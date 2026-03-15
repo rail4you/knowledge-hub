@@ -41,6 +41,16 @@
     "BirthDate": "Birth date",
     "NewUser": "New user",
     "UserDeletionConfirmationMessage": "Are you sure to delete the user '{0}'?",
-    "ShortBio": "Short Bio"
+    "ShortBio": "Short Bio",
+    "SelectType": "Select a type",
+    "SelectUser": "Select a user",
+    "NameRequired": "Name is required",
+    "TypeRequired": "Type is required",
+    "UserRequired": "User is required",
+    "PublishDateRequired": "Publish date is required",
+    "PriceRequired": "Price is required",
+    "BirthDateRequired": "Birth date is required",
+    "ShortBioRequired": "Short bio is required",
+    "Save": "Save"
   }
 }

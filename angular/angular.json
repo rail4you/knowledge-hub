@@ -46,6 +46,7 @@
               }
             ],
             "styles": [
+              "./node_modules/ng-zorro-antd/ng-zorro-antd.min.css",
               {
                 "input": "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
                 "inject": true,
@@ -55,11 +56,6 @@
                 "input": "node_modules/@fortawesome/fontawesome-free/css/v4-shims.min.css",
                 "inject": true,
                 "bundleName": "fontawesome-v4-shims.min"
-              },
-              {
-                "input": "node_modules/ng-zorro-antd/tree/style/index.min.css",
-                "inject": false,
-                "bundleName": "ng-zorro-antd-tree"
               },
               {
                 "input": "node_modules/@swimlane/ngx-datatable/index.css",

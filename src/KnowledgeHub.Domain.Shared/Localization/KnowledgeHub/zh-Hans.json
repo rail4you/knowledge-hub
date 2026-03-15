@@ -75,6 +75,16 @@
     "BirthDate": "出生日期",
     "NewUser": "新建用户",
     "UserDeletionConfirmationMessage": "确定要删除用户 '{0}' 吗？",
-    "ShortBio": "简介"
+    "ShortBio": "简介",
+    "SelectType": "请选择类型",
+    "SelectUser": "请选择用户",
+    "NameRequired": "请输入名称",
+    "TypeRequired": "请选择类型",
+    "UserRequired": "请选择用户",
+    "PublishDateRequired": "请选择发布日期",
+    "PriceRequired": "请输入价格",
+    "BirthDateRequired": "请选择出生日期",
+    "ShortBioRequired": "请输入简介",
+    "Save": "保存"
   }
 }

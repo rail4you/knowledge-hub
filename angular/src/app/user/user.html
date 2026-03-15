@@ -1,98 +1,91 @@
-<div class="card">
-  <div class="card-header">
-    <div class="row">
-      <div class="col col-md-6">
-        <h5 class="card-title">
-          {{ '::Menu:Users' | abpLocalization }}
-        </h5>
-      </div>
-      <div class="text-end col col-md-6">
-        <div class="text-lg-end pt-2">
-          <button *abpPermission="'KnowledgeHub.Users.Create'" id="create" class="btn btn-primary" type="button" (click)="createUser()">
-            <i class="fa fa-plus me-1"></i>
-            <span>{{ '::NewUser' | abpLocalization }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="card-body">
-    <ngx-datatable [rows]="user.items" [count]="user.totalCount" [list]="list" default>
-      <ngx-datatable-column
-        [name]="'::Actions' | abpLocalization"
-        [maxWidth]="150"
-        [sortable]="false"
-      >
-        <ng-template let-row="row" ngx-datatable-cell-template>
-          <div ngbDropdown container="body" class="d-inline-block">
-            <button
-              class="btn btn-primary btn-sm dropdown-toggle"
-              data-toggle="dropdown"
-              aria-haspopup="true"
-              ngbDropdownToggle
-            >
-              <i class="fa fa-cog me-1"></i>{{ '::Actions' | abpLocalization }}
+<nz-card [nzExtra]="extraTemplate">
+  <ng-template #extraTemplate>
+    <button *abpPermission="'KnowledgeHub.Users.Create'" nz-button nzType="primary" (click)="createUser()">
+      <span nz-icon nzType="plus" nzTheme="outline"></span>
+      {{ '::NewUser' | abpLocalization }}
+    </button>
+  </ng-template>
+
+  <nz-card-meta
+    [nzTitle]="'::Menu:Users' | abpLocalization"
+  ></nz-card-meta>
+
+  <nz-table
+    #basicTable
+    [nzData]="user.items"
+    [nzTotal]="user.totalCount"
+    [(nzPageIndex)]="pageIndex"
+    [(nzPageSize)]="pageSize"
+    [nzShowSizeChanger]="true"
+    [nzPageSizeOptions]="[10, 20, 50]"
+    (nzPageIndexChange)="onPageIndexChange($event)"
+    (nzPageSizeChange)="onPageSizeChange($event)"
+    [nzShowTotal]="totalTemplate"
+  >
+    <thead>
+      <tr>
+        <th>{{ '::Actions' | abpLocalization }}</th>
+        <th>{{ '::Name' | abpLocalization }}</th>
+        <th>{{ '::BirthDate' | abpLocalization }}</th>
+        <th>{{ '::ShortBio' | abpLocalization }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let data of basicTable.data">
+        <td>
+          <nz-space>
+            <button *abpPermission="'KnowledgeHub.Users.Edit'" nz-button nzType="link" (click)="editUser(data.id)">
+              <span nz-icon nzType="edit" nzTheme="outline"></span>
+              {{ '::Edit' | abpLocalization }}
             </button>
-            <div ngbDropdownMenu>
-              <button *abpPermission="'KnowledgeHub.Users.Edit'" ngbDropdownItem (click)="editUser(row.id)">
-                {{ '::Edit' | abpLocalization }}
-              </button>
-              <button *abpPermission="'KnowledgeHub.Users.Delete'" ngbDropdownItem (click)="delete(row.id)">
-                {{ '::Delete' | abpLocalization }}
-              </button>
-            </div>
-          </div>
-        </ng-template>
-      </ngx-datatable-column>
-      <ngx-datatable-column [name]="'::Name' | abpLocalization" prop="name" />
-      <ngx-datatable-column [name]="'::BirthDate' | abpLocalization">
-        <ng-template let-row="row" ngx-datatable-cell-template>
-          {{ row.birthDate | date }}
-        </ng-template>
-      </ngx-datatable-column>
-      <ngx-datatable-column [name]="'::ShortBio' | abpLocalization" prop="shortBio" />
-    </ngx-datatable>
-  </div>
-</div>
-
-<abp-modal [(visible)]="isModalOpen">
-  <ng-template #abpHeader>
-    <h3>{{ (selectedUser.id ? '::Edit' : '::NewUser') | abpLocalization }}</h3>
+            <button *abpPermission="'KnowledgeHub.Users.Delete'" nz-button nzType="link" nzDanger (click)="delete(data.id)">
+              <span nz-icon nzType="delete" nzTheme="outline"></span>
+              {{ '::Delete' | abpLocalization }}
+            </button>
+          </nz-space>
+        </td>
+        <td>{{ data.name }}</td>
+        <td>{{ data.birthDate | date }}</td>
+        <td>{{ data.shortBio }}</td>
+      </tr>
+    </tbody>
+  </nz-table>
+  <ng-template #totalTemplate let-total>
+    {{ '::TotalRecords' | abpLocalization }}: {{ total }}
   </ng-template>
+</nz-card>
 
-  <ng-template #abpBody>
-    <form [formGroup]="form" (ngSubmit)="save()">
-      <div class="form-group">
-        <label for="user-name">Name</label><span> * </span>
-        <input type="text" id="user-name" class="form-control" formControlName="name" autofocus />
-      </div>
+<nz-modal
+  [(nzVisible)]="isModalOpen"
+  [nzTitle]="(selectedUser.id ? '::Edit' : '::NewUser') | abpLocalization"
+  (nzOnCancel)="isModalOpen = false"
+  (nzOnOk)="save()"
+  [nzOkDisabled]="form.invalid"
+  [nzOkText]="'::Save' | abpLocalization"
+  [nzCancelText]="'::Close' | abpLocalization"
+>
+  <ng-container *nzModalContent>
+    <form nz-form [formGroup]="form" nzLayout="vertical">
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" nzRequired>{{ '::Name' | abpLocalization }}</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzErrorTip]="'::NameRequired' | abpLocalization">
+          <input nz-input formControlName="name" [placeholder]="('::Name' | abpLocalization)" />
+        </nz-form-control>
+      </nz-form-item>
 
-      <div class="mt-2">
-        <label>Birth date</label><span> * </span>
-        <input
-          #datepicker="ngbDatepicker"
-          class="form-control"
-          name="datepicker"
-          formControlName="birthDate"
-          ngbDatepicker
-          (click)="datepicker.toggle()"
-        />
-      </div>
-      <div class="form-group">
-        <label for="user-short-bio">{{ '::ShortBio' | abpLocalization }}</label><span> * </span>
-        <textarea id="user-short-bio" class="form-control" formControlName="shortBio" rows="12"></textarea>
-      </div>
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" nzRequired>{{ '::BirthDate' | abpLocalization }}</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzErrorTip]="'::BirthDateRequired' | abpLocalization">
+          <nz-date-picker formControlName="birthDate" style="width: 100%"></nz-date-picker>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label [nzSpan]="24" nzRequired>{{ '::ShortBio' | abpLocalization }}</nz-form-label>
+        <nz-form-control [nzSpan]="24" [nzErrorTip]="'::ShortBioRequired' | abpLocalization">
+          <textarea nz-input formControlName="shortBio" rows="4" [placeholder]="('::ShortBio' | abpLocalization)"></textarea>
+        </nz-form-control>
+      </nz-form-item>
     </form>
-  </ng-template>
-
-  <ng-template #abpFooter>
-    <button type="button" class="btn btn-secondary" abpClose>
-      {{ '::Close' | abpLocalization }}
-    </button>
-
-    <button class="btn btn-primary" (click)="save()" [disabled]="form.invalid">
-      <i class="fa fa-check mr-1"></i>
-      {{ '::Save' | abpLocalization }}
-    </button>
-  </ng-template>
-</abp-modal>
+  </ng-container>
+</nz-modal>
