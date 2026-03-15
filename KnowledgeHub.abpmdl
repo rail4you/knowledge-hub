@@ -1,0 +1,109 @@
+{
+  "template": "app",
+  "imports": {
+    "Volo.Abp.LeptonXLiteTheme": {
+      "version": "5.1.0",
+      "isInstalled": true,
+      "creationTime": "03/15/2026 13:15:47 +00:00"
+    },
+    "Volo.Abp.Account": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/15/2026 13:15:47 +00:00"
+    },
+    "Volo.Abp.OpenIddict": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/15/2026 13:15:47 +00:00"
+    },
+    "Volo.Abp.Identity": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/15/2026 13:15:47 +00:00"
+    },
+    "Volo.Abp.TenantManagement": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/15/2026 13:15:47 +00:00"
+    },
+    "Volo.Abp.SettingManagement": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/15/2026 13:15:47 +00:00"
+    },
+    "Volo.Abp.PermissionManagement": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/15/2026 13:15:47 +00:00"
+    },
+    "Volo.Abp.FeatureManagement": {
+      "version": "10.1.0",
+      "isInstalled": true,
+      "creationTime": "03/15/2026 13:15:47 +00:00"
+    }
+  },
+  "folders": {
+    "items": {
+      "src": {},
+      "test": {}
+    }
+  },
+  "packages": {
+    "KnowledgeHub.Application": {
+      "path": "src/KnowledgeHub.Application/KnowledgeHub.Application.abppkg",
+      "folder": "src"
+    },
+    "KnowledgeHub.Application.Tests": {
+      "path": "test/KnowledgeHub.Application.Tests/KnowledgeHub.Application.Tests.abppkg",
+      "folder": "test"
+    },
+    "KnowledgeHub.Domain.Shared": {
+      "path": "src/KnowledgeHub.Domain.Shared/KnowledgeHub.Domain.Shared.abppkg",
+      "folder": "src"
+    },
+    "KnowledgeHub.Application.Contracts": {
+      "path": "src/KnowledgeHub.Application.Contracts/KnowledgeHub.Application.Contracts.abppkg",
+      "folder": "src"
+    },
+    "KnowledgeHub.HttpApi": {
+      "path": "src/KnowledgeHub.HttpApi/KnowledgeHub.HttpApi.abppkg",
+      "folder": "src"
+    },
+    "KnowledgeHub.HttpApi.Client": {
+      "path": "src/KnowledgeHub.HttpApi.Client/KnowledgeHub.HttpApi.Client.abppkg",
+      "folder": "src"
+    },
+    "KnowledgeHub.EntityFrameworkCore.Tests": {
+      "path": "test/KnowledgeHub.EntityFrameworkCore.Tests/KnowledgeHub.EntityFrameworkCore.Tests.abppkg",
+      "folder": "test"
+    },
+    "KnowledgeHub.EntityFrameworkCore": {
+      "path": "src/KnowledgeHub.EntityFrameworkCore/KnowledgeHub.EntityFrameworkCore.abppkg",
+      "folder": "src"
+    },
+    "KnowledgeHub.TestBase": {
+      "path": "test/KnowledgeHub.TestBase/KnowledgeHub.TestBase.abppkg",
+      "folder": "test"
+    },
+    "KnowledgeHub.Domain.Tests": {
+      "path": "test/KnowledgeHub.Domain.Tests/KnowledgeHub.Domain.Tests.abppkg",
+      "folder": "test"
+    },
+    "KnowledgeHub.HttpApi.Client.ConsoleTestApp": {
+      "path": "test/KnowledgeHub.HttpApi.Client.ConsoleTestApp/KnowledgeHub.HttpApi.Client.ConsoleTestApp.abppkg",
+      "folder": "test"
+    },
+    "KnowledgeHub.DbMigrator": {
+      "path": "src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.abppkg",
+      "folder": "src"
+    },
+    "KnowledgeHub.HttpApi.Host": {
+      "path": "src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.abppkg",
+      "folder": "src"
+    },
+    "KnowledgeHub.Domain": {
+      "path": "src/KnowledgeHub.Domain/KnowledgeHub.Domain.abppkg",
+      "folder": "src"
+    }
+  }
+}

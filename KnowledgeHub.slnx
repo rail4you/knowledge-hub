@@ -1,0 +1,23 @@
+<Solution>
+    <Configurations>
+        <Platform Name="Any CPU" />
+    </Configurations>
+    <Folder Name="/src/">
+        <Project Path="src/KnowledgeHub.Domain/KnowledgeHub.Domain.csproj" />
+        <Project Path="src/KnowledgeHub.Application/KnowledgeHub.Application.csproj" />
+        <Project Path="src/KnowledgeHub.EntityFrameworkCore/KnowledgeHub.EntityFrameworkCore.csproj" />
+        <Project Path="src/KnowledgeHub.Domain.Shared/KnowledgeHub.Domain.Shared.csproj" />
+        <Project Path="src/KnowledgeHub.Application.Contracts/KnowledgeHub.Application.Contracts.csproj" />
+        <Project Path="src/KnowledgeHub.HttpApi/KnowledgeHub.HttpApi.csproj" />
+        <Project Path="src/KnowledgeHub.HttpApi.Client/KnowledgeHub.HttpApi.Client.csproj" />
+        <Project Path="src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj" />
+        <Project Path="src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj" />
+    </Folder>
+    <Folder Name="/test/">
+        <Project Path="test/KnowledgeHub.Application.Tests/KnowledgeHub.Application.Tests.csproj" />
+        <Project Path="test/KnowledgeHub.EntityFrameworkCore.Tests/KnowledgeHub.EntityFrameworkCore.Tests.csproj" />
+        <Project Path="test/KnowledgeHub.TestBase/KnowledgeHub.TestBase.csproj" />
+        <Project Path="test/KnowledgeHub.Domain.Tests/KnowledgeHub.Domain.Tests.csproj" />
+        <Project Path="test/KnowledgeHub.HttpApi.Client.ConsoleTestApp/KnowledgeHub.HttpApi.Client.ConsoleTestApp.csproj" />
+    </Folder>
+</Solution>
