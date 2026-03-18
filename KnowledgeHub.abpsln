@@ -19,9 +19,7 @@
   },
   "options": {
     "httpRequests": {
-      "ignoredUrls": [
-      
-      ]
+      "ignoredUrls": []
     }
   },
   "creatingStudioConfiguration": {
@@ -45,14 +43,17 @@
     "theme": "leptonx-lite",
     "themeStyle": "",
     "themeMenuPlacement": "",
-    "mobileFramework": "none",
     "progressiveWebApp": "false",
     "runProgressiveWebAppSupport": "false",
     "publicWebsite": "false",
     "socialLogin": "false",
     "sampleCrudPage": "false",
-    "selectedLanguages": ["Chinese (Simplified)", "English", ],
+    "selectedLanguages": [
+      "Chinese (Simplified)",
+      "English"
+    ],
     "defaultLanguage": "Chinese (Simplified)",
     "createCommand": "abp new KnowledgeHub -t app --ui-framework angular --database-provider ef --database-management-system postgresql --theme leptonx-lite --skip-migration  --skip-migrator  --without-cms-kit --dont-run-install-libs --dont-run-bundling --no-social-logins -no-gdpr -no-openiddict-admin-ui -no-audit-logging -no-file-management -no-language-management -no-text-template-management"
-  }
+  },
+  "defaultRunProfile": "Default"
 }

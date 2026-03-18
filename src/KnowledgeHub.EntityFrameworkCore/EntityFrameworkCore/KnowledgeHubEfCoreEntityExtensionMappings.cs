@@ -1,4 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using KnowledgeHub.Users;
+using Microsoft.EntityFrameworkCore;
 using Volo.Abp.Identity;
 using Volo.Abp.ObjectExtending;
 using Volo.Abp.Threading;
@@ -16,29 +19,157 @@ public static class KnowledgeHubEfCoreEntityExtensionMappings
 
         OneTimeRunner.Run(() =>
         {
-                /* You can configure extra properties for the
-                 * entities defined in the modules used by your application.
-                 *
-                 * This class can be used to map these extra properties to table fields in the database.
-                 *
-                 * USE THIS CLASS ONLY TO CONFIGURE EF CORE RELATED MAPPING.
-                 * USE KnowledgeHubModuleExtensionConfigurator CLASS (in the Domain.Shared project)
-                 * FOR A HIGH LEVEL API TO DEFINE EXTRA PROPERTIES TO ENTITIES OF THE USED MODULES
-                 *
-                 * Example: Map a property to a table field:
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, UserRoleType>(
+                    "RoleType",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasConversion<int>();
+                    }
+                );
 
-                     ObjectExtensionManager.Instance
-                         .MapEfCoreProperty<IdentityUser, string>(
-                             "MyProperty",
-                             (entityBuilder, propertyBuilder) =>
-                             {
-                                 propertyBuilder.HasMaxLength(128);
-                             }
-                         );
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, Guid?>(
+                    "SchoolId",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                    }
+                );
 
-                 * See the documentation for more:
-                 * https://docs.abp.io/en/abp/latest/Customizing-Application-Modules-Extending-Entities
-                 */
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "EmployeeNumber",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(50);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "Department",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(100);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "Major",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(100);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "Course",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(200);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "Title",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(50);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "StudentNumber",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(50);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "Grade",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(50);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "ClassName",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(50);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "ManagementScope",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(500);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "CompanyName",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(200);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "UnifiedSocialCreditCode",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(18);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "Position",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(50);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "Industry",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(100);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "PartnerSchool",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(500);
+                    }
+                );
+
+            ObjectExtensionManager.Instance
+                .MapEfCoreProperty<IdentityUser, string>(
+                    "Remark",
+                    (entityBuilder, propertyBuilder) =>
+                    {
+                        propertyBuilder.HasMaxLength(500);
+                    }
+                );
         });
     }
 }

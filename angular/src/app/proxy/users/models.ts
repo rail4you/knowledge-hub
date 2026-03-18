@@ -21,3 +21,16 @@ export interface UserDto extends EntityDto<string> {
   birthDate?: string;
   shortBio?: string;
 }
+
+export interface UserImportResultDto {
+  totalCount: number;
+  successCount: number;
+  failCount: number;
+  failItems: UserImportFailItemDto[];
+}
+
+export interface UserImportFailItemDto {
+  rowNumber: number;
+  userName: string;
+  reason: string;
+}

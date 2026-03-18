@@ -1,0 +1,473 @@
+<div class="resource-page">
+  <div class="tab-header">
+    <button nz-button [nzType]="selectedTabIndex === 0 ? 'primary' : 'default'" (click)="selectedTabIndex = 0">
+      {{ '::Resources' | abpLocalization }}
+    </button>
+    <button nz-button [nzType]="selectedTabIndex === 1 ? 'primary' : 'default'" (click)="selectedTabIndex = 1">
+      {{ '::Categories' | abpLocalization }}
+    </button>
+    <button nz-button [nzType]="selectedTabIndex === 2 ? 'primary' : 'default'" (click)="selectedTabIndex = 2; loadPendingAudits()">
+      {{ '::PendingAudit' | abpLocalization }}
+    </button>
+    <button nz-button [nzType]="selectedTabIndex === 3 ? 'primary' : 'default'" (click)="selectedTabIndex = 3; loadPhysicalDeleteRequests()">
+      {{ '::PhysicalDeleteRequests' | abpLocalization }}
+    </button>
+  </div>
+
+  <div class="tab-content">
+    <!-- Resources Tab -->
+    <div *ngIf="selectedTabIndex === 0" class="resources-layout">
+      <div class="resource-list">
+        <div class="list-header">
+          <h3>{{ '::Resource' | abpLocalization }}</h3>
+          <button nz-button nzType="primary" (click)="createResource()">
+            <span nz-icon nzType="plus"></span>
+            {{ '::NewResource' | abpLocalization }}
+          </button>
+        </div>
+        
+        <nz-table
+          [nzData]="resources.items"
+          [nzTotal]="resources.totalCount"
+          [nzPageIndex]="pageIndex"
+          [nzPageSize]="pageSize"
+          [nzShowSizeChanger]="true"
+          [nzFrontPagination]="false"
+          (nzPageIndexChange)="onPageIndexChange($event)"
+          (nzPageSizeChange)="onPageSizeChange($event)"
+          [nzScroll]="{ y: 'calc(100vh - 200px)' }"
+        >
+          <thead>
+            <tr>
+              <th>{{ '::Name' | abpLocalization }}</th>
+              <th>{{ '::ResourceType' | abpLocalization }}</th>
+              <th>{{ '::Version' | abpLocalization }}</th>
+              <th>{{ '::Status' | abpLocalization }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of resources.items" 
+                (click)="selectResource(item)"
+                [class.selected]="selectedResource.id === item.id"
+                style="cursor: pointer;">
+              <td>{{ item.name }}</td>
+              <td>
+                <nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag>
+              </td>
+              <td>v{{ item.currentVersion }}</td>
+              <td>
+                <nz-tag [nzColor]="getStatusColor(item.status)">
+                  {{ getStatusName(item.status) }}
+                </nz-tag>
+              </td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </div>
+
+      <div class="resource-preview">
+        <ng-container *ngIf="selectedResource.id; else noSelect">
+          <div class="preview-header">
+            <div class="header-info">
+              <h2>{{ selectedResource.name }}</h2>
+              <div class="meta">
+                <span>{{ '::Version' | abpLocalization }}: v{{ selectedResource.currentVersion }}</span>
+                <span>{{ '::Creator' | abpLocalization }}: {{ selectedResource.creatorName }}</span>
+                <span>{{ selectedResource.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+              </div>
+            </div>
+            <div class="header-actions">
+              <button nz-button (click)="download()" [disabled]="!selectedResource.isDownloadable">
+                <span nz-icon nzType="download"></span>
+                {{ '::Download' | abpLocalization }}
+              </button>
+              <button nz-button (click)="toggleCollect()">
+                <span nz-icon nzType="star"></span>
+                {{ isCollected() ? ('::Uncollect' | abpLocalization) : ('::Collect' | abpLocalization) }}
+              </button>
+              <button nz-button nzType="primary" (click)="editResource(selectedResource.id!)">
+                <span nz-icon nzType="edit"></span>
+                {{ '::Edit' | abpLocalization }}
+              </button>
+              <button nz-button nzType="default" (click)="submitForReview(selectedResource.id!)" 
+                *ngIf="selectedResource.status === 0 || selectedResource.status === 4">
+                <span nz-icon nzType="send"></span>
+                {{ '::SubmitForReview' | abpLocalization }}
+              </button>
+            </div>
+          </div>
+          
+          <nz-divider></nz-divider>
+          
+          <div class="preview-content">
+            <div class="file-info">
+              <div class="info-item">
+                <label>{{ '::FileName' | abpLocalization }}:</label>
+                <span>{{ selectedResource.originalFileName }}</span>
+              </div>
+              <div class="info-item">
+                <label>{{ '::FileSize' | abpLocalization }}:</label>
+                <span>{{ selectedResource.fileSize | number }} B</span>
+              </div>
+              <div class="info-item">
+                <label>{{ '::ResourceType' | abpLocalization }}:</label>
+                <nz-tag>{{ getResourceTypeName(selectedResource.resourceType) }}</nz-tag>
+              </div>
+              <div class="info-item">
+                <label>{{ '::Status' | abpLocalization }}:</label>
+                <nz-tag [nzColor]="getStatusColor(selectedResource.status)">
+                  {{ getStatusName(selectedResource.status) }}
+                </nz-tag>
+              </div>
+              <div class="info-item" *ngIf="selectedResource.keywords">
+                <label>{{ '::Keywords' | abpLocalization }}:</label>
+                <span>{{ selectedResource.keywords }}</span>
+              </div>
+              <div class="info-item" *ngIf="selectedResource.description">
+                <label>{{ '::Description' | abpLocalization }}:</label>
+                <span>{{ selectedResource.description }}</span>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+        
+        <ng-template #noSelect>
+          <nz-empty [nzNotFoundContent]="'SelectResource' | abpLocalization"></nz-empty>
+        </ng-template>
+      </div>
+
+      <div class="version-history">
+        <h3>{{ '::VersionHistory' | abpLocalization }}</h3>
+        
+        <ng-container *ngIf="selectedResource.id; else noVersion">
+          <div class="version-list">
+            <nz-timeline>
+              <nz-timeline-item 
+                *ngFor="let version of versions()"
+                [nzColor]="version.isCurrentVersion ? 'blue' : 'gray'">
+                <div class="version-item">
+                  <div class="version-header">
+                    <span class="version-number">v{{ version.version }}</span>
+                    <nz-tag *ngIf="version.isCurrentVersion" nzColor="blue">
+                      {{ '::CurrentVersion' | abpLocalization }}
+                    </nz-tag>
+                  </div>
+                  <div class="version-time">{{ version.creationTime | date:'yyyy-MM-dd HH:mm' }}</div>
+                  <div class="version-content" *ngIf="version.updateContent">
+                    {{ version.updateContent }}
+                  </div>
+                  <div class="version-actions">
+                    <button nz-button nzSize="small" nzType="link" [disabled]="version.isCurrentVersion" (click)="rollbackVersion(version.id!)">
+                      {{ '::RollbackVersion' | abpLocalization }}
+                    </button>
+                  </div>
+                </div>
+              </nz-timeline-item>
+            </nz-timeline>
+          </div>
+          
+          <nz-divider></nz-divider>
+          
+          <div class="upload-section">
+            <p>{{ '::UploadNewVersion' | abpLocalization }}</p>
+            <nz-upload nzType="drag" [nzMultiple]="false">
+              <p class="ant-upload-drag-icon">
+                <span nz-icon nzType="inbox"></span>
+              </p>
+              <p class="ant-upload-text">{{ 'ClickOrDragToUpload' | abpLocalization }}</p>
+              <p class="ant-upload-hint">{{ 'UploadHint' | abpLocalization }}</p>
+            </nz-upload>
+          </div>
+        </ng-container>
+        
+        <ng-template #noVersion>
+          <nz-empty [nzNotFoundContent]="'SelectResourceForHistory' | abpLocalization"></nz-empty>
+        </ng-template>
+      </div>
+    </div>
+
+    <!-- Categories Tab -->
+    <div *ngIf="selectedTabIndex === 1" class="category-container full-height">
+      <div class="category-header">
+        <h3>{{ '::Categories' | abpLocalization }}</h3>
+        <button nz-button nzType="primary" (click)="createCategory()">
+          <span nz-icon nzType="plus"></span>
+          {{ '::NewCategory' | abpLocalization }}
+        </button>
+      </div>
+      
+      <div class="category-list">
+        <nz-tree
+          [nzData]="categories()"
+          [nzDraggable]="false"
+          nzBlockNode
+          nzShowExpand
+        >
+          <ng-template #nzTreeTemplate let-node>
+            <span class="category-node">
+              <span>{{ node.title }}</span>
+              <nz-tag *ngIf="node.origin.isActive" nzColor="green">{{ '::Active' | abpLocalization }}</nz-tag>
+              <nz-tag *ngIf="!node.origin.isActive" nzColor="default">{{ '::Inactive' | abpLocalization }}</nz-tag>
+              <span class="category-actions">
+                <button nz-button nzType="link" nzSize="small" (click)="editCategory(node.origin); $event.stopPropagation()">
+                  <span nz-icon nzType="edit"></span>
+                </button>
+                <button nz-button nzType="link" nzSize="small" nzDanger (click)="deleteCategory(node.key); $event.stopPropagation()">
+                  <span nz-icon nzType="delete"></span>
+                </button>
+              </span>
+            </span>
+          </ng-template>
+        </nz-tree>
+        
+        <nz-empty *ngIf="categories().length === 0" [nzNotFoundContent]="'NoCategories' | abpLocalization"></nz-empty>
+      </div>
+    </div>
+
+    <!-- Pending Audit Tab -->
+    <div *ngIf="selectedTabIndex === 2" class="audit-container full-height">
+      <h3>{{ '::PendingAudit' | abpLocalization }}</h3>
+      
+      <nz-table
+        [nzData]="pendingAudits()"
+        [nzFrontPagination]="false"
+        [nzScroll]="{ y: 'calc(100vh - 250px)' }"
+      >
+        <thead>
+          <tr>
+            <th>{{ '::Name' | abpLocalization }}</th>
+            <th>{{ '::ResourceType' | abpLocalization }}</th>
+            <th>{{ '::Creator' | abpLocalization }}</th>
+            <th>{{ '::CreationTime' | abpLocalization }}</th>
+            <th>{{ '::Actions' | abpLocalization }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of pendingAudits()">
+            <td>{{ item.name }}</td>
+            <td>
+              <nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag>
+            </td>
+            <td>{{ item.creatorName }}</td>
+            <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+            <td>
+              <button nz-button nzType="primary" nzSize="small" (click)="openAuditModal(item)">
+                {{ '::Audit' | abpLocalization }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+      
+      <nz-empty *ngIf="pendingAudits().length === 0" [nzNotFoundContent]="'NoPendingAudits' | abpLocalization"></nz-empty>
+    </div>
+
+    <!-- Physical Delete Requests Tab -->
+    <div *ngIf="selectedTabIndex === 3" class="audit-container full-height">
+      <h3>{{ '::PhysicalDeleteRequests' | abpLocalization }}</h3>
+      
+      <nz-table
+        [nzData]="physicalDeleteRequests()"
+        [nzFrontPagination]="false"
+        [nzScroll]="{ y: 'calc(100vh - 250px)' }"
+      >
+        <thead>
+          <tr>
+            <th>{{ '::ResourceName' | abpLocalization }}</th>
+            <th>{{ '::Reason' | abpLocalization }}</th>
+            <th>{{ '::Requester' | abpLocalization }}</th>
+            <th>{{ '::RequestTime' | abpLocalization }}</th>
+            <th>{{ '::Actions' | abpLocalization }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of physicalDeleteRequests()">
+            <td>{{ item.resourceName }}</td>
+            <td>{{ item.reason }}</td>
+            <td>{{ item.requesterName }}</td>
+            <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+            <td>
+              <button nz-button nzType="primary" nzSize="small" (click)="approvePhysicalDelete(item.id)">
+                {{ '::Approve' | abpLocalization }}
+              </button>
+              <button nz-button nzType="danger" nzSize="small" (click)="rejectPhysicalDelete(item.id)" style="margin-left: 8px;">
+                {{ '::Reject' | abpLocalization }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </nz-table>
+      
+      <nz-empty *ngIf="physicalDeleteRequests().length === 0" [nzNotFoundContent]="'NoDeleteRequests' | abpLocalization"></nz-empty>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit Resource Modal -->
+<nz-modal
+  [(nzVisible)]="isModalOpen"
+  [nzTitle]="selectedResource.id ? ('::Edit' | abpLocalization) : ('::NewResource' | abpLocalization)"
+  (nzOnCancel)="isModalOpen = false"
+  (nzOnOk)="save()"
+  [nzOkDisabled]="form.invalid"
+>
+  <ng-container *nzModalContent>
+    <form [formGroup]="form" nz-form>
+      <nz-form-item>
+        <nz-form-label [nzRequired]="true">{{ '::Name' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <input nz-input formControlName="name" />
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label [nzRequired]="true">{{ '::ResourceType' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <nz-select formControlName="resourceType">
+            <nz-option *ngFor="let item of resourceTypes" [nzValue]="item.value" [nzLabel]="item.label"></nz-option>
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label>{{ '::Category' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <nz-select formControlName="categoryId" [nzAllowClear]="true">
+            <nz-option *ngFor="let item of categories()" [nzValue]="item.id" [nzLabel]="item.name"></nz-option>
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label>{{ '::Keywords' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <input nz-input formControlName="keywords" />
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label>{{ '::CopyrightInfo' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <input nz-input formControlName="copyrightInfo" />
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label>{{ '::IsDownloadable' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <label nz-checkbox formControlName="isDownloadable"></label>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item *ngIf="!selectedResource.id">
+        <nz-form-label>{{ '::UploadFile' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <input type="file" (change)="onFileSelected($event)" accept="*/*" />
+          <div *ngIf="selectedFile" style="margin-top: 8px;">
+            <p>{{ selectedFile.name }} ({{ formatFileSize(selectedFile.size) }})</p>
+            <button nz-button nzType="primary" (click)="uploadChunked()" [disabled]="isUploading()">
+              <span *ngIf="isUploading()" nz-icon nzType="loading"></span>
+              {{ isUploading() ? ('::Uploading' | abpLocalization) : ('::Upload' | abpLocalization) }}
+            </button>
+            <nz-progress *ngIf="isUploading()" [nzPercent]="uploadProgress()" nzSize="small" style="margin-top: 8px;"></nz-progress>
+          </div>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label>{{ '::Description' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <textarea nz-input formControlName="description" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- Create/Edit Category Modal -->
+<nz-modal
+  [(nzVisible)]="isCategoryModalOpen"
+  [nzTitle]="selectedCategory ? ('::EditCategory' | abpLocalization) : ('::NewCategory' | abpLocalization)"
+  (nzOnCancel)="isCategoryModalOpen = false"
+  (nzOnOk)="saveCategory()"
+  [nzOkDisabled]="categoryForm?.invalid"
+>
+  <ng-container *nzModalContent>
+    <form [formGroup]="categoryForm" nz-form *ngIf="categoryForm">
+      <nz-form-item>
+        <nz-form-label [nzRequired]="true">{{ '::Name' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <input nz-input formControlName="name" />
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label>{{ '::Code' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <input nz-input formControlName="code" />
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label>{{ '::ParentCategory' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <nz-tree-select
+            formControlName="parentId"
+            [nzNodes]="categories()"
+            nzPlaceHolder="{{ 'SelectParentCategory' | abpLocalization }}"
+            [nzAllowClear]="true"
+            [nzShowIcon]="true"
+          ></nz-tree-select>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label>{{ '::SortOrder' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <nz-input-number formControlName="sortOrder" [nzMin]="0"></nz-input-number>
+        </nz-form-control>
+      </nz-form-item>
+      
+      <nz-form-item>
+        <nz-form-label>{{ '::IsActive' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <label nz-checkbox formControlName="isActive"></label>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+</nz-modal>
+
+<!-- Audit Modal -->
+<nz-modal
+  [(nzVisible)]="isAuditModalOpen"
+  [nzTitle]="'::Audit' | abpLocalization"
+  (nzOnCancel)="isAuditModalOpen = false"
+  [nzOkLoading]="isAuditLoading()"
+  [nzFooter]="auditFooter"
+>
+  <ng-container *nzModalContent>
+    <div *ngIf="selectedAuditResource">
+      <p><strong>{{ '::Name' | abpLocalization }}:</strong> {{ selectedAuditResource.name }}</p>
+      <p><strong>{{ '::ResourceType' | abpLocalization }}:</strong> {{ getResourceTypeName(selectedAuditResource.resourceType) }}</p>
+      <p><strong>{{ '::FileSize' | abpLocalization }}:</strong> {{ selectedAuditResource.fileSize | number }} B</p>
+    </div>
+    
+    <nz-form-item style="margin-top: 16px;">
+      <nz-form-label>{{ '::Comment' | abpLocalization }}</nz-form-label>
+      <nz-form-control>
+        <textarea nz-input [(ngModel)]="auditComment" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
+      </nz-form-control>
+    </nz-form-item>
+  </ng-container>
+  
+  <ng-template #auditFooter>
+    <button nz-button nzType="default" (click)="isAuditModalOpen = false">{{ '::Cancel' | abpLocalization }}</button>
+    <button nz-button nzType="danger" (click)="auditResource(2)" [nzLoading]="isAuditLoading()">
+      {{ '::Reject' | abpLocalization }}
+    </button>
+    <button nz-button nzType="primary" (click)="auditResource(1)" [nzLoading]="isAuditLoading()">
+      {{ '::Approve' | abpLocalization }}
+    </button>
+  </ng-template>
+</nz-modal>

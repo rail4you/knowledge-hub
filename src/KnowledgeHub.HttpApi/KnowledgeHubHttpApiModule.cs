@@ -8,6 +8,7 @@ using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement.HttpApi;
 using Volo.Abp.Localization;
 using Volo.Abp.TenantManagement;
+using Volo.Abp.AspNetCore.Mvc;
 
 namespace KnowledgeHub;
 
@@ -18,12 +19,18 @@ namespace KnowledgeHub;
     typeof(AbpAccountHttpApiModule),
     typeof(AbpIdentityHttpApiModule),
     typeof(AbpTenantManagementHttpApiModule),
-    typeof(AbpFeatureManagementHttpApiModule)
+    typeof(AbpFeatureManagementHttpApiModule),
+    typeof(AbpAspNetCoreMvcModule)
     )]
 public class KnowledgeHubHttpApiModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
+        Configure<AbpAspNetCoreMvcOptions>(options =>
+        {
+            options.ConventionalControllers.Create(typeof(KnowledgeHubHttpApiModule).Assembly);
+        });
+
         ConfigureLocalization();
     }
 

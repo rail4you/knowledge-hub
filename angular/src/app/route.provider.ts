@@ -23,7 +23,14 @@ function configureRoutes() {
         iconClass: 'fas fa-database',
         order: 2,
         layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Documents || KnowledgeHub.Users'
+        requiredPolicy: 'KnowledgeHub.Documents || KnowledgeHub.Users || KnowledgeHub.Resources'
+      },
+      {
+        path: '/resources',
+        name: '::Menu:Resources',
+        parentName: '::Menu:KnowledgeHub',
+        layout: eLayoutType.application,
+        requiredPolicy: 'KnowledgeHub.Resources',
       },
       {
         path: '/documents',

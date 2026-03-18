@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\KnowledgeHub.Domain\KnowledgeHub.Domain.csproj" />
     <ProjectReference Include="..\KnowledgeHub.Application.Contracts\KnowledgeHub.Application.Contracts.csproj" />
   </ItemGroup>
@@ -20,6 +24,7 @@
     <PackageReference Include="Volo.Abp.Account.Application" Version="10.1.0" />
     <PackageReference Include="Volo.Abp.Identity.Application" Version="10.1.0" />
     <PackageReference Include="Volo.Abp.TenantManagement.Application" Version="10.1.0" />
+    <PackageReference Include="ClosedXML" Version="0.104.1" />
   </ItemGroup>
 
 </Project>

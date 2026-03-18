@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using KnowledgeHub.Users;
 using Volo.Abp.Identity;
 using Volo.Abp.ObjectExtending;
 using Volo.Abp.Threading;
@@ -37,35 +39,146 @@ public static class KnowledgeHubModuleExtensionConfigurator
 
     private static void ConfigureExtraProperties()
     {
-        /* You can configure extra properties for the
-         * entities defined in the modules used by your application.
-         *
-         * This class can be used to define these extra properties
-         * with a high level, easy to use API.
-         *
-         * Example: Add a new property to the user entity of the identity module
+        ObjectExtensionManager.Instance.Modules()
+           .ConfigureIdentity(identity =>
+           {
+               identity.ConfigureUser(user =>
+               {
+                   user.AddOrUpdateProperty<UserRoleType>(
+                       "RoleType",
+                       property =>
+                       {
+                           property.Attributes.Add(new RequiredAttribute());
+                       }
+                   );
 
-           ObjectExtensionManager.Instance.Modules()
-              .ConfigureIdentity(identity =>
-              {
-                  identity.ConfigureUser(user =>
-                  {
-                      user.AddOrUpdateProperty<string>( //property type: string
-                          "SocialSecurityNumber", //property name
-                          property =>
-                          {
-                              //validation rules
-                              property.Attributes.Add(new RequiredAttribute());
-                              property.Attributes.Add(new StringLengthAttribute(64) {MinimumLength = 4});
+                   user.AddOrUpdateProperty<Guid?>(
+                       "SchoolId",
+                       property =>
+                       {
+                       }
+                   );
 
-                              //...other configurations for this property
-                          }
-                      );
-                  });
-              });
+                   user.AddOrUpdateProperty<string>(
+                       "EmployeeNumber",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(50));
+                       }
+                   );
 
-         * See the documentation for more:
-         * https://abp.io/docs/latest/framework/architecture/modularity/extending/module-entity-extensions
-         */
+                   user.AddOrUpdateProperty<string>(
+                       "Department",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(100));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "Major",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(100));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "Course",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(200));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "Title",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(50));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "StudentNumber",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(50));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "Grade",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(50));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "ClassName",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(50));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "ManagementScope",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(500));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "CompanyName",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(200));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "UnifiedSocialCreditCode",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(18));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "Position",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(50));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "Industry",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(100));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "PartnerSchool",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(500));
+                       }
+                   );
+
+                   user.AddOrUpdateProperty<string>(
+                       "Remark",
+                       property =>
+                       {
+                           property.Attributes.Add(new StringLengthAttribute(500));
+                       }
+                   );
+               });
+           });
     }
 }

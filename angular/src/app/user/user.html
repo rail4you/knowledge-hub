@@ -1,5 +1,9 @@
 <nz-card [nzExtra]="extraTemplate">
   <ng-template #extraTemplate>
+    <button *abpPermission="'KnowledgeHub.Users.Import'" nz-button (click)="importUsers()">
+      <span nz-icon nzType="upload" nzTheme="outline"></span>
+      {{ '::Import' | abpLocalization }}
+    </button>
     <button *abpPermission="'KnowledgeHub.Users.Create'" nz-button nzType="primary" (click)="createUser()">
       <span nz-icon nzType="plus" nzTheme="outline"></span>
       {{ '::NewUser' | abpLocalization }}

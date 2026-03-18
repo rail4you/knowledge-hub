@@ -1,5 +1,3 @@
-using KnowledgeHub.Documents;
-using KnowledgeHub.Users;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -16,6 +14,7 @@ using Volo.Abp.SettingManagement.EntityFrameworkCore;
 using Volo.Abp.OpenIddict.EntityFrameworkCore;
 using Volo.Abp.TenantManagement;
 using Volo.Abp.TenantManagement.EntityFrameworkCore;
+using KnowledgeHub.Resources;
 
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -58,8 +57,12 @@ public class KnowledgeHubDbContext :
     public DbSet<TenantConnectionString> TenantConnectionStrings { get; set; }
 
     #endregion
-    public DbSet<Document> Documents { get; set; }
-    public DbSet<AppUser> AppUsers { get; set; }
+    public DbSet<Resource> Resources { get; set; }
+    public DbSet<ResourceVersion> ResourceVersions { get; set; }
+    public DbSet<ResourceCategory> ResourceCategories { get; set; }
+    public DbSet<ResourceAudit> ResourceAudits { get; set; }
+    public DbSet<ResourceCollection> ResourceCollections { get; set; }
+    public DbSet<PhysicalDeleteRequest> PhysicalDeleteRequests { get; set; }
 
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
@@ -84,27 +87,6 @@ public class KnowledgeHubDbContext :
         builder.ConfigureBlobStoring();
         
         /* Configure your own tables/entities inside here */
-
-        builder.Entity<Document>(b =>
-        {
-            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "Documents",
-                KnowledgeHubConsts.DbSchema);
-            b.ConfigureByConvention();
-            b.Property(x => x.Name).IsRequired().HasMaxLength(128);
-            b.HasOne<AppUser>().WithMany().HasForeignKey(x => x.UserId).IsRequired();
-        });
-        builder.Entity<AppUser>(b =>
-        {
-            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "AppUsers",
-                KnowledgeHubConsts.DbSchema);
-    
-            b.ConfigureByConvention();
-    
-            b.Property(x => x.Name)
-                .IsRequired()
-                .HasMaxLength(UserConsts.MaxNameLength);
-
-            b.HasIndex(x => x.Name);
-        });
+        builder.ConfigureResource();
     }
 }

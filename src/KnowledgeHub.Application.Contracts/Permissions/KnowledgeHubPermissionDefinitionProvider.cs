@@ -19,6 +19,18 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         documentsPermission.AddChild(KnowledgeHubPermissions.Documents.Create, L("Permission:Documents.Create"));
         documentsPermission.AddChild(KnowledgeHubPermissions.Documents.Edit, L("Permission:Documents.Edit"));
         documentsPermission.AddChild(KnowledgeHubPermissions.Documents.Delete, L("Permission:Documents.Delete"));
+
+        //Resources permissions
+        var resourcesPermission = myGroup.AddPermission(KnowledgeHubPermissions.Resources.Default, L("Permission:Resources"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.Create, L("Permission:Resources.Create"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.Edit, L("Permission:Resources.Edit"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.Delete, L("Permission:Resources.Delete"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.Download, L("Permission:Resources.Download"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.SchoolAudit, L("Permission:Resources.SchoolAudit"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.LeagueAudit, L("Permission:Resources.LeagueAudit"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ManageCategory, L("Permission:Resources.ManageCategory"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.PhysicalDelete, L("Permission:Resources.PhysicalDelete"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ViewStatistics, L("Permission:Resources.ViewStatistics"));
         
         //Users permissions
         var usersPermission = myGroup.AddPermission(
@@ -29,6 +41,8 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             KnowledgeHubPermissions.Users.Edit, L("Permission:Users.Edit"));
         usersPermission.AddChild(
             KnowledgeHubPermissions.Users.Delete, L("Permission:Users.Delete"));
+        usersPermission.AddChild(
+            KnowledgeHubPermissions.Users.Import, L("Permission:Users.Import"));
     }
 
     private static LocalizableString L(string name)

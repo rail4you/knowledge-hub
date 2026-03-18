@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: knowledgehub-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: KnowledgeHub2024!
+      POSTGRES_DB: KnowledgeHub
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    platform: linux/amd64
+
+  # ABP .NET API
+  api:
+    image: knowledgehub-api:latest
+    container_name: knowledgehub-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__Default=Host=db;Port=5432;Database=KnowledgeHub;User ID=postgres;Password=KnowledgeHub2024!
+      - App__SelfUrl=http://localhost
+      - App__AngularUrl=http://localhost
+      - App__CorsOrigins=http://localhost,http://localhost:80
+      - App__RedirectAllowedUrls=http://localhost,http://localhost:80
+      - AuthServer__Authority=http://localhost
+      - AuthServer__RequireHttpsMetadata=false
+      - Serilog__MinimumLevel__Default=Information
+    ports:
+      - "5000:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health-status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    platform: linux/amd64
+
+  # Angular Frontend
+  web:
+    image: knowledgehub-web:latest
+    container_name: knowledgehub-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    platform: linux/amd64
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: knowledgehub-network

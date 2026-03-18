@@ -4,6 +4,7 @@ import {UserService, UserDto} from '../proxy/users';
 import {FormGroup, FormBuilder, Validators, ReactiveFormsModule} from '@angular/forms';
 import {ConfirmationService, Confirmation} from '@abp/ng.theme.shared';
 import {DatePipe, CommonModule} from "@angular/common";
+import {Router} from '@angular/router';
 import {NzTableModule} from 'ng-zorro-antd/table';
 import {NzCardModule} from 'ng-zorro-antd/card';
 import {NzButtonModule} from 'ng-zorro-antd/button';
@@ -54,6 +55,7 @@ export class UserComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly fb = inject(FormBuilder);
   private readonly confirmation = inject(ConfirmationService);
+  private readonly router = inject(Router);
 
   ngOnInit(): void {
     this.buildForm();
@@ -126,6 +128,10 @@ export class UserComponent implements OnInit {
           this.userService.delete(id).subscribe(() => this.list.get());
         }
       });
+  }
+
+  importUsers() {
+    this.router.navigate(['/users/import']);
   }
 
   onPageIndexChange(index: number): void {

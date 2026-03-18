@@ -1,14 +1,14 @@
 import { Environment } from '@abp/ng.core';
 
-const baseUrl = 'http://localhost:4200';
+const baseUrl = 'http://localhost';
 
 const oAuthConfig = {
-  issuer: 'https://localhost:44305/',
+  issuer: 'http://localhost',
   redirectUri: baseUrl,
   clientId: 'KnowledgeHub_App',
   responseType: 'code',
   scope: 'offline_access KnowledgeHub',
-  requireHttps: true,
+  requireHttps: false,
 };
 
 export const environment = {
@@ -20,7 +20,7 @@ export const environment = {
   oAuthConfig,
   apis: {
     default: {
-      url: 'https://localhost:44305',
+      url: 'http://localhost',
       rootNamespace: 'KnowledgeHub',
     },
     AbpAccountPublic: {

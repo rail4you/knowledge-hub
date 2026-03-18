@@ -10,12 +10,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KnowledgeHub.Application.Contracts\KnowledgeHub.Application.Contracts.csproj" />
+    <ProjectReference Include="..\KnowledgeHub.Application\KnowledgeHub.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Volo.Abp.PermissionManagement.HttpApi" Version="10.1.0" />
     <PackageReference Include="Volo.Abp.FeatureManagement.HttpApi" Version="10.1.0" />
     <PackageReference Include="Volo.Abp.SettingManagement.HttpApi" Version="10.1.0" />
+    <PackageReference Include="Volo.Abp.AspNetCore.Mvc" Version="10.1.0" />
   </ItemGroup>
 
   <ItemGroup>

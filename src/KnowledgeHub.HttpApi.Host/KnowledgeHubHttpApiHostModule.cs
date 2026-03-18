@@ -16,6 +16,7 @@ using OpenIddict.Server.AspNetCore;
 using KnowledgeHub.EntityFrameworkCore;
 using KnowledgeHub.MultiTenancy;
 using KnowledgeHub.HealthChecks;
+using KnowledgeHub.Resources.FileStorage;
 using Microsoft.OpenApi;
 using Volo.Abp;
 using Volo.Abp.Studio;
@@ -39,6 +40,8 @@ using Volo.Abp.OpenIddict;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Security.Claims;
+using Volo.Abp.UI.Navigation;
+using KnowledgeHub.Web;
 
 namespace KnowledgeHub;
 
@@ -73,17 +76,29 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
 
         if (!hostingEnvironment.IsDevelopment())
         {
-            PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
-            {
-                options.AddDevelopmentEncryptionAndSigningCertificate = false;
-            });
-
-            PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
-            {
-                serverBuilder.AddProductionEncryptionAndSigningCertificate("openiddict.pfx", configuration["AuthServer:CertificatePassPhrase"]!);
-                serverBuilder.SetIssuer(new Uri(configuration["AuthServer:Authority"]!));
-            });
         }
+
+        Configure<AbpNavigationOptions>(options =>
+        {
+            options.MenuContributors.Add(new KnowledgeHubMenuContributor());
+        });
+    }
+
+    private void PreConfigureServicesPre75(ServiceConfigurationContext context)
+    {
+        var hostingEnvironment = context.Services.GetHostingEnvironment();
+        var configuration = context.Services.GetConfiguration();
+
+        PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
+        {
+            options.AddDevelopmentEncryptionAndSigningCertificate = false;
+        });
+
+        PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
+        {
+            serverBuilder.AddProductionEncryptionAndSigningCertificate("openiddict.pfx", configuration["AuthServer:CertificatePassPhrase"]!);
+            serverBuilder.SetIssuer(new Uri(configuration["AuthServer:Authority"]!));
+        });
     }
 
     public override void ConfigureServices(ServiceConfigurationContext context)
@@ -121,6 +136,8 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         ConfigureSwagger(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
+        
+        context.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
     }
 
     private void ConfigureStudio(IHostEnvironment hostingEnvironment)
@@ -271,6 +288,14 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         app.MapAbpStaticAssets();
         app.UseAbpStudioLink();
         app.UseAbpSecurityHeaders();
+        
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+                Path.Combine(env.ContentRootPath, "uploads")),
+            RequestPath = "/uploads"
+        });
+        
         app.UseCors();
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();

@@ -24,19 +24,19 @@ export const APP_ROUTES: Routes = [
     loadChildren: () => import('@abp/ng.setting-management').then(c => c.createRoutes()),
   },
   {
-    path: 'users',
-    loadComponent: () => import('./user/user').then(c => c.UserComponent),
+    path: 'identity/users/import',
+    loadComponent: () => import('./users/import/user-import.component').then(c => c.UserImportComponent),
     canActivate: [authGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.Users',
+      requiredPolicy: 'KnowledgeHub.Users.Import',
     },
   },
   {
-    path: 'documents',
-    loadComponent: () => import('./document/document').then(c => c.DocumentComponent),
+    path: 'resources',
+    loadComponent: () => import('./resources/resource').then(c => c.ResourceComponent),
     canActivate: [authGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.Documents',
+      requiredPolicy: 'KnowledgeHub.Resources',
     },
   },
 ];

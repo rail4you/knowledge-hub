@@ -1,0 +1,75 @@
+<div class="user-import-container">
+  <nz-card nzTitle="用户批量导入">
+    @if (!uploadSuccess) {
+      <div class="upload-section">
+        <div class="template-download">
+          <button nz-button nzType="link" (click)="downloadTemplate()">
+            <span nz-icon nzType="download"></span>
+            下载导入模板
+          </button>
+        </div>
+
+        <nz-upload
+          nzType="drag"
+          [nzMultiple]="false"
+          [nzBeforeUpload]="beforeUpload"
+          [nzFileList]="fileList"
+          nzAccept=".xlsx,.xls"
+        >
+          <p class="ant-upload-drag-icon">
+            <span nz-icon nzType="inbox"></span>
+          </p>
+          <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
+          <p class="ant-upload-hint">支持单个Excel文件上传 (.xlsx, .xls)</p>
+        </nz-upload>
+
+        <div class="upload-actions">
+          <button
+            nz-button
+            nzType="primary"
+            [nzLoading]="uploading"
+            [disabled]="fileList.length === 0"
+            (click)="handleUpload()"
+          >
+            {{ uploading ? '导入中...' : '开始导入' }}
+          </button>
+        </div>
+      </div>
+    } @else {
+      <nz-result
+        nzStatus="success"
+        nzTitle="导入完成"
+        [nzSubTitle]="`成功: ${importResult?.successCount || 0} 条, 失败: ${importResult?.failCount || 0} 条`"
+      >
+        <div nz-result-extra>
+          @if (importResult?.failCount > 0) {
+            <nz-table
+              #failTable
+              [nzData]="importResult?.failItems || []"
+              [nzPageSize]="5"
+              nzSize="small"
+            >
+              <thead>
+                <tr>
+                  <th>行号</th>
+                  <th>账号</th>
+                  <th>失败原因</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of failTable.data; track item.rowNumber) {
+                  <tr>
+                    <td>{{ item.rowNumber }}</td>
+                    <td>{{ item.userName }}</td>
+                    <td>{{ item.reason }}</td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          }
+          <button nz-button nzType="primary" (click)="reset()">继续导入</button>
+        </div>
+      </nz-result>
+    }
+  </nz-card>
+</div>

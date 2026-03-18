@@ -1,38 +1,46 @@
-using KnowledgeHub.Documents;
 using KnowledgeHub.Users;
+using KnowledgeHub.Resources;
 using Riok.Mapperly.Abstractions;
 using Volo.Abp.Mapperly;
 
 namespace KnowledgeHub;
 
 [Mapper]
-public partial class DocumentToDocumentDtoMapper : MapperBase<Document, DocumentDto>
+public partial class ResourceToResourceDtoMapper : MapperBase<Resource, ResourceDto>
 {
-    public override partial DocumentDto Map(Document source);
+    public override partial ResourceDto Map(Resource source);
 
-    public override partial void Map(Document source, DocumentDto destination);
+    public override partial void Map(Resource source, ResourceDto destination);
 }
 
 [Mapper]
-public partial class CreateUpdateDocumentDtoToDocumentMapper : MapperBase<CreateUpdateDocumentDto, Document>
+public partial class CreateUpdateResourceDtoToResourceMapper : MapperBase<CreateUpdateResourceDto, Resource>
 {
-    public override partial Document Map(CreateUpdateDocumentDto source);
+    public override partial Resource Map(CreateUpdateResourceDto source);
 
-    public override partial void Map(CreateUpdateDocumentDto source, Document destination);
+    public override partial void Map(CreateUpdateResourceDto source, Resource destination);
 }
 
 [Mapper]
-public partial class UserToUserDtoMapper : MapperBase<AppUser, UserDto>
+public partial class ResourceVersionToResourceVersionDtoMapper : MapperBase<ResourceVersion, ResourceVersionDto>
 {
-    public override partial UserDto Map(AppUser source);
-    
-    public override partial void Map(AppUser source, UserDto destination);
+    public override partial ResourceVersionDto Map(ResourceVersion source);
+
+    public override partial void Map(ResourceVersion source, ResourceVersionDto destination);
 }
 
 [Mapper]
-public partial class UserToUserLookupDtoMapper : MapperBase<AppUser, UserLookupDto>
+public partial class ResourceCategoryToResourceCategoryDtoMapper : MapperBase<ResourceCategory, ResourceCategoryDto>
 {
-    public override partial UserLookupDto Map(AppUser source);
+    public override partial ResourceCategoryDto Map(ResourceCategory source);
 
-    public override partial void Map(AppUser source, UserLookupDto destination);
+    public override partial void Map(ResourceCategory source, ResourceCategoryDto destination);
+}
+
+[Mapper]
+public partial class ResourceAuditToResourceAuditDtoMapper : MapperBase<ResourceAudit, ResourceAuditDto>
+{
+    public override partial ResourceAuditDto Map(ResourceAudit source);
+
+    public override partial void Map(ResourceAudit source, ResourceAuditDto destination);
 }

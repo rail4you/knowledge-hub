@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-KnowledgeHub2024!}
+      POSTGRES_DB: KnowledgeHub
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - knowledgehub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: knowledgehub-api:latest
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__Default=Host=db;Port=5432;Database=KnowledgeHub;User ID=postgres;Password=${DB_PASSWORD:-KnowledgeHub2024!}
+      - App__SelfUrl=${API_URL:-http://localhost}
+      - App__AngularUrl=${WEB_URL:-http://localhost}
+      - App__CorsOrigins=${WEB_URL:-http://localhost}
+      - App__RedirectAllowedUrls=${WEB_URL:-http://localhost}
+      - AuthServer__Authority=${API_URL:-http://localhost}
+      - AuthServer__RequireHttpsMetadata=false
+      - Serilog__MinimumLevel__Default=Information
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - knowledgehub-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health-status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  web:
+    image: knowledgehub-web:latest
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - knowledgehub-network
+
+  # Run migrations once (remove after first run)
+  migrator:
+    image: knowledgehub-api:latest
+    restart: no
+    entrypoint: ["dotnet", "KnowledgeHub.DbMigrator.dll"]
+    environment:
+      - ConnectionStrings__Default=Host=db;Port=5432;Database=KnowledgeHub;User ID=postgres;Password=${DB_PASSWORD:-KnowledgeHub2024!}
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - knowledgehub-network
+
+volumes:
+  postgres_data:
+
+networks:
+  knowledgehub-network:
+    driver: bridge
