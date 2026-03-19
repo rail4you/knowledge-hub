@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources.Enums;
 using Volo.Abp.Domain.Entities.Auditing;
 using Volo.Abp.MultiTenancy;
@@ -30,11 +31,16 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public ICollection<ResourceVersion> Versions { get; set; }
     public ICollection<ResourceAudit> Audits { get; set; }
     public ICollection<ResourceCollection> Collections { get; set; }
+    public ICollection<DocumentIndex> DocumentIndices { get; set; }
+    public ICollection<ResourceViewLog> ViewLogs { get; set; }
+    public ResourceExposure? Exposure { get; set; }
 
     public Resource()
     {
         Versions = new List<ResourceVersion>();
         Audits = new List<ResourceAudit>();
         Collections = new List<ResourceCollection>();
+        DocumentIndices = new List<DocumentIndex>();
+        ViewLogs = new List<ResourceViewLog>();
     }
 }

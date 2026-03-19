@@ -56,5 +56,14 @@ public class KnowledgeHubMenuContributor : IMenuContributor
                 "/resources/audit"
             ).RequirePermissions(KnowledgeHubPermissions.Resources.SchoolAudit, KnowledgeHubPermissions.Resources.LeagueAudit)
         );
+
+        administration.AddItem(
+            new ApplicationMenuItem(
+                "SearchManagement",
+                "搜索管理",
+                "fa fa-search",
+                "/search"
+            ).RequirePermissions(KnowledgeHubPermissions.Search.Default)
+        );
     }
 }

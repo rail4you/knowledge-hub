@@ -75,6 +75,11 @@ public class CreateUpdateResourceDto
     public string? CopyrightInfo { get; set; }
     public bool IsDownloadable { get; set; } = true;
     public Guid? OrganizationId { get; set; }
+    
+    public string? FilePath { get; set; }
+    public long? FileSize { get; set; }
+    public string? FileExtension { get; set; }
+    public string? OriginalFileName { get; set; }
 }
 
 public class CreateUpdateResourceCategoryDto
@@ -89,7 +94,6 @@ public class CreateUpdateResourceCategoryDto
 public class AuditResourceDto
 {
     public Guid ResourceId { get; set; }
-    public AuditType AuditType { get; set; }
     public AuditStatus Status { get; set; }
     public string? Comment { get; set; }
 }
@@ -98,6 +102,10 @@ public class UploadVersionDto
 {
     public Guid ResourceId { get; set; }
     public string? UpdateContent { get; set; }
+    public string? FilePath { get; set; }
+    public long? FileSize { get; set; }
+    public string? FileExtension { get; set; }
+    public string? OriginalFileName { get; set; }
 }
 
 public class InitiateUploadDto

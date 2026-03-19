@@ -36,8 +36,12 @@ class Program
             .ConfigureLogging((context, logging) => logging.ClearProviders())
             .ConfigureAppConfiguration((context, config) =>
             {
-                var path = Path.Combine(Directory.GetCurrentDirectory(), "src", "KnowledgeHub.DbMigrator");
-                config.SetBasePath(path);
+                var basePath = Directory.GetCurrentDirectory();
+                if (!basePath.Contains("/bin/"))
+                {
+                    basePath = Path.Combine(basePath, "src", "KnowledgeHub.DbMigrator");
+                }
+                config.SetBasePath(basePath);
                 config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
             })
             .ConfigureServices((hostContext, services) =>

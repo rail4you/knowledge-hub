@@ -63,7 +63,7 @@ export class UserImportComponent {
       const uint8Array = new Uint8Array(arrayBuffer);
 
       this.userImportService
-        .importUsingUrl(uint8Array as any)
+        .import(uint8Array as any)
         .subscribe({
           next: (result) => {
             this.uploading = false;

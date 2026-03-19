@@ -45,6 +45,14 @@ function configureRoutes() {
         parentName: '::Menu:KnowledgeHub',
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.Users',
+      },
+      {
+        path: '/search',
+        name: '::Menu:Search',
+        iconClass: 'fas fa-search',
+        order: 3,
+        layout: eLayoutType.application,
+        requiredPolicy: 'KnowledgeHub.Search',
       }
   ]);
 }

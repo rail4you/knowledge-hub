@@ -17,6 +17,8 @@ using KnowledgeHub.EntityFrameworkCore;
 using KnowledgeHub.MultiTenancy;
 using KnowledgeHub.HealthChecks;
 using KnowledgeHub.Resources.FileStorage;
+using KnowledgeHub.Application.Search;
+using KnowledgeHub.Application.Contracts.Search;
 using Microsoft.OpenApi;
 using Volo.Abp;
 using Volo.Abp.Studio;
@@ -42,6 +44,8 @@ using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.UI.Navigation;
 using KnowledgeHub.Web;
+using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Options;
 
 namespace KnowledgeHub;
 
@@ -138,6 +142,15 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         ConfigureCors(context, configuration);
         
         context.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+        
+        context.Services.Configure<MeilisearchOptions>(configuration.GetSection("Meilisearch"));
+        context.Services.Configure<EmbeddingServiceOptions>(configuration.GetSection("EmbeddingService"));
+        
+        context.Services.AddHttpClient<IMeiliSearchService, MeiliSearchService>();
+        context.Services.AddHttpClient<IEmbeddingService, EmbeddingService>();
+        context.Services.AddScoped<IDocumentExtractionService, DocumentExtractionService>();
+        context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();
+        context.Services.AddScoped<ISearchAppService, SearchAppService>();
     }
 
     private void ConfigureStudio(IHostEnvironment hostingEnvironment)

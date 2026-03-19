@@ -1,5 +1,18 @@
 import type { EntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 
+export interface UserImportFailItemDto {
+  rowNumber?: number;
+  userName?: string;
+  reason?: string;
+}
+
+export interface UserImportResultDto {
+  totalCount?: number;
+  successCount?: number;
+  failCount?: number;
+  failItems?: UserImportFailItemDto[];
+}
+
 export interface CreateUserDto {
   name: string;
   birthDate: string;
@@ -20,17 +33,4 @@ export interface UserDto extends EntityDto<string> {
   name?: string;
   birthDate?: string;
   shortBio?: string;
-}
-
-export interface UserImportResultDto {
-  totalCount: number;
-  successCount: number;
-  failCount: number;
-  failItems: UserImportFailItemDto[];
-}
-
-export interface UserImportFailItemDto {
-  rowNumber: number;
-  userName: string;
-  reason: string;
 }

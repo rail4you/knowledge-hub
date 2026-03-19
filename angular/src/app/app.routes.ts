@@ -39,4 +39,12 @@ export const APP_ROUTES: Routes = [
       requiredPolicy: 'KnowledgeHub.Resources',
     },
   },
+  {
+    path: 'search',
+    loadComponent: () => import('./search/search.component').then(c => c.SearchComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Search',
+    },
+  },
 ];

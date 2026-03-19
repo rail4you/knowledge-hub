@@ -15,6 +15,7 @@ using Volo.Abp.OpenIddict.EntityFrameworkCore;
 using Volo.Abp.TenantManagement;
 using Volo.Abp.TenantManagement.EntityFrameworkCore;
 using KnowledgeHub.Resources;
+using KnowledgeHub.Domain.Search;
 
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -64,6 +65,13 @@ public class KnowledgeHubDbContext :
     public DbSet<ResourceCollection> ResourceCollections { get; set; }
     public DbSet<PhysicalDeleteRequest> PhysicalDeleteRequests { get; set; }
 
+    // Search entities
+    public DbSet<DocumentIndex> DocumentIndices { get; set; }
+    public DbSet<SearchQuery> SearchQueries { get; set; }
+    public DbSet<ResourceViewLog> ResourceViewLogs { get; set; }
+    public DbSet<SearchStatistics> SearchStatistics { get; set; }
+    public DbSet<ResourceExposure> ResourceExposures { get; set; }
+
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
     {
@@ -88,5 +96,6 @@ public class KnowledgeHubDbContext :
         
         /* Configure your own tables/entities inside here */
         builder.ConfigureResource();
+        builder.ConfigureSearch();
     }
 }

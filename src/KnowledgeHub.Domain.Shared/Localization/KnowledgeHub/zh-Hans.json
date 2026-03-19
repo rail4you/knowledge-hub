@@ -237,6 +237,8 @@
     "RollbackConfirm": "确定要回滚到此版本吗？",
     "SelectFileFirst": "请选择文件",
     "UploadSuccess": "文件上传成功",
+    "UploadVersionSuccess": "上传新版本成功",
+    "UploadVersionFailed": "上传新版本失败",
     "UploadFailed": "文件上传失败",
     "Tip": "提示"
   }

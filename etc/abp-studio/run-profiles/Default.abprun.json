@@ -14,7 +14,7 @@
     "KnowledgeHub.Angular": {
       "type": "cli",
       "workingDirectory": "../../../angular",
-      "startCommand": "yarn start",
+      "startCommand": "./start.ps1",
       "launchUrl": "http://localhost:4200",
       "kubernetesService": ".*-angular$",
       "execution": {

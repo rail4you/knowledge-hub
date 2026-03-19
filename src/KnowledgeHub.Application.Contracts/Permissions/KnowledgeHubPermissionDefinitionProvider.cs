@@ -1,7 +1,6 @@
 using KnowledgeHub.Localization;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Localization;
-using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Permissions;
 
@@ -43,6 +42,11 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
             KnowledgeHubPermissions.Users.Delete, L("Permission:Users.Delete"));
         usersPermission.AddChild(
             KnowledgeHubPermissions.Users.Import, L("Permission:Users.Import"));
+
+        //Search permissions
+        var searchPermission = myGroup.AddPermission(KnowledgeHubPermissions.Search.Default, L("Permission:Search"));
+        searchPermission.AddChild(KnowledgeHubPermissions.Search.ManageIndex, L("Permission:Search.ManageIndex"));
+        searchPermission.AddChild(KnowledgeHubPermissions.Search.ViewStatistics, L("Permission:Search.ViewStatistics"));
     }
 
     private static LocalizableString L(string name)

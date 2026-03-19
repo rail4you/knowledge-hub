@@ -170,13 +170,21 @@
           
           <div class="upload-section">
             <p>{{ '::UploadNewVersion' | abpLocalization }}</p>
-            <nz-upload nzType="drag" [nzMultiple]="false">
+            <nz-upload nzType="drag" [nzMultiple]="false" [nzBeforeUpload]="beforeUploadVersion.bind(this)">
               <p class="ant-upload-drag-icon">
                 <span nz-icon nzType="inbox"></span>
               </p>
               <p class="ant-upload-text">{{ 'ClickOrDragToUpload' | abpLocalization }}</p>
-              <p class="ant-upload-hint">{{ 'UploadHint' | abpLocalization }}</p>
             </nz-upload>
+            <nz-progress *ngIf="isVersionUploading()" [nzPercent]="versionUploadProgress()" nzStatus="active"></nz-progress>
+            <div *ngIf="versionUploadedFileInfo" class="uploaded-file-info" style="margin-top: 8px;">
+              <span>{{ versionUploadedFileInfo.originalFileName }} ({{ formatFileSize(versionUploadedFileInfo.fileSize!) }})</span>
+            </div>
+            <div style="margin-top: 12px;">
+              <button nz-button nzType="primary" [disabled]="!versionUploadedFileInfo" [nzLoading]="isVersionUploading()" (click)="uploadNewVersion()">
+                {{ '::UploadNewVersion' | abpLocalization }}
+              </button>
+            </div>
           </div>
         </ng-container>
         
@@ -237,6 +245,7 @@
           <tr>
             <th>{{ '::Name' | abpLocalization }}</th>
             <th>{{ '::ResourceType' | abpLocalization }}</th>
+            <th>{{ '::Status' | abpLocalization }}</th>
             <th>{{ '::Creator' | abpLocalization }}</th>
             <th>{{ '::CreationTime' | abpLocalization }}</th>
             <th>{{ '::Actions' | abpLocalization }}</th>
@@ -247,6 +256,11 @@
             <td>{{ item.name }}</td>
             <td>
               <nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag>
+            </td>
+            <td>
+              <nz-tag [nzColor]="item.status === 1 ? 'blue' : 'orange'">
+                {{ item.status === 1 ? ('::SchoolAudit' | abpLocalization) : ('::LeagueAudit' | abpLocalization) }}
+              </nz-tag>
             </td>
             <td>{{ item.creatorName }}</td>
             <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
@@ -441,7 +455,7 @@
 <!-- Audit Modal -->
 <nz-modal
   [(nzVisible)]="isAuditModalOpen"
-  [nzTitle]="'::Audit' | abpLocalization"
+  [nzTitle]="getAuditModalTitle()"
   (nzOnCancel)="isAuditModalOpen = false"
   [nzOkLoading]="isAuditLoading()"
   [nzFooter]="auditFooter"

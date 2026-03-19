@@ -1,123 +1,8 @@
-export interface ResourceDto {
-  id?: string;
-  name?: string;
-  description?: string;
-  resourceType?: number;
-  categoryId?: string;
-  categoryName?: string;
-  filePath?: string;
-  fileSize?: number;
-  fileExtension?: string;
-  originalFileName?: string;
-  status?: number;
-  currentVersion?: number;
-  keywords?: string;
-  copyrightInfo?: string;
-  isDownloadable?: boolean;
-  collectionCount?: number;
-  downloadCount?: number;
-  viewCount?: number;
-  organizationId?: string;
-  organizationName?: string;
-  creatorId?: string;
-  creatorName?: string;
-  creationTime?: string;
-}
-
-export interface ResourceVersionDto {
-  id?: string;
-  resourceId?: string;
-  version?: number;
-  filePath?: string;
-  fileSize?: number;
-  updateContent?: string;
-  isCurrentVersion?: boolean;
-  creationTime?: string;
-  creatorId?: string;
-  creatorName?: string;
-}
-
-export interface ResourceCategoryDto {
-  id?: string;
-  name?: string;
-  parentId?: string;
-  parentName?: string;
-  code?: string;
-  sortOrder?: number;
-  isActive?: boolean;
-  children?: ResourceCategoryDto[];
-  creationTime?: string;
-}
-
-export interface ResourceAuditDto {
-  id?: string;
-  resourceId?: string;
-  auditType?: number;
-  status?: number;
-  comment?: string;
-  auditorId?: string;
-  auditorName?: string;
-  creationTime?: string;
-}
-
-export interface CreateUpdateResourceDto {
-  name?: string;
-  description?: string;
-  resourceType?: number;
-  categoryId?: string;
-  keywords?: string;
-  copyrightInfo?: string;
-  isDownloadable?: boolean;
-  organizationId?: string;
-}
-
-export interface CreateUpdateResourceCategoryDto {
-  name?: string;
-  parentId?: string;
-  code?: string;
-  sortOrder?: number;
-  isActive?: boolean;
-}
-
-export interface AuditResourceDto {
-  resourceId?: string;
-  auditType?: number;
-  status?: number;
-  comment?: string;
-}
-
-export interface UploadVersionDto {
-  resourceId?: string;
-  updateContent?: string;
-}
-
-export interface ResourceListQueryDto {
-  sorting?: string;
-  skipCount?: number;
-  maxResultCount?: number;
-  filter?: string;
-  status?: number;
-  resourceType?: number;
-  categoryId?: string;
-}
-
-export interface InitiateUploadDto {
-  fileName?: string;
-  totalSize?: number;
-  chunkSize?: number;
-}
-
-export interface InitiateUploadResultDto {
-  uploadId?: string;
-  chunkSize?: number;
-  totalChunks?: number;
-}
-
-export interface UploadChunkDto {
-  uploadId?: string;
-  fileName?: string;
-  chunkNumber?: number;
-}
+import type { AuditStatus } from './enums/audit-status.enum';
+import type { ResourceType } from './enums/resource-type.enum';
+import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { AuditType } from './enums/audit-type.enum';
+import type { ResourceStatus } from './enums/resource-status.enum';
 
 export interface CompleteUploadDto {
   uploadId?: string;
@@ -132,21 +17,176 @@ export interface CompleteUploadResultDto {
   originalFileName?: string;
 }
 
-export interface PhysicalDeleteRequestDto {
+export interface InitiateUploadDto {
+  fileName?: string;
+  totalSize?: number;
+  chunkSize?: number;
+}
+
+export interface InitiateUploadResultDto {
+  uploadId?: string;
+  chunkSize?: number;
+  totalChunks?: number;
+}
+
+export interface AuditResourceDto {
+  resourceId?: string;
+  status?: AuditStatus;
+  comment?: string | null;
+}
+
+export interface CreatePhysicalDeleteRequestDto {
+  resourceId?: string;
+  reason?: string;
+}
+
+export interface CreateUpdateResourceCategoryDto {
+  name?: string;
+  parentId?: string | null;
+  code?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export interface CreateUpdateResourceDto {
+  name?: string;
+  description?: string | null;
+  resourceType?: ResourceType;
+  categoryId?: string | null;
+  keywords?: string | null;
+  copyrightInfo?: string | null;
+  isDownloadable?: boolean;
+  organizationId?: string | null;
+  filePath?: string | null;
+  fileSize?: number | null;
+  fileExtension?: string | null;
+  originalFileName?: string | null;
+}
+
+export interface DocumentPageSearchResultDto {
   id?: string;
+  resourceId?: string;
+  resourceName?: string;
+  pageNumber?: number;
+  content?: string;
+  highlightedContent?: string | null;
+  title?: string | null;
+  fileExtension?: string;
+  resourceType?: number;
+  categoryName?: string | null;
+  uploadDate?: string;
+}
+
+export interface MeiliSearchQueryDto {
+  query?: string;
+  limit?: number;
+  offset?: number;
+  resourceType?: number | null;
+  categoryId?: string | null;
+}
+
+export interface MeiliSearchResultDto {
+  items?: DocumentPageSearchResultDto[];
+  totalCount?: number;
+  processingTimeMs?: number;
+}
+
+export interface PhysicalDeleteRequestDto extends EntityDto<string> {
   resourceId?: string;
   resourceName?: string;
   reason?: string;
   status?: number;
   requesterId?: string;
   requesterName?: string;
-  approverId?: string;
-  approverName?: string;
-  approvalTime?: string;
+  approverId?: string | null;
+  approverName?: string | null;
+  approvalTime?: string | null;
   creationTime?: string;
 }
 
-export interface CreatePhysicalDeleteRequestDto {
+export interface ResourceAuditDto extends EntityDto<string> {
   resourceId?: string;
-  reason?: string;
+  auditType?: AuditType;
+  status?: AuditStatus;
+  comment?: string | null;
+  auditorId?: string;
+  auditorName?: string | null;
+  creationTime?: string;
+}
+
+export interface ResourceCategoryDto extends FullAuditedEntityDto<string> {
+  name?: string;
+  parentId?: string | null;
+  parentName?: string | null;
+  code?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+  children?: ResourceCategoryDto[];
+}
+
+export interface ResourceDto extends FullAuditedEntityDto<string> {
+  name?: string;
+  description?: string | null;
+  resourceType?: ResourceType;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  filePath?: string;
+  fileSize?: number;
+  fileExtension?: string;
+  originalFileName?: string;
+  status?: ResourceStatus;
+  currentVersion?: number;
+  keywords?: string | null;
+  copyrightInfo?: string | null;
+  isDownloadable?: boolean;
+  collectionCount?: number;
+  downloadCount?: number;
+  viewCount?: number;
+  organizationId?: string | null;
+  organizationName?: string | null;
+  creatorId?: string;
+  creatorName?: string | null;
+}
+
+export interface ResourceListQueryDto extends PagedAndSortedResultRequestDto {
+  filter?: string | null;
+  status?: ResourceStatus | null;
+  resourceType?: ResourceType | null;
+  categoryId?: string | null;
+}
+
+export interface ResourceSearchQueryDto extends PagedAndSortedResultRequestDto {
+  query?: string | null;
+  resourceType?: ResourceType | null;
+  categoryId?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export interface ResourceVersionDto extends EntityDto<string> {
+  resourceId?: string;
+  version?: number;
+  filePath?: string;
+  fileSize?: number;
+  updateContent?: string | null;
+  isCurrentVersion?: boolean;
+  creationTime?: string;
+  creatorId?: string;
+  creatorName?: string | null;
+}
+
+export interface UploadChunkDto {
+  uploadId?: string;
+  fileName?: string;
+  chunkNumber?: number;
+  isLastChunk?: boolean;
+}
+
+export interface UploadVersionDto {
+  resourceId?: string;
+  updateContent?: string | null;
+  filePath?: string | null;
+  fileSize?: number | null;
+  fileExtension?: string | null;
+  originalFileName?: string | null;
 }

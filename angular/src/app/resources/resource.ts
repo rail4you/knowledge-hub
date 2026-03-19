@@ -1,6 +1,8 @@
-import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService} from '@abp/ng.core';
+import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest} from '@abp/ng.core';
 import {Component, OnInit, inject, signal} from '@angular/core';
-import {ResourceService, ResourceDto, ResourceVersionDto, resourceTypeOptions, resourceStatusOptions, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto} from '../proxy/resources';
+import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto} from '../proxy/resources';
+import {resourceTypeOptions, resourceStatusOptions} from '../proxy/resources/enums';
+import {ChunkUploadService} from '../proxy/controllers';
 import {FormGroup, FormBuilder, Validators, ReactiveFormsModule} from '@angular/forms';
 import {AsyncPipe, CurrencyPipe, DatePipe, CommonModule} from "@angular/common";
 import {FormsModule} from "@angular/forms";
@@ -104,9 +106,17 @@ export class ResourceComponent implements OnInit {
   uploadProgress = signal(0);
   isUploading = signal(false);
   uploadId = '';
+  uploadedFileInfo: CompleteUploadResultDto | null = null;
+
+  versionUploadProgress = signal(0);
+  isVersionUploading = signal(false);
+  versionUploadedFileInfo: CompleteUploadResultDto | null = null;
+  versionUpdateContent = '';
 
   public readonly list = inject(ListService);
   private readonly resourceService = inject(ResourceService);
+  private readonly chunkUploadService = inject(ChunkUploadService);
+  private readonly restService = inject(RestService);
   private readonly fb = inject(FormBuilder);
   private readonly confirmation = inject(ConfirmationService);
   private readonly localization = inject(LocalizationService);
@@ -258,7 +268,6 @@ export class ResourceComponent implements OnInit {
     this.isAuditLoading.set(true);
     this.resourceService.audit({
       resourceId: this.selectedAuditResource.id,
-      auditType: this.selectedAuditResource.status === 1 ? 0 : 1,
       status: status,
       comment: this.auditComment
     }).subscribe({
@@ -344,6 +353,10 @@ export class ResourceComponent implements OnInit {
     this.resourceService.getVersions(resourceId).subscribe({
       next: (result) => {
         this.versions.set(result);
+      },
+      error: (err) => {
+        console.error('Load versions error:', err);
+        this.versions.set([]);
       }
     });
   }
@@ -352,6 +365,10 @@ export class ResourceComponent implements OnInit {
     this.resourceService.isCollected(resourceId).subscribe({
       next: (result) => {
         this.isCollected.set(result);
+      },
+      error: (err) => {
+        console.error('Check collected error:', err);
+        this.isCollected.set(false);
       }
     });
   }
@@ -380,8 +397,18 @@ export class ResourceComponent implements OnInit {
     }
   }
 
+  getAuditModalTitle(): string {
+    if (!this.selectedAuditResource) return this.l('Audit');
+    return this.selectedAuditResource.status === 1 
+      ? this.l('SchoolAudit') 
+      : this.l('LeagueAudit');
+  }
+
   createResource() {
     this.selectedResource = {} as ResourceDto;
+    this.selectedFile = null;
+    this.uploadedFileInfo = null;
+    this.uploadProgress.set(0);
     this.buildForm();
     this.isModalOpen = true;
   }
@@ -399,13 +426,24 @@ export class ResourceComponent implements OnInit {
       return;
     }
 
+    const formValue = { ...this.form.value };
+    
+    if (!this.selectedResource.id && this.uploadedFileInfo) {
+      formValue.filePath = this.uploadedFileInfo.filePath;
+      formValue.fileSize = this.uploadedFileInfo.fileSize;
+      formValue.fileExtension = this.uploadedFileInfo.fileExtension;
+      formValue.originalFileName = this.uploadedFileInfo.originalFileName;
+    }
+
     const request = this.selectedResource.id
-      ? this.resourceService.update(this.selectedResource.id, this.form.value)
-      : this.resourceService.create(this.form.value);
+      ? this.resourceService.update(this.selectedResource.id, formValue)
+      : this.resourceService.create(formValue);
 
     request.subscribe(() => {
       this.isModalOpen = false;
       this.form.reset();
+      this.uploadedFileInfo = null;
+      this.selectedFile = null;
       this.list.get();
     });
   }
@@ -426,6 +464,10 @@ export class ResourceComponent implements OnInit {
         next: () => {
           this.isCollected.set(false);
           this.list.get();
+        },
+        error: (err) => {
+          console.error('Uncollect error:', err);
+          this.message.error(this.l('OperationFailed'));
         }
       });
     } else {
@@ -433,6 +475,10 @@ export class ResourceComponent implements OnInit {
         next: () => {
           this.isCollected.set(true);
           this.list.get();
+        },
+        error: (err) => {
+          console.error('Collect error:', err);
+          this.message.error(this.l('OperationFailed'));
         }
       });
     }
@@ -442,13 +488,18 @@ export class ResourceComponent implements OnInit {
     if (!this.selectedResource.id || !this.selectedResource.isDownloadable) return;
     
     this.resourceService.download(this.selectedResource.id).subscribe({
-      next: (blob) => {
+      next: (data) => {
+        const blob = new Blob([new Uint8Array(data)], { type: 'application/octet-stream' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = this.selectedResource.originalFileName || 'download';
         a.click();
         window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        console.error('Download error:', err);
+        this.message.error(this.l('DownloadFailed'));
       }
     });
   }
@@ -494,7 +545,7 @@ export class ResourceComponent implements OnInit {
     this.uploadProgress.set(0);
 
     try {
-      const initiateResult = await this.resourceService.initiateUpload({
+      const initiateResult = await this.chunkUploadService.initiateUploadByInput({
         fileName: this.selectedFile.name,
         totalSize: this.selectedFile.size,
         chunkSize: this.CHUNK_SIZE
@@ -513,25 +564,30 @@ export class ResourceComponent implements OnInit {
         const chunk = this.selectedFile!.slice(start, end);
 
         const formData = new FormData();
+        formData.append('file', chunk, this.selectedFile!.name);
         formData.append('uploadId', this.uploadId);
         formData.append('fileName', this.selectedFile!.name);
         formData.append('chunkNumber', i.toString());
-        formData.append('file', chunk);
 
-        await this.resourceService.uploadChunk(formData).toPromise();
+        await this.restService.request<any, boolean>({
+          method: 'POST',
+          url: '/api/app/chunk-upload/upload',
+          body: formData,
+        }).toPromise();
         this.uploadProgress.set(Math.round(((i + 1) / totalChunks) * 100));
       }
 
-      const completeResult = await this.resourceService.completeUpload({
+      const completeResult = await this.chunkUploadService.completeUploadByInput({
         uploadId: this.uploadId,
         fileName: this.selectedFile.name,
         totalChunks: totalChunks
       }).toPromise();
 
       if (completeResult) {
+        this.uploadedFileInfo = completeResult;
         this.message.success(this.l('UploadSuccess'));
         this.form.patchValue({
-          name: this.form.value.name || this.selectedFile.name
+          name: this.form.value.name || this.selectedFile!.name
         });
       }
     } catch (error) {
@@ -548,5 +604,92 @@ export class ResourceComponent implements OnInit {
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  beforeUploadVersion(file: File): boolean {
+    this.versionUploadedFileInfo = null;
+    this.versionUploadProgress.set(0);
+    this.uploadVersionFile(file);
+    return false;
+  }
+
+  async uploadVersionFile(file: File): Promise<void> {
+    this.isVersionUploading.set(true);
+    this.versionUploadProgress.set(0);
+
+    try {
+      const initiateResult = await this.chunkUploadService.initiateUploadByInput({
+        fileName: file.name,
+        totalSize: file.size,
+        chunkSize: this.CHUNK_SIZE
+      }).toPromise();
+
+      if (!initiateResult) {
+        throw new Error('Failed to initiate upload');
+      }
+
+      const uploadId = initiateResult.uploadId!;
+      const totalChunks = initiateResult.totalChunks!;
+
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * this.CHUNK_SIZE;
+        const end = Math.min(start + this.CHUNK_SIZE, file.size);
+        const chunk = file.slice(start, end);
+
+        const formData = new FormData();
+        formData.append('file', chunk, file.name);
+        formData.append('uploadId', uploadId);
+        formData.append('fileName', file.name);
+        formData.append('chunkNumber', i.toString());
+
+        await this.restService.request<any, boolean>({
+          method: 'POST',
+          url: '/api/app/chunk-upload/upload',
+          body: formData,
+        }).toPromise();
+        this.versionUploadProgress.set(Math.round(((i + 1) / totalChunks) * 100));
+      }
+
+      const completeResult = await this.chunkUploadService.completeUploadByInput({
+        uploadId: uploadId,
+        fileName: file.name,
+        totalChunks: totalChunks
+      }).toPromise();
+
+      if (completeResult) {
+        this.versionUploadedFileInfo = completeResult;
+        this.message.success(this.l('UploadSuccess'));
+      }
+    } catch (error) {
+      this.message.error(this.l('UploadFailed'));
+      console.error(error);
+    } finally {
+      this.isVersionUploading.set(false);
+    }
+  }
+
+  uploadNewVersion(): void {
+    if (!this.versionUploadedFileInfo || !this.selectedResource.id) {
+      return;
+    }
+
+    this.resourceService.uploadVersion({
+      resourceId: this.selectedResource.id,
+      filePath: this.versionUploadedFileInfo.filePath,
+      fileSize: this.versionUploadedFileInfo.fileSize,
+      fileExtension: this.versionUploadedFileInfo.fileExtension,
+      originalFileName: this.versionUploadedFileInfo.originalFileName
+    }).subscribe({
+      next: () => {
+        this.message.success(this.l('UploadVersionSuccess'));
+        this.versionUploadedFileInfo = null;
+        this.versionUploadProgress.set(0);
+        this.loadVersions(this.selectedResource.id!);
+        this.list.get();
+      },
+      error: () => {
+        this.message.error(this.l('UploadVersionFailed'));
+      }
+    });
   }
 }

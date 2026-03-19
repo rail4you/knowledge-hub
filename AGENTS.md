@@ -39,3 +39,4 @@ For detailed development rules, see: `angular/.claude/CLAUDE.md`
 - **Run DB Migrator**: `dotnet run` in `Acme.BookStore.DbMigrator` project
 - **Run API Host**: `dotnet run` in `Acme.BookStore.HttpApi.Host` project
 - **Run Angular**: `npm start` in `angular/` folder
+- **Generate API proxy**: `abp generate-proxy -t ng` (in `angular/` folder) - ALWAYS use this to generate frontend API services, NEVER manually edit proxy files

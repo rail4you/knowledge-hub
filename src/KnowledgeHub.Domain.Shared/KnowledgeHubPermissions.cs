@@ -25,7 +25,7 @@ public static class KnowledgeHubPermissions
         public const string PhysicalDelete = Default + ".PhysicalDelete";
         public const string ViewStatistics = Default + ".ViewStatistics";
     }
-    
+
     public static class Users
     {
         public const string Default = GroupName + ".Users";
@@ -33,5 +33,12 @@ public static class KnowledgeHubPermissions
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
         public const string Import = Default + ".Import";
+    }
+
+    public static class Search
+    {
+        public const string Default = GroupName + ".Search";
+        public const string ManageIndex = Default + ".ManageIndex";
+        public const string ViewStatistics = Default + ".ViewStatistics";
     }
 }
