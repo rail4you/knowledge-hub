@@ -278,6 +278,10 @@ tempkey.jwk
 .opencode.json
 .superset/
 etc/build/
+meilisearch
 
 # Uploads
 src/KnowledgeHub.HttpApi.Host/uploads/
+
+# Meilisearch data
+data.ms/
