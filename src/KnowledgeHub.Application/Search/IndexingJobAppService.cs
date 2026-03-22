@@ -170,6 +170,32 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         return await GetAsync(job.Id);
     }
 
+    public async Task<string> TestExecuteJobAsync(Guid id)
+    {
+        var job = await _jobRepository.GetAsync(id);
+        var resource = await _resourceRepository.GetAsync(job.ResourceId);
+        
+        if (resource == null)
+        {
+            return "Resource not found";
+        }
+        
+        if (string.IsNullOrEmpty(resource.FilePath))
+        {
+            return "Resource has no file path";
+        }
+        
+        var fullPath = Path.Combine(_fileStorageService.RootPath, resource.FilePath);
+        
+        if (!File.Exists(fullPath))
+        {
+            return $"File not found: {fullPath}";
+        }
+        
+        var parseResult = await _liteparseService.ParseDocumentAsync(fullPath);
+        return $"Successfully parsed {parseResult.Pages.Count} pages";
+    }
+
     public async Task RetryAsync(Guid id)
     {
         var job = await _jobRepository.GetAsync(id);

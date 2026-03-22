@@ -1,4 +1,5 @@
 ﻿using KnowledgeHub.Resources;
+using KnowledgeHub.EntityFrameworkCore;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.SettingManagement;
 using Volo.Abp.Account;
@@ -14,6 +15,7 @@ namespace KnowledgeHub;
 [DependsOn(
     typeof(KnowledgeHubDomainModule),
     typeof(KnowledgeHubApplicationContractsModule),
+    typeof(KnowledgeHubEntityFrameworkCoreModule),
     typeof(AbpPermissionManagementApplicationModule),
     typeof(AbpFeatureManagementApplicationModule),
     typeof(AbpIdentityApplicationModule),
@@ -23,8 +25,4 @@ namespace KnowledgeHub;
     )]
 public class KnowledgeHubApplicationModule : AbpModule
 {
-    public override void ConfigureServices(ServiceConfigurationContext context)
-    {
-        context.Services.AddSingleton<ISearchService, MeiliSearchService>();
-    }
 }

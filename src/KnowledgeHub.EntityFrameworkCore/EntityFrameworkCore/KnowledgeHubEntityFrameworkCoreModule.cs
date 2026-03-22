@@ -51,7 +51,9 @@ public class KnowledgeHubEntityFrameworkCoreModule : AbpModule
             options.AddDefaultRepositories(includeAllEntities: true);
         });
 
+        // Register IDocumentIndexRepository
         context.Services.AddScoped<IDocumentIndexRepository, EfCoreDocumentIndexRepository>();
+        Console.WriteLine("=== KnowledgeHubEntityFrameworkCoreModule: IDocumentIndexRepository registered ===");
 
         if (AbpStudioAnalyzeHelper.IsInAnalyzeMode)
         {

@@ -22,8 +22,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
     private readonly IRepository<DocumentIndexingJob, Guid> _jobRepository;
     private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
-    private readonly LiteparseService _liteparseService;
-    private readonly IMeiliSearchService _meiliSearchService;
+    private readonly IDocumentExtractionService _documentExtractionService;
     private readonly IFileStorageService _fileStorageService;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ILogger<DocumentIndexingBackgroundJob> _logger;
@@ -32,8 +31,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         IRepository<DocumentIndexingJob, Guid> jobRepository,
         IRepository<PageContent, Guid> pageContentRepository,
         IRepository<Resource, Guid> resourceRepository,
-        LiteparseService liteparseService,
-        IMeiliSearchService meiliSearchService,
+        IDocumentExtractionService documentExtractionService,
         IFileStorageService fileStorageService,
         IUnitOfWorkManager unitOfWorkManager,
         ILogger<DocumentIndexingBackgroundJob> logger)
@@ -41,15 +39,16 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _jobRepository = jobRepository;
         _pageContentRepository = pageContentRepository;
         _resourceRepository = resourceRepository;
-        _liteparseService = liteparseService;
-        _meiliSearchService = meiliSearchService;
+        _documentExtractionService = documentExtractionService;
         _fileStorageService = fileStorageService;
         _unitOfWorkManager = unitOfWorkManager;
         _logger = logger;
+        _logger.LogInformation("DocumentIndexingBackgroundJob CONSTRUCTOR called");
     }
 
     public async Task ExecuteAsync(DocumentIndexingJobArgs args)
     {
+        _logger.LogInformation("DocumentIndexingBackgroundJob.ExecuteAsync STARTED for job {JobId}, resource {ResourceId}", args.JobId, args.ResourceId);
         _logger.LogInformation("Starting indexing job {JobId} for resource {ResourceId}", args.JobId, args.ResourceId);
 
         try
@@ -87,39 +86,37 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Parsing, progress: 10);
         _logger.LogInformation("Parsing document: {ResourceId}", args.ResourceId);
 
-        var parseResult = await _liteparseService.ParseDocumentAsync(fullPath);
+        var pages = await _documentExtractionService.ExtractPagesAsync(args.ResourceId);
         
-        await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: 30, totalPages: parseResult.Pages.Count);
-        _logger.LogInformation("Parsed {PageCount} pages, now indexing", parseResult.Pages.Count);
+        await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: 30, totalPages: pages.Count);
+        _logger.LogInformation("Parsed {PageCount} pages, now indexing", pages.Count);
 
         await DeleteExistingPagesAsync(args.ResourceId);
 
         var pageContents = new List<PageContent>();
-        for (int i = 0; i < parseResult.Pages.Count; i++)
+        for (int i = 0; i < pages.Count; i++)
         {
-            var page = parseResult.Pages[i];
+            var page = pages[i];
             var pageContent = new PageContent
             {
                 ResourceId = args.ResourceId,
-                PageNumber = page.Page,
-                PageWidth = page.Width,
-                PageHeight = page.Height,
-                Content = page.Text ?? string.Empty,
-                TextItemsJson = JsonSerializer.Serialize(page.TextItems),
+                PageNumber = page.PageNumber,
+                Content = page.Content ?? string.Empty,
                 TenantId = args.TenantId
             };
             pageContents.Add(pageContent);
 
-            var progress = 30 + (int)((i + 1) / (double)parseResult.Pages.Count * 50);
+            var progress = 30 + (int)((i + 1) / (double)pages.Count * 50);
             await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: progress, processedPages: i + 1);
         }
 
         await _pageContentRepository.InsertManyAsync(pageContents);
 
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: 85);
-        _logger.LogInformation("Indexing document to Meilisearch: {ResourceId}", args.ResourceId);
+        _logger.LogInformation("Saved page content to database for resource {ResourceId}", args.ResourceId);
 
-        await _meiliSearchService.IndexDocumentAsync(args.ResourceId);
+        // Note: Meilisearch indexing is handled separately via SearchAppService
+        // This avoids circular dependency issues in background job
 
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Completed, progress: 100);
         _logger.LogInformation("Indexing completed for resource {ResourceId}", args.ResourceId);

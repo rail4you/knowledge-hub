@@ -14,6 +14,7 @@ public interface IIndexingJobAppService : IApplicationService
     Task<IndexingJobDto> GetAsync(Guid id);
     Task<IndexingJobDto> CreateAsync(CreateIndexingJobInput input);
     Task RetryAsync(Guid id);
+    Task<string> TestExecuteJobAsync(Guid id);
     Task CancelAsync(Guid id);
     Task RetryAllFailedAsync();
     Task<TestParseResultDto> TestParseAsync(Guid resourceId);

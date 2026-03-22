@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\KnowledgeHub.Domain\KnowledgeHub.Domain.csproj" />
     <ProjectReference Include="..\KnowledgeHub.Application.Contracts\KnowledgeHub.Application.Contracts.csproj" />
+    <ProjectReference Include="..\KnowledgeHub.EntityFrameworkCore\KnowledgeHub.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
