@@ -74,6 +74,21 @@ start_angular() {
     log_info "Angular URL: http://localhost:4200"
 }
 
+start_meilisearch() {
+    local pid_file="$PID_DIR/meilisearch.pid"
+    if is_running "$pid_file"; then
+        log_warn "Meilisearch is already running (PID: $(cat $pid_file))"
+        return
+    fi
+    
+    log_info "Starting Meilisearch..."
+    cd "$PROJECT_ROOT"
+    ./meilisearch --master-key="aSampleMasterKey" > "$LOG_DIR/meilisearch.log" 2>&1 &
+    echo $! > "$pid_file"
+    log_success "Meilisearch started (PID: $(cat $pid_file))"
+    log_info "Meilisearch URL: http://localhost:7700"
+}
+
 stop_service() {
     local name="$1"
     local pid_file="$PID_DIR/${name}.pid"
@@ -101,6 +116,7 @@ stop_all() {
     log_info "Stopping all services..."
     stop_service "api"
     stop_service "angular"
+    stop_service "meilisearch"
     log_success "All services stopped"
 }
 
@@ -126,6 +142,13 @@ show_status() {
         printf "%-15s %-10s %-10s\n" "" "" "http://localhost:4200"
     else
         printf "%-15s ${RED}%-10s${NC} %-10s\n" "Angular" "Stopped" "-"
+    fi
+    
+    if is_running "$PID_DIR/meilisearch.pid"; then
+        printf "%-15s ${GREEN}%-10s${NC} %-10s\n" "Meilisearch" "Running" "$(cat $PID_DIR/meilisearch.pid)"
+        printf "%-15s %-10s %-10s\n" "" "" "http://localhost:7700"
+    else
+        printf "%-15s ${RED}%-10s${NC} %-10s\n" "Meilisearch" "Stopped" "-"
     fi
     
     echo ""
@@ -156,9 +179,17 @@ show_log() {
                 log_error "No log file found. Is Angular running?"
             fi
             ;;
+        meilisearch|search)
+            local log_file="$LOG_DIR/meilisearch.log"
+            if [ -f "$log_file" ]; then
+                tail -100 "$log_file"
+            else
+                log_error "No log file found. Is Meilisearch running?"
+            fi
+            ;;
         *)
             log_error "Unknown service: $service"
-            echo "Usage: $0 log [api|angular]"
+            echo "Usage: $0 log [api|angular|meilisearch]"
             exit 1
             ;;
     esac
@@ -192,13 +223,21 @@ tail_logs() {
                 log_error "No log file found. Start Angular first."
             fi
             ;;
+        meilisearch|search)
+            local log_file="$LOG_DIR/meilisearch.log"
+            if [ -f "$log_file" ]; then
+                tail -f "$log_file"
+            else
+                log_error "No log file found. Start Meilisearch first."
+            fi
+            ;;
         all|"")
             log_info "Tailing all logs (Ctrl+C to stop)..."
             tail -f "$LOG_DIR"/*.log 2>/dev/null || log_error "No log files found"
             ;;
         *)
             log_error "Unknown service: $service"
-            echo "Usage: $0 tail [api|angular|all]"
+            echo "Usage: $0 tail [api|angular|meilisearch|all]"
             exit 1
             ;;
     esac
@@ -211,27 +250,29 @@ show_help() {
     echo "Usage: $0 <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  start [api|angular]    Start services (default: all)"
-    echo "  stop [api|angular]     Stop services (default: all)"
-    echo "  restart [api|angular]  Restart services (default: all)"
-    echo "  status                 Show service status"
-    echo "  log <service>          Show last 100 lines of log (api|angular)"
-    echo "  tail [service]         Tail logs in real-time (api|angular|all)"
-    echo "  migrate                Run database migration"
-    echo "  help                   Show this help"
+    echo "  start [api|angular|meilisearch]  Start services (default: all)"
+    echo "  stop [api|angular|meilisearch]   Stop services (default: all)"
+    echo "  restart [api|angular|meilisearch] Restart services (default: all)"
+    echo "  status                           Show service status"
+    echo "  log <service>                    Show last 100 lines of log"
+    echo "  tail [service]                   Tail logs in real-time"
+    echo "  migrate                          Run database migration"
+    echo "  help                             Show this help"
     echo ""
     echo "Examples:"
     echo "  $0 start               Start all services"
     echo "  $0 start api           Start only API"
+    echo "  $0 start meilisearch   Start only Meilisearch"
     echo "  $0 stop                Stop all services"
     echo "  $0 log api             Show API logs"
     echo "  $0 tail angular        Tail Angular logs"
     echo "  $0 migrate             Run database migration"
     echo ""
     echo "Services:"
-    echo "  API:     https://localhost:44305 (Swagger: /swagger)"
-    echo "  Angular: http://localhost:4200"
-    echo "  DB:      localhost:5433 (PostgreSQL)"
+    echo "  API:         https://localhost:44305 (Swagger: /swagger)"
+    echo "  Angular:     http://localhost:4200"
+    echo "  Meilisearch: http://localhost:7700"
+    echo "  DB:          localhost:5433 (PostgreSQL)"
     echo ""
 }
 
@@ -245,9 +286,13 @@ case "${1:-help}" in
             angular|frontend|ng)
                 start_angular
                 ;;
+            meilisearch|search)
+                start_meilisearch
+                ;;
             all)
                 start_api
                 start_angular
+                start_meilisearch
                 ;;
             *)
                 log_error "Unknown service: $2"
@@ -263,6 +308,9 @@ case "${1:-help}" in
                 ;;
             angular|frontend|ng)
                 stop_service "angular"
+                ;;
+            meilisearch|search)
+                stop_service "meilisearch"
                 ;;
             all)
                 stop_all
@@ -286,11 +334,17 @@ case "${1:-help}" in
                 ensure_dirs
                 start_angular
                 ;;
+            meilisearch|search)
+                stop_service "meilisearch"
+                ensure_dirs
+                start_meilisearch
+                ;;
             all)
                 stop_all
                 ensure_dirs
                 start_api
                 start_angular
+                start_meilisearch
                 ;;
             *)
                 log_error "Unknown service: $2"
@@ -305,7 +359,7 @@ case "${1:-help}" in
     log|logs)
         if [ -z "$2" ]; then
             log_error "Please specify a service"
-            echo "Usage: $0 log [api|angular]"
+            echo "Usage: $0 log [api|angular|meilisearch]"
             exit 1
         fi
         show_log "$2"

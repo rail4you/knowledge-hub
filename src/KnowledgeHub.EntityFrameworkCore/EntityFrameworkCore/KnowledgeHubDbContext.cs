@@ -71,6 +71,8 @@ public class KnowledgeHubDbContext :
     public DbSet<ResourceViewLog> ResourceViewLogs { get; set; }
     public DbSet<SearchStatistics> SearchStatistics { get; set; }
     public DbSet<ResourceExposure> ResourceExposures { get; set; }
+    public DbSet<DocumentIndexingJob> DocumentIndexingJobs { get; set; }
+    public DbSet<PageContent> PageContents { get; set; }
 
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)

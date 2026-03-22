@@ -14,6 +14,8 @@ using Volo.Abp.SettingManagement.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.TenantManagement.EntityFrameworkCore;
 using Volo.Abp.Studio;
+using KnowledgeHub.Domain.Search;
+using Volo.Abp.Domain.Repositories.EntityFrameworkCore;
 
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -49,6 +51,8 @@ public class KnowledgeHubEntityFrameworkCoreModule : AbpModule
             options.AddDefaultRepositories(includeAllEntities: true);
         });
 
+        context.Services.AddScoped<IDocumentIndexRepository, EfCoreDocumentIndexRepository>();
+
         if (AbpStudioAnalyzeHelper.IsInAnalyzeMode)
         {
             return;
@@ -62,6 +66,5 @@ public class KnowledgeHubEntityFrameworkCoreModule : AbpModule
             options.UseNpgsql();
 
         });
-        
     }
 }

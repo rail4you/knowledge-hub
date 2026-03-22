@@ -5,6 +5,7 @@ namespace KnowledgeHub.Resources.FileStorage;
 
 public interface IFileStorageService
 {
+    string RootPath { get; }
     Task<string> SaveAsync(Stream stream, string fileName, string directory);
     Task<string> SaveChunkAsync(Stream stream, string fileName, int chunkNumber, string uploadId);
     Task<string> MergeChunksAsync(string uploadId, string fileName, string directory);

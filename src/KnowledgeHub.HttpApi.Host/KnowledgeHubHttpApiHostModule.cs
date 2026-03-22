@@ -46,6 +46,7 @@ using Volo.Abp.UI.Navigation;
 using KnowledgeHub.Web;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
+using Volo.Abp.BackgroundJobs;
 
 namespace KnowledgeHub;
 
@@ -59,7 +60,8 @@ namespace KnowledgeHub;
     typeof(KnowledgeHubEntityFrameworkCoreModule),
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpSwashbuckleModule),
-    typeof(AbpAspNetCoreSerilogModule)
+    typeof(AbpAspNetCoreSerilogModule),
+    typeof(AbpBackgroundJobsModule)
     )]
 public class KnowledgeHubHttpApiHostModule : AbpModule
 {
@@ -151,6 +153,11 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.AddScoped<IDocumentExtractionService, DocumentExtractionService>();
         context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();
         context.Services.AddScoped<ISearchAppService, SearchAppService>();
+
+        Configure<AbpBackgroundJobOptions>(options =>
+        {
+            options.IsJobExecutionEnabled = true;
+        });
     }
 
     private void ConfigureStudio(IHostEnvironment hostingEnvironment)

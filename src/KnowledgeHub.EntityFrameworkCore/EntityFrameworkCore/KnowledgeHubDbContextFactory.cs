@@ -28,7 +28,7 @@ public class KnowledgeHubDbContextFactory : IDesignTimeDbContextFactory<Knowledg
     private static IConfigurationRoot BuildConfiguration()
     {
         var builder = new ConfigurationBuilder()
-            .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../KnowledgeHub.DbMigrator/"))
+            .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../KnowledgeHub.HttpApi.Host/"))
             .AddJsonFile("appsettings.json", optional: false)
             .AddEnvironmentVariables();
 

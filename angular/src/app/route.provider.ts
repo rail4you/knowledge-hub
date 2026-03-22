@@ -23,7 +23,7 @@ function configureRoutes() {
         iconClass: 'fas fa-database',
         order: 2,
         layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Documents || KnowledgeHub.Users || KnowledgeHub.Resources'
+        requiredPolicy: 'KnowledgeHub.Resources'
       },
       {
         path: '/resources',
@@ -33,26 +33,20 @@ function configureRoutes() {
         requiredPolicy: 'KnowledgeHub.Resources',
       },
       {
-        path: '/documents',
-        name: '::Menu:Documents',
-        parentName: '::Menu:KnowledgeHub',
-        layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Documents',
-      },
-      {
-        path: '/users',
-        name: '::Menu:Users',
-        parentName: '::Menu:KnowledgeHub',
-        layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Users',
-      },
-      {
         path: '/search',
         name: '::Menu:Search',
         iconClass: 'fas fa-search',
         order: 3,
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.Search',
+      },
+      {
+        path: '/admin/indexing-jobs',
+        name: '::Menu:IndexingJobs',
+        iconClass: 'fas fa-tasks',
+        parentName: '::Menu:KnowledgeHub',
+        layout: eLayoutType.application,
+        requiredPolicy: 'KnowledgeHub.Resources',
       }
   ]);
 }

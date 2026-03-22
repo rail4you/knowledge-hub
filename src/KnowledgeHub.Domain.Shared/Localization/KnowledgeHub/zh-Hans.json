@@ -240,6 +240,8 @@
     "UploadVersionSuccess": "上传新版本成功",
     "UploadVersionFailed": "上传新版本失败",
     "UploadFailed": "文件上传失败",
-    "Tip": "提示"
+    "Tip": "提示",
+    "Menu:IndexingJobs": "索引任务",
+    "Menu:Search": "搜索"
   }
 }

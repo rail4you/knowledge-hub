@@ -43,3 +43,19 @@ public interface IResourceExposureRepository : IRepository<ResourceExposure, Gui
     Task IncrementExposureAsync(Guid resourceId, CancellationToken cancellationToken = default);
     Task IncrementClickAsync(Guid resourceId, CancellationToken cancellationToken = default);
 }
+
+public interface IDocumentIndexingJobRepository : IRepository<DocumentIndexingJob, Guid>
+{
+    Task<DocumentIndexingJob?> GetByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
+    Task<DocumentIndexingJob?> GetPendingJobByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
+    Task<List<DocumentIndexingJob>> GetPendingJobsAsync(int maxResultCount, CancellationToken cancellationToken = default);
+    Task<List<DocumentIndexingJob>> GetFailedJobsForRetryAsync(int maxResultCount, CancellationToken cancellationToken = default);
+    Task<List<DocumentIndexingJob>> GetByStatusAsync(IndexingJobStatus status, int skipCount, int maxResultCount, CancellationToken cancellationToken = default);
+}
+
+public interface IPageContentRepository : IRepository<PageContent, Guid>
+{
+    Task<List<PageContent>> GetByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
+    Task<PageContent?> GetByResourceAndPageAsync(Guid resourceId, int pageNumber, CancellationToken cancellationToken = default);
+    Task DeleteByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
+}

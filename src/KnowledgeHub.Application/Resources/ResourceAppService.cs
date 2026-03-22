@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Common;
+using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
@@ -11,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
@@ -33,6 +36,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected ISearchService SearchService { get; }
     protected ICurrentTenant CurrentTenant { get; }
     protected IHttpContextAccessor HttpContextAccessor { get; }
+    protected IBackgroundJobManager BackgroundJobManager { get; }
+    protected IRepository<DocumentIndexingJob, Guid> IndexingJobRepository { get; }
 
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
@@ -45,7 +50,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IFileStorageService fileStorageService,
         ISearchService searchService,
         ICurrentTenant currentTenant,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IBackgroundJobManager backgroundJobManager,
+        IRepository<DocumentIndexingJob, Guid> indexingJobRepository)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -58,6 +65,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         SearchService = searchService;
         CurrentTenant = currentTenant;
         HttpContextAccessor = httpContextAccessor;
+        BackgroundJobManager = backgroundJobManager;
+        IndexingJobRepository = indexingJobRepository;
     }
 
     public virtual async Task<ResourceDto> GetAsync(Guid id)
@@ -141,6 +150,26 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             IsCurrentVersion = true
         };
         await VersionRepository.InsertAsync(initialVersion);
+
+        // Trigger document indexing job
+        if (!string.IsNullOrEmpty(resource.FilePath))
+        {
+            var indexingJob = new DocumentIndexingJob
+            {
+                ResourceId = resource.Id,
+                Status = IndexingJobStatus.Pending,
+                TenantId = CurrentTenant.Id
+            };
+            await IndexingJobRepository.InsertAsync(indexingJob);
+
+            await BackgroundJobManager.EnqueueAsync(new DocumentIndexingJobArgs
+            {
+                JobId = indexingJob.Id,
+                ResourceId = resource.Id,
+                FilePath = resource.FilePath,
+                TenantId = CurrentTenant.Id
+            });
+        }
 
         return ObjectMapper.Map<Resource, ResourceDto>(resource);
     }

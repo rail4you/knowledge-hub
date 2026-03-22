@@ -47,4 +47,12 @@ export const APP_ROUTES: Routes = [
       requiredPolicy: 'KnowledgeHub.Search',
     },
   },
+  {
+    path: 'admin/indexing-jobs',
+    loadComponent: () => import('./admin/indexing-jobs/indexing-jobs.component').then(c => c.IndexingJobsComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Resources',
+    },
+  },
 ];

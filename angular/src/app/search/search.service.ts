@@ -95,6 +95,49 @@ export interface TopResourceDto {
   clickRate: number;
 }
 
+export interface IndexingJobDto {
+  id: string;
+  resourceId: string;
+  resourceName?: string;
+  resourceVersionId?: string;
+  status: IndexingJobStatus;
+  progress: number;
+  errorMessage?: string;
+  totalPages?: number;
+  processedPages?: number;
+  startedAt?: string;
+  completedAt?: string;
+  retryCount: number;
+  nextRetryAt?: string;
+  creationTime: string;
+}
+
+export enum IndexingJobStatus {
+  Pending = 0,
+  Parsing = 10,
+  Indexing = 20,
+  Completed = 30,
+  Failed = 40,
+  Cancelled = 50
+}
+
+export interface GetIndexingJobsInput {
+  resourceId?: string;
+  status?: IndexingJobStatus;
+  skipCount?: number;
+  maxResultCount?: number;
+}
+
+export interface CreateIndexingJobInput {
+  resourceId: string;
+  resourceVersionId?: string;
+}
+
+export interface PagedResultDto<T> {
+  items: T[];
+  totalCount: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -148,5 +191,63 @@ export class SearchService {
 
   getTopResources(count = 10): Observable<TopResourceDto[]> {
     return this.restService.request({ method: 'GET', url: `${this.apiUrl}/analytics/top-resources`, params: { count } }, { apiName: 'Search' });
+  }
+
+  getIndexingJobs(input: GetIndexingJobsInput): Observable<PagedResultDto<IndexingJobDto>> {
+    const params: Record<string, any> = {
+      skipCount: input.skipCount ?? 0,
+      maxResultCount: input.maxResultCount ?? 20
+    };
+    if (input.resourceId) params.resourceId = input.resourceId;
+    if (input.status !== undefined) params.status = input.status;
+    
+    return this.restService.request({ 
+      method: 'GET', 
+      url: '/api/app/indexing-job', 
+      params 
+    }, { apiName: 'Search' });
+  }
+
+  getIndexingJob(id: string): Observable<IndexingJobDto> {
+    return this.restService.request({ 
+      method: 'GET', 
+      url: `/api/app/indexing-job/${id}` 
+    }, { apiName: 'Search' });
+  }
+
+  getIndexingJobByResourceId(resourceId: string): Observable<IndexingJobDto | null> {
+    return this.restService.request({ 
+      method: 'GET', 
+      url: `/api/app/indexing-job/by-resource/${resourceId}` 
+    }, { apiName: 'Search' });
+  }
+
+  createIndexingJob(input: CreateIndexingJobInput): Observable<IndexingJobDto> {
+    return this.restService.request({ 
+      method: 'POST', 
+      url: '/api/app/indexing-job',
+      body: input
+    }, { apiName: 'Search' });
+  }
+
+  retryIndexingJob(id: string): Observable<void> {
+    return this.restService.request({ 
+      method: 'POST', 
+      url: `/api/app/indexing-job/${id}/retry` 
+    }, { apiName: 'Search' });
+  }
+
+  cancelIndexingJob(id: string): Observable<void> {
+    return this.restService.request({ 
+      method: 'POST', 
+      url: `/api/app/indexing-job/${id}/cancel` 
+    }, { apiName: 'Search' });
+  }
+
+  retryAllFailedIndexingJobs(): Observable<void> {
+    return this.restService.request({ 
+      method: 'POST', 
+      url: '/api/app/indexing-job/retry-all-failed' 
+    }, { apiName: 'Search' });
   }
 }
