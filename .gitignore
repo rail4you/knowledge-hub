@@ -272,3 +272,12 @@ src/KnowledgeHub.Blazor.Server.Tiered/Logs/*
 # IdentityServer temp files
 tempkey.rsa
 tempkey.jwk
+
+# Development
+.dev/
+.opencode.json
+.superset/
+etc/build/
+
+# Uploads
+src/KnowledgeHub.HttpApi.Host/uploads/
