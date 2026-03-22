@@ -88,9 +88,10 @@ export class ResourceService {
   
 
   download = (resourceId: string, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, number[]>({
+    this.restService.request<any, Blob>({
       method: 'POST',
       url: `/api/app/resource/download/${resourceId}`,
+      responseType: 'blob',
     },
     { apiName: this.apiName,...config });
   

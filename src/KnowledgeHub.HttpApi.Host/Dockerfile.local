@@ -1,18 +1,15 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0  AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 USER $APP_UID
 EXPOSE 8080
 EXPOSE 8081
 
-COPY bin/Release/net10.0/publish/ app/
-WORKDIR /app
-
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-RUN dotnet dev-certs https -v -ep openiddict.pfx -p YOUR_CERTIFICATE_PASSPHRASE_HERE
-RUN chmod 644 openiddict.pfx
+RUN dotnet dev-certs https -v -ep localhost.pfx -p 91f91912-5ab0-49df-8166-23377efaf3cc
+RUN chmod 644 localhost.pfx
 
 FROM base AS final
 WORKDIR /app
-COPY --from=build /src .
-
+COPY bin/Release/net10.0/publish/ .
+COPY --from=build /src/localhost.pfx ./localhost.pfx
 ENTRYPOINT ["dotnet", "KnowledgeHub.HttpApi.Host.dll"]

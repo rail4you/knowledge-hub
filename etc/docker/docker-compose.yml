@@ -1,0 +1,185 @@
+# ============================================================
+# docker-compose.yml - KnowledgeHub
+# UI: Angular (Nginx) | DB: EF Core | Tiered: Yes
+#
+# 目录约定（放置于 aspnet-core/etc/docker/）：
+#   docker-compose.yml        ← 本文件
+#   dynamic-env.json          ← Angular 运行时环境变量（挂载覆盖）
+#   run-docker.sh             ← 一键启动脚本
+#   certs/localhost.pfx       ← 由 run-docker.sh 自动生成
+#
+# 镜像命名：mycompany/knowledgehub-*
+# 如需修改，全局替换 mycompany/knowledgehub 即可
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # Angular UI — Nginx 静态托管，HTTP only（端口 4200）
+  # Angular 不使用 .pfx 证书；HTTPS 请在 Nginx 层单独配置
+  # ----------------------------------------------------------
+  knowledgehub-angular:
+    image: mycompany/knowledgehub-angular:latest
+    container_name: knowledgehub-angular
+    build:
+      context: ../../angular
+      dockerfile: Dockerfile.local
+    ports:
+      - "4200:80"
+    depends_on:
+      - knowledgehub-api
+    # dynamic-env.json 在运行时覆盖镜像内的同名文件，
+    # Angular 初始化时会通过 /getEnvConfig 端点读取此文件
+    volumes:
+      - ./dynamic-env.json:/usr/share/nginx/html/dynamic-env.json
+    restart: on-failure
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # HttpApi.Host — 后端 API（HTTPS，端口 44354）
+  # ----------------------------------------------------------
+  knowledgehub-api:
+    image: mycompany/knowledgehub-api:latest
+    container_name: knowledgehub-api
+    hostname: knowledgehub-api
+    build:
+      context: ../../
+      dockerfile: src/KnowledgeHub.HttpApi.Host/Dockerfile.local
+    environment:
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+      - Kestrel__Certificates__Default__Path=/app/localhost.pfx
+      - Kestrel__Certificates__Default__Password=91f91912-5ab0-49df-8166-23377efaf3cc
+      # 对外暴露的 API 地址（浏览器可访问）
+      - App__SelfUrl=https://localhost:44354
+      - App__HealthCheckUrl=http://knowledgehub-api/health-status
+      # Angular 应用地址（用于账号相关跳转）
+      - App__AngularUrl=http://localhost:4200
+      # CORS 允许的来源
+      - App__CorsOrigins=http://localhost:4200
+      # 允许重定向的 URL（OpenIddict 回调）
+      - App__RedirectAllowedUrls=http://localhost:4200
+      # 内部网络访问 AuthServer（不走外部 DNS）
+      - AuthServer__Authority=http://knowledgehub-authserver
+      - AuthServer__RequireHttpsMetadata=false
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=postgres
+      - Redis__Configuration=redis
+    ports:
+      - "44354:443"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    volumes:
+      - ./certs:/root/certificate
+      - uploads_data:/app/uploads
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # AuthServer — OpenIddict 认证服务（HTTPS，端口 44334）
+  # ----------------------------------------------------------
+#  knowledgehub-authserver:
+#    image: mycompany/knowledgehub-authserver:latest
+#    container_name: knowledgehub-authserver
+#    hostname: knowledgehub-authserver
+#    build:
+#      context: ../../
+#      dockerfile: src/KnowledgeHub.AuthServer/Dockerfile.local
+#    environment:
+#      - ASPNETCORE_URLS=https://+:443;http://+:80
+#      - Kestrel__Certificates__Default__Path=/root/certificate/localhost.pfx
+#      - Kestrel__Certificates__Default__Password=91f91912-5ab0-49df-8166-23377efaf3cc
+#      # 对外暴露的 AuthServer 地址
+#      - App__SelfUrl=https://localhost:44334
+#      # 内部 issuer（供容器间通信使用）
+#      - AuthServer__Authority=http://knowledgehub-authserver
+#      - AuthServer__RequireHttpsMetadata=false
+#      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=postgres
+#      - Redis__Configuration=redis
+#    ports:
+#      - "44334:443"
+#    depends_on:
+#      sql-server:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#    restart: on-failure
+#    volumes:
+#      - ./certs:/root/certificate
+#    networks:
+#      - abp-network
+
+  # ----------------------------------------------------------
+  # DbMigrator — 数据库迁移 & OpenIddict 种子数据（一次性任务）
+  # ----------------------------------------------------------
+  db-migrator:
+    image: mycompany/knowledgehub-db-migrator:latest
+    container_name: knowledgehub-db-migrator
+    build:
+      context: ../../
+      dockerfile: src/KnowledgeHub.DbMigrator/Dockerfile.local
+    environment:
+      # OpenIddict 客户端回调地址（生产环境替换为真实域名）
+      - OpenIddict__Applications__KnowledgeHub_App__RootUrl=http://localhost:4200
+      - OpenIddict__Applications__KnowledgeHub_Swagger__RootUrl=https://localhost:44354
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # Postgresql 16
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    hostname: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=KnowledgeHub
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # Redis
+  # ----------------------------------------------------------
+  redis:
+    image: redis:alpine
+    container_name: redis
+    hostname: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - abp-network
+
+# ----------------------------------------------------------
+# Volumes & Networks
+# ----------------------------------------------------------
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  abp-network:
+    driver: bridge

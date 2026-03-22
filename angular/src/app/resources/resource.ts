@@ -29,6 +29,7 @@ import {NzTabsModule} from 'ng-zorro-antd/tabs';
 import {NzTreeModule} from 'ng-zorro-antd/tree';
 import {NzTreeSelectModule} from 'ng-zorro-antd/tree-select';
 import {NzInputNumberModule} from 'ng-zorro-antd/input-number';
+import {NzUploadModule} from 'ng-zorro-antd/upload';
 
 @Component({
   selector: 'app-resource',
@@ -64,7 +65,8 @@ import {NzInputNumberModule} from 'ng-zorro-antd/input-number';
     NzTabsModule,
     NzTreeModule,
     NzTreeSelectModule,
-    NzInputNumberModule
+    NzInputNumberModule,
+    NzUploadModule
   ]
 })
 export class ResourceComponent implements OnInit {
@@ -488,8 +490,7 @@ export class ResourceComponent implements OnInit {
     if (!this.selectedResource.id || !this.selectedResource.isDownloadable) return;
     
     this.resourceService.download(this.selectedResource.id).subscribe({
-      next: (data) => {
-        const blob = new Blob([new Uint8Array(data)], { type: 'application/octet-stream' });
+      next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -686,6 +687,9 @@ export class ResourceComponent implements OnInit {
         this.versionUploadProgress.set(0);
         this.loadVersions(this.selectedResource.id!);
         this.list.get();
+        this.resourceService.get(this.selectedResource.id).subscribe((resource) => {
+          this.selectedResource = resource;
+        });
       },
       error: () => {
         this.message.error(this.l('UploadVersionFailed'));

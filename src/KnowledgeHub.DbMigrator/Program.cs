@@ -37,12 +37,13 @@ class Program
             .ConfigureAppConfiguration((context, config) =>
             {
                 var basePath = Directory.GetCurrentDirectory();
-                if (!basePath.Contains("/bin/"))
+                if (!basePath.Contains("/bin/") && !File.Exists(Path.Combine(basePath, "appsettings.json")))
                 {
                     basePath = Path.Combine(basePath, "src", "KnowledgeHub.DbMigrator");
                 }
                 config.SetBasePath(basePath);
                 config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                config.AddEnvironmentVariables();
             })
             .ConfigureServices((hostContext, services) =>
             {

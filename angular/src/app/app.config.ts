@@ -13,10 +13,34 @@ import { provideLogo, withEnvironmentOptions } from "@abp/ng.theme.shared";
 import { ApplicationConfig } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
+import { provideNzIcons } from 'ng-zorro-antd/icon';
+import { 
+  PlusOutline, 
+  DownloadOutline, 
+  StarOutline, 
+  EditOutline, 
+  SendOutline, 
+  InboxOutline, 
+  DeleteOutline, 
+  LoadingOutline,
+  UploadOutline
+} from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
 import { APP_ROUTE_PROVIDER } from './route.provider';
 import { FOOTER_PROVIDER } from './footer/footer.config';
+
+const icons = [
+  PlusOutline, 
+  DownloadOutline, 
+  StarOutline, 
+  EditOutline, 
+  SendOutline, 
+  InboxOutline, 
+  DeleteOutline, 
+  LoadingOutline,
+  UploadOutline
+];
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -24,6 +48,7 @@ export const appConfig: ApplicationConfig = {
     APP_ROUTE_PROVIDER,
     FOOTER_PROVIDER,
     provideAnimations(),
+    provideNzIcons(icons),
     provideAbpCore(
       withOptions({
         environment,

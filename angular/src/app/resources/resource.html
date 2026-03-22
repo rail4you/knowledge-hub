@@ -132,7 +132,7 @@
         </ng-container>
         
         <ng-template #noSelect>
-          <nz-empty [nzNotFoundContent]="'SelectResource' | abpLocalization"></nz-empty>
+          <nz-empty [nzNotFoundContent]="'::SelectResource' | abpLocalization"></nz-empty>
         </ng-template>
       </div>
 
@@ -174,7 +174,7 @@
               <p class="ant-upload-drag-icon">
                 <span nz-icon nzType="inbox"></span>
               </p>
-              <p class="ant-upload-text">{{ 'ClickOrDragToUpload' | abpLocalization }}</p>
+              <p class="ant-upload-text">{{ '::ClickOrDragToUpload' | abpLocalization }}</p>
             </nz-upload>
             <nz-progress *ngIf="isVersionUploading()" [nzPercent]="versionUploadProgress()" nzStatus="active"></nz-progress>
             <div *ngIf="versionUploadedFileInfo" class="uploaded-file-info" style="margin-top: 8px;">
@@ -189,7 +189,7 @@
         </ng-container>
         
         <ng-template #noVersion>
-          <nz-empty [nzNotFoundContent]="'SelectResourceForHistory' | abpLocalization"></nz-empty>
+          <nz-empty [nzNotFoundContent]="'::SelectResourceForHistory' | abpLocalization"></nz-empty>
         </ng-template>
       </div>
     </div>
@@ -228,7 +228,7 @@
           </ng-template>
         </nz-tree>
         
-        <nz-empty *ngIf="categories().length === 0" [nzNotFoundContent]="'NoCategories' | abpLocalization"></nz-empty>
+        <nz-empty *ngIf="categories().length === 0" [nzNotFoundContent]="'::NoCategories' | abpLocalization"></nz-empty>
       </div>
     </div>
 
@@ -273,7 +273,7 @@
         </tbody>
       </nz-table>
       
-      <nz-empty *ngIf="pendingAudits().length === 0" [nzNotFoundContent]="'NoPendingAudits' | abpLocalization"></nz-empty>
+      <nz-empty *ngIf="pendingAudits().length === 0" [nzNotFoundContent]="'::NoPendingAudits' | abpLocalization"></nz-empty>
     </div>
 
     <!-- Physical Delete Requests Tab -->
@@ -312,7 +312,7 @@
         </tbody>
       </nz-table>
       
-      <nz-empty *ngIf="physicalDeleteRequests().length === 0" [nzNotFoundContent]="'NoDeleteRequests' | abpLocalization"></nz-empty>
+      <nz-empty *ngIf="physicalDeleteRequests().length === 0" [nzNotFoundContent]="'::NoDeleteRequests' | abpLocalization"></nz-empty>
     </div>
   </div>
 </div>
@@ -428,7 +428,7 @@
           <nz-tree-select
             formControlName="parentId"
             [nzNodes]="categories()"
-            nzPlaceHolder="{{ 'SelectParentCategory' | abpLocalization }}"
+            nzPlaceHolder="{{ '::SelectParentCategory' | abpLocalization }}"
             [nzAllowClear]="true"
             [nzShowIcon]="true"
           ></nz-tree-select>
