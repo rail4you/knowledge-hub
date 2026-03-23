@@ -12,8 +12,9 @@ public class DocumentPage
     public string ResourceId { get; set; } = string.Empty;
     public string ResourceName { get; set; } = string.Empty;
     public int PageNumber { get; set; }
-    public string Content { get; set; } = string.Empty;
-    public string? Title { get; set; }
+    public string? pageContent { get; set; }
+    public string? pageTitle { get; set; }
+    public Dictionary<string, string>? _formatted { get; set; }
     public string FileExtension { get; set; } = string.Empty;
     public int ResourceType { get; set; }
     public string? CategoryName { get; set; }
@@ -59,7 +60,7 @@ public class MeiliSearchService : ISearchService
             
             var filterableAttributes = new[] { "resourceId", "resourceType", "categoryName", "fileExtension" };
             var sortableAttributes = new[] { "uploadDate", "pageNumber", "resourceName" };
-            var searchableAttributes = new[] { "content", "title", "resourceName" };
+            var searchableAttributes = new[] { "pageContent", "pageTitle", "resourceName" };
 
             await index.UpdateFilterableAttributesAsync(filterableAttributes);
             await index.UpdateSortableAttributesAsync(sortableAttributes);
@@ -90,7 +91,7 @@ public class MeiliSearchService : ISearchService
         {
             Limit = limit,
             Offset = offset,
-            AttributesToHighlight = new[] { "content", "title" },
+            AttributesToHighlight = new[] { "pageContent", "pageTitle" },
             HighlightPreTag = "<mark>",
             HighlightPostTag = "</mark>"
         });

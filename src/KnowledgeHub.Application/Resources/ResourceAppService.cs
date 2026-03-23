@@ -617,16 +617,16 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     {
         var testDocs = new List<DocumentPage>
         {
-            new DocumentPage { Id = "1", ResourceId = "res-1", ResourceName = "红楼梦", PageNumber = 1, Content = "第一回 甄士隐梦幻识通灵 贾雨村风尘怀闺秀", Title = "第一章 梦开始的地方", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
-            new DocumentPage { Id = "2", ResourceId = "res-1", ResourceName = "红楼梦", PageNumber = 2, Content = "此开卷第一回也。作者自云：因曾历过一番梦幻之后，故将真事隐去，而借『通灵』之说，撰此《石头记》一书也。", Title = "第二章 作者自述", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
-            new DocumentPage { Id = "3", ResourceId = "res-2", ResourceName = "西游记", PageNumber = 1, Content = "第一回 灵根孕育源流出 心性修持大道生", Title = "第一章 孙悟空诞生", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
-            new DocumentPage { Id = "4", ResourceId = "res-2", ResourceName = "西游记", PageNumber = 2, Content = "诗曰：混沌未分天地乱，茫茫渺渺无人见。自从盘古破鸿蒙，辟从开来清浊辨。覆载群生仰至仁，发明万物皆成善。", Title = "第二章 天地初开", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
-            new DocumentPage { Id = "5", ResourceId = "res-3", ResourceName = "三国演义", PageNumber = 1, Content = "第一回 宴桃园豪杰三结义 斩黄巾英雄首立功", Title = "第一章 刘关张结义", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
-            new DocumentPage { Id = "6", ResourceId = "res-4", ResourceName = "水浒传", PageNumber = 1, Content = "第一回 张天师祈禳瘟疫 洪太尉误走妖魔", Title = "第一章 洪太尉上山", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
-            new DocumentPage { Id = "7", ResourceId = "res-5", ResourceName = "Python教程", PageNumber = 1, Content = "第一章 Python基础语法\nPython是一种广泛使用的解释型、高级和通用的编程语言。", Title = "第一章 Python入门", FileExtension = "docx", ResourceType = 0, CategoryName = "编程教程", UploadDate = DateTime.UtcNow },
-            new DocumentPage { Id = "8", ResourceId = "res-5", ResourceName = "Python教程", PageNumber = 2, Content = "第二章 变量和数据类型\nPython中的变量不需要声明类型，直接赋值即可。", Title = "第二章 变量类型", FileExtension = "docx", ResourceType = 0, CategoryName = "编程教程", UploadDate = DateTime.UtcNow },
-            new DocumentPage { Id = "9", ResourceId = "res-6", ResourceName = "JavaScript教程", PageNumber = 1, Content = "第一章 JavaScript简介\nJavaScript是一种脚本语言，用于网页交互。", Title = "第一章 JS入门", FileExtension = "docx", ResourceType = 0, CategoryName = "编程教程", UploadDate = DateTime.UtcNow },
-            new DocumentPage { Id = "10", ResourceId = "res-7", ResourceName = "数据结构", PageNumber = 1, Content = "第一章 数组和链表\n数组是最基本的数据结构，链表可以动态添加删除元素。", Title = "第一章 基础数据结构", FileExtension = "pdf", ResourceType = 0, CategoryName = "计算机基础", UploadDate = DateTime.UtcNow },
+            new DocumentPage { Id = "1", ResourceId = "res-1", ResourceName = "红楼梦", PageNumber = 1, pageContent = "第一回 甄士隐梦幻识通灵 贾雨村风尘怀闺秀", pageTitle = "第一章 梦开始的地方", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
+            new DocumentPage { Id = "2", ResourceId = "res-1", ResourceName = "红楼梦", PageNumber = 2, pageContent = "此开卷第一回也。作者自云：因曾历过一番梦幻之后，故将真事隐去，而借『通灵』之说，撰此《石头记》一书也。", pageTitle = "第二章 作者自述", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
+            new DocumentPage { Id = "3", ResourceId = "res-2", ResourceName = "西游记", PageNumber = 1, pageContent = "第一回 灵根孕育源流出 心性修持大道生", pageTitle = "第一章 孙悟空诞生", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
+            new DocumentPage { Id = "4", ResourceId = "res-2", ResourceName = "西游记", PageNumber = 2, pageContent = "诗曰：混沌未分天地乱，茫茫渺渺无人见。自从盘古破鸿蒙，辟从开来清浊辨。覆载群生仰至仁，发明万物皆成善。", pageTitle = "第二章 天地初开", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
+            new DocumentPage { Id = "5", ResourceId = "res-3", ResourceName = "三国演义", PageNumber = 1, pageContent = "第一回 宴桃园豪杰三结义 斩黄巾英雄首立功", pageTitle = "第一章 刘关张结义", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
+            new DocumentPage { Id = "6", ResourceId = "res-4", ResourceName = "水浒传", PageNumber = 1, pageContent = "第一回 张天师祈禳瘟疫 洪太尉误走妖魔", pageTitle = "第一章 洪太尉上山", FileExtension = "pdf", ResourceType = 0, CategoryName = "古典文学", UploadDate = DateTime.UtcNow },
+            new DocumentPage { Id = "7", ResourceId = "res-5", ResourceName = "Python教程", PageNumber = 1, pageContent = "第一章 Python基础语法\nPython是一种广泛使用的解释型、高级和通用的编程语言。", pageTitle = "第一章 Python入门", FileExtension = "docx", ResourceType = 0, CategoryName = "编程教程", UploadDate = DateTime.UtcNow },
+            new DocumentPage { Id = "8", ResourceId = "res-5", ResourceName = "Python教程", PageNumber = 2, pageContent = "第二章 变量和数据类型\nPython中的变量不需要声明类型，直接赋值即可。", pageTitle = "第二章 变量类型", FileExtension = "docx", ResourceType = 0, CategoryName = "编程教程", UploadDate = DateTime.UtcNow },
+            new DocumentPage { Id = "9", ResourceId = "res-6", ResourceName = "JavaScript教程", PageNumber = 1, pageContent = "第一章 JavaScript简介\nJavaScript是一种脚本语言，用于网页交互。", pageTitle = "第一章 JS入门", FileExtension = "docx", ResourceType = 0, CategoryName = "编程教程", UploadDate = DateTime.UtcNow },
+            new DocumentPage { Id = "10", ResourceId = "res-7", ResourceName = "数据结构", PageNumber = 1, pageContent = "第一章 数组和链表\n数组是最基本的数据结构，链表可以动态添加删除元素。", pageTitle = "第一章 基础数据结构", FileExtension = "pdf", ResourceType = 0, CategoryName = "计算机基础", UploadDate = DateTime.UtcNow },
         };
 
         await SearchService.AddDocumentsAsync(testDocs);
@@ -685,18 +685,29 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     {
         var result = await SearchService.SearchAsync(input.Query, input.Limit, input.Offset);
         
-        var dtos = result.Hits.Select(h => new DocumentPageSearchResultDto
-        {
-            Id = h.Id,
-            ResourceId = h.ResourceId,
-            ResourceName = h.ResourceName,
-            PageNumber = h.PageNumber,
-            Content = h.Content,
-            Title = h.Title,
-            FileExtension = h.FileExtension,
-            ResourceType = h.ResourceType,
-            CategoryName = h.CategoryName,
-            UploadDate = h.UploadDate
+        var dtos = result.Hits.Select(h => {
+            var highlightedContent = h._formatted?.GetValueOrDefault("pageContent") ?? h.pageContent;
+            var highlightedTitle = h._formatted?.GetValueOrDefault("pageTitle") ?? h.pageTitle;
+            
+            if (string.IsNullOrEmpty(highlightedContent) && !string.IsNullOrEmpty(h.pageContent))
+            {
+                highlightedContent = GenerateSnippet(h.pageContent, input.Query, 200);
+            }
+            
+            return new DocumentPageSearchResultDto
+            {
+                Id = h.Id,
+                ResourceId = h.ResourceId,
+                ResourceName = h.ResourceName,
+                PageNumber = h.PageNumber,
+                Content = h.pageContent,
+                HighlightedContent = highlightedContent,
+                Title = highlightedTitle,
+                FileExtension = h.FileExtension,
+                ResourceType = h.ResourceType,
+                CategoryName = h.CategoryName,
+                UploadDate = h.UploadDate
+            };
         }).ToList();
 
         return new MeiliSearchResultDto
@@ -705,5 +716,34 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             TotalCount = result.TotalHits,
             ProcessingTimeMs = result.ProcessingTimeMs
         };
+    }
+
+    private static string GenerateSnippet(string content, string query, int maxLength = 200)
+    {
+        if (string.IsNullOrEmpty(content) || string.IsNullOrEmpty(query))
+            return content ?? string.Empty;
+
+        var lowerContent = content.ToLower();
+        var lowerQuery = query.ToLower();
+        var index = lowerContent.IndexOf(lowerQuery, StringComparison.Ordinal);
+
+        if (index < 0)
+            return content.Length > maxLength ? content.Substring(0, maxLength) + "..." : content;
+
+        var start = Math.Max(0, index - 50);
+        var end = Math.Min(content.Length, index + query.Length + maxLength - 50);
+
+        var snippet = content.Substring(start, end - start);
+        
+        if (start > 0) snippet = "..." + snippet;
+        if (end < content.Length) snippet += "...";
+
+        snippet = System.Text.RegularExpressions.Regex.Replace(
+            snippet, 
+            System.Text.RegularExpressions.Regex.Escape(query), 
+            "<mark>$&</mark>", 
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return snippet;
     }
 }
