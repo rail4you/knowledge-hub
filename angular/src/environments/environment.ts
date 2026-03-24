@@ -15,7 +15,7 @@ export const environment = {
   production: false,
   application: {
     baseUrl,
-    name: 'KnowledgeHub',
+    name: '易课通知识库系统',
   },
   oAuthConfig,
   apis: {

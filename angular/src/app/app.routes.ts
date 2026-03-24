@@ -1,4 +1,4 @@
-import { authGuard, permissionGuard } from '@abp/ng.core';
+import { authGuard, permissionGuard, eLayoutType } from '@abp/ng.core';
 import { Routes } from '@angular/router';
 
 export const APP_ROUTES: Routes = [
@@ -97,6 +97,9 @@ export const APP_ROUTES: Routes = [
     path: 'student',
     loadComponent: () => import('./student/layout/student-layout.component').then(c => c.StudentLayoutComponent),
     canActivate: [authGuard],
+    data: {
+      layout: eLayoutType.empty
+    },
     children: [
       { path: '', redirectTo: 'resources', pathMatch: 'full' },
       { path: 'resources', loadComponent: () => import('./student/resources/student-resources.component').then(c => c.StudentResourcesComponent) },

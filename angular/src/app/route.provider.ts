@@ -133,9 +133,8 @@ function configureRoutes() {
       {
         path: '/student',
         name: '::Menu:StudentPortal',
-        iconClass: 'fas fa-user-graduate',
-        order: 1,
-        layout: eLayoutType.application,
-      }
+        layout: eLayoutType.empty,
+        invisible: true,
+      },
   ]);
 }

@@ -1,43 +1,106 @@
 <div class="student-layout">
-  <header class="student-header">
-    <div class="logo">
-      <span nz-icon nzType="read" nzTheme="outline"></span>
-      <span class="logo-text">学生门户</span>
-    </div>
-    
-    <nav class="student-nav">
-      <a routerLink="/student/resources" routerLinkActive="active">
-        <span nz-icon nzType="book"></span>
-        知识库
+  <header class="app-header">
+    <div class="header-container">
+      <a routerLink="/student/resources" class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="40" height="40" rx="8" fill="url(#logo-gradient)"/>
+            <path d="M12 12h16v4H12v-4zm0 6h16v4H12v-4zm0 6h12v4H12v-4z" fill="white" opacity="0.9"/>
+            <circle cx="28" cy="28" r="6" fill="white" opacity="0.3"/>
+            <path d="M26 28l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="logo-gradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#0056D2"/>
+                <stop offset="1" stop-color="#1A73E8"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="brand-text">易课通知识库系统</span>
       </a>
-      <a routerLink="/student/search" routerLinkActive="active">
-        <span nz-icon nzType="search"></span>
-        搜索
-      </a>
-      <div class="nav-dropdown">
-        <a routerLink="/student/ai/chat" routerLinkActive="active">
-          <span nz-icon nzType="robot"></span>
-          智能问答
+
+      <nav class="main-nav">
+        <a routerLink="/student/resources" routerLinkActive="active" class="nav-link">
+          <span nz-icon nzType="book" nzTheme="outline"></span>
+          <span>知识库</span>
         </a>
-        <div class="nav-dropdown-content">
-          <a routerLink="/student/ai/chat">智能问答</a>
-          <a routerLink="/student/ai/lesson-plan">教案生成</a>
-          <a routerLink="/student/ai/case-analysis">案例分析</a>
-          <a routerLink="/student/ai/career-guidance">职业规划</a>
+        <a routerLink="/student/courses" routerLinkActive="active" class="nav-link">
+          <span nz-icon nzType="schedule" nzTheme="outline"></span>
+          <span>我的课程</span>
+        </a>
+        <a routerLink="/student/search" routerLinkActive="active" class="nav-link">
+          <span nz-icon nzType="search" nzTheme="outline"></span>
+          <span>搜索</span>
+        </a>
+        <div class="nav-dropdown">
+          <a routerLink="/student/ai/chat" routerLinkActive="active" class="nav-link">
+            <span nz-icon nzType="robot" nzTheme="outline"></span>
+            <span>AI 助手</span>
+            <span nz-icon nzType="down" nzTheme="outline" class="dropdown-arrow"></span>
+          </a>
+          <div class="dropdown-menu">
+            <a routerLink="/student/ai/chat" class="dropdown-item">
+              <span nz-icon nzType="comment" nzTheme="outline"></span>
+              智能问答
+            </a>
+            <a routerLink="/student/ai/lesson-plan" class="dropdown-item">
+              <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              教案生成
+            </a>
+            <a routerLink="/student/ai/case-analysis" class="dropdown-item">
+              <span nz-icon nzType="bulb" nzTheme="outline"></span>
+              案例分析
+            </a>
+            <a routerLink="/student/ai/career-guidance" class="dropdown-item">
+              <span nz-icon nzType="solution" nzTheme="outline"></span>
+              职业规划
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="header-actions">
+        <a routerLink="/" class="back-link">
+          <span nz-icon nzType="home" nzTheme="outline"></span>
+          返回首页
+        </a>
+        <nz-dropdown-menu #userMenu="nzDropdownMenu">
+          <ul nz-menu>
+            <li nz-menu-item class="user-info-item">
+              <div class="user-details">
+                <div class="user-name">{{ userName }}</div>
+                <div class="user-role">学生</div>
+              </div>
+            </li>
+            <li nz-menu-divider></li>
+            <li nz-menu-item (click)="logout()">
+              <span nz-icon nzType="logout" nzTheme="outline"></span>
+              退出登录
+            </li>
+          </ul>
+        </nz-dropdown-menu>
+        <div class="user-avatar" nz-dropdown [nzDropdownMenu]="userMenu">
+          <nz-avatar [nzText]="userInitial" nzSize="small"></nz-avatar>
         </div>
       </div>
-      <a routerLink="/student/courses" routerLinkActive="active">
-        <span nz-icon nzType="schedule"></span>
-        我的课程
-      </a>
-    </nav>
-    
-    <div class="user-info">
-      <nz-avatar nzText="学生" nzColor="#1890ff"></nz-avatar>
     </div>
   </header>
-  
-  <main class="student-content">
+
+  <main class="main-content">
     <router-outlet></router-outlet>
   </main>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-links">
+        <a href="#">关于我们</a>
+        <a href="#">帮助中心</a>
+        <a href="#">隐私政策</a>
+        <a href="#">服务条款</a>
+      </div>
+      <div class="footer-copyright">
+        © 2026 易课通知识库系统 - 让学习更高效
+      </div>
+    </div>
+  </footer>
 </div>
