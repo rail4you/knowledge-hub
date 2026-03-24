@@ -12,6 +12,7 @@ export interface SearchQueryDto {
   skipCount: number;
   maxResultCount: number;
   sorting: string;
+  indexName?: string;
 }
 
 export interface HybridSearchQueryDto extends SearchQueryDto {
@@ -19,13 +20,13 @@ export interface HybridSearchQueryDto extends SearchQueryDto {
 }
 
 export interface DocumentSearchResultDto {
+  id: string;
   resourceId: string;
   resourceName: string;
   pageNumber: number;
-  pageContent: string;
-  pageTitle?: string;
-  highlightedText: string;
-  previewText: string;
+  content: string;
+  highlightedContent: string | null;
+  title: string | null;
   relevanceScore: number;
   fileExtension: string;
   resourceType: number;
@@ -133,6 +134,10 @@ export interface CreateIndexingJobInput {
   resourceVersionId?: string;
 }
 
+export interface RefreshDocumentIndexDto {
+  resourceId: string;
+}
+
 export interface PagedResultDto<T> {
   items: T[];
   totalCount: number;
@@ -154,7 +159,7 @@ export class SearchService {
   }
 
   hybridSearch(query: HybridSearchQueryDto): Observable<SearchResultDto> {
-    return this.restService.request({ method: 'POST', url: `${this.apiUrl}/search`, body: query }, { apiName: 'Resources' });
+    return this.restService.request({ method: 'POST', url: '/api/app/search/hybrid-search', body: query }, { apiName: 'Search' });
   }
 
   indexResource(resourceId: string): Observable<IndexTaskResultDto> {
@@ -248,6 +253,14 @@ export class SearchService {
     return this.restService.request({ 
       method: 'POST', 
       url: '/api/app/indexing-job/retry-all-failed' 
+    }, { apiName: 'Search' });
+  }
+
+  refreshDocumentIndex(resourceId: string): Observable<IndexTaskResultDto> {
+    return this.restService.request({ 
+      method: 'POST', 
+      url: '/api/app/search/refresh-document-index',
+      body: { resourceId } as RefreshDocumentIndexDto
     }, { apiName: 'Search' });
   }
 }

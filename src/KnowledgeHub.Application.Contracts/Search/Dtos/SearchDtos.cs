@@ -15,6 +15,7 @@ public class SearchQueryDto
     public int SkipCount { get; set; } = 0;
     public int MaxResultCount { get; set; } = 20;
     public string Sorting { get; set; } = "relevance";
+    public string? IndexName { get; set; }
 }
 
 public class HybridSearchQueryDto : SearchQueryDto
@@ -47,6 +48,11 @@ public class DocumentSearchResultDto
 }
 
 public class IndexDocumentDto
+{
+    public Guid ResourceId { get; set; }
+}
+
+public class RefreshDocumentIndexDto
 {
     public Guid ResourceId { get; set; }
 }

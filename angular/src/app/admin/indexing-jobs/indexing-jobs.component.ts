@@ -91,6 +91,15 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
                   <td>{{ job.retryCount }}</td>
                   <td>{{ job.creationTime | date:'short' }}</td>
                   <td>
+                    <button 
+                      nz-button 
+                      nzType="link" 
+                      nzSize="small"
+                      nz-tooltip
+                      nzTooltipTitle="重新生成向量索引"
+                      (click)="refreshEmbeddings(job.resourceId)">
+                      刷新向量
+                    </button>
                     @if (job.status === IndexingJobStatus.Failed) {
                       <button 
                         nz-button 
@@ -227,6 +236,17 @@ export class IndexingJobsComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.message.error('取消失败');
+      }
+    });
+  }
+
+  refreshEmbeddings(resourceId: string) {
+    this.searchService.refreshDocumentIndex(resourceId).subscribe({
+      next: () => {
+        this.message.success('已开始重新生成向量索引');
+      },
+      error: () => {
+        this.message.error('刷新向量索引失败');
       }
     });
   }

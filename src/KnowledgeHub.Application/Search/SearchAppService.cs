@@ -71,6 +71,11 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
         return await _meiliSearchService.IndexDocumentAsync(input.ResourceId);
     }
 
+    public async Task<IndexTaskResultDto> RefreshDocumentIndexAsync(RefreshDocumentIndexDto input)
+    {
+        return await _meiliSearchService.IndexDocumentAsync(input.ResourceId);
+    }
+
     public async Task DeleteIndexAsync(Guid resourceId)
     {
         await _meiliSearchService.DeleteDocumentAsync(resourceId);

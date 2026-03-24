@@ -28,7 +28,7 @@ public class KnowledgeHubHttpApiModule : AbpModule
     {
         Configure<AbpAspNetCoreMvcOptions>(options =>
         {
-            options.ConventionalControllers.Create(typeof(KnowledgeHubHttpApiModule).Assembly);
+            options.ConventionalControllers.Create(typeof(KnowledgeHubApplicationModule).Assembly);
         });
 
         ConfigureLocalization();

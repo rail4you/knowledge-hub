@@ -259,7 +259,97 @@ public class MeiliSearchService : IMeiliSearchService
 
     public async Task<SearchResultDto> HybridSearchAsync(HybridSearchQueryDto query)
     {
-        return await SearchAsync(query);
+        var effectiveIndexName = query.IndexName ?? IndexName;
+        await EnsureIndexExistsAsync();
+        
+        var filters = new List<string>();
+        
+        if (query.ResourceTypes?.Any() == true)
+        {
+            var typeFilters = query.ResourceTypes.Select(t => $"resourceType = {(int)t}");
+            filters.Add($"({string.Join(" OR ", typeFilters)})");
+        }
+        
+        if (query.CategoryId.HasValue)
+        {
+            filters.Add($"categoryId = \"{query.CategoryId}\"");
+        }
+        
+        if (!string.IsNullOrEmpty(query.FileExtension))
+        {
+            filters.Add($"fileExtension = \"{query.FileExtension}\"");
+        }
+        
+        if (query.StartDate.HasValue)
+        {
+            filters.Add($"uploadDate >= {query.StartDate.Value:yyyy-MM-dd}");
+        }
+        
+        if (query.EndDate.HasValue)
+        {
+            filters.Add($"uploadDate <= {query.EndDate.Value:yyyy-MM-dd}");
+        }
+
+        filters.Add("status IN [2, 3]");
+
+        var tenantId = _currentTenant.Id;
+        if (tenantId.HasValue)
+        {
+            filters.Add($"tenantId = \"{tenantId}\"");
+        }
+
+        var searchParams = new
+        {
+            q = query.Query,
+            limit = query.MaxResultCount,
+            offset = query.SkipCount,
+            filter = filters.Any() ? string.Join(" AND ", filters) : null,
+            attributesToHighlight = new[] { "pageContent", "pageTitle", "resourceName" },
+            highlightPreTag = "<mark>",
+            highlightPostTag = "</mark>",
+            attributesToCrop = new[] { "pageContent" },
+            cropLength = 200,
+            showRankingScore = true,
+            hybrid = new
+            {
+                embedder = "qwen",
+                semanticRatio = 1.0
+            }
+        };
+
+        var response = await _httpClient.PostAsJsonAsync($"/indexes/{effectiveIndexName}/search", searchParams);
+        var result = await response.Content.ReadFromJsonAsync<MeiliSearchResponse>();
+
+        var items = new List<DocumentSearchResultDto>();
+        if (result?.Hits != null)
+        {
+            foreach (var hit in result.Hits)
+            {
+                items.Add(new DocumentSearchResultDto
+                {
+                    ResourceId = Guid.TryParse(hit.ResourceId, out var rid) ? rid : Guid.Empty,
+                    ResourceName = hit.ResourceName ?? string.Empty,
+                    PageNumber = hit.PageNumber,
+                    PageContent = hit.PageContent ?? string.Empty,
+                    PageTitle = hit.PageTitle,
+                    HighlightedText = hit._formatted?.PageContent ?? hit.PageContent ?? string.Empty,
+                    PreviewText = hit.PageContent?.Length > 200 ? hit.PageContent[..200] + "..." : hit.PageContent ?? string.Empty,
+                    RelevanceScore = (float)hit.RankingScore,
+                    FileExtension = hit.FileExtension ?? string.Empty,
+                    ResourceType = (ResourceType)(hit.ResourceType),
+                    CategoryName = hit.CategoryId,
+                    UploadDate = DateTime.TryParse(hit.UploadDate, out var dt) ? dt : DateTime.MinValue
+                });
+            }
+        }
+
+        return new SearchResultDto
+        {
+            Items = items,
+            TotalCount = result?.EstimatedTotalHits ?? 0,
+            Query = query.Query,
+            Facets = new Dictionary<string, Dictionary<string, long>>()
+        };
     }
 
     public async Task DeleteDocumentAsync(Guid resourceId)

@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, viewChild, input } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -98,44 +98,53 @@ export class DocumentViewerComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
 
-  resourceId = input.required<string>();
-  page = input<number>();
-  highlight = input<string>();
-
   currentPage = signal(1);
   totalPages = signal(1);
   pageContent = signal('');
   loading = signal(false);
   resourceName = signal('');
+  resourceId = signal('');
 
   ngOnInit() {
-    if (this.page()) {
-      this.currentPage.set(this.page());
+    const id = this.route.snapshot.paramMap.get('id');
+    const page = this.route.snapshot.queryParamMap.get('page');
+    const state = history.state;
+
+    if (id) {
+      this.resourceId.set(id);
     }
-    this.loadPageContent();
+    if (page) {
+      this.currentPage.set(parseInt(page, 10));
+    }
+    if (state.content) {
+      this.pageContent.set(state.content);
+      this.loading.set(false);
+    } else {
+      this.loadPageContent();
+    }
   }
 
   loadPageContent() {
     this.loading.set(true);
-    // TODO: Call API to get page content with highlighted text
-    // For now, just show placeholder
-    setTimeout(() => {
-      this.pageContent.set('<p>文档内容加载中...</p><p>当前页码: ' + this.currentPage() + '</p>');
+    const content = history.state.content;
+    if (content) {
+      this.pageContent.set(content);
       this.loading.set(false);
-    }, 500);
+    } else {
+      this.pageContent.set('<p>无内容</p>');
+      this.loading.set(false);
+    }
   }
 
   prevPage() {
     if (this.currentPage() > 1) {
       this.currentPage.update(v => v - 1);
-      this.loadPageContent();
     }
   }
 
   nextPage() {
     if (this.currentPage() < this.totalPages()) {
       this.currentPage.update(v => v + 1);
-      this.loadPageContent();
     }
   }
 

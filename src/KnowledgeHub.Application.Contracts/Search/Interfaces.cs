@@ -54,6 +54,7 @@ public interface ISearchAppService : IApplicationService
     Task<SearchResultDto> SearchAsync(SearchQueryDto input);
     Task<SearchResultDto> HybridSearchAsync(HybridSearchQueryDto input);
     Task<IndexTaskResultDto> IndexResourceAsync(IndexDocumentDto input);
+    Task<IndexTaskResultDto> RefreshDocumentIndexAsync(RefreshDocumentIndexDto input);
     Task DeleteIndexAsync(Guid resourceId);
     Task<List<IndexStatusDto>> GetIndexingTasksAsync(int skipCount = 0, int maxResultCount = 20);
     Task<IndexStatusDto?> GetIndexTaskStatusAsync(long taskId);

@@ -490,7 +490,8 @@ export class ResourceComponent implements OnInit {
     if (!this.selectedResource.id || !this.selectedResource.isDownloadable) return;
     
     this.resourceService.download(this.selectedResource.id).subscribe({
-      next: (blob) => {
+      next: (data: number[]) => {
+        const blob = new Blob([new Uint8Array(data as any)], { type: 'application/octet-stream' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

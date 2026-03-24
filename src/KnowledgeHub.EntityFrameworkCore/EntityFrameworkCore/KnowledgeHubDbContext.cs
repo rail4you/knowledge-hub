@@ -16,6 +16,7 @@ using Volo.Abp.TenantManagement;
 using Volo.Abp.TenantManagement.EntityFrameworkCore;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Domain.Search;
+using KnowledgeHub.EntityFrameworkCore.AI;
 
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -74,6 +75,10 @@ public class KnowledgeHubDbContext :
     public DbSet<DocumentIndexingJob> DocumentIndexingJobs { get; set; }
     public DbSet<PageContent> PageContents { get; set; }
 
+    // AI Chat entities
+    public DbSet<KnowledgeHub.AI.ChatThread> ChatThreads { get; set; }
+    public DbSet<KnowledgeHub.AI.ChatMessage> ChatMessages { get; set; }
+
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
     {
@@ -99,5 +104,6 @@ public class KnowledgeHubDbContext :
         /* Configure your own tables/entities inside here */
         builder.ConfigureResource();
         builder.ConfigureSearch();
+        builder.ConfigureAI();
     }
 }

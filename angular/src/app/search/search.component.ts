@@ -66,6 +66,11 @@ import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto
             <nz-option nzValue="hybrid" nzLabel="混合搜索"></nz-option>
           </nz-select>
           
+          <nz-select [(ngModel)]="selectedIndex" nzPlaceHolder="选择索引" style="width: 150px;">
+            <nz-option nzValue="movie" nzLabel="电影"></nz-option>
+            <nz-option nzValue="documents" nzLabel="文档"></nz-option>
+          </nz-select>
+          
           <nz-date-picker [(ngModel)]="startDate" nzPlaceHolder="开始日期"></nz-date-picker>
           <nz-date-picker [(ngModel)]="endDate" nzPlaceHolder="结束日期"></nz-date-picker>
         </div>
@@ -86,7 +91,7 @@ import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto
                          [nzExtra]="extraTemplate"
                          class="result-card"
                          (click)="viewDocument(result)">
-                  <p class="preview-text" [innerHTML]="result.highlightedText"></p>
+                  <p class="preview-text" [innerHTML]="result.highlightedContent || result.content"></p>
                   <nz-tag *ngIf="result.categoryName">{{ result.categoryName }}</nz-tag>
                   <nz-tag nzColor="blue">{{ getResourceTypeName(result.resourceType) }}</nz-tag>
                   <nz-tag nzColor="green">相关性: {{ (result.relevanceScore * 100).toFixed(1) }}%</nz-tag>
@@ -188,6 +193,7 @@ export class SearchComponent implements OnInit {
   searchQuery = '';
   selectedResourceTypes: number[] = [];
   searchType: 'keyword' | 'hybrid' = 'keyword';
+  selectedIndex = 'movie';
   startDate: Date | null = null;
   endDate: Date | null = null;
   
@@ -218,7 +224,8 @@ export class SearchComponent implements OnInit {
       maxResultCount: this.pageSize,
       sorting: 'relevance',
       startDate: this.startDate ? this.startDate.toISOString() : undefined,
-      endDate: this.endDate ? this.endDate.toISOString() : undefined
+      endDate: this.endDate ? this.endDate.toISOString() : undefined,
+      indexName: this.selectedIndex
     };
 
     const searchObservable = this.searchType === 'hybrid' 
@@ -250,8 +257,9 @@ export class SearchComponent implements OnInit {
       viewSource: 0
     }).subscribe();
 
-    this.router.navigate(['/resources', result.resourceId], {
-      queryParams: { page: result.pageNumber }
+    this.router.navigate(['/document-viewer', result.resourceId], {
+      queryParams: { page: result.pageNumber },
+      state: { content: result.highlightedContent || result.content }
     });
   }
 

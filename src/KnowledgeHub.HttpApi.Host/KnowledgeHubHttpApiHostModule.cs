@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using OpenIddict.Validation.AspNetCore;
 using OpenIddict.Server.AspNetCore;
+using KnowledgeHub.Resources;
 using KnowledgeHub.EntityFrameworkCore;
 using KnowledgeHub.MultiTenancy;
 using KnowledgeHub.HealthChecks;
@@ -22,6 +24,7 @@ using KnowledgeHub.Application.Contracts.Search;
 using Microsoft.OpenApi;
 using Volo.Abp;
 using Volo.Abp.Studio;
+using ResourcesSearchService = KnowledgeHub.Resources.MeiliSearchService;
 using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.MultiTenancy;
@@ -148,7 +151,9 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.Configure<MeilisearchOptions>(configuration.GetSection("Meilisearch"));
         context.Services.Configure<EmbeddingServiceOptions>(configuration.GetSection("EmbeddingService"));
         
-        context.Services.AddHttpClient<IMeiliSearchService, MeiliSearchService>();
+        context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>();
+        context.Services.AddScoped<KnowledgeHub.Resources.ISearchService>(sp => 
+    new global::KnowledgeHub.Resources.MeiliSearchService(new HttpClient { BaseAddress = new Uri(configuration["Meilisearch:Host"] ?? "http://localhost:7700") }));
         context.Services.AddHttpClient<IEmbeddingService, EmbeddingService>();
         context.Services.AddScoped<IDocumentExtractionService, DocumentExtractionService>();
         context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();

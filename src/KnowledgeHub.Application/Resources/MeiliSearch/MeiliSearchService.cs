@@ -1,33 +1,54 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Meilisearch;
 
 namespace KnowledgeHub.Resources;
+
+public class MeiliFormatted
+{
+    [System.Text.Json.Serialization.JsonPropertyName("pageContent")]
+    public string? pageContent { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("pageTitle")]
+    public string? pageTitle { get; set; }
+}
 
 public class DocumentPage
 {
     public string Id { get; set; } = string.Empty;
+    [System.Text.Json.Serialization.JsonPropertyName("resourceId")]
     public string ResourceId { get; set; } = string.Empty;
-    public string ResourceName { get; set; } = string.Empty;
+    [System.Text.Json.Serialization.JsonPropertyName("resourceName")]
+    public string? ResourceName { get; set; } = string.Empty;
+    [System.Text.Json.Serialization.JsonPropertyName("pageNumber")]
     public int PageNumber { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("pageContent")]
     public string? pageContent { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("pageTitle")]
     public string? pageTitle { get; set; }
-    public Dictionary<string, string>? _formatted { get; set; }
+    public MeiliFormatted? _formatted { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("fileExtension")]
     public string FileExtension { get; set; } = string.Empty;
+    [System.Text.Json.Serialization.JsonPropertyName("resourceType")]
     public int ResourceType { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("categoryName")]
     public string? CategoryName { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("uploadDate")]
     public DateTime UploadDate { get; set; }
 }
 
 public interface ISearchService
 {
-    Task InitializeAsync();
-    Task AddDocumentsAsync(IEnumerable<DocumentPage> documents);
-    Task<SearchResult> SearchAsync(string query, int limit = 20, int offset = 0);
-    Task DeleteDocumentAsync(string id);
-    Task DeleteByResourceIdAsync(string resourceId);
+    Task InitializeAsync(string? indexName = null);
+    Task AddDocumentsAsync(IEnumerable<DocumentPage> documents, string? indexName = null);
+    Task<SearchResult> SearchAsync(string query, int limit = 20, int offset = 0, string? indexName = null);
+    Task<SearchResult> SemanticSearchAsync(string query, int limit = 20, int offset = 0, string? indexName = null);
+    Task DeleteDocumentAsync(string id, string? indexName = null);
+    Task DeleteByResourceIdAsync(string resourceId, string? indexName = null);
 }
 
 public class SearchResult
@@ -39,34 +60,50 @@ public class SearchResult
 
 public class MeiliSearchService : ISearchService
 {
-    private readonly MeilisearchClient _client;
-    private readonly string _indexName = "documents";
+    private readonly HttpClient _httpClient;
+    private readonly string _defaultIndexName = "movie";
     private bool _initialized = false;
+    private string? _initializedIndexName;
 
-    public MeiliSearchService()
+    public MeiliSearchService(HttpClient httpClient)
     {
+        _httpClient = httpClient;
         var host = Environment.GetEnvironmentVariable("MEILISEARCH_HOST") ?? "http://localhost:7700";
         var apiKey = Environment.GetEnvironmentVariable("MEILISEARCH_API_KEY") ?? "aSampleMasterKey";
-        _client = new MeilisearchClient(host, apiKey);
+        _httpClient.BaseAddress = new Uri(host);
+        if (!string.IsNullOrEmpty(apiKey))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+        }
     }
 
-    public async Task InitializeAsync()
+    public async Task InitializeAsync(string? indexName = null)
     {
-        if (_initialized) return;
+        var effectiveIndexName = indexName ?? _defaultIndexName;
+        if (_initialized && _initializedIndexName == effectiveIndexName) return;
 
         try
         {
-            var index = _client.Index(_indexName);
-            
-            var filterableAttributes = new[] { "resourceId", "resourceType", "categoryName", "fileExtension" };
-            var sortableAttributes = new[] { "uploadDate", "pageNumber", "resourceName" };
-            var searchableAttributes = new[] { "pageContent", "pageTitle", "resourceName" };
+            var response = await _httpClient.GetAsync($"/indexes/{effectiveIndexName}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var createContent = new { uid = effectiveIndexName, primaryKey = "id" };
+                await _httpClient.PostAsJsonAsync("/indexes", createContent);
+            }
 
-            await index.UpdateFilterableAttributesAsync(filterableAttributes);
-            await index.UpdateSortableAttributesAsync(sortableAttributes);
-            await index.UpdateSearchableAttributesAsync(searchableAttributes);
+            var indexPath = $"/indexes/{effectiveIndexName}";
+            
+            await _httpClient.PostAsJsonAsync($"{indexPath}/settings/filterable-attributes", 
+                new[] { "resourceId", "resourceType", "categoryName", "fileExtension" });
+            
+            await _httpClient.PostAsJsonAsync($"{indexPath}/settings/searchable-attributes", 
+                new[] { "pageContent", "pageTitle", "resourceName" });
+            
+            await _httpClient.PostAsJsonAsync($"{indexPath}/settings/sortable-attributes", 
+                new[] { "uploadDate", "pageNumber", "resourceName" });
 
             _initialized = true;
+            _initializedIndexName = effectiveIndexName;
         }
         catch (Exception ex)
         {
@@ -74,54 +111,156 @@ public class MeiliSearchService : ISearchService
         }
     }
 
-    public async Task AddDocumentsAsync(IEnumerable<DocumentPage> documents)
+    public async Task AddDocumentsAsync(IEnumerable<DocumentPage> documents, string? indexName = null)
     {
-        await InitializeAsync();
+        await InitializeAsync(indexName);
+        var effectiveIndexName = indexName ?? _defaultIndexName;
         
-        var index = _client.Index(_indexName);
-        await index.AddDocumentsAsync(documents, "id");
+        var json = JsonSerializer.Serialize(documents);
+        await _httpClient.PostAsync(
+            $"/indexes/{effectiveIndexName}/documents",
+            new StringContent(json, Encoding.UTF8, "application/json"));
     }
 
-    public async Task<SearchResult> SearchAsync(string query, int limit = 20, int offset = 0)
+    public async Task<SearchResult> SearchAsync(string query, int limit = 20, int offset = 0, string? indexName = null)
     {
-        await InitializeAsync();
+        var effectiveIndexName = indexName ?? _defaultIndexName;
+        await InitializeAsync(effectiveIndexName);
         
-        var index = _client.Index(_indexName);
-        var result = await index.SearchAsync<DocumentPage>(query, new SearchQuery
+        var searchParams = new
         {
-            Limit = limit,
-            Offset = offset,
-            AttributesToHighlight = new[] { "pageContent", "pageTitle" },
-            HighlightPreTag = "<mark>",
-            HighlightPostTag = "</mark>"
-        });
+            q = query,
+            limit,
+            offset,
+            attributesToHighlight = new[] { "pageContent", "pageTitle" },
+            highlightPreTag = "<mark>",
+            highlightPostTag = "</mark>"
+        };
+
+        var response = await _httpClient.PostAsJsonAsync($"/indexes/{effectiveIndexName}/search", searchParams);
+        var result = await response.Content.ReadFromJsonAsync<MeiliSearchResponse>();
 
         return new SearchResult
         {
-            Hits = result.Hits.ToList(),
-            TotalHits = result.EstimatedTotalHits,
-            ProcessingTimeMs = result.ProcessingTimeMs
+            Hits = result?.Hits?.Select(h => new DocumentPage
+            {
+                Id = h.Id,
+                ResourceId = h.ResourceId,
+                ResourceName = h.ResourceName ?? string.Empty,
+                PageNumber = h.PageNumber,
+                pageContent = h._formatted?.pageContent ?? h.pageContent,
+                pageTitle = h._formatted?.pageTitle ?? h.pageTitle,
+                FileExtension = h.FileExtension ?? string.Empty,
+                ResourceType = h.ResourceType,
+                CategoryName = h.CategoryName,
+                UploadDate = h.UploadDate
+            }).ToList() ?? new List<DocumentPage>(),
+            TotalHits = result?.EstimatedTotalHits ?? 0,
+            ProcessingTimeMs = result?.ProcessingTimeMs ?? 0
         };
     }
 
-    public async Task DeleteDocumentAsync(string id)
+    public async Task<SearchResult> SemanticSearchAsync(string query, int limit = 20, int offset = 0, string? indexName = null)
     {
-        await InitializeAsync();
+        var effectiveIndexName = indexName ?? _defaultIndexName;
+        await InitializeAsync(effectiveIndexName);
         
-        var index = _client.Index(_indexName);
-        await index.DeleteDocumentsAsync(new[] { id });
+        var searchParams = new
+        {
+            q = query,
+            limit,
+            offset,
+            attributesToHighlight = new[] { "pageContent", "pageTitle" },
+            highlightPreTag = "<mark>",
+            highlightPostTag = "</mark>",
+            hybrid = new
+            {
+                embedder = "qwen",
+                semanticRatio = 1.0
+            }
+        };
+
+        var response = await _httpClient.PostAsJsonAsync($"/indexes/{effectiveIndexName}/search", searchParams);
+        var result = await response.Content.ReadFromJsonAsync<MeiliSearchResponse>();
+
+        return new SearchResult
+        {
+            Hits = result?.Hits?.Select(h => new DocumentPage
+            {
+                Id = h.Id,
+                ResourceId = h.ResourceId,
+                ResourceName = h.ResourceName ?? string.Empty,
+                PageNumber = h.PageNumber,
+                pageContent = h._formatted?.pageContent ?? h.pageContent,
+                pageTitle = h._formatted?.pageTitle ?? h.pageTitle,
+                FileExtension = h.FileExtension ?? string.Empty,
+                ResourceType = h.ResourceType,
+                CategoryName = h.CategoryName,
+                UploadDate = h.UploadDate
+            }).ToList() ?? new List<DocumentPage>(),
+            TotalHits = result?.EstimatedTotalHits ?? 0,
+            ProcessingTimeMs = result?.ProcessingTimeMs ?? 0
+        };
     }
 
-    public async Task DeleteByResourceIdAsync(string resourceId)
+    public async Task DeleteDocumentAsync(string id, string? indexName = null)
     {
-        await InitializeAsync();
+        var effectiveIndexName = indexName ?? _defaultIndexName;
+        await InitializeAsync(effectiveIndexName);
+        await _httpClient.DeleteAsync($"/indexes/{effectiveIndexName}/documents/{id}");
+    }
+
+    public async Task DeleteByResourceIdAsync(string resourceId, string? indexName = null)
+    {
+        var effectiveIndexName = indexName ?? _defaultIndexName;
+        await InitializeAsync(effectiveIndexName);
         
-        var index = _client.Index(_indexName);
-        var docs = await index.SearchAsync<DocumentPage>(resourceId, new SearchQuery { Limit = 100 });
-        var ids = docs.Hits.Select(h => h.Id).ToList();
-        if (ids.Any())
+        var searchParams = new { q = resourceId, limit = 100 };
+        var response = await _httpClient.PostAsJsonAsync($"/indexes/{effectiveIndexName}/search", searchParams);
+        var result = await response.Content.ReadFromJsonAsync<MeiliSearchResponse>();
+        
+        if (result?.Hits != null)
         {
-            await index.DeleteDocumentsAsync(ids);
+            var ids = result.Hits.Select(h => h.Id).ToList();
+            if (ids.Any())
+            {
+                var deleteContent = new { ids };
+                await _httpClient.PostAsJsonAsync($"/indexes/{effectiveIndexName}/documents/delete", deleteContent);
+            }
         }
+    }
+
+    private class MeiliSearchResponse
+    {
+        public List<MeiliHit>? Hits { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("estimatedTotalHits")]
+        public int? EstimatedTotalHits { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("processingTimeMs")]
+        public double? ProcessingTimeMs { get; set; }
+    }
+
+    private class MeiliHit
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+        [System.Text.Json.Serialization.JsonPropertyName("resourceId")]
+        public string ResourceId { get; set; } = string.Empty;
+        [System.Text.Json.Serialization.JsonPropertyName("resourceName")]
+        public string? ResourceName { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("pageNumber")]
+        public int PageNumber { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("pageContent")]
+        public string? pageContent { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("pageTitle")]
+        public string? pageTitle { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("fileExtension")]
+        public string? FileExtension { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("resourceType")]
+        public int ResourceType { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("categoryName")]
+        public string? CategoryName { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("uploadDate")]
+        public DateTime UploadDate { get; set; }
+        public MeiliFormatted? _formatted { get; set; }
     }
 }

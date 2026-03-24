@@ -125,6 +125,26 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
 
+    [Authorize(KnowledgeHubPermissions.Resources.Default)]
+    public async Task<PagedResultDto<ResourceDto>> GetLeagueApprovedAsync(PagedResultRequestDto input)
+    {
+        var query = await ResourceRepository.GetQueryableAsync();
+        
+        var resources = query
+            .Where(r => r.Status == ResourceStatus.LeagueApproved)
+            .OrderByDescending(r => r.CreationTime)
+            .Skip(input.SkipCount)
+            .Take(input.MaxResultCount)
+            .ToList();
+        
+        var count = query.Count(r => r.Status == ResourceStatus.LeagueApproved);
+        
+        return new PagedResultDto<ResourceDto>(
+            count,
+            ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources)
+        );
+    }
+
     [Authorize(KnowledgeHubPermissions.Resources.Create)]
     public virtual async Task<ResourceDto> CreateAsync(CreateUpdateResourceDto input)
     {
@@ -683,11 +703,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [AllowAnonymous]
     public virtual async Task<MeiliSearchResultDto> SearchDocumentsAsync(MeiliSearchQueryDto input)
     {
-        var result = await SearchService.SearchAsync(input.Query, input.Limit, input.Offset);
+        var result = await SearchService.SearchAsync(input.Query, input.Limit, input.Offset, input.IndexName);
         
         var dtos = result.Hits.Select(h => {
-            var highlightedContent = h._formatted?.GetValueOrDefault("pageContent") ?? h.pageContent;
-            var highlightedTitle = h._formatted?.GetValueOrDefault("pageTitle") ?? h.pageTitle;
+            var highlightedContent = h._formatted?.pageContent ?? h.pageContent;
+            var highlightedTitle = h._formatted?.pageTitle ?? h.pageTitle;
             
             if (string.IsNullOrEmpty(highlightedContent) && !string.IsNullOrEmpty(h.pageContent))
             {
