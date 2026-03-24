@@ -15,6 +15,8 @@ using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.TenantManagement.EntityFrameworkCore;
 using Volo.Abp.Studio;
 using KnowledgeHub.Domain.Search;
+using KnowledgeHub.Courses;
+using KnowledgeHub.EntityFrameworkCore.Courses;
 using Volo.Abp.Domain.Repositories.EntityFrameworkCore;
 
 namespace KnowledgeHub.EntityFrameworkCore;
@@ -54,6 +56,10 @@ public class KnowledgeHubEntityFrameworkCoreModule : AbpModule
         // Register IDocumentIndexRepository
         context.Services.AddScoped<IDocumentIndexRepository, EfCoreDocumentIndexRepository>();
         Console.WriteLine("=== KnowledgeHubEntityFrameworkCoreModule: IDocumentIndexRepository registered ===");
+
+        // Register custom Course repository
+        context.Services.AddScoped<ICourseRepository, EfCoreCourseRepository>();
+        Console.WriteLine("=== KnowledgeHubEntityFrameworkCoreModule: ICourseRepository registered ===");
 
         if (AbpStudioAnalyzeHelper.IsInAnalyzeMode)
         {

@@ -58,7 +58,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
         
         await _courseRepository.InsertAsync(course);
         
-        return ObjectMapper.Map<Course, CourseDto>(course);
+        return MapToDto(course);
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
@@ -82,7 +82,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
         
         await _courseRepository.UpdateAsync(course);
         
-        return ObjectMapper.Map<Course, CourseDto>(course);
+        return MapToDto(course);
     }
 
     public async Task<CourseDto> GetAsync(Guid id)
@@ -92,7 +92,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
         {
             return null;
         }
-        return ObjectMapper.Map<Course, CourseDto>(course);
+        return MapToDto(course);
     }
 
     public async Task<PagedResultDto<CourseDto>> GetListAsync(PagedCourseRequestDto input)
@@ -113,7 +113,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
 
         return new PagedResultDto<CourseDto>(
             totalCount,
-            ObjectMapper.Map<List<Course>, List<CourseDto>>(courses)
+            courses.Select(MapToDto).ToList()
         );
     }
 
@@ -177,7 +177,25 @@ public class CourseAppService : ApplicationService, ITransientDependency
 
         return new PagedResultDto<CourseDto>(
             totalCount,
-            ObjectMapper.Map<List<Course>, List<CourseDto>>(courses)
+            courses.Select(c => new CourseDto
+            {
+                Id = c.Id,
+                Title = c.Title,
+                Description = c.Description,
+                CoverImageUrl = c.CoverImageUrl,
+                Major = c.Major,
+                Semester = c.Semester,
+                Credits = c.Credits,
+                SemesterHours = c.SemesterHours,
+                Status = c.Status,
+                Difficulty = c.Difficulty,
+                TeacherId = c.TeacherId,
+                CategoryId = c.CategoryId,
+                CreationTime = c.CreationTime,
+                CreatorId = c.CreatorId,
+                LastModificationTime = c.LastModificationTime,
+                LastModifierId = c.LastModifierId
+            }).ToList()
         );
     }
 
@@ -235,7 +253,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
 
         return new PagedResultDto<CourseDto>(
             courses.Count,
-            ObjectMapper.Map<List<Course>, List<CourseDto>>(courses)
+            courses.Select(MapToDto).ToList()
         );
     }
 
@@ -255,7 +273,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
 
         return new PagedResultDto<CourseDto>(
             courses.Count,
-            ObjectMapper.Map<List<Course>, List<CourseDto>>(courses)
+            courses.Select(MapToDto).ToList()
         );
     }
 
@@ -277,5 +295,28 @@ public class CourseAppService : ApplicationService, ITransientDependency
                     .Distinct()
                     .OrderBy(x => x)
                     .ToList();
+    }
+
+    private CourseDto MapToDto(Course course)
+    {
+        return new CourseDto
+        {
+            Id = course.Id,
+            Title = course.Title,
+            Description = course.Description,
+            CoverImageUrl = course.CoverImageUrl,
+            Major = course.Major,
+            Semester = course.Semester,
+            Credits = course.Credits,
+            SemesterHours = course.SemesterHours,
+            Status = course.Status,
+            Difficulty = course.Difficulty,
+            TeacherId = course.TeacherId,
+            CategoryId = course.CategoryId,
+            CreationTime = course.CreationTime,
+            CreatorId = course.CreatorId,
+            LastModificationTime = course.LastModificationTime,
+            LastModifierId = course.LastModifierId
+        };
     }
 }

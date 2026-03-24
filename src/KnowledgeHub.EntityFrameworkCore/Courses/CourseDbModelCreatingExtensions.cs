@@ -37,7 +37,9 @@ public static class CourseDbModelCreatingExtensions
             
             b.HasIndex(x => x.CourseId);
             b.HasIndex(x => x.SortOrder);
+            b.HasIndex(x => x.ParentId);
             
+            b.HasOne(x => x.Parent).WithMany(x => x.Children).HasForeignKey(x => x.ParentId).IsRequired(false);
             b.HasMany(x => x.KnowledgeResources).WithOne().HasForeignKey(x => x.ChapterId);
         });
         

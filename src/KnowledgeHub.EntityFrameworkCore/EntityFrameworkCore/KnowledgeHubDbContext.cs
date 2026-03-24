@@ -79,6 +79,16 @@ public class KnowledgeHubDbContext :
     public DbSet<KnowledgeHub.AI.ChatThread> ChatThreads { get; set; }
     public DbSet<KnowledgeHub.AI.ChatMessage> ChatMessages { get; set; }
 
+    // Course entities
+    public DbSet<KnowledgeHub.Courses.Course> Courses { get; set; }
+    public DbSet<KnowledgeHub.Courses.Chapter> Chapters { get; set; }
+    public DbSet<KnowledgeHub.Courses.KnowledgeResource> KnowledgeResources { get; set; }
+
+    // Learning entities
+    public DbSet<KnowledgeHub.Learning.StudentCourse> StudentCourses { get; set; }
+    public DbSet<KnowledgeHub.Learning.LearningProgress> LearningProgresses { get; set; }
+    public DbSet<KnowledgeHub.Learning.KnowledgeMastery> KnowledgeMasteries { get; set; }
+
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
     {
@@ -105,5 +115,7 @@ public class KnowledgeHubDbContext :
         builder.ConfigureResource();
         builder.ConfigureSearch();
         builder.ConfigureAI();
+        builder.ConfigureCourse();
+        builder.ConfigureLearning();
     }
 }

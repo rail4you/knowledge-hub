@@ -62,3 +62,19 @@ public partial class ChapterDtoToChapterMapper : MapperBase<ChapterDto, Chapter>
 
     public override partial void Map(ChapterDto source, Chapter destination);
 }
+
+[Mapper]
+public partial class CourseToCourseDtoMapper : MapperBase<Course, CourseDto>
+{
+    public override partial CourseDto Map(Course source);
+
+    public override partial void Map(Course source, CourseDto destination);
+}
+
+[Mapper]
+public partial class CreateUpdateCourseDtoToCourseMapper : MapperBase<CreateUpdateCourseDto, Course>
+{
+    public override partial Course Map(CreateUpdateCourseDto source);
+
+    public override partial void Map(CreateUpdateCourseDto source, Course destination);
+}
