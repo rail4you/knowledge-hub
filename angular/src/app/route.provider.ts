@@ -111,6 +111,12 @@ function configureRoutes() {
         layout: eLayoutType.application,
       },
       {
+        path: '/learning/knowledge-graph/:courseId',
+        name: '::Menu:KnowledgeGraph',
+        parentName: '::Menu:Learning',
+        layout: eLayoutType.application,
+      },
+      {
         path: '/student',
         name: '::Menu:StudentPortal',
         iconClass: 'fas fa-user-graduate',
