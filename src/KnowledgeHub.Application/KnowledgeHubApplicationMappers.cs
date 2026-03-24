@@ -1,5 +1,7 @@
 using KnowledgeHub.Users;
 using KnowledgeHub.Resources;
+using KnowledgeHub.Courses;
+using KnowledgeHub.Courses.Dtos;
 using Riok.Mapperly.Abstractions;
 using Volo.Abp.Mapperly;
 
@@ -43,4 +45,20 @@ public partial class ResourceAuditToResourceAuditDtoMapper : MapperBase<Resource
     public override partial ResourceAuditDto Map(ResourceAudit source);
 
     public override partial void Map(ResourceAudit source, ResourceAuditDto destination);
+}
+
+[Mapper]
+public partial class ChapterToChapterDtoMapper : MapperBase<Chapter, ChapterDto>
+{
+    public override partial ChapterDto Map(Chapter source);
+
+    public override partial void Map(Chapter source, ChapterDto destination);
+}
+
+[Mapper]
+public partial class ChapterDtoToChapterMapper : MapperBase<ChapterDto, Chapter>
+{
+    public override partial Chapter Map(ChapterDto source);
+
+    public override partial void Map(ChapterDto source, Chapter destination);
 }
