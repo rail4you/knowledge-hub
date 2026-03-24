@@ -367,6 +367,48 @@ public class MeiliSearchService : IMeiliSearchService
         }
     }
 
+    public async Task<IndexTaskResultDto> RefreshDocumentIndexAsync(Guid resourceId)
+    {
+        var embedderConfig = new
+        {
+            qwen = new
+            {
+                source = "rest",
+                url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings",
+                apiKey = _options.Value.EmbeddingApiKey,
+                dimensions = _options.Value.EmbeddingDimension,
+                documentTemplate = "{{doc.pageTitle}} {{doc.pageContent}}",
+                request = new
+                {
+                    model = "text-embedding-v3",
+                    input = "{{text}}",
+                    encoding_format = "float"
+                },
+                response = new
+                {
+                    data = new[]
+                    {
+                        new { embedding = "{{embedding}}" }
+                    }
+                }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(embedderConfig);
+        var response = await _httpClient.PatchAsync(
+            $"/indexes/{IndexName}/settings/embedders",
+            new StringContent(json, Encoding.UTF8, "application/json"));
+
+        var taskResult = await response.Content.ReadFromJsonAsync<MeiliTaskResponse>();
+
+        return new IndexTaskResultDto
+        {
+            TaskId = taskResult?.TaskUid ?? 0,
+            DocumentIndexId = resourceId,
+            Status = "Processing"
+        };
+    }
+
     public async Task<IndexStatusDto?> GetIndexingTaskStatusAsync(long taskId)
     {
         var response = await _httpClient.GetAsync($"/tasks/{taskId}");
@@ -437,6 +479,7 @@ public class MeilisearchOptions
     public string ApiKey { get; set; } = "";
     public string IndexName { get; set; } = "documents";
     public int EmbeddingDimension { get; set; } = 768;
+    public string? EmbeddingApiKey { get; set; }
 }
 
 internal class MeiliTaskResponse

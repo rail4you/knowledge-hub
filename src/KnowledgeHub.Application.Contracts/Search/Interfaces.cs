@@ -13,6 +13,7 @@ public interface IMeiliSearchService : IApplicationService
     Task<SearchResultDto> SearchAsync(SearchQueryDto query);
     Task<SearchResultDto> HybridSearchAsync(HybridSearchQueryDto query);
     Task DeleteDocumentAsync(Guid resourceId);
+    Task<IndexTaskResultDto> RefreshDocumentIndexAsync(Guid resourceId);
     Task<IndexStatusDto?> GetIndexingTaskStatusAsync(long taskId);
     Task<List<IndexStatusDto>> GetPendingIndexingTasksAsync(int skipCount = 0, int maxResultCount = 20);
     Task<List<IndexStatusDto>> GetAllIndexingTasksAsync(int skipCount = 0, int maxResultCount = 20);
@@ -54,7 +55,7 @@ public interface ISearchAppService : IApplicationService
     Task<SearchResultDto> SearchAsync(SearchQueryDto input);
     Task<SearchResultDto> HybridSearchAsync(HybridSearchQueryDto input);
     Task<IndexTaskResultDto> IndexResourceAsync(IndexDocumentDto input);
-    Task<IndexTaskResultDto> RefreshDocumentIndexAsync(RefreshDocumentIndexDto input);
+    Task<IndexTaskResultDto> RefreshDocumentIndexAsync(Guid resourceId);
     Task DeleteIndexAsync(Guid resourceId);
     Task<List<IndexStatusDto>> GetIndexingTasksAsync(int skipCount = 0, int maxResultCount = 20);
     Task<IndexStatusDto?> GetIndexTaskStatusAsync(long taskId);
