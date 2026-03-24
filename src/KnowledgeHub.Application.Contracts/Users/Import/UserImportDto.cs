@@ -27,7 +27,8 @@ public class UserImportDto
     [StringLength(256)]
     public string? Email { get; set; }
 
-    public Guid? SchoolId { get; set; }
+    [StringLength(50)]
+    public string? SchoolId { get; set; }
 
     [StringLength(50)]
     public string? EmployeeNumber { get; set; }

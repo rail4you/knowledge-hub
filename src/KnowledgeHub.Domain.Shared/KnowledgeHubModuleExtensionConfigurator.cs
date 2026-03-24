@@ -52,12 +52,13 @@ public static class KnowledgeHubModuleExtensionConfigurator
                        }
                    );
 
-                   user.AddOrUpdateProperty<Guid?>(
-                       "SchoolId",
-                       property =>
-                       {
-                       }
-                   );
+                    user.AddOrUpdateProperty<string>(
+                        "SchoolId",
+                        property =>
+                        {
+                            property.Attributes.Add(new StringLengthAttribute(50));
+                        }
+                    );
 
                    user.AddOrUpdateProperty<string>(
                        "EmployeeNumber",

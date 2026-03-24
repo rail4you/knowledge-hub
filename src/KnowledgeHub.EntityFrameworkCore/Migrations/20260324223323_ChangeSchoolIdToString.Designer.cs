@@ -3,6 +3,7 @@ using System;
 using KnowledgeHub.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Volo.Abp.EntityFrameworkCore;
@@ -12,9 +13,11 @@ using Volo.Abp.EntityFrameworkCore;
 namespace KnowledgeHub.Migrations
 {
     [DbContext(typeof(KnowledgeHubDbContext))]
-    partial class KnowledgeHubDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260324223323_ChangeSchoolIdToString")]
+    partial class ChangeSchoolIdToString
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2655,9 +2658,8 @@ namespace KnowledgeHub.Migrations
                     b.Property<int>("RoleType")
                         .HasColumnType("integer");
 
-                    b.Property<string>("SchoolId")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<Guid?>("SchoolId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("SecurityStamp")
                         .IsRequired()

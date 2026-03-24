@@ -29,10 +29,11 @@ public static class KnowledgeHubEfCoreEntityExtensionMappings
                 );
 
             ObjectExtensionManager.Instance
-                .MapEfCoreProperty<IdentityUser, Guid?>(
+                .MapEfCoreProperty<IdentityUser, string>(
                     "SchoolId",
                     (entityBuilder, propertyBuilder) =>
                     {
+                        propertyBuilder.HasMaxLength(50);
                     }
                 );
 

@@ -223,8 +223,8 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
 
         user.ExtraProperties["RoleType"] = (int)dto.RoleType;
         
-        if (dto.SchoolId.HasValue)
-            user.ExtraProperties["SchoolId"] = dto.SchoolId.Value;
+        if (!string.IsNullOrWhiteSpace(dto.SchoolId))
+            user.ExtraProperties["SchoolId"] = dto.SchoolId;
         
         if (!string.IsNullOrWhiteSpace(dto.EmployeeNumber))
             user.ExtraProperties["EmployeeNumber"] = dto.EmployeeNumber;
