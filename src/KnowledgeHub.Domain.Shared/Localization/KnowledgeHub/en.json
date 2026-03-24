@@ -219,6 +219,7 @@
     "Menu:MyCourses": "My Courses",
     "Menu:CreateCourse": "Create Course",
     "Menu:KnowledgeGraph": "Knowledge Graph",
+    "Menu:Admin": "Admin",
     "Menu:ExerciseManagement": "Exercise Management"
   }
 }

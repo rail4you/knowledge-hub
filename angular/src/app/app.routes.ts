@@ -56,6 +56,14 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/exercise',
+    loadComponent: () => import('./admin/exercise/exercise-management.component').then(c => c.ExerciseManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Exercises',
+    },
+  },
+  {
     path: 'document-viewer/:id',
     loadComponent: () => import('./document-viewer/document-viewer.component').then(c => c.DocumentViewerComponent),
     canActivate: [authGuard, permissionGuard],

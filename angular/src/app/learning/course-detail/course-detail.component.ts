@@ -9,6 +9,8 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzListModule } from 'ng-zorro-antd/list';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { ChapterTreeComponent } from '../chapter/chapter-tree.component';
 
 interface Chapter {
   id: string;
@@ -53,7 +55,9 @@ interface CourseDetail {
     NzIconModule,
     NzProgressModule,
     NzListModule,
-    NzCollapseModule
+    NzCollapseModule,
+    NzDividerModule,
+    ChapterTreeComponent
   ],
   templateUrl: './course-detail.component.html',
   styleUrls: ['./course-detail.component.scss'],
@@ -65,10 +69,12 @@ export class CourseDetailComponent implements OnInit {
   
   course = signal<CourseDetail | null>(null);
   loading = signal(true);
+  courseId = signal<string>('');
   
   ngOnInit() {
     const courseId = this.route.snapshot.paramMap.get('id');
     if (courseId) {
+      this.courseId.set(courseId);
       this.loadCourse(courseId);
     }
   }
@@ -139,6 +145,13 @@ export class CourseDetailComponent implements OnInit {
     const course = this.course();
     if (course) {
       this.router.navigate(['/learning/knowledge-graph', course.id]);
+    }
+  }
+
+  viewExercises() {
+    const course = this.course();
+    if (course) {
+      this.router.navigate(['/learning/exercise', course.id]);
     }
   }
   

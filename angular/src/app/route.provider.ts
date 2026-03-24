@@ -86,6 +86,20 @@ function configureRoutes() {
         layout: eLayoutType.application,
       },
       {
+        path: '/admin',
+        name: '::Menu:Admin',
+        iconClass: 'fas fa-cog',
+        order: 6,
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/admin/exercise',
+        name: '::Menu:ExerciseManagement',
+        parentName: '::Menu:Admin',
+        layout: eLayoutType.application,
+        requiredPolicy: 'KnowledgeHub.Exercises',
+      },
+      {
         path: '/learning',
         name: '::Menu:Learning',
         iconClass: 'fas fa-graduation-cap',
@@ -113,12 +127,6 @@ function configureRoutes() {
       {
         path: '/learning/knowledge-graph/:courseId',
         name: '::Menu:KnowledgeGraph',
-        parentName: '::Menu:Learning',
-        layout: eLayoutType.application,
-      },
-      {
-        path: '/learning/exercise/:courseId',
-        name: '::Menu:ExerciseManagement',
         parentName: '::Menu:Learning',
         layout: eLayoutType.application,
       },

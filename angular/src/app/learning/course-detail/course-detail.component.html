@@ -48,7 +48,7 @@
             </div>
           }
           
-          <div class="action-buttons">
+            <div class="action-buttons">
             @if (course()!.isEnrolled) {
               <button nz-button nzType="primary" (click)="startLearning()">
                 <span nz-icon nzType="play-circle"></span>
@@ -64,12 +64,20 @@
               <span nz-icon nzType="apartment"></span>
               知识图谱
             </button>
+            <button nz-button (click)="viewExercises()">
+              <span nz-icon nzType="form"></span>
+              习题管理
+            </button>
           </div>
         </div>
       </div>
     </div>
     
     <nz-card class="chapters-card" nzTitle="课程章节">
+      <app-chapter-tree [courseId]="courseId()"></app-chapter-tree>
+      
+      <nz-divider nzType="horizontal"></nz-divider>
+      
       <nz-collapse>
         @for (chapter of course()!.chapters; track chapter.id) {
           <nz-collapse-panel [nzHeader]="chapter.title">
