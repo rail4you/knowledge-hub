@@ -120,6 +120,10 @@ export const APP_ROUTES: Routes = [
         path: 'teacher/create',
         loadComponent: () => import('./learning/teacher/course-create/course-create.component').then(c => c.CourseCreateComponent),
       },
+      {
+        path: 'knowledge-graph/:courseId',
+        loadComponent: () => import('./learning/knowledge-graph/knowledge-graph.component').then(c => c.KnowledgeGraphComponent),
+      },
     ],
   },
 ];

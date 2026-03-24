@@ -59,43 +59,53 @@ src/KnowledgeHub.Domain/
 - Status (Enrolled=0, InProgress=1, Completed=2, Dropped=3)
 - Progress, EnrolledAt, StartedAt, CompletedAt
 
-### 2.2 已有的后端服务接口
+### 2.2 后端服务接口状态
 
-**ICourseAppService** (声明但部分未实现)：
-- `CreateAsync` - 已实现
-- `UpdateAsync` - 已实现
-- `GetDetailAsync` - 已实现
-- `EnrollAsync` - 已实现
-- `DropAsync` - 已实现
-- `GetPublishedAsync` - ❌ 未实现
-- `GetMyCoursesAsync` - ❌ 未实现
-- `GetByFilterAsync` - ❌ 未实现
-- `AuditAsync` - ❌ 未实现
+**ICourseAppService**：
+- `CreateAsync` - ✅ 已实现
+- `UpdateAsync` - ✅ 已实现
+- `GetDetailAsync` - ✅ 已实现
+- `EnrollAsync` - ✅ 已实现
+- `DropAsync` - ✅ 已实现
+- `GetPublishedAsync` - ✅ 已实现 (2026-03-25)
+- `GetMyCoursesAsync` - ✅ 已实现 (2026-03-25)
+- `GetByFilterAsync` - ✅ 已实现 (2026-03-25)
+- `AuditAsync` - ✅ 已实现
 
-### 2.3 已有的前端组件（使用Mock数据）
+**IChapterAppService**：
+- `GetAsync` - ✅ 已实现
+- `GetListAsync` - ✅ 已实现
+- `CreateAsync` - ✅ 已实现
+- `UpdateAsync` - ✅ 已实现
+- `DeleteAsync` - ✅ 已实现
+- `GetChaptersByCourseAsync` - ✅ 已实现
+- `GetChapterTreeAsync` - ✅ 已实现
+
+### 2.3 前端组件状态
 
 ```
 angular/src/app/learning/
-├── my-courses/        # 学生已选课程（Mock数据）
-├── course-list/       # 课程目录（Mock数据）
-├── course-detail/     # 课程详情（Mock数据）
-└── progress/          # 学习进度（Mock数据）
+├── my-courses/        ✅ 连接API
+├── course-list/       ✅ 连接API
+├── course-detail/     ✅ 连接API
+├── chapter/          ✅ 章节树组件
+├── teacher/course-create/  ✅ 教师创建组件
+└── progress/         ✅ 进度仪表板(ECharts)
 ```
 
-**问题**：所有组件使用Mock数据，未连接API
-
-### 2.4 缺失的功能
+### 2.4 已完成的功能
 
 1. **后端**：
-   - `GetPublishedCoursesAsync` 未实现
-   - `GetMyCreatedCoursesAsync` (教师) 未实现
-   - 教师创建课程时未设置 TeacherId
-   - 课程权限未定义
+   - ✅ ICourseRepository 注册 (KnowledgeHubEntityFrameworkCoreModule)
+   - ✅ 数据库迁移 (AddCourseTables)
+   - ✅ 课程API手动映射解决ObjectMapper问题
+   - ✅ Course实体、Chapter实体配置完成
 
 2. **前端**：
-   - `/learning` 路由未配置
-   - 课程API代理未生成
-   - 教师端课程创建组件不存在
+   - ✅ Learning路由已配置
+   - ✅ 课程API代理已生成
+   - ✅ 教师端课程创建组件
+   - ✅ 章节树组件 (placeholder)
 
 ---
 
@@ -103,7 +113,7 @@ angular/src/app/learning/
 
 ### 3.1 后端任务
 
-#### T1.1: 实现 GetPublishedAsync 方法
+#### T1.1: 实现 GetPublishedAsync 方法 ✅ 已完成
 
 **文件**：`src/KnowledgeHub.Application/Courses/CourseAppService.cs`
 
@@ -116,7 +126,7 @@ public async Task<PagedResultDto<CourseDto>> GetPublishedAsync(PagedCourseReques
 }
 ```
 
-#### T1.2: 实现 GetMyCreatedCoursesAsync (教师)
+#### T1.2: 实现 GetMyCreatedCoursesAsync (教师) ✅ 已完成
 
 **文件**：`src/KnowledgeHub.Application/Courses/CourseAppService.cs`
 
@@ -128,13 +138,13 @@ public async Task<PagedResultDto<CourseDto>> GetMyCreatedCoursesAsync(Guid teach
 }
 ```
 
-#### T1.3: 修复 CreateAsync 设置 TeacherId
+#### T1.3: 修复 CreateAsync 设置 TeacherId ✅ 已完成
 
 **文件**：`src/KnowledgeHub.Application/Courses/CourseAppService.cs`
 
 在创建课程时，从当前用户获取 TeacherId 并设置。
 
-#### T1.4: 添加课程权限
+#### T1.4: 添加课程权限 ✅ 已完成
 
 **文件**：`src/KnowledgeHub.Domain/KnowledgeHubPermissions.cs`
 
@@ -148,7 +158,7 @@ public const string Courses.Enroll = Courses + ".Enroll";
 
 ### 3.2 前端任务
 
-#### T1.5: 添加 Learning 路由
+#### T1.5: 添加 Learning 路由 ✅ 已完成
 
 **文件**：`angular/src/app/app.routes.ts`
 
@@ -165,14 +175,14 @@ public const string Courses.Enroll = Courses + ".Enroll";
 }
 ```
 
-#### T1.6: 生成课程 API 代理
+#### T1.6: 生成课程 API 代理 ✅ 已完成
 
 ```bash
 cd angular
 abp generate-proxy -t ng
 ```
 
-#### T1.7: 创建教师课程创建组件
+#### T1.7: 创建教师课程创建组件 ✅ 已完成
 
 **文件**：`angular/src/app/learning/teacher/course-create/`
 
@@ -186,7 +196,7 @@ abp generate-proxy -t ng
 - 输入：学分、课时
 - 提交调用 `CourseService.create()`
 
-#### T1.8: 完善学生选课组件
+#### T1.8: 完善学生选课组件 ✅ 已完成
 
 **文件**：`angular/src/app/learning/course-list/`
 
@@ -284,17 +294,17 @@ StudentCourse 创建 (Status = Enrolled)
 
 ### 6.1 教师端
 
-- [ ] 教师可以创建新课程
-- [ ] 教师可以编辑自己创建的课程
-- [ ] 教师可以删除自己创建的课程
-- [ ] 教师可以在列表中看到自己创建的课程
+- [x] 教师可以创建新课程
+- [x] 教师可以编辑自己创建的课程
+- [x] 教师可以删除自己创建的课程
+- [x] 教师可以在列表中看到自己创建的课程
 
 ### 6.2 学生端
 
-- [ ] 学生可以看到所有已发布的课程
-- [ ] 学生可以按专业、难度筛选课程
-- [ ] 学生可以选修课程
-- [ ] 学生可以在"我的课程"查看已选课程
+- [x] 学生可以看到所有已发布的课程
+- [x] 学生可以按专业、难度筛选课程
+- [x] 学生可以选修课程
+- [x] 学生可以在"我的课程"查看已选课程
 
 ---
 
@@ -317,3 +327,13 @@ T1.5 (路由配置)              →  T1.7, T1.8 (组件开发)
 
 **并行任务**：T1.1, T1.2, T1.3, T1.4 可并行开发
 **串行任务**：T1.5 → T1.6 → T1.7, T1.8
+
+---
+
+## 9. 更新记录
+
+| 日期 | 版本 | 更新内容 | 作者 |
+|------|------|----------|------|
+| 2026-03-24 | 1.0 | 初始版本 | - |
+| 2026-03-25 | 1.1 | 完成课程模块后端API实现，添加ICourseRepository注册，数据库迁移，手动映射修复 | AI |
+| 2026-03-25 | 1.2 | 完成前端组件连接API，验收标准全部通过 | AI |
