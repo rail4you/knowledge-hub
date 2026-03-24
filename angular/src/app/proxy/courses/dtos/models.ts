@@ -3,9 +3,11 @@ import type { CourseStatus } from '../enums/course-status.enum';
 
 export interface ChapterDto extends EntityDto<string> {
   courseId?: string;
+  parentId?: string | null;
   title?: string;
   description?: string | null;
   sortOrder?: number;
+  children?: ChapterDto[];
   knowledgeResources?: KnowledgeResourceDto[];
 }
 
@@ -38,6 +40,14 @@ export interface CourseFilterDto {
   categoryId?: string | null;
   teacherId?: string | null;
   status?: CourseStatus | null;
+}
+
+export interface CreateUpdateChapterDto {
+  courseId?: string;
+  parentId?: string | null;
+  title?: string;
+  description?: string | null;
+  sortOrder?: number;
 }
 
 export interface CreateUpdateCourseDto {

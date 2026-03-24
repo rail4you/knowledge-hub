@@ -33,7 +33,7 @@ interface ChapterDto {
 }
 
 interface CourseDetailDto {
-  id: string;
+  id?: string;
   title?: string;
   description?: string;
   chapters?: ChapterDto[];

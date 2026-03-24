@@ -2041,6 +2041,23 @@
                   }
                 },
                 {
+                  "name": "RefreshDocumentIndexAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "resourceId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Application.Contracts.Search.Dtos.IndexTaskResultDto",
+                    "typeSimple": "KnowledgeHub.Application.Contracts.Search.Dtos.IndexTaskResultDto"
+                  }
+                },
+                {
                   "name": "GetIndexingTaskStatusAsync",
                   "parametersOnMethod": [
                     {
@@ -2332,6 +2349,43 @@
               "returnValue": {
                 "type": "System.Void",
                 "typeSimple": "System.Void"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Search.IMeiliSearchService"
+            },
+            "RefreshDocumentIndexAsyncByResourceId": {
+              "uniqueName": "RefreshDocumentIndexAsyncByResourceId",
+              "name": "RefreshDocumentIndexAsync",
+              "httpMethod": "POST",
+              "url": "api/app/meili-search/refresh-document-index/{resourceId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "resourceId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "resourceId",
+                  "name": "resourceId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Application.Contracts.Search.Dtos.IndexTaskResultDto",
+                "typeSimple": "KnowledgeHub.Application.Contracts.Search.Dtos.IndexTaskResultDto"
               },
               "allowAnonymous": null,
               "implementFrom": "KnowledgeHub.Application.Contracts.Search.IMeiliSearchService"
@@ -3128,6 +3182,23 @@
                   }
                 },
                 {
+                  "name": "RefreshDocumentIndexAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "resourceId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Application.Contracts.Search.Dtos.IndexTaskResultDto",
+                    "typeSimple": "KnowledgeHub.Application.Contracts.Search.Dtos.IndexTaskResultDto"
+                  }
+                },
+                {
                   "name": "DeleteIndexAsync",
                   "parametersOnMethod": [
                     {
@@ -3392,6 +3463,43 @@
                   "defaultValue": null,
                   "constraintTypes": null,
                   "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Application.Contracts.Search.Dtos.IndexTaskResultDto",
+                "typeSimple": "KnowledgeHub.Application.Contracts.Search.Dtos.IndexTaskResultDto"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Search.ISearchAppService"
+            },
+            "RefreshDocumentIndexAsyncByResourceId": {
+              "uniqueName": "RefreshDocumentIndexAsyncByResourceId",
+              "name": "RefreshDocumentIndexAsync",
+              "httpMethod": "POST",
+              "url": "api/app/search/refresh-document-index/{resourceId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "resourceId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "resourceId",
+                  "name": "resourceId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
                   "descriptorName": ""
                 }
               ],
@@ -4011,6 +4119,508 @@
               },
               "allowAnonymous": false,
               "implementFrom": "KnowledgeHub.Users.IUserImportAppService"
+            }
+          }
+        },
+        "KnowledgeHub.Courses.ChapterAppService": {
+          "controllerName": "Chapter",
+          "controllerGroupName": "Chapter",
+          "isRemoteService": true,
+          "isIntegrationService": false,
+          "apiVersion": null,
+          "type": "KnowledgeHub.Courses.ChapterAppService",
+          "interfaces": [
+            {
+              "type": "KnowledgeHub.Courses.IChapterAppService",
+              "name": "IChapterAppService",
+              "methods": [
+                {
+                  "name": "GetChaptersByCourseAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "courseId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Collections.Generic.List<KnowledgeHub.Courses.Dtos.ChapterDto>",
+                    "typeSimple": "[KnowledgeHub.Courses.Dtos.ChapterDto]"
+                  }
+                },
+                {
+                  "name": "GetChapterTreeAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "courseId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Collections.Generic.List<KnowledgeHub.Courses.Dtos.ChapterDto>",
+                    "typeSimple": "[KnowledgeHub.Courses.Dtos.ChapterDto]"
+                  }
+                },
+                {
+                  "name": "DeleteByCourseAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "courseId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                },
+                {
+                  "name": "GetAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "id",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Courses.Dtos.ChapterDto",
+                    "typeSimple": "KnowledgeHub.Courses.Dtos.ChapterDto"
+                  }
+                },
+                {
+                  "name": "GetListAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto, Volo.Abp.Ddd.Application.Contracts",
+                      "type": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+                      "typeSimple": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Courses.Dtos.ChapterDto>",
+                    "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Courses.Dtos.ChapterDto>"
+                  }
+                },
+                {
+                  "name": "CreateAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                      "typeSimple": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Courses.Dtos.ChapterDto",
+                    "typeSimple": "KnowledgeHub.Courses.Dtos.ChapterDto"
+                  }
+                },
+                {
+                  "name": "UpdateAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "id",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    },
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                      "typeSimple": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Courses.Dtos.ChapterDto",
+                    "typeSimple": "KnowledgeHub.Courses.Dtos.ChapterDto"
+                  }
+                },
+                {
+                  "name": "DeleteAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "id",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                }
+              ]
+            }
+          ],
+          "actions": {
+            "GetAsyncById": {
+              "uniqueName": "GetAsyncById",
+              "name": "GetAsync",
+              "httpMethod": "GET",
+              "url": "api/app/chapter/{id}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "id",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "id",
+                  "name": "id",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Courses.Dtos.ChapterDto",
+                "typeSimple": "KnowledgeHub.Courses.Dtos.ChapterDto"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "Volo.Abp.Application.Services.IReadOnlyAppService<KnowledgeHub.Courses.Dtos.ChapterDto,KnowledgeHub.Courses.Dtos.ChapterDto,System.Guid,Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto>"
+            },
+            "GetListAsyncByInput": {
+              "uniqueName": "GetListAsyncByInput",
+              "name": "GetListAsync",
+              "httpMethod": "GET",
+              "url": "api/app/chapter",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto, Volo.Abp.Ddd.Application.Contracts",
+                  "type": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+                  "typeSimple": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "Sorting",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "SkipCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "MaxResultCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Courses.Dtos.ChapterDto>",
+                "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Courses.Dtos.ChapterDto>"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "Volo.Abp.Application.Services.IReadOnlyAppService<KnowledgeHub.Courses.Dtos.ChapterDto,KnowledgeHub.Courses.Dtos.ChapterDto,System.Guid,Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto>"
+            },
+            "CreateAsyncByInput": {
+              "uniqueName": "CreateAsyncByInput",
+              "name": "CreateAsync",
+              "httpMethod": "POST",
+              "url": "api/app/chapter",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                  "typeSimple": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                  "typeSimple": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Courses.Dtos.ChapterDto",
+                "typeSimple": "KnowledgeHub.Courses.Dtos.ChapterDto"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "Volo.Abp.Application.Services.ICreateAppService<KnowledgeHub.Courses.Dtos.ChapterDto,KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto>"
+            },
+            "UpdateAsyncByIdAndInput": {
+              "uniqueName": "UpdateAsyncByIdAndInput",
+              "name": "UpdateAsync",
+              "httpMethod": "PUT",
+              "url": "api/app/chapter/{id}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "id",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                },
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                  "typeSimple": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "id",
+                  "name": "id",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                  "typeSimple": "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Courses.Dtos.ChapterDto",
+                "typeSimple": "KnowledgeHub.Courses.Dtos.ChapterDto"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "Volo.Abp.Application.Services.IUpdateAppService<KnowledgeHub.Courses.Dtos.ChapterDto,System.Guid,KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto>"
+            },
+            "DeleteAsyncById": {
+              "uniqueName": "DeleteAsyncById",
+              "name": "DeleteAsync",
+              "httpMethod": "DELETE",
+              "url": "api/app/chapter/{id}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "id",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "id",
+                  "name": "id",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "Volo.Abp.Application.Services.IDeleteAppService<System.Guid>"
+            },
+            "GetChaptersByCourseAsyncByCourseId": {
+              "uniqueName": "GetChaptersByCourseAsyncByCourseId",
+              "name": "GetChaptersByCourseAsync",
+              "httpMethod": "GET",
+              "url": "api/app/chapter/chapters-by-course/{courseId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "courseId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "courseId",
+                  "name": "courseId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Collections.Generic.List<KnowledgeHub.Courses.Dtos.ChapterDto>",
+                "typeSimple": "[KnowledgeHub.Courses.Dtos.ChapterDto]"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Courses.IChapterAppService"
+            },
+            "GetChapterTreeAsyncByCourseId": {
+              "uniqueName": "GetChapterTreeAsyncByCourseId",
+              "name": "GetChapterTreeAsync",
+              "httpMethod": "GET",
+              "url": "api/app/chapter/chapter-tree/{courseId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "courseId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "courseId",
+                  "name": "courseId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Collections.Generic.List<KnowledgeHub.Courses.Dtos.ChapterDto>",
+                "typeSimple": "[KnowledgeHub.Courses.Dtos.ChapterDto]"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Courses.IChapterAppService"
+            },
+            "DeleteByCourseAsyncByCourseId": {
+              "uniqueName": "DeleteByCourseAsyncByCourseId",
+              "name": "DeleteByCourseAsync",
+              "httpMethod": "DELETE",
+              "url": "api/app/chapter/by-course/{courseId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "courseId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "courseId",
+                  "name": "courseId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Courses.IChapterAppService"
             }
           }
         },
@@ -12850,6 +13460,19 @@
           "isNullable": false
         },
         {
+          "name": "ParentId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
           "name": "Title",
           "jsonName": null,
           "type": "System.String",
@@ -12880,6 +13503,19 @@
           "jsonName": null,
           "type": "System.Int32",
           "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Children",
+          "jsonName": null,
+          "type": "[KnowledgeHub.Courses.Dtos.ChapterDto]",
+          "typeSimple": "[KnowledgeHub.Courses.Dtos.ChapterDto]",
           "isRequired": false,
           "minLength": null,
           "maxLength": null,
@@ -13213,6 +13849,80 @@
           "maximum": null,
           "regex": null,
           "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ParentId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "Title",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Description",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "SortOrder",
+          "jsonName": null,
+          "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
         }
       ]
     },
