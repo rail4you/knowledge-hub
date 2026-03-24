@@ -1,0 +1,91 @@
+# ============================================================
+# docker-compose.prod.yml - KnowledgeHub 生产环境配置
+# ============================================================
+# 使用方式: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 远程部署时需要：
+# 1. 修改 APP_SELF_URL 和 APP_ANGULAR_URL 为实际域名
+# 2. 数据库密码、API Keys 等通过 .env.production 注入
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # Angular UI — Nginx 静态托管（端口 80）
+  # ----------------------------------------------------------
+  knowledgehub-angular:
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+
+  # ----------------------------------------------------------
+  # HttpApi.Host — 后端 API（HTTPS，端口 44354）
+  # ----------------------------------------------------------
+  knowledgehub-api:
+    environment:
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+      - Kestrel__Certificates__Default__Path=/app/localhost.pfx
+      - Kestrel__Certificates__Default__Password=${CERT_PASSWORD}
+      # 生产环境 URL
+      - App__SelfUrl=${APP_SELF_URL}
+      - App__HealthCheckUrl=http://knowledgehub-api/health-status
+      - App__AngularUrl=${APP_ANGULAR_URL}
+      - App__CorsOrigins=${APP_CORS_ORIGINS}
+      - App__RedirectAllowedUrls=${APP_REDIRECT_URLS}
+      - AuthServer__Authority=https://119.45.170.4:44354
+      - AuthServer__RequireHttpsMetadata=false
+      # 数据库
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}
+      - Redis__Configuration=redis
+      # Meilisearch
+      - Meilisearch__Host=http://meilisearch:7700
+      - Meilisearch__ApiKey=${MEILISEARCH_MASTER_KEY}
+      - Meilisearch__IndexName=documents
+      - Meilisearch__EmbeddingDimension=1024
+      - Meilisearch__EmbeddingApiKey=${EMBEDDING_API_KEY}
+      # Qwen API
+      - Qwen__ApiKey=${QWEN_API_KEY}
+      - Qwen__BaseUrl=${QWEN_BASE_URL}
+      - Qwen__Model=${QWEN_MODEL}
+      # JWT
+      - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
+      - StringEncryption__DefaultPassPhrase=${STRING_ENCRYPTION_PASSPHRASE}
+      # Serilog
+      - Serilog__MinimumLevel__Default=Information
+    volumes:
+      - ./certs:/root/certificate
+      - ./certs:/app/localhost.pfx:ro
+      - uploads_data:/app/uploads
+
+  # ----------------------------------------------------------
+  # Meilisearch — 全文搜索引擎
+  # ----------------------------------------------------------
+  meilisearch:
+    environment:
+      - MEILI_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
+      - MEILI_ENV=production
+      - MEILI_DB_PATH=/meili_data
+      - MEILI_HTTP_ADDR=0.0.0.0:7700
+
+  # ----------------------------------------------------------
+  # DbMigrator — 数据库迁移 & OpenIddict 种子数据
+  # ----------------------------------------------------------
+  db-migrator:
+    environment:
+      - OpenIddict__Applications__KnowledgeHub_App__RootUrl=${APP_ANGULAR_URL}
+      - OpenIddict__Applications__KnowledgeHub_Swagger__RootUrl=${APP_SELF_URL}
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}
+      - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # ----------------------------------------------------------
+  # Postgresql 16
+  # ----------------------------------------------------------
+  postgres:
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=KnowledgeHub

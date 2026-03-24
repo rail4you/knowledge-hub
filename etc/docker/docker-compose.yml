@@ -21,9 +21,6 @@ services:
   knowledgehub-angular:
     image: mycompany/knowledgehub-angular:latest
     container_name: knowledgehub-angular
-    build:
-      context: ../../angular
-      dockerfile: Dockerfile.local
     ports:
       - "4200:80"
     depends_on:
@@ -71,10 +68,38 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      meilisearch:
+        condition: service_healthy
     restart: on-failure
     volumes:
       - ./certs:/root/certificate
       - uploads_data:/app/uploads
+      - ./meilisearch_data:/meili_data
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # Meilisearch — 全文搜索引擎
+  # ----------------------------------------------------------
+  meilisearch:
+    image: getmeili/meilisearch:v1.6
+    container_name: meilisearch
+    hostname: meilisearch
+    environment:
+      - MEILI_MASTER_KEY=aSampleMasterKey
+      - MEILI_ENV=production
+      - MEILI_DB_PATH=/meili_data
+      - MEILI_HTTP_ADDR=0.0.0.0:7700
+    ports:
+      - "7700:7700"
+    volumes:
+      - ./meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
     networks:
       - abp-network
 
@@ -179,6 +204,7 @@ services:
 volumes:
   postgres_data:
   uploads_data:
+  meilisearch_data:
 
 networks:
   abp-network:
