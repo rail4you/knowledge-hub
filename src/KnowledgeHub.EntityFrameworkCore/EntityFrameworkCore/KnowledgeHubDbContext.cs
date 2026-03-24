@@ -17,6 +17,7 @@ using Volo.Abp.TenantManagement.EntityFrameworkCore;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.EntityFrameworkCore.AI;
+using KnowledgeHub.Exams;
 
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -89,6 +90,13 @@ public class KnowledgeHubDbContext :
     public DbSet<KnowledgeHub.Learning.LearningProgress> LearningProgresses { get; set; }
     public DbSet<KnowledgeHub.Learning.KnowledgeMastery> KnowledgeMasteries { get; set; }
 
+    // Exam entities
+    public DbSet<Exam> Exams { get; set; }
+    public DbSet<Exercise> Exercises { get; set; }
+    public DbSet<ExamExercise> ExamExercises { get; set; }
+    public DbSet<StudentExam> StudentExams { get; set; }
+    public DbSet<StudentAnswer> StudentAnswers { get; set; }
+
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
     {
@@ -117,5 +125,6 @@ public class KnowledgeHubDbContext :
         builder.ConfigureAI();
         builder.ConfigureCourse();
         builder.ConfigureLearning();
+        builder.ConfigureExam();
     }
 }
