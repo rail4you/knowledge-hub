@@ -50,6 +50,8 @@ using KnowledgeHub.Web;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 using Volo.Abp.BackgroundJobs;
+using KnowledgeHub.Json;
+using Volo.Abp.Json;
 
 namespace KnowledgeHub;
 
@@ -162,6 +164,11 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         Configure<AbpBackgroundJobOptions>(options =>
         {
             options.IsJobExecutionEnabled = true;
+        });
+
+        Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
+        {
+            options.JsonSerializerOptions.Converters.Add(new NullableGuidConverter());
         });
     }
 
