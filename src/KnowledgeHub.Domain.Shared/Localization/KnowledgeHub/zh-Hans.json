@@ -256,6 +256,7 @@
     "Menu:CourseList": "课程列表",
     "Menu:MyCourses": "我的课程",
     "Menu:CreateCourse": "创建课程",
-    "Menu:KnowledgeGraph": "知识图谱"
+    "Menu:KnowledgeGraph": "知识图谱",
+    "Menu:ExerciseManagement": "习题管理"
   }
 }

@@ -218,6 +218,7 @@
     "Menu:CourseList": "Course List",
     "Menu:MyCourses": "My Courses",
     "Menu:CreateCourse": "Create Course",
-    "Menu:KnowledgeGraph": "Knowledge Graph"
+    "Menu:KnowledgeGraph": "Knowledge Graph",
+    "Menu:ExerciseManagement": "Exercise Management"
   }
 }

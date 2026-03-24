@@ -117,6 +117,12 @@ function configureRoutes() {
         layout: eLayoutType.application,
       },
       {
+        path: '/learning/exercise/:courseId',
+        name: '::Menu:ExerciseManagement',
+        parentName: '::Menu:Learning',
+        layout: eLayoutType.application,
+      },
+      {
         path: '/student',
         name: '::Menu:StudentPortal',
         iconClass: 'fas fa-user-graduate',

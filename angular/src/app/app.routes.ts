@@ -124,6 +124,14 @@ export const APP_ROUTES: Routes = [
         path: 'knowledge-graph/:courseId',
         loadComponent: () => import('./learning/knowledge-graph/knowledge-graph.component').then(c => c.KnowledgeGraphComponent),
       },
+      {
+        path: 'exercise/:courseId',
+        loadComponent: () => import('./learning/exercise/exercise-list.component').then(c => c.ExerciseListComponent),
+      },
+      {
+        path: 'exercise-practice/:courseId',
+        loadComponent: () => import('./learning/exercise/exercise-practice.component').then(c => c.ExercisePracticeComponent),
+      },
     ],
   },
 ];
