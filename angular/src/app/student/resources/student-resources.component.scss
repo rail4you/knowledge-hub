@@ -1,0 +1,54 @@
+.student-resources {
+  max-width: 1200px;
+  margin: 0 auto;
+
+  .page-header {
+    margin-bottom: 16px;
+
+    h1 {
+      margin: 0 0 8px 0;
+    }
+
+    p {
+      color: #666;
+      margin: 0;
+    }
+  }
+
+  .filter-card {
+    margin-bottom: 16px;
+
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      .search-input {
+        width: 300px;
+      }
+
+      .filter-select {
+        width: 150px;
+      }
+    }
+  }
+
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+  }
+
+  .resource-name {
+    strong {
+      color: #333;
+    }
+
+    .resource-desc {
+      margin: 4px 0 0 0;
+      font-size: 12px;
+      color: #999;
+    }
+  }
+}

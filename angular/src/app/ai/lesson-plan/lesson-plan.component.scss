@@ -1,0 +1,37 @@
+.lesson-plan-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  
+  nz-card {
+    margin-bottom: 16px;
+  }
+}
+
+nz-form-item {
+  margin-bottom: 16px;
+}
+
+nz-divider {
+  margin: 16px 0;
+}
+
+.result-card {
+  margin-top: 24px;
+}
+
+nz-descriptions {
+  margin-bottom: 16px;
+}
+
+nz-collapse {
+  margin: 16px 0;
+  
+  nz-collapse-panel {
+    margin-bottom: 8px;
+  }
+}
+
+nz-tag {
+  margin: 4px 8px;
+}

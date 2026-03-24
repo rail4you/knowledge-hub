@@ -1,0 +1,116 @@
+<div class="student-resources">
+  <div class="page-header">
+    <h1>知识库资源</h1>
+    <p>浏览联盟审核通过的学习资源</p>
+  </div>
+
+  <nz-card class="filter-card">
+    <div class="filter-bar">
+      <nz-input-group [nzPrefix]="searchIcon" class="search-input">
+        <input 
+          nz-input 
+          [ngModel]="filterText()"
+          (ngModelChange)="filterText.set($event)"
+          placeholder="搜索资源..."
+          (keyup.enter)="loadResources()"
+        />
+      </nz-input-group>
+      <ng-template #searchIcon>
+        <span nz-icon nzType="search"></span>
+      </ng-template>
+
+      <nz-select 
+        [ngModel]="selectedType()"
+        (ngModelChange)="selectedType.set($event); loadResources()"
+        nzPlaceHolder="资源类型"
+        class="filter-select"
+      >
+        @for (type of resourceTypes; track type.value) {
+          <nz-option [nzValue]="type.value" [nzLabel]="type.label"></nz-option>
+        }
+      </nz-select>
+
+      <button nz-button nzType="primary" (click)="loadResources()">
+        <span nz-icon nzType="search"></span>
+        搜索
+      </button>
+    </div>
+  </nz-card>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (resources().length === 0) {
+    <nz-empty nzNotFoundContent="暂无资源"></nz-empty>
+  } @else {
+    <nz-table
+      [nzData]="resources()"
+      [nzShowPagination]="true"
+      [nzPageSize]="10"
+      nzSize="middle"
+    >
+      <thead>
+        <tr>
+          <th>资源名称</th>
+          <th>类型</th>
+          <th>分类</th>
+          <th>上传者</th>
+          <th>上传时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (resource of resources(); track resource.id) {
+          <tr>
+            <td>
+              <div class="resource-name">
+                <strong>{{ resource.name }}</strong>
+                @if (resource.description) {
+                  <p class="resource-desc">{{ resource.description | slice:0:50 }}...</p>
+                }
+              </div>
+            </td>
+            <td>
+              <nz-tag [nzColor]="getResourceTypeColor(resource.resourceType)">
+                {{ getResourceTypeName(resource.resourceType) }}
+              </nz-tag>
+            </td>
+            <td>{{ resource.categoryName || '-' }}</td>
+            <td>{{ resource.creatorName || '-' }}</td>
+            <td>{{ resource.creationTime | date:'yyyy-MM-dd' }}</td>
+            <td>
+              <button 
+                nz-button 
+                nzType="link" 
+                nzSize="small"
+                nz-tooltip="预览"
+                (click)="viewResource(resource.id)"
+              >
+                <span nz-icon nzType="eye"></span>
+              </button>
+              <button 
+                nz-button 
+                nzType="link" 
+                nzSize="small"
+                nz-tooltip="下载"
+                (click)="downloadResource(resource.id)"
+              >
+                <span nz-icon nzType="download"></span>
+              </button>
+              <button 
+                nz-button 
+                nzType="link" 
+                nzSize="small"
+                nz-tooltip="收藏"
+                (click)="collectResource(resource.id)"
+              >
+                <span nz-icon nzType="star"></span>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  }
+</div>

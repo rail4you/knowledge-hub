@@ -47,6 +47,75 @@ function configureRoutes() {
         parentName: '::Menu:KnowledgeHub',
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.Resources',
+      },
+      {
+        path: '/ai',
+        name: '::Menu:AI',
+        iconClass: 'fas fa-robot',
+        order: 4,
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/ai/chat',
+        name: '::Menu:AIChat',
+        parentName: '::Menu:AI',
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/ai/lesson-plan',
+        name: '::Menu:LessonPlan',
+        parentName: '::Menu:AI',
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/ai/case-analysis',
+        name: '::Menu:CaseAnalysis',
+        parentName: '::Menu:AI',
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/ai/career-guidance',
+        name: '::Menu:CareerGuidance',
+        parentName: '::Menu:AI',
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/ai/model-management',
+        name: '::Menu:ModelManagement',
+        parentName: '::Menu:AI',
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/learning',
+        name: '::Menu:Learning',
+        iconClass: 'fas fa-graduation-cap',
+        order: 5,
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/learning/course-list',
+        name: '::Menu:CourseList',
+        parentName: '::Menu:Learning',
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/learning/my-courses',
+        name: '::Menu:MyCourses',
+        parentName: '::Menu:Learning',
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/learning/teacher/create',
+        name: '::Menu:CreateCourse',
+        parentName: '::Menu:Learning',
+        layout: eLayoutType.application,
+      },
+      {
+        path: '/student',
+        name: '::Menu:StudentPortal',
+        iconClass: 'fas fa-user-graduate',
+        order: 1,
+        layout: eLayoutType.application,
       }
   ]);
 }

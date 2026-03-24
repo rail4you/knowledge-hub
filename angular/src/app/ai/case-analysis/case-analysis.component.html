@@ -1,0 +1,115 @@
+<div class="case-analysis-container">
+  <div class="page-header">
+    <h2>案例分析</h2>
+    <p class="subtitle">上传案例文档，AI将自动进行多维度分析</p>
+  </div>
+
+  <nz-card nzTitle="输入案例" class="input-card">
+    <nz-upload
+      nzType="drag"
+      [nzMultiple]="false"
+      [nzShowUploadList]="false"
+      (nzChange)="handleUpload($event)"
+      [nzAccept]="'.txt,.md,.json'"
+      [nzBeforeUpload]="beforeUpload">
+      <p class="ant-upload-drag-icon">
+        <span nz-icon nzType="inbox"></span>
+      </p>
+      <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
+      <p class="ant-upload-hint">支持 .txt, .md, .json 格式，最大 10MB</p>
+    </nz-upload>
+
+    <nz-divider>或者直接输入案例内容</nz-divider>
+
+    <textarea
+      nz-input
+      [(ngModel)]="input().content"
+      [nzAutosize]="{ minRows: 6, maxRows: 12 }"
+      placeholder="请粘贴或输入案例内容..."
+    ></textarea>
+
+    <div class="actions">
+      <button nz-button nzType="primary" (click)="analyze()" [nzLoading]="isLoading()" [disabled]="!input().content.trim()">
+        <span nz-icon nzType="search"></span>
+        开始分析
+      </button>
+      <button nz-button (click)="reset()" [disabled]="isLoading()">
+        <span nz-icon nzType="clear"></span>
+        清空
+      </button>
+    </div>
+  </nz-card>
+
+  @if (isLoading()) {
+    <nz-card class="result-card">
+      <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 8 }"></nz-skeleton>
+    </nz-card>
+  }
+
+  @if (result()) {
+    <nz-card nzTitle="分析结果" class="result-card">
+      <nz-descriptions nzTitle="{{ result().title }}" nzBordered [nzColumn]="2">
+        <nz-descriptions-item nzTitle="案例摘要" [nzSpan]="2">
+          {{ result().summary }}
+        </nz-descriptions-item>
+      </nz-descriptions>
+
+      <nz-divider nzText="背景分析"></nz-divider>
+      <nz-descriptions nzBordered [nzColumn]="2">
+        <nz-descriptions-item nzTitle="行业">{{ result().background.industry }}</nz-descriptions-item>
+        <nz-descriptions-item nzTitle="时间范围">{{ result().background.timeframe }}</nz-descriptions-item>
+        <nz-descriptions-item nzTitle="场景背景" [nzSpan]="2">{{ result().background.context }}</nz-descriptions-item>
+        <nz-descriptions-item nzTitle="相关方" [nzSpan]="2">
+          @for (stakeholder of result().background.stakeholders; track stakeholder) {
+            <nz-tag>{{ stakeholder }}</nz-tag>
+          }
+        </nz-descriptions-item>
+      </nz-descriptions>
+
+      <nz-divider nzText="关键问题"></nz-divider>
+      <nz-collapse>
+        @for (issue of result().keyIssues; track issue.id) {
+          <nz-collapse-panel [nzHeader]="issue.title" [nzActive]="true">
+            <nz-descriptions [nzColumn]="1" nzSize="small">
+              <nz-descriptions-item nzTitle="问题描述">{{ issue.description }}</nz-descriptions-item>
+              <nz-descriptions-item nzTitle="影响">{{ issue.impact }}</nz-descriptions-item>
+              <nz-descriptions-item nzTitle="严重程度">
+                <nz-tag [nzColor]="getSeverityColor(issue.severity)">{{ issue.severity }}</nz-tag>
+              </nz-descriptions-item>
+            </nz-descriptions>
+          </nz-collapse-panel>
+        }
+      </nz-collapse>
+
+      <nz-divider nzText="解决方案"></nz-divider>
+      <nz-collapse>
+        @for (solution of result().solutions; track solution.id) {
+          <nz-collapse-panel [nzHeader]="solution.title">
+            <p>{{ solution.description }}</p>
+            <h4>实施步骤:</h4>
+            <ol>
+              @for (step of solution.steps; track step) {
+                <li>{{ step }}</li>
+              }
+            </ol>
+            <p><strong>预期效果:</strong> {{ solution.expectedOutcome }}</p>
+          </nz-collapse-panel>
+        }
+      </nz-collapse>
+
+      <nz-divider nzText="关键洞察"></nz-divider>
+      <ul class="insight-list">
+        @for (insight of result().keyInsights; track insight) {
+          <li>{{ insight }}</li>
+        }
+      </ul>
+
+      <nz-divider nzText="建议"></nz-divider>
+      <ul class="recommendation-list">
+        @for (rec of result().recommendations; track rec) {
+          <li>{{ rec }}</li>
+        }
+      </ul>
+    </nz-card>
+  }
+</div>

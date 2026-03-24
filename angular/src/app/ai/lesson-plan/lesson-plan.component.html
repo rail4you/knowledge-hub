@@ -1,0 +1,111 @@
+<div class="lesson-plan-container">
+  <div class="lesson-plan-header">
+    <h2>教案课件生成</h2>
+    <p class="subtitle">输入课程信息，p>
+  </div>
+
+  <nz-card>
+    <div nz-row [nzGutter]="[16, 16]">
+      <div nz-col [nzSpan]="12">
+        <nz-form-item nzLabel="课程主题">
+          <input nz-input [(ngModel)]="input().topic" placeholder="例如：Python基础入门" />
+        </nz-form-item>
+      </div>
+      
+      <div nz-col [nzSpan]="6">
+        <nz-form-item nzLabel="学科">
+          <nz-select [(ngModel)]="input().subject" nzPlaceHolder="请选择">
+            <nz-option nzValue="语文" nzLabel="语文"></nz-option>
+            <nz-option nzValue="数学" nzLabel="数学"></nz-option>
+            <nz-option nzValue="英语" nzLabel="英语"></nz-option>
+            <nz-option nzValue="物理" nzLabel="物理"></nz-option>
+            <nz-option nzValue="化学" nzLabel="化学"></nz-option>
+            <nz-option nzValue="生物" nzLabel="生物"></nz-option>
+            <nz-option nzValue="历史" nzLabel="历史"></nz-option>
+            <nz-option nzValue="地理" nzLabel="地理"></nz-option>
+            <nz-option nzValue="计算机" nzLabel="计算机"></nz-option>
+          </nz-select>
+        </nz-form-item>
+      </div>
+
+      <div nz-col [nzSpan]="6">
+        <nz-form-item nzLabel="年级">
+          <nz-select [(ngModel)]="input().grade" nzPlaceHolder="请选择">
+            <nz-option nzValue="七年级" nzLabel="七年级"></nz-option>
+            <nz-option nzValue="八年级" nzLabel="八年级"></nz-option>
+            <nz-option nzValue="九年级" nzLabel="九年级"></nz-option>
+            <nz-option nzValue="高一" nzLabel="高一"></nz-option>
+            <nz-option nzValue="高二" nzLabel="高二"></nz-option>
+            <nz-option nzValue="高三" nzLabel="高三"></nz-option>
+            <nz-option nzValue="大学" nzLabel="大学"></nz-option>
+          </nz-select>
+        </nz-form-item>
+      </div>
+
+      <div nz-col [nzSpan]="6">
+        <nz-form-item nzLabel="课时(分钟)">
+          <nz-input-number [(ngModel)]="input().duration" [nzMin]="5" [nzMax]="180" [nzStep]="5"></nz-input-number>
+        </nz-form-item>
+      </div>
+    </div>
+
+    <nz-divider></nz-divider>
+
+    <button nz-button nzType="primary" (click)="generate()" [nzLoading]="isLoading()">
+      <span nz-icon nzType="file-text"></span>
+      生成教案
+    </button>
+  </nz-card>
+
+  <nz-card *ngIf="result()" class="result-card" nzTitle="生成的教案">
+    <ng-container *ngIf="!isLoading(); else result() as r">
+      <nz-descriptions nzTitle="r.title" nzBordered>
+        <nz-descriptions-item nzTitle="学科">{{ r().subject }}</nz-descriptions-item>
+        <nz-descriptions-item nzTitle="年级">{{ r().grade }}</nz-descriptions-item>
+        <nz-descriptions-item nzTitle="课时">{{ r().duration }}分钟</nz-descriptions-item>
+      </nz-descriptions>
+
+      <nz-divider nzText="教学目标"></nz-divider>
+      <ul>
+        <li *ngFor="let obj of r().objectives">{{ obj }}</li>
+      </ul>
+
+      <nz-divider nzText="教学重点"></nz-divider>
+      <ul>
+        <li *ngFor="let kp of r().keyPoints">{{ kp }}</li>
+      </ul>
+
+      <nz-divider nzText="教学难点"></nz-divider>
+      <ul>
+        <li *ngFor="let diff of r().difficulties">{{ diff }}</li>
+      </ul>
+
+      <nz-divider nzText="教学环节"></nz-divider>
+      <nz-collapse>
+        <nz-collapse-panel *ngFor="let section of r().sections; let i = index" [nzHeader]="section.name + ' (' + section.duration + '分钟)'">
+        <p>{{ section.content }}</p>
+        <h4>活动:</h4>
+        <ul>
+          <li *ngFor="let activity of section.activities">{{ activity }}</li>
+        </ul>
+      </nz-collapse-panel>
+    </nz-collapse>
+
+      <nz-divider nzText="教学方法"></nz-divider>
+      <nz-tag *ngFor="let method of r().methods">{{ method }}</nz-tag>
+
+      <nz-divider nzText="教学资源"></nz-divider>
+      <nz-tag *ngFor="let resource of r().resources">{{ resource }}</nz-tag>
+
+      <nz-divider nzText="评估方法"></nz-divider>
+      <ul>
+        <li *ngFor="let assessment of r().assessment">{{ assessment }}</li>
+      </ul>
+
+      <nz-divider nzText="课后作业"></nz-divider>
+      <ul>
+        <li *ngFor="let hw of r().homework">{{ hw }}</li>
+      </ul>
+    </ng-container>
+  </nz-card>
+</div>

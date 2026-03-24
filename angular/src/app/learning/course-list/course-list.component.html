@@ -1,0 +1,114 @@
+<div class="course-list-container">
+  <div class="page-header">
+    <h1>课程中心</h1>
+    <p>浏览和选择您感兴趣的课程</p>
+  </div>
+
+  <div class="filter-bar">
+    <nz-input-group [nzPrefix]="searchIcon" class="search-input">
+      <input 
+        nz-input 
+        [ngModel]="filterText()"
+        (ngModelChange)="filterText.set($event); loadCourses()"
+        placeholder="搜索课程..."
+      />
+    </nz-input-group>
+    <ng-template #searchIcon>
+      <span nz-icon nzType="search"></span>
+    </ng-template>
+
+    <nz-select 
+      [ngModel]="selectedMajor()"
+      (ngModelChange)="selectedMajor.set($event); loadCourses()"
+      nzPlaceholder="专业" 
+      nzAllowClear
+      class="filter-select"
+    >
+      @for (major of majors(); track major) {
+        <nz-option [nzValue]="major" [nzLabel]="major"></nz-option>
+      }
+    </nz-select>
+
+    <nz-select 
+      [ngModel]="selectedDifficulty()"
+      (ngModelChange)="selectedDifficulty.set($event); loadCourses()"
+      nzPlaceholder="难度" 
+      nzAllowClear
+      class="filter-select"
+    >
+      @for (diff of difficulties; track diff.value) {
+        <nz-option [nzValue]="diff.value" [nzLabel]="diff.label"></nz-option>
+      }
+    </nz-select>
+
+    <nz-select 
+      [ngModel]="selectedSemester()"
+      (ngModelChange)="selectedSemester.set($event); loadCourses()"
+      nzPlaceholder="学期" 
+      nzAllowClear
+      class="filter-select"
+    >
+      @for (semester of semesters(); track semester) {
+        <nz-option [nzValue]="semester" [nzLabel]="semester"></nz-option>
+      }
+    </nz-select>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (courses().length === 0) {
+    <nz-empty nzNotFoundContent="暂无课程"></nz-empty>
+  } @else {
+    <div nz-row [nzGutter]="[16, 16]">
+      @for (course of courses(); track course.id) {
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="6">
+          <nz-card 
+            class="course-card"
+            [nzCover]="coverTemplate"
+            [nzActions]="[viewAction, enrollAction]"
+            nzHoverable
+          >
+            <ng-template #coverTemplate>
+              <div class="course-cover" [style.backgroundImage]="'url(' + (course.coverImageUrl || 'assets/images/default-course.png') + ')'">
+                @if (!course.coverImageUrl) {
+                  <span nz-icon nzType="book" nzTheme="outline" class="cover-icon"></span>
+                }
+              </div>
+            </ng-template>
+            
+            <h3 class="course-title">{{ course.title }}</h3>
+            <p class="course-description">{{ course.description }}</p>
+            
+            <div class="course-meta">
+              <nz-tag [nzColor]="getDifficultyColor(course.difficulty)">
+                {{ getDifficultyLabel(course.difficulty) }}
+              </nz-tag>
+              <span class="meta-item">
+                <span nz-icon nzType="user"></span>
+                {{ course.studentCount || 0 }} 人学习
+              </span>
+            </div>
+            
+            <div class="course-info">
+              @if (course.major) {
+                <span><span nz-icon nzType="book"></span> {{ course.major }}</span>
+              }
+              @if (course.credits) {
+                <span><span nz-icon nzType="schedule"></span> {{ course.credits }} 学分</span>
+              }
+            </div>
+          </nz-card>
+          
+          <ng-template #viewAction>
+            <span (click)="viewCourse(course.id)">查看详情</span>
+          </ng-template>
+          <ng-template #enrollAction>
+            <span (click)="enrollCourse(course.id)">选课</span>
+          </ng-template>
+        </div>
+      }
+    </div>
+  }
+</div>

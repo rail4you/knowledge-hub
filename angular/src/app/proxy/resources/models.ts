@@ -4,6 +4,12 @@ import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } 
 import type { AuditType } from './enums/audit-type.enum';
 import type { ResourceStatus } from './enums/resource-status.enum';
 
+export interface AuditResourceDto {
+  resourceId?: string;
+  status?: AuditStatus;
+  comment?: string | null;
+}
+
 export interface CompleteUploadDto {
   uploadId?: string;
   fileName?: string;
@@ -15,24 +21,6 @@ export interface CompleteUploadResultDto {
   fileSize?: number;
   fileExtension?: string;
   originalFileName?: string;
-}
-
-export interface InitiateUploadDto {
-  fileName?: string;
-  totalSize?: number;
-  chunkSize?: number;
-}
-
-export interface InitiateUploadResultDto {
-  uploadId?: string;
-  chunkSize?: number;
-  totalChunks?: number;
-}
-
-export interface AuditResourceDto {
-  resourceId?: string;
-  status?: AuditStatus;
-  comment?: string | null;
 }
 
 export interface CreatePhysicalDeleteRequestDto {
@@ -77,12 +65,25 @@ export interface DocumentPageSearchResultDto {
   uploadDate?: string;
 }
 
+export interface InitiateUploadDto {
+  fileName?: string;
+  totalSize?: number;
+  chunkSize?: number;
+}
+
+export interface InitiateUploadResultDto {
+  uploadId?: string;
+  chunkSize?: number;
+  totalChunks?: number;
+}
+
 export interface MeiliSearchQueryDto {
   query?: string;
   limit?: number;
   offset?: number;
   resourceType?: number | null;
   categoryId?: string | null;
+  indexName?: string;
 }
 
 export interface MeiliSearchResultDto {

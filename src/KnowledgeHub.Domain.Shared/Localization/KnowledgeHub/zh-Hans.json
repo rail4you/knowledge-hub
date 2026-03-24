@@ -242,6 +242,15 @@
     "UploadFailed": "文件上传失败",
     "Tip": "提示",
     "Menu:IndexingJobs": "索引任务",
-    "Menu:Search": "搜索"
+    "Menu:AI": "智能问答",
+    "Menu:AIChat": "智能问答",
+    "Menu:LessonPlan": "教案生成",
+    "Menu:CaseAnalysis": "案例分析",
+    "Menu:CareerGuidance": "职业规划",
+    "Menu:ModelManagement": "模型管理",
+    "Menu:Search": "搜索",
+    "Menu:StudentPortal": "学生门户",
+    "Menu:StudentResources": "知识库",
+    "Menu:StudentCourses": "我的课程"
   }
 }

@@ -1,0 +1,69 @@
+<div class="dashboard-container">
+  <div class="page-header">
+    <h1>学习中心</h1>
+    <p>查看您的学习进度和统计数据</p>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (dashboard()) {
+    <div nz-row [nzGutter]="16" class="stats-row">
+      <div nz-col [nzSpan]="6">
+        <nz-card class="stat-card">
+          <nz-statistic [nzValue]="dashboard()!.totalCourses" nzTitle="总课程"></nz-statistic>
+        </nz-card>
+      </div>
+      <div nz-col [nzSpan]="6">
+        <nz-card class="stat-card">
+          <nz-statistic [nzValue]="dashboard()!.inProgressCourses" nzTitle="学习中" [nzValueStyle]="{ color: '#1890ff' }"></nz-statistic>
+        </nz-card>
+      </div>
+      <div nz-col [nzSpan]="6">
+        <nz-card class="stat-card">
+          <nz-statistic [nzValue]="dashboard()!.completedCourses" nzTitle="已完成" [nzValueStyle]="{ color: '#52c41a' }"></nz-statistic>
+        </nz-card>
+      </div>
+      <div nz-col [nzSpan]="6">
+        <nz-card class="stat-card">
+          <nz-statistic [nzValue]="dashboard()!.totalLearningTime" nzTitle="学习时长(小时)"></nz-statistic>
+        </nz-card>
+      </div>
+    </div>
+
+    <div nz-row [nzGutter]="16" class="charts-row">
+      <div nz-col [nzSpan]="12">
+        <nz-card nzTitle="本周学习时长">
+          <div #chartContainer class="chart-container"></div>
+        </nz-card>
+      </div>
+      <div nz-col [nzSpan]="12">
+        <nz-card nzTitle="知识掌握度">
+          <div class="mastery-list">
+            @for (dim of dashboard()!.knowledgeDimensions; track dim.name; let i = $index) {
+              <div class="mastery-item">
+                <span class="dim-name">{{ dim.name }}</span>
+                <nz-progress [nzPercent]="dashboard()!.masteryValues[i]" nzSize="small"></nz-progress>
+              </div>
+            }
+          </div>
+        </nz-card>
+      </div>
+    </div>
+
+    <nz-card nzTitle="最近学习" class="recent-card">
+      <nz-list [nzDataSource]="dashboard()!.recentLearning" [nzRenderItem]="item">
+        <ng-template #item let-item>
+          <nz-list-item [nzActions]="[continueAction]">
+            <nz-list-item-meta [nzTitle]="item.courseName" [nzDescription]="'进度: ' + item.progress + '%'">
+            </nz-list-item-meta>
+            <ng-template #continueAction>
+              <button nz-button nzType="link" (click)="continueLearning(item.courseId)">继续学习</button>
+            </ng-template>
+          </nz-list-item>
+        </ng-template>
+      </nz-list>
+    </nz-card>
+  }
+</div>

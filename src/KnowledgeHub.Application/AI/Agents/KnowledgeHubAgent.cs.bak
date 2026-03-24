@@ -1,0 +1,115 @@
+using System;
+using System.ClientModel;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Agents.AI;
+using Microsoft.Agents.AI.Interfaces;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using OpenAI;
+using OpenAI.Chat;
+
+namespace KnowledgeHub.Application.AI.Agents;
+
+public class KnowledgeHubAgent
+{
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<KnowledgeHubAgent> _logger;
+    
+    private const string DefaultInstructions = @"你是 KnowledgeHub 平台的智能教育助手。
+
+你的职责：
+- 回答关于课程、知识点的问题
+- 帮助学生学习，解释概念
+- 推荐学习路径
+- 生成练习题（如果用户要求）
+
+回答要求：
+1. 回答简洁，专业
+2. 如果涉及课程信息，先查询课程数据
+3. 使用 Markdown 格式化回答";
+
+    public KnowledgeHubAgent(
+        IConfiguration configuration,
+        ILogger<KnowledgeHubAgent> logger)
+    {
+        _configuration = configuration;
+        _logger = logger;
+    }
+
+    public string Name => "KnowledgeHubAgent";
+    
+    public string Instructions => DefaultInstructions;
+
+    public async IAsyncEnumerable<StreamingUpdate> InvokeAsync(
+        string message,
+        IList<ChatMessage>? history = null,
+        CancellationToken cancellationToken = default)
+    {
+        var apiKey = _configuration["Qwen:ApiKey"] 
+            ?? throw new InvalidOperationException("Qwen:ApiKey is not configured");
+        var baseUrl = _configuration["Qwen:BaseUrl"] 
+            ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
+        var model = _configuration["Qwen:Model"] ?? "qwen-plus";
+        
+        var client = new OpenAIClient(
+            new ApiKeyCredential(apiKey), 
+            new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
+        
+        var chatClient = client.GetChatClient(model);
+        
+        var options = new ChatOptions
+        {
+            Instructions = DefaultInstructions
+        };
+        
+        if (history != null)
+        {
+            foreach (var msg in history)
+            {
+                if (msg.Role == "user")
+                    options.Messages.Add(new ChatMessage(ChatRole.User, msg.Content ?? ""));
+                else if (msg.Role == "assistant")
+                    options.Messages.Add(new ChatMessage(ChatRole.Assistant, msg.Content ?? ""));
+            }
+        }
+        
+        await foreach (var update in chatClient.GetStreamingResponseAsync(
+            [new UserChatMessage(message)], 
+            options, 
+            cancellationToken))
+        {
+            if (!string.IsNullOrEmpty(update.ContentUpdate))
+            {
+                yield return new StreamingUpdate
+                {
+                    ContentUpdate = update.ContentUpdate,
+                    IsComplete = false
+                };
+            }
+        }
+        
+        yield return new StreamingUpdate
+        {
+            ContentUpdate = "",
+            IsComplete = true
+        };
+    }
+
+    public ULid? Id { get; } = ULid.NewUlid();
+}
+
+public class StreamingUpdate
+{
+    public string? ContentUpdate { get; set; }
+    public bool IsComplete { get; set; }
+}
+
+public class ChatMessage
+{
+    public string Role { get; set; } = "";
+    public string? Content { get; set; }
+}

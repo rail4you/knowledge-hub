@@ -1,0 +1,63 @@
+.dashboard-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+  
+  h1 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+  }
+  
+  p {
+    color: #666;
+    margin: 0;
+  }
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+}
+
+.stats-row {
+  margin-bottom: 24px;
+  
+  .stat-card {
+    text-align: center;
+  }
+}
+
+.charts-row {
+  margin-bottom: 24px;
+  
+  .chart-container {
+    height: 300px;
+  }
+  
+  .mastery-list {
+    .mastery-item {
+      margin-bottom: 16px;
+      
+      .dim-name {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+.recent-card {
+  nz-list-item {
+    nz-list-item-meta {
+      nz-avatar {
+        background-color: #1890ff;
+      }
+    }
+  }
+}

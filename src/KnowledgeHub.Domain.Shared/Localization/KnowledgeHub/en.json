@@ -204,6 +204,15 @@
     "SelectFileFirst": "Please select a file",
     "UploadSuccess": "File uploaded successfully",
     "UploadFailed": "File upload failed",
-    "Tip": "Tip"
+    "Tip": "Tip",
+    "Menu:AI": "AI",
+    "Menu:AIChat": "AI Chat",
+    "Menu:LessonPlan": "Lesson Plan",
+    "Menu:CaseAnalysis": "Case Analysis",
+    "Menu:CareerGuidance": "Career Guidance",
+    "Menu:ModelManagement": "Model Management",
+    "Menu:StudentPortal": "Student Portal",
+    "Menu:StudentResources": "Knowledge Base",
+    "Menu:StudentCourses": "My Courses"
   }
 }

@@ -1,6 +1,6 @@
 import type { AuditResourceDto, CompleteUploadDto, CompleteUploadResultDto, CreatePhysicalDeleteRequestDto, CreateUpdateResourceCategoryDto, CreateUpdateResourceDto, InitiateUploadDto, InitiateUploadResultDto, MeiliSearchQueryDto, MeiliSearchResultDto, PhysicalDeleteRequestDto, ResourceAuditDto, ResourceCategoryDto, ResourceDto, ResourceListQueryDto, ResourceSearchQueryDto, ResourceVersionDto, UploadChunkDto, UploadVersionDto } from './models';
 import { RestService, Rest } from '@abp/ng.core';
-import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
+import type { PagedAndSortedResultRequestDto, PagedResultDto, PagedResultRequestDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
 @Injectable({
@@ -88,10 +88,9 @@ export class ResourceService {
   
 
   download = (resourceId: string, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, Blob>({
+    this.restService.request<any, number[]>({
       method: 'POST',
       url: `/api/app/resource/download/${resourceId}`,
-      responseType: 'blob',
     },
     { apiName: this.apiName,...config });
   
@@ -134,6 +133,15 @@ export class ResourceService {
       method: 'GET',
       url: '/api/app/resource/filtered-list',
       params: { filter: input.filter, status: input.status, resourceType: input.resourceType, categoryId: input.categoryId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getLeagueApproved = (input: PagedResultRequestDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PagedResultDto<ResourceDto>>({
+      method: 'GET',
+      url: '/api/app/resource/league-approved',
+      params: { skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

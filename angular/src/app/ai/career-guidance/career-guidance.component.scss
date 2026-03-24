@@ -1,0 +1,58 @@
+.career-guidance-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0 0 8px 0;
+      color: #333;
+    }
+
+    .subtitle {
+      color: #666;
+      margin: 0;
+    }
+  }
+
+  nz-card {
+    margin-bottom: 24px;
+  }
+
+  .profile-card {
+    nz-form-item {
+      margin-bottom: 16px;
+    }
+  }
+
+  .result-card {
+    nz-descriptions {
+      margin-bottom: 16px;
+    }
+
+    nz-collapse {
+      margin-bottom: 16px;
+    }
+
+    nz-table {
+      margin-bottom: 16px;
+    }
+
+    nz-timeline {
+      margin-top: 16px;
+    }
+
+    .next-steps {
+      margin: 8px 0;
+      padding-left: 24px;
+
+      li {
+        margin-bottom: 8px;
+        line-height: 1.6;
+      }
+    }
+  }
+}

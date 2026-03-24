@@ -1,0 +1,191 @@
+<div class="course-create-container">
+  <div class="page-header">
+    <h1>创建新课程</h1>
+    <p>填写课程信息，创建新的教学课程</p>
+  </div>
+
+  <nz-card>
+    <nz-steps [nzCurrent]="currentStep()" class="course-steps">
+      <nz-step nzTitle="基本信息"></nz-step>
+      <nz-step nzTitle="详细信息"></nz-step>
+      <nz-step nzTitle="确认提交"></nz-step>
+    </nz-steps>
+
+    @if (loading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+      </div>
+    } @else {
+      <div class="step-content">
+        @switch (currentStep()) {
+          @case (0) {
+            <div class="form-section">
+              <h3>课程基本信息</h3>
+              <nz-form-item>
+                <nz-form-label [nzSpan]="4" nzRequired>课程名称</nz-form-label>
+                <nz-form-control [nzSpan]="20">
+                  <input 
+                    nz-input 
+                    [ngModel]="formData().title"
+                    (ngModelChange)="updateField('title', $event)"
+                    placeholder="请输入课程名称"
+                  />
+                </nz-form-control>
+              </nz-form-item>
+
+              <nz-form-item>
+                <nz-form-label [nzSpan]="4">课程描述</nz-form-label>
+                <nz-form-control [nzSpan]="20">
+                  <textarea 
+                    nz-input 
+                    [ngModel]="formData().description"
+                    (ngModelChange)="updateField('description', $event)"
+                    placeholder="请输入课程描述"
+                    [nzAutosize]="{ minRows: 3, maxRows: 6 }"
+                  ></textarea>
+                </nz-form-control>
+              </nz-form-item>
+
+              <nz-form-item>
+                <nz-form-label [nzSpan]="4">封面图片URL</nz-form-label>
+                <nz-form-control [nzSpan]="20">
+                  <input 
+                    nz-input 
+                    [ngModel]="formData().coverImageUrl"
+                    (ngModelChange)="updateField('coverImageUrl', $event)"
+                    placeholder="请输入封面图片URL"
+                  />
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          }
+          @case (1) {
+            <div class="form-section">
+              <h3>课程详细信息</h3>
+              <nz-form-item>
+                <nz-form-label [nzSpan]="4" nzRequired>专业</nz-form-label>
+                <nz-form-control [nzSpan]="20">
+                  <nz-select 
+                    [ngModel]="formData().major"
+                    (ngModelChange)="updateField('major', $event)"
+                    nzPlaceHolder="请选择专业"
+                    class="full-width"
+                  >
+                    @for (major of majors; track major) {
+                      <nz-option [nzValue]="major" [nzLabel]="major"></nz-option>
+                    }
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+
+              <nz-form-item>
+                <nz-form-label [nzSpan]="4" nzRequired>学期</nz-form-label>
+                <nz-form-control [nzSpan]="20">
+                  <nz-select 
+                    [ngModel]="formData().semester"
+                    (ngModelChange)="updateField('semester', $event)"
+                    nzPlaceHolder="请选择学期"
+                    class="full-width"
+                  >
+                    @for (semester of semesters; track semester) {
+                      <nz-option [nzValue]="semester" [nzLabel]="semester"></nz-option>
+                    }
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+
+              <div nz-row [nzGutter]="16">
+                <div nz-col [nzSpan]="12">
+                  <nz-form-item>
+                    <nz-form-label [nzSpan]="8" nzRequired>学分</nz-form-label>
+                    <nz-form-control [nzSpan]="16">
+                      <nz-input-number 
+                        [ngModel]="formData().credits"
+                        (ngModelChange)="updateField('credits', $event)"
+                        [nzMin]="1" 
+                        [nzMax]="10"
+                        class="full-width"
+                      ></nz-input-number>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+                <div nz-col [nzSpan]="12">
+                  <nz-form-item>
+                    <nz-form-label [nzSpan]="8" nzRequired>课时</nz-form-label>
+                    <nz-form-control [nzSpan]="16">
+                      <nz-input-number 
+                        [ngModel]="formData().semesterHours"
+                        (ngModelChange)="updateField('semesterHours', $event)"
+                        [nzMin]="1" 
+                        [nzMax]="200"
+                        class="full-width"
+                      ></nz-input-number>
+                    </nz-form-control>
+                  </nz-form-item>
+                </div>
+              </div>
+
+              <nz-form-item>
+                <nz-form-label [nzSpan]="4" nzRequired>难度</nz-form-label>
+                <nz-form-control [nzSpan]="20">
+                  <nz-select 
+                    [ngModel]="formData().difficulty"
+                    (ngModelChange)="updateField('difficulty', $event)"
+                    nzPlaceHolder="请选择难度"
+                    class="full-width"
+                  >
+                    @for (diff of difficulties; track diff.value) {
+                      <nz-option [nzValue]="diff.value" [nzLabel]="diff.label"></nz-option>
+                    }
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          }
+          @case (2) {
+            <div class="form-section">
+              <h3>确认课程信息</h3>
+              <nz-descriptions nzBordered [nzColumn]="1">
+                <nz-descriptions-item nzTitle="课程名称">{{ formData().title }}</nz-descriptions-item>
+                <nz-descriptions-item nzTitle="课程描述">{{ formData().description || '无' }}</nz-descriptions-item>
+                <nz-descriptions-item nzTitle="专业">{{ formData().major || '未选择' }}</nz-descriptions-item>
+                <nz-descriptions-item nzTitle="学期">{{ formData().semester || '未选择' }}</nz-descriptions-item>
+                <nz-descriptions-item nzTitle="学分">{{ formData().credits }}</nz-descriptions-item>
+                <nz-descriptions-item nzTitle="课时">{{ formData().semesterHours }}</nz-descriptions-item>
+                <nz-descriptions-item nzTitle="难度">
+                  {{ getDifficultyLabel() }}
+                </nz-descriptions-item>
+              </nz-descriptions>
+            </div>
+          }
+        }
+
+        <div class="form-actions">
+          @if (currentStep() > 0) {
+            <button nz-button (click)="prevStep()">
+              <span nz-icon nzType="left"></span>
+              上一步
+            </button>
+          }
+          @if (currentStep() < 2) {
+            <button nz-button nzType="default" (click)="saveDraft()">
+              保存草稿
+            </button>
+            <button nz-button nzType="primary" (click)="nextStep()">
+              下一步
+              <span nz-icon nzType="right"></span>
+            </button>
+          } @else {
+            <button nz-button (click)="prevStep()">
+              上一步
+            </button>
+            <button nz-button nzType="primary" (click)="submit()">
+              <span nz-icon nzType="check"></span>
+              提交
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </nz-card>
+</div>

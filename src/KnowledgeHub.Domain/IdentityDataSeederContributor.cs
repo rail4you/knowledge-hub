@@ -112,12 +112,22 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Search.ManageIndex, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Search.ViewStatistics, true);
 
+        // Courses permissions - Teacher
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Courses.Default, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Courses.Create, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Courses.Edit, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Courses.Enroll, true);
+
         // Student - Read-only access
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Resources.Default, true);
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Resources.Download, true);
 
         // Search permissions - Student
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Search.Default, true);
+
+        // Courses permissions - Student
+        await GrantPermissionAsync("Student", KnowledgeHubPermissions.Courses.Default, true);
+        await GrantPermissionAsync("Student", KnowledgeHubPermissions.Courses.Enroll, true);
 
         // Enterprise User - Limited access
         await GrantPermissionAsync("EnterpriseUser", KnowledgeHubPermissions.Resources.Default, true);

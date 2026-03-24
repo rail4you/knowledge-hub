@@ -1,0 +1,99 @@
+<div class="course-detail-container">
+  @if (loading()) {
+    <div class="loading-container">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (course()) {
+    <div class="course-header">
+      <button nz-button nzType="text" (click)="goBack()">
+        <span nz-icon nzType="arrow-left"></span>
+        返回
+      </button>
+      
+      <div class="header-content">
+        <div class="cover-image" [style.backgroundImage]="'url(' + (course()!.coverImageUrl || 'assets/default-course.png') + ')'">
+          @if (!course()!.coverImageUrl) {
+            <span nz-icon nzType="book" class="cover-icon"></span>
+          }
+        </div>
+        
+        <div class="course-info">
+          <h1>{{ course()!.title }}</h1>
+          <p class="description">{{ course()!.description }}</p>
+          
+          <div class="meta-tags">
+            <nz-tag [nzColor]="getDifficultyColor(course()!.difficulty)">
+              {{ getDifficultyLabel(course()!.difficulty) }}
+            </nz-tag>
+            @if (course()!.major) {
+              <nz-tag nzColor="blue">{{ course()!.major }}</nz-tag>
+            }
+            @if (course()!.credits) {
+              <nz-tag nzColor="purple">{{ course()!.credits }} 学分</nz-tag>
+            }
+          </div>
+          
+          <div class="info-row">
+            <span><span nz-icon nzType="user"></span> {{ course()!.teacherName }}</span>
+            <span><span nz-icon nzType="team"></span> {{ course()!.studentCount }} 人学习</span>
+            @if (course()!.semester) {
+              <span><span nz-icon nzType="calendar"></span> {{ course()!.semester }}</span>
+            }
+          </div>
+          
+          @if (course()!.isEnrolled && course()!.progress !== undefined) {
+            <div class="progress-section">
+              <span>学习进度</span>
+              <nz-progress [nzPercent]="course()!.progress!" nzSize="small"></nz-progress>
+            </div>
+          }
+          
+          <div class="action-buttons">
+            @if (course()!.isEnrolled) {
+              <button nz-button nzType="primary" (click)="startLearning()">
+                <span nz-icon nzType="play-circle"></span>
+                继续学习
+              </button>
+            } @else {
+              <button nz-button nzType="primary" (click)="enrollCourse()">
+                <span nz-icon nzType="plus"></span>
+                选课
+              </button>
+            }
+            <button nz-button (click)="viewKnowledgeGraph()">
+              <span nz-icon nzType="apartment"></span>
+              知识图谱
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <nz-card class="chapters-card" nzTitle="课程章节">
+      <nz-collapse>
+        @for (chapter of course()!.chapters; track chapter.id) {
+          <nz-collapse-panel [nzHeader]="chapter.title">
+            <nz-list [nzDataSource]="chapter.knowledgeResources" [nzRenderItem]="resourceTemplate">
+              <ng-template #resourceTemplate let-resource>
+                <nz-list-item>
+                  <nz-list-item-meta
+                    [nzTitle]="resource.name"
+                    [nzDescription]="resource.description"
+                  >
+                  </nz-list-item-meta>
+                  <ul nz-list-item-actions>
+                    <nz-list-item-action>
+                      <nz-tag [nzColor]="getDifficultyColor(resource.difficulty)">
+                        {{ getDifficultyLabel(resource.difficulty) }}
+                      </nz-tag>
+                    </nz-list-item-action>
+                  </ul>
+                </nz-list-item>
+              </ng-template>
+            </nz-list>
+          </nz-collapse-panel>
+        }
+      </nz-collapse>
+    </nz-card>
+  }
+</div>

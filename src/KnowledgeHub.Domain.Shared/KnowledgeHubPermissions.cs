@@ -41,4 +41,13 @@ public static class KnowledgeHubPermissions
         public const string ManageIndex = Default + ".ManageIndex";
         public const string ViewStatistics = Default + ".ViewStatistics";
     }
+
+    public static class Courses
+    {
+        public const string Default = GroupName + ".Courses";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+        public const string Enroll = Default + ".Enroll";
+    }
 }

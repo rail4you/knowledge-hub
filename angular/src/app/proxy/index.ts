@@ -1,6 +1,9 @@
 import * as Application from './application';
 import * as Controllers from './controllers';
+import * as Courses from './courses';
+import * as Domain from './domain';
+import * as Learning from './learning';
 import * as Microsoft from './microsoft';
 import * as Resources from './resources';
 import * as Users from './users';
-export { Application, Controllers, Microsoft, Resources, Users };
+export { Application, Controllers, Courses, Domain, Learning, Microsoft, Resources, Users };

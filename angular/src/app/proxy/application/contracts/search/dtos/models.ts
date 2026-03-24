@@ -1,4 +1,6 @@
 import type { ResourceType } from '../../../../resources/enums/resource-type.enum';
+import type { EntityDto } from '@abp/ng.core';
+import type { IndexingJobStatus } from '../../../../domain/search/indexing-job-status.enum';
 
 export interface DocumentSearchResultDto {
   resourceId?: string;
@@ -38,6 +40,22 @@ export interface IndexTaskResultDto {
   status?: string;
 }
 
+export interface IndexingJobDto extends EntityDto<string> {
+  resourceId?: string;
+  resourceName?: string | null;
+  resourceVersionId?: string | null;
+  status?: IndexingJobStatus;
+  progress?: number;
+  errorMessage?: string | null;
+  totalPages?: number | null;
+  processedPages?: number | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  retryCount?: number;
+  nextRetryAt?: string | null;
+  creationTime?: string;
+}
+
 export interface LogViewDto {
   resourceId?: string;
   pageNumber?: number | null;
@@ -67,6 +85,7 @@ export interface SearchQueryDto {
   skipCount?: number;
   maxResultCount?: number;
   sorting?: string;
+  indexName?: string | null;
 }
 
 export interface SearchResultDto {

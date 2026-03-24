@@ -1,0 +1,68 @@
+<div class="my-courses-container">
+  <div class="page-header">
+    <h1>我的课程</h1>
+    <p>查看您已选的课程和学习进度</p>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (courses().length === 0) {
+    <nz-empty nzNotFoundContent="暂无选课记录">
+      <nz-empty-footer>
+        <button nz-button nzType="primary" (click)="router.navigate(['/learning/course-list'])">
+          去选课
+        </button>
+      </nz-empty-footer>
+    </nz-empty>
+  } @else {
+    <div nz-row [nzGutter]="[16, 16]">
+      @for (course of courses(); track course.id) {
+        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="6">
+          <nz-card class="course-card" nzHoverable>
+            <div class="card-header">
+              <h3 class="course-title">{{ course.title }}</h3>
+              <nz-tag [nzColor]="getDifficultyColor(course.difficulty)">
+                {{ getDifficultyLabel(course.difficulty) }}
+              </nz-tag>
+            </div>
+            
+            <div class="course-meta">
+              @if (course.major) {
+                <span><span nz-icon nzType="book"></span> {{ course.major }}</span>
+              }
+              @if (course.semester) {
+                <span><span nz-icon nzType="calendar"></span> {{ course.semester }}</span>
+              }
+            </div>
+
+            <div class="course-info">
+              @if (course.credits) {
+                <span>学分: {{ course.credits }}</span>
+              }
+              @if (course.chapterCount) {
+                <span>章节: {{ course.chapterCount }}</span>
+              }
+            </div>
+            
+            <div class="date-info">
+              <span>创建时间: {{ course.creationTime | date:'yyyy-MM-dd' }}</span>
+            </div>
+            
+            <div class="card-actions">
+              <button nz-button nzType="primary" nzSize="small" (click)="continueLearning(course.id!)">
+                <span nz-icon nzType="play-circle"></span>
+                继续
+              </button>
+              <button nz-button nzSize="small" (click)="viewDetail(course.id!)">
+                <span nz-icon nzType="eye"></span>
+                详情
+              </button>
+            </div>
+          </nz-card>
+        </div>
+      }
+    </div>
+  }
+</div>

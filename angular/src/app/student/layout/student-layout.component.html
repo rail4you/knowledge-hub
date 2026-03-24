@@ -1,0 +1,43 @@
+<div class="student-layout">
+  <header class="student-header">
+    <div class="logo">
+      <span nz-icon nzType="read" nzTheme="outline"></span>
+      <span class="logo-text">学生门户</span>
+    </div>
+    
+    <nav class="student-nav">
+      <a routerLink="/student/resources" routerLinkActive="active">
+        <span nz-icon nzType="book"></span>
+        知识库
+      </a>
+      <a routerLink="/student/search" routerLinkActive="active">
+        <span nz-icon nzType="search"></span>
+        搜索
+      </a>
+      <div class="nav-dropdown">
+        <a routerLink="/student/ai/chat" routerLinkActive="active">
+          <span nz-icon nzType="robot"></span>
+          智能问答
+        </a>
+        <div class="nav-dropdown-content">
+          <a routerLink="/student/ai/chat">智能问答</a>
+          <a routerLink="/student/ai/lesson-plan">教案生成</a>
+          <a routerLink="/student/ai/case-analysis">案例分析</a>
+          <a routerLink="/student/ai/career-guidance">职业规划</a>
+        </div>
+      </div>
+      <a routerLink="/student/courses" routerLinkActive="active">
+        <span nz-icon nzType="schedule"></span>
+        我的课程
+      </a>
+    </nav>
+    
+    <div class="user-info">
+      <nz-avatar nzText="学生" nzColor="#1890ff"></nz-avatar>
+    </div>
+  </header>
+  
+  <main class="student-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

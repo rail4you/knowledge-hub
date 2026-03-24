@@ -47,6 +47,13 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         var searchPermission = myGroup.AddPermission(KnowledgeHubPermissions.Search.Default, L("Permission:Search"));
         searchPermission.AddChild(KnowledgeHubPermissions.Search.ManageIndex, L("Permission:Search.ManageIndex"));
         searchPermission.AddChild(KnowledgeHubPermissions.Search.ViewStatistics, L("Permission:Search.ViewStatistics"));
+
+        //Courses permissions
+        var coursesPermission = myGroup.AddPermission(KnowledgeHubPermissions.Courses.Default, L("Permission:Courses"));
+        coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Create, L("Permission:Courses.Create"));
+        coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Edit, L("Permission:Courses.Edit"));
+        coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Delete, L("Permission:Courses.Delete"));
+        coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Enroll, L("Permission:Courses.Enroll"));
     }
 
     private static LocalizableString L(string name)

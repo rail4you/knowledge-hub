@@ -1,0 +1,51 @@
+<div class="chat-container">
+  <div class="chat-header">
+    <h2>专业大模型助手</h2>
+    <p class="subtitle">基于知识图谱的智能问答系统</p>
+  </div>
+  
+  <div #messagesContainer class="messages-container">
+    @for (msg of messages(); track msg.id) {
+      <div class="message" [class.user]="msg.role === 'user'" [class.assistant]="msg.role === 'assistant'">
+        <nz-avatar [nzText]="msg.role === 'user' ? '我' : 'AI'" [nzColor]="msg.role === 'user' ? '#1890ff' : '#52c41a'"></nz-avatar>
+        <div class="message-content">
+          @if (msg.content) {
+            <p [innerHTML]="formatMessage(msg.content)"></p>
+          } @else {
+            <div class="typing-indicator">
+              <span></span><span></span><span></span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+  
+  <div class="input-container">
+    <nz-input-group [nzSuffix]="suffixTemplate" class="input-wrapper">
+      <textarea
+        nz-input
+        [value]="inputMessage()"
+        (input)="inputMessage.set($any($event.target).value)"
+        (keydown.enter)="onKeyPress($event)"
+        placeholder="输入您的问题，按 Enter 发送..."
+        nzSize="large"
+        [nzAutosize]="{ minRows: 1, maxRows: 4 }"
+        [disabled]="isLoading()"
+      ></textarea>
+    </nz-input-group>
+    <ng-template #suffixTemplate>
+      <button 
+        nz-button 
+        nzType="primary" 
+        nzShape="circle" 
+        nz-icon
+        (click)="sendMessage()"
+        [disabled]="isLoading() || !inputMessage().trim()"
+        class="send-button"
+      >
+        <span nz-icon nzType="send"></span>
+      </button>
+    </ng-template>
+  </div>
+</div>

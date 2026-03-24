@@ -89,6 +89,21 @@ start_meilisearch() {
     log_info "Meilisearch URL: http://localhost:7700"
 }
 
+start_ai() {
+    local pid_file="$PID_DIR/ai.pid"
+    if is_running "$pid_file"; then
+        log_warn "AI API is already running (PID: $(cat $pid_file))"
+        return
+    fi
+    
+    log_info "Starting AI API..."
+    cd "$PROJECT_ROOT"
+    dotnet run --project src/KnowledgeHub.AI.Api > "$LOG_DIR/ai.log" 2>&1 &
+    echo $! > "$pid_file"
+    log_success "AI API started (PID: $(cat $pid_file))"
+    log_info "AI API URL: http://localhost:5000"
+}
+
 stop_service() {
     local name="$1"
     local pid_file="$PID_DIR/${name}.pid"
@@ -117,6 +132,7 @@ stop_all() {
     stop_service "api"
     stop_service "angular"
     stop_service "meilisearch"
+    stop_service "ai"
     log_success "All services stopped"
 }
 
@@ -149,6 +165,13 @@ show_status() {
         printf "%-15s %-10s %-10s\n" "" "" "http://localhost:7700"
     else
         printf "%-15s ${RED}%-10s${NC} %-10s\n" "Meilisearch" "Stopped" "-"
+    fi
+    
+    if is_running "$PID_DIR/ai.pid"; then
+        printf "%-15s ${GREEN}%-10s${NC} %-10s\n" "AI API" "Running" "$(cat $PID_DIR/ai.pid)"
+        printf "%-15s %-10s %-10s\n" "" "" "http://localhost:5000"
+    else
+        printf "%-15s ${RED}%-10s${NC} %-10s\n" "AI API" "Stopped" "-"
     fi
     
     echo ""
@@ -185,6 +208,14 @@ show_log() {
                 tail -100 "$log_file"
             else
                 log_error "No log file found. Is Meilisearch running?"
+            fi
+            ;;
+        ai)
+            local log_file="$LOG_DIR/ai.log"
+            if [ -f "$log_file" ]; then
+                tail -100 "$log_file"
+            else
+                log_error "No log file found. Is AI API running?"
             fi
             ;;
         *)
@@ -231,6 +262,14 @@ tail_logs() {
                 log_error "No log file found. Start Meilisearch first."
             fi
             ;;
+        ai)
+            local log_file="$LOG_DIR/ai.log"
+            if [ -f "$log_file" ]; then
+                tail -f "$log_file"
+            else
+                log_error "No log file found. Start AI API first."
+            fi
+            ;;
         all|"")
             log_info "Tailing all logs (Ctrl+C to stop)..."
             tail -f "$LOG_DIR"/*.log 2>/dev/null || log_error "No log files found"
@@ -250,9 +289,9 @@ show_help() {
     echo "Usage: $0 <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  start [api|angular|meilisearch]  Start services (default: all)"
-    echo "  stop [api|angular|meilisearch]   Stop services (default: all)"
-    echo "  restart [api|angular|meilisearch] Restart services (default: all)"
+    echo "  start [api|angular|meilisearch|ai]  Start services (default: all)"
+    echo "  stop [api|angular|meilisearch|ai]   Stop services (default: all)"
+    echo "  restart [api|angular|meilisearch|ai] Restart services (default: all)"
     echo "  status                           Show service status"
     echo "  log <service>                    Show last 100 lines of log"
     echo "  tail [service]                   Tail logs in real-time"
@@ -272,6 +311,7 @@ show_help() {
     echo "  API:         https://localhost:44305 (Swagger: /swagger)"
     echo "  Angular:     http://localhost:4200"
     echo "  Meilisearch: http://localhost:7700"
+    echo "  AI API:      http://localhost:5000"
     echo "  DB:          localhost:5433 (PostgreSQL)"
     echo ""
 }
@@ -289,10 +329,14 @@ case "${1:-help}" in
             meilisearch|search)
                 start_meilisearch
                 ;;
+            ai)
+                start_ai
+                ;;
             all)
                 start_api
                 start_angular
                 start_meilisearch
+                start_ai
                 ;;
             *)
                 log_error "Unknown service: $2"
@@ -311,6 +355,24 @@ case "${1:-help}" in
                 ;;
             meilisearch|search)
                 stop_service "meilisearch"
+                ensure_dirs
+                start_meilisearch
+                ;;
+            ai)
+                stop_service "ai"
+                ensure_dirs
+                start_ai
+                ;;
+            all)
+                stop_all
+                ensure_dirs
+                start_api
+                start_angular
+                start_meilisearch
+                start_ai
+                ;;
+            ai)
+                stop_service "ai"
                 ;;
             all)
                 stop_all
@@ -339,12 +401,18 @@ case "${1:-help}" in
                 ensure_dirs
                 start_meilisearch
                 ;;
+            ai)
+                stop_service "ai"
+                ensure_dirs
+                start_ai
+                ;;
             all)
                 stop_all
                 ensure_dirs
                 start_api
                 start_angular
                 start_meilisearch
+                start_ai
                 ;;
             *)
                 log_error "Unknown service: $2"
