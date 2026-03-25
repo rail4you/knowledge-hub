@@ -1,5 +1,6 @@
 import { authGuard, permissionGuard, eLayoutType } from '@abp/ng.core';
 import { Routes } from '@angular/router';
+import { identityUserCreateFormPropContributors, identityUserEntityPropContributors } from './identity-form-prop-contributors';
 
 export const APP_ROUTES: Routes = [
   {
@@ -13,7 +14,13 @@ export const APP_ROUTES: Routes = [
   },
   {
     path: 'identity',
-    loadChildren: () => import('@abp/ng.identity').then(c => c.createRoutes()),
+    loadChildren: () =>
+      import('@abp/ng.identity').then((m) =>
+        m.createRoutes({
+          createFormPropContributors: identityUserCreateFormPropContributors,
+          entityPropContributors: identityUserEntityPropContributors,
+        })
+      ),
   },
   {
     path: 'tenant-management',

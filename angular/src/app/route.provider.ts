@@ -86,25 +86,11 @@ function configureRoutes() {
         layout: eLayoutType.application,
       },
       {
-        path: '/admin',
-        name: '::Menu:Admin',
-        iconClass: 'fas fa-cog',
-        order: 6,
-        layout: eLayoutType.application,
-      },
-      {
         path: '/admin/exercise',
         name: '::Menu:ExerciseManagement',
-        parentName: '::Menu:Admin',
+        parentName: 'AbpUiNavigation::Menu:Administration',
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.Exercises',
-      },
-      {
-        path: '/admin/identity-roles',
-        name: '::Menu:IdentityRoles',
-        parentName: '::Menu:Admin',
-        layout: eLayoutType.application,
-        requiredPolicy: 'AbpIdentity.Roles',
       },
       {
         path: '/learning',

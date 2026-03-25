@@ -1,4 +1,4 @@
-﻿using KnowledgeHub.Resources;
+using KnowledgeHub.Resources;
 using KnowledgeHub.EntityFrameworkCore;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.SettingManagement;
@@ -12,7 +12,7 @@ using Volo.Abp.TenantManagement;
 
 namespace KnowledgeHub;
 
-[DependsOn(
+ [DependsOn(
     typeof(KnowledgeHubDomainModule),
     typeof(KnowledgeHubApplicationContractsModule),
     typeof(KnowledgeHubEntityFrameworkCoreModule),

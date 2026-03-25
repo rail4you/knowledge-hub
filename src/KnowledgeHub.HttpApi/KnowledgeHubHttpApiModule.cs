@@ -19,6 +19,7 @@ namespace KnowledgeHub;
     typeof(AbpAccountHttpApiModule),
     typeof(AbpIdentityHttpApiModule),
     typeof(AbpTenantManagementHttpApiModule),
+    typeof(AbpTenantManagementDomainModule),
     typeof(AbpFeatureManagementHttpApiModule),
     typeof(AbpAspNetCoreMvcModule)
     )]
