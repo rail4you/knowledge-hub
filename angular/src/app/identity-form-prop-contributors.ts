@@ -11,7 +11,7 @@ const tenantProp = new FormProp<IdentityUserDto>({
   type: ePropType.String,
   name: 'tenantId',
   displayName: '所属租户',
-  isExtra: false,
+  isExtra: true,
   options: (data) => {
     const tenantService = data.getInjected(TenantService);
     if (cachedTenants.length > 0) {
