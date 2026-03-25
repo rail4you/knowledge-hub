@@ -34,7 +34,7 @@ export interface ChatMessage {
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-  private aguiUrl = 'http://localhost:5000';
+  private aguiUrl = 'http://localhost:5001';
 
   chat(input: ChatInput, agent: string = ''): Observable<ChatMessageChunk> {
     const endpoint = agent ? `/${agent}` : '/';

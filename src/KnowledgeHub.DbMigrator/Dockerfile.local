@@ -4,8 +4,7 @@ COPY . .
 RUN dotnet restore src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj && \
     dotnet publish src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0
-USER $APP_UID
-COPY --from=build /app/publish .
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "KnowledgeHub.DbMigrator.dll"]

@@ -175,5 +175,5 @@ app.MapGet("/info", () => Results.Json(new
     }
 }));
 
-Log.Information("AG-UI server starting on http://localhost:5000");
-app.Run("http://localhost:5000");
+Log.Information("AG-UI server starting on http://localhost:5001");
+app.Run("http://localhost:5001");

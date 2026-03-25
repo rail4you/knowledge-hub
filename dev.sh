@@ -101,7 +101,7 @@ start_ai() {
     dotnet run --project src/KnowledgeHub.AI.Api > "$LOG_DIR/ai.log" 2>&1 &
     echo $! > "$pid_file"
     log_success "AI API started (PID: $(cat $pid_file))"
-    log_info "AI API URL: http://localhost:5000"
+    log_info "AI API URL: http://localhost:5001"
 }
 
 stop_service() {
@@ -169,7 +169,7 @@ show_status() {
     
     if is_running "$PID_DIR/ai.pid"; then
         printf "%-15s ${GREEN}%-10s${NC} %-10s\n" "AI API" "Running" "$(cat $PID_DIR/ai.pid)"
-        printf "%-15s %-10s %-10s\n" "" "" "http://localhost:5000"
+        printf "%-15s %-10s %-10s\n" "" "" "http://localhost:5001"
     else
         printf "%-15s ${RED}%-10s${NC} %-10s\n" "AI API" "Stopped" "-"
     fi
@@ -311,7 +311,7 @@ show_help() {
     echo "  API:         https://localhost:44305 (Swagger: /swagger)"
     echo "  Angular:     http://localhost:4200"
     echo "  Meilisearch: http://localhost:7700"
-    echo "  AI API:      http://localhost:5000"
+    echo "  AI API:      http://localhost:5001"
     echo "  DB:          localhost:5433 (PostgreSQL)"
     echo ""
 }
