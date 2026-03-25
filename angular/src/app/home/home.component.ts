@@ -1,6 +1,8 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { AuthService, LocalizationPipe } from '@abp/ng.core';
+import { AuthService, ConfigStateService, LocalizationPipe } from '@abp/ng.core';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
+import { OAuthService } from 'angular-oauth2-oidc';
+import { filter, take } from 'rxjs/operators';
 
 @Component({
   selector: 'app-home',
@@ -10,6 +12,8 @@ import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 })
 export class HomeComponent implements OnInit {
   private authService = inject(AuthService);
+  private configService = inject(ConfigStateService);
+  private oauthService = inject(OAuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
@@ -21,7 +25,19 @@ export class HomeComponent implements OnInit {
     if (this.hasLoggedIn) {
       const returnUrl = this.route.snapshot.queryParams['returnUrl'];
       if (!returnUrl) {
-        this.router.navigate(['/student/resources']);
+        this.configService.getAll$().pipe(
+          take(1),
+        ).subscribe(config => {
+          console.log('Full config:', JSON.stringify(config, null, 2));
+          const currentUser = (config as any).currentUser;
+          const roles = currentUser?.roles || [];
+          console.log('User roles from config:', roles);
+          if (roles.some((r: string) => r?.toLowerCase?.() === 'student')) {
+            this.router.navigate(['/student/resources']);
+          } else {
+            this.router.navigate(['/']);
+          }
+        });
       }
     }
   }
