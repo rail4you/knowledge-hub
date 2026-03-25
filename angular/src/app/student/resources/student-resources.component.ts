@@ -107,21 +107,40 @@ export class StudentResourcesComponent implements OnInit {
     return colors[type || 0] || 'blue';
   }
 
-  downloadResource(id?: string) {
-    if (!id) return;
-    this.resourceService.download(id).subscribe({
-      next: () => {
-        this.message.success('下载成功');
+  getResourceTypeIcon(type?: number): string {
+    const icons = ['file-text', 'video-camera', 'audio', 'picture', 'file-ppt'];
+    return icons[type || 0] || 'file-text';
+  }
+
+  downloadResource(resource?: ResourceDto) {
+    if (!resource?.id) return;
+    this.resourceService.getFileUrl(resource.id).subscribe({
+      next: (url) => {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = resource.originalFileName || resource.name || 'download';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.message.success('下载已开始');
       },
       error: () => {
-        this.message.error('下载失败');
+        this.message.error('获取下载链接失败');
       }
     });
   }
 
-  viewResource(id?: string) {
-    if (!id) return;
-    window.open(`/document-viewer/${id}`, '_blank');
+  viewResource(resource?: ResourceDto) {
+    if (!resource?.id) return;
+    this.resourceService.getFileUrl(resource.id).subscribe({
+      next: (url) => {
+        window.open(url, '_blank');
+      },
+      error: () => {
+        this.message.error('获取预览链接失败');
+      }
+    });
   }
 
   collectResource(id?: string) {

@@ -100,6 +100,13 @@ function configureRoutes() {
         requiredPolicy: 'KnowledgeHub.Exercises',
       },
       {
+        path: '/admin/identity-roles',
+        name: '::Menu:IdentityRoles',
+        parentName: '::Menu:Admin',
+        layout: eLayoutType.application,
+        requiredPolicy: 'AbpIdentity.Roles',
+      },
+      {
         path: '/learning',
         name: '::Menu:Learning',
         iconClass: 'fas fa-graduation-cap',

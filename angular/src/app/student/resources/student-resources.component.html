@@ -68,10 +68,10 @@
             </div>
           </div>
           <div class="card-actions">
-            <button class="action-btn" nz-tooltip="预览" (click)="viewResource(resource.id); $event.stopPropagation()">
+            <button class="action-btn" nz-tooltip="预览" (click)="viewResource(resource); $event.stopPropagation()">
               <span nz-icon nzType="eye" nzTheme="outline"></span>
             </button>
-            <button class="action-btn" nz-tooltip="下载" (click)="downloadResource(resource.id); $event.stopPropagation()">
+            <button class="action-btn" nz-tooltip="下载" (click)="downloadResource(resource); $event.stopPropagation()">
               <span nz-icon nzType="download" nzTheme="outline"></span>
             </button>
             <button class="action-btn" nz-tooltip="收藏" (click)="collectResource(resource.id); $event.stopPropagation()">

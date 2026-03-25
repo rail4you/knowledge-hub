@@ -15,7 +15,7 @@ import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
-import { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos/exercise.dto';
+import { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 
 @Component({

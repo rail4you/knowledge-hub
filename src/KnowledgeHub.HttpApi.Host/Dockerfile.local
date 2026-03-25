@@ -5,11 +5,17 @@ EXPOSE 8081
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
+# 复制项目文件
+COPY . .
+# 在容器内还原和发布，确保生成目标平台二进制文件
+RUN dotnet restore src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj && \
+    dotnet publish src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj -c Release -o /app/publish
+# 生成开发证书
 RUN dotnet dev-certs https -v -ep localhost.pfx -p 91f91912-5ab0-49df-8166-23377efaf3cc
 RUN chmod 644 localhost.pfx
 
 FROM base AS final
 WORKDIR /app
-COPY bin/Release/net10.0/publish/ .
+COPY --from=build /app/publish .
 COPY --from=build /src/localhost.pfx ./localhost.pfx
 ENTRYPOINT ["dotnet", "KnowledgeHub.HttpApi.Host.dll"]

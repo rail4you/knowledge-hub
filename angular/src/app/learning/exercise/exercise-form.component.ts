@@ -12,7 +12,7 @@ import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
-import { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos/exercise.dto';
+import { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 
 interface OptionItem {

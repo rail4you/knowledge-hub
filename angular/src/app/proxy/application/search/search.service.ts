@@ -98,6 +98,14 @@ export class SearchService {
     { apiName: this.apiName,...config });
   
 
+  refreshDocumentIndex = (resourceId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, IndexTaskResultDto>({
+      method: 'POST',
+      url: `/api/app/search/refresh-document-index/${resourceId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   search = (input: SearchQueryDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, SearchResultDto>({
       method: 'POST',

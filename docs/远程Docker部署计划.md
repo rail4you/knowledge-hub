@@ -105,9 +105,12 @@ environment:
 
 ### 5.1 脚本命名
 
-`deploy-to-remote.sh`
+| 脚本 | 用途 | 执行频率 |
+|------|------|----------|
+| `deploy-to-remote.sh` | 部署项目代码（Angular/API） | 每次代码更新时 |
+| `package-database-images.sh` | 打包数据库镜像 | 只需执行一次或偶尔更新 |
 
-### 5.2 脚本功能
+### 5.2 deploy-to-remote.sh 功能
 
 1. **本地构建阶段**
    - 构建 Angular 生产镜像
@@ -124,8 +127,31 @@ environment:
    - 使用 docker-compose 启动服务
    - 执行数据库迁移
 
-### 5.3 脚本参数
+### 5.3 package-database-images.sh 功能
 
+1. **拉取最新镜像**
+   - PostgreSQL 16 Alpine
+   - Redis Alpine
+   - Meilisearch v1.6
+
+2. **打包传输**
+   - 打包为 tar 文件
+   - 通过 SSH 传输到远程服务器
+   - 加载到远程 Docker
+
+### 5.4 部署流程
+
+```bash
+# 首次部署时（只需执行一次）
+./package-database-images.sh
+
+# 每次代码更新时
+./deploy-to-remote.sh --env production
+```
+
+### 5.5 脚本参数
+
+**deploy-to-remote.sh:**
 ```bash
 ./deploy-to-remote.sh [OPTIONS]
 
@@ -135,6 +161,12 @@ OPTIONS:
   --env ENV         指定环境 (production|development)
   --dry-run         演练模式，不实际执行
   --help            显示帮助
+```
+
+**package-database-images.sh:**
+```bash
+./package-database-images.sh
+# 无需参数，直接执行
 ```
 
 ---
@@ -218,8 +250,25 @@ sudo ufw allow 44305/tcp
 
 ## 九、部署流程详解
 
-### 9.1 本地构建镜像
+### 9.1 首次部署（数据库镜像）
 
+数据库镜像（PostgreSQL、Redis、Meilisearch）不频繁更新，只需执行一次：
+
+```bash
+cd /Users/bai/projects/KnowledgeHub/etc/docker
+./package-database-images.sh
+```
+
+### 9.2 每次代码更新部署
+
+```bash
+cd /Users/bai/projects/KnowledgeHub/etc/docker
+./deploy-to-remote.sh --env production
+```
+
+### 9.3 手动分步部署（可选）
+
+**构建项目镜像：**
 ```bash
 # 构建 Angular
 cd angular
@@ -234,10 +283,9 @@ docker build -f src/KnowledgeHub.DbMigrator/Dockerfile.local \
   -t mycompany/knowledgehub-db-migrator:latest .
 ```
 
-### 9.2 打包并传输
-
+**打包并传输：**
 ```bash
-# 打包镜像
+# 打包项目镜像（不含数据库镜像）
 docker save mycompany/knowledgehub-angular:latest \
   mycompany/knowledgehub-api:latest \
   mycompany/knowledgehub-db-migrator:latest \
@@ -248,8 +296,7 @@ sshpass -p 'password' scp knowledgehub-images.tar \
   ubuntu@119.45.170.4:~/knowledgehub/
 ```
 
-### 9.3 远程部署
-
+**远程部署：**
 ```bash
 # SSH 远程执行
 sshpass -p 'password' ssh ubuntu@119.45.170.4 << 'EOF'
@@ -259,10 +306,10 @@ sshpass -p 'password' ssh ubuntu@119.45.170.4 << 'EOF'
   docker load -i knowledgehub-images.tar
   
   # 启动服务
-  docker-compose -f docker-compose.prod.yml up -d
+  docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
   
   # 执行数据库迁移
-  docker-compose -f docker-compose.prod.yml run --rm db-migrator
+  docker-compose -f docker-compose.yml -f docker-compose.prod.yml run --rm db-migrator
 EOF
 ```
 
@@ -289,6 +336,22 @@ EOF
 2. **端口冲突**: 确认远程服务器端口未被占用
 3. **数据库迁移失败**: 检查 PostgreSQL 连接和迁移脚本
 4. **Meilisearch 连接失败**: 检查网络和服务健康状态
+5. **镜像架构不匹配**: macOS (Apple Silicon) 构建的镜像是 arm64，远程服务器是 x86_64，需要使用 `package-database-images.sh` 重新拉取正确架构的镜像
+
+### 架构问题排查
+
+如果遇到 `exec format error` 或容器无法启动：
+
+```bash
+# 检查服务器架构
+ssh ubuntu@119.45.170.4 uname -m
+
+# 检查镜像架构
+ssh ubuntu@119.45.170.4 docker inspect <image> --format '{{.Architecture}}'
+
+# 解决方案：重新打包数据库镜像
+./package-database-images.sh
+```
 
 ### 日志查看
 
@@ -298,7 +361,7 @@ docker-compose logs -f
 
 # 远程日志
 sshpass -p 'password' ssh ubuntu@119.45.170.4 \
-  "docker-compose -f ~/knowledgehub/docker-compose.prod.yml logs -f"
+  "docker-compose -f ~/knowledgehub/docker-compose.yml -f ~/knowledgehub/docker-compose.prod.yml logs -f"
 ```
 
 ---

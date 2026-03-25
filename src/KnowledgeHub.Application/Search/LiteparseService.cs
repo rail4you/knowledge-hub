@@ -76,6 +76,11 @@ public class LiteparseService : IDocumentExtractionService, ITransientDependency
         }
     }
 
+    private static readonly string PdfParserPath = Path.Combine(
+        Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.FullName 
+        ?? Directory.GetCurrentDirectory(),
+        "utils", "pdf-parser", "cli.js");
+
     public async Task<LiteparseResultDto> ParseDocumentAsync(string filePath, CancellationToken ct = default)
     {
         if (!File.Exists(filePath))
@@ -83,6 +88,71 @@ public class LiteparseService : IDocumentExtractionService, ITransientDependency
             throw new UserFriendlyException($"File not found: {filePath}");
         }
 
+        var cliPath = PdfParserPath;
+        if (!File.Exists(cliPath))
+        {
+            _logger.LogWarning("PDF parser not found at {Path}, falling back to lit CLI", cliPath);
+            return await ParseWithLitAsync(filePath, ct);
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "node",
+            Arguments = $"\"{cliPath}\" --format json \"{filePath}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using var process = new Process { StartInfo = startInfo };
+        var outputBuilder = new StringBuilder();
+        var errorBuilder = new StringBuilder();
+
+        process.OutputDataReceived += (s, e) =>
+        {
+            if (e.Data != null)
+                outputBuilder.AppendLine(e.Data);
+        };
+        process.ErrorDataReceived += (s, e) =>
+        {
+            if (e.Data != null)
+                errorBuilder.AppendLine(e.Data);
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromMinutes(5));
+
+        try
+        {
+            await process.WaitForExitAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(); } catch { }
+            throw new UserFriendlyException("Document parsing timed out");
+        }
+
+        if (process.ExitCode != 0)
+        {
+            var error = errorBuilder.ToString();
+            _logger.LogError("PDF parser failed with exit code {ExitCode}: {Error}, falling back to lit", process.ExitCode, error);
+            return await ParseWithLitAsync(filePath, ct);
+        }
+
+        var output = outputBuilder.ToString();
+        return JsonSerializer.Deserialize<LiteparseResultDto>(output, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        }) ?? new LiteparseResultDto();
+    }
+
+    private async Task<LiteparseResultDto> ParseWithLitAsync(string filePath, CancellationToken ct = default)
+    {
         var startInfo = new ProcessStartInfo
         {
             FileName = "lit",

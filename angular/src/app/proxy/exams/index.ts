@@ -1,3 +1,4 @@
+import * as Dtos from './dtos';
+import * as Enums from './enums';
 export * from './exercise.service';
-export * from './dtos/exercise.dto';
-export * from './enums/exercise-type.enum';
+export { Dtos, Enums };

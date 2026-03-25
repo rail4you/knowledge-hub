@@ -77,6 +77,14 @@ export class MeiliSearchService {
     { apiName: this.apiName,...config });
   
 
+  refreshDocumentIndex = (resourceId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, IndexTaskResultDto>({
+      method: 'POST',
+      url: `/api/app/meili-search/refresh-document-index/${resourceId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   retryFailedIndexing = (documentIndexId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',

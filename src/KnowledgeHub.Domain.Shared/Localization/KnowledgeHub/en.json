@@ -72,6 +72,11 @@
     "Enum:UserRoleType.3": "Teacher",
     "Enum:UserRoleType.4": "Student",
     "Enum:UserRoleType.5": "Enterprise User",
+    "RoleName:LeagueAdmin": "League Admin",
+    "RoleName:SchoolAdmin": "School Admin",
+    "RoleName:Teacher": "Teacher",
+    "RoleName:Student": "Student",
+    "RoleName:EnterpriseUser": "Enterprise User",
     "RoleType": "Role Type",
     "PhoneNumber": "Phone Number",
     "Email": "Email",
@@ -220,6 +225,11 @@
     "Menu:CreateCourse": "Create Course",
     "Menu:KnowledgeGraph": "Knowledge Graph",
     "Menu:Admin": "Admin",
-    "Menu:ExerciseManagement": "Exercise Management"
+    "Menu:ExerciseManagement": "Exercise Management",
+    "Menu:IdentityRoles": "Roles",
+    "IsDefault": "Default",
+    "IsPublic": "Public",
+    "Yes": "Yes",
+    "No": "No"
   }
 }

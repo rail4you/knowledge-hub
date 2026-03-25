@@ -201,42 +201,42 @@ build_images() {
         return
     fi
 
-    log_info "=== Step 1: 构建 Docker 镜像 ==="
+    log_info "=== Step 1: 构建 Docker 镜像（linux/amd64） ==="
 
-    # 构建 Angular
-    log_info "构建 Angular 镜像..."
+    # 设置 buildx builder
+    export DOCKER_BUILDKIT=1
+    
+    # 确保使用支持多平台的 builder
+    docker buildx use default 2>/dev/null || true
+
+    # 拉取 linux/amd64 版本的基础镜像（用于打包传输到远程）
+    log_info "拉取 linux/amd64 版本基础镜像..."
+    docker pull --platform linux/amd64 postgres:16-alpine
+    docker pull --platform linux/amd64 redis:alpine
+    docker pull --platform linux/amd64 getmeili/meilisearch:v1.6
+    log_success "基础镜像拉取完成"
+
+    # 构建 Angular 项目
+    log_info "构建 Angular 项目..."
     cd "$PROJECT_ROOT/angular"
-    docker build -f Dockerfile.local -t "$ANGULAR_IMAGE" .
+    npm run build
+    log_success "Angular 项目构建完成"
+
+    # 构建 Angular Docker 镜像（使用 linux/amd64 平台）
+    log_info "构建 Angular 镜像（linux/amd64）..."
+    cd "$PROJECT_ROOT/angular"
+    docker buildx build --platform linux/amd64 -f Dockerfile.local -t "$ANGULAR_IMAGE" . --load
     log_success "Angular 镜像构建完成"
 
-    # 构建 API
-    log_info "构建 API 镜像..."
+    # 构建 API（使用 linux/amd64 平台）
+    log_info "构建 API 镜像（linux/amd64）..."
     cd "$PROJECT_ROOT"
-
-    log_info "构建 API 项目..."
-    dotnet build src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj -c Release
-
-    log_info "发布 API 项目..."
-    dotnet publish src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj \
-        -c Release \
-        -o src/KnowledgeHub.HttpApi.Host/bin/Release/net10.0/publish \
-        --no-build
-
-    docker build -f src/KnowledgeHub.HttpApi.Host/Dockerfile.local -t "$API_IMAGE" .
+    docker buildx build --platform linux/amd64 -f src/KnowledgeHub.HttpApi.Host/Dockerfile.local -t "$API_IMAGE" . --load
     log_success "API 镜像构建完成"
 
-    # 构建 DbMigrator
-    log_info "构建 DbMigrator 镜像..."
-    log_info "构建 DbMigrator 项目..."
-    dotnet build src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj -c Release
-
-    log_info "发布 DbMigrator 项目..."
-    dotnet publish src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj \
-        -c Release \
-        -o src/KnowledgeHub.DbMigrator/bin/Release/net10.0/publish \
-        --no-build
-
-    docker build -f src/KnowledgeHub.DbMigrator/Dockerfile.local -t "$MIGRATOR_IMAGE" .
+    # 构建 DbMigrator（使用 linux/amd64 平台）
+    log_info "构建 DbMigrator 镜像（linux/amd64）..."
+    docker buildx build --platform linux/amd64 -f src/KnowledgeHub.DbMigrator/Dockerfile.local -t "$MIGRATOR_IMAGE" . --load
     log_success "DbMigrator 镜像构建完成"
 }
 
@@ -253,9 +253,9 @@ package_images() {
         "$ANGULAR_IMAGE" \
         "$API_IMAGE" \
         "$MIGRATOR_IMAGE" \
-        getmeili/meilisearch:v1.6 \
         postgres:16-alpine \
         redis:alpine \
+        getmeili/meilisearch:v1.6 \
         -o "$TEMP_DIR/knowledgehub-images.tar"
 
     # 复制 docker-compose 文件
@@ -344,7 +344,26 @@ prepare_remote() {
 load_images() {
     log_info "=== Step 5: 加载 Docker 镜像 ==="
 
-    remote_exec "cd $REMOTE_DIR && docker load -i knowledgehub-images.tar"
+    # 查找最新的部署目录中的 tar 文件
+    local latest_deploy=$(sshpass -p "$REMOTE_PASSWORD" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "ls -td $REMOTE_DIR/knowledgehub-deploy-* 2>/dev/null | head -1")
+    
+    if [ -z "$latest_deploy" ]; then
+        log_error "未找到部署目录"
+        return 1
+    fi
+
+    log_info "从最新部署目录加载镜像: $latest_deploy"
+    
+    # 删除旧镜像避免冲突
+    log_info "清理旧镜像..."
+    remote_exec "docker rmi -f \$(docker images -q 'mycompany/*' 2>/dev/null) 2>/dev/null || true"
+    
+    # 加载新镜像
+    remote_exec "cd $latest_deploy && docker load -i knowledgehub-images.tar"
+
+    # 清理旧部署目录（保留当前）
+    log_info "清理旧部署目录..."
+    remote_exec "cd $REMOTE_DIR && ls -td knowledgehub-deploy-* 2>/dev/null | tail -n +2 | xargs rm -rf 2>/dev/null || true"
 
     log_success "镜像加载完成"
 }
@@ -355,13 +374,24 @@ load_images() {
 start_services() {
     log_info "=== Step 6: 启动服务 ==="
 
-    # 停止旧容器（如果存在）
-    log_info "停止旧容器..."
-    remote_exec "cd $REMOTE_DIR && $REMOTE_DOCKER_COMPOSE --env-file .env.production down 2>/dev/null || true"
+    # 查找最新的部署目录
+    local latest_deploy=$(sshpass -p "$REMOTE_PASSWORD" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "ls -td $REMOTE_DIR/knowledgehub-deploy-* 2>/dev/null | head -1")
+    
+    if [ -z "$latest_deploy" ]; then
+        log_error "未找到部署目录"
+        return 1
+    fi
+
+    log_info "使用部署目录: $latest_deploy"
+
+    # 停止并删除旧容器（所有相关容器）
+    log_info "停止并删除旧容器..."
+    remote_exec "docker stop \$(docker ps -aq --filter 'name=knowledgehub' --filter 'name=postgres' --filter 'name=redis' --filter 'name=meilisearch' 2>/dev/null) 2>/dev/null || true"
+    remote_exec "docker rm \$(docker ps -aq --filter 'name=knowledgehub' --filter 'name=postgres' --filter 'name=redis' --filter 'name=meilisearch' 2>/dev/null) 2>/dev/null || true"
 
     # 启动服务
     log_info "启动 Docker Compose 服务..."
-    remote_exec "cd $REMOTE_DIR && $REMOTE_DOCKER_COMPOSE --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d"
+    remote_exec "cd $latest_deploy && $REMOTE_DOCKER_COMPOSE --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d"
 
     log_success "服务启动完成"
 }

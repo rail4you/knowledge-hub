@@ -15,14 +15,14 @@
 services:
 
   # ----------------------------------------------------------
-  # Angular UI — Nginx 静态托管，HTTP only（端口 4200）
+  # Angular UI — Nginx 静态托管，HTTP only（端口 80）
   # Angular 不使用 .pfx 证书；HTTPS 请在 Nginx 层单独配置
   # ----------------------------------------------------------
   knowledgehub-angular:
     image: mycompany/knowledgehub-angular:latest
     container_name: knowledgehub-angular
     ports:
-      - "4200:80"
+      - "80:80"
     depends_on:
       - knowledgehub-api
     # dynamic-env.json 在运行时覆盖镜像内的同名文件，
@@ -44,9 +44,7 @@ services:
       context: ../../
       dockerfile: src/KnowledgeHub.HttpApi.Host/Dockerfile.local
     environment:
-      - ASPNETCORE_URLS=https://+:443;http://+:80
-      - Kestrel__Certificates__Default__Path=/app/localhost.pfx
-      - Kestrel__Certificates__Default__Password=91f91912-5ab0-49df-8166-23377efaf3cc
+      - ASPNETCORE_URLS=http://+:44354;http://+:80
       # 对外暴露的 API 地址（浏览器可访问）
       - App__SelfUrl=https://localhost:44354
       - App__HealthCheckUrl=http://knowledgehub-api/health-status
@@ -62,13 +60,11 @@ services:
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=postgres
       - Redis__Configuration=redis
     ports:
-      - "44354:443"
+      - "44354:44354"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      meilisearch:
         condition: service_healthy
     restart: on-failure
     volumes:
@@ -85,6 +81,7 @@ services:
     image: getmeili/meilisearch:v1.6
     container_name: meilisearch
     hostname: meilisearch
+    platform: linux/amd64
     environment:
       - MEILI_MASTER_KEY=aSampleMasterKey
       - MEILI_ENV=production
@@ -188,6 +185,7 @@ services:
     image: redis:alpine
     container_name: redis
     hostname: redis
+    platform: linux/amd64
     ports:
       - "6379:6379"
     healthcheck:

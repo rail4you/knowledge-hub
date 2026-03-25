@@ -64,6 +64,22 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/identity-roles',
+    loadComponent: () => import('./admin/identity-roles/identity-roles.component').then(c => c.IdentityRolesComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'AbpIdentity.Roles',
+    },
+  },
+  {
+    path: 'identity/roles',
+    loadComponent: () => import('./admin/identity-roles/identity-roles.component').then(c => c.IdentityRolesComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'AbpIdentity.Roles',
+    },
+  },
+  {
     path: 'document-viewer/:id',
     loadComponent: () => import('./document-viewer/document-viewer.component').then(c => c.DocumentViewerComponent),
     canActivate: [authGuard, permissionGuard],

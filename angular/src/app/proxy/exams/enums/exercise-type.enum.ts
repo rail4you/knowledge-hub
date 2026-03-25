@@ -1,3 +1,5 @@
+import { mapEnumToOptions } from '@abp/ng.core';
+
 export enum ExerciseType {
   SingleChoice = 0,
   MultiChoice = 1,
@@ -5,5 +7,7 @@ export enum ExerciseType {
   FillBlank = 3,
   ShortAnswer = 4,
   Essay = 5,
-  CaseAnalysis = 6
+  CaseAnalysis = 6,
 }
+
+export const exerciseTypeOptions = mapEnumToOptions(ExerciseType);

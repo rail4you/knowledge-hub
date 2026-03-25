@@ -13,7 +13,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
-import { ExerciseDto } from '../../proxy/exams/dtos/exercise.dto';
+import { ExerciseDto } from '../../proxy/exams/dtos';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { ExerciseFormComponent } from './exercise-form.component';
 

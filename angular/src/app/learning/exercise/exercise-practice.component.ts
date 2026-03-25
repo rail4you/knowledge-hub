@@ -14,7 +14,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
-import { ExerciseDto } from '../../proxy/exams/dtos/exercise.dto';
+import { ExerciseDto } from '../../proxy/exams/dtos';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 
 interface AnswerItem {
