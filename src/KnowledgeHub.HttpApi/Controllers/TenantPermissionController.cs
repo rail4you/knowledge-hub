@@ -5,7 +5,6 @@ using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
-using Volo.Abp.PermissionManagement;
 
 namespace KnowledgeHub.HttpApi.Controllers;
 
@@ -19,6 +18,13 @@ public class TenantPermissionController : AbpController
     public TenantPermissionController(ITenantPermissionService tenantPermissionService)
     {
         _tenantPermissionService = tenantPermissionService;
+    }
+
+    [HttpGet("get-for-tenant")]
+    public async Task<dynamic> GetForTenantAsync(Guid? tenantId, string providerName, string providerKey)
+    {
+        var result = await _tenantPermissionService.GetForTenantAsync(tenantId, providerName, providerKey);
+        return result;
     }
 
     [HttpPost("set-for-tenant")]
@@ -48,11 +54,5 @@ public class PermissionItem
     public string Name { get; set; } = string.Empty;
     public string ProviderName { get; set; } = string.Empty;
     public string ProviderKey { get; set; } = string.Empty;
-    public bool IsGranted { get; set; }
-}
-
-public class PermissionGrantInfoDto
-{
-    public string Name { get; set; } = string.Empty;
     public bool IsGranted { get; set; }
 }

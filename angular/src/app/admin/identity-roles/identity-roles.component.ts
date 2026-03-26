@@ -246,16 +246,13 @@ export class IdentityRolesComponent implements OnInit {
 
   loadPermissions() {
     this.permissionLoading.set(true);
-    this.restService.request<any, any>({
-      method: 'GET',
-      url: '/api/permission-management/permissions',
-      params: {
-        providerName: 'R',
-        providerKey: this.permissionProviderKey,
-      }
+    this.tenantPermissionService.getForTenant({
+      tenantId: this.permissionTenantId,
+      providerName: 'R',
+      providerKey: this.permissionProviderKey,
     }).subscribe({
-      next: (result) => {
-        this.permissionGroups = this.buildPermissionGroups(result.groups || []);
+      next: (permissions) => {
+        this.permissionGroups = this.buildPermissionGroups(permissions || []);
         this.permissionLoading.set(false);
       },
       error: () => {
@@ -264,20 +261,89 @@ export class IdentityRolesComponent implements OnInit {
     });
   }
 
-  private buildPermissionGroups(groups: any[]): PermissionGroup[] {
-    return groups
-      .filter((group: any) => group.name === 'KnowledgeHub')
-      .map(group => ({
-        name: group.name,
-        displayName: group.displayName,
-        permissions: (group.permissions || []).map((p: any) => ({
-          name: p.name,
-          displayName: p.displayName,
-          providerName: 'R',
-          providerKey: this.permissionProviderKey,
-          isGranted: p.isGranted,
-        }))
-      }));
+  private buildPermissionGroups(permissions: any[]): PermissionGroup[] {
+    const knowledgeHubPermissions = permissions.filter((p: any) => p.name && p.name.startsWith('KnowledgeHub.'));
+    
+    const groups: PermissionGroup[] = [];
+    const groupMap = new Map<string, PermissionGroup>();
+    
+    knowledgeHubPermissions.forEach((p: any) => {
+      const parts = p.name.replace('KnowledgeHub.', '').split('.');
+      const groupName = parts.length > 1 ? parts[0] : 'Other';
+      const displayName = this.getGroupDisplayName(groupName);
+      
+      if (!groupMap.has(groupName)) {
+        const group: PermissionGroup = {
+          name: groupName,
+          displayName: displayName,
+          permissions: [],
+        };
+        groupMap.set(groupName, group);
+        groups.push(group);
+      }
+      
+      groupMap.get(groupName)!.permissions.push({
+        name: p.name,
+        displayName: this.getPermissionDisplayName(p.name),
+        providerName: 'R',
+        providerKey: this.permissionProviderKey,
+        isGranted: p.isGranted,
+      });
+    });
+    
+    return groups;
+  }
+
+  private getPermissionDisplayName(permissionName: string): string {
+    const shortName = permissionName.replace('KnowledgeHub.', '');
+    const nameMap: Record<string, string> = {
+      'Documents': '文档管理',
+      'Documents.Create': '创建新文档',
+      'Documents.Edit': '编辑文档',
+      'Documents.Delete': '删除文档',
+      'Resources': '资源管理',
+      'Resources.Create': '创建资源',
+      'Resources.Edit': '编辑资源',
+      'Resources.Delete': '删除资源',
+      'Resources.Download': '下载资源',
+      'Resources.SchoolAudit': '院校审核',
+      'Resources.LeagueAudit': '联盟终审',
+      'Resources.ManageCategory': '管理分类',
+      'Resources.PhysicalDelete': '物理删除',
+      'Resources.ViewStatistics': '查看统计',
+      'Users': '用户管理',
+      'Users.Create': '创建新用户',
+      'Users.Edit': '编辑用户',
+      'Users.Delete': '删除用户',
+      'Users.Import': '导入用户',
+      'Search': '搜索管理',
+      'Search.ManageIndex': '管理索引',
+      'Search.ViewStatistics': '查看统计',
+      'Courses': '课程管理',
+      'Courses.Create': '创建课程',
+      'Courses.Edit': '编辑课程',
+      'Courses.Delete': '删除课程',
+      'Courses.Enroll': '课程报名',
+      'AI': '智能助手',
+      'AI.Chat': '智能问答',
+      'AI.LessonPlan': '教案生成',
+      'AI.CaseAnalysis': '案例分析',
+      'AI.CareerGuidance': '职业规划',
+    };
+    return nameMap[shortName] || nameMap[permissionName] || shortName.split('.')[shortName.split('.').length - 1];
+  }
+
+  private getGroupDisplayName(groupName: string): string {
+    const nameMap: Record<string, string> = {
+      'Documents': '文档管理',
+      'Resources': '资源管理',
+      'Users': '用户管理',
+      'Search': '搜索管理',
+      'Courses': '课程管理',
+      'AI': '智能助手',
+      'Other': '其他',
+    };
+    return nameMap[groupName] || groupName;
   }
 
   savePermissions() {
