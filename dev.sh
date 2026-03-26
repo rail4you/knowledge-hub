@@ -355,21 +355,6 @@ case "${1:-help}" in
                 ;;
             meilisearch|search)
                 stop_service "meilisearch"
-                ensure_dirs
-                start_meilisearch
-                ;;
-            ai)
-                stop_service "ai"
-                ensure_dirs
-                start_ai
-                ;;
-            all)
-                stop_all
-                ensure_dirs
-                start_api
-                start_angular
-                start_meilisearch
-                start_ai
                 ;;
             ai)
                 stop_service "ai"
