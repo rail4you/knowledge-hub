@@ -54,6 +54,13 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Edit, L("Permission:Courses.Edit"));
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Delete, L("Permission:Courses.Delete"));
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Enroll, L("Permission:Courses.Enroll"));
+
+        //AI permissions
+        var aiPermission = myGroup.AddPermission(KnowledgeHubPermissions.AI.Default, L("Permission:AI"));
+        aiPermission.AddChild(KnowledgeHubPermissions.AI.Chat, L("Permission:AI.Chat"));
+        aiPermission.AddChild(KnowledgeHubPermissions.AI.LessonPlan, L("Permission:AI.LessonPlan"));
+        aiPermission.AddChild(KnowledgeHubPermissions.AI.CaseAnalysis, L("Permission:AI.CaseAnalysis"));
+        aiPermission.AddChild(KnowledgeHubPermissions.AI.CareerGuidance, L("Permission:AI.CareerGuidance"));
     }
 
     private static LocalizableString L(string name)

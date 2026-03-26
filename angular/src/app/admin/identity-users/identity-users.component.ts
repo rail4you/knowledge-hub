@@ -126,6 +126,7 @@ export class IdentityUsersComponent implements OnInit {
   
   roles: RoleDto[] = [];
   selectedUserRoles: string[] = [];
+  userRolesMap: Record<string, string[]> = {};
   
   isPermissionModalOpen = false;
   permissionProviderKey = '';
@@ -181,7 +182,28 @@ export class IdentityUsersComponent implements OnInit {
 
     this.list.hookToQuery(userStreamCreator).subscribe((response) => {
       this.users = response;
+      this.loadUsersRoles();
     });
+  }
+
+  loadUsersRoles() {
+    if (!this.users.items?.length) return;
+    
+    this.users.items.forEach((user) => {
+      if (user.id) {
+        this.restService.request<any, string[]>({
+          method: 'GET',
+          url: `/api/app/tenant-user/roles-for-user/${user.id}`,
+        }).subscribe((roles) => {
+          this.userRolesMap[user.id!] = roles || [];
+        });
+      }
+    });
+  }
+
+  getUserRoles(userId: string | undefined): string[] {
+    if (!userId) return [];
+    return this.userRolesMap[userId] || [];
   }
 
   buildForm() {

@@ -22,6 +22,7 @@
       <tr>
         <th>{{ '::UserName' | abpLocalization }}</th>
         <th>{{ '::Email' | abpLocalization }}</th>
+        <th>{{ '::Roles' | abpLocalization }}</th>
         <th>{{ '::Actions' | abpLocalization }}</th>
       </tr>
     </thead>
@@ -30,6 +31,11 @@
         <tr>
           <td>{{ user.userName }}</td>
           <td>{{ user.email }}</td>
+          <td>
+            @for (role of getUserRoles(user.id); track role) {
+              <nz-tag>{{ role }}</nz-tag>
+            }
+          </td>
           <td>
             <nz-space>
               <button nz-button nzType="link" *nzSpaceItem (click)="editUser(user)">

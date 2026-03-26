@@ -50,4 +50,13 @@ public static class KnowledgeHubPermissions
         public const string Delete = Default + ".Delete";
         public const string Enroll = Default + ".Enroll";
     }
+
+    public static class AI
+    {
+        public const string Default = GroupName + ".AI";
+        public const string Chat = Default + ".Chat";
+        public const string LessonPlan = Default + ".LessonPlan";
+        public const string CaseAnalysis = Default + ".CaseAnalysis";
+        public const string CareerGuidance = Default + ".CareerGuidance";
+    }
 }
