@@ -11,6 +11,7 @@ using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.BackgroundJobs;
@@ -181,14 +182,24 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 TenantId = CurrentTenant.Id
             };
             await IndexingJobRepository.InsertAsync(indexingJob);
+            Logger.LogInformation("Created DocumentIndexingJob {JobId} for resource {ResourceId}", indexingJob.Id, resource.Id);
 
-            await BackgroundJobManager.EnqueueAsync(new DocumentIndexingJobArgs
+            try
             {
-                JobId = indexingJob.Id,
-                ResourceId = resource.Id,
-                FilePath = resource.FilePath,
-                TenantId = CurrentTenant.Id
-            });
+                await BackgroundJobManager.EnqueueAsync(new DocumentIndexingJobArgs
+                {
+                    JobId = indexingJob.Id,
+                    ResourceId = resource.Id,
+                    FilePath = resource.FilePath,
+                    TenantId = CurrentTenant.Id
+                });
+                Logger.LogInformation("Successfully enqueued background job for DocumentIndexingJob {JobId}", indexingJob.Id);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to enqueue background job for DocumentIndexingJob {JobId}", indexingJob.Id);
+                throw;
+            }
         }
 
         return ObjectMapper.Map<Resource, ResourceDto>(resource);

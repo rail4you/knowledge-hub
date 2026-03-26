@@ -67,7 +67,7 @@
               <nz-tag nzColor="default">{{ '::No' | abpLocalization }}</nz-tag>
             }
           </td>
-<td>
+ <td>
             <nz-space>
               <button nz-button nzType="link" *nzSpaceItem (click)="editRole(role)">
                 {{ '::Edit' | abpLocalization }}
@@ -134,11 +134,53 @@
   </ng-container>
 </nz-modal>
 
-<abp-permission-management
-  *ngIf="permissionProviderKey"
-  [visible]="isPermissionModalOpen"
-  providerName="R"
-  [providerKey]="permissionProviderKey"
-  [entityDisplayName]="permissionEntityDisplayName"
-  (visibleChange)="isPermissionModalOpen = $event"
-></abp-permission-management>
+<nz-modal
+  [(nzVisible)]="isPermissionModalOpen"
+  [nzTitle]="permissionEntityDisplayName + ' - ' + ('::Permissions' | abpLocalization)"
+  [nzOkText]="'::Save' | abpLocalization"
+  [nzCancelText]="'::Cancel' | abpLocalization"
+  [nzOkLoading]="permissionSaving()"
+  [nzWidth]="700"
+  (nzOnOk)="savePermissions()"
+  (nzOnCancel)="isPermissionModalOpen = false"
+>
+  <ng-container *nzModalContent>
+    <nz-spin [nzSpinning]="permissionLoading()">
+      @if (permissionTenantId) {
+        <div class="mb-4">
+          <nz-tag nzColor="blue">{{ '::Tenant' | abpLocalization }}: {{ getTenantName(permissionTenantId) }}</nz-tag>
+        </div>
+      }
+      
+      <div class="permission-container">
+        @for (group of permissionGroups; track group.name) {
+          <nz-card [nzTitle]="group.displayName" [nzSize]="'small'" class="permission-group-card">
+            <div class="group-actions">
+              <label nz-checkbox 
+                [ngModel]="isGroupAllGranted(group)" 
+                [nzIndeterminate]="isGroupIndeterminate(group)"
+                (ngModelChange)="toggleGroupPermissions(group, $event)">
+                {{ '::SelectAll' | abpLocalization }}
+              </label>
+            </div>
+            <nz-divider></nz-divider>
+            <div class="permissions-grid">
+              @for (permission of group.permissions; track permission.name) {
+                <div class="permission-item">
+                  <label nz-checkbox 
+                    [(ngModel)]="permission.isGranted">
+                    {{ permission.displayName }}
+                  </label>
+                </div>
+              }
+            </div>
+          </nz-card>
+        }
+      </div>
+
+      @if (permissionGroups.length === 0 && !permissionLoading()) {
+        <nz-empty [nzNotFoundContent]="'::NoPermissionsFound' | abpLocalization"></nz-empty>
+      }
+    </nz-spin>
+  </ng-container>
+</nz-modal>

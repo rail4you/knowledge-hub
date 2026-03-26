@@ -8,7 +8,7 @@ import { Injectable, inject } from '@angular/core';
 })
 export class ResourceService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   approvePhysicalDelete = (id: string, config?: Partial<Rest.Config>) =>

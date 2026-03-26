@@ -3,6 +3,7 @@ import { ListService, LocalizationService, LocalizationPipe, PermissionDirective
 import type { PagedResultDto } from '@abp/ng.core';
 import { IdentityRoleService } from './identity-role.service';
 import type { IdentityRoleDto, IdentityRoleCreateDto, IdentityRoleUpdateDto } from './models';
+import { TenantPermissionService, PermissionItem } from './tenant-permission.service';
 import { FormGroup, FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { ConfirmationService, Confirmation } from '@abp/ng.theme.shared';
 import { CommonModule } from '@angular/common';
@@ -19,11 +20,20 @@ import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
-import { PermissionManagementComponent } from '@abp/ng.permission-management';
+import { NzTreeModule } from 'ng-zorro-antd/tree';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 
 interface TenantDto {
   id?: string | null;
   name?: string;
+}
+
+interface PermissionGroup {
+  name: string;
+  displayName: string;
+  permissions: PermissionItem[];
 }
 
 @Component({
@@ -48,7 +58,10 @@ interface TenantDto {
     NzIconModule,
     NzSelectModule,
     NzCheckboxModule,
-    PermissionManagementComponent,
+    NzTreeModule,
+    NzSpinModule,
+    NzDividerModule,
+    NzEmptyModule,
   ],
   providers: [ListService],
   templateUrl: './identity-roles.component.html',
@@ -72,6 +85,10 @@ export class IdentityRolesComponent implements OnInit {
   isPermissionModalOpen = false;
   permissionProviderKey = '';
   permissionEntityDisplayName = '';
+  permissionTenantId: string | null = null;
+  permissionGroups: PermissionGroup[] = [];
+  permissionLoading = signal(false);
+  permissionSaving = signal(false);
 
   private readonly list = inject(ListService);
   private readonly roleService = inject(IdentityRoleService);
@@ -79,6 +96,7 @@ export class IdentityRolesComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly confirmation = inject(ConfirmationService);
   private readonly restService = inject(RestService);
+  private readonly tenantPermissionService = inject(TenantPermissionService);
 
   l(key: string): string {
     return this.localization.instant(key);
@@ -219,8 +237,77 @@ export class IdentityRolesComponent implements OnInit {
     }
     this.permissionProviderKey = role.name;
     this.permissionEntityDisplayName = this.getRoleDisplayName(role.name);
+    this.permissionTenantId = role.tenantId || null;
+    this.loadPermissions();
     setTimeout(() => {
       this.isPermissionModalOpen = true;
     });
+  }
+
+  loadPermissions() {
+    this.permissionLoading.set(true);
+    this.restService.request<any, any>({
+      method: 'GET',
+      url: '/api/permission-management/permissions',
+      params: {
+        providerName: 'R',
+        providerKey: this.permissionProviderKey,
+      }
+    }).subscribe({
+      next: (result) => {
+        this.permissionGroups = this.buildPermissionGroups(result.groups || []);
+        this.permissionLoading.set(false);
+      },
+      error: () => {
+        this.permissionLoading.set(false);
+      }
+    });
+  }
+
+  private buildPermissionGroups(groups: any[]): PermissionGroup[] {
+    return groups
+      .filter((group: any) => group.name === 'KnowledgeHub')
+      .map(group => ({
+        name: group.name,
+        displayName: group.displayName,
+        permissions: (group.permissions || []).map((p: any) => ({
+          name: p.name,
+          displayName: p.displayName,
+          providerName: 'R',
+          providerKey: this.permissionProviderKey,
+          isGranted: p.isGranted,
+        }))
+      }));
+  }
+
+  savePermissions() {
+    this.permissionSaving.set(true);
+    const permissions = this.permissionGroups.flatMap(g => g.permissions);
+    
+    this.tenantPermissionService.setForTenant({
+      tenantId: this.permissionTenantId,
+      permissions: permissions,
+    }).subscribe({
+      next: () => {
+        this.permissionSaving.set(false);
+        this.isPermissionModalOpen = false;
+      },
+      error: () => {
+        this.permissionSaving.set(false);
+      }
+    });
+  }
+
+  isGroupAllGranted(group: PermissionGroup): boolean {
+    return group.permissions.length > 0 && group.permissions.every(p => p.isGranted);
+  }
+
+  isGroupIndeterminate(group: PermissionGroup): boolean {
+    const granted = group.permissions.filter(p => p.isGranted).length;
+    return granted > 0 && granted < group.permissions.length;
+  }
+
+  toggleGroupPermissions(group: PermissionGroup, granted: boolean) {
+    group.permissions.forEach(p => p.isGranted = granted);
   }
 }
