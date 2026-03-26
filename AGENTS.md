@@ -169,3 +169,141 @@ docker compose logs -f angular # View Angular logs
 - **Install dependencies**: `abp install-libs` (in solution root)
 - **Generate API proxy**: `abp generate-proxy -t ng` (in `angular/` folder) - ALWAYS use this to generate frontend API services, NEVER manually edit proxy files
 - **Run tests**: `dotnet test` (in solution root)
+
+---
+
+## ABP Angular 高级用法
+
+### 替换内置组件 (Replaceable Components)
+
+ABP 允许替换框架内置组件（如角色管理、用户管理等），而无需修改路由配置。
+
+**步骤：**
+
+1. 创建配置文件（如 `identity-roles.config.ts`）：
+```typescript
+import { provideAppInitializer, inject } from '@angular/core';
+import { ReplaceableComponentsService } from '@abp/ng.core';
+import { eIdentityComponents } from '@abp/ng.identity';
+import { MyCustomRolesComponent } from './my-custom-roles.component';
+
+function initCustomComponent() {
+  const replaceableComponents = inject(ReplaceableComponentsService);
+  replaceableComponents.add({
+    key: eIdentityComponents.Roles,  // 要替换的组件 key
+    component: MyCustomRolesComponent,  // 自定义组件
+  });
+}
+
+export const CUSTOM_COMPONENT_PROVIDER = [
+  provideAppInitializer(() => {
+    initCustomComponent();
+  }),
+];
+```
+
+2. 在 `app.config.ts` 中引入 provider：
+```typescript
+import { CUSTOM_COMPONENT_PROVIDER } from './identity-roles.config';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    // ... 其他 providers
+    CUSTOM_COMPONENT_PROVIDER,
+  ]
+};
+```
+
+**可替换的 Identity 组件：**
+- `eIdentityComponents.Roles` - 角色管理
+- `eIdentityComponents.Users` - 用户管理
+
+**可替换的 Theme 组件：**
+- `eThemeLeptonXComponents.Footer` - 页脚
+- `eThemeLeptonXComponents.Header` - 页头
+- `eThemeLeptonXComponents.Sidebar` - 侧边栏
+
+### Localization 本地化
+
+**1. 后端添加翻译**
+
+在 `src/{Project}.Domain.Shared/Localization/{Project}/` 目录下编辑 JSON 文件：
+
+```json
+// zh-Hans.json
+{
+  "culture": "zh-Hans",
+  "texts": {
+    "MyKey": "我的翻译",
+    "RoleName:Admin": "管理员"
+  }
+}
+```
+
+**2. 前端使用翻译**
+
+模板中使用 `abpLocalization` pipe：
+```html
+<!-- 基本用法 -->
+<span>{{ '::MyKey' | abpLocalization }}</span>
+
+<!-- 带参数 -->
+<span>{{ '::HelloMessage' | abpLocalization:{0: userName} }}</span>
+```
+
+TypeScript 中使用 `LocalizationService`：
+```typescript
+import { LocalizationService } from '@abp/ng.core';
+
+// 注入服务
+private readonly localization = inject(LocalizationService);
+
+// 获取翻译
+const text = this.localization.instant('::MyKey');
+
+// 动态 key
+const roleName = 'Admin';
+const translated = this.localization.instant(`::RoleName:${roleName}`);
+```
+
+**3. Localization Key 前缀规则**
+
+| 前缀 | 说明 |
+|------|------|
+| `::Key` | 从所有资源中查找（推荐） |
+| `Key` | 仅从默认资源查找 |
+| `ResourceName::Key` | 从指定资源查找 |
+
+**4. 查找顺序**
+
+ABP 按以下顺序查找翻译：
+1. 项目自定义资源（如 `KnowledgeHub`）
+2. 模块资源（如 `AbpIdentity`）
+3. 框架基础资源（如 `AbpValidation`）
+
+**5. 查看可用的 Localization Keys**
+
+```bash
+# 查看所有资源
+curl -sk "https://localhost:44305/api/abp/application-localization?cultureName=zh-Hans" | jq '.resources | keys'
+
+# 查看特定资源的翻译
+curl -sk "https://localhost:44305/api/abp/application-localization?cultureName=zh-Hans" | jq '.resources.AbpIdentity.texts'
+curl -sk "https://localhost:44305/api/abp/application-localization?cultureName=zh-Hans" | jq '.resources.KnowledgeHub.texts'
+```
+
+### 常见问题排查
+
+**问题：路由被 ABP 模块覆盖**
+
+当自定义路由与 ABP 模块的 `loadChildren` 冲突时（如 `/identity/roles`），有两种解决方案：
+
+1. 使用不同的路径（如 `/admin/identity-roles`）
+2. 使用 `ReplaceableComponentsService` 替换组件（推荐）
+
+**问题：翻译不显示**
+
+1. 检查 key 是否正确（使用 `::` 前缀）
+2. 确认 API 已重启加载新的翻译文件
+3. 使用 curl 命令验证 API 返回的 localization 数据
+4. 检查 key 是否在正确的资源文件中

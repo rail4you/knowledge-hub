@@ -29,6 +29,7 @@ import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
 import { APP_ROUTE_PROVIDER } from './route.provider';
 import { FOOTER_PROVIDER } from './footer/footer.config';
+import { IDENTITY_ROLES_PROVIDER } from './identity-roles.config';
 import { IdentityUserService } from '@abp/ng.identity/proxy';
 import { CustomIdentityUserService } from './custom-identity-user.service';
 
@@ -49,6 +50,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(APP_ROUTES),
     APP_ROUTE_PROVIDER,
     FOOTER_PROVIDER,
+    IDENTITY_ROLES_PROVIDER,
     provideAnimations(),
     provideNzIcons(icons),
     provideAbpCore(

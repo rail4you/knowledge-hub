@@ -5,13 +5,16 @@ export interface IdentityRoleDto {
   isPublic?: boolean;
   concurrencyStamp?: string;
   extraProperties?: Record<string, any>;
+  tenantId?: string;
+  isStatic?: boolean;
 }
 
-export interface GetIdentityRolesInput {
+ export interface GetIdentityRolesInput {
   filter?: string;
-  sorting?: string;
-  skipCount?: number;
-  maxResultCount?: number;
+    sorting?: string;
+    skipCount?: number;
+    maxResultCount?: number;
+    tenantId?: string;
 }
 
 export interface IdentityRoleCreateDto {
@@ -19,6 +22,7 @@ export interface IdentityRoleCreateDto {
   isDefault?: boolean;
   isPublic?: boolean;
   roleCount?: number;
+  tenantId?: string;
 }
 
 export interface IdentityRoleUpdateDto {

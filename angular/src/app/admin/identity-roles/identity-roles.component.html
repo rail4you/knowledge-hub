@@ -1,11 +1,25 @@
-<nz-page-header nzTitle="{{ '::Menu:IdentityRoles' | abpLocalization }}" nzSubtitle="{{ '::Menu:IdentityRoles' | abpLocalization }}">
+<nz-page-header nzTitle="{{ '::Roles' | abpLocalization }}" nzSubtitle="{{ '::Roles' | abpLocalization }}">
 </nz-page-header>
 
 <nz-card>
-  <div class="mb-4">
+  <div class="mb-4 flex gap-4 items-center">
     <button nz-button nzType="primary" (click)="createRole()">
       <span>{{ '::NewRole' | abpLocalization }}</span>
     </button>
+    
+    <nz-select 
+      [(ngModel)]="selectedTenantId" 
+      (ngModelChange)="onTenantFilterChange($event)"
+      [ngModelOptions]="{standalone: true}"
+      nzAllowClear
+      [nzPlaceHolder]="'::FilterByTenant' | abpLocalization"
+      style="width: 200px;"
+    >
+      <nz-option [nzValue]="null" [nzLabel]="'::All' | abpLocalization"></nz-option>
+      @for (tenant of tenants; track tenant.id) {
+        <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
+      }
+    </nz-select>
   </div>
 
   <nz-table
@@ -21,8 +35,9 @@
     <thead>
       <tr>
         <th>{{ '::DisplayName:RoleName' | abpLocalization }}</th>
-        <th>{{ '::IsDefault' | abpLocalization }}</th>
-        <th>{{ '::IsPublic' | abpLocalization }}</th>
+        <th>{{ '::Tenant' | abpLocalization }}</th>
+        <th>{{ '::DisplayName:IsDefault' | abpLocalization }}</th>
+        <th>{{ '::DisplayName:IsPublic' | abpLocalization }}</th>
         <th>{{ '::Actions' | abpLocalization }}</th>
       </tr>
     </thead>
@@ -32,6 +47,11 @@
           <td>
             <strong>{{ getRoleDisplayName(role.name) }}</strong>
             <div class="text-muted small">{{ role.name }}</div>
+          </td>
+          <td>
+            <nz-tag [nzColor]="role.tenantId ? 'blue' : 'green'">
+              {{ getTenantName(role.tenantId) }}
+            </nz-tag>
           </td>
           <td>
             @if (role.isDefault) {
@@ -72,30 +92,41 @@
   (nzOnOk)="save()"
   (nzOnCancel)="isModalOpen = false"
 >
-  @if (isModalOpen) {
-    <ng-container *nzModalContent>
-      <form [formGroup]="form" nzLayout="vertical">
+  <ng-container *nzModalContent>
+    <form [formGroup]="form" nzLayout="vertical" *ngIf="form">
+      @if (!selectedRole.id) {
         <nz-form-item>
-          <nz-form-label nzRequired>{{ '::DisplayName:RoleName' | abpLocalization }}</nz-form-label>
-          <nz-form-control nzErrorTip="{{ '::NameRequired' | abpLocalization }}">
-            <input nz-input formControlName="name" placeholder="{{ '::DisplayName:RoleName' | abpLocalization }}" />
-          </nz-form-control>
-        </nz-form-item>
-
-        <nz-form-item>
-          <nz-form-label>{{ '::IsDefault' | abpLocalization }}</nz-form-label>
+          <nz-form-label>{{ '::Tenant' | abpLocalization }}</nz-form-label>
           <nz-form-control>
-            <label nz-checkbox formControlName="isDefault"></label>
+            <nz-select formControlName="tenantId" nzAllowClear [nzPlaceHolder]="'::SelectTenant' | abpLocalization">
+              @for (tenant of tenants; track tenant.id) {
+                <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
+              }
+            </nz-select>
           </nz-form-control>
         </nz-form-item>
+      }
 
-        <nz-form-item>
-          <nz-form-label>{{ '::IsPublic' | abpLocalization }}</nz-form-label>
-          <nz-form-control>
-            <label nz-checkbox formControlName="isPublic"></label>
-          </nz-form-control>
-        </nz-form-item>
-      </form>
-    </ng-container>
-  }
+      <nz-form-item>
+        <nz-form-label nzRequired>{{ '::DisplayName:RoleName' | abpLocalization }}</nz-form-label>
+        <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
+          <input nz-input formControlName="name" placeholder="{{ '::DisplayName:RoleName' | abpLocalization }}" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>{{ '::DisplayName:IsDefault' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <label nz-checkbox formControlName="isDefault"></label>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>{{ '::DisplayName:IsPublic' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <label nz-checkbox formControlName="isPublic"></label>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
 </nz-modal>

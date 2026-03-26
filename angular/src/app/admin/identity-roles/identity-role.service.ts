@@ -8,34 +8,40 @@ import { Injectable, inject } from '@angular/core';
 })
 export class IdentityRoleService {
   private restService = inject(RestService);
-  apiName = 'AbpIdentity';
+  apiName = 'Default';
 
   getAllList = (config?: Partial<Rest.Config>) =>
     this.restService.request<any, IdentityRoleDto[]>({
       method: 'GET',
-      url: '/api/identity/roles/all',
+      url: '/api/app/tenant-role/all',
     },
     { apiName: this.apiName, ...config });
 
   getList = (input: GetIdentityRolesInput, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<IdentityRoleDto>>({
       method: 'GET',
-      url: '/api/identity/roles',
-      params: { filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      url: '/api/app/tenant-role',
+      params: { 
+        filter: input.filter, 
+        sorting: input.sorting, 
+        skipCount: input.skipCount, 
+        maxResultCount: input.maxResultCount,
+        tenantId: input.tenantId
+      },
     },
     { apiName: this.apiName, ...config });
 
   get = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, IdentityRoleDto>({
       method: 'GET',
-      url: `/api/identity/roles/${id}`,
+      url: `/api/app/tenant-role/${id}`,
     },
     { apiName: this.apiName, ...config });
 
   create = (input: IdentityRoleCreateDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, IdentityRoleDto>({
       method: 'POST',
-      url: '/api/identity/roles',
+      url: '/api/app/tenant-role',
       body: input,
     },
     { apiName: this.apiName, ...config });
@@ -43,7 +49,7 @@ export class IdentityRoleService {
   update = (id: string, input: IdentityRoleUpdateDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, IdentityRoleDto>({
       method: 'PUT',
-      url: `/api/identity/roles/${id}`,
+      url: `/api/app/tenant-role/${id}`,
       body: input,
     },
     { apiName: this.apiName, ...config });
@@ -51,7 +57,7 @@ export class IdentityRoleService {
   delete = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'DELETE',
-      url: `/api/identity/roles/${id}`,
+      url: `/api/app/tenant-role/${id}`,
     },
     { apiName: this.apiName, ...config });
 }

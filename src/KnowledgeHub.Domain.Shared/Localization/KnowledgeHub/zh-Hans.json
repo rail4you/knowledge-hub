@@ -119,6 +119,7 @@
     "RoleName:Teacher": "教师",
     "RoleName:Student": "学生",
     "RoleName:EnterpriseUser": "企业用户",
+    "RoleName:admin": "管理员",
     "RoleType": "角色类型",
     "PhoneNumber": "手机号",
     "Email": "邮箱",
@@ -281,6 +282,16 @@
     "IsDefault": "默认",
     "IsPublic": "公开",
     "Yes": "是",
-    "No": "否"
+    "No": "否",
+    "Tenant": "租户",
+    "FilterByTenant": "按租户过滤",
+    "All": "全部",
+    "SelectTenant": "选择租户",
+    "Global": "全局",
+    "Roles": "角色",
+    "NewRole": "新角色",
+    "DisplayName:RoleName": "角色名称",
+    "DisplayName:IsDefault": "默认",
+    "DisplayName:IsPublic": "公开"
   }
 }
