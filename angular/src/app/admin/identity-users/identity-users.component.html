@@ -1,0 +1,159 @@
+<nz-page-header nzTitle="{{ '::Users' | abpLocalization }}" nzSubtitle="{{ '::Users' | abpLocalization }}">
+</nz-page-header>
+
+<nz-card>
+  <div class="mb-4 flex gap-4 items-center">
+    <button nz-button nzType="primary" (click)="createUser()">
+      <span>{{ '::NewUser' | abpLocalization }}</span>
+    </button>
+  </div>
+
+  <nz-table
+    [nzData]="users.items"
+    [nzTotal]="users.totalCount"
+    [nzPageIndex]="pageIndex"
+    [nzPageSize]="pageSize"
+    [nzShowSizeChanger]="true"
+    [nzFrontPagination]="false"
+    (nzPageIndexChange)="onPageIndexChange($event)"
+    (nzPageSizeChange)="onPageSizeChange($event)"
+  >
+    <thead>
+      <tr>
+        <th>{{ '::UserName' | abpLocalization }}</th>
+        <th>{{ '::Email' | abpLocalization }}</th>
+        <th>{{ '::Actions' | abpLocalization }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (user of users.items; track user.id) {
+        <tr>
+          <td>{{ user.userName }}</td>
+          <td>{{ user.email }}</td>
+          <td>
+            <nz-space>
+              <button nz-button nzType="link" *nzSpaceItem (click)="editUser(user)">
+                {{ '::Edit' | abpLocalization }}
+              </button>
+              <button nz-button nzType="link" *nzSpaceItem (click)="openPermissions(user)">
+                {{ '::Permissions' | abpLocalization }}
+              </button>
+              <button nz-button nzType="link" nzDanger *nzSpaceItem (click)="delete(user.id!, user.userName!)">
+                {{ '::Delete' | abpLocalization }}
+              </button>
+            </nz-space>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
+</nz-card>
+
+<nz-modal
+  [(nzVisible)]="isModalOpen"
+  [nzTitle]="selectedUser.id ? ('::Edit' | abpLocalization) : ('::NewUser' | abpLocalization)"
+  [nzOkText]="'::Save' | abpLocalization"
+  [nzCancelText]="'::Cancel' | abpLocalization"
+  [nzOkLoading]="isLoading()"
+  (nzOnOk)="save()"
+  (nzOnCancel)="isModalOpen = false"
+  [nzWidth]="800"
+>
+  <ng-container *nzModalContent>
+    <nz-tabset>
+      <nz-tab [nzTitle]="'::UserInformations' | abpLocalization">
+        <form [formGroup]="form" nzLayout="vertical" *ngIf="form" class="mt-4">
+          <nz-form-item>
+            <nz-form-label>{{ '::UserName' | abpLocalization }}</nz-form-label>
+            <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
+              <input nz-input formControlName="userName" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>{{ '::Email' | abpLocalization }}</nz-form-label>
+            <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
+              <input nz-input formControlName="email" />
+            </nz-form-control>
+          </nz-form-item>
+
+          @if (!selectedUser.id) {
+            <nz-form-item>
+              <nz-form-label>{{ '::Password' | abpLocalization }}</nz-form-label>
+              <nz-form-control>
+                <input nz-input type="password" formControlName="password" />
+              </nz-form-control>
+            </nz-form-item>
+          }
+
+          <nz-form-item>
+            <nz-form-label>{{ '::Name' | abpLocalization }}</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="name" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>{{ '::Surname' | abpLocalization }}</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="surname" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label>{{ '::IsActive' | abpLocalization }}</nz-form-label>
+            <nz-form-control>
+              <label nz-checkbox formControlName="isActive"></label>
+            </nz-form-control>
+          </nz-form-item>
+        </form>
+      </nz-tab>
+
+      <nz-tab [nzTitle]="'::Roles' | abpLocalization">
+        <div class="mt-4">
+          <nz-form-item>
+            <nz-form-label>{{ '::SelectTenant' | abpLocalization }}</nz-form-label>
+            <nz-form-control>
+              <nz-select 
+                [(ngModel)]="selectedTenantIdForRoles"
+                (ngModelChange)="onTenantChangeForRoles($event)"
+                [nzPlaceHolder]="'::SelectTenant' | abpLocalization"
+                style="width: 100%;"
+              >
+                <nz-option [nzValue]="null" [nzLabel]="'::Global' | abpLocalization"></nz-option>
+                @for (tenant of tenants; track tenant.id) {
+                  <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+            <small class="text-muted">{{ '::SelectTenantToViewRoles' | abpLocalization }}</small>
+          </nz-form-item>
+
+          <nz-divider></nz-divider>
+
+          <div class="roles-list">
+            @for (role of roles; track role.id) {
+              <label 
+                nz-checkbox 
+                [nzChecked]="isRoleSelected(role.name || '')"
+                (nzCheckedChange)="toggleRole(role.name || '')"
+                class="role-checkbox"
+              >
+                {{ getRoleDisplayName(role.name) }}
+              </label>
+            }
+          </div>
+        </div>
+      </nz-tab>
+    </nz-tabset>
+  </ng-container>
+</nz-modal>
+
+@if (isPermissionModalOpen && permissionProviderKey) {
+  <abp-permission-management
+    [(visible)]="isPermissionModalOpen"
+    providerName="U"
+    [providerKey]="permissionProviderKey"
+    [entityDisplayName]="permissionProviderKey"
+  ></abp-permission-management>
+}

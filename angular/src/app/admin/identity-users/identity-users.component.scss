@@ -1,0 +1,13 @@
+.roles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.role-checkbox {
+  margin-left: 0 !important;
+}
+
+nz-divider {
+  margin: 16px 0;
+}
