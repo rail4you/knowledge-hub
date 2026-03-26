@@ -39,7 +39,7 @@
         >
           <thead>
             <tr>
-              <th>{{ '::Name' | abpLocalization }}</th>
+<th>{{ '::ResourceName' | abpLocalization }}</th>
               <th>{{ '::ResourceType' | abpLocalization }}</th>
               <th>{{ '::Version' | abpLocalization }}</th>
               <th>{{ '::Status' | abpLocalization }}</th>
@@ -243,9 +243,9 @@
       >
         <thead>
           <tr>
-            <th>{{ '::Name' | abpLocalization }}</th>
+            <th>{{ '::ResourceName' | abpLocalization }}</th>
             <th>{{ '::ResourceType' | abpLocalization }}</th>
-            <th>{{ '::Status' | abpLocalization }}</th>
+            <th>{{ '::AuditStatus' | abpLocalization }}</th>
             <th>{{ '::Creator' | abpLocalization }}</th>
             <th>{{ '::CreationTime' | abpLocalization }}</th>
             <th>{{ '::Actions' | abpLocalization }}</th>
@@ -328,7 +328,7 @@
   <ng-container *nzModalContent>
     <form [formGroup]="form" nz-form>
       <nz-form-item>
-        <nz-form-label [nzRequired]="true">{{ '::Name' | abpLocalization }}</nz-form-label>
+        <nz-form-label [nzRequired]="true">{{ '::ResourceName' | abpLocalization }}</nz-form-label>
         <nz-form-control>
           <input nz-input formControlName="name" />
         </nz-form-control>
@@ -338,7 +338,7 @@
         <nz-form-label [nzRequired]="true">{{ '::ResourceType' | abpLocalization }}</nz-form-label>
         <nz-form-control>
           <nz-select formControlName="resourceType">
-            <nz-option *ngFor="let item of resourceTypes" [nzValue]="item.value" [nzLabel]="item.label"></nz-option>
+            <nz-option *ngFor="let item of resourceTypes" [nzValue]="item.value" [nzLabel]="item.key"></nz-option>
           </nz-select>
         </nz-form-control>
       </nz-form-item>
@@ -409,7 +409,7 @@
   <ng-container *nzModalContent>
     <form [formGroup]="categoryForm" nz-form *ngIf="categoryForm">
       <nz-form-item>
-        <nz-form-label [nzRequired]="true">{{ '::Name' | abpLocalization }}</nz-form-label>
+        <nz-form-label [nzRequired]="true">{{ '::CategoryName' | abpLocalization }}</nz-form-label>
         <nz-form-control>
           <input nz-input formControlName="name" />
         </nz-form-control>
@@ -462,7 +462,7 @@
 >
   <ng-container *nzModalContent>
     <div *ngIf="selectedAuditResource">
-      <p><strong>{{ '::Name' | abpLocalization }}:</strong> {{ selectedAuditResource.name }}</p>
+      <p><strong>{{ '::ResourceName' | abpLocalization }}:</strong> {{ selectedAuditResource.name }}</p>
       <p><strong>{{ '::ResourceType' | abpLocalization }}:</strong> {{ getResourceTypeName(selectedAuditResource.resourceType) }}</p>
       <p><strong>{{ '::FileSize' | abpLocalization }}:</strong> {{ selectedAuditResource.fileSize | number }} B</p>
     </div>

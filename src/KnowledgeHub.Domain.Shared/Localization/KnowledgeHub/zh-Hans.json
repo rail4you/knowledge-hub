@@ -292,6 +292,7 @@
     "FilterByTenant": "按租户过滤",
     "All": "全部",
     "SelectTenant": "选择租户",
+    "SelectAll": "全选",
     "Global": "全局",
     "Roles": "角色",
     "NewRole": "新角色",

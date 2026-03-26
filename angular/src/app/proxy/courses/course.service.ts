@@ -8,7 +8,7 @@ import { Injectable, inject } from '@angular/core';
 })
 export class CourseService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   create = (input: CreateUpdateCourseDto, config?: Partial<Rest.Config>) =>

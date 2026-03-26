@@ -72,11 +72,11 @@ build_angular() {
     cd "$SCRIPT_DIR"
     docker buildx build \
         --platform linux/amd64 \
-        -f Dockerfile.angular \
+        -f ../../angular/Dockerfile.local \
         -t "$REGISTRY/$NAMESPACE/${IMAGE_PREFIX}-angular:latest" \
         -t "$REGISTRY/$NAMESPACE/${IMAGE_PREFIX}-angular:$(date +%Y%m%d)" \
         --load \
-        ../..
+        ../../angular
     
     ok "Angular 镜像构建完成"
 }
@@ -257,7 +257,7 @@ show_menu() {
             build_api
             build_migrator
             push_images "angular" "api" "db-migrator"
-            deploy_remote "angular" "api" "migrator"
+            deploy_remote "angular" "api" "db-migrator"
             run_migration
             ;;
         5) run_migration ;;
@@ -298,7 +298,7 @@ case "${1:-}" in
         build_api
         build_migrator
         push_images "angular" "api" "db-migrator"
-        deploy_remote "angular" "api" "migrator"
+        deploy_remote "angular" "api" "db-migrator"
         run_migration
         ;;
     --angular)

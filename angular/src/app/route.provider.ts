@@ -104,21 +104,21 @@ function configureRoutes() {
         iconClass: 'fas fa-graduation-cap',
         order: 5,
         layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Courses.Default',
+        requiredPolicy: 'KnowledgeHub.Courses',
       },
       {
         path: '/learning/course-list',
         name: '::Menu:CourseList',
         parentName: '::Menu:Learning',
         layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Courses.Default',
+        requiredPolicy: 'KnowledgeHub.Courses',
       },
       {
         path: '/learning/my-courses',
         name: '::Menu:MyCourses',
         parentName: '::Menu:Learning',
         layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Courses.Default',
+        requiredPolicy: 'KnowledgeHub.Courses',
       },
       {
         path: '/learning/teacher/create',
@@ -132,7 +132,7 @@ function configureRoutes() {
         name: '::Menu:KnowledgeGraph',
         parentName: '::Menu:Learning',
         layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Courses.Default',
+        requiredPolicy: 'KnowledgeHub.Courses',
       },
       {
         path: '/student',

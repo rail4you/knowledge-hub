@@ -10,7 +10,7 @@ export class CustomIdentityUserService {
   private restService = inject(RestService);
   apiName = 'Default';
 
-  create = (input: IdentityUserCreateDto): Observable<IdentityUserDto> => {
+  create = (input: IdentityUserCreateDto): Observable<any> => {
     const tenantId = input.extraProperties?.['tenantId'] as string | undefined;
     
     if (tenantId) {
@@ -28,7 +28,7 @@ export class CustomIdentityUserService {
       return this.tenantUserService.createUserForTenant(tenantInput);
     }
     
-    return this.restService.request<any, IdentityUserDto>({
+    return this.restService.request<any, any>({
       method: 'POST',
       url: '/api/identity/users',
       body: input,

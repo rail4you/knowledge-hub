@@ -7,7 +7,7 @@ import type { HybridSearchQueryDto, IndexStatusDto, IndexTaskResultDto, SearchQu
 })
 export class MeiliSearchService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   deleteDocument = (resourceId: string, config?: Partial<Rest.Config>) =>

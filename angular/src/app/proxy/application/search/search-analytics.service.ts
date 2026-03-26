@@ -7,7 +7,7 @@ import type { LogViewDto, PopularSearchDto, SearchHistoryDto, SearchStatsDto, To
 })
 export class SearchAnalyticsService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   getPopularSearches = (count: number = 10, config?: Partial<Rest.Config>) =>

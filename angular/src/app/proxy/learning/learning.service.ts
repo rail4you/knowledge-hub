@@ -7,7 +7,7 @@ import { Injectable, inject } from '@angular/core';
 })
 export class LearningService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   getDashboard = (config?: Partial<Rest.Config>) =>

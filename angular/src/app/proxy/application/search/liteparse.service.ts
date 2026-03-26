@@ -8,7 +8,7 @@ import type { PageContentDto } from '../contracts/search/models';
 })
 export class LiteparseService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   extractPages = (resourceId: string, config?: Partial<Rest.Config>) =>

@@ -9,7 +9,7 @@ import type { CreateIndexingJobInput, GetIndexingJobsInput, TestParseResultDto }
 })
 export class IndexingJobService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   cancel = (id: string, config?: Partial<Rest.Config>) =>

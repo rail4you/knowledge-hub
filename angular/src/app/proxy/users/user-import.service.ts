@@ -7,7 +7,7 @@ import { Injectable, inject } from '@angular/core';
 })
 export class UserImportService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   import = (excelFile: number[], config?: Partial<Rest.Config>) =>

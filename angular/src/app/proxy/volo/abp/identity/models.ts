@@ -1,4 +1,8 @@
-import type { ExtensibleFullAuditedEntityDto } from '@abp/ng.core';
+import type { ExtensibleFullAuditedEntityDto, ExtensiblePagedAndSortedResultRequestDto } from '@abp/ng.core';
+
+export interface GetIdentityUsersInput extends ExtensiblePagedAndSortedResultRequestDto {
+  filter?: string;
+}
 
 export interface IdentityUserDto extends ExtensibleFullAuditedEntityDto<string> {
   tenantId?: string | null;

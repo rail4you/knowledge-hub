@@ -8,7 +8,7 @@ import type { CompleteUploadDto, CompleteUploadResultDto, InitiateUploadDto, Ini
 })
 export class ChunkUploadService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   completeUploadByInput = (input: CompleteUploadDto, config?: Partial<Rest.Config>) =>

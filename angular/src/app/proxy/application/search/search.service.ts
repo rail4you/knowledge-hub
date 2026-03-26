@@ -7,7 +7,7 @@ import type { HybridSearchQueryDto, IndexDocumentDto, IndexStatusDto, IndexTaskR
 })
 export class SearchService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   deleteIndex = (resourceId: string, config?: Partial<Rest.Config>) =>

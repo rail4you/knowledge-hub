@@ -7,7 +7,7 @@ import type { UserImportResultDto } from '../users/models';
 })
 export class UserImportService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   import = (excelFile: number[], config?: Partial<Rest.Config>) =>

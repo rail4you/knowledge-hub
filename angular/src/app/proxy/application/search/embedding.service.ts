@@ -6,7 +6,7 @@ import { Injectable, inject } from '@angular/core';
 })
 export class EmbeddingService {
   private restService = inject(RestService);
-  apiName = 'Default';
+  apiName = 'KnowledgeHub';
   
 
   generateBatchEmbeddings = (texts: string[], config?: Partial<Rest.Config>) =>
