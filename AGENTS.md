@@ -142,6 +142,33 @@ public class IndexingJobAppService : ...
 - **Username**: admin
 - **Password**: 1q2w3E*
 
+### 进程管理与代码修改
+
+**API 使用 `--no-hot-reload` 运行**：
+- 修改 C# 代码后，`dotnet watch` 会检测到变化并**完全重启** API 进程
+- 这比热重载更稳定，因为 ABP 框架的复杂性使热重载效果不稳定
+- 重启通常需要 3-5 秒
+
+**何时需要重启 API**：
+- 修改了任何 C# 代码（Controller、Service、Entity、Dto 等）
+- 修改了后端配置文件（如 appsettings.json）
+- 修改了 Application.Contracts 或 Domain 层代码
+- 添加/修改了 API 路由或 DTO
+
+**何时不需要重启（Angular 自动更新）**：
+- 只修改了 Angular 前端代码（TypeScript、HTML、SCSS）
+- 只修改了静态资源
+
+**端口占用问题处理**：
+如果 API 重启失败并报端口占用，执行：
+```bash
+./dev.sh restart api
+```
+或手动清理：
+```bash
+lsof -ti:44305 | xargs kill -9 2>/dev/null || true
+```
+
 ---
 
 ## Production (Docker)

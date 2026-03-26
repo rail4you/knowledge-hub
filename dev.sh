@@ -52,7 +52,7 @@ start_api() {
     
     log_info "Starting API (HttpApi.Host)..."
     cd "$PROJECT_ROOT"
-    ASPNETCORE_ENVIRONMENT=Development dotnet watch --project src/KnowledgeHub.HttpApi.Host > "$LOG_DIR/api.log" 2>&1 &
+    ASPNETCORE_ENVIRONMENT=Development dotnet watch --project src/KnowledgeHub.HttpApi.Host --no-hot-reload > "$LOG_DIR/api.log" 2>&1 &
     echo $! > "$pid_file"
     log_success "API started (PID: $(cat $pid_file))"
     log_info "API URL: https://localhost:44305"
