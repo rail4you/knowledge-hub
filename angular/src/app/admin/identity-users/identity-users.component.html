@@ -60,100 +60,95 @@
   [nzWidth]="800"
 >
   <ng-container *nzModalContent>
-    <nz-tabset>
-      <nz-tab [nzTitle]="'::UserInformations' | abpLocalization">
-        <form [formGroup]="form" nzLayout="vertical" *ngIf="form" class="mt-4">
-          <nz-form-item>
-            <nz-form-label>{{ '::UserName' | abpLocalization }}</nz-form-label>
-            <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
-              <input nz-input formControlName="userName" />
-            </nz-form-control>
-          </nz-form-item>
+    @if (form) {
+    <form [formGroup]="form" nzLayout="vertical" class="mt-4">
+      <nz-form-item>
+        <nz-form-label>{{ '::UserName' | abpLocalization }}</nz-form-label>
+        <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
+          <input nz-input formControlName="userName" />
+        </nz-form-control>
+      </nz-form-item>
 
-          <nz-form-item>
-            <nz-form-label>{{ '::Email' | abpLocalization }}</nz-form-label>
-            <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
-              <input nz-input formControlName="email" />
-            </nz-form-control>
-          </nz-form-item>
+      <nz-form-item>
+        <nz-form-label>{{ '::Email' | abpLocalization }}</nz-form-label>
+        <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
+          <input nz-input formControlName="email" />
+        </nz-form-control>
+      </nz-form-item>
 
-          @if (!selectedUser.id) {
-            <nz-form-item>
-              <nz-form-label>{{ '::Password' | abpLocalization }}</nz-form-label>
-              <nz-form-control>
-                <input nz-input type="password" formControlName="password" />
-              </nz-form-control>
-            </nz-form-item>
+      @if (!selectedUser.id) {
+        <nz-form-item>
+          <nz-form-label>{{ '::Password' | abpLocalization }}</nz-form-label>
+          <nz-form-control>
+            <input nz-input type="password" formControlName="password" />
+          </nz-form-control>
+        </nz-form-item>
+      }
+
+      <nz-form-item>
+        <nz-form-label>{{ '::Name' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <input nz-input formControlName="name" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>{{ '::Surname' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <input nz-input formControlName="surname" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>{{ '::IsActive' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <label nz-checkbox formControlName="isActive"></label>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+
+    <nz-divider></nz-divider>
+
+    <nz-form-item>
+      <nz-form-label>{{ '::SelectTenant' | abpLocalization }}</nz-form-label>
+      <nz-form-control>
+        <nz-select 
+          [(ngModel)]="selectedTenantIdForRoles"
+          (ngModelChange)="onTenantChangeForRoles($event)"
+          [nzPlaceHolder]="'::SelectTenant' | abpLocalization"
+          style="width: 100%;"
+        >
+          <nz-option [nzValue]="null" [nzLabel]="'::Global' | abpLocalization"></nz-option>
+          @for (tenant of tenants; track tenant.id) {
+            <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
           }
+        </nz-select>
+      </nz-form-control>
+      <small class="text-muted">{{ '::SelectTenantToViewRoles' | abpLocalization }}</small>
+    </nz-form-item>
 
-          <nz-form-item>
-            <nz-form-label>{{ '::Name' | abpLocalization }}</nz-form-label>
-            <nz-form-control>
-              <input nz-input formControlName="name" />
-            </nz-form-control>
-          </nz-form-item>
-
-          <nz-form-item>
-            <nz-form-label>{{ '::Surname' | abpLocalization }}</nz-form-label>
-            <nz-form-control>
-              <input nz-input formControlName="surname" />
-            </nz-form-control>
-          </nz-form-item>
-
-          <nz-form-item>
-            <nz-form-label>{{ '::IsActive' | abpLocalization }}</nz-form-label>
-            <nz-form-control>
-              <label nz-checkbox formControlName="isActive"></label>
-            </nz-form-control>
-          </nz-form-item>
-        </form>
-      </nz-tab>
-
-      <nz-tab [nzTitle]="'::Roles' | abpLocalization">
-        <div class="mt-4">
-          <nz-form-item>
-            <nz-form-label>{{ '::SelectTenant' | abpLocalization }}</nz-form-label>
-            <nz-form-control>
-              <nz-select 
-                [(ngModel)]="selectedTenantIdForRoles"
-                (ngModelChange)="onTenantChangeForRoles($event)"
-                [nzPlaceHolder]="'::SelectTenant' | abpLocalization"
-                style="width: 100%;"
-              >
-                <nz-option [nzValue]="null" [nzLabel]="'::Global' | abpLocalization"></nz-option>
-                @for (tenant of tenants; track tenant.id) {
-                  <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
-                }
-              </nz-select>
-            </nz-form-control>
-            <small class="text-muted">{{ '::SelectTenantToViewRoles' | abpLocalization }}</small>
-          </nz-form-item>
-
-          <nz-divider></nz-divider>
-
-          <div class="roles-list">
-            @for (role of roles; track role.id) {
-              <label 
-                nz-checkbox 
-                [nzChecked]="isRoleSelected(role.name || '')"
-                (nzCheckedChange)="toggleRole(role.name || '')"
-                class="role-checkbox"
-              >
-                {{ getRoleDisplayName(role.name) }}
-              </label>
-            }
-          </div>
-        </div>
-      </nz-tab>
-    </nz-tabset>
+    <div class="roles-list">
+      @for (role of roles; track role.id) {
+        <label 
+          nz-checkbox 
+          [nzChecked]="isRoleSelected(role.name || '')"
+          (nzCheckedChange)="toggleRole(role.name || '')"
+          class="role-checkbox"
+        >
+          {{ getRoleDisplayName(role.name) }}
+        </label>
+      }
+    </div>
+    }
   </ng-container>
 </nz-modal>
 
-@if (isPermissionModalOpen && permissionProviderKey) {
+@if (permissionProviderKey) {
   <abp-permission-management
-    [(visible)]="isPermissionModalOpen"
+    [visible]="isPermissionModalOpen"
     providerName="U"
     [providerKey]="permissionProviderKey"
     [entityDisplayName]="permissionProviderKey"
+    (visibleChange)="isPermissionModalOpen = $event"
   ></abp-permission-management>
 }

@@ -25,7 +25,7 @@ import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
-import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
 
 interface TenantDto {
   id?: string | null;
@@ -70,7 +70,7 @@ interface IdentityUserDto {
     NzIconModule,
     NzSelectModule,
     NzCheckboxModule,
-    NzTabsModule,
+    NzDividerModule,
     PermissionManagementComponent,
   ],
   providers: [ListService],
@@ -94,7 +94,7 @@ export class IdentityUsersComponent implements OnInit {
   selectedUserRoles: string[] = [];
   
   isPermissionModalOpen = false;
-  permissionProviderKey: string | null = null;
+  permissionProviderKey = '';
 
   private readonly list = inject(ListService);
   private readonly restService = inject(RestService);
@@ -165,10 +165,13 @@ export class IdentityUsersComponent implements OnInit {
     
     this.restService.request<any, { items: RoleDto[] }>({
       method: 'GET',
-      url: '/api/app/tenant-role/all',
-      params: tenantId ? { tenantId } : {}
-    }).subscribe(({ items }) => {
-      this.roles = items;
+      url: '/api/app/tenant-role',
+      params: { 
+        maxResultCount: 1000,
+        tenantId: tenantId || undefined
+      }
+    }).subscribe((response) => {
+      this.roles = response.items || [];
     });
   }
 
@@ -283,7 +286,9 @@ export class IdentityUsersComponent implements OnInit {
   }
 
   openPermissions(user: IdentityUserDto) {
-    this.permissionProviderKey = user.id || null;
-    this.isPermissionModalOpen = true;
+    this.permissionProviderKey = user.id;
+    setTimeout(() => {
+      this.isPermissionModalOpen = true;
+    });
   }
 }

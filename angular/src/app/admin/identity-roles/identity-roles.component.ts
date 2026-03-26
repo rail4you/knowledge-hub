@@ -70,8 +70,8 @@ export class IdentityRolesComponent implements OnInit {
   tenantNames: Record<string, string> = {};
 
   isPermissionModalOpen = false;
-  permissionProviderKey: string | null = null;
-  permissionEntityDisplayName: string = '';
+  permissionProviderKey = '';
+  permissionEntityDisplayName = '';
 
   private readonly list = inject(ListService);
   private readonly roleService = inject(IdentityRoleService);
@@ -86,7 +86,9 @@ export class IdentityRolesComponent implements OnInit {
 
   getRoleDisplayName(roleName: string | undefined): string {
     if (!roleName) return '';
-    return this.l(`RoleName:${roleName}`) || roleName;
+    const key = `::RoleName:${roleName}`;
+    const translated = this.l(key);
+    return (translated && translated !== key) ? translated : roleName;
   }
 
   getTenantName(tenantId: string | null | undefined): string {
@@ -211,8 +213,14 @@ export class IdentityRolesComponent implements OnInit {
   }
 
   openPermissions(role: IdentityRoleDto) {
-    this.permissionProviderKey = role.name || null;
+    if (!role.name) {
+      console.error('ProviderKey is required');
+      return;
+    }
+    this.permissionProviderKey = role.name;
     this.permissionEntityDisplayName = this.getRoleDisplayName(role.name);
-    this.isPermissionModalOpen = true;
+    setTimeout(() => {
+      this.isPermissionModalOpen = true;
+    });
   }
 }

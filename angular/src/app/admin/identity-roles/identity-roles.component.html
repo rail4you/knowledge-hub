@@ -136,8 +136,9 @@
 
 <abp-permission-management
   *ngIf="permissionProviderKey"
-  [(visible)]="isPermissionModalOpen"
+  [visible]="isPermissionModalOpen"
   providerName="R"
   [providerKey]="permissionProviderKey"
   [entityDisplayName]="permissionEntityDisplayName"
+  (visibleChange)="isPermissionModalOpen = $event"
 ></abp-permission-management>

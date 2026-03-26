@@ -307,3 +307,48 @@ curl -sk "https://localhost:44305/api/abp/application-localization?cultureName=z
 2. 确认 API 已重启加载新的翻译文件
 3. 使用 curl 命令验证 API 返回的 localization 数据
 4. 检查 key 是否在正确的资源文件中
+
+**问题：ABP Permission Management 组件打不开，报 "Provider Key and Provider Name are required"**
+
+这是 Angular 变更检测顺序问题。ABP 的 `abp-permission-management` 组件在 `visible` 变为 `true` 时**同步**调用 `openModal()` 检查 `providerKey`。当使用 `[(visible)]` 双向绑定时，`visible` 和 `providerKey` 在同一变更检测周期内更新，但 `visible` 的变化触发了同步检查，此时 `providerKey` 可能尚未更新。
+
+**解决方案（模板）：**
+
+```html
+<!-- 使用 *ngIf 控制渲染，[visible] 单向绑定，permissionProviderKey 初始值为 '' -->
+<abp-permission-management
+  *ngIf="permissionProviderKey"
+  [visible]="isPermissionModalOpen"
+  providerName="R"
+  [providerKey]="permissionProviderKey"
+  [entityDisplayName]="permissionEntityDisplayName"
+  (visibleChange)="isPermissionModalOpen = $event"
+></abp-permission-management>
+```
+
+**解决方案（TypeScript）：**
+
+```typescript
+// 初始值为空字符串（不是 null，null 在 *ngIf 中是 truthy）
+permissionProviderKey = '';
+
+// 用 setTimeout 推迟 visible 的设置
+openPermissions(role: IdentityRoleDto) {
+  this.permissionProviderKey = role.name;
+  setTimeout(() => {
+    this.isPermissionModalOpen = true;
+  });
+}
+```
+
+**通用原则**：当组件的某个属性变化会触发依赖于其他属性的同步逻辑时，用 `setTimeout` 将该属性的变化推迟到下一个事件循环，确保其他属性已先期完成更新。
+
+---
+
+### 常见的 ABP UI 配置问题
+
+本项目积累的 ABP UI 配置问题汇总：
+
+| 问题 | 原因 | 解决方案 |
+|------|------|---------|
+| Permission Management 报 "Provider Key and Provider Name are required" | Angular 变更检测顺序问题，`visible` 双向绑定触发同步检查时 `providerKey` 未就绪 | 模板用 `*ngIf` + `[visible]`，TS 用 `setTimeout` 延迟设置 `visible` |
