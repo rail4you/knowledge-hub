@@ -292,6 +292,9 @@
     "NewRole": "新角色",
     "DisplayName:RoleName": "角色名称",
     "DisplayName:IsDefault": "默认",
-    "DisplayName:IsPublic": "公开"
+    "DisplayName:IsPublic": "公开",
+    "Permissions": "权限",
+    "SelectTenantToViewRoles": "选择租户以查看可用角色",
+    "RoleDeletionConfirmationMessage": "确定要删除角色 '{0}' 吗？"
   }
 }

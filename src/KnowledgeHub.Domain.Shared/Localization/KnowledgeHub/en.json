@@ -248,6 +248,9 @@
     "NewRole": "New Role",
     "DisplayName:RoleName": "Role Name",
     "DisplayName:IsDefault": "Default",
-    "DisplayName:IsPublic": "Public"
+    "DisplayName:IsPublic": "Public",
+    "Permissions": "Permissions",
+    "SelectTenantToViewRoles": "Select tenant to view available roles",
+    "RoleDeletionConfirmationMessage": "Are you sure to delete the role '{0}'?"
   }
 }

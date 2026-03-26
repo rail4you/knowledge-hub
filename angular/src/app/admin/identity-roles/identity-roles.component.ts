@@ -19,6 +19,7 @@ import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { PermissionManagementComponent } from '@abp/ng.permission-management';
 
 interface TenantDto {
   id?: string | null;
@@ -47,6 +48,7 @@ interface TenantDto {
     NzIconModule,
     NzSelectModule,
     NzCheckboxModule,
+    PermissionManagementComponent,
   ],
   providers: [ListService],
   templateUrl: './identity-roles.component.html',
@@ -67,6 +69,10 @@ export class IdentityRolesComponent implements OnInit {
   selectedTenantId: string | null = null;
   tenantNames: Record<string, string> = {};
 
+  isPermissionModalOpen = false;
+  permissionProviderKey: string | null = null;
+  permissionEntityDisplayName: string = '';
+
   private readonly list = inject(ListService);
   private readonly roleService = inject(IdentityRoleService);
   private readonly localization = inject(LocalizationService);
@@ -80,8 +86,7 @@ export class IdentityRolesComponent implements OnInit {
 
   getRoleDisplayName(roleName: string | undefined): string {
     if (!roleName) return '';
-    const translated = this.localization.instant(`::RoleName:${roleName}`);
-    return translated || roleName;
+    return this.l(`RoleName:${roleName}`) || roleName;
   }
 
   getTenantName(tenantId: string | null | undefined): string {
@@ -203,5 +208,11 @@ export class IdentityRolesComponent implements OnInit {
     this.pageSize = size;
     this.pageIndex = 1;
     this.loadRoles();
+  }
+
+  openPermissions(role: IdentityRoleDto) {
+    this.permissionProviderKey = role.name || null;
+    this.permissionEntityDisplayName = this.getRoleDisplayName(role.name);
+    this.isPermissionModalOpen = true;
   }
 }

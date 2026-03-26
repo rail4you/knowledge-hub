@@ -1,0 +1,179 @@
+# ============================================================
+# docker-compose.registry.yml - 基于阿里云镜像仓库
+# ============================================================
+# 
+# 使用方式:
+#   docker-compose -f docker-compose.registry.yml --env-file .env.production up -d
+#
+# 镜像仓库: registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # Angular UI — Nginx 静态托管（端口 80）
+  # ----------------------------------------------------------
+  knowledgehub-angular:
+    image: registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub-angular:latest
+    container_name: knowledgehub-angular
+    ports:
+      - "80:80"
+    volumes:
+      - ./dynamic-env.json:/usr/share/nginx/html/dynamic-env.json:ro
+    depends_on:
+      - knowledgehub-api
+    restart: unless-stopped
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # HttpApi.Host — 后端 API（端口 44354）
+  # ----------------------------------------------------------
+  knowledgehub-api:
+    image: registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub-api:latest
+    container_name: knowledgehub-api
+    hostname: knowledgehub-api
+    environment:
+      - ASPNETCORE_URLS=http://+:44354
+      - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+      # 应用 URL
+      - App__SelfUrl=${APP_SELF_URL}
+      - App__HealthCheckUrl=http://knowledgehub-api/health-status
+      - App__AngularUrl=${APP_ANGULAR_URL}
+      - App__CorsOrigins=${APP_CORS_ORIGINS}
+      - App__RedirectAllowedUrls=${APP_REDIRECT_URLS}
+      # AuthServer
+      - AuthServer__Authority=http://knowledgehub-api:44354/
+      - AuthServer__RequireHttpsMetadata=false
+      # 数据库
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}
+      - Redis__Configuration=redis
+      # Meilisearch
+      - Meilisearch__Host=http://meilisearch:7700
+      - Meilisearch__ApiKey=${MEILISEARCH_MASTER_KEY}
+      - Meilisearch__IndexName=documents
+      - Meilisearch__EmbeddingDimension=1024
+      - Meilisearch__EmbeddingApiKey=${EMBEDDING_API_KEY}
+      # Qwen API
+      - Qwen__ApiKey=${QWEN_API_KEY}
+      - Qwen__BaseUrl=${QWEN_BASE_URL}
+      - Qwen__Model=${QWEN_MODEL}
+      # 安全
+      - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
+      - StringEncryption__DefaultPassPhrase=${STRING_ENCRYPTION_PASSPHRASE}
+      # Serilog
+      - Serilog__MinimumLevel__Default=Information
+    ports:
+      - "44354:44354"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # Meilisearch — 全文搜索引擎
+  # ----------------------------------------------------------
+  meilisearch:
+    image: getmeili/meilisearch:v1.6
+    container_name: meilisearch
+    hostname: meilisearch
+    platform: linux/amd64
+    environment:
+      - MEILI_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
+      - MEILI_ENV=production
+      - MEILI_DB_PATH=/meili_data
+      - MEILI_HTTP_ADDR=0.0.0.0:7700
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # DbMigrator — 数据库迁移（一次性任务）
+  # ----------------------------------------------------------
+  db-migrator:
+    image: registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub-db-migrator:latest
+    container_name: knowledgehub-db-migrator
+    environment:
+      - OpenIddict__Applications__KnowledgeHub_App__ClientId=KnowledgeHub_App
+      - OpenIddict__Applications__KnowledgeHub_App__RootUrl=${APP_ANGULAR_URL}
+      - OpenIddict__Applications__KnowledgeHub_Swagger__ClientId=KnowledgeHub_Swagger
+      - OpenIddict__Applications__KnowledgeHub_Swagger__RootUrl=${APP_SELF_URL}
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}
+      - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # PostgreSQL 16
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    hostname: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=KnowledgeHub
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # Redis
+  # ----------------------------------------------------------
+  redis:
+    image: redis:alpine
+    container_name: redis
+    hostname: redis
+    platform: linux/amd64
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - abp-network
+
+# ----------------------------------------------------------
+# Volumes & Networks
+# ----------------------------------------------------------
+volumes:
+  postgres_data:
+  uploads_data:
+  meilisearch_data:
+
+networks:
+  abp-network:
+    driver: bridge

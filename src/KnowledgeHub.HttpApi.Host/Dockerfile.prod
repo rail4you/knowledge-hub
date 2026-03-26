@@ -1,0 +1,33 @@
+# ============================================================
+# Dockerfile.prod - API 生产环境镜像
+# ============================================================
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# 复制项目文件
+COPY . .
+
+# 还原依赖并发布
+RUN dotnet restore src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj && \
+    dotnet publish src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj \
+    -c Release -o /app/publish
+
+# ----------------------------------------------------------
+# 生产镜像
+# ----------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+
+# 复制发布产物
+COPY --from=build /app/publish .
+
+# 创建上传目录
+RUN mkdir -p /app/uploads
+
+# 设置时区
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+EXPOSE 44354
+
+ENTRYPOINT ["dotnet", "KnowledgeHub.HttpApi.Host.dll"]

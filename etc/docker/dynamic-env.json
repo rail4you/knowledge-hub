@@ -5,7 +5,7 @@
     "name": "KnowledgeHub"
   },
   "oAuthConfig": {
-    "issuer": "https://119.45.170.4:44354/",
+    "issuer": "http://119.45.170.4:44354/",
     "redirectUri": "http://119.45.170.4",
     "clientId": "KnowledgeHub_App",
     "responseType": "code",
@@ -13,11 +13,11 @@
   },
   "apis": {
     "default": {
-      "url": "https://119.45.170.4:44354",
+      "url": "http://119.45.170.4:44354",
       "rootNamespace": "KnowledgeHub"
     },
     "AbpAccountPublic": {
-      "url": "https://119.45.170.4:44354",
+      "url": "http://119.45.170.4:44354",
       "rootNamespace": "AbpAccountPublic"
     }
   }
