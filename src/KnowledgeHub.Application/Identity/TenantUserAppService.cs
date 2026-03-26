@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
@@ -39,11 +40,12 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                 tenantId: input.TenantId
             );
 
-            user.Name = input.Name;
-            user.Surname = input.Surname;
+            user.Name = input.Name ?? string.Empty;
+            user.Surname = input.Surname ?? "-";
             user.SetIsActive(input.IsActive);
-
-            (await _userManager.CreateAsync(user, input.Password))
+            
+            var password = input.Password;
+            (await _userManager.CreateAsync(user, password))
                 .CheckErrors();
 
             if (input.RoleNames != null && input.RoleNames.Count > 0)
@@ -99,6 +101,23 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         }
     }
 
+    public async Task<List<string>> GetRolesForUserAsync(Guid userId)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var user = await _userRepository.FindAsync(userId);
+            if (user == null)
+            {
+                throw new UserFriendlyException($"用户不存在: {userId}");
+            }
+
+            using (_currentTenant.Change(user.TenantId))
+            {
+                return (await _userManager.GetRolesAsync(user)).ToList();
+            }
+        }
+    }
+
     public async Task<IdentityUserDto> UpdateAsync(Guid id, UpdateTenantUserDto input)
     {
         using (DataFilter.Disable<IMultiTenant>())
@@ -118,6 +137,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                 user.Name = input.Name;
                 user.Surname = input.Surname;
                 user.SetIsActive(input.IsActive);
+                user.SetPhoneNumber(input.PhoneNumber, input.PhoneNumberConfirmed);
 
                 (await _userManager.UpdateAsync(user))
                     .CheckErrors();

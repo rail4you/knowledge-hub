@@ -6,8 +6,7 @@ namespace KnowledgeHub.Application.Identity;
 
 public class CreateTenantUserDto
 {
-    [Required]
-    public Guid TenantId { get; set; }
+    public Guid? TenantId { get; set; }
 
     [Required]
     public string UserName { get; set; }
@@ -20,7 +19,7 @@ public class CreateTenantUserDto
 
     public string Name { get; set; }
 
-    public string Surname { get; set; }
+    public string Surname { get; set; } = string.Empty;
 
     public bool IsActive { get; set; } = true;
 

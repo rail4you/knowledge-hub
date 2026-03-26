@@ -23,7 +23,9 @@ import {
   InboxOutline, 
   DeleteOutline, 
   LoadingOutline,
-  UploadOutline
+  UploadOutline,
+  EyeOutline,
+  EyeInvisibleOutline
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -43,7 +45,9 @@ const icons = [
   InboxOutline, 
   DeleteOutline, 
   LoadingOutline,
-  UploadOutline
+  UploadOutline,
+  EyeOutline,
+  EyeInvisibleOutline
 ];
 
 export const appConfig: ApplicationConfig = {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -13,6 +14,8 @@ public interface ITenantUserAppService : IApplicationService
     Task<PagedResultDto<IdentityUserDto>> GetListAsync(GetIdentityUsersInput input);
     
     Task<IdentityUserDto> GetAsync(Guid id);
+
+    Task<List<string>> GetRolesForUserAsync(Guid userId);
     
     Task<IdentityUserDto> UpdateAsync(Guid id, UpdateTenantUserDto input);
     

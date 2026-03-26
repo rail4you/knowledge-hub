@@ -7,10 +7,12 @@ import {
   RestService 
 } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
+import { TenantUserService } from '../../proxy/application/identity/tenant-user.service';
 import { FormGroup, FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ConfirmationService, Confirmation } from '@abp/ng.theme.shared';
 import { PermissionManagementComponent } from '@abp/ng.permission-management';
-import { finalize } from 'rxjs/operators';
+import { finalize, catchError } from 'rxjs/operators';
+import { throwError } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -26,6 +28,8 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzGridModule } from 'ng-zorro-antd/grid';
+import { NzAlertModule } from 'ng-zorro-antd/alert';
 
 interface TenantDto {
   id?: string | null;
@@ -41,11 +45,39 @@ interface RoleDto {
 
 interface IdentityUserDto {
   id?: string;
+  tenantId?: string;
   userName?: string;
-  email?: string;
+  normalizedUserName?: string;
   name?: string;
-  surname?: string;
+  email?: string;
+  normalizedEmail?: string;
+  emailConfirmed?: boolean;
+  phoneNumber?: string;
+  phoneNumberConfirmed?: boolean;
   isActive?: boolean;
+  twoFactorEnabled?: boolean;
+  lockoutEnabled?: boolean;
+  accessFailedCount?: number;
+  lockoutEnd?: string;
+  extraProperties?: Record<string, any>;
+  className?: string;
+  companyName?: string;
+  course?: string;
+  department?: string;
+  employeeNumber?: string;
+  grade?: string;
+  industry?: string;
+  major?: string;
+  managementScope?: string;
+  partnerSchool?: string;
+  position?: string;
+  remark?: string;
+  roleType?: number;
+  schoolId?: string;
+  studentNumber?: string;
+  title?: string;
+  unifiedSocialCreditCode?: string;
+  roleNames?: string[];
   [key: string]: any;
 }
 
@@ -71,6 +103,8 @@ interface IdentityUserDto {
     NzSelectModule,
     NzCheckboxModule,
     NzDividerModule,
+    NzGridModule,
+    NzAlertModule,
     PermissionManagementComponent,
   ],
   providers: [ListService],
@@ -95,12 +129,14 @@ export class IdentityUsersComponent implements OnInit {
   
   isPermissionModalOpen = false;
   permissionProviderKey = '';
+  formError = '';
 
   private readonly list = inject(ListService);
   private readonly restService = inject(RestService);
   private readonly localization = inject(LocalizationService);
   private readonly fb = inject(FormBuilder);
   private readonly confirmation = inject(ConfirmationService);
+  private readonly tenantUserService = inject(TenantUserService);
 
   l(key: string): string {
     return this.localization.instant(key);
@@ -154,14 +190,35 @@ export class IdentityUsersComponent implements OnInit {
       email: [this.selectedUser.email || '', [Validators.required, Validators.email]],
       password: [''],
       name: [this.selectedUser.name || ''],
-      surname: [this.selectedUser.surname || ''],
+      phoneNumber: [this.selectedUser.phoneNumber || ''],
       isActive: [this.selectedUser.isActive ?? true],
       tenantId: [this.selectedTenantId || null],
+      tenantIdForRoles: [this.selectedTenantIdForRoles || null],
+      studentNumber: [this.selectedUser.studentNumber || ''],
+      employeeNumber: [this.selectedUser.employeeNumber || ''],
+      grade: [this.selectedUser.grade || ''],
+      className: [this.selectedUser.className || ''],
+      major: [this.selectedUser.major || ''],
+      department: [this.selectedUser.department || ''],
+      position: [this.selectedUser.position || ''],
+      title: [this.selectedUser.title || ''],
+      companyName: [this.selectedUser.companyName || ''],
+      course: [this.selectedUser.course || ''],
+      industry: [this.selectedUser.industry || ''],
+      managementScope: [this.selectedUser.managementScope || ''],
+      partnerSchool: [this.selectedUser.partnerSchool || ''],
+      schoolId: [this.selectedUser.schoolId || ''],
+      remark: [this.selectedUser.remark || ''],
+      unifiedSocialCreditCode: [this.selectedUser.unifiedSocialCreditCode || ''],
+    });
+
+    this.form.valueChanges.subscribe(() => {
+      this.formError = '';
     });
   }
 
   loadRolesForTenant() {
-    const tenantId = this.selectedTenantIdForRoles;
+    const tenantId = this.form.get('tenantIdForRoles')?.value;
     
     this.restService.request<any, { items: RoleDto[] }>({
       method: 'GET',
@@ -176,7 +233,7 @@ export class IdentityUsersComponent implements OnInit {
   }
 
   onTenantChangeForRoles(tenantId: string | null) {
-    this.selectedTenantIdForRoles = tenantId;
+    this.form.patchValue({ tenantId: tenantId });
     this.loadRolesForTenant();
   }
 
@@ -209,11 +266,11 @@ export class IdentityUsersComponent implements OnInit {
     this.selectedTenantIdForRoles = user.tenantId || null;
     this.buildForm();
     
-    this.restService.request<any, { items: RoleDto[] }>({
+    this.restService.request<any, string[]>({
       method: 'GET',
-      url: `/api/identity/users/${user.id}/roles`,
-    }).subscribe((response) => {
-      this.selectedUserRoles = response.items.map(r => r.name || '');
+      url: `/api/app/tenant-user/roles-for-user/${user.id}`,
+    }).subscribe((roles) => {
+      this.selectedUserRoles = roles || [];
       this.loadRolesForTenant();
       this.isModalOpen = true;
     });
@@ -224,37 +281,65 @@ export class IdentityUsersComponent implements OnInit {
       return;
     }
 
-    const formValue = { ...this.form.value, roleNames: this.selectedUserRoles };
+    const { tenantIdForRoles, tenantId, password, email, ...formValue } = this.form.value;
+    
     this.isLoading.set(true);
 
+    const handleError = (err: any) => {
+      this.isLoading.set(false);
+      this.formError = err?.error?.error?.message || err?.message || this.l('::SaveFailed');
+      return throwError(() => err);
+    };
+
     if (this.selectedUser.id) {
+      const payload: any = { 
+        ...formValue, 
+        email,
+        surname: formValue.surname || '-',
+        roleNames: this.selectedUserRoles 
+      };
+      
       this.restService.request<any, IdentityUserDto>({
         method: 'PUT',
         url: `/api/app/tenant-user/${this.selectedUser.id}`,
-        body: formValue,
-      }).subscribe({
+        body: payload,
+      }).pipe(
+        catchError(handleError)
+      ).subscribe({
         next: () => {
           this.isLoading.set(false);
           this.isModalOpen = false;
+          this.formError = '';
           this.list.get();
-        },
-        error: () => {
-          this.isLoading.set(false);
         }
       });
     } else {
+      const payload: any = { 
+        ...formValue, 
+        emailAddress: email,
+        surname: '-',
+        roleNames: this.selectedUserRoles 
+      };
+      
+      if (tenantId) {
+        payload.tenantId = tenantId;
+      }
+      if (password) {
+        payload.password = password;
+      }
+      
       this.restService.request<any, IdentityUserDto>({
         method: 'POST',
-        url: '/api/app/tenant-user',
-        body: formValue,
-      }).subscribe({
+        url: '/api/app/tenant-user/user-for-tenant',
+        body: payload,
+      }).pipe(
+        catchError(handleError)
+      ).subscribe({
         next: () => {
           this.isLoading.set(false);
           this.isModalOpen = false;
+          this.formError = '';
           this.list.get();
-        },
-        error: () => {
-          this.isLoading.set(false);
         }
       });
     }

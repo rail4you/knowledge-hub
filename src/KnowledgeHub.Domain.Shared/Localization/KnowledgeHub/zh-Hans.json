@@ -295,6 +295,23 @@
     "DisplayName:IsPublic": "公开",
     "Permissions": "权限",
     "SelectTenantToViewRoles": "选择租户以查看可用角色",
-    "RoleDeletionConfirmationMessage": "确定要删除角色 '{0}' 吗？"
+    "RoleDeletionConfirmationMessage": "确定要删除角色 '{0}' 吗？",
+    "UserName": "用户名称",
+    "UserNames": "用户名称",
+    "DisplayName:UserName": "用户名称",
+    "Email": "邮箱地址",
+    "DisplayName:Email": "邮箱地址",
+    "Password": "密码",
+    "DisplayName:Password": "密码",
+    "Name": "姓名",
+    "DisplayName:Name": "姓名",
+    "PhoneNumber": "手机号码",
+    "DisplayName:PhoneNumber": "手机号码",
+    "IsActive": "是否启用",
+    "DisplayName:IsActive": "是否启用",
+    "Users": "用户",
+    "NewUser": "新用户",
+    "EditUser": "编辑用户",
+    "User": "用户"
   }
 }

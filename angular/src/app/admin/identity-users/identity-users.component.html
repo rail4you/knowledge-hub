@@ -35,9 +35,6 @@
               <button nz-button nzType="link" *nzSpaceItem (click)="editUser(user)">
                 {{ '::Edit' | abpLocalization }}
               </button>
-              <button nz-button nzType="link" *nzSpaceItem (click)="openPermissions(user)">
-                {{ '::Permissions' | abpLocalization }}
-              </button>
               <button nz-button nzType="link" nzDanger *nzSpaceItem (click)="delete(user.id!, user.userName!)">
                 {{ '::Delete' | abpLocalization }}
               </button>
@@ -57,89 +54,272 @@
   [nzOkLoading]="isLoading()"
   (nzOnOk)="save()"
   (nzOnCancel)="isModalOpen = false"
-  [nzWidth]="800"
+  [nzWidth]="1000"
 >
   <ng-container *nzModalContent>
-    @if (form) {
-    <form [formGroup]="form" nzLayout="vertical" class="mt-4">
-      <nz-form-item>
-        <nz-form-label>{{ '::UserName' | abpLocalization }}</nz-form-label>
-        <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
-          <input nz-input formControlName="userName" />
-        </nz-form-control>
-      </nz-form-item>
-
-      <nz-form-item>
-        <nz-form-label>{{ '::Email' | abpLocalization }}</nz-form-label>
-        <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
-          <input nz-input formControlName="email" />
-        </nz-form-control>
-      </nz-form-item>
+    <form [formGroup]="form" nzLayout="vertical" *ngIf="form">
+      @if (formError) {
+        <nz-alert nzType="error" [nzMessage]="formError" nzShowIcon class="mb-4"></nz-alert>
+      }
+      <strong>账号信息</strong>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label nzRequired>{{ '::UserName' | abpLocalization }}</nz-form-label>
+            <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
+              <input nz-input formControlName="userName" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label nzRequired>{{ '::Email' | abpLocalization }}</nz-form-label>
+            <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
+              <input nz-input formControlName="email" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>{{ '::IsActive' | abpLocalization }}</nz-form-label>
+            <nz-form-control>
+              <label nz-checkbox formControlName="isActive"></label>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
 
       @if (!selectedUser.id) {
         <nz-form-item>
-          <nz-form-label>{{ '::Password' | abpLocalization }}</nz-form-label>
+          <nz-form-label nzRequired>{{ '::Password' | abpLocalization }}</nz-form-label>
           <nz-form-control>
             <input nz-input type="password" formControlName="password" />
           </nz-form-control>
         </nz-form-item>
       }
 
+      <nz-divider></nz-divider>
+      <strong>基本信息</strong>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>所属租户</nz-form-label>
+            <nz-form-control>
+              <nz-select 
+                formControlName="tenantId"
+                [nzPlaceHolder]="'::SelectTenant' | abpLocalization"
+                style="width: 100%;"
+              >
+                @for (tenant of tenants; track tenant.id) {
+                  <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>{{ '::Name' | abpLocalization }}</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="name" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>{{ '::PhoneNumber' | abpLocalization }}</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="phoneNumber" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+
+      <nz-divider></nz-divider>
+      <strong>学校信息</strong>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>学号</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="studentNumber" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>工号</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="employeeNumber" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>班级</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="className" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>年级</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="grade" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>专业</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="major" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>院系</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="department" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>岗位</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="position" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>职称</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="title" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>课程</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="course" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>管理范围</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="managementScope" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>合作学校</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="partnerSchool" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label>学校ID</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="schoolId" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+
+      <nz-divider></nz-divider>
+      <strong>单位信息</strong>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="12">
+          <nz-form-item>
+            <nz-form-label>单位名称</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="companyName" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="12">
+          <nz-form-item>
+            <nz-form-label>行业</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="industry" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+      <div nz-row [nzGutter]="16">
+        <div nz-col [nzSpan]="12">
+          <nz-form-item>
+            <nz-form-label>统一社会信用代码</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="unifiedSocialCreditCode" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+        <div nz-col [nzSpan]="12">
+          <nz-form-item>
+            <nz-form-label>备注</nz-form-label>
+            <nz-form-control>
+              <input nz-input formControlName="remark" />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </div>
+
+      <nz-divider></nz-divider>
+      <strong>租户与角色</strong>
+
       <nz-form-item>
-        <nz-form-label>{{ '::Name' | abpLocalization }}</nz-form-label>
+        <nz-form-label>{{ '::SelectTenant' | abpLocalization }}</nz-form-label>
         <nz-form-control>
-          <input nz-input formControlName="name" />
+          <nz-select 
+            formControlName="tenantIdForRoles"
+            (ngModelChange)="onTenantChangeForRoles($event)"
+            [nzPlaceHolder]="'::SelectTenant' | abpLocalization"
+            style="width: 100%;"
+          >
+            @for (tenant of tenants; track tenant.id) {
+              <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
+            }
+          </nz-select>
         </nz-form-control>
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label>{{ '::Surname' | abpLocalization }}</nz-form-label>
+        <nz-form-label>{{ '::Roles' | abpLocalization }}</nz-form-label>
         <nz-form-control>
-          <input nz-input formControlName="surname" />
-        </nz-form-control>
-      </nz-form-item>
-
-      <nz-form-item>
-        <nz-form-label>{{ '::IsActive' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
-          <label nz-checkbox formControlName="isActive"></label>
+          <div class="roles-list">
+            @for (role of roles; track role.id) {
+              <label 
+                nz-checkbox 
+                [nzChecked]="isRoleSelected(role.name || '')"
+                (nzCheckedChange)="toggleRole(role.name || '')"
+                class="role-checkbox"
+              >
+                {{ getRoleDisplayName(role.name) }}
+              </label>
+            }
+          </div>
         </nz-form-control>
       </nz-form-item>
     </form>
-
-    <nz-divider></nz-divider>
-
-    <nz-form-item>
-      <nz-form-label>{{ '::SelectTenant' | abpLocalization }}</nz-form-label>
-      <nz-form-control>
-        <nz-select 
-          [(ngModel)]="selectedTenantIdForRoles"
-          (ngModelChange)="onTenantChangeForRoles($event)"
-          [nzPlaceHolder]="'::SelectTenant' | abpLocalization"
-          style="width: 100%;"
-        >
-          <nz-option [nzValue]="null" [nzLabel]="'::Global' | abpLocalization"></nz-option>
-          @for (tenant of tenants; track tenant.id) {
-            <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
-          }
-        </nz-select>
-      </nz-form-control>
-      <small class="text-muted">{{ '::SelectTenantToViewRoles' | abpLocalization }}</small>
-    </nz-form-item>
-
-    <div class="roles-list">
-      @for (role of roles; track role.id) {
-        <label 
-          nz-checkbox 
-          [nzChecked]="isRoleSelected(role.name || '')"
-          (nzCheckedChange)="toggleRole(role.name || '')"
-          class="role-checkbox"
-        >
-          {{ getRoleDisplayName(role.name) }}
-        </label>
-      }
-    </div>
-    }
   </ng-container>
 </nz-modal>
 
