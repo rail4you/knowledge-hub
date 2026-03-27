@@ -30,6 +30,7 @@ import {
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
 import { APP_ROUTE_PROVIDER } from './route.provider';
+import { ALLIANCE_ROUTE_PROVIDER } from './alliance-route.provider';
 import { FOOTER_PROVIDER } from './footer/footer.config';
 import { IDENTITY_ROLES_PROVIDER } from './identity-roles.config';
 import { IDENTITY_USERS_PROVIDER } from './identity-users.config';
@@ -55,6 +56,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(APP_ROUTES),
     APP_ROUTE_PROVIDER,
+    ALLIANCE_ROUTE_PROVIDER,
     FOOTER_PROVIDER,
     IDENTITY_ROLES_PROVIDER,
     IDENTITY_USERS_PROVIDER,

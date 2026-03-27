@@ -99,13 +99,6 @@ function configureRoutes() {
         requiredPolicy: 'KnowledgeHub.Exercises',
       },
       {
-        path: '/admin/alliance',
-        name: '::Menu:Alliance',
-        parentName: 'AbpUiNavigation::Menu:Administration',
-        layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Alliance',
-      },
-      {
         path: '/learning',
         name: '::Menu:Learning',
         iconClass: 'fas fa-graduation-cap',

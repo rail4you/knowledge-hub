@@ -173,7 +173,4 @@ DELETE FROM "AbpFeatureValues" WHERE "Name" LIKE 'KnowledgeHub%';
 - [x] 联盟管理前端（AllianceManagementComponent）
 - [x] 联盟审批流程（AllianceAppService.LeagueAuditAsync）
 - [x] 联盟菜单项（/admin/alliance）
-
-## 后续功能
-
-- [ ] 菜单根据版本动态显示/隐藏（Basic 版隐藏联盟菜单）
+- [x] 菜单根据版本动态显示（Basic 版隐藏联盟菜单）
