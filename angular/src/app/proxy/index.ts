@@ -1,12 +1,14 @@
+import * as Alliance from './alliance';
 import * as Application from './application';
 import * as Controllers from './controllers';
 import * as Courses from './courses';
 import * as Domain from './domain';
 import * as Exams from './exams';
 import * as HttpApi from './http-api';
+import * as Install from './install';
 import * as Learning from './learning';
 import * as Microsoft from './microsoft';
 import * as Resources from './resources';
 import * as Users from './users';
 import * as Volo from './volo';
-export { Application, Controllers, Courses, Domain, Exams, HttpApi, Learning, Microsoft, Resources, Users, Volo };
+export { Alliance, Application, Controllers, Courses, Domain, Exams, HttpApi, Install, Learning, Microsoft, Resources, Users, Volo };

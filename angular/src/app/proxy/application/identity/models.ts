@@ -69,5 +69,6 @@ export interface UpdateTenantUserDto {
   studentNumber?: string | null;
   title?: string | null;
   unifiedSocialCreditCode?: string | null;
+  password?: string | null;
   roleNames?: string[];
 }

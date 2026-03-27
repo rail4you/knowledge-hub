@@ -1,4 +1,4 @@
-import { provideAbpCore, withOptions, APP_INITIALIZER } from '@abp/ng.core';
+import { provideAbpCore, withOptions } from '@abp/ng.core';
 import { provideAbpOAuth } from '@abp/ng.oauth';
 import { provideSettingManagementConfig } from '@abp/ng.setting-management/config';
 import { provideFeatureManagementConfig } from '@abp/ng.feature-management';

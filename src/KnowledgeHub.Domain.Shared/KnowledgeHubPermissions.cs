@@ -59,4 +59,13 @@ public static class KnowledgeHubPermissions
         public const string CaseAnalysis = Default + ".CaseAnalysis";
         public const string CareerGuidance = Default + ".CareerGuidance";
     }
+
+    public static class Alliance
+    {
+        public const string Default = GroupName + ".Alliance";
+        public const string Create = Default + ".Create";
+        public const string Update = Default + ".Update";
+        public const string Delete = Default + ".Delete";
+        public const string ManageMembers = Default + ".ManageMembers";
+    }
 }

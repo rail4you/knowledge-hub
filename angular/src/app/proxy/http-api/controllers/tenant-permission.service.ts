@@ -10,6 +10,15 @@ export class TenantPermissionService {
   apiName = 'KnowledgeHub';
   
 
+  getForTenant = (tenantId: string, providerName: string, providerKey: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, object>({
+      method: 'GET',
+      url: '/api/knowledge-hub/permissions/get-for-tenant',
+      params: { tenantId, providerName, providerKey },
+    },
+    { apiName: this.apiName,...config });
+  
+
   setForTenant = (input: SetPermissionForTenantInput, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',

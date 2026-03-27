@@ -137,7 +137,10 @@ DELETE FROM "AbpFeatureValues" WHERE "Name" LIKE 'KnowledgeHub%';
 | `EditionConfigService.cs` | 版本配置检查服务 |
 | `InstallAppService.cs` | 安装服务 |
 | `EditionAppService.cs` | 版本管理服务 |
+| `TenantCreationEventHandler.cs` | 租户创建事件拦截 |
 | `InstallComponent.ts` | 安装向导前端 |
+| `EditionInfoComponent.ts` | 版本信息与升级组件 |
+| `EditionService.ts` | Angular 版本检查服务 |
 
 ### 版本升级流程
 
@@ -163,11 +166,13 @@ DELETE FROM "AbpFeatureValues" WHERE "Name" LIKE 'KnowledgeHub%';
 - [x] 安装向导（Web UI）
 - [x] 安装 API（保存 Edition 和 Feature 配置）
 - [x] 版本升级 API
+- [x] 版本升级前端 UI（EditionInfoComponent）
 - [x] 审批流程根据版本控制
 - [x] EditionService（Angular 版本检查服务）
+- [x] 租户创建拦截（TenantCreationEventHandler）
 
 ## 后续功能
 
-- [ ] 租户创建拦截（TenantCreationValidator 接入）
 - [ ] 联盟管理前端
-- [ ] 版本升级前端 UI
+- [ ] 联盟审批流程
+- [ ] 菜单根据版本动态显示/隐藏

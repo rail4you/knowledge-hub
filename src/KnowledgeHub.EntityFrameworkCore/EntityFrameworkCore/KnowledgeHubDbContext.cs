@@ -18,6 +18,7 @@ using KnowledgeHub.Resources;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.EntityFrameworkCore.AI;
 using KnowledgeHub.Exams;
+using KnowledgeHub.Alliance;
 
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -97,6 +98,11 @@ public class KnowledgeHubDbContext :
     public DbSet<StudentExam> StudentExams { get; set; }
     public DbSet<StudentAnswer> StudentAnswers { get; set; }
 
+    // Alliance entities
+    public DbSet<KnowledgeHub.Alliance.Alliance> Alliances { get; set; }
+    public DbSet<KnowledgeHub.Alliance.AllianceMember> AllianceMembers { get; set; }
+    public DbSet<KnowledgeHub.Alliance.AllianceAudit> AllianceAudits { get; set; }
+
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
     {
@@ -126,5 +132,6 @@ public class KnowledgeHubDbContext :
         builder.ConfigureCourse();
         builder.ConfigureLearning();
         builder.ConfigureExam();
+        builder.ConfigureAlliance();
     }
 }

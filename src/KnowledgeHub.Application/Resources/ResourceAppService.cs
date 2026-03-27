@@ -572,10 +572,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                     resource.Status = ResourceStatus.LeagueApproved;
                 }
             }
-            else if (resource.Status == ResourceStatus.SchoolApproved)
-            {
-                resource.Status = ResourceStatus.LeagueApproved;
-            }
+            // When two-level approval is enabled, SchoolApproved resources
+            // must be approved by League admin via AllianceAppService.LeagueAuditAsync
         }
         else
         {

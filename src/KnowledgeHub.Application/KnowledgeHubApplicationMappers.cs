@@ -2,6 +2,8 @@ using KnowledgeHub.Users;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Courses;
 using KnowledgeHub.Courses.Dtos;
+using KnowledgeHub.Alliance;
+using KnowledgeHub.Application.Contracts.Alliance;
 using Riok.Mapperly.Abstractions;
 using Volo.Abp.Mapperly;
 
@@ -77,4 +79,28 @@ public partial class CreateUpdateCourseDtoToCourseMapper : MapperBase<CreateUpda
     public override partial Course Map(CreateUpdateCourseDto source);
 
     public override partial void Map(CreateUpdateCourseDto source, Course destination);
+}
+
+[Mapper]
+public partial class AllianceToAllianceDtoMapper : MapperBase<KnowledgeHub.Alliance.Alliance, AllianceDto>
+{
+    public override partial AllianceDto Map(KnowledgeHub.Alliance.Alliance source);
+
+    public override partial void Map(KnowledgeHub.Alliance.Alliance source, AllianceDto destination);
+}
+
+[Mapper]
+public partial class AllianceMemberToAllianceMemberDtoMapper : MapperBase<KnowledgeHub.Alliance.AllianceMember, AllianceMemberDto>
+{
+    public override partial AllianceMemberDto Map(KnowledgeHub.Alliance.AllianceMember source);
+
+    public override partial void Map(KnowledgeHub.Alliance.AllianceMember source, AllianceMemberDto destination);
+}
+
+[Mapper]
+public partial class AllianceAuditToAllianceAuditDtoMapper : MapperBase<KnowledgeHub.Alliance.AllianceAudit, AllianceAuditDto>
+{
+    public override partial AllianceAuditDto Map(KnowledgeHub.Alliance.AllianceAudit source);
+
+    public override partial void Map(KnowledgeHub.Alliance.AllianceAudit source, AllianceAuditDto destination);
 }

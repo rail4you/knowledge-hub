@@ -1045,6 +1045,1054 @@
             }
           }
         },
+        "KnowledgeHub.Application.Alliance.AllianceAppService": {
+          "controllerName": "Alliance",
+          "controllerGroupName": "Alliance",
+          "isRemoteService": true,
+          "isIntegrationService": false,
+          "apiVersion": null,
+          "type": "KnowledgeHub.Application.Alliance.AllianceAppService",
+          "interfaces": [
+            {
+              "type": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService",
+              "name": "IAllianceAppService",
+              "methods": [
+                {
+                  "name": "GetAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "id",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto",
+                    "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto"
+                  }
+                },
+                {
+                  "name": "GetListAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto, Volo.Abp.Ddd.Application.Contracts",
+                      "type": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+                      "typeSimple": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.AllianceDto>",
+                    "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.AllianceDto>"
+                  }
+                },
+                {
+                  "name": "CreateAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                      "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto",
+                    "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto"
+                  }
+                },
+                {
+                  "name": "UpdateAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "id",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    },
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                      "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto",
+                    "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto"
+                  }
+                },
+                {
+                  "name": "DeleteAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "id",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                },
+                {
+                  "name": "AddMemberAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceMemberDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceMemberDto",
+                      "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceMemberDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto",
+                    "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto"
+                  }
+                },
+                {
+                  "name": "RemoveMemberAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "memberId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                },
+                {
+                  "name": "GetMembersAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberQueryDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberQueryDto",
+                      "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberQueryDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto>",
+                    "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto>"
+                  }
+                },
+                {
+                  "name": "UpdateMemberRoleAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "memberId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    },
+                    {
+                      "name": "role",
+                      "typeAsString": "KnowledgeHub.Alliance.Enums.AllianceMemberRole, KnowledgeHub.Domain.Shared",
+                      "type": "KnowledgeHub.Alliance.Enums.AllianceMemberRole",
+                      "typeSimple": "enum",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto",
+                    "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto"
+                  }
+                },
+                {
+                  "name": "LeagueAuditAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditInputDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditInputDto",
+                      "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditInputDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditDto",
+                    "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditDto"
+                  }
+                },
+                {
+                  "name": "GetPendingAuditsAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "allianceId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    },
+                    {
+                      "name": "input",
+                      "typeAsString": "Volo.Abp.Application.Dtos.PagedResultRequestDto, Volo.Abp.Ddd.Application.Contracts",
+                      "type": "Volo.Abp.Application.Dtos.PagedResultRequestDto",
+                      "typeSimple": "Volo.Abp.Application.Dtos.PagedResultRequestDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.PendingAllianceAuditDto>",
+                    "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.PendingAllianceAuditDto>"
+                  }
+                },
+                {
+                  "name": "GetResourceAuditsAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "resourceId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Collections.Generic.List<KnowledgeHub.Application.Contracts.Alliance.AllianceAuditDto>",
+                    "typeSimple": "[KnowledgeHub.Application.Contracts.Alliance.AllianceAuditDto]"
+                  }
+                },
+                {
+                  "name": "IsAllianceEnabledAsync",
+                  "parametersOnMethod": [],
+                  "returnValue": {
+                    "type": "System.Boolean",
+                    "typeSimple": "boolean"
+                  }
+                },
+                {
+                  "name": "IsTenantInAllianceAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "tenantId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Boolean",
+                    "typeSimple": "boolean"
+                  }
+                },
+                {
+                  "name": "GetTenantAllianceMembershipAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "tenantId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto",
+                    "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto"
+                  }
+                }
+              ]
+            }
+          ],
+          "actions": {
+            "GetAsyncById": {
+              "uniqueName": "GetAsyncById",
+              "name": "GetAsync",
+              "httpMethod": "GET",
+              "url": "api/app/alliance/{id}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "id",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "id",
+                  "name": "id",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto",
+                "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "GetListAsyncByInput": {
+              "uniqueName": "GetListAsyncByInput",
+              "name": "GetListAsync",
+              "httpMethod": "GET",
+              "url": "api/app/alliance",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto, Volo.Abp.Ddd.Application.Contracts",
+                  "type": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+                  "typeSimple": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "Sorting",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "SkipCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "MaxResultCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.AllianceDto>",
+                "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.AllianceDto>"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "CreateAsyncByInput": {
+              "uniqueName": "CreateAsyncByInput",
+              "name": "CreateAsync",
+              "httpMethod": "POST",
+              "url": "api/app/alliance",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                  "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                  "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto",
+                "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "UpdateAsyncByIdAndInput": {
+              "uniqueName": "UpdateAsyncByIdAndInput",
+              "name": "UpdateAsync",
+              "httpMethod": "PUT",
+              "url": "api/app/alliance/{id}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "id",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                },
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                  "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "id",
+                  "name": "id",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                  "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto",
+                "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceDto"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "DeleteAsyncById": {
+              "uniqueName": "DeleteAsyncById",
+              "name": "DeleteAsync",
+              "httpMethod": "DELETE",
+              "url": "api/app/alliance/{id}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "id",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "id",
+                  "name": "id",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "AddMemberAsyncByInput": {
+              "uniqueName": "AddMemberAsyncByInput",
+              "name": "AddMemberAsync",
+              "httpMethod": "POST",
+              "url": "api/app/alliance/member",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceMemberDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceMemberDto",
+                  "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceMemberDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceMemberDto",
+                  "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceMemberDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto",
+                "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "RemoveMemberAsyncByMemberId": {
+              "uniqueName": "RemoveMemberAsyncByMemberId",
+              "name": "RemoveMemberAsync",
+              "httpMethod": "DELETE",
+              "url": "api/app/alliance/member/{memberId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "memberId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "memberId",
+                  "name": "memberId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "GetMembersAsyncByInput": {
+              "uniqueName": "GetMembersAsyncByInput",
+              "name": "GetMembersAsync",
+              "httpMethod": "GET",
+              "url": "api/app/alliance/members",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberQueryDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberQueryDto",
+                  "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberQueryDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "AllianceId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "Sorting",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "SkipCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "MaxResultCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto>",
+                "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto>"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "UpdateMemberRoleAsyncByMemberIdAndRole": {
+              "uniqueName": "UpdateMemberRoleAsyncByMemberIdAndRole",
+              "name": "UpdateMemberRoleAsync",
+              "httpMethod": "PUT",
+              "url": "api/app/alliance/member-role/{memberId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "memberId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                },
+                {
+                  "name": "role",
+                  "typeAsString": "KnowledgeHub.Alliance.Enums.AllianceMemberRole, KnowledgeHub.Domain.Shared",
+                  "type": "KnowledgeHub.Alliance.Enums.AllianceMemberRole",
+                  "typeSimple": "enum",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "memberId",
+                  "name": "memberId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                },
+                {
+                  "nameOnMethod": "role",
+                  "name": "role",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Alliance.Enums.AllianceMemberRole",
+                  "typeSimple": "enum",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto",
+                "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "LeagueAuditAsyncByInput": {
+              "uniqueName": "LeagueAuditAsyncByInput",
+              "name": "LeagueAuditAsync",
+              "httpMethod": "POST",
+              "url": "api/app/alliance/league-audit",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditInputDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditInputDto",
+                  "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditInputDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditInputDto",
+                  "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditInputDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditDto",
+                "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditDto"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "GetPendingAuditsAsyncByAllianceIdAndInput": {
+              "uniqueName": "GetPendingAuditsAsyncByAllianceIdAndInput",
+              "name": "GetPendingAuditsAsync",
+              "httpMethod": "GET",
+              "url": "api/app/alliance/pending-audits/{allianceId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "allianceId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                },
+                {
+                  "name": "input",
+                  "typeAsString": "Volo.Abp.Application.Dtos.PagedResultRequestDto, Volo.Abp.Ddd.Application.Contracts",
+                  "type": "Volo.Abp.Application.Dtos.PagedResultRequestDto",
+                  "typeSimple": "Volo.Abp.Application.Dtos.PagedResultRequestDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "allianceId",
+                  "name": "allianceId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "SkipCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "MaxResultCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.PendingAllianceAuditDto>",
+                "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Application.Contracts.Alliance.PendingAllianceAuditDto>"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "GetResourceAuditsAsyncByResourceId": {
+              "uniqueName": "GetResourceAuditsAsyncByResourceId",
+              "name": "GetResourceAuditsAsync",
+              "httpMethod": "GET",
+              "url": "api/app/alliance/resource-audits/{resourceId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "resourceId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "resourceId",
+                  "name": "resourceId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Collections.Generic.List<KnowledgeHub.Application.Contracts.Alliance.AllianceAuditDto>",
+                "typeSimple": "[KnowledgeHub.Application.Contracts.Alliance.AllianceAuditDto]"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "IsAllianceEnabledAsync": {
+              "uniqueName": "IsAllianceEnabledAsync",
+              "name": "IsAllianceEnabledAsync",
+              "httpMethod": "POST",
+              "url": "api/app/alliance/is-alliance-enabled",
+              "supportedVersions": [],
+              "parametersOnMethod": [],
+              "parameters": [],
+              "returnValue": {
+                "type": "System.Boolean",
+                "typeSimple": "boolean"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "IsTenantInAllianceAsyncByTenantId": {
+              "uniqueName": "IsTenantInAllianceAsyncByTenantId",
+              "name": "IsTenantInAllianceAsync",
+              "httpMethod": "POST",
+              "url": "api/app/alliance/is-tenant-in-alliance/{tenantId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "tenantId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "tenantId",
+                  "name": "tenantId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Boolean",
+                "typeSimple": "boolean"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            },
+            "GetTenantAllianceMembershipAsyncByTenantId": {
+              "uniqueName": "GetTenantAllianceMembershipAsyncByTenantId",
+              "name": "GetTenantAllianceMembershipAsync",
+              "httpMethod": "GET",
+              "url": "api/app/alliance/tenant-alliance-membership/{tenantId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "tenantId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "tenantId",
+                  "name": "tenantId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto",
+                "typeSimple": "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Application.Contracts.Alliance.IAllianceAppService"
+            }
+          }
+        },
+        "KnowledgeHub.Application.Edition.EditionAppService": {
+          "controllerName": "Edition",
+          "controllerGroupName": "Edition",
+          "isRemoteService": true,
+          "isIntegrationService": false,
+          "apiVersion": null,
+          "type": "KnowledgeHub.Application.Edition.EditionAppService",
+          "interfaces": [
+            {
+              "type": "KnowledgeHub.Application.Edition.IEditionAppService",
+              "name": "IEditionAppService",
+              "methods": [
+                {
+                  "name": "GetCurrentEditionAsync",
+                  "parametersOnMethod": [],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Install.Dto.EditionDto",
+                    "typeSimple": "KnowledgeHub.Install.Dto.EditionDto"
+                  }
+                },
+                {
+                  "name": "UpgradeToStandardAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto",
+                      "typeSimple": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                }
+              ]
+            }
+          ],
+          "actions": {
+            "GetCurrentEditionAsync": {
+              "uniqueName": "GetCurrentEditionAsync",
+              "name": "GetCurrentEditionAsync",
+              "httpMethod": "GET",
+              "url": "api/app/edition/current-edition",
+              "supportedVersions": [],
+              "parametersOnMethod": [],
+              "parameters": [],
+              "returnValue": {
+                "type": "KnowledgeHub.Install.Dto.EditionDto",
+                "typeSimple": "KnowledgeHub.Install.Dto.EditionDto"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Application.Edition.IEditionAppService"
+            },
+            "UpgradeToStandardAsyncByInput": {
+              "uniqueName": "UpgradeToStandardAsyncByInput",
+              "name": "UpgradeToStandardAsync",
+              "httpMethod": "POST",
+              "url": "api/app/edition/upgrade-to-standard",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto",
+                  "typeSimple": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto",
+                  "typeSimple": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Application.Edition.IEditionAppService"
+            }
+          }
+        },
         "KnowledgeHub.Application.Identity.TenantRoleAppService": {
           "controllerName": "TenantRole",
           "controllerGroupName": "TenantRole",
@@ -1824,6 +2872,101 @@
               },
               "allowAnonymous": null,
               "implementFrom": "KnowledgeHub.Application.Identity.ITenantUserAppService"
+            }
+          }
+        },
+        "KnowledgeHub.Application.Install.InstallAppService": {
+          "controllerName": "Install",
+          "controllerGroupName": "Install",
+          "isRemoteService": true,
+          "isIntegrationService": false,
+          "apiVersion": null,
+          "type": "KnowledgeHub.Application.Install.InstallAppService",
+          "interfaces": [
+            {
+              "type": "KnowledgeHub.Install.IInstallAppService",
+              "name": "IInstallAppService",
+              "methods": [
+                {
+                  "name": "GetStatusAsync",
+                  "parametersOnMethod": [],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Install.Dto.InstallStatusDto",
+                    "typeSimple": "KnowledgeHub.Install.Dto.InstallStatusDto"
+                  }
+                },
+                {
+                  "name": "InstallAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Install.Dto.InstallInputDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Install.Dto.InstallInputDto",
+                      "typeSimple": "KnowledgeHub.Install.Dto.InstallInputDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                }
+              ]
+            }
+          ],
+          "actions": {
+            "GetStatusAsync": {
+              "uniqueName": "GetStatusAsync",
+              "name": "GetStatusAsync",
+              "httpMethod": "GET",
+              "url": "api/app/install/status",
+              "supportedVersions": [],
+              "parametersOnMethod": [],
+              "parameters": [],
+              "returnValue": {
+                "type": "KnowledgeHub.Install.Dto.InstallStatusDto",
+                "typeSimple": "KnowledgeHub.Install.Dto.InstallStatusDto"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Install.IInstallAppService"
+            },
+            "InstallAsyncByInput": {
+              "uniqueName": "InstallAsyncByInput",
+              "name": "InstallAsync",
+              "httpMethod": "POST",
+              "url": "api/app/install/install",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Install.Dto.InstallInputDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Install.Dto.InstallInputDto",
+                  "typeSimple": "KnowledgeHub.Install.Dto.InstallInputDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Install.Dto.InstallInputDto",
+                  "typeSimple": "KnowledgeHub.Install.Dto.InstallInputDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Install.IInstallAppService"
             }
           }
         },
@@ -4832,6 +5975,132 @@
             }
           }
         },
+        "KnowledgeHub.Controllers.EditionController": {
+          "controllerName": "Edition",
+          "controllerGroupName": null,
+          "isRemoteService": false,
+          "isIntegrationService": false,
+          "apiVersion": null,
+          "type": "KnowledgeHub.Controllers.EditionController",
+          "interfaces": [],
+          "actions": {
+            "GetCurrentEditionAsync": {
+              "uniqueName": "GetCurrentEditionAsync",
+              "name": "GetCurrentEditionAsync",
+              "httpMethod": "GET",
+              "url": "api/app/edition/current",
+              "supportedVersions": [],
+              "parametersOnMethod": [],
+              "parameters": [],
+              "returnValue": {
+                "type": "KnowledgeHub.Install.Dto.EditionDto",
+                "typeSimple": "KnowledgeHub.Install.Dto.EditionDto"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Controllers.EditionController"
+            },
+            "UpgradeToStandardAsyncByInput": {
+              "uniqueName": "UpgradeToStandardAsyncByInput",
+              "name": "UpgradeToStandardAsync",
+              "httpMethod": "POST",
+              "url": "api/app/edition/upgrade",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto",
+                  "typeSimple": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto",
+                  "typeSimple": "KnowledgeHub.Install.Dto.EditionUpgradeInputDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Controllers.EditionController"
+            }
+          }
+        },
+        "KnowledgeHub.Controllers.InstallController": {
+          "controllerName": "Install",
+          "controllerGroupName": null,
+          "isRemoteService": false,
+          "isIntegrationService": false,
+          "apiVersion": null,
+          "type": "KnowledgeHub.Controllers.InstallController",
+          "interfaces": [],
+          "actions": {
+            "GetStatusAsync": {
+              "uniqueName": "GetStatusAsync",
+              "name": "GetStatusAsync",
+              "httpMethod": "GET",
+              "url": "api/app/install/status",
+              "supportedVersions": [],
+              "parametersOnMethod": [],
+              "parameters": [],
+              "returnValue": {
+                "type": "KnowledgeHub.Install.Dto.InstallStatusDto",
+                "typeSimple": "KnowledgeHub.Install.Dto.InstallStatusDto"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Controllers.InstallController"
+            },
+            "InstallAsyncByInput": {
+              "uniqueName": "InstallAsyncByInput",
+              "name": "InstallAsync",
+              "httpMethod": "POST",
+              "url": "api/app/install/install",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Install.Dto.InstallInputDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Install.Dto.InstallInputDto",
+                  "typeSimple": "KnowledgeHub.Install.Dto.InstallInputDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Install.Dto.InstallInputDto",
+                  "typeSimple": "KnowledgeHub.Install.Dto.InstallInputDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Controllers.InstallController"
+            }
+          }
+        },
         "KnowledgeHub.Controllers.TenantListController": {
           "controllerName": "TenantList",
           "controllerGroupName": null,
@@ -6825,6 +8094,83 @@
           "type": "KnowledgeHub.HttpApi.Controllers.TenantPermissionController",
           "interfaces": [],
           "actions": {
+            "GetForTenantAsyncByTenantIdAndProviderNameAndProviderKey": {
+              "uniqueName": "GetForTenantAsyncByTenantIdAndProviderNameAndProviderKey",
+              "name": "GetForTenantAsync",
+              "httpMethod": "GET",
+              "url": "api/knowledge-hub/permissions/get-for-tenant",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "tenantId",
+                  "typeAsString": "System.Nullable`1[[System.Guid, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib",
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null
+                },
+                {
+                  "name": "providerName",
+                  "typeAsString": "System.String, System.Private.CoreLib",
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                },
+                {
+                  "name": "providerKey",
+                  "typeAsString": "System.String, System.Private.CoreLib",
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "tenantId",
+                  "name": "tenantId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": ""
+                },
+                {
+                  "nameOnMethod": "providerName",
+                  "name": "providerName",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": ""
+                },
+                {
+                  "nameOnMethod": "providerKey",
+                  "name": "providerKey",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Object",
+                "typeSimple": "object"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.HttpApi.Controllers.TenantPermissionController"
+            },
             "SetForTenantAsyncByInput": {
               "uniqueName": "SetForTenantAsyncByInput",
               "name": "SetForTenantAsync",
@@ -13191,6 +14537,36 @@
     }
   },
   "types": {
+    "KnowledgeHub.Alliance.Enums.AllianceMemberRole": {
+      "baseType": "System.Enum",
+      "isEnum": true,
+      "enumNames": [
+        "Member",
+        "Admin"
+      ],
+      "enumValues": [
+        0,
+        1
+      ],
+      "genericArguments": null,
+      "properties": null
+    },
+    "KnowledgeHub.Alliance.Enums.AllianceStatus": {
+      "baseType": "System.Enum",
+      "isEnum": true,
+      "enumNames": [
+        "Active",
+        "Suspended",
+        "Dissolved"
+      ],
+      "enumValues": [
+        0,
+        1,
+        2
+      ],
+      "genericArguments": null,
+      "properties": null
+    },
     "KnowledgeHub.Application.AI.Dtos.ChatInputDto": {
       "baseType": null,
       "isEnum": false,
@@ -13420,6 +14796,481 @@
           "name": "Type",
           "jsonName": null,
           "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditDto": {
+      "baseType": "Volo.Abp.Application.Dtos.EntityDto<System.Guid>",
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "AllianceId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ResourceId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ResourceName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ApproverTenantId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ApproverTenantName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Status",
+          "jsonName": null,
+          "type": "KnowledgeHub.Resources.Enums.AuditStatus",
+          "typeSimple": "enum",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Comment",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Application.Contracts.Alliance.AllianceAuditInputDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "ResourceId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Status",
+          "jsonName": null,
+          "type": "KnowledgeHub.Resources.Enums.AuditStatus",
+          "typeSimple": "enum",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Comment",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Application.Contracts.Alliance.AllianceDto": {
+      "baseType": "Volo.Abp.Application.Dtos.AuditedEntityDto<System.Guid>",
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "Name",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Description",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "Status",
+          "jsonName": null,
+          "type": "KnowledgeHub.Alliance.Enums.AllianceStatus",
+          "typeSimple": "enum",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "MemberCount",
+          "jsonName": null,
+          "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberDto": {
+      "baseType": "Volo.Abp.Application.Dtos.EntityDto<System.Guid>",
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "AllianceId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "MemberTenantId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TenantName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Role",
+          "jsonName": null,
+          "type": "KnowledgeHub.Alliance.Enums.AllianceMemberRole",
+          "typeSimple": "enum",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "JoinedTime",
+          "jsonName": null,
+          "type": "System.DateTime",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Application.Contracts.Alliance.AllianceMemberQueryDto": {
+      "baseType": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "AllianceId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "Name",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Description",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Application.Contracts.Alliance.CreateAllianceMemberDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "AllianceId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TenantId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TenantName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Role",
+          "jsonName": null,
+          "type": "KnowledgeHub.Alliance.Enums.AllianceMemberRole",
+          "typeSimple": "enum",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Application.Contracts.Alliance.PendingAllianceAuditDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "ResourceId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ResourceName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "SubmitterTenantId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "SubmitterTenantName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "SubmittedTime",
+          "jsonName": null,
+          "type": "System.DateTime",
           "typeSimple": "string",
           "isRequired": false,
           "minLength": null,
@@ -15414,6 +17265,19 @@
           "isNullable": true
         },
         {
+          "name": "Password",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
           "name": "RoleNames",
           "jsonName": null,
           "type": "[System.String]",
@@ -17178,6 +19042,198 @@
           "jsonName": null,
           "type": "[KnowledgeHub.HttpApi.Controllers.PermissionItem]",
           "typeSimple": "[KnowledgeHub.HttpApi.Controllers.PermissionItem]",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Install.Dto.EditionDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "Edition",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "MaxTenantCount",
+          "jsonName": null,
+          "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "IsAllianceEnabled",
+          "jsonName": null,
+          "type": "System.Boolean",
+          "typeSimple": "boolean",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "IsTwoLevelApprovalEnabled",
+          "jsonName": null,
+          "type": "System.Boolean",
+          "typeSimple": "boolean",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Install.Dto.EditionUpgradeInputDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "LicenseKey",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Install.Dto.InstallInputDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "LicenseKey",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Edition",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "AdminUsername",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "AdminPassword",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "AdminEmail",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Install.Dto.InstallStatusDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "IsInstalled",
+          "jsonName": null,
+          "type": "System.Boolean",
+          "typeSimple": "boolean",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CurrentEdition",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
           "isRequired": false,
           "minLength": null,
           "maxLength": null,
