@@ -170,9 +170,10 @@ DELETE FROM "AbpFeatureValues" WHERE "Name" LIKE 'KnowledgeHub%';
 - [x] 审批流程根据版本控制
 - [x] EditionService（Angular 版本检查服务）
 - [x] 租户创建拦截（TenantCreationEventHandler）
+- [x] 联盟管理前端（AllianceManagementComponent）
+- [x] 联盟审批流程（AllianceAppService.LeagueAuditAsync）
+- [x] 联盟菜单项（/admin/alliance）
 
 ## 后续功能
 
-- [ ] 联盟管理前端
-- [ ] 联盟审批流程
-- [ ] 菜单根据版本动态显示/隐藏
+- [ ] 菜单根据版本动态显示/隐藏（Basic 版隐藏联盟菜单）
