@@ -2,21 +2,25 @@ using System.Threading.Tasks;
 using KnowledgeHub.Settings;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Settings;
+using Volo.Abp.SettingManagement;
 
 namespace KnowledgeHub.Install;
 
 public class InstallStatusService : IInstallStatusService, ITransientDependency
 {
-    private readonly ISettingProvider _settingProvider;
+    private readonly ISettingStore _settingStore;
 
-    public InstallStatusService(ISettingProvider settingProvider)
+    public InstallStatusService(ISettingStore settingStore)
     {
-        _settingProvider = settingProvider;
+        _settingStore = settingStore;
     }
 
     public async Task<bool> IsInstalledAsync()
     {
-        var isInstalled = await _settingProvider.GetOrNullAsync(KnowledgeHubSettings.IsInstalled);
+        var isInstalled = await _settingStore.GetOrNullAsync(
+            KnowledgeHubSettings.IsInstalled,
+            "H",
+            null);
         return isInstalled == "true";
     }
 }

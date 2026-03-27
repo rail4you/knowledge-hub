@@ -6,7 +6,10 @@ public class KnowledgeHubSettingDefinitionProvider : SettingDefinitionProvider
 {
     public override void Define(ISettingDefinitionContext context)
     {
-        //Define your own settings here. Example:
-        //context.Add(new SettingDefinition(KnowledgeHubSettings.MySetting1));
+        context.Add(
+            new SettingDefinition(KnowledgeHubSettings.IsInstalled, "false", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.InstalledEdition, "Basic", isVisibleToClients: false),
+            new SettingDefinition(KnowledgeHubSettings.LicenseKey, "", isVisibleToClients: false)
+        );
     }
 }
