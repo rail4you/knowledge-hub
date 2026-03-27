@@ -1,8 +1,6 @@
-using Volo.Abp.Application.Dtos;
-
 namespace KnowledgeHub.Install.Dto;
 
-public class InstallStatusDto : EntityDto
+public class InstallStatusDto
 {
     public bool IsInstalled { get; set; }
     public string CurrentEdition { get; set; } = "Basic";
@@ -26,7 +24,7 @@ public class EditionUpgradeInputDto
     public string LicenseKey { get; set; } = string.Empty;
 }
 
-public class EditionDto : EntityDto
+public class EditionDto
 {
     public string Edition { get; set; } = "Basic";
     

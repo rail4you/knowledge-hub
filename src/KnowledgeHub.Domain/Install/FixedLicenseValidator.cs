@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Volo.Abp.DependencyInjection;
 
 namespace KnowledgeHub.Install;

@@ -5,11 +5,6 @@ using Volo.Abp.Settings;
 
 namespace KnowledgeHub.Install;
 
-public interface IInstallStatusService
-{
-    Task<bool> IsInstalledAsync();
-}
-
 public class InstallStatusService : IInstallStatusService, ITransientDependency
 {
     private readonly ISettingProvider _settingProvider;
@@ -24,4 +19,9 @@ public class InstallStatusService : IInstallStatusService, ITransientDependency
         var isInstalled = await _settingProvider.GetOrNullAsync(KnowledgeHubSettings.IsInstalled);
         return isInstalled == "true";
     }
+}
+
+public interface IInstallStatusService
+{
+    Task<bool> IsInstalledAsync();
 }
