@@ -33,6 +33,14 @@ export const APP_ROUTES: Routes = [
     loadChildren: () => import('@abp/ng.tenant-management').then(c => c.createRoutes()),
   },
   {
+    path: 'admin/edition',
+    loadComponent: () => import('./install/edition-info.component').then(c => c.EditionInfoComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Admin',
+    },
+  },
+  {
     path: 'setting-management',
     loadChildren: () => import('@abp/ng.setting-management').then(c => c.createRoutes()),
   },
