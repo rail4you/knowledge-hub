@@ -13,7 +13,7 @@ export class EditionService {
   getCurrentEdition = (config?: Partial<Rest.Config>) =>
     this.restService.request<any, EditionDto>({
       method: 'GET',
-      url: '/api/app/edition/current',
+      url: '/api/app/edition/current-edition',
     },
     { apiName: this.apiName,...config });
   
@@ -21,7 +21,7 @@ export class EditionService {
   upgradeToStandard = (input: EditionUpgradeInputDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',
-      url: '/api/app/edition/upgrade',
+      url: '/api/app/edition/upgrade-to-standard',
       body: input,
     },
     { apiName: this.apiName,...config });

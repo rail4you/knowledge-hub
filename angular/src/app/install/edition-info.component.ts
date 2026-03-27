@@ -188,7 +188,7 @@ export class EditionInfoComponent implements OnInit {
     
     this.isUpgrading = true;
     
-    this.http.post('/api/app/edition/upgrade', { licenseKey: this.licenseKey })
+    this.http.post('/api/app/edition/upgrade-to-standard', { licenseKey: this.licenseKey })
       .subscribe({
         next: () => {
           this.message.success('升级成功！');

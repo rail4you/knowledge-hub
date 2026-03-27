@@ -25,7 +25,7 @@ export class EditionService {
       return of(this.editionCache);
     }
     
-    return this.http.get<EditionDto>('/api/app/edition/current').pipe(
+    return this.http.get<EditionDto>('/api/app/edition/current-edition').pipe(
       tap(edition => {
         this.editionCache = edition;
         this.editionSubject.next(edition);
