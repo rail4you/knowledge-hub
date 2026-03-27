@@ -280,6 +280,11 @@ tempkey.jwk
 etc/build/
 meilisearch
 
+# Editor swap files
+*.swp
+*.swo
+*~
+
 # Uploads
 src/KnowledgeHub.HttpApi.Host/uploads/
 
