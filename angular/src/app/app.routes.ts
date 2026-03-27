@@ -1,8 +1,14 @@
 import { authGuard, permissionGuard, eLayoutType } from '@abp/ng.core';
 import { Routes } from '@angular/router';
 import { identityUserCreateFormPropContributors, identityUserEntityPropContributors } from './identity-form-prop-contributors';
+import { installGuard } from './install/install.guard';
 
 export const APP_ROUTES: Routes = [
+  {
+    path: 'install',
+    loadComponent: () => import('./install/install.component').then(c => c.InstallComponent),
+    canActivate: [installGuard],
+  },
   {
     path: '',
     pathMatch: 'full',

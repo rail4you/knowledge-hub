@@ -63,9 +63,3 @@ public class InstallAppService : ApplicationService, IInstallAppService
         }
     }
 }
-
-public interface IInstallAppService : IApplicationService
-{
-    Task<InstallStatusDto> GetStatusAsync();
-    Task InstallAsync(InstallInputDto input);
-}

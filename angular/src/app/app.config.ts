@@ -1,4 +1,4 @@
-import { provideAbpCore, withOptions } from '@abp/ng.core';
+import { provideAbpCore, withOptions, APP_INITIALIZER } from '@abp/ng.core';
 import { provideAbpOAuth } from '@abp/ng.oauth';
 import { provideSettingManagementConfig } from '@abp/ng.setting-management/config';
 import { provideFeatureManagementConfig } from '@abp/ng.feature-management';
@@ -10,7 +10,7 @@ import { registerLocaleForEsBuild } from '@abp/ng.core/locale';
 import { provideThemeLeptonX } from '@abp/ng.theme.lepton-x';
 import { LPX_LAYOUT_PROVIDER, provideSideMenuLayout } from '@abp/ng.theme.lepton-x/layouts';
 import { provideLogo, withEnvironmentOptions } from "@abp/ng.theme.shared";
-import { ApplicationConfig } from '@angular/core';
+import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
@@ -35,6 +35,7 @@ import { IDENTITY_ROLES_PROVIDER } from './identity-roles.config';
 import { IDENTITY_USERS_PROVIDER } from './identity-users.config';
 import { IdentityUserService } from '@abp/ng.identity/proxy';
 import { CustomIdentityUserService } from './custom-identity-user.service';
+import { checkInstallStatus } from './install/install.initializer';
 
 const icons = [
   PlusOutline, 
@@ -77,5 +78,10 @@ export const appConfig: ApplicationConfig = {
     provideTenantManagementConfig(),
     provideAbpThemeShared(),
     { provide: IdentityUserService, useClass: CustomIdentityUserService },
+    {
+      provide: APP_INITIALIZER,
+      useFactory: checkInstallStatus,
+      multi: true,
+    },
   ]
 };
