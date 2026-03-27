@@ -1,23 +1,23 @@
 {
   "production": true,
   "application": {
-    "baseUrl": "http://localhost:4200",
+    "baseUrl": "${APP_ANGULAR_URL}",
     "name": "KnowledgeHub"
   },
   "oAuthConfig": {
-    "issuer": "https://localhost:44354/",
-    "redirectUri": "http://localhost:4200",
+    "issuer": "${APP_SELF_URL}/",
+    "redirectUri": "${APP_ANGULAR_URL}",
     "clientId": "KnowledgeHub_App",
     "responseType": "code",
     "scope": "offline_access openid profile email phone KnowledgeHub"
   },
   "apis": {
     "default": {
-      "url": "https://localhost:44354",
+      "url": "${APP_SELF_URL}",
       "rootNamespace": "KnowledgeHub"
     },
     "AbpAccountPublic": {
-      "url": "https://localhost:44354",
+      "url": "${APP_SELF_URL}",
       "rootNamespace": "AbpAccountPublic"
     }
   }

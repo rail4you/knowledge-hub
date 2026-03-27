@@ -1,11 +1,16 @@
 # ============================================================
 # docker-compose.prod.yml - KnowledgeHub 生产环境配置
 # ============================================================
-# 使用方式: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# 使用方式: 
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
 #
-# 远程部署时需要：
-# 1. 修改 APP_SELF_URL 和 APP_ANGULAR_URL 为实际域名
-# 2. 数据库密码、API Keys 等通过 .env.production 注入
+# 或使用部署脚本:
+#   ./deploy-production.sh --deploy
+#
+# 配置文件:
+#   1. 复制 .env.example 为 .env.production
+#   2. 修改 .env.production 中的配置
+#   3. 运行部署脚本
 # ============================================================
 
 services:
@@ -14,24 +19,28 @@ services:
   # Angular UI — Nginx 静态托管（端口 80）
   # ----------------------------------------------------------
   knowledgehub-angular:
+    image: ${REGISTRY}/knowledgehub-angular:${IMAGE_TAG}
     environment:
-      - NGINX_HOST=localhost
+      - NGINX_HOST=${SERVER_HOST}
       - NGINX_PORT=80
 
   # ----------------------------------------------------------
   # HttpApi.Host — 后端 API（HTTP，端口 44354）
   # ----------------------------------------------------------
   knowledgehub-api:
+    image: ${REGISTRY}/knowledgehub-api:${IMAGE_TAG}
     environment:
-      - ASPNETCORE_URLS=http://+:44354;http://+:80
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
       - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
-      # 生产环境 URL
+      # 应用 URL
       - App__SelfUrl=${APP_SELF_URL}
       - App__HealthCheckUrl=http://knowledgehub-api/health-status
       - App__AngularUrl=${APP_ANGULAR_URL}
       - App__CorsOrigins=${APP_CORS_ORIGINS}
       - App__RedirectAllowedUrls=${APP_REDIRECT_URLS}
-      - AuthServer__Authority=http://119.45.170.4:44354/
+      # AuthServer（容器内部通信）
+      - AuthServer__Authority=http://knowledgehub-api
       - AuthServer__RequireHttpsMetadata=false
       # 数据库
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}
@@ -46,13 +55,13 @@ services:
       - Qwen__ApiKey=${QWEN_API_KEY}
       - Qwen__BaseUrl=${QWEN_BASE_URL}
       - Qwen__Model=${QWEN_MODEL}
-      # JWT
+      # JWT & 加密
       - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
       - StringEncryption__DefaultPassPhrase=${STRING_ENCRYPTION_PASSPHRASE}
       # Serilog
       - Serilog__MinimumLevel__Default=Information
     volumes:
-      - uploads_data:/app/uploads
+      - ./uploads:/app/uploads
 
   # ----------------------------------------------------------
   # Meilisearch — 全文搜索引擎
@@ -69,6 +78,7 @@ services:
   # DbMigrator — 数据库迁移 & OpenIddict 种子数据
   # ----------------------------------------------------------
   db-migrator:
+    image: ${REGISTRY}/knowledgehub-db-migrator:${IMAGE_TAG}
     environment:
       - OpenIddict__Applications__KnowledgeHub_App__RootUrl=${APP_ANGULAR_URL}
       - OpenIddict__Applications__KnowledgeHub_Swagger__RootUrl=${APP_SELF_URL}

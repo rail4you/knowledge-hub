@@ -49,11 +49,11 @@ services:
       - App__SelfUrl=https://localhost:44354
       - App__HealthCheckUrl=http://knowledgehub-api/health-status
       # Angular 应用地址（用于账号相关跳转）
-      - App__AngularUrl=http://localhost:4200
+      - App__AngularUrl=${APP_ANGULAR_URL:-http://localhost:4200}
       # CORS 允许的来源
-      - App__CorsOrigins=http://localhost:4200
+      - App__CorsOrigins=${APP_CORS_ORIGINS:-http://localhost:4200}
       # 允许重定向的 URL（OpenIddict 回调）
-      - App__RedirectAllowedUrls=http://localhost:4200
+      - App__RedirectAllowedUrls=${APP_REDIRECT_URLS:-http://localhost:4200}
       # 内部网络访问 AuthServer（不走外部 DNS）
       - AuthServer__Authority=http://knowledgehub-authserver
       - AuthServer__RequireHttpsMetadata=false
