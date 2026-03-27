@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Common;
 using KnowledgeHub.Domain.Search;
+using KnowledgeHub.Edition;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
@@ -39,6 +40,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IHttpContextAccessor HttpContextAccessor { get; }
     protected IBackgroundJobManager BackgroundJobManager { get; }
     protected IRepository<DocumentIndexingJob, Guid> IndexingJobRepository { get; }
+    protected IEditionConfigService EditionConfigService { get; }
 
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
@@ -53,7 +55,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         ICurrentTenant currentTenant,
         IHttpContextAccessor httpContextAccessor,
         IBackgroundJobManager backgroundJobManager,
-        IRepository<DocumentIndexingJob, Guid> indexingJobRepository)
+        IRepository<DocumentIndexingJob, Guid> indexingJobRepository,
+        IEditionConfigService editionConfigService)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -68,6 +71,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         HttpContextAccessor = httpContextAccessor;
         BackgroundJobManager = backgroundJobManager;
         IndexingJobRepository = indexingJobRepository;
+        EditionConfigService = editionConfigService;
     }
 
     public virtual async Task<ResourceDto> GetAsync(Guid id)
@@ -129,16 +133,35 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [AllowAnonymous]
     public async Task<PagedResultDto<ResourceDto>> GetLeagueApprovedAsync(PagedResultRequestDto input)
     {
+        var isTwoLevelApproval = await EditionConfigService.IsTwoLevelApprovalEnabledAsync();
+        
         var query = await ResourceRepository.GetQueryableAsync();
         
-        var resources = query
-            .Where(r => r.Status == ResourceStatus.SchoolApproved || r.Status == ResourceStatus.LeagueApproved)
-            .OrderByDescending(r => r.CreationTime)
-            .Skip(input.SkipCount)
-            .Take(input.MaxResultCount)
-            .ToList();
+        List<Resource> resources;
+        int count;
         
-        var count = query.Count(r => r.Status == ResourceStatus.SchoolApproved || r.Status == ResourceStatus.LeagueApproved);
+        if (isTwoLevelApproval)
+        {
+            resources = query
+                .Where(r => r.Status == ResourceStatus.LeagueApproved)
+                .OrderByDescending(r => r.CreationTime)
+                .Skip(input.SkipCount)
+                .Take(input.MaxResultCount)
+                .ToList();
+            
+            count = query.Count(r => r.Status == ResourceStatus.LeagueApproved);
+        }
+        else
+        {
+            resources = query
+                .Where(r => r.Status == ResourceStatus.SchoolApproved || r.Status == ResourceStatus.LeagueApproved)
+                .OrderByDescending(r => r.CreationTime)
+                .Skip(input.SkipCount)
+                .Take(input.MaxResultCount)
+                .ToList();
+            
+            count = query.Count(r => r.Status == ResourceStatus.SchoolApproved || r.Status == ResourceStatus.LeagueApproved);
+        }
         
         return new PagedResultDto<ResourceDto>(
             count,
@@ -503,6 +526,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [Authorize(KnowledgeHubPermissions.Resources.SchoolAudit)]
     public virtual async Task<PagedResultDto<ResourceDto>> GetPendingAuditListAsync(ResourceListQueryDto input)
     {
+        var isTwoLevelApproval = await EditionConfigService.IsTwoLevelApprovalEnabledAsync();
+        
         var resources = await ResourceRepository.GetListAsync(
             skipCount: input.SkipCount,
             maxResultCount: input.MaxResultCount,
@@ -522,6 +547,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<ResourceAuditDto> AuditAsync(AuditResourceDto input)
     {
         var resource = await Repository.GetAsync(input.ResourceId);
+        var isTwoLevelApproval = await EditionConfigService.IsTwoLevelApprovalEnabledAsync();
         
         var audit = new ResourceAudit
         {
@@ -537,7 +563,14 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         {
             if (resource.Status == ResourceStatus.PendingReview)
             {
-                resource.Status = ResourceStatus.SchoolApproved;
+                if (isTwoLevelApproval)
+                {
+                    resource.Status = ResourceStatus.SchoolApproved;
+                }
+                else
+                {
+                    resource.Status = ResourceStatus.LeagueApproved;
+                }
             }
             else if (resource.Status == ResourceStatus.SchoolApproved)
             {
