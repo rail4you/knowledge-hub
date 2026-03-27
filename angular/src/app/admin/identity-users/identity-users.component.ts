@@ -321,6 +321,10 @@ export class IdentityUsersComponent implements OnInit {
         roleNames: this.selectedUserRoles 
       };
       
+      if (password) {
+        payload.password = password;
+      }
+      
       this.restService.request<any, IdentityUserDto>({
         method: 'PUT',
         url: `/api/app/tenant-user/${this.selectedUser.id}`,

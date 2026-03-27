@@ -67,5 +67,8 @@ public class UpdateTenantUserDto
 
     public string? UnifiedSocialCreditCode { get; set; }
 
+    [DataType(DataType.Password)]
+    public string? Password { get; set; }
+
     public List<string> RoleNames { get; set; } = new();
 }

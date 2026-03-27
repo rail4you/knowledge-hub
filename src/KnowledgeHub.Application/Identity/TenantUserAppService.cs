@@ -142,6 +142,13 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                 (await _userManager.UpdateAsync(user))
                     .CheckErrors();
 
+                if (!string.IsNullOrWhiteSpace(input.Password))
+                {
+                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                    (await _userManager.ResetPasswordAsync(user, token, input.Password))
+                        .CheckErrors();
+                }
+
                 if (input.RoleNames != null)
                 {
                     (await _userManager.SetRolesAsync(user, input.RoleNames))

@@ -62,6 +62,9 @@ build_angular() {
     
     cd "$SCRIPT_DIR/../../angular"
     
+    # 同步动态环境配置（用于 Docker 镜像）
+    cp "$SCRIPT_DIR/dynamic-env.json" ./dynamic-env.json
+    
     # 安装依赖
     bun install
     

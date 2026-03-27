@@ -95,14 +95,12 @@
         </div>
       </div>
 
-      @if (!selectedUser.id) {
-        <nz-form-item>
-          <nz-form-label nzRequired>{{ '::Password' | abpLocalization }}</nz-form-label>
-          <nz-form-control>
-            <input nz-input type="password" formControlName="password" />
-          </nz-form-control>
-        </nz-form-item>
-      }
+      <nz-form-item>
+        <nz-form-label [nzRequired]="!selectedUser.id">{{ '::Password' | abpLocalization }}</nz-form-label>
+        <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
+          <input nz-input type="password" formControlName="password" [placeholder]="selectedUser.id ? '留空则不修改密码' : ''" />
+        </nz-form-control>
+      </nz-form-item>
 
       <nz-divider></nz-divider>
       <strong>基本信息</strong>

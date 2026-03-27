@@ -1,2 +1,24 @@
 {
+  "production": true,
+  "application": {
+    "baseUrl": "http://119.45.170.4",
+    "name": "KnowledgeHub"
+  },
+  "oAuthConfig": {
+    "issuer": "http://119.45.170.4:44354/",
+    "redirectUri": "http://119.45.170.4",
+    "clientId": "KnowledgeHub_App",
+    "responseType": "code",
+    "scope": "offline_access openid profile email phone KnowledgeHub"
+  },
+  "apis": {
+    "default": {
+      "url": "http://119.45.170.4:44354",
+      "rootNamespace": "KnowledgeHub"
+    },
+    "AbpAccountPublic": {
+      "url": "http://119.45.170.4:44354",
+      "rootNamespace": "AbpAccountPublic"
+    }
+  }
 }
