@@ -74,6 +74,7 @@ export class ResourceComponent implements OnInit {
   selectedResource = {} as ResourceDto;
   versions = signal<ResourceVersionDto[]>([]);
   categories = signal<ResourceCategoryDto[]>([]);
+  categoryTreeNodes = signal<any[]>([]);
   isCollected = signal<boolean>(false);
 
   form!: FormGroup;
@@ -169,17 +170,38 @@ export class ResourceComponent implements OnInit {
     this.resourceService.getCategories().subscribe({
       next: (result) => {
         this.categories.set(result);
+        this.categoryTreeNodes.set(this.buildTreeNodes(result));
       }
     });
+  }
+
+  buildTreeNodes(categories: ResourceCategoryDto[]): any[] {
+    return categories.map(cat => ({
+      title: cat.name,
+      key: cat.id,
+      icon: 'folder',
+      isLeaf: !cat.children || cat.children.length === 0,
+      expanded: true,
+      origin: cat,
+      children: cat.children && cat.children.length > 0 ? this.buildTreeNodes(cat.children) : []
+    }));
+  }
+
+  flattenCategories(categories: ResourceCategoryDto[]): ResourceCategoryDto[] {
+    const result: ResourceCategoryDto[] = [];
+    for (const cat of categories) {
+      result.push(cat);
+      if (cat.children && cat.children.length > 0) {
+        result.push(...this.flattenCategories(cat.children));
+      }
+    }
+    return result;
   }
 
   buildCategoryForm() {
     this.categoryForm = this.fb.group({
       name: [this.selectedCategory?.name || '', Validators.required],
-      code: [this.selectedCategory?.code || ''],
       parentId: [this.selectedCategory?.parentId ?? null],
-      sortOrder: [this.selectedCategory?.sortOrder ?? 0],
-      isActive: [this.selectedCategory?.isActive ?? true],
     });
   }
 
@@ -200,7 +222,14 @@ export class ResourceComponent implements OnInit {
       return;
     }
 
-    const input = this.categoryForm.value as CreateUpdateResourceCategoryDto;
+    const formValue = this.categoryForm.value;
+    const input = {
+      name: formValue.name,
+      parentId: formValue.parentId,
+      code: '',
+      sortOrder: this.selectedCategory?.sortOrder ?? 0,
+      isActive: this.selectedCategory?.isActive ?? true,
+    } as CreateUpdateResourceCategoryDto;
     
     const request = this.selectedCategory?.id
       ? this.resourceService.updateCategory(this.selectedCategory.id, input)
@@ -232,6 +261,54 @@ export class ResourceComponent implements OnInit {
           }
         });
       }
+    });
+  }
+
+  moveCategoryUp(category: ResourceCategoryDto) {
+    this.reorderCategory(category, -1);
+  }
+
+  moveCategoryDown(category: ResourceCategoryDto) {
+    this.reorderCategory(category, 1);
+  }
+
+  private getSiblings(category: ResourceCategoryDto): ResourceCategoryDto[] {
+    const all = this.categories();
+    if (category.parentId) {
+      const findChildren = (cats: ResourceCategoryDto[]): ResourceCategoryDto[] | null => {
+        for (const cat of cats) {
+          if (cat.id === category.parentId) return cat.children || [];
+          if (cat.children) {
+            const found = findChildren(cat.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      return findChildren(all) || [];
+    }
+    return all;
+  }
+
+  private reorderCategory(category: ResourceCategoryDto, direction: number) {
+    const siblings = this.getSiblings(category);
+    const idx = siblings.findIndex(s => s.id === category.id);
+    if (idx < 0) return;
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= siblings.length) return;
+
+    const swapWith = siblings[newIdx];
+    const input1 = { name: category.name, parentId: category.parentId, code: category.code || '', sortOrder: swapWith.sortOrder, isActive: category.isActive } as CreateUpdateResourceCategoryDto;
+    const input2 = { name: swapWith.name, parentId: swapWith.parentId, code: swapWith.code || '', sortOrder: category.sortOrder, isActive: swapWith.isActive } as CreateUpdateResourceCategoryDto;
+
+    this.resourceService.updateCategory(category.id!, input1).subscribe({
+      next: () => {
+        this.resourceService.updateCategory(swapWith.id!, input2).subscribe({
+          next: () => this.loadCategories(),
+          error: () => this.message.error(this.l('OperationFailed'))
+        });
+      },
+      error: () => this.message.error(this.l('OperationFailed'))
     });
   }
 

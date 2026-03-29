@@ -81,11 +81,18 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
+    
+    .category-name {
+      flex: 1;
+    }
     
     .category-actions {
       margin-left: auto;
       opacity: 0;
       transition: opacity 0.2s;
+      display: flex;
+      gap: 2px;
     }
     
     &:hover .category-actions {

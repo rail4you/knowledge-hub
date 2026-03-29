@@ -381,7 +381,24 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<List<ResourceCategoryDto>> GetCategoriesAsync()
     {
         var categories = await CategoryRepository.GetListAsync();
-        return ObjectMapper.Map<List<ResourceCategory>, List<ResourceCategoryDto>>(categories);
+        var dtos = ObjectMapper.Map<List<ResourceCategory>, List<ResourceCategoryDto>>(categories);
+
+        var lookup = dtos.ToDictionary(c => c.Id);
+        var roots = new List<ResourceCategoryDto>();
+
+        foreach (var dto in dtos)
+        {
+            if (dto.ParentId.HasValue && lookup.TryGetValue(dto.ParentId.Value, out var parent))
+            {
+                parent.Children.Add(dto);
+            }
+            else
+            {
+                roots.Add(dto);
+            }
+        }
+
+        return roots;
     }
 
     [Authorize(KnowledgeHubPermissions.Resources.ManageCategory)]

@@ -109,8 +109,8 @@ public class EfCoreResourceCategoryRepository : EfCoreRepository<KnowledgeHubDbC
         }
 
         return await query
-            .Where(x => x.IsActive)
             .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.CreationTime)
             .ToListAsync(cancellationToken);
     }
 }
