@@ -437,16 +437,15 @@ export class ResourceComponent implements OnInit {
 
   onCategoryClick(event: any) {
     const node = event.node;
-    const category = node.origin;
-    if (this.selectedCategoryId() === category.id) {
+    if (this.selectedCategoryId() === node.key) {
       this.clearCategoryFilter();
-    } else {
-      this.selectedCategoryId.set(category.id);
-      this.selectedCategoryName.set(category.name);
-      this.selectedTreeKeys.set([category.id]);
+      return;
     }
+    this.selectedCategoryId.set(node.key);
+    this.selectedCategoryName.set(node.title);
+    this.selectedTreeKeys.set([node.key]);
     this.pageIndex = 1;
-    this.list.get();
+    this.loadResources();
   }
 
   clearCategoryFilter() {
@@ -454,7 +453,7 @@ export class ResourceComponent implements OnInit {
     this.selectedCategoryName.set('');
     this.selectedTreeKeys.set([]);
     this.pageIndex = 1;
-    this.list.get();
+    this.loadResources();
   }
 
   getResourceIcon(type?: number): string {

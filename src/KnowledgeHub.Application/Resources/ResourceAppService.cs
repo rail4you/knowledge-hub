@@ -104,28 +104,38 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
     public virtual async Task<PagedResultDto<ResourceDto>> GetFilteredListAsync(ResourceListQueryDto input)
     {
-        var totalCount = await ResourceRepository.GetCountAsync(input.Filter ?? "");
-        var resources = await ResourceRepository.GetListAsync(
-            input.SkipCount,
-            input.MaxResultCount,
-            input.Sorting ?? "CreationTime DESC",
-            input.Filter ?? ""
-        );
+        var query = await ResourceRepository.GetQueryableAsync();
 
-        var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
+        if (!string.IsNullOrWhiteSpace(input.Filter))
+        {
+            var filter = input.Filter.ToLower();
+            query = query.Where(x =>
+                (x.Name != null && x.Name.ToLower().Contains(filter)) ||
+                (x.Description != null && x.Description.ToLower().Contains(filter)));
+        }
 
         if (input.Status.HasValue)
         {
-            dtos = dtos.Where(x => x.Status == input.Status).ToList();
+            query = query.Where(x => x.Status == input.Status.Value);
         }
+
         if (input.ResourceType.HasValue)
         {
-            dtos = dtos.Where(x => x.ResourceType == input.ResourceType).ToList();
+            query = query.Where(x => x.ResourceType == input.ResourceType.Value);
         }
+
         if (input.CategoryId.HasValue)
         {
-            dtos = dtos.Where(x => x.CategoryId == input.CategoryId).ToList();
+            query = query.Where(x => x.CategoryId == input.CategoryId.Value);
         }
+
+        var totalCount = await AsyncExecuter.CountAsync(query);
+
+        query = query.OrderByDescending(x => x.CreationTime);
+        query = query.Skip(input.SkipCount).Take(input.MaxResultCount);
+
+        var resources = await AsyncExecuter.ToListAsync(query);
+        var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
 
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
