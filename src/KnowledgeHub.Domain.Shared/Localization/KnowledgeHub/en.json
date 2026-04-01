@@ -256,6 +256,9 @@
     "DisplayName:IsPublic": "Public",
     "Permissions": "Permissions",
     "SelectTenantToViewRoles": "Select tenant to view available roles",
-    "RoleDeletionConfirmationMessage": "Are you sure to delete the role '{0}'?"
+    "RoleDeletionConfirmationMessage": "Are you sure to delete the role '{0}'?",
+    "AllResources": "All Resources",
+    "Details": "Details",
+    "InitialVersion": "Initial version"
   }
 }

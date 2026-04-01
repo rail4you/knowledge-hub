@@ -604,10 +604,21 @@ export class ResourceComponent implements OnInit {
 
   download() {
     if (!this.selectedResource.id || !this.selectedResource.isDownloadable) return;
-    
+
     this.resourceService.download(this.selectedResource.id).subscribe({
-      next: (data: number[]) => {
-        const blob = new Blob([new Uint8Array(data as any)], { type: 'application/octet-stream' });
+      next: (data: any) => {
+        let bytes: Uint8Array;
+        if (typeof data === 'string') {
+          // Backend returns Base64 encoded string
+          const binary = atob(data);
+          bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+        } else {
+          bytes = new Uint8Array(data);
+        }
+        const blob = new Blob([new Uint8Array(bytes) as any], { type: 'application/octet-stream' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

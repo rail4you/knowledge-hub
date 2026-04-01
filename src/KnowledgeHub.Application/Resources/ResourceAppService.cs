@@ -200,7 +200,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             Version = 1,
             FilePath = resource.FilePath,
             FileSize = resource.FileSize,
-            UpdateContent = "Initial version",
+            UpdateContent = L["InitialVersion"],
             IsCurrentVersion = true
         };
         await VersionRepository.InsertAsync(initialVersion);

@@ -360,6 +360,9 @@
     "Install:UpgradeToStandard": "升级到标准版",
     "Install:UpgradeConfirm": "确定要升级到标准版吗？升级后无法降级。",
     "Install:UpgradeSuccess": "升级成功",
-    "Install:MaxTenantReached": "当前版本已达最大租户数限制，请升级到标准版以创建更多租户"
+    "Install:MaxTenantReached": "当前版本已达最大租户数限制，请升级到标准版以创建更多租户",
+    "AllResources": "全部资源",
+    "Details": "详情",
+    "InitialVersion": "初始版本"
   }
 }
