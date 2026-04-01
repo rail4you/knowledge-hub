@@ -255,28 +255,23 @@ public class MeiliSearchService : IMeiliSearchService
         await EnsureIndexExistsAsync();
         
         var filters = new List<string>();
-        
-        if (query.ResourceTypes?.Any() == true)
+
+        if (query.FileExtensions?.Any() == true)
         {
-            var typeFilters = query.ResourceTypes.Select(t => $"resourceType = {(int)t}");
-            filters.Add($"({string.Join(" OR ", typeFilters)})");
+            var extFilters = query.FileExtensions.Select(ext => $"fileExtension = \"{ext}\"");
+            filters.Add($"({string.Join(" OR ", extFilters)})");
         }
-        
+
         if (query.CategoryId.HasValue)
         {
             filters.Add($"categoryId = \"{query.CategoryId}\"");
         }
-        
-        if (!string.IsNullOrEmpty(query.FileExtension))
-        {
-            filters.Add($"fileExtension = \"{query.FileExtension}\"");
-        }
-        
+
         if (query.StartDate.HasValue)
         {
             filters.Add($"uploadDate >= {query.StartDate.Value:yyyy-MM-dd}");
         }
-        
+
         if (query.EndDate.HasValue)
         {
             filters.Add($"uploadDate <= {query.EndDate.Value:yyyy-MM-dd}");
@@ -301,7 +296,8 @@ public class MeiliSearchService : IMeiliSearchService
             highlightPostTag = "</mark>",
             attributesToCrop = new[] { "pageContent" },
             cropLength = 200,
-            showRankingScore = true
+            showRankingScore = true,
+            distinct = "resourceId"
         };
 
         var response = await _httpClient.PostAsJsonAsync($"/indexes/{IndexName}/search", searchParams);
@@ -345,28 +341,23 @@ public class MeiliSearchService : IMeiliSearchService
         await EnsureIndexExistsAsync();
         
         var filters = new List<string>();
-        
-        if (query.ResourceTypes?.Any() == true)
+
+        if (query.FileExtensions?.Any() == true)
         {
-            var typeFilters = query.ResourceTypes.Select(t => $"resourceType = {(int)t}");
-            filters.Add($"({string.Join(" OR ", typeFilters)})");
+            var extFilters = query.FileExtensions.Select(ext => $"fileExtension = \"{ext}\"");
+            filters.Add($"({string.Join(" OR ", extFilters)})");
         }
-        
+
         if (query.CategoryId.HasValue)
         {
             filters.Add($"categoryId = \"{query.CategoryId}\"");
         }
-        
-        if (!string.IsNullOrEmpty(query.FileExtension))
-        {
-            filters.Add($"fileExtension = \"{query.FileExtension}\"");
-        }
-        
+
         if (query.StartDate.HasValue)
         {
             filters.Add($"uploadDate >= {query.StartDate.Value:yyyy-MM-dd}");
         }
-        
+
         if (query.EndDate.HasValue)
         {
             filters.Add($"uploadDate <= {query.EndDate.Value:yyyy-MM-dd}");
@@ -392,6 +383,7 @@ public class MeiliSearchService : IMeiliSearchService
             attributesToCrop = new[] { "pageContent" },
             cropLength = 200,
             showRankingScore = true,
+            distinct = "resourceId",
             hybrid = new
             {
                 embedder = "qwen",
@@ -596,6 +588,7 @@ internal class MeiliHit
     public string? UploadDate { get; set; }
     public string? TenantId { get; set; }
     public int Status { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("_rankingScore")]
     public double RankingScore { get; set; }
     public MeiliFormatted? _formatted { get; set; }
 }

@@ -31,6 +31,7 @@ import {NzTreeSelectModule} from 'ng-zorro-antd/tree-select';
 import {NzInputNumberModule} from 'ng-zorro-antd/input-number';
 import {NzUploadModule} from 'ng-zorro-antd/upload';
 import {NzCollapseModule} from 'ng-zorro-antd/collapse';
+import {NzCheckboxModule} from 'ng-zorro-antd/checkbox';
 
 @Component({
   selector: 'app-resource',
@@ -67,7 +68,8 @@ import {NzCollapseModule} from 'ng-zorro-antd/collapse';
     NzTreeModule,
     NzTreeSelectModule,
     NzInputNumberModule,
-    NzUploadModule
+    NzUploadModule,
+    NzCheckboxModule
   ]
 })
 export class ResourceComponent implements OnInit {
@@ -76,6 +78,7 @@ export class ResourceComponent implements OnInit {
   versions = signal<ResourceVersionDto[]>([]);
   categories = signal<ResourceCategoryDto[]>([]);
   categoryTreeNodes = signal<any[]>([]);
+  flatCategories = signal<any[]>([]);
   isCollected = signal<boolean>(false);
 
   form!: FormGroup;
@@ -142,7 +145,7 @@ export class ResourceComponent implements OnInit {
   };
 
   l(key: string): string {
-    return this.localization.instant(key);
+    return this.localization.instant('::' + key);
   }
 
   ngOnInit() {
@@ -178,8 +181,20 @@ export class ResourceComponent implements OnInit {
       next: (result) => {
         this.categories.set(result);
         this.categoryTreeNodes.set(this.buildTreeNodes(result));
+        this.flatCategories.set(this.flattenWithLevel(result));
       }
     });
+  }
+
+  flattenWithLevel(categories: ResourceCategoryDto[], level = 0): any[] {
+    const result: any[] = [];
+    for (const cat of categories) {
+      result.push({ ...cat, _level: level });
+      if (cat.children && cat.children.length > 0) {
+        result.push(...this.flattenWithLevel(cat.children, level + 1));
+      }
+    }
+    return result;
   }
 
   buildTreeNodes(categories: ResourceCategoryDto[]): any[] {
@@ -203,6 +218,10 @@ export class ResourceComponent implements OnInit {
       }
     }
     return result;
+  }
+
+  findCategoryById(id: string): ResourceCategoryDto | undefined {
+    return this.flattenCategories(this.categories()).find(c => c.id === id);
   }
 
   buildCategoryForm() {
@@ -559,10 +578,27 @@ export class ResourceComponent implements OnInit {
 
     request.subscribe(() => {
       this.isModalOpen = false;
+      const createdCategoryId = formValue.categoryId;
       this.form.reset();
       this.uploadedFileInfo = null;
       this.selectedFile = null;
-      this.list.get();
+
+      if (!this.selectedResource.id && createdCategoryId) {
+        // 新建资源：跳转到对应分类的资源列表
+        this.selectedCategoryId.set(createdCategoryId);
+        const category = this.findCategoryById(createdCategoryId);
+        this.selectedCategoryName.set(category?.name || '');
+        this.selectedTreeKeys.set([createdCategoryId]);
+        this.pageIndex = 1;
+        this.selectedTabIndex = 0;
+      } else if (!this.selectedResource.id) {
+        // 新建资源但没设分类：跳转到全部资源
+        this.clearCategoryFilter();
+      } else {
+        // 编辑资源：刷新当前列表
+      }
+      this.loadResources();
+      this.selectedResource = {} as ResourceDto;
     });
   }
 

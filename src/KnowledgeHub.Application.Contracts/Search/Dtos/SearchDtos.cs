@@ -7,11 +7,10 @@ namespace KnowledgeHub.Application.Contracts.Search.Dtos;
 public class SearchQueryDto
 {
     public string Query { get; set; } = string.Empty;
-    public List<ResourceType>? ResourceTypes { get; set; }
+    public List<string>? FileExtensions { get; set; }
     public Guid? CategoryId { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
-    public string? FileExtension { get; set; }
     public int SkipCount { get; set; } = 0;
     public int MaxResultCount { get; set; } = 20;
     public string Sorting { get; set; } = "relevance";

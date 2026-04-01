@@ -33,6 +33,8 @@ public class GetIndexingJobsInput : PagedAndSortedResultRequestDto
 {
     public Guid? ResourceId { get; set; }
     public IndexingJobStatus? Status { get; set; }
+    public DateTime? StartTime { get; set; }
+    public DateTime? EndTime { get; set; }
 }
 
 public class CreateIndexingJobInput

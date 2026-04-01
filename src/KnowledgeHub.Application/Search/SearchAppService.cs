@@ -30,10 +30,10 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
         
         if (_currentUser.Id.HasValue)
         {
-            var filters = input.ResourceTypes != null 
-                ? string.Join(",", input.ResourceTypes) 
+            var filters = input.FileExtensions != null
+                ? string.Join(",", input.FileExtensions)
                 : null;
-            
+
             await _analyticsService.LogSearchAsync(
                 _currentUser.Id.Value,
                 input.Query,
@@ -51,10 +51,10 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
         
         if (_currentUser.Id.HasValue)
         {
-            var filters = input.ResourceTypes != null 
-                ? string.Join(",", input.ResourceTypes) 
+            var filters = input.FileExtensions != null
+                ? string.Join(",", input.FileExtensions)
                 : null;
-            
+
             await _analyticsService.LogSearchAsync(
                 _currentUser.Id.Value,
                 input.Query,

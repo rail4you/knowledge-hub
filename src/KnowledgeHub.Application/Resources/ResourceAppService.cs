@@ -779,7 +779,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 FileExtension = h.FileExtension,
                 ResourceType = h.ResourceType,
                 CategoryName = h.CategoryName,
-                UploadDate = h.UploadDate
+                UploadDate = h.UploadDate,
+                RelevanceScore = (float)h.RankingScore
             };
         }).ToList();
 

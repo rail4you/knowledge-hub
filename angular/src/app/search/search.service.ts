@@ -4,11 +4,10 @@ import { RestService } from '@abp/ng.core';
 
 export interface SearchQueryDto {
   query?: string;
-  resourceTypes?: number[];
+  fileExtensions?: string[];
   categoryId?: string;
   startDate?: string;
   endDate?: string;
-  fileExtension?: string;
   skipCount: number;
   maxResultCount: number;
   sorting: string;
@@ -125,6 +124,8 @@ export enum IndexingJobStatus {
 export interface GetIndexingJobsInput {
   resourceId?: string;
   status?: IndexingJobStatus;
+  startTime?: string;
+  endTime?: string;
   skipCount?: number;
   maxResultCount?: number;
 }
@@ -179,7 +180,7 @@ export class SearchService {
   }
 
   logView(input: LogViewDto): Observable<void> {
-    return this.restService.request({ method: 'POST', url: `${this.apiUrl}/analytics/view`, body: input }, { apiName: 'Search' });
+    return this.restService.request({ method: 'POST', url: '/api/app/search/log-view', body: input }, { apiName: 'Search' });
   }
 
   getMySearchHistory(skipCount = 0, maxResultCount = 20): Observable<SearchHistoryDto[]> {
@@ -205,11 +206,13 @@ export class SearchService {
     };
     if (input.resourceId) params.resourceId = input.resourceId;
     if (input.status !== undefined) params.status = input.status;
-    
-    return this.restService.request({ 
-      method: 'GET', 
-      url: '/api/app/indexing-job', 
-      params 
+    if (input.startTime) params.startTime = input.startTime;
+    if (input.endTime) params.endTime = input.endTime;
+
+    return this.restService.request({
+      method: 'GET',
+      url: '/api/app/indexing-job',
+      params
     }, { apiName: 'Search' });
   }
 

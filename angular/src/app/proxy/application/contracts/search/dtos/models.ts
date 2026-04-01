@@ -77,11 +77,10 @@ export interface SearchHistoryDto {
 
 export interface SearchQueryDto {
   query?: string;
-  resourceTypes?: ResourceType[] | null;
+  fileExtensions?: string[] | null;
   categoryId?: string | null;
   startDate?: string | null;
   endDate?: string | null;
-  fileExtension?: string | null;
   skipCount?: number;
   maxResultCount?: number;
   sorting?: string;

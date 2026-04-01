@@ -39,6 +39,7 @@ public class DocumentPage
     public string? CategoryName { get; set; }
     [System.Text.Json.Serialization.JsonPropertyName("uploadDate")]
     public DateTime UploadDate { get; set; }
+    public double RankingScore { get; set; }
 }
 
 public interface ISearchService
@@ -134,7 +135,8 @@ public class MeiliSearchService : ISearchService
             offset,
             attributesToHighlight = new[] { "pageContent", "pageTitle" },
             highlightPreTag = "<mark>",
-            highlightPostTag = "</mark>"
+            highlightPostTag = "</mark>",
+            showRankingScore = true
         };
 
         var response = await _httpClient.PostAsJsonAsync($"/indexes/{effectiveIndexName}/search", searchParams);
@@ -153,7 +155,8 @@ public class MeiliSearchService : ISearchService
                 FileExtension = h.FileExtension ?? string.Empty,
                 ResourceType = h.ResourceType,
                 CategoryName = h.CategoryName,
-                UploadDate = h.UploadDate
+                UploadDate = h.UploadDate,
+                RankingScore = h.RankingScore
             }).ToList() ?? new List<DocumentPage>(),
             TotalHits = result?.EstimatedTotalHits ?? 0,
             ProcessingTimeMs = result?.ProcessingTimeMs ?? 0
@@ -164,7 +167,7 @@ public class MeiliSearchService : ISearchService
     {
         var effectiveIndexName = indexName ?? _defaultIndexName;
         await InitializeAsync(effectiveIndexName);
-        
+
         var searchParams = new
         {
             q = query,
@@ -173,6 +176,7 @@ public class MeiliSearchService : ISearchService
             attributesToHighlight = new[] { "pageContent", "pageTitle" },
             highlightPreTag = "<mark>",
             highlightPostTag = "</mark>",
+            showRankingScore = true,
             hybrid = new
             {
                 embedder = "qwen",
@@ -196,7 +200,8 @@ public class MeiliSearchService : ISearchService
                 FileExtension = h.FileExtension ?? string.Empty,
                 ResourceType = h.ResourceType,
                 CategoryName = h.CategoryName,
-                UploadDate = h.UploadDate
+                UploadDate = h.UploadDate,
+                RankingScore = h.RankingScore
             }).ToList() ?? new List<DocumentPage>(),
             TotalHits = result?.EstimatedTotalHits ?? 0,
             ProcessingTimeMs = result?.ProcessingTimeMs ?? 0
@@ -261,6 +266,8 @@ public class MeiliSearchService : ISearchService
         public string? CategoryName { get; set; }
         [System.Text.Json.Serialization.JsonPropertyName("uploadDate")]
         public DateTime UploadDate { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("_rankingScore")]
+        public double RankingScore { get; set; }
         public MeiliFormatted? _formatted { get; set; }
     }
 }

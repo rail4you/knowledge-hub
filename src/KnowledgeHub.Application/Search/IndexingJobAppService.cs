@@ -54,6 +54,16 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
             query = query.Where(x => x.ResourceId == input.ResourceId.Value);
         }
 
+        if (input.StartTime.HasValue)
+        {
+            query = query.Where(x => x.CreationTime >= input.StartTime.Value);
+        }
+
+        if (input.EndTime.HasValue)
+        {
+            query = query.Where(x => x.CreationTime <= input.EndTime.Value);
+        }
+
         var totalCount = await _jobRepository.AsyncExecuter.CountAsync(query);
         
         query = query.Skip(input.SkipCount).Take(input.MaxResultCount);

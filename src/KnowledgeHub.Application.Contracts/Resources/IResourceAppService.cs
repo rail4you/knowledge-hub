@@ -94,6 +94,7 @@ public class DocumentPageSearchResultDto
     public int ResourceType { get; set; }
     public string? CategoryName { get; set; }
     public DateTime UploadDate { get; set; }
+    public float RelevanceScore { get; set; }
 }
 
 public interface IResourceAuditAppService
