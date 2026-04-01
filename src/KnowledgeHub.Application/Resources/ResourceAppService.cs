@@ -232,30 +232,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<ResourceDto> UpdateAsync(Guid id, CreateUpdateResourceDto input)
     {
         var resource = await Repository.GetAsync(id);
-        
-        var oldVersions = await VersionRepository.GetVersionsAsync(id);
-        var currentVersions = oldVersions.Where(x => x.IsCurrentVersion).ToList();
-        foreach (var oldVersion in currentVersions)
-        {
-            oldVersion.IsCurrentVersion = false;
-            await VersionRepository.UpdateAsync(oldVersion);
-        }
-
-        var newVersion = new ResourceVersion
-        {
-            ResourceId = id,
-            Version = resource.CurrentVersion + 1,
-            FilePath = resource.FilePath,
-            FileSize = resource.FileSize,
-            UpdateContent = input.Description ?? "Updated",
-            IsCurrentVersion = true
-        };
-        await VersionRepository.InsertAsync(newVersion);
 
         ObjectMapper.Map(input, resource);
-        resource.CurrentVersion = newVersion.Version;
-        resource.Status = ResourceStatus.PendingReview;
-        
+
         await Repository.UpdateAsync(resource);
         return ObjectMapper.Map<Resource, ResourceDto>(resource);
     }

@@ -30,6 +30,7 @@ import {NzTreeModule} from 'ng-zorro-antd/tree';
 import {NzTreeSelectModule} from 'ng-zorro-antd/tree-select';
 import {NzInputNumberModule} from 'ng-zorro-antd/input-number';
 import {NzUploadModule} from 'ng-zorro-antd/upload';
+import {NzCollapseModule} from 'ng-zorro-antd/collapse';
 
 @Component({
   selector: 'app-resource',
@@ -91,6 +92,11 @@ export class ResourceComponent implements OnInit {
 
   selectedTabIndex = 0;
   selectedCategory: ResourceCategoryDto | null = null;
+  leftPanelVisible = signal(true);
+  rightPanelVisible = signal(true);
+  selectedCategoryId = signal<string | null>(null);
+  selectedCategoryName = signal<string>('');
+  selectedTreeKeys = signal<string[]>([]);
   
   pendingAudits = signal<ResourceDto[]>([]);
   selectedAuditResource: ResourceDto | null = null;
@@ -142,14 +148,15 @@ export class ResourceComponent implements OnInit {
   ngOnInit() {
     this.buildForm();
     this.loadCategories();
+    this.loadResources();
+  }
 
-    const resourceStreamCreator = (query) => this.resourceService.getFilteredList({
-      ...query,
+  loadResources() {
+    this.resourceService.getFilteredList({
       maxResultCount: this.pageSize,
-      skipCount: (this.pageIndex - 1) * this.pageSize
-    });
-
-    this.list.hookToQuery(resourceStreamCreator).subscribe((response) => {
+      skipCount: (this.pageIndex - 1) * this.pageSize,
+      categoryId: this.selectedCategoryId()
+    }).subscribe((response) => {
       this.resources = response;
     });
   }
@@ -428,6 +435,39 @@ export class ResourceComponent implements OnInit {
     this.checkCollected(resource.id!);
   }
 
+  onCategoryClick(event: any) {
+    const node = event.node;
+    const category = node.origin;
+    if (this.selectedCategoryId() === category.id) {
+      this.clearCategoryFilter();
+    } else {
+      this.selectedCategoryId.set(category.id);
+      this.selectedCategoryName.set(category.name);
+      this.selectedTreeKeys.set([category.id]);
+    }
+    this.pageIndex = 1;
+    this.list.get();
+  }
+
+  clearCategoryFilter() {
+    this.selectedCategoryId.set(null);
+    this.selectedCategoryName.set('');
+    this.selectedTreeKeys.set([]);
+    this.pageIndex = 1;
+    this.list.get();
+  }
+
+  getResourceIcon(type?: number): string {
+    switch (type) {
+      case 0: return 'file-text';
+      case 1: return 'video-camera';
+      case 2: return 'audio';
+      case 3: return 'picture';
+      case 4: return 'file-ppt';
+      default: return 'file';
+    }
+  }
+
   loadVersions(resourceId: string) {
     this.resourceService.getVersions(resourceId).subscribe({
       next: (result) => {
@@ -598,13 +638,13 @@ export class ResourceComponent implements OnInit {
 
   onPageIndexChange(index: number): void {
     this.pageIndex = index;
-    this.list.get();
+    this.loadResources();
   }
 
   onPageSizeChange(size: number): void {
     this.pageSize = size;
     this.pageIndex = 1;
-    this.list.get();
+    this.loadResources();
   }
 
   onFileSelected(event: Event): void {

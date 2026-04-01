@@ -69,3 +69,7 @@
 2026-03-22 23:30:44.638 +08:00 [INF] Successfully completed host database migrations.
 2026-03-22 23:30:44.742 +08:00 [INF] Successfully completed all database migrations.
 2026-03-22 23:30:44.742 +08:00 [INF] You can safely end this process...
+2026-03-31 20:03:49.468 +08:00 [INF] Starting KnowledgeHub.HttpApi.Host.
+2026-03-31 20:27:30.760 +08:00 [INF] Starting KnowledgeHub.HttpApi.Host.
+2026-03-31 20:38:34.284 +08:00 [INF] Starting KnowledgeHub.HttpApi.Host.
+2026-03-31 20:41:25.077 +08:00 [INF] Starting KnowledgeHub.HttpApi.Host.

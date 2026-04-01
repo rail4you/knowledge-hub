@@ -21,6 +21,7 @@ public class Program
         {
             Log.Information("Starting KnowledgeHub.HttpApi.Host.");
             var builder = WebApplication.CreateBuilder(args);
+            Log.Information("Step 1: WebApplication.CreateBuilder done");
             builder.Host
                 .AddAppSettingsSecretsJson()
                 .UseAutofac()
@@ -31,10 +32,15 @@ public class Program
                         .ReadFrom.Services(services)
                         .WriteTo.Async(c => c.AbpStudio(services));
                 });
+            Log.Information("Step 2: Host configured");
             await builder.AddApplicationAsync<KnowledgeHubHttpApiHostModule>();
+            Log.Information("Step 3: AddApplicationAsync done");
             var app = builder.Build();
+            Log.Information("Step 4: Build done");
             await app.InitializeApplicationAsync();
+            Log.Information("Step 5: InitializeApplicationAsync done");
             await app.RunAsync();
+            Log.Information("Step 6: RunAsync done");
             return 0;
         }
         catch (Exception ex)

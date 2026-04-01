@@ -85,8 +85,20 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             });
         });
 
-        if (!hostingEnvironment.IsDevelopment())
+        if (hostingEnvironment.IsDevelopment())
         {
+            PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
+            {
+                options.AddDevelopmentEncryptionAndSigningCertificate = false;
+            });
+
+            PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
+            {
+                serverBuilder.AddEphemeralSigningKey();
+                serverBuilder.AddEncryptionKey(new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+                    System.Security.Cryptography.RandomNumberGenerator.GetBytes(256 / 8)));
+                serverBuilder.DisableAccessTokenEncryption();
+            });
         }
 
         Configure<AbpNavigationOptions>(options =>

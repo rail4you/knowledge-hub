@@ -15,182 +15,234 @@
   </div>
 
   <div class="tab-content">
-    <!-- Resources Tab -->
-    <div *ngIf="selectedTabIndex === 0" class="resources-layout">
-      <div class="resource-list">
-        <div class="list-header">
-          <h3>{{ '::Resource' | abpLocalization }}</h3>
-          <button nz-button nzType="primary" (click)="createResource()">
-            <span nz-icon nzType="plus"></span>
-            {{ '::NewResource' | abpLocalization }}
-          </button>
+    <!-- Resources Tab - Explorer Layout -->
+    <div *ngIf="selectedTabIndex === 0" class="explorer-layout">
+      <!-- Left Sidebar: Category Tree -->
+      <div class="sidebar-left" [class.collapsed]="!leftPanelVisible()">
+        <div *ngIf="leftPanelVisible()" class="sidebar-inner">
+          <div class="sidebar-header">
+            <h4>{{ '::Categories' | abpLocalization }}</h4>
+            <button nz-button nzType="text" nzSize="small" (click)="leftPanelVisible.set(false)">
+              <span nz-icon nzType="menu-fold"></span>
+            </button>
+          </div>
+          <div class="category-filter">
+            <div class="category-filter-item" [class.active]="!selectedCategoryId()" (click)="clearCategoryFilter()">
+              <span nz-icon nzType="appstore" class="filter-icon"></span>
+              <span>{{ '::AllResources' | abpLocalization }}</span>
+            </div>
+          </div>
+          <div class="sidebar-tree">
+            <nz-tree
+              [nzData]="categoryTreeNodes()"
+              [nzDraggable]="false"
+              nzBlockNode
+              nzShowExpand
+              nzShowIcon
+              [nzSelectedKeys]="selectedTreeKeys()"
+              (nzClick)="onCategoryClick($event)"
+            ></nz-tree>
+            <nz-empty *ngIf="categoryTreeNodes().length === 0" nzNotFoundContent=""></nz-empty>
+          </div>
         </div>
-        
-        <nz-table
-          [nzData]="resources.items"
-          [nzTotal]="resources.totalCount"
-          [nzPageIndex]="pageIndex"
-          [nzPageSize]="pageSize"
-          [nzShowSizeChanger]="true"
-          [nzFrontPagination]="false"
-          (nzPageIndexChange)="onPageIndexChange($event)"
-          (nzPageSizeChange)="onPageSizeChange($event)"
-          [nzScroll]="{ y: 'calc(100vh - 200px)' }"
-        >
-          <thead>
-            <tr>
-<th>{{ '::ResourceName' | abpLocalization }}</th>
-              <th>{{ '::ResourceType' | abpLocalization }}</th>
-              <th>{{ '::Version' | abpLocalization }}</th>
-              <th>{{ '::Status' | abpLocalization }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of resources.items" 
-                (click)="selectResource(item)"
-                [class.selected]="selectedResource.id === item.id"
-                style="cursor: pointer;">
-              <td>{{ item.name }}</td>
-              <td>
-                <nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag>
-              </td>
-              <td>v{{ item.currentVersion }}</td>
-              <td>
-                <nz-tag [nzColor]="getStatusColor(item.status)">
-                  {{ getStatusName(item.status) }}
-                </nz-tag>
-              </td>
-            </tr>
-          </tbody>
-        </nz-table>
+        <div *ngIf="!leftPanelVisible()" class="sidebar-collapsed-bar" (click)="leftPanelVisible.set(true)">
+          <span nz-icon nzType="menu-unfold"></span>
+        </div>
       </div>
 
-      <div class="resource-preview">
-        <ng-container *ngIf="selectedResource.id; else noSelect">
-          <div class="preview-header">
-            <div class="header-info">
-              <h2>{{ selectedResource.name }}</h2>
-              <div class="meta">
-                <span>{{ '::Version' | abpLocalization }}: v{{ selectedResource.currentVersion }}</span>
-                <span>{{ '::Creator' | abpLocalization }}: {{ selectedResource.creatorName }}</span>
-                <span>{{ selectedResource.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
-              </div>
-            </div>
-            <div class="header-actions">
-              <button nz-button (click)="download()" [disabled]="!selectedResource.isDownloadable">
+      <!-- Center: Document Table -->
+      <div class="main-content">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <button nz-button nzType="primary" (click)="createResource()">
+              <span nz-icon nzType="plus"></span>
+              {{ '::NewResource' | abpLocalization }}
+            </button>
+            <span class="breadcrumb" *ngIf="selectedCategoryName()">
+              <span nz-icon nzType="folder"></span>
+              {{ selectedCategoryName() }}
+            </span>
+          </div>
+          <div class="toolbar-right">
+            <button nz-button nzType="text" nzSize="small" (click)="rightPanelVisible.set(!rightPanelVisible())">
+              <span nz-icon nzType="profile"></span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="table-wrapper">
+          <nz-table
+            [nzData]="resources.items"
+            [nzTotal]="resources.totalCount"
+            [nzPageIndex]="pageIndex"
+            [nzPageSize]="pageSize"
+            [nzShowSizeChanger]="true"
+            [nzFrontPagination]="false"
+            (nzPageIndexChange)="onPageIndexChange($event)"
+            (nzPageSizeChange)="onPageSizeChange($event)"
+            nzSize="middle"
+            [nzScroll]="{ y: 'calc(100vh - 210px)' }"
+          >
+            <thead>
+              <tr>
+                <th>{{ '::ResourceName' | abpLocalization }}</th>
+                <th>{{ '::ResourceType' | abpLocalization }}</th>
+                <th>{{ '::Version' | abpLocalization }}</th>
+                <th>{{ '::Status' | abpLocalization }}</th>
+                <th>{{ '::Creator' | abpLocalization }}</th>
+                <th>{{ '::CreationTime' | abpLocalization }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of resources.items" 
+                  (click)="selectResource(item)"
+                  [class.selected]="selectedResource.id === item.id"
+                  style="cursor: pointer;">
+                <td>
+                  <span class="file-name-cell">
+                    <span nz-icon [nzType]="getResourceIcon(item.resourceType)" class="file-icon"></span>
+                    {{ item.name }}
+                  </span>
+                </td>
+                <td><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
+                <td>v{{ item.currentVersion }}</td>
+                <td>
+                  <nz-tag [nzColor]="getStatusColor(item.status)">
+                    {{ getStatusName(item.status) }}
+                  </nz-tag>
+                </td>
+                <td>{{ item.creatorName }}</td>
+                <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+              </tr>
+            </tbody>
+          </nz-table>
+        </div>
+      </div>
+
+      <!-- Right Sidebar: Details + Version History -->
+      <div class="sidebar-right" [class.collapsed]="!rightPanelVisible()">
+        <div *ngIf="rightPanelVisible()" class="sidebar-inner">
+          <div class="sidebar-header">
+            <h4>{{ '::Details' | abpLocalization }}</h4>
+            <button nz-button nzType="text" nzSize="small" (click)="rightPanelVisible.set(false)">
+              <span nz-icon nzType="close"></span>
+            </button>
+          </div>
+          
+          <div class="details-content" *ngIf="selectedResource.id; else noSelect">
+            <div class="detail-actions">
+              <button nz-button nzSize="small" (click)="download()" [disabled]="!selectedResource.isDownloadable">
                 <span nz-icon nzType="download"></span>
                 {{ '::Download' | abpLocalization }}
               </button>
-              <button nz-button (click)="toggleCollect()">
-                <span nz-icon nzType="star"></span>
+              <button nz-button nzSize="small" (click)="toggleCollect()">
+                <span nz-icon nzType="star" [nzTheme]="isCollected() ? 'fill' : 'outline'"></span>
                 {{ isCollected() ? ('::Uncollect' | abpLocalization) : ('::Collect' | abpLocalization) }}
               </button>
-              <button nz-button nzType="primary" (click)="editResource(selectedResource.id!)">
+              <button nz-button nzSize="small" nzType="primary" (click)="editResource(selectedResource.id!)">
                 <span nz-icon nzType="edit"></span>
                 {{ '::Edit' | abpLocalization }}
               </button>
-              <button nz-button nzType="default" (click)="submitForReview(selectedResource.id!)" 
+              <button nz-button nzSize="small" (click)="submitForReview(selectedResource.id!)"
                 *ngIf="selectedResource.status === 0 || selectedResource.status === 4">
                 <span nz-icon nzType="send"></span>
                 {{ '::SubmitForReview' | abpLocalization }}
               </button>
             </div>
-          </div>
-          
-          <nz-divider></nz-divider>
-          
-          <div class="preview-content">
-            <div class="file-info">
-              <div class="info-item">
-                <label>{{ '::FileName' | abpLocalization }}:</label>
-                <span>{{ selectedResource.originalFileName }}</span>
-              </div>
-              <div class="info-item">
-                <label>{{ '::FileSize' | abpLocalization }}:</label>
-                <span>{{ selectedResource.fileSize | number }} B</span>
-              </div>
-              <div class="info-item">
-                <label>{{ '::ResourceType' | abpLocalization }}:</label>
-                <nz-tag>{{ getResourceTypeName(selectedResource.resourceType) }}</nz-tag>
-              </div>
-              <div class="info-item">
-                <label>{{ '::Status' | abpLocalization }}:</label>
-                <nz-tag [nzColor]="getStatusColor(selectedResource.status)">
-                  {{ getStatusName(selectedResource.status) }}
-                </nz-tag>
-              </div>
-              <div class="info-item" *ngIf="selectedResource.keywords">
-                <label>{{ '::Keywords' | abpLocalization }}:</label>
-                <span>{{ selectedResource.keywords }}</span>
-              </div>
-              <div class="info-item" *ngIf="selectedResource.description">
-                <label>{{ '::Description' | abpLocalization }}:</label>
-                <span>{{ selectedResource.description }}</span>
-              </div>
-            </div>
-          </div>
-        </ng-container>
-        
-        <ng-template #noSelect>
-          <nz-empty [nzNotFoundContent]="'::SelectResource' | abpLocalization"></nz-empty>
-        </ng-template>
-      </div>
 
-      <div class="version-history">
-        <h3>{{ '::VersionHistory' | abpLocalization }}</h3>
-        
-        <ng-container *ngIf="selectedResource.id; else noVersion">
-          <div class="version-list">
-            <nz-timeline>
-              <nz-timeline-item 
-                *ngFor="let version of versions()"
-                [nzColor]="version.isCurrentVersion ? 'blue' : 'gray'">
-                <div class="version-item">
-                  <div class="version-header">
-                    <span class="version-number">v{{ version.version }}</span>
-                    <nz-tag *ngIf="version.isCurrentVersion" nzColor="blue">
-                      {{ '::CurrentVersion' | abpLocalization }}
-                    </nz-tag>
+            <nz-collapse [nzBordered]="false" nzGhost>
+              <nz-collapse-panel [nzHeader]="'::FileInfo' | abpLocalization" [nzActive]="true">
+                <div class="detail-info">
+                  <div class="detail-row">
+                    <label>{{ '::FileName' | abpLocalization }}</label>
+                    <span>{{ selectedResource.originalFileName }}</span>
                   </div>
-                  <div class="version-time">{{ version.creationTime | date:'yyyy-MM-dd HH:mm' }}</div>
-                  <div class="version-content" *ngIf="version.updateContent">
-                    {{ version.updateContent }}
+                  <div class="detail-row">
+                    <label>{{ '::FileSize' | abpLocalization }}</label>
+                    <span>{{ formatFileSize(selectedResource.fileSize) }}</span>
                   </div>
-                  <div class="version-actions">
-                    <button nz-button nzSize="small" nzType="link" [disabled]="version.isCurrentVersion" (click)="rollbackVersion(version.id!)">
-                      {{ '::RollbackVersion' | abpLocalization }}
-                    </button>
+                  <div class="detail-row">
+                    <label>{{ '::ResourceType' | abpLocalization }}</label>
+                    <span><nz-tag>{{ getResourceTypeName(selectedResource.resourceType) }}</nz-tag></span>
+                  </div>
+                  <div class="detail-row">
+                    <label>{{ '::Status' | abpLocalization }}</label>
+                    <span><nz-tag [nzColor]="getStatusColor(selectedResource.status)">{{ getStatusName(selectedResource.status) }}</nz-tag></span>
+                  </div>
+                  <div class="detail-row">
+                    <label>{{ '::Version' | abpLocalization }}</label>
+                    <span>v{{ selectedResource.currentVersion }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <label>{{ '::Creator' | abpLocalization }}</label>
+                    <span>{{ selectedResource.creatorName }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <label>{{ '::CreationTime' | abpLocalization }}</label>
+                    <span>{{ selectedResource.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+                  </div>
+                  <div class="detail-row" *ngIf="selectedResource.keywords">
+                    <label>{{ '::Keywords' | abpLocalization }}</label>
+                    <span>{{ selectedResource.keywords }}</span>
+                  </div>
+                  <div class="detail-row full" *ngIf="selectedResource.description">
+                    <label>{{ '::Description' | abpLocalization }}</label>
+                    <span class="description-text">{{ selectedResource.description }}</span>
                   </div>
                 </div>
-              </nz-timeline-item>
-            </nz-timeline>
+              </nz-collapse-panel>
+
+              <nz-collapse-panel [nzHeader]="'::VersionHistory' | abpLocalization" [nzActive]="true">
+                <div class="version-list">
+                  <div *ngFor="let version of versions()" class="version-item">
+                    <div class="version-header">
+                      <span class="version-dot" [class.current]="version.isCurrentVersion"></span>
+                      <span class="version-number">v{{ version.version }}</span>
+                      <nz-tag *ngIf="version.isCurrentVersion" nzColor="blue" nzSize="small">
+                        {{ '::CurrentVersion' | abpLocalization }}
+                      </nz-tag>
+                    </div>
+                    <div class="version-time">{{ version.creationTime | date:'yyyy-MM-dd HH:mm' }}</div>
+                    <div class="version-content" *ngIf="version.updateContent">{{ version.updateContent }}</div>
+                    <div class="version-actions">
+                      <button nz-button nzSize="small" nzType="link" [disabled]="version.isCurrentVersion" (click)="rollbackVersion(version.id!)">
+                        {{ '::RollbackVersion' | abpLocalization }}
+                      </button>
+                    </div>
+                  </div>
+                  <nz-empty *ngIf="versions().length === 0" nzNotFoundContent=""></nz-empty>
+                </div>
+
+                <nz-divider></nz-divider>
+
+                <div class="upload-section">
+                  <nz-upload nzType="drag" [nzMultiple]="false" [nzBeforeUpload]="beforeUploadVersion.bind(this)" class="compact-upload">
+                    <p class="ant-upload-drag-icon">
+                      <span nz-icon nzType="cloud-upload"></span>
+                    </p>
+                    <p class="ant-upload-text">{{ '::UploadNewVersion' | abpLocalization }}</p>
+                  </nz-upload>
+                  <nz-progress *ngIf="isVersionUploading()" [nzPercent]="versionUploadProgress()" nzSize="small" nzStatus="active"></nz-progress>
+                  <div *ngIf="versionUploadedFileInfo" class="uploaded-file-info">
+                    <span>{{ versionUploadedFileInfo.originalFileName }} ({{ formatFileSize(versionUploadedFileInfo.fileSize!) }})</span>
+                  </div>
+                  <button nz-button nzType="primary" nzSize="small" [disabled]="!versionUploadedFileInfo" [nzLoading]="isVersionUploading()" (click)="uploadNewVersion()" style="margin-top: 8px;">
+                    {{ '::UploadNewVersion' | abpLocalization }}
+                  </button>
+                </div>
+              </nz-collapse-panel>
+            </nz-collapse>
           </div>
-          
-          <nz-divider></nz-divider>
-          
-          <div class="upload-section">
-            <p>{{ '::UploadNewVersion' | abpLocalization }}</p>
-            <nz-upload nzType="drag" [nzMultiple]="false" [nzBeforeUpload]="beforeUploadVersion.bind(this)">
-              <p class="ant-upload-drag-icon">
-                <span nz-icon nzType="inbox"></span>
-              </p>
-              <p class="ant-upload-text">{{ '::ClickOrDragToUpload' | abpLocalization }}</p>
-            </nz-upload>
-            <nz-progress *ngIf="isVersionUploading()" [nzPercent]="versionUploadProgress()" nzStatus="active"></nz-progress>
-            <div *ngIf="versionUploadedFileInfo" class="uploaded-file-info" style="margin-top: 8px;">
-              <span>{{ versionUploadedFileInfo.originalFileName }} ({{ formatFileSize(versionUploadedFileInfo.fileSize!) }})</span>
+
+          <ng-template #noSelect>
+            <div class="empty-details">
+              <nz-empty [nzNotFoundContent]="'::SelectResource' | abpLocalization"></nz-empty>
             </div>
-            <div style="margin-top: 12px;">
-              <button nz-button nzType="primary" [disabled]="!versionUploadedFileInfo" [nzLoading]="isVersionUploading()" (click)="uploadNewVersion()">
-                {{ '::UploadNewVersion' | abpLocalization }}
-              </button>
-            </div>
-          </div>
-        </ng-container>
-        
-        <ng-template #noVersion>
-          <nz-empty [nzNotFoundContent]="'::SelectResourceForHistory' | abpLocalization"></nz-empty>
-        </ng-template>
+          </ng-template>
+        </div>
+        <div *ngIf="!rightPanelVisible()" class="sidebar-collapsed-bar" (click)="rightPanelVisible.set(true)">
+          <span nz-icon nzType="profile"></span>
+        </div>
       </div>
     </div>
 
@@ -259,9 +311,7 @@
         <tbody>
           <tr *ngFor="let item of pendingAudits()">
             <td>{{ item.name }}</td>
-            <td>
-              <nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag>
-            </td>
+            <td><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
             <td>
               <nz-tag [nzColor]="item.status === 1 ? 'blue' : 'orange'">
                 {{ item.status === 1 ? ('::SchoolAudit' | abpLocalization) : ('::LeagueAudit' | abpLocalization) }}
