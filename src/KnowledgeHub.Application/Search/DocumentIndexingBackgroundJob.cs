@@ -25,6 +25,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
     private readonly IDocumentExtractionService _documentExtractionService;
     private readonly IFileStorageService _fileStorageService;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
+    private readonly IMeiliSearchService _meiliSearchService;
     private readonly ILogger<DocumentIndexingBackgroundJob> _logger;
 
     public DocumentIndexingBackgroundJob(
@@ -34,6 +35,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         IDocumentExtractionService documentExtractionService,
         IFileStorageService fileStorageService,
         IUnitOfWorkManager unitOfWorkManager,
+        IMeiliSearchService meiliSearchService,
         ILogger<DocumentIndexingBackgroundJob> logger)
     {
         _jobRepository = jobRepository;
@@ -42,6 +44,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _documentExtractionService = documentExtractionService;
         _fileStorageService = fileStorageService;
         _unitOfWorkManager = unitOfWorkManager;
+        _meiliSearchService = meiliSearchService;
         _logger = logger;
         _logger.LogInformation("DocumentIndexingBackgroundJob CONSTRUCTOR called");
     }
@@ -115,8 +118,22 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: 85);
         _logger.LogInformation("Saved page content to database for resource {ResourceId}", args.ResourceId);
 
-        // Note: Meilisearch indexing is handled separately via SearchAppService
-        // This avoids circular dependency issues in background job
+        var pageDtos = pageContents.Select(pc => new PageContentDto
+        {
+            PageNumber = pc.PageNumber,
+            Content = pc.Content,
+            Title = null
+        }).ToList();
+
+        try
+        {
+            await _meiliSearchService.IndexDocumentFromPagesAsync(args.ResourceId, pageDtos);
+        }
+        catch (Exception meiliEx)
+        {
+            _logger.LogWarning(meiliEx, "Meilisearch indexing failed for resource {ResourceId}", args.ResourceId);
+            // Non-fatal: PageContent is already saved, can be re-indexed later
+        }
 
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Completed, progress: 100);
         _logger.LogInformation("Indexing completed for resource {ResourceId}", args.ResourceId);

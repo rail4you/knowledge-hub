@@ -179,7 +179,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.AddScoped<KnowledgeHub.Resources.ISearchService>(sp => 
     new global::KnowledgeHub.Resources.MeiliSearchService(new HttpClient { BaseAddress = new Uri(configuration["Meilisearch:Host"] ?? "http://localhost:7700") }));
         context.Services.AddHttpClient<IEmbeddingService, EmbeddingService>();
-        context.Services.AddScoped<IDocumentExtractionService, DocumentExtractionService>();
+        context.Services.AddScoped<IDocumentExtractionService, LiteparseService>();
         context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();
         context.Services.AddScoped<ISearchAppService, SearchAppService>();
 

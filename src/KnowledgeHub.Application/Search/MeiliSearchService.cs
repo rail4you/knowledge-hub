@@ -127,17 +127,17 @@ public class MeiliSearchService : IMeiliSearchService
         {
             id = documentIndices.First(x => x.PageNumber == p.PageNumber).Id.ToString(),
             resourceId = resourceId.ToString(),
-            resourceName = resource.Name,
+            resourceName = resource.Name ?? "",
             resourceType = (int)resource.ResourceType,
-            categoryId = resource.CategoryId?.ToString(),
-            fileExtension = resource.FileExtension,
-            keywords = resource.Keywords,
-            description = resource.Description,
+            categoryId = resource.CategoryId?.ToString() ?? "",
+            fileExtension = resource.FileExtension ?? "",
+            keywords = resource.Keywords ?? "",
+            description = resource.Description ?? "",
             pageNumber = p.PageNumber,
-            pageContent = p.Content,
-            pageTitle = p.Title,
+            pageContent = p.Content ?? "",
+            pageTitle = p.Title ?? "",
             uploadDate = resource.CreationTime.ToString("yyyy-MM-dd"),
-            tenantId = tenantId?.ToString(),
+            tenantId = tenantId?.ToString() ?? "",
             status = (int)resource.Status,
             relevanceScore = 1.0
         }).ToList();
@@ -166,6 +166,88 @@ public class MeiliSearchService : IMeiliSearchService
     public async Task<IndexTaskResultDto> IndexAllPagesAsync(Guid resourceId)
     {
         return await IndexDocumentAsync(resourceId);
+    }
+
+    public async Task<IndexTaskResultDto> IndexDocumentFromPagesAsync(Guid resourceId, List<PageContentDto> pages)
+    {
+        var resource = await _resourceRepository.GetAsync(resourceId);
+
+        if (!pages.Any())
+        {
+            return new IndexTaskResultDto
+            {
+                TaskId = 0,
+                DocumentIndexId = Guid.Empty,
+                Status = "NoContent"
+            };
+        }
+
+        var tenantId = _currentTenant.Id;
+
+        // Delete old DocumentIndex records for this resource
+        var oldIndices = await _documentIndexRepository.GetByResourceIdAsync(resourceId);
+        if (oldIndices.Any())
+        {
+            await _documentIndexRepository.DeleteManyAsync(oldIndices);
+        }
+
+        // Create new DocumentIndex entities
+        var documentIndices = new List<DocumentIndex>();
+        foreach (var page in pages)
+        {
+            var docIndex = new DocumentIndex
+            {
+                ResourceId = resourceId,
+                PageNumber = page.PageNumber,
+                PageContent = page.Content,
+                PageTitle = page.Title,
+                IndexStatus = IndexStatus.Pending,
+                TenantId = tenantId
+            };
+            documentIndices.Add(docIndex);
+        }
+
+        await _documentIndexRepository.InsertManyAsync(documentIndices);
+
+        // Build Meilisearch documents and POST
+        var meiliDocuments = pages.Select(p => new
+        {
+            id = documentIndices.First(x => x.PageNumber == p.PageNumber).Id.ToString(),
+            resourceId = resourceId.ToString(),
+            resourceName = resource.Name ?? "",
+            resourceType = (int)resource.ResourceType,
+            categoryId = resource.CategoryId?.ToString() ?? "",
+            fileExtension = resource.FileExtension ?? "",
+            keywords = resource.Keywords ?? "",
+            description = resource.Description ?? "",
+            pageNumber = p.PageNumber,
+            pageContent = p.Content ?? "",
+            pageTitle = p.Title ?? "",
+            uploadDate = resource.CreationTime.ToString("yyyy-MM-dd"),
+            tenantId = tenantId?.ToString() ?? "",
+            status = (int)resource.Status,
+            relevanceScore = 1.0
+        }).ToList();
+
+        var json = JsonSerializer.Serialize(meiliDocuments);
+        var response = await _httpClient.PostAsync(
+            $"/indexes/{IndexName}/documents",
+            new StringContent(json, Encoding.UTF8, "application/json"));
+
+        var taskResult = await response.Content.ReadFromJsonAsync<MeiliTaskResponse>();
+
+        for (int i = 0; i < documentIndices.Count; i++)
+        {
+            documentIndices[i].IndexingTaskId = taskResult?.TaskUid;
+        }
+        await _documentIndexRepository.UpdateManyAsync(documentIndices);
+
+        return new IndexTaskResultDto
+        {
+            TaskId = taskResult?.TaskUid ?? 0,
+            DocumentIndexId = documentIndices.First().Id,
+            Status = "Processing"
+        };
     }
 
     public async Task<SearchResultDto> SearchAsync(SearchQueryDto query)

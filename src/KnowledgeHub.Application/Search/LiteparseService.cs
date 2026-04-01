@@ -12,17 +12,16 @@ using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
-using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 
 namespace KnowledgeHub.Application.Search;
 
-public class LiteparseService : IDocumentExtractionService, ITransientDependency
+public class LiteparseService : IDocumentExtractionService
 {
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly ILogger<LiteparseService> _logger;
-    private static readonly string[] SupportedExtensions = { ".pdf", ".docx", ".pptx" };
+    private static readonly string[] SupportedExtensions = { ".pdf", ".docx", ".pptx", ".xlsx" };
 
     public LiteparseService(
         IRepository<Resource, Guid> resourceRepository,
@@ -54,7 +53,7 @@ public class LiteparseService : IDocumentExtractionService, ITransientDependency
                 return new List<PageContentDto>();
             }
 
-            var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", filePath);
+            var fullPath = Path.Combine(_fileStorageService.RootPath, filePath);
             if (!File.Exists(fullPath))
             {
                 _logger.LogWarning("File not found: {FilePath}", fullPath);

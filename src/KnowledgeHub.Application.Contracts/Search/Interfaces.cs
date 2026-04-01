@@ -19,6 +19,7 @@ public interface IMeiliSearchService : IApplicationService
     Task<List<IndexStatusDto>> GetAllIndexingTasksAsync(int skipCount = 0, int maxResultCount = 20);
     Task RetryFailedIndexingAsync(Guid documentIndexId);
     Task EnsureIndexExistsAsync();
+    Task<IndexTaskResultDto> IndexDocumentFromPagesAsync(Guid resourceId, List<PageContentDto> pages);
 }
 
 public interface IDocumentExtractionService : IApplicationService

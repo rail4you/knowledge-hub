@@ -21,20 +21,20 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
     private readonly IRepository<DocumentIndexingJob, Guid> _jobRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IBackgroundJobManager _backgroundJobManager;
-    private readonly LiteparseService _liteparseService;
+    private readonly IDocumentExtractionService _documentExtractionService;
     private readonly IFileStorageService _fileStorageService;
 
     public IndexingJobAppService(
         IRepository<DocumentIndexingJob, Guid> jobRepository,
         IRepository<Resource, Guid> resourceRepository,
         IBackgroundJobManager backgroundJobManager,
-        LiteparseService liteparseService,
+        IDocumentExtractionService documentExtractionService,
         IFileStorageService fileStorageService)
     {
         _jobRepository = jobRepository;
         _resourceRepository = resourceRepository;
         _backgroundJobManager = backgroundJobManager;
-        _liteparseService = liteparseService;
+        _documentExtractionService = documentExtractionService;
         _fileStorageService = fileStorageService;
     }
 
@@ -192,8 +192,8 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
             return $"File not found: {fullPath}";
         }
         
-        var parseResult = await _liteparseService.ParseDocumentAsync(fullPath);
-        return $"Successfully parsed {parseResult.Pages.Count} pages";
+        var parseResult = await _documentExtractionService.ExtractPagesAsync(job.ResourceId);
+        return $"Successfully extracted {parseResult.Count} pages";
     }
 
     public async Task RetryAsync(Guid id)
@@ -275,13 +275,13 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
 
         try
         {
-            var result = await _liteparseService.ParseDocumentAsync(fullPath);
-            
+            var result = await _documentExtractionService.ExtractPagesAsync(resource.Id);
+
             return new TestParseResultDto
             {
                 Success = true,
-                PageCount = result.Pages.Count,
-                FirstPagePreview = result.Pages.FirstOrDefault()?.Text?.Substring(0, Math.Min(500, result.Pages.FirstOrDefault()?.Text?.Length ?? 0))
+                PageCount = result.Count,
+                FirstPagePreview = result.FirstOrDefault()?.Content?.Substring(0, Math.Min(500, result.FirstOrDefault()?.Content?.Length ?? 0))
             };
         }
         catch (Exception ex)

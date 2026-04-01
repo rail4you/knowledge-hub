@@ -532,21 +532,26 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [Authorize(KnowledgeHubPermissions.Resources.SchoolAudit)]
     public virtual async Task<PagedResultDto<ResourceDto>> GetPendingAuditListAsync(ResourceListQueryDto input)
     {
-        var isTwoLevelApproval = await EditionConfigService.IsTwoLevelApprovalEnabledAsync();
-        
-        var resources = await ResourceRepository.GetListAsync(
-            skipCount: input.SkipCount,
-            maxResultCount: input.MaxResultCount,
-            sorting: input.Sorting ?? "CreationTime",
-            filter: input.Filter
-        );
+        var query = await ResourceRepository.GetQueryableAsync();
 
-        var filteredResources = resources.Where(r => 
-            r.Status == ResourceStatus.PendingReview || 
-            r.Status == ResourceStatus.SchoolApproved).ToList();
-        
-        var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(filteredResources);
-        return new PagedResultDto<ResourceDto>(dtos.Count, dtos);
+        if (!string.IsNullOrWhiteSpace(input.Filter))
+        {
+            query = query.Where(x => x.Name.Contains(input.Filter));
+        }
+
+        query = query.Where(r =>
+            r.Status == ResourceStatus.PendingReview ||
+            r.Status == ResourceStatus.SchoolApproved);
+
+        var totalCount = await AsyncExecuter.CountAsync(query);
+
+        query = query.OrderByDescending(r => r.CreationTime)
+                     .Skip(input.SkipCount)
+                     .Take(input.MaxResultCount);
+
+        var resources = await AsyncExecuter.ToListAsync(query);
+        var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
+        return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
 
     [Authorize(KnowledgeHubPermissions.Resources.SchoolAudit)]
