@@ -28,6 +28,7 @@ function configureRoutes() {
       {
         path: '/resources',
         name: '::Menu:Resources',
+        iconClass: 'fas fa-folder-open',
         parentName: '::Menu:KnowledgeHub',
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.Resources',

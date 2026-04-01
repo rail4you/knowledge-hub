@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -39,7 +40,7 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
             var healthTask = GetAsync<MeiliHealthDto>("/health");
             var versionTask = GetAsync<MeiliVersionDto>("/version");
             var statsTask = GetAsync<MeiliStatsRawDto>("/stats");
-            var indexesTask = GetAsync<List<MeiliIndexDto>>("/indexes");
+            var indexesTask = GetAsync<MeiliIndexesRawDto>("/indexes");
             var tasksTask = GetAsync<MeiliTasksRawDto>("/tasks?limit=20");
 
             await Task.WhenAll(healthTask, versionTask, statsTask, indexesTask, tasksTask);
@@ -47,7 +48,7 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
             dashboard.Health = healthTask.Result ?? new MeiliHealthDto();
             dashboard.Version = versionTask.Result ?? new MeiliVersionDto();
             dashboard.Stats = MapStats(statsTask.Result);
-            dashboard.Indexes = indexesTask.Result ?? new List<MeiliIndexDto>();
+            dashboard.Indexes = indexesTask.Result?.Results ?? new List<MeiliIndexDto>();
             dashboard.RecentTasks = tasksTask.Result?.Results ?? new List<MeiliTaskDto>();
 
             // Get embedders for the primary index
@@ -94,6 +95,65 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 
         var result = await GetAsync<MeiliTasksRawDto>($"/tasks?limit={limit}");
         return result?.Results ?? new List<MeiliTaskDto>();
+    }
+
+    public async Task<List<MeiliDocumentGroupDto>> GetIndexDocumentsAsync(string indexUid, int limit = 200)
+    {
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+
+        try
+        {
+            var response = await _httpClient.GetAsync($"/indexes/{indexUid}/documents?limit={limit}");
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+
+            using var doc = JsonDocument.Parse(json);
+            var results = doc.RootElement.GetProperty("results");
+
+            var groups = new Dictionary<string, MeiliDocumentGroupDto>();
+
+            foreach (var item in results.EnumerateArray())
+            {
+                var resourceName = item.TryGetProperty("resourceName", out var rnProp)
+                    ? rnProp.GetString() ?? "unknown"
+                    : "unknown";
+                var resourceId = item.TryGetProperty("resourceId", out var riProp)
+                    ? riProp.GetString() : null;
+                var fileExtension = item.TryGetProperty("fileExtension", out var feProp)
+                    ? feProp.GetString() : null;
+                var pageNumber = item.TryGetProperty("pageNumber", out var pnProp)
+                    ? pnProp.GetInt32() : 0;
+                var pageTitle = item.TryGetProperty("pageTitle", out var ptProp)
+                    ? ptProp.GetString() : null;
+                var id = item.TryGetProperty("id", out var idProp)
+                    ? idProp.GetString() ?? "" : "";
+
+                if (!groups.TryGetValue(resourceName, out var group))
+                {
+                    group = new MeiliDocumentGroupDto
+                    {
+                        ResourceName = resourceName,
+                        ResourceId = resourceId,
+                        FileExtension = fileExtension
+                    };
+                    groups[resourceName] = group;
+                }
+
+                group.Pages.Add(new MeiliDocumentPageDto
+                {
+                    Id = id,
+                    PageNumber = pageNumber,
+                    PageTitle = pageTitle
+                });
+                group.PageCount = group.Pages.Count;
+            }
+
+            return groups.Values.OrderByDescending(g => g.PageCount).ToList();
+        }
+        catch
+        {
+            return new List<MeiliDocumentGroupDto>();
+        }
     }
 
     private async Task<Dictionary<string, MeiliEmbedderDto>> GetEmbeddersInternalAsync(string indexUid)
@@ -194,4 +254,9 @@ internal class MeiliIndexStatsRawDto
 internal class MeiliTasksRawDto
 {
     public List<MeiliTaskDto>? Results { get; set; }
+}
+
+internal class MeiliIndexesRawDto
+{
+    public List<MeiliIndexDto>? Results { get; set; }
 }

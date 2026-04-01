@@ -67,3 +67,19 @@ public class MeiliTaskDto
     public DateTime? StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
 }
+
+public class MeiliDocumentGroupDto
+{
+    public string ResourceName { get; set; } = string.Empty;
+    public string? ResourceId { get; set; }
+    public string? FileExtension { get; set; }
+    public int PageCount { get; set; }
+    public List<MeiliDocumentPageDto> Pages { get; set; } = new();
+}
+
+public class MeiliDocumentPageDto
+{
+    public string Id { get; set; } = string.Empty;
+    public int PageNumber { get; set; }
+    public string? PageTitle { get; set; }
+}
