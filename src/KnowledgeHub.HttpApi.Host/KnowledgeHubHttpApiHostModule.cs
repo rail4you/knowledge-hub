@@ -182,6 +182,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.AddScoped<IDocumentExtractionService, LiteparseService>();
         context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();
         context.Services.AddScoped<ISearchAppService, SearchAppService>();
+        context.Services.AddHttpClient<IMeiliSearchAdminAppService, MeiliSearchAdminAppService>();
 
         Configure<AbpBackgroundJobOptions>(options =>
         {

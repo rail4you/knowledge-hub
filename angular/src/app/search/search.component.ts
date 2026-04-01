@@ -13,6 +13,8 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { ConfigStateService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
 
@@ -31,50 +33,81 @@ import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto
     NzEmptyModule,
     NzTagModule,
     NzPaginationModule,
-    NzDatePickerModule
+    NzDatePickerModule,
+    NzTooltipModule,
+    NzDividerModule
   ],
   template: `
     <div class="search-container">
       <div class="search-header">
         <h1>文档搜索</h1>
+
         <div class="search-bar">
-          <nz-input-group [nzPrefix]="prefixTemplate" nzSize="large">
+          <nz-input-group [nzPrefix]="prefixTemplate" nzSize="large" class="search-input-wrapper">
             <input nz-input placeholder="输入关键词搜索文档..."
                    [(ngModel)]="searchQuery"
                    (keyup.enter)="search()"
                    nzSize="large" />
           </nz-input-group>
           <ng-template #prefixTemplate>
-            <span nz-icon nzType="search"></span>
+            <span nz-icon nzType="search" style="color: #bfbfbf; font-size: 18px;"></span>
           </ng-template>
-          <button nz-button nzType="primary" nzSize="large" (click)="search()" [nzLoading]="loading()">
+          <button nz-button nzType="primary" nzSize="large" (click)="search()" [nzLoading]="loading()" class="search-btn">
+            <span nz-icon nzType="search"></span>
             搜索
           </button>
         </div>
 
         <div class="search-filters">
-          <nz-select [(ngModel)]="searchType" nzPlaceHolder="搜索类型" style="width: 150px;">
-            <nz-option nzValue="keyword" nzLabel="关键词搜索"></nz-option>
-            <nz-option nzValue="hybrid" nzLabel="混合搜索"></nz-option>
-          </nz-select>
+          <div class="filter-group">
+            <label class="filter-label">
+              <span nz-icon nzType="search" style="margin-right: 4px;"></span>
+              搜索类型
+            </label>
+            <nz-select [(ngModel)]="searchType" class="filter-select">
+              <nz-option nzValue="keyword" nzLabel="关键词搜索"></nz-option>
+              <nz-option nzValue="hybrid" nzLabel="混合搜索"></nz-option>
+            </nz-select>
+          </div>
 
-          <nz-select [(ngModel)]="selectedIndex" nzPlaceHolder="选择索引" style="width: 150px;">
-            <nz-option nzValue="movie" nzLabel="电影"></nz-option>
-            <nz-option nzValue="documents" nzLabel="文档"></nz-option>
-          </nz-select>
+          <div class="filter-group">
+            <label class="filter-label">
+              <span nz-icon nzType="database" style="margin-right: 4px;"></span>
+              搜索索引
+            </label>
+            <nz-select [(ngModel)]="selectedIndex" class="filter-select">
+              <nz-option nzValue="movie" nzLabel="电影"></nz-option>
+              <nz-option nzValue="documents" nzLabel="文档"></nz-option>
+            </nz-select>
+          </div>
 
-          <nz-date-picker [(ngModel)]="startDate" nzPlaceHolder="开始日期"></nz-date-picker>
-          <nz-date-picker [(ngModel)]="endDate" nzPlaceHolder="结束日期"></nz-date-picker>
+          <div class="filter-group">
+            <label class="filter-label">
+              <span nz-icon nzType="calendar" style="margin-right: 4px;"></span>
+              时间范围
+            </label>
+            <div class="date-range">
+              <nz-date-picker [(ngModel)]="startDate" nzPlaceHolder="开始日期" nzSize="default"></nz-date-picker>
+              <span class="date-separator">至</span>
+              <nz-date-picker [(ngModel)]="endDate" nzPlaceHolder="结束日期" nzSize="default"></nz-date-picker>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="search-content">
         <nz-spin [nzSpinning]="loading()">
-          @if (results().length === 0 && !loading()) {
+          @if (results().length === 0 && !loading() && searchQuery) {
             <nz-empty nzNotFoundContent="未找到搜索结果"></nz-empty>
+          } @else if (results().length === 0 && !loading()) {
+            <div class="search-empty-hint">
+              <span nz-icon nzType="search" style="font-size: 48px; color: #d9d9d9;"></span>
+              <p>输入关键词开始搜索文档</p>
+            </div>
           } @else {
             <div class="results-toolbar">
-              <span class="results-count">找到 {{ filteredResults().length }} 个结果</span>
+              <span class="results-count">找到 <strong>{{ filteredResults().length }}</strong> 个结果</span>
+              <nz-divider nzType="vertical"></nz-divider>
               <div class="ext-filter">
                 <span class="ext-filter-label">按类型筛选：</span>
                 <nz-tag
@@ -94,17 +127,25 @@ import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto
 
             <div class="search-results">
               @for (result of filteredResults(); track result.resourceId + '-' + result.pageNumber) {
-                <nz-card [nzTitle]="result.resourceName + ' - 第 ' + result.pageNumber + ' 页'"
-                         [nzExtra]="extraTemplate"
-                         class="result-card"
-                         (click)="viewDocument(result)">
-                  <p class="preview-text" [innerHTML]="result.highlightedContent || result.content"></p>
-                  <nz-tag *ngIf="result.categoryName">{{ result.categoryName }}</nz-tag>
-                  <nz-tag nzColor="green">{{ (result.relevanceScore * 100).toFixed(1) }} 分</nz-tag>
-                  <ng-template #extraTemplate>
-                    <span class="file-ext">{{ result.fileExtension }}</span>
-                  </ng-template>
-                </nz-card>
+                <div class="result-card" (click)="viewDocument(result)">
+                  <div class="result-header">
+                    <div class="result-title">
+                      <span nz-icon [nzType]="getFileIcon(result.fileExtension)" class="result-icon"></span>
+                      <span class="result-name">{{ result.resourceName }}</span>
+                      <nz-tag class="result-page-tag">第 {{ result.pageNumber }} 页</nz-tag>
+                    </div>
+                    <div class="result-meta">
+                      <nz-tag *ngIf="result.categoryName" nzColor="blue">{{ result.categoryName }}</nz-tag>
+                      <nz-tag [nzColor]="getScoreColor(result.relevanceScore)">
+                        {{ (result.relevanceScore * 100).toFixed(0) }} 分
+                      </nz-tag>
+                      <span class="file-ext-badge">{{ result.fileExtension }}</span>
+                    </div>
+                  </div>
+                  <div class="result-content">
+                    <p class="preview-text" [innerHTML]="result.highlightedContent || result.content"></p>
+                  </div>
+                </div>
               }
             </div>
 
@@ -123,45 +164,103 @@ import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto
   `,
   styles: [`
     .search-container {
-      padding: 24px;
-      max-width: 1200px;
+      padding: 32px;
+      max-width: 1000px;
       margin: 0 auto;
     }
 
     .search-header h1 {
-      margin-bottom: 24px;
+      margin-bottom: 28px;
+      font-size: 24px;
+      font-weight: 500;
+      color: #1a1a1a;
     }
 
     .search-bar {
       display: flex;
       gap: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
     }
 
-    .search-bar nz-input-group {
+    .search-input-wrapper {
       flex: 1;
+    }
+
+    .search-btn {
+      min-width: 100px;
     }
 
     .search-filters {
       display: flex;
-      gap: 12px;
+      gap: 20px;
       flex-wrap: wrap;
+      padding: 16px 20px;
+      background: #fafafa;
+      border-radius: 8px;
+      border: 1px solid #f0f0f0;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .filter-label {
+      font-size: 13px;
+      color: #8c8c8c;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+    }
+
+    .filter-select {
+      min-width: 160px;
+    }
+
+    .date-range {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .date-separator {
+      color: #bbb;
+      font-size: 13px;
     }
 
     .search-content {
       margin-top: 24px;
     }
 
+    .search-empty-hint {
+      text-align: center;
+      padding: 60px 0;
+      color: #bfbfbf;
+    }
+
+    .search-empty-hint p {
+      margin-top: 16px;
+      font-size: 14px;
+      color: #999;
+    }
+
     .results-toolbar {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
       margin-bottom: 16px;
       flex-wrap: wrap;
     }
 
     .results-count {
       color: #666;
+      font-size: 14px;
+    }
+
+    .results-count strong {
+      color: #1890ff;
+      font-size: 16px;
     }
 
     .ext-filter {
@@ -183,27 +282,81 @@ import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto
     .search-results {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
 
     .result-card {
       cursor: pointer;
-      transition: box-shadow 0.3s;
+      border: 1px solid #f0f0f0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      transition: all 0.2s ease;
+      background: #fff;
     }
 
     .result-card:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-color: #1890ff;
+      box-shadow: 0 2px 12px rgba(24, 144, 255, 0.12);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .result-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .result-icon {
+      color: #1890ff;
+      font-size: 16px;
+    }
+
+    .result-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .result-page-tag {
+      font-size: 12px;
+    }
+
+    .result-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .file-ext-badge {
+      font-size: 12px;
+      color: #999;
+      background: #f5f5f5;
+      padding: 1px 8px;
+      border-radius: 4px;
+    }
+
+    .result-content {
+      border-top: 1px solid #f5f5f5;
+      padding-top: 10px;
     }
 
     .preview-text {
-      max-height: 100px;
+      max-height: 80px;
       overflow: hidden;
       text-overflow: ellipsis;
-      margin-bottom: 12px;
-    }
-
-    .file-ext {
-      color: #999;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+      margin: 0;
     }
 
     .pagination {

@@ -266,8 +266,6 @@
           <tr>
             <th>{{ '::CategoryName' | abpLocalization }}</th>
             <th>{{ '::ParentCategory' | abpLocalization }}</th>
-            <th>{{ '::SortOrder' | abpLocalization }}</th>
-            <th>{{ '::Status' | abpLocalization }}</th>
             <th>{{ '::Actions' | abpLocalization }}</th>
           </tr>
         </thead>
@@ -281,12 +279,6 @@
               </span>
             </td>
             <td>{{ cat.parentName || '-' }}</td>
-            <td>{{ cat.sortOrder }}</td>
-            <td>
-              <nz-tag [nzColor]="cat.isActive ? 'success' : 'default'">
-                {{ cat.isActive ? ('::Active' | abpLocalization) : ('::Inactive' | abpLocalization) }}
-              </nz-tag>
-            </td>
             <td>
               <button nz-button nzType="link" nzSize="small" (click)="moveCategoryUp(cat)" nz-tooltip nzTooltipTitle="{{ '::MoveUp' | abpLocalization }}">
                 <span nz-icon nzType="arrow-up"></span>

@@ -10,6 +10,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
+import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -31,6 +32,7 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
     NzEmptyModule,
     NzTooltipModule,
     NzDropDownModule,
+    NzMenuModule,
     NzDatePickerModule,
     NzIconModule
   ],
@@ -46,11 +48,7 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
       </div>
 
       <div class="filters">
-        <nz-dropdown>
-          <button nz-button nz-dropdown>
-            <span>{{ statusFilterLabel() }}</span>
-            <span nz-icon nzType="down"></span>
-          </button>
+        <nz-dropdown-menu #statusMenu="nzDropdownMenu">
           <ul nz-menu>
             <li nz-menu-item [nzSelected]="selectedStatus() === null" (click)="onStatusFilter(null)">
               全部状态
@@ -74,13 +72,13 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
               <nz-tag nzColor="warning">已取消</nz-tag>
             </li>
           </ul>
-        </nz-dropdown>
+        </nz-dropdown-menu>
+        <button nz-button [nzDropdownMenu]="statusMenu" nz-dropdown>
+          <span>{{ statusFilterLabel() }}</span>
+          <span nz-icon nzType="down"></span>
+        </button>
 
-        <nz-dropdown>
-          <button nz-button nz-dropdown>
-            <span>{{ timeFilterLabel() }}</span>
-            <span nz-icon nzType="down"></span>
-          </button>
+        <nz-dropdown-menu #timeMenu="nzDropdownMenu">
           <ul nz-menu>
             <li nz-menu-item [nzSelected]="selectedTimeRange() === 'all'" (click)="onTimeFilter('all')">
               全部时间
@@ -101,7 +99,11 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
               自定义
             </li>
           </ul>
-        </nz-dropdown>
+        </nz-dropdown-menu>
+        <button nz-button [nzDropdownMenu]="timeMenu" nz-dropdown>
+          <span>{{ timeFilterLabel() }}</span>
+          <span nz-icon nzType="down"></span>
+        </button>
 
         @if (selectedTimeRange() === 'custom') {
           <nz-range-picker

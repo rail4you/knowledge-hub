@@ -49,6 +49,14 @@ function configureRoutes() {
         requiredPolicy: 'KnowledgeHub.Resources',
       },
       {
+        path: '/admin/meilisearch',
+        name: '::Menu:MeiliSearchDashboard',
+        iconClass: 'fas fa-tachometer-alt',
+        parentName: '::Menu:KnowledgeHub',
+        layout: eLayoutType.application,
+        requiredPolicy: 'KnowledgeHub.Search.ViewStatistics',
+      },
+      {
         path: '/ai',
         name: '::Menu:AI',
         iconClass: 'fas fa-robot',

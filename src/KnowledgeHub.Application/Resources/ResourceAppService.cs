@@ -379,6 +379,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         {
             if (dto.ParentId.HasValue && lookup.TryGetValue(dto.ParentId.Value, out var parent))
             {
+                dto.ParentName = parent.Name;
                 parent.Children.Add(dto);
             }
             else
@@ -438,12 +439,25 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [Authorize(KnowledgeHubPermissions.Resources.Download)]
     public virtual async Task<byte[]> DownloadAsync(Guid resourceId)
     {
-        var resource = await Repository.GetAsync(resourceId);
+        var resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
 
         resource.DownloadCount++;
         await Repository.UpdateAsync(resource);
 
-        var stream = await FileStorageService.GetAsync(resource.FilePath);
+        var filePath = resource.FilePath;
+        if (string.IsNullOrEmpty(filePath))
+        {
+            var currentVersion = resource.Versions.FirstOrDefault(x => x.IsCurrentVersion);
+            filePath = currentVersion?.FilePath;
+        }
+
+        if (string.IsNullOrEmpty(filePath))
+        {
+            throw new BusinessException("KnowledgeHub:ResourceFileNotFound")
+                .WithData("ResourceName", resource.Name);
+        }
+
+        var stream = await FileStorageService.GetAsync(filePath);
         using var memoryStream = new MemoryStream();
         await stream.CopyToAsync(memoryStream);
         return memoryStream.ToArray();
@@ -558,12 +572,18 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<ResourceAuditDto> AuditAsync(AuditResourceDto input)
     {
         var resource = await Repository.GetAsync(input.ResourceId);
+
+        if (resource.Status != ResourceStatus.PendingReview)
+        {
+            throw new UserFriendlyException("只有待审核状态的资源才能进行校审核");
+        }
+
         var isTwoLevelApproval = await EditionConfigService.IsTwoLevelApprovalEnabledAsync();
-        
+
         var audit = new ResourceAudit
         {
             ResourceId = input.ResourceId,
-            AuditType = resource.Status == ResourceStatus.PendingReview ? AuditType.Initial : AuditType.Final,
+            AuditType = AuditType.Initial,
             Status = input.Status,
             Comment = input.Comment
         };
@@ -572,19 +592,14 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         if (input.Status == AuditStatus.Approved)
         {
-            if (resource.Status == ResourceStatus.PendingReview)
+            if (isTwoLevelApproval)
             {
-                if (isTwoLevelApproval)
-                {
-                    resource.Status = ResourceStatus.SchoolApproved;
-                }
-                else
-                {
-                    resource.Status = ResourceStatus.LeagueApproved;
-                }
+                resource.Status = ResourceStatus.SchoolApproved;
             }
-            // When two-level approval is enabled, SchoolApproved resources
-            // must be approved by League admin via AllianceAppService.LeagueAuditAsync
+            else
+            {
+                resource.Status = ResourceStatus.LeagueApproved;
+            }
         }
         else
         {

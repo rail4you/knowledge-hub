@@ -1,6 +1,7 @@
 import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest} from '@abp/ng.core';
 import {Component, OnInit, inject, signal} from '@angular/core';
 import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto} from '../proxy/resources';
+import {AllianceService} from '../proxy/application/alliance/alliance.service';
 import {resourceTypeOptions, resourceStatusOptions} from '../proxy/resources/enums';
 import {ChunkUploadService} from '../proxy/controllers';
 import {FormGroup, FormBuilder, Validators, ReactiveFormsModule} from '@angular/forms';
@@ -127,6 +128,7 @@ export class ResourceComponent implements OnInit {
 
   public readonly list = inject(ListService);
   private readonly resourceService = inject(ResourceService);
+  private readonly allianceService = inject(AllianceService);
   private readonly chunkUploadService = inject(ChunkUploadService);
   private readonly restService = inject(RestService);
   private readonly fb = inject(FormBuilder);
@@ -369,25 +371,50 @@ export class ResourceComponent implements OnInit {
 
   auditResource(status: number) {
     if (!this.selectedAuditResource) return;
-    
+
     this.isAuditLoading.set(true);
-    this.resourceService.audit({
-      resourceId: this.selectedAuditResource.id,
-      status: status,
-      comment: this.auditComment
-    }).subscribe({
-      next: () => {
-        this.message.success(status === 1 ? this.l('AuditPassed') : this.l('AuditRejected'));
-        this.isAuditModalOpen = false;
-        this.isAuditLoading.set(false);
-        this.loadPendingAudits();
-        this.list.get();
-      },
-      error: () => {
-        this.message.error(this.l('AuditFailed'));
-        this.isAuditLoading.set(false);
-      }
-    });
+
+    // PendingReview(1) → 校审核; SchoolApproved(2) → 联盟审核
+    const isSchoolAudit = this.selectedAuditResource.status === 1;
+
+    if (isSchoolAudit) {
+      this.resourceService.audit({
+        resourceId: this.selectedAuditResource.id,
+        status: status,
+        comment: this.auditComment
+      }).subscribe({
+        next: () => {
+          this.message.success(status === 1 ? this.l('AuditPassed') : this.l('AuditRejected'));
+          this.isAuditModalOpen = false;
+          this.isAuditLoading.set(false);
+          this.loadPendingAudits();
+          this.list.get();
+        },
+        error: () => {
+          this.message.error(this.l('AuditFailed'));
+          this.isAuditLoading.set(false);
+        }
+      });
+    } else {
+      // 联盟审核：调用 AllianceService
+      this.allianceService.leagueAudit({
+        resourceId: this.selectedAuditResource.id,
+        status: status,
+        comment: this.auditComment
+      }).subscribe({
+        next: () => {
+          this.message.success(status === 1 ? this.l('AuditPassed') : this.l('AuditRejected'));
+          this.isAuditModalOpen = false;
+          this.isAuditLoading.set(false);
+          this.loadPendingAudits();
+          this.list.get();
+        },
+        error: () => {
+          this.message.error(this.l('AuditFailed'));
+          this.isAuditLoading.set(false);
+        }
+      });
+    }
   }
 
   loadPhysicalDeleteRequests() {

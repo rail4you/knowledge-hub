@@ -85,6 +85,14 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/meilisearch',
+    loadComponent: () => import('./admin/meilisearch/meilisearch-dashboard.component').then(c => c.MeiliSearchDashboardComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Search.ViewStatistics',
+    },
+  },
+  {
     path: 'admin/exercise',
     loadComponent: () => import('./admin/exercise/exercise-management.component').then(c => c.ExerciseManagementComponent),
     canActivate: [authGuard, permissionGuard],
