@@ -460,6 +460,19 @@ export class ResourceComponent implements OnInit {
     this.isDeleteModalOpen = true;
   }
 
+  openDeleteModalForResource(resource: ResourceDto) {
+    this.selectedResource.set(resource);
+    this.deleteReason = '';
+    this.isDeleteModalOpen = true;
+  }
+
+  submitDeleteRequest() {
+    if (!this.selectedResource()?.id || !this.deleteReason.trim()) {
+      return;
+    }
+    this.requestPhysicalDelete(this.selectedResource()!.id!, this.deleteReason);
+  }
+
   approvePhysicalDelete(id: string) {
     this.resourceService.approvePhysicalDelete(id).subscribe({
       next: () => {

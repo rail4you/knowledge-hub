@@ -109,6 +109,7 @@
                 <th>{{ '::Status' | abpLocalization }}</th>
                 <th>{{ '::Creator' | abpLocalization }}</th>
                 <th>{{ '::CreationTime' | abpLocalization }}</th>
+                <th>{{ '::Actions' | abpLocalization }}</th>
               </tr>
             </thead>
             <tbody>
@@ -131,6 +132,11 @@
                 </td>
                 <td>{{ item.creatorName }}</td>
                 <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+                <td>
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="openDeleteModalForResource(item)" nz-tooltip nzTooltipTitle="{{ '::RequestDelete' | abpLocalization }}">
+                    <span nz-icon nzType="delete"></span>
+                  </button>
+                </td>
               </tr>
             </tbody>
           </nz-table>
@@ -202,11 +208,11 @@
         <nz-step nzTitle="{{ '::LeagueAudit' | abpLocalization }}"></nz-step>
       </nz-steps>
       <div class="audit-workflow-legend">
-        <span class="legend-item"><nz-tag nzColor="blue">●</nz-tag> 待审核的文档资源</span>
+        <span class="legend-item"><nz-tag nzColor="blue">●</nz-tag> {{ '::PendingReview' | abpLocalization }}</span>
         <span class="legend-arrow">→</span>
-        <span class="legend-item"><nz-tag nzColor="processing">●</nz-tag> 院校审核（第一步）</span>
+        <span class="legend-item"><nz-tag nzColor="processing">●</nz-tag> {{ '::SchoolAudit' | abpLocalization }}（{{ '::FirstStep' | abpLocalization }}）</span>
         <span class="legend-arrow">→</span>
-        <span class="legend-item"><nz-tag nzColor="warning">●</nz-tag> 联盟审核（第二步）</span>
+        <span class="legend-item"><nz-tag nzColor="warning">●</nz-tag> {{ '::LeagueAudit' | abpLocalization }}（{{ '::SecondStep' | abpLocalization }}）</span>
       </div>
 
       <nz-table
@@ -608,6 +614,34 @@
     </button>
     <button nz-button nzType="primary" (click)="auditResource(1)" [nzLoading]="isAuditLoading()">
       {{ '::Approve' | abpLocalization }}
+    </button>
+  </ng-template>
+</nz-modal>
+
+<!-- Delete Request Modal -->
+<nz-modal
+  [(nzVisible)]="isDeleteModalOpen"
+  [nzTitle]="'::RequestDelete' | abpLocalization"
+  (nzOnCancel)="isDeleteModalOpen = false"
+  [nzFooter]="deleteFooter"
+>
+  <ng-container *nzModalContent>
+    <div *ngIf="selectedResource()">
+      <p><strong>{{ '::ResourceName' | abpLocalization }}:</strong> {{ selectedResource().name }}</p>
+    </div>
+
+    <nz-form-item style="margin-top: 16px;">
+      <nz-form-label [nzRequired]="true">{{ '::DeleteReason' | abpLocalization }}</nz-form-label>
+      <nz-form-control>
+        <textarea nz-input [(ngModel)]="deleteReason" [nzAutosize]="{ minRows: 3, maxRows: 6 }" [placeholder]="'::EnterDeleteReason' | abpLocalization"></textarea>
+      </nz-form-control>
+    </nz-form-item>
+  </ng-container>
+
+  <ng-template #deleteFooter>
+    <button nz-button nzType="default" (click)="isDeleteModalOpen = false">{{ '::Cancel' | abpLocalization }}</button>
+    <button nz-button nzType="danger" [disabled]="!deleteReason.trim()" (click)="submitDeleteRequest()">
+      {{ '::SubmitDeleteRequest' | abpLocalization }}
     </button>
   </ng-template>
 </nz-modal>

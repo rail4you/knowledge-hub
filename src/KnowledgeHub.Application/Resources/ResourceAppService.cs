@@ -725,10 +725,17 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [Authorize(KnowledgeHubPermissions.Resources.PhysicalDelete)]
     public virtual async Task<PagedResultDto<PhysicalDeleteRequestDto>> GetPendingPhysicalDeleteRequestsAsync(ResourceListQueryDto input)
     {
-        var requests = await PhysicalDeleteRequestRepository.GetPendingRequestsAsync();
+        var query = await PhysicalDeleteRequestRepository.GetQueryableAsync();
+        query = query.Where(x => x.Status == PhysicalDeleteStatus.Pending);
         
+        var totalCount = await AsyncExecuter.CountAsync(query);
+        
+        query = query.OrderByDescending(x => x.CreationTime);
+        query = query.Skip(input.SkipCount).Take(input.MaxResultCount);
+        
+        var requests = await AsyncExecuter.ToListAsync(query);
         var dtos = ObjectMapper.Map<List<PhysicalDeleteRequest>, List<PhysicalDeleteRequestDto>>(requests);
-        return new PagedResultDto<PhysicalDeleteRequestDto>(dtos.Count, dtos);
+        return new PagedResultDto<PhysicalDeleteRequestDto>(totalCount, dtos);
     }
 
     [Authorize(KnowledgeHubPermissions.Resources.PhysicalDelete)]

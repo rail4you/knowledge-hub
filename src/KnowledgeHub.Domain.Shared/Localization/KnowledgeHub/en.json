@@ -136,7 +136,8 @@
     "NeedsSchoolAudit": "Needs School Audit",
     "LeagueAudit": "League Audit",
     "NeedsLeagueAudit": "Needs League Audit",
-    "AuditWorkflow": "Audit Workflow",
+    "FirstStep": "First Step",
+    "SecondStep": "Second Step",
     "AuditComment": "Audit Comment",
     "Approved": "Approved",
     "Rejected": "Rejected",
@@ -227,6 +228,10 @@
     "DeleteApproved": "Delete approved",
     "DeleteRejected": "Delete rejected",
     "OperationFailed": "Operation failed",
+    "RequestDelete": "Request Delete",
+    "DeleteReason": "Delete Reason",
+    "EnterDeleteReason": "Please enter the delete reason",
+    "SubmitDeleteRequest": "Submit Delete Request",
     "RollbackConfirm": "Are you sure you want to rollback to this version?",
     "SelectFileFirst": "Please select a file",
     "UploadSuccess": "File uploaded successfully",
@@ -350,6 +355,7 @@
     "SearchHistory:Time": "Time",
     "DownloadFile": "Download",
     "PreviewLoading": "Loading preview...",
-    "PreviewNotSupported": "This file type does not support preview"
+    "PreviewNotSupported": "This file type does not support preview",
+    "AbpUi::Logout": "Log Out"
   }
 }

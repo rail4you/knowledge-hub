@@ -176,7 +176,8 @@
     "NeedsSchoolAudit": "需要院校审核",
     "LeagueAudit": "联盟审核",
     "NeedsLeagueAudit": "需要联盟审核",
-    "AuditWorkflow": "审核流程",
+    "FirstStep": "第一步",
+    "SecondStep": "第二步",
     "AuditComment": "审核意见",
     "Approved": "通过",
     "Rejected": "拒绝",
@@ -267,6 +268,10 @@
     "DeleteApproved": "删除已批准",
     "DeleteRejected": "删除已拒绝",
     "OperationFailed": "操作失败",
+    "RequestDelete": "申请删除",
+    "DeleteReason": "删除原因",
+    "EnterDeleteReason": "请输入删除原因",
+    "SubmitDeleteRequest": "提交删除申请",
     "RollbackConfirm": "确定要回滚到此版本吗？",
     "SelectFileFirst": "请选择文件",
     "UploadSuccess": "文件上传成功",
@@ -464,6 +469,7 @@
     "Slide": "幻灯片",
     "TotalPages": "共 {0} 页",
     "TotalRows": "共 {0} 行 × {1} 列",
-    "DownloadFile": "下载文件"
+    "DownloadFile": "下载文件",
+    "AbpUi::Logout": "退出登录"
   }
 }
