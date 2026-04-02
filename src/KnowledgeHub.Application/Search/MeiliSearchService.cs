@@ -170,6 +170,8 @@ public class MeiliSearchService : IMeiliSearchService
 
     public async Task<IndexTaskResultDto> IndexDocumentFromPagesAsync(Guid resourceId, List<PageContentDto> pages)
     {
+        await EnsureIndexExistsAsync();
+        
         var resource = await _resourceRepository.GetAsync(resourceId);
 
         if (!pages.Any())
