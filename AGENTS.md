@@ -173,21 +173,101 @@ lsof -ti:44305 | xargs kill -9 2>/dev/null || true
 
 ## Production (Docker)
 
-### Commands
+### 部署脚本 (deploy-to-remote.sh)
 
 ```bash
-cd etc/docker
-./run-docker.sh            # Start all Docker services
-docker compose down        # Stop all services
-docker compose logs -f api # View API logs
-docker compose logs -f angular # View Angular logs
+# 完整部署（构建 + 推送 + 启动）
+./etc/docker/deploy-to-remote.sh --env production
+
+# 仅构建镜像（不推送）
+./etc/docker/deploy-to-remote.sh --env production --skip-push
+
+# 仅推送镜像（不构建）
+./etc/docker/deploy-to-remote.sh --env production --skip-build
+```
+
+### 生产环境部署流程
+
+**重要：部署前检查项**
+
+1. **确认远程服务器状态**
+   ```bash
+   sshpass -p '密码' ssh ubuntu@服务器IP 'docker ps'
+   ```
+
+2. **确认 .env.production 配置正确**
+   ```bash
+   cat etc/docker/.env.production | grep -E "APP_SELF_URL|APP_ANGULAR_URL"
+   ```
+
+3. **确认 dynamic-env.json 配置正确**（关键！）
+   - Angular 的 `dynamic-env.json` 必须包含正确的 API 端口
+   - API URL 格式：`http://服务器IP:44354`
+
+**标准部署步骤**
+
+1. **本地构建并推送镜像**
+   ```bash
+   ./etc/docker/deploy-to-remote.sh --env production
+   ```
+
+2. **远程服务器拉取并启动**
+   ```bash
+   # 拉取新镜像
+   docker-compose -f docker-compose.registry.yml --env-file .env.production pull
+
+   # 启动服务
+   docker-compose -f docker-compose.registry.yml --env-file .env.production up -d
+   ```
+
+3. **验证服务状态**
+   ```bash
+   # 检查容器状态
+   docker ps
+
+   # 检查 API 健康状态
+   curl -sk 'http://服务器IP:44354/api/app/install/status'
+
+   # 检查 Angular 首页
+   curl -sk 'http://服务器IP/'
+   ```
+
+### 常见部署问题
+
+| 问题 | 原因 | 解决方案 |
+|------|------|---------|
+| Angular 容器启动失败 "exec format error" | 镜像架构不匹配（arm64 vs amd64） | 本地使用 `docker build --platform linux/amd64` 构建 |
+| 登录页一直 "busy" | `dynamic-env.json` 配置错误 | 检查 API URL 是否包含端口 44354 |
+| API 返回 404 | 远程 `dynamic-env.json` 未更新 | 重新复制正确配置到远程并重启容器 |
+| Docker Hub 拉取失败 | 网络问题 | 等待重试或使用阿里云镜像 |
+
+### 远程服务器管理
+
+```bash
+# SSH 连接
+sshpass -p '密码' ssh ubuntu@服务器IP
+
+# 查看容器状态
+docker ps --format "table {{.Names}}\t{{.Status}}"
+
+# 查看日志
+docker logs knowledgehub-api --tail 100
+docker logs knowledgehub-angular --tail 100
+
+# 重启容器
+docker restart knowledgehub-api
+docker restart knowledgehub-angular
+
+# 完全重建
+docker-compose -f docker-compose.registry.yml --env-file .env.production down
+docker-compose -f docker-compose.registry.yml --env-file .env.production up -d
 ```
 
 ### Production URLs
 
-- **API**: https://localhost:44354
-- **Swagger**: https://localhost:44354/swagger
-- **Angular**: http://localhost:4200
+- **API**: http://服务器IP:44354
+- **Swagger**: http://服务器IP:44354/swagger
+- **Angular**: http://服务器IP
 
 ---
 
