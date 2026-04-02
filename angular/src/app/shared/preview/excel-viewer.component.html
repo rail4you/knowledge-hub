@@ -1,0 +1,48 @@
+<div class="excel-viewer">
+  <nz-spin *ngIf="isLoading()" nzSimple class="viewer-spinner"></nz-spin>
+  <div *ngIf="error()" class="viewer-error">{{ error() }}</div>
+
+  <ng-container *ngIf="!isLoading() && !error()">
+    <!-- Toolbar -->
+    <div class="viewer-toolbar">
+      <span class="sheet-info">{{ sheets().length }} Sheets</span>
+      <nz-space>
+        <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="scale() <= 0.5">
+          <span nz-icon nzType="zoom-out"></span>
+        </button>
+        <span class="scale-info">{{ getScalePercent() }}%</span>
+        <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="scale() >= 1.5">
+          <span nz-icon nzType="zoom-in"></span>
+        </button>
+      </nz-space>
+    </div>
+
+    <!-- Sheet Tabs -->
+    <nz-tabset [nzSelectedIndex]="activeSheet()" (nzSelectedIndexChange)="onSheetChange($event)" nzSize="small" nzType="card">
+      <nz-tab *ngFor="let sheet of sheets(); let i = index" [nzTitle]="sheet.name">
+        <div class="table-container" [style.transform]="'scale(' + scale() + ')'" [style.transformOrigin]="'top left'">
+          <table class="excel-table" *ngIf="currentSheet()">
+            <thead>
+              <tr>
+                <th class="row-number">#</th>
+                <th *ngFor="let ci of colIndices()" class="col-header">
+                  {{ getColName(ci) }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of currentSheet()!.rows; let ri = index">
+                <td class="row-number">{{ ri + 1 }}</td>
+                <td *ngFor="let cell of row; let ci = index"
+                    [class.header-cell]="ri === 0"
+                    [class.empty-cell]="!cell && cell !== 0">
+                  {{ cell }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </nz-tab>
+    </nz-tabset>
+  </ng-container>
+</div>

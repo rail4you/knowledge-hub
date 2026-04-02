@@ -1,0 +1,78 @@
+<nz-modal
+  [nzVisible]="visible()"
+  [nzTitle]="resourceName() || ('::Preview' | abpLocalization)"
+  (nzOnCancel)="close()"
+  [nzWidth]="1000"
+  [nzFooter]="previewFooter"
+  [nzStyle]="{ top: '20px' }"
+  nzWrapClassName="file-preview-modal"
+>
+  <ng-container *nzModalContent>
+    <!-- Loading -->
+    <div *ngIf="isLoading()" class="preview-loading">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+      <p style="margin-top: 16px; color: #999;">{{ '::PreviewLoading' | abpLocalization }}</p>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="loadError() && !isLoading()" class="preview-error">
+      <nz-result nzStatus="error" [nzTitle]="loadError()"></nz-result>
+    </div>
+
+    <!-- File Content -->
+    <div *ngIf="!isLoading() && !loadError() && fileData().byteLength > 0" class="preview-content">
+      @switch (fileType) {
+        @case ('pdf') {
+          <app-pdf-viewer [data]="fileData()" [fileName]="fileName"></app-pdf-viewer>
+        }
+        @case ('word') {
+          <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>
+        }
+        @case ('excel') {
+          <app-excel-viewer [data]="fileData()" [fileName]="fileName"></app-excel-viewer>
+        }
+        @case ('pptx') {
+          <app-pptx-viewer [data]="fileData()" [fileName]="fileName"></app-pptx-viewer>
+        }
+        @case ('image') {
+          <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="image"></app-media-viewer>
+        }
+        @case ('video') {
+          <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="video"></app-media-viewer>
+        }
+        @case ('audio') {
+          <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="audio"></app-media-viewer>
+        }
+        @case ('text') {
+          <app-text-viewer [data]="fileData()" [fileName]="fileName"></app-text-viewer>
+        }
+        @default {
+          <div class="preview-unsupported">
+            <nz-result
+              nzStatus="warning"
+              [nzTitle]="('::PreviewNotSupported' | abpLocalization)"
+              [nzSubTitle]="fileName + ' (' + formatFileSize(fileSize()) + ')'"
+            ></nz-result>
+          </div>
+        }
+      }
+    </div>
+  </ng-container>
+
+  <ng-template #previewFooter>
+    <div class="preview-footer">
+      <span class="file-info" *ngIf="fileExtension()">
+        {{ fileName }} ({{ formatFileSize(fileSize()) }})
+      </span>
+      <div class="footer-actions">
+        <button nz-button (click)="download()">
+          <span nz-icon nzType="download"></span>
+          {{ '::DownloadFile' | abpLocalization }}
+        </button>
+        <button nz-button nzType="default" (click)="close()">
+          {{ '::Close' | abpLocalization }}
+        </button>
+      </div>
+    </div>
+  </ng-template>
+</nz-modal>

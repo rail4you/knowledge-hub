@@ -1,0 +1,5 @@
+<div class="word-viewer">
+  <nz-spin *ngIf="isLoading()" nzSimple class="viewer-spinner"></nz-spin>
+  <div *ngIf="error()" class="viewer-error">{{ error() }}</div>
+  <div *ngIf="!isLoading() && !error()" class="word-content" [innerHTML]="htmlContent()"></div>
+</div>

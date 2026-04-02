@@ -1,0 +1,38 @@
+<div class="media-viewer">
+  <!-- Image -->
+  <ng-container *ngIf="fileType() === 'image'">
+    <div class="image-toolbar" *ngIf="blobUrl()">
+      <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="scale() <= 0.25">
+        <span nz-icon nzType="zoom-out"></span>
+      </button>
+      <span class="scale-info">{{ getScalePercent() }}%</span>
+      <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="scale() >= 5">
+        <span nz-icon nzType="zoom-in"></span>
+      </button>
+      <button nz-button nzSize="small" (click)="fitOriginal()">
+        <span nz-icon nzType="fullscreen"></span>
+      </button>
+    </div>
+    <div class="image-container" *ngIf="blobUrl()">
+      <img [src]="blobUrl()" [style.transform]="'scale(' + scale() + ')'" alt="Preview" />
+    </div>
+  </ng-container>
+
+  <!-- Video -->
+  <ng-container *ngIf="fileType() === 'video'">
+    <div class="video-container" *ngIf="blobUrl()">
+      <video controls [src]="blobUrl()" style="width: 100%; max-height: 70vh;"></video>
+    </div>
+  </ng-container>
+
+  <!-- Audio -->
+  <ng-container *ngIf="fileType() === 'audio'">
+    <div class="audio-container" *ngIf="blobUrl()">
+      <div class="audio-icon">
+        <span nz-icon nzType="customer-service" style="font-size: 64px; color: #1890ff;"></span>
+      </div>
+      <p class="audio-name">{{ fileName() }}</p>
+      <audio controls [src]="blobUrl()" style="width: 100%; max-width: 500px;"></audio>
+    </div>
+  </ng-container>
+</div>

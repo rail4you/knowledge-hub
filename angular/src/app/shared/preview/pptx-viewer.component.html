@@ -1,0 +1,64 @@
+<div class="pptx-viewer">
+  <nz-spin *ngIf="isLoading()" nzSimple class="viewer-spinner"></nz-spin>
+  <div *ngIf="error()" class="viewer-error">{{ error() }}</div>
+
+  <ng-container *ngIf="!isLoading() && !error()">
+    <!-- Toolbar -->
+    <div class="viewer-toolbar">
+      <nz-space>
+        <button nz-button nzSize="small" (click)="prevSlide()" [disabled]="currentSlide() <= 0">
+          <span nz-icon nzType="left"></span>
+        </button>
+        <span class="slide-info">{{ currentSlide() + 1 }} / {{ slides().length }}</span>
+        <button nz-button nzSize="small" (click)="nextSlide()" [disabled]="currentSlide() >= slides().length - 1">
+          <span nz-icon nzType="right"></span>
+        </button>
+      </nz-space>
+      <nz-space>
+        <button nz-button nzSize="small" (click)="toggleGrid()" [nzType]="showGrid() ? 'primary' : 'default'">
+          <span nz-icon nzType="appstore"></span>
+        </button>
+        <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="scale() <= 0.5">
+          <span nz-icon nzType="zoom-out"></span>
+        </button>
+        <span class="scale-info">{{ getScalePercent() }}%</span>
+        <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="scale() >= 2">
+          <span nz-icon nzType="zoom-in"></span>
+        </button>
+      </nz-space>
+    </div>
+
+    <!-- Grid View -->
+    <div *ngIf="showGrid()" class="slide-grid">
+      <div *ngFor="let s of slides(); let i = index" class="slide-grid-item" [class.active]="i === currentSlide()" (click)="goToSlide(i)">
+        <div class="slide-grid-content">
+          <div *ngFor="let text of s.texts" class="slide-text-thumb"
+               [style.fontSize]="(text.fontSize ? text.fontSize * 0.3 : 8) + 'px'"
+               [style.fontWeight]="text.bold ? 'bold' : 'normal'">
+            {{ text.value }}
+          </div>
+        </div>
+        <div class="slide-grid-number">{{ i + 1 }}</div>
+      </div>
+    </div>
+
+    <!-- Single Slide View -->
+    <div *ngIf="!showGrid() && slide()" class="slide-container" [style.transform]="'scale(' + scale() + ')'" [style.transformOrigin]="'top center'">
+      <div class="slide-canvas">
+        <div *ngFor="let text of slide()!.texts" class="slide-text"
+             [style.fontSize]="(text.fontSize || 18) + 'px'"
+             [style.fontWeight]="text.bold ? 'bold' : 'normal'"
+             [style.color]="text.color || '#333'">
+          {{ text.value }}
+        </div>
+        <img *ngFor="let img of slide()!.images" [src]="img.src"
+             [style.left.px]="img.x" [style.top.px]="img.y"
+             [style.width.px]="img.width" [style.height.px]="img.height"
+             class="slide-image" />
+        <div *ngIf="slide()!.texts.length === 0 && slide()!.images.length === 0" class="slide-empty">
+          Empty slide
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

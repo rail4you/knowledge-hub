@@ -1,5 +1,5 @@
 import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest} from '@abp/ng.core';
-import {Component, OnInit, inject, signal} from '@angular/core';
+import {Component, OnInit, inject, signal, ViewChild} from '@angular/core';
 import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto} from '../proxy/resources';
 import {AllianceService} from '../proxy/application/alliance/alliance.service';
 import {resourceTypeOptions, resourceStatusOptions} from '../proxy/resources/enums';
@@ -33,6 +33,7 @@ import {NzInputNumberModule} from 'ng-zorro-antd/input-number';
 import {NzUploadModule} from 'ng-zorro-antd/upload';
 import {NzCollapseModule} from 'ng-zorro-antd/collapse';
 import {NzCheckboxModule} from 'ng-zorro-antd/checkbox';
+import {FilePreviewComponent} from '../shared/preview/file-preview.component';
 
 @Component({
   selector: 'app-resource',
@@ -70,7 +71,8 @@ import {NzCheckboxModule} from 'ng-zorro-antd/checkbox';
     NzTreeSelectModule,
     NzInputNumberModule,
     NzUploadModule,
-    NzCheckboxModule
+    NzCheckboxModule,
+    FilePreviewComponent
   ]
 })
 export class ResourceComponent implements OnInit {
@@ -125,6 +127,9 @@ export class ResourceComponent implements OnInit {
   isVersionUploading = signal(false);
   versionUploadedFileInfo: CompleteUploadResultDto | null = null;
   versionUpdateContent = '';
+
+  isPreviewOpen = signal(false);
+  @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
   public readonly list = inject(ListService);
   private readonly resourceService = inject(ResourceService);
@@ -694,6 +699,16 @@ export class ResourceComponent implements OnInit {
         this.message.error(this.l('DownloadFailed'));
       }
     });
+  }
+
+  previewFile() {
+    if (!this.selectedResource.id || !this.selectedResource.filePath) return;
+    this.filePreview.open(
+      this.selectedResource.id,
+      this.selectedResource.originalFileName || this.selectedResource.name,
+      this.selectedResource.fileExtension || '',
+      this.selectedResource.fileSize || 0
+    );
   }
 
   rollbackVersion(versionId: string) {

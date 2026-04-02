@@ -1,0 +1,33 @@
+<div class="pdf-viewer">
+  <!-- Toolbar -->
+  <div class="viewer-toolbar">
+    <nz-space>
+      <button nz-button nzSize="small" (click)="prevPage()" [disabled]="currentPage() <= 1">
+        <span nz-icon nzType="left"></span>
+      </button>
+      <span class="page-info">{{ currentPage() }} / {{ totalPages() }}</span>
+      <button nz-button nzSize="small" (click)="nextPage()" [disabled]="currentPage() >= totalPages()">
+        <span nz-icon nzType="right"></span>
+      </button>
+    </nz-space>
+    <nz-space>
+      <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="scale() <= 0.5">
+        <span nz-icon nzType="zoom-out"></span>
+      </button>
+      <span class="scale-info">{{ getScalePercent() }}%</span>
+      <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="scale() >= 3">
+        <span nz-icon nzType="zoom-in"></span>
+      </button>
+      <button nz-button nzSize="small" (click)="fitWidth()">
+        <span nz-icon nzType="fullscreen"></span>
+      </button>
+    </nz-space>
+  </div>
+
+  <!-- Canvas -->
+  <div class="pdf-canvas-container">
+    <nz-spin *ngIf="isLoading()" nzSimple class="viewer-spinner"></nz-spin>
+    <div *ngIf="error()" class="viewer-error">{{ error() }}</div>
+    <canvas #pdfCanvas class="pdf-canvas" *ngIf="!isLoading() && !error()"></canvas>
+  </div>
+</div>

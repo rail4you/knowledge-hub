@@ -1,0 +1,396 @@
+:host {
+  display: block;
+}
+
+// ============================================
+// File Preview Modal
+// ============================================
+.preview-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.preview-error,
+.preview-unsupported {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.preview-content {
+  min-height: 400px;
+  max-height: calc(90vh - 200px);
+  overflow: auto;
+}
+
+.preview-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .file-info {
+    font-size: 12px;
+    color: #999;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 400px;
+  }
+
+  .footer-actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+// ============================================
+// Common Viewer Styles
+// ============================================
+.viewer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  .page-info,
+  .scale-info,
+  .sheet-info,
+  .slide-info {
+    font-size: 12px;
+    color: #666;
+    min-width: 60px;
+    text-align: center;
+  }
+}
+
+.viewer-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.viewer-error {
+  padding: 20px;
+  text-align: center;
+  color: #ff4d4f;
+}
+
+// ============================================
+// PDF Viewer
+// ============================================
+.pdf-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .pdf-canvas-container {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    background: #525659;
+
+    .pdf-canvas {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+// ============================================
+// Word Viewer
+// ============================================
+.word-viewer {
+  .word-content {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 40px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    line-height: 1.8;
+    color: #333;
+
+    ::ng-deep {
+      h1 { font-size: 24px; font-weight: 700; margin: 20px 0 12px; }
+      h2 { font-size: 20px; font-weight: 600; margin: 16px 0 10px; }
+      h3 { font-size: 16px; font-weight: 600; margin: 12px 0 8px; }
+      p { margin: 8px 0; }
+      table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+      td, th { border: 1px solid #ddd; padding: 8px; }
+      th { background: #f5f5f5; }
+      img { max-width: 100%; height: auto; }
+      ul, ol { padding-left: 24px; }
+    }
+  }
+}
+
+// ============================================
+// Excel Viewer
+// ============================================
+.excel-viewer {
+  display: flex;
+  flex-direction: column;
+
+  .table-container {
+    overflow: auto;
+    max-height: calc(90vh - 320px);
+  }
+
+  .excel-table {
+    border-collapse: collapse;
+    font-size: 12px;
+    min-width: 100%;
+
+    th, td {
+      border: 1px solid #e8e8e8;
+      padding: 4px 8px;
+      white-space: nowrap;
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .row-number {
+      background: #fafafa;
+      color: #999;
+      text-align: center;
+      width: 40px;
+      min-width: 40px;
+      font-size: 11px;
+    }
+
+    .col-header {
+      background: #fafafa;
+      color: #666;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .header-cell {
+      background: #f0f7ff;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .empty-cell {
+      background: #fafafa;
+    }
+
+    tbody tr:hover {
+      background: #e6f7ff;
+    }
+  }
+}
+
+// ============================================
+// PPTX Viewer
+// ============================================
+.pptx-viewer {
+  display: flex;
+  flex-direction: column;
+
+  .slide-container {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    overflow: auto;
+    max-height: calc(90vh - 320px);
+  }
+
+  .slide-canvas {
+    width: 720px;
+    height: 540px;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+
+    .slide-text {
+      margin: 4px 0;
+      word-wrap: break-word;
+    }
+
+    .slide-image {
+      position: absolute;
+      object-fit: contain;
+    }
+
+    .slide-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #ccc;
+      font-size: 18px;
+    }
+  }
+
+  .slide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    padding: 16px;
+    overflow: auto;
+    max-height: calc(90vh - 320px);
+
+    .slide-grid-item {
+      border: 2px solid #e8e8e8;
+      border-radius: 6px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 0.2s;
+
+      &:hover {
+        border-color: #1890ff;
+      }
+
+      &.active {
+        border-color: #1890ff;
+        box-shadow: 0 0 0 1px #1890ff;
+      }
+
+      .slide-grid-content {
+        aspect-ratio: 4/3;
+        background: #fff;
+        padding: 8px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        .slide-text-thumb {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          color: #333;
+        }
+      }
+
+      .slide-grid-number {
+        text-align: center;
+        font-size: 11px;
+        color: #999;
+        padding: 4px;
+        background: #fafafa;
+      }
+    }
+  }
+}
+
+// ============================================
+// Media Viewer
+// ============================================
+.media-viewer {
+  .image-toolbar {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    max-height: calc(90vh - 320px);
+    overflow: auto;
+    padding: 16px;
+
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      transition: transform 0.2s;
+    }
+  }
+
+  .video-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+    padding: 16px;
+
+    video {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 4px;
+    }
+  }
+
+  .audio-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .audio-name {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 16px;
+  }
+}
+
+// ============================================
+// Text Viewer
+// ============================================
+.text-viewer {
+  .text-content-wrapper {
+    max-height: calc(90vh - 300px);
+    overflow: auto;
+    background: #1e1e1e;
+    border-radius: 4px;
+  }
+
+  .text-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+
+    td {
+      padding: 0 12px;
+      vertical-align: top;
+    }
+
+    .line-number {
+      color: #858585;
+      text-align: right;
+      user-select: none;
+      width: 50px;
+      min-width: 50px;
+      padding-right: 16px;
+      border-right: 1px solid #404040;
+    }
+
+    .line-content {
+      color: #d4d4d4;
+
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+    }
+
+    tr:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+  }
+}

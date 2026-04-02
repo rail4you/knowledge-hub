@@ -131,6 +131,11 @@
           
           <div class="details-content" *ngIf="selectedResource.id; else noSelect">
             <div class="detail-actions">
+              <button nz-button nzSize="small" nzType="primary" (click)="previewFile()"
+                [disabled]="!selectedResource.id || !selectedResource.filePath">
+                <span nz-icon nzType="eye"></span>
+                {{ '::Preview' | abpLocalization }}
+              </button>
               <button nz-button nzSize="small" (click)="download()" [disabled]="!selectedResource.isDownloadable">
                 <span nz-icon nzType="download"></span>
                 {{ '::Download' | abpLocalization }}
@@ -536,3 +541,6 @@
     </button>
   </ng-template>
 </nz-modal>
+
+<!-- File Preview Modal -->
+<app-file-preview #filePreview></app-file-preview>
