@@ -28,6 +28,9 @@ RUN mkdir -p /app/uploads
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+# 设置 ASP.NET Core 环境
+ENV ASPNETCORE_ENVIRONMENT=Production
+
 EXPOSE 44354
 
 ENTRYPOINT ["dotnet", "KnowledgeHub.HttpApi.Host.dll"]
