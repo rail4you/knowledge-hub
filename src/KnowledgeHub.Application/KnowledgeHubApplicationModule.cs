@@ -1,5 +1,7 @@
 using KnowledgeHub.Resources;
 using KnowledgeHub.EntityFrameworkCore;
+using KnowledgeHub.Application.Search;
+using KnowledgeHub.Application.Contracts.Search;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.SettingManagement;
 using Volo.Abp.Account;
@@ -25,4 +27,9 @@ namespace KnowledgeHub;
     )]
 public class KnowledgeHubApplicationModule : AbpModule
 {
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        context.Services.AddSingleton<OpenDataLoaderService>();
+        context.Services.AddSingleton<IDocumentExtractionService>(sp => sp.GetRequiredService<OpenDataLoaderService>());
+    }
 }

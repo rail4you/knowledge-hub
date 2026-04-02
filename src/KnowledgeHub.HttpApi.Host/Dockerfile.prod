@@ -4,6 +4,16 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+# 安装 Java 和 LibreOffice
+RUN apt-get update && apt-get install -y wget && \
+    wget https://download.java.net/java/GA/jdk17/0e4801a0f3a246d5a79f3aba9058ed5f/9/GPL/openjdk-17_linux-x64_bin.tar.gz && \
+    tar -xzf openjdk-17_linux-x64_bin.tar.gz -C /opt && \
+    rm openjdk-17_linux-x64_bin.tar.gz && \
+    apt-get update && apt-get install -y libreoffice && \
+    rm -rf /var/lib/apt/lists/*
+ENV JAVA_HOME=/opt/jdk-17
+ENV PATH=$PATH:$JAVA_HOME/bin
+
 # 复制项目文件
 COPY . .
 
@@ -20,9 +30,13 @@ WORKDIR /app
 
 # 复制发布产物
 COPY --from=build /app/publish .
+COPY --from=build /opt/jdk-17 /opt/jdk-17
+COPY --from=build /src/src/KnowledgeHub.HttpApi.Host/utils /app/utils
+ENV JAVA_HOME=/opt/jdk-17
+ENV PATH=$PATH:$JAVA_HOME/bin
 
 # 创建上传目录
-RUN mkdir -p /app/uploads
+RUN mkdir -p /app/uploads /tmp/office /tmp/opendataloader && chmod +x /app/utils/pdf-parser/document-parser.jar
 
 # 设置时区
 ENV TZ=Asia/Shanghai
