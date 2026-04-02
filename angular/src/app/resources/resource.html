@@ -196,6 +196,19 @@
     <div *ngIf="selectedTabIndex === 2" class="audit-container full-height">
       <h3>{{ '::PendingAudit' | abpLocalization }}</h3>
 
+      <nz-steps [nzCurrent]="0" nzSize="small" class="audit-workflow">
+        <nz-step nzTitle="{{ '::PendingReview' | abpLocalization }}"></nz-step>
+        <nz-step nzTitle="{{ '::SchoolAudit' | abpLocalization }}"></nz-step>
+        <nz-step nzTitle="{{ '::LeagueAudit' | abpLocalization }}"></nz-step>
+      </nz-steps>
+      <div class="audit-workflow-legend">
+        <span class="legend-item"><nz-tag nzColor="blue">●</nz-tag> 待审核的文档资源</span>
+        <span class="legend-arrow">→</span>
+        <span class="legend-item"><nz-tag nzColor="processing">●</nz-tag> 院校审核（第一步）</span>
+        <span class="legend-arrow">→</span>
+        <span class="legend-item"><nz-tag nzColor="warning">●</nz-tag> 联盟审核（第二步）</span>
+      </div>
+
       <nz-table
         [nzData]="pendingAudits()"
         [nzFrontPagination]="false"
@@ -217,7 +230,7 @@
             <td><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
             <td>
               <nz-tag [nzColor]="item.status === 1 ? 'blue' : 'orange'">
-                {{ item.status === 1 ? ('::SchoolAudit' | abpLocalization) : ('::LeagueAudit' | abpLocalization) }}
+                {{ item.status === 1 ? ('::NeedsSchoolAudit' | abpLocalization) : ('::NeedsLeagueAudit' | abpLocalization) }}
               </nz-tag>
             </td>
             <td>{{ item.creatorName }}</td>

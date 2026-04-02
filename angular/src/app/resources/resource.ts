@@ -26,6 +26,7 @@ import {NzEmptyModule} from 'ng-zorro-antd/empty';
 import {NzSpinModule} from 'ng-zorro-antd/spin';
 import {NzProgressModule} from 'ng-zorro-antd/progress';
 import {NzTabsModule} from 'ng-zorro-antd/tabs';
+import {NzStepsModule} from 'ng-zorro-antd/steps';
 import {NzTreeModule} from 'ng-zorro-antd/tree';
 import {NzTreeSelectModule} from 'ng-zorro-antd/tree-select';
 import {NzInputNumberModule} from 'ng-zorro-antd/input-number';
@@ -67,6 +68,7 @@ import {FilePreviewComponent} from '../shared/preview/file-preview.component';
     NzSpinModule,
     NzProgressModule,
     NzTabsModule,
+    NzStepsModule,
     NzTreeModule,
     NzTreeSelectModule,
     NzInputNumberModule,
