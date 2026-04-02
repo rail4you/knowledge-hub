@@ -302,6 +302,7 @@
     "MeiliSearch:NoTasks": "No tasks",
     "MeiliSearch:Dashboard": "Search Engine Dashboard",
     "KnowledgeHub:ResourceFileNotFound": "Resource file not found: {ResourceName}",
+    "Menu:DocumentSearch": "Document Search",
     "Menu:SearchStatistics": "Search Statistics",
     "Menu:SearchHistory": "Search History",
     "SearchStatistics:TotalSearches": "Total Searches",
