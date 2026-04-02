@@ -1,0 +1,51 @@
+# ============================================================
+# docker-compose.prod.proxy.yml - 使用 Angular 容器内置 nginx 代理 API
+# 
+# 功能：
+#   - Angular 容器 nginx 同时提供静态文件和 API 反向代理
+#   - 所有外部访问通过端口 80
+#   - 解决云服务器防火墙阻止 44354 端口的问题
+#
+# 使用方式:
+#   docker-compose -f docker-compose.registry.yml -f docker-compose.prod.proxy.yml --env-file .env.production up -d
+# ============================================================
+
+services:
+
+  # ----------------------------------------------------------
+  # 修改 Angular 配置 - 挂载自定义 nginx 配置并代理 API
+  # ----------------------------------------------------------
+  knowledgehub-angular:
+    volumes:
+      - ./nginx.angular-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./dynamic-env.json:/usr/share/nginx/html/dynamic-env.json:ro
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # 修改 API 配置 - 仅内部网络访问，不再暴露端口
+  # ----------------------------------------------------------
+  knowledgehub-api:
+    ports: []
+    environment:
+      - ASPNETCORE_URLS=http://+:44354
+      - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+      - App__SelfUrl=http://119.45.170.4
+      - App__HealthCheckUrl=http://knowledgehub-api/health-status
+      - App__AngularUrl=http://119.45.170.4
+      - App__CorsOrigins=http://119.45.170.4,http://localhost:4200
+      - App__RedirectAllowedUrls=http://119.45.170.4,http://localhost:4200
+      - AuthServer__Authority=http://knowledgehub-api:44354/
+      - AuthServer__RequireHttpsMetadata=false
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}
+      - Redis__Configuration=redis
+      - Meilisearch__Host=http://meilisearch:7700
+      - Meilisearch__ApiKey=${MEILISEARCH_MASTER_KEY}
+      - Meilisearch__IndexName=documents
+      - Meilisearch__EmbeddingDimension=1024
+      - Meilisearch__EmbeddingApiKey=${EMBEDDING_API_KEY}
+      - Qwen__ApiKey=${QWEN_API_KEY}
+      - Qwen__BaseUrl=${QWEN_BASE_URL}
+      - Qwen__Model=${QWEN_MODEL}
+      - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
+      - StringEncryption__DefaultPassPhrase=${STRING_ENCRYPTION_PASSPHRASE}
+      - Serilog__MinimumLevel__Default=Information

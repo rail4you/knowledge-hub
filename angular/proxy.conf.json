@@ -1,0 +1,17 @@
+{
+  "/api": {
+    "target": "https://localhost:44305",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/.well-known": {
+    "target": "https://localhost:44305",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/connect": {
+    "target": "https://localhost:44305",
+    "secure": false,
+    "changeOrigin": true
+  }
+}
