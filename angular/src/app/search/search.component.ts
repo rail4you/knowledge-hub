@@ -404,6 +404,31 @@ export class SearchComponent implements OnInit {
     return all.filter(r => r.fileExtension === this.selectedFileExtension);
   });
 
+  getFileIcon(ext: string): string {
+    const iconMap: Record<string, string> = {
+      '.pdf': 'file-pdf',
+      '.doc': 'file-word',
+      '.docx': 'file-word',
+      '.xls': 'file-excel',
+      '.xlsx': 'file-excel',
+      '.ppt': 'file-ppt',
+      '.pptx': 'file-ppt',
+      '.txt': 'file-text',
+      '.md': 'file-text',
+      '.jpg': 'file-image',
+      '.jpeg': 'file-image',
+      '.png': 'file-image',
+    };
+    return iconMap[ext?.toLowerCase()] || 'file';
+  }
+
+  getScoreColor(score: number): string {
+    if (score >= 0.8) return 'green';
+    if (score >= 0.5) return 'blue';
+    if (score >= 0.3) return 'orange';
+    return 'red';
+  }
+
   ngOnInit() {
     this.loadIndexes();
     

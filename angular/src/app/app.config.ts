@@ -14,18 +14,28 @@ import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
-import { 
-  PlusOutline, 
-  DownloadOutline, 
-  StarOutline, 
-  EditOutline, 
-  SendOutline, 
-  InboxOutline, 
-  DeleteOutline, 
+import {
+  PlusOutline,
+  DownloadOutline,
+  StarOutline,
+  EditOutline,
+  SendOutline,
+  InboxOutline,
+  DeleteOutline,
   LoadingOutline,
   UploadOutline,
   EyeOutline,
-  EyeInvisibleOutline
+  EyeInvisibleOutline,
+  SearchOutline,
+  DatabaseOutline,
+  CalendarOutline,
+  FileWordOutline,
+  FileExcelOutline,
+  FilePdfOutline,
+  FileTextOutline,
+  FileImageOutline,
+  FileOutline,
+  FilePptOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -39,17 +49,27 @@ import { CustomIdentityUserService } from './custom-identity-user.service';
 import { checkInstallStatus } from './install/install.initializer';
 
 const icons = [
-  PlusOutline, 
-  DownloadOutline, 
-  StarOutline, 
-  EditOutline, 
-  SendOutline, 
-  InboxOutline, 
-  DeleteOutline, 
+  PlusOutline,
+  DownloadOutline,
+  StarOutline,
+  EditOutline,
+  SendOutline,
+  InboxOutline,
+  DeleteOutline,
   LoadingOutline,
   UploadOutline,
   EyeOutline,
-  EyeInvisibleOutline
+  EyeInvisibleOutline,
+  SearchOutline,
+  DatabaseOutline,
+  CalendarOutline,
+  FileWordOutline,
+  FileExcelOutline,
+  FilePdfOutline,
+  FileTextOutline,
+  FileImageOutline,
+  FileOutline,
+  FilePptOutline,
 ];
 
 export const appConfig: ApplicationConfig = {
