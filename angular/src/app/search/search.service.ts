@@ -184,7 +184,7 @@ export class SearchService {
   }
 
   getMySearchHistory(skipCount = 0, maxResultCount = 20): Observable<SearchHistoryDto[]> {
-    return this.restService.request({ method: 'GET', url: `${this.apiUrl}/history`, params: { skipCount, maxResultCount } }, { apiName: 'Search' });
+    return this.restService.request({ method: 'GET', url: '/api/app/search/my-search-history', params: { skipCount, maxResultCount } }, { apiName: 'Default' });
   }
 
   getSearchStats(startDate?: string, endDate?: string): Observable<SearchStatsDto> {

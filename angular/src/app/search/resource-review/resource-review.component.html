@@ -1,0 +1,73 @@
+<div class="review-container">
+  @if (summary(); as s) {
+    <div class="rating-summary">
+      <div class="overall-rating">
+        <div class="big-rating">{{ s.averageRating }}</div>
+        <nz-rate [ngModel]="s.averageRating" [nzDisabled]="true" nzAllowHalf></nz-rate>
+        <div class="total-reviews">{{ s.totalReviews }} 条评价</div>
+      </div>
+      <div class="rating-distribution">
+        @for (star of [5, 4, 3, 2, 1]; track star) {
+          <div class="distribution-row">
+            <span class="star-label">{{ star }} 星</span>
+            <div class="distribution-bar-bg">
+              <div class="distribution-bar" [style.height.px]="getTrendHeight(star)" [style.width.%]="getRatingPercent(star)"></div>
+            </div>
+            <span class="distribution-count">{{ s.ratingDistribution[star - 1] }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <nz-divider></nz-divider>
+
+    <div class="review-form">
+      <h4>{{ editingReviewId ? '编辑评价' : '提交评价' }}</h4>
+      <div class="form-rating">
+        <span>评分：</span>
+        <nz-rate [(ngModel)]="myRating"></nz-rate>
+      </div>
+      <textarea nz-input [(ngModel)]="myContent" placeholder="请输入评价内容..." [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
+      <div class="form-actions">
+        <button nz-button nzType="primary" (click)="submitReview()" [nzLoading]="submitting()" [disabled]="myRating === 0">
+          {{ editingReviewId ? '更新评价' : '提交评价' }}
+        </button>
+        @if (editingReviewId) {
+          <button nz-button nzDanger (click)="deleteReview(editingReviewId!)">删除评价</button>
+        }
+      </div>
+    </div>
+
+    <nz-divider></nz-divider>
+  }
+
+  <div class="reviews-list">
+    <nz-spin [nzSpinning]="loading()">
+      @if (reviews().length === 0) {
+        <nz-empty nzNotFoundContent="暂无评价"></nz-empty>
+      } @else {
+        <nz-list [nzDataSource]="reviews()" [nzRenderItem]="reviewItem">
+          <ng-template #reviewItem let-item>
+            <nz-list-item>
+              <nz-list-item-meta
+                [nzAvatar]="avatarTpl"
+                [nzTitle]="titleTpl"
+                [nzDescription]="item.content || ''">
+              </nz-list-item-meta>
+              <ng-template #avatarTpl>
+                <nz-avatar [nzText]="item.userName?.charAt(0) || '?'"></nz-avatar>
+              </ng-template>
+              <ng-template #titleTpl>
+                <div class="review-header">
+                  <span class="reviewer-name">{{ item.userName }}</span>
+                  <nz-rate [ngModel]="item.rating" [nzDisabled]="true" nzSize="small"></nz-rate>
+                  <span class="review-time">{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+                </div>
+              </ng-template>
+            </nz-list-item>
+          </ng-template>
+        </nz-list>
+      }
+    </nz-spin>
+  </div>
+</div>

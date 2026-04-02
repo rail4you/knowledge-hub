@@ -5,7 +5,7 @@ import {AllianceService} from '../proxy/application/alliance/alliance.service';
 import {resourceTypeOptions, resourceStatusOptions} from '../proxy/resources/enums';
 import {ChunkUploadService} from '../proxy/controllers';
 import {FormGroup, FormBuilder, Validators, ReactiveFormsModule} from '@angular/forms';
-import {AsyncPipe, CurrencyPipe, DatePipe, CommonModule} from "@angular/common";
+import {AsyncPipe, DatePipe, CommonModule} from "@angular/common";
 import {FormsModule} from "@angular/forms";
 import {Confirmation, ConfirmationService} from "@abp/ng.theme.shared";
 import {NzTableModule} from 'ng-zorro-antd/table';
@@ -25,7 +25,6 @@ import {NzTooltipModule} from 'ng-zorro-antd/tooltip';
 import {NzEmptyModule} from 'ng-zorro-antd/empty';
 import {NzSpinModule} from 'ng-zorro-antd/spin';
 import {NzProgressModule} from 'ng-zorro-antd/progress';
-import {NzMessageService} from 'ng-zorro-antd/message';
 import {NzTabsModule} from 'ng-zorro-antd/tabs';
 import {NzTreeModule} from 'ng-zorro-antd/tree';
 import {NzTreeSelectModule} from 'ng-zorro-antd/tree-select';
@@ -33,6 +32,8 @@ import {NzInputNumberModule} from 'ng-zorro-antd/input-number';
 import {NzUploadModule} from 'ng-zorro-antd/upload';
 import {NzCollapseModule} from 'ng-zorro-antd/collapse';
 import {NzCheckboxModule} from 'ng-zorro-antd/checkbox';
+import {NzDrawerModule} from 'ng-zorro-antd/drawer';
+import {NzMessageService} from 'ng-zorro-antd/message';
 import {FilePreviewComponent} from '../shared/preview/file-preview.component';
 
 @Component({
@@ -45,7 +46,6 @@ import {FilePreviewComponent} from '../shared/preview/file-preview.component';
     CommonModule,
     FormsModule,
     LocalizationPipe,
-    CurrencyPipe,
     DatePipe,
     ReactiveFormsModule,
     PermissionDirective,
@@ -72,12 +72,13 @@ import {FilePreviewComponent} from '../shared/preview/file-preview.component';
     NzInputNumberModule,
     NzUploadModule,
     NzCheckboxModule,
+    NzDrawerModule,
     FilePreviewComponent
   ]
 })
 export class ResourceComponent implements OnInit {
   resources = {items: [], totalCount: 0} as PagedResultDto<ResourceDto>;
-  selectedResource = {} as ResourceDto;
+  selectedResource = signal<ResourceDto>({} as ResourceDto);
   versions = signal<ResourceVersionDto[]>([]);
   categories = signal<ResourceCategoryDto[]>([]);
   categoryTreeNodes = signal<any[]>([]);
@@ -99,11 +100,11 @@ export class ResourceComponent implements OnInit {
   selectedTabIndex = 0;
   selectedCategory: ResourceCategoryDto | null = null;
   leftPanelVisible = signal(true);
-  rightPanelVisible = signal(true);
   selectedCategoryId = signal<string | null>(null);
   selectedCategoryName = signal<string>('');
   selectedTreeKeys = signal<string[]>([]);
-  
+  drawerVisible = signal(false);
+
   pendingAudits = signal<ResourceDto[]>([]);
   selectedAuditResource: ResourceDto | null = null;
   auditComment = '';
@@ -118,8 +119,10 @@ export class ResourceComponent implements OnInit {
 
   CHUNK_SIZE = 1024 * 1024;
   selectedFile: File | null = null;
+  selectedFileList: any[] = [];
   uploadProgress = signal(0);
   isUploading = signal(false);
+  isSaving = signal(false);
   uploadId = '';
   uploadedFileInfo: CompleteUploadResultDto | null = null;
 
@@ -172,14 +175,15 @@ export class ResourceComponent implements OnInit {
   }
 
   buildForm() {
+    const res = this.selectedResource();
     this.form = this.fb.group({
-      name: [this.selectedResource.name || '', Validators.required],
-      description: [this.selectedResource.description || ''],
-      resourceType: [this.selectedResource.resourceType ?? null, Validators.required],
-      categoryId: [this.selectedResource.categoryId ?? null],
-      keywords: [this.selectedResource.keywords || ''],
-      copyrightInfo: [this.selectedResource.copyrightInfo || ''],
-      isDownloadable: [this.selectedResource.isDownloadable ?? true],
+      name: [res.name || '', Validators.required],
+      description: [res.description || ''],
+      resourceType: [res.resourceType ?? null, Validators.required],
+      categoryId: [res.categoryId ?? null],
+      keywords: [res.keywords || ''],
+      copyrightInfo: [res.copyrightInfo || ''],
+      isDownloadable: [res.isDownloadable ?? true],
     });
   }
 
@@ -263,7 +267,7 @@ export class ResourceComponent implements OnInit {
       sortOrder: this.selectedCategory?.sortOrder ?? 0,
       isActive: this.selectedCategory?.isActive ?? true,
     } as CreateUpdateResourceCategoryDto;
-    
+
     const request = this.selectedCategory?.id
       ? this.resourceService.updateCategory(this.selectedCategory.id, input)
       : this.resourceService.createCategory(input);
@@ -450,7 +454,6 @@ export class ResourceComponent implements OnInit {
   }
 
   openDeleteModal() {
-    this.selectedResource = this.selectedResource;
     this.deleteReason = '';
     this.isDeleteModalOpen = true;
   }
@@ -481,9 +484,24 @@ export class ResourceComponent implements OnInit {
   }
 
   selectResource(resource: ResourceDto) {
-    this.selectedResource = resource;
+    // Always create a new object reference to ensure signal triggers change detection
+    this.selectedResource.set({ ...resource });
+    this.drawerVisible.set(true);
     this.loadVersions(resource.id!);
     this.checkCollected(resource.id!);
+  }
+
+  closeDrawer() {
+    this.drawerVisible.set(false);
+  }
+
+  onTabChange(index: number) {
+    this.selectedTabIndex = index;
+    if (index === 2) {
+      this.loadPendingAudits();
+    } else if (index === 3) {
+      this.loadPhysicalDeleteRequests();
+    }
   }
 
   onCategoryClick(event: any) {
@@ -568,23 +586,25 @@ export class ResourceComponent implements OnInit {
 
   getAuditModalTitle(): string {
     if (!this.selectedAuditResource) return this.l('Audit');
-    return this.selectedAuditResource.status === 1 
-      ? this.l('SchoolAudit') 
+    return this.selectedAuditResource.status === 1
+      ? this.l('SchoolAudit')
       : this.l('LeagueAudit');
   }
 
   createResource() {
-    this.selectedResource = {} as ResourceDto;
+    this.selectedResource.set({} as ResourceDto);
     this.selectedFile = null;
+    this.selectedFileList = [];
     this.uploadedFileInfo = null;
     this.uploadProgress.set(0);
+    this.isSaving.set(false);
     this.buildForm();
     this.isModalOpen = true;
   }
 
   editResource(id: string) {
     this.resourceService.get(id).subscribe((resource) => {
-      this.selectedResource = resource;
+      this.selectedResource.set(resource);
       this.buildForm();
       this.isModalOpen = true;
     });
@@ -596,41 +616,69 @@ export class ResourceComponent implements OnInit {
     }
 
     const formValue = { ...this.form.value };
-    
-    if (!this.selectedResource.id && this.uploadedFileInfo) {
+    const res = this.selectedResource();
+
+    // Edit mode: just update metadata
+    if (res.id) {
+      this.resourceService.update(res.id, formValue).subscribe(() => {
+        this.isModalOpen = false;
+        this.form.reset();
+        this.loadResources();
+        this.selectedResource.set({} as ResourceDto);
+      });
+      return;
+    }
+
+    // Create mode: must have a file selected
+    if (!this.selectedFile) {
+      this.message.warning(this.l('SelectFileFirst'));
+      return;
+    }
+
+    this.isSaving.set(true);
+
+    // Upload file first, then create resource
+    this.uploadChunkedForCreate().then(() => {
+      if (!this.uploadedFileInfo) {
+        this.isSaving.set(false);
+        return;
+      }
+
       formValue.filePath = this.uploadedFileInfo.filePath;
       formValue.fileSize = this.uploadedFileInfo.fileSize;
       formValue.fileExtension = this.uploadedFileInfo.fileExtension;
       formValue.originalFileName = this.uploadedFileInfo.originalFileName;
-    }
 
-    const request = this.selectedResource.id
-      ? this.resourceService.update(this.selectedResource.id, formValue)
-      : this.resourceService.create(formValue);
+      this.resourceService.create(formValue).subscribe({
+        next: () => {
+          this.isModalOpen = false;
+          const createdCategoryId = formValue.categoryId;
+          this.form.reset();
+          this.uploadedFileInfo = null;
+          this.selectedFile = null;
+          this.selectedFileList = [];
+          this.isSaving.set(false);
 
-    request.subscribe(() => {
-      this.isModalOpen = false;
-      const createdCategoryId = formValue.categoryId;
-      this.form.reset();
-      this.uploadedFileInfo = null;
-      this.selectedFile = null;
-
-      if (!this.selectedResource.id && createdCategoryId) {
-        // 新建资源：跳转到对应分类的资源列表
-        this.selectedCategoryId.set(createdCategoryId);
-        const category = this.findCategoryById(createdCategoryId);
-        this.selectedCategoryName.set(category?.name || '');
-        this.selectedTreeKeys.set([createdCategoryId]);
-        this.pageIndex = 1;
-        this.selectedTabIndex = 0;
-      } else if (!this.selectedResource.id) {
-        // 新建资源但没设分类：跳转到全部资源
-        this.clearCategoryFilter();
-      } else {
-        // 编辑资源：刷新当前列表
-      }
-      this.loadResources();
-      this.selectedResource = {} as ResourceDto;
+          if (createdCategoryId) {
+            this.selectedCategoryId.set(createdCategoryId);
+            const category = this.findCategoryById(createdCategoryId);
+            this.selectedCategoryName.set(category?.name || '');
+            this.selectedTreeKeys.set([createdCategoryId]);
+            this.pageIndex = 1;
+            this.selectedTabIndex = 0;
+          } else {
+            this.clearCategoryFilter();
+          }
+          this.loadResources();
+          this.selectedResource.set({} as ResourceDto);
+        },
+        error: () => {
+          this.isSaving.set(false);
+          this.message.error(this.l('SaveFailed'));
+        }
+      });
+    }).catch(() => {
+      this.isSaving.set(false);
     });
   }
 
@@ -643,10 +691,11 @@ export class ResourceComponent implements OnInit {
   }
 
   toggleCollect() {
-    if (!this.selectedResource.id) return;
-    
+    const res = this.selectedResource();
+    if (!res.id) return;
+
     if (this.isCollected()) {
-      this.resourceService.uncollect(this.selectedResource.id).subscribe({
+      this.resourceService.uncollect(res.id).subscribe({
         next: () => {
           this.isCollected.set(false);
           this.list.get();
@@ -657,7 +706,7 @@ export class ResourceComponent implements OnInit {
         }
       });
     } else {
-      this.resourceService.collect(this.selectedResource.id).subscribe({
+      this.resourceService.collect(res.id).subscribe({
         next: () => {
           this.isCollected.set(true);
           this.list.get();
@@ -671,13 +720,13 @@ export class ResourceComponent implements OnInit {
   }
 
   download() {
-    if (!this.selectedResource.id || !this.selectedResource.isDownloadable) return;
+    const res = this.selectedResource();
+    if (!res.id || !res.isDownloadable) return;
 
-    this.resourceService.download(this.selectedResource.id).subscribe({
+    this.resourceService.download(res.id).subscribe({
       next: (data: any) => {
         let bytes: Uint8Array;
         if (typeof data === 'string') {
-          // Backend returns Base64 encoded string
           const binary = atob(data);
           bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) {
@@ -690,7 +739,7 @@ export class ResourceComponent implements OnInit {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = this.selectedResource.originalFileName || 'download';
+        a.download = res.originalFileName || 'download';
         a.click();
         window.URL.revokeObjectURL(url);
       },
@@ -702,12 +751,13 @@ export class ResourceComponent implements OnInit {
   }
 
   previewFile() {
-    if (!this.selectedResource.id || !this.selectedResource.filePath) return;
+    const res = this.selectedResource();
+    if (!res.id || !res.filePath) return;
     this.filePreview.open(
-      this.selectedResource.id,
-      this.selectedResource.originalFileName || this.selectedResource.name,
-      this.selectedResource.fileExtension || '',
-      this.selectedResource.fileSize || 0
+      res.id,
+      res.originalFileName || res.name,
+      res.fileExtension || '',
+      res.fileSize || 0
     );
   }
 
@@ -716,7 +766,8 @@ export class ResourceComponent implements OnInit {
       if (status === Confirmation.Status.confirm) {
         this.resourceService.rollbackVersion(versionId).subscribe({
           next: () => {
-            this.loadVersions(this.selectedResource.id!);
+            const res = this.selectedResource();
+            this.loadVersions(res.id!);
             this.list.get();
           }
         });
@@ -742,9 +793,78 @@ export class ResourceComponent implements OnInit {
     }
   }
 
-  async uploadChunked(): Promise<void> {
+  // Allowed file types based on resource type
+  private readonly DOCUMENT_EXTENSIONS = ['.pdf', '.docx', '.ppt', '.pptx', '.xlsx', '.xls', '.doc'];
+  private readonly VIDEO_EXTENSIONS = ['.mp4', '.mov', '.qt', '.avi', '.mkv', '.wmv', '.flv', '.webm'];
+
+  getAllowedFileTypes(): string {
+    const resourceType = this.form?.get('resourceType')?.value;
+    if (resourceType === 1) {
+      return this.VIDEO_EXTENSIONS.join(',');
+    }
+    return this.DOCUMENT_EXTENSIONS.join(',');
+  }
+
+  getResourceTypeHint(): string {
+    const resourceType = this.form?.get('resourceType')?.value;
+    if (resourceType === 1) {
+      return '支持的视频格式：MP4, MOV, QT, AVI, MKV, WMV, FLV, WebM';
+    }
+    return '支持的文档格式：PDF, Word (DOC/DOCX), PowerPoint (PPT/PPTX), Excel (XLS/XLSX)';
+  }
+
+  private isFileTypeAllowed(fileName: string): boolean {
+    const resourceType = this.form?.get('resourceType')?.value;
+    const ext = '.' + fileName.split('.').pop()?.toLowerCase();
+    if (resourceType === 1) {
+      return this.VIDEO_EXTENSIONS.includes(ext);
+    }
+    return this.DOCUMENT_EXTENSIONS.includes(ext);
+  }
+
+  onResourceTypeChange(_value: number): void {
+    // Clear selected file if its type doesn't match the new resource type
+    if (this.selectedFile) {
+      if (!this.isFileTypeAllowed(this.selectedFile.name)) {
+        this.selectedFile = null;
+        this.selectedFileList = [];
+      }
+    }
+  }
+
+  beforeUploadFile = (file: any): boolean => {
+    const fileName = file.name || '';
+    if (!this.isFileTypeAllowed(fileName)) {
+      this.message.error(this.getResourceTypeHint());
+      return false;
+    }
+    // Extract native File object from NzUploadFile
+    const nativeFile: File = file.originFileObj || file;
+    this.selectedFile = nativeFile instanceof File ? nativeFile : file;
+    this.selectedFileList = [{
+      uid: '-1',
+      name: fileName,
+      size: file.size,
+      status: 'done'
+    }];
+    // Auto-fill resource name from file name if empty
+    const currentName = this.form.get('name')?.value;
+    if (!currentName) {
+      const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
+      this.form.patchValue({ name: nameWithoutExt });
+    }
+    return false;
+  };
+
+  onFileListChange(fileList: any[]): void {
+    if (fileList.length === 0) {
+      this.selectedFile = null;
+      this.selectedFileList = [];
+    }
+  }
+
+  async uploadChunkedForCreate(): Promise<void> {
     if (!this.selectedFile) {
-      this.message.warning(this.l('SelectFileFirst'));
       return;
     }
 
@@ -792,14 +912,11 @@ export class ResourceComponent implements OnInit {
 
       if (completeResult) {
         this.uploadedFileInfo = completeResult;
-        this.message.success(this.l('UploadSuccess'));
-        this.form.patchValue({
-          name: this.form.value.name || this.selectedFile!.name
-        });
       }
     } catch (error) {
       this.message.error(this.l('UploadFailed'));
       console.error(error);
+      throw error;
     } finally {
       this.isUploading.set(false);
     }
@@ -876,12 +993,12 @@ export class ResourceComponent implements OnInit {
   }
 
   uploadNewVersion(): void {
-    if (!this.versionUploadedFileInfo || !this.selectedResource.id) {
-      return;
-    }
+    if (!this.versionUploadedFileInfo) return;
+    const res = this.selectedResource();
+    if (!res.id) return;
 
     this.resourceService.uploadVersion({
-      resourceId: this.selectedResource.id,
+      resourceId: res.id,
       filePath: this.versionUploadedFileInfo.filePath,
       fileSize: this.versionUploadedFileInfo.fileSize,
       fileExtension: this.versionUploadedFileInfo.fileExtension,
@@ -891,10 +1008,10 @@ export class ResourceComponent implements OnInit {
         this.message.success(this.l('UploadVersionSuccess'));
         this.versionUploadedFileInfo = null;
         this.versionUploadProgress.set(0);
-        this.loadVersions(this.selectedResource.id!);
+        this.loadVersions(res.id!);
         this.list.get();
-        this.resourceService.get(this.selectedResource.id).subscribe((resource) => {
-          this.selectedResource = resource;
+        this.resourceService.get(res.id).subscribe((updated) => {
+          this.selectedResource.set(updated);
         });
       },
       error: () => {

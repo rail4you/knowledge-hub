@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
+using KnowledgeHub.Application.Search;
 using KnowledgeHub.Common;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Edition;
@@ -40,6 +41,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IHttpContextAccessor HttpContextAccessor { get; }
     protected IBackgroundJobManager BackgroundJobManager { get; }
     protected IRepository<DocumentIndexingJob, Guid> IndexingJobRepository { get; }
+    protected IRepository<VideoIndexingJob, Guid> VideoIndexingJobRepository { get; }
     protected IEditionConfigService EditionConfigService { get; }
 
     public ResourceAppService(
@@ -56,6 +58,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IHttpContextAccessor httpContextAccessor,
         IBackgroundJobManager backgroundJobManager,
         IRepository<DocumentIndexingJob, Guid> indexingJobRepository,
+        IRepository<VideoIndexingJob, Guid> videoIndexingJobRepository,
         IEditionConfigService editionConfigService)
     {
         Repository = repository;
@@ -71,6 +74,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         HttpContextAccessor = httpContextAccessor;
         BackgroundJobManager = backgroundJobManager;
         IndexingJobRepository = indexingJobRepository;
+        VideoIndexingJobRepository = videoIndexingJobRepository;
         EditionConfigService = editionConfigService;
     }
 
@@ -183,7 +187,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<ResourceDto> CreateAsync(CreateUpdateResourceDto input)
     {
         var resource = MapToEntity(input);
-        
+
         if (!string.IsNullOrEmpty(input.FilePath))
         {
             resource.FilePath = input.FilePath;
@@ -191,7 +195,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             resource.FileExtension = input.FileExtension;
             resource.OriginalFileName = input.OriginalFileName;
         }
-        
+
         await Repository.InsertAsync(resource);
 
         var initialVersion = new ResourceVersion
@@ -205,37 +209,95 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         };
         await VersionRepository.InsertAsync(initialVersion);
 
-        // Trigger document indexing job
-        if (!string.IsNullOrEmpty(resource.FilePath))
-        {
-            var indexingJob = new DocumentIndexingJob
-            {
-                ResourceId = resource.Id,
-                Status = IndexingJobStatus.Pending,
-                TenantId = CurrentTenant.Id
-            };
-            await IndexingJobRepository.InsertAsync(indexingJob);
-            Logger.LogInformation("Created DocumentIndexingJob {JobId} for resource {ResourceId}", indexingJob.Id, resource.Id);
+        var isVideo = IsVideoResource(input);
+        var hasFile = !string.IsNullOrEmpty(resource.FilePath);
 
-            try
+        if (hasFile)
+        {
+            if (isVideo)
             {
-                await BackgroundJobManager.EnqueueAsync(new DocumentIndexingJobArgs
-                {
-                    JobId = indexingJob.Id,
-                    ResourceId = resource.Id,
-                    FilePath = resource.FilePath,
-                    TenantId = CurrentTenant.Id
-                });
-                Logger.LogInformation("Successfully enqueued background job for DocumentIndexingJob {JobId}", indexingJob.Id);
+                await EnqueueVideoIndexingJobAsync(resource);
             }
-            catch (Exception ex)
+            else
             {
-                Logger.LogError(ex, "Failed to enqueue background job for DocumentIndexingJob {JobId}", indexingJob.Id);
-                throw;
+                await EnqueueDocumentIndexingJobAsync(resource);
             }
         }
 
         return ObjectMapper.Map<Resource, ResourceDto>(resource);
+    }
+
+    private bool IsVideoResource(CreateUpdateResourceDto input)
+    {
+        if (input.ResourceType == ResourceType.Video)
+        {
+            return true;
+        }
+
+        if (VideoIndexingBackgroundJob.IsVideoFile(input.FileExtension))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task EnqueueVideoIndexingJobAsync(Resource resource)
+    {
+        var indexingJob = new VideoIndexingJob
+        {
+            ResourceId = resource.Id,
+            Status = VideoIndexingJobStatus.Pending,
+            TenantId = CurrentTenant.Id
+        };
+        await VideoIndexingJobRepository.InsertAsync(indexingJob);
+        Logger.LogInformation("Created VideoIndexingJob {JobId} for resource {ResourceId}", indexingJob.Id, resource.Id);
+
+        try
+        {
+            await BackgroundJobManager.EnqueueAsync(new VideoIndexingJobArgs
+            {
+                JobId = indexingJob.Id,
+                ResourceId = resource.Id,
+                FilePath = resource.FilePath,
+                TenantId = CurrentTenant.Id
+            });
+            Logger.LogInformation("Successfully enqueued background job for VideoIndexingJob {JobId}", indexingJob.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to enqueue background job for VideoIndexingJob {JobId}", indexingJob.Id);
+            throw;
+        }
+    }
+
+    private async Task EnqueueDocumentIndexingJobAsync(Resource resource)
+    {
+        var indexingJob = new DocumentIndexingJob
+        {
+            ResourceId = resource.Id,
+            Status = IndexingJobStatus.Pending,
+            TenantId = CurrentTenant.Id
+        };
+        await IndexingJobRepository.InsertAsync(indexingJob);
+        Logger.LogInformation("Created DocumentIndexingJob {JobId} for resource {ResourceId}", indexingJob.Id, resource.Id);
+
+        try
+        {
+            await BackgroundJobManager.EnqueueAsync(new DocumentIndexingJobArgs
+            {
+                JobId = indexingJob.Id,
+                ResourceId = resource.Id,
+                FilePath = resource.FilePath,
+                TenantId = CurrentTenant.Id
+            });
+            Logger.LogInformation("Successfully enqueued background job for DocumentIndexingJob {JobId}", indexingJob.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to enqueue background job for DocumentIndexingJob {JobId}", indexingJob.Id);
+            throw;
+        }
     }
 
     [Authorize(KnowledgeHubPermissions.Resources.Edit)]
@@ -288,6 +350,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         await VersionRepository.InsertAsync(newVersion);
         await Repository.UpdateAsync(resource);
+
+        if (VideoIndexingBackgroundJob.IsVideoFile(resource.FileExtension))
+        {
+            await EnqueueVideoIndexingJobAsync(resource);
+        }
 
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(newVersion);
     }
@@ -772,6 +839,22 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<MeiliSearchResultDto> SearchDocumentsAsync(MeiliSearchQueryDto input)
     {
         var result = await SearchService.SearchAsync(input.Query, input.Limit, input.Offset, input.IndexName);
+
+        // Log search query for analytics
+        if (CurrentUser.Id.HasValue && !string.IsNullOrWhiteSpace(input.Query))
+        {
+            try
+            {
+                var analyticsService = LazyServiceProvider.LazyGetRequiredService<ISearchAnalyticsService>();
+                await analyticsService.LogSearchAsync(
+                    CurrentUser.Id.Value,
+                    input.Query,
+                    0,
+                    result.TotalHits,
+                    null);
+            }
+            catch { /* don't fail search on analytics error */ }
+        }
         
         var dtos = result.Hits.Select(h => {
             var highlightedContent = h._formatted?.pageContent ?? h.pageContent;

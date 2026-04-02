@@ -1,0 +1,146 @@
+.stats-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.stats-header {
+  h1 {
+    margin-bottom: 24px;
+    font-size: 24px;
+    font-weight: 500;
+    color: #1a1a1a;
+  }
+
+  .filters {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.trend-section {
+  margin-bottom: 24px;
+}
+
+.trend-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.trend-legend {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  padding: 0 4px;
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  .legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+}
+
+.trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 140px;
+  overflow-x: auto;
+  padding: 0 4px;
+}
+
+.trend-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 36px;
+  cursor: pointer;
+
+  &:hover .trend-bar {
+    opacity: 0.8;
+  }
+}
+
+.trend-bar-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.trend-bar {
+  width: 14px;
+  border-radius: 2px 2px 0;
+  min-height: 2px;
+  transition: height 0.3s ease, opacity 0.15s ease;
+
+  &.bar-search {
+    background: linear-gradient(to top, #1890ff, #40a9ff);
+  }
+
+  &.bar-user {
+    background: linear-gradient(to top, #52c41a, #73d13d);
+  }
+}
+
+.trend-label {
+  font-size: 11px;
+  color: #999;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.trend-tooltip {
+  font-size: 13px;
+  line-height: 1.8;
+
+  &-date {
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+}
+
+.stats-tables {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.table-card {
+  nz-card {
+    height: 100%;
+  }
+}
+
+.table-title {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  padding: 60px 0;
+}

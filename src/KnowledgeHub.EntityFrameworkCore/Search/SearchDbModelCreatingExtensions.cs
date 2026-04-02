@@ -80,15 +80,43 @@ public static class SearchDbModelCreatingExtensions
             b.Property(x => x.ErrorMessage).HasMaxLength(2000);
         });
 
+        builder.Entity<VideoIndexingJob>(b =>
+        {
+            b.ToTable("KhVideoIndexingJobs");
+            b.ConfigureByConvention();
+            
+            b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => x.Status);
+            b.HasIndex(x => x.CreationTime);
+            b.HasIndex(x => x.NextRetryAt);
+            
+            b.Property(x => x.ErrorMessage).HasMaxLength(2000);
+        });
+
         builder.Entity<PageContent>(b =>
         {
             b.ToTable("KhPageContents");
             b.ConfigureByConvention();
-            
+
             b.HasIndex(x => new { x.ResourceId, x.PageNumber }).IsUnique();
-            
+
             b.Property(x => x.Content).HasColumnType("text");
             b.Property(x => x.TextItemsJson).HasColumnType("jsonb");
+        });
+
+        builder.Entity<ResourceReview>(b =>
+        {
+            b.ToTable("KhResourceReviews");
+            b.ConfigureByConvention();
+
+            b.HasIndex(x => new { x.ResourceId, x.UserId }).IsUnique();
+
+            b.Property(x => x.Content).HasMaxLength(2000);
+
+            b.HasOne(x => x.Resource)
+                .WithMany(x => x.Reviews)
+                .HasForeignKey(x => x.ResourceId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

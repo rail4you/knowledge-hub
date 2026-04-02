@@ -59,3 +59,19 @@ public interface IPageContentRepository : IRepository<PageContent, Guid>
     Task<PageContent?> GetByResourceAndPageAsync(Guid resourceId, int pageNumber, CancellationToken cancellationToken = default);
     Task DeleteByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
 }
+
+public interface IResourceReviewRepository : IRepository<ResourceReview, Guid>
+{
+    Task<ResourceReview?> GetByUserAndResourceAsync(Guid userId, Guid resourceId, CancellationToken cancellationToken = default);
+    Task<List<ResourceReview>> GetByResourceIdAsync(Guid resourceId, int skipCount, int maxResultCount, CancellationToken cancellationToken = default);
+    Task<int> GetCountByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
+}
+
+public interface IVideoIndexingJobRepository : IRepository<VideoIndexingJob, Guid>
+{
+    Task<VideoIndexingJob?> GetByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
+    Task<VideoIndexingJob?> GetPendingJobByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
+    Task<List<VideoIndexingJob>> GetPendingJobsAsync(int maxResultCount, CancellationToken cancellationToken = default);
+    Task<List<VideoIndexingJob>> GetFailedJobsForRetryAsync(int maxResultCount, CancellationToken cancellationToken = default);
+    Task<List<VideoIndexingJob>> GetByStatusAsync(VideoIndexingJobStatus status, int skipCount, int maxResultCount, CancellationToken cancellationToken = default);
+}

@@ -1,0 +1,18 @@
+.review-container { padding: 16px 0; }
+.rating-summary { display: flex; gap: 32px; align-items: center; padding: 16px; }
+.rating-summary .overall-rating { text-align: center; min-width: 120px; }
+.rating-summary .overall-rating .big-rating { font-size: 36px; font-weight: 600; color: #faad14; line-height: 1.2; }
+.rating-summary .overall-rating .total-reviews { font-size: 13px; color: #999; margin-top: 4px; }
+.rating-summary .rating-distribution { flex: 1; }
+.rating-summary .distribution-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.rating-summary .star-label { font-size: 12px; color: #666; min-width: 30px; }
+.rating-summary .distribution-bar-bg { flex: 1; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
+.rating-summary .distribution-bar { height: 100%; background: #faad14; border-radius: 4px; transition: width 0.3s ease; }
+.rating-summary .distribution-count { font-size: 12px; color: #999; min-width: 24px; text-align: right; }
+.review-form h4 { margin-bottom: 12px; font-weight: 500; }
+.review-form .form-rating { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.review-form textarea { margin-bottom: 12px; }
+.review-form .form-actions { display: flex; gap: 8px; }
+.reviews-list .review-header { display: flex; align-items: center; gap: 8px; }
+.reviews-list .reviewer-name { font-weight: 500; }
+.reviews-list .review-time { font-size: 12px; color: #999; }

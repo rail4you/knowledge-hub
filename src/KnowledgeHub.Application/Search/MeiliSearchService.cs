@@ -279,7 +279,7 @@ public class MeiliSearchService : IMeiliSearchService
             filters.Add($"uploadDate <= {query.EndDate.Value:yyyy-MM-dd}");
         }
 
-        filters.Add("status IN [2, 3]");
+        filters.Add("status IN [0, 1, 2, 3]");
 
         var tenantId = _currentTenant.Id;
         if (tenantId.HasValue)
@@ -298,8 +298,7 @@ public class MeiliSearchService : IMeiliSearchService
             highlightPostTag = "</mark>",
             attributesToCrop = new[] { "pageContent" },
             cropLength = 200,
-            showRankingScore = true,
-            distinct = "resourceId"
+            showRankingScore = true
         };
 
         var response = await _httpClient.PostAsJsonAsync($"/indexes/{IndexName}/search", searchParams);
@@ -365,7 +364,7 @@ public class MeiliSearchService : IMeiliSearchService
             filters.Add($"uploadDate <= {query.EndDate.Value:yyyy-MM-dd}");
         }
 
-        filters.Add("status IN [2, 3]");
+        filters.Add("status IN [0, 1, 2, 3]");
 
         var tenantId = _currentTenant.Id;
         if (tenantId.HasValue)
@@ -385,7 +384,6 @@ public class MeiliSearchService : IMeiliSearchService
             attributesToCrop = new[] { "pageContent" },
             cropLength = 200,
             showRankingScore = true,
-            distinct = "resourceId",
             hybrid = new
             {
                 embedder = "qwen",

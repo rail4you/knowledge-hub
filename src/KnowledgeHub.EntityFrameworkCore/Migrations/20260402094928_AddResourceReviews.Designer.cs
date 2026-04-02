@@ -3,6 +3,7 @@ using System;
 using KnowledgeHub.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Volo.Abp.EntityFrameworkCore;
@@ -12,9 +13,11 @@ using Volo.Abp.EntityFrameworkCore;
 namespace KnowledgeHub.Migrations
 {
     [DbContext(typeof(KnowledgeHubDbContext))]
-    partial class KnowledgeHubDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260402094928_AddResourceReviews")]
+    partial class AddResourceReviews
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -970,68 +973,6 @@ namespace KnowledgeHub.Migrations
                         .IsUnique();
 
                     b.ToTable("KhSearchStatistics", (string)null);
-                });
-
-            modelBuilder.Entity("KnowledgeHub.Domain.Search.VideoIndexingJob", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime>("CreationTime")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<Guid>("JobId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("NextRetryAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int?>("ProcessedEvents")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Progress")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("ResourceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ResourceVersionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("RetryCount")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("StartedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("smallint");
-
-                    b.Property<Guid?>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("TenantId");
-
-                    b.Property<int?>("TotalEvents")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreationTime");
-
-                    b.HasIndex("NextRetryAt");
-
-                    b.HasIndex("ResourceId");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("KhVideoIndexingJobs", (string)null);
                 });
 
             modelBuilder.Entity("KnowledgeHub.Exams.Exam", b =>

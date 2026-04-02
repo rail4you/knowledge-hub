@@ -34,6 +34,7 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public ICollection<DocumentIndex> DocumentIndices { get; set; }
     public ICollection<ResourceViewLog> ViewLogs { get; set; }
     public ResourceExposure? Exposure { get; set; }
+    public ICollection<ResourceReview> Reviews { get; set; }
 
     public Resource()
     {
@@ -42,5 +43,6 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
         Collections = new List<ResourceCollection>();
         DocumentIndices = new List<DocumentIndex>();
         ViewLogs = new List<ResourceViewLog>();
+        Reviews = new List<ResourceReview>();
     }
 }

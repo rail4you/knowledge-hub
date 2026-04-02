@@ -47,6 +47,7 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         var searchPermission = myGroup.AddPermission(KnowledgeHubPermissions.Search.Default, L("Permission:Search"));
         searchPermission.AddChild(KnowledgeHubPermissions.Search.ManageIndex, L("Permission:Search.ManageIndex"));
         searchPermission.AddChild(KnowledgeHubPermissions.Search.ViewStatistics, L("Permission:Search.ViewStatistics"));
+        searchPermission.AddChild(KnowledgeHubPermissions.Search.ReviewResource, L("Permission:Search.ReviewResource"));
 
         //Courses permissions
         var coursesPermission = myGroup.AddPermission(KnowledgeHubPermissions.Courses.Default, L("Permission:Courses"));

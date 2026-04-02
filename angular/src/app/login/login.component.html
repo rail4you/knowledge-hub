@@ -1,0 +1,161 @@
+<div class="login-page">
+  <!-- Header -->
+  <header class="login-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" rx="12" fill="#059669"/>
+          <path d="M18 18h28v6H18v-6zm0 10h28v6H18v-6zm0 10h20v6H18v-6z" fill="white" opacity="0.95"/>
+          <circle cx="44" cy="44" r="10" fill="white" opacity="0.25"/>
+          <path d="M40 44l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="header-title">易课通知识库系统</span>
+    </div>
+    <div class="header-right">
+      <div class="language-selector" [class.open]="langDropdownOpen()">
+        <button class="lang-btn" (click)="toggleLangDropdown()">
+          <i class="fa fa-globe"></i>
+          <span>{{ getCurrentLangDisplayName() }}</span>
+          <i class="fa fa-chevron-down"></i>
+        </button>
+        <div class="lang-dropdown-menu">
+          @for (lang of languages; track lang.cultureName) {
+            <button
+              [class.active]="lang.cultureName === currentLang"
+              (click)="onChangeLang(lang.cultureName)"
+            >
+              {{ lang.displayName }}
+            </button>
+          }
+        </div>
+      </div>
+      <a routerLink="/" class="back-home">
+        <i class="fa fa-home"></i>
+        <span>{{ '::BackToHome' | abpLocalization }}</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="login-content">
+    <!-- Left Panel -->
+    <div class="left-panel">
+      <div class="left-panel-inner">
+        <h1 class="left-title">易课通知识库系统</h1>
+        <p class="left-subtitle">智能化知识管理与学习平台</p>
+        <p class="left-description">
+          集成 AI 技术的新一代知识管理系统，为教育机构提供全方位的数字化教学支持
+        </p>
+
+        <div class="feature-list">
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i class="fa fa-folder-open"></i>
+            </div>
+            <div class="feature-text">
+              <h3>资源管理</h3>
+              <p>上传管理教学资源，支持多种文档格式</p>
+            </div>
+          </div>
+
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i class="fa fa-search"></i>
+            </div>
+            <div class="feature-text">
+              <h3>智能搜索</h3>
+              <p>基于 AI 的全文搜索，快速定位知识内容</p>
+            </div>
+          </div>
+
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i class="fa fa-comment-dots"></i>
+            </div>
+            <div class="feature-text">
+              <h3>AI 助手</h3>
+              <p>智能对话问答，辅助学习与知识探索</p>
+            </div>
+          </div>
+
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i class="fa fa-book"></i>
+            </div>
+            <div class="feature-text">
+              <h3>课程学习</h3>
+              <p>系统化课程管理，跟踪学习进度</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+      <div class="login-form-wrapper">
+        <div class="login-form-inner">
+          <h2 class="form-title">{{ 'AbpAccount::Login' | abpLocalization }}</h2>
+          <p class="form-subtitle">欢迎回来，请登录您的账号</p>
+
+          <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
+            <div class="form-group">
+              <label for="login-username">
+                <i class="fa fa-user"></i>
+                {{ 'AbpAccount::UserNameOrEmailAddress' | abpLocalization }}
+              </label>
+              <input
+                id="login-username"
+                type="text"
+                class="form-input"
+                formControlName="username"
+                autocomplete="username"
+                placeholder="{{ 'AbpAccount::UserNameOrEmailAddress' | abpLocalization }}"
+                autofocus
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="login-password">
+                <i class="fa fa-lock"></i>
+                {{ 'AbpAccount::Password' | abpLocalization }}
+              </label>
+              <div class="password-wrapper">
+                <input
+                  id="login-password"
+                  [type]="showPassword() ? 'text' : 'password'"
+                  class="form-input"
+                  formControlName="password"
+                  autocomplete="current-password"
+                  placeholder="{{ 'AbpAccount::Password' | abpLocalization }}"
+                />
+                <button type="button" class="toggle-password" (click)="togglePassword()">
+                  <i class="fa" [class.fa-eye]="!showPassword()" [class.fa-eye-slash]="showPassword()"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-options">
+              <label class="remember-me">
+                <input type="checkbox" formControlName="rememberMe" />
+                <span>{{ 'AbpAccount::RememberMe' | abpLocalization }}</span>
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              class="login-btn"
+              [disabled]="inProgress"
+            >
+              @if (inProgress) {
+                <i class="fa fa-spinner fa-spin"></i>
+              }
+              {{ 'AbpAccount::Login' | abpLocalization }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

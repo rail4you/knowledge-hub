@@ -43,6 +43,7 @@ import { APP_ROUTE_PROVIDER } from './route.provider';
 import { ALLIANCE_ROUTE_PROVIDER } from './alliance-route.provider';
 import { FOOTER_PROVIDER } from './footer/footer.config';
 import { IDENTITY_ROLES_PROVIDER } from './identity-roles.config';
+import { LOGIN_PROVIDER } from './login/login.config';
 import { IDENTITY_USERS_PROVIDER } from './identity-users.config';
 import { IdentityUserService } from '@abp/ng.identity/proxy';
 import { CustomIdentityUserService } from './custom-identity-user.service';
@@ -80,6 +81,7 @@ export const appConfig: ApplicationConfig = {
     FOOTER_PROVIDER,
     IDENTITY_ROLES_PROVIDER,
     IDENTITY_USERS_PROVIDER,
+    LOGIN_PROVIDER,
     provideAnimations(),
     provideNzIcons(icons),
     provideAbpCore(

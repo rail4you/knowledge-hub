@@ -1,0 +1,126 @@
+<div class="stats-container">
+  <div class="stats-header">
+    <h1>{{ '::Menu:SearchStatistics' | abpLocalization }}</h1>
+    <div class="filters">
+      <nz-range-picker [(ngModel)]="dateRange" (ngModelChange)="onDateRangeChange()"></nz-range-picker>
+      @if (isHost) {
+        <nz-select [(ngModel)]="selectedTenantId" (ngModelChange)="onTenantChange()" nzPlaceHolder="{{ '::SearchStatistics:SelectTenant' | abpLocalization }}" style="min-width: 200px">
+          <nz-option [nzValue]="null" [nzLabel]="'::SearchStatistics:AllTenants' | abpLocalization"></nz-option>
+          @for (t of tenants(); track t.id) {
+            <nz-option [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
+          }
+        </nz-select>
+      }
+    </div>
+  </div>
+
+  <nz-spin [nzSpinning]="loading()">
+    @if (dashboard(); as d) {
+      <div class="stats-cards">
+        <nz-card>
+          <nz-statistic [nzTitle]="'::SearchStatistics:TotalSearches' | abpLocalization" [nzValue]="d.totalSearches"></nz-statistic>
+        </nz-card>
+        <nz-card>
+          <nz-statistic [nzTitle]="'::SearchStatistics:TodaySearches' | abpLocalization" [nzValue]="d.todaySearches"></nz-statistic>
+        </nz-card>
+        <nz-card>
+          <nz-statistic [nzTitle]="'::SearchStatistics:ActiveUsers' | abpLocalization" [nzValue]="d.activeUsers"></nz-statistic>
+        </nz-card>
+        <nz-card>
+          <nz-statistic [nzTitle]="'::SearchStatistics:TodayActiveUsers' | abpLocalization" [nzValue]="d.todayActiveUsers"></nz-statistic>
+        </nz-card>
+      </div>
+
+      <nz-card [nzTitle]="'::SearchStatistics:DailyTrend' | abpLocalization" style="margin-top: 16px">
+        <div class="trend-legend">
+          <span class="legend-item"><span class="legend-dot" style="background:#1890ff"></span>{{ '::SearchStatistics:SearchCount' | abpLocalization }}</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#52c41a"></span>{{ '::SearchStatistics:ActiveUsers' | abpLocalization }}</span>
+        </div>
+        <div class="trend-chart">
+          @for (item of d.dailyTrends; track item.date) {
+            <div class="trend-bar-wrapper"
+                 nz-tooltip
+                 [nzTooltipTitle]="tip"
+                 [nzTooltipMouseEnterDelay]="0.1">
+              <ng-template #tip>
+                <div class="trend-tooltip">
+                  <div class="trend-tooltip-date">{{ item.date | date:'yyyy/MM/dd' }}</div>
+                  <div>{{ '::SearchStatistics:SearchCount' | abpLocalization }}：{{ item.searchCount }}</div>
+                  <div>{{ '::SearchStatistics:ActiveUsers' | abpLocalization }}：{{ item.uniqueUsers }}</div>
+                </div>
+              </ng-template>
+              <div class="trend-bar-group">
+                <div class="trend-bar bar-search" [style.height.px]="getTrendHeight(item.searchCount)"></div>
+                <div class="trend-bar bar-user" [style.height.px]="getTrendHeight(item.uniqueUsers)"></div>
+              </div>
+              <div class="trend-label">{{ item.date | date:'M/d' }}</div>
+            </div>
+          }
+        </div>
+      </nz-card>
+
+      <div class="stats-tables">
+        <nz-card [nzTitle]="'::SearchStatistics:PopularSearches' | abpLocalization" style="flex: 1">
+          <nz-table [nzData]="d.popularSearches" [nzPageSize]="10" nzSize="small">
+            <thead>
+              <tr>
+                <th>{{ '::SearchStatistics:Keyword' | abpLocalization }}</th>
+                <th>{{ '::SearchStatistics:Frequency' | abpLocalization }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of d.popularSearches; track item.keyword) {
+                <tr>
+                  <td>{{ item.keyword }}</td>
+                  <td><nz-tag nzColor="blue">{{ item.count }}</nz-tag></td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        </nz-card>
+
+        <nz-card [nzTitle]="'::SearchStatistics:TopResources' | abpLocalization" style="flex: 1">
+          <nz-table [nzData]="d.topResources" [nzPageSize]="10" nzSize="small">
+            <thead>
+              <tr>
+                <th>{{ '::SearchStatistics:ResourceName' | abpLocalization }}</th>
+                <th>{{ '::SearchStatistics:SearchCount' | abpLocalization }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of d.topResources; track item.resourceId) {
+                <tr>
+                  <td>{{ item.resourceName }}</td>
+                  <td>{{ item.searchCount }}</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        </nz-card>
+
+        <nz-card [nzTitle]="'::SearchStatistics:TopRatedResources' | abpLocalization" style="flex: 1">
+          <nz-table [nzData]="d.topRatedResources" [nzPageSize]="10" nzSize="small">
+            <thead>
+              <tr>
+                <th>{{ '::SearchStatistics:ResourceName' | abpLocalization }}</th>
+                <th>{{ '::SearchStatistics:AvgRating' | abpLocalization }}</th>
+                <th>{{ '::SearchStatistics:ReviewCount' | abpLocalization }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of d.topRatedResources; track item.resourceId) {
+                <tr>
+                  <td>{{ item.resourceName }}</td>
+                  <td>{{ item.averageRating }} / 5</td>
+                  <td>{{ item.reviewCount }}</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        </nz-card>
+      </div>
+    } @else if (!loading()) {
+      <nz-empty [nzNotFoundContent]="'::SearchStatistics:NoData' | abpLocalization"></nz-empty>
+    }
+  </nz-spin>
+</div>

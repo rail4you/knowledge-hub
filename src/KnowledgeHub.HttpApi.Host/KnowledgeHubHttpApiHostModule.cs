@@ -183,6 +183,11 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();
         context.Services.AddScoped<ISearchAppService, SearchAppService>();
         context.Services.AddHttpClient<IMeiliSearchAdminAppService, MeiliSearchAdminAppService>();
+        context.Services.AddHttpClient("MeiliSearch", client =>
+        {
+            client.BaseAddress = new Uri(configuration["Meilisearch:Host"] ?? "http://localhost:7700");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
 
         Configure<AbpBackgroundJobOptions>(options =>
         {

@@ -40,6 +40,7 @@ public static class KnowledgeHubPermissions
         public const string Default = GroupName + ".Search";
         public const string ManageIndex = Default + ".ManageIndex";
         public const string ViewStatistics = Default + ".ViewStatistics";
+        public const string ReviewResource = Default + ".ReviewResource";
     }
 
     public static class Courses

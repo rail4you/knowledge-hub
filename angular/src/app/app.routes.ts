@@ -93,6 +93,22 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/search-statistics',
+    loadComponent: () => import('./admin/search-statistics/search-statistics.component').then(c => c.SearchStatisticsComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Search.ViewStatistics',
+    },
+  },
+  {
+    path: 'my/search-history',
+    loadComponent: () => import('./search/search-history/search-history.component').then(c => c.SearchHistoryComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Search',
+    },
+  },
+  {
     path: 'admin/exercise',
     loadComponent: () => import('./admin/exercise/exercise-management.component').then(c => c.ExerciseManagementComponent),
     canActivate: [authGuard, permissionGuard],
@@ -141,6 +157,7 @@ export const APP_ROUTES: Routes = [
       { path: '', redirectTo: 'resources', pathMatch: 'full' },
       { path: 'resources', loadComponent: () => import('./student/resources/student-resources.component').then(c => c.StudentResourcesComponent) },
       { path: 'search', loadComponent: () => import('./search/search.component').then(c => c.SearchComponent) },
+      { path: 'search-history', loadComponent: () => import('./search/search-history/search-history.component').then(c => c.SearchHistoryComponent) },
       { path: 'ai/chat', loadComponent: () => import('./ai/chat/chat.component').then(c => c.ChatComponent) },
       { path: 'ai/lesson-plan', loadComponent: () => import('./ai/lesson-plan/lesson-plan.component').then(c => c.LessonPlanComponent) },
       { path: 'ai/case-analysis', loadComponent: () => import('./ai/case-analysis/case-analysis.component').then(c => c.CaseAnalysisComponent) },
