@@ -71,7 +71,7 @@ public class MeiliSearchQueryDto
     public int Offset { get; set; } = 0;
     public int? ResourceType { get; set; }
     public Guid? CategoryId { get; set; }
-    public string IndexName { get; set; } = "movie";
+    public string IndexName { get; set; } = "documents";
 }
 
 public class MeiliSearchResultDto

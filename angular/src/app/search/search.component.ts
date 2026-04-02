@@ -17,6 +17,7 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { ConfigStateService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
+import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/meilisearch-admin.service';
 
 @Component({
   selector: 'app-search',
@@ -76,8 +77,9 @@ import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto
               搜索索引
             </label>
             <nz-select [(ngModel)]="selectedIndex" class="filter-select">
-              <nz-option nzValue="movie" nzLabel="电影"></nz-option>
-              <nz-option nzValue="documents" nzLabel="文档"></nz-option>
+              @for (idx of availableIndexes(); track idx.uid) {
+                <nz-option [nzValue]="idx.uid" [nzLabel]="idx.uid"></nz-option>
+              }
             </nz-select>
           </div>
 
@@ -368,6 +370,7 @@ import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto
 })
 export class SearchComponent implements OnInit {
   private readonly searchService = inject(SearchService);
+  private readonly adminService = inject(MeiliSearchAdminService);
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
   private readonly configService = inject(ConfigStateService);
@@ -375,9 +378,11 @@ export class SearchComponent implements OnInit {
   searchQuery = '';
   selectedFileExtension = '';
   searchType: 'keyword' | 'hybrid' = 'keyword';
-  selectedIndex = 'movie';
+  selectedIndex = 'documents';
   startDate: Date | null = null;
   endDate: Date | null = null;
+  
+  availableIndexes = signal<MeiliIndexDto[]>([]);
 
   results = signal<DocumentSearchResultDto[]>([]);
   totalCount = signal(0);
@@ -400,6 +405,8 @@ export class SearchComponent implements OnInit {
   });
 
   ngOnInit() {
+    this.loadIndexes();
+    
     // Restore search state from navigation (returning from document viewer)
     const state = history.state as {
       searchState?: {
@@ -435,6 +442,20 @@ export class SearchComponent implements OnInit {
       this.searchQuery = q;
       this.search();
     }
+  }
+
+  loadIndexes() {
+    this.adminService.getIndexes().subscribe({
+      next: (indexes) => {
+        this.availableIndexes.set(indexes);
+        if (indexes.length > 0 && !indexes.find(i => i.uid === this.selectedIndex)) {
+          this.selectedIndex = indexes[0].uid;
+        }
+      },
+      error: () => {
+        this.availableIndexes.set([]);
+      }
+    });
   }
 
   search() {

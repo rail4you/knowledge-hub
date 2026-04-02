@@ -12,4 +12,5 @@ public interface IMeiliSearchAdminAppService : IApplicationService
     Task<Dictionary<string, MeiliEmbedderDto>> GetEmbeddersAsync(string indexUid);
     Task<List<MeiliTaskDto>> GetRecentTasksAsync(int limit = 20);
     Task<List<MeiliDocumentGroupDto>> GetIndexDocumentsAsync(string indexUid, int limit = 200);
+    Task<List<MeiliIndexDto>> GetIndexesAsync();
 }

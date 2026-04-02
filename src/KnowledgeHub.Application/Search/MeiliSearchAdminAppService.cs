@@ -234,6 +234,14 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 
         return stats;
     }
+
+    public async Task<List<MeiliIndexDto>> GetIndexesAsync()
+    {
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+
+        var result = await GetAsync<MeiliIndexesRawDto>("/indexes");
+        return result?.Results ?? new List<MeiliIndexDto>();
+    }
 }
 
 internal class MeiliStatsRawDto
