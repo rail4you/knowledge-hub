@@ -645,8 +645,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             throw new UserFriendlyException("只有待审核状态的资源才能进行校审核");
         }
 
-        var isTwoLevelApproval = await EditionConfigService.IsTwoLevelApprovalEnabledAsync();
-
         var audit = new ResourceAudit
         {
             ResourceId = input.ResourceId,
@@ -659,14 +657,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         if (input.Status == AuditStatus.Approved)
         {
-            if (isTwoLevelApproval)
-            {
-                resource.Status = ResourceStatus.SchoolApproved;
-            }
-            else
-            {
-                resource.Status = ResourceStatus.LeagueApproved;
-            }
+            resource.Status = ResourceStatus.SchoolApproved;
         }
         else
         {
