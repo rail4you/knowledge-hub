@@ -486,3 +486,9 @@ openPermissions(role: IdentityRoleDto) {
 | 问题 | 原因 | 解决方案 |
 |------|------|---------|
 | Permission Management 报 "Provider Key and Provider Name are required" | Angular 变更检测顺序问题，`visible` 双向绑定触发同步检查时 `providerKey` 未就绪 | 模板用 `*ngIf` + `[visible]`，TS 用 `setTimeout` 延迟设置 `visible` |
+
+### ASP.NET Core / API 常见问题
+
+| 问题 | 原因 | 解决方案 |
+|------|------|---------|
+| POST 请求返回 400 错误，日志显示 "Antiforgery token validation failed" | 使用 JWT 认证的 API Controller 的 POST 方法被 antiforgery 中间件拦截，Angular `RestService` 不自动处理 antiforgery token | 在 Controller 或 Action 上添加 `[IgnoreAntiforgeryToken]` 属性 |

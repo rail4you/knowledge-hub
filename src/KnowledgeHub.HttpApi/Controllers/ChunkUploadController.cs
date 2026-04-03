@@ -12,6 +12,7 @@ using Volo.Abp.AspNetCore.Mvc;
 namespace KnowledgeHub.Controllers;
 
 [Authorize(KnowledgeHubPermissions.Resources.Default)]
+[IgnoreAntiforgeryToken]
 public class ChunkUploadController : AbpControllerBase
 {
     private readonly IFileStorageService _fileStorageService;
