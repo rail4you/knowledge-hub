@@ -7,7 +7,7 @@ namespace KnowledgeHub.Alliance;
 
 public class AllianceAudit : AuditedEntity<Guid>, IMultiTenant
 {
-    public Guid AllianceId { get; set; }
+    public Guid? AllianceId { get; set; }
     public Guid ResourceId { get; set; }
     public Guid ApproverTenantId { get; set; }
     public string ApproverTenantName { get; set; }
@@ -19,7 +19,7 @@ public class AllianceAudit : AuditedEntity<Guid>, IMultiTenant
     {
     }
 
-    public AllianceAudit(Guid allianceId, Guid resourceId, Guid approverTenantId, string approverTenantName, AuditStatus status, string? comment = null)
+    public AllianceAudit(Guid? allianceId, Guid resourceId, Guid approverTenantId, string approverTenantName, AuditStatus status, string? comment = null)
     {
         AllianceId = allianceId;
         ResourceId = resourceId;

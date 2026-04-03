@@ -366,7 +366,7 @@ export class ResourceComponent implements OnInit {
     this.resourceService.submitForReview(resourceId).subscribe({
       next: () => {
         this.message.success(this.l('SubmitReviewSuccess'));
-        this.list.get();
+        this.loadResources();
       },
       error: () => {
         this.message.error(this.l('SubmitReviewFailed'));
@@ -399,7 +399,7 @@ export class ResourceComponent implements OnInit {
           this.isAuditModalOpen = false;
           this.isAuditLoading.set(false);
           this.loadPendingAudits();
-          this.list.get();
+          this.loadResources();
         },
         error: () => {
           this.message.error(this.l('AuditFailed'));
@@ -418,7 +418,7 @@ export class ResourceComponent implements OnInit {
           this.isAuditModalOpen = false;
           this.isAuditLoading.set(false);
           this.loadPendingAudits();
-          this.list.get();
+          this.loadResources();
         },
         error: () => {
           this.message.error(this.l('AuditFailed'));

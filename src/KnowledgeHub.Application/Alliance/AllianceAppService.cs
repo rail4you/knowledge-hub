@@ -181,18 +181,8 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
     [Authorize(KnowledgeHubPermissions.Resources.LeagueAudit)]
     public virtual async Task<AllianceAuditDto> LeagueAuditAsync(AllianceAuditInputDto input)
     {
-        var isAllianceEnabled = await EditionConfigService.IsAllianceEnabledAsync();
-        if (!isAllianceEnabled)
-        {
-            throw new UserFriendlyException("联盟功能未启用");
-        }
-
         var currentTenantId = CurrentTenant.Id ?? Guid.Empty;
         var membership = await MemberRepository.GetByTenantIdAsync(currentTenantId);
-        if (membership == null || membership.Role != AllianceMemberRole.Admin)
-        {
-            throw new UserFriendlyException("只有联盟管理员才能进行联盟审核");
-        }
 
         var resource = await ResourceRepository.GetAsync(input.ResourceId);
         if (resource.Status != ResourceStatus.SchoolApproved)
@@ -200,11 +190,14 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
             throw new UserFriendlyException("只有学校已批准的资源才能进行联盟审核");
         }
 
+        var allianceId = membership?.AllianceId;
+        var tenantName = membership?.TenantName ?? "Host Admin";
+
         var audit = new AllianceAuditEntity(
-            membership.AllianceId,
+            allianceId,
             input.ResourceId,
             currentTenantId,
-            membership.TenantName,
+            tenantName,
             input.Status,
             input.Comment
         )
