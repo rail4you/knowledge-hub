@@ -96,7 +96,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         var analysisRequest = new VideoAnalysisRequestDto
         {
             FilePath = videoPath,
-            VideoUrl = videoUrl
+            VideoUrl = string.IsNullOrEmpty(resource.FilePath) ? videoUrl : null
         };
 
         var analysisResult = await _videoAnalysisAppService.AnalyzeVideoTimelineAsync(analysisRequest);
