@@ -1,85 +1,157 @@
 <div class="resources-page">
-  <div class="page-hero">
+  <!-- 页面头部 -->
+  <div class="page-header">
     <h1>知识库资源</h1>
-    <p>探索优质学习资源，提升您的知识技能</p>
-  </div>
-
-  <div class="search-section">
     <div class="search-box">
       <span nz-icon nzType="search" class="search-icon"></span>
-      <input 
-        type="text" 
+      <input
+        type="text"
         [ngModel]="filterText()"
         (ngModelChange)="filterText.set($event)"
-        placeholder="搜索课程、文档、视频..."
-        (keyup.enter)="loadResources()"
+        placeholder="搜索资源名称..."
+        (keyup.enter)="onSearch()"
         class="search-input"
       />
-      <button class="search-btn" (click)="loadResources()">搜索</button>
-    </div>
-    <div class="filter-tags">
-      @for (type of resourceTypes; track type.value) {
-        <button 
-          class="filter-tag"
-          [class.active]="selectedType() === type.value"
-          (click)="selectedType.set(type.value); loadResources()"
-        >
-          {{ type.label }}
-        </button>
-      }
+      <button class="search-btn" (click)="onSearch()">搜索</button>
     </div>
   </div>
 
-  @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>正在加载资源...</p>
-    </div>
-  } @else if (resources().length === 0) {
-    <div class="empty-state">
-      <span nz-icon nzType="inbox" class="empty-icon"></span>
-      <h3>暂无资源</h3>
-      <p>请尝试其他搜索条件</p>
-    </div>
-  } @else {
-    <div class="resources-grid">
-      @for (resource of resources(); track resource.id) {
-        <div class="resource-card" (click)="viewResource(resource.id)">
-          <div class="card-thumbnail" [class]="'type-' + (resource.resourceType || 0)">
-            <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
-          </div>
-          <div class="card-content">
-            <div class="card-type">
-              <span class="type-badge" [class]="'badge-' + (resource.resourceType || 0)">
-                {{ getResourceTypeName(resource.resourceType) }}
-              </span>
-            </div>
-            <h3 class="card-title">{{ resource.name }}</h3>
-            <p class="card-desc">{{ resource.description || '暂无描述' }}</p>
-            <div class="card-meta">
-              <span class="meta-item">
-                <span nz-icon nzType="user" nzTheme="outline"></span>
-                {{ resource.creatorName || '未知' }}
-              </span>
-              <span class="meta-item">
-                <span nz-icon nzType="calendar" nzTheme="outline"></span>
-                {{ resource.creationTime | date:'yyyy-MM-dd' }}
-              </span>
-            </div>
-          </div>
-          <div class="card-actions">
-            <button class="action-btn" nz-tooltip="预览" (click)="viewResource(resource); $event.stopPropagation()">
-              <span nz-icon nzType="eye" nzTheme="outline"></span>
-            </button>
-            <button class="action-btn" nz-tooltip="下载" (click)="downloadResource(resource); $event.stopPropagation()">
-              <span nz-icon nzType="download" nzTheme="outline"></span>
-            </button>
-            <button class="action-btn" nz-tooltip="收藏" (click)="collectResource(resource.id); $event.stopPropagation()">
-              <span nz-icon nzType="star" nzTheme="outline"></span>
-            </button>
-          </div>
+  <!-- 主内容区：左分类 + 右列表 -->
+  <div class="content-layout">
+    <!-- 左侧分类侧边栏 -->
+    <aside class="category-sidebar">
+      <div class="sidebar-title">全部分类</div>
+      <div class="category-list">
+        <!-- 全部 -->
+        <div
+          class="category-item"
+          [class.active]="selectedCategoryId() === null"
+          (click)="selectCategory(null)"
+        >
+          <span class="category-name">全部资源</span>
+          <span class="category-count">{{ totalCount() }}</span>
         </div>
+
+        @for (category of categories(); track category.id) {
+          <div class="category-group">
+            <div
+              class="category-item"
+              [class.active]="selectedCategoryId() === category.id"
+              (click)="selectCategory(category.id!)"
+            >
+              @if (category.children && category.children.length > 0) {
+                <span
+                  class="expand-icon"
+                  (click)="toggleCategoryExpand(category.id!); $event.stopPropagation()"
+                >
+                  <span nz-icon [nzType]="expandedCategories().has(category.id!) ? 'down' : 'right'" nzTheme="outline"></span>
+                </span>
+              }
+              <span class="category-name">{{ category.name }}</span>
+            </div>
+
+            @if (category.children && category.children.length > 0 && expandedCategories().has(category.id!)) {
+              @for (child of category.children; track child.id) {
+                <div
+                  class="category-item sub-category"
+                  [class.active]="selectedCategoryId() === child.id"
+                  (click)="selectCategory(child.id!)"
+                >
+                  <span class="category-name">{{ child.name }}</span>
+                </div>
+              }
+            }
+          </div>
+        }
+      </div>
+    </aside>
+
+    <!-- 右侧内容区 -->
+    <div class="content-main">
+      <!-- 类型切换 + 结果计数 -->
+      <div class="content-toolbar">
+        <div class="type-tabs">
+          @for (type of resourceTypes; track type.value) {
+            <button
+              class="type-tab"
+              [class.active]="selectedType() === type.value"
+              (click)="selectType(type.value)"
+            >
+              {{ type.label }}
+            </button>
+          }
+        </div>
+        <div class="result-count">
+          共 <strong>{{ totalCount() }}</strong> 个资源
+        </div>
+      </div>
+
+      <!-- 加载状态 -->
+      @if (loading()) {
+        <div class="loading-state">
+          <nz-spin nzSimple nzSize="large"></nz-spin>
+          <p>正在加载资源...</p>
+        </div>
+      } @else if (resources().length === 0) {
+        <!-- 空状态 -->
+        <div class="empty-state">
+          <span nz-icon nzType="inbox" class="empty-icon"></span>
+          <h3>暂无资源</h3>
+          <p>请尝试其他搜索条件</p>
+        </div>
+      } @else {
+        <!-- 资源卡片网格 -->
+        <div class="resources-grid">
+          @for (resource of resources(); track resource.id) {
+            <div class="resource-card" [class]="'type-' + (resource.resourceType || 0)">
+              <div class="card-thumbnail">
+                <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
+              </div>
+              <div class="card-content">
+                <h3 class="card-title" [title]="resource.name || ''">{{ resource.name }}</h3>
+                <p class="card-desc">{{ resource.description || '暂无描述' }}</p>
+                <div class="card-meta">
+                  <span class="meta-item">
+                    <span nz-icon nzType="user" nzTheme="outline"></span>
+                    {{ resource.creatorName || '未知' }}
+                  </span>
+                  <span class="meta-item">
+                    <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                    {{ resource.creationTime | date:'yyyy-MM-dd' }}
+                  </span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <button class="action-btn preview-btn" nz-tooltip="预览" (click)="previewResource(resource)">
+                  <span nz-icon nzType="eye" nzTheme="outline"></span>
+                </button>
+                <button class="action-btn download-btn" nz-tooltip="下载" (click)="downloadResource(resource)">
+                  <span nz-icon nzType="download" nzTheme="outline"></span>
+                </button>
+                <button class="action-btn collect-btn" nz-tooltip="收藏" (click)="collectResource(resource.id); $event.stopPropagation()">
+                  <span nz-icon nzType="star" nzTheme="outline"></span>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- 分页 -->
+        @if (totalCount() > pageSize()) {
+          <div class="pagination-wrapper">
+            <nz-pagination
+              [nzPageIndex]="pageIndex()"
+              [nzPageSize]="pageSize()"
+              [nzTotal]="totalCount()"
+              (nzPageIndexChange)="onPageChange($event)"
+              nzAlign="center"
+            ></nz-pagination>
+          </div>
+        }
       }
     </div>
-  }
+  </div>
 </div>
+
+<!-- 文件预览组件 -->
+<app-file-preview #filePreview></app-file-preview>

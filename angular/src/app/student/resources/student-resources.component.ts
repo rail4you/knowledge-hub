@@ -1,19 +1,19 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzTableModule } from 'ng-zorro-antd/table';
-import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ResourceService } from '../../proxy/resources/resource.service';
-import type { ResourceDto } from '../../proxy/resources/models';
+import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum';
+import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
+import type { ResourceDto, ResourceCategoryDto } from '../../proxy/resources/models';
+import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 
 @Component({
   selector: 'app-student-resources',
@@ -21,16 +21,14 @@ import type { ResourceDto } from '../../proxy/resources/models';
   imports: [
     CommonModule,
     FormsModule,
-    NzCardModule,
     NzIconModule,
-    NzTableModule,
-    NzTagModule,
     NzButtonModule,
     NzInputModule,
-    NzSelectModule,
     NzSpinModule,
     NzEmptyModule,
-    NzTooltipModule
+    NzTooltipModule,
+    NzPaginationModule,
+    FilePreviewComponent,
   ],
   templateUrl: './student-resources.component.html',
   styleUrls: ['./student-resources.component.scss'],
@@ -40,47 +38,46 @@ export class StudentResourcesComponent implements OnInit {
   private readonly resourceService = inject(ResourceService);
   private readonly message = inject(NzMessageService);
 
+  @ViewChild('filePreview') filePreview!: FilePreviewComponent;
+
   resources = signal<ResourceDto[]>([]);
   loading = signal(false);
   filterText = signal('');
-  selectedType = signal<number | null>(null);
-  selectedCategory = signal<string | null>(null);
+  selectedType = signal<ResourceType | null>(null);
+  selectedCategoryId = signal<string | null>(null);
+  expandedCategories = signal<Set<string>>(new Set());
+  categories = signal<ResourceCategoryDto[]>([]);
+
+  totalCount = signal(0);
+  pageIndex = signal(1);
+  pageSize = signal(12);
 
   resourceTypes = [
-    { label: '全部', value: null as number | null },
-    { label: '文档', value: 0 as number | null },
-    { label: '视频', value: 1 as number | null },
-    { label: '音频', value: 2 as number | null },
-    { label: '图片', value: 3 as number | null },
-    { label: 'PPT', value: 4 as number | null }
+    { label: '全部', value: null as ResourceType | null },
+    { label: '文档', value: ResourceType.Document },
+    { label: '视频', value: ResourceType.Video },
   ];
 
-  categories = signal<{ id: string; name: string }[]>([]);
-
   ngOnInit() {
-    this.loadResources();
     this.loadCategories();
+    this.loadResources();
   }
 
   loadResources() {
     this.loading.set(true);
-    this.resourceService.getLeagueApproved({
-      maxResultCount: 100,
-      skipCount: 0
-    } as any).subscribe({
+    const input: any = {
+      status: ResourceStatus.LeagueApproved,
+      filter: this.filterText() || undefined,
+      resourceType: this.selectedType() ?? undefined,
+      categoryId: this.selectedCategoryId() || undefined,
+      skipCount: (this.pageIndex() - 1) * this.pageSize(),
+      maxResultCount: this.pageSize(),
+    };
+
+    this.resourceService.getFilteredList(input).subscribe({
       next: (result) => {
-        let items = result.items || [];
-        if (this.filterText()) {
-          const filter = this.filterText().toLowerCase();
-          items = items.filter(r => 
-            r.name?.toLowerCase().includes(filter) ||
-            r.description?.toLowerCase().includes(filter)
-          );
-        }
-        if (this.selectedType() !== null) {
-          items = items.filter(r => r.resourceType === this.selectedType()!);
-        }
-        this.resources.set(items);
+        this.resources.set(result.items || []);
+        this.totalCount.set(result.totalCount || 0);
         this.loading.set(false);
       },
       error: () => {
@@ -92,55 +89,85 @@ export class StudentResourcesComponent implements OnInit {
   loadCategories() {
     this.resourceService.getCategories().subscribe({
       next: (cats) => {
-        this.categories.set(cats.map(c => ({ id: c.id!, name: c.name || '' })));
+        this.categories.set(cats);
       }
     });
   }
 
-  getResourceTypeName(type?: number): string {
-    const types = ['文档', '视频', '音频', '图片', 'PPT'];
-    return types[type || 0] || '文档';
+  selectCategory(categoryId: string | null) {
+    this.selectedCategoryId.set(categoryId);
+    this.pageIndex.set(1);
+    this.loadResources();
   }
 
-  getResourceTypeColor(type?: number): string {
-    const colors = ['blue', 'purple', 'orange', 'green', 'red'];
-    return colors[type || 0] || 'blue';
+  toggleCategoryExpand(categoryId: string) {
+    const current = new Set(this.expandedCategories());
+    if (current.has(categoryId)) {
+      current.delete(categoryId);
+    } else {
+      current.add(categoryId);
+    }
+    this.expandedCategories.set(current);
   }
 
-  getResourceTypeIcon(type?: number): string {
-    const icons = ['file-text', 'video-camera', 'audio', 'picture', 'file-ppt'];
-    return icons[type || 0] || 'file-text';
+  selectType(type: ResourceType | null) {
+    this.selectedType.set(type);
+    this.pageIndex.set(1);
+    this.loadResources();
   }
 
-  downloadResource(resource?: ResourceDto) {
+  onPageChange(index: number) {
+    this.pageIndex.set(index);
+    this.loadResources();
+  }
+
+  onSearch() {
+    this.pageIndex.set(1);
+    this.loadResources();
+  }
+
+  previewResource(resource: ResourceDto) {
     if (!resource?.id) return;
-    this.resourceService.getFileUrl(resource.id).subscribe({
-      next: (url) => {
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = resource.originalFileName || resource.name || 'download';
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    this.filePreview.open(
+      resource.id,
+      resource.originalFileName || resource.name || '未命名',
+      resource.fileExtension || '',
+      resource.fileSize || 0
+    );
+  }
+
+  downloadResource(resource: ResourceDto) {
+    if (!resource?.id) return;
+    this.resourceService.download(resource.id).subscribe({
+      next: (data: any) => {
+        const arrayBuffer = this.toArrayBuffer(data);
+        const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = resource.originalFileName || resource.name || 'download';
+        a.click();
+        URL.revokeObjectURL(url);
         this.message.success('下载已开始');
       },
       error: () => {
-        this.message.error('获取下载链接失败');
+        this.message.error('下载失败');
       }
     });
   }
 
-  viewResource(resource?: ResourceDto) {
-    if (!resource?.id) return;
-    this.resourceService.getFileUrl(resource.id).subscribe({
-      next: (url) => {
-        window.open(url, '_blank');
-      },
-      error: () => {
-        this.message.error('获取预览链接失败');
+  private toArrayBuffer(data: any): ArrayBuffer {
+    if (typeof data === 'string') {
+      const binary = atob(data);
+      const buffer = new ArrayBuffer(binary.length);
+      const view = new Uint8Array(buffer);
+      for (let i = 0; i < binary.length; i++) {
+        view[i] = binary.charCodeAt(i);
       }
-    });
+      return buffer;
+    }
+    if (data instanceof ArrayBuffer) return data;
+    return new Uint8Array(data).buffer.slice(0) as ArrayBuffer;
   }
 
   collectResource(id?: string) {
@@ -153,5 +180,16 @@ export class StudentResourcesComponent implements OnInit {
         this.message.error('收藏失败');
       }
     });
+  }
+
+  getResourceTypeIcon(type?: number): string {
+    const icons: Record<number, string> = {
+      [ResourceType.Document]: 'file-text',
+      [ResourceType.Video]: 'video-camera',
+      [ResourceType.Audio]: 'audio',
+      [ResourceType.Image]: 'picture',
+      [ResourceType.PPT]: 'file-ppt',
+    };
+    return icons[type ?? 0] || 'file-text';
   }
 }

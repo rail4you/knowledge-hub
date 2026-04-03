@@ -20,22 +20,26 @@
       </a>
 
       <nav class="main-nav">
-        <a routerLink="/student/resources" routerLinkActive="active" class="nav-link">
-          <span nz-icon nzType="book" nzTheme="outline"></span>
-          <span>知识库</span>
-        </a>
+        <div class="nav-group">
+          <a routerLink="/student/resources" routerLinkActive="active" class="nav-link">
+            <span nz-icon nzType="book" nzTheme="outline"></span>
+            <span>知识库</span>
+          </a>
+          <a routerLink="/student/search" routerLinkActive="active" class="nav-link">
+            <span nz-icon nzType="search" nzTheme="outline"></span>
+            <span>搜索</span>
+          </a>
+          <a routerLink="/student/search-history" routerLinkActive="active" class="nav-link">
+            <span nz-icon nzType="history" nzTheme="outline"></span>
+            <span>搜索历史</span>
+          </a>
+        </div>
+        <div class="nav-divider"></div>
         <a routerLink="/student/courses" routerLinkActive="active" class="nav-link">
           <span nz-icon nzType="schedule" nzTheme="outline"></span>
           <span>我的课程</span>
         </a>
-        <a routerLink="/student/search" routerLinkActive="active" class="nav-link">
-          <span nz-icon nzType="search" nzTheme="outline"></span>
-          <span>搜索</span>
-        </a>
-        <a routerLink="/student/search-history" routerLinkActive="active" class="nav-link">
-          <span nz-icon nzType="history" nzTheme="outline"></span>
-          <span>搜索历史</span>
-        </a>
+        <div class="nav-divider"></div>
         <div class="nav-dropdown">
           <a routerLink="/student/ai/chat" routerLinkActive="active" class="nav-link">
             <span nz-icon nzType="robot" nzTheme="outline"></span>

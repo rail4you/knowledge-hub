@@ -57,6 +57,19 @@
   flex: 1;
 }
 
+.nav-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-divider {
+  width: 1px;
+  height: 24px;
+  background: #e0e0e0;
+  margin: 0 8px;
+}
+
 .nav-link {
   display: flex;
   align-items: center;
