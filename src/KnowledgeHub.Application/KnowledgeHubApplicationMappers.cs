@@ -104,3 +104,11 @@ public partial class AllianceAuditToAllianceAuditDtoMapper : MapperBase<Knowledg
 
     public override partial void Map(KnowledgeHub.Alliance.AllianceAudit source, AllianceAuditDto destination);
 }
+
+[Mapper]
+public partial class PhysicalDeleteRequestToPhysicalDeleteRequestDtoMapper : MapperBase<PhysicalDeleteRequest, PhysicalDeleteRequestDto>
+{
+    public override partial PhysicalDeleteRequestDto Map(PhysicalDeleteRequest source);
+
+    public override partial void Map(PhysicalDeleteRequest source, PhysicalDeleteRequestDto destination);
+}

@@ -11,7 +11,7 @@ using KnowledgeHub.Edition;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -689,6 +689,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     }
 
     [Authorize(KnowledgeHubPermissions.Resources.PhysicalDelete)]
+    [IgnoreAntiforgeryToken]
     public virtual async Task<PhysicalDeleteRequestDto> RequestPhysicalDeleteAsync(CreatePhysicalDeleteRequestDto input)
     {
         var resource = await Repository.GetAsync(input.ResourceId);
@@ -863,6 +864,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 highlightedContent = GenerateSnippet(h.pageContent, input.Query, 200);
             }
             
+            var isVideo = !string.IsNullOrEmpty(h.VideoId) || !string.IsNullOrEmpty(h.VideoName);
+
             return new DocumentPageSearchResultDto
             {
                 Id = h.Id,
@@ -876,7 +879,14 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 ResourceType = h.ResourceType,
                 CategoryName = h.CategoryName,
                 UploadDate = h.UploadDate,
-                RelevanceScore = (float)h.RankingScore
+                RelevanceScore = (float)h.RankingScore,
+                SourceType = isVideo ? "video" : "document",
+                VideoId = h.VideoId,
+                VideoName = h.VideoName,
+                VideoUrl = h.VideoUrl,
+                StartTime = h.StartTime,
+                EndTime = h.EndTime,
+                EventDescription = h.EventDescription
             };
         }).ToList();
 

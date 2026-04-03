@@ -448,6 +448,7 @@ export class ResourceComponent implements OnInit {
         this.message.success(this.l('DeleteRequestSubmitted'));
         this.isDeleteModalOpen = false;
         this.deleteReason = '';
+        this.loadPhysicalDeleteRequests();
       },
       error: () => {
         this.message.error(this.l('SubmitFailed'));
@@ -478,7 +479,7 @@ export class ResourceComponent implements OnInit {
       next: () => {
         this.message.success(this.l('DeleteApproved'));
         this.loadPhysicalDeleteRequests();
-        this.list.get();
+        this.loadResources();
       },
       error: () => {
         this.message.error(this.l('OperationFailed'));
