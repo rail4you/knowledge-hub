@@ -80,6 +80,7 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         var documents = analysisResult.Events.Select((evt, index) => new
         {
             id = $"{videoId}_{index}",
+            resourceId = videoId.ToString(),
             videoId = videoId.ToString(),
             videoName = videoName,
             videoUrl = videoUrl,

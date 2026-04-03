@@ -15,7 +15,8 @@ import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { ConfigStateService } from '@abp/ng.core';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { ConfigStateService, EnvironmentService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
 import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/meilisearch-admin.service';
 
@@ -36,7 +37,8 @@ import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/mei
     NzPaginationModule,
     NzDatePickerModule,
     NzTooltipModule,
-    NzDividerModule
+    NzDividerModule,
+    NzModalModule
   ],
   template: `
     <div class="search-container">
@@ -132,20 +134,32 @@ import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/mei
                 <div class="result-card" (click)="viewDocument(result)">
                   <div class="result-header">
                     <div class="result-title">
-                      <span nz-icon [nzType]="getFileIcon(result.fileExtension)" class="result-icon"></span>
+                      <span nz-icon [nzType]="result.sourceType === 'video' ? 'video-camera' : getFileIcon(result.fileExtension)" class="result-icon"></span>
                       <span class="result-name">{{ result.resourceName }}</span>
-                      <nz-tag class="result-page-tag">第 {{ result.pageNumber }} 页</nz-tag>
+                      @if (result.sourceType === 'video') {
+                        <nz-tag class="result-page-tag" nzColor="purple">
+                          {{ result.startTime || '' }}
+                          {{ result.startTime && result.endTime ? ' - ' : '' }}
+                          {{ result.endTime || '' }}
+                        </nz-tag>
+                      } @else {
+                        <nz-tag class="result-page-tag">第 {{ result.pageNumber }} 页</nz-tag>
+                      }
                     </div>
                     <div class="result-meta">
                       <nz-tag *ngIf="result.categoryName" nzColor="blue">{{ result.categoryName }}</nz-tag>
                       <nz-tag [nzColor]="getScoreColor(result.relevanceScore)">
                         {{ (result.relevanceScore * 100).toFixed(0) }} 分
                       </nz-tag>
-                      <span class="file-ext-badge">{{ result.fileExtension }}</span>
+                      @if (result.sourceType === 'video') {
+                        <span class="file-ext-badge">视频</span>
+                      } @else {
+                        <span class="file-ext-badge">{{ result.fileExtension }}</span>
+                      }
                     </div>
                   </div>
                   <div class="result-content">
-                    <p class="preview-text" [innerHTML]="result.highlightedContent || result.content"></p>
+                    <p class="preview-text" [innerHTML]="result.highlightedContent || result.eventDescription || result.content"></p>
                   </div>
                 </div>
               }
@@ -163,6 +177,46 @@ import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/mei
         </nz-spin>
       </div>
     </div>
+
+    <nz-modal
+      [nzVisible]="isVideoModalOpen()"
+      [nzTitle]="currentVideoName()"
+      [nzWidth]="900"
+      [nzFooter]="videoModalFooter"
+      (nzOnCancel)="closeVideoModal()"
+      nzMaskClosable="false"
+    >
+      <ng-container *nzModalContent>
+        <div class="video-player-container">
+          <video 
+            #videoPlayer
+            controls 
+            [src]="currentVideoUrl()" 
+            style="width: 100%; max-height: 70vh;"
+            (loadedmetadata)="onVideoMetadataLoaded(videoPlayer)"
+          ></video>
+          <div class="video-info" *ngIf="currentVideoEventDescription()">
+            <h4>事件描述</h4>
+            <p>{{ currentVideoEventDescription() }}</p>
+          </div>
+          <div class="video-timeline" *ngIf="currentVideoStartTime() && currentVideoEndTime()">
+            <span class="timeline-label">时间范围：</span>
+            <span class="timeline-value">{{ currentVideoStartTime() }} - {{ currentVideoEndTime() }}</span>
+          </div>
+        </div>
+      </ng-container>
+      <ng-template #videoModalFooter>
+        <div class="video-modal-footer">
+          <button nz-button nzType="default" (click)="returnToSearch()">
+            <span nz-icon nzType="left"></span>
+            返回搜索界面
+          </button>
+          <button nz-button nzType="primary" (click)="closeVideoModal()">
+            关闭
+          </button>
+        </div>
+      </ng-template>
+    </nz-modal>
   `,
   styles: [`
     .search-container {
@@ -366,6 +420,53 @@ import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/mei
       display: flex;
       justify-content: center;
     }
+
+    .video-player-container {
+      padding: 16px 0;
+    }
+
+    .video-info {
+      margin-top: 16px;
+      padding: 12px;
+      background: #f5f5f5;
+      border-radius: 6px;
+    }
+
+    .video-info h4 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .video-info p {
+      margin: 0;
+      font-size: 14px;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .video-timeline {
+      margin-top: 12px;
+      padding: 8px 12px;
+      background: #e6f7ff;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .timeline-label {
+      color: #1890ff;
+      font-weight: 500;
+    }
+
+    .timeline-value {
+      color: #333;
+    }
+
+    .video-modal-footer {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
   `]
 })
 export class SearchComponent implements OnInit {
@@ -374,6 +475,7 @@ export class SearchComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
   private readonly configService = inject(ConfigStateService);
+  private readonly environmentService = inject(EnvironmentService);
 
   searchQuery = '';
   selectedFileExtension = '';
@@ -403,6 +505,13 @@ export class SearchComponent implements OnInit {
     if (!this.selectedFileExtension) return all;
     return all.filter(r => r.fileExtension === this.selectedFileExtension);
   });
+
+  isVideoModalOpen = signal(false);
+  currentVideoUrl = signal('');
+  currentVideoStartTime = signal('00:00:00');
+  currentVideoEndTime = signal('');
+  currentVideoName = signal('');
+  currentVideoEventDescription = signal('');
 
   getFileIcon(ext: string): string {
     const iconMap: Record<string, string> = {
@@ -519,6 +628,47 @@ export class SearchComponent implements OnInit {
     this.search();
   }
 
+  openVideoModal(result: DocumentSearchResultDto) {
+    const env = this.environmentService.getEnvironment();
+    const baseUrl = env?.apis?.default?.url || '';
+    let videoUrl = result.videoUrl || '';
+    if (videoUrl && !videoUrl.startsWith('http')) {
+      videoUrl = baseUrl + videoUrl;
+    }
+    this.currentVideoUrl.set(videoUrl);
+    this.currentVideoStartTime.set(result.startTime || '00:00:00');
+    this.currentVideoEndTime.set(result.endTime || '');
+    this.currentVideoName.set(result.videoName || result.resourceName || '视频');
+    this.currentVideoEventDescription.set(result.eventDescription || '');
+    this.isVideoModalOpen.set(true);
+  }
+
+  closeVideoModal() {
+    this.isVideoModalOpen.set(false);
+  }
+
+  returnToSearch() {
+    this.closeVideoModal();
+  }
+
+  formatTimeToSeconds(time: string): number {
+    if (!time) return 0;
+    const parts = time.split(':').map(Number);
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    }
+    return 0;
+  }
+
+  onVideoMetadataLoaded(videoPlayer: HTMLVideoElement) {
+    const startSeconds = this.formatTimeToSeconds(this.currentVideoStartTime());
+    if (startSeconds > 0 && startSeconds < videoPlayer.duration) {
+      videoPlayer.currentTime = startSeconds;
+    }
+  }
+
   viewDocument(result: DocumentSearchResultDto) {
     this.searchService.logView({
       resourceId: result.resourceId,
@@ -529,23 +679,32 @@ export class SearchComponent implements OnInit {
       error: () => { /* ignore log view errors */ }
     });
 
-    this.router.navigate(['/document-viewer', result.resourceId], {
-      queryParams: { page: result.pageNumber },
-      state: {
-        content: result.highlightedContent || result.content,
-        searchState: {
-          query: this.searchQuery,
-          results: this.results(),
-          totalCount: this.totalCount(),
-          pageIndex: this.pageIndex,
-          selectedFileExtension: this.selectedFileExtension,
-          searchType: this.searchType,
-          selectedIndex: this.selectedIndex,
-          startDate: this.startDate ? this.startDate.toISOString() : null,
-          endDate: this.endDate ? this.endDate.toISOString() : null,
+    if (result.sourceType === 'video' && result.videoUrl) {
+      this.openVideoModal(result);
+      return;
+    }
+
+    if (result.sourceType === 'video') {
+      this.openVideoModal(result);
+    } else {
+      this.router.navigate(['/document-viewer', result.resourceId], {
+        queryParams: { page: result.pageNumber },
+        state: {
+          content: result.highlightedContent || result.content,
+          searchState: {
+            query: this.searchQuery,
+            results: this.results(),
+            totalCount: this.totalCount(),
+            pageIndex: this.pageIndex,
+            selectedFileExtension: this.selectedFileExtension,
+            searchType: this.searchType,
+            selectedIndex: this.selectedIndex,
+            startDate: this.startDate ? this.startDate.toISOString() : null,
+            endDate: this.endDate ? this.endDate.toISOString() : null,
+          }
         }
-      }
-    });
+      });
+    }
   }
 
 }
