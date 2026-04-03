@@ -1,0 +1,40 @@
+# Node modules
+**/node_modules
+**/npm-debug.log
+
+# Angular build output
+angular/dist
+angular/.angular
+
+# .NET build output
+**/bin
+**/obj
+**/.vs
+**/.vscode
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+*.swp
+*.swo
+
+# Logs
+**/logs
+**/*.log
+
+# Test results
+**/TestResults
+
+# Docker
+**/.dockerignore
+**/Dockerfile*
+**/docker-compose*
+
+# Misc
+**/uploads
+**/uploads_data
+etc/docker/meilisearch_data
+etc/docker/certs
