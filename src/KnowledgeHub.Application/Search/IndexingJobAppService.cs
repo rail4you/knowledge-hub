@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.BackgroundJobs;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 
 namespace KnowledgeHub.Application.Search;
@@ -19,6 +20,7 @@ namespace KnowledgeHub.Application.Search;
 public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppService
 {
     private readonly IRepository<DocumentIndexingJob, Guid> _jobRepository;
+    private readonly IRepository<VideoIndexingJob, Guid> _videoJobRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IBackgroundJobManager _backgroundJobManager;
     private readonly IDocumentExtractionService _documentExtractionService;
@@ -26,12 +28,14 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
 
     public IndexingJobAppService(
         IRepository<DocumentIndexingJob, Guid> jobRepository,
+        IRepository<VideoIndexingJob, Guid> videoJobRepository,
         IRepository<Resource, Guid> resourceRepository,
         IBackgroundJobManager backgroundJobManager,
         IDocumentExtractionService documentExtractionService,
         IFileStorageService fileStorageService)
     {
         _jobRepository = jobRepository;
+        _videoJobRepository = videoJobRepository;
         _resourceRepository = resourceRepository;
         _backgroundJobManager = backgroundJobManager;
         _documentExtractionService = documentExtractionService;
@@ -40,40 +44,77 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
 
     public async Task<PagedResultDto<IndexingJobDto>> GetListAsync(GetIndexingJobsInput input)
     {
-        var query = await _jobRepository.GetQueryableAsync();
-        
-        query = query.OrderByDescending(x => x.CreationTime);
+        // Query document jobs
+        var docQuery = await _jobRepository.GetQueryableAsync();
+        docQuery = docQuery.OrderByDescending(x => x.CreationTime);
 
         if (input.Status.HasValue)
         {
-            query = query.Where(x => x.Status == input.Status.Value);
+            var statusValue = input.Status.Value;
+            docQuery = docQuery.Where(x => x.Status == statusValue);
         }
 
         if (input.ResourceId.HasValue)
         {
-            query = query.Where(x => x.ResourceId == input.ResourceId.Value);
+            var rid = input.ResourceId.Value;
+            docQuery = docQuery.Where(x => x.ResourceId == rid);
         }
 
         if (input.StartTime.HasValue)
         {
-            query = query.Where(x => x.CreationTime >= input.StartTime.Value);
+            var st = input.StartTime.Value;
+            docQuery = docQuery.Where(x => x.CreationTime >= st);
         }
 
         if (input.EndTime.HasValue)
         {
-            query = query.Where(x => x.CreationTime <= input.EndTime.Value);
+            var et = input.EndTime.Value;
+            docQuery = docQuery.Where(x => x.CreationTime <= et);
         }
 
-        var totalCount = await _jobRepository.AsyncExecuter.CountAsync(query);
-        
-        query = query.Skip(input.SkipCount).Take(input.MaxResultCount);
+        var docJobs = await _jobRepository.AsyncExecuter.ToListAsync(docQuery);
 
-        var jobs = await _jobRepository.AsyncExecuter.ToListAsync(query);
-        var resourceIds = jobs.Select(x => x.ResourceId).Distinct().ToList();
-        var resources = await _resourceRepository.GetListAsync(x => resourceIds.Contains(x.Id));
+        // Query video jobs
+        var vidQuery = await _videoJobRepository.GetQueryableAsync();
+        vidQuery = vidQuery.OrderByDescending(x => x.CreationTime);
+
+        if (input.Status.HasValue)
+        {
+            // Map IndexingJobStatus to VideoIndexingJobStatus for filtering
+            var statusValue = input.Status.Value;
+            vidQuery = vidQuery.Where(x => (int)x.Status == (int)statusValue);
+        }
+
+        if (input.ResourceId.HasValue)
+        {
+            var rid = input.ResourceId.Value;
+            vidQuery = vidQuery.Where(x => x.ResourceId == rid);
+        }
+
+        if (input.StartTime.HasValue)
+        {
+            var st = input.StartTime.Value;
+            vidQuery = vidQuery.Where(x => x.CreationTime >= st);
+        }
+
+        if (input.EndTime.HasValue)
+        {
+            var et = input.EndTime.Value;
+            vidQuery = vidQuery.Where(x => x.CreationTime <= et);
+        }
+
+        var vidJobs = await _videoJobRepository.AsyncExecuter.ToListAsync(vidQuery);
+
+        // Merge and map
+        var allResourceIds = docJobs.Select(x => x.ResourceId)
+            .Concat(vidJobs.Select(x => x.ResourceId))
+            .Distinct().ToList();
+        var resources = await _resourceRepository.GetListAsync(x => allResourceIds.Contains(x.Id));
         var resourceDict = resources.ToDictionary(x => x.Id, x => x.Name);
 
-        var items = jobs.Select(job => new IndexingJobDto
+        var allItems = new List<IndexingJobDto>();
+
+        allItems.AddRange(docJobs.Select(job => new IndexingJobDto
         {
             Id = job.Id,
             ResourceId = job.ResourceId,
@@ -88,60 +129,164 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
             CompletedAt = job.CompletedAt,
             RetryCount = job.RetryCount,
             NextRetryAt = job.NextRetryAt,
-            CreationTime = job.CreationTime
-        }).ToList();
+            CreationTime = job.CreationTime,
+            JobType = "document"
+        }));
 
-        return new PagedResultDto<IndexingJobDto>(totalCount, items);
+        allItems.AddRange(vidJobs.Select(job => new IndexingJobDto
+        {
+            Id = job.Id,
+            ResourceId = job.ResourceId,
+            ResourceName = resourceDict.GetValueOrDefault(job.ResourceId, "Unknown"),
+            ResourceVersionId = job.ResourceVersionId,
+            // Map VideoIndexingJobStatus.Analyzing(15) → IndexingJobStatus.Parsing(10) for frontend compatibility
+            Status = MapVideoStatus(job.Status),
+            Progress = job.Progress,
+            ErrorMessage = job.ErrorMessage,
+            TotalPages = null,
+            ProcessedPages = null,
+            TotalSegments = job.TotalEvents,
+            ProcessedSegments = job.ProcessedEvents,
+            StartedAt = job.StartedAt,
+            CompletedAt = job.CompletedAt,
+            RetryCount = job.RetryCount,
+            NextRetryAt = job.NextRetryAt,
+            CreationTime = job.CreationTime,
+            JobType = "video"
+        }));
+
+        // Sort merged results by CreationTime descending
+        allItems = allItems.OrderByDescending(x => x.CreationTime).ToList();
+
+        var totalCount = allItems.Count;
+        var pagedItems = allItems.Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
+
+        return new PagedResultDto<IndexingJobDto>(totalCount, pagedItems);
+    }
+
+    private static IndexingJobStatus MapVideoStatus(VideoIndexingJobStatus status)
+    {
+        return status switch
+        {
+            VideoIndexingJobStatus.Pending => IndexingJobStatus.Pending,
+            VideoIndexingJobStatus.Parsing => IndexingJobStatus.Parsing,
+            VideoIndexingJobStatus.Analyzing => IndexingJobStatus.Parsing, // Map Analyzing(15) → Parsing(10)
+            VideoIndexingJobStatus.Indexing => IndexingJobStatus.Indexing,
+            VideoIndexingJobStatus.Completed => IndexingJobStatus.Completed,
+            VideoIndexingJobStatus.Failed => IndexingJobStatus.Failed,
+            VideoIndexingJobStatus.Cancelled => IndexingJobStatus.Cancelled,
+            _ => IndexingJobStatus.Pending
+        };
     }
 
     public async Task<IndexingJobDto> GetAsync(Guid id)
     {
-        var job = await _jobRepository.GetAsync(id);
-        var resource = await _resourceRepository.FindAsync(job.ResourceId);
-
-        return new IndexingJobDto
+        // Try document job first
+        var docJob = await _jobRepository.FindAsync(id);
+        if (docJob != null)
         {
-            Id = job.Id,
-            ResourceId = job.ResourceId,
-            ResourceName = resource?.Name ?? "Unknown",
-            ResourceVersionId = job.ResourceVersionId,
-            Status = job.Status,
-            Progress = job.Progress,
-            ErrorMessage = job.ErrorMessage,
-            TotalPages = job.TotalPages,
-            ProcessedPages = job.ProcessedPages,
-            StartedAt = job.StartedAt,
-            CompletedAt = job.CompletedAt,
-            RetryCount = job.RetryCount,
-            NextRetryAt = job.NextRetryAt,
-            CreationTime = job.CreationTime
-        };
+            var resource = await _resourceRepository.FindAsync(docJob.ResourceId);
+            return new IndexingJobDto
+            {
+                Id = docJob.Id,
+                ResourceId = docJob.ResourceId,
+                ResourceName = resource?.Name ?? "Unknown",
+                ResourceVersionId = docJob.ResourceVersionId,
+                Status = docJob.Status,
+                Progress = docJob.Progress,
+                ErrorMessage = docJob.ErrorMessage,
+                TotalPages = docJob.TotalPages,
+                ProcessedPages = docJob.ProcessedPages,
+                StartedAt = docJob.StartedAt,
+                CompletedAt = docJob.CompletedAt,
+                RetryCount = docJob.RetryCount,
+                NextRetryAt = docJob.NextRetryAt,
+                CreationTime = docJob.CreationTime,
+                JobType = "document"
+            };
+        }
+
+        // Try video job
+        var vidJob = await _videoJobRepository.FindAsync(id);
+        if (vidJob != null)
+        {
+            var resource = await _resourceRepository.FindAsync(vidJob.ResourceId);
+            return new IndexingJobDto
+            {
+                Id = vidJob.Id,
+                ResourceId = vidJob.ResourceId,
+                ResourceName = resource?.Name ?? "Unknown",
+                ResourceVersionId = vidJob.ResourceVersionId,
+                Status = MapVideoStatus(vidJob.Status),
+                Progress = vidJob.Progress,
+                ErrorMessage = vidJob.ErrorMessage,
+                TotalSegments = vidJob.TotalEvents,
+                ProcessedSegments = vidJob.ProcessedEvents,
+                StartedAt = vidJob.StartedAt,
+                CompletedAt = vidJob.CompletedAt,
+                RetryCount = vidJob.RetryCount,
+                NextRetryAt = vidJob.NextRetryAt,
+                CreationTime = vidJob.CreationTime,
+                JobType = "video"
+            };
+        }
+
+        throw new EntityNotFoundException(typeof(DocumentIndexingJob), id);
     }
 
     public async Task<IndexingJobDto?> GetByResourceIdAsync(Guid resourceId)
     {
+        // Try document job first
         var job = await _jobRepository.FirstOrDefaultAsync(x => x.ResourceId == resourceId);
-        if (job == null) return null;
-
-        var resource = await _resourceRepository.FindAsync(job.ResourceId);
-
-        return new IndexingJobDto
+        if (job != null)
         {
-            Id = job.Id,
-            ResourceId = job.ResourceId,
-            ResourceName = resource?.Name ?? "Unknown",
-            ResourceVersionId = job.ResourceVersionId,
-            Status = job.Status,
-            Progress = job.Progress,
-            ErrorMessage = job.ErrorMessage,
-            TotalPages = job.TotalPages,
-            ProcessedPages = job.ProcessedPages,
-            StartedAt = job.StartedAt,
-            CompletedAt = job.CompletedAt,
-            RetryCount = job.RetryCount,
-            NextRetryAt = job.NextRetryAt,
-            CreationTime = job.CreationTime
-        };
+            var resource = await _resourceRepository.FindAsync(job.ResourceId);
+            return new IndexingJobDto
+            {
+                Id = job.Id,
+                ResourceId = job.ResourceId,
+                ResourceName = resource?.Name ?? "Unknown",
+                ResourceVersionId = job.ResourceVersionId,
+                Status = job.Status,
+                Progress = job.Progress,
+                ErrorMessage = job.ErrorMessage,
+                TotalPages = job.TotalPages,
+                ProcessedPages = job.ProcessedPages,
+                StartedAt = job.StartedAt,
+                CompletedAt = job.CompletedAt,
+                RetryCount = job.RetryCount,
+                NextRetryAt = job.NextRetryAt,
+                CreationTime = job.CreationTime,
+                JobType = "document"
+            };
+        }
+
+        // Try video job
+        var vidJob = await _videoJobRepository.FirstOrDefaultAsync(x => x.ResourceId == resourceId);
+        if (vidJob != null)
+        {
+            var resource = await _resourceRepository.FindAsync(vidJob.ResourceId);
+            return new IndexingJobDto
+            {
+                Id = vidJob.Id,
+                ResourceId = vidJob.ResourceId,
+                ResourceName = resource?.Name ?? "Unknown",
+                ResourceVersionId = vidJob.ResourceVersionId,
+                Status = MapVideoStatus(vidJob.Status),
+                Progress = vidJob.Progress,
+                ErrorMessage = vidJob.ErrorMessage,
+                TotalSegments = vidJob.TotalEvents,
+                ProcessedSegments = vidJob.ProcessedEvents,
+                StartedAt = vidJob.StartedAt,
+                CompletedAt = vidJob.CompletedAt,
+                RetryCount = vidJob.RetryCount,
+                NextRetryAt = vidJob.NextRetryAt,
+                CreationTime = vidJob.CreationTime,
+                JobType = "video"
+            };
+        }
+
+        return null;
     }
 
     public async Task<IndexingJobDto> CreateAsync(CreateIndexingJobInput input)
@@ -208,62 +353,120 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
 
     public async Task RetryAsync(Guid id)
     {
-        var job = await _jobRepository.GetAsync(id);
-        
-        if (job.Status != IndexingJobStatus.Failed && job.Status != IndexingJobStatus.Pending)
+        // Try document job first
+        var docJob = await _jobRepository.FindAsync(id);
+        if (docJob != null)
         {
-            throw new UserFriendlyException("Only failed or pending jobs can be retried.");
+            if (docJob.Status != IndexingJobStatus.Failed && docJob.Status != IndexingJobStatus.Pending)
+            {
+                throw new UserFriendlyException("Only failed or pending jobs can be retried.");
+            }
+
+            var resource = await _resourceRepository.GetAsync(docJob.ResourceId);
+
+            docJob.Status = IndexingJobStatus.Pending;
+            docJob.ErrorMessage = null;
+            docJob.RetryCount = 0;
+            docJob.NextRetryAt = null;
+            docJob.StartedAt = null;
+            docJob.CompletedAt = null;
+            docJob.Progress = 0;
+            docJob.ProcessedPages = null;
+
+            await _jobRepository.UpdateAsync(docJob);
+
+            await _backgroundJobManager.EnqueueAsync(new DocumentIndexingJobArgs
+            {
+                JobId = docJob.Id,
+                ResourceId = docJob.ResourceId,
+                FilePath = resource.FilePath,
+                TenantId = CurrentTenant.Id
+            });
+            return;
         }
 
-        var resource = await _resourceRepository.GetAsync(job.ResourceId);
-
-        job.Status = IndexingJobStatus.Pending;
-        job.ErrorMessage = null;
-        job.RetryCount = 0;
-        job.NextRetryAt = null;
-        job.StartedAt = null;
-        job.CompletedAt = null;
-        job.Progress = 0;
-        job.ProcessedPages = null;
-
-        await _jobRepository.UpdateAsync(job);
-
-        await _backgroundJobManager.EnqueueAsync(new DocumentIndexingJobArgs
+        // Try video job
+        var vidJob = await _videoJobRepository.FindAsync(id);
+        if (vidJob != null)
         {
-            JobId = job.Id,
-            ResourceId = job.ResourceId,
-            FilePath = resource.FilePath,
-            TenantId = CurrentTenant.Id
-        });
+            if (vidJob.Status != VideoIndexingJobStatus.Failed && vidJob.Status != VideoIndexingJobStatus.Pending)
+            {
+                throw new UserFriendlyException("Only failed or pending jobs can be retried.");
+            }
+
+            var resource = await _resourceRepository.GetAsync(vidJob.ResourceId);
+
+            vidJob.Status = VideoIndexingJobStatus.Pending;
+            vidJob.ErrorMessage = null;
+            vidJob.RetryCount = 0;
+            vidJob.NextRetryAt = null;
+            vidJob.StartedAt = null;
+            vidJob.CompletedAt = null;
+            vidJob.Progress = 0;
+            vidJob.ProcessedEvents = null;
+
+            await _videoJobRepository.UpdateAsync(vidJob);
+
+            await _backgroundJobManager.EnqueueAsync(new VideoIndexingJobArgs
+            {
+                JobId = vidJob.Id,
+                ResourceId = vidJob.ResourceId,
+                FilePath = resource.FilePath,
+                TenantId = CurrentTenant.Id
+            });
+            return;
+        }
+
+        throw new EntityNotFoundException(typeof(DocumentIndexingJob), id);
     }
 
     public async Task CancelAsync(Guid id)
     {
-        var job = await _jobRepository.GetAsync(id);
-        
-        if (job.Status == IndexingJobStatus.Completed)
+        // Try document job first
+        var docJob = await _jobRepository.FindAsync(id);
+        if (docJob != null)
         {
-            throw new UserFriendlyException("Cannot cancel a completed job.");
+            if (docJob.Status == IndexingJobStatus.Completed)
+            {
+                throw new UserFriendlyException("Cannot cancel a completed job.");
+            }
+
+            docJob.Status = IndexingJobStatus.Cancelled;
+            docJob.CompletedAt = DateTime.UtcNow;
+            await _jobRepository.UpdateAsync(docJob);
+            return;
         }
 
-        job.Status = IndexingJobStatus.Cancelled;
-        job.CompletedAt = DateTime.UtcNow;
-        await _jobRepository.UpdateAsync(job);
+        // Try video job
+        var vidJob = await _videoJobRepository.FindAsync(id);
+        if (vidJob != null)
+        {
+            if (vidJob.Status == VideoIndexingJobStatus.Completed)
+            {
+                throw new UserFriendlyException("Cannot cancel a completed job.");
+            }
+
+            vidJob.Status = VideoIndexingJobStatus.Cancelled;
+            vidJob.CompletedAt = DateTime.UtcNow;
+            await _videoJobRepository.UpdateAsync(vidJob);
+            return;
+        }
+
+        throw new EntityNotFoundException(typeof(DocumentIndexingJob), id);
     }
 
     public async Task RetryAllFailedAsync()
     {
-        var failedJobs = await _jobRepository.GetListAsync(x => x.Status == IndexingJobStatus.Failed);
-        
-        foreach (var job in failedJobs)
+        var failedDocJobs = await _jobRepository.GetListAsync(x => x.Status == IndexingJobStatus.Failed);
+        foreach (var job in failedDocJobs)
         {
-            try
-            {
-                await RetryAsync(job.Id);
-            }
-            catch (Exception)
-            {
-            }
+            try { await RetryAsync(job.Id); } catch { }
+        }
+
+        var failedVidJobs = await _videoJobRepository.GetListAsync(x => x.Status == VideoIndexingJobStatus.Failed);
+        foreach (var job in failedVidJobs)
+        {
+            try { await RetryAsync(job.Id); } catch { }
         }
     }
 

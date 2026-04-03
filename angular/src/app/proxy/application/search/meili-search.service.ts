@@ -1,6 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 import type { HybridSearchQueryDto, IndexStatusDto, IndexTaskResultDto, SearchQueryDto, SearchResultDto } from '../contracts/search/dtos/models';
+import type { PageContentDto } from '../contracts/search/models';
 
 @Injectable({
   providedIn: 'root',
@@ -73,6 +74,15 @@ export class MeiliSearchService {
     this.restService.request<any, IndexTaskResultDto>({
       method: 'POST',
       url: `/api/app/meili-search/index-document/${resourceId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  indexDocumentFromPages = (resourceId: string, pages: PageContentDto[], config?: Partial<Rest.Config>) =>
+    this.restService.request<any, IndexTaskResultDto>({
+      method: 'POST',
+      url: `/api/app/meili-search/index-document-from-pages/${resourceId}`,
+      body: pages,
     },
     { apiName: this.apiName,...config });
   

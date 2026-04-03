@@ -9,6 +9,8 @@ export interface CreateIndexingJobInput {
 export interface GetIndexingJobsInput extends PagedAndSortedResultRequestDto {
   resourceId?: string | null;
   status?: IndexingJobStatus | null;
+  startTime?: string | null;
+  endTime?: string | null;
 }
 
 export interface PageContentDto {

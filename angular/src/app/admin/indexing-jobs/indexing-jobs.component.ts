@@ -39,7 +39,7 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
   template: `
     <div class="indexing-jobs-container">
       <div class="header">
-        <h2>文档索引任务</h2>
+        <h2>索引任务</h2>
         <div class="header-actions">
           <button nz-button nzType="default" (click)="refresh()">
             刷新
@@ -132,7 +132,7 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
                 <th>资源名称</th>
                 <th>状态</th>
                 <th>进度</th>
-                <th>页数</th>
+                <th>处理进度</th>
                 <th>重试次数</th>
                 <th>创建时间</th>
                 <th>操作</th>
@@ -145,6 +145,11 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
                     <a (click)="viewResource(job.resourceId)" class="resource-link">
                       {{ job.resourceName || job.resourceId }}
                     </a>
+                    @if (job.jobType === 'video') {
+                      <nz-tag nzColor="purple" style="margin-left: 6px; font-size: 11px;">视频</nz-tag>
+                    } @else {
+                      <nz-tag nzColor="blue" style="margin-left: 6px; font-size: 11px;">文档</nz-tag>
+                    }
                   </td>
                   <td>
                     <nz-tag [nzColor]="getStatusColor(job.status)">
@@ -159,24 +164,34 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
                     </nz-progress>
                   </td>
                   <td>
-                    @if (job.totalPages) {
-                      {{ job.processedPages ?? 0 }} / {{ job.totalPages }}
+                    @if (job.jobType === 'video') {
+                      @if (job.totalSegments) {
+                        {{ job.processedSegments ?? 0 }} / {{ job.totalSegments }}
+                      } @else {
+                        -
+                      }
                     } @else {
-                      -
+                      @if (job.totalPages) {
+                        {{ job.processedPages ?? 0 }} / {{ job.totalPages }}
+                      } @else {
+                        -
+                      }
                     }
                   </td>
                   <td>{{ job.retryCount }}</td>
                   <td>{{ job.creationTime | date:'short' }}</td>
                   <td>
-                    <button
-                      nz-button
-                      nzType="link"
-                      nzSize="small"
-                      nz-tooltip
-                      nzTooltipTitle="重新生成向量索引"
-                      (click)="refreshEmbeddings(job.resourceId)">
-                      刷新向量
-                    </button>
+                    @if (job.jobType === 'document') {
+                      <button
+                        nz-button
+                        nzType="link"
+                        nzSize="small"
+                        nz-tooltip
+                        nzTooltipTitle="重新生成向量索引"
+                        (click)="refreshEmbeddings(job.resourceId)">
+                        刷新向量
+                      </button>
+                    }
                     @if (job.status === IndexingJobStatus.Failed) {
                       <button
                         nz-button

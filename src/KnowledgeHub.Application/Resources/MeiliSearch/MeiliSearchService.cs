@@ -15,6 +15,12 @@ public class MeiliFormatted
     public string? pageContent { get; set; }
     [System.Text.Json.Serialization.JsonPropertyName("pageTitle")]
     public string? pageTitle { get; set; }
+
+    // Video-specific highlighted fields
+    [System.Text.Json.Serialization.JsonPropertyName("eventDescription")]
+    public string? eventDescription { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("videoName")]
+    public string? videoName { get; set; }
 }
 
 public class DocumentPage
@@ -40,6 +46,20 @@ public class DocumentPage
     [System.Text.Json.Serialization.JsonPropertyName("uploadDate")]
     public DateTime UploadDate { get; set; }
     public double RankingScore { get; set; }
+
+    // Video-specific fields
+    [System.Text.Json.Serialization.JsonPropertyName("videoId")]
+    public string? VideoId { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("videoName")]
+    public string? VideoName { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("videoUrl")]
+    public string? VideoUrl { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("startTime")]
+    public string? StartTime { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("endTime")]
+    public string? EndTime { get; set; }
+    [System.Text.Json.Serialization.JsonPropertyName("eventDescription")]
+    public string? EventDescription { get; set; }
 }
 
 public interface ISearchService
@@ -133,7 +153,7 @@ public class MeiliSearchService : ISearchService
             q = query,
             limit,
             offset,
-            attributesToHighlight = new[] { "pageContent", "pageTitle" },
+            attributesToHighlight = new[] { "pageContent", "pageTitle", "eventDescription", "videoName" },
             highlightPreTag = "<mark>",
             highlightPostTag = "</mark>",
             showRankingScore = true
@@ -156,7 +176,15 @@ public class MeiliSearchService : ISearchService
                 ResourceType = h.ResourceType,
                 CategoryName = h.CategoryName,
                 UploadDate = h.UploadDate,
-                RankingScore = h.RankingScore
+                RankingScore = h.RankingScore,
+
+                // Video-specific fields
+                VideoId = h.VideoId,
+                VideoName = h.VideoName,
+                VideoUrl = h.VideoUrl,
+                StartTime = h.StartTime,
+                EndTime = h.EndTime,
+                EventDescription = h._formatted?.eventDescription ?? h.EventDescription
             }).ToList() ?? new List<DocumentPage>(),
             TotalHits = result?.EstimatedTotalHits ?? 0,
             ProcessingTimeMs = result?.ProcessingTimeMs ?? 0
@@ -173,7 +201,7 @@ public class MeiliSearchService : ISearchService
             q = query,
             limit,
             offset,
-            attributesToHighlight = new[] { "pageContent", "pageTitle" },
+            attributesToHighlight = new[] { "pageContent", "pageTitle", "eventDescription", "videoName" },
             highlightPreTag = "<mark>",
             highlightPostTag = "</mark>",
             showRankingScore = true,
@@ -201,7 +229,15 @@ public class MeiliSearchService : ISearchService
                 ResourceType = h.ResourceType,
                 CategoryName = h.CategoryName,
                 UploadDate = h.UploadDate,
-                RankingScore = h.RankingScore
+                RankingScore = h.RankingScore,
+
+                // Video-specific fields
+                VideoId = h.VideoId,
+                VideoName = h.VideoName,
+                VideoUrl = h.VideoUrl,
+                StartTime = h.StartTime,
+                EndTime = h.EndTime,
+                EventDescription = h._formatted?.eventDescription ?? h.EventDescription
             }).ToList() ?? new List<DocumentPage>(),
             TotalHits = result?.EstimatedTotalHits ?? 0,
             ProcessingTimeMs = result?.ProcessingTimeMs ?? 0
@@ -268,6 +304,21 @@ public class MeiliSearchService : ISearchService
         public DateTime UploadDate { get; set; }
         [System.Text.Json.Serialization.JsonPropertyName("_rankingScore")]
         public double RankingScore { get; set; }
+
+        // Video-specific fields
+        [System.Text.Json.Serialization.JsonPropertyName("videoId")]
+        public string? VideoId { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("videoName")]
+        public string? VideoName { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("videoUrl")]
+        public string? VideoUrl { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("startTime")]
+        public string? StartTime { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("endTime")]
+        public string? EndTime { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("eventDescription")]
+        public string? EventDescription { get; set; }
+
         public MeiliFormatted? _formatted { get; set; }
     }
 }

@@ -63,6 +63,14 @@ export interface DocumentPageSearchResultDto {
   resourceType?: number;
   categoryName?: string | null;
   uploadDate?: string;
+  relevanceScore?: number;
+  sourceType?: string;
+  videoId?: string | null;
+  videoName?: string | null;
+  videoUrl?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  eventDescription?: string | null;
 }
 
 export interface InitiateUploadDto {

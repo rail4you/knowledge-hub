@@ -18,4 +18,9 @@ public class IndexingJobDto : EntityDto<Guid>
     public int RetryCount { get; set; }
     public DateTime? NextRetryAt { get; set; }
     public DateTime CreationTime { get; set; }
+
+    /// <summary>"document" | "video"</summary>
+    public string JobType { get; set; } = "document";
+    public int? TotalSegments { get; set; }
+    public int? ProcessedSegments { get; set; }
 }

@@ -31,6 +31,13 @@ export interface DocumentSearchResultDto {
   resourceType: number;
   categoryName?: string;
   uploadDate: string;
+  sourceType: 'document' | 'video';
+  videoId?: string;
+  videoName?: string;
+  videoUrl?: string;
+  startTime?: string;
+  endTime?: string;
+  eventDescription?: string;
 }
 
 export interface SearchResultDto {
@@ -110,6 +117,9 @@ export interface IndexingJobDto {
   retryCount: number;
   nextRetryAt?: string;
   creationTime: string;
+  jobType: 'document' | 'video';
+  totalSegments?: number;
+  processedSegments?: number;
 }
 
 export enum IndexingJobStatus {

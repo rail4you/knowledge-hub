@@ -670,18 +670,15 @@ export class SearchComponent implements OnInit {
   }
 
   viewDocument(result: DocumentSearchResultDto) {
-    this.searchService.logView({
-      resourceId: result.resourceId,
-      pageNumber: result.pageNumber,
-      viewDurationSeconds: 0,
-      viewSource: 0
-    }).subscribe({
-      error: () => { /* ignore log view errors */ }
-    });
-
-    if (result.sourceType === 'video' && result.videoUrl) {
-      this.openVideoModal(result);
-      return;
+    if (result.resourceId && result.sourceType !== 'video') {
+      this.searchService.logView({
+        resourceId: result.resourceId,
+        pageNumber: result.pageNumber,
+        viewDurationSeconds: 0,
+        viewSource: 0
+      }).subscribe({
+        error: () => { /* ignore log view errors */ }
+      });
     }
 
     if (result.sourceType === 'video') {

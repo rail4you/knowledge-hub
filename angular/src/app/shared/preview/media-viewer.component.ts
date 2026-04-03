@@ -11,7 +11,8 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MediaViewerComponent implements OnDestroy {
-  data = input.required<ArrayBuffer>();
+  data = input<ArrayBuffer>();
+  streamUrl = input('');
   fileName = input('');
   fileType = input<'image' | 'video' | 'audio'>('image');
 
@@ -20,6 +21,16 @@ export class MediaViewerComponent implements OnDestroy {
 
   constructor() {
     effect(() => {
+      const url = this.streamUrl();
+      if (url) {
+        // Streaming URL mode: use URL directly (video/audio)
+        if (this.blobUrl()) {
+          URL.revokeObjectURL(this.blobUrl());
+        }
+        this.blobUrl.set(url);
+        return;
+      }
+
       const d = this.data();
       const name = this.fileName();
       if (d && d.byteLength > 0) {
@@ -29,7 +40,7 @@ export class MediaViewerComponent implements OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.blobUrl()) {
+    if (this.blobUrl() && !this.streamUrl()) {
       URL.revokeObjectURL(this.blobUrl());
     }
   }

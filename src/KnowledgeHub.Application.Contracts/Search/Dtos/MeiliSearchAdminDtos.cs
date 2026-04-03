@@ -75,6 +75,10 @@ public class MeiliDocumentGroupDto
     public string? FileExtension { get; set; }
     public int PageCount { get; set; }
     public List<MeiliDocumentPageDto> Pages { get; set; } = new();
+
+    /// <summary>"document" | "video"</summary>
+    public string ResourceType { get; set; } = "document";
+    public string? VideoUrl { get; set; }
 }
 
 public class MeiliDocumentPageDto
@@ -82,4 +86,7 @@ public class MeiliDocumentPageDto
     public string Id { get; set; } = string.Empty;
     public int PageNumber { get; set; }
     public string? PageTitle { get; set; }
+    public string? EventDescription { get; set; }
+    public string? StartTime { get; set; }
+    public string? EndTime { get; set; }
 }

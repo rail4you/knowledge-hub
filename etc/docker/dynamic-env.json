@@ -2,10 +2,10 @@
   "production": true,
   "application": {
     "baseUrl": "http://119.45.170.4",
-    "name": "KnowledgeHub"
+    "name": "易课通知识库系统"
   },
   "oAuthConfig": {
-    "issuer": "http://119.45.170.4:44354/",
+    "issuer": "http://119.45.170.4/",
     "redirectUri": "http://119.45.170.4",
     "clientId": "KnowledgeHub_App",
     "responseType": "code",
@@ -13,11 +13,11 @@
   },
   "apis": {
     "default": {
-      "url": "http://119.45.170.4:44354",
+      "url": "http://119.45.170.4",
       "rootNamespace": "KnowledgeHub"
     },
     "AbpAccountPublic": {
-      "url": "http://119.45.170.4:44354",
+      "url": "http://119.45.170.4",
       "rootNamespace": "AbpAccountPublic"
     }
   }

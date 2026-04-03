@@ -49,7 +49,7 @@ export class IndexingJobService {
     this.restService.request<any, PagedResultDto<IndexingJobDto>>({
       method: 'GET',
       url: '/api/app/indexing-job',
-      params: { resourceId: input.resourceId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { resourceId: input.resourceId, status: input.status, startTime: input.startTime, endTime: input.endTime, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

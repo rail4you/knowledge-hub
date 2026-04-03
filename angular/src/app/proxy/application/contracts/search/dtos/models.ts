@@ -2,6 +2,18 @@ import type { ResourceType } from '../../../../resources/enums/resource-type.enu
 import type { EntityDto } from '@abp/ng.core';
 import type { IndexingJobStatus } from '../../../../domain/search/indexing-job-status.enum';
 
+export interface CreateResourceReviewDto {
+  resourceId?: string;
+  rating?: number;
+  content?: string | null;
+}
+
+export interface DailySearchTrendDto {
+  date?: string;
+  searchCount?: number;
+  uniqueUsers?: number;
+}
+
 export interface DocumentSearchResultDto {
   resourceId?: string;
   resourceName?: string;
@@ -15,6 +27,13 @@ export interface DocumentSearchResultDto {
   resourceType?: ResourceType;
   categoryName?: string | null;
   uploadDate?: string;
+  sourceType?: string;
+  videoId?: string | null;
+  videoName?: string | null;
+  videoUrl?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  eventDescription?: string | null;
 }
 
 export interface HybridSearchQueryDto extends SearchQueryDto {
@@ -54,6 +73,9 @@ export interface IndexingJobDto extends EntityDto<string> {
   retryCount?: number;
   nextRetryAt?: string | null;
   creationTime?: string;
+  jobType?: string;
+  totalSegments?: number | null;
+  processedSegments?: number | null;
 }
 
 export interface LogViewDto {
@@ -63,9 +85,119 @@ export interface LogViewDto {
   viewSource?: number;
 }
 
+export interface MeiliDashboardDto {
+  health?: MeiliHealthDto;
+  version?: MeiliVersionDto;
+  stats?: MeiliStatsDto;
+  indexes?: MeiliIndexDto[];
+  embedders?: Record<string, MeiliEmbedderDto>;
+  recentTasks?: MeiliTaskDto[];
+}
+
+export interface MeiliDocumentGroupDto {
+  resourceName?: string;
+  resourceId?: string | null;
+  fileExtension?: string | null;
+  pageCount?: number;
+  pages?: MeiliDocumentPageDto[];
+  resourceType?: string;
+  videoUrl?: string | null;
+}
+
+export interface MeiliDocumentPageDto {
+  id?: string;
+  pageNumber?: number;
+  pageTitle?: string | null;
+  eventDescription?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+}
+
+export interface MeiliEmbedderDto {
+  source?: string;
+  url?: string | null;
+  model?: string | null;
+  dimensions?: number | null;
+  documentTemplate?: string | null;
+}
+
+export interface MeiliHealthDto {
+  status?: string;
+}
+
+export interface MeiliIndexDto {
+  uid?: string;
+  primaryKey?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface MeiliIndexStatsDto {
+  numberOfDocuments?: number;
+  isIndexing?: boolean;
+  fieldDistribution?: Record<string, number>;
+}
+
+export interface MeiliStatsDto {
+  databaseSize?: number;
+  usedDatabaseSize?: number;
+  lastUpdate?: string | null;
+  indexes?: Record<string, MeiliIndexStatsDto>;
+}
+
+export interface MeiliTaskDto {
+  uid?: number;
+  indexUid?: string | null;
+  status?: string;
+  type?: string;
+  enqueuedAt?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+}
+
+export interface MeiliVersionDto {
+  commitSha?: string;
+  commitDate?: string;
+  pkgVersion?: string;
+}
+
 export interface PopularSearchDto {
   query?: string;
   count?: number;
+}
+
+export interface PopularSearchTermDto {
+  keyword?: string;
+  count?: number;
+}
+
+export interface ResourceRatingSummaryDto {
+  resourceId?: string;
+  averageRating?: number;
+  totalReviews?: number;
+  ratingDistribution?: number[];
+  myReview?: ResourceReviewDto | null;
+}
+
+export interface ResourceReviewDto {
+  id?: string;
+  resourceId?: string;
+  userId?: string;
+  userName?: string;
+  rating?: number;
+  content?: string | null;
+  creationTime?: string;
+}
+
+export interface SearchDashboardDto {
+  totalSearches?: number;
+  todaySearches?: number;
+  activeUsers?: number;
+  todayActiveUsers?: number;
+  dailyTrends?: DailySearchTrendDto[];
+  popularSearches?: PopularSearchTermDto[];
+  topResources?: TopResourceStatsDto[];
+  topRatedResources?: TopRatedResourceDto[];
 }
 
 export interface SearchHistoryDto {
@@ -102,9 +234,22 @@ export interface SearchStatsDto {
   topSearchTerm?: string | null;
 }
 
+export interface SearchStatsQueryDto {
+  startDate?: string | null;
+  endDate?: string | null;
+  tenantId?: string | null;
+}
+
 export interface SearchTrendDto {
   date?: string;
   searchCount?: number;
+}
+
+export interface TopRatedResourceDto {
+  resourceId?: string;
+  resourceName?: string;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
 export interface TopResourceDto {
@@ -113,4 +258,41 @@ export interface TopResourceDto {
   exposureCount?: number;
   clickCount?: number;
   clickRate?: number;
+}
+
+export interface TopResourceStatsDto {
+  resourceId?: string;
+  resourceName?: string;
+  searchCount?: number;
+  clickCount?: number;
+  clickRate?: number;
+}
+
+export interface UpdateResourceReviewDto {
+  rating?: number;
+  content?: string | null;
+}
+
+export interface VideoAnalysisRequestDto {
+  filePath?: string | null;
+  videoUrl?: string | null;
+  customPrompt?: string | null;
+}
+
+export interface VideoAnalysisResultDto {
+  rawContent?: string;
+  events?: VideoTimelineEventDto[];
+  usage?: VideoAnalysisUsageDto | null;
+}
+
+export interface VideoAnalysisUsageDto {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
+
+export interface VideoTimelineEventDto {
+  startTime?: string;
+  endTime?: string;
+  event?: string;
 }

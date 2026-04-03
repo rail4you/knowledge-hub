@@ -95,6 +95,15 @@ public class DocumentPageSearchResultDto
     public string? CategoryName { get; set; }
     public DateTime UploadDate { get; set; }
     public float RelevanceScore { get; set; }
+
+    /// <summary>"document" | "video"</summary>
+    public string SourceType { get; set; } = "document";
+    public string? VideoId { get; set; }
+    public string? VideoName { get; set; }
+    public string? VideoUrl { get; set; }
+    public string? StartTime { get; set; }
+    public string? EndTime { get; set; }
+    public string? EventDescription { get; set; }
 }
 
 public interface IResourceAuditAppService

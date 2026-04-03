@@ -116,9 +116,14 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
             {
                 var resourceName = item.TryGetProperty("resourceName", out var rnProp)
                     ? rnProp.GetString() ?? "unknown"
-                    : "unknown";
+                    : item.TryGetProperty("videoName", out var vnProp)
+                        ? vnProp.GetString() ?? "unknown"
+                        : "unknown";
                 var resourceId = item.TryGetProperty("resourceId", out var riProp)
-                    ? riProp.GetString() : null;
+                    ? riProp.GetString()
+                    : item.TryGetProperty("videoId", out var viProp)
+                        ? viProp.GetString()
+                        : null;
                 var fileExtension = item.TryGetProperty("fileExtension", out var feProp)
                     ? feProp.GetString() : null;
                 var pageNumber = item.TryGetProperty("pageNumber", out var pnProp)
@@ -128,13 +133,30 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
                 var id = item.TryGetProperty("id", out var idProp)
                     ? idProp.GetString() ?? "" : "";
 
+                // Detect resource type: video if it has startTime or eventDescription
+                var isVideo = item.TryGetProperty("startTime", out _) ||
+                              item.TryGetProperty("eventDescription", out _);
+                var resourceType = isVideo ? "video" : "document";
+
+                // Read video fields
+                var startTime = item.TryGetProperty("startTime", out var stProp)
+                    ? stProp.GetString() : null;
+                var endTime = item.TryGetProperty("endTime", out var etProp)
+                    ? etProp.GetString() : null;
+                var eventDescription = item.TryGetProperty("eventDescription", out var edProp)
+                    ? edProp.GetString() : null;
+                var videoUrl = item.TryGetProperty("videoUrl", out var vuProp)
+                    ? vuProp.GetString() : null;
+
                 if (!groups.TryGetValue(resourceName, out var group))
                 {
                     group = new MeiliDocumentGroupDto
                     {
                         ResourceName = resourceName,
                         ResourceId = resourceId,
-                        FileExtension = fileExtension
+                        FileExtension = fileExtension,
+                        ResourceType = resourceType,
+                        VideoUrl = videoUrl
                     };
                     groups[resourceName] = group;
                 }
@@ -143,7 +165,10 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
                 {
                     Id = id,
                     PageNumber = pageNumber,
-                    PageTitle = pageTitle
+                    PageTitle = pageTitle,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    EventDescription = eventDescription
                 });
                 group.PageCount = group.Pages.Count;
             }

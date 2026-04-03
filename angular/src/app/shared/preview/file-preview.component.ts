@@ -47,6 +47,7 @@ export class FilePreviewComponent {
   fileSize = signal(0);
 
   fileData = signal<ArrayBuffer>(new ArrayBuffer(0));
+  fileUrl = signal('');
   isLoading = signal(false);
   loadError = signal('');
 
@@ -87,6 +88,7 @@ export class FilePreviewComponent {
     this.fileSize.set(fileSize);
     this.loadError.set('');
     this.fileData.set(new ArrayBuffer(0));
+    this.fileUrl.set('');
     this.visible.set(true);
 
     this.loadFile();
@@ -95,6 +97,7 @@ export class FilePreviewComponent {
   close() {
     this.visible.set(false);
     this.fileData.set(new ArrayBuffer(0));
+    this.fileUrl.set('');
   }
 
   download() {
@@ -141,6 +144,28 @@ export class FilePreviewComponent {
     this.isLoading.set(true);
     this.loadError.set('');
 
+    const type = this.fileType;
+
+    // Video and audio: use streaming URL for native browser playback
+    if (type === 'video' || type === 'audio') {
+      this.resourceService.getFileUrl(this.resourceId()).subscribe({
+        next: (url: string) => {
+          const env = this.environmentService.getEnvironment();
+          const baseUrl = env?.apis?.default?.url || '';
+          const fullUrl = url.startsWith('http') ? url : baseUrl + url;
+          this.fileUrl.set(fullUrl);
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Failed to get file URL:', err);
+          this.loadError.set('Failed to load file for preview');
+          this.isLoading.set(false);
+        },
+      });
+      return;
+    }
+
+    // Other file types: download to memory
     this.resourceService.download(this.resourceId()).subscribe({
       next: (data: any) => {
         const arrayBuffer = this.toArrayBuffer(data);

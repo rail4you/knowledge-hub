@@ -1,23 +1,23 @@
 {
   "production": true,
   "application": {
-    "baseUrl": "${APP_ANGULAR_URL}",
-    "name": "KnowledgeHub"
+    "baseUrl": "${PUBLIC_URL}",
+    "name": "易课通知识库系统"
   },
   "oAuthConfig": {
-    "issuer": "${APP_SELF_URL}/",
-    "redirectUri": "${APP_ANGULAR_URL}",
+    "issuer": "${PUBLIC_URL}/",
+    "redirectUri": "${PUBLIC_URL}",
     "clientId": "KnowledgeHub_App",
     "responseType": "code",
     "scope": "offline_access openid profile email phone KnowledgeHub"
   },
   "apis": {
     "default": {
-      "url": "${APP_SELF_URL}",
+      "url": "${PUBLIC_URL}",
       "rootNamespace": "KnowledgeHub"
     },
     "AbpAccountPublic": {
-      "url": "${APP_SELF_URL}",
+      "url": "${PUBLIC_URL}",
       "rootNamespace": "AbpAccountPublic"
     }
   }

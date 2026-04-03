@@ -20,7 +20,7 @@
     </div>
 
     <!-- File Content -->
-    <div *ngIf="!isLoading() && !loadError() && fileData().byteLength > 0" class="preview-content">
+    <div *ngIf="!isLoading() && !loadError() && (fileData().byteLength > 0 || fileUrl())" class="preview-content">
       @switch (fileType) {
         @case ('pdf') {
           <app-pdf-viewer [data]="fileData()" [fileName]="fileName"></app-pdf-viewer>
@@ -38,10 +38,10 @@
           <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="image"></app-media-viewer>
         }
         @case ('video') {
-          <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="video"></app-media-viewer>
+          <app-media-viewer [streamUrl]="fileUrl()" [fileName]="fileName" fileType="video"></app-media-viewer>
         }
         @case ('audio') {
-          <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="audio"></app-media-viewer>
+          <app-media-viewer [streamUrl]="fileUrl()" [fileName]="fileName" fileType="audio"></app-media-viewer>
         }
         @case ('text') {
           <app-text-viewer [data]="fileData()" [fileName]="fileName"></app-text-viewer>

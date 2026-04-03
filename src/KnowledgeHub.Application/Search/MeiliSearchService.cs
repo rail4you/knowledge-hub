@@ -293,7 +293,7 @@ public class MeiliSearchService : IMeiliSearchService
             limit = query.MaxResultCount,
             offset = query.SkipCount,
             filter = filters.Any() ? string.Join(" AND ", filters) : null,
-            attributesToHighlight = new[] { "pageContent", "pageTitle", "resourceName" },
+            attributesToHighlight = new[] { "pageContent", "pageTitle", "resourceName", "eventDescription", "videoName" },
             highlightPreTag = "<mark>",
             highlightPostTag = "</mark>",
             attributesToCrop = new[] { "pageContent" },
@@ -322,7 +322,16 @@ public class MeiliSearchService : IMeiliSearchService
                     FileExtension = hit.FileExtension ?? string.Empty,
                     ResourceType = (ResourceType)(hit.ResourceType),
                     CategoryName = hit.CategoryId,
-                    UploadDate = DateTime.TryParse(hit.UploadDate, out var dt) ? dt : DateTime.MinValue
+                    UploadDate = DateTime.TryParse(hit.UploadDate, out var dt) ? dt : DateTime.MinValue,
+
+                    // Video-specific fields
+                    SourceType = !string.IsNullOrEmpty(hit.VideoId) ? "video" : "document",
+                    VideoId = hit.VideoId,
+                    VideoName = hit.VideoName,
+                    VideoUrl = hit.VideoUrl,
+                    StartTime = hit.StartTime,
+                    EndTime = hit.EndTime,
+                    EventDescription = hit._formatted?.EventDescription ?? hit.EventDescription
                 });
             }
         }
@@ -378,7 +387,7 @@ public class MeiliSearchService : IMeiliSearchService
             limit = query.MaxResultCount,
             offset = query.SkipCount,
             filter = filters.Any() ? string.Join(" AND ", filters) : null,
-            attributesToHighlight = new[] { "pageContent", "pageTitle", "resourceName" },
+            attributesToHighlight = new[] { "pageContent", "pageTitle", "resourceName", "eventDescription", "videoName" },
             highlightPreTag = "<mark>",
             highlightPostTag = "</mark>",
             attributesToCrop = new[] { "pageContent" },
@@ -412,7 +421,16 @@ public class MeiliSearchService : IMeiliSearchService
                     FileExtension = hit.FileExtension ?? string.Empty,
                     ResourceType = (ResourceType)(hit.ResourceType),
                     CategoryName = hit.CategoryId,
-                    UploadDate = DateTime.TryParse(hit.UploadDate, out var dt) ? dt : DateTime.MinValue
+                    UploadDate = DateTime.TryParse(hit.UploadDate, out var dt) ? dt : DateTime.MinValue,
+
+                    // Video-specific fields
+                    SourceType = !string.IsNullOrEmpty(hit.VideoId) ? "video" : "document",
+                    VideoId = hit.VideoId,
+                    VideoName = hit.VideoName,
+                    VideoUrl = hit.VideoUrl,
+                    StartTime = hit.StartTime,
+                    EndTime = hit.EndTime,
+                    EventDescription = hit._formatted?.EventDescription ?? hit.EventDescription
                 });
             }
         }
@@ -590,6 +608,15 @@ internal class MeiliHit
     public int Status { get; set; }
     [System.Text.Json.Serialization.JsonPropertyName("_rankingScore")]
     public double RankingScore { get; set; }
+
+    // Video-specific fields (populated for video index hits)
+    public string? VideoId { get; set; }
+    public string? VideoName { get; set; }
+    public string? VideoUrl { get; set; }
+    public string? StartTime { get; set; }
+    public string? EndTime { get; set; }
+    public string? EventDescription { get; set; }
+
     public MeiliFormatted? _formatted { get; set; }
 }
 
@@ -598,4 +625,8 @@ internal class MeiliFormatted
     public string? PageContent { get; set; }
     public string? PageTitle { get; set; }
     public string? ResourceName { get; set; }
+
+    // Video-specific highlighted fields
+    public string? EventDescription { get; set; }
+    public string? VideoName { get; set; }
 }
