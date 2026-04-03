@@ -59,19 +59,121 @@ start_api() {
     log_info "Swagger: https://localhost:44305/swagger"
 }
 
+# Wait for a HTTP endpoint to return 200, with timeout
+# Usage: wait_for_http <url> <description> [timeout_seconds]
+wait_for_http() {
+    local url="$1"
+    local desc="$2"
+    local timeout="${3:-60}"
+    local elapsed=0
+
+    while [ $elapsed -lt $timeout ]; do
+        if curl -sf -o /dev/null "$url" 2>/dev/null; then
+            return 0
+        fi
+        sleep 2
+        elapsed=$((elapsed + 2))
+    done
+    return 1
+}
+
+# Wait for a HTTPS endpoint to return 200 (skip cert verification)
+# Usage: wait_for_https <url> <description> [timeout_seconds]
+wait_for_https() {
+    local url="$1"
+    local desc="$2"
+    local timeout="${3:-60}"
+    local elapsed=0
+
+    while [ $elapsed -lt $timeout ]; do
+        if curl -skf -o /dev/null "$url" 2>/dev/null; then
+            return 0
+        fi
+        sleep 2
+        elapsed=$((elapsed + 2))
+    done
+    return 1
+}
+
+# Wait for a TCP port to be free
+# Usage: wait_for_port_free <port> [timeout_seconds]
+wait_for_port_free() {
+    local port="$1"
+    local timeout="${2:-10}"
+    local elapsed=0
+
+    while [ $elapsed -lt $timeout ]; do
+        if ! lsof -ti:"$port" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+    return 1
+}
+
+start_api() {
+    local pid_file="$PID_DIR/api.pid"
+    if is_running "$pid_file"; then
+        log_warn "API is already running (PID: $(cat $pid_file))"
+        return
+    fi
+
+    # Ensure port 44305 is free
+    if ! wait_for_port_free 44305; then
+        log_warn "Port 44305 still occupied, force cleaning..."
+        lsof -ti:44305 | xargs kill -9 2>/dev/null || true
+        sleep 1
+    fi
+
+    log_info "Starting API (HttpApi.Host)..."
+    cd "$PROJECT_ROOT"
+    ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_Kestrel__Certificates__Default__Path="$HOME/.aspnet/https/aspnetapp.pfx" ASPNETCORE_Kestrel__Certificates__Default__Password="devcert" dotnet run --project src/KnowledgeHub.HttpApi.Host > "$LOG_DIR/api.log" 2>&1 &
+    echo $! > "$pid_file"
+
+    if wait_for_https "https://localhost:44305/health-status" "API" 90; then
+        log_success "API started (PID: $(cat $pid_file))"
+        log_info "API URL: https://localhost:44305"
+        log_info "Swagger: https://localhost:44305/swagger"
+    else
+        log_error "API failed to start. Check logs: $0 log api"
+        exit 1
+    fi
+}
+
 start_angular() {
     local pid_file="$PID_DIR/angular.pid"
     if is_running "$pid_file"; then
         log_warn "Angular is already running (PID: $(cat $pid_file))"
         return
     fi
-    
+
+    # Ensure port 4200 is free
+    if ! wait_for_port_free 4200; then
+        log_warn "Port 4200 still occupied, force cleaning..."
+        lsof -ti:4200 | xargs kill -9 2>/dev/null || true
+        sleep 1
+    fi
+
+    # Clean Angular build cache to avoid stale compilation issues
+    local cache_dir="$PROJECT_ROOT/angular/.angular/cache"
+    if [ -d "$cache_dir" ]; then
+        rm -rf "$cache_dir"
+        log_info "Cleared Angular build cache"
+    fi
+
     log_info "Starting Angular..."
     cd "$PROJECT_ROOT/angular"
     npm run start -- --configuration=development > "$LOG_DIR/angular.log" 2>&1 &
     echo $! > "$pid_file"
-    log_success "Angular started (PID: $(cat $pid_file))"
-    log_info "Angular URL: http://localhost:4200"
+
+    if wait_for_http "http://localhost:4200" "Angular" 60; then
+        log_success "Angular started (PID: $(cat $pid_file))"
+        log_info "Angular URL: http://localhost:4200"
+    else
+        log_error "Angular failed to start. Check logs: $0 log angular"
+        exit 1
+    fi
 }
 
 start_meilisearch() {
@@ -80,13 +182,26 @@ start_meilisearch() {
         log_warn "Meilisearch is already running (PID: $(cat $pid_file))"
         return
     fi
-    
+
+    # Ensure port 7700 is free
+    if ! wait_for_port_free 7700; then
+        log_warn "Port 7700 still occupied, force cleaning..."
+        lsof -ti:7700 | xargs kill -9 2>/dev/null || true
+        sleep 1
+    fi
+
     log_info "Starting Meilisearch..."
     cd "$PROJECT_ROOT"
     ./meilisearch --master-key="aSampleMasterKey" > "$LOG_DIR/meilisearch.log" 2>&1 &
     echo $! > "$pid_file"
-    log_success "Meilisearch started (PID: $(cat $pid_file))"
-    log_info "Meilisearch URL: http://localhost:7700"
+
+    if wait_for_http "http://localhost:7700/health" "Meilisearch" 30; then
+        log_success "Meilisearch started (PID: $(cat $pid_file))"
+        log_info "Meilisearch URL: http://localhost:7700"
+    else
+        log_error "Meilisearch failed to start. Check logs: $0 log meilisearch"
+        exit 1
+    fi
 }
 
 start_ai() {
