@@ -4,12 +4,6 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# 安装 Java (使用 Apache POI，不再需要 LibreOffice)
-RUN apt-get update && apt-get install -y openjdk-17-jdk && \
-    rm -rf /var/lib/apt/lists/*
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ENV PATH=$PATH:$JAVA_HOME/bin
-
 # 复制项目文件
 COPY . .
 
@@ -24,15 +18,22 @@ RUN dotnet restore src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.cspro
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 
-# 安装 Java 运行时和 locale 支持（中文文件名需要 UTF-8）
-RUN apt-get update && apt-get install -y openjdk-17-jre locales && \
-    sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && \
-    locale-gen en_US.UTF-8 && \
-    rm -rf /var/lib/apt/lists/*
+# 安装 Java headless 运行时 + locale + 时区（合并为单层）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        openjdk-17-jre-headless \
+        locales \
+        tzdata \
+    && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
+    && locale-gen en_US.UTF-8 \
+    && ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo "Asia/Shanghai" > /etc/timezone \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV PATH=$PATH:$JAVA_HOME/bin
 ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
+ENV TZ=Asia/Shanghai
 
 # 复制发布产物
 COPY --from=build /app/publish .
@@ -40,10 +41,6 @@ COPY --from=build /src/src/KnowledgeHub.HttpApi.Host/utils /app/utils
 
 # 创建上传目录
 RUN mkdir -p /app/uploads /tmp/opendataloader && chmod +x /app/utils/pdf-parser/document-parser.jar
-
-# 设置时区
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 设置 ASP.NET Core 环境
 ENV ASPNETCORE_ENVIRONMENT=Production
