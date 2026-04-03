@@ -89,8 +89,13 @@ public class MeiliSearchService : ISearchService
     public MeiliSearchService(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        var host = Environment.GetEnvironmentVariable("MEILISEARCH_HOST") ?? "http://localhost:7700";
-        var apiKey = Environment.GetEnvironmentVariable("MEILISEARCH_API_KEY") ?? "aSampleMasterKey";
+        // Support both Docker-style (Meilisearch__Host) and direct env var naming
+        var host = Environment.GetEnvironmentVariable("MEILISEARCH_HOST")
+            ?? Environment.GetEnvironmentVariable("Meilisearch__Host")
+            ?? "http://localhost:7700";
+        var apiKey = Environment.GetEnvironmentVariable("MEILISEARCH_API_KEY")
+            ?? Environment.GetEnvironmentVariable("Meilisearch__ApiKey")
+            ?? "aSampleMasterKey";
         _httpClient.BaseAddress = new Uri(host);
         if (!string.IsNullOrEmpty(apiKey))
         {
