@@ -148,6 +148,13 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
                 var videoUrl = item.TryGetProperty("videoUrl", out var vuProp)
                     ? vuProp.GetString() : null;
 
+                var pageContent = item.TryGetProperty("pageContent", out var pcProp)
+                    ? pcProp.GetString() : null;
+                var uploadDate = item.TryGetProperty("uploadDate", out var udProp)
+                    ? udProp.GetString()
+                    : item.TryGetProperty("indexedAt", out var iaProp)
+                        ? iaProp.GetString() : null;
+
                 if (!groups.TryGetValue(resourceName, out var group))
                 {
                     group = new MeiliDocumentGroupDto
@@ -156,7 +163,8 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
                         ResourceId = resourceId,
                         FileExtension = fileExtension,
                         ResourceType = resourceType,
-                        VideoUrl = videoUrl
+                        VideoUrl = videoUrl,
+                        UploadDate = uploadDate
                     };
                     groups[resourceName] = group;
                 }
@@ -166,6 +174,7 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
                     Id = id,
                     PageNumber = pageNumber,
                     PageTitle = pageTitle,
+                    PageContent = pageContent,
                     StartTime = startTime,
                     EndTime = endTime,
                     EventDescription = eventDescription
@@ -173,7 +182,10 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
                 group.PageCount = group.Pages.Count;
             }
 
-            return groups.Values.OrderByDescending(g => g.PageCount).ToList();
+            return groups.Values
+                .OrderByDescending(g => g.UploadDate ?? string.Empty)
+                .ThenByDescending(g => g.PageCount)
+                .ToList();
         }
         catch
         {

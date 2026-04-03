@@ -1,0 +1,311 @@
+<div class="meilisearch-dashboard">
+  <div class="header">
+    <h2>{{ '::MeiliSearch:Dashboard' | abpLocalization }}</h2>
+    <button nz-button nzType="primary" (click)="refresh()" [nzLoading]="loading()">
+      <span nz-icon nzType="reload"></span>
+      {{ '::MeiliSearch:Refresh' | abpLocalization }}
+    </button>
+  </div>
+
+  <nz-spin [nzSpinning]="loading()">
+    @if (dashboard(); as data) {
+      <!-- Overview bar -->
+      <nz-card nzSize="small" class="section-card">
+        <div nz-row [nzGutter]="[24, 0]">
+          <div nz-col nzSpan="4">
+            <div class="info-label">{{ '::MeiliSearch:HealthStatus' | abpLocalization }}</div>
+            <div class="info-value">
+              @if (data.health.status === 'available') {
+                <nz-badge nzStatus="success" [nzText]="'::MeiliSearch:Available' | abpLocalization"></nz-badge>
+              } @else {
+                <nz-badge nzStatus="error" [nzText]="'::MeiliSearch:Unavailable' | abpLocalization"></nz-badge>
+              }
+            </div>
+          </div>
+          <div nz-col nzSpan="4">
+            <div class="info-label">{{ '::MeiliSearch:PkgVersion' | abpLocalization }}</div>
+            <div class="info-value">{{ data.version.pkgVersion || '-' }}</div>
+          </div>
+          <div nz-col nzSpan="5">
+            <div class="info-label">{{ '::MeiliSearch:DatabaseSize' | abpLocalization }}</div>
+            <div class="info-value">{{ formatBytes(data.stats.databaseSize) }}</div>
+          </div>
+          <div nz-col nzSpan="5">
+            <div class="info-label">{{ '::MeiliSearch:UsedSize' | abpLocalization }}</div>
+            <div class="info-value">{{ formatBytes(data.stats.usedDatabaseSize) }}</div>
+          </div>
+          <div nz-col nzSpan="6">
+            <div class="info-label">{{ '::MeiliSearch:LastUpdate' | abpLocalization }}</div>
+            <div class="info-value">{{ data.stats.lastUpdate ? (data.stats.lastUpdate | date:'short') : '-' }}</div>
+          </div>
+        </div>
+      </nz-card>
+
+      <!-- Indexes Table -->
+      <nz-card [nzTitle]="'::MeiliSearch:Indexes' | abpLocalization" nzSize="small" class="section-card">
+        @if (data.indexes.length === 0) {
+          <nz-empty [nzNotFoundContent]="'::MeiliSearch:NoIndexes' | abpLocalization"></nz-empty>
+        } @else {
+          <nz-table #indexTable [nzData]="data.indexes" nzSize="small" [nzShowPagination]="false">
+            <thead>
+              <tr>
+                <th>{{ '::MeiliSearch:Uid' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:PrimaryKey' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:DocumentCount' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:IsIndexing' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:FieldDistribution' | abpLocalization }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (index of indexTable.data; track index.uid) {
+                <tr>
+                  <td>{{ index.uid }}</td>
+                  <td>{{ index.primaryKey || '-' }}</td>
+                  <td>
+                    @if (data.stats.indexes[index.uid]) {
+                      {{ data.stats.indexes[index.uid].numberOfDocuments }}
+                    } @else {
+                      -
+                    }
+                  </td>
+                  <td>
+                    @if (data.stats.indexes[index.uid]?.isIndexing) {
+                      <nz-tag nzColor="processing">是</nz-tag>
+                    } @else {
+                      <nz-tag nzColor="default">否</nz-tag>
+                    }
+                  </td>
+                  <td>
+                    <a (click)="toggleIndexDetail(index.uid)" class="detail-link">
+                      @if (expandedIndexUid() === index.uid) {
+                        收起
+                      } @else {
+                        查看文档
+                      }
+                    </a>
+                  </td>
+                </tr>
+                @if (expandedIndexUid() === index.uid) {
+                  <tr>
+                    <td colspan="5" class="nested-cell">
+                      @if (loadingDocuments()[index.uid]) {
+                        <nz-spin nzSimple nzSize="small"></nz-spin>
+                      } @else {
+                        <div class="filter-bar">
+                          <nz-radio-group [ngModel]="timeFilter()" (ngModelChange)="timeFilter.set($event)">
+                            <label nz-radio-button nzValue="all">全部</label>
+                            <label nz-radio-button nzValue="today">今天</label>
+                            <label nz-radio-button nzValue="yesterday">昨天</label>
+                            <label nz-radio-button nzValue="week">近一周</label>
+                            <label nz-radio-button nzValue="month">近一月</label>
+                          </nz-radio-group>
+                        </div>
+                        @if (filteredDocumentGroups(); as groups) {
+                          <nz-table [nzData]="groups" nzSize="small" [nzShowPagination]="false" class="nested-table">
+                            <thead>
+                              <tr>
+                                <th>名称</th>
+                                <th>类型</th>
+                                <th>扩展名</th>
+                                <th>数量</th>
+                                <th>上传日期</th>
+                                <th></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (group of groups; track group.resourceName + group.resourceId) {
+                                <tr>
+                                  <td><strong>{{ group.resourceName }}</strong></td>
+                                  <td>
+                                    @if (group.resourceType === 'video') {
+                                      <nz-tag nzColor="purple">视频</nz-tag>
+                                    } @else {
+                                      <nz-tag nzColor="blue">文档</nz-tag>
+                                    }
+                                  </td>
+                                  <td>
+                                    @if (group.fileExtension) {
+                                      <nz-tag>{{ group.fileExtension }}</nz-tag>
+                                    } @else {
+                                      -
+                                    }
+                                  </td>
+                                  <td>{{ group.pageCount }}</td>
+                                  <td>{{ group.uploadDate ? (group.uploadDate | date:'shortDate') : '-' }}</td>
+                                  <td>
+                                    <a (click)="toggleGroupExpand(group.resourceName)" class="expand-link">
+                                      <span nz-icon [nzType]="expandedGroupName() === group.resourceName ? 'down' : 'right'"></span>
+                                      {{ expandedGroupName() === group.resourceName ? '收起' : '展开' }}
+                                    </a>
+                                  </td>
+                                </tr>
+                                @if (expandedGroupName() === group.resourceName) {
+                                  <tr>
+                                    <td colspan="6" class="detail-cell">
+                                      @if (group.resourceType === 'video') {
+                                        <nz-table [nzData]="group.pages" nzSize="small" [nzShowPagination]="false" class="detail-table">
+                                          <thead>
+                                            <tr>
+                                              <th>序号</th>
+                                              <th>开始时间</th>
+                                              <th>结束时间</th>
+                                              <th>事件描述</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            @for (page of group.pages; track page.id; let i = $index) {
+                                              <tr>
+                                                <td>{{ i + 1 }}</td>
+                                                <td>{{ page.startTime || '-' }}</td>
+                                                <td>{{ page.endTime || '-' }}</td>
+                                                <td>
+                                                  @if (page.eventDescription && page.eventDescription.length > 80) {
+                                                    <span nz-tooltip [nzTooltipTitle]="page.eventDescription" nzTooltipOverlayStyle="max-width: 500px; white-space: pre-wrap">
+                                                      {{ truncateText(page.eventDescription) }}
+                                                    </span>
+                                                  } @else {
+                                                    {{ page.eventDescription || '-' }}
+                                                  }
+                                                </td>
+                                              </tr>
+                                            }
+                                          </tbody>
+                                        </nz-table>
+                                      } @else {
+                                        <nz-table [nzData]="group.pages" nzSize="small" [nzShowPagination]="false" class="detail-table">
+                                          <thead>
+                                            <tr>
+                                              <th>页码</th>
+                                              <th>标题</th>
+                                              <th>内容</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            @for (page of group.pages; track page.id) {
+                                              <tr>
+                                                <td>{{ page.pageNumber }}</td>
+                                                <td>
+                                                  @if (page.pageTitle && page.pageTitle.length > 80) {
+                                                    <span nz-tooltip [nzTooltipTitle]="page.pageTitle" nzTooltipOverlayStyle="max-width: 500px; white-space: pre-wrap">
+                                                      {{ truncateText(page.pageTitle) }}
+                                                    </span>
+                                                  } @else {
+                                                    {{ page.pageTitle || '-' }}
+                                                  }
+                                                </td>
+                                                <td>
+                                                  @if (page.pageContent && page.pageContent.length > 80) {
+                                                    <span nz-tooltip [nzTooltipTitle]="page.pageContent" nzTooltipOverlayStyle="max-width: 500px; white-space: pre-wrap">
+                                                      {{ truncateText(page.pageContent) }}
+                                                    </span>
+                                                  } @else {
+                                                    {{ truncateText(page.pageContent) }}
+                                                  }
+                                                </td>
+                                              </tr>
+                                            }
+                                          </tbody>
+                                        </nz-table>
+                                      }
+                                    </td>
+                                  </tr>
+                                }
+                              }
+                            </tbody>
+                          </nz-table>
+                          @if (groups.length === 0) {
+                            <nz-empty nzNotFoundContent="暂无文档数据"></nz-empty>
+                          }
+                        }
+                      }
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </nz-table>
+        }
+      </nz-card>
+
+      <!-- Embedders Card -->
+      <nz-card [nzTitle]="'::MeiliSearch:Embedders' | abpLocalization" nzSize="small" class="section-card">
+        @if (embedderEntries(data.embedders).length === 0) {
+          <nz-empty [nzNotFoundContent]="'::MeiliSearch:NoEmbedders' | abpLocalization"></nz-empty>
+        } @else {
+          <nz-table #embedderTable [nzData]="embedderEntries(data.embedders)" nzSize="small" [nzShowPagination]="false">
+            <thead>
+              <tr>
+                <th>名称</th>
+                <th>{{ '::MeiliSearch:Source' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:Model' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:Dimensions' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:Url' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:DocumentTemplate' | abpLocalization }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of embedderTable.data; track entry.name) {
+                <tr>
+                  <td><strong>{{ entry.name }}</strong></td>
+                  <td><nz-tag nzColor="blue">{{ entry.embedder.source }}</nz-tag></td>
+                  <td>{{ entry.embedder.model || '-' }}</td>
+                  <td>{{ entry.embedder.dimensions ?? '-' }}</td>
+                  <td>
+                    @if (entry.embedder.url) {
+                      <span class="url-text">{{ entry.embedder.url }}</span>
+                    } @else {
+                      -
+                    }
+                  </td>
+                  <td>
+                    @if (entry.embedder.documentTemplate) {
+                      <code class="template-code">{{ entry.embedder.documentTemplate }}</code>
+                    } @else {
+                      -
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        }
+      </nz-card>
+
+      <!-- Recent Tasks Table -->
+      <nz-card [nzTitle]="'::MeiliSearch:RecentTasks' | abpLocalization" nzSize="small" class="section-card">
+        @if (data.recentTasks.length === 0) {
+          <nz-empty [nzNotFoundContent]="'::MeiliSearch:NoTasks' | abpLocalization"></nz-empty>
+        } @else {
+          <nz-table #taskTable [nzData]="data.recentTasks" nzSize="small" [nzPageSize]="10">
+            <thead>
+              <tr>
+                <th>{{ '::MeiliSearch:TaskUid' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:IndexUid' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:Type' | abpLocalization }}</th>
+                <th>Status</th>
+                <th>{{ '::MeiliSearch:EnqueuedAt' | abpLocalization }}</th>
+                <th>{{ '::MeiliSearch:FinishedAt' | abpLocalization }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (task of taskTable.data; track task.uid) {
+                <tr>
+                  <td>{{ task.uid }}</td>
+                  <td>{{ task.indexUid || '-' }}</td>
+                  <td>{{ task.type }}</td>
+                  <td>
+                    <nz-tag [nzColor]="getStatusColor(task.status)">
+                      {{ getStatusText(task.status) }}
+                    </nz-tag>
+                  </td>
+                  <td>{{ task.enqueuedAt ? (task.enqueuedAt | date:'short') : '-' }}</td>
+                  <td>{{ task.finishedAt ? (task.finishedAt | date:'short') : '-' }}</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        }
+      </nz-card>
+    }
+  </nz-spin>
+</div>

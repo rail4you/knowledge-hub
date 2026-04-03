@@ -1,0 +1,149 @@
+.meilisearch-dashboard {
+  padding: 24px;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+
+    h2 {
+      margin: 0;
+    }
+  }
+
+  .section-card {
+    margin-bottom: 16px;
+  }
+
+  .info-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    margin-bottom: 4px;
+  }
+
+  .info-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: #262626;
+  }
+
+  .detail-link {
+    color: #1890ff;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .field-dist-cell {
+    background: #fafafa;
+  }
+
+  .field-dist-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+  }
+
+  .field-dist-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .field-count {
+      font-size: 12px;
+      color: #666;
+    }
+  }
+
+  .url-text {
+    font-size: 12px;
+    word-break: break-all;
+    color: #666;
+  }
+
+  .template-code {
+    font-size: 12px;
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #333;
+  }
+
+  .nested-cell {
+    padding: 12px 16px !important;
+    background: #fafafa;
+  }
+
+  .nested-table {
+    margin: 0;
+
+    th {
+      font-size: 12px;
+      color: #8c8c8c;
+      background: transparent;
+    }
+
+    td {
+      font-size: 13px;
+    }
+  }
+
+  .page-titles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    align-items: center;
+  }
+
+  .page-title-item {
+    font-size: 12px;
+    color: #595959;
+    white-space: nowrap;
+  }
+
+  .more-pages {
+    font-size: 12px;
+    color: #8c8c8c;
+  }
+
+  .filter-bar {
+    margin-bottom: 12px;
+  }
+
+  .expand-link {
+    color: #1890ff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .detail-cell {
+    padding: 8px 16px !important;
+    background: #f5f5f5;
+  }
+
+  .detail-table {
+    margin: 0;
+
+    th {
+      font-size: 12px;
+      color: #8c8c8c;
+      background: transparent;
+    }
+
+    td {
+      font-size: 13px;
+      max-width: 400px;
+      word-break: break-all;
+    }
+  }
+}

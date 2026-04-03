@@ -278,7 +278,7 @@ tempkey.jwk
 .opencode.json
 .superset/
 etc/build/
-meilisearch
+/meilisearch
 
 # Editor swap files
 *.swp
