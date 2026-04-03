@@ -90,6 +90,11 @@ public class OpenDataLoaderService : IDocumentExtractionService
         var tempDir = Path.Combine(Path.GetTempPath(), $"opendataloader_{Guid.NewGuid()}");
         Directory.CreateDirectory(tempDir);
 
+        // Copy file to temp path with ASCII name to avoid Java encoding issues with non-ASCII filenames
+        var ext = Path.GetExtension(filePath);
+        var tempFilePath = Path.Combine(tempDir, $"input{ext}");
+        File.Copy(filePath, tempFilePath, overwrite: true);
+
         try
         {
             var scriptPath = PdfParserScriptPath;
@@ -101,7 +106,7 @@ public class OpenDataLoaderService : IDocumentExtractionService
             var startInfo = new ProcessStartInfo
             {
                 FileName = scriptPath,
-                Arguments = $"\"{filePath}\" \"{tempDir}\"",
+                Arguments = $"\"{tempFilePath}\" \"{tempDir}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
