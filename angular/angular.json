@@ -30,7 +30,7 @@
             ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "allowedCommonJsDependencies": ["chart.js", "js-sha256"],
+            "allowedCommonJsDependencies": ["js-sha256"],
             "assets": [
               "src/favicon.ico",
               "src/assets",
@@ -93,34 +93,9 @@
                 "bundleName": "abp-bundle"
               },
               {
-                "input": "node_modules/@volo/ngx-lepton-x.lite/assets/css/bootstrap-dim.rtl.css",
-                "inject": false,
-                "bundleName": "bootstrap-dim.rtl"
-              },
-              {
                 "input": "node_modules/@volo/ngx-lepton-x.lite/assets/css/font-bundle.css",
                 "inject": false,
                 "bundleName": "font-bundle"
-              },
-              {
-                "input": "node_modules/@volo/ngx-lepton-x.lite/assets/css/font-bundle.rtl.css",
-                "inject": false,
-                "bundleName": "font-bundle.rtl"
-              },
-              {
-                "input": "node_modules/@volo/ngx-lepton-x.lite/assets/css/ng-bundle.rtl.css",
-                "inject": false,
-                "bundleName": "ng-bundle.rtl"
-              },
-              {
-                "input": "node_modules/@volo/ngx-lepton-x.lite/assets/css/side-menu/layout-bundle.rtl.css",
-                "inject": false,
-                "bundleName": "layout-bundle.rtl"
-              },
-              {
-                "input": "node_modules/@abp/ng.theme.lepton-x/assets/css/abp-bundle.rtl.css",
-                "inject": false,
-                "bundleName": "abp-bundle.rtl"
               },
               {
                 "input": "node_modules/bootstrap-icons/font/bootstrap-icons.css",
@@ -140,7 +115,7 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2.5mb",
+                  "maximumWarning": "1.5mb",
                   "maximumError": "3mb"
                 },
                 {

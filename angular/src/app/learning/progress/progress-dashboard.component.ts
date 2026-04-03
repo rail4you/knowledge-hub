@@ -11,8 +11,12 @@ import { NzListModule } from 'ng-zorro-antd/list';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import * as echarts from 'echarts';
-import type { EChartsOption } from 'echarts/index';
+import * as echarts from 'echarts/core';
+import { BarChart } from 'echarts/charts';
+import { CanvasRenderer } from 'echarts/renderers';
+import { TooltipComponent, GridComponent } from 'echarts/components';
+
+echarts.use([BarChart, CanvasRenderer, TooltipComponent, GridComponent]);
 
 interface LearningDashboard {
   totalCourses: number;

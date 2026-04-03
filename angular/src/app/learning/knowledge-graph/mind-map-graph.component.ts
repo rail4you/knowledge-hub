@@ -2,7 +2,12 @@ import { Component, Input, signal, ElementRef, viewChild, AfterViewInit, OnChang
 import { CommonModule } from '@angular/common';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import * as echarts from 'echarts';
+import * as echarts from 'echarts/core';
+import { TreeChart } from 'echarts/charts';
+import { CanvasRenderer } from 'echarts/renderers';
+import { TooltipComponent } from 'echarts/components';
+
+echarts.use([TreeChart, CanvasRenderer, TooltipComponent]);
 
 interface KnowledgeResourceDto {
   id: string;
@@ -122,7 +127,7 @@ export class MindMapGraphComponent implements AfterViewInit, OnChanges {
     
     const mindMapData = this.buildMindMapData();
     
-    const option: echarts.EChartsOption = {
+    const option: echarts.EChartsCoreOption = {
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove'

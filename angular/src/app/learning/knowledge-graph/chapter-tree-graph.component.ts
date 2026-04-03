@@ -4,7 +4,12 @@ import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import * as echarts from 'echarts';
+import * as echarts from 'echarts/core';
+import { TreeChart } from 'echarts/charts';
+import { CanvasRenderer } from 'echarts/renderers';
+import { TooltipComponent } from 'echarts/components';
+
+echarts.use([TreeChart, CanvasRenderer, TooltipComponent]);
 
 interface KnowledgeResourceDto {
   id: string;
@@ -117,7 +122,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges {
     
     const treeData = this.buildTreeData(this.chapters);
     
-    const option: echarts.EChartsOption = {
+    const option: echarts.EChartsCoreOption = {
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove',

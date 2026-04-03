@@ -4,7 +4,6 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import * as XLSX from 'xlsx';
 
 interface SheetData {
   name: string;
@@ -45,11 +44,12 @@ export class ExcelViewerComponent {
     });
   }
 
-  private parseExcel(data: ArrayBuffer) {
+  private async parseExcel(data: ArrayBuffer) {
     try {
       this.isLoading.set(true);
       this.error.set('');
 
+      const XLSX = await import('xlsx');
       const workbook = XLSX.read(data, { type: 'array' });
       const sheetData = workbook.SheetNames.map(name => {
         const sheet = workbook.Sheets[name];

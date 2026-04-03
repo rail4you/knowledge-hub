@@ -3,7 +3,12 @@ import { CommonModule } from '@angular/common';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
-import * as echarts from 'echarts';
+import * as echarts from 'echarts/core';
+import { GraphChart } from 'echarts/charts';
+import { CanvasRenderer } from 'echarts/renderers';
+import { TooltipComponent, LegendComponent } from 'echarts/components';
+
+echarts.use([GraphChart, CanvasRenderer, TooltipComponent, LegendComponent]);
 
 interface KnowledgeResourceDto {
   id: string;
@@ -197,7 +202,7 @@ export class KnowledgeNetworkGraphComponent implements AfterViewInit, OnChanges 
     
     const { nodes, edges } = this.buildNetworkData();
     
-    const option: echarts.EChartsOption = {
+    const option: echarts.EChartsCoreOption = {
       tooltip: {
         trigger: 'item',
         triggerOn: 'mousemove',

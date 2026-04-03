@@ -14,7 +14,6 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { ConfigStateService, LocalizationModule } from '@abp/ng.core';
 import { SearchStatisticsService, SearchDashboardDto } from './search-statistics.service';
-import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-search-statistics',
@@ -107,10 +106,11 @@ export class SearchStatisticsComponent implements OnInit {
     return Math.max(4, (count / max) * 120);
   }
 
-  exportToExcel() {
+  async exportToExcel() {
     const d = this.dashboard();
     if (!d) return;
 
+    const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
 
     // 概览数据
