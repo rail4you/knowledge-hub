@@ -112,11 +112,14 @@ cmd_restart() {
     load_env
     local svc="${1:-}"
     if [ -z "$svc" ]; then
-        info "重启所有服务..."
-        compose restart
+        info "重启所有服务（down + up）..."
+        compose down
+        compose up -d
     else
-        info "重启 $svc..."
-        compose restart "$svc"
+        info "重建 $svc（stop + rm + up）..."
+        compose stop "$svc" 2>/dev/null || true
+        compose rm -f "$svc" 2>/dev/null || true
+        compose up -d --no-deps "$svc"
     fi
     ok "重启完成"
 }
