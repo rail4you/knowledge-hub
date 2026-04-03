@@ -2,6 +2,10 @@
   <div class="stats-header">
     <h1>{{ '::Menu:SearchStatistics' | abpLocalization }}</h1>
     <div class="filters">
+      <button nz-button nzType="primary" (click)="exportToExcel()" [disabled]="!dashboard()">
+        <span nz-icon nzType="download"></span>
+        导出 Excel
+      </button>
       <nz-range-picker [(ngModel)]="dateRange" (ngModelChange)="onDateRangeChange()"></nz-range-picker>
       @if (isHost) {
         <nz-select [(ngModel)]="selectedTenantId" (ngModelChange)="onTenantChange()" nzPlaceHolder="{{ '::SearchStatistics:SelectTenant' | abpLocalization }}" style="min-width: 200px">

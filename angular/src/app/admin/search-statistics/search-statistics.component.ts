@@ -11,15 +11,17 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzButtonModule } from 'ng-zorro-antd/button';
 import { ConfigStateService, LocalizationModule } from '@abp/ng.core';
 import { SearchStatisticsService, SearchDashboardDto } from './search-statistics.service';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-search-statistics',
   standalone: true,
   imports: [
     CommonModule, FormsModule, LocalizationModule, NzCardModule, NzSpinModule, NzStatisticModule,
-    NzDatePickerModule, NzSelectModule, NzTableModule, NzTagModule, NzEmptyModule, NzTooltipModule
+    NzDatePickerModule, NzSelectModule, NzTableModule, NzTagModule, NzEmptyModule, NzTooltipModule, NzButtonModule
   ],
   templateUrl: './search-statistics.component.html',
   styleUrls: ['./search-statistics.component.scss'],
@@ -103,5 +105,56 @@ export class SearchStatisticsComponent implements OnInit {
     const max = this.maxTrendSearchCount();
     if (max === 0) return 4;
     return Math.max(4, (count / max) * 120);
+  }
+
+  exportToExcel() {
+    const d = this.dashboard();
+    if (!d) return;
+
+    const wb = XLSX.utils.book_new();
+
+    // 概览数据
+    const overview = [
+      ['统计项', '数值'],
+      ['全部检索次数', d.all.totalSearches],
+      ['全部今日检索', d.all.todaySearches],
+      ['文档检索次数', d.document.totalSearches],
+      ['文档今日检索', d.document.todaySearches],
+      ['视频检索次数', d.video.totalSearches],
+      ['视频今日检索', d.video.todaySearches]
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overview), '概览');
+
+    // 每日趋势
+    const trends = [
+      ['日期', '全部检索', '文档检索', '视频检索'],
+      ...d.dailyTrends.map(t => [t.date, t.totalSearchCount, t.documentSearchCount, t.videoSearchCount])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trends), '每日趋势');
+
+    // 热门搜索
+    const popular = [
+      ['关键词', '次数', '类型'],
+      ...d.popularSearches.map(p => [p.keyword, p.count, p.sourceType === 'video' ? '视频' : p.sourceType === 'document' ? '文档' : '全部'])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(popular), '热门搜索');
+
+    // 热门资源
+    const resources = [
+      ['资源名称', '搜索次数'],
+      ...d.topResources.map(r => [r.resourceName, r.searchCount])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resources), '热门资源');
+
+    // 高评分资源
+    const rated = [
+      ['资源名称', '平均评分', '评价数'],
+      ...d.topRatedResources.map(r => [r.resourceName, r.averageRating, r.reviewCount])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rated), '高评分资源');
+
+    const fileName = `搜索统计_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    this.message.success('导出成功');
   }
 }
