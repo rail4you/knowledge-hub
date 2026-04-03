@@ -38,7 +38,7 @@ public class SearchAnalyticsService : ISearchAnalyticsService
         _currentUser = currentUser;
     }
 
-    public async Task LogSearchAsync(Guid userId, string query, int searchType, int resultCount, string? filters)
+    public async Task LogSearchAsync(Guid userId, string query, int searchType, int resultCount, string? filters, string sourceType = "all")
     {
         var searchQuery = new SearchQuery
         {
@@ -47,7 +47,8 @@ public class SearchAnalyticsService : ISearchAnalyticsService
             SearchType = (SearchType)searchType,
             ResultCount = resultCount,
             Filters = filters,
-            TenantId = _currentTenant.Id
+            TenantId = _currentTenant.Id,
+            SourceType = sourceType
         };
         
         await _searchQueryRepository.InsertAsync(searchQuery);

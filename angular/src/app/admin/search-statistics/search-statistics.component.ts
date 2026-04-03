@@ -40,7 +40,19 @@ export class SearchStatisticsComponent implements OnInit {
   maxTrendSearchCount = computed(() => {
     const d = this.dashboard();
     if (!d || d.dailyTrends.length === 0) return 1;
-    return Math.max(...d.dailyTrends.map(t => t.searchCount), 1);
+    return Math.max(...d.dailyTrends.map(t => t.totalSearchCount), 1);
+  });
+
+  maxDocumentSearchCount = computed(() => {
+    const d = this.dashboard();
+    if (!d || d.dailyTrends.length === 0) return 1;
+    return Math.max(...d.dailyTrends.map(t => t.documentSearchCount), 1);
+  });
+
+  maxVideoSearchCount = computed(() => {
+    const d = this.dashboard();
+    if (!d || d.dailyTrends.length === 0) return 1;
+    return Math.max(...d.dailyTrends.map(t => t.videoSearchCount), 1);
   });
 
   ngOnInit() {

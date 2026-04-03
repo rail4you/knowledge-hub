@@ -22,7 +22,7 @@
 
 .stats-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -99,6 +99,10 @@
 
   &.bar-user {
     background: linear-gradient(to top, #52c41a, #73d13d);
+  }
+
+  &.bar-video {
+    background: linear-gradient(to top, #722ed1, #9254de);
   }
 }
 

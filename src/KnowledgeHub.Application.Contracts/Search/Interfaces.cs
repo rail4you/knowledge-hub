@@ -43,7 +43,7 @@ public interface IEmbeddingService : IApplicationService
 
 public interface ISearchAnalyticsService : IApplicationService
 {
-    Task LogSearchAsync(Guid userId, string query, int searchType, int resultCount, string? filters);
+    Task LogSearchAsync(Guid userId, string query, int searchType, int resultCount, string? filters, string sourceType = "all");
     Task LogResourceViewAsync(LogViewDto input);
     Task<SearchStatsDto> GetSearchStatsAsync(DateTime? startDate, DateTime? endDate);
     Task<List<PopularSearchDto>> GetPopularSearchesAsync(int count = 10);

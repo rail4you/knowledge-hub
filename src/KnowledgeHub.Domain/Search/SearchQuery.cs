@@ -12,4 +12,6 @@ public class SearchQuery : FullAuditedAggregateRoot<Guid>
     public int ResultCount { get; set; }
     public string? Filters { get; set; }
     public Guid? TenantId { get; set; }
+    /// <summary>"document" | "video" | "all"</summary>
+    public string SourceType { get; set; } = "all";
 }

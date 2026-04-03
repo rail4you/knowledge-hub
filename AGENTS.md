@@ -126,7 +126,34 @@ public class IndexingJobAppService : ...
 ./dev.sh tail api           # Tail API logs in real-time
 ./dev.sh tail angular       # Tail Angular logs in real-time
 ./dev.sh tail meilisearch   # Tail Meilisearch logs in real-time
-./dev.sh migrate            # Run database migration
+./dev.sh migrate            # Run database migration (使用 DbMigrator)
+```
+
+### 数据库迁移 (Database Migration)
+
+**使用 DbMigrator 进行迁移：**
+```bash
+./dev.sh migrate            # 使用 --no-build（快速，但新建迁移文件后不生效）
+dotnet run --project src/KnowledgeHub.DbMigrator  # 完整编译后再迁移（确保新建迁移文件被应用）
+```
+
+**为什么 `./dev.sh migrate` 有时不能同步数据库？**
+- `dev.sh migrate` 使用 `--no-build` 参数，只运行已编译的 DbMigrator
+- 如果刚创建了新的迁移文件（如 `AddXXX`），但尚未编译，新迁移不会被应用
+- 解决：直接运行 `dotnet run --project src/KnowledgeHub.DbMigrator` 完整编译后再迁移
+
+**创建新迁移：**
+```bash
+dotnet ef migrations add <MigrationName> --project src/KnowledgeHub.EntityFrameworkCore --startup-project src/KnowledgeHub.HttpApi.Host
+```
+
+**验证迁移是否生效：**
+```bash
+# 检查迁移历史
+PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d KnowledgeHub -c "SELECT * FROM \"__EFMigrationsHistory\" ORDER BY \"MigrationId\" DESC LIMIT 5;"
+
+# 检查表结构
+PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d KnowledgeHub -c "\d \"表名\""
 ```
 
 ### Development URLs

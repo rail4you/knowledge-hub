@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
@@ -34,12 +35,15 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
                 ? string.Join(",", input.FileExtensions)
                 : null;
 
+            var sourceType = result.Items.Any(i => i.SourceType == "video") ? "video" : "document";
+
             await _analyticsService.LogSearchAsync(
                 _currentUser.Id.Value,
                 input.Query,
                 0,
                 result.TotalCount,
-                filters);
+                filters,
+                sourceType);
         }
         
         return result;
@@ -55,12 +59,15 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
                 ? string.Join(",", input.FileExtensions)
                 : null;
 
+            var sourceType = result.Items.Any(i => i.SourceType == "video") ? "video" : "document";
+
             await _analyticsService.LogSearchAsync(
                 _currentUser.Id.Value,
                 input.Query,
                 1,
                 result.TotalCount,
-                filters);
+                filters,
+                sourceType);
         }
         
         return result;

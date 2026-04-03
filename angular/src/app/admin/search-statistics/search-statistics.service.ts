@@ -2,11 +2,17 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { RestService } from '@abp/ng.core';
 
-export interface SearchDashboardDto {
+export interface SearchStatsBreakdown {
   totalSearches: number;
   todaySearches: number;
   activeUsers: number;
   todayActiveUsers: number;
+}
+
+export interface SearchDashboardDto {
+  all: SearchStatsBreakdown;
+  document: SearchStatsBreakdown;
+  video: SearchStatsBreakdown;
   dailyTrends: DailySearchTrendDto[];
   popularSearches: PopularSearchTermDto[];
   topResources: TopResourceStatsDto[];
@@ -21,13 +27,16 @@ export interface SearchStatsQueryDto {
 
 export interface DailySearchTrendDto {
   date: string;
-  searchCount: number;
+  totalSearchCount: number;
+  documentSearchCount: number;
+  videoSearchCount: number;
   uniqueUsers: number;
 }
 
 export interface PopularSearchTermDto {
   keyword: string;
   count: number;
+  sourceType?: string;
 }
 
 export interface TopResourceStatsDto {

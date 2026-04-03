@@ -845,12 +845,14 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             try
             {
                 var analyticsService = LazyServiceProvider.LazyGetRequiredService<ISearchAnalyticsService>();
+                var sourceType = result.Hits.Any(h => !string.IsNullOrEmpty(h.VideoId) || !string.IsNullOrEmpty(h.VideoName)) ? "video" : "document";
                 await analyticsService.LogSearchAsync(
                     CurrentUser.Id.Value,
                     input.Query,
                     0,
                     result.TotalHits,
-                    null);
+                    null,
+                    sourceType);
             }
             catch { /* don't fail search on analytics error */ }
         }
