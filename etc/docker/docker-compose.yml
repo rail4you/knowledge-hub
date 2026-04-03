@@ -14,6 +14,7 @@
 #   ├── dynamic-env.json        ← Angular 运行时配置（由 deploy.sh 自动生成）
 #   ├── deploy.sh               ← 管理脚本
 #   ├── uploads/                ← 文件上传目录
+#   ├── postgres_data/          ← PostgreSQL 数据（bind mount，down -v 安全）
 #   └── meilisearch_data/       ← 搜索引擎数据
 #
 # 使用方式：
@@ -67,8 +68,8 @@ services:
       - App__AngularUrl=${PUBLIC_URL}
       - App__CorsOrigins=${PUBLIC_URL}
       - App__RedirectAllowedUrls=${PUBLIC_URL}
-      # AuthServer（容器内部通信，不走外部网络）
-      - AuthServer__Authority=http://knowledgehub-api:44354/
+      # AuthServer（外部可访问地址，用于 token 验证）
+      - AuthServer__Authority=${PUBLIC_URL}/
       - AuthServer__RequireHttpsMetadata=false
       # 数据库
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}
@@ -157,7 +158,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=KnowledgeHub
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -186,11 +187,9 @@ services:
       - abp-network
 
 # ----------------------------------------------------------
-# Volumes & Networks
+# 注意：数据持久化全部使用 bind mount（./xxx），不使用 named volume
+# 这样即使误执行 docker compose down -v 也不会删除数据库数据
 # ----------------------------------------------------------
-volumes:
-  postgres_data:
-
 networks:
   abp-network:
     driver: bridge

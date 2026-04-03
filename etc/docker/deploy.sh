@@ -84,7 +84,7 @@ cmd_up() {
     generate_dynamic_env
 
     info "创建必要目录..."
-    mkdir -p "$SCRIPT_DIR/uploads" "$SCRIPT_DIR/meilisearch_data"
+    mkdir -p "$SCRIPT_DIR/uploads" "$SCRIPT_DIR/meilisearch_data" "$SCRIPT_DIR/postgres_data"
 
     info "拉取最新镜像..."
     compose pull 2>/dev/null || true
