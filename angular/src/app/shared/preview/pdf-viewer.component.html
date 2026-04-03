@@ -28,6 +28,6 @@
   <div class="pdf-canvas-container">
     <nz-spin *ngIf="isLoading()" nzSimple class="viewer-spinner"></nz-spin>
     <div *ngIf="error()" class="viewer-error">{{ error() }}</div>
-    <canvas #pdfCanvas class="pdf-canvas" *ngIf="!isLoading() && !error()"></canvas>
+    <canvas #pdfCanvas class="pdf-canvas" [style.display]="(isLoading() || error()) ? 'none' : 'block'"></canvas>
   </div>
 </div>
