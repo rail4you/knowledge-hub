@@ -1,12 +1,14 @@
 import { Injectable, inject, NgZone } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
 
 export interface ChatInput {
   message: string;
   threadId?: string;
+  resourceId?: string;
   agent?: string;
 }
+
+
 
 export interface ChatMessageChunk {
   content: string;
@@ -14,92 +16,93 @@ export interface ChatMessageChunk {
   isComplete: boolean;
 }
 
-export interface FileUrl {
-  url: string;
-  type: string;
-}
-
-export interface ChatThread {
+export interface ResourceForChat {
   id: string;
-  createdAt: Date;
-  messages: ChatMessage[];
-}
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  createdAt: Date;
+  name: string;
+  fileExtension?: string;
+  sourceFormat?: string;
+  nodeCount: number;
 }
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-  private aguiUrl = 'http://localhost:5001';
+  private readonly apiUrl = 'https://localhost:44305/api/learning/ai';
 
-  chat(input: ChatInput, agent: string = ''): Observable<ChatMessageChunk> {
-    const endpoint = agent ? `/${agent}` : '/';
+  getResources(): Observable<ResourceForChat[]> {
+    return new Observable<ResourceForChat[]>(observer => {
+      fetch(`${this.apiUrl}/resources`, {
+        credentials: 'include',
+      })
+        .then(async response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          observer.next(data);
+          observer.complete();
+        })
+        .catch(err => {
+          observer.error(err);
+        });
+    });
+  }
+
+  chat(input: ChatInput): Observable<ChatMessageChunk> {
     return new Observable<ChatMessageChunk>(observer => {
-      const messages = [
-        { role: 'user', content: input.message }
-      ];
-      
-      const body = JSON.stringify({ messages });
-      
-      fetch(`${this.aguiUrl}${endpoint}`, {
+      const body = JSON.stringify({
+        message: input.message,
+        threadId: input.threadId || null,
+        resourceId: input.resourceId || null,
+      });
+
+      fetch(`${this.apiUrl}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body
+        credentials: 'include',
+        body,
       }).then(async response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const reader = response.body?.getReader();
         if (!reader) {
           observer.complete();
           return;
         }
-        
+
         const decoder = new TextDecoder();
         let buffer = '';
-        
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          
+
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
-          
+
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
-                const event = JSON.parse(line.slice(6));
-                if (event.type === 'TEXT_MESSAGE_CONTENT' && event.delta) {
-                  observer.next({
-                    content: event.delta,
-                    threadId: event.threadId || '',
-                    isComplete: false
-                  });
-                } else if (event.type === 'RUN_FINISHED') {
-                  observer.next({
-                    content: '',
-                    threadId: event.threadId || '',
-                    isComplete: true
-                  });
-                }
+                const chunk = JSON.parse(line.slice(6));
+                observer.next({
+                  content: chunk.content || '',
+                  threadId: chunk.threadId || '',
+                  isComplete: chunk.isComplete || false,
+                });
               } catch {
                 // skip malformed JSON
               }
             }
           }
         }
-        
+
         observer.complete();
       }).catch(err => {
         observer.error(err);
       });
-      
+
       return () => {};
     });
   }

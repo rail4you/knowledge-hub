@@ -12,4 +12,5 @@ public interface IChatAppService : IApplicationService
     IAsyncEnumerable<ChatMessageChunkDto> ChatStreamingAsync(ChatInputDto input);
     Task<ChatThreadDto> GetThreadAsync(string threadId);
     Task<List<ChatThreadDto>> GetMyThreadsAsync();
+    Task<List<ResourceForChatDto>> GetResourcesWithPageIndexAsync();
 }

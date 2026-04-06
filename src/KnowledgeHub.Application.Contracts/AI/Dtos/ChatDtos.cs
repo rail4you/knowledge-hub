@@ -8,7 +8,17 @@ public class ChatInputDto
 {
     public string Message { get; set; } = string.Empty;
     public string? ThreadId { get; set; }
+    public Guid? ResourceId { get; set; }
     public List<FileUrlDto>? FileUrls { get; set; }
+}
+
+public class ResourceForChatDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? FileExtension { get; set; }
+    public string? SourceFormat { get; set; }
+    public int NodeCount { get; set; }
 }
 
 public class FileUrlDto

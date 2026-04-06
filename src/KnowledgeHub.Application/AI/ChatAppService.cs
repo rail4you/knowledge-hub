@@ -8,12 +8,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI.Dtos;
 using KnowledgeHub.Application.AI.Tools;
+using KnowledgeHub.Domain.Search;
+using KnowledgeHub.Resources;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Application.AI;
@@ -24,6 +27,8 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
     private readonly IConfiguration _configuration;
     private readonly ILogger<ChatAppService> _logger;
     private readonly PageIndexTools _pageIndexTools;
+    private readonly IRepository<ResourcePageIndex, Guid> _pageIndexRepository;
+    private readonly IRepository<Resource, Guid> _resourceRepository;
 
     private const string DefaultInstructions = @"你是 KnowledgeHub 平台的智能教育助手。
 
@@ -43,18 +48,36 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
 3. 使用 Markdown 格式化回答
 4. 当搜索工具返回结果时，基于搜索结果给出准确、有依据的回答";
 
+    private const string DocumentChatInstructions = @"你是一个专业的文档问答助手。
+
+TOOL USE:
+- 先调用 get_document() 获取文档元数据（名称、页数等）。
+- 调用 get_document_structure() 查看文档完整目录结构，找到与用户问题相关的章节。
+- 调用 get_page_content(pages=""5-7"") 获取指定页码范围的内容。使用紧凑的页码范围，不要一次请求整个文档。
+- 每次调用工具前，先用一句话说明调用原因。
+
+回答要求：
+1. 仅基于工具返回的内容回答，不要编造信息。
+2. 回答要简洁、准确、有依据。
+3. 使用 Markdown 格式化回答。
+4. 如果文档中没有相关内容，如实告知用户。";
+
     private const int MaxToolCallRounds = 5;
 
     public ChatAppService(
         ICurrentUser currentUser,
         IConfiguration configuration,
         ILogger<ChatAppService> logger,
-        PageIndexTools pageIndexTools)
+        PageIndexTools pageIndexTools,
+        IRepository<ResourcePageIndex, Guid> pageIndexRepository,
+        IRepository<Resource, Guid> resourceRepository)
     {
         _currentUser = currentUser;
         _configuration = configuration;
         _logger = logger;
         _pageIndexTools = pageIndexTools;
+        _pageIndexRepository = pageIndexRepository;
+        _resourceRepository = resourceRepository;
     }
 
     public Task<ChatThreadDto> CreateThreadAsync()
@@ -84,15 +107,46 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
             new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
 
         IChatClient chatClient = openaiClient.GetChatClient(model).AsIChatClient();
-
-        // Use FunctionInvokingChatClient to automatically handle tool calls
         chatClient = new FunctionInvokingChatClient(chatClient);
 
-        var tools = BuildTools();
+        List<AITool> tools;
+        string instructions;
+
+        if (input.ResourceId.HasValue)
+        {
+            // Document QA mode: fetch latest PageIndex for the resource
+            var pageIndexList = await _pageIndexRepository
+                .GetListAsync(x => x.ResourceId == input.ResourceId.Value);
+            var latestPageIndex = pageIndexList
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefault();
+
+            if (latestPageIndex == null)
+            {
+                yield return new ChatMessageChunkDto
+                {
+                    Content = "该文档尚未生成页面索引，无法进行文档问答。请先为文档生成索引。",
+                    ThreadId = threadId,
+                    IsComplete = false
+                };
+                yield return new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true };
+                yield break;
+            }
+
+            var docTools = new DocumentChatTools(latestPageIndex.PageIndexJson, _logger);
+            tools = BuildDocumentTools(docTools);
+            instructions = DocumentChatInstructions;
+        }
+        else
+        {
+            // General chat mode
+            tools = BuildTools();
+            instructions = DefaultInstructions;
+        }
 
         var chatOptions = new ChatOptions
         {
-            Instructions = DefaultInstructions,
+            Instructions = instructions,
             Tools = tools,
         };
 
@@ -101,7 +155,6 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
             new(ChatRole.User, input.Message)
         };
 
-        // Streaming with automatic tool invocation via FunctionInvokingChatClient
         await foreach (var update in chatClient.GetStreamingResponseAsync(messages, chatOptions, CancellationToken.None))
         {
             if (update.Text != null && update.Text.Length > 0)
@@ -123,6 +176,38 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
         };
     }
 
+    public async Task<List<ResourceForChatDto>> GetResourcesWithPageIndexAsync()
+    {
+        var pageIndices = await _pageIndexRepository.GetListAsync();
+
+        // Group by ResourceId, take the latest for each
+        var latestByResource = pageIndices
+            .GroupBy(pi => pi.ResourceId)
+            .Select(g => g.OrderByDescending(pi => pi.CreatedAt).First())
+            .ToList();
+
+        var resourceIds = latestByResource.Select(pi => pi.ResourceId).ToList();
+        var resources = await _resourceRepository.GetListAsync(r => resourceIds.Contains(r.Id));
+        var resourceMap = resources.ToDictionary(r => r.Id);
+
+        var result = new List<ResourceForChatDto>();
+        foreach (var pi in latestByResource)
+        {
+            if (!resourceMap.TryGetValue(pi.ResourceId, out var resource)) continue;
+
+            result.Add(new ResourceForChatDto
+            {
+                Id = resource.Id,
+                Name = resource.Name,
+                FileExtension = resource.FileExtension,
+                SourceFormat = pi.SourceFormat,
+                NodeCount = pi.NodeCount
+            });
+        }
+
+        return result;
+    }
+
     private List<AITool> BuildTools()
     {
         return new List<AITool>
@@ -130,11 +215,30 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
             AIFunctionFactory.Create(
                 _pageIndexTools.SearchPageIndex,
                 name: "SearchPageIndex",
-                description: "搜索文档的页面索引结构。当用户询问文档目录、章节、内容结构时使用此工具。"),
+                description: "搜索文档的页面索引结构。当用户询问文档目录、章节、内容结构时使用此工具。返回匹配的章节标题和摘要。"),
             AIFunctionFactory.Create(
                 _pageIndexTools.GetDocumentStructure,
                 name: "GetDocumentStructure",
                 description: "获取指定文档的完整页面索引树。当用户想了解某文档的详细结构（目录、章节层次）时使用。"),
+        };
+    }
+
+    private List<AITool> BuildDocumentTools(DocumentChatTools docTools)
+    {
+        return new List<AITool>
+        {
+            AIFunctionFactory.Create(
+                docTools.GetDocument,
+                name: "get_document",
+                description: "获取当前文档的元数据：文档名称、描述、页数等。在回答文档相关问题前，先调用此工具确认文档状态。"),
+            AIFunctionFactory.Create(
+                docTools.GetDocumentStructure,
+                name: "get_document_structure",
+                description: "获取文档的完整目录结构树（不含正文内容）。用于查找与用户问题相关的章节和页码范围。"),
+            AIFunctionFactory.Create(
+                docTools.GetPageContent,
+                name: "get_page_content",
+                description: "获取指定页码范围的正文内容。使用紧凑范围如 '5-7'（第5到7页）、'3,8'（第3和8页）、'12'（第12页）。请先调用 get_document_structure 确定相关页码范围。"),
         };
     }
 

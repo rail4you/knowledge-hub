@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI;
@@ -15,10 +16,16 @@ namespace KnowledgeHub.Controllers;
 public class AIController : AbpControllerBase
 {
     private readonly IChatAppService _chatAppService;
-    
+
     public AIController(IChatAppService chatAppService)
     {
         _chatAppService = chatAppService;
+    }
+
+    [HttpGet("resources")]
+    public async Task<List<ResourceForChatDto>> GetResources()
+    {
+        return await _chatAppService.GetResourcesWithPageIndexAsync();
     }
 
     [HttpPost("chat")]
@@ -29,7 +36,7 @@ public class AIController : AbpControllerBase
         Response.Headers.Append("Cache-Control", "no-cache");
         Response.Headers.Append("Connection", "keep-alive");
         Response.Headers.Append("X-Accel-Buffering", "no");
-        
+
         await foreach (var chunk in _chatAppService.ChatStreamingAsync(input))
         {
             if (!string.IsNullOrEmpty(chunk.Content))

@@ -1,51 +1,128 @@
-<div class="chat-container">
-  <div class="chat-header">
-    <h2>专业大模型助手</h2>
-    <p class="subtitle">基于知识图谱的智能问答系统</p>
-  </div>
-  
-  <div #messagesContainer class="messages-container">
-    @for (msg of messages(); track msg.id) {
-      <div class="message" [class.user]="msg.role === 'user'" [class.assistant]="msg.role === 'assistant'">
-        <nz-avatar [nzText]="msg.role === 'user' ? '我' : 'AI'" [nzColor]="msg.role === 'user' ? '#1890ff' : '#52c41a'"></nz-avatar>
-        <div class="message-content">
-          @if (msg.content) {
-            <p [innerHTML]="formatMessage(msg.content)"></p>
-          } @else {
-            <div class="typing-indicator">
-              <span></span><span></span><span></span>
-            </div>
-          }
-        </div>
-      </div>
-    }
-  </div>
-  
-  <div class="input-container">
-    <nz-input-group [nzSuffix]="suffixTemplate" class="input-wrapper">
-      <textarea
-        nz-input
-        [value]="inputMessage()"
-        (input)="inputMessage.set($any($event.target).value)"
-        (keydown.enter)="onKeyPress($event)"
-        placeholder="输入您的问题，按 Enter 发送..."
-        nzSize="large"
-        [nzAutosize]="{ minRows: 1, maxRows: 4 }"
-        [disabled]="isLoading()"
-      ></textarea>
-    </nz-input-group>
-    <ng-template #suffixTemplate>
-      <button 
-        nz-button 
-        nzType="primary" 
-        nzShape="circle" 
-        nz-icon
-        (click)="sendMessage()"
-        [disabled]="isLoading() || !inputMessage().trim()"
-        class="send-button"
-      >
-        <span nz-icon nzType="send"></span>
+<div class="chat-layout">
+  <!-- Left sidebar: Resource list -->
+  <div class="resource-sidebar">
+    <div class="sidebar-header">
+      <h3>文档资源</h3>
+      <button nz-button nzType="text" nzSize="small" (click)="newChat()" nz-tooltip="新建对话">
+        <span nz-icon nzType="plus"></span>
       </button>
-    </ng-template>
+    </div>
+
+    <div class="sidebar-search">
+      <nz-input-group [nzSuffix]="searchIcon">
+        <input
+          nz-input
+          type="text"
+          [value]="resourceSearchText()"
+          (input)="resourceSearchText.set($any($event.target).value)"
+          placeholder="搜索文档..."
+        />
+      </nz-input-group>
+      <ng-template #searchIcon>
+        <span nz-icon nzType="search"></span>
+      </ng-template>
+    </div>
+
+    <div class="resource-list">
+      @if (isResourcesLoading()) {
+        <div class="loading-container">
+          <nz-spin nzSimple></nz-spin>
+        </div>
+      } @else if (filteredResources().length === 0) {
+        <nz-empty nzNotFoundContent="暂无文档资源"></nz-empty>
+      } @else {
+        @for (resource of filteredResources(); track resource.id) {
+          <div
+            class="resource-item"
+            [class.selected]="selectedResource()?.id === resource.id"
+            (click)="selectResource(resource)"
+          >
+            <div class="resource-icon">
+              <span nz-icon nzType="file-text" nzTheme="outline"></span>
+            </div>
+            <div class="resource-info">
+              <div class="resource-name">{{ resource.name }}</div>
+              <div class="resource-meta">
+                @if (resource.sourceFormat) {
+                  <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
+                }
+                <span class="node-count">{{ resource.nodeCount }} 节点</span>
+              </div>
+            </div>
+          </div>
+        }
+      }
+    </div>
+  </div>
+
+  <!-- Right: Chat area -->
+  <div class="chat-main">
+    <div class="chat-header">
+      <div class="header-title">
+        <h2>文档问答助手</h2>
+        @if (selectedResource()) {
+          <nz-tag [nzColor]="'green'">
+            <span nz-icon nzType="file-text" nzTheme="outline"></span>
+            {{ selectedResource()!.name }}
+          </nz-tag>
+        }
+      </div>
+      <button nz-button nzType="default" nzSize="small" (click)="newChat()">
+        <span nz-icon nzType="edit" nzTheme="outline"></span>
+        新建对话
+      </button>
+    </div>
+
+    <div #messagesContainer class="messages-container">
+      @if (messages().length === 0) {
+        <div class="welcome-message">
+          <span nz-icon nzType="robot" nzTheme="outline" class="welcome-icon"></span>
+          <h3>@if (selectedResource()) { 关于 {{ selectedResource()!.name }} 的问答 } @else { 你好，我是文档问答助手 }</h3>
+          <p>@if (selectedResource()) { 请输入关于这篇文档的问题 } @else { 请从左侧选择一个文档，或直接提问 }</p>
+        </div>
+      }
+      @for (msg of messages(); track msg.id) {
+        <div class="message" [class.user]="msg.role === 'user'" [class.assistant]="msg.role === 'assistant'">
+          <nz-avatar [nzText]="msg.role === 'user' ? '我' : 'AI'" [nzColor]="msg.role === 'user' ? '#1890ff' : '#52c41a'"></nz-avatar>
+          <div class="message-content">
+            @if (msg.content) {
+              <p [innerHTML]="formatMessage(msg.content)"></p>
+            } @else {
+              <div class="typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="input-container">
+      <nz-input-group [nzSuffix]="suffixTemplate" class="input-wrapper">
+        <textarea
+          nz-input
+          [value]="inputMessage()"
+          (input)="inputMessage.set($any($event.target).value)"
+          (keydown.enter)="onKeyPress($event)"
+          placeholder="@if (selectedResource()) { 输入关于文档的问题，按 Enter 发送... } @else { 输入您的问题，按 Enter 发送... }"
+          nzSize="large"
+          [nzAutosize]="{ minRows: 1, maxRows: 4 }"
+          [disabled]="isLoading()"
+        ></textarea>
+      </nz-input-group>
+      <ng-template #suffixTemplate>
+        <button
+          nz-button
+          nzType="primary"
+          nzShape="circle"
+          nz-icon
+          (click)="sendMessage()"
+          [disabled]="isLoading() || !inputMessage().trim()"
+          class="send-button"
+        >
+          <span nz-icon nzType="send"></span>
+        </button>
+      </ng-template>
+    </div>
   </div>
 </div>
