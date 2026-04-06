@@ -1,115 +1,214 @@
 <div class="case-analysis-container">
   <div class="page-header">
     <h2>案例分析</h2>
-    <p class="subtitle">上传案例文档，AI将自动进行多维度分析</p>
+    <p class="subtitle">基于资源库文档，AI 智能生成多维度案例分析报告</p>
   </div>
 
-  <nz-card nzTitle="输入案例" class="input-card">
-    <nz-upload
-      nzType="drag"
-      [nzMultiple]="false"
-      [nzShowUploadList]="false"
-      (nzChange)="handleUpload($event)"
-      [nzAccept]="'.txt,.md,.json'"
-      [nzBeforeUpload]="beforeUpload">
-      <p class="ant-upload-drag-icon">
-        <span nz-icon nzType="inbox"></span>
-      </p>
-      <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
-      <p class="ant-upload-hint">支持 .txt, .md, .json 格式，最大 10MB</p>
-    </nz-upload>
+  <!-- Step 1: Select resource -->
+  <nz-card class="step-card">
+    <div class="step-title">
+      <span class="step-number">1</span>
+      <span>选择分析资源</span>
+    </div>
 
-    <nz-divider>或者直接输入案例内容</nz-divider>
+    @if (resourcesLoading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple nzTip="加载资源列表..."></nz-spin>
+      </div>
+    } @else if (resources().length === 0) {
+      <nz-empty nzNotFoundContent="暂无可用资源，请先上传并索引文档"></nz-empty>
+    } @else {
+      <nz-select
+        class="resource-select"
+        [ngModel]="selectedResourceId()"
+        (ngModelChange)="selectedResourceId.set($event)"
+        nzPlaceHolder="请选择一个资源"
+        nzAllowClear
+        nzShowSearch
+        [nzOptionHeightPx]="64"
+      >
+        @for (resource of resources(); track resource.id) {
+          <nz-option [nzValue]="resource.id" [nzLabel]="resource.name">
+            <div class="resource-option">
+              <span nz-icon nzType="file-text" nzTheme="outline" class="resource-icon"></span>
+              <div class="resource-option-info">
+                <div class="resource-option-name">{{ resource.name }}</div>
+                <div class="resource-option-meta">
+                  @if (resource.sourceFormat) {
+                    <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
+                  }
+                  <span class="node-count">{{ resource.nodeCount }} 个索引节点</span>
+                </div>
+              </div>
+            </div>
+          </nz-option>
+        }
+      </nz-select>
 
-    <textarea
-      nz-input
-      [(ngModel)]="input().content"
-      [nzAutosize]="{ minRows: 6, maxRows: 12 }"
-      placeholder="请粘贴或输入案例内容..."
-    ></textarea>
+      @if (selectedResource()) {
+        <div class="selected-resource-info">
+          <nz-tag [nzColor]="'green'">
+            <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+            已选择：{{ selectedResource()!.name }}
+          </nz-tag>
+          @if (selectedResource()!.sourceFormat) {
+            <nz-tag [nzColor]="'blue'">{{ selectedResource()!.sourceFormat }}</nz-tag>
+          }
+          <span class="meta-text">{{ selectedResource()!.nodeCount }} 个索引节点</span>
+        </div>
+      }
+    }
+  </nz-card>
 
-    <div class="actions">
-      <button nz-button nzType="primary" (click)="analyze()" [nzLoading]="isLoading()" [disabled]="!input().content.trim()">
-        <span nz-icon nzType="search"></span>
+  <!-- Step 2: Configure and generate -->
+  <nz-card class="step-card">
+    <div class="step-title">
+      <span class="step-number">2</span>
+      <span>分析设置</span>
+    </div>
+
+    <div class="focus-area-section">
+      <label class="field-label">分析关注点（可选）</label>
+      <textarea
+        nz-input
+        [ngModel]="focusArea()"
+        (ngModelChange)="focusArea.set($event)"
+        [nzAutosize]="{ minRows: 3, maxRows: 6 }"
+        placeholder="例如：重点关注技术架构决策、团队管理挑战、市场策略分析..."
+        [disabled]="isLoading()"
+      ></textarea>
+      <div class="field-hint">填写关注点可以让 AI 针对特定角度进行深入分析</div>
+    </div>
+
+    <nz-divider></nz-divider>
+
+    <div class="action-bar">
+      <button nz-button nzType="primary" nzSize="large" (click)="generate()" [disabled]="!canGenerate()" [nzLoading]="isLoading()">
+        <span nz-icon nzType="thunderbolt"></span>
         开始分析
       </button>
-      <button nz-button (click)="reset()" [disabled]="isLoading()">
-        <span nz-icon nzType="clear"></span>
-        清空
+      <button nz-button nzSize="large" (click)="reset()" [disabled]="isLoading()">
+        重置
       </button>
     </div>
   </nz-card>
 
-  @if (isLoading()) {
-    <nz-card class="result-card">
-      <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 8 }"></nz-skeleton>
+  <!-- Loading state -->
+  @if (isLoading() && !result()) {
+    <nz-card class="step-card loading-card">
+      <div class="generating-container">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+        <p class="generating-text">正在基于文档内容生成案例分析，请稍候...</p>
+        <p class="generating-hint">AI 正在分析文档结构与关键内容</p>
+      </div>
     </nz-card>
   }
 
-  @if (result()) {
-    <nz-card nzTitle="分析结果" class="result-card">
-      <nz-descriptions nzTitle="{{ result().title }}" nzBordered [nzColumn]="2">
-        <nz-descriptions-item nzTitle="案例摘要" [nzSpan]="2">
-          {{ result().summary }}
-        </nz-descriptions-item>
-      </nz-descriptions>
+  <!-- Step 3: Result preview -->
+  @if (result(); as r) {
+    <nz-card class="step-card result-card">
+      <div class="result-header">
+        <div class="step-title">
+          <span class="step-number">3</span>
+          <span>分析报告预览</span>
+        </div>
+        <div class="result-actions">
+          <button nz-button nzType="primary" (click)="downloadDocx()" [nzLoading]="isExporting()">
+            <span nz-icon nzType="download"></span>
+            下载 DOCX
+          </button>
+          <button nz-button (click)="reset()">
+            <span nz-icon nzType="redo"></span>
+            重新分析
+          </button>
+        </div>
+      </div>
 
-      <nz-divider nzText="背景分析"></nz-divider>
-      <nz-descriptions nzBordered [nzColumn]="2">
-        <nz-descriptions-item nzTitle="行业">{{ result().background.industry }}</nz-descriptions-item>
-        <nz-descriptions-item nzTitle="时间范围">{{ result().background.timeframe }}</nz-descriptions-item>
-        <nz-descriptions-item nzTitle="场景背景" [nzSpan]="2">{{ result().background.context }}</nz-descriptions-item>
-        <nz-descriptions-item nzTitle="相关方" [nzSpan]="2">
-          @for (stakeholder of result().background.stakeholders; track stakeholder) {
-            <nz-tag>{{ stakeholder }}</nz-tag>
-          }
-        </nz-descriptions-item>
-      </nz-descriptions>
+      <div class="result-content">
+        <h2 class="plan-title">{{ r.title }}</h2>
 
-      <nz-divider nzText="关键问题"></nz-divider>
-      <nz-collapse>
-        @for (issue of result().keyIssues; track issue.id) {
-          <nz-collapse-panel [nzHeader]="issue.title" [nzActive]="true">
-            <nz-descriptions [nzColumn]="1" nzSize="small">
-              <nz-descriptions-item nzTitle="问题描述">{{ issue.description }}</nz-descriptions-item>
-              <nz-descriptions-item nzTitle="影响">{{ issue.impact }}</nz-descriptions-item>
-              <nz-descriptions-item nzTitle="严重程度">
-                <nz-tag [nzColor]="getSeverityColor(issue.severity)">{{ issue.severity }}</nz-tag>
-              </nz-descriptions-item>
-            </nz-descriptions>
-          </nz-collapse-panel>
-        }
-      </nz-collapse>
+        <!-- Summary -->
+        <div class="section-block">
+          <h4 class="section-heading">案例摘要</h4>
+          <p class="summary-text">{{ r.summary }}</p>
+        </div>
 
-      <nz-divider nzText="解决方案"></nz-divider>
-      <nz-collapse>
-        @for (solution of result().solutions; track solution.id) {
-          <nz-collapse-panel [nzHeader]="solution.title">
-            <p>{{ solution.description }}</p>
-            <h4>实施步骤:</h4>
-            <ol>
-              @for (step of solution.steps; track step) {
-                <li>{{ step }}</li>
+        <!-- Background -->
+        <div class="section-block">
+          <h4 class="section-heading">背景分析</h4>
+          <nz-descriptions nzBordered [nzColumn]="2" nzSize="small">
+            <nz-descriptions-item nzTitle="行业">{{ r.background.industry }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="时间范围">{{ r.background.timeframe }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="场景背景" [nzSpan]="2">{{ r.background.context }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="相关方" [nzSpan]="2">
+              @for (stakeholder of r.background.stakeholders; track stakeholder) {
+                <nz-tag>{{ stakeholder }}</nz-tag>
               }
-            </ol>
-            <p><strong>预期效果:</strong> {{ solution.expectedOutcome }}</p>
-          </nz-collapse-panel>
-        }
-      </nz-collapse>
+            </nz-descriptions-item>
+          </nz-descriptions>
+        </div>
 
-      <nz-divider nzText="关键洞察"></nz-divider>
-      <ul class="insight-list">
-        @for (insight of result().keyInsights; track insight) {
-          <li>{{ insight }}</li>
-        }
-      </ul>
+        <!-- Key Issues -->
+        <div class="section-block">
+          <h4 class="section-heading">关键问题</h4>
+          <nz-collapse>
+            @for (issue of r.keyIssues; track issue.id) {
+              <nz-collapse-panel [nzHeader]="issue.title" [nzActive]="true">
+                <nz-descriptions [nzColumn]="1" nzSize="small">
+                  <nz-descriptions-item nzTitle="问题描述">{{ issue.description }}</nz-descriptions-item>
+                  <nz-descriptions-item nzTitle="影响">{{ issue.impact }}</nz-descriptions-item>
+                  <nz-descriptions-item nzTitle="严重程度">
+                    <nz-tag [nzColor]="getSeverityColor(issue.severity)">{{ issue.severity }}</nz-tag>
+                  </nz-descriptions-item>
+                </nz-descriptions>
+              </nz-collapse-panel>
+            }
+          </nz-collapse>
+        </div>
 
-      <nz-divider nzText="建议"></nz-divider>
-      <ul class="recommendation-list">
-        @for (rec of result().recommendations; track rec) {
-          <li>{{ rec }}</li>
-        }
-      </ul>
+        <!-- Solutions -->
+        <div class="section-block">
+          <h4 class="section-heading">解决方案</h4>
+          <nz-collapse>
+            @for (solution of r.solutions; track solution.id) {
+              <nz-collapse-panel [nzHeader]="solution.title">
+                <p>{{ solution.description }}</p>
+                @if (solution.steps.length > 0) {
+                  <div>
+                    <h5>实施步骤：</h5>
+                    <ol class="step-list">
+                      @for (step of solution.steps; track step) {
+                        <li>{{ step }}</li>
+                      }
+                    </ol>
+                  </div>
+                }
+                <p><strong>预期效果：</strong>{{ solution.expectedOutcome }}</p>
+              </nz-collapse-panel>
+            }
+          </nz-collapse>
+        </div>
+
+        <!-- Key Insights -->
+        <div class="section-block">
+          <h4 class="section-heading">关键洞察</h4>
+          <ul class="item-list">
+            @for (insight of r.keyInsights; track insight) {
+              <li>{{ insight }}</li>
+            }
+          </ul>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="section-block">
+          <h4 class="section-heading">建议</h4>
+          <ul class="item-list">
+            @for (rec of r.recommendations; track rec) {
+              <li>{{ rec }}</li>
+            }
+          </ul>
+        </div>
+      </div>
     </nz-card>
   }
 </div>

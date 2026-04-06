@@ -32,6 +32,11 @@ export interface LessonPlanGenerationInput {
   duration: number;
 }
 
+export interface CaseAnalysisGenerationInput {
+  resourceId: string;
+  focusArea?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private readonly apiUrl = 'https://localhost:44305/api/learning/ai';
@@ -182,6 +187,78 @@ export class ChatService {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ lessonPlanJson }),
+    }).then(async response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.blob();
+    });
+  }
+
+  generateCaseAnalysis(input: CaseAnalysisGenerationInput): Observable<ChatMessageChunk> {
+    return new Observable<ChatMessageChunk>(observer => {
+      const body = JSON.stringify(input);
+
+      fetch(`${this.apiUrl}/generate-case-analysis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body,
+      }).then(async response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          observer.complete();
+          return;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const chunk = JSON.parse(line.slice(6));
+                this.ngZone.run(() => {
+                  observer.next({
+                    content: chunk.content || '',
+                    threadId: chunk.threadId || '',
+                    isComplete: chunk.isComplete || false,
+                  });
+                });
+              } catch {
+                // skip malformed JSON
+              }
+            }
+          }
+        }
+
+        this.ngZone.run(() => observer.complete());
+      }).catch(err => {
+        this.ngZone.run(() => observer.error(err));
+      });
+
+      return () => {};
+    });
+  }
+
+  exportCaseAnalysisDocx(caseAnalysisJson: string): Promise<Blob> {
+    return fetch(`${this.apiUrl}/export-case-analysis-docx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ caseAnalysisJson }),
     }).then(async response => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

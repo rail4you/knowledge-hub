@@ -1,24 +1,20 @@
-import { Component, signal, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, inject, computed, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzUploadModule, NzUploadChangeParam } from 'ng-zorro-antd/upload';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { ChatService } from '../services/chat.service';
-
-interface CaseInput {
-  content: string;
-  title?: string;
-}
+import { Subject, takeUntil } from 'rxjs';
+import { ChatService, ResourceForChat } from '../services/chat.service';
 
 interface CaseAnalysisResult {
   title: string;
@@ -56,132 +52,157 @@ interface CaseAnalysisResult {
     NzInputModule,
     NzButtonModule,
     NzCardModule,
-    NzUploadModule,
-    NzSpinModule,
-    NzIconModule,
+    NzSelectModule,
     NzDividerModule,
     NzCollapseModule,
     NzDescriptionsModule,
     NzTagModule,
-    NzSkeletonModule
+    NzSpinModule,
+    NzIconModule,
+    NzEmptyModule
   ],
   templateUrl: './case-analysis.component.html',
   styleUrls: ['./case-analysis.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class CaseAnalysisComponent {
+export class CaseAnalysisComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
-  private readonly message = inject(NzMessageService);
-  
-  input = signal<CaseInput>({ content: '', title: '' });
+  private readonly messageService = inject(NzMessageService);
+  private readonly destroy$ = new Subject<void>();
+
+  resources = signal<ResourceForChat[]>([]);
+  resourcesLoading = signal(false);
+  selectedResourceId = signal<string | null>(null);
+
+  selectedResource = computed(() => {
+    const id = this.selectedResourceId();
+    if (!id) return null;
+    return this.resources().find(r => r.id === id) ?? null;
+  });
+
+  focusArea = signal('');
   result = signal<CaseAnalysisResult | null>(null);
+  rawJson = signal('');
   isLoading = signal(false);
-  
-  beforeUpload = (file: File): boolean => {
-    const isValid = file.size / 1024 / 1024 < 10;
-    if (!isValid) {
-      this.message.error('文件大小不能超过10MB');
-    }
-    return isValid;
-  };
-  
-  handleUpload = (info: NzUploadChangeParam): void => {
-    const file = info.file;
-    if (!file || !file.originFileObj) return;
-    if (!this.beforeUpload(file.originFileObj)) return;
-    
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.input.update(input => ({
-        ...input,
-        content: reader.result as string,
-        title: file.name
-      }));
-      this.message.success(`已加载文件: ${file.name}`);
-    };
-    reader.readAsText(file.originFileObj);
-  };
-  
-  analyze(): void {
-    const input = this.input();
-    if (!input.content.trim()) {
-      this.message.warning('请先上传案例文档或输入案例内容');
-      return;
-    }
-    
+  isExporting = signal(false);
+
+  canGenerate = computed(() => {
+    return !!this.selectedResourceId() && !this.isLoading();
+  });
+
+  ngOnInit() {
+    this.loadResources();
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private loadResources() {
+    this.resourcesLoading.set(true);
+    this.chatService.getResources()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.resources.set(data);
+          this.resourcesLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Failed to load resources:', err);
+          this.resourcesLoading.set(false);
+          this.messageService.error('加载资源列表失败');
+        }
+      });
+  }
+
+  generate() {
+    const resourceId = this.selectedResourceId();
+    if (!resourceId) return;
+
     this.isLoading.set(true);
     this.result.set(null);
-    
-    const prompt = this.buildPrompt();
+    this.rawJson.set('');
+
     let fullResponse = '';
-    
-    this.chatService.chat({ message: prompt, agent: 'case-analysis' }).subscribe({
-      next: (chunk) => {
-        if (chunk.content) {
-          fullResponse += chunk.content;
-          this.tryParseResult(fullResponse);
+
+    this.chatService.generateCaseAnalysis({
+      resourceId,
+      focusArea: this.focusArea() || undefined
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (chunk) => {
+          if (chunk.content) {
+            fullResponse += chunk.content;
+            this.rawJson.set(fullResponse);
+            this.tryParseResult(fullResponse);
+          }
+        },
+        error: (err) => {
+          console.error('Error generating case analysis:', err);
+          this.isLoading.set(false);
+          this.messageService.error('案例分析生成失败，请稍后重试');
+        },
+        complete: () => {
+          this.isLoading.set(false);
+          if (fullResponse && !this.result()) {
+            this.tryParseResult(fullResponse, true);
+          }
         }
-      },
-      error: (err) => {
-        console.error('Error analyzing case:', err);
-        this.message.error('分析失败，请重试');
-        this.isLoading.set(false);
-      },
-      complete: () => {
-        this.isLoading.set(false);
-      }
-    });
+      });
   }
-  
-  private tryParseResult(response: string): void {
+
+  private tryParseResult(json: string, final = false) {
     try {
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]) as CaseAnalysisResult;
-        this.result.set(parsed);
+      let cleanJson = json.trim();
+      if (cleanJson.startsWith('```')) {
+        const firstNewline = cleanJson.indexOf('\n');
+        if (firstNewline >= 0) cleanJson = cleanJson.substring(firstNewline + 1);
+        if (cleanJson.endsWith('```')) {
+          cleanJson = cleanJson.substring(0, cleanJson.length - 3).trimEnd();
+        }
       }
+      const parsed = JSON.parse(cleanJson);
+      this.result.set(parsed);
     } catch {
-      // JSON not yet complete
+      if (final) {
+        this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
+      }
     }
   }
-  
-  private buildPrompt(): string {
-    const input = this.input();
-    return `请分析以下案例，提供多维度分析：
 
-案例标题: ${input.title || '未命名案例'}
+  async downloadDocx() {
+    const json = this.rawJson();
+    if (!json) return;
 
-案例内容:
-${input.content}
-
-请以JSON格式输出分析结果，包含以下字段:
-{
-  "title": "案例标题",
-  "summary": "案例摘要(100字以内)",
-  "background": {
-    "industry": "所属行业",
-    "timeframe": "时间范围",
-    "context": "背景描述",
-    "stakeholders": ["相关方1", "相关方2"]
-  },
-  "keyIssues": [
-    {"id": "1", "title": "问题标题", "description": "问题描述", "impact": "影响", "severity": "高/中/低"}
-  ],
-  "solutions": [
-    {"id": "1", "title": "方案标题", "description": "方案描述", "steps": ["步骤1"], "expectedOutcome": "预期效果"}
-  ],
-  "keyInsights": ["洞察1", "洞察2"],
-  "recommendations": ["建议1", "建议2"]
-}
-
-只输出JSON，不要其他内容。`;
+    this.isExporting.set(true);
+    try {
+      const blob = await this.chatService.exportCaseAnalysisDocx(json);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `案例分析_${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      this.messageService.success('案例分析已下载');
+    } catch (err) {
+      console.error('Failed to export docx:', err);
+      this.messageService.error('导出失败，请重试');
+    } finally {
+      this.isExporting.set(false);
+    }
   }
-  
-  reset(): void {
-    this.input.set({ content: '', title: '' });
+
+  reset() {
+    this.selectedResourceId.set(null);
+    this.focusArea.set('');
     this.result.set(null);
+    this.rawJson.set('');
   }
-  
+
   getSeverityColor(severity: string): string {
     switch (severity) {
       case '高': return 'red';
