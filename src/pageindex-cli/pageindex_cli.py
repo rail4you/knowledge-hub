@@ -95,12 +95,14 @@ def convert_pptx_to_md(path: str) -> str:
         for shape in slide.shapes:
             if not shape.has_text_frame:
                 continue
-            is_title = (
-                shape.shape_type == 13  # MSO_SHAPE_TYPE.TITLE is 14, placeholder 0=title
-                or (hasattr(shape, "placeholder_format")
-                    and shape.placeholder_format is not None
-                    and shape.placeholder_format.idx == 0)
-            )
+            # Determine if this shape is the slide title placeholder
+            is_title = False
+            try:
+                pf = shape.placeholder_format
+                if pf is not None and pf.idx == 0:
+                    is_title = True
+            except ValueError:
+                pass  # Not a placeholder shape
             text = shape.text_frame.text.strip()
             if not text:
                 continue
