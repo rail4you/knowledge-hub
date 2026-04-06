@@ -19,6 +19,11 @@ export interface PageContentDto {
   title?: string | null;
 }
 
+export interface PageIndexSearchInput {
+  query?: string;
+  maxResults?: number;
+}
+
 export interface TestParseResultDto {
   success?: boolean;
   errorMessage?: string | null;

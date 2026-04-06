@@ -1,5 +1,6 @@
 import { Component, signal, inject, ViewChild, ElementRef, ChangeDetectionStrategy, OnDestroy, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -12,6 +13,7 @@ import { NzListModule } from 'ng-zorro-antd/list';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { Subject, takeUntil } from 'rxjs';
+import { marked } from 'marked';
 import { ChatService, ResourceForChat } from '../services/chat.service';
 
 interface ChatMessage {
@@ -44,6 +46,7 @@ interface ChatMessage {
 })
 export class ChatComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
+  private readonly sanitizer = inject(DomSanitizer);
   private readonly destroy$ = new Subject<void>();
 
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
@@ -190,15 +193,9 @@ export class ChatComponent implements OnInit, OnDestroy {
     }, 0);
   }
 
-  formatMessage(content: string): string {
+  formatMessage(content: string): SafeHtml {
     if (!content) return '';
-    return content
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code>$1</code>');
+    const html = marked.parse(content, { async: false }) as string;
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 }

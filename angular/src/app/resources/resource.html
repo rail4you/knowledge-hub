@@ -436,6 +436,91 @@
               </button>
             </div>
           </nz-collapse-panel>
+
+          <nz-collapse-panel [nzHeader]="'::ResourceReviews' | abpLocalization">
+            <app-resource-review [resourceId]="selectedResource()!.id!"></app-resource-review>
+          </nz-collapse-panel>
+
+          <!-- Resource Statistics Panel -->
+          <nz-collapse-panel [nzHeader]="'::ResourceStatistics' | abpLocalization" *abpPermission="'KnowledgeHub.Resources.ViewStatistics'">
+            @if (statisticsLoading()) {
+              <div style="text-align: center; padding: 20px;">
+                <nz-spin nzSimple nzSize="small"></nz-spin>
+              </div>
+            } @else if (resourceStatistics(); as stats) {
+              <div class="stats-grid">
+                <div class="stats-card">
+                  <div class="stats-value">{{ stats.totalViews }}</div>
+                  <div class="stats-label">总浏览量</div>
+                </div>
+                <div class="stats-card">
+                  <div class="stats-value">{{ stats.uniqueViewers }}</div>
+                  <div class="stats-label">独立访客</div>
+                </div>
+                <div class="stats-card">
+                  <div class="stats-value">{{ stats.totalCollections }}</div>
+                  <div class="stats-label">收藏数</div>
+                </div>
+                <div class="stats-card">
+                  <div class="stats-value">{{ stats.collectionRate | number:'1.1-1' }}%</div>
+                  <div class="stats-label">收藏率</div>
+                </div>
+                <div class="stats-card">
+                  <div class="stats-value">{{ stats.totalDownloads }}</div>
+                  <div class="stats-label">下载数</div>
+                </div>
+                <div class="stats-card">
+                  <div class="stats-value">{{ stats.averageRating | number:'1.1-1' }}</div>
+                  <div class="stats-label">平均评分</div>
+                </div>
+              </div>
+
+              <!-- View Trend -->
+              <div class="stats-section" style="margin-top: 12px;">
+                <div class="stats-section-title">浏览趋势 (30天)</div>
+                <div class="stats-trend">
+                  <span>近30天: <strong>{{ stats.viewsLast30Days }}</strong></span>
+                  <span>前30天: <strong>{{ stats.viewsPrevious30Days }}</strong></span>
+                  <span [class]="stats.viewTrendPercentage >= 0 ? 'trend-up' : 'trend-down'">
+                    {{ stats.viewTrendPercentage >= 0 ? '↑' : '↓' }}
+                    {{ stats.viewTrendPercentage >= 0 ? stats.viewTrendPercentage : -stats.viewTrendPercentage }}%
+                  </span>
+                </div>
+              </div>
+
+              <!-- Rating Distribution -->
+              @if (stats.totalReviews > 0) {
+                <div class="stats-section" style="margin-top: 12px;">
+                  <div class="stats-section-title">评分分布 (共{{ stats.totalReviews }}条)</div>
+                  <div class="rating-bars">
+                    @for (rating of [5, 4, 3, 2, 1]; track rating) {
+                      <div class="rating-bar-row">
+                        <span class="rating-bar-label">{{ rating }}星</span>
+                        <div class="rating-bar-track">
+                          <div class="rating-bar-fill" [style.width.%]="stats.totalReviews > 0 ? (stats.ratingDistribution[rating - 1] / stats.totalReviews * 100) : 0"></div>
+                        </div>
+                        <span class="rating-bar-count">{{ stats.ratingDistribution[rating - 1] }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Search CTR -->
+              @if (stats.timesInSearchResults > 0) {
+                <div class="stats-section" style="margin-top: 12px;">
+                  <div class="stats-section-title">搜索曝光</div>
+                  <div class="stats-trend">
+                    <span>搜索结果出现: <strong>{{ stats.timesInSearchResults }}</strong>次</span>
+                    <span>点击: <strong>{{ stats.timesClickedFromSearch }}</strong>次</span>
+                    <span>CTR: <strong>{{ stats.clickThroughRate }}%</strong></span>
+                  </div>
+                </div>
+              }
+            } @else {
+              <nz-empty nzNotFoundContent="暂无统计数据"></nz-empty>
+            }
+          </nz-collapse-panel>
         </nz-collapse>
       </div>
     </div>

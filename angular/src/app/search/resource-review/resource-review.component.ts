@@ -1,4 +1,4 @@
-import { Component, Input, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -28,6 +28,7 @@ import { ResourceReviewService, ResourceReviewDto, ResourceRatingSummaryDto, Cre
 })
 export class ResourceReviewComponent implements OnInit {
   @Input() resourceId = '';
+  @Output() reviewChanged = new EventEmitter<void>();
 
   private readonly reviewService = inject(ResourceReviewService);
   private readonly message = inject(NzMessageService);
@@ -91,6 +92,7 @@ export class ResourceReviewComponent implements OnInit {
           this.message.success('评价更新成功');
           this.loadSummary();
           this.loadReviews();
+          this.reviewChanged.emit();
         },
         error: () => {
           this.submitting.set(false);
@@ -109,6 +111,7 @@ export class ResourceReviewComponent implements OnInit {
           this.message.success('评价提交成功');
           this.loadSummary();
           this.loadReviews();
+          this.reviewChanged.emit();
         },
         error: () => {
           this.submitting.set(false);
@@ -127,6 +130,7 @@ export class ResourceReviewComponent implements OnInit {
         this.myContent = '';
         this.loadSummary();
         this.loadReviews();
+        this.reviewChanged.emit();
       },
       error: () => this.message.error('删除失败')
     });

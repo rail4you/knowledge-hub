@@ -1,20 +1,94 @@
 <div class="lesson-plan-container">
   <div class="lesson-plan-header">
-    <h2>教案课件生成</h2>
-    <p class="subtitle">输入课程信息，p>
+    <h2>教案生成</h2>
+    <p class="subtitle">基于资源库资源，智能生成教学教案</p>
   </div>
 
-  <nz-card>
+  <!-- Step 1: Select resource -->
+  <nz-card class="step-card">
+    <div class="step-title">
+      <span class="step-number">1</span>
+      <span>选择教学资源</span>
+    </div>
+
+    @if (resourcesLoading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple nzTip="加载资源列表..."></nz-spin>
+      </div>
+    } @else if (resources().length === 0) {
+      <nz-empty nzNotFoundContent="暂无可用资源，请先上传并索引文档"></nz-empty>
+    } @else {
+      <nz-select
+        class="resource-select"
+        [ngModel]="selectedResourceId()"
+        (ngModelChange)="selectedResourceId.set($event)"
+        nzPlaceHolder="请选择一个资源"
+        nzAllowClear
+        nzShowSearch
+        [nzOptionHeightPx]="64"
+      >
+        @for (resource of resources(); track resource.id) {
+          <nz-option [nzValue]="resource.id" [nzLabel]="resource.name">
+            <div class="resource-option">
+              <span nz-icon nzType="file-text" nzTheme="outline" class="resource-icon"></span>
+              <div class="resource-option-info">
+                <div class="resource-option-name">{{ resource.name }}</div>
+                <div class="resource-option-meta">
+                  @if (resource.sourceFormat) {
+                    <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
+                  }
+                  <span class="node-count">{{ resource.nodeCount }} 个索引节点</span>
+                </div>
+              </div>
+            </div>
+          </nz-option>
+        }
+      </nz-select>
+
+      @if (selectedResource()) {
+        <div class="selected-resource-info">
+          <nz-tag [nzColor]="'green'">
+            <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+            已选择：{{ selectedResource()!.name }}
+          </nz-tag>
+          @if (selectedResource()!.sourceFormat) {
+            <nz-tag [nzColor]="'blue'">{{ selectedResource()!.sourceFormat }}</nz-tag>
+          }
+          <span class="meta-text">{{ selectedResource()!.nodeCount }} 个索引节点</span>
+        </div>
+      }
+    }
+  </nz-card>
+
+  <!-- Step 2: Configure parameters -->
+  <nz-card class="step-card">
+    <div class="step-title">
+      <span class="step-number">2</span>
+      <span>填写教学参数</span>
+    </div>
+
     <div nz-row [nzGutter]="[16, 16]">
-      <div nz-col [nzSpan]="12">
+      <div nz-col [nzSpan]="24">
         <nz-form-item nzLabel="课程主题">
-          <input nz-input [(ngModel)]="input().topic" placeholder="例如：Python基础入门" />
+          <input
+            nz-input
+            [ngModel]="input().topic"
+            (ngModelChange)="updateTopic($event)"
+            placeholder="例如：Python基础入门、细胞的分裂与分化"
+            [disabled]="isLoading()"
+          />
         </nz-form-item>
       </div>
-      
-      <div nz-col [nzSpan]="6">
+
+      <div nz-col [nzSpan]="8">
         <nz-form-item nzLabel="学科">
-          <nz-select [(ngModel)]="input().subject" nzPlaceHolder="请选择">
+          <nz-select
+            [ngModel]="input().subject"
+            (ngModelChange)="updateSubject($event)"
+            nzPlaceHolder="请选择"
+            nzAllowClear
+            [disabled]="isLoading()"
+          >
             <nz-option nzValue="语文" nzLabel="语文"></nz-option>
             <nz-option nzValue="数学" nzLabel="数学"></nz-option>
             <nz-option nzValue="英语" nzLabel="英语"></nz-option>
@@ -28,9 +102,15 @@
         </nz-form-item>
       </div>
 
-      <div nz-col [nzSpan]="6">
+      <div nz-col [nzSpan]="8">
         <nz-form-item nzLabel="年级">
-          <nz-select [(ngModel)]="input().grade" nzPlaceHolder="请选择">
+          <nz-select
+            [ngModel]="input().grade"
+            (ngModelChange)="updateGrade($event)"
+            nzPlaceHolder="请选择"
+            nzAllowClear
+            [disabled]="isLoading()"
+          >
             <nz-option nzValue="七年级" nzLabel="七年级"></nz-option>
             <nz-option nzValue="八年级" nzLabel="八年级"></nz-option>
             <nz-option nzValue="九年级" nzLabel="九年级"></nz-option>
@@ -42,70 +122,157 @@
         </nz-form-item>
       </div>
 
-      <div nz-col [nzSpan]="6">
+      <div nz-col [nzSpan]="8">
         <nz-form-item nzLabel="课时(分钟)">
-          <nz-input-number [(ngModel)]="input().duration" [nzMin]="5" [nzMax]="180" [nzStep]="5"></nz-input-number>
+          <nz-input-number
+            [ngModel]="input().duration"
+            (ngModelChange)="updateDuration($event)"
+            [nzMin]="5"
+            [nzMax]="180"
+            [nzStep]="5"
+            [disabled]="isLoading()"
+          ></nz-input-number>
         </nz-form-item>
       </div>
     </div>
 
     <nz-divider></nz-divider>
 
-    <button nz-button nzType="primary" (click)="generate()" [nzLoading]="isLoading()">
-      <span nz-icon nzType="file-text"></span>
-      生成教案
-    </button>
+    <div class="action-bar">
+      <button nz-button nzType="primary" nzSize="large" (click)="generate()" [disabled]="!canGenerate()" [nzLoading]="isLoading()">
+        <span nz-icon nzType="thunderbolt"></span>
+        生成教案
+      </button>
+      <button nz-button nzSize="large" (click)="reset()" [disabled]="isLoading()">
+        重置
+      </button>
+    </div>
   </nz-card>
 
-  <nz-card *ngIf="result()" class="result-card" nzTitle="生成的教案">
-    <ng-container *ngIf="!isLoading(); else result() as r">
-      <nz-descriptions nzTitle="r.title" nzBordered>
-        <nz-descriptions-item nzTitle="学科">{{ r().subject }}</nz-descriptions-item>
-        <nz-descriptions-item nzTitle="年级">{{ r().grade }}</nz-descriptions-item>
-        <nz-descriptions-item nzTitle="课时">{{ r().duration }}分钟</nz-descriptions-item>
-      </nz-descriptions>
+  <!-- Loading state -->
+  @if (isLoading() && !result()) {
+    <nz-card class="step-card loading-card">
+      <div class="generating-container">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+        <p class="generating-text">正在基于文档内容生成教案，请稍候...</p>
+        <p class="generating-hint">AI 正在分析文档结构与关键内容</p>
+      </div>
+    </nz-card>
+  }
 
-      <nz-divider nzText="教学目标"></nz-divider>
-      <ul>
-        <li *ngFor="let obj of r().objectives">{{ obj }}</li>
-      </ul>
+  <!-- Step 3: Result preview -->
+  @if (result(); as r) {
+    <nz-card class="step-card result-card">
+      <div class="result-header">
+        <div class="step-title">
+          <span class="step-number">3</span>
+          <span>教案预览</span>
+        </div>
+        <div class="result-actions">
+          <button nz-button nzType="primary" (click)="downloadDocx()" [nzLoading]="isExporting()">
+            <span nz-icon nzType="download"></span>
+            下载 DOCX
+          </button>
+          <button nz-button (click)="reset()">
+            <span nz-icon nzType="redo"></span>
+            重新生成
+          </button>
+        </div>
+      </div>
 
-      <nz-divider nzText="教学重点"></nz-divider>
-      <ul>
-        <li *ngFor="let kp of r().keyPoints">{{ kp }}</li>
-      </ul>
+      <div class="result-content">
+        <h2 class="plan-title">{{ r.title }}</h2>
 
-      <nz-divider nzText="教学难点"></nz-divider>
-      <ul>
-        <li *ngFor="let diff of r().difficulties">{{ diff }}</li>
-      </ul>
+        <nz-descriptions nzBordered [nzColumn]="3" nzSize="small">
+          <nz-descriptions-item nzTitle="学科">{{ r.subject }}</nz-descriptions-item>
+          <nz-descriptions-item nzTitle="年级">{{ r.grade }}</nz-descriptions-item>
+          <nz-descriptions-item nzTitle="课时">{{ r.duration }}分钟</nz-descriptions-item>
+        </nz-descriptions>
 
-      <nz-divider nzText="教学环节"></nz-divider>
-      <nz-collapse>
-        <nz-collapse-panel *ngFor="let section of r().sections; let i = index" [nzHeader]="section.name + ' (' + section.duration + '分钟)'">
-        <p>{{ section.content }}</p>
-        <h4>活动:</h4>
-        <ul>
-          <li *ngFor="let activity of section.activities">{{ activity }}</li>
-        </ul>
-      </nz-collapse-panel>
-    </nz-collapse>
+        <div class="section-block">
+          <h4 class="section-heading">教学目标</h4>
+          <ul class="item-list">
+            @for (obj of r.objectives; track obj) {
+              <li>{{ obj }}</li>
+            }
+          </ul>
+        </div>
 
-      <nz-divider nzText="教学方法"></nz-divider>
-      <nz-tag *ngFor="let method of r().methods">{{ method }}</nz-tag>
+        <div class="section-block">
+          <h4 class="section-heading">教学重点</h4>
+          <ul class="item-list">
+            @for (kp of r.keyPoints; track kp) {
+              <li>{{ kp }}</li>
+            }
+          </ul>
+        </div>
 
-      <nz-divider nzText="教学资源"></nz-divider>
-      <nz-tag *ngFor="let resource of r().resources">{{ resource }}</nz-tag>
+        <div class="section-block">
+          <h4 class="section-heading">教学难点</h4>
+          <ul class="item-list">
+            @for (diff of r.difficulties; track diff) {
+              <li>{{ diff }}</li>
+            }
+          </ul>
+        </div>
 
-      <nz-divider nzText="评估方法"></nz-divider>
-      <ul>
-        <li *ngFor="let assessment of r().assessment">{{ assessment }}</li>
-      </ul>
+        <div class="section-block">
+          <h4 class="section-heading">教学环节</h4>
+          <nz-collapse>
+            @for (section of r.sections; track section.name) {
+              <nz-collapse-panel [nzHeader]="section.name + ' (' + section.duration + '分钟)'">
+                <p>{{ section.content }}</p>
+                @if (section.activities.length > 0) {
+                  <div>
+                    <h5>活动：</h5>
+                    <ul class="item-list">
+                      @for (activity of section.activities; track activity) {
+                        <li>{{ activity }}</li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </nz-collapse-panel>
+            }
+          </nz-collapse>
+        </div>
 
-      <nz-divider nzText="课后作业"></nz-divider>
-      <ul>
-        <li *ngFor="let hw of r().homework">{{ hw }}</li>
-      </ul>
-    </ng-container>
-  </nz-card>
+        <div class="section-block">
+          <h4 class="section-heading">教学方法</h4>
+          <div class="tag-list">
+            @for (method of r.methods; track method) {
+              <nz-tag [nzColor]="'blue'">{{ method }}</nz-tag>
+            }
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h4 class="section-heading">教学资源</h4>
+          <div class="tag-list">
+            @for (resource of r.resources; track resource) {
+              <nz-tag [nzColor]="'green'">{{ resource }}</nz-tag>
+            }
+          </div>
+        </div>
+
+        <div class="section-block">
+          <h4 class="section-heading">评估方法</h4>
+          <ul class="item-list">
+            @for (assessment of r.assessment; track assessment) {
+              <li>{{ assessment }}</li>
+            }
+          </ul>
+        </div>
+
+        <div class="section-block">
+          <h4 class="section-heading">课后作业</h4>
+          <ul class="item-list">
+            @for (hw of r.homework; track hw) {
+              <li>{{ hw }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    </nz-card>
+  }
 </div>

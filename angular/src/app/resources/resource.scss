@@ -661,4 +661,109 @@
   }
 }
 
+// ============================================
+// Resource Statistics Panel
+// ============================================
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
 
+.stats-card {
+  background: #fafbfc;
+  border-radius: 6px;
+  padding: 10px 12px;
+  text-align: center;
+  border: 1px solid #f0f0f0;
+}
+
+.stats-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f1f1f;
+  line-height: 1.2;
+}
+
+.stats-label {
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.stats-section {
+  background: #fafbfc;
+  border-radius: 6px;
+  padding: 10px 12px;
+  border: 1px solid #f0f0f0;
+}
+
+.stats-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.stats-trend {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #666;
+
+  strong {
+    color: #333;
+  }
+}
+
+.trend-up {
+  color: #52c41a;
+  font-weight: 600;
+}
+
+.trend-down {
+  color: #ff4d4f;
+  font-weight: 600;
+}
+
+.rating-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rating-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rating-bar-label {
+  font-size: 11px;
+  color: #999;
+  width: 28px;
+  flex-shrink: 0;
+}
+
+.rating-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rating-bar-fill {
+  height: 100%;
+  background: #faad14;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.rating-bar-count {
+  font-size: 11px;
+  color: #999;
+  width: 24px;
+  text-align: right;
+  flex-shrink: 0;
+}

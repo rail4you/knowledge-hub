@@ -55,11 +55,11 @@ export class SearchAnalyticsService {
     { apiName: this.apiName,...config });
   
 
-  logSearch = (userId: string, query: string, searchType: number, resultCount: number, filters: string, config?: Partial<Rest.Config>) =>
+  logSearch = (userId: string, query: string, searchType: number, resultCount: number, filters: string, sourceType: string = "all", config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',
       url: `/api/app/search-analytics/log-search/${userId}`,
-      params: { query, searchType, resultCount, filters },
+      params: { query, searchType, resultCount, filters, sourceType },
     },
     { apiName: this.apiName,...config });
 }

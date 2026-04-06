@@ -80,7 +80,8 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.ManageCategory, true);
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.PhysicalDelete, true);
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.ViewStatistics, true);
-        
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.ViewRecommendation, true);
+
         // Search permissions - LeagueAdmin
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Search.Default, true);
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Search.ManageIndex, true);
@@ -109,6 +110,7 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.SchoolAudit, true);
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ManageCategory, true);
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ViewStatistics, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ViewRecommendation, true);
 
         // Search permissions - SchoolAdmin
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Search.Default, true);
@@ -134,6 +136,7 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Resources.Create, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Resources.Edit, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Resources.Download, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Resources.ViewRecommendation, true);
 
         // Search permissions - Teacher
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Search.Default, true);
@@ -156,6 +159,7 @@ public class IdentityDataSeederContributor
         // Student - Read-only access
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Resources.Default, true);
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Resources.Download, true);
+        await GrantPermissionAsync("Student", KnowledgeHubPermissions.Resources.ViewRecommendation, true);
 
         // Search permissions - Student
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Search.Default, true);

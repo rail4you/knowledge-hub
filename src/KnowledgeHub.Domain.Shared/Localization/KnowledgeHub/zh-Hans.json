@@ -81,6 +81,8 @@
     "Permission:Resources.ManageCategory": "管理分类",
     "Permission:Resources.PhysicalDelete": "物理删除",
     "Permission:Resources.ViewStatistics": "查看统计",
+    "Permission:Resources.ViewRecommendation": "查看推荐",
+    "ResourceStatistics": "资源统计",
     "Permission:Users": "用户管理",
     "Permission:Users.Create": "创建新用户",
     "Permission:Users.Edit": "编辑用户",

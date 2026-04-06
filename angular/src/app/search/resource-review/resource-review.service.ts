@@ -49,14 +49,14 @@ export class ResourceReviewService {
   }
 
   getMyReview(resourceId: string): Observable<ResourceReviewDto | null> {
-    return this.restService.request({ method: 'GET', url: `${this.apiUrl}/my-review`, params: { resourceId } }, { apiName: 'Default' });
+    return this.restService.request({ method: 'GET', url: `${this.apiUrl}/my-review/${resourceId}` }, { apiName: 'Default' });
   }
 
   getResourceReviews(resourceId: string, skipCount = 0, maxResultCount = 20): Observable<ResourceReviewDto[]> {
-    return this.restService.request({ method: 'GET', url: `${this.apiUrl}/resource-reviews`, params: { resourceId, skipCount, maxResultCount } }, { apiName: 'Default' });
+    return this.restService.request({ method: 'GET', url: `${this.apiUrl}/resource-reviews/${resourceId}`, params: { skipCount, maxResultCount } }, { apiName: 'Default' });
   }
 
   getRatingSummary(resourceId: string): Observable<ResourceRatingSummaryDto> {
-    return this.restService.request({ method: 'GET', url: `${this.apiUrl}/rating-summary`, params: { resourceId } }, { apiName: 'Default' });
+    return this.restService.request({ method: 'GET', url: `${this.apiUrl}/rating-summary/${resourceId}` }, { apiName: 'Default' });
   }
 }

@@ -15,13 +15,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using Volo.Abp;
-using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Application.AI;
 
-public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransientDependency
+// Not implementing IChatAppService to avoid ABP Castle DynamicProxy buffering IAsyncEnumerable.
+// The controller injects this class directly for the streaming method.
+public class ChatAppService : KnowledgeHubAppService
 {
     private readonly ICurrentUser _currentUser;
     private readonly IConfiguration _configuration;
@@ -80,17 +81,7 @@ TOOL USE:
         _resourceRepository = resourceRepository;
     }
 
-    public Task<ChatThreadDto> CreateThreadAsync()
-    {
-        return Task.FromResult(new ChatThreadDto
-        {
-            Id = Guid.NewGuid().ToString(),
-            CreatedAt = DateTime.Now,
-            Messages = new List<ChatMessageDto>()
-        });
-    }
-
-    public async IAsyncEnumerable<ChatMessageChunkDto> ChatStreamingAsync(ChatInputDto input)
+    public async Task ChatStreamingAsync(ChatInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
     {
         var threadId = string.IsNullOrEmpty(input.ThreadId)
             ? Guid.NewGuid().ToString()
@@ -123,14 +114,14 @@ TOOL USE:
 
             if (latestPageIndex == null)
             {
-                yield return new ChatMessageChunkDto
+                await onChunk(new ChatMessageChunkDto
                 {
                     Content = "该文档尚未生成页面索引，无法进行文档问答。请先为文档生成索引。",
                     ThreadId = threadId,
                     IsComplete = false
-                };
-                yield return new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true };
-                yield break;
+                });
+                await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
+                return;
             }
 
             var docTools = new DocumentChatTools(latestPageIndex.PageIndexJson, _logger);
@@ -159,21 +150,21 @@ TOOL USE:
         {
             if (update.Text != null && update.Text.Length > 0)
             {
-                yield return new ChatMessageChunkDto
+                await onChunk(new ChatMessageChunkDto
                 {
                     Content = update.Text,
                     ThreadId = threadId,
                     IsComplete = false
-                };
+                });
             }
         }
 
-        yield return new ChatMessageChunkDto
+        await onChunk(new ChatMessageChunkDto
         {
             Content = "",
             ThreadId = threadId,
             IsComplete = true
-        };
+        });
     }
 
     public async Task<List<ResourceForChatDto>> GetResourcesWithPageIndexAsync()
@@ -240,25 +231,5 @@ TOOL USE:
                 name: "get_page_content",
                 description: "获取指定页码范围的正文内容。使用紧凑范围如 '5-7'（第5到7页）、'3,8'（第3和8页）、'12'（第12页）。请先调用 get_document_structure 确定相关页码范围。"),
         };
-    }
-
-    public Task<ChatThreadDto> GetThreadAsync(string threadId)
-    {
-        if (!Guid.TryParse(threadId, out _))
-        {
-            throw new UserFriendlyException("Invalid thread ID");
-        }
-
-        return Task.FromResult(new ChatThreadDto
-        {
-            Id = threadId,
-            CreatedAt = DateTime.Now,
-            Messages = new List<ChatMessageDto>()
-        });
-    }
-
-    public Task<List<ChatThreadDto>> GetMyThreadsAsync()
-    {
-        return Task.FromResult(new List<ChatThreadDto>());
     }
 }

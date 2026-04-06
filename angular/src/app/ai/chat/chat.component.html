@@ -86,7 +86,11 @@
           <nz-avatar [nzText]="msg.role === 'user' ? '我' : 'AI'" [nzColor]="msg.role === 'user' ? '#1890ff' : '#52c41a'"></nz-avatar>
           <div class="message-content">
             @if (msg.content) {
-              <p [innerHTML]="formatMessage(msg.content)"></p>
+              @if (msg.role === 'assistant') {
+                <div class="markdown-body" [innerHTML]="formatMessage(msg.content)"></div>
+              } @else {
+                <p>{{ msg.content }}</p>
+              }
             } @else {
               <div class="typing-indicator">
                 <span></span><span></span><span></span>

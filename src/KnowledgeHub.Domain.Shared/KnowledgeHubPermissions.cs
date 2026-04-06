@@ -24,6 +24,7 @@ public static class KnowledgeHubPermissions
         public const string ManageCategory = Default + ".ManageCategory";
         public const string PhysicalDelete = Default + ".PhysicalDelete";
         public const string ViewStatistics = Default + ".ViewStatistics";
+        public const string ViewRecommendation = Default + ".ViewRecommendation";
     }
 
     public static class Users

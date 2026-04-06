@@ -10,7 +10,9 @@ export interface CreateResourceReviewDto {
 
 export interface DailySearchTrendDto {
   date?: string;
-  searchCount?: number;
+  totalSearchCount?: number;
+  documentSearchCount?: number;
+  videoSearchCount?: number;
   uniqueUsers?: number;
 }
 
@@ -102,12 +104,14 @@ export interface MeiliDocumentGroupDto {
   pages?: MeiliDocumentPageDto[];
   resourceType?: string;
   videoUrl?: string | null;
+  uploadDate?: string | null;
 }
 
 export interface MeiliDocumentPageDto {
   id?: string;
   pageNumber?: number;
   pageTitle?: string | null;
+  pageContent?: string | null;
   eventDescription?: string | null;
   startTime?: string | null;
   endTime?: string | null;
@@ -161,6 +165,17 @@ export interface MeiliVersionDto {
   pkgVersion?: string;
 }
 
+export interface PageIndexSearchResultDto {
+  resourceId?: string;
+  resourceName?: string | null;
+  nodeTitle?: string | null;
+  nodeSummary?: string | null;
+  nodeId?: string;
+  startIndex?: number;
+  endIndex?: number;
+  docDescription?: string | null;
+}
+
 export interface PopularSearchDto {
   query?: string;
   count?: number;
@@ -169,6 +184,37 @@ export interface PopularSearchDto {
 export interface PopularSearchTermDto {
   keyword?: string;
   count?: number;
+  sourceType?: string;
+}
+
+export interface RecommendedResourceDto {
+  resourceId?: string;
+  resourceName?: string;
+  description?: string | null;
+  resourceType?: number;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  keywords?: string | null;
+  fileExtension?: string | null;
+  fileSize?: number | null;
+  viewCount?: number;
+  collectionCount?: number;
+  downloadCount?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  recommendationScore?: number;
+  recommendationReason?: string;
+  creationTime?: string;
+}
+
+export interface ResourcePageIndexDto {
+  id?: string;
+  resourceId?: string;
+  resourceVersionId?: string;
+  pageIndexJson?: string;
+  sourceFormat?: string | null;
+  model?: string | null;
+  nodeCount?: number;
 }
 
 export interface ResourceRatingSummaryDto {
@@ -189,11 +235,30 @@ export interface ResourceReviewDto {
   creationTime?: string;
 }
 
+export interface ResourceStatisticsDto {
+  resourceId?: string;
+  totalViews?: number;
+  uniqueViewers?: number;
+  avgViewDurationSeconds?: number;
+  totalDownloads?: number;
+  totalCollections?: number;
+  collectionRate?: number;
+  downloadRate?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  ratingDistribution?: number[];
+  viewsLast30Days?: number;
+  viewsPrevious30Days?: number;
+  viewTrendPercentage?: number;
+  timesInSearchResults?: number;
+  timesClickedFromSearch?: number;
+  clickThroughRate?: number;
+}
+
 export interface SearchDashboardDto {
-  totalSearches?: number;
-  todaySearches?: number;
-  activeUsers?: number;
-  todayActiveUsers?: number;
+  all?: SearchStatsBreakdown;
+  document?: SearchStatsBreakdown;
+  video?: SearchStatsBreakdown;
   dailyTrends?: DailySearchTrendDto[];
   popularSearches?: PopularSearchTermDto[];
   topResources?: TopResourceStatsDto[];
@@ -224,6 +289,13 @@ export interface SearchResultDto {
   totalCount?: number;
   query?: string;
   facets?: Record<string, Record<string, number>>;
+}
+
+export interface SearchStatsBreakdown {
+  totalSearches?: number;
+  todaySearches?: number;
+  activeUsers?: number;
+  todayActiveUsers?: number;
 }
 
 export interface SearchStatsDto {

@@ -18,6 +18,8 @@ import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import type { ResourceDto, ResourceCategoryDto } from '../../proxy/resources/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { ResourceReviewComponent } from '../../search/resource-review/resource-review.component';
+import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
+import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
 
 @Component({
   selector: 'app-student-resources',
@@ -45,6 +47,8 @@ import { ResourceReviewComponent } from '../../search/resource-review/resource-r
 })
 export class StudentResourcesComponent implements OnInit {
   private readonly resourceService = inject(ResourceService);
+  private readonly reviewService = inject(ResourceReviewService);
+  private readonly recommendationService = inject(RecommendationService);
   private readonly message = inject(NzMessageService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
@@ -63,6 +67,14 @@ export class StudentResourcesComponent implements OnInit {
 
   drawerVisible = signal(false);
   selectedResource = signal<ResourceDto | null>(null);
+  ratingSummaries = signal<Record<string, ResourceRatingSummaryDto>>({});
+
+  // Recommendation signals
+  recommendedResources = signal<RecommendedResourceDto[]>([]);
+  recommendationsLoading = signal(false);
+  recommendationsCollapsed = signal(false);
+  relatedResources = signal<RecommendedResourceDto[]>([]);
+  relatedLoading = signal(false);
 
   resourceTypes = [
     { label: '全部', value: null as ResourceType | null },
@@ -73,6 +85,7 @@ export class StudentResourcesComponent implements OnInit {
   ngOnInit() {
     this.loadCategories();
     this.loadResources();
+    this.loadRecommendations();
   }
 
   loadResources() {
@@ -91,6 +104,7 @@ export class StudentResourcesComponent implements OnInit {
         this.resources.set(result.items || []);
         this.totalCount.set(result.totalCount || 0);
         this.loading.set(false);
+        this.loadRatingSummaries(result.items || []);
       },
       error: () => {
         this.loading.set(false);
@@ -103,6 +117,19 @@ export class StudentResourcesComponent implements OnInit {
       next: (cats) => {
         this.categories.set(cats);
       }
+    });
+  }
+
+  loadRatingSummaries(items: ResourceDto[]) {
+    const summaries = { ...this.ratingSummaries() };
+    items.forEach(resource => {
+      if (!resource.id) return;
+      this.reviewService.getRatingSummary(resource.id).subscribe({
+        next: (summary) => {
+          summaries[resource.id!] = summary;
+          this.ratingSummaries.set({ ...summaries });
+        }
+      });
     });
   }
 
@@ -208,9 +235,77 @@ export class StudentResourcesComponent implements OnInit {
   selectResource(resource: ResourceDto) {
     this.selectedResource.set(resource);
     this.drawerVisible.set(true);
+    if (resource.id) {
+      this.loadRelatedResources(resource.id);
+    }
   }
 
   closeDrawer() {
     this.drawerVisible.set(false);
+  }
+
+  loadRecommendations() {
+    this.recommendationsLoading.set(true);
+    this.recommendationService.getPersonalizedRecommendations(10).subscribe({
+      next: (result) => {
+        this.recommendedResources.set(result);
+        this.recommendationsLoading.set(false);
+      },
+      error: () => {
+        // Fallback to trending
+        this.recommendationService.getTrendingResources(10).subscribe({
+          next: (result) => {
+            this.recommendedResources.set(result);
+            this.recommendationsLoading.set(false);
+          },
+          error: () => {
+            this.recommendationsLoading.set(false);
+          }
+        });
+      }
+    });
+  }
+
+  loadRelatedResources(resourceId: string) {
+    this.relatedLoading.set(true);
+    this.recommendationService.getRelatedResources(resourceId, 6).subscribe({
+      next: (result) => {
+        this.relatedResources.set(result);
+        this.relatedLoading.set(false);
+      },
+      error: () => {
+        this.relatedLoading.set(false);
+      }
+    });
+  }
+
+  selectRelatedResource(resource: RecommendedResourceDto) {
+    // Find the resource in the existing list or create a partial ResourceDto
+    const existing = this.resources().find(r => r.id === resource.resourceId);
+    if (existing) {
+      this.selectedResource.set(existing);
+    } else {
+      this.selectedResource.set({
+        id: resource.resourceId,
+        name: resource.resourceName,
+        description: resource.description,
+        resourceType: resource.resourceType,
+        categoryId: resource.categoryId,
+        fileSize: resource.fileSize,
+        fileExtension: resource.fileExtension,
+        creationTime: resource.creationTime,
+      } as ResourceDto);
+    }
+    this.loadRelatedResources(resource.resourceId);
+  }
+
+  onReviewChanged(resourceId: string) {
+    this.reviewService.getRatingSummary(resourceId).subscribe({
+      next: (summary) => {
+        const summaries = { ...this.ratingSummaries() };
+        summaries[resourceId] = summary;
+        this.ratingSummaries.set(summaries);
+      }
+    });
   }
 }

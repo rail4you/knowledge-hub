@@ -33,7 +33,6 @@ def convert_docx_to_md(path: str) -> str:
     """Convert a .docx file to Markdown text preserving headings and paragraphs."""
     try:
         from docx import Document
-        from docx.oxml.ns import qn
     except ImportError:
         sys.exit("python-docx is required: pip install python-docx")
 

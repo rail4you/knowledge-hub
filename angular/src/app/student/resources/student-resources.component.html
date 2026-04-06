@@ -68,6 +68,52 @@
 
     <!-- 右侧内容区 -->
     <div class="content-main">
+      <!-- 推荐轮播区 -->
+      @if (!recommendationsCollapsed()) {
+        <div class="recommendation-section">
+          <div class="recommendation-header">
+            <h3 class="recommendation-title">
+              <span nz-icon nzType="fire" nzTheme="outline"></span>
+              为你推荐
+            </h3>
+            <button class="collapse-btn" (click)="recommendationsCollapsed.set(true)">
+              <span nz-icon nzType="up" nzTheme="outline"></span>
+              收起
+            </button>
+          </div>
+          @if (recommendationsLoading()) {
+            <div class="recommendation-loading">
+              <nz-spin nzSimple nzSize="small"></nz-spin>
+            </div>
+          } @else if (recommendedResources().length > 0) {
+            <div class="recommendation-scroll">
+              @for (rec of recommendedResources(); track rec.resourceId) {
+                <div class="recommendation-card" (click)="selectRelatedResource(rec)">
+                  <div class="rec-card-icon" [class]="'rec-type-' + rec.resourceType">
+                    <span nz-icon [nzType]="getResourceTypeIcon(rec.resourceType)" nzTheme="outline"></span>
+                  </div>
+                  <div class="rec-card-content">
+                    <div class="rec-card-name" [title]="rec.resourceName">{{ rec.resourceName }}</div>
+                    <div class="rec-card-meta">
+                      <span class="rec-reason-tag">{{ rec.recommendationReason }}</span>
+                      @if (rec.averageRating > 0) {
+                        <span class="rec-rating">{{ rec.averageRating | number:'1.1-1' }}</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="recommendation-collapsed-bar" (click)="recommendationsCollapsed.set(false)">
+          <span nz-icon nzType="fire" nzTheme="outline"></span>
+          为你推荐
+          <span nz-icon nzType="down" nzTheme="outline"></span>
+        </div>
+      }
+
       <!-- 类型切换 + 结果计数 -->
       <div class="content-toolbar">
         <div class="type-tabs">
@@ -111,9 +157,15 @@
                 <h3 class="card-title" [title]="resource.name || ''">{{ resource.name }}</h3>
                 <p class="card-desc">{{ resource.description || '暂无描述' }}</p>
                 <div class="card-meta">
-                  <span class="meta-item">
-                    <span nz-icon nzType="user" nzTheme="outline"></span>
-                    {{ resource.creatorName || '未知' }}
+                  <span class="meta-item rating-display">
+                    @if (ratingSummaries()[resource.id!]; as summary) {
+                      <nz-rate [ngModel]="summary.averageRating" [nzDisabled]="true" nzSize="small"></nz-rate>
+                      <span class="rating-text">{{ summary.averageRating | number:'1.1-1' }}</span>
+                      <span class="review-count">({{ summary.totalReviews }})</span>
+                    } @else {
+                      <nz-rate [ngModel]="0" [nzDisabled]="true" nzSize="small"></nz-rate>
+                      <span class="rating-text">暂无评分</span>
+                    }
                   </span>
                   <span class="meta-item">
                     <span nz-icon nzType="calendar" nzTheme="outline"></span>
@@ -176,10 +228,6 @@
           <span class="info-value">{{ (resource.fileSize || 0) / 1024 / 1024 | number:'1.1-1' }} MB</span>
         </div>
         <div class="info-row">
-          <span class="info-label">上传者</span>
-          <span class="info-value">{{ resource.creatorName || '未知' }}</span>
-        </div>
-        <div class="info-row">
           <span class="info-label">上传时间</span>
           <span class="info-value">{{ resource.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
         </div>
@@ -193,7 +241,41 @@
 
       <nz-divider></nz-divider>
 
-      <app-resource-review [resourceId]="resource.id!"></app-resource-review>
+      <app-resource-review [resourceId]="resource.id!" (reviewChanged)="onReviewChanged(resource.id!)"></app-resource-review>
+
+      <!-- 相关资源推荐 -->
+      @if (relatedLoading()) {
+        <div class="related-loading">
+          <nz-spin nzSimple nzSize="small"></nz-spin>
+          <span>正在加载相关资源...</span>
+        </div>
+      } @else if (relatedResources().length > 0) {
+        <nz-divider></nz-divider>
+        <div class="related-section">
+          <h4 class="related-title">
+            <span nz-icon nzType="link" nzTheme="outline"></span>
+            相关资源
+          </h4>
+          <div class="related-grid">
+            @for (related of relatedResources(); track related.resourceId) {
+              <div class="related-card" (click)="selectRelatedResource(related)">
+                <div class="related-card-icon" [class]="'rec-type-' + related.resourceType">
+                  <span nz-icon [nzType]="getResourceTypeIcon(related.resourceType)" nzTheme="outline"></span>
+                </div>
+                <div class="related-card-body">
+                  <div class="related-card-name" [title]="related.resourceName">{{ related.resourceName }}</div>
+                  <div class="related-card-meta">
+                    <span class="related-reason">{{ related.recommendationReason }}</span>
+                    @if (related.averageRating > 0) {
+                      <span class="related-rating">{{ related.averageRating | number:'1.1-1' }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
     }
   </ng-container>
 </nz-drawer>

@@ -36,6 +36,8 @@ import {NzCheckboxModule} from 'ng-zorro-antd/checkbox';
 import {NzDrawerModule} from 'ng-zorro-antd/drawer';
 import {NzMessageService} from 'ng-zorro-antd/message';
 import {FilePreviewComponent} from '../shared/preview/file-preview.component';
+import {ResourceReviewComponent} from '../search/resource-review/resource-review.component';
+import {RecommendationService, type ResourceStatisticsDto} from '../search/recommendation/recommendation.service';
 
 @Component({
   selector: 'app-resource',
@@ -75,7 +77,8 @@ import {FilePreviewComponent} from '../shared/preview/file-preview.component';
     NzUploadModule,
     NzCheckboxModule,
     NzDrawerModule,
-    FilePreviewComponent
+    FilePreviewComponent,
+    ResourceReviewComponent
   ]
 })
 export class ResourceComponent implements OnInit {
@@ -136,6 +139,9 @@ export class ResourceComponent implements OnInit {
   isPreviewOpen = signal(false);
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
+  resourceStatistics = signal<ResourceStatisticsDto | null>(null);
+  statisticsLoading = signal(false);
+
   public readonly list = inject(ListService);
   private readonly resourceService = inject(ResourceService);
   private readonly allianceService = inject(AllianceService);
@@ -145,6 +151,7 @@ export class ResourceComponent implements OnInit {
   private readonly confirmation = inject(ConfirmationService);
   private readonly localization = inject(LocalizationService);
   private readonly message = inject(NzMessageService);
+  private readonly recommendationService = inject(RecommendationService);
 
   private readonly resourceTypeNames: Record<string, Record<number, string>> = {
     'zh-Hans': { 0: '文档', 1: '视频', 2: '音频', 3: '图片', 4: 'PPT' },
@@ -505,10 +512,26 @@ export class ResourceComponent implements OnInit {
     this.drawerVisible.set(true);
     this.loadVersions(resource.id!);
     this.checkCollected(resource.id!);
+    this.loadResourceStatistics(resource.id!);
   }
 
   closeDrawer() {
     this.drawerVisible.set(false);
+    this.resourceStatistics.set(null);
+  }
+
+  loadResourceStatistics(resourceId: string) {
+    this.statisticsLoading.set(true);
+    this.recommendationService.getResourceStatistics(resourceId).subscribe({
+      next: (stats) => {
+        this.resourceStatistics.set(stats);
+        this.statisticsLoading.set(false);
+      },
+      error: () => {
+        this.resourceStatistics.set(null);
+        this.statisticsLoading.set(false);
+      }
+    });
   }
 
   onTabChange(index: number) {

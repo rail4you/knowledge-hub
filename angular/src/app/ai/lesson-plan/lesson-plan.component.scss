@@ -1,10 +1,107 @@
 .lesson-plan-container {
   padding: 24px;
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  
-  nz-card {
-    margin-bottom: 16px;
+
+  .lesson-plan-header {
+    margin-bottom: 24px;
+
+    h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      color: rgba(0, 0, 0, 0.45);
+      font-size: 14px;
+      margin: 0;
+    }
+  }
+}
+
+.step-card {
+  margin-bottom: 20px;
+}
+
+.step-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  font-size: 16px;
+  font-weight: 500;
+
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #1890ff;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+  }
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+.resource-select {
+  width: 100%;
+}
+
+.resource-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+
+  .resource-icon {
+    font-size: 20px;
+    color: #1890ff;
+  }
+
+  .resource-option-info {
+    flex: 1;
+
+    .resource-option-name {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .resource-option-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+
+      .node-count {
+        font-size: 12px;
+        color: rgba(0, 0, 0, 0.45);
+      }
+    }
+  }
+}
+
+.selected-resource-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f6ffed;
+  border-radius: 6px;
+  border: 1px solid #b7eb8f;
+
+  .meta-text {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.45);
   }
 }
 
@@ -12,26 +109,110 @@ nz-form-item {
   margin-bottom: 16px;
 }
 
-nz-divider {
-  margin: 16px 0;
+.action-bar {
+  display: flex;
+  gap: 12px;
 }
 
-.result-card {
-  margin-top: 24px;
-}
+.loading-card {
+  .generating-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 0;
+    gap: 12px;
 
-nz-descriptions {
-  margin-bottom: 16px;
-}
+    .generating-text {
+      font-size: 16px;
+      color: rgba(0, 0, 0, 0.65);
+      margin: 0;
+    }
 
-nz-collapse {
-  margin: 16px 0;
-  
-  nz-collapse-panel {
-    margin-bottom: 8px;
+    .generating-hint {
+      font-size: 13px;
+      color: rgba(0, 0, 0, 0.35);
+      margin: 0;
+    }
   }
 }
 
-nz-tag {
-  margin: 4px 8px;
+.result-card {
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    .result-actions {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  .result-content {
+    .plan-title {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 20px;
+      color: rgba(0, 0, 0, 0.85);
+    }
+
+    nz-descriptions {
+      margin-bottom: 20px;
+    }
+
+    .section-block {
+      margin-bottom: 20px;
+
+      .section-heading {
+        font-size: 15px;
+        font-weight: 600;
+        color: rgba(0, 0, 0, 0.75);
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f0f0f0;
+        margin: 0 0 12px;
+      }
+
+      .item-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+
+        li {
+          position: relative;
+          padding: 4px 0 4px 18px;
+          line-height: 1.6;
+
+          &::before {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 12px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #1890ff;
+          }
+        }
+      }
+
+      .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        nz-tag {
+          margin: 0;
+          font-size: 13px;
+        }
+      }
+    }
+
+    nz-collapse {
+      margin: 0;
+    }
+  }
 }

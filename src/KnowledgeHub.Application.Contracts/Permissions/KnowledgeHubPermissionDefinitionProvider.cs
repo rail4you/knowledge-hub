@@ -30,6 +30,7 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ManageCategory, L("Permission:Resources.ManageCategory"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.PhysicalDelete, L("Permission:Resources.PhysicalDelete"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ViewStatistics, L("Permission:Resources.ViewStatistics"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ViewRecommendation, L("Permission:Resources.ViewRecommendation"));
         
         //Users permissions
         var usersPermission = myGroup.AddPermission(
