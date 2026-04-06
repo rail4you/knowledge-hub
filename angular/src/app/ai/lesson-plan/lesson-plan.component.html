@@ -67,72 +67,92 @@
       <span>填写教学参数</span>
     </div>
 
-    <div nz-row [nzGutter]="[16, 16]">
-      <div nz-col [nzSpan]="24">
-        <nz-form-item nzLabel="课程主题">
-          <input
-            nz-input
-            [ngModel]="input().topic"
-            (ngModelChange)="updateTopic($event)"
-            placeholder="例如：Python基础入门、细胞的分裂与分化"
-            [disabled]="isLoading()"
-          />
-        </nz-form-item>
-      </div>
+    <div nz-form nzLayout="vertical">
+      <div nz-row [nzGutter]="[16, 16]">
+        <div nz-col [nzSpan]="24">
+          <nz-form-item>
+            <nz-form-label nzFor="topic">课程主题</nz-form-label>
+            <nz-form-control>
+              <input
+                #topic
+                nz-input
+                id="topic"
+                [ngModel]="input().topic"
+                (ngModelChange)="updateTopic($event)"
+                placeholder="例如：数据结构与算法、高等数学、有机化学"
+                [disabled]="isLoading()"
+              />
+            </nz-form-control>
+          </nz-form-item>
+        </div>
 
-      <div nz-col [nzSpan]="8">
-        <nz-form-item nzLabel="学科">
-          <nz-select
-            [ngModel]="input().subject"
-            (ngModelChange)="updateSubject($event)"
-            nzPlaceHolder="请选择"
-            nzAllowClear
-            [disabled]="isLoading()"
-          >
-            <nz-option nzValue="语文" nzLabel="语文"></nz-option>
-            <nz-option nzValue="数学" nzLabel="数学"></nz-option>
-            <nz-option nzValue="英语" nzLabel="英语"></nz-option>
-            <nz-option nzValue="物理" nzLabel="物理"></nz-option>
-            <nz-option nzValue="化学" nzLabel="化学"></nz-option>
-            <nz-option nzValue="生物" nzLabel="生物"></nz-option>
-            <nz-option nzValue="历史" nzLabel="历史"></nz-option>
-            <nz-option nzValue="地理" nzLabel="地理"></nz-option>
-            <nz-option nzValue="计算机" nzLabel="计算机"></nz-option>
-          </nz-select>
-        </nz-form-item>
-      </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label nzFor="subject">学科门类</nz-form-label>
+            <nz-form-control>
+              <nz-select
+                [ngModel]="input().subject"
+                (ngModelChange)="updateSubject($event)"
+                nzPlaceHolder="请选择学科门类"
+                nzAllowClear
+                [disabled]="isLoading()"
+              >
+                <nz-option nzValue="哲学" nzLabel="哲学"></nz-option>
+                <nz-option nzValue="经济学" nzLabel="经济学"></nz-option>
+                <nz-option nzValue="法学" nzLabel="法学"></nz-option>
+                <nz-option nzValue="教育学" nzLabel="教育学"></nz-option>
+                <nz-option nzValue="文学" nzLabel="文学"></nz-option>
+                <nz-option nzValue="历史学" nzLabel="历史学"></nz-option>
+                <nz-option nzValue="理学" nzLabel="理学"></nz-option>
+                <nz-option nzValue="工学" nzLabel="工学"></nz-option>
+                <nz-option nzValue="农学" nzLabel="农学"></nz-option>
+                <nz-option nzValue="医学" nzLabel="医学"></nz-option>
+                <nz-option nzValue="管理学" nzLabel="管理学"></nz-option>
+                <nz-option nzValue="艺术学" nzLabel="艺术学"></nz-option>
+                <nz-option nzValue="交叉学科" nzLabel="交叉学科"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
 
-      <div nz-col [nzSpan]="8">
-        <nz-form-item nzLabel="年级">
-          <nz-select
-            [ngModel]="input().grade"
-            (ngModelChange)="updateGrade($event)"
-            nzPlaceHolder="请选择"
-            nzAllowClear
-            [disabled]="isLoading()"
-          >
-            <nz-option nzValue="七年级" nzLabel="七年级"></nz-option>
-            <nz-option nzValue="八年级" nzLabel="八年级"></nz-option>
-            <nz-option nzValue="九年级" nzLabel="九年级"></nz-option>
-            <nz-option nzValue="高一" nzLabel="高一"></nz-option>
-            <nz-option nzValue="高二" nzLabel="高二"></nz-option>
-            <nz-option nzValue="高三" nzLabel="高三"></nz-option>
-            <nz-option nzValue="大学" nzLabel="大学"></nz-option>
-          </nz-select>
-        </nz-form-item>
-      </div>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label nzFor="grade">授课对象</nz-form-label>
+            <nz-form-control>
+              <nz-select
+                [ngModel]="input().grade"
+                (ngModelChange)="updateGrade($event)"
+                nzPlaceHolder="请选择授课对象"
+                nzAllowClear
+                [disabled]="isLoading()"
+              >
+                <nz-option nzValue="大一" nzLabel="大一"></nz-option>
+                <nz-option nzValue="大二" nzLabel="大二"></nz-option>
+                <nz-option nzValue="大三" nzLabel="大三"></nz-option>
+                <nz-option nzValue="大四" nzLabel="大四"></nz-option>
+                <nz-option nzValue="研究生" nzLabel="研究生"></nz-option>
+                <nz-option nzValue="博士" nzLabel="博士"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
 
-      <div nz-col [nzSpan]="8">
-        <nz-form-item nzLabel="课时(分钟)">
-          <nz-input-number
-            [ngModel]="input().duration"
-            (ngModelChange)="updateDuration($event)"
-            [nzMin]="5"
-            [nzMax]="180"
-            [nzStep]="5"
-            [disabled]="isLoading()"
-          ></nz-input-number>
-        </nz-form-item>
+        <div nz-col [nzSpan]="8">
+          <nz-form-item>
+            <nz-form-label nzFor="duration">课时（分钟）</nz-form-label>
+            <nz-form-control>
+              <nz-input-number
+                [ngModel]="input().duration"
+                (ngModelChange)="updateDuration($event)"
+                [nzMin]="5"
+                [nzMax]="180"
+                [nzStep]="5"
+                [disabled]="isLoading()"
+                style="width: 100%"
+              ></nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
       </div>
     </div>
 
@@ -185,7 +205,7 @@
 
         <nz-descriptions nzBordered [nzColumn]="3" nzSize="small">
           <nz-descriptions-item nzTitle="学科">{{ r.subject }}</nz-descriptions-item>
-          <nz-descriptions-item nzTitle="年级">{{ r.grade }}</nz-descriptions-item>
+          <nz-descriptions-item nzTitle="授课对象">{{ r.grade }}</nz-descriptions-item>
           <nz-descriptions-item nzTitle="课时">{{ r.duration }}分钟</nz-descriptions-item>
         </nz-descriptions>
 
