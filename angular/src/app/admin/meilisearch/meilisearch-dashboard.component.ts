@@ -15,7 +15,7 @@ import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { MeiliSearchAdminService, MeiliDashboardDto, MeiliEmbedderDto, MeiliDocumentGroupDto } from './meilisearch-admin.service';
+import { MeiliSearchAdminService, MeiliDashboardDto, MeiliEmbedderDto, MeiliDocumentGroupDto, PageIndexListItemDto } from './meilisearch-admin.service';
 
 @Component({
   selector: 'app-meilisearch-dashboard',
@@ -52,6 +52,13 @@ export class MeiliSearchDashboardComponent implements OnInit {
   loadingDocuments = signal<Record<string, boolean>>({});
   expandedGroupName = signal<string | null>(null);
   timeFilter = signal<string>('all');
+  pageIndexList = signal<PageIndexListItemDto[]>([]);
+  loadingPageIndex = signal(false);
+  expandedPageIndexId = signal<string | null>(null);
+
+  totalNodeCount = computed(() => {
+    return this.pageIndexList().reduce((sum, p) => sum + p.nodeCount, 0);
+  });
 
   filteredDocumentGroups = computed(() => {
     const indexUid = this.expandedIndexUid();
@@ -94,6 +101,7 @@ export class MeiliSearchDashboardComponent implements OnInit {
 
   ngOnInit() {
     this.loadDashboard();
+    this.loadPageIndexList();
   }
 
   loadDashboard() {
@@ -112,6 +120,7 @@ export class MeiliSearchDashboardComponent implements OnInit {
 
   refresh() {
     this.loadDashboard();
+    this.loadPageIndexList();
   }
 
   toggleIndexDetail(uid: string) {
@@ -180,5 +189,24 @@ export class MeiliSearchDashboardComponent implements OnInit {
   truncateText(text: string | null | undefined, maxLength = 80): string {
     if (!text) return '-';
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  }
+
+  loadPageIndexList() {
+    this.loadingPageIndex.set(true);
+    this.adminService.getPageIndexList().subscribe({
+      next: (data) => {
+        this.pageIndexList.set(data);
+        this.loadingPageIndex.set(false);
+      },
+      error: () => {
+        this.loadingPageIndex.set(false);
+        this.message.error('加载 PageIndex 数据失败');
+      },
+    });
+  }
+
+  togglePageIndexDetail(id: string) {
+    const current = this.expandedPageIndexId();
+    this.expandedPageIndexId.set(current === id ? null : id);
   }
 }

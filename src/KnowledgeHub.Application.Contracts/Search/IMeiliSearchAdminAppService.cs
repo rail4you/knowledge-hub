@@ -13,4 +13,5 @@ public interface IMeiliSearchAdminAppService : IApplicationService
     Task<List<MeiliTaskDto>> GetRecentTasksAsync(int limit = 20);
     Task<List<MeiliDocumentGroupDto>> GetIndexDocumentsAsync(string indexUid, int limit = 200);
     Task<List<MeiliIndexDto>> GetIndexesAsync();
+    Task<List<PageIndexListItemDto>> GetPageIndexListAsync();
 }

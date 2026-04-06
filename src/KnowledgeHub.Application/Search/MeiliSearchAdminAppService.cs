@@ -7,8 +7,11 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
+using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Permissions;
+using KnowledgeHub.Resources;
 using Microsoft.Extensions.Options;
+using Volo.Abp.Domain.Repositories;
 
 namespace KnowledgeHub.Application.Search;
 
@@ -16,11 +19,22 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 {
     private readonly HttpClient _httpClient;
     private readonly IOptions<MeilisearchOptions> _options;
+    private readonly IRepository<ResourcePageIndex, Guid> _pageIndexRepository;
+    private readonly IRepository<Resource, Guid> _resourceRepository;
+    private readonly IRepository<ResourceVersion, Guid> _versionRepository;
 
-    public MeiliSearchAdminAppService(IOptions<MeilisearchOptions> options, HttpClient httpClient)
+    public MeiliSearchAdminAppService(
+        IOptions<MeilisearchOptions> options,
+        HttpClient httpClient,
+        IRepository<ResourcePageIndex, Guid> pageIndexRepository,
+        IRepository<Resource, Guid> resourceRepository,
+        IRepository<ResourceVersion, Guid> versionRepository)
     {
         _options = options;
         _httpClient = httpClient;
+        _pageIndexRepository = pageIndexRepository;
+        _resourceRepository = resourceRepository;
+        _versionRepository = versionRepository;
         _httpClient.BaseAddress = new Uri(_options.Value.Host);
         if (!string.IsNullOrEmpty(_options.Value.ApiKey))
         {
@@ -270,6 +284,63 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
         }
 
         return stats;
+    }
+
+    public async Task<List<PageIndexListItemDto>> GetPageIndexListAsync()
+    {
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+
+        var pageIndexQuery = await _pageIndexRepository.GetQueryableAsync();
+        var resourceQuery = await _resourceRepository.GetQueryableAsync();
+        var versionQuery = await _versionRepository.GetQueryableAsync();
+
+        var pageIndexes = pageIndexQuery
+            .OrderByDescending(p => p.CreatedAt)
+            .ToList();
+
+        var resourceIds = pageIndexes.Select(p => p.ResourceId).Distinct().ToList();
+        var versionIds = pageIndexes.Select(p => p.ResourceVersionId).Distinct().ToList();
+
+        var resources = resourceQuery
+            .Where(r => resourceIds.Contains(r.Id))
+            .ToDictionary(r => r.Id, r => r.Name);
+
+        var versions = versionQuery
+            .Where(v => versionIds.Contains(v.Id))
+            .ToDictionary(v => v.Id, v => v.Version);
+
+        var result = pageIndexes.Select(p =>
+        {
+            string? docDescription = null;
+            if (!string.IsNullOrEmpty(p.PageIndexJson))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(p.PageIndexJson);
+                    if (doc.RootElement.TryGetProperty("doc_description", out var descProp))
+                    {
+                        docDescription = descProp.GetString();
+                    }
+                }
+                catch { }
+            }
+
+            return new PageIndexListItemDto
+            {
+                Id = p.Id,
+                ResourceName = resources.GetValueOrDefault(p.ResourceId) ?? "未知资源",
+                ResourceId = p.ResourceId,
+                VersionNumber = versions.GetValueOrDefault(p.ResourceVersionId, 0),
+                TenantId = p.TenantId,
+                SourceFormat = p.SourceFormat,
+                Model = p.Model,
+                NodeCount = p.NodeCount,
+                DocDescription = docDescription,
+                CreatedAt = p.CreatedAt,
+            };
+        }).ToList();
+
+        return result;
     }
 
     public async Task<List<MeiliIndexDto>> GetIndexesAsync()
