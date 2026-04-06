@@ -220,7 +220,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             }
             else
             {
-                await EnqueueDocumentIndexingJobAsync(resource);
+                await EnqueueDocumentIndexingJobAsync(resource, initialVersion.Id);
             }
         }
 
@@ -271,7 +271,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         }
     }
 
-    private async Task EnqueueDocumentIndexingJobAsync(Resource resource)
+    private async Task EnqueueDocumentIndexingJobAsync(Resource resource, Guid? resourceVersionId = null)
     {
         var indexingJob = new DocumentIndexingJob
         {
@@ -289,9 +289,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 JobId = indexingJob.Id,
                 ResourceId = resource.Id,
                 FilePath = resource.FilePath,
-                TenantId = CurrentTenant.Id
+                TenantId = CurrentTenant.Id,
+                ResourceVersionId = resourceVersionId
             });
-            Logger.LogInformation("Successfully enqueued background job for DocumentIndexingJob {JobId}", indexingJob.Id);
+            Logger.LogInformation("Successfully enqueued background job for DocumentIndexingJob {JobId}, ResourceVersionId: {VersionId}", indexingJob.Id, resourceVersionId);
         }
         catch (Exception ex)
         {

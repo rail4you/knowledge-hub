@@ -3,17 +3,16 @@ using System.ClientModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI.Dtos;
-using Microsoft.Agents.AI;
+using KnowledgeHub.Application.AI.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenAI;
-using OpenAI.Chat;
 using Volo.Abp;
-using Volo.Abp.Application.Services;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Users;
 
@@ -24,7 +23,8 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
     private readonly ICurrentUser _currentUser;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ChatAppService> _logger;
-    
+    private readonly PageIndexTools _pageIndexTools;
+
     private const string DefaultInstructions = @"你是 KnowledgeHub 平台的智能教育助手。
 
 你的职责：
@@ -33,19 +33,28 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
 - 推荐学习路径
 - 生成练习题（如果用户要求）
 
+你可以使用以下工具来帮助用户：
+- SearchPageIndex：当用户询问文档中的某个主题、章节或知识点时，使用此工具搜索相关文档内容
+- GetDocumentStructure：当用户想了解某个文档的完整目录结构时，使用此工具
+
 回答要求：
 1. 回答简洁，专业
-2. 如果涉及课程信息，先查询课程数据
-3. 使用 Markdown 格式化回答";
+2. 如果涉及课程信息或文档内容，先使用搜索工具查询
+3. 使用 Markdown 格式化回答
+4. 当搜索工具返回结果时，基于搜索结果给出准确、有依据的回答";
+
+    private const int MaxToolCallRounds = 5;
 
     public ChatAppService(
         ICurrentUser currentUser,
         IConfiguration configuration,
-        ILogger<ChatAppService> logger)
+        ILogger<ChatAppService> logger,
+        PageIndexTools pageIndexTools)
     {
         _currentUser = currentUser;
         _configuration = configuration;
         _logger = logger;
+        _pageIndexTools = pageIndexTools;
     }
 
     public Task<ChatThreadDto> CreateThreadAsync()
@@ -60,31 +69,43 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
 
     public async IAsyncEnumerable<ChatMessageChunkDto> ChatStreamingAsync(ChatInputDto input)
     {
-        var threadId = string.IsNullOrEmpty(input.ThreadId) 
-            ? Guid.NewGuid().ToString() 
+        var threadId = string.IsNullOrEmpty(input.ThreadId)
+            ? Guid.NewGuid().ToString()
             : input.ThreadId;
-        
-        var apiKey = _configuration["Qwen:ApiKey"] 
+
+        var apiKey = _configuration["Qwen:ApiKey"]
             ?? throw new AbpException("Qwen:ApiKey is not configured");
-        var baseUrl = _configuration["Qwen:BaseUrl"] 
+        var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-plus";
-        
-        var client = new OpenAIClient(new ApiKeyCredential(apiKey), new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-        
-        AIAgent agent = client
-            .GetChatClient(model)
-            .AsAIAgent(
-                instructions: DefaultInstructions,
-                name: "KgEduAssistant");
-        
-        var fullContent = new StringBuilder();
-        
-        await foreach (var update in agent.RunStreamingAsync(input.Message, cancellationToken: CancellationToken.None))
+
+        var openaiClient = new OpenAIClient(
+            new ApiKeyCredential(apiKey),
+            new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
+
+        IChatClient chatClient = openaiClient.GetChatClient(model).AsIChatClient();
+
+        // Use FunctionInvokingChatClient to automatically handle tool calls
+        chatClient = new FunctionInvokingChatClient(chatClient);
+
+        var tools = BuildTools();
+
+        var chatOptions = new ChatOptions
         {
-            if (!string.IsNullOrEmpty(update.Text))
+            Instructions = DefaultInstructions,
+            Tools = tools,
+        };
+
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, input.Message)
+        };
+
+        // Streaming with automatic tool invocation via FunctionInvokingChatClient
+        await foreach (var update in chatClient.GetStreamingResponseAsync(messages, chatOptions, CancellationToken.None))
+        {
+            if (update.Text != null && update.Text.Length > 0)
             {
-                fullContent.Append(update.Text);
                 yield return new ChatMessageChunkDto
                 {
                     Content = update.Text,
@@ -93,12 +114,27 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
                 };
             }
         }
-        
+
         yield return new ChatMessageChunkDto
         {
             Content = "",
             ThreadId = threadId,
             IsComplete = true
+        };
+    }
+
+    private List<AITool> BuildTools()
+    {
+        return new List<AITool>
+        {
+            AIFunctionFactory.Create(
+                _pageIndexTools.SearchPageIndex,
+                name: "SearchPageIndex",
+                description: "搜索文档的页面索引结构。当用户询问文档目录、章节、内容结构时使用此工具。"),
+            AIFunctionFactory.Create(
+                _pageIndexTools.GetDocumentStructure,
+                name: "GetDocumentStructure",
+                description: "获取指定文档的完整页面索引树。当用户想了解某文档的详细结构（目录、章节层次）时使用。"),
         };
     }
 
@@ -108,7 +144,7 @@ public class ChatAppService : KnowledgeHubAppService, IChatAppService, ITransien
         {
             throw new UserFriendlyException("Invalid thread ID");
         }
-        
+
         return Task.FromResult(new ChatThreadDto
         {
             Id = threadId,

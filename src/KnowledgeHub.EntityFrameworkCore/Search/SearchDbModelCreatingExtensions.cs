@@ -118,5 +118,18 @@ public static class SearchDbModelCreatingExtensions
                 .HasForeignKey(x => x.ResourceId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        builder.Entity<ResourcePageIndex>(b =>
+        {
+            b.ToTable("KhResourcePageIndices");
+            b.ConfigureByConvention();
+
+            b.Property(x => x.PageIndexJson).HasColumnType("jsonb");
+            b.Property(x => x.SourceFormat).HasMaxLength(32);
+            b.Property(x => x.Model).HasMaxLength(64);
+
+            b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => x.ResourceVersionId).IsUnique();
+        });
     }
 }

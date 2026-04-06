@@ -78,6 +78,7 @@ public class KnowledgeHubDbContext :
     public DbSet<VideoIndexingJob> VideoIndexingJobs { get; set; }
     public DbSet<PageContent> PageContents { get; set; }
     public DbSet<ResourceReview> ResourceReviews { get; set; }
+    public DbSet<ResourcePageIndex> ResourcePageIndices { get; set; }
 
     // AI Chat entities
     public DbSet<KnowledgeHub.AI.ChatThread> ChatThreads { get; set; }
