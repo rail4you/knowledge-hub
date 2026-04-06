@@ -273,6 +273,7 @@ public class PageIndexService : IPageIndexService, ITransientDependency
 
     /// <summary>
     /// Resolve the CLI script path by trying multiple candidate locations.
+    /// Supports both development (solution root) and Docker (/app/pageindex-cli/) layouts.
     /// </summary>
     private string ResolveCliPath()
     {
@@ -281,8 +282,8 @@ public class PageIndexService : IPageIndexService, ITransientDependency
         // Candidate paths to try (in order of priority)
         var candidates = new[]
         {
-            configuredPath,                                                     // As-is from config
-            Path.Combine("/Users/bai/projects/KnowledgeHub", configuredPath),   // Relative to solution root
+            configuredPath,                                                     // As-is from config (e.g. Docker: /app/pageindex-cli/pageindex_cli.py)
+            Path.Combine("/Users/bai/projects/KnowledgeHub", configuredPath),   // Development: relative to solution root
             Path.Combine(AppContext.BaseDirectory, configuredPath),              // Relative to bin output
             Path.GetFullPath(configuredPath),                                    // Relative to CWD
         };
