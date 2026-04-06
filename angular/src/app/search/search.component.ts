@@ -16,9 +16,11 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzRateModule } from 'ng-zorro-antd/rate';
 import { ConfigStateService, EnvironmentService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
 import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/meilisearch-admin.service';
+import { ResourceReviewComponent } from './resource-review/resource-review.component';
 
 @Component({
   selector: 'app-search',
@@ -38,7 +40,9 @@ import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/mei
     NzDatePickerModule,
     NzTooltipModule,
     NzDividerModule,
-    NzModalModule
+    NzModalModule,
+    NzRateModule,
+    ResourceReviewComponent
   ],
   template: `
     <div class="search-container">
@@ -156,6 +160,11 @@ import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/mei
                       } @else {
                         <span class="file-ext-badge">{{ result.fileExtension }}</span>
                       }
+                      <button nz-button nzSize="small" nzType="text" class="review-btn"
+                        nz-tooltip="查看评价"
+                        (click)="openReviewModal(result.resourceId, result.resourceName, $event)">
+                        <span nz-icon nzType="star" nzTheme="outline"></span>
+                      </button>
                     </div>
                   </div>
                   <div class="result-content">
@@ -216,6 +225,20 @@ import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/mei
           </button>
         </div>
       </ng-template>
+    </nz-modal>
+
+    <nz-modal
+      [nzVisible]="isReviewModalOpen()"
+      [nzTitle]="'评价 - ' + reviewResourceName()"
+      [nzWidth]="600"
+      [nzFooter]="null"
+      (nzOnCancel)="closeReviewModal()"
+    >
+      <ng-container *nzModalContent>
+        @if (reviewResourceId()) {
+          <app-resource-review [resourceId]="reviewResourceId()"></app-resource-review>
+        }
+      </ng-container>
     </nz-modal>
   `,
   styles: [`
@@ -397,6 +420,15 @@ import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/mei
       border-radius: 4px;
     }
 
+    .review-btn {
+      color: #faad14;
+      margin-left: 4px;
+    }
+
+    .review-btn:hover {
+      color: #ffc53d;
+    }
+
     .result-content {
       border-top: 1px solid #f5f5f5;
       padding-top: 10px;
@@ -512,6 +544,10 @@ export class SearchComponent implements OnInit {
   currentVideoEndTime = signal('');
   currentVideoName = signal('');
   currentVideoEventDescription = signal('');
+
+  isReviewModalOpen = signal(false);
+  reviewResourceId = signal('');
+  reviewResourceName = signal('');
 
   getFileIcon(ext: string): string {
     const iconMap: Record<string, string> = {
@@ -649,6 +685,17 @@ export class SearchComponent implements OnInit {
 
   returnToSearch() {
     this.closeVideoModal();
+  }
+
+  openReviewModal(resourceId: string, resourceName: string, event: Event) {
+    event.stopPropagation();
+    this.reviewResourceId.set(resourceId);
+    this.reviewResourceName.set(resourceName);
+    this.isReviewModalOpen.set(true);
+  }
+
+  closeReviewModal() {
+    this.isReviewModalOpen.set(false);
   }
 
   formatTimeToSeconds(time: string): number {

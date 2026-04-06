@@ -8,6 +8,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { SearchService } from '../search/search.service';
+import { ResourceReviewComponent } from '../search/resource-review/resource-review.component';
 
 interface HitMatch {
   id: number;
@@ -24,7 +25,8 @@ interface HitMatch {
     NzButtonModule,
     NzIconModule,
     NzBadgeModule,
-    NzTagModule
+    NzTagModule,
+    ResourceReviewComponent
   ],
   template: `
     <div class="document-viewer">
@@ -41,6 +43,11 @@ interface HitMatch {
         <button nz-button (click)="goBack()">
           <span nz-icon nzType="rollback"></span>
           返回
+        </button>
+        <span class="toolbar-spacer"></span>
+        <button nz-button [nzType]="showReviewPanel() ? 'primary' : 'default'" (click)="toggleReviewPanel()">
+          <span nz-icon nzType="star" nzTheme="outline"></span>
+          评价
         </button>
       </div>
 
@@ -74,6 +81,22 @@ interface HitMatch {
             <div class="text-content" [innerHTML]="pageContent()"></div>
           }
         </div>
+
+        @if (showReviewPanel()) {
+          <div class="review-panel">
+            <div class="review-panel-header">
+              <span class="review-panel-title">资源评价</span>
+              <button nz-button nzSize="small" nzType="text" (click)="toggleReviewPanel()">
+                <span nz-icon nzType="close"></span>
+              </button>
+            </div>
+            <div class="review-panel-content">
+              @if (resourceId()) {
+                <app-resource-review [resourceId]="resourceId()"></app-resource-review>
+              }
+            </div>
+          </div>
+        }
       </div>
     </div>
   `,
@@ -100,10 +123,45 @@ interface HitMatch {
       color: #666;
     }
 
+    .toolbar-spacer {
+      flex: 1;
+    }
+
     .body-area {
       flex: 1;
       display: flex;
       overflow: hidden;
+    }
+
+    .review-panel {
+      width: 380px;
+      min-width: 380px;
+      background: white;
+      border-left: 1px solid #e8e8e8;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .review-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #e8e8e8;
+      background: #fafafa;
+    }
+
+    .review-panel-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .review-panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
     }
 
     .hit-nav {
@@ -219,6 +277,7 @@ export class DocumentViewerComponent implements OnInit, AfterViewInit {
 
   hits = signal<HitMatch[]>([]);
   activeHit = signal<number>(-1);
+  showReviewPanel = signal(false);
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
@@ -336,5 +395,9 @@ export class DocumentViewerComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/search'], {
       state: { searchState: history.state.searchState }
     });
+  }
+
+  toggleReviewPanel() {
+    this.showReviewPanel.update(v => !v);
   }
 }

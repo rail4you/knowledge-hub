@@ -103,7 +103,7 @@
         <!-- 资源卡片网格 -->
         <div class="resources-grid">
           @for (resource of resources(); track resource.id) {
-            <div class="resource-card" [class]="'type-' + (resource.resourceType || 0)">
+            <div class="resource-card" [class]="'type-' + (resource.resourceType || 0)" (click)="selectResource(resource)">
               <div class="card-thumbnail">
                 <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
               </div>
@@ -122,10 +122,10 @@
                 </div>
               </div>
               <div class="card-actions">
-                <button class="action-btn preview-btn" nz-tooltip="预览" (click)="previewResource(resource)">
+                <button class="action-btn preview-btn" nz-tooltip="预览" (click)="previewResource(resource); $event.stopPropagation()">
                   <span nz-icon nzType="eye" nzTheme="outline"></span>
                 </button>
-                <button class="action-btn download-btn" nz-tooltip="下载" (click)="downloadResource(resource)">
+                <button class="action-btn download-btn" nz-tooltip="下载" (click)="downloadResource(resource); $event.stopPropagation()">
                   <span nz-icon nzType="download" nzTheme="outline"></span>
                 </button>
                 <button class="action-btn collect-btn" nz-tooltip="收藏" (click)="collectResource(resource.id); $event.stopPropagation()">
@@ -152,6 +152,51 @@
     </div>
   </div>
 </div>
+
+<!-- 资源详情 Drawer -->
+<nz-drawer
+  [nzVisible]="drawerVisible()"
+  [nzTitle]="selectedResource()?.name || '资源详情'"
+  nzPlacement="right"
+  [nzWidth]="520"
+  (nzOnClose)="closeDrawer()"
+>
+  <ng-container *nzDrawerContent>
+    @if (selectedResource(); as resource) {
+      <div class="drawer-resource-info">
+        <div class="info-row">
+          <span class="info-label">类型</span>
+          <span class="info-value">
+            <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
+            {{ resource.resourceType === 0 ? '文档' : resource.resourceType === 1 ? '视频' : resource.resourceType === 2 ? '音频' : resource.resourceType === 3 ? '图片' : 'PPT' }}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">大小</span>
+          <span class="info-value">{{ (resource.fileSize || 0) / 1024 / 1024 | number:'1.1-1' }} MB</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">上传者</span>
+          <span class="info-value">{{ resource.creatorName || '未知' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">上传时间</span>
+          <span class="info-value">{{ resource.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+        </div>
+        @if (resource.description) {
+          <div class="info-row description">
+            <span class="info-label">描述</span>
+            <span class="info-value">{{ resource.description }}</span>
+          </div>
+        }
+      </div>
+
+      <nz-divider></nz-divider>
+
+      <app-resource-review [resourceId]="resource.id!"></app-resource-review>
+    }
+  </ng-container>
+</nz-drawer>
 
 <!-- 文件预览组件 -->
 <app-file-preview #filePreview></app-file-preview>

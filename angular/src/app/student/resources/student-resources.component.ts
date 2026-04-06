@@ -1,5 +1,5 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -8,18 +8,23 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzDrawerModule } from 'ng-zorro-antd/drawer';
+import { NzRateModule } from 'ng-zorro-antd/rate';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ResourceService } from '../../proxy/resources/resource.service';
 import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import type { ResourceDto, ResourceCategoryDto } from '../../proxy/resources/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
+import { ResourceReviewComponent } from '../../search/resource-review/resource-review.component';
 
 @Component({
   selector: 'app-student-resources',
   standalone: true,
   imports: [
     CommonModule,
+    DatePipe,
     FormsModule,
     NzIconModule,
     NzButtonModule,
@@ -28,7 +33,11 @@ import { FilePreviewComponent } from '../../shared/preview/file-preview.componen
     NzEmptyModule,
     NzTooltipModule,
     NzPaginationModule,
+    NzDrawerModule,
+    NzRateModule,
+    NzDividerModule,
     FilePreviewComponent,
+    ResourceReviewComponent,
   ],
   templateUrl: './student-resources.component.html',
   styleUrls: ['./student-resources.component.scss'],
@@ -51,6 +60,9 @@ export class StudentResourcesComponent implements OnInit {
   totalCount = signal(0);
   pageIndex = signal(1);
   pageSize = signal(12);
+
+  drawerVisible = signal(false);
+  selectedResource = signal<ResourceDto | null>(null);
 
   resourceTypes = [
     { label: '全部', value: null as ResourceType | null },
@@ -191,5 +203,14 @@ export class StudentResourcesComponent implements OnInit {
       [ResourceType.PPT]: 'file-ppt',
     };
     return icons[type ?? 0] || 'file-text';
+  }
+
+  selectResource(resource: ResourceDto) {
+    this.selectedResource.set(resource);
+    this.drawerVisible.set(true);
+  }
+
+  closeDrawer() {
+    this.drawerVisible.set(false);
   }
 }
