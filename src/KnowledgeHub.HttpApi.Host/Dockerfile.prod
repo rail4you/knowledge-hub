@@ -83,12 +83,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get purge -y --auto-remove build-essential wget perl \
     && rm -rf /var/lib/apt/lists/*
 
-# 配置 OpenSSL 环境变量，使 Python 使用正确的 OpenSSL 版本
-ENV OPENSSL_DIR=/usr/local/openssl-3.3.0
-ENV LD_LIBRARY_PATH=/usr/local/openssl-3.3.0/lib:$LD_LIBRARY_PATH
-ENV PATH=/usr/local/openssl-3.3.0/bin:$PATH
+# 使用 OpenSSL 3.3.0 替换系统库（Python 3.12 需要 OpenSSL 3.3.0）
+RUN cp /usr/local/openssl-3.3.0/lib64/libcrypto.so.3 /lib/x86_64-linux-gnu/libcrypto.so.3 && \
+    cp /usr/local/openssl-3.3.0/lib64/libssl.so.3 /lib/x86_64-linux-gnu/libssl.so.3 && \
+    ldconfig
 
-RUN ldconfig
+ENV OPENSSL_DIR=/usr/local/openssl-3.3.0
+ENV LD_LIBRARY_PATH=/usr/local/openssl-3.3.0/lib64:$LD_LIBRARY_PATH
+ENV PATH=/usr/local/openssl-3.3.0/bin:$PATH
 
 # 复制发布产物
 COPY --from=build /app/publish .
