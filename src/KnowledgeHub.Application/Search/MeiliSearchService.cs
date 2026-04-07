@@ -62,30 +62,32 @@ public class MeiliSearchService : IMeiliSearchService
             var response = await _httpClient.GetAsync($"/indexes/{IndexName}");
             if (!response.IsSuccessStatusCode)
             {
-                await CreateIndexAsync();
+                var content = new { uid = IndexName, primaryKey = "id" };
+                response = await _httpClient.PostAsJsonAsync("/indexes", content);
+                response.EnsureSuccessStatusCode();
             }
         }
         catch
         {
-            await CreateIndexAsync();
+            var content = new { uid = IndexName, primaryKey = "id" };
+            var response = await _httpClient.PostAsJsonAsync("/indexes", content);
+            response.EnsureSuccessStatusCode();
         }
+
+        await UpdateIndexSettingsAsync();
     }
 
-    private async Task CreateIndexAsync()
+    private async Task UpdateIndexSettingsAsync()
     {
-        var content = new { uid = IndexName, primaryKey = "id" };
-        var response = await _httpClient.PostAsJsonAsync("/indexes", content);
-        response.EnsureSuccessStatusCode();
-
         var index = _httpClient.BaseAddress + $"/indexes/{IndexName}";
-        
-        await _httpClient.PostAsJsonAsync($"{index}/settings/filterable-attributes", 
+
+        await _httpClient.PutAsJsonAsync($"{index}/settings/filterable-attributes",
             new[] { "resourceId", "resourceType", "categoryId", "fileExtension", "uploadDate", "tenantId", "status", "pageNumber" });
-        
-        await _httpClient.PostAsJsonAsync($"{index}/settings/searchable-attributes", 
+
+        await _httpClient.PutAsJsonAsync($"{index}/settings/searchable-attributes",
             new[] { "pageContent", "pageTitle", "resourceName", "keywords", "description" });
-        
-        await _httpClient.PostAsJsonAsync($"{index}/settings/sortable-attributes", 
+
+        await _httpClient.PutAsJsonAsync($"{index}/settings/sortable-attributes",
             new[] { "uploadDate", "pageNumber", "relevanceScore" });
     }
 
