@@ -64,6 +64,30 @@ ENV TZ=Asia/Shanghai
 # 包含: python3 二进制、标准库、第三方包
 # 精简: 已在 python-deps 阶段删除 __pycache__、.pyc、man pages
 COPY --from=python-deps /usr/local /usr/local
+
+# 编译安装 OpenSSL 3.3.0（python:3.12-slim 内置 Python 需要）
+# Ubuntu 24.04 默认 OpenSSL 3.0.13 与 Python 3.12 不兼容
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        wget \
+        perl \
+    && cd /tmp \
+    && wget -q https://www.openssl.org/source/openssl-3.3.0.tar.gz \
+    && tar -xzf openssl-3.3.0.tar.gz \
+    && cd openssl-3.3.0 \
+    && ./Configure --prefix=/usr/local/openssl-3.3.0 --openssldir=/usr/local/openssl-3.3.0 shared \
+    && make -j$(nproc) \
+    && make install_sw \
+    && cd / \
+    && rm -rf /tmp/openssl-3.3.0 /tmp/openssl-3.3.0.tar.gz \
+    && apt-get purge -y --auto-remove build-essential wget perl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 配置 OpenSSL 环境变量，使 Python 使用正确的 OpenSSL 版本
+ENV OPENSSL_DIR=/usr/local/openssl-3.3.0
+ENV LD_LIBRARY_PATH=/usr/local/openssl-3.3.0/lib:$LD_LIBRARY_PATH
+ENV PATH=/usr/local/openssl-3.3.0/bin:$PATH
+
 RUN ldconfig
 
 # 复制发布产物
