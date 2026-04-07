@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ViewChild } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, ChangeDetectionStrategy, ViewChild } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -75,6 +75,18 @@ export class StudentResourcesComponent implements OnInit {
   recommendationsCollapsed = signal(false);
   relatedResources = signal<RecommendedResourceDto[]>([]);
   relatedLoading = signal(false);
+  relatedTab = signal<string>('all');
+
+  relatedReasons = computed(() => {
+    const reasons = new Set(this.relatedResources().map(r => r.recommendationReason));
+    return [...reasons];
+  });
+
+  filteredRelatedResources = computed(() => {
+    const tab = this.relatedTab();
+    if (tab === 'all') return this.relatedResources();
+    return this.relatedResources().filter(r => r.recommendationReason === tab);
+  });
 
   resourceTypes = [
     { label: '全部', value: null as ResourceType | null },

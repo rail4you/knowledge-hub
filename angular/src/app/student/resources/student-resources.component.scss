@@ -610,107 +610,6 @@
 
 // ===== Drawer 资源详情 =====
 .drawer-resource-info {
-  .related-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 16px 0;
-    color: #9ca3af;
-    font-size: 13px;
-  }
-
-  .related-section {
-    .related-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #1f2937;
-      margin: 0 0 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-
-      span[nz-icon] {
-        color: #0056d2;
-      }
-    }
-  }
-
-  .related-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-
-  .related-card {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 8px 10px;
-    border-radius: 6px;
-    border: 1px solid #f0f0f0;
-    cursor: pointer;
-    transition: all 0.15s;
-
-    &:hover {
-      border-color: #0056d2;
-      background: #f8faff;
-    }
-  }
-
-  .related-card-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    color: #fff;
-    flex-shrink: 0;
-
-    &.rec-type-0 { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-    &.rec-type-1 { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-    &.rec-type-2 { background: linear-gradient(135deg, #f59e0b, #d97706); }
-    &.rec-type-3 { background: linear-gradient(135deg, #10b981, #059669); }
-    &.rec-type-4 { background: linear-gradient(135deg, #ef4444, #dc2626); }
-  }
-
-  .related-card-body {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .related-card-name {
-    font-size: 12px;
-    font-weight: 500;
-    color: #1f2937;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    margin-bottom: 2px;
-  }
-
-  .related-card-meta {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .related-reason {
-    font-size: 10px;
-    color: #0056d2;
-    background: #eff6ff;
-    padding: 0 4px;
-    border-radius: 2px;
-  }
-
-  .related-rating {
-    font-size: 11px;
-    color: #faad14;
-    font-weight: 500;
-  }
-
   .info-row {
     display: flex;
     align-items: baseline;
@@ -736,6 +635,166 @@
     align-items: center;
     gap: 4px;
   }
+}
+
+// ===== 相关资源（Drawer 内） =====
+.related-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.related-section {
+  .related-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    span[nz-icon] {
+      color: #0056d2;
+    }
+
+    .related-count {
+      font-size: 11px;
+      font-weight: 400;
+      color: #9ca3af;
+      background: #f3f4f6;
+      padding: 1px 6px;
+      border-radius: 10px;
+      margin-left: 2px;
+    }
+  }
+}
+
+.related-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.related-tab {
+  padding: 4px 12px;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 14px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.15s;
+  font-weight: 500;
+
+  &:hover {
+    border-color: #0056d2;
+    color: #0056d2;
+  }
+
+  &.active {
+    background: #0056d2;
+    color: #fff;
+    border-color: #0056d2;
+  }
+}
+
+.related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.related-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: #0056d2;
+    background: #f8faff;
+
+    .related-item-name {
+      color: #0056d2;
+    }
+  }
+}
+
+.related-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #fff;
+  flex-shrink: 0;
+
+  &.rec-type-0 { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  &.rec-type-1 { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  &.rec-type-2 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  &.rec-type-3 { background: linear-gradient(135deg, #10b981, #059669); }
+  &.rec-type-4 { background: linear-gradient(135deg, #ef4444, #dc2626); }
+}
+
+.related-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.related-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.related-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.related-category {
+  font-size: 11px;
+  color: #8c8c8c;
+}
+
+.related-item-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.related-item-rating {
+  font-size: 12px;
+  color: #faad14;
+  font-weight: 600;
+}
+
+.related-item-reason {
+  font-size: 10px;
+  color: #0056d2;
+  background: #eff6ff;
+  padding: 2px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
 // ===== 响应式 =====

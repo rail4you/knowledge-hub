@@ -255,21 +255,41 @@
           <h4 class="related-title">
             <span nz-icon nzType="link" nzTheme="outline"></span>
             相关资源
+            <span class="related-count">{{ relatedResources().length }}</span>
           </h4>
-          <div class="related-grid">
-            @for (related of relatedResources(); track related.resourceId) {
-              <div class="related-card" (click)="selectRelatedResource(related)">
-                <div class="related-card-icon" [class]="'rec-type-' + related.resourceType">
+          <div class="related-tabs">
+            <button
+              class="related-tab"
+              [class.active]="relatedTab() === 'all'"
+              (click)="relatedTab.set('all')"
+            >全部</button>
+            @for (reason of relatedReasons(); track reason) {
+              <button
+                class="related-tab"
+                [class.active]="relatedTab() === reason"
+                (click)="relatedTab.set(reason)"
+              >{{ reason }}</button>
+            }
+          </div>
+          <div class="related-list">
+            @for (related of filteredRelatedResources(); track related.resourceId) {
+              <div class="related-item" (click)="selectRelatedResource(related)">
+                <div class="related-item-icon" [class]="'rec-type-' + related.resourceType">
                   <span nz-icon [nzType]="getResourceTypeIcon(related.resourceType)" nzTheme="outline"></span>
                 </div>
-                <div class="related-card-body">
-                  <div class="related-card-name" [title]="related.resourceName">{{ related.resourceName }}</div>
-                  <div class="related-card-meta">
-                    <span class="related-reason">{{ related.recommendationReason }}</span>
-                    @if (related.averageRating > 0) {
-                      <span class="related-rating">{{ related.averageRating | number:'1.1-1' }}</span>
+                <div class="related-item-info">
+                  <div class="related-item-name" [title]="related.resourceName">{{ related.resourceName }}</div>
+                  <div class="related-item-meta">
+                    @if (related.categoryName) {
+                      <span class="related-category">{{ related.categoryName }}</span>
                     }
                   </div>
+                </div>
+                <div class="related-item-right">
+                  @if (related.averageRating > 0) {
+                    <span class="related-item-rating">{{ related.averageRating | number:'1.1-1' }}</span>
+                  }
+                  <span class="related-item-reason">{{ related.recommendationReason }}</span>
                 </div>
               </div>
             }
