@@ -41,11 +41,12 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 
-# 安装 locale + 时区 + python3 运行时依赖（libexpat, zlib 等共享库）
+# 安装 locale + 时区 + python3 运行时依赖（libexpat, zlib 等共享库）+ ffmpeg（视频处理）
 RUN apt-get update && apt-get install -y --no-install-recommends \
         locales \
         tzdata \
         libexpat1 \
+        ffmpeg \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen en_US.UTF-8 \
     && ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
