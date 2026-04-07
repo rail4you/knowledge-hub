@@ -323,3 +323,36 @@ curl -k -X POST https://119.45.170.4/api/app/resource/category \
 | Token 验证失败 | issuer 地址不匹配 | 统一 issuer 格式（带尾部斜杠） |
 | API 容器启动失败 | 端口占用或证书配置错误 | 检查端口、简化配置 |
 | Nginx 502 | proxy_pass 协议错误 | 使用 http:// 而非 https:// |
+
+---
+
+## 九、2026-04-07 部署记录
+
+### 9.1 韶署新功能
+
+本次部署新增了以下功能到远程服务器：
+- 职业指导规划（Career Guidance）组件
+- AI 敩案教案生成（Lesson Plan）
+- AI 聊天服务更新
+- 资源库管理更新（PageIndex-based AI 生成）
+- Python PageIndex CLI 集成（含 litellm, pymupdf, python-docx 等）
+
+### 9.2 部署中遇到的问题
+
+| 问题 | 原因 | 解决方案 |
+|------|------|---------|
+| Docker Hub 连接超时/重置 | GFW 导致无法访问 Docker Hub | 配置 `~/.orbstack/config/docker.json` 镜像加速器 |
+| buildx docker-container driver 不继承镜像配置 | buildx 的 docker-container driver 使用独立 daemon | 使用 OrbStack 原生 driver（`orbstack`），或先手动 `docker pull` 基础镜像再构建 |
+| `eclipse-temurin:17-jdk` 镜像加速器找不到 | 部分镜像加速器未同步该镜像 | 先 `docker pull --platform linux/amd64 eclipse-temurin:17-jdk` 手动拉取 |
+| `deploy.sh` CRLF 行尾符 | scp 从 macOS 传输时保留了 CRLF | 远程执行 `sed -i 's/\r$//' deploy.sh` |
+| 远程 Docker Hub 拉取超时 | 远程服务器同样无法访问 Docker Hub | 基础镜像已有本地缓存，跳过拉取即可 |
+| DbMigrator 报 `libgssapi_krb5.so.2` 警告 | Kerberos 库未安装 | 不影响数据库迁移，可忽略 |
+| **scp 覆盖 HTTPS 配置** | `scp` 同步时将本地的纯 HTTP `nginx-proxy.conf` 覆盖了远程的 HTTPS 版本 | 将本地 `nginx-proxy.conf` 更新为包含 HTTPS 443 配置，避免再次被覆盖 |
+
+### 9.3 部署注意事项
+
+1. **本地 `nginx-proxy.conf` 已更新为 HTTPS 版本**（HTTP 80 重定向到 HTTPS 443），以后 `scp` 同步不会再丢失 HTTPS 配置
+2. **`docker-compose.yml` 已添加 443 端口映射和证书挂载**（`./certs:/etc/nginx/certs:ro`）
+3. **`.env` 中 `PUBLIC_URL` 需要设为 `https://119.45.170.4`**（当前远程仍为 `http://`，需按需更新）
+4. **镜像加速器配置**：本地 `~/.orbstack/config/docker.json` 已添加镜像加速器，构建时优先使用 OrbStack 原生 driver
+5. **远程服务器证书文件**位于 `~/knowledgehub/certs/` 目录

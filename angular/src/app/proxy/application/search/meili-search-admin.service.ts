@@ -1,6 +1,6 @@
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { MeiliDashboardDto, MeiliDocumentGroupDto, MeiliEmbedderDto, MeiliIndexDto, MeiliIndexStatsDto, MeiliTaskDto } from '../contracts/search/dtos/models';
+import type { MeiliDashboardDto, MeiliDocumentGroupDto, MeiliEmbedderDto, MeiliIndexDto, MeiliIndexStatsDto, MeiliTaskDto, PageIndexListItemDto } from '../contracts/search/dtos/models';
 
 @Injectable({
   providedIn: 'root',
@@ -49,6 +49,14 @@ export class MeiliSearchAdminService {
     this.restService.request<any, MeiliIndexDto[]>({
       method: 'GET',
       url: '/api/app/meili-search-admin/indexes',
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getPageIndexList = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PageIndexListItemDto[]>({
+      method: 'GET',
+      url: '/api/app/meili-search-admin/page-index-list',
     },
     { apiName: this.apiName,...config });
   

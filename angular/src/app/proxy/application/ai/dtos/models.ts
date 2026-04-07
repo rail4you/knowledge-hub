@@ -1,4 +1,9 @@
 
+export interface CaseAnalysisGenerationInputDto {
+  resourceId?: string;
+  focusArea?: string | null;
+}
+
 export interface ChatInputDto {
   message?: string;
   threadId?: string | null;
@@ -15,6 +20,14 @@ export interface ChatMessageChunkDto {
 export interface FileUrlDto {
   url?: string;
   type?: string;
+}
+
+export interface LessonPlanGenerationInputDto {
+  resourceId?: string;
+  topic?: string;
+  subject?: string | null;
+  grade?: string | null;
+  duration?: number;
 }
 
 export interface ResourceForChatDto {

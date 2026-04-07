@@ -165,6 +165,19 @@ export interface MeiliVersionDto {
   pkgVersion?: string;
 }
 
+export interface PageIndexListItemDto {
+  id?: string;
+  resourceName?: string;
+  resourceId?: string;
+  versionNumber?: number;
+  tenantId?: string | null;
+  sourceFormat?: string | null;
+  model?: string | null;
+  nodeCount?: number;
+  docDescription?: string | null;
+  createdAt?: string;
+}
+
 export interface PageIndexSearchResultDto {
   resourceId?: string;
   resourceName?: string | null;

@@ -293,3 +293,5 @@ data.ms/
 # Environment files with secrets
 etc/docker/.env.production
 etc/docker/.env.*.local
+
+*.png
