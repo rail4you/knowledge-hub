@@ -301,6 +301,30 @@
 }
 
 // ============================================
+// Filter Bar
+// ============================================
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  background: #fff;
+
+  .filter-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .filter-right {
+    display: flex;
+    align-items: center;
+  }
+}
+
+// ============================================
 // Drawer Styles
 // ============================================
 .drawer-content {
@@ -372,6 +396,37 @@
     display: flex;
     gap: 8px;
     align-items: center;
+  }
+}
+
+// Drawer Tab Navigation
+.drawer-tab-nav {
+  display: flex;
+  border-bottom: 2px solid #f0f0f0;
+  flex-shrink: 0;
+  padding: 0 24px;
+}
+
+.drawer-tab-item {
+  position: relative;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.25s ease;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+
+  &:hover {
+    color: #1890ff;
+  }
+
+  &.active {
+    color: #1890ff;
+    border-bottom-color: #1890ff;
   }
 }
 

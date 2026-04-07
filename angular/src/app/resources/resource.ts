@@ -110,6 +110,22 @@ export class ResourceComponent implements OnInit {
   selectedTreeKeys = signal<string[]>([]);
   drawerVisible = signal(false);
 
+  // Filter state
+  timeFilter = signal<string>('all');
+  statusFilter = signal<number | null>(null);
+
+  // Drawer Tab state
+  drawerTabIndex = signal<number>(0);
+
+  // Time filter options
+  timeFilterOptions = [
+    { value: 'all', label: '全部' },
+    { value: 'today', label: '今天' },
+    { value: 'yesterday', label: '昨天' },
+    { value: 'last7days', label: '最近7天' },
+    { value: 'last30days', label: '最近30天' },
+  ];
+
   pendingAudits = signal<ResourceDto[]>([]);
   selectedAuditResource: ResourceDto | null = null;
   auditComment = '';
@@ -174,10 +190,14 @@ export class ResourceComponent implements OnInit {
   }
 
   loadResources() {
+    const dateRange = this.getDateRangeFromFilter(this.timeFilter());
     this.resourceService.getFilteredList({
       maxResultCount: this.pageSize,
       skipCount: (this.pageIndex - 1) * this.pageSize,
-      categoryId: this.selectedCategoryId()
+      categoryId: this.selectedCategoryId(),
+      status: this.statusFilter(),
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate
     }).subscribe((response) => {
       this.resources = response;
     });
@@ -823,6 +843,71 @@ export class ResourceComponent implements OnInit {
     this.pageSize = size;
     this.pageIndex = 1;
     this.loadResources();
+  }
+
+  onTimeFilterChange(value: string): void {
+    this.timeFilter.set(value);
+    this.pageIndex = 1;
+    this.loadResources();
+  }
+
+  onStatusFilterChange(value: number | null): void {
+    this.statusFilter.set(value);
+    this.pageIndex = 1;
+    this.loadResources();
+  }
+
+  clearAllFilters(): void {
+    this.timeFilter.set('all');
+    this.statusFilter.set(null);
+    this.pageIndex = 1;
+    this.loadResources();
+  }
+
+  hasActiveFilters(): boolean {
+    return this.timeFilter() !== 'all' || this.statusFilter() !== null;
+  }
+
+  private getDateRangeFromFilter(filter: string): { startDate?: string; endDate?: string } {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    switch (filter) {
+      case 'today':
+        return {
+          startDate: today.toISOString(),
+          endDate: endOfDay.toISOString()
+        };
+      case 'yesterday': {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayEnd = new Date(yesterday);
+        yesterdayEnd.setHours(23, 59, 59);
+        return {
+          startDate: yesterday.toISOString(),
+          endDate: yesterdayEnd.toISOString()
+        };
+      }
+      case 'last7days': {
+        const start7 = new Date(today);
+        start7.setDate(start7.getDate() - 6);
+        return {
+          startDate: start7.toISOString(),
+          endDate: endOfDay.toISOString()
+        };
+      }
+      case 'last30days': {
+        const start30 = new Date(today);
+        start30.setDate(start30.getDate() - 29);
+        return {
+          startDate: start30.toISOString(),
+          endDate: endOfDay.toISOString()
+        };
+      }
+      default:
+        return {};
+    }
   }
 
   onFileSelected(event: Event): void {

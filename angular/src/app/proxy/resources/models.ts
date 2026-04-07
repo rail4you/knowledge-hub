@@ -162,6 +162,8 @@ export interface ResourceListQueryDto extends PagedAndSortedResultRequestDto {
   status?: ResourceStatus | null;
   resourceType?: ResourceType | null;
   categoryId?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 export interface ResourceSearchQueryDto extends PagedAndSortedResultRequestDto {

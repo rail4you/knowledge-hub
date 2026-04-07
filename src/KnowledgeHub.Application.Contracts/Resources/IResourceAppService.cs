@@ -53,6 +53,8 @@ public class ResourceListQueryDto : PagedAndSortedResultRequestDto
     public ResourceStatus? Status { get; set; }
     public ResourceType? ResourceType { get; set; }
     public Guid? CategoryId { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 }
 
 public class ResourceSearchQueryDto : PagedAndSortedResultRequestDto

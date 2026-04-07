@@ -132,7 +132,7 @@ export class ResourceService {
     this.restService.request<any, PagedResultDto<ResourceDto>>({
       method: 'GET',
       url: '/api/app/resource/filtered-list',
-      params: { filter: input.filter, status: input.status, resourceType: input.resourceType, categoryId: input.categoryId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, status: input.status, resourceType: input.resourceType, categoryId: input.categoryId, startDate: input.startDate, endDate: input.endDate, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -159,7 +159,7 @@ export class ResourceService {
     this.restService.request<any, PagedResultDto<ResourceDto>>({
       method: 'GET',
       url: '/api/app/resource/pending-audit-list',
-      params: { filter: input.filter, status: input.status, resourceType: input.resourceType, categoryId: input.categoryId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, status: input.status, resourceType: input.resourceType, categoryId: input.categoryId, startDate: input.startDate, endDate: input.endDate, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -168,7 +168,7 @@ export class ResourceService {
     this.restService.request<any, PagedResultDto<PhysicalDeleteRequestDto>>({
       method: 'GET',
       url: '/api/app/resource/pending-physical-delete-requests',
-      params: { filter: input.filter, status: input.status, resourceType: input.resourceType, categoryId: input.categoryId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, status: input.status, resourceType: input.resourceType, categoryId: input.categoryId, startDate: input.startDate, endDate: input.endDate, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

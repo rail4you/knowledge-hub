@@ -133,6 +133,15 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             query = query.Where(x => x.CategoryId == input.CategoryId.Value);
         }
 
+        if (input.StartDate.HasValue)
+        {
+            query = query.Where(x => x.CreationTime >= input.StartDate.Value);
+        }
+        if (input.EndDate.HasValue)
+        {
+            query = query.Where(x => x.CreationTime <= input.EndDate.Value);
+        }
+
         var totalCount = await AsyncExecuter.CountAsync(query);
 
         query = query.OrderByDescending(x => x.CreationTime);
