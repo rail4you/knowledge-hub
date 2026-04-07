@@ -9,7 +9,8 @@
     "redirectUri": "${PUBLIC_URL}",
     "clientId": "KnowledgeHub_App",
     "responseType": "code",
-    "scope": "offline_access openid profile email phone KnowledgeHub"
+    "scope": "offline_access openid profile email phone KnowledgeHub",
+    "requireHttps": false
   },
   "apis": {
     "default": {
