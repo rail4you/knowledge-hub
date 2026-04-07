@@ -44,7 +44,7 @@ export interface CareerGuidanceGenerationInput {
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-  private readonly apiUrl = 'https://localhost:44305/api/learning/ai';
+  private readonly apiUrl = '/api/learning/ai';
   private readonly ngZone = inject(NgZone);
 
   getResources(): Observable<ResourceForChat[]> {
