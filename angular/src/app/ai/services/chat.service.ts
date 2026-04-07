@@ -37,6 +37,11 @@ export interface CaseAnalysisGenerationInput {
   focusArea?: string;
 }
 
+export interface CareerGuidanceGenerationInput {
+  resourceId: string;
+  careerGoal?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   private readonly apiUrl = 'https://localhost:44305/api/learning/ai';
@@ -259,6 +264,78 @@ export class ChatService {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ caseAnalysisJson }),
+    }).then(async response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.blob();
+    });
+  }
+
+  generateCareerGuidance(input: CareerGuidanceGenerationInput): Observable<ChatMessageChunk> {
+    return new Observable<ChatMessageChunk>(observer => {
+      const body = JSON.stringify(input);
+
+      fetch(`${this.apiUrl}/generate-career-guidance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body,
+      }).then(async response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          observer.complete();
+          return;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const chunk = JSON.parse(line.slice(6));
+                this.ngZone.run(() => {
+                  observer.next({
+                    content: chunk.content || '',
+                    threadId: chunk.threadId || '',
+                    isComplete: chunk.isComplete || false,
+                  });
+                });
+              } catch {
+                // skip malformed JSON
+              }
+            }
+          }
+        }
+
+        this.ngZone.run(() => observer.complete());
+      }).catch(err => {
+        this.ngZone.run(() => observer.error(err));
+      });
+
+      return () => {};
+    });
+  }
+
+  exportCareerGuidanceDocx(careerGuidanceJson: string): Promise<Blob> {
+    return fetch(`${this.apiUrl}/export-career-guidance-docx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ careerGuidanceJson }),
     }).then(async response => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

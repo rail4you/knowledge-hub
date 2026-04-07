@@ -1,174 +1,225 @@
 <div class="career-guidance-container">
   <div class="page-header">
     <h2>职业规划指导</h2>
-    <p class="subtitle">基于您的个人档案，提供个性化职业发展建议</p>
+    <p class="subtitle">基于资源库简历文档，AI 智能生成个性化职业发展规划建议</p>
   </div>
 
-  <nz-card nzTitle="学生档案" class="profile-card">
-    <form nz-form nzLayout="vertical">
-      <div nz-row [nzGutter]="[16, 8]">
-        <div nz-col [nzSpan]="12">
-          <nz-form-item nzLabel="专业">
-            <nz-select [(ngModel)]="profile().major" name="major" nzPlaceHolder="请选择专业">
-              @for (major of majors; track major) {
-                <nz-option [nzValue]="major" [nzLabel]="major"></nz-option>
-              }
-            </nz-select>
-          </nz-form-item>
-        </div>
-        
-        <div nz-col [nzSpan]="12">
-          <nz-form-item nzLabel="年级">
-            <nz-select [(ngModel)]="profile().grade" name="grade" nzPlaceHolder="请选择年级">
-              @for (grade of grades; track grade) {
-                <nz-option [nzValue]="grade" [nzLabel]="grade"></nz-option>
-              }
-            </nz-select>
-          </nz-form-item>
-        </div>
+  <!-- Step 1: Select resource -->
+  <nz-card class="step-card">
+    <div class="step-title">
+      <span class="step-number">1</span>
+      <span>选择简历资源</span>
+    </div>
 
-        <div nz-col [nzSpan]="12">
-          <nz-form-item nzLabel="GPA (0-100)">
-            <input nz-input type="number" [(ngModel)]="profile().gpa" name="gpa" placeholder="例如: 85" [min]="0" [max]="100" />
-          </nz-form-item>
-        </div>
-
-        <div nz-col [nzSpan]="12">
-          <nz-form-item nzLabel="职业目标">
-            <input nz-input [(ngModel)]="profile().careerGoal" name="careerGoal" placeholder="例如: 数据分析师、产品经理" />
-          </nz-form-item>
-        </div>
-
-        <div nz-col [nzSpan]="12">
-          <nz-form-item nzLabel="技能 (逗号分隔)">
-            <textarea nz-input [(ngModel)]="profile().skills" name="skills" placeholder="例如: Python, Java, 数据分析" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
-          </nz-form-item>
-        </div>
-
-        <div nz-col [nzSpan]="12">
-          <nz-form-item nzLabel="兴趣方向 (逗号分隔)">
-            <textarea nz-input [(ngModel)]="profile().interests" name="interests" placeholder="例如: 人工智能, 区块链, 产品设计" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
-          </nz-form-item>
-        </div>
-
-        <div nz-col [nzSpan]="12">
-          <nz-form-item nzLabel="项目经验">
-            <textarea nz-input [(ngModel)]="profile().projects" name="projects" placeholder="参与过的项目，每行一个" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
-          </nz-form-item>
-        </div>
-
-        <div nz-col [nzSpan]="12">
-          <nz-form-item nzLabel="证书/资质">
-            <textarea nz-input [(ngModel)]="profile().certifications" name="certifications" placeholder="例如: AWS认证, PMP" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
-          </nz-form-item>
-        </div>
+    @if (resourcesLoading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple nzTip="加载资源列表..."></nz-spin>
       </div>
-    </form>
+    } @else if (resources().length === 0) {
+      <nz-empty nzNotFoundContent="暂无可用资源，请先上传并索引简历文档"></nz-empty>
+    } @else {
+      <nz-select
+        class="resource-select"
+        [ngModel]="selectedResourceId()"
+        (ngModelChange)="selectedResourceId.set($event)"
+        nzPlaceHolder="请选择一个简历资源"
+        nzAllowClear
+        nzShowSearch
+        [nzOptionHeightPx]="64"
+      >
+        @for (resource of resources(); track resource.id) {
+          <nz-option [nzValue]="resource.id" [nzLabel]="resource.name">
+            <div class="resource-option">
+              <span nz-icon nzType="file-text" nzTheme="outline" class="resource-icon"></span>
+              <div class="resource-option-info">
+                <div class="resource-option-name">{{ resource.name }}</div>
+                <div class="resource-option-meta">
+                  @if (resource.sourceFormat) {
+                    <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
+                  }
+                  <span class="node-count">{{ resource.nodeCount }} 个索引节点</span>
+                </div>
+              </div>
+            </div>
+          </nz-option>
+        }
+      </nz-select>
+
+      @if (selectedResource()) {
+        <div class="selected-resource-info">
+          <nz-tag [nzColor]="'green'">
+            <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+            已选择：{{ selectedResource()!.name }}
+          </nz-tag>
+          @if (selectedResource()!.sourceFormat) {
+            <nz-tag [nzColor]="'blue'">{{ selectedResource()!.sourceFormat }}</nz-tag>
+          }
+          <span class="meta-text">{{ selectedResource()!.nodeCount }} 个索引节点</span>
+        </div>
+      }
+    }
+  </nz-card>
+
+  <!-- Step 2: Configure and generate -->
+  <nz-card class="step-card">
+    <div class="step-title">
+      <span class="step-number">2</span>
+      <span>分析设置</span>
+    </div>
+
+    <div class="goal-section">
+      <label class="field-label">职业目标（可选）</label>
+      <textarea
+        nz-input
+        [ngModel]="careerGoal()"
+        (ngModelChange)="careerGoal.set($event)"
+        [nzAutosize]="{ minRows: 2, maxRows: 4 }"
+        placeholder="例如：希望从事数据分析方向、目标是成为全栈工程师..."
+        [disabled]="isLoading()"
+      ></textarea>
+      <div class="field-hint">填写职业目标可以让 AI 提供更具针对性的规划建议</div>
+    </div>
 
     <nz-divider></nz-divider>
 
-    <div class="actions">
-      <button nz-button nzType="primary" (click)="generate()" [nzLoading]="isLoading()" [disabled]="!profile().major || !profile().grade">
-        <span nz-icon nzType="rocket"></span>
-        生成职业建议
+    <div class="action-bar">
+      <button nz-button nzType="primary" nzSize="large" (click)="generate()" [disabled]="!canGenerate()" [nzLoading]="isLoading()">
+        <span nz-icon nzType="thunderbolt"></span>
+        生成职业规划
       </button>
-      <button nz-button (click)="reset()" [disabled]="isLoading()">
-        <span nz-icon nzType="clear"></span>
-        清空
+      <button nz-button nzSize="large" (click)="reset()" [disabled]="isLoading()">
+        重置
       </button>
     </div>
   </nz-card>
 
-  @if (isLoading()) {
-    <nz-card class="result-card">
-      <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 10 }"></nz-skeleton>
+  <!-- Loading state -->
+  @if (isLoading() && !result()) {
+    <nz-card class="step-card loading-card">
+      <div class="generating-container">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+        <p class="generating-text">正在基于简历内容生成职业规划建议，请稍候...</p>
+        <p class="generating-hint">AI 正在分析您的技能、经历与职业方向</p>
+      </div>
     </nz-card>
   }
 
-  @if (result()) {
-    <nz-card nzTitle="职业建议报告" class="result-card">
-      @let r = result();
+  <!-- Step 3: Result preview -->
+  @if (result(); as r) {
+    <nz-card class="step-card result-card">
+      <div class="result-header">
+        <div class="step-title">
+          <span class="step-number">3</span>
+          <span>职业规划报告预览</span>
+        </div>
+        <div class="result-actions">
+          <button nz-button nzType="primary" (click)="downloadDocx()" [nzLoading]="isExporting()">
+            <span nz-icon nzType="download"></span>
+            下载 DOCX
+          </button>
+          <button nz-button (click)="reset()">
+            <span nz-icon nzType="redo"></span>
+            重新生成
+          </button>
+        </div>
+      </div>
 
-      <!-- 个人评估 -->
-      <nz-descriptions nzTitle="个人能力评估" nzBordered [nzColumn]="2">
-        <nz-descriptions-item nzTitle="职业匹配度" [nzSpan]="2">
-          <nz-progress [nzPercent]="r.assessment.careerMatchScore" [nzStatus]="r.assessment.careerMatchScore >= 70 ? 'success' : 'normal'"></nz-progress>
-        </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="核心优势">
-          @for (s of r.assessment.strengths; track s) {
-            <nz-tag nzColor="green">{{ s }}</nz-tag>
-          }
-        </nz-descriptions-item>
-        <nz-descriptions-item nzTitle="待提升领域">
-          @for (a of r.assessment.areasForImprovement; track a) {
-            <nz-tag nzColor="orange">{{ a }}</nz-tag>
-          }
-        </nz-descriptions-item>
-      </nz-descriptions>
+      <div class="result-content">
+        <h2 class="plan-title">{{ r.title }}</h2>
 
-      <!-- 推荐职业路径 -->
-      <nz-divider nzText="推荐职业路径"></nz-divider>
-      <nz-collapse>
-        @for (path of r.recommendedPaths; track path.title) {
-          <nz-collapse-panel [nzHeader]="path.title + ' (匹配度: ' + path.matchScore + '%)'">
-            <p>{{ path.description }}</p>
-            <nz-descriptions [nzColumn]="2" nzSize="small">
-              <nz-descriptions-item nzTitle="薪资范围">{{ path.salaryRange }}</nz-descriptions-item>
-              <nz-descriptions-item nzTitle="发展潜力">{{ path.growthPotential }}</nz-descriptions-item>
-              <nz-descriptions-item nzTitle="所需技能" [nzSpan]="2">
-                @for (skill of path.requiredSkills; track skill) {
-                  <nz-tag>{{ skill }}</nz-tag>
-                }
-              </nz-descriptions-item>
-            </nz-descriptions>
-          </nz-collapse-panel>
-        }
-      </nz-collapse>
+        <!-- Assessment -->
+        <div class="section-block">
+          <h4 class="section-heading">个人能力评估</h4>
+          <nz-descriptions nzBordered [nzColumn]="2" nzSize="small">
+            <nz-descriptions-item nzTitle="职业匹配度" [nzSpan]="2">
+              <nz-progress [nzPercent]="r.assessment.careerMatchScore" [nzStatus]="r.assessment.careerMatchScore >= 70 ? 'success' : 'normal'"></nz-progress>
+            </nz-descriptions-item>
+            <nz-descriptions-item nzTitle="综合评估" [nzSpan]="2">{{ r.assessment.summary }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="核心优势">
+              @for (s of r.assessment.strengths; track s) {
+                <nz-tag nzColor="green">{{ s }}</nz-tag>
+              }
+            </nz-descriptions-item>
+            <nz-descriptions-item nzTitle="待提升领域">
+              @for (a of r.assessment.areasForImprovement; track a) {
+                <nz-tag nzColor="orange">{{ a }}</nz-tag>
+              }
+            </nz-descriptions-item>
+          </nz-descriptions>
+        </div>
 
-      <!-- 技能差距分析 -->
-      <nz-divider nzText="技能差距分析"></nz-divider>
-      <nz-table [nzData]="r.skillGaps" nzSize="small" [nzNoResult]="'暂无数据'">
-        <thead>
-          <tr>
-            <th>技能</th>
-            <th>当前水平</th>
-            <th>目标水平</th>
-            <th>优先级</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (gap of r.skillGaps; track gap.skill) {
-            <tr>
-              <td>{{ gap.skill }}</td>
-              <td>{{ gap.currentLevel }}</td>
-              <td>{{ gap.targetLevel }}</td>
-              <td>
-                <nz-tag [nzColor]="getPriorityColor(gap.priority)">{{ gap.priority }}</nz-tag>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </nz-table>
+        <!-- Recommended Paths -->
+        <div class="section-block">
+          <h4 class="section-heading">推荐职业路径</h4>
+          <nz-collapse>
+            @for (path of r.recommendedPaths; track path.title) {
+              <nz-collapse-panel [nzHeader]="path.title + ' (匹配度: ' + path.matchScore + '%)'">
+                <p>{{ path.description }}</p>
+                <nz-descriptions [nzColumn]="2" nzSize="small">
+                  <nz-descriptions-item nzTitle="薪资范围">{{ path.salaryRange }}</nz-descriptions-item>
+                  <nz-descriptions-item nzTitle="发展潜力">{{ path.growthPotential }}</nz-descriptions-item>
+                  <nz-descriptions-item nzTitle="所需技能" [nzSpan]="2">
+                    @for (skill of path.requiredSkills; track skill) {
+                      <nz-tag>{{ skill }}</nz-tag>
+                    }
+                  </nz-descriptions-item>
+                </nz-descriptions>
+              </nz-collapse-panel>
+            }
+          </nz-collapse>
+        </div>
 
-      <!-- 行动计划 -->
-      <nz-divider nzText="行动计划"></nz-divider>
-      <nz-timeline>
-        @for (action of r.actionPlan; track action.id) {
-          <nz-timeline-item [nzColor]="getPriorityColor(action.priority)">
-            <h4>{{ action.title }}</h4>
-            <p>{{ action.description }}</p>
-            <small>时间线: {{ action.timeline }} | 优先级: {{ action.priority }}</small>
-          </nz-timeline-item>
-        }
-      </nz-timeline>
+        <!-- Skill Gaps -->
+        <div class="section-block">
+          <h4 class="section-heading">技能差距分析</h4>
+          <nz-table [nzData]="r.skillGaps" nzSize="small" [nzNoResult]="'暂无数据'">
+            <thead>
+              <tr>
+                <th>技能</th>
+                <th>当前水平</th>
+                <th>目标水平</th>
+                <th>优先级</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (gap of r.skillGaps; track gap.skill) {
+                <tr>
+                  <td>{{ gap.skill }}</td>
+                  <td>{{ gap.currentLevel }}</td>
+                  <td>{{ gap.targetLevel }}</td>
+                  <td>
+                    <nz-tag [nzColor]="getPriorityColor(gap.priority)">{{ gap.priority }}</nz-tag>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        </div>
 
-      <!-- 下一步 -->
-      <nz-divider nzText="下一步行动"></nz-divider>
-      <ul class="next-steps">
-        @for (step of r.nextSteps; track step) {
-          <li>{{ step }}</li>
-        }
-      </ul>
+        <!-- Action Plan -->
+        <div class="section-block">
+          <h4 class="section-heading">行动计划</h4>
+          <nz-timeline>
+            @for (action of r.actionPlan; track action.id) {
+              <nz-timeline-item [nzColor]="getPriorityColor(action.priority)">
+                <h4>{{ action.title }}</h4>
+                <p>{{ action.description }}</p>
+                <small>时间线: {{ action.timeline }} | 优先级: {{ action.priority }}</small>
+              </nz-timeline-item>
+            }
+          </nz-timeline>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="section-block">
+          <h4 class="section-heading">下一步行动</h4>
+          <ul class="item-list">
+            @for (step of r.nextSteps; track step) {
+              <li>{{ step }}</li>
+            }
+          </ul>
+        </div>
+      </div>
     </nz-card>
   }
 </div>
