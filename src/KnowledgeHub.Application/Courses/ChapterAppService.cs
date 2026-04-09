@@ -84,8 +84,24 @@ public class ChapterAppService : ApplicationService, IChapterAppService
     {
         var query = await _chapterRepository.GetQueryableAsync();
         var allChapters = query.Where(c => c.CourseId == courseId).OrderBy(c => c.SortOrder).ToList();
-        
-        var chapterDtos = ObjectMapper.Map<List<Chapter>, List<ChapterDto>>(allChapters);
+
+        if (allChapters.Count == 0)
+        {
+            return new List<ChapterDto>();
+        }
+
+        var chapterDtos = allChapters.Select(c => new ChapterDto
+        {
+            Id = c.Id,
+            CourseId = c.CourseId,
+            ParentId = c.ParentId,
+            Title = c.Title,
+            Description = c.Description,
+            SortOrder = c.SortOrder,
+            Children = new List<ChapterDto>(),
+            KnowledgeResources = new List<KnowledgeResourceDto>(),
+        }).ToList();
+
         return BuildTree(chapterDtos);
     }
 

@@ -1,0 +1,234 @@
+<div class="chapter-management-container">
+  <div class="page-header">
+    <h1>{{ '::Menu:ChapterManagement' | abpLocalization }}</h1>
+  </div>
+
+  <!-- Course selector -->
+  <nz-card class="selector-card">
+    <div class="course-selector">
+      <label>选择课程：</label>
+      <nz-select
+        [ngModel]="selectedCourseId()"
+        (ngModelChange)="onCourseSelected($event)"
+        nzPlaceHolder="请选择课程"
+        nzAllowClear
+        class="course-select"
+      >
+        @for (course of courses(); track course.id) {
+          <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+        }
+      </nz-select>
+    </div>
+  </nz-card>
+
+  @if (selectedCourseId()) {
+    <div class="content-layout">
+      <!-- Left: Chapter tree -->
+      <nz-card class="tree-panel" nzTitle="章节结构">
+        <div class="tree-toolbar">
+          <button nz-button nzType="primary" nzSize="small" (click)="openCreateRootModal()">
+            <span nz-icon nzType="plus"></span>
+            新建根章节
+          </button>
+          <button nz-button nzSize="small" (click)="openMindMap()">
+            <span nz-icon nzType="deployment-unit"></span>
+            生成知识图谱
+          </button>
+        </div>
+
+        @if (loading()) {
+          <div class="loading-container">
+            <nz-spin nzSimple nzSize="large"></nz-spin>
+          </div>
+        } @else if (chapters().length === 0) {
+          <nz-empty nzNotFoundContent="暂无章节，请新建根章节"></nz-empty>
+        } @else {
+          <div class="tree-view">
+            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: chapters(), depth: 0 }"></ng-container>
+          </div>
+        }
+      </nz-card>
+
+      <!-- Right: Chapter detail -->
+      <nz-card class="detail-panel" nzTitle="章节详情">
+        @if (selectedChapter()) {
+          @let chapter = selectedChapter()!;
+          <div class="detail-content">
+            <div class="detail-field">
+              <label>章节名称：</label>
+              <span>{{ chapter.title }}</span>
+            </div>
+            @if (chapter.description) {
+              <div class="detail-field">
+                <label>描述：</label>
+                <span>{{ chapter.description }}</span>
+              </div>
+            }
+            <div class="detail-field">
+              <label>排序：</label>
+              <span>{{ chapter.sortOrder ?? 0 }}</span>
+            </div>
+            @if (chapter.parentId) {
+              <div class="detail-field">
+                <label>父章节 ID：</label>
+                <span>{{ chapter.parentId }}</span>
+              </div>
+            }
+            <div class="detail-field">
+              <label>子章节数：</label>
+              <span>{{ chapter.children?.length ?? 0 }}</span>
+            </div>
+            <div class="detail-actions">
+              <button nz-button nzType="primary" nzSize="small" (click)="openEditModal(chapter)">
+                <span nz-icon nzType="edit"></span>
+                编辑
+              </button>
+              <button nz-button nzSize="small" (click)="openCreateChildModal(chapter)">
+                <span nz-icon nzType="plus"></span>
+                添加子章节
+              </button>
+              <button nz-button nzDanger nzSize="small" (click)="deleteChapter(chapter)">
+                <span nz-icon nzType="delete"></span>
+                删除
+              </button>
+            </div>
+          </div>
+        } @else {
+          <nz-empty nzNotFoundContent="请选择左侧章节查看详情"></nz-empty>
+        }
+      </nz-card>
+    </div>
+  }
+
+  <!-- Recursive tree template -->
+  <ng-template #treeNode let-nodes let-depth="depth">
+    @for (node of nodes; track node.id) {
+      <div class="tree-node" [style.padding-left.px]="depth * 20">
+        <div
+          class="tree-node-content"
+          [class.selected]="selectedChapter()?.id === node.id"
+          (click)="selectChapter(node)"
+        >
+          @if (hasChildren(node)) {
+            <span class="toggle-icon" (click)="toggleNode(node.id!); $event.stopPropagation()">
+              <span nz-icon [nzType]="isExpanded(node.id!) ? 'down' : 'right'"></span>
+            </span>
+          } @else {
+            <span class="toggle-icon placeholder"></span>
+          }
+          <span class="node-title">{{ node.title }}</span>
+          <span class="node-actions">
+            <button nz-button nzType="text" nzSize="small" (click)="openCreateChildModal(node); $event.stopPropagation()"
+              title="添加子章节">
+              <span nz-icon nzType="plus"></span>
+            </button>
+            <button nz-button nzType="text" nzSize="small" (click)="openEditModal(node); $event.stopPropagation()"
+              title="编辑">
+              <span nz-icon nzType="edit"></span>
+            </button>
+            <button nz-button nzType="text" nzSize="small" nzDanger (click)="deleteChapter(node); $event.stopPropagation()"
+              title="删除">
+              <span nz-icon nzType="delete"></span>
+            </button>
+          </span>
+        </div>
+        @if (hasChildren(node) && isExpanded(node.id!)) {
+          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+        }
+      </div>
+    }
+  </ng-template>
+
+  <!-- Create/Edit Modal -->
+  <nz-modal
+    [(nzVisible)]="isModalVisible"
+    [nzTitle]="isEdit ? '编辑章节' : '新建章节'"
+    [nzOkLoading]="saving"
+    nzOkText="保存"
+    nzCancelText="取消"
+    (nzOnOk)="handleModalOk()"
+    (nzOnCancel)="handleModalCancel()"
+    [nzWidth]="520"
+  >
+    <ng-container *nzModalContent>
+      <form nz-form nzLayout="vertical">
+        <nz-form-item>
+          <nz-form-label nzRequired>章节名称</nz-form-label>
+          <nz-form-control>
+            <input
+              nz-input
+              [(ngModel)]="formData.title"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="请输入章节名称"
+            />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>描述</nz-form-label>
+          <nz-form-control>
+            <textarea
+              nz-input
+              [(ngModel)]="formData.description"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="请输入章节描述"
+              [nzAutosize]="{ minRows: 2, maxRows: 5 }"
+            ></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        @if (!isEdit) {
+          <nz-form-item>
+            <nz-form-label>父章节</nz-form-label>
+            <nz-form-control>
+              <nz-select
+                [(ngModel)]="formData.parentId"
+                [ngModelOptions]="{ standalone: true }"
+                nzPlaceHolder="无（作为根章节）"
+                nzAllowClear
+              >
+                @for (ch of getFlatChapters(); track ch.id) {
+                  <nz-option [nzValue]="ch.id" [nzLabel]="ch.title">
+                    <span [style.padding-left.px]="ch.depth * 12">{{ ch.title }}</span>
+                  </nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        }
+
+        <nz-form-item>
+          <nz-form-label>排序</nz-form-label>
+          <nz-form-control>
+            <nz-input-number
+              [(ngModel)]="formData.sortOrder"
+              [ngModelOptions]="{ standalone: true }"
+              [nzMin]="0"
+              [nzStep]="10"
+              style="width: 100%"
+            ></nz-input-number>
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </ng-container>
+  </nz-modal>
+
+  <!-- Mind Map Overlay -->
+  @if (isMindMapVisible()) {
+    <div class="mind-map-overlay">
+      <div class="mind-map-header">
+        <h2>{{ getSelectedCourseTitle() }} - 知识图谱</h2>
+        <button nz-button nzType="default" (click)="closeMindMap()">
+          <span nz-icon nzType="close"></span>
+          关闭
+        </button>
+      </div>
+      <div class="mind-map-body">
+        <app-chapter-mind-map
+          [chapters]="chapters()"
+          [courseTitle]="getSelectedCourseTitle()"
+        ></app-chapter-mind-map>
+      </div>
+    </div>
+  }
+</div>

@@ -178,6 +178,14 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./learning/course-list/course-list.component').then(c => c.CourseListComponent),
       },
       {
+        path: 'student-enrollment',
+        loadComponent: () => import('./learning/student-enrollment/student-enrollment.component').then(c => c.StudentEnrollmentComponent),
+      },
+      {
+        path: 'chapter-management',
+        loadComponent: () => import('./learning/chapter-management/chapter-management.component').then(c => c.ChapterManagementComponent),
+      },
+      {
         path: 'course-detail/:id',
         loadComponent: () => import('./learning/course-detail/course-detail.component').then(c => c.CourseDetailComponent),
       },

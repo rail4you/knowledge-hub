@@ -37,6 +37,7 @@
     "@copilotkitnext/core": "^1.54.0",
     "@types/echarts": "^4.9.22",
     "echarts": "^6.0.0",
+    "jsmind": "^0.9.1",
     "jszip": "^3.10.1",
     "mammoth": "^1.12.0",
     "ng-zorro-antd": "^21.0.2",

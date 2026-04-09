@@ -147,18 +147,19 @@ function configureRoutes() {
         requiredPolicy: 'KnowledgeHub.Courses',
       },
       {
-        path: '/learning/my-courses',
-        name: '::Menu:MyCourses',
+        path: '/learning/student-enrollment',
+        name: '::Menu:StudentEnrollment',
         parentName: '::Menu:Learning',
         layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Courses',
+        requiredPolicy: 'KnowledgeHub.Courses.ManageEnrollment',
       },
       {
-        path: '/learning/teacher/create',
-        name: '::Menu:CreateCourse',
+        path: '/learning/chapter-management',
+        name: '::Menu:ChapterManagement',
+        iconClass: 'fas fa-sitemap',
         parentName: '::Menu:Learning',
         layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Courses.Create',
+        requiredPolicy: 'KnowledgeHub.Courses.Edit',
       },
       {
         path: '/learning/knowledge-graph/:courseId',
@@ -166,6 +167,7 @@ function configureRoutes() {
         parentName: '::Menu:Learning',
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.Courses',
+        invisible: true,
       },
       {
         path: '/student',
