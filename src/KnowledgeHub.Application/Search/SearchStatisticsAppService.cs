@@ -38,23 +38,8 @@ public class SearchStatisticsAppService : KnowledgeHubAppService, ISearchStatist
             tenantId = _currentTenant.Id;
         }
 
-        // Host 用户且未指定租户，返回空数据（让用户先选择租户）
-        if (!_currentTenant.Id.HasValue && !tenantId.HasValue)
-        {
-            return new SearchDashboardDto
-            {
-                All = new SearchStatsBreakdown(),
-                Document = new SearchStatsBreakdown(),
-                Video = new SearchStatsBreakdown(),
-                DailyTrends = new List<DailySearchTrendDto>(),
-                PopularSearches = new List<PopularSearchTermDto>(),
-                TopResources = new List<TopResourceStatsDto>(),
-                TopRatedResources = new List<TopRatedResourceDto>()
-            };
-        }
-
-        // 租户用户：只匹配该租户的数据（不包括共享数据）
-        // Host 管理员：匹配指定租户的数据（不包括共享数据）
+        // 租户用户：只匹配该租户的数据
+        // Host 管理员：指定租户时匹配该租户数据，不指定租户时匹配所有租户数据（全局汇总）
         var tenantFilter = tenantId.HasValue
             ? $"\"TenantId\" = '{tenantId}'"
             : "1=1";
