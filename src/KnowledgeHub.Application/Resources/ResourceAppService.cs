@@ -371,9 +371,23 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await VersionRepository.InsertAsync(newVersion);
         await Repository.UpdateAsync(resource);
 
+        // 清理旧版本的索引数据并等待索引任务完成
+        if (oldVersions.Any())
+        {
+            foreach (var oldVersion in oldVersions)
+            {
+                await CleanupVersionIndexDataAsync(oldVersion.Id);
+            }
+        }
+
         if (VideoIndexingBackgroundJob.IsVideoFile(resource.FileExtension))
         {
             await EnqueueVideoIndexingJobAsync(resource);
+        }
+        else
+        {
+            // 非视频文件，触发文档索引任务
+            await EnqueueDocumentIndexingJobAsync(resource, newVersion.Id);
         }
 
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(newVersion);
@@ -402,6 +416,25 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         await VersionRepository.UpdateAsync(version);
         await Repository.UpdateAsync(resource);
+
+        // 清理当前版本的索引数据并等待索引任务完成，然后触发重新索引
+        if (currentVersions.Any())
+        {
+            foreach (var currentVersion in currentVersions)
+            {
+                await CleanupVersionIndexDataAsync(currentVersion.Id);
+            }
+        }
+
+        if (VideoIndexingBackgroundJob.IsVideoFile(resource.FileExtension))
+        {
+            await EnqueueVideoIndexingJobAsync(resource);
+        }
+        else
+        {
+            // 非视频文件，触发文档索引任务
+            await EnqueueDocumentIndexingJobAsync(resource, version.Id);
+        }
 
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(version);
     }
@@ -602,6 +635,109 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to delete VideoIndexingJob for resource {ResourceId}", resourceId);
+        }
+    }
+
+    /// <summary>
+    /// 清理指定版本的索引数据（用于版本切换时清理旧版本索引）
+    /// </summary>
+    /// <param name="resourceVersionId">资源版本ID</param>
+    protected virtual async Task CleanupVersionIndexDataAsync(Guid resourceVersionId)
+    {
+        // 1. 等待该版本的索引任务完成
+        var activeJobs = await IndexingJobRepository.GetListAsync(x =>
+            x.ResourceVersionId == resourceVersionId &&
+            (x.Status == IndexingJobStatus.Pending ||
+             x.Status == IndexingJobStatus.Parsing ||
+             x.Status == IndexingJobStatus.Indexing));
+
+        // 等待索引任务完成（最多等待 5 分钟）
+        var maxWaitTime = TimeSpan.FromMinutes(5);
+        var startTime = DateTime.UtcNow;
+        while (activeJobs.Any() && DateTime.UtcNow - startTime < maxWaitTime)
+        {
+            Logger.LogInformation("Waiting for indexing jobs to complete for version {ResourceVersionId}, remaining jobs: {Count}", resourceVersionId, activeJobs.Count);
+            await Task.Delay(2000);
+            activeJobs = await IndexingJobRepository.GetListAsync(x =>
+                x.ResourceVersionId == resourceVersionId &&
+                (x.Status == IndexingJobStatus.Pending ||
+                 x.Status == IndexingJobStatus.Parsing ||
+                 x.Status == IndexingJobStatus.Indexing));
+        }
+
+        // 如果还有未完成的索引任务，记录警告但继续执行清理
+        if (activeJobs.Any())
+        {
+            Logger.LogWarning("Timeout waiting for indexing jobs to complete for version {ResourceVersionId}, proceeding with cleanup", resourceVersionId);
+        }
+        else
+        {
+            Logger.LogInformation("All indexing jobs completed for version {ResourceVersionId}", resourceVersionId);
+        }
+
+        // 获取该版本对应的资源ID
+        var resourceVersion = await VersionRepository.GetAsync(resourceVersionId);
+        var resourceId = resourceVersion.ResourceId;
+
+        // 2. 删除 MeiliSearch 索引（该资源的所有索引数据，因为是基于 resourceId 删除的）
+        try
+        {
+            await MeiliSearchService.DeleteDocumentAsync(resourceId);
+            Logger.LogInformation("Deleted MeiliSearch index data for resource {ResourceId} (version cleanup)", resourceId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete MeiliSearch index data for resource {ResourceId}", resourceId);
+        }
+
+        // 3. 删除该版本的 PageIndex 记录
+        try
+        {
+            var pageIndexList = await PageIndexRepository.GetListAsync(x =>
+                x.ResourceId == resourceId && x.ResourceVersionId == resourceVersionId);
+            if (pageIndexList.Any())
+            {
+                await PageIndexRepository.DeleteManyAsync(pageIndexList);
+                Logger.LogInformation("Deleted {Count} ResourcePageIndex records for version {ResourceVersionId}", pageIndexList.Count, resourceVersionId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete ResourcePageIndex for version {ResourceVersionId}", resourceVersionId);
+        }
+
+        // 4. 删除该版本的索引任务记录
+        try
+        {
+            var indexingJobs = await IndexingJobRepository.GetListAsync(x =>
+                x.ResourceId == resourceId && x.ResourceVersionId == resourceVersionId);
+            if (indexingJobs.Any())
+            {
+                await IndexingJobRepository.DeleteManyAsync(indexingJobs);
+                Logger.LogInformation("Deleted {Count} DocumentIndexingJob records for version {ResourceVersionId}", indexingJobs.Count, resourceVersionId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete DocumentIndexingJob for version {ResourceVersionId}", resourceVersionId);
+        }
+
+        // 5. 删除该版本的 DocumentIndex 记录（页面内容）
+        try
+        {
+            var documentIndices = await DocumentIndexRepository.GetByResourceIdAsync(resourceId);
+            if (documentIndices.Any())
+            {
+                foreach (var docIndex in documentIndices)
+                {
+                    await DocumentIndexRepository.DeleteAsync(docIndex);
+                }
+                Logger.LogInformation("Deleted {Count} DocumentIndex records for resource {ResourceId}", documentIndices.Count, resourceId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete DocumentIndex for resource {ResourceId}", resourceId);
         }
     }
 
