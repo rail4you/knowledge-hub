@@ -379,3 +379,64 @@ openPermissions(role: IdentityRoleDto) {
 | 问题 | 原因 | 解决方案 |
 |------|------|---------|
 | Permission Management 报 "Provider Key and Provider Name are required" | Angular 变更检测顺序问题，`visible` 双向绑定触发同步检查时 `providerKey` 未就绪 | 模板用 `*ngIf` + `[visible]`，TS 用 `setTimeout` 延迟设置 `visible` |
+
+---
+
+## API 日志排查指南
+
+### 日志位置
+
+API 日志文件位于项目根目录下的 `.dev/logs/api.log`：
+```bash
+# 查看 API 日志
+tail -f .dev/logs/api.log
+
+# 或者使用 dev.sh
+./dev.sh log api
+./dev.sh tail api
+```
+
+### 排查 API 500 错误的步骤
+
+**1. 首先确认 API 是否是最新代码**
+代码修改后必须重启 API 才能生效：
+```bash
+./dev.sh restart api
+```
+
+**2. 等待 API 完全启动后再测试**
+重启后等待 5 秒以上：
+```bash
+sleep 5 && curl -sk https://localhost:44305/health-status
+```
+
+**3. 触发请求后查看日志**
+```bash
+# 方法一：实时跟踪日志
+./dev.sh tail api
+
+# 方法二：先清空日志，触发请求，再查看
+> .dev/logs/api.log  # 清空日志（需手动或用其他方式）
+# 然后在浏览器触发请求
+tail -100 .dev/logs/api.log
+```
+
+**4. 搜索错误关键词**
+```bash
+grep -i "ERR\|Exception" .dev/logs/api.log | tail -50
+grep -i "search-statistics" .dev/logs/api.log | tail -20
+```
+
+**5. 查看完整的异常信息**
+```bash
+# 查看 PostgreSQL 错误（如 TenantId 模糊引用、UUID 类型错误等）
+grep -B10 -A10 "MessageText:" .dev/logs/api.log | head -50
+```
+
+### 本次排查学到的经验
+
+1. **重启时机问题**：API 重启后需要等待足够时间（5秒以上）才能完全就绪
+2. **日志捕获时机**：需要在用户操作之前就开始捕获日志
+3. **PostgreSQL UUID 类型问题**：`TenantId` 是 UUID 类型，不能和空字符串 `''` 比较
+4. **LEFT JOIN + WHERE 问题**：在 `LEFT JOIN` 后，`WHERE` 子句中对右表的条件会导致左表数据被过滤
+5. **动态 SQL 调试**：复杂 SQL 错误需要查看 PostgreSQL 的 `MessageText` 获取详细信息
