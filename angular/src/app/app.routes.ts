@@ -186,6 +186,14 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./learning/chapter-management/chapter-management.component').then(c => c.ChapterManagementComponent),
       },
       {
+        path: 'exercise-management',
+        loadComponent: () => import('./learning/exercise-management/exercise-management.component').then(c => c.ExerciseManagementComponent),
+      },
+      {
+        path: 'chapter-exercise',
+        loadComponent: () => import('./learning/chapter-exercise/chapter-exercise.component').then(c => c.ChapterExerciseComponent),
+      },
+      {
         path: 'course-detail/:id',
         loadComponent: () => import('./learning/course-detail/course-detail.component').then(c => c.CourseDetailComponent),
       },
@@ -204,6 +212,22 @@ export const APP_ROUTES: Routes = [
       {
         path: 'exercise-practice/:courseId',
         loadComponent: () => import('./learning/exercise/exercise-practice.component').then(c => c.ExercisePracticeComponent),
+      },
+      {
+        path: 'exercise-learning/:courseId',
+        loadComponent: () => import('./learning/exercise-learning/exercise-learning.component').then(c => c.ExerciseLearningComponent),
+      },
+      {
+        path: 'learning-progress',
+        loadComponent: () => import('./learning/learning-progress/learning-progress.component').then(c => c.LearningProgressComponent),
+      },
+      {
+        path: 'learning-statistics',
+        loadComponent: () => import('./learning/learning-statistics/learning-statistics.component').then(c => c.LearningStatisticsComponent),
+        canActivate: [permissionGuard],
+        data: {
+          requiredPolicy: 'KnowledgeHub.Learning.ViewStatistics',
+        },
       },
     ],
   },

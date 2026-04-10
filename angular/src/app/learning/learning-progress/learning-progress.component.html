@@ -1,0 +1,50 @@
+<div class="learning-progress-container">
+  <nz-card nzTitle="学习进度">
+    @if (loading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+      </div>
+    } @else if (courses().length === 0) {
+      <nz-empty nzDescription="暂未选课，请先选课"></nz-empty>
+    } @else {
+      <div class="course-grid">
+        @for (course of courses(); track course.id) {
+          <nz-card nzSize="small" class="course-card" [nzActions]="[actionStart, actionDetail]">
+            <ng-template #actionStart>
+              <span nz-icon nzType="form" (click)="startExercise(course.courseId!)"></span>
+            </ng-template>
+            <ng-template #actionDetail>
+              <span nz-icon nzType="eye" (click)="viewCourseDetail(course.courseId!)"></span>
+            </ng-template>
+
+            <div class="course-info">
+              <h4 class="course-title">{{ course.courseTitle }}</h4>
+              <div class="course-meta">
+                @if (course.major) {
+                  <nz-tag nzColor="blue">{{ course.major }}</nz-tag>
+                }
+                @if (course.semester) {
+                  <nz-tag>{{ course.semester }}</nz-tag>
+                }
+                <nz-tag [nzColor]="getStatusColor(course.status ?? 0)">
+                  {{ getStatusLabel(course.status ?? 0) }}
+                </nz-tag>
+              </div>
+              <div class="progress-section">
+                <span class="progress-label">学习进度 {{ course.progress ?? 0 }}%</span>
+                <nz-progress
+                  [nzPercent]="course.progress ?? 0"
+                  [nzStrokeColor]="getProgressColor(course.progress ?? 0)"
+                  nzSize="small"
+                ></nz-progress>
+              </div>
+              <div class="course-footer">
+                <span>选课时间：{{ course.enrolledAt | date:'yyyy-MM-dd' }}</span>
+              </div>
+            </div>
+          </nz-card>
+        }
+      </div>
+    }
+  </nz-card>
+</div>

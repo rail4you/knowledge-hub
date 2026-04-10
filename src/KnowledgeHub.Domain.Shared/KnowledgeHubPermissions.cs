@@ -23,6 +23,7 @@ public static class KnowledgeHubPermissions
         public const string LeagueAudit = Default + ".LeagueAudit";
         public const string ManageCategory = Default + ".ManageCategory";
         public const string PhysicalDelete = Default + ".PhysicalDelete";
+        public const string RequestDelete = Default + ".RequestDelete";
         public const string ViewStatistics = Default + ".ViewStatistics";
         public const string ViewRecommendation = Default + ".ViewRecommendation";
     }
@@ -51,6 +52,7 @@ public static class KnowledgeHubPermissions
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
         public const string Enroll = Default + ".Enroll";
+        public const string ManageEnrollment = Default + ".ManageEnrollment";
     }
 
     public static class AI
@@ -69,5 +71,12 @@ public static class KnowledgeHubPermissions
         public const string Update = Default + ".Update";
         public const string Delete = Default + ".Delete";
         public const string ManageMembers = Default + ".ManageMembers";
+    }
+
+    public static class Learning
+    {
+        public const string Default = GroupName + ".Learning";
+        public const string ViewStatistics = Default + ".ViewStatistics";
+        public const string ExportData = Default + ".ExportData";
     }
 }

@@ -93,6 +93,7 @@ public class KnowledgeHubDbContext :
     public DbSet<KnowledgeHub.Learning.StudentCourse> StudentCourses { get; set; }
     public DbSet<KnowledgeHub.Learning.LearningProgress> LearningProgresses { get; set; }
     public DbSet<KnowledgeHub.Learning.KnowledgeMastery> KnowledgeMasteries { get; set; }
+    public DbSet<KnowledgeHub.Learning.StudentExerciseRecord> StudentExerciseRecords { get; set; }
 
     // Exam entities
     public DbSet<Exam> Exams { get; set; }

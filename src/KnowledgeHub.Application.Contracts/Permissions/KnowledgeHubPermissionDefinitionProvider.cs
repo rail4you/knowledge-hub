@@ -28,6 +28,7 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.SchoolAudit, L("Permission:Resources.SchoolAudit"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.LeagueAudit, L("Permission:Resources.LeagueAudit"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ManageCategory, L("Permission:Resources.ManageCategory"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.RequestDelete, L("Permission:Resources.RequestDelete"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.PhysicalDelete, L("Permission:Resources.PhysicalDelete"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ViewStatistics, L("Permission:Resources.ViewStatistics"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ViewRecommendation, L("Permission:Resources.ViewRecommendation"));
@@ -56,6 +57,7 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Edit, L("Permission:Courses.Edit"));
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Delete, L("Permission:Courses.Delete"));
         coursesPermission.AddChild(KnowledgeHubPermissions.Courses.Enroll, L("Permission:Courses.Enroll"));
+        coursesPermission.AddChild(KnowledgeHubPermissions.Courses.ManageEnrollment, L("Permission:Courses.ManageEnrollment"));
 
         //AI permissions
         var aiPermission = myGroup.AddPermission(KnowledgeHubPermissions.AI.Default, L("Permission:AI"));
@@ -70,6 +72,11 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         alliancePermission.AddChild(KnowledgeHubPermissions.Alliance.Update, L("Permission:Alliance.Update"));
         alliancePermission.AddChild(KnowledgeHubPermissions.Alliance.Delete, L("Permission:Alliance.Delete"));
         alliancePermission.AddChild(KnowledgeHubPermissions.Alliance.ManageMembers, L("Permission:Alliance.ManageMembers"));
+
+        //Learning permissions
+        var learningPermission = myGroup.AddPermission(KnowledgeHubPermissions.Learning.Default, L("Permission:Learning"));
+        learningPermission.AddChild(KnowledgeHubPermissions.Learning.ViewStatistics, L("Permission:Learning.ViewStatistics"));
+        learningPermission.AddChild(KnowledgeHubPermissions.Learning.ExportData, L("Permission:Learning.ExportData"));
     }
 
     private static LocalizableString L(string name)

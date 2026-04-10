@@ -154,6 +154,13 @@ export class CourseDetailComponent implements OnInit {
       this.router.navigate(['/learning/exercise', course.id]);
     }
   }
+
+  startExerciseLearning() {
+    const course = this.course();
+    if (course) {
+      this.router.navigate(['/learning/exercise-learning', course.id]);
+    }
+  }
   
   enrollCourse() {
     console.log('Enrolling...');

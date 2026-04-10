@@ -1,0 +1,206 @@
+<div class="exercise-learning-container">
+  @if (loading()) {
+    <div class="loading-container">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (chapters().length === 0) {
+    <nz-card>
+      <nz-result nzStatus="info" nzTitle="暂无习题" nzSubTitle="该课程尚未添加习题">
+        <div nz-result-extra>
+          <button nz-button nzType="primary" (click)="goBack()">返回课程</button>
+        </div>
+      </nz-result>
+    </nz-card>
+  } @else {
+    <!-- Top progress bar -->
+    <nz-card class="progress-card" nzSize="small">
+      <div class="progress-header">
+        <button nz-button nzType="text" (click)="goBack()">
+          <span nz-icon nzType="arrow-left"></span> 返回
+        </button>
+        <span>学习进度</span>
+        <nz-progress [nzPercent]="progressPercent()" nzSize="small" style="flex: 1; margin: 0 16px;"></nz-progress>
+        <span>{{ completedCount() }}/{{ totalExercises() }}</span>
+      </div>
+    </nz-card>
+
+    <div class="main-content">
+      <!-- Left: Chapter navigation -->
+      <div class="chapter-nav">
+        @for (chapter of chapters(); track chapter.id; let i = $index) {
+          <div
+            class="chapter-item"
+            [class.active]="selectedChapterIndex() === i"
+            (click)="selectChapter(i)"
+          >
+            <div class="chapter-title">{{ chapter.title }}</div>
+            <div class="chapter-meta">
+              <span>{{ chapter.exercises.length }} 题</span>
+              <nz-progress
+                [nzPercent]="getChapterCompletion(chapter)"
+                nzSize="small"
+                [nzShowInfo]="false"
+                style="width: 60px;"
+              ></nz-progress>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Right: Exercise area -->
+      <div class="exercise-area">
+        @if (currentExercise(); as exercise) {
+          <nz-card>
+            <!-- Exercise list mini-nav -->
+            <div class="exercise-nav">
+              @for (ex of currentExercises(); track ex.id; let j = $index) {
+                <div
+                  class="exercise-dot"
+                  [class.active]="currentExerciseIndex() === j"
+                  [class.completed]="getExerciseStatus(ex.id!) === 'completed'"
+                  (click)="selectExercise(j)"
+                  [nzTooltipTitle]="ex.title ?? ''"
+                  nz-tooltip
+                >
+                  {{ j + 1 }}
+                </div>
+              }
+            </div>
+
+            <nz-divider></nz-divider>
+
+            <!-- Exercise content -->
+            <div class="exercise-header">
+              <nz-tag [nzColor]="getTypeColor(exercise.type)">{{ getTypeName(exercise.type) }}</nz-tag>
+              <nz-tag [nzColor]="getDifficultyColor(exercise.difficulty)">{{ getDifficultyLabel(exercise.difficulty) }}</nz-tag>
+              <span class="score">{{ exercise.score }}分</span>
+            </div>
+
+            <h3 class="exercise-title">{{ exercise.title }}</h3>
+            <p class="exercise-content">{{ exercise.questionContent }}</p>
+
+            <!-- Answer area -->
+            @if (!hasSubmitted()) {
+              <div class="answer-area">
+                @if (exercise.type === ExerciseType.SingleChoice) {
+                  <nz-radio-group [(ngModel)]="currentAnswer">
+                    @for (opt of parseOptions(exercise); track opt.key) {
+                      <label nz-radio [nzValue]="opt.key" class="option-item">
+                        <span class="option-key">{{ opt.key }}.</span>
+                        <span>{{ opt.content }}</span>
+                      </label>
+                    }
+                  </nz-radio-group>
+                }
+
+                @if (exercise.type === ExerciseType.MultiChoice) {
+                  <div>
+                    @for (opt of parseOptions(exercise); track opt.key) {
+                      <label nz-checkbox [(ngModel)]="multiSelectedOptions[opt.key]" class="option-item">
+                        <span class="option-key">{{ opt.key }}.</span>
+                        <span>{{ opt.content }}</span>
+                      </label>
+                    }
+                  </div>
+                }
+
+                @if (exercise.type === ExerciseType.TrueFalse) {
+                  <nz-radio-group [(ngModel)]="currentAnswer">
+                    <label nz-radio nzValue="true" class="option-item">正确</label>
+                    <label nz-radio nzValue="false" class="option-item">错误</label>
+                  </nz-radio-group>
+                }
+
+                @if (exercise.type === ExerciseType.FillBlank || exercise.type === ExerciseType.ShortAnswer || exercise.type === ExerciseType.Essay) {
+                  <textarea
+                    nz-input
+                    [(ngModel)]="currentAnswer"
+                    placeholder="请输入答案"
+                    [nzAutosize]="{ minRows: 3, maxRows: 6 }"
+                    style="width: 100%"
+                  ></textarea>
+                }
+              </div>
+
+              <div class="actions">
+                <button nz-button (click)="prevExercise()" [disabled]="currentExerciseIndex() === 0">
+                  <span nz-icon nzType="left"></span> 上一题
+                </button>
+                <button nz-button nzType="primary" (click)="submitAnswer()">
+                  <span nz-icon nzType="check"></span> 提交答案
+                </button>
+                <button nz-button (click)="nextExercise()" [disabled]="currentExerciseIndex() >= currentExercises().length - 1">
+                  下一题 <span nz-icon nzType="right"></span>
+                </button>
+              </div>
+            }
+
+            <!-- After submission -->
+            @if (hasSubmitted()) {
+              <div class="result-area">
+                @if (exerciseRecords().get(exercise.id!)?.isCorrect === true) {
+                  <nz-alert nzType="success" nzMessage="回答正确" nzShowIcon></nz-alert>
+                } @else if (exerciseRecords().get(exercise.id!)?.isCorrect === false) {
+                  <nz-alert nzType="error" nzMessage="回答错误" nzShowIcon></nz-alert>
+                } @else {
+                  <nz-alert nzType="info" nzMessage="答案已提交，请查看参考答案进行自我评估" nzShowIcon></nz-alert>
+                }
+
+                @if (!hasViewedAnswer()) {
+                  <button nz-button nzType="primary" (click)="viewAnswer()" style="margin-top: 16px;">
+                    <span nz-icon nzType="eye"></span> 查看参考答案
+                  </button>
+                }
+
+                @if (hasViewedAnswer()) {
+                  <nz-card nzSize="small" nzTitle="参考答案" style="margin-top: 16px;">
+                    <p class="answer-text">{{ exercise.answer }}</p>
+                    @if (exercise.answerExplanation) {
+                      <nz-alert nzType="info" [nzMessage]="exercise.answerExplanation" nzShowIcon style="margin-top: 8px;"></nz-alert>
+                    }
+                  </nz-card>
+
+                  @if (selfAssessment() === SelfAssessment.None) {
+                    <div class="self-assessment" style="margin-top: 16px;">
+                      <span>自我评估：</span>
+                      <nz-space>
+                        <button *nzSpaceItem nz-button (click)="submitSelfAssessment(SelfAssessment.Correct)">
+                          <span style="color: green;">正确</span>
+                        </button>
+                        <button *nzSpaceItem nz-button (click)="submitSelfAssessment(SelfAssessment.PartiallyCorrect)">
+                          <span style="color: orange;">部分正确</span>
+                        </button>
+                        <button *nzSpaceItem nz-button (click)="submitSelfAssessment(SelfAssessment.Incorrect)">
+                          <span style="color: red;">错误</span>
+                        </button>
+                      </nz-space>
+                    </div>
+                  } @else {
+                    <div style="margin-top: 16px;">
+                      <nz-tag [nzColor]="getSelfAssessmentColor(selfAssessment())">
+                        自我评估：{{ getSelfAssessmentLabel(selfAssessment()) }}
+                      </nz-tag>
+                    </div>
+                  }
+                }
+
+                <div class="actions" style="margin-top: 16px;">
+                  <button nz-button (click)="prevExercise()" [disabled]="currentExerciseIndex() === 0">
+                    <span nz-icon nzType="left"></span> 上一题
+                  </button>
+                  <button nz-button (click)="nextExercise()" [disabled]="currentExerciseIndex() >= currentExercises().length - 1">
+                    下一题 <span nz-icon nzType="right"></span>
+                  </button>
+                </div>
+              </div>
+            }
+          </nz-card>
+        } @else {
+          <nz-card>
+            <nz-result nzStatus="info" nzTitle="暂无习题" nzSubTitle="该章节暂无习题"></nz-result>
+          </nz-card>
+        }
+      </div>
+    </div>
+  }
+</div>

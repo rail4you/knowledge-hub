@@ -1,0 +1,141 @@
+<div class="learning-statistics-container">
+  <!-- Filter card -->
+  <nz-card nzTitle="学习统计" nzSize="small" style="margin-bottom: 16px;">
+    <div class="filter-bar">
+      <nz-select
+        [(ngModel)]="selectedCourseId"
+        nzPlaceHolder="选择课程"
+        nzAllowClear
+        style="width: 240px;"
+        (ngModelChange)="onCourseChange()"
+      >
+        @for (course of courses(); track course.id) {
+          <nz-option [nzValue]="course.id" [nzLabel]="course.title"></nz-option>
+        }
+      </nz-select>
+
+      <nz-range-picker
+        [(ngModel)]="dateRange"
+        (ngModelChange)="onDateRangeChange()"
+      ></nz-range-picker>
+
+      <button nz-button nzType="primary" (click)="exportExcel()" [nzLoading]="exporting()" [disabled]="!selectedCourseId">
+        <span nz-icon nzType="download"></span>
+        导出 Excel
+      </button>
+    </div>
+  </nz-card>
+
+  @if (overview(); as ov) {
+    <!-- Overview cards -->
+    <div class="overview-cards" nz-row [nzGutter]="16">
+      <div nz-col [nzSpan]="6">
+        <nz-card nzSize="small">
+          <nz-statistic nzTitle="总学生数" [nzValue]="ov.totalStudents ?? 0"></nz-statistic>
+        </nz-card>
+      </div>
+      <div nz-col [nzSpan]="6">
+        <nz-card nzSize="small">
+          <nz-statistic nzTitle="活跃学生" [nzValue]="ov.activeStudents ?? 0"></nz-statistic>
+        </nz-card>
+      </div>
+      <div nz-col [nzSpan]="6">
+        <nz-card nzSize="small">
+          <nz-statistic nzTitle="平均完成率" [nzValue]="ov.averageCompletionRate ?? 0" nzSuffix="%"></nz-statistic>
+        </nz-card>
+      </div>
+      <div nz-col [nzSpan]="6">
+        <nz-card nzSize="small">
+          <nz-statistic nzTitle="平均正确率" [nzValue]="ov.averageCorrectRate ?? 0" nzSuffix="%"></nz-statistic>
+        </nz-card>
+      </div>
+    </div>
+
+    @if (ov.chapterProgress && ov.chapterProgress.length > 0) {
+      <nz-card nzTitle="章节进度概览" nzSize="small" style="margin-top: 16px;">
+        <nz-table [nzData]="ov.chapterProgress" nzSize="small" [nzShowPagination]="false">
+          <thead>
+            <tr>
+              <th>章节</th>
+              <th>习题总数</th>
+              <th>已完成</th>
+              <th>完成率</th>
+              <th>正确率</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ch of ov.chapterProgress; track ch.chapterId) {
+              <tr>
+                <td>{{ ch.chapterName }}</td>
+                <td>{{ ch.totalExercises }}</td>
+                <td>{{ ch.completedCount }}</td>
+                <td>
+                  <nz-tag [nzColor]="getCompletionColor(ch.completionRate ?? 0)">
+                    {{ ch.completionRate ?? 0 }}%
+                  </nz-tag>
+                </td>
+                <td>
+                  <nz-tag [nzColor]="getCorrectColor(ch.correctRate ?? 0)">
+                    {{ ch.correctRate ?? 0 }}%
+                  </nz-tag>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      </nz-card>
+    }
+  }
+
+  <!-- Student statistics table -->
+  <nz-card nzTitle="学生统计明细" nzSize="small" style="margin-top: 16px;">
+    @if (loading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+      </div>
+    } @else {
+      <nz-table
+        [nzData]="statistics()"
+        nzSize="small"
+        [nzFrontPagination]="false"
+        [nzTotal]="totalCount()"
+        [nzPageSize]="pageSize()"
+        [nzPageIndex]="pageIndex()"
+        (nzPageIndexChange)="onPageChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)"
+        [nzShowSizeChanger]="true"
+      >
+        <thead>
+          <tr>
+            <th>学生姓名</th>
+            <th>完成数/总题数</th>
+            <th>完成率</th>
+            <th>正确率</th>
+            <th>总用时</th>
+            <th>最后活跃</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of statistics(); track item.studentId) {
+            <tr>
+              <td>{{ item.studentName }}</td>
+              <td>{{ item.completedCount }}/{{ item.totalCount }}</td>
+              <td>
+                <nz-tag [nzColor]="getCompletionColor(item.completionRate ?? 0)">
+                  {{ item.completionRate ?? 0 }}%
+                </nz-tag>
+              </td>
+              <td>
+                <nz-tag [nzColor]="getCorrectColor(item.correctRate ?? 0)">
+                  {{ item.correctRate ?? 0 }}%
+                </nz-tag>
+              </td>
+              <td>{{ formatTimeSpent(item.totalTimeSpent) }}</td>
+              <td>{{ item.lastActiveTime | date:'yyyy-MM-dd HH:mm' }}</td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    }
+  </nz-card>
+</div>

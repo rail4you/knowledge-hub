@@ -873,6 +873,111 @@
       "rootPath": "app",
       "remoteServiceName": "KnowledgeHub",
       "controllers": {
+        "KnowledgeHub.Application.AI.CareerGuidanceAppService": {
+          "controllerName": "CareerGuidance",
+          "controllerGroupName": "CareerGuidance",
+          "isRemoteService": true,
+          "isIntegrationService": false,
+          "apiVersion": null,
+          "type": "KnowledgeHub.Application.AI.CareerGuidanceAppService",
+          "interfaces": [],
+          "actions": {
+            "GenerateStreamingAsyncByInputAndOnChunk": {
+              "uniqueName": "GenerateStreamingAsyncByInputAndOnChunk",
+              "name": "GenerateStreamingAsync",
+              "httpMethod": "POST",
+              "url": "api/app/career-guidance/generate-streaming",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto",
+                  "typeSimple": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                },
+                {
+                  "name": "onChunk",
+                  "typeAsString": "System.Func`2[[KnowledgeHub.Application.AI.Dtos.ChatMessageChunkDto, KnowledgeHub.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[System.Threading.Tasks.Task, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib",
+                  "type": "System.Func<KnowledgeHub.Application.AI.Dtos.ChatMessageChunkDto,System.Threading.Tasks.Task>",
+                  "typeSimple": "System.Func<KnowledgeHub.Application.AI.Dtos.ChatMessageChunkDto,System.Threading.Tasks.Task>",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto",
+                  "typeSimple": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                },
+                {
+                  "nameOnMethod": "onChunk",
+                  "name": "onChunk",
+                  "jsonName": null,
+                  "type": "System.Func<KnowledgeHub.Application.AI.Dtos.ChatMessageChunkDto,System.Threading.Tasks.Task>",
+                  "typeSimple": "System.Func<KnowledgeHub.Application.AI.Dtos.ChatMessageChunkDto,System.Threading.Tasks.Task>",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Application.AI.CareerGuidanceAppService"
+            },
+            "ExportDocxByCareerGuidanceJson": {
+              "uniqueName": "ExportDocxByCareerGuidanceJson",
+              "name": "ExportDocx",
+              "httpMethod": "POST",
+              "url": "api/app/career-guidance/export-docx",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "careerGuidanceJson",
+                  "typeAsString": "System.String, System.Private.CoreLib",
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "careerGuidanceJson",
+                  "name": "careerGuidanceJson",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Byte[]",
+                "typeSimple": "[number]"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Application.AI.CareerGuidanceAppService"
+            }
+          }
+        },
         "KnowledgeHub.Application.AI.CaseAnalysisAppService": {
           "controllerName": "CaseAnalysis",
           "controllerGroupName": "CaseAnalysis",
@@ -9199,6 +9304,438 @@
             }
           }
         },
+        "KnowledgeHub.Courses.StudentCourseAppService": {
+          "controllerName": "StudentCourse",
+          "controllerGroupName": "StudentCourse",
+          "isRemoteService": true,
+          "isIntegrationService": false,
+          "apiVersion": null,
+          "type": "KnowledgeHub.Courses.StudentCourseAppService",
+          "interfaces": [
+            {
+              "type": "KnowledgeHub.Courses.IStudentCourseAppService",
+              "name": "IStudentCourseAppService",
+              "methods": [
+                {
+                  "name": "GetPagedAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Courses.Dtos.GetStudentCoursesInput, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Courses.Dtos.GetStudentCoursesInput",
+                      "typeSimple": "KnowledgeHub.Courses.Dtos.GetStudentCoursesInput",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Courses.Dtos.StudentCourseDto>",
+                    "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Courses.Dtos.StudentCourseDto>"
+                  }
+                },
+                {
+                  "name": "GetAvailableStudentsAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Courses.Dtos.GetAvailableStudentsInput, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Courses.Dtos.GetAvailableStudentsInput",
+                      "typeSimple": "KnowledgeHub.Courses.Dtos.GetAvailableStudentsInput",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Application.Dtos.PagedResultDto<Volo.Abp.Identity.IdentityUserDto>",
+                    "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<Volo.Abp.Identity.IdentityUserDto>"
+                  }
+                },
+                {
+                  "name": "EnrollStudentAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Courses.Dtos.CreateStudentCourseDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Courses.Dtos.CreateStudentCourseDto",
+                      "typeSimple": "KnowledgeHub.Courses.Dtos.CreateStudentCourseDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                },
+                {
+                  "name": "BatchEnrollAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Courses.Dtos.BatchEnrollDto, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Courses.Dtos.BatchEnrollDto",
+                      "typeSimple": "KnowledgeHub.Courses.Dtos.BatchEnrollDto",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                },
+                {
+                  "name": "DeleteAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "id",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                }
+              ]
+            }
+          ],
+          "actions": {
+            "GetPagedAsyncByInput": {
+              "uniqueName": "GetPagedAsyncByInput",
+              "name": "GetPagedAsync",
+              "httpMethod": "GET",
+              "url": "api/app/student-course/paged",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Courses.Dtos.GetStudentCoursesInput, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Courses.Dtos.GetStudentCoursesInput",
+                  "typeSimple": "KnowledgeHub.Courses.Dtos.GetStudentCoursesInput",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "CourseId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "StudentId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "Status",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Learning.Enums.StudentCourseStatus?",
+                  "typeSimple": "enum?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "TenantId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "Filter",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "Sorting",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "SkipCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "MaxResultCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Courses.Dtos.StudentCourseDto>",
+                "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Courses.Dtos.StudentCourseDto>"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Courses.IStudentCourseAppService"
+            },
+            "GetAvailableStudentsAsyncByInput": {
+              "uniqueName": "GetAvailableStudentsAsyncByInput",
+              "name": "GetAvailableStudentsAsync",
+              "httpMethod": "GET",
+              "url": "api/app/student-course/available-students",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Courses.Dtos.GetAvailableStudentsInput, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Courses.Dtos.GetAvailableStudentsInput",
+                  "typeSimple": "KnowledgeHub.Courses.Dtos.GetAvailableStudentsInput",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "CourseId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "TenantId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "Filter",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "Sorting",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "SkipCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "MaxResultCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Application.Dtos.PagedResultDto<Volo.Abp.Identity.IdentityUserDto>",
+                "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<Volo.Abp.Identity.IdentityUserDto>"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Courses.IStudentCourseAppService"
+            },
+            "EnrollStudentAsyncByInput": {
+              "uniqueName": "EnrollStudentAsyncByInput",
+              "name": "EnrollStudentAsync",
+              "httpMethod": "POST",
+              "url": "api/app/student-course/enroll-student",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Courses.Dtos.CreateStudentCourseDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Courses.Dtos.CreateStudentCourseDto",
+                  "typeSimple": "KnowledgeHub.Courses.Dtos.CreateStudentCourseDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Courses.Dtos.CreateStudentCourseDto",
+                  "typeSimple": "KnowledgeHub.Courses.Dtos.CreateStudentCourseDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Courses.IStudentCourseAppService"
+            },
+            "BatchEnrollAsyncByInput": {
+              "uniqueName": "BatchEnrollAsyncByInput",
+              "name": "BatchEnrollAsync",
+              "httpMethod": "POST",
+              "url": "api/app/student-course/batch-enroll",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Courses.Dtos.BatchEnrollDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Courses.Dtos.BatchEnrollDto",
+                  "typeSimple": "KnowledgeHub.Courses.Dtos.BatchEnrollDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Courses.Dtos.BatchEnrollDto",
+                  "typeSimple": "KnowledgeHub.Courses.Dtos.BatchEnrollDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Courses.IStudentCourseAppService"
+            },
+            "DeleteAsyncById": {
+              "uniqueName": "DeleteAsyncById",
+              "name": "DeleteAsync",
+              "httpMethod": "DELETE",
+              "url": "api/app/student-course/{id}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "id",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "id",
+                  "name": "id",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Courses.IStudentCourseAppService"
+            }
+          }
+        },
         "KnowledgeHub.Exams.ExerciseAppService": {
           "controllerName": "Exercise",
           "controllerGroupName": "Exercise",
@@ -10103,6 +10640,702 @@
               },
               "allowAnonymous": null,
               "implementFrom": "KnowledgeHub.Learning.ILearningAppService"
+            }
+          }
+        },
+        "KnowledgeHub.Learning.StudentExerciseRecordAppService": {
+          "controllerName": "StudentExerciseRecord",
+          "controllerGroupName": "StudentExerciseRecord",
+          "isRemoteService": true,
+          "isIntegrationService": false,
+          "apiVersion": null,
+          "type": "KnowledgeHub.Learning.StudentExerciseRecordAppService",
+          "interfaces": [
+            {
+              "type": "KnowledgeHub.Learning.IStudentExerciseRecordAppService",
+              "name": "IStudentExerciseRecordAppService",
+              "methods": [
+                {
+                  "name": "SaveOrUpdateRecordAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Learning.Dtos.SaveExerciseRecordInput, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Learning.Dtos.SaveExerciseRecordInput",
+                      "typeSimple": "KnowledgeHub.Learning.Dtos.SaveExerciseRecordInput",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto",
+                    "typeSimple": "KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto"
+                  }
+                },
+                {
+                  "name": "GetRecordsByCourseAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput",
+                      "typeSimple": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto>",
+                    "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto>"
+                  }
+                },
+                {
+                  "name": "GetRecordsByChapterAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput",
+                      "typeSimple": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto>",
+                    "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto>"
+                  }
+                },
+                {
+                  "name": "MarkAnswerViewedAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Learning.Dtos.MarkAnswerViewedInput, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Learning.Dtos.MarkAnswerViewedInput",
+                      "typeSimple": "KnowledgeHub.Learning.Dtos.MarkAnswerViewedInput",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                },
+                {
+                  "name": "SubmitSelfAssessmentAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Learning.Dtos.SubmitSelfAssessmentInput, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Learning.Dtos.SubmitSelfAssessmentInput",
+                      "typeSimple": "KnowledgeHub.Learning.Dtos.SubmitSelfAssessmentInput",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "System.Void",
+                    "typeSimple": "System.Void"
+                  }
+                },
+                {
+                  "name": "GetChapterProgressAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "courseId",
+                      "typeAsString": "System.Guid, System.Private.CoreLib",
+                      "type": "System.Guid",
+                      "typeSimple": "string",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Application.Dtos.ListResultDto<KnowledgeHub.Learning.Dtos.ChapterProgressDto>",
+                    "typeSimple": "Volo.Abp.Application.Dtos.ListResultDto<KnowledgeHub.Learning.Dtos.ChapterProgressDto>"
+                  }
+                },
+                {
+                  "name": "GetLearningStatisticsAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput",
+                      "typeSimple": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentLearningStatisticsDto>",
+                    "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentLearningStatisticsDto>"
+                  }
+                },
+                {
+                  "name": "GetCourseLearningOverviewAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Learning.Dtos.GetCourseLearningOverviewInput, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Learning.Dtos.GetCourseLearningOverviewInput",
+                      "typeSimple": "KnowledgeHub.Learning.Dtos.GetCourseLearningOverviewInput",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "KnowledgeHub.Learning.Dtos.CourseLearningOverviewDto",
+                    "typeSimple": "KnowledgeHub.Learning.Dtos.CourseLearningOverviewDto"
+                  }
+                },
+                {
+                  "name": "ExportLearningStatisticsAsync",
+                  "parametersOnMethod": [
+                    {
+                      "name": "input",
+                      "typeAsString": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput, KnowledgeHub.Application.Contracts",
+                      "type": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput",
+                      "typeSimple": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput",
+                      "isOptional": false,
+                      "defaultValue": null
+                    }
+                  ],
+                  "returnValue": {
+                    "type": "Volo.Abp.Content.IRemoteStreamContent",
+                    "typeSimple": "Volo.Abp.Content.IRemoteStreamContent"
+                  }
+                }
+              ]
+            }
+          ],
+          "actions": {
+            "SaveOrUpdateRecordAsyncByInput": {
+              "uniqueName": "SaveOrUpdateRecordAsyncByInput",
+              "name": "SaveOrUpdateRecordAsync",
+              "httpMethod": "POST",
+              "url": "api/app/student-exercise-record/save-or-update-record",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Learning.Dtos.SaveExerciseRecordInput, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Learning.Dtos.SaveExerciseRecordInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.SaveExerciseRecordInput",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Learning.Dtos.SaveExerciseRecordInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.SaveExerciseRecordInput",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto",
+                "typeSimple": "KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Learning.IStudentExerciseRecordAppService"
+            },
+            "GetRecordsByCourseAsyncByInput": {
+              "uniqueName": "GetRecordsByCourseAsyncByInput",
+              "name": "GetRecordsByCourseAsync",
+              "httpMethod": "GET",
+              "url": "api/app/student-exercise-record/records-by-course",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "CourseId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "ChapterId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "Sorting",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "SkipCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "MaxResultCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto>",
+                "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto>"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Learning.IStudentExerciseRecordAppService"
+            },
+            "GetRecordsByChapterAsyncByInput": {
+              "uniqueName": "GetRecordsByChapterAsyncByInput",
+              "name": "GetRecordsByChapterAsync",
+              "httpMethod": "GET",
+              "url": "api/app/student-exercise-record/records-by-chapter",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "CourseId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "ChapterId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "Sorting",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "SkipCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "MaxResultCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto>",
+                "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto>"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Learning.IStudentExerciseRecordAppService"
+            },
+            "MarkAnswerViewedAsyncByInput": {
+              "uniqueName": "MarkAnswerViewedAsyncByInput",
+              "name": "MarkAnswerViewedAsync",
+              "httpMethod": "POST",
+              "url": "api/app/student-exercise-record/mark-answer-viewed",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Learning.Dtos.MarkAnswerViewedInput, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Learning.Dtos.MarkAnswerViewedInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.MarkAnswerViewedInput",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Learning.Dtos.MarkAnswerViewedInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.MarkAnswerViewedInput",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Learning.IStudentExerciseRecordAppService"
+            },
+            "SubmitSelfAssessmentAsyncByInput": {
+              "uniqueName": "SubmitSelfAssessmentAsyncByInput",
+              "name": "SubmitSelfAssessmentAsync",
+              "httpMethod": "POST",
+              "url": "api/app/student-exercise-record/submit-self-assessment",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Learning.Dtos.SubmitSelfAssessmentInput, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Learning.Dtos.SubmitSelfAssessmentInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.SubmitSelfAssessmentInput",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Learning.Dtos.SubmitSelfAssessmentInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.SubmitSelfAssessmentInput",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Learning.IStudentExerciseRecordAppService"
+            },
+            "GetChapterProgressAsyncByCourseId": {
+              "uniqueName": "GetChapterProgressAsyncByCourseId",
+              "name": "GetChapterProgressAsync",
+              "httpMethod": "GET",
+              "url": "api/app/student-exercise-record/chapter-progress/{courseId}",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "courseId",
+                  "typeAsString": "System.Guid, System.Private.CoreLib",
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "courseId",
+                  "name": "courseId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": [],
+                  "bindingSourceId": "Path",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Application.Dtos.ListResultDto<KnowledgeHub.Learning.Dtos.ChapterProgressDto>",
+                "typeSimple": "Volo.Abp.Application.Dtos.ListResultDto<KnowledgeHub.Learning.Dtos.ChapterProgressDto>"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Learning.IStudentExerciseRecordAppService"
+            },
+            "GetLearningStatisticsAsyncByInput": {
+              "uniqueName": "GetLearningStatisticsAsyncByInput",
+              "name": "GetLearningStatisticsAsync",
+              "httpMethod": "GET",
+              "url": "api/app/student-exercise-record/learning-statistics",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "CourseId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "ChapterId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "TenantId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "StartTime",
+                  "jsonName": null,
+                  "type": "System.DateTime?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "EndTime",
+                  "jsonName": null,
+                  "type": "System.DateTime?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "Sorting",
+                  "jsonName": null,
+                  "type": "System.String",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "SkipCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "MaxResultCount",
+                  "jsonName": null,
+                  "type": "System.Int32",
+                  "typeSimple": "number",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentLearningStatisticsDto>",
+                "typeSimple": "Volo.Abp.Application.Dtos.PagedResultDto<KnowledgeHub.Learning.Dtos.StudentLearningStatisticsDto>"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Learning.IStudentExerciseRecordAppService"
+            },
+            "GetCourseLearningOverviewAsyncByInput": {
+              "uniqueName": "GetCourseLearningOverviewAsyncByInput",
+              "name": "GetCourseLearningOverviewAsync",
+              "httpMethod": "GET",
+              "url": "api/app/student-exercise-record/course-learning-overview",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Learning.Dtos.GetCourseLearningOverviewInput, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Learning.Dtos.GetCourseLearningOverviewInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.GetCourseLearningOverviewInput",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "CourseId",
+                  "jsonName": null,
+                  "type": "System.Guid",
+                  "typeSimple": "string",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                },
+                {
+                  "nameOnMethod": "input",
+                  "name": "TenantId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": "input"
+                }
+              ],
+              "returnValue": {
+                "type": "KnowledgeHub.Learning.Dtos.CourseLearningOverviewDto",
+                "typeSimple": "KnowledgeHub.Learning.Dtos.CourseLearningOverviewDto"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Learning.IStudentExerciseRecordAppService"
+            },
+            "ExportLearningStatisticsAsyncByInput": {
+              "uniqueName": "ExportLearningStatisticsAsyncByInput",
+              "name": "ExportLearningStatisticsAsync",
+              "httpMethod": "POST",
+              "url": "api/app/student-exercise-record/export-learning-statistics",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput",
+                  "typeSimple": "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "Volo.Abp.Content.IRemoteStreamContent",
+                "typeSimple": "Volo.Abp.Content.IRemoteStreamContent"
+              },
+              "allowAnonymous": false,
+              "implementFrom": "KnowledgeHub.Learning.IStudentExerciseRecordAppService"
             }
           }
         },
@@ -14589,6 +15822,80 @@
               },
               "allowAnonymous": null,
               "implementFrom": "KnowledgeHub.Controllers.AIController"
+            },
+            "GenerateCareerGuidanceByInput": {
+              "uniqueName": "GenerateCareerGuidanceByInput",
+              "name": "GenerateCareerGuidance",
+              "httpMethod": "POST",
+              "url": "api/learning/ai/generate-career-guidance",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto",
+                  "typeSimple": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto",
+                  "typeSimple": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "System.Void",
+                "typeSimple": "System.Void"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Controllers.AIController"
+            },
+            "ExportCareerGuidanceDocxByInput": {
+              "uniqueName": "ExportCareerGuidanceDocxByInput",
+              "name": "ExportCareerGuidanceDocx",
+              "httpMethod": "POST",
+              "url": "api/learning/ai/export-career-guidance-docx",
+              "supportedVersions": [],
+              "parametersOnMethod": [
+                {
+                  "name": "input",
+                  "typeAsString": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceExportInputDto, KnowledgeHub.Application.Contracts",
+                  "type": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceExportInputDto",
+                  "typeSimple": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceExportInputDto",
+                  "isOptional": false,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "input",
+                  "name": "input",
+                  "jsonName": null,
+                  "type": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceExportInputDto",
+                  "typeSimple": "KnowledgeHub.Application.AI.Dtos.CareerGuidanceExportInputDto",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "Body",
+                  "descriptorName": ""
+                }
+              ],
+              "returnValue": {
+                "type": "Microsoft.AspNetCore.Mvc.IActionResult",
+                "typeSimple": "Microsoft.AspNetCore.Mvc.IActionResult"
+              },
+              "allowAnonymous": null,
+              "implementFrom": "KnowledgeHub.Controllers.AIController"
             }
           }
         }
@@ -16486,6 +17793,63 @@
       ],
       "genericArguments": null,
       "properties": null
+    },
+    "KnowledgeHub.Application.AI.Dtos.CareerGuidanceExportInputDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "CareerGuidanceJson",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Application.AI.Dtos.CareerGuidanceGenerationInputDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "ResourceId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CareerGoal",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
     },
     "KnowledgeHub.Application.AI.Dtos.CaseAnalysisExportInputDto": {
       "baseType": null,
@@ -22093,6 +23457,41 @@
         }
       ]
     },
+    "KnowledgeHub.Courses.Dtos.BatchEnrollDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "StudentIds",
+          "jsonName": null,
+          "type": "[System.Guid]",
+          "typeSimple": "[string]",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
     "KnowledgeHub.Courses.Dtos.ChapterDto": {
       "baseType": "Volo.Abp.Application.Dtos.EntityDto<System.Guid>",
       "isEnum": false,
@@ -22506,6 +23905,41 @@
         }
       ]
     },
+    "KnowledgeHub.Courses.Dtos.CreateStudentCourseDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "StudentId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
     "KnowledgeHub.Courses.Dtos.CreateUpdateChapterDto": {
       "baseType": null,
       "isEnum": false,
@@ -22696,6 +24130,141 @@
           "jsonName": null,
           "type": "System.Guid?",
           "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "Status",
+          "jsonName": null,
+          "type": "KnowledgeHub.Courses.Enums.CourseStatus",
+          "typeSimple": "enum",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Courses.Dtos.GetAvailableStudentsInput": {
+      "baseType": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TenantId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "Filter",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Courses.Dtos.GetStudentCoursesInput": {
+      "baseType": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "StudentId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "Status",
+          "jsonName": null,
+          "type": "KnowledgeHub.Learning.Enums.StudentCourseStatus?",
+          "typeSimple": "enum?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "TenantId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "Filter",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
           "isRequired": false,
           "minLength": null,
           "maxLength": null,
@@ -22942,6 +24511,119 @@
           "maximum": null,
           "regex": null,
           "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Courses.Dtos.StudentCourseDto": {
+      "baseType": "Volo.Abp.Application.Dtos.FullAuditedEntityDto<System.Guid>",
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "TenantId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "StudentId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "StudentName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CourseName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "Status",
+          "jsonName": null,
+          "type": "KnowledgeHub.Learning.Enums.StudentCourseStatus",
+          "typeSimple": "enum",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "EnrolledAt",
+          "jsonName": null,
+          "type": "System.DateTime",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Progress",
+          "jsonName": null,
+          "type": "System.Decimal",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
         }
       ]
     },
@@ -23814,6 +25496,350 @@
         }
       ]
     },
+    "KnowledgeHub.Learning.Dtos.ChapterProgressDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "ChapterId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ChapterName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TotalExercises",
+          "jsonName": null,
+          "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CompletedCount",
+          "jsonName": null,
+          "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CompletionRate",
+          "jsonName": null,
+          "type": "System.Decimal",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CorrectRate",
+          "jsonName": null,
+          "type": "System.Decimal",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Learning.Dtos.CourseLearningOverviewDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CourseName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TotalStudents",
+          "jsonName": null,
+          "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ActiveStudents",
+          "jsonName": null,
+          "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TotalExercises",
+          "jsonName": null,
+          "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "AverageCompletionRate",
+          "jsonName": null,
+          "type": "System.Decimal",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "AverageCorrectRate",
+          "jsonName": null,
+          "type": "System.Decimal",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ChapterProgress",
+          "jsonName": null,
+          "type": "[KnowledgeHub.Learning.Dtos.ChapterProgressDto]",
+          "typeSimple": "[KnowledgeHub.Learning.Dtos.ChapterProgressDto]",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Learning.Dtos.GetCourseLearningOverviewInput": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TenantId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Learning.Dtos.GetLearningStatisticsInput": {
+      "baseType": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ChapterId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "TenantId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "StartTime",
+          "jsonName": null,
+          "type": "System.DateTime?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "EndTime",
+          "jsonName": null,
+          "type": "System.DateTime?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Learning.Dtos.GetStudentExerciseRecordsInput": {
+      "baseType": "Volo.Abp.Application.Dtos.PagedAndSortedResultRequestDto",
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ChapterId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
+    },
     "KnowledgeHub.Learning.Dtos.KnowledgeDimensionDto": {
       "baseType": null,
       "isEnum": false,
@@ -24201,6 +26227,41 @@
         }
       ]
     },
+    "KnowledgeHub.Learning.Dtos.MarkAnswerViewedInput": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "ExerciseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
     "KnowledgeHub.Learning.Dtos.RecentLearningDto": {
       "baseType": null,
       "isEnum": false,
@@ -24338,6 +26399,80 @@
           "name": "AdditionalMinutes",
           "jsonName": null,
           "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
+    "KnowledgeHub.Learning.Dtos.SaveExerciseRecordInput": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ChapterId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "ExerciseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "StudentAnswer",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "TimeSpentTicks",
+          "jsonName": null,
+          "type": "System.Int64",
           "typeSimple": "number",
           "isRequired": false,
           "minLength": null,
@@ -24501,6 +26636,371 @@
         }
       ]
     },
+    "KnowledgeHub.Learning.Dtos.StudentExerciseRecordDto": {
+      "baseType": "Volo.Abp.Application.Dtos.FullAuditedEntityDto<System.Guid>",
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "StudentId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "StudentName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CourseName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "ChapterId",
+          "jsonName": null,
+          "type": "System.Guid?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "ChapterName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "ExerciseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ExerciseTitle",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "StudentAnswer",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "IsCorrect",
+          "jsonName": null,
+          "type": "System.Boolean?",
+          "typeSimple": "boolean?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "HasViewedAnswer",
+          "jsonName": null,
+          "type": "System.Boolean",
+          "typeSimple": "boolean",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ViewedAt",
+          "jsonName": null,
+          "type": "System.DateTime?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "SelfAssessment",
+          "jsonName": null,
+          "type": "KnowledgeHub.Learning.Enums.SelfAssessment",
+          "typeSimple": "enum",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TimeSpent",
+          "jsonName": null,
+          "type": "System.TimeSpan",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CompletedAt",
+          "jsonName": null,
+          "type": "System.DateTime?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Learning.Dtos.StudentLearningStatisticsDto": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "StudentId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "StudentName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CompletedCount",
+          "jsonName": null,
+          "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TotalCount",
+          "jsonName": null,
+          "type": "System.Int32",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CompletionRate",
+          "jsonName": null,
+          "type": "System.Decimal",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CorrectRate",
+          "jsonName": null,
+          "type": "System.Decimal",
+          "typeSimple": "number",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "TotalTimeSpent",
+          "jsonName": null,
+          "type": "System.TimeSpan",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "LastActiveTime",
+          "jsonName": null,
+          "type": "System.DateTime?",
+          "typeSimple": "string?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        }
+      ]
+    },
+    "KnowledgeHub.Learning.Dtos.SubmitSelfAssessmentInput": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "ExerciseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "CourseId",
+          "jsonName": null,
+          "type": "System.Guid",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "Assessment",
+          "jsonName": null,
+          "type": "KnowledgeHub.Learning.Enums.SelfAssessment",
+          "typeSimple": "enum",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        }
+      ]
+    },
     "KnowledgeHub.Learning.Enums.MasteryLevel": {
       "baseType": "System.Enum",
       "isEnum": true,
@@ -24513,6 +27013,24 @@
         0,
         1,
         2
+      ],
+      "genericArguments": null,
+      "properties": null
+    },
+    "KnowledgeHub.Learning.Enums.SelfAssessment": {
+      "baseType": "System.Enum",
+      "isEnum": true,
+      "enumNames": [
+        "None",
+        "Correct",
+        "PartiallyCorrect",
+        "Incorrect"
+      ],
+      "enumValues": [
+        0,
+        1,
+        2,
+        3
       ],
       "genericArguments": null,
       "properties": null
@@ -33577,6 +36095,54 @@
           "maximum": null,
           "regex": null,
           "isNullable": false
+        }
+      ]
+    },
+    "Volo.Abp.Content.IRemoteStreamContent": {
+      "baseType": null,
+      "isEnum": false,
+      "enumNames": null,
+      "enumValues": null,
+      "genericArguments": null,
+      "properties": [
+        {
+          "name": "FileName",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
+        },
+        {
+          "name": "ContentType",
+          "jsonName": null,
+          "type": "System.String",
+          "typeSimple": "string",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": false
+        },
+        {
+          "name": "ContentLength",
+          "jsonName": null,
+          "type": "System.Int64?",
+          "typeSimple": "number?",
+          "isRequired": false,
+          "minLength": null,
+          "maxLength": null,
+          "minimum": null,
+          "maximum": null,
+          "regex": null,
+          "isNullable": true
         }
       ]
     },

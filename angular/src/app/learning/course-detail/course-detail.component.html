@@ -68,6 +68,12 @@
               <span nz-icon nzType="form"></span>
               习题管理
             </button>
+            @if (course()!.isEnrolled) {
+              <button nz-button nzType="default" (click)="startExerciseLearning()">
+                <span nz-icon nzType="read"></span>
+                习题学习
+              </button>
+            }
           </div>
         </div>
       </div>
