@@ -1,114 +1,243 @@
 <div class="course-list-container">
   <div class="page-header">
-    <h1>课程中心</h1>
-    <p>浏览和选择您感兴趣的课程</p>
+    <h1>课程管理</h1>
   </div>
 
-  <div class="filter-bar">
-    <nz-input-group [nzPrefix]="searchIcon" class="search-input">
-      <input 
-        nz-input 
-        [ngModel]="filterText()"
-        (ngModelChange)="filterText.set($event); loadCourses()"
-        placeholder="搜索课程..."
-      />
-    </nz-input-group>
-    <ng-template #searchIcon>
-      <span nz-icon nzType="search"></span>
-    </ng-template>
+  <nz-card>
+    <div class="toolbar">
+      <nz-input-group [nzPrefix]="searchIcon" class="search-input">
+        <input
+          nz-input
+          [ngModel]="filterText()"
+          (ngModelChange)="filterText.set($event); loadCourses()"
+          placeholder="搜索课程名称..."
+        />
+      </nz-input-group>
+      <ng-template #searchIcon>
+        <span nz-icon nzType="search"></span>
+      </ng-template>
 
-    <nz-select 
-      [ngModel]="selectedMajor()"
-      (ngModelChange)="selectedMajor.set($event); loadCourses()"
-      nzPlaceholder="专业" 
-      nzAllowClear
-      class="filter-select"
-    >
-      @for (major of majors(); track major) {
-        <nz-option [nzValue]="major" [nzLabel]="major"></nz-option>
-      }
-    </nz-select>
-
-    <nz-select 
-      [ngModel]="selectedDifficulty()"
-      (ngModelChange)="selectedDifficulty.set($event); loadCourses()"
-      nzPlaceholder="难度" 
-      nzAllowClear
-      class="filter-select"
-    >
-      @for (diff of difficulties; track diff.value) {
-        <nz-option [nzValue]="diff.value" [nzLabel]="diff.label"></nz-option>
-      }
-    </nz-select>
-
-    <nz-select 
-      [ngModel]="selectedSemester()"
-      (ngModelChange)="selectedSemester.set($event); loadCourses()"
-      nzPlaceholder="学期" 
-      nzAllowClear
-      class="filter-select"
-    >
-      @for (semester of semesters(); track semester) {
-        <nz-option [nzValue]="semester" [nzLabel]="semester"></nz-option>
-      }
-    </nz-select>
-  </div>
-
-  @if (loading()) {
-    <div class="loading-container">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
+      <button nz-button nzType="primary" (click)="openCreateModal()">
+        <span nz-icon nzType="plus"></span>
+        新建课程
+      </button>
     </div>
-  } @else if (courses().length === 0) {
-    <nz-empty nzNotFoundContent="暂无课程"></nz-empty>
-  } @else {
-    <div nz-row [nzGutter]="[16, 16]">
-      @for (course of courses(); track course.id) {
-        <div nz-col [nzXs]="24" [nzSm]="12" [nzMd]="8" [nzLg]="6">
-          <nz-card 
-            class="course-card"
-            [nzCover]="coverTemplate"
-            [nzActions]="[viewAction, enrollAction]"
-            nzHoverable
-          >
-            <ng-template #coverTemplate>
-              <div class="course-cover" [style.backgroundImage]="'url(' + (course.coverImageUrl || 'assets/images/default-course.png') + ')'">
-                @if (!course.coverImageUrl) {
-                  <span nz-icon nzType="book" nzTheme="outline" class="cover-icon"></span>
-                }
-              </div>
-            </ng-template>
-            
-            <h3 class="course-title">{{ course.title }}</h3>
-            <p class="course-description">{{ course.description }}</p>
-            
-            <div class="course-meta">
-              <nz-tag [nzColor]="getDifficultyColor(course.difficulty)">
-                {{ getDifficultyLabel(course.difficulty) }}
-              </nz-tag>
-              <span class="meta-item">
-                <span nz-icon nzType="user"></span>
-                {{ course.studentCount || 0 }} 人学习
-              </span>
-            </div>
-            
-            <div class="course-info">
-              @if (course.major) {
-                <span><span nz-icon nzType="book"></span> {{ course.major }}</span>
-              }
-              @if (course.credits) {
-                <span><span nz-icon nzType="schedule"></span> {{ course.credits }} 学分</span>
-              }
-            </div>
-          </nz-card>
-          
-          <ng-template #viewAction>
-            <span (click)="viewCourse(course.id)">查看详情</span>
-          </ng-template>
-          <ng-template #enrollAction>
-            <span (click)="enrollCourse(course.id)">选课</span>
-          </ng-template>
+
+    @if (loading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+      </div>
+    } @else if (courses().length === 0) {
+      <nz-empty nzNotFoundContent="暂无课程"></nz-empty>
+    } @else {
+      <nz-table
+        [nzData]="courses()"
+        [nzPageSize]="10"
+        [nzShowSizeChanger]="true"
+        [nzShowTotal]="totalTemplate"
+        nzSize="middle"
+        class="course-table"
+      >
+        <thead>
+          <tr>
+            <th>课程名称</th>
+            <th>专业</th>
+            <th>学期</th>
+            <th>学分</th>
+            <th>学时</th>
+            <th>难度</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (course of courses(); track course.id) {
+            <tr>
+              <td>
+                <div class="course-name-cell">
+                  <strong>{{ course.title }}</strong>
+                  @if (course.description) {
+                    <div class="course-desc">{{ course.description }}</div>
+                  }
+                </div>
+              </td>
+              <td>{{ course.major || '-' }}</td>
+              <td>{{ course.semester || '-' }}</td>
+              <td>{{ course.credits ?? '-' }}</td>
+              <td>{{ course.semesterHours ?? '-' }}</td>
+              <td>
+                <nz-tag [nzColor]="getDifficultyColor(course.difficulty)">
+                  {{ getDifficultyLabel(course.difficulty) }}
+                </nz-tag>
+              </td>
+              <td>
+                <nz-tag [nzColor]="getStatusColor(course.status)">
+                  {{ getStatusLabel(course.status) }}
+                </nz-tag>
+              </td>
+              <td>
+                <div class="action-btns">
+                  <button nz-button nzType="link" nzSize="small" (click)="openEditModal(course)">
+                    <span nz-icon nzType="edit"></span>
+                    编辑
+                  </button>
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="deleteCourse(course)">
+                    <span nz-icon nzType="delete"></span>
+                    删除
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      <ng-template #totalTemplate let-total>共 {{ total }} 条</ng-template>
+    }
+  </nz-card>
+
+  <!-- Create/Edit Modal -->
+  <nz-modal
+    [(nzVisible)]="isModalVisible"
+    [nzTitle]="isEdit ? '编辑课程' : '新建课程'"
+    [nzOkLoading]="saving"
+    nzOkText="保存"
+    nzCancelText="取消"
+    (nzOnOk)="handleModalOk()"
+    (nzOnCancel)="handleModalCancel()"
+    [nzWidth]="640"
+  >
+    <ng-container *nzModalContent>
+      <form nz-form nzLayout="vertical">
+        <nz-form-item>
+          <nz-form-label nzRequired>课程名称</nz-form-label>
+          <nz-form-control>
+            <input
+              nz-input
+              [(ngModel)]="formData.title"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="请输入课程名称"
+            />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>课程描述</nz-form-label>
+          <nz-form-control>
+            <textarea
+              nz-input
+              [(ngModel)]="formData.description"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="请输入课程描述"
+              [nzAutosize]="{ minRows: 3, maxRows: 6 }"
+            ></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>专业</nz-form-label>
+              <nz-form-control>
+                <input
+                  nz-input
+                  [(ngModel)]="formData.major"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="请输入专业"
+                />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>学期</nz-form-label>
+              <nz-form-control>
+                <input
+                  nz-input
+                  [(ngModel)]="formData.semester"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="请输入学期"
+                />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
         </div>
-      }
-    </div>
-  }
+
+        <div nz-row [nzGutter]="16">
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>学分</nz-form-label>
+              <nz-form-control>
+                <input
+                  nz-input
+                  type="number"
+                  [ngModel]="formData.credits"
+                  (ngModelChange)="formData.credits = $event ? Number($event) : undefined"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="请输入学分"
+                />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+          <div nz-col [nzSpan]="12">
+            <nz-form-item>
+              <nz-form-label>学时</nz-form-label>
+              <nz-form-control>
+                <input
+                  nz-input
+                  type="number"
+                  [ngModel]="formData.semesterHours"
+                  (ngModelChange)="formData.semesterHours = $event ? Number($event) : undefined"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="请输入学时"
+                />
+              </nz-form-control>
+            </nz-form-item>
+          </div>
+        </div>
+
+        <nz-form-item>
+          <nz-form-label>难度</nz-form-label>
+          <nz-form-control>
+            <nz-select
+              [(ngModel)]="formData.difficulty"
+              [ngModelOptions]="{ standalone: true }"
+              nzPlaceHolder="请选择难度"
+            >
+              @for (diff of difficulties; track diff.value) {
+                <nz-option [nzValue]="diff.value" [nzLabel]="diff.label"></nz-option>
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>状态</nz-form-label>
+          <nz-form-control>
+            <nz-select
+              [(ngModel)]="formData.status"
+              [ngModelOptions]="{ standalone: true }"
+              nzPlaceHolder="请选择状态"
+            >
+              @for (s of statusOptions; track s.value) {
+                <nz-option [nzValue]="s.value" [nzLabel]="s.label"></nz-option>
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>封面图片URL</nz-form-label>
+          <nz-form-control>
+            <input
+              nz-input
+              [(ngModel)]="formData.coverImageUrl"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="请输入封面图片URL"
+            />
+          </nz-form-control>
+        </nz-form-item>
+      </form>
+    </ng-container>
+  </nz-modal>
 </div>

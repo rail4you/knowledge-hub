@@ -169,6 +169,7 @@ export class ResourceComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly recommendationService = inject(RecommendationService);
 
+  
   private readonly resourceTypeNames: Record<string, Record<number, string>> = {
     'zh-Hans': { 0: '文档', 1: '视频', 2: '音频', 3: '图片', 4: 'PPT' },
     'en': { 0: 'Document', 1: 'Video', 2: 'Audio', 3: 'Image', 4: 'PPT' }
@@ -462,6 +463,10 @@ export class ResourceComponent implements OnInit {
     }).subscribe({
       next: (result) => {
         this.physicalDeleteRequests.set(result.items);
+      },
+      error: () => {
+        // No permission to view pending delete requests (e.g. Teacher role)
+        this.physicalDeleteRequests.set([]);
       }
     });
   }

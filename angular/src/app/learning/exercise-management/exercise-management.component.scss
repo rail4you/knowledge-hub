@@ -1,0 +1,96 @@
+.exercise-management-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+    font-size: 24px;
+  }
+}
+
+.filter-card {
+  margin-bottom: 16px;
+
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      label {
+        font-weight: 500;
+        white-space: nowrap;
+      }
+    }
+
+    .course-select {
+      min-width: 300px;
+    }
+  }
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 48px;
+}
+
+.content-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.danger-link {
+  color: #ff4d4f;
+  cursor: pointer;
+
+  &:hover {
+    color: #ff7875;
+  }
+}
+
+// Modal styles
+.options-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .option-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    input {
+      flex: 1;
+    }
+  }
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.multi-answer-checkboxes {
+  display: flex;
+  gap: 16px;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+}

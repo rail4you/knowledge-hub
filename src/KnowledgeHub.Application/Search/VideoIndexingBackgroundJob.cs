@@ -23,6 +23,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
     private readonly IFileStorageService _fileStorageService;
     private readonly IVideoAnalysisAppService _videoAnalysisAppService;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
+    private readonly ICurrentTenant _currentTenant;
     private readonly ILogger<VideoIndexingBackgroundJob> _logger;
 
     private static readonly string[] VideoExtensions = { ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".m4v", ".mpg", ".mpeg", ".3gp", ".qt" };
@@ -33,6 +34,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         IFileStorageService fileStorageService,
         IVideoAnalysisAppService videoAnalysisAppService,
         IUnitOfWorkManager unitOfWorkManager,
+        ICurrentTenant currentTenant,
         ILogger<VideoIndexingBackgroundJob> logger)
     {
         _jobRepository = jobRepository;
@@ -40,22 +42,27 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         _fileStorageService = fileStorageService;
         _videoAnalysisAppService = videoAnalysisAppService;
         _unitOfWorkManager = unitOfWorkManager;
+        _currentTenant = currentTenant;
         _logger = logger;
     }
 
     public async Task ExecuteAsync(VideoIndexingJobArgs args)
     {
-        _logger.LogInformation("VideoIndexingBackgroundJob.ExecuteAsync STARTED for job {JobId}, resource {ResourceId}", args.JobId, args.ResourceId);
+        _logger.LogInformation("VideoIndexingBackgroundJob.ExecuteAsync STARTED for job {JobId}, resource {ResourceId}, tenant {TenantId}", args.JobId, args.ResourceId, args.TenantId);
 
-        try
+        // Set tenant context for multi-tenant resource retrieval
+        using (_currentTenant.Change(args.TenantId))
         {
-            await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Parsing, progress: 5);
-            await ExecuteJobAsync(args);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Video indexing job {JobId} failed: {Error}", args.JobId, ex.Message);
-            await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Failed, errorMessage: ex.Message);
+            try
+            {
+                await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Parsing, progress: 5);
+                await ExecuteJobAsync(args);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Video indexing job {JobId} failed: {Error}", args.JobId, ex.Message);
+                await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Failed, errorMessage: ex.Message);
+            }
         }
     }
 

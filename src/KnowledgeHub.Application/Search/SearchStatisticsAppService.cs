@@ -168,13 +168,15 @@ public class SearchStatisticsAppService : KnowledgeHubAppService, ISearchStatist
 
     private async Task<List<TopResourceStatsDto>> GetTopResourcesAsync(string startDate, string endDate, string tenantFilter)
     {
+        var tenantId = _currentTenant.Id;
         using var command = _dbContext.Database.GetDbConnection().CreateCommand();
         command.CommandText = $@"
             SELECT v.""ResourceId"", r.""Name"", COUNT(*) as view_count
             FROM ""KhResourceViewLogs"" v
             LEFT JOIN ""AppResources"" r ON v.""ResourceId"" = r.""Id""
             WHERE v.""CreationTime"" >= '{startDate}' AND v.""CreationTime"" <= '{endDate}' 
-                AND r.""Name"" IS NOT NULL AND r.""Name"" != '' {tenantFilter}
+                AND r.""Name"" IS NOT NULL AND r.""Name"" != '' 
+                AND (r.""TenantId"" = '{(tenantId.HasValue ? tenantId.Value : _currentTenant.Id)}' OR r.""TenantId"" IS NULL)
             GROUP BY v.""ResourceId"", r.""Name""
             ORDER BY view_count DESC
             LIMIT 10";
@@ -198,12 +200,14 @@ public class SearchStatisticsAppService : KnowledgeHubAppService, ISearchStatist
 
     private async Task<List<TopRatedResourceDto>> GetTopRatedResourcesAsync(string startDate, string endDate, string tenantFilter)
     {
+        var tenantId = _currentTenant.Id;
         using var command = _dbContext.Database.GetDbConnection().CreateCommand();
         command.CommandText = $@"
             SELECT r.""ResourceId"", res.""Name"", AVG(r.""Rating"") as avg_rating, COUNT(*) as review_count
             FROM ""KhResourceReviews"" r
             LEFT JOIN ""AppResources"" res ON r.""ResourceId"" = res.""Id""
-            WHERE res.""Name"" IS NOT NULL AND res.""Name"" != '' {tenantFilter}
+            WHERE res.""Name"" IS NOT NULL AND res.""Name"" != '' 
+                AND (res.""TenantId"" = '{(tenantId.HasValue ? tenantId.Value : _currentTenant.Id)}' OR res.""TenantId"" IS NULL)
             GROUP BY r.""ResourceId"", res.""Name""
             HAVING COUNT(*) >= 1
             ORDER BY avg_rating DESC, review_count DESC

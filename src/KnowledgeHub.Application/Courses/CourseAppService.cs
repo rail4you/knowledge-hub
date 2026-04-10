@@ -54,8 +54,9 @@ public class CourseAppService : ApplicationService, ITransientDependency
         course.SemesterHours = input.SemesterHours;
         course.Difficulty = input.Difficulty;
         course.CategoryId = input.CategoryId;
+        course.Status = input.Status;
         course.TeacherId = _currentUser.Id;
-        
+
         await _courseRepository.InsertAsync(course);
         
         return MapToDto(course);
@@ -79,9 +80,10 @@ public class CourseAppService : ApplicationService, ITransientDependency
         course.SemesterHours = input.SemesterHours;
         course.Difficulty = input.Difficulty;
         course.CategoryId = input.CategoryId;
-        
+        course.Status = input.Status;
+
         await _courseRepository.UpdateAsync(course);
-        
+
         return MapToDto(course);
     }
 

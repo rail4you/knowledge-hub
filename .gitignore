@@ -295,3 +295,6 @@ etc/docker/.env.production
 etc/docker/.env.*.local
 
 *.png
+graphify-out
+*.pyc
+Logs

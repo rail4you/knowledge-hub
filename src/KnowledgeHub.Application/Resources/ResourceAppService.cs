@@ -698,7 +698,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await Repository.UpdateAsync(resource);
     }
 
-    [Authorize(KnowledgeHubPermissions.Resources.PhysicalDelete)]
+    [Authorize(KnowledgeHubPermissions.Resources.RequestDelete)]
     [IgnoreAntiforgeryToken]
     public virtual async Task<PhysicalDeleteRequestDto> RequestPhysicalDeleteAsync(CreatePhysicalDeleteRequestDto input)
     {

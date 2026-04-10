@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Application.Search;
 
@@ -24,6 +25,7 @@ public class PageIndexService : IPageIndexService, ITransientDependency
     private readonly IRepository<ResourceVersion, Guid> _versionRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly IConfiguration _configuration;
+    private readonly ICurrentTenant _currentTenant;
     private readonly ILogger<PageIndexService> _logger;
 
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -37,6 +39,7 @@ public class PageIndexService : IPageIndexService, ITransientDependency
         IRepository<ResourceVersion, Guid> versionRepository,
         IFileStorageService fileStorageService,
         IConfiguration configuration,
+        ICurrentTenant currentTenant,
         ILogger<PageIndexService> logger)
     {
         _pageIndexRepository = pageIndexRepository;
@@ -44,6 +47,7 @@ public class PageIndexService : IPageIndexService, ITransientDependency
         _versionRepository = versionRepository;
         _fileStorageService = fileStorageService;
         _configuration = configuration;
+        _currentTenant = currentTenant;
         _logger = logger;
     }
 
@@ -153,7 +157,13 @@ public class PageIndexService : IPageIndexService, ITransientDependency
     public async Task<List<PageIndexSearchResultDto>> SearchPageIndexAsync(string query, int maxResults = 10)
     {
         var results = new List<PageIndexSearchResultDto>();
-        var allPageIndices = await _pageIndexRepository.GetListAsync();
+
+        // 获取当前租户的 PageIndex
+        var tenantId = _currentTenant.Id;
+        var allPageIndices = tenantId.HasValue
+            ? await _pageIndexRepository.GetListAsync(x => x.TenantId == tenantId)
+            : await _pageIndexRepository.GetListAsync(x => x.TenantId == null);
+
         var queryLower = query.ToLowerInvariant();
 
         foreach (var pageIndex in allPageIndices)
@@ -233,7 +243,11 @@ public class PageIndexService : IPageIndexService, ITransientDependency
         var timeoutMinutes = _configuration["PageIndex:TimeoutMinutes"] != null
             ? int.Parse(_configuration["PageIndex:TimeoutMinutes"]!)
             : 5;
-        var pythonPath = _configuration["PageIndex:PythonPath"] ?? "python3";
+        // Priority: PAGEINDEX_PYTHON env var > appsettings > system default
+        // In Docker, PAGEINDEX_PYTHON points to the venv with all deps installed.
+        var pythonPath = Environment.GetEnvironmentVariable("PAGEINDEX_PYTHON")
+            ?? _configuration["PageIndex:PythonPath"]
+            ?? "python3";
         var cliPath = ResolveCliPath();
 
         var startInfo = new ProcessStartInfo

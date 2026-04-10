@@ -22,6 +22,7 @@
         class="tab-nav-item"
         [class.active]="selectedTabIndex === 2"
         (click)="onTabChange(2)"
+        *abpPermission="'KnowledgeHub.Resources.SchoolAudit'"
       >
         <span nz-icon nzType="audit" class="tab-icon"></span>
         <span>{{ '::PendingAudit' | abpLocalization }}</span>
@@ -30,6 +31,7 @@
         class="tab-nav-item"
         [class.active]="selectedTabIndex === 3"
         (click)="onTabChange(3)"
+        *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'"
       >
         <span nz-icon nzType="delete" class="tab-icon"></span>
         <span>{{ '::PhysicalDeleteRequests' | abpLocalization }}</span>
@@ -229,7 +231,8 @@
     </div>
 
     <!-- Pending Audit Tab -->
-    <div *ngIf="selectedTabIndex === 2" class="audit-container full-height">
+    <ng-container *ngIf="selectedTabIndex === 2">
+    <div class="audit-container full-height">
       <h3>{{ '::PendingAudit' | abpLocalization }}</h3>
 
       <nz-steps [nzCurrent]="0" nzSize="small" class="audit-workflow">
@@ -282,9 +285,11 @@
 
       <nz-empty *ngIf="pendingAudits().length === 0" [nzNotFoundContent]="'::NoPendingAudits' | abpLocalization"></nz-empty>
     </div>
+    </ng-container>
 
     <!-- Physical Delete Requests Tab -->
-    <div *ngIf="selectedTabIndex === 3" class="audit-container full-height">
+    <ng-container *ngIf="selectedTabIndex === 3">
+    <div class="audit-container full-height">
       <h3>{{ '::PhysicalDeleteRequests' | abpLocalization }}</h3>
 
       <nz-table
@@ -321,6 +326,7 @@
 
       <nz-empty *ngIf="physicalDeleteRequests().length === 0" [nzNotFoundContent]="'::NoDeleteRequests' | abpLocalization"></nz-empty>
     </div>
+    </ng-container>
   </div>
 </div>
 

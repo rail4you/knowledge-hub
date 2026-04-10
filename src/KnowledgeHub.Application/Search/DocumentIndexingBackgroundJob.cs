@@ -13,6 +13,7 @@ using Volo.Abp;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Uow;
 
 namespace KnowledgeHub.Application.Search;
@@ -27,6 +28,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly IMeiliSearchService _meiliSearchService;
     private readonly IPageIndexService _pageIndexService;
+    private readonly ICurrentTenant _currentTenant;
     private readonly ILogger<DocumentIndexingBackgroundJob> _logger;
 
     public DocumentIndexingBackgroundJob(
@@ -38,6 +40,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         IUnitOfWorkManager unitOfWorkManager,
         IMeiliSearchService meiliSearchService,
         IPageIndexService pageIndexService,
+        ICurrentTenant currentTenant,
         ILogger<DocumentIndexingBackgroundJob> logger)
     {
         _jobRepository = jobRepository;
@@ -48,24 +51,30 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _unitOfWorkManager = unitOfWorkManager;
         _meiliSearchService = meiliSearchService;
         _pageIndexService = pageIndexService;
+        _currentTenant = currentTenant;
         _logger = logger;
         _logger.LogInformation("DocumentIndexingBackgroundJob CONSTRUCTOR called");
     }
 
     public async Task ExecuteAsync(DocumentIndexingJobArgs args)
     {
-        _logger.LogInformation("DocumentIndexingBackgroundJob.ExecuteAsync STARTED for job {JobId}, resource {ResourceId}", args.JobId, args.ResourceId);
-        _logger.LogInformation("Starting indexing job {JobId} for resource {ResourceId}", args.JobId, args.ResourceId);
+        _logger.LogInformation("DocumentIndexingBackgroundJob.ExecuteAsync STARTED for job {JobId}, resource {ResourceId}, tenant {TenantId}", args.JobId, args.ResourceId, args.TenantId);
 
-        try
+        // Set tenant context for multi-tenant resource retrieval
+        using (_currentTenant.Change(args.TenantId))
         {
-            await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Parsing, progress: 5);
-            await ExecuteJobAsync(args);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Indexing job {JobId} failed: {Error}", args.JobId, ex.Message);
-            await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Failed, errorMessage: ex.Message);
+            _logger.LogInformation("Starting indexing job {JobId} for resource {ResourceId}", args.JobId, args.ResourceId);
+
+            try
+            {
+                await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Parsing, progress: 5);
+                await ExecuteJobAsync(args);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Indexing job {JobId} failed: {Error}", args.JobId, ex.Message);
+                await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Failed, errorMessage: ex.Message);
+            }
         }
     }
 

@@ -25,33 +25,31 @@ RUN jlink --add-modules \
     --output /opt/jre-minimal
 
 # ----------------------------------------------------------
-# Python 阶段：安装 PageIndex CLI 依赖
-# ----------------------------------------------------------
-FROM python:3.12-slim AS python-deps
-
-COPY src/pageindex-cli/requirements-docker.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt \
-    && find /usr/local -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; \
-    find /usr/local -type f -name '*.pyc' -delete 2>/dev/null; \
-    rm -rf /usr/local/share/man /root/.cache
-
-# ----------------------------------------------------------
 # 生产镜像
 # ----------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 
-# 安装 locale + 时区 + python3 运行时依赖（libexpat, zlib 等共享库）+ ffmpeg（视频处理）
+# 一步安装所有系统依赖：
+# - locale / tzdata：中文和时区支持
+# - python3 + python3-venv：PageIndex CLI 运行环境（系统 Python 天然兼容系统 OpenSSL）
+# - ffmpeg：视频处理
+# 然后创建 venv 并安装 pip 依赖
+COPY src/pageindex-cli/requirements-docker.txt /tmp/requirements.txt
 RUN apt-get update && apt-get install -y --no-install-recommends \
         locales \
         tzdata \
-        libexpat1 \
+        python3 \
+        python3-venv \
+        python3-pip \
         ffmpeg \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen en_US.UTF-8 \
     && ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo "Asia/Shanghai" > /etc/timezone \
-    && rm -rf /var/lib/apt/lists/*
+    && python3 -m venv /opt/pageindex-venv \
+    && /opt/pageindex-venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt \
+    && rm -rf /tmp/requirements.txt /var/lib/apt/lists/* /root/.cache
 
 # 复制精简 JRE
 COPY --from=jre-build /opt/jre-minimal /opt/jre-minimal
@@ -61,37 +59,8 @@ ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 ENV TZ=Asia/Shanghai
 
-# 复制 Python runtime + pip 依赖（从 python:3.12-slim 整体提取 /usr/local）
-# 包含: python3 二进制、标准库、第三方包
-# 精简: 已在 python-deps 阶段删除 __pycache__、.pyc、man pages
-COPY --from=python-deps /usr/local /usr/local
-
-# 编译安装 OpenSSL 3.3.0（python:3.12-slim 内置 Python 需要）
-# Ubuntu 24.04 默认 OpenSSL 3.0.13 与 Python 3.12 不兼容
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-        wget \
-        perl \
-    && cd /tmp \
-    && wget -q https://www.openssl.org/source/openssl-3.3.0.tar.gz \
-    && tar -xzf openssl-3.3.0.tar.gz \
-    && cd openssl-3.3.0 \
-    && ./Configure --prefix=/usr/local/openssl-3.3.0 --openssldir=/usr/local/openssl-3.3.0 shared \
-    && make -j$(nproc) \
-    && make install_sw \
-    && cd / \
-    && rm -rf /tmp/openssl-3.3.0 /tmp/openssl-3.3.0.tar.gz \
-    && apt-get purge -y --auto-remove build-essential wget perl \
-    && rm -rf /var/lib/apt/lists/*
-
-# 使用 OpenSSL 3.3.0 替换系统库（Python 3.12 需要 OpenSSL 3.3.0）
-RUN cp /usr/local/openssl-3.3.0/lib64/libcrypto.so.3 /lib/x86_64-linux-gnu/libcrypto.so.3 && \
-    cp /usr/local/openssl-3.3.0/lib64/libssl.so.3 /lib/x86_64-linux-gnu/libssl.so.3 && \
-    ldconfig
-
-ENV OPENSSL_DIR=/usr/local/openssl-3.3.0
-ENV LD_LIBRARY_PATH=/usr/local/openssl-3.3.0/lib64:$LD_LIBRARY_PATH
-ENV PATH=/usr/local/openssl-3.3.0/bin:$PATH
+# PageIndex CLI 使用 venv 中的 Python
+ENV PAGEINDEX_PYTHON=/opt/pageindex-venv/bin/python3
 
 # 复制发布产物
 COPY --from=build /app/publish .

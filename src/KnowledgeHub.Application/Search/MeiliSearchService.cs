@@ -286,7 +286,13 @@ public class MeiliSearchService : IMeiliSearchService
         var tenantId = _currentTenant.Id;
         if (tenantId.HasValue)
         {
+            // 租户用户：只能搜索该租户的文档
             filters.Add($"tenantId = \"{tenantId}\"");
+        }
+        else
+        {
+            // Host 用户或空租户：只搜索没有租户的文档（空字符串）
+            filters.Add("tenantId = \"\"");
         }
 
         var searchParams = new
@@ -380,7 +386,13 @@ public class MeiliSearchService : IMeiliSearchService
         var tenantId = _currentTenant.Id;
         if (tenantId.HasValue)
         {
+            // 租户用户：只能搜索该租户的文档
             filters.Add($"tenantId = \"{tenantId}\"");
+        }
+        else
+        {
+            // Host 用户或空租户：只搜索没有租户的文档（空字符串）
+            filters.Add("tenantId = \"\"");
         }
 
         var searchParams = new

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
 using Volo.Abp.Authorization.Permissions;
@@ -19,7 +20,9 @@ public class KnowledgeHubMenuContributor : IMenuContributor
 
     private void ConfigureMainMenu(MenuConfigurationContext context)
     {
-        var administration = context.Menu.GetAdministration();
+        var administration = context.Menu.Items
+            .FirstOrDefault(i => i.Name == "Abp.Application.Main.Administration");
+        if (administration == null) return;
         
         administration.AddItem(
             new ApplicationMenuItem(

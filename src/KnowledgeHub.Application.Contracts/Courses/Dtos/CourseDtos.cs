@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using KnowledgeHub.Courses.Enums;
+using KnowledgeHub.Learning.Enums;
 using Volo.Abp.Application.Dtos;
 
 namespace KnowledgeHub.Courses.Dtos;
@@ -39,6 +40,7 @@ public class CreateUpdateCourseDto
     public int? SemesterHours { get; set; }
     public int Difficulty { get; set; } = 1;
     public Guid? CategoryId { get; set; }
+    public CourseStatus Status { get; set; } = CourseStatus.Draft;
 }
 
 public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
@@ -72,4 +74,44 @@ public class AuditResultDto
 {
     public bool Success { get; set; }
     public string? Message { get; set; }
+}
+
+public class StudentCourseDto : FullAuditedEntityDto<Guid>
+{
+    public Guid? TenantId { get; set; }
+    public Guid StudentId { get; set; }
+    public string? StudentName { get; set; }
+    public Guid CourseId { get; set; }
+    public string? CourseName { get; set; }
+    public StudentCourseStatus Status { get; set; }
+    public DateTime EnrolledAt { get; set; }
+    public decimal Progress { get; set; }
+}
+
+public class GetStudentCoursesInput : PagedAndSortedResultRequestDto
+{
+    public Guid? CourseId { get; set; }
+    public Guid? StudentId { get; set; }
+    public StudentCourseStatus? Status { get; set; }
+    public Guid? TenantId { get; set; }
+    public string? Filter { get; set; }
+}
+
+public class CreateStudentCourseDto
+{
+    public Guid StudentId { get; set; }
+    public Guid CourseId { get; set; }
+}
+
+public class BatchEnrollDto
+{
+    public List<Guid> StudentIds { get; set; } = new();
+    public Guid CourseId { get; set; }
+}
+
+public class GetAvailableStudentsInput : PagedAndSortedResultRequestDto
+{
+    public Guid CourseId { get; set; }
+    public Guid? TenantId { get; set; }
+    public string? Filter { get; set; }
 }

@@ -35,7 +35,7 @@ export class WordViewerComponent {
       this.error.set('');
 
       const mammoth = await import('mammoth');
-      const result = await mammoth.convertToHtml({ arrayBuffer: data });
+      const result = await mammoth.default.convertToHtml({ arrayBuffer: data });
       const safeHtml = this.sanitizer.bypassSecurityTrustHtml(result.value);
       this.htmlContent.set(safeHtml);
 

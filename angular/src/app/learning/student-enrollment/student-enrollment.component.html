@@ -1,0 +1,211 @@
+<div class="enrollment-container">
+  <div class="page-header">
+    <h1>学生选课管理</h1>
+  </div>
+
+  <nz-card>
+    <div class="toolbar">
+      <nz-select
+        [(ngModel)]="selectedCourseId"
+        nzPlaceHolder="选择课程"
+        nzAllowClear
+        class="course-select"
+        (ngModelChange)="onCourseChange()"
+      >
+        @for (course of courses(); track course.id) {
+          <nz-option [nzValue]="course.id" [nzLabel]="course.title || ''"></nz-option>
+        }
+      </nz-select>
+
+      @if (isHost) {
+        <nz-select
+          [(ngModel)]="selectedTenantId"
+          nzPlaceHolder="选择租户"
+          nzAllowClear
+          class="tenant-select"
+          (ngModelChange)="onTenantChange()"
+        >
+          <nz-option nzValue="" nzLabel="全部"></nz-option>
+          @for (tenant of tenants(); track tenant.id) {
+            <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name"></nz-option>
+          }
+        </nz-select>
+      }
+
+      <nz-select
+        [(ngModel)]="selectedStatusFilter"
+        nzPlaceHolder="选课状态"
+        nzAllowClear
+        class="status-select"
+        (ngModelChange)="onStatusFilterChange()"
+      >
+        @for (opt of statusOptions; track opt.value) {
+          <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+        }
+      </nz-select>
+
+      <nz-input-group [nzPrefix]="searchIcon" class="search-input">
+        <input
+          nz-input
+          [(ngModel)]="filterText"
+          (ngModelChange)="loadEnrollments()"
+          placeholder="搜索学生姓名..."
+        />
+      </nz-input-group>
+      <ng-template #searchIcon>
+        <span nz-icon nzType="search"></span>
+      </ng-template>
+
+      <button nz-button nzType="primary" (click)="openAddModal()" [disabled]="!selectedCourseId">
+        <span nz-icon nzType="plus"></span>
+        添加学生
+      </button>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+      </div>
+    } @else if (!selectedCourseId) {
+      <nz-empty nzNotFoundContent="请先选择课程"></nz-empty>
+    } @else if (enrollments().length === 0) {
+      <nz-empty nzNotFoundContent="暂无选课记录"></nz-empty>
+    } @else {
+      <nz-table
+        [nzData]="enrollments()"
+        [nzTotal]="total"
+        [nzPageSize]="pageSize"
+        [nzPageIndex]="pageIndex"
+        [nzShowSizeChanger]="true"
+        [nzShowTotal]="totalTemplate"
+        nzSize="middle"
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)"
+        class="enrollment-table"
+      >
+        <thead>
+          <tr>
+            <th>学生姓名</th>
+            <th>课程名称</th>
+            <th>选课状态</th>
+            <th>选课时间</th>
+            <th>学习进度</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (enrollment of enrollments(); track enrollment.id) {
+            <tr>
+              <td>{{ enrollment.studentName || '-' }}</td>
+              <td>{{ enrollment.courseName || '-' }}</td>
+              <td>
+                <nz-tag [nzColor]="getStatusColor(enrollment.status)">
+                  {{ getStatusLabel(enrollment.status) }}
+                </nz-tag>
+              </td>
+              <td>{{ enrollment.enrolledAt | date:'yyyy-MM-dd HH:mm' }}</td>
+              <td>
+                <nz-progress
+                  [nzPercent]="enrollment.progress || 0"
+                  nzSize="small"
+                  [nzStatus]="(enrollment.progress || 0) >= 100 ? 'success' : 'active'"
+                ></nz-progress>
+              </td>
+              <td>
+                <button
+                  nz-button
+                  nzType="link"
+                  nzSize="small"
+                  nzDanger
+                  (click)="dropStudent(enrollment)"
+                  [disabled]="enrollment.status === 3"
+                >
+                  <span nz-icon nzType="minus-circle"></span>
+                  退课
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      <ng-template #totalTemplate let-total>共 {{ total }} 条</ng-template>
+    }
+  </nz-card>
+
+  <!-- Add Students Modal -->
+  <nz-modal
+    [(nzVisible)]="addModalVisible"
+    nzTitle="添加学生"
+    [nzOkLoading]="saving"
+    nzOkText="确认添加"
+    nzCancelText="取消"
+    (nzOnOk)="handleAddModalOk()"
+    (nzOnCancel)="handleAddModalCancel()"
+    [nzWidth]="720"
+  >
+    <ng-container *nzModalContent>
+      <div class="add-modal-toolbar">
+        <nz-input-group [nzPrefix]="modalSearchIcon" class="modal-search-input">
+          <input
+            nz-input
+            [(ngModel)]="studentFilterText"
+            (ngModelChange)="studentPageIndex = 1; loadAvailableStudents()"
+            placeholder="搜索学生..."
+          />
+        </nz-input-group>
+        <ng-template #modalSearchIcon>
+          <span nz-icon nzType="search"></span>
+        </ng-template>
+
+        <span class="selected-count">
+          已选 {{ selectedStudentIds.size }} 人
+        </span>
+
+        <button nz-button nzSize="small" (click)="selectAllStudents()">全选当前页</button>
+        <button nz-button nzSize="small" (click)="deselectAllStudents()">清除选择</button>
+      </div>
+
+      @if (addModalLoading) {
+        <div class="loading-container">
+          <nz-spin nzSimple></nz-spin>
+        </div>
+      } @else if (availableStudents().length === 0) {
+        <nz-empty nzNotFoundContent="没有可选的学生"></nz-empty>
+      } @else {
+        <nz-table
+          [nzData]="availableStudents()"
+          [nzTotal]="studentTotal"
+          [nzPageSize]="studentPageSize"
+          [nzPageIndex]="studentPageIndex"
+          nzSize="small"
+          (nzPageIndexChange)="onStudentPageChange($event)"
+        >
+          <thead>
+            <tr>
+              <th nzWidth="50px">选择</th>
+              <th>用户名</th>
+              <th>姓名</th>
+              <th>邮箱</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (student of availableStudents(); track student.id) {
+              <tr>
+                <td>
+                  <label nz-checkbox
+                    [nzChecked]="isStudentSelected(student.id!)"
+                    (nzCheckedChange)="toggleStudentSelection(student.id!)"
+                  ></label>
+                </td>
+                <td>{{ student.userName }}</td>
+                <td>{{ student.name || '-' }}</td>
+                <td>{{ student.email || '-' }}</td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      }
+    </ng-container>
+  </nz-modal>
+</div>

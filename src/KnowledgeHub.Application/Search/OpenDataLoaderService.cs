@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
@@ -20,16 +21,19 @@ public class OpenDataLoaderService : IDocumentExtractionService
 {
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<OpenDataLoaderService> _logger;
     private static readonly string[] SupportedExtensions = { ".pdf", ".docx", ".pptx", ".xlsx", ".doc", ".ppt", ".xls", ".odt", ".ods", ".odp", ".rtf", ".csv" };
 
     public OpenDataLoaderService(
         IRepository<Resource, Guid> resourceRepository,
         IFileStorageService fileStorageService,
+        IConfiguration configuration,
         ILogger<OpenDataLoaderService> logger)
     {
         _resourceRepository = resourceRepository;
         _fileStorageService = fileStorageService;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -75,10 +79,34 @@ public class OpenDataLoaderService : IDocumentExtractionService
         }
     }
 
-    private static readonly string PdfParserScriptPath = Path.Combine(
-        Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.FullName
-        ?? Directory.GetCurrentDirectory(),
-        "utils", "pdf-parser", "run-parser.sh");
+    private string ResolveScriptPath()
+    {
+        var configuredPath = _configuration["DocumentParser:CliPath"] ?? "src/KnowledgeHub.HttpApi.Host/utils/pdf-parser/run-parser.sh";
+
+        var candidates = new[]
+        {
+            configuredPath,
+            Path.Combine("/Users/bai/projects/KnowledgeHub", configuredPath),
+            Path.Combine(AppContext.BaseDirectory, configuredPath),
+            Path.GetFullPath(configuredPath),
+            // Docker 容器中的路径
+            "/app/utils/pdf-parser/run-parser.sh",
+            // 也支持不带前缀的路径
+            "utils/pdf-parser/run-parser.sh",
+        };
+
+        foreach (var candidate in candidates)
+        {
+            if (File.Exists(candidate))
+            {
+                _logger.LogDebug("Resolved DocumentParser script path: {Path}", candidate);
+                return Path.GetFullPath(candidate);
+            }
+        }
+
+        throw new UserFriendlyException(
+            $"DocumentParser script not found. Tried: {string.Join(", ", candidates)}");
+    }
 
     public async Task<OpenDataLoaderResultDto> ParseDocumentAsync(string filePath, CancellationToken ct = default)
     {
@@ -97,11 +125,7 @@ public class OpenDataLoaderService : IDocumentExtractionService
 
         try
         {
-            var scriptPath = PdfParserScriptPath;
-            if (!File.Exists(scriptPath))
-            {
-                throw new UserFriendlyException($"OpenDataLoader script not found at: {scriptPath}. Please ensure the script is deployed.");
-            }
+            var scriptPath = ResolveScriptPath();
 
             var startInfo = new ProcessStartInfo
             {

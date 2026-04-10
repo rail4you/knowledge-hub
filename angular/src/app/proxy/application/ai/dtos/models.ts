@@ -1,4 +1,9 @@
 
+export interface CareerGuidanceGenerationInputDto {
+  resourceId?: string;
+  careerGoal?: string | null;
+}
+
 export interface CaseAnalysisGenerationInputDto {
   resourceId?: string;
   focusArea?: string | null;

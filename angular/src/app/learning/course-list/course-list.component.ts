@@ -1,7 +1,6 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -9,11 +8,15 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzGridModule } from 'ng-zorro-antd/grid';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
-import type { CourseDto } from '../../proxy/courses/dtos/models';
+import type { CourseDto, CreateUpdateCourseDto } from '../../proxy/courses/dtos/models';
+import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 
 @Component({
   selector: 'app-course-list',
@@ -28,8 +31,11 @@ import type { CourseDto } from '../../proxy/courses/dtos/models';
     NzTagModule,
     NzSpinModule,
     NzEmptyModule,
-    NzGridModule,
-    NzIconModule
+    NzTableModule,
+    NzIconModule,
+    NzModalModule,
+    NzFormModule,
+    NzGridModule
   ],
   templateUrl: './course-list.component.html',
   styleUrls: ['./course-list.component.scss'],
@@ -38,46 +44,61 @@ import type { CourseDto } from '../../proxy/courses/dtos/models';
 export class CourseListComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly message = inject(NzMessageService);
-  private readonly router = inject(Router);
-  
+  private readonly modal = inject(NzModalService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
   courses = signal<CourseDto[]>([]);
   loading = signal(false);
   filterText = signal('');
-  selectedMajor = signal<string | null>(null);
-  selectedDifficulty = signal<number | null>(null);
-  selectedSemester = signal<string | null>(null);
-  
-  majors = signal<string[]>([]);
-  semesters = signal<string[]>([]);
-  
+
+  // Modal state
+  isModalVisible = false;
+  isEdit = false;
+  editId: string | null = null;
+  saving = false;
+
+  // Plain object - not a signal. ngModel mutates this directly,
+  // which works reliably inside nz-modal with OnPush.
+  formData: CreateUpdateCourseDto = this.emptyForm();
+
   difficulties = [
     { label: '入门', value: 1 },
     { label: '初级', value: 2 },
     { label: '中级', value: 3 },
     { label: '高级', value: 4 }
   ];
-  
+
+  statusOptions = [
+    { label: '草稿', value: CourseStatus.Draft },
+    { label: '已发布', value: CourseStatus.Published }
+  ];
+
+  private emptyForm(): CreateUpdateCourseDto {
+    return {
+      title: '',
+      description: '',
+      coverImageUrl: '',
+      major: '',
+      semester: '',
+      credits: undefined,
+      semesterHours: undefined,
+      difficulty: 1,
+      categoryId: undefined,
+      status: CourseStatus.Draft
+    };
+  }
+
   ngOnInit() {
-    this.loadFilterOptions();
     this.loadCourses();
   }
 
-  loadFilterOptions() {
-    this.courseService.getMajors().subscribe({
-      next: (majors) => this.majors.set(majors || [])
-    });
-    this.courseService.getSemesters().subscribe({
-      next: (semesters) => this.semesters.set(semesters || [])
-    });
-  }
-  
   loadCourses() {
-    this.loading.set(true);
-    this.courseService.getPublished({
+    // Only show full-page spinner on first load (no existing data)
+    if (this.courses().length === 0) {
+      this.loading.set(true);
+    }
+    this.courseService.getList({
       filter: this.filterText() || undefined,
-      major: this.selectedMajor() || undefined,
-      semester: this.selectedSemester() || undefined,
-      difficulty: this.selectedDifficulty() || undefined,
       maxResultCount: 100,
       skipCount: 0
     } as any).subscribe({
@@ -90,7 +111,7 @@ export class CourseListComponent implements OnInit {
       }
     });
   }
-  
+
   getDifficultyColor(difficulty?: number): string {
     const colors: Record<number, string> = {
       1: '#52c41a',
@@ -100,26 +121,99 @@ export class CourseListComponent implements OnInit {
     };
     return colors[difficulty || 1] || '#d9d9d9';
   }
-  
+
   getDifficultyLabel(difficulty?: number): string {
     return this.difficulties.find(d => d.value === difficulty)?.label || '入门';
   }
-  
-  viewCourse(id?: string) {
-    if (id) {
-      this.router.navigate(['/learning/course-detail', id]);
-    }
+
+  getStatusLabel(status?: number): string {
+    const labels: Record<number, string> = {
+      0: '草稿',
+      5: '已发布'
+    };
+    return labels[status ?? 0] || '未知';
   }
-  
-  enrollCourse(id?: string) {
-    if (!id) return;
-    this.courseService.enroll(id).subscribe({
+
+  getStatusColor(status?: number): string {
+    const colors: Record<number, string> = {
+      0: 'default',
+      5: 'success'
+    };
+    return colors[status ?? 0] || 'default';
+  }
+
+  openCreateModal() {
+    this.isEdit = false;
+    this.editId = null;
+    this.formData = this.emptyForm();
+    this.isModalVisible = true;
+  }
+
+  openEditModal(course: CourseDto) {
+    this.isEdit = true;
+    this.editId = course.id ?? null;
+    this.formData = {
+      title: course.title ?? '',
+      description: course.description ?? '',
+      coverImageUrl: course.coverImageUrl ?? '',
+      major: course.major ?? '',
+      semester: course.semester ?? '',
+      credits: course.credits ?? undefined,
+      semesterHours: course.semesterHours ?? undefined,
+      difficulty: course.difficulty ?? 1,
+      categoryId: undefined,
+      status: course.status ?? CourseStatus.Draft
+    };
+    this.isModalVisible = true;
+  }
+
+  deleteCourse(course: CourseDto) {
+    this.modal.confirm({
+      nzTitle: '确认删除',
+      nzContent: `确定要删除课程「${course.title}」吗？此操作不可撤销。`,
+      nzOkText: '删除',
+      nzOkDanger: true,
+      nzCancelText: '取消',
+      nzOnOk: () => {
+        if (!course.id) return;
+        this.courseService.delete(course.id).subscribe({
+          next: () => {
+            this.message.success('课程已删除');
+            this.loadCourses();
+          },
+          error: () => {
+            this.message.error('删除失败');
+          }
+        });
+      }
+    });
+  }
+
+  handleModalCancel() {
+    this.isModalVisible = false;
+  }
+
+  handleModalOk() {
+    if (!this.formData.title?.trim()) {
+      this.message.warning('请输入课程名称');
+      return;
+    }
+
+    this.saving = true;
+    const request = this.isEdit && this.editId
+      ? this.courseService.update(this.editId, this.formData)
+      : this.courseService.create(this.formData);
+
+    request.subscribe({
       next: () => {
-        this.message.success('选课成功');
+        this.saving = false;
+        this.isModalVisible = false;
+        this.message.success(this.isEdit ? '课程更新成功' : '课程创建成功');
         this.loadCourses();
       },
-      error: (err) => {
-        this.message.error(err?.message || '选课失败');
+      error: () => {
+        this.saving = false;
+        this.message.error(this.isEdit ? '更新失败' : '创建失败');
       }
     });
   }

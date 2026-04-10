@@ -1,0 +1,134 @@
+<div class="chapter-exercise-container">
+  <div class="page-header">
+    <h1>{{ '::Menu:ChapterExercise' | abpLocalization }}</h1>
+  </div>
+
+  <!-- Course selector -->
+  <nz-card class="selector-card">
+    <div class="course-selector">
+      <label>选择课程：</label>
+      <nz-select
+        [ngModel]="selectedCourseId()"
+        (ngModelChange)="onCourseSelected($event)"
+        nzPlaceHolder="请选择课程"
+        nzAllowClear
+        class="course-select"
+      >
+        @for (course of courses(); track course.id) {
+          <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+        }
+      </nz-select>
+    </div>
+  </nz-card>
+
+  @if (selectedCourseId()) {
+    <div class="content-layout">
+      <!-- Left: Chapter tree (30%) -->
+      <nz-card class="tree-panel" nzTitle="章节列表">
+        @if (chapters().length === 0) {
+          <nz-empty nzNotFoundContent="暂无章节"></nz-empty>
+        } @else {
+          <div class="tree-view">
+            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: chapters(), depth: 0 }"></ng-container>
+          </div>
+        }
+      </nz-card>
+
+      <!-- Right: Exercise management (70%) -->
+      <nz-card class="exercise-panel">
+        @if (selectedChapterId()) {
+          <div class="exercise-panel-header">
+            <h3>{{ selectedChapterTitle() }} - 已关联习题 ({{ chapterExercises().length }}题)</h3>
+          </div>
+
+          @if (loading()) {
+            <div class="loading-container">
+              <nz-spin nzSimple nzSize="large"></nz-spin>
+            </div>
+          } @else if (chapterExercises().length === 0) {
+            <nz-empty nzNotFoundContent="暂无关联习题，可从下方添加"></nz-empty>
+          } @else {
+            <div class="linked-exercises">
+              @for (exercise of chapterExercises(); track exercise.id) {
+                <div class="exercise-item">
+                  <div class="exercise-item-left">
+                    <div class="exercise-item-title">
+                      {{ exercise.title }}
+                      <nz-tag [nzColor]="getTypeColor(exercise.type)">{{ getTypeName(exercise.type) }}</nz-tag>
+                      <span class="score-badge">{{ exercise.score }}分</span>
+                    </div>
+                    <div class="exercise-item-content">{{ exercise.questionContent }}</div>
+                  </div>
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkExercise(exercise)">
+                    取消关联
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Add from course exercises -->
+          <div class="add-section">
+            <div class="add-section-header">
+              <h4>从习题列表中添加</h4>
+              <input
+                nz-input
+                [ngModel]="searchText()"
+                (ngModelChange)="searchText.set($event)"
+                placeholder="搜索习题..."
+                style="width: 200px"
+              />
+            </div>
+            @if (availableExercises().length === 0) {
+              <nz-empty nzNotFoundContent="没有可添加的习题"></nz-empty>
+            } @else {
+              <div class="available-exercises">
+                @for (exercise of availableExercises(); track exercise.id) {
+                  <div class="exercise-item available">
+                    <div class="exercise-item-left">
+                      <div class="exercise-item-title">
+                        {{ exercise.title }}
+                        <nz-tag [nzColor]="getTypeColor(exercise.type)">{{ getTypeName(exercise.type) }}</nz-tag>
+                      </div>
+                      <div class="exercise-item-content">{{ exercise.questionContent }}</div>
+                    </div>
+                    <button nz-button nzType="primary" nzSize="small" (click)="linkExercise(exercise)">
+                      添加到章节
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <nz-empty nzNotFoundContent="请选择左侧章节查看关联习题"></nz-empty>
+        }
+      </nz-card>
+    </div>
+  }
+
+  <!-- Recursive tree template -->
+  <ng-template #treeNode let-nodes let-depth="depth">
+    @for (node of nodes; track node.id) {
+      <div class="tree-node" [style.padding-left.px]="depth * 20">
+        <div
+          class="tree-node-content"
+          [class.selected]="selectedChapterId() === node.id"
+          (click)="selectChapter(node)"
+        >
+          @if (hasChildren(node)) {
+            <span class="toggle-icon" (click)="toggleNode(node.id!); $event.stopPropagation()">
+              <span nz-icon [nzType]="isExpanded(node.id!) ? 'down' : 'right'"></span>
+            </span>
+          } @else {
+            <span class="toggle-icon placeholder"></span>
+          }
+          <span class="node-title">{{ node.title }}</span>
+        </div>
+        @if (hasChildren(node) && isExpanded(node.id!)) {
+          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+        }
+      </div>
+    }
+  </ng-template>
+</div>

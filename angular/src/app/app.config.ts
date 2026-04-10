@@ -36,6 +36,8 @@ import {
   FileImageOutline,
   FileOutline,
   FilePptOutline,
+  RightOutline,
+  DownOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -71,6 +73,8 @@ const icons = [
   FileImageOutline,
   FileOutline,
   FilePptOutline,
+  RightOutline,
+  DownOutline,
 ];
 
 export const appConfig: ApplicationConfig = {

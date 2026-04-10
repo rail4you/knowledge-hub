@@ -10,7 +10,7 @@ export class ChatService {
   apiName = 'KnowledgeHub';
   
 
-  chatStreaming = (input: ChatInputDto, onChunk: (chunk: ChatMessageChunkDto) => void, config?: Partial<Rest.Config>) =>
+  chatStreaming = (input: ChatInputDto, onChunk: (chunk: ChatMessageChunkDto) => any, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',
       url: '/api/app/chat/chat-streaming',

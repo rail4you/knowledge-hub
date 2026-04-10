@@ -1,0 +1,225 @@
+<div class="exercise-management-container">
+  <div class="page-header">
+    <h1>{{ '::Menu:ExerciseManagement' | abpLocalization }}</h1>
+  </div>
+
+  <!-- Filters -->
+  <nz-card class="filter-card">
+    <div class="filter-bar">
+      <div class="filter-item">
+        <label>选择课程：</label>
+        <nz-select
+          [ngModel]="selectedCourseId()"
+          (ngModelChange)="onCourseSelected($event)"
+          nzPlaceHolder="请选择课程"
+          nzAllowClear
+          class="course-select"
+        >
+          @for (course of courses(); track course.id) {
+            <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+          }
+        </nz-select>
+      </div>
+      <div class="filter-item">
+        <label>题型：</label>
+        <nz-select
+          [ngModel]="selectedType()"
+          (ngModelChange)="selectedType.set($event)"
+          nzPlaceHolder="全部题型"
+          nzAllowClear
+          style="width: 130px"
+        >
+          <nz-option [nzValue]="null" nzLabel="全部"></nz-option>
+          <nz-option [nzValue]="0" nzLabel="单选题"></nz-option>
+          <nz-option [nzValue]="1" nzLabel="多选题"></nz-option>
+          <nz-option [nzValue]="3" nzLabel="填空题"></nz-option>
+          <nz-option [nzValue]="4" nzLabel="问答题"></nz-option>
+        </nz-select>
+      </div>
+      <button nz-button nzType="primary" (click)="openCreateModal()">
+        <span nz-icon nzType="plus"></span>
+        新建习题
+      </button>
+    </div>
+  </nz-card>
+
+  <!-- Table -->
+  <nz-card>
+    @if (loading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+      </div>
+    } @else {
+      <nz-table
+        [nzData]="filteredExercises()"
+        [nzPageSize]="20"
+        nzShowSizeChanger
+        [nzShowPagination]="filteredExercises().length > 20"
+        nzSize="middle"
+      >
+        <thead>
+          <tr>
+            <th>标题</th>
+            <th>题目内容</th>
+            <th nzWidth="90px">题型</th>
+            <th nzWidth="80px">答案</th>
+            <th nzWidth="80px">难度</th>
+            <th nzWidth="60px">分值</th>
+            <th nzWidth="120px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (exercise of filteredExercises(); track exercise.id) {
+            <tr>
+              <td>{{ exercise.title }}</td>
+              <td class="content-cell">{{ exercise.questionContent }}</td>
+              <td>
+                <nz-tag [nzColor]="getTypeColor(exercise.type!)">{{ getTypeName(exercise.type!) }}</nz-tag>
+              </td>
+              <td>{{ exercise.answer }}</td>
+              <td>
+                <nz-tag [nzColor]="getDifficultyColor(exercise.difficulty!)">{{ getDifficultyName(exercise.difficulty!) }}</nz-tag>
+              </td>
+              <td>{{ exercise.score }}</td>
+              <td>
+                <a (click)="openEditModal(exercise)">编辑</a>
+                <nz-divider nzType="vertical"></nz-divider>
+                <a class="danger-link" (click)="deleteExercise(exercise)">删除</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    }
+  </nz-card>
+
+  <!-- Create/Edit Modal -->
+  <nz-modal
+    [(nzVisible)]="isModalVisible"
+    [nzTitle]="isEdit ? '编辑习题' : '新建习题'"
+    [nzOkLoading]="saving"
+    nzOkText="保存"
+    nzCancelText="取消"
+    (nzOnOk)="handleModalOk()"
+    (nzOnCancel)="handleModalCancel()"
+    [nzWidth]="680"
+  >
+    <ng-container *nzModalContent>
+      <form nz-form nzLayout="vertical">
+        <nz-form-item>
+          <nz-form-label nzRequired>题型</nz-form-label>
+          <nz-form-control>
+            <nz-select [(ngModel)]="formData.type" (ngModelChange)="onTypeChange()" [ngModelOptions]="{ standalone: true }" style="width: 200px">
+              <nz-option [nzValue]="0" nzLabel="单选题"></nz-option>
+              <nz-option [nzValue]="1" nzLabel="多选题"></nz-option>
+              <nz-option [nzValue]="3" nzLabel="填空题"></nz-option>
+              <nz-option [nzValue]="4" nzLabel="问答题"></nz-option>
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>标题</nz-form-label>
+          <nz-form-control>
+            <input nz-input [(ngModel)]="formData.title" [ngModelOptions]="{ standalone: true }" placeholder="习题标题" />
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>题目内容</nz-form-label>
+          <nz-form-control>
+            <textarea nz-input [(ngModel)]="formData.questionContent" [ngModelOptions]="{ standalone: true }" placeholder="请输入题目内容" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        @if (isChoiceType()) {
+          <nz-form-item>
+            <nz-form-label nzRequired>选项</nz-form-label>
+            <nz-form-control>
+              <div class="options-form">
+                <div class="option-row">
+                  <nz-tag nzColor="blue">A</nz-tag>
+                  <input nz-input [(ngModel)]="optionA" [ngModelOptions]="{ standalone: true }" placeholder="选项 A" />
+                </div>
+                <div class="option-row">
+                  <nz-tag nzColor="blue">B</nz-tag>
+                  <input nz-input [(ngModel)]="optionB" [ngModelOptions]="{ standalone: true }" placeholder="选项 B" />
+                </div>
+                <div class="option-row">
+                  <nz-tag nzColor="blue">C</nz-tag>
+                  <input nz-input [(ngModel)]="optionC" [ngModelOptions]="{ standalone: true }" placeholder="选项 C（可选）" />
+                </div>
+                <div class="option-row">
+                  <nz-tag nzColor="blue">D</nz-tag>
+                  <input nz-input [(ngModel)]="optionD" [ngModelOptions]="{ standalone: true }" placeholder="选项 D（可选）" />
+                </div>
+              </div>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label nzRequired>正确答案</nz-form-label>
+            <nz-form-control>
+              @if (formData.type === 0) {
+                <nz-radio-group [(ngModel)]="selectedAnswer" (ngModelChange)="formData.answer = $event" [ngModelOptions]="{ standalone: true }">
+                  <label nz-radio nzValue="A">A</label>
+                  <label nz-radio nzValue="B">B</label>
+                  <label nz-radio nzValue="C">C</label>
+                  <label nz-radio nzValue="D">D</label>
+                </nz-radio-group>
+              } @else {
+                <div class="multi-answer-checkboxes">
+                  <label><input type="checkbox" [(ngModel)]="multiAnswerA" [ngModelOptions]="{ standalone: true }" /> A</label>
+                  <label><input type="checkbox" [(ngModel)]="multiAnswerB" [ngModelOptions]="{ standalone: true }" /> B</label>
+                  <label><input type="checkbox" [(ngModel)]="multiAnswerC" [ngModelOptions]="{ standalone: true }" /> C</label>
+                  <label><input type="checkbox" [(ngModel)]="multiAnswerD" [ngModelOptions]="{ standalone: true }" /> D</label>
+                </div>
+              }
+            </nz-form-control>
+          </nz-form-item>
+        } @else {
+          <nz-form-item>
+            <nz-form-label nzRequired>答案</nz-form-label>
+            <nz-form-control>
+              <textarea
+                nz-input
+                [(ngModel)]="formData.answer"
+                [ngModelOptions]="{ standalone: true }"
+                placeholder="请输入答案"
+                [nzAutosize]="{ minRows: 2, maxRows: 4 }"
+              ></textarea>
+            </nz-form-control>
+          </nz-form-item>
+        }
+
+        <nz-form-item>
+          <nz-form-label>答案解析</nz-form-label>
+          <nz-form-control>
+            <textarea nz-input [(ngModel)]="formData.answerExplanation" [ngModelOptions]="{ standalone: true }" placeholder="答案解析（可选）" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+
+        <div class="form-row">
+          <nz-form-item style="flex: 1">
+            <nz-form-label>难度</nz-form-label>
+            <nz-form-control>
+              <nz-select [(ngModel)]="formData.difficulty" [ngModelOptions]="{ standalone: true }" style="width: 100%">
+                <nz-option [nzValue]="1" nzLabel="入门"></nz-option>
+                <nz-option [nzValue]="2" nzLabel="简单"></nz-option>
+                <nz-option [nzValue]="3" nzLabel="中等"></nz-option>
+                <nz-option [nzValue]="4" nzLabel="困难"></nz-option>
+                <nz-option [nzValue]="5" nzLabel="专家"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+          <nz-form-item style="flex: 1">
+            <nz-form-label>分值</nz-form-label>
+            <nz-form-control>
+              <nz-input-number [(ngModel)]="formData.score" [ngModelOptions]="{ standalone: true }" [nzMin]="1" [nzMax]="100" [nzStep]="1" style="width: 100%"></nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </form>
+    </ng-container>
+  </nz-modal>
+</div>
