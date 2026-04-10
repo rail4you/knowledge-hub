@@ -163,6 +163,7 @@ public class IdentityDataSeederContributor
 
         // Search permissions - Student
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Search.Default, true);
+        await GrantPermissionAsync("Student", KnowledgeHubPermissions.Search.ViewStatistics, true);
 
         // AI permissions - Student
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.AI.Default, true);

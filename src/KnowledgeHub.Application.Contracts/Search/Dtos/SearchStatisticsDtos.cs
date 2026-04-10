@@ -18,8 +18,8 @@ public class SearchStatsBreakdown
 {
     public long TotalSearches { get; set; }
     public long TodaySearches { get; set; }
-    public int ActiveUsers { get; set; }
-    public int TodayActiveUsers { get; set; }
+    public long ActiveUsers { get; set; }
+    public long TodayActiveUsers { get; set; }
 }
 
 public class SearchStatsQueryDto
