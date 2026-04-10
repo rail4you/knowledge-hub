@@ -43,6 +43,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IRepository<DocumentIndexingJob, Guid> IndexingJobRepository { get; }
     protected IRepository<VideoIndexingJob, Guid> VideoIndexingJobRepository { get; }
     protected IEditionConfigService EditionConfigService { get; }
+    protected IMeiliSearchService MeiliSearchService { get; }
+    protected IDocumentIndexRepository DocumentIndexRepository { get; }
+    protected IRepository<ResourcePageIndex, Guid> PageIndexRepository { get; }
 
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
@@ -59,7 +62,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IBackgroundJobManager backgroundJobManager,
         IRepository<DocumentIndexingJob, Guid> indexingJobRepository,
         IRepository<VideoIndexingJob, Guid> videoIndexingJobRepository,
-        IEditionConfigService editionConfigService)
+        IEditionConfigService editionConfigService,
+        IMeiliSearchService meiliSearchService,
+        IDocumentIndexRepository documentIndexRepository,
+        IRepository<ResourcePageIndex, Guid> pageIndexRepository)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -76,6 +82,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IndexingJobRepository = indexingJobRepository;
         VideoIndexingJobRepository = videoIndexingJobRepository;
         EditionConfigService = editionConfigService;
+        MeiliSearchService = meiliSearchService;
+        DocumentIndexRepository = documentIndexRepository;
+        PageIndexRepository = pageIndexRepository;
     }
 
     public virtual async Task<ResourceDto> GetAsync(Guid id)
@@ -324,6 +333,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [Authorize(KnowledgeHubPermissions.Resources.Delete)]
     public virtual async Task DeleteAsync(Guid id)
     {
+        await CleanupResourceIndexDataAsync(id);
         await Repository.DeleteAsync(id);
     }
 
@@ -540,6 +550,61 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         return memoryStream.ToArray();
     }
 
+    protected virtual async Task CleanupResourceIndexDataAsync(Guid resourceId)
+    {
+        try
+        {
+            await MeiliSearchService.DeleteDocumentAsync(resourceId);
+            Logger.LogInformation("Deleted MeiliSearch index data for resource {ResourceId}", resourceId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete MeiliSearch index data for resource {ResourceId}", resourceId);
+        }
+
+        try
+        {
+            var pageIndexList = await PageIndexRepository.GetListAsync(x => x.ResourceId == resourceId);
+            if (pageIndexList.Any())
+            {
+                await PageIndexRepository.DeleteManyAsync(pageIndexList);
+                Logger.LogInformation("Deleted {Count} ResourcePageIndex records for resource {ResourceId}", pageIndexList.Count, resourceId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete ResourcePageIndex for resource {ResourceId}", resourceId);
+        }
+
+        try
+        {
+            var indexingJobs = await IndexingJobRepository.GetListAsync(x => x.ResourceId == resourceId);
+            if (indexingJobs.Any())
+            {
+                await IndexingJobRepository.DeleteManyAsync(indexingJobs);
+                Logger.LogInformation("Deleted {Count} DocumentIndexingJob records for resource {ResourceId}", indexingJobs.Count, resourceId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete DocumentIndexingJob for resource {ResourceId}", resourceId);
+        }
+
+        try
+        {
+            var videoIndexingJobs = await VideoIndexingJobRepository.GetListAsync(x => x.ResourceId == resourceId);
+            if (videoIndexingJobs.Any())
+            {
+                await VideoIndexingJobRepository.DeleteManyAsync(videoIndexingJobs);
+                Logger.LogInformation("Deleted {Count} VideoIndexingJob records for resource {ResourceId}", videoIndexingJobs.Count, resourceId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete VideoIndexingJob for resource {ResourceId}", resourceId);
+        }
+    }
+
     protected virtual Resource MapToEntity(CreateUpdateResourceDto input)
     {
         var resource = ObjectMapper.Map<CreateUpdateResourceDto, Resource>(input);
@@ -744,20 +809,22 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<PhysicalDeleteRequestDto> ApprovePhysicalDeleteAsync(Guid id)
     {
         var request = await PhysicalDeleteRequestRepository.GetAsync(id);
-        
+
         var resource = await Repository.GetAsync(request.ResourceId);
-        
+
+        await CleanupResourceIndexDataAsync(request.ResourceId);
+
         await FileStorageService.DeleteAsync(resource.FilePath);
-        
+
         await Repository.DeleteAsync(request.ResourceId);
-        
+
         request.Status = PhysicalDeleteStatus.Approved;
         request.ApproverId = CurrentUser.Id ?? Guid.Empty;
         request.ApproverName = CurrentUser.Name;
         request.ApprovalTime = DateTime.UtcNow;
-        
+
         await PhysicalDeleteRequestRepository.UpdateAsync(request);
-        
+
         return ObjectMapper.Map<PhysicalDeleteRequest, PhysicalDeleteRequestDto>(request);
     }
 

@@ -102,7 +102,15 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _logger.LogInformation("Parsing document: {ResourceId}", args.ResourceId);
 
         var pages = await _documentExtractionService.ExtractPagesAsync(args.ResourceId);
-        
+
+        if (pages.Count == 0)
+        {
+            _logger.LogWarning("No pages extracted for resource {ResourceId} ({FileExtension}). The format may not be supported by the parser.",
+                args.ResourceId, resource.FileExtension);
+            await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Completed, progress: 100, totalPages: 0);
+            return;
+        }
+
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: 30, totalPages: pages.Count);
         _logger.LogInformation("Parsed {PageCount} pages, now indexing", pages.Count);
 

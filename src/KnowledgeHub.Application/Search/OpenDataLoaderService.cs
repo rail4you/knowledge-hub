@@ -23,7 +23,7 @@ public class OpenDataLoaderService : IDocumentExtractionService
     private readonly IFileStorageService _fileStorageService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OpenDataLoaderService> _logger;
-    private static readonly string[] SupportedExtensions = { ".pdf", ".docx", ".pptx", ".xlsx", ".doc", ".ppt", ".xls", ".odt", ".ods", ".odp", ".rtf", ".csv" };
+    private static readonly string[] SupportedExtensions = { ".pdf", ".docx", ".pptx", ".xlsx" };
 
     public OpenDataLoaderService(
         IRepository<Resource, Guid> resourceRepository,
