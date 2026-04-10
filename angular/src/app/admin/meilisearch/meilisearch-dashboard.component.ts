@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizationPipe, ConfigStateService } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -14,6 +14,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { MeiliSearchAdminService, MeiliDashboardDto, MeiliEmbedderDto, MeiliDocumentGroupDto, PageIndexListItemDto } from './meilisearch-admin.service';
 
@@ -36,6 +37,7 @@ import { MeiliSearchAdminService, MeiliDashboardDto, MeiliEmbedderDto, MeiliDocu
     NzBadgeModule,
     NzTooltipModule,
     NzRadioModule,
+    NzSelectModule,
   ],
   templateUrl: './meilisearch-dashboard.component.html',
   styleUrls: ['./meilisearch-dashboard.component.scss'],
@@ -43,6 +45,7 @@ import { MeiliSearchAdminService, MeiliDashboardDto, MeiliEmbedderDto, MeiliDocu
 })
 export class MeiliSearchDashboardComponent implements OnInit {
   private readonly adminService = inject(MeiliSearchAdminService);
+  private readonly configService = inject(ConfigStateService);
   private readonly message = inject(NzMessageService);
 
   loading = signal(false);
@@ -55,6 +58,11 @@ export class MeiliSearchDashboardComponent implements OnInit {
   pageIndexList = signal<PageIndexListItemDto[]>([]);
   loadingPageIndex = signal(false);
   expandedPageIndexId = signal<string | null>(null);
+
+  // 租户相关
+  selectedTenantId: string | null = null;
+  isHost = false;
+  tenants = signal<{ id: string; name: string }[]>([]);
 
   totalNodeCount = computed(() => {
     return this.pageIndexList().reduce((sum, p) => sum + p.nodeCount, 0);
@@ -100,13 +108,24 @@ export class MeiliSearchDashboardComponent implements OnInit {
   });
 
   ngOnInit() {
+    this.isHost = !this.configService.getDeep('currentUser.tenantId');
+    if (this.isHost) {
+      this.loadTenants();
+    }
     this.loadDashboard();
     this.loadPageIndexList();
   }
 
+  private loadTenants() {
+    const tenants = this.configService.getDeep('currentUser.tenants') as any[];
+    if (tenants && Array.isArray(tenants)) {
+      this.tenants.set(tenants.map((t: any) => ({ id: t.id, name: t.name })));
+    }
+  }
+
   loadDashboard() {
     this.loading.set(true);
-    this.adminService.getDashboard().subscribe({
+    this.adminService.getDashboard(this.selectedTenantId || undefined).subscribe({
       next: (data) => {
         this.dashboard.set(data);
         this.loading.set(false);
@@ -135,7 +154,7 @@ export class MeiliSearchDashboardComponent implements OnInit {
 
   loadDocuments(indexUid: string) {
     this.loadingDocuments.update(m => ({ ...m, [indexUid]: true }));
-    this.adminService.getIndexDocuments(indexUid).subscribe({
+    this.adminService.getIndexDocuments(indexUid, 200, this.selectedTenantId || undefined).subscribe({
       next: (groups) => {
         this.documentGroups.update(m => ({ ...m, [indexUid]: groups }));
         this.loadingDocuments.update(m => ({ ...m, [indexUid]: false }));
@@ -193,7 +212,7 @@ export class MeiliSearchDashboardComponent implements OnInit {
 
   loadPageIndexList() {
     this.loadingPageIndex.set(true);
-    this.adminService.getPageIndexList().subscribe({
+    this.adminService.getPageIndexList(this.selectedTenantId || undefined).subscribe({
       next: (data) => {
         this.pageIndexList.set(data);
         this.loadingPageIndex.set(false);
@@ -208,5 +227,13 @@ export class MeiliSearchDashboardComponent implements OnInit {
   togglePageIndexDetail(id: string) {
     const current = this.expandedPageIndexId();
     this.expandedPageIndexId.set(current === id ? null : id);
+  }
+
+  onTenantChange() {
+    this.loadDashboard();
+    this.loadPageIndexList();
+    // 清空展开的索引和文档
+    this.expandedIndexUid.set(null);
+    this.documentGroups.set({});
   }
 }

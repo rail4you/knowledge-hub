@@ -12,6 +12,7 @@ using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources;
 using Microsoft.Extensions.Options;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Application.Search;
 
@@ -22,19 +23,22 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
     private readonly IRepository<ResourcePageIndex, Guid> _pageIndexRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<ResourceVersion, Guid> _versionRepository;
+    private readonly ICurrentTenant _currentTenant;
 
     public MeiliSearchAdminAppService(
         IOptions<MeilisearchOptions> options,
         HttpClient httpClient,
         IRepository<ResourcePageIndex, Guid> pageIndexRepository,
         IRepository<Resource, Guid> resourceRepository,
-        IRepository<ResourceVersion, Guid> versionRepository)
+        IRepository<ResourceVersion, Guid> versionRepository,
+        ICurrentTenant currentTenant)
     {
         _options = options;
         _httpClient = httpClient;
         _pageIndexRepository = pageIndexRepository;
         _resourceRepository = resourceRepository;
         _versionRepository = versionRepository;
+        _currentTenant = currentTenant;
         _httpClient.BaseAddress = new Uri(_options.Value.Host);
         if (!string.IsNullOrEmpty(_options.Value.ApiKey))
         {
@@ -43,9 +47,16 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
         }
     }
 
-    public async Task<MeiliDashboardDto> GetDashboardAsync()
+    public async Task<MeiliDashboardDto> GetDashboardAsync(Guid? tenantId = null)
     {
         await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+
+        // 如果当前用户已登录且属于某个租户，则强制使用该租户ID
+        var currentTenantId = _currentTenant.Id;
+        if (currentTenantId.HasValue)
+        {
+            tenantId = currentTenantId;
+        }
 
         var dashboard = new MeiliDashboardDto();
 
@@ -111,13 +122,31 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
         return result?.Results ?? new List<MeiliTaskDto>();
     }
 
-    public async Task<List<MeiliDocumentGroupDto>> GetIndexDocumentsAsync(string indexUid, int limit = 200)
+    public async Task<List<MeiliDocumentGroupDto>> GetIndexDocumentsAsync(string indexUid, int limit = 200, Guid? tenantId = null)
     {
         await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
 
+        // 如果当前用户已登录且属于某个租户，则强制使用该租户ID
+        var currentTenantId = _currentTenant.Id;
+        if (currentTenantId.HasValue)
+        {
+            tenantId = currentTenantId;
+        }
+
         try
         {
-            var response = await _httpClient.GetAsync($"/indexes/{indexUid}/documents?limit={limit}");
+            // 构建 tenantId filter
+            var tenantFilter = tenantId.HasValue ? $"tenantId = \"{tenantId}\"" : "";
+
+            // 构建查询参数
+            var queryParams = new List<string> { $"limit={limit}" };
+            if (!string.IsNullOrEmpty(tenantFilter))
+            {
+                queryParams.Add($"filter={Uri.EscapeDataString(tenantFilter)}");
+            }
+
+            var queryString = string.Join("&", queryParams);
+            var response = await _httpClient.GetAsync($"/indexes/{indexUid}/documents?{queryString}");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
 
@@ -286,15 +315,34 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
         return stats;
     }
 
-    public async Task<List<PageIndexListItemDto>> GetPageIndexListAsync()
+    public async Task<List<PageIndexListItemDto>> GetPageIndexListAsync(Guid? tenantId = null)
     {
         await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+
+        // 如果当前用户已登录且属于某个租户，则强制使用该租户ID
+        var currentTenantId = _currentTenant.Id;
+        if (currentTenantId.HasValue)
+        {
+            tenantId = currentTenantId;
+        }
 
         var pageIndexQuery = await _pageIndexRepository.GetQueryableAsync();
         var resourceQuery = await _resourceRepository.GetQueryableAsync();
         var versionQuery = await _versionRepository.GetQueryableAsync();
 
-        var pageIndexes = pageIndexQuery
+        // 应用租户过滤
+        var queryable = pageIndexQuery.AsQueryable();
+        if (tenantId.HasValue)
+        {
+            queryable = queryable.Where(p => p.TenantId == tenantId);
+        }
+        else if (_currentTenant.Id == null)
+        {
+            // Host 用户且未指定租户，返回空列表（让用户先选择租户）
+            return new List<PageIndexListItemDto>();
+        }
+
+        var pageIndexes = queryable
             .OrderByDescending(p => p.CreatedAt)
             .ToList();
 

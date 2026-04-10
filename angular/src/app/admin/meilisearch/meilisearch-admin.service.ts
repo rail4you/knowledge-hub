@@ -100,10 +100,11 @@ export class MeiliSearchAdminService {
   private readonly restService = inject(RestService);
   private readonly apiUrl = '/api/app/meili-search-admin';
 
-  getDashboard(): Observable<MeiliDashboardDto> {
+  getDashboard(tenantId?: string): Observable<MeiliDashboardDto> {
     return this.restService.request({
       method: 'GET',
-      url: `${this.apiUrl}/dashboard`
+      url: `${this.apiUrl}/dashboard`,
+      params: tenantId ? { tenantId } : {}
     }, { apiName: 'Default' });
   }
 
@@ -131,11 +132,11 @@ export class MeiliSearchAdminService {
     }, { apiName: 'Default' });
   }
 
-  getIndexDocuments(indexUid: string, limit = 200): Observable<MeiliDocumentGroupDto[]> {
+  getIndexDocuments(indexUid: string, limit = 200, tenantId?: string): Observable<MeiliDocumentGroupDto[]> {
     return this.restService.request({
       method: 'GET',
       url: `${this.apiUrl}/index-documents`,
-      params: { indexUid, limit }
+      params: tenantId ? { indexUid, limit, tenantId } : { indexUid, limit }
     }, { apiName: 'Default' });
   }
 
@@ -146,10 +147,11 @@ export class MeiliSearchAdminService {
     }, { apiName: 'Default' });
   }
 
-  getPageIndexList(): Observable<PageIndexListItemDto[]> {
+  getPageIndexList(tenantId?: string): Observable<PageIndexListItemDto[]> {
     return this.restService.request({
       method: 'GET',
-      url: `${this.apiUrl}/page-index-list`
+      url: `${this.apiUrl}/page-index-list`,
+      params: tenantId ? { tenantId } : {}
     }, { apiName: 'Default' });
   }
 }

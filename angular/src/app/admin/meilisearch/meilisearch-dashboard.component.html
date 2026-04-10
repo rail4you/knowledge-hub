@@ -1,6 +1,18 @@
 <div class="meilisearch-dashboard">
   <div class="header">
     <h2>{{ '::MeiliSearch:Dashboard' | abpLocalization }}</h2>
+    @if (isHost) {
+      <nz-select
+        style="width: 200px;"
+        [nzPlaceHolder]="'选择租户'"
+        [(ngModel)]="selectedTenantId"
+        (ngModelChange)="onTenantChange()"
+        [nzAllowClear]="true">
+        @for (tenant of tenants(); track tenant.id) {
+          <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name"></nz-option>
+        }
+      </nz-select>
+    }
     <button nz-button nzType="primary" (click)="refresh()" [nzLoading]="loading()">
       <span nz-icon nzType="reload"></span>
       {{ '::MeiliSearch:Refresh' | abpLocalization }}
