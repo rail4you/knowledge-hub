@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using KnowledgeHub.Exams.Dtos;
+using Microsoft.AspNetCore.Http;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
@@ -20,13 +21,18 @@ public interface IExamAppService : ICrudAppService<
 }
 
 public interface IExerciseAppService : ICrudAppService<
-    ExerciseDto, 
-    Guid, 
-    PagedAndSortedResultRequestDto, 
+    ExerciseDto,
+    Guid,
+    PagedAndSortedResultRequestDto,
     CreateUpdateExerciseDto>
 {
     Task<List<ExerciseDto>> GetByCourseAsync(Guid courseId);
     Task<List<ExerciseDto>> GetByChapterAsync(Guid chapterId);
     Task<List<ExerciseDto>> GenerateByAIAsync(GenerateExerciseInput input);
     Task<GradingResultDto> GradeEssayAsync(GradeEssayInput input);
+
+    /// <summary>
+    /// 从 Excel 文件导入习题
+    /// </summary>
+    Task<ExerciseImportResultDto> ImportFromExcelAsync(Guid courseId, IFormFile file);
 }

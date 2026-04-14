@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using KnowledgeHub.Exams.Enums;
 using Volo.Abp.Application.Dtos;
 
@@ -58,4 +59,15 @@ public class GradingResultDto
     public int Score { get; set; }
     public string? Feedback { get; set; }
     public bool IsCorrect { get; set; }
+}
+
+/// <summary>
+/// 习题导入结果 DTO
+/// </summary>
+public class ExerciseImportResultDto
+{
+    public int TotalRows { get; set; }
+    public int SuccessCount { get; set; }
+    public int FailCount { get; set; }
+    public List<string> Errors { get; set; } = new();
 }

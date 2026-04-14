@@ -10,10 +10,11 @@ export class MeiliSearchAdminService {
   apiName = 'KnowledgeHub';
   
 
-  getDashboard = (config?: Partial<Rest.Config>) =>
+  getDashboard = (tenantId?: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, MeiliDashboardDto>({
       method: 'GET',
       url: '/api/app/meili-search-admin/dashboard',
+      params: { tenantId },
     },
     { apiName: this.apiName,...config });
   
@@ -27,11 +28,11 @@ export class MeiliSearchAdminService {
     { apiName: this.apiName,...config });
   
 
-  getIndexDocuments = (indexUid: string, limit: number = 200, config?: Partial<Rest.Config>) =>
+  getIndexDocuments = (indexUid: string, limit: number = 200, tenantId?: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, MeiliDocumentGroupDto[]>({
       method: 'GET',
       url: '/api/app/meili-search-admin/index-documents',
-      params: { indexUid, limit },
+      params: { indexUid, limit, tenantId },
     },
     { apiName: this.apiName,...config });
   
@@ -53,10 +54,11 @@ export class MeiliSearchAdminService {
     { apiName: this.apiName,...config });
   
 
-  getPageIndexList = (config?: Partial<Rest.Config>) =>
+  getPageIndexList = (tenantId?: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PageIndexListItemDto[]>({
       method: 'GET',
       url: '/api/app/meili-search-admin/page-index-list',
+      params: { tenantId },
     },
     { apiName: this.apiName,...config });
   

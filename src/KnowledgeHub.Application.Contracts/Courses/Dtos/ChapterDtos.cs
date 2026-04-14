@@ -23,3 +23,14 @@ public class CreateUpdateChapterDto
     public string? Description { get; set; }
     public int SortOrder { get; set; }
 }
+
+/// <summary>
+/// 章节导入结果 DTO
+/// </summary>
+public class ChapterImportResultDto
+{
+    public int TotalRows { get; set; }
+    public int SuccessCount { get; set; }
+    public int FailCount { get; set; }
+    public List<string> Errors { get; set; } = new();
+}

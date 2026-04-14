@@ -156,7 +156,7 @@ export const APP_ROUTES: Routes = [
     children: [
       { path: '', redirectTo: 'resources', pathMatch: 'full' },
       { path: 'resources', loadComponent: () => import('./student/resources/student-resources.component').then(c => c.StudentResourcesComponent) },
-      { path: 'search', loadComponent: () => import('./search/search.component').then(c => c.SearchComponent) },
+      { path: 'search', loadComponent: () => import('./search/search.component').then(c => c.SearchComponent), canActivate: [permissionGuard], data: { requiredPolicy: 'KnowledgeHub.Search' } },
       { path: 'search-history', loadComponent: () => import('./search/search-history/search-history.component').then(c => c.SearchHistoryComponent) },
       { path: 'ai/chat', loadComponent: () => import('./ai/chat/chat.component').then(c => c.ChatComponent) },
       { path: 'ai/lesson-plan', loadComponent: () => import('./ai/lesson-plan/lesson-plan.component').then(c => c.LessonPlanComponent) },

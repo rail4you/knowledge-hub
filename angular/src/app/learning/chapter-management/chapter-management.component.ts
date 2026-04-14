@@ -15,7 +15,7 @@ import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
-import type { CourseDto, ChapterDto, CreateUpdateChapterDto } from '../../proxy/courses/dtos/models';
+import type { CourseDto, ChapterDto, CreateUpdateChapterDto, ChapterImportResultDto } from '../../proxy/courses/dtos/models';
 import { ChapterMindMapComponent } from './chapter-mind-map/chapter-mind-map.component';
 
 @Component({
@@ -272,5 +272,77 @@ export class ChapterManagementComponent implements OnInit {
     const courseId = this.selectedCourseId();
     const course = this.courses().find(c => c.id === courseId);
     return course?.title ?? '';
+  }
+
+  // Import modal state
+  isImportModalVisible = false;
+  importing = false;
+  selectedImportFile: File | null = null;
+
+  openImportModal() {
+    const courseId = this.selectedCourseId();
+    if (!courseId) {
+      this.message.warning('请先选择课程');
+      return;
+    }
+    this.isImportModalVisible = true;
+    this.selectedImportFile = null;
+  }
+
+  closeImportModal() {
+    this.isImportModalVisible = false;
+    this.selectedImportFile = null;
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      if (!isExcel) {
+        this.message.error('只能上传 Excel 文件 (.xlsx, .xls)');
+        return;
+      }
+      const isLt10M = file.size / 1024 / 1024 < 10;
+      if (!isLt10M) {
+        this.message.error('文件大小不能超过 10MB');
+        return;
+      }
+
+      // 保存文件引用
+      this.selectedImportFile = file;
+      this.cdr.markForCheck();
+    }
+  }
+
+  handleImport() {
+    if (!this.selectedImportFile) {
+      this.message.warning('请先选择文件');
+      return;
+    }
+
+    const courseId = this.selectedCourseId();
+    if (!courseId) return;
+
+    this.importing = true;
+    const file = this.selectedImportFile;
+
+    this.chapterService.importFromExcel(courseId, file).subscribe({
+      next: (result: ChapterImportResultDto) => {
+        this.importing = false;
+        if (result.failCount === 0) {
+          this.message.success(`导入成功！共导入 ${result.successCount} 个章节`);
+          this.closeImportModal();
+          this.loadChapterTree();
+        } else {
+          const errorMsg = result.errors?.slice(0, 5).join('\n') || '';
+          this.message.warning(`导入完成：成功 ${result.successCount}，失败 ${result.failCount}\n${errorMsg}`);
+        }
+      },
+      error: (err) => {
+        this.importing = false;
+        this.message.error('导入失败: ' + (err.message || '未知错误'));
+      },
+    });
   }
 }

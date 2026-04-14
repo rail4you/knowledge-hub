@@ -1,4 +1,4 @@
-import type { CreateUpdateExerciseDto, ExerciseDto, GenerateExerciseInput, GradeEssayInput, GradingResultDto } from './dtos/models';
+import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto, GenerateExerciseInput, GradeEssayInput, GradingResultDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -86,4 +86,17 @@ export class ExerciseService {
       body: input,
     },
     { apiName: this.apiName,...config });
+
+
+  importFromExcel = (courseId: string, file: File, config?: Partial<Rest.Config>) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.restService.request<any, ExerciseImportResultDto>({
+      method: 'POST',
+      url: `/api/app/exercise/import-from-excel/${courseId}`,
+      body: formData,
+    },
+    { apiName: this.apiName, ...config });
+  };
 }

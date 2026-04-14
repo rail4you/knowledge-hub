@@ -36,6 +36,8 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   teacherName?: string | null;
   chapterCount?: number;
   studentCount?: number;
+  isEnrolled?: boolean;
+  progress?: number;
 }
 
 export interface CourseFilterDto {
@@ -120,4 +122,11 @@ export interface StudentCourseDto extends FullAuditedEntityDto<string> {
   status?: StudentCourseStatus;
   enrolledAt?: string;
   progress?: number;
+}
+
+export interface ChapterImportResultDto {
+  totalRows?: number;
+  successCount?: number;
+  failCount?: number;
+  errors?: string[];
 }

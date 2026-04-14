@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -15,7 +15,9 @@ import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
-import { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos';
+import { CourseService } from '../../proxy/courses/course.service';
+import { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto } from '../../proxy/exams/dtos';
+import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 
 @Component({
@@ -60,6 +62,10 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
         <button nz-button nzType="primary" (click)="showForm = true">
           <span nz-icon nzType="plus"></span>
           创建习题
+        </button>
+        <button nz-button nzType="default" (click)="openImportModal()">
+          <span nz-icon nzType="upload"></span>
+          导入习题
         </button>
       </div>
       
@@ -110,9 +116,9 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
     </nz-card>
     
     @if (showForm) {
-      <nz-modal 
-        [(nzVisible)]="showForm" 
-        [nzTitle]="isEditing ? '编辑习题' : '创建习题'" 
+      <nz-modal
+        [(nzVisible)]="showForm"
+        [nzTitle]="isEditing ? '编辑习题' : '创建习题'"
         [nzWidth]="700"
         (nzOnCancel)="closeForm()"
         (nzOnOk)="saveExercise()">
@@ -123,14 +129,14 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
               <input nz-input [(ngModel)]="formData.courseId" placeholder="课程ID" />
             </nz-form-control>
           </nz-form-item>
-          
+
           <nz-form-item>
             <nz-form-label [nzSpan]="4" nzRequired>标题</nz-form-label>
             <nz-form-control [nzSpan]="18">
               <input nz-input [(ngModel)]="formData.title" placeholder="习题标题" />
             </nz-form-control>
           </nz-form-item>
-          
+
           <nz-form-item>
             <nz-form-label [nzSpan]="4" nzRequired>题型</nz-form-label>
             <nz-form-control [nzSpan]="18">
@@ -143,28 +149,28 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
               </nz-select>
             </nz-form-control>
           </nz-form-item>
-          
+
           <nz-form-item>
             <nz-form-label [nzSpan]="4" nzRequired>题目内容</nz-form-label>
             <nz-form-control [nzSpan]="18">
               <textarea nz-input [(ngModel)]="formData.questionContent" placeholder="请输入题目内容" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
             </nz-form-control>
           </nz-form-item>
-          
+
           <nz-form-item>
             <nz-form-label [nzSpan]="4" nzRequired>答案</nz-form-label>
             <nz-form-control [nzSpan]="18">
               <input nz-input [(ngModel)]="formData.answer" placeholder="答案" />
             </nz-form-control>
           </nz-form-item>
-          
+
           <nz-form-item>
             <nz-form-label [nzSpan]="4">答案解析</nz-form-label>
             <nz-form-control [nzSpan]="18">
               <textarea nz-input [(ngModel)]="formData.answerExplanation" placeholder="答案解析（可选）" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
             </nz-form-control>
           </nz-form-item>
-          
+
           <nz-form-item>
             <nz-form-label [nzSpan]="4">难度</nz-form-label>
             <nz-form-control [nzSpan]="18">
@@ -177,13 +183,65 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
               </nz-select>
             </nz-form-control>
           </nz-form-item>
-          
+
           <nz-form-item>
             <nz-form-label [nzSpan]="4">分值</nz-form-label>
             <nz-form-control [nzSpan]="18">
               <nz-input-number [(ngModel)]="formData.score" [nzMin]="1" [nzMax]="100" [nzStep]="1"></nz-input-number>
             </nz-form-control>
           </nz-form-item>
+        </ng-container>
+      </nz-modal>
+    }
+
+    <!-- Import Modal -->
+    @if (showImportModal) {
+      <nz-modal
+        [(nzVisible)]="showImportModal"
+        nzTitle="导入习题"
+        [nzOkLoading]="importing"
+        nzOkText="导入"
+        nzCancelText="取消"
+        (nzOnOk)="handleImport()"
+        (nzOnCancel)="closeImportModal()"
+        [nzWidth]="520"
+        [nzOkDisabled]="!selectedImportFile || !selectedCourseId"
+      >
+        <ng-container *nzModalContent>
+          <nz-form-item>
+            <nz-form-label [nzSpan]="4" nzRequired>选择课程</nz-form-label>
+            <nz-form-control [nzSpan]="18">
+              <nz-select [(ngModel)]="selectedCourseId" nzPlaceHolder="请选择课程" style="width: 100%">
+                @for (course of courses; track course.id) {
+                  <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+
+          <div class="import-template-download">
+            <span>导入说明：</span>
+            <a href="/assets/习题导入模版.xlsx" download="习题导入模版.xlsx">
+              下载导入模板
+            </a>
+          </div>
+          <div class="file-input-container">
+            <input
+              #fileInput
+              type="file"
+              accept=".xlsx,.xls"
+              style="display: none"
+              (change)="onFileSelected($event)"
+            />
+            <button nz-button nzType="default" (click)="fileInput.click()">
+              <span nz-icon nzType="upload"></span>
+              选择 Excel 文件
+            </button>
+            @if (selectedImportFile) {
+              <span class="selected-file-name">{{ selectedImportFile.name }}</span>
+            }
+          </div>
+          <p class="import-hint">支持 .xlsx 和 .xls 格式，文件大小不超过 10MB</p>
         </ng-container>
       </nz-modal>
     }
@@ -200,9 +258,11 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 })
 export class ExerciseManagementComponent implements OnInit {
   private readonly exerciseService = inject(ExerciseService);
+  private readonly courseService = inject(CourseService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
-  
+  private readonly cdr = inject(ChangeDetectorRef);
+
   exercises = signal<ExerciseDto[]>([]);
   loading = signal(true);
   selectedType: ExerciseType | null = null;
@@ -210,13 +270,90 @@ export class ExerciseManagementComponent implements OnInit {
   showForm = false;
   isEditing = false;
   editingId = '';
-  
+
+  // Import modal state
+  showImportModal = false;
+  importing = false;
+  selectedImportFile: File | null = null;
+  courses: CourseDto[] = [];
+  selectedCourseId: string | null = null;
+
   formData: CreateUpdateExerciseDto = this.createEmptyForm();
   
   ngOnInit() {
     this.loadExercises();
+    this.loadCourses();
   }
-  
+
+  loadCourses() {
+    this.courseService.getList({ maxResultCount: 100, skipCount: 0 } as any).subscribe({
+      next: (result) => {
+        this.courses = result.items || [];
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  openImportModal() {
+    this.showImportModal = true;
+    this.selectedImportFile = null;
+    this.selectedCourseId = null;
+  }
+
+  closeImportModal() {
+    this.showImportModal = false;
+    this.selectedImportFile = null;
+    this.selectedCourseId = null;
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      if (!isExcel) {
+        this.message.error('只能上传 Excel 文件 (.xlsx, .xls)');
+        return;
+      }
+      const isLt10M = file.size / 1024 / 1024 < 10;
+      if (!isLt10M) {
+        this.message.error('文件大小不能超过 10MB');
+        return;
+      }
+
+      this.selectedImportFile = file;
+      this.cdr.markForCheck();
+    }
+  }
+
+  handleImport() {
+    if (!this.selectedImportFile || !this.selectedCourseId) {
+      this.message.warning('请选择文件和课程');
+      return;
+    }
+
+    this.importing = true;
+    const file = this.selectedImportFile;
+
+    this.exerciseService.importFromExcel(this.selectedCourseId, file).subscribe({
+      next: (result: ExerciseImportResultDto) => {
+        this.importing = false;
+        if (result.failCount === 0) {
+          this.message.success(`导入成功！共导入 ${result.successCount} 个习题`);
+          this.closeImportModal();
+          this.loadExercises();
+        } else {
+          const errorMsg = result.errors?.slice(0, 5).join('\n') || '';
+          this.message.warning(`导入完成：成功 ${result.successCount}，失败 ${result.failCount}\n${errorMsg}`);
+        }
+      },
+      error: (err) => {
+        this.importing = false;
+        this.message.error('导入失败: ' + (err.message || '未知错误'));
+      },
+    });
+  }
+
   createEmptyForm(): CreateUpdateExerciseDto {
     return {
       courseId: '',

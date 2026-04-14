@@ -18,6 +18,10 @@
           <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
         }
       </nz-select>
+      <button nz-button nzType="primary" nzSize="small" (click)="openImportModal()" style="margin-left: 16px">
+        <span nz-icon nzType="upload"></span>
+        导入习题
+      </button>
     </div>
   </nz-card>
 
@@ -131,4 +135,43 @@
       </div>
     }
   </ng-template>
+
+  <!-- Import Modal -->
+  <nz-modal
+    [(nzVisible)]="isImportModalVisible"
+    nzTitle="导入习题"
+    [nzOkLoading]="importing"
+    nzOkText="导入"
+    nzCancelText="取消"
+    (nzOnOk)="handleImport()"
+    (nzOnCancel)="closeImportModal()"
+    [nzWidth]="520"
+    [nzOkDisabled]="!selectedImportFile"
+  >
+    <ng-container *nzModalContent>
+      <div class="import-template-download">
+        <span>导入说明：</span>
+        <a href="/assets/习题导入模版.xlsx" download="习题导入模版.xlsx">
+          下载导入模板
+        </a>
+      </div>
+      <div class="file-input-container">
+        <input
+          #fileInput
+          type="file"
+          accept=".xlsx,.xls"
+          style="display: none"
+          (change)="onFileSelected($event)"
+        />
+        <button nz-button nzType="default" (click)="fileInput.click()">
+          <span nz-icon nzType="upload"></span>
+          选择 Excel 文件
+        </button>
+        @if (selectedImportFile) {
+          <span class="selected-file-name">{{ selectedImportFile.name }}</span>
+        }
+      </div>
+      <p class="import-hint">支持 .xlsx 和 .xls 格式，文件大小不超过 10MB</p>
+    </ng-container>
+  </nz-modal>
 </div>

@@ -51,3 +51,10 @@ export interface GradingResultDto {
   feedback?: string | null;
   isCorrect?: boolean;
 }
+
+export interface ExerciseImportResultDto {
+  totalRows?: number;
+  successCount?: number;
+  failCount?: number;
+  errors?: string[];
+}

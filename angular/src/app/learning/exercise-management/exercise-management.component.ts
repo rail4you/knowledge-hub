@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocalizationPipe } from '@abp/ng.core';
@@ -18,7 +18,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
-import type { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos/models';
+import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto } from '../../proxy/exams/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 
 @Component({
@@ -50,6 +50,7 @@ export class ExerciseManagementComponent implements OnInit {
   private readonly exerciseService = inject(ExerciseService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   courses = signal<CourseDto[]>([]);
   selectedCourseId = signal<string | null>(null);
@@ -63,6 +64,11 @@ export class ExerciseManagementComponent implements OnInit {
   editId: string | null = null;
   saving = false;
   formData: CreateUpdateExerciseDto = this.emptyForm();
+
+  // Import modal state
+  isImportModalVisible = false;
+  importing = false;
+  selectedImportFile: File | null = null;
 
   // Options for choice questions
   optionA = '';
@@ -319,5 +325,72 @@ export class ExerciseManagementComponent implements OnInit {
   getDifficultyColor(difficulty: number): string {
     const colors: Record<number, string> = { 1: 'green', 2: 'lime', 3: 'gold', 4: 'orange', 5: 'red' };
     return colors[difficulty] ?? 'default';
+  }
+
+  // Import methods
+  openImportModal() {
+    const courseId = this.selectedCourseId();
+    if (!courseId) {
+      this.message.warning('请先选择课程');
+      return;
+    }
+    this.isImportModalVisible = true;
+    this.selectedImportFile = null;
+  }
+
+  closeImportModal() {
+    this.isImportModalVisible = false;
+    this.selectedImportFile = null;
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      if (!isExcel) {
+        this.message.error('只能上传 Excel 文件 (.xlsx, .xls)');
+        return;
+      }
+      const isLt10M = file.size / 1024 / 1024 < 10;
+      if (!isLt10M) {
+        this.message.error('文件大小不能超过 10MB');
+        return;
+      }
+
+      this.selectedImportFile = file;
+      this.cdr.markForCheck();
+    }
+  }
+
+  handleImport() {
+    if (!this.selectedImportFile) {
+      this.message.warning('请先选择文件');
+      return;
+    }
+
+    const courseId = this.selectedCourseId();
+    if (!courseId) return;
+
+    this.importing = true;
+    const file = this.selectedImportFile;
+
+    this.exerciseService.importFromExcel(courseId, file).subscribe({
+      next: (result: ExerciseImportResultDto) => {
+        this.importing = false;
+        if (result.failCount === 0) {
+          this.message.success(`导入成功！共导入 ${result.successCount} 个习题`);
+          this.closeImportModal();
+          this.loadExercises();
+        } else {
+          const errorMsg = result.errors?.slice(0, 5).join('\n') || '';
+          this.message.warning(`导入完成：成功 ${result.successCount}，失败 ${result.failCount}\n${errorMsg}`);
+        }
+      },
+      error: (err) => {
+        this.importing = false;
+        this.message.error('导入失败: ' + (err.message || '未知错误'));
+      },
+    });
   }
 }

@@ -19,7 +19,7 @@ export class CareerGuidanceService {
     { apiName: this.apiName,...config });
   
 
-  generateStreaming = (input: CareerGuidanceGenerationInputDto, onChunk: (chunk: ChatMessageChunkDto) => any, config?: Partial<Rest.Config>) =>
+  generateStreaming = (input: CareerGuidanceGenerationInputDto, onChunk: (chunk: ChatMessageChunkDto) => void, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',
       url: '/api/app/career-guidance/generate-streaming',

@@ -3943,7 +3943,16 @@
               "methods": [
                 {
                   "name": "GetDashboardAsync",
-                  "parametersOnMethod": [],
+                  "parametersOnMethod": [
+                    {
+                      "name": "tenantId",
+                      "typeAsString": "System.Nullable`1[[System.Guid, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib",
+                      "type": "System.Guid?",
+                      "typeSimple": "string?",
+                      "isOptional": true,
+                      "defaultValue": null
+                    }
+                  ],
                   "returnValue": {
                     "type": "KnowledgeHub.Application.Contracts.Search.Dtos.MeiliDashboardDto",
                     "typeSimple": "KnowledgeHub.Application.Contracts.Search.Dtos.MeiliDashboardDto"
@@ -4018,6 +4027,14 @@
                       "typeSimple": "number",
                       "isOptional": true,
                       "defaultValue": 200
+                    },
+                    {
+                      "name": "tenantId",
+                      "typeAsString": "System.Nullable`1[[System.Guid, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib",
+                      "type": "System.Guid?",
+                      "typeSimple": "string?",
+                      "isOptional": true,
+                      "defaultValue": null
                     }
                   ],
                   "returnValue": {
@@ -4035,7 +4052,16 @@
                 },
                 {
                   "name": "GetPageIndexListAsync",
-                  "parametersOnMethod": [],
+                  "parametersOnMethod": [
+                    {
+                      "name": "tenantId",
+                      "typeAsString": "System.Nullable`1[[System.Guid, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib",
+                      "type": "System.Guid?",
+                      "typeSimple": "string?",
+                      "isOptional": true,
+                      "defaultValue": null
+                    }
+                  ],
                   "returnValue": {
                     "type": "System.Collections.Generic.List<KnowledgeHub.Application.Contracts.Search.Dtos.PageIndexListItemDto>",
                     "typeSimple": "[KnowledgeHub.Application.Contracts.Search.Dtos.PageIndexListItemDto]"
@@ -4045,14 +4071,36 @@
             }
           ],
           "actions": {
-            "GetDashboardAsync": {
-              "uniqueName": "GetDashboardAsync",
+            "GetDashboardAsyncByTenantId": {
+              "uniqueName": "GetDashboardAsyncByTenantId",
               "name": "GetDashboardAsync",
               "httpMethod": "GET",
               "url": "api/app/meili-search-admin/dashboard",
               "supportedVersions": [],
-              "parametersOnMethod": [],
-              "parameters": [],
+              "parametersOnMethod": [
+                {
+                  "name": "tenantId",
+                  "typeAsString": "System.Nullable`1[[System.Guid, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib",
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": true,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "tenantId",
+                  "name": "tenantId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": ""
+                }
+              ],
               "returnValue": {
                 "type": "KnowledgeHub.Application.Contracts.Search.Dtos.MeiliDashboardDto",
                 "typeSimple": "KnowledgeHub.Application.Contracts.Search.Dtos.MeiliDashboardDto"
@@ -4171,8 +4219,8 @@
               "allowAnonymous": null,
               "implementFrom": "KnowledgeHub.Application.Contracts.Search.IMeiliSearchAdminAppService"
             },
-            "GetIndexDocumentsAsyncByIndexUidAndLimit": {
-              "uniqueName": "GetIndexDocumentsAsyncByIndexUidAndLimit",
+            "GetIndexDocumentsAsyncByIndexUidAndLimitAndTenantId": {
+              "uniqueName": "GetIndexDocumentsAsyncByIndexUidAndLimitAndTenantId",
               "name": "GetIndexDocumentsAsync",
               "httpMethod": "GET",
               "url": "api/app/meili-search-admin/index-documents",
@@ -4193,6 +4241,14 @@
                   "typeSimple": "number",
                   "isOptional": true,
                   "defaultValue": 200
+                },
+                {
+                  "name": "tenantId",
+                  "typeAsString": "System.Nullable`1[[System.Guid, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib",
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": true,
+                  "defaultValue": null
                 }
               ],
               "parameters": [
@@ -4219,6 +4275,18 @@
                   "constraintTypes": null,
                   "bindingSourceId": "ModelBinding",
                   "descriptorName": ""
+                },
+                {
+                  "nameOnMethod": "tenantId",
+                  "name": "tenantId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": ""
                 }
               ],
               "returnValue": {
@@ -4228,14 +4296,36 @@
               "allowAnonymous": null,
               "implementFrom": "KnowledgeHub.Application.Contracts.Search.IMeiliSearchAdminAppService"
             },
-            "GetPageIndexListAsync": {
-              "uniqueName": "GetPageIndexListAsync",
+            "GetPageIndexListAsyncByTenantId": {
+              "uniqueName": "GetPageIndexListAsyncByTenantId",
               "name": "GetPageIndexListAsync",
               "httpMethod": "GET",
               "url": "api/app/meili-search-admin/page-index-list",
               "supportedVersions": [],
-              "parametersOnMethod": [],
-              "parameters": [],
+              "parametersOnMethod": [
+                {
+                  "name": "tenantId",
+                  "typeAsString": "System.Nullable`1[[System.Guid, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib",
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": true,
+                  "defaultValue": null
+                }
+              ],
+              "parameters": [
+                {
+                  "nameOnMethod": "tenantId",
+                  "name": "tenantId",
+                  "jsonName": null,
+                  "type": "System.Guid?",
+                  "typeSimple": "string?",
+                  "isOptional": false,
+                  "defaultValue": null,
+                  "constraintTypes": null,
+                  "bindingSourceId": "ModelBinding",
+                  "descriptorName": ""
+                }
+              ],
               "returnValue": {
                 "type": "System.Collections.Generic.List<KnowledgeHub.Application.Contracts.Search.Dtos.PageIndexListItemDto>",
                 "typeSimple": "[KnowledgeHub.Application.Contracts.Search.Dtos.PageIndexListItemDto]"
@@ -21734,7 +21824,7 @@
         {
           "name": "ActiveUsers",
           "jsonName": null,
-          "type": "System.Int32",
+          "type": "System.Int64",
           "typeSimple": "number",
           "isRequired": false,
           "minLength": null,
@@ -21747,7 +21837,7 @@
         {
           "name": "TodayActiveUsers",
           "jsonName": null,
-          "type": "System.Int32",
+          "type": "System.Int64",
           "typeSimple": "number",
           "isRequired": false,
           "minLength": null,

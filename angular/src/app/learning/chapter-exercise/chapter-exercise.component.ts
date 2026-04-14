@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocalizationPipe } from '@abp/ng.core';
@@ -11,11 +11,12 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import type { CourseDto, ChapterDto } from '../../proxy/courses/dtos/models';
-import type { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos/models';
+import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto } from '../../proxy/exams/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 
 @Component({
@@ -33,6 +34,7 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
     NzSpinModule,
     NzEmptyModule,
     NzSelectModule,
+    NzModalModule,
   ],
   templateUrl: './chapter-exercise.component.html',
   styleUrls: ['./chapter-exercise.component.scss'],
@@ -43,6 +45,7 @@ export class ChapterExerciseComponent implements OnInit {
   private readonly chapterService = inject(ChapterService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly message = inject(NzMessageService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   courses = signal<CourseDto[]>([]);
   selectedCourseId = signal<string | null>(null);
@@ -246,5 +249,76 @@ export class ChapterExerciseComponent implements OnInit {
       [ExerciseType.CaseAnalysis]: 'green',
     };
     return colors[type] ?? 'default';
+  }
+
+  // Import modal state
+  isImportModalVisible = false;
+  importing = false;
+  selectedImportFile: File | null = null;
+
+  openImportModal() {
+    const courseId = this.selectedCourseId();
+    if (!courseId) {
+      this.message.warning('请先选择课程');
+      return;
+    }
+    this.isImportModalVisible = true;
+    this.selectedImportFile = null;
+  }
+
+  closeImportModal() {
+    this.isImportModalVisible = false;
+    this.selectedImportFile = null;
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      if (!isExcel) {
+        this.message.error('只能上传 Excel 文件 (.xlsx, .xls)');
+        return;
+      }
+      const isLt10M = file.size / 1024 / 1024 < 10;
+      if (!isLt10M) {
+        this.message.error('文件大小不能超过 10MB');
+        return;
+      }
+
+      this.selectedImportFile = file;
+      this.cdr.markForCheck();
+    }
+  }
+
+  handleImport() {
+    if (!this.selectedImportFile) {
+      this.message.warning('请先选择文件');
+      return;
+    }
+
+    const courseId = this.selectedCourseId();
+    if (!courseId) return;
+
+    this.importing = true;
+    const file = this.selectedImportFile;
+
+    this.exerciseService.importFromExcel(courseId, file).subscribe({
+      next: (result: ExerciseImportResultDto) => {
+        this.importing = false;
+        if (result.failCount === 0) {
+          this.message.success(`导入成功！共导入 ${result.successCount} 个习题`);
+          this.closeImportModal();
+          this.loadCourseExercises();
+        } else {
+          const errorMsg = result.errors?.slice(0, 5).join('\n') || '';
+          this.message.warning(`导入完成：成功 ${result.successCount}，失败 ${result.failCount}\n${errorMsg}`);
+        }
+      },
+      error: (err) => {
+        this.importing = false;
+        this.message.error('导入失败: ' + (err.message || '未知错误'));
+      },
+    });
   }
 }

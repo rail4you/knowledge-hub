@@ -6,13 +6,17 @@ using KnowledgeHub.Courses;
 using KnowledgeHub.Courses.Dtos;
 using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Learning;
+using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Courses;
@@ -23,6 +27,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
     private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly IRepository<KnowledgeResource, Guid> _knowledgeResourceRepository;
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
+    private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly ICurrentUser _currentUser;
     private readonly ILogger<CourseAppService> _logger;
 
@@ -31,6 +36,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
         IRepository<Chapter, Guid> chapterRepository,
         IRepository<KnowledgeResource, Guid> knowledgeResourceRepository,
         IRepository<StudentCourse, Guid> studentCourseRepository,
+        IRepository<IdentityUser, Guid> userRepository,
         ICurrentUser currentUser,
         ILogger<CourseAppService> logger)
     {
@@ -38,6 +44,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
         _chapterRepository = chapterRepository;
         _knowledgeResourceRepository = knowledgeResourceRepository;
         _studentCourseRepository = studentCourseRepository;
+        _userRepository = userRepository;
         _currentUser = currentUser;
         _logger = logger;
     }
@@ -132,10 +139,68 @@ public class CourseAppService : ApplicationService, ITransientDependency
         {
             return null;
         }
-        
+
         var chapters = await _chapterRepository.GetListAsync(x => x.CourseId == id);
         var knowledgeResources = await _knowledgeResourceRepository.GetListAsync(x => x.CourseId == id);
-        
+
+        // Get teacher name
+        string? teacherName = null;
+        if (course.TeacherId.HasValue)
+        {
+            var teacher = await _userRepository.FindAsync(course.TeacherId.Value);
+            teacherName = teacher?.Name ?? teacher?.UserName;
+        }
+
+        // Get student count (cross-tenant query)
+        int studentCount;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var studentCourseQuery = await _studentCourseRepository.GetQueryableAsync();
+            studentCount = studentCourseQuery
+                .Where(sc => sc.CourseId == id && sc.Status != StudentCourseStatus.Dropped)
+                .Count();
+        }
+
+        // Get current user's enrollment status
+        var currentUserId = _currentUser.Id;
+        StudentCourse? enrollment = null;
+        if (currentUserId.HasValue)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                enrollment = await _studentCourseRepository
+                    .FirstOrDefaultAsync(sc => sc.CourseId == id && sc.StudentId == currentUserId.Value);
+            }
+        }
+
+        // Build chapter tree with knowledge resources
+        var chapterDtos = chapters
+            .OrderBy(c => c.SortOrder)
+            .Select(ch =>
+            {
+                var chResources = knowledgeResources
+                    .Where(kr => kr.ChapterId == ch.Id)
+                    .Select(kr => new KnowledgeResourceDto
+                    {
+                        Id = kr.Id,
+                        Name = kr.Name,
+                        Description = kr.Description,
+                        Difficulty = kr.Difficulty,
+                        ImportanceLevel = kr.ImportanceLevel
+                    }).ToList();
+
+                return new ChapterDto
+                {
+                    Id = ch.Id,
+                    CourseId = ch.CourseId,
+                    Title = ch.Title,
+                    Description = ch.Description,
+                    SortOrder = ch.SortOrder,
+                    KnowledgeResources = chResources
+                };
+            })
+            .ToList();
+
         return new CourseDetailDto
         {
             Id = course.Id,
@@ -150,14 +215,12 @@ public class CourseAppService : ApplicationService, ITransientDependency
             Status = course.Status,
             TeacherId = course.TeacherId,
             CategoryId = course.CategoryId,
-            Chapters = chapters.OrderBy(c => c.SortOrder).Select(ch => new ChapterDto
-            {
-                Id = ch.Id,
-                CourseId = ch.CourseId,
-                Title = ch.Title,
-                Description = ch.Description,
-                SortOrder = ch.SortOrder
-            }).ToList()
+            TeacherName = teacherName,
+            StudentCount = studentCount,
+            ChapterCount = chapters.Count,
+            IsEnrolled = enrollment != null,
+            Progress = enrollment?.Progress ?? 0,
+            Chapters = chapterDtos
         };
     }
 

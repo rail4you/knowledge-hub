@@ -19,7 +19,7 @@ export class LessonPlanService {
     { apiName: this.apiName,...config });
   
 
-  generateStreaming = (input: LessonPlanGenerationInputDto, onChunk: (chunk: ChatMessageChunkDto) => any, config?: Partial<Rest.Config>) =>
+  generateStreaming = (input: LessonPlanGenerationInputDto, onChunk: (chunk: ChatMessageChunkDto) => void, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',
       url: '/api/app/lesson-plan/generate-streaming',

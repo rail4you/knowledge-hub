@@ -1,4 +1,4 @@
-import type { ChapterDto, CreateUpdateChapterDto } from './dtos/models';
+import type { ChapterDto, ChapterImportResultDto, CreateUpdateChapterDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -76,4 +76,17 @@ export class ChapterService {
       body: input,
     },
     { apiName: this.apiName,...config });
+
+
+  importFromExcel = (courseId: string, file: File, config?: Partial<Rest.Config>) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.restService.request<any, ChapterImportResultDto>({
+      method: 'POST',
+      url: `/api/app/chapter/import-from-excel/${courseId}`,
+      body: formData,
+    },
+    { apiName: this.apiName, ...config });
+  };
 }

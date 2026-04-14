@@ -22,6 +22,8 @@ public class CourseDto : FullAuditedEntityDto<Guid>
     public string? TeacherName { get; set; }
     public int ChapterCount { get; set; }
     public int StudentCount { get; set; }
+    public bool IsEnrolled { get; set; }
+    public decimal Progress { get; set; }
 }
 
 public class CourseDetailDto : CourseDto
