@@ -1,0 +1,47 @@
+<div class="micro-major-page">
+  <div class="hero">
+    <h1>微专业</h1>
+    <p>围绕行业细分方向组织课程、进度和认证证书。</p>
+  </div>
+
+  <div class="toolbar">
+    <input
+      nz-input
+      placeholder="搜索微专业名称、简介、行业方向"
+      [ngModel]="filter()"
+      (ngModelChange)="filter.set($event)"
+      (keyup.enter)="loadItems()"
+    />
+    <button nz-button nzType="primary" (click)="loadItems()">搜索</button>
+  </div>
+
+  @if (loading()) {
+    <div class="state">
+      <nz-spin nzTip="加载中..."></nz-spin>
+    </div>
+  } @else {
+    <div class="grid">
+      @for (item of items(); track item.id) {
+        <nz-card class="major-card" [nzHoverable]="true" (click)="openDetail(item.id)">
+          <div class="major-card__head">
+            <h3>{{ item.title }}</h3>
+            @if (item.isCertificateEnabled) {
+              <nz-tag nzColor="green">含证书</nz-tag>
+            }
+          </div>
+          <p>{{ item.summary || item.description || '暂无简介' }}</p>
+          <div class="major-card__meta">
+            <span>{{ item.courseCount }} 门课程</span>
+            <span>{{ item.enrollmentCount }} 人报名</span>
+          </div>
+          <div class="major-card__footer">
+            <span>{{ item.industryField || '通用方向' }}</span>
+            <button nz-button nzType="primary" (click)="enroll(item, $event)">
+              {{ item.isCurrentUserEnrolled ? '已报名' : '立即报名' }}
+            </button>
+          </div>
+        </nz-card>
+      }
+    </div>
+  }
+</div>

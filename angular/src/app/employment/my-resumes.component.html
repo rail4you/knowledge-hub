@@ -1,0 +1,51 @@
+<nz-card nzTitle="我的简历" [nzExtra]="extraTpl">
+  <ng-template #extraTpl>
+    <button nz-button nzType="primary" (click)="openCreate()">新增简历</button>
+  </ng-template>
+
+  <nz-table [nzData]="items()" [nzFrontPagination]="false">
+    <thead>
+      <tr>
+        <th>标题</th>
+        <th>版本</th>
+        <th>专业/年级</th>
+        <th>默认</th>
+        <th>最近使用</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of items(); track item.id) {
+        <tr>
+          <td>{{ item.title }}</td>
+          <td>v{{ item.versionNo }}</td>
+          <td>{{ item.major || '-' }} / {{ item.grade || '-' }}</td>
+          <td>{{ item.isDefault ? '是' : '否' }}</td>
+          <td>{{ item.lastUsedAt || '-' }}</td>
+          <td class="actions">
+            <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
+            <button nz-button nzType="link" (click)="setDefault(item.id)">设默认</button>
+            <button nz-button nzType="link" nzDanger (click)="delete(item.id)">删除</button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
+</nz-card>
+
+<nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editingId ? '编辑简历' : '新增简历'" (nzOnCancel)="modalVisible = false" (nzOnOk)="save()">
+  <div class="resume-form">
+    <input nz-input [(ngModel)]="form.title" placeholder="简历标题" />
+    <input nz-input [(ngModel)]="form.fullName" placeholder="姓名" />
+    <input nz-input [(ngModel)]="form.phoneNumber" placeholder="手机号" />
+    <input nz-input [(ngModel)]="form.email" placeholder="邮箱" />
+    <input nz-input [(ngModel)]="form.schoolName" placeholder="学校" />
+    <input nz-input [(ngModel)]="form.major" placeholder="专业" />
+    <input nz-input [(ngModel)]="form.grade" placeholder="年级" />
+    <input nz-input [(ngModel)]="form.className" placeholder="班级" />
+    <textarea nz-input rows="3" [(ngModel)]="form.summary" placeholder="个人简介"></textarea>
+    <textarea nz-input rows="3" [(ngModel)]="form.skills" placeholder="技能标签"></textarea>
+    <textarea nz-input rows="3" [(ngModel)]="form.projectExperience" placeholder="项目经历"></textarea>
+    <input nz-input [(ngModel)]="form.attachmentUrl" placeholder="简历附件链接" />
+  </div>
+</nz-modal>

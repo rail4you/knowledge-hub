@@ -33,7 +33,7 @@
           <td>{{ user.email }}</td>
           <td>
             @for (role of getUserRoles(user.id); track role) {
-              <nz-tag>{{ role }}</nz-tag>
+              <nz-tag>{{ getRoleDisplayName(role) }}</nz-tag>
             }
           </td>
           <td>
@@ -291,36 +291,13 @@
       <strong>租户与角色</strong>
 
       <nz-form-item>
-        <nz-form-label>{{ '::SelectTenant' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
-          <nz-select 
-            formControlName="tenantIdForRoles"
-            (ngModelChange)="onTenantChangeForRoles($event)"
-            [nzPlaceHolder]="'::SelectTenant' | abpLocalization"
-            style="width: 100%;"
-          >
-            @for (tenant of tenants; track tenant.id) {
-              <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
+        <nz-form-label nzRequired>{{ '::Roles' | abpLocalization }}</nz-form-label>
+        <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
+          <nz-select formControlName="roleName" [nzPlaceHolder]="'::Roles' | abpLocalization">
+            @for (role of roles; track role.id) {
+              <nz-option [nzValue]="role.name" [nzLabel]="getRoleDisplayName(role.name)"></nz-option>
             }
           </nz-select>
-        </nz-form-control>
-      </nz-form-item>
-
-      <nz-form-item>
-        <nz-form-label>{{ '::Roles' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
-          <div class="roles-list">
-            @for (role of roles; track role.id) {
-              <label 
-                nz-checkbox 
-                [nzChecked]="isRoleSelected(role.name || '')"
-                (nzCheckedChange)="toggleRole(role.name || '')"
-                class="role-checkbox"
-              >
-                {{ getRoleDisplayName(role.name) }}
-              </label>
-            }
-          </div>
         </nz-form-control>
       </nz-form-item>
     </form>

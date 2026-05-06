@@ -26,7 +26,6 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
@@ -101,7 +100,6 @@ interface IdentityUserDto {
     NzDropDownModule,
     NzIconModule,
     NzSelectModule,
-    NzCheckboxModule,
     NzDividerModule,
     NzGridModule,
     NzAlertModule,
@@ -122,10 +120,9 @@ export class IdentityUsersComponent implements OnInit {
   
   tenants: TenantDto[] = [];
   selectedTenantId: string | null = null;
-  selectedTenantIdForRoles: string | null = null;
   
   roles: RoleDto[] = [];
-  selectedUserRoles: string[] = [];
+  selectedUserRole: string | null = null;
   userRolesMap: Record<string, string[]> = {};
   
   isPermissionModalOpen = false;
@@ -215,7 +212,7 @@ export class IdentityUsersComponent implements OnInit {
       phoneNumber: [this.selectedUser.phoneNumber || ''],
       isActive: [this.selectedUser.isActive ?? true],
       tenantId: [this.selectedTenantId || null],
-      tenantIdForRoles: [this.selectedTenantIdForRoles || null],
+      roleName: [this.selectedUserRole, Validators.required],
       studentNumber: [this.selectedUser.studentNumber || ''],
       employeeNumber: [this.selectedUser.employeeNumber || ''],
       grade: [this.selectedUser.grade || ''],
@@ -237,11 +234,13 @@ export class IdentityUsersComponent implements OnInit {
     this.form.valueChanges.subscribe(() => {
       this.formError = '';
     });
+
+    this.form.get('tenantId')?.valueChanges.subscribe((tenantId: string | null) => {
+      this.loadRolesForTenant(tenantId);
+    });
   }
 
-  loadRolesForTenant() {
-    const tenantId = this.form.get('tenantIdForRoles')?.value;
-    
+  loadRolesForTenant(tenantId: string | null = this.form.get('tenantId')?.value ?? null) {
     this.restService.request<any, { items: RoleDto[] }>({
       method: 'GET',
       url: '/api/app/tenant-role',
@@ -251,49 +250,36 @@ export class IdentityUsersComponent implements OnInit {
       }
     }).subscribe((response) => {
       this.roles = response.items || [];
+      const availableRoleNames = new Set(this.roles.map(role => role.name));
+      const selectedRoleName = this.form.get('roleName')?.value as string | null;
+      if (selectedRoleName && !availableRoleNames.has(selectedRoleName)) {
+        this.selectedUserRole = null;
+        this.form.patchValue({ roleName: null }, { emitEvent: false });
+      }
     });
-  }
-
-  onTenantChangeForRoles(tenantId: string | null) {
-    this.form.patchValue({ tenantId: tenantId });
-    this.loadRolesForTenant();
-  }
-
-  isRoleSelected(roleName: string): boolean {
-    return this.selectedUserRoles.includes(roleName);
-  }
-
-  toggleRole(roleName: string) {
-    const index = this.selectedUserRoles.indexOf(roleName);
-    if (index > -1) {
-      this.selectedUserRoles.splice(index, 1);
-    } else {
-      this.selectedUserRoles.push(roleName);
-    }
   }
 
   createUser() {
     this.selectedUser = {} as IdentityUserDto;
     this.selectedTenantId = null;
-    this.selectedTenantIdForRoles = null;
-    this.selectedUserRoles = [];
+    this.selectedUserRole = null;
     this.buildForm();
-    this.loadRolesForTenant();
+    this.loadRolesForTenant(this.selectedTenantId);
     this.isModalOpen = true;
   }
 
   editUser(user: IdentityUserDto) {
     this.selectedUser = user;
     this.selectedTenantId = user.tenantId || null;
-    this.selectedTenantIdForRoles = user.tenantId || null;
     this.buildForm();
     
     this.restService.request<any, string[]>({
       method: 'GET',
       url: `/api/app/tenant-user/roles-for-user/${user.id}`,
     }).subscribe((roles) => {
-      this.selectedUserRoles = roles || [];
-      this.loadRolesForTenant();
+      this.selectedUserRole = roles?.[0] || null;
+      this.form.patchValue({ roleName: this.selectedUserRole }, { emitEvent: false });
+      this.loadRolesForTenant(this.selectedTenantId);
       this.isModalOpen = true;
     });
   }
@@ -303,7 +289,7 @@ export class IdentityUsersComponent implements OnInit {
       return;
     }
 
-    const { tenantIdForRoles, tenantId, password, email, ...formValue } = this.form.value;
+    const { tenantId, roleName, password, email, ...formValue } = this.form.value;
     
     this.isLoading.set(true);
 
@@ -318,7 +304,7 @@ export class IdentityUsersComponent implements OnInit {
         ...formValue, 
         email,
         surname: formValue.surname || '-',
-        roleNames: this.selectedUserRoles 
+        roleNames: roleName ? [roleName] : []
       };
       
       if (password) {
@@ -344,7 +330,7 @@ export class IdentityUsersComponent implements OnInit {
         ...formValue, 
         emailAddress: email,
         surname: '-',
-        roleNames: this.selectedUserRoles 
+        roleNames: roleName ? [roleName] : []
       };
       
       if (tenantId) {

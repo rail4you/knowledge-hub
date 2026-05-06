@@ -1,166 +1,187 @@
-import { Component, signal, effect, computed, input, ChangeDetectionStrategy } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  OnDestroy,
+  computed,
+  effect,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-
-interface SlideContent {
-  texts: { value: string; fontSize?: number; bold?: boolean; color?: string }[];
-  images: { src: string; x: number; y: number; width: number; height: number }[];
-}
+import { PPTXViewer } from 'pptxviewjs';
 
 @Component({
   selector: 'app-pptx-viewer',
   standalone: true,
-  imports: [CommonModule, NzButtonModule, NzIconModule, NzSpinModule],
+  imports: [CommonModule, NzButtonModule, NzIconModule],
   templateUrl: './pptx-viewer.component.html',
+  styleUrls: ['./pptx-viewer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PptxViewerComponent {
+export class PptxViewerComponent implements OnDestroy {
   data = input.required<ArrayBuffer>();
   fileName = input('');
 
-  slides = signal<SlideContent[]>([]);
-  currentSlide = signal(0);
-  isLoading = signal(true);
-  error = signal('');
-  showGrid = signal(false);
-  scale = signal(1);
+  readonly canvasRef = viewChild<ElementRef<HTMLCanvasElement>>('slideCanvas');
 
-  slide = computed(() => this.slides()[this.currentSlide()] || null);
+  readonly slideCount = signal(0);
+  readonly currentSlide = signal(0);
+  readonly isLoading = signal(true);
+  readonly isRendering = signal(false);
+  readonly error = signal('');
+  readonly zoom = signal(1);
+
+  readonly slideLabel = computed(() => `${this.currentSlide() + 1} / ${this.slideCount() || 0}`);
+  readonly zoomLabel = computed(() => `${Math.round(this.zoom() * 100)}%`);
+  readonly canGoPrev = computed(() => this.currentSlide() > 0);
+  readonly canGoNext = computed(() => this.currentSlide() < this.slideCount() - 1);
+  readonly slideIndexes = computed(() => Array.from({ length: this.slideCount() }, (_, index) => index));
+
+  private viewer: PPTXViewer | null = null;
+  private renderToken = 0;
 
   constructor() {
     effect(() => {
-      const d = this.data();
-      if (d && d.byteLength > 0) {
-        this.parsePptx(d);
+      const data = this.data();
+      const canvas = this.canvasRef()?.nativeElement;
+
+      if (!data?.byteLength || !canvas) {
+        return;
       }
+
+      void this.loadPresentation(data, canvas);
     });
   }
 
-  private async parsePptx(data: ArrayBuffer) {
+  async prevSlide() {
+    if (!this.canGoPrev()) return;
+    await this.renderSlide(this.currentSlide() - 1);
+  }
+
+  async nextSlide() {
+    if (!this.canGoNext()) return;
+    await this.renderSlide(this.currentSlide() + 1);
+  }
+
+  async goToSlide(index: number) {
+    if (index < 0 || index >= this.slideCount()) return;
+    await this.renderSlide(index);
+  }
+
+  async zoomIn() {
+    if (this.zoom() >= 2) return;
+    this.zoom.update(value => Math.min(2, value + 0.25));
+    await this.renderSlide(this.currentSlide());
+  }
+
+  async zoomOut() {
+    if (this.zoom() <= 0.5) return;
+    this.zoom.update(value => Math.max(0.5, value - 0.25));
+    await this.renderSlide(this.currentSlide());
+  }
+
+  async resetZoom() {
+    if (this.zoom() === 1) return;
+    this.zoom.set(1);
+    await this.renderSlide(this.currentSlide());
+  }
+
+  pageTrackBy = (index: number) => index;
+
+  ngOnDestroy() {
+    this.renderToken++;
+    this.disposeViewer();
+  }
+
+  private async loadPresentation(data: ArrayBuffer, canvas: HTMLCanvasElement) {
+    const token = ++this.renderToken;
+    this.disposeViewer();
+
+    this.isLoading.set(true);
+    this.isRendering.set(false);
+    this.error.set('');
+    this.slideCount.set(0);
+    this.currentSlide.set(0);
+    this.zoom.set(1);
+
     try {
-      this.isLoading.set(true);
-      this.error.set('');
-      const JSZip = (await import('jszip')).default;
-      const zip = await JSZip.loadAsync(data);
-
-      const slideFiles: string[] = [];
-      zip.forEach((relativePath) => {
-        const match = relativePath.match(/^ppt\/slides\/slide(\d+)\.xml$/);
-        if (match) {
-          slideFiles.push(relativePath);
-        }
-      });
-      slideFiles.sort((a, b) => {
-        const numA = parseInt(a.match(/slide(\d+)/)?.[1] || '0');
-        const numB = parseInt(b.match(/slide(\d+)/)?.[1] || '0');
-        return numA - numB;
+      const viewer = new PPTXViewer({
+        canvas,
+        debug: false,
+        slideSizeMode: 'fit',
+        backgroundColor: '#ffffff',
+        autoRenderFirstSlide: false,
       });
 
-      const parsedSlides: SlideContent[] = [];
+      await viewer.loadFile(data.slice(0));
 
-      for (const slidePath of slideFiles) {
-        const slideXml = await zip.file(slidePath)?.async('text') || '';
-        const slideNum = slidePath.match(/slide(\d+)/)?.[1];
-
-        // Parse relationships to get image mappings
-        const relsPath = `ppt/slides/_rels/slide${slideNum}.xml.rels`;
-        const relsXml = await zip.file(relsPath)?.async('text') || '';
-        const imageRels: Record<string, string> = {};
-        const relRegex = /Target="([^"]*media[^"]*)"[^>]*Id="([^"]*)"/g;
-        let relMatch;
-        while ((relMatch = relRegex.exec(relsXml)) !== null) {
-          imageRels[relMatch[2]] = relMatch[1].replace('../', 'ppt/');
-        }
-
-        // Extract texts
-        const texts: SlideContent['texts'] = [];
-        const textRegex = /<a:t>([^<]*)<\/a:t>/g;
-        let textMatch;
-        while ((textMatch = textRegex.exec(slideXml)) !== null) {
-          const value = textMatch[1].trim();
-          if (value) {
-            const beforeText = slideXml.substring(0, textMatch.index);
-            const rPrMatch = beforeText.match(/<a:rPr[^>]*sz="(\d+)"[^>]*(?:b="1")?[^>]*>/g);
-            let fontSize: number | undefined;
-            let bold = false;
-            if (rPrMatch) {
-              const last = rPrMatch[rPrMatch.length - 1];
-              const szMatch = last.match(/sz="(\d+)"/);
-              if (szMatch) fontSize = parseInt(szMatch[1]) / 100;
-              if (last.includes('b="1"')) bold = true;
-            }
-            texts.push({ value, fontSize, bold });
-          }
-        }
-
-        // Extract images
-        const images: SlideContent['images'] = [];
-        const imgRegex = /<a:blip[^>]*r:embed="([^"]*)"[^>]*\/>/g;
-        let imgMatch;
-        let imgIndex = 0;
-        while ((imgMatch = imgRegex.exec(slideXml)) !== null) {
-          const rId = imgMatch[1];
-          const imagePath = imageRels[rId];
-          if (imagePath) {
-            const imageFile = zip.file(imagePath);
-            if (imageFile) {
-              const blob = await imageFile.async('blob');
-              const url = URL.createObjectURL(blob);
-              images.push({
-                src: url,
-                x: 50 + (imgIndex % 2) * 200,
-                y: 100 + Math.floor(imgIndex / 2) * 200,
-                width: 300,
-                height: 200,
-              });
-              imgIndex++;
-            }
-          }
-        }
-
-        parsedSlides.push({ texts, images });
+      if (token !== this.renderToken) {
+        viewer.destroy();
+        return;
       }
 
-      this.slides.set(parsedSlides);
-      this.currentSlide.set(0);
-    } catch (e: any) {
-      console.error('PPTX parse error:', e);
-      this.error.set(e.message || 'Failed to parse PPTX file');
+      this.viewer = viewer;
+      this.slideCount.set(viewer.getSlideCount());
+      await this.renderSlide(0, token);
+    } catch (error: unknown) {
+      if (token !== this.renderToken) {
+        return;
+      }
+
+      console.error('PPTX render error:', error);
+      this.error.set(error instanceof Error ? error.message : 'PPTX 预览加载失败');
     } finally {
-      this.isLoading.set(false);
+      if (token === this.renderToken) {
+        this.isLoading.set(false);
+      }
     }
   }
 
-  prevSlide() {
-    if (this.currentSlide() <= 0) return;
-    this.currentSlide.update(v => v - 1);
+  private async renderSlide(index: number, token = this.renderToken) {
+    if (!this.viewer) return;
+
+    this.isRendering.set(true);
+
+    try {
+      const canvas = this.canvasRef()?.nativeElement;
+      if (!canvas) {
+        return;
+      }
+
+      await this.viewer.render(canvas, {
+        slideIndex: index,
+        scale: this.zoom(),
+        quality: 'high',
+      });
+
+      if (token !== this.renderToken) {
+        return;
+      }
+
+      this.currentSlide.set(this.viewer.getCurrentSlideIndex());
+      this.error.set('');
+    } catch (error: unknown) {
+      if (token !== this.renderToken) {
+        return;
+      }
+
+      console.error('PPTX slide render error:', error);
+      this.error.set(error instanceof Error ? error.message : 'PPTX 页面渲染失败');
+    } finally {
+      if (token === this.renderToken) {
+        this.isRendering.set(false);
+      }
+    }
   }
 
-  nextSlide() {
-    if (this.currentSlide() >= this.slides().length - 1) return;
-    this.currentSlide.update(v => v + 1);
-  }
+  private disposeViewer() {
+    if (!this.viewer) return;
 
-  goToSlide(index: number) {
-    this.currentSlide.set(index);
-    this.showGrid.set(false);
-  }
-
-  toggleGrid() {
-    this.showGrid.update(v => !v);
-  }
-
-  zoomIn() {
-    this.scale.update(v => Math.min(2, v + 0.25));
-  }
-
-  zoomOut() {
-    this.scale.update(v => Math.max(0.5, v - 0.25));
-  }
-
-  getScalePercent(): number {
-    return Math.round(this.scale() * 100);
+    this.viewer.destroy();
+    this.viewer = null;
   }
 }

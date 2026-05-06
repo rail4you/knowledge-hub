@@ -1,0 +1,14 @@
+<nz-card nzTitle="企业档案">
+  <div class="profile-form">
+    <input nz-input [(ngModel)]="form.companyName" placeholder="企业名称" />
+    <input nz-input [(ngModel)]="form.unifiedSocialCreditCode" placeholder="统一社会信用代码" />
+    <input nz-input [(ngModel)]="form.contactName" placeholder="联系人" />
+    <input nz-input [(ngModel)]="form.phoneNumber" placeholder="联系电话" />
+    <input nz-input [(ngModel)]="form.email" placeholder="联系邮箱" />
+    <input nz-input [(ngModel)]="form.position" placeholder="职位/岗位" />
+    <input nz-input [(ngModel)]="form.industry" placeholder="所属行业" />
+    <input nz-input [(ngModel)]="form.partnerSchool" placeholder="合作院校" />
+    <textarea nz-input rows="4" [(ngModel)]="form.remark" placeholder="企业简介 / 备注"></textarea>
+    <button nz-button nzType="primary" (click)="save()">保存档案</button>
+  </div>
+</nz-card>

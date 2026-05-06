@@ -1,0 +1,33 @@
+<nz-card nzTitle="就业统计" [nzExtra]="extraTpl">
+  <ng-template #extraTpl>
+    <div class="toolbar">
+      <input nz-input [(ngModel)]="major" placeholder="专业" />
+      <input nz-input [(ngModel)]="grade" placeholder="年级" />
+      <button nz-button (click)="reload()">查询</button>
+      <button nz-button nzType="primary" (click)="export()">导出</button>
+    </div>
+  </ng-template>
+
+  <nz-table [nzData]="rows()" [nzFrontPagination]="false">
+    <thead>
+      <tr>
+        <th>专业</th>
+        <th>年级</th>
+        <th>状态</th>
+        <th>学生数</th>
+        <th>去向数</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.major + row.grade + row.status) {
+        <tr>
+          <td>{{ row.major }}</td>
+          <td>{{ row.grade }}</td>
+          <td>{{ row.status }}</td>
+          <td>{{ row.studentCount }}</td>
+          <td>{{ row.outcomeCount }}</td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
+</nz-card>

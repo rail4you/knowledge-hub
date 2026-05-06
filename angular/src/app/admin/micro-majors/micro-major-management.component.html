@@ -1,0 +1,110 @@
+<div class="page">
+  <nz-card nzTitle="微专业管理" [nzExtra]="extraTpl">
+    <ng-template #extraTpl>
+      <button nz-button nzType="primary" (click)="openCreate()">新建微专业</button>
+    </ng-template>
+
+    <nz-table [nzData]="items()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>名称</th>
+          <th>状态</th>
+          <th>课程数</th>
+          <th>报名数</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id) {
+          <tr>
+            <td>{{ item.title }}</td>
+            <td>{{ getStatusLabel(item.status) }}</td>
+            <td>{{ item.courseCount }}</td>
+            <td>{{ item.enrollmentCount }}</td>
+            <td class="actions">
+              <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
+              <button nz-button nzType="link" nzDanger (click)="delete(item.id)">删除</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <nz-card nzTitle="报名与发证">
+    <nz-table [nzData]="enrollments()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>微专业</th>
+          <th>学生</th>
+          <th>进度</th>
+          <th>状态</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of enrollments(); track item.id) {
+          <tr>
+            <td>{{ item.microMajorTitle }}</td>
+            <td>{{ item.studentName }}</td>
+            <td>{{ item.progress }}%</td>
+            <td>{{ item.status }}</td>
+            <td>
+              <button nz-button nzType="link" (click)="issueCertificate(item.id)">发证</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <nz-modal
+    [nzVisible]="modalVisible"
+    [nzTitle]="editingId ? '编辑微专业' : '新建微专业'"
+    [nzWidth]="860"
+    (nzOnCancel)="modalVisible = false"
+    (nzOnOk)="save()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form-grid">
+        <label>名称</label>
+        <input nz-input [(ngModel)]="form.title" />
+
+        <label>简介</label>
+        <textarea nz-input rows="3" [(ngModel)]="form.summary"></textarea>
+
+        <label>说明</label>
+        <textarea nz-input rows="5" [(ngModel)]="form.description"></textarea>
+
+        <label>行业方向</label>
+        <input nz-input [(ngModel)]="form.industryField" />
+
+        <label>协同单位</label>
+        <input nz-input [(ngModel)]="form.collaborationUnit" />
+
+        <label>封面链接</label>
+        <input nz-input [(ngModel)]="form.coverImageUrl" />
+
+        <label>状态</label>
+        <nz-select [(ngModel)]="form.status">
+          <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+          <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
+          <nz-option [nzValue]="statuses.Archived" nzLabel="已归档"></nz-option>
+        </nz-select>
+
+        <label>完成要求</label>
+        <input nz-input type="number" [(ngModel)]="form.requiredCompletionRate" />
+
+        <label>启用证书</label>
+        <nz-switch [(ngModel)]="form.isCertificateEnabled"></nz-switch>
+
+        <label>绑定课程</label>
+        <nz-select nzMode="multiple" [(ngModel)]="selectedCourseIds">
+          @for (course of courses(); track course.id) {
+            <nz-option [nzValue]="course.id" [nzLabel]="course.title || '未命名课程'"></nz-option>
+          }
+        </nz-select>
+      </div>
+    </ng-container>
+  </nz-modal>
+</div>

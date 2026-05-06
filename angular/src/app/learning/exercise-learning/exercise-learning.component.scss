@@ -1,11 +1,93 @@
 .exercise-learning-container {
   padding: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+
+  .back-btn {
+    color: #666;
+    &:hover {
+      color: #1890ff;
+    }
+  }
+
+  .page-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .title-icon {
+      color: #1890ff;
+      font-size: 22px;
+    }
+  }
 }
 
 .loading-container {
   display: flex;
   justify-content: center;
   padding: 100px;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  padding: 60px 0;
+
+  .empty-card {
+    text-align: center;
+    max-width: 400px;
+    padding: 48px 32px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #f0f0f0;
+
+    .empty-icon-wrapper {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #f0f5ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+
+      .empty-icon {
+        font-size: 36px;
+        color: #1890ff;
+      }
+    }
+
+    h3 {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .empty-desc {
+      color: #999;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .empty-actions {
+      display: flex;
+      justify-content: center;
+    }
+  }
 }
 
 .progress-card {
@@ -15,6 +97,13 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    font-size: 14px;
+    color: #666;
+  }
+
+  .progress-text {
+    color: #1890ff;
+    font-weight: 500;
   }
 }
 
@@ -26,6 +115,16 @@
 .chapter-nav {
   width: 240px;
   flex-shrink: 0;
+
+  .nav-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 }
 
 .chapter-item {

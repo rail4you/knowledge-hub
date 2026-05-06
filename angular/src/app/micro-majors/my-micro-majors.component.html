@@ -1,0 +1,50 @@
+<div class="my-page">
+  <nz-card nzTitle="我的微专业">
+    @if (loading()) {
+      <div class="state">
+        <nz-spin nzTip="加载中..."></nz-spin>
+      </div>
+    } @else if (enrollments().length === 0) {
+      <nz-empty nzNotFoundContent="您还没有报名任何微专业"></nz-empty>
+    } @else {
+      <div class="cards">
+        @for (item of enrollments(); track item.id) {
+          <nz-card>
+            <div class="card-head">
+              <strong>{{ item.microMajorTitle || '未命名微专业' }}</strong>
+              <button nz-button nzType="link" (click)="openDetail(item.microMajorId)">查看详情</button>
+            </div>
+            <nz-progress [nzPercent]="item.progress"></nz-progress>
+            <div class="meta">
+              <span>状态：{{ item.status }}</span>
+              <span>报名时间：{{ item.enrolledAt | date:'yyyy-MM-dd' }}</span>
+            </div>
+          </nz-card>
+        }
+      </div>
+    }
+  </nz-card>
+
+  <nz-card nzTitle="我的证书">
+    <nz-table [nzData]="certificates()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>微专业</th>
+          <th>证书编号</th>
+          <th>查询码</th>
+          <th>发证时间</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of certificates(); track item.id) {
+          <tr>
+            <td>{{ item.microMajorTitle }}</td>
+            <td>{{ item.certificateNo }}</td>
+            <td>{{ item.verifyCode }}</td>
+            <td>{{ item.issuedAt | date:'yyyy-MM-dd HH:mm' }}</td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+</div>

@@ -1,0 +1,74 @@
+.double-high-detail-page {
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 2fr 240px;
+  gap: 24px;
+}
+
+.hero-grid h1 {
+  margin-bottom: 8px;
+}
+
+.hero-grid p {
+  color: #64748b;
+}
+
+.hero-actions {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.metric {
+  display: grid;
+  gap: 6px;
+  text-align: center;
+}
+
+.metric strong {
+  font-size: 28px;
+  color: #0f172a;
+}
+
+.indicator-name {
+  font-weight: 600;
+}
+
+.manual-box {
+  display: grid;
+  gap: 8px;
+}
+
+.action-cell {
+  min-width: 220px;
+}
+
+.evidence-form {
+  display: grid;
+  gap: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (max-width: 960px) {
+  .hero-grid,
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

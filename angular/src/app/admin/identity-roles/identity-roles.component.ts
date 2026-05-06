@@ -77,7 +77,9 @@ export class IdentityRolesComponent implements OnInit {
   selectedRole = {} as IdentityRoleDto;
   pageIndex = 1;
   pageSize = 10;
-  
+
+  readonly presetRoleNames = ['admin', 'LeagueAdmin', 'SchoolAdmin', 'Teacher', 'Student', 'EnterpriseUser'] as const;
+
   tenants: TenantDto[] = [];
   selectedTenantId: string | null = null;
   tenantNames: Record<string, string> = {};
@@ -182,7 +184,7 @@ export class IdentityRolesComponent implements OnInit {
       return;
     }
 
-    const formValue = { ...this.form.value } as IdentityRoleCreateDto | IdentityRoleUpdateDto;
+    const formValue = { ...this.form.getRawValue() } as IdentityRoleCreateDto | IdentityRoleUpdateDto;
     this.isLoading.set(true);
 
     if (this.selectedRole.id) {
@@ -296,6 +298,12 @@ export class IdentityRolesComponent implements OnInit {
 
   private getPermissionDisplayName(permissionName: string): string {
     const shortName = permissionName.replace('KnowledgeHub.', '');
+    const localizationKey = `::Permission:${shortName}`;
+    const localized = this.l(localizationKey);
+    if (localized && localized !== localizationKey) {
+      return localized;
+    }
+
     const nameMap: Record<string, string> = {
       'Documents': '文档管理',
       'Documents.Create': '创建新文档',
@@ -309,8 +317,10 @@ export class IdentityRolesComponent implements OnInit {
       'Resources.SchoolAudit': '院校审核',
       'Resources.LeagueAudit': '联盟终审',
       'Resources.ManageCategory': '管理分类',
+      'Resources.RequestDelete': '申请删除',
       'Resources.PhysicalDelete': '物理删除',
       'Resources.ViewStatistics': '查看统计',
+      'Resources.ViewRecommendation': '查看推荐',
       'Users': '用户管理',
       'Users.Create': '创建新用户',
       'Users.Edit': '编辑用户',
@@ -324,16 +334,31 @@ export class IdentityRolesComponent implements OnInit {
       'Courses.Edit': '编辑课程',
       'Courses.Delete': '删除课程',
       'Courses.Enroll': '课程报名',
+      'Courses.ManageEnrollment': '管理选课',
       'AI': '智能助手',
       'AI.Chat': '智能问答',
       'AI.LessonPlan': '教案生成',
       'AI.CaseAnalysis': '案例分析',
       'AI.CareerGuidance': '职业规划',
+      'Alliance': '联盟管理',
+      'Alliance.Create': '创建联盟',
+      'Alliance.Update': '编辑联盟',
+      'Alliance.Delete': '删除联盟',
+      'Alliance.ManageMembers': '管理联盟成员',
+      'Learning': '学习记录',
+      'Learning.ViewStatistics': '查看学习统计',
+      'Learning.ExportData': '导出学习数据',
     };
     return nameMap[shortName] || nameMap[permissionName] || shortName.split('.')[shortName.split('.').length - 1];
   }
 
   private getGroupDisplayName(groupName: string): string {
+    const localizationKey = `::Permission:${groupName}`;
+    const localized = this.l(localizationKey);
+    if (localized && localized !== localizationKey) {
+      return localized;
+    }
+
     const nameMap: Record<string, string> = {
       'Documents': '文档管理',
       'Resources': '资源管理',
@@ -341,6 +366,8 @@ export class IdentityRolesComponent implements OnInit {
       'Search': '搜索管理',
       'Courses': '课程管理',
       'AI': '智能助手',
+      'Alliance': '联盟管理',
+      'Learning': '学习记录',
       'Other': '其他',
     };
     return nameMap[groupName] || groupName;

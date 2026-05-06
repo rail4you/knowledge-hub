@@ -79,4 +79,60 @@ public static class KnowledgeHubPermissions
         public const string ViewStatistics = Default + ".ViewStatistics";
         public const string ExportData = Default + ".ExportData";
     }
+
+    public static class News
+    {
+        public const string Default = GroupName + ".News";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+        public const string Review = Default + ".Review";
+        public const string Publish = Default + ".Publish";
+        public const string ManageComment = Default + ".ManageComment";
+    }
+
+    public static class MicroMajors
+    {
+        public const string Default = GroupName + ".MicroMajors";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+        public const string ManageEnrollment = Default + ".ManageEnrollment";
+        public const string IssueCertificate = Default + ".IssueCertificate";
+        public const string ViewStatistics = Default + ".ViewStatistics";
+    }
+
+    public static class Practicum
+    {
+        public const string Default = GroupName + ".Practicum";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Review = Default + ".Review";
+        public const string Score = Default + ".Score";
+        public const string Export = Default + ".Export";
+        public const string ViewStatistics = Default + ".ViewStatistics";
+    }
+
+    public static class DoubleHigh
+    {
+        public const string Default = GroupName + ".DoubleHigh";
+        public const string ManageProject = Default + ".ManageProject";
+        public const string ManageIndicator = Default + ".ManageIndicator";
+        public const string CollectData = Default + ".CollectData";
+        public const string ExportReport = Default + ".ExportReport";
+        public const string ViewAll = Default + ".ViewAll";
+    }
+
+    public static class Employment
+    {
+        public const string Default = GroupName + ".Employment";
+        public const string PublishJob = Default + ".PublishJob";
+        public const string ReviewJob = Default + ".ReviewJob";
+        public const string ManageResume = Default + ".ManageResume";
+        public const string ScheduleInterview = Default + ".ScheduleInterview";
+        public const string ManageGuidance = Default + ".ManageGuidance";
+        public const string ManageOutcome = Default + ".ManageOutcome";
+        public const string ViewStatistics = Default + ".ViewStatistics";
+        public const string ExportReport = Default + ".ExportReport";
+    }
 }

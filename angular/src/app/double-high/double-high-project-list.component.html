@@ -1,0 +1,43 @@
+<div class="double-high-list-page">
+  <div class="hero">
+    <div>
+      <h1>双高评估项目</h1>
+      <p>围绕指标管理、数据采集、佐证材料和报表导出构建专业群评估闭环。</p>
+    </div>
+    <div class="search-box">
+      <input nz-input [(ngModel)]="keyword" placeholder="搜索项目名称、批次编码" />
+      <button nz-button nzType="primary" (click)="reload()">查询</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    @for (item of items(); track item.id) {
+      <nz-card class="project-card">
+        <div class="card-head">
+          <div>
+            <h2>{{ item.title }}</h2>
+            <p>{{ item.batchCode }}</p>
+          </div>
+          <span nz-tag [nzColor]="item.status === statuses.Active ? 'green' : 'default'">{{ getStatusLabel(item.status) }}</span>
+        </div>
+
+        <p class="summary">{{ item.description || '暂无项目说明' }}</p>
+
+        <div class="meta">
+          <div>指标数：{{ item.indicatorCount }}</div>
+          <div>已采集：{{ item.collectedIndicatorCount }}</div>
+          <div>佐证材料：{{ item.evidenceCount }}</div>
+        </div>
+
+        <div class="progress-box">
+          <span>完成率</span>
+          <nz-progress [nzPercent]="+item.completionRate" [nzStrokeColor]="'#0d9488'"></nz-progress>
+        </div>
+
+        <div class="actions">
+          <a nz-button nzType="default" [routerLink]="['/assessment/double-high/project', item.id]">查看详情</a>
+        </div>
+      </nz-card>
+    }
+  </div>
+</div>

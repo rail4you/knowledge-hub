@@ -1,0 +1,99 @@
+.practicum-detail-page {
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 2fr 320px;
+  gap: 24px;
+}
+
+.hero-grid h1 {
+  margin-bottom: 8px;
+}
+
+.hero-grid p {
+  color: #64748b;
+}
+
+.side-panel {
+  display: flex;
+  align-items: start;
+  justify-content: end;
+}
+
+.progress-box {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.task-block {
+  display: grid;
+  gap: 12px;
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.task-meta {
+  color: #475569;
+  display: grid;
+  gap: 6px;
+}
+
+.submit-box {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.submit-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.materials {
+  display: grid;
+  gap: 12px;
+}
+
+.material-item {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #0f172a;
+}
+
+.guidance-list {
+  display: grid;
+  gap: 12px;
+}
+
+.guidance-item {
+  padding: 14px 16px;
+  border-left: 4px solid #0ea5e9;
+  background: #f8fafc;
+}
+
+.guidance-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 900px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+  }
+}

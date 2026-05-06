@@ -17,6 +17,7 @@ import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
+import { RestService } from '@abp/ng.core';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto } from '../../proxy/exams/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
@@ -48,6 +49,7 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 export class ExerciseManagementComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly exerciseService = inject(ExerciseService);
+  private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -196,12 +198,23 @@ export class ExerciseManagementComponent implements OnInit {
   }
 
   handleModalOk() {
+    const type = this.formData.type;
+
+    // Pre-build answer for multi-choice from checkboxes before validation
+    if (type === ExerciseType.MultiChoice) {
+      const answers: string[] = [];
+      if (this.multiAnswerA) answers.push('A');
+      if (this.multiAnswerB) answers.push('B');
+      if (this.multiAnswerC) answers.push('C');
+      if (this.multiAnswerD) answers.push('D');
+      this.formData.answer = answers.join(',');
+    }
+
     if (!this.formData.title?.trim() || !this.formData.questionContent?.trim() || !this.formData.answer?.trim()) {
       this.message.warning('请填写必填项（标题、题目内容、答案）');
       return;
     }
 
-    const type = this.formData.type;
     if (type === ExerciseType.SingleChoice || type === ExerciseType.MultiChoice) {
       if (!this.optionA.trim() || !this.optionB.trim()) {
         this.message.warning('选择题至少需要两个选项');
@@ -215,19 +228,6 @@ export class ExerciseManagementComponent implements OnInit {
       ]);
     } else {
       this.formData.options = null;
-    }
-
-    if (type === ExerciseType.MultiChoice) {
-      const answers: string[] = [];
-      if (this.multiAnswerA) answers.push('A');
-      if (this.multiAnswerB) answers.push('B');
-      if (this.multiAnswerC) answers.push('C');
-      if (this.multiAnswerD) answers.push('D');
-      if (answers.length === 0) {
-        this.message.warning('请选择正确答案');
-        return;
-      }
-      this.formData.answer = answers.join(',');
     }
 
     this.saving = true;
@@ -375,7 +375,14 @@ export class ExerciseManagementComponent implements OnInit {
     this.importing = true;
     const file = this.selectedImportFile;
 
-    this.exerciseService.importFromExcel(courseId, file).subscribe({
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    this.restService.request<any, ExerciseImportResultDto>({
+      method: 'POST',
+      url: `/api/app/exercise/import-from-excel/${courseId}`,
+      body: formData,
+    }, { apiName: 'KnowledgeHub' }).subscribe({
       next: (result: ExerciseImportResultDto) => {
         this.importing = false;
         if (result.failCount === 0) {

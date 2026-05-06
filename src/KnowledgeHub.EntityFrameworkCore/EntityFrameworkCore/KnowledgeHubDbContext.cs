@@ -19,6 +19,11 @@ using KnowledgeHub.Domain.Search;
 using KnowledgeHub.EntityFrameworkCore.AI;
 using KnowledgeHub.Exams;
 using KnowledgeHub.Alliance;
+using KnowledgeHub.News;
+using KnowledgeHub.MicroMajors;
+using KnowledgeHub.Practicums;
+using KnowledgeHub.DoubleHigh;
+using KnowledgeHub.Employment;
 
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -107,6 +112,43 @@ public class KnowledgeHubDbContext :
     public DbSet<KnowledgeHub.Alliance.AllianceMember> AllianceMembers { get; set; }
     public DbSet<KnowledgeHub.Alliance.AllianceAudit> AllianceAudits { get; set; }
 
+    // News entities
+    public DbSet<NewsCategory> NewsCategories { get; set; }
+    public DbSet<NewsArticle> NewsArticles { get; set; }
+    public DbSet<NewsAudit> NewsAudits { get; set; }
+    public DbSet<NewsComment> NewsComments { get; set; }
+    public DbSet<NewsReaction> NewsReactions { get; set; }
+
+    // Micro major entities
+    public DbSet<MicroMajor> MicroMajors { get; set; }
+    public DbSet<MicroMajorCourse> MicroMajorCourses { get; set; }
+    public DbSet<MicroMajorEnrollment> MicroMajorEnrollments { get; set; }
+    public DbSet<MicroMajorCertificate> MicroMajorCertificates { get; set; }
+
+    // Practicum entities
+    public DbSet<PracticumProject> PracticumProjects { get; set; }
+    public DbSet<PracticumTask> PracticumTasks { get; set; }
+    public DbSet<PracticumMaterial> PracticumMaterials { get; set; }
+    public DbSet<PracticumEnrollment> PracticumEnrollments { get; set; }
+    public DbSet<PracticumSubmission> PracticumSubmissions { get; set; }
+    public DbSet<PracticumGuidanceRecord> PracticumGuidanceRecords { get; set; }
+    public DbSet<PracticumAssessment> PracticumAssessments { get; set; }
+
+    // Double high entities
+    public DbSet<DoubleHighProject> DoubleHighProjects { get; set; }
+    public DbSet<DoubleHighIndicator> DoubleHighIndicators { get; set; }
+    public DbSet<DoubleHighIndicatorValue> DoubleHighIndicatorValues { get; set; }
+    public DbSet<DoubleHighEvidence> DoubleHighEvidences { get; set; }
+    public DbSet<DoubleHighReport> DoubleHighReports { get; set; }
+
+    // Employment entities
+    public DbSet<JobPosting> JobPostings { get; set; }
+    public DbSet<StudentResume> StudentResumes { get; set; }
+    public DbSet<JobApplication> JobApplications { get; set; }
+    public DbSet<InterviewSchedule> InterviewSchedules { get; set; }
+    public DbSet<EmploymentGuidanceRecord> EmploymentGuidanceRecords { get; set; }
+    public DbSet<EmploymentOutcome> EmploymentOutcomes { get; set; }
+
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
     {
@@ -137,5 +179,10 @@ public class KnowledgeHubDbContext :
         builder.ConfigureLearning();
         builder.ConfigureExam();
         builder.ConfigureAlliance();
+        builder.ConfigureNews();
+        builder.ConfigureMicroMajor();
+        builder.ConfigurePracticum();
+        builder.ConfigureDoubleHigh();
+        builder.ConfigureEmployment();
     }
 }

@@ -1,0 +1,10 @@
+.toolbar {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+  }
+}

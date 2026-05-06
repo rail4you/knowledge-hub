@@ -1,0 +1,47 @@
+<div class="report-center-page">
+  <nz-card nzTitle="报表导出中心">
+    <nz-table [nzData]="projects()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>项目</th>
+          <th>批次</th>
+          <th>完成率</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of projects(); track item.id) {
+          <tr>
+            <td>{{ item.title }}</td>
+            <td>{{ item.batchCode }}</td>
+            <td>{{ item.completionRate }}%</td>
+            <td><button nz-button nzType="primary" (click)="export(item.id)">导出报表</button></td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <nz-card nzTitle="最近导出记录">
+    <nz-table [nzData]="reports()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>项目</th>
+          <th>报表名称</th>
+          <th>生成人</th>
+          <th>生成时间</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of reports(); track item.id) {
+          <tr>
+            <td>{{ item.projectTitle }}</td>
+            <td>{{ item.reportName }}</td>
+            <td>{{ item.generatedByName || '-' }}</td>
+            <td>{{ item.generatedAt }}</td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+</div>

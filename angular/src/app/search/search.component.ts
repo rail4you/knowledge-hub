@@ -84,7 +84,7 @@ import { ResourceReviewComponent } from './resource-review/resource-review.compo
             </label>
             <nz-select [(ngModel)]="selectedIndex" class="filter-select">
               @for (idx of availableIndexes(); track idx.uid) {
-                <nz-option [nzValue]="idx.uid" [nzLabel]="idx.uid"></nz-option>
+                <nz-option [nzValue]="idx.uid" [nzLabel]="getIndexLabel(idx.uid)"></nz-option>
               }
             </nz-select>
           </div>
@@ -548,6 +548,23 @@ export class SearchComponent implements OnInit {
   isReviewModalOpen = signal(false);
   reviewResourceId = signal('');
   reviewResourceName = signal('');
+
+  getIndexLabel(indexUid: string | null | undefined): string {
+    const normalized = (indexUid || '').toLowerCase();
+    if (normalized === 'documents') {
+      return '文档';
+    }
+    if (normalized === 'videos') {
+      return '视频';
+    }
+    if (normalized === 'images') {
+      return '图片';
+    }
+    if (normalized === 'audios') {
+      return '音频';
+    }
+    return indexUid || '默认索引';
+  }
 
   getFileIcon(ext: string): string {
     const iconMap: Record<string, string> = {

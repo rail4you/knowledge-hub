@@ -59,6 +59,21 @@ export class ChatComponent implements OnInit, OnDestroy {
   selectedResource = signal<ResourceForChat | null>(null);
   resourceSearchText = signal('');
   isResourcesLoading = signal(false);
+  inputPlaceholder = computed(() =>
+    this.selectedResource()
+      ? `输入关于《${this.selectedResource()!.name}》的问题，按 Enter 发送...`
+      : '输入您的问题，按 Enter 发送...'
+  );
+  welcomeTitle = computed(() =>
+    this.selectedResource()
+      ? `关于《${this.selectedResource()!.name}》的问答`
+      : '你好，我是文档问答助手'
+  );
+  welcomeDescription = computed(() =>
+    this.selectedResource()
+      ? '请输入关于这份资源的问题'
+      : '请从左侧选择一份资源，或直接开始提问'
+  );
 
   filteredResources = computed(() => {
     const search = this.resourceSearchText().toLowerCase();
@@ -195,7 +210,60 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   formatMessage(content: string): SafeHtml {
     if (!content) return '';
-    const html = marked.parse(content, { async: false }) as string;
+    const cleaned = this.sanitizeAssistantContent(content);
+    const html = marked.parse(cleaned, { async: false }) as string;
     return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  private sanitizeAssistantContent(content: string): string {
+    let cleaned = content;
+
+    cleaned = cleaned.replace(/<think\b[^>]*>[\s\S]*?<\/think>/gi, '');
+    cleaned = cleaned.replace(/<thinking\b[^>]*>[\s\S]*?<\/thinking>/gi, '');
+    cleaned = cleaned.replace(/<details\b[^>]*>\s*<summary\b[^>]*>\s*(?:思考|推理|工具|检索|thinking|reasoning|tool)[\s\S]*?<\/details>/gi, '');
+    cleaned = cleaned.replace(/```(?:think|thinking|thought|reasoning|tool|tool_call|tool_result)[\s\S]*?```/gi, '');
+
+    // Hide unfinished reasoning/tool blocks while streaming.
+    cleaned = cleaned.replace(/<think\b[^>]*>[\s\S]*$/gi, '');
+    cleaned = cleaned.replace(/<thinking\b[^>]*>[\s\S]*$/gi, '');
+    cleaned = cleaned.replace(/<details\b[^>]*>\s*<summary\b[^>]*>\s*(?:思考|推理|工具|检索|thinking|reasoning|tool)[\s\S]*$/gi, '');
+    cleaned = cleaned.replace(/```(?:think|thinking|thought|reasoning|tool|tool_call|tool_result)[\s\S]*$/gi, '');
+
+    cleaned = cleaned
+      .split('\n')
+      .filter(line => !this.isAuxiliaryLine(line))
+      .join('\n');
+
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+    return cleaned || '正在整理答案...';
+  }
+
+  private isAuxiliaryLine(line: string): boolean {
+    const normalized = line.trim();
+    if (!normalized) return false;
+
+    const auxiliaryPatterns = [
+      /^思考(过程|如下)?[:：]?$/i,
+      /^推理(过程|如下)?[:：]?$/i,
+      /^工具(调用|使用|返回|结果)?[:：]?$/i,
+      /^检索(过程|步骤|结果)?[:：]?$/i,
+      /^调用工具[:：]?/i,
+      /^正在调用[:：]?/i,
+      /^已(?:调用|检索|搜索|读取)[:：]?/i,
+      /^我先(调用|搜索|查看|读取|检索)/i,
+      /^让我先(调用|搜索|查看|读取|检索)/i,
+      /^先调用\s+/i,
+      /^\[?(?:tool|reasoning|thinking)[_\s-]?(?:call|result|step)?\]?[:：]?/i,
+      /^SearchPageIndex\b/i,
+      /^get_document\b/i,
+      /^get_document_structure\b/i,
+      /^get_page_content\b/i,
+      /^tool[_\s-]?call/i,
+      /^tool[_\s-]?result/i,
+      /^reasoning[:：]?/i,
+      /^thinking[:：]?/i,
+    ];
+
+    return auxiliaryPatterns.some(pattern => pattern.test(normalized));
   }
 }

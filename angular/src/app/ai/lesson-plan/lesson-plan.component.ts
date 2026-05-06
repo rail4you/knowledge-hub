@@ -13,6 +13,7 @@ import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
 import { ChatService, ResourceForChat } from '../services/chat.service';
@@ -63,7 +64,8 @@ interface LessonPlanResult {
     NzDescriptionsModule,
     NzTagModule,
     NzSpinModule,
-    NzIconModule
+    NzIconModule,
+    NzEmptyModule
   ],
   templateUrl: './lesson-plan.component.html',
   styleUrls: ['./lesson-plan.component.scss'],

@@ -201,6 +201,40 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         );
     }
 
+    public virtual async Task<PagedResultDto<ResourceDto>> GetCollectedListAsync(PagedResultRequestDto input)
+    {
+        var userId = CurrentUser.Id ?? throw new UserFriendlyException("请先登录");
+        var collections = await CollectionRepository.GetByUserIdAsync(userId);
+        var totalCount = collections.Count;
+
+        var pagedResourceIds = collections
+            .Skip(input.SkipCount)
+            .Take(input.MaxResultCount)
+            .Select(x => x.ResourceId)
+            .ToList();
+
+        if (pagedResourceIds.Count == 0)
+        {
+            return new PagedResultDto<ResourceDto>(totalCount, new List<ResourceDto>());
+        }
+
+        var resourceQuery = await Repository.GetQueryableAsync();
+        var resources = await AsyncExecuter.ToListAsync(
+            resourceQuery.Where(x => pagedResourceIds.Contains(x.Id))
+        );
+
+        var resourceMap = resources.ToDictionary(x => x.Id);
+        var orderedResources = pagedResourceIds
+            .Where(resourceMap.ContainsKey)
+            .Select(resourceId => resourceMap[resourceId])
+            .ToList();
+
+        return new PagedResultDto<ResourceDto>(
+            totalCount,
+            ObjectMapper.Map<List<Resource>, List<ResourceDto>>(orderedResources)
+        );
+    }
+
     [Authorize(KnowledgeHubPermissions.Resources.Create)]
     public virtual async Task<ResourceDto> CreateAsync(CreateUpdateResourceDto input)
     {

@@ -57,11 +57,13 @@ export class ChatService {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
           const data = await response.json();
-          observer.next(data);
-          observer.complete();
+          this.ngZone.run(() => {
+            observer.next(data);
+            observer.complete();
+          });
         })
         .catch(err => {
-          observer.error(err);
+          this.ngZone.run(() => observer.error(err));
         });
     });
   }

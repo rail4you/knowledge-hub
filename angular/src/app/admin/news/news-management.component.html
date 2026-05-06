@@ -1,0 +1,162 @@
+<div class="news-management">
+  <nz-card nzTitle="资讯分类管理" [nzExtra]="categoryExtra">
+    <ng-template #categoryExtra>
+      <button nz-button nzType="primary" (click)="openCreateCategory()">新建分类</button>
+    </ng-template>
+
+    <nz-table [nzData]="categories()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>名称</th>
+          <th>编码</th>
+          <th>排序</th>
+          <th>状态</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of categories(); track item.id) {
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.code }}</td>
+            <td>{{ item.sortOrder }}</td>
+            <td>{{ item.isActive ? '启用' : '停用' }}</td>
+            <td class="actions">
+              <button nz-button nzType="link" (click)="openEditCategory(item)">编辑</button>
+              <button nz-button nzType="link" nzDanger (click)="deleteCategory(item.id)">删除</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <nz-card nzTitle="资讯内容管理" [nzExtra]="articleExtra">
+    <ng-template #articleExtra>
+      <button nz-button nzType="primary" (click)="openCreateArticle()">新建资讯</button>
+    </ng-template>
+
+    <nz-table [nzData]="articles()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>标题</th>
+          <th>分类</th>
+          <th>状态</th>
+          <th>浏览/点赞/评论</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of articles(); track item.id) {
+          <tr>
+            <td>{{ item.title }}</td>
+            <td>{{ item.categoryName || '-' }}</td>
+            <td>{{ getArticleStatusLabel(item.status) }}</td>
+            <td>{{ item.viewCount }}/{{ item.likeCount }}/{{ item.commentCount }}</td>
+            <td class="actions">
+              <button nz-button nzType="link" (click)="openEditArticle(item)">编辑</button>
+              <button nz-button nzType="link" (click)="submitForReview(item.id)">提审</button>
+              <button nz-button nzType="link" (click)="publish(item.id)">发布</button>
+              <button nz-button nzType="link" (click)="reject(item.id)">驳回</button>
+              <button nz-button nzType="link" (click)="archive(item.id)">归档</button>
+              <button nz-button nzType="link" nzDanger (click)="deleteArticle(item.id)">删除</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <nz-card nzTitle="评论管理">
+    <nz-table [nzData]="comments()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>用户</th>
+          <th>内容</th>
+          <th>状态</th>
+          <th>时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of comments(); track item.id) {
+          <tr>
+            <td>{{ item.userName || '-' }}</td>
+            <td>{{ item.content }}</td>
+            <td>{{ getCommentStatusLabel(item.status) }}</td>
+            <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+            <td class="actions">
+              <button nz-button nzType="link" (click)="reviewComment(item.id, commentStatuses.Approved)">显示</button>
+              <button nz-button nzType="link" (click)="reviewComment(item.id, commentStatuses.Hidden)">隐藏</button>
+              <button nz-button nzType="link" (click)="reviewComment(item.id, commentStatuses.Rejected)">拒绝</button>
+              <button nz-button nzType="link" nzDanger (click)="deleteComment(item.id)">删除</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <nz-modal
+    [nzVisible]="categoryModalVisible"
+    [nzTitle]="editingCategoryId ? '编辑分类' : '新建分类'"
+    (nzOnCancel)="categoryModalVisible = false"
+    (nzOnOk)="saveCategory()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form-grid">
+        <label>名称</label>
+        <input nz-input [(ngModel)]="categoryForm.name" />
+        <label>编码</label>
+        <input nz-input [(ngModel)]="categoryForm.code" />
+        <label>排序</label>
+        <input nz-input type="number" [(ngModel)]="categoryForm.sortOrder" />
+        <label>启用</label>
+        <nz-switch [(ngModel)]="categoryForm.isActive"></nz-switch>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <nz-modal
+    [nzVisible]="articleModalVisible"
+    [nzTitle]="editingArticleId ? '编辑资讯' : '新建资讯'"
+    [nzWidth]="860"
+    (nzOnCancel)="articleModalVisible = false"
+    (nzOnOk)="saveArticle()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form-grid">
+        <label>分类</label>
+        <nz-select [(ngModel)]="articleForm.categoryId">
+          @for (category of categories(); track category.id) {
+            <nz-option [nzValue]="category.id" [nzLabel]="category.name"></nz-option>
+          }
+        </nz-select>
+
+        <label>标题</label>
+        <input nz-input [(ngModel)]="articleForm.title" />
+
+        <label>摘要</label>
+        <textarea nz-input rows="3" [(ngModel)]="articleForm.summary"></textarea>
+
+        <label>封面链接</label>
+        <input nz-input [(ngModel)]="articleForm.coverImageUrl" />
+
+        <label>标签</label>
+        <input nz-input [(ngModel)]="articleForm.tags" />
+
+        <label>正文</label>
+        <textarea nz-input rows="10" [(ngModel)]="articleForm.content"></textarea>
+
+        <label>置顶</label>
+        <nz-switch [(ngModel)]="articleForm.isTop"></nz-switch>
+
+        <label>热门</label>
+        <nz-switch [(ngModel)]="articleForm.isHot"></nz-switch>
+
+        <label>允许评论</label>
+        <nz-switch [(ngModel)]="articleForm.allowComments"></nz-switch>
+      </div>
+    </ng-container>
+  </nz-modal>
+</div>

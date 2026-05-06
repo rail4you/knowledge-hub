@@ -1,0 +1,15 @@
+.guidance-list {
+  display: grid;
+  gap: 12px;
+}
+
+.guidance-item {
+  border-radius: 14px;
+}
+
+.guidance-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}

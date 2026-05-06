@@ -12,7 +12,128 @@ This is a layered startup solution based on Domain Driven Design (DDD) using [AB
 
 ## Development Rules
 
-For detailed development rules, see: `angular/.claude/CLAUDE.md`
+For detailed development rules, see: `CLAUDE.md`
+
+## Codex Workflow
+
+This repository already contains `AGENTS.md` and `CLAUDE.md` at the root. There is currently no `angular/.claude/CLAUDE.md`, so do not rely on that path.
+
+### Primary Goal
+
+The main day-to-day task in this project is:
+
+1. Start from a route URL
+2. Find the Angular page/component that owns the route
+3. Find the service calls used by that page
+4. Map those calls to backend AppService or Controller code
+5. Modify the smallest correct set of frontend, contracts, application, domain, and EF files
+
+### Route To Angular Lookup
+
+When a request mentions a route such as `/search`, `/resources`, `/learning/course-detail/123`, or `/identity/roles`, use this order:
+
+1. Check `angular/src/app/app.routes.ts`
+2. Check menu registration files:
+   - `angular/src/app/route.provider.ts`
+   - `angular/src/app/alliance-route.provider.ts`
+3. Check ABP replaceable component registration in:
+   - `angular/src/app/app.config.ts`
+   - `angular/src/app/identity-roles.config.ts`
+   - `angular/src/app/identity-users.config.ts`
+4. If the route is under an ABP package module such as `/account`, `/identity`, `/tenant-management`, or `/setting-management`, assume the route shell comes from the ABP package first, then verify whether this repo replaces the concrete page component locally
+
+Useful commands:
+
+```bash
+rg -n "path: 'search'|path: 'resources'|path: 'identity'|path: 'learning'" angular/src/app/app.routes.ts angular/src/app/route.provider.ts angular/src/app/alliance-route.provider.ts
+rg -n "ReplaceableComponentsService|eIdentityComponents" angular/src/app
+```
+
+### Angular To Backend Lookup
+
+After locating the component:
+
+1. Open the component `.ts` file
+2. Inspect injected services and imports
+3. Prefer this mapping:
+   - `angular/src/app/proxy/**` => generated from `src/KnowledgeHub.Application.Contracts/**`
+   - matching implementation usually lives in `src/KnowledgeHub.Application/**`
+4. If the component uses a hand-written Angular service with `RestService.request(...)`, search the URL string in `src/KnowledgeHub.Application/**`, `src/KnowledgeHub.HttpApi/**`, and `src/KnowledgeHub.AI.Api/**`
+5. If the component uses ABP built-in modules, also inspect local replacement config and wrapper services before assuming the code is external
+
+Useful commands:
+
+```bash
+rg -n "inject\\(|private readonly .*Service|constructor\\(" angular/src/app/<feature>
+rg -n "/api/app/|/api/knowledge-hub/|RemoteService\\(|Route\\(" src
+rg -n "interface I.*AppService|class .*AppService" src/KnowledgeHub.Application.Contracts src/KnowledgeHub.Application
+```
+
+### Backend Mapping Rules
+
+For conventional ABP endpoints:
+
+- `src/KnowledgeHub.Application.Contracts/**/I*AppService.cs` defines the contract
+- `src/KnowledgeHub.Application/**/**/*AppService.cs` contains the implementation
+- `src/KnowledgeHub.HttpApi/KnowledgeHubHttpApiModule.cs` registers conventional controllers from the Application assembly
+- Angular generated proxies under `angular/src/app/proxy/**` are derived from these contracts
+
+For manual endpoints:
+
+- Look in `src/KnowledgeHub.HttpApi/Controllers/**`
+- Match `apiName` in Angular with `[RemoteService(Name = "...")]` on the controller when present
+- If Angular uses a hard-coded URL and there is no generated proxy, do not edit proxy files; edit the manual controller or the underlying service instead
+
+### Route Lookup Cheat Sheet
+
+- `/` => `angular/src/app/home/home.component.ts`
+- `/resources` => `angular/src/app/resources/resource.ts`
+  Backend starts from `angular/src/app/proxy/resources/resource.service.ts`
+  Then check `src/KnowledgeHub.Application.Contracts/Resources/IResourceAppService.cs` and `src/KnowledgeHub.Application/Resources/ResourceAppService.cs`
+- `/student/resources` => `angular/src/app/student/resources/student-resources.component.ts`
+  Primarily uses `ResourceService`, `ResourceReviewService`, and recommendation services
+- `/search` => `angular/src/app/search/search.component.ts`
+  This page uses a hand-written Angular service `angular/src/app/search/search.service.ts`
+  Search its request URLs in backend code instead of assuming a generated proxy
+- `/admin/indexing-jobs` => `angular/src/app/admin/indexing-jobs/indexing-jobs.component.ts`
+- `/admin/meilisearch` => `angular/src/app/admin/meilisearch/meilisearch-dashboard.component.ts`
+- `/identity/users` => ABP identity route, but the page is replaced locally through `angular/src/app/identity-users.config.ts`
+- `/identity/roles` => ABP identity route, but the page is replaced locally through `angular/src/app/identity-roles.config.ts` with `angular/src/app/admin/identity-roles/identity-roles.component.ts`
+  Backend is not the default ABP role page here; inspect `src/KnowledgeHub.Application/Identity/TenantRoleAppService.cs` and `src/KnowledgeHub.HttpApi/Controllers/TenantPermissionController.cs`
+- `/learning/**` => children are declared directly in `angular/src/app/app.routes.ts`
+
+### Proxy Rules
+
+- Never manually edit files under `angular/src/app/proxy/**`
+- If an Application.Contracts interface or DTO changes, regenerate Angular proxies:
+
+```bash
+cd angular
+abp generate-proxy -t ng
+```
+
+- Some older hand-written Angular services still exist next to generated proxies. If both exist, first verify which one the component actually imports before making changes
+
+### Route Change Checklist
+
+When changing behavior for a route, check all of these before finishing:
+
+1. Route entry in `app.routes.ts`
+2. Menu entry in `route.provider.ts` or `alliance-route.provider.ts`
+3. Guards and `requiredPolicy`
+4. Angular component, template, and local service imports
+5. Generated proxy or manual `RestService` calls
+6. Matching AppService contract and implementation, or manual HttpApi controller
+7. DTO changes across Contracts, Application, and Angular proxy regeneration
+8. Localization keys if text changed
+
+### ABP-Specific Reminders
+
+- App service interfaces must end with `AppService` and inherit `IApplicationService`
+- App service implementations must be `public class`, end with `AppService`, and inherit `KnowledgeHubAppService`
+- If a new API does not appear, verify naming, DI registration, and `ConventionalControllers.Create(typeof(KnowledgeHubApplicationModule).Assembly)`
+- ABP built-in pages may be overridden through `ReplaceableComponentsService`; do not assume `/identity/*` is untouched framework code
+- For JWT-authenticated custom POST endpoints that return antiforgery errors, add `[IgnoreAntiforgeryToken]` on the controller or action when appropriate
 
 ### Quick Reference
 

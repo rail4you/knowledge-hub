@@ -1,0 +1,86 @@
+<div class="favorites-page">
+  <div class="page-header">
+    <div>
+      <h1>我的收藏</h1>
+      <p>集中查看你已收藏的资源，支持继续预览、下载或取消收藏。</p>
+    </div>
+    <button nz-button nzType="default" (click)="browseResources()">
+      <span nz-icon nzType="appstore" nzTheme="outline"></span>
+      去资源库
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+      <p>正在加载收藏资源...</p>
+    </div>
+  } @else if (resources().length === 0) {
+    <div class="empty-state">
+      <nz-empty nzNotFoundContent="你还没有收藏任何资源"></nz-empty>
+      <button nz-button nzType="primary" (click)="browseResources()">去看看资源</button>
+    </div>
+  } @else {
+    <div class="favorites-summary">
+      共收藏 <strong>{{ totalCount() }}</strong> 个资源
+    </div>
+
+    <div class="resources-grid">
+      @for (resource of resources(); track resource.id) {
+        <article class="resource-card" [class]="'type-' + (resource.resourceType || 0)">
+          <div class="card-thumbnail">
+            <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
+          </div>
+
+          <div class="card-content">
+            <div class="card-top">
+              <span class="type-badge">{{ getResourceTypeLabel(resource.resourceType) }}</span>
+              <button class="remove-btn" nz-tooltip="取消收藏" (click)="removeFavorite(resource)">
+                <span nz-icon nzType="star" nzTheme="fill"></span>
+              </button>
+            </div>
+
+            <h3 class="card-title" [title]="resource.name || ''">{{ resource.name || '未命名资源' }}</h3>
+            <p class="card-desc">{{ resource.description || '暂无描述' }}</p>
+
+            <div class="card-meta">
+              <span>
+                <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                {{ resource.creationTime | date:'yyyy-MM-dd' }}
+              </span>
+              <span>
+                <span nz-icon nzType="database" nzTheme="outline"></span>
+                {{ (resource.fileSize || 0) / 1024 / 1024 | number:'1.1-1' }} MB
+              </span>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="action-btn" nz-tooltip="预览" (click)="previewResource(resource)">
+              <span nz-icon nzType="eye" nzTheme="outline"></span>
+              预览
+            </button>
+            <button class="action-btn" nz-tooltip="下载" (click)="downloadResource(resource)">
+              <span nz-icon nzType="download" nzTheme="outline"></span>
+              下载
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+
+    @if (totalCount() > pageSize()) {
+      <div class="pagination-wrapper">
+        <nz-pagination
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          [nzTotal]="totalCount()"
+          (nzPageIndexChange)="onPageChange($event)"
+          nzAlign="center"
+        ></nz-pagination>
+      </div>
+    }
+  }
+</div>
+
+<app-file-preview #filePreview></app-file-preview>

@@ -16,14 +16,18 @@
             </defs>
           </svg>
         </div>
-        <span class="brand-text">易课通知识库系统</span>
+        <span class="brand-text">易课通资源库系统</span>
       </a>
 
       <nav class="main-nav">
         <div class="nav-group">
           <a routerLink="/student/resources" routerLinkActive="active" class="nav-link">
             <span nz-icon nzType="book" nzTheme="outline"></span>
-            <span>知识库</span>
+            <span>资源库</span>
+          </a>
+          <a routerLink="/student/favorites" routerLinkActive="active" class="nav-link">
+            <span nz-icon nzType="star" nzTheme="outline"></span>
+            <span>我的收藏</span>
           </a>
           <a routerLink="/student/search" routerLinkActive="active" class="nav-link">
             <span nz-icon nzType="search" nzTheme="outline"></span>
@@ -76,8 +80,8 @@
           <ul nz-menu>
             <li nz-menu-item class="user-info-item">
               <div class="user-details">
-                <div class="user-name">{{ userName }}</div>
-                <div class="user-role">学生</div>
+                <div class="user-name">{{ userName() }}</div>
+                <div class="user-role">{{ userRoleLabel() }}</div>
               </div>
             </li>
             <li nz-menu-divider></li>
@@ -107,7 +111,7 @@
         <a href="#">服务条款</a>
       </div>
       <div class="footer-copyright">
-        &copy; 2026 易课通知识库系统 - 让学习更高效
+        &copy; 2026 易课通资源库系统 - 让学习更高效
       </div>
     </div>
   </footer>

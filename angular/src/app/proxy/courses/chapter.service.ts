@@ -2,6 +2,7 @@ import type { ChapterDto, ChapterImportResultDto, CreateUpdateChapterDto } from 
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
+import type { IFormFile } from '../microsoft/asp-net-core/http/models';
 
 @Injectable({
   providedIn: 'root',
@@ -69,6 +70,15 @@ export class ChapterService {
     { apiName: this.apiName,...config });
   
 
+  importFromExcel = (courseId: string, file: IFormFile, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ChapterImportResultDto>({
+      method: 'POST',
+      url: `/api/app/chapter/import-from-excel/${courseId}`,
+      body: file,
+    },
+    { apiName: this.apiName,...config });
+  
+
   update = (id: string, input: CreateUpdateChapterDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, ChapterDto>({
       method: 'PUT',
@@ -76,17 +86,4 @@ export class ChapterService {
       body: input,
     },
     { apiName: this.apiName,...config });
-
-
-  importFromExcel = (courseId: string, file: File, config?: Partial<Rest.Config>) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    return this.restService.request<any, ChapterImportResultDto>({
-      method: 'POST',
-      url: `/api/app/chapter/import-from-excel/${courseId}`,
-      body: formData,
-    },
-    { apiName: this.apiName, ...config });
-  };
 }

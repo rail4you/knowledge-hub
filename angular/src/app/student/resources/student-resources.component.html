@@ -1,7 +1,7 @@
 <div class="resources-page">
   <!-- 页面头部 -->
   <div class="page-header">
-    <h1>知识库资源</h1>
+    <h1>资源库</h1>
     <div class="search-box">
       <span nz-icon nzType="search" class="search-icon"></span>
       <input
@@ -180,8 +180,13 @@
                 <button class="action-btn download-btn" nz-tooltip="下载" (click)="downloadResource(resource); $event.stopPropagation()">
                   <span nz-icon nzType="download" nzTheme="outline"></span>
                 </button>
-                <button class="action-btn collect-btn" nz-tooltip="收藏" (click)="collectResource(resource.id); $event.stopPropagation()">
-                  <span nz-icon nzType="star" nzTheme="outline"></span>
+                <button
+                  class="action-btn collect-btn"
+                  [class.is-collected]="isCollected(resource.id)"
+                  [nz-tooltip]="isCollected(resource.id) ? '取消收藏' : '收藏'"
+                  (click)="toggleCollection(resource); $event.stopPropagation()"
+                >
+                  <span nz-icon nzType="star" [nzTheme]="isCollected(resource.id) ? 'fill' : 'outline'"></span>
                 </button>
               </div>
             </div>

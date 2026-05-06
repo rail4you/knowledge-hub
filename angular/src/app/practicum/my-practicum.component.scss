@@ -1,0 +1,25 @@
+.my-practicum-page {
+  padding: 24px;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 14px;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.timeline-time {
+  color: #64748b;
+}
+
+.timeline-body {
+  display: grid;
+  gap: 4px;
+}

@@ -30,6 +30,13 @@ export interface ExerciseDto extends FullAuditedEntityDto<string> {
   isAiGenerated?: boolean;
 }
 
+export interface ExerciseImportResultDto {
+  totalRows?: number;
+  successCount?: number;
+  failCount?: number;
+  errors?: string[];
+}
+
 export interface GenerateExerciseInput {
   courseId?: string;
   knowledgeResourceId?: string | null;
@@ -50,11 +57,4 @@ export interface GradingResultDto {
   score?: number;
   feedback?: string | null;
   isCorrect?: boolean;
-}
-
-export interface ExerciseImportResultDto {
-  totalRows?: number;
-  successCount?: number;
-  failCount?: number;
-  errors?: string[];
 }

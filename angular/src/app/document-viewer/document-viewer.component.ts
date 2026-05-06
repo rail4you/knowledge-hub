@@ -130,7 +130,7 @@ interface HitMatch {
     .body-area {
       flex: 1;
       display: flex;
-      overflow: hidden;
+      min-height: 0;
     }
 
     .review-panel {
@@ -230,21 +230,39 @@ interface HitMatch {
 
     .page-container {
       flex: 1;
+      min-width: 0;
+      min-height: 0;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 24px;
-      display: flex;
-      justify-content: center;
     }
 
     .text-content {
       background: white;
       max-width: 800px;
       width: 100%;
+      margin: 0 auto;
       padding: 40px;
       border-radius: 4px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
       line-height: 1.8;
       font-size: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      overflow-x: hidden;
+      box-sizing: border-box;
+    }
+
+    .text-content ::ng-deep * {
+      max-width: 100%;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      box-sizing: border-box;
+    }
+
+    .text-content ::ng-deep pre,
+    .text-content ::ng-deep code {
       white-space: pre-wrap;
     }
 

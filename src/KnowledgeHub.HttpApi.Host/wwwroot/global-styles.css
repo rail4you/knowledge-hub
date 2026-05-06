@@ -6,3 +6,45 @@
     --lpx-logo: url('/images/logo/leptonxlite/logo-dark-thumbnail.png');
     background-position: left;
 }
+
+.kh-tenant-list {
+    margin-top: 12px;
+    padding: 12px 0 4px;
+}
+
+.kh-tenant-list-title {
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #344054;
+}
+
+.kh-tenant-list-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.kh-tenant-option {
+    border: 1px solid #d0d5dd;
+    border-radius: 999px;
+    background: #fff;
+    color: #344054;
+    padding: 6px 14px;
+    font-size: 13px;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.kh-tenant-option:hover {
+    border-color: #059669;
+    color: #047857;
+    background: #ecfdf5;
+}
+
+.kh-tenant-option.active {
+    border-color: #059669;
+    background: #059669;
+    color: #fff;
+}

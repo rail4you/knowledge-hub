@@ -17,6 +17,13 @@ export interface ChapterDto extends EntityDto<string> {
   knowledgeResources?: KnowledgeResourceDto[];
 }
 
+export interface ChapterImportResultDto {
+  totalRows?: number;
+  successCount?: number;
+  failCount?: number;
+  errors?: string[];
+}
+
 export interface CourseDetailDto extends CourseDto {
   chapters?: ChapterDto[];
 }
@@ -122,11 +129,4 @@ export interface StudentCourseDto extends FullAuditedEntityDto<string> {
   status?: StudentCourseStatus;
   enrolledAt?: string;
   progress?: number;
-}
-
-export interface ChapterImportResultDto {
-  totalRows?: number;
-  successCount?: number;
-  failCount?: number;
-  errors?: string[];
 }

@@ -1,0 +1,41 @@
+<div class="my-practicum-page">
+  <nz-card nzTitle="我的实训">
+    <nz-table [nzData]="items()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>项目</th>
+          <th>状态</th>
+          <th>进度</th>
+          <th>得分</th>
+          <th>最后提交</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of items()">
+          <td>{{ item.projectTitle }}</td>
+          <td>{{ getStatusLabel(item.status) }}</td>
+          <td><nz-progress [nzPercent]="+item.progress" [nzSize]="'small'"></nz-progress></td>
+          <td>{{ item.finalScore ?? '-' }}</td>
+          <td>{{ item.lastSubmittedAt || '-' }}</td>
+          <td><button nz-button nzType="link" (click)="openTimeline(item)">过程追溯</button></td>
+        </tr>
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <nz-modal [(nzVisible)]="timelineVisible" [nzTitle]="timelineTitle" [nzFooter]="null" nzWidth="760">
+    <div class="timeline-list">
+      @for (item of timeline(); track item.time + item.title) {
+        <div class="timeline-item">
+          <div class="timeline-time">{{ item.time }}</div>
+          <div class="timeline-body">
+            <strong>{{ item.title }}</strong>
+            <div>{{ item.content || '-' }}</div>
+            <small>{{ item.operatorName || '系统' }}</small>
+          </div>
+        </div>
+      }
+    </div>
+  </nz-modal>
+</div>

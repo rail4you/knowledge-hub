@@ -17,7 +17,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { RestService } from '@abp/ng.core';
+import { ConfigStateService, RestService } from '@abp/ng.core';
 import { CourseService } from '../../proxy/courses/course.service';
 import { StudentCourseService } from '../../proxy/courses/student-course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
@@ -60,6 +60,7 @@ export class StudentEnrollmentComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly studentCourseService = inject(StudentCourseService);
   private readonly restService = inject(RestService);
+  private readonly configService = inject(ConfigStateService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -103,7 +104,9 @@ export class StudentEnrollmentComponent implements OnInit {
 
   ngOnInit() {
     this.loadCourses();
-    this.loadTenants();
+    if (this.isHost) {
+      this.loadTenants();
+    }
   }
 
   loadCourses() {
@@ -312,7 +315,6 @@ export class StudentEnrollmentComponent implements OnInit {
   }
 
   get isHost(): boolean {
-    // If tenants are available, user is host admin
-    return this.tenants().length > 0;
+    return !this.configService.getDeep('currentUser.tenantId');
   }
 }

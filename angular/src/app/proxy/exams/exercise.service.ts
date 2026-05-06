@@ -2,6 +2,7 @@ import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto, Gen
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
+import type { IFormFile } from '../microsoft/asp-net-core/http/models';
 
 @Injectable({
   providedIn: 'root',
@@ -79,6 +80,15 @@ export class ExerciseService {
     { apiName: this.apiName,...config });
   
 
+  importFromExcel = (courseId: string, file: IFormFile, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ExerciseImportResultDto>({
+      method: 'POST',
+      url: `/api/app/exercise/import-from-excel/${courseId}`,
+      body: file,
+    },
+    { apiName: this.apiName,...config });
+  
+
   update = (id: string, input: CreateUpdateExerciseDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, ExerciseDto>({
       method: 'PUT',
@@ -86,17 +96,4 @@ export class ExerciseService {
       body: input,
     },
     { apiName: this.apiName,...config });
-
-
-  importFromExcel = (courseId: string, file: File, config?: Partial<Rest.Config>) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    return this.restService.request<any, ExerciseImportResultDto>({
-      method: 'POST',
-      url: `/api/app/exercise/import-from-excel/${courseId}`,
-      body: formData,
-    },
-    { apiName: this.apiName, ...config });
-  };
 }

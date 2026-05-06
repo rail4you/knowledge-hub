@@ -1,0 +1,39 @@
+@if (job(); as item) {
+  <div class="detail-page">
+    <nz-card class="hero-card">
+      <div class="hero-head">
+        <div>
+          <h2>{{ item.title }}</h2>
+          <p>{{ item.companyName }} · {{ item.location || '地点待定' }}</p>
+        </div>
+        <a nz-button [routerLink]="['/employment/jobs']">返回列表</a>
+      </div>
+      <div class="hero-meta">
+        <span>{{ getTypeLabel(item.jobType) }}</span>
+        <span>{{ item.salaryRange || '薪资面议' }}</span>
+        <span>{{ item.recruitmentCount }} 人</span>
+        <span>{{ item.contactName || '联系人待补充' }}</span>
+      </div>
+    </nz-card>
+
+    <div class="detail-grid">
+      <nz-card nzTitle="岗位说明">
+        <p>{{ item.summary || '暂无摘要' }}</p>
+        <p>{{ item.description }}</p>
+        <p>技能要求：{{ item.skillTags || '未填写' }}</p>
+        <p>福利待遇：{{ item.benefits || '未填写' }}</p>
+        <p>学历要求：{{ item.educationRequirement || '未填写' }}</p>
+      </nz-card>
+
+      <nz-card nzTitle="投递岗位">
+        <nz-select [(ngModel)]="selectedResumeId" nzPlaceHolder="选择投递简历">
+          @for (resume of resumes(); track resume.id) {
+            <nz-option [nzValue]="resume.id" [nzLabel]="resume.title + ' v' + resume.versionNo"></nz-option>
+          }
+        </nz-select>
+        <textarea nz-input rows="6" [(ngModel)]="coverLetter" placeholder="补充求职说明"></textarea>
+        <button nz-button nzType="primary" (click)="apply()">立即投递</button>
+      </nz-card>
+    </div>
+  </div>
+}

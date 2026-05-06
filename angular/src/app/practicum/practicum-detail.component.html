@@ -1,0 +1,111 @@
+@if (project(); as project) {
+  <div class="practicum-detail-page">
+    <nz-card class="hero-card">
+      <div class="hero-grid">
+        <div>
+          <h1>{{ project.title }}</h1>
+          <p>{{ project.summary || '暂无简介' }}</p>
+          <nz-descriptions [nzColumn]="2" nzBordered>
+            <nz-descriptions-item nzTitle="关联课程">{{ project.courseTitle || '未绑定' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="专业/班级">{{ project.major || '未设置' }} / {{ project.className || '未设置' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="开始时间">{{ project.startTime || '未设置' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="结束时间">{{ project.endTime || '未设置' }}</nz-descriptions-item>
+          </nz-descriptions>
+        </div>
+        <div class="side-panel">
+          @if (project.isCurrentUserEnrolled) {
+            <div class="progress-box">
+              <span>我的进度</span>
+              <nz-progress [nzPercent]="+(project.currentUserProgress || 0)" [nzStrokeColor]="'#0d9488'"></nz-progress>
+            </div>
+          } @else {
+            <button nz-button nzType="primary" (click)="enroll()">加入实训</button>
+          }
+        </div>
+      </div>
+    </nz-card>
+
+    <nz-card nzTitle="任务清单" class="section-card">
+      @for (task of project.tasks; track task.id) {
+        <div class="task-block">
+          <div class="task-header">
+            <div>
+              <h3>{{ task.sortOrder }}. {{ task.title }}</h3>
+              <p>{{ task.description || '暂无任务描述' }}</p>
+            </div>
+            <span nz-tag nzColor="blue">权重 {{ task.scoreWeight }}%</span>
+          </div>
+
+          <div class="task-meta">
+            <div>任务要求：{{ task.requirement || '暂无' }}</div>
+            <div>截止时间：{{ task.dueTime || '未设置' }}</div>
+          </div>
+
+          @if (project.isCurrentUserEnrolled) {
+            <div class="submit-box">
+              <textarea nz-input [(ngModel)]="forms[task.id].content" rows="4" placeholder="提交说明、过程描述、阶段总结"></textarea>
+              <div class="submit-grid">
+                <input nz-input [(ngModel)]="forms[task.id].attachmentUrls" placeholder="附件 URL，多个逗号分隔" />
+                <input nz-input [(ngModel)]="forms[task.id].linkUrl" placeholder="成果链接 URL" />
+                <input nz-input [(ngModel)]="forms[task.id].screenshotUrls" placeholder="截图 URL，多个逗号分隔" />
+              </div>
+              <button nz-button nzType="primary" (click)="submit(task.id)">提交任务成果</button>
+            </div>
+          }
+
+          <nz-table [nzData]="getTaskSubmissions(task.id)" [nzFrontPagination]="false" nzSize="small">
+            <thead>
+              <tr>
+                <th>版本</th>
+                <th>提交时间</th>
+                <th>状态</th>
+                <th>评分</th>
+                <th>反馈</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of getTaskSubmissions(task.id)">
+                <td>V{{ item.versionNo }}</td>
+                <td>{{ item.submittedAt }}</td>
+                <td>{{ getSubmissionStatusLabel(item.status) }}</td>
+                <td>{{ item.score ?? '-' }}</td>
+                <td>{{ item.teacherFeedback || '-' }}</td>
+              </tr>
+            </tbody>
+          </nz-table>
+        </div>
+        <nz-divider></nz-divider>
+      }
+    </nz-card>
+
+    <nz-card nzTitle="实训资料" class="section-card">
+      <div class="materials">
+        @for (material of project.materials; track material.id) {
+          <a class="material-item" [href]="material.resourceUrl" target="_blank" rel="noreferrer">
+            <strong>{{ material.title }}</strong>
+            <span>{{ material.description || '点击打开资料' }}</span>
+          </a>
+        }
+      </div>
+    </nz-card>
+
+    @if (project.isCurrentUserEnrolled) {
+      <nz-card nzTitle="教师指导记录" class="section-card">
+        <div class="guidance-list">
+          @for (item of guidances(); track item.id) {
+            <div class="guidance-item">
+              <div class="guidance-head">
+                <strong>{{ item.teacherName || '教师' }}</strong>
+                <span>{{ item.guidedAt }}</span>
+              </div>
+              <div>{{ item.content }}</div>
+              @if (item.taskTitle) {
+                <small>关联任务：{{ item.taskTitle }}</small>
+              }
+            </div>
+          }
+        </div>
+      </nz-card>
+    }
+  </div>
+}

@@ -1,0 +1,76 @@
+<div class="interview-page">
+  <nz-card nzTitle="待安排投递">
+    <nz-table [nzData]="applications()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>学生</th>
+          <th>岗位</th>
+          <th>企业</th>
+          <th>状态</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of applications(); track item.id) {
+          <tr>
+            <td>{{ item.studentName || '-' }}</td>
+            <td>{{ item.jobTitle || '-' }}</td>
+            <td>{{ item.companyName || '-' }}</td>
+            <td>{{ item.status }}</td>
+            <td><button nz-button nzType="link" (click)="openSchedule(item)">预约面试</button></td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <nz-card nzTitle="面试记录">
+    <nz-table [nzData]="interviews()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>学生</th>
+          <th>岗位</th>
+          <th>时间</th>
+          <th>会议链接</th>
+          <th>结果</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of interviews(); track item.id) {
+          <tr>
+            <td>{{ item.studentName || '-' }}</td>
+            <td>{{ item.jobTitle || '-' }}</td>
+            <td>{{ item.scheduledAt }}</td>
+            <td>{{ item.meetingUrl || item.location || '-' }}</td>
+            <td>{{ item.result }}</td>
+            <td><button nz-button nzType="link" (click)="openResult(item)">回填结果</button></td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+</div>
+
+<nz-modal [(nzVisible)]="scheduleVisible" nzTitle="预约面试" (nzOnCancel)="scheduleVisible = false" (nzOnOk)="saveSchedule()">
+  <div class="form-grid">
+    <input nz-input [(ngModel)]="scheduleForm.interviewerName" placeholder="面试官" />
+    <input nz-input [(ngModel)]="scheduleForm.interviewerPhone" placeholder="联系电话" />
+    <input nz-input [(ngModel)]="scheduleForm.location" placeholder="地点" />
+    <input nz-input [(ngModel)]="scheduleForm.meetingUrl" placeholder="外部会议链接" />
+    <textarea nz-input rows="3" [(ngModel)]="scheduleForm.note" placeholder="备注"></textarea>
+  </div>
+</nz-modal>
+
+<nz-modal [(nzVisible)]="resultVisible" nzTitle="面试结果" (nzOnCancel)="resultVisible = false" (nzOnOk)="saveResult()">
+  <div class="form-grid">
+    <nz-select [(ngModel)]="resultForm.result">
+      <nz-option [nzValue]="results.Pending" nzLabel="待定"></nz-option>
+      <nz-option [nzValue]="results.Passed" nzLabel="通过"></nz-option>
+      <nz-option [nzValue]="results.Deferred" nzLabel="待补充"></nz-option>
+      <nz-option [nzValue]="results.Failed" nzLabel="未通过"></nz-option>
+    </nz-select>
+    <textarea nz-input rows="4" [(ngModel)]="resultForm.summary" placeholder="面试纪要"></textarea>
+    <textarea nz-input rows="3" [(ngModel)]="resultForm.resultComment" placeholder="结果说明"></textarea>
+  </div>
+</nz-modal>

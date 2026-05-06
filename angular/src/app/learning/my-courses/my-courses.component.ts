@@ -73,10 +73,23 @@ export class MyCoursesComponent implements OnInit {
   }
 
   continueLearning(courseId: string) {
-    this.router.navigate(['/learning/course-detail', courseId]);
+    const route = this.router.url.startsWith('/student')
+      ? ['/student/course-detail', courseId]
+      : ['/learning/course-detail', courseId];
+    this.router.navigate(route);
   }
   
   viewDetail(courseId: string) {
-    this.router.navigate(['/learning/course-detail', courseId]);
+    const route = this.router.url.startsWith('/student')
+      ? ['/student/course-detail', courseId]
+      : ['/learning/course-detail', courseId];
+    this.router.navigate(route);
+  }
+
+  browseCourses() {
+    const route = this.router.url.startsWith('/student')
+      ? ['/student/resources']
+      : ['/learning/course-list'];
+    this.router.navigate(route);
   }
 }

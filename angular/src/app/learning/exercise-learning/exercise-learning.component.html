@@ -1,32 +1,54 @@
 <div class="exercise-learning-container">
+  <!-- Page Header (always visible) -->
+  <div class="page-header">
+    <button nz-button nzType="text" (click)="goBack()" class="back-btn">
+      <span nz-icon nzType="arrow-left"></span>
+      返回课程
+    </button>
+    <h2 class="page-title">
+      <span nz-icon nzType="read" class="title-icon"></span>
+      习题练习
+    </h2>
+  </div>
+
   @if (loading()) {
     <div class="loading-container">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
+      <nz-spin nzSimple nzSize="large" nzTip="加载中..."></nz-spin>
     </div>
   } @else if (chapters().length === 0) {
-    <nz-card>
-      <nz-result nzStatus="info" nzTitle="暂无习题" nzSubTitle="该课程尚未添加习题">
-        <div nz-result-extra>
-          <button nz-button nzType="primary" (click)="goBack()">返回课程</button>
+    <!-- Empty state -->
+    <div class="empty-state">
+      <div class="empty-card">
+        <div class="empty-icon-wrapper">
+          <span nz-icon nzType="inbox" class="empty-icon"></span>
         </div>
-      </nz-result>
-    </nz-card>
+        <h3>暂无习题</h3>
+        <p class="empty-desc">该课程尚未添加习题内容，请等待教师添加后再来练习。</p>
+        <div class="empty-actions">
+          <button nz-button nzType="primary" (click)="goBack()">
+            <span nz-icon nzType="arrow-left"></span>
+            返回课程详情
+          </button>
+        </div>
+      </div>
+    </div>
   } @else {
     <!-- Top progress bar -->
     <nz-card class="progress-card" nzSize="small">
       <div class="progress-header">
-        <button nz-button nzType="text" (click)="goBack()">
-          <span nz-icon nzType="arrow-left"></span> 返回
-        </button>
         <span>学习进度</span>
         <nz-progress [nzPercent]="progressPercent()" nzSize="small" style="flex: 1; margin: 0 16px;"></nz-progress>
-        <span>{{ completedCount() }}/{{ totalExercises() }}</span>
+        <span class="progress-text">{{ completedCount() }}/{{ totalExercises() }}</span>
       </div>
     </nz-card>
 
     <div class="main-content">
       <!-- Left: Chapter navigation -->
       <div class="chapter-nav">
+        <div class="nav-title">
+          <span nz-icon nzType="menu-fold"></span>
+          章节列表
+        </div>
         @for (chapter of chapters(); track chapter.id; let i = $index) {
           <div
             class="chapter-item"

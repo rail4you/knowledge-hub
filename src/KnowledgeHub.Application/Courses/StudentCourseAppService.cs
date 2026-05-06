@@ -89,7 +89,7 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
         {
             var userQuery = await _userRepository.GetQueryableAsync();
             studentMap = (await userQuery.Where(u => studentIds.Contains(u.Id)).ToListAsync())
-                .ToDictionary(s => s.Id, s => s.Name ?? s.UserName);
+                .ToDictionary(s => s.Id, s => string.IsNullOrWhiteSpace(s.Name) ? s.UserName : s.Name);
 
             var courseQuery = await _courseRepository.GetQueryableAsync();
             courseMap = (await courseQuery.Where(c => courseIds.Contains(c.Id)).ToListAsync())

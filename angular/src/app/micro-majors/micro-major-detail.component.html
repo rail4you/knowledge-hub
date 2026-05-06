@@ -1,0 +1,52 @@
+@if (loading()) {
+  <div class="state">
+    <nz-spin nzTip="加载微专业中..."></nz-spin>
+  </div>
+} @else if (detail(); as detail) {
+  <div class="detail-page">
+    <div class="back">
+      <a routerLink="/micro-majors">返回微专业列表</a>
+    </div>
+
+    <nz-card>
+      <div class="hero">
+        <div>
+          <h1>{{ detail.title }}</h1>
+          <p>{{ detail.summary || detail.description || '暂无介绍' }}</p>
+          <div class="meta">
+            <span>行业方向：{{ detail.industryField || '通用方向' }}</span>
+            <span>协同单位：{{ detail.collaborationUnit || '未设置' }}</span>
+            <span>{{ detail.courseCount }} 门核心课程</span>
+          </div>
+        </div>
+        <div class="cta">
+          @if (detail.currentUserProgress !== undefined && detail.currentUserProgress !== null) {
+            <nz-progress [nzPercent]="detail.currentUserProgress"></nz-progress>
+          }
+          <button nz-button nzType="primary" (click)="enroll()">
+            {{ detail.isCurrentUserEnrolled ? '已报名' : '立即报名' }}
+          </button>
+        </div>
+      </div>
+    </nz-card>
+
+    <nz-card nzTitle="课程组成">
+      <div class="course-list">
+        @for (course of detail.courses; track course.id) {
+          <div class="course-item">
+            <div>
+              <strong>{{ course.courseTitle || '未命名课程' }}</strong>
+              <div class="course-item__meta">
+                <span>{{ course.major || '未设置专业' }}</span>
+                <span>{{ course.semester || '未设置学期' }}</span>
+              </div>
+            </div>
+            @if (course.isCore) {
+              <nz-tag nzColor="blue">核心</nz-tag>
+            }
+          </div>
+        }
+      </div>
+    </nz-card>
+  </div>
+}

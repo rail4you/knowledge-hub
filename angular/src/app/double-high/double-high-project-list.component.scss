@@ -1,0 +1,75 @@
+.double-high-list-page {
+  padding: 24px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+}
+
+.hero p {
+  margin: 0;
+  color: #64748b;
+}
+
+.search-box {
+  display: flex;
+  gap: 12px;
+  min-width: 320px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.project-card {
+  display: grid;
+  gap: 12px;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-head h2 {
+  margin: 0 0 4px;
+}
+
+.card-head p,
+.summary {
+  color: #64748b;
+}
+
+.meta {
+  display: grid;
+  gap: 6px;
+  color: #334155;
+}
+
+.progress-box {
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-box {
+    min-width: 0;
+  }
+}

@@ -48,7 +48,6 @@ public static class KnowledgeHubModuleExtensionConfigurator
                        "RoleType",
                        property =>
                        {
-                           property.Attributes.Add(new RequiredAttribute());
                        }
                    );
 

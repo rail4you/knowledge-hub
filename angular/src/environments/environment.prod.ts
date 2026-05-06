@@ -1,9 +1,9 @@
 import { Environment } from '@abp/ng.core';
 
-const baseUrl = 'https://localhost';
+const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://localhost';
 
 const oAuthConfig = {
-  issuer: 'https://localhost',
+  issuer: baseUrl,
   redirectUri: baseUrl,
   clientId: 'KnowledgeHub_App',
   responseType: 'code',
@@ -15,12 +15,12 @@ export const environment = {
   production: true,
   application: {
     baseUrl,
-    name: '易课通知识库系统',
+    name: '易课通资源库系统',
   },
   oAuthConfig,
   apis: {
     default: {
-      url: 'https://localhost',
+      url: baseUrl,
       rootNamespace: 'KnowledgeHub',
     },
     AbpAccountPublic: {

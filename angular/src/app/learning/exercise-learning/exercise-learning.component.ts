@@ -17,6 +17,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpaceModule } from 'ng-zorro-antd/space';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzResultModule } from 'ng-zorro-antd/result';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import { ChapterProgressDto, SaveExerciseRecordInput, StudentExerciseRecordDto } from '../../proxy/learning/dtos/models';
@@ -55,7 +56,8 @@ interface ChapterWithExercises {
     NzSpinModule,
     NzSpaceModule,
     NzDividerModule,
-    NzTooltipModule
+    NzTooltipModule,
+    NzResultModule
   ],
   templateUrl: './exercise-learning.component.html',
   styleUrls: ['./exercise-learning.component.scss'],
@@ -327,7 +329,10 @@ export class ExerciseLearningComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/learning/course-detail', this.courseId()]);
+    const route = this.router.url.startsWith('/student')
+      ? ['/student/course-detail', this.courseId()]
+      : ['/learning/course-detail', this.courseId()];
+    this.router.navigate(route);
   }
 
   getTypeName(type: ExerciseType): string {

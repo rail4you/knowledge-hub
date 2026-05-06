@@ -11,8 +11,8 @@
   } @else if (courses().length === 0) {
     <nz-empty nzNotFoundContent="暂无选课记录">
       <nz-empty-footer>
-        <button nz-button nzType="primary" (click)="router.navigate(['/learning/course-list'])">
-          去选课
+        <button nz-button nzType="primary" (click)="browseCourses()">
+          去浏览资源
         </button>
       </nz-empty-footer>
     </nz-empty>

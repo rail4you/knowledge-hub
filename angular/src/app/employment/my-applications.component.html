@@ -1,0 +1,26 @@
+<nz-card nzTitle="我的投递">
+  <nz-table [nzData]="items()" [nzFrontPagination]="false">
+    <thead>
+      <tr>
+        <th>岗位</th>
+        <th>企业</th>
+        <th>简历</th>
+        <th>状态</th>
+        <th>投递时间</th>
+        <th>企业反馈</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of items(); track item.id) {
+        <tr>
+          <td><a [routerLink]="['/employment/jobs', item.jobPostingId]">{{ item.jobTitle }}</a></td>
+          <td>{{ item.companyName || '-' }}</td>
+          <td>{{ item.resumeTitle || '-' }}</td>
+          <td>{{ getStatusLabel(item.status) }}</td>
+          <td>{{ item.appliedAt }}</td>
+          <td>{{ item.employerRemark || '-' }}</td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
+</nz-card>

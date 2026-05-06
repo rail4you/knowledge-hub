@@ -596,6 +596,12 @@
         color: #0056d2;
         background: #f0f6ff;
       }
+
+      &.is-collected {
+        color: #faad14;
+        border-color: rgba(250, 173, 20, 0.35);
+        background: #fff9e6;
+      }
     }
   }
 

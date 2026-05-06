@@ -1,0 +1,55 @@
+<nz-card nzTitle="岗位管理" [nzExtra]="extraTpl">
+  <ng-template #extraTpl>
+    <div class="toolbar">
+      <nz-select [(ngModel)]="statusFilter" nzAllowClear nzPlaceHolder="状态筛选" (ngModelChange)="reload()">
+        <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+        <nz-option [nzValue]="statuses.PendingReview" nzLabel="待审"></nz-option>
+        <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
+        <nz-option [nzValue]="statuses.Rejected" nzLabel="已驳回"></nz-option>
+        <nz-option [nzValue]="statuses.Closed" nzLabel="已关闭"></nz-option>
+      </nz-select>
+      <button nz-button nzType="primary" (click)="openCreate()">新增岗位</button>
+    </div>
+  </ng-template>
+
+  <nz-table [nzData]="items()" [nzFrontPagination]="false">
+    <thead>
+      <tr>
+        <th>岗位</th>
+        <th>企业</th>
+        <th>类型</th>
+        <th>状态</th>
+        <th>投递数</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of items(); track item.id) {
+        <tr>
+          <td>{{ item.title }}</td>
+          <td>{{ item.companyName }}</td>
+          <td>{{ item.jobType }}</td>
+          <td>{{ item.status }}</td>
+          <td>{{ item.applicationCount }}</td>
+          <td class="actions">
+            <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
+            <button nz-button nzType="link" (click)="review(item, statuses.Published)">通过</button>
+            <button nz-button nzType="link" (click)="review(item, statuses.Rejected)">驳回</button>
+            <button nz-button nzType="link" nzDanger (click)="delete(item.id)">删除</button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
+</nz-card>
+
+<nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editingId ? '编辑岗位' : '新增岗位'" (nzOnCancel)="modalVisible = false" (nzOnOk)="save()">
+  <div class="job-form">
+    <input nz-input [(ngModel)]="form.title" placeholder="岗位名称" />
+    <input nz-input [(ngModel)]="form.summary" placeholder="岗位摘要" />
+    <textarea nz-input rows="4" [(ngModel)]="form.description" placeholder="岗位描述"></textarea>
+    <input nz-input [(ngModel)]="form.location" placeholder="工作地区" />
+    <input nz-input [(ngModel)]="form.salaryRange" placeholder="薪资范围" />
+    <input nz-input [(ngModel)]="form.skillTags" placeholder="技能标签" />
+  </div>
+</nz-modal>

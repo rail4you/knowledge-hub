@@ -3,76 +3,6 @@
   const defaultAdminUsername = "admin";
   const defaultAdminPassword = "1q2w3E*";
 
-  const style = document.createElement('style');
-  style.textContent = `
-    .tenant-selector-popup { font-size: 14px !important; }
-    .tenant-selector-title { font-size: 16px !important; font-weight: 600 !important; }
-    .tenant-selector-input { font-size: 14px !important; padding: 8px !important; }
-    .tenant-selector-btn { font-size: 14px !important; padding: 8px 16px !important; }
-  `;
-  document.head.appendChild(style);
-
-  const fetchTenants = async () => {
-    try {
-      const response = await fetch("/api/public/tenants");
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (e) {
-      console.warn("Failed to fetch tenants:", e);
-    }
-    return [{ id: null, name: "全局" }];
-  };
-
-  const showTenantSelector = async () => {
-    const tenants = await fetchTenants();
-    const savedTenantName = localStorage.getItem("selectedTenantName") || "";
-    
-    const tenant = tenants.find(t => t.name === savedTenantName);
-    const selectedId = tenant ? tenant.id : null;
-
-    const { value: selectedValue } = await Swal.fire({
-      title: '选择租户',
-      input: 'select',
-      inputOptions: tenants.reduce((acc, t) => {
-        acc[t.id || ''] = t.name;
-        return acc;
-      }, {}),
-      inputValue: selectedId || '',
-      showCancelButton: true,
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      customClass: {
-        popup: 'tenant-selector-popup',
-        title: 'tenant-selector-title',
-        input: 'tenant-selector-input',
-        confirmButton: 'tenant-selector-btn',
-        cancelButton: 'tenant-selector-btn'
-      },
-      inputValidator: (value) => {
-        return new Promise((resolve) => {
-          resolve();
-        });
-      }
-    });
-
-    if (selectedValue !== undefined) {
-      const selectedTenant = tenants.find(t => (t.id || '') === selectedValue);
-      const tenantName = selectedTenant ? selectedTenant.name : '全局';
-      localStorage.setItem("selectedTenantName", tenantName);
-      localStorage.setItem("selectedTenantId", selectedValue || "");
-      
-      document.cookie = `__tenant=${selectedValue || ''};path=/`;
-      
-      const nameSpan = document.querySelector('.tenant-info .tenant-name, .card .row .col span, #AbpTenantSwitchLink').closest('.row').querySelector('span');
-      if (nameSpan) {
-        nameSpan.textContent = tenantName;
-      }
-      
-      location.reload();
-    }
-  };
-
   const run = () => {
     if (!/\/Account\/Login\/?$/i.test(window.location.pathname)) {
       return;
@@ -132,21 +62,10 @@
       passwordInput.addEventListener("focus", autoFillDefaults, { once: true });
     }
 
-    const tenantSwitchLink = document.getElementById('AbpTenantSwitchLink');
-    if (tenantSwitchLink) {
-      const savedTenantName = localStorage.getItem("selectedTenantName");
-      if (savedTenantName) {
-        const tenantNameSpan = tenantSwitchLink.closest('.row')?.querySelector('.col span');
-        if (tenantNameSpan) {
-          tenantNameSpan.textContent = savedTenantName;
-        }
-      }
-      
-      tenantSwitchLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        showTenantSelector();
-      }, true);
+    const tenantInfoSpan = document.getElementById('AbpTenantSwitchLink')?.closest('.row')?.querySelector('.col span');
+    const savedTenantName = localStorage.getItem("selectedTenantName");
+    if (tenantInfoSpan && savedTenantName) {
+      tenantInfoSpan.textContent = savedTenantName;
     }
   };
 

@@ -1,0 +1,20 @@
+<div class="guidance-page">
+  <nz-card nzTitle="就业指导" [nzExtra]="extraTpl">
+    <ng-template #extraTpl>
+      <a nz-button nzType="default" [routerLink]="['/ai/career-guidance']">打开 AI 职业规划</a>
+    </ng-template>
+
+    <div class="guidance-list">
+      @for (item of items(); track item.id) {
+        <nz-card class="guidance-item">
+          <div class="guidance-head">
+            <strong>{{ item.title }}</strong>
+            <span>{{ getSourceLabel(item.sourceType) }} · {{ item.guidedAt }}</span>
+          </div>
+          <p>{{ item.content }}</p>
+          <p>目标：{{ item.careerGoal || '未填写' }}</p>
+        </nz-card>
+      }
+    </div>
+  </nz-card>
+</div>

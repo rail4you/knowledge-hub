@@ -68,6 +68,7 @@ export class StudentResourcesComponent implements OnInit {
   drawerVisible = signal(false);
   selectedResource = signal<ResourceDto | null>(null);
   ratingSummaries = signal<Record<string, ResourceRatingSummaryDto>>({});
+  collectedResourceIds = signal<Record<string, boolean>>({});
 
   // Recommendation signals
   recommendedResources = signal<RecommendedResourceDto[]>([]);
@@ -117,6 +118,7 @@ export class StudentResourcesComponent implements OnInit {
         this.totalCount.set(result.totalCount || 0);
         this.loading.set(false);
         this.loadRatingSummaries(result.items || []);
+        this.loadCollectionStatus(result.items || []);
       },
       error: () => {
         this.loading.set(false);
@@ -140,6 +142,28 @@ export class StudentResourcesComponent implements OnInit {
         next: (summary) => {
           summaries[resource.id!] = summary;
           this.ratingSummaries.set({ ...summaries });
+        }
+      });
+    });
+  }
+
+  loadCollectionStatus(items: ResourceDto[]) {
+    if (items.length === 0) {
+      this.collectedResourceIds.set({});
+      return;
+    }
+
+    const collectedMap: Record<string, boolean> = {};
+
+    items.forEach(resource => {
+      if (!resource.id) {
+        return;
+      }
+
+      this.resourceService.isCollected(resource.id).subscribe({
+        next: (isCollected) => {
+          collectedMap[resource.id!] = isCollected;
+          this.collectedResourceIds.set({ ...this.collectedResourceIds(), ...collectedMap });
         }
       });
     });
@@ -221,14 +245,30 @@ export class StudentResourcesComponent implements OnInit {
     return new Uint8Array(data).buffer.slice(0) as ArrayBuffer;
   }
 
-  collectResource(id?: string) {
-    if (!id) return;
-    this.resourceService.collect(id).subscribe({
+  isCollected(resourceId?: string) {
+    return !!resourceId && !!this.collectedResourceIds()[resourceId];
+  }
+
+  toggleCollection(resource: ResourceDto) {
+    if (!resource.id) {
+      return;
+    }
+
+    const request$ = this.isCollected(resource.id)
+      ? this.resourceService.uncollect(resource.id)
+      : this.resourceService.collect(resource.id);
+
+    request$.subscribe({
       next: () => {
-        this.message.success('收藏成功');
+        const nextValue = !this.isCollected(resource.id);
+        this.collectedResourceIds.set({
+          ...this.collectedResourceIds(),
+          [resource.id!]: nextValue,
+        });
+        this.message.success(nextValue ? '已加入收藏' : '已取消收藏');
       },
       error: () => {
-        this.message.error('收藏失败');
+        this.message.error(this.isCollected(resource.id) ? '取消收藏失败' : '收藏失败');
       }
     });
   }

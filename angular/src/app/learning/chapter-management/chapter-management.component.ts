@@ -327,7 +327,10 @@ export class ChapterManagementComponent implements OnInit {
     this.importing = true;
     const file = this.selectedImportFile;
 
-    this.chapterService.importFromExcel(courseId, file).subscribe({
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    this.chapterService.importFromExcel(courseId, formData as any).subscribe({
       next: (result: ChapterImportResultDto) => {
         this.importing = false;
         if (result.failCount === 0) {

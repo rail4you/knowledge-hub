@@ -42,8 +42,10 @@ export class CourseDetailComponent implements OnInit {
   course = signal<CourseDetailDto | null>(null);
   loading = signal(true);
   courseId = signal<string>('');
+  isStudentView = signal(false);
 
   ngOnInit() {
+    this.isStudentView.set(this.router.url.startsWith('/student'));
     const courseId = this.route.snapshot.paramMap.get('id');
     if (courseId) {
       this.courseId.set(courseId);
@@ -75,17 +77,24 @@ export class CourseDetailComponent implements OnInit {
   }
   
   goBack() {
-    this.router.navigate(['/learning/courses']);
+    this.router.navigate([this.isStudentView() ? '/student/courses' : '/learning/my-courses']);
   }
   
   startLearning() {
     const course = this.course();
     if (course) {
-      this.router.navigate(['/learning/courses', course.id, 'learn']);
+      this.router.navigate([
+        this.isStudentView() ? '/student/exercise-learning' : '/learning/exercise-learning',
+        course.id,
+      ]);
     }
   }
   
   viewKnowledgeGraph() {
+    if (this.isStudentView()) {
+      return;
+    }
+
     const course = this.course();
     if (course) {
       this.router.navigate(['/learning/knowledge-graph', course.id]);
@@ -93,6 +102,10 @@ export class CourseDetailComponent implements OnInit {
   }
 
   viewExercises() {
+    if (this.isStudentView()) {
+      return;
+    }
+
     const course = this.course();
     if (course) {
       this.router.navigate(['/learning/exercise', course.id]);
@@ -102,7 +115,10 @@ export class CourseDetailComponent implements OnInit {
   startExerciseLearning() {
     const course = this.course();
     if (course) {
-      this.router.navigate(['/learning/exercise-learning', course.id]);
+      this.router.navigate([
+        this.isStudentView() ? '/student/exercise-learning' : '/learning/exercise-learning',
+        course.id,
+      ]);
     }
   }
   

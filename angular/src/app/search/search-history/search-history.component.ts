@@ -9,6 +9,7 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { Router } from '@angular/router';
 import { SearchService, SearchHistoryDto } from '../search.service';
 
 @Component({
@@ -105,6 +106,7 @@ import { SearchService, SearchHistoryDto } from '../search.service';
 export class SearchHistoryComponent implements OnInit {
   private readonly searchService = inject(SearchService);
   private readonly message = inject(NzMessageService);
+  private readonly router = inject(Router);
 
   readonly history = signal<SearchHistoryDto[]>([]);
   readonly loading = signal(false);
@@ -141,6 +143,9 @@ export class SearchHistoryComponent implements OnInit {
 
   reSearch(queryText: string) {
     if (!queryText.trim()) return;
-    window.location.href = `/search?q=${encodeURIComponent(queryText)}`;
+    const target = this.router.url.startsWith('/student') ? '/student/search' : '/search';
+    this.router.navigate([target], {
+      queryParams: { q: queryText },
+    });
   }
 }

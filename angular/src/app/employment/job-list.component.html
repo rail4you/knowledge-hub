@@ -1,0 +1,37 @@
+<div class="employment-page">
+  <section class="toolbar">
+    <input nz-input [(ngModel)]="keyword" placeholder="搜索岗位 / 企业 / 技能" />
+    <input nz-input [(ngModel)]="location" placeholder="地区" />
+    <nz-select [(ngModel)]="jobType" nzAllowClear nzPlaceHolder="岗位类型">
+      <nz-option [nzValue]="jobTypes.FullTime" nzLabel="全职"></nz-option>
+      <nz-option [nzValue]="jobTypes.Internship" nzLabel="实习"></nz-option>
+      <nz-option [nzValue]="jobTypes.PartTime" nzLabel="兼职"></nz-option>
+      <nz-option [nzValue]="jobTypes.Apprenticeship" nzLabel="学徒"></nz-option>
+    </nz-select>
+    <button nz-button nzType="primary" (click)="reload()">搜索</button>
+  </section>
+
+  <div class="job-grid">
+    @for (item of jobs(); track item.id) {
+      <nz-card class="job-card">
+        <div class="job-head">
+          <div>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.companyName }} · {{ item.location || '地点待定' }}</p>
+          </div>
+          <nz-tag [nzColor]="item.hasApplied ? 'green' : 'blue'">{{ item.hasApplied ? '已投递' : getTypeLabel(item.jobType) }}</nz-tag>
+        </div>
+        <p class="summary">{{ item.summary || item.description }}</p>
+        <div class="meta">
+          <span>{{ item.salaryRange || '薪资面议' }}</span>
+          <span>{{ item.recruitmentCount }} 人</span>
+          <span>{{ item.applicationCount }} 份投递</span>
+        </div>
+        <div class="actions">
+          <nz-tag>{{ getStatusLabel(item.status) }}</nz-tag>
+          <a nz-button nzType="primary" [routerLink]="['/employment/jobs', item.id]">查看详情</a>
+        </div>
+      </nz-card>
+    }
+  </div>
+</div>

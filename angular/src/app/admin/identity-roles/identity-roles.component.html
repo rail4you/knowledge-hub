@@ -110,12 +110,18 @@
         </nz-form-item>
       }
 
-      <nz-form-item>
-        <nz-form-label nzRequired>{{ '::DisplayName:RoleName' | abpLocalization }}</nz-form-label>
-        <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
-          <input nz-input formControlName="name" placeholder="{{ '::DisplayName:RoleName' | abpLocalization }}" />
-        </nz-form-control>
-      </nz-form-item>
+      @if (!selectedRole.id) {
+        <nz-form-item>
+          <nz-form-label nzRequired>{{ '::DisplayName:RoleName' | abpLocalization }}</nz-form-label>
+          <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
+            <nz-select formControlName="name" [nzPlaceHolder]="'::DisplayName:RoleName' | abpLocalization">
+              @for (roleName of presetRoleNames; track roleName) {
+                <nz-option [nzValue]="roleName" [nzLabel]="getRoleDisplayName(roleName)"></nz-option>
+              }
+            </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+      }
 
       <nz-form-item>
         <nz-form-label>{{ '::DisplayName:IsDefault' | abpLocalization }}</nz-form-label>

@@ -77,6 +77,52 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         var learningPermission = myGroup.AddPermission(KnowledgeHubPermissions.Learning.Default, L("Permission:Learning"));
         learningPermission.AddChild(KnowledgeHubPermissions.Learning.ViewStatistics, L("Permission:Learning.ViewStatistics"));
         learningPermission.AddChild(KnowledgeHubPermissions.Learning.ExportData, L("Permission:Learning.ExportData"));
+
+        // News permissions
+        var newsPermission = myGroup.AddPermission(KnowledgeHubPermissions.News.Default, L("Permission:News"));
+        newsPermission.AddChild(KnowledgeHubPermissions.News.Create, L("Permission:News.Create"));
+        newsPermission.AddChild(KnowledgeHubPermissions.News.Edit, L("Permission:News.Edit"));
+        newsPermission.AddChild(KnowledgeHubPermissions.News.Delete, L("Permission:News.Delete"));
+        newsPermission.AddChild(KnowledgeHubPermissions.News.Review, L("Permission:News.Review"));
+        newsPermission.AddChild(KnowledgeHubPermissions.News.Publish, L("Permission:News.Publish"));
+        newsPermission.AddChild(KnowledgeHubPermissions.News.ManageComment, L("Permission:News.ManageComment"));
+
+        // Micro major permissions
+        var microMajorPermission = myGroup.AddPermission(KnowledgeHubPermissions.MicroMajors.Default, L("Permission:MicroMajors"));
+        microMajorPermission.AddChild(KnowledgeHubPermissions.MicroMajors.Create, L("Permission:MicroMajors.Create"));
+        microMajorPermission.AddChild(KnowledgeHubPermissions.MicroMajors.Edit, L("Permission:MicroMajors.Edit"));
+        microMajorPermission.AddChild(KnowledgeHubPermissions.MicroMajors.Delete, L("Permission:MicroMajors.Delete"));
+        microMajorPermission.AddChild(KnowledgeHubPermissions.MicroMajors.ManageEnrollment, L("Permission:MicroMajors.ManageEnrollment"));
+        microMajorPermission.AddChild(KnowledgeHubPermissions.MicroMajors.IssueCertificate, L("Permission:MicroMajors.IssueCertificate"));
+        microMajorPermission.AddChild(KnowledgeHubPermissions.MicroMajors.ViewStatistics, L("Permission:MicroMajors.ViewStatistics"));
+
+        // Practicum permissions
+        var practicumPermission = myGroup.AddPermission(KnowledgeHubPermissions.Practicum.Default, L("Permission:Practicum"));
+        practicumPermission.AddChild(KnowledgeHubPermissions.Practicum.Create, L("Permission:Practicum.Create"));
+        practicumPermission.AddChild(KnowledgeHubPermissions.Practicum.Edit, L("Permission:Practicum.Edit"));
+        practicumPermission.AddChild(KnowledgeHubPermissions.Practicum.Review, L("Permission:Practicum.Review"));
+        practicumPermission.AddChild(KnowledgeHubPermissions.Practicum.Score, L("Permission:Practicum.Score"));
+        practicumPermission.AddChild(KnowledgeHubPermissions.Practicum.Export, L("Permission:Practicum.Export"));
+        practicumPermission.AddChild(KnowledgeHubPermissions.Practicum.ViewStatistics, L("Permission:Practicum.ViewStatistics"));
+
+        // Double high permissions
+        var doubleHighPermission = myGroup.AddPermission(KnowledgeHubPermissions.DoubleHigh.Default, L("Permission:DoubleHigh"));
+        doubleHighPermission.AddChild(KnowledgeHubPermissions.DoubleHigh.ManageProject, L("Permission:DoubleHigh.ManageProject"));
+        doubleHighPermission.AddChild(KnowledgeHubPermissions.DoubleHigh.ManageIndicator, L("Permission:DoubleHigh.ManageIndicator"));
+        doubleHighPermission.AddChild(KnowledgeHubPermissions.DoubleHigh.CollectData, L("Permission:DoubleHigh.CollectData"));
+        doubleHighPermission.AddChild(KnowledgeHubPermissions.DoubleHigh.ExportReport, L("Permission:DoubleHigh.ExportReport"));
+        doubleHighPermission.AddChild(KnowledgeHubPermissions.DoubleHigh.ViewAll, L("Permission:DoubleHigh.ViewAll"));
+
+        // Employment permissions
+        var employmentPermission = myGroup.AddPermission(KnowledgeHubPermissions.Employment.Default, L("Permission:Employment"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.PublishJob, L("Permission:Employment.PublishJob"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ReviewJob, L("Permission:Employment.ReviewJob"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ManageResume, L("Permission:Employment.ManageResume"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ScheduleInterview, L("Permission:Employment.ScheduleInterview"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ManageGuidance, L("Permission:Employment.ManageGuidance"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ManageOutcome, L("Permission:Employment.ManageOutcome"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ViewStatistics, L("Permission:Employment.ViewStatistics"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ExportReport, L("Permission:Employment.ExportReport"));
     }
 
     private static LocalizableString L(string name)

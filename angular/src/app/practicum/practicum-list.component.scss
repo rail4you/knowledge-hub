@@ -1,0 +1,82 @@
+.practicum-list-page {
+  padding: 24px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: end;
+}
+
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+}
+
+.hero p {
+  margin: 0;
+  color: #64748b;
+}
+
+.search-box {
+  display: flex;
+  gap: 12px;
+  min-width: 340px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.project-card {
+  overflow: hidden;
+}
+
+.cover {
+  margin: -24px -24px 16px;
+  padding: 24px;
+  min-height: 180px;
+  color: #fff;
+  background-size: cover;
+  background-position: center;
+}
+
+.cover h2 {
+  margin: 16px 0 8px;
+  color: inherit;
+}
+
+.cover p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.meta {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+}
+
+.progress-row {
+  display: grid;
+  gap: 6px;
+}
+
+.actions {
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-box {
+    min-width: 0;
+  }
+}

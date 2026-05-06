@@ -41,6 +41,7 @@ public interface IResourceAppService : ICrudAppService<ResourceDto, Guid, PagedA
     Task<PhysicalDeleteRequestDto> RejectPhysicalDeleteAsync(Guid id);
     
     Task<PagedResultDto<ResourceDto>> GetLeagueApprovedAsync(PagedResultRequestDto input);
+    Task<PagedResultDto<ResourceDto>> GetCollectedListAsync(PagedResultRequestDto input);
     
     Task<PagedResultDto<ResourceDto>> SearchAsync(ResourceSearchQueryDto input);
     Task<MeiliSearchResultDto> SearchDocumentsAsync(MeiliSearchQueryDto input);

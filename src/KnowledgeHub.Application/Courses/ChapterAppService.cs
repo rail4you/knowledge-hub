@@ -73,13 +73,43 @@ public class ChapterAppService : ApplicationService, IChapterAppService
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task DeleteAsync(Guid id)
     {
+        // Recursively collect all descendant IDs before deleting
+        var query = await _chapterRepository.GetQueryableAsync();
+        var allChapters = query.ToList();
+
+        var idsToDelete = new List<Guid> { id };
+        CollectDescendants(id, allChapters, idsToDelete);
+
+        // Delete descendants first (bottom-up), then the target
+        foreach (var childId in idsToDelete.Skip(1).AsEnumerable().Reverse())
+        {
+            await _chapterRepository.DeleteAsync(childId);
+        }
         await _chapterRepository.DeleteAsync(id);
+    }
+
+    private void CollectDescendants(Guid parentId, List<Chapter> allChapters, List<Guid> result)
+    {
+        var children = allChapters.Where(c => c.ParentId == parentId).ToList();
+        foreach (var child in children)
+        {
+            result.Add(child.Id);
+            CollectDescendants(child.Id, allChapters, result);
+        }
     }
 
     public async Task<List<ChapterDto>> GetChaptersByCourseAsync(Guid courseId)
     {
         var query = await _chapterRepository.GetQueryableAsync();
         var chapters = query.Where(c => c.CourseId == courseId).OrderBy(c => c.SortOrder).ToList();
+
+        // Ensure navigation properties are not null before mapping
+        foreach (var chapter in chapters)
+        {
+            chapter.Children ??= new List<Chapter>();
+            chapter.KnowledgeResources ??= new List<KnowledgeResource>();
+        }
+
         return ObjectMapper.Map<List<Chapter>, List<ChapterDto>>(chapters);
     }
 

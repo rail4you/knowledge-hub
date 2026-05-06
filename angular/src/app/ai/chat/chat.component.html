@@ -2,10 +2,8 @@
   <!-- Left sidebar: Resource list -->
   <div class="resource-sidebar">
     <div class="sidebar-header">
-      <h3>文档资源</h3>
-      <button nz-button nzType="text" nzSize="small" (click)="newChat()" nz-tooltip="新建对话">
-        <span nz-icon nzType="plus"></span>
-      </button>
+      <h3>资源文档</h3>
+
     </div>
 
     <div class="sidebar-search">
@@ -15,7 +13,7 @@
           type="text"
           [value]="resourceSearchText()"
           (input)="resourceSearchText.set($any($event.target).value)"
-          placeholder="搜索文档..."
+          placeholder="搜索资源文档..."
         />
       </nz-input-group>
       <ng-template #searchIcon>
@@ -67,18 +65,15 @@
           </nz-tag>
         }
       </div>
-      <button nz-button nzType="default" nzSize="small" (click)="newChat()">
-        <span nz-icon nzType="edit" nzTheme="outline"></span>
-        新建对话
-      </button>
+
     </div>
 
     <div #messagesContainer class="messages-container">
       @if (messages().length === 0) {
         <div class="welcome-message">
           <span nz-icon nzType="robot" nzTheme="outline" class="welcome-icon"></span>
-          <h3>@if (selectedResource()) { 关于 {{ selectedResource()!.name }} 的问答 } @else { 你好，我是文档问答助手 }</h3>
-          <p>@if (selectedResource()) { 请输入关于这篇文档的问题 } @else { 请从左侧选择一个文档，或直接提问 }</p>
+          <h3>{{ welcomeTitle() }}</h3>
+          <p>{{ welcomeDescription() }}</p>
         </div>
       }
       @for (msg of messages(); track msg.id) {
@@ -108,7 +103,7 @@
           [value]="inputMessage()"
           (input)="inputMessage.set($any($event.target).value)"
           (keydown.enter)="onKeyPress($event)"
-          placeholder="@if (selectedResource()) { 输入关于文档的问题，按 Enter 发送... } @else { 输入您的问题，按 Enter 发送... }"
+          [placeholder]="inputPlaceholder()"
           nzSize="large"
           [nzAutosize]="{ minRows: 1, maxRows: 4 }"
           [disabled]="isLoading()"

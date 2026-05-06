@@ -1,0 +1,46 @@
+.employment-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 12px;
+}
+
+.job-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.job-card {
+  border-radius: 16px;
+}
+
+.job-head,
+.actions,
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.summary {
+  min-height: 48px;
+  color: #5b6470;
+}
+
+.meta {
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+}

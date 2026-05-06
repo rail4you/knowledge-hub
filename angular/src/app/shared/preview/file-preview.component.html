@@ -2,7 +2,7 @@
   [nzVisible]="visible()"
   [nzTitle]="resourceName() || ('::Preview' | abpLocalization)"
   (nzOnCancel)="close()"
-  [nzWidth]="1000"
+  [nzWidth]="fileType === 'pptx' ? 1280 : 1000"
   [nzFooter]="previewFooter"
   [nzStyle]="{ top: '20px' }"
   nzWrapClassName="file-preview-modal"

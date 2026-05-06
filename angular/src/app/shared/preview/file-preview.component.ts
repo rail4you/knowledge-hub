@@ -158,7 +158,7 @@ export class FilePreviewComponent {
         },
         error: (err) => {
           console.error('Failed to get file URL:', err);
-          this.loadError.set('Failed to load file for preview');
+          this.loadError.set('预览加载失败，请稍后重试');
           this.isLoading.set(false);
         },
       });
@@ -174,7 +174,7 @@ export class FilePreviewComponent {
       },
       error: (err) => {
         console.error('File load error:', err);
-        this.loadError.set('Failed to load file for preview');
+        this.loadError.set('预览加载失败，请稍后重试');
         this.isLoading.set(false);
       },
     });

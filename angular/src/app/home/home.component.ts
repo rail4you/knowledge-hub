@@ -1,8 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { AuthService, ConfigStateService, LocalizationPipe } from '@abp/ng.core';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
-import { OAuthService } from 'angular-oauth2-oidc';
-import { filter, take } from 'rxjs/operators';
+import { hasRole } from '../auth/current-user.utils';
 
 @Component({
   selector: 'app-home',
@@ -13,7 +12,6 @@ import { filter, take } from 'rxjs/operators';
 export class HomeComponent implements OnInit {
   private authService = inject(AuthService);
   private configService = inject(ConfigStateService);
-  private oauthService = inject(OAuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
@@ -21,17 +19,27 @@ export class HomeComponent implements OnInit {
     return this.authService.isAuthenticated
   }
 
+  get isStudent(): boolean {
+    return hasRole(this.configService, 'Student');
+  }
+
   ngOnInit() {
     if (this.hasLoggedIn) {
       const returnUrl = this.route.snapshot.queryParams['returnUrl'];
-      if (!returnUrl) {
-        this.router.navigate(['/']);
+      if (!returnUrl && this.isStudent) {
+        this.router.navigate(['/student/resources']);
       }
     }
   }
 
   login() {
     this.authService.navigateToLogin();
+  }
+
+  logout() {
+    this.authService.logout().subscribe(() => {
+      this.router.navigate(['/']);
+    });
   }
 
   features = [

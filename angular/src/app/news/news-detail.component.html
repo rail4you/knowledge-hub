@@ -1,0 +1,72 @@
+@if (loading()) {
+  <div class="state">
+    <nz-spin nzTip="加载资讯中..."></nz-spin>
+  </div>
+} @else if (article(); as article) {
+  <div class="detail-page">
+    <div class="back">
+      <a routerLink="/news">返回资讯列表</a>
+    </div>
+
+    <nz-card>
+      <div class="meta">
+        @if (article.categoryName) {
+          <nz-tag nzColor="blue">{{ article.categoryName }}</nz-tag>
+        }
+        @if (article.isTop) {
+          <nz-tag nzColor="red">置顶</nz-tag>
+        }
+        @if (article.isHot) {
+          <nz-tag nzColor="orange">热门</nz-tag>
+        }
+      </div>
+
+      <h1>{{ article.title }}</h1>
+      <div class="submeta">
+        <span>{{ article.authorName || '系统发布' }}</span>
+        <span>{{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+        <span>{{ article.viewCount }} 浏览</span>
+        <span>{{ article.likeCount }} 点赞</span>
+      </div>
+
+      @if (article.summary) {
+        <blockquote>{{ article.summary }}</blockquote>
+      }
+
+      <div class="content">{{ article.content }}</div>
+
+      <div class="actions">
+        <button nz-button nzType="primary" [disabled]="article.userHasLiked" (click)="likeArticle()">
+          {{ article.userHasLiked ? '已点赞' : '点赞' }}
+        </button>
+      </div>
+    </nz-card>
+
+    @if (article.allowComments) {
+      <nz-card nzTitle="评论区">
+        <textarea
+          nz-input
+          rows="4"
+          placeholder="输入评论内容"
+          [ngModel]="commentText()"
+          (ngModelChange)="commentText.set($event)"
+        ></textarea>
+        <div class="comment-submit">
+          <button nz-button nzType="primary" (click)="submitComment()">发表评论</button>
+        </div>
+
+        <div class="comment-list">
+          @for (comment of comments(); track comment.id) {
+            <div class="comment-item">
+              <div class="comment-item__meta">
+                <strong>{{ comment.userName || '匿名用户' }}</strong>
+                <span>{{ comment.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+              </div>
+              <div class="comment-item__content">{{ comment.content }}</div>
+            </div>
+          }
+        </div>
+      </nz-card>
+    }
+  </div>
+}

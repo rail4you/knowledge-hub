@@ -9,7 +9,7 @@
           <path d="M40 44l4 4 8-8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <h1 class="system-title">易课通知识库系统</h1>
+      <h1 class="system-title">易课通资源库系统</h1>
       <p class="system-subtitle">智能化知识管理与学习平台</p>
       <p class="system-description">
         集成 AI 技术的新一代知识管理系统，提供资源管理、智能搜索、AI 辅助教学、课程学习等核心功能，
@@ -17,20 +17,29 @@
       </p>
       <div class="hero-actions">
         @if(hasLoggedIn){
-          <a routerLink="/student/resources" class="student-portal-btn">
-            <i class="fa fa-graduation-cap me-2"></i>
-            进入学生门户
-          </a>
-          <a routerLink="/resources" class="secondary-btn">
-            <i class="fa fa-database me-2"></i>
-            管理资源
-          </a>
+          <div class="logged-in-actions">
+            @if (isStudent) {
+              <a routerLink="/student/resources" class="student-portal-btn">
+                <i class="fa fa-graduation-cap me-2"></i>
+                进入学生门户
+              </a>
+            } @else {
+              <a routerLink="/resources" class="student-portal-btn">
+                <i class="fa fa-database me-2"></i>
+                进入资源管理
+              </a>
+            }
+            <button (click)="logout()" class="logout-btn">
+              <i class="fa fa-sign-out me-2"></i>
+              退出登录
+            </button>
+          </div>
         } @else {
           <button (click)="login()" class="login-btn">
             <i class="fa fa-sign-in me-2"></i>
             立即登录
           </button>
-          <p class="login-hint">登录后即可访问学生门户和学习资源</p>
+          <p class="login-hint">登录后即可访问学生门户和资源内容</p>
         }
       </div>
     </div>
