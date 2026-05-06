@@ -31,15 +31,6 @@ interface HitMatch {
   template: `
     <div class="document-viewer">
       <div class="toolbar">
-        <button nz-button (click)="prevPage()" [disabled]="currentPage() <= 1">
-          <span nz-icon nzType="left"></span>
-          上一页
-        </button>
-        <span class="page-info">{{ currentPage() }} / {{ totalPages() }}</span>
-        <button nz-button (click)="nextPage()" [disabled]="currentPage() >= totalPages()">
-          下一页
-          <span nz-icon nzType="right"></span>
-        </button>
         <button nz-button (click)="goBack()">
           <span nz-icon nzType="rollback"></span>
           返回
@@ -117,12 +108,6 @@ interface HitMatch {
       border-bottom: 1px solid #e8e8e8;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
-
-    .page-info {
-      font-size: 14px;
-      color: #666;
-    }
-
     .toolbar-spacer {
       flex: 1;
     }
@@ -286,8 +271,6 @@ export class DocumentViewerComponent implements OnInit, AfterViewInit {
 
   @ViewChild('pageContainer', { static: true }) pageContainerRef!: ElementRef<HTMLDivElement>;
 
-  currentPage = signal(1);
-  totalPages = signal(1);
   pageContent = signal('');
   loading = signal(false);
   resourceName = signal('');
@@ -299,14 +282,10 @@ export class DocumentViewerComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
-    const page = this.route.snapshot.queryParamMap.get('page');
     const state = history.state;
 
     if (id) {
       this.resourceId.set(id);
-    }
-    if (page) {
-      this.currentPage.set(parseInt(page, 10));
     }
     if (state.content) {
       this.pageContent.set(state.content);
@@ -394,18 +373,6 @@ export class DocumentViewerComponent implements OnInit, AfterViewInit {
     } else {
       this.pageContent.set('<p>无内容</p>');
       this.loading.set(false);
-    }
-  }
-
-  prevPage() {
-    if (this.currentPage() > 1) {
-      this.currentPage.update(v => v - 1);
-    }
-  }
-
-  nextPage() {
-    if (this.currentPage() < this.totalPages()) {
-      this.currentPage.update(v => v + 1);
     }
   }
 
