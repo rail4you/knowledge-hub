@@ -5,6 +5,7 @@ const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https:
 const oAuthConfig = {
   issuer: baseUrl,
   redirectUri: baseUrl,
+  postLogoutRedirectUri: baseUrl,
   clientId: 'KnowledgeHub_App',
   responseType: 'code',
   scope: 'offline_access KnowledgeHub',

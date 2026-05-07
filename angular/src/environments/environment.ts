@@ -5,6 +5,7 @@ const baseUrl = 'http://localhost:4200';
 const oAuthConfig = {
   issuer: 'https://localhost:44305/',
   redirectUri: baseUrl,
+  postLogoutRedirectUri: baseUrl,
   clientId: 'KnowledgeHub_App',
   responseType: 'code',
   scope: 'offline_access KnowledgeHub',
