@@ -32,13 +32,12 @@ public class SearchResultDto
 
 public class DocumentSearchResultDto
 {
-    public Guid ResourceId { get; set; }
+    public string ResourceId { get; set; } = string.Empty;
     public string ResourceName { get; set; } = string.Empty;
     public int PageNumber { get; set; }
-    public string PageContent { get; set; } = string.Empty;
-    public string? PageTitle { get; set; }
-    public string HighlightedText { get; set; } = string.Empty;
-    public string PreviewText { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string? Title { get; set; }
+    public string? HighlightedContent { get; set; }
     public float RelevanceScore { get; set; }
     public string FileExtension { get; set; } = string.Empty;
     public ResourceType ResourceType { get; set; }

@@ -162,7 +162,7 @@ export class SearchService {
   private readonly apiUrl = '/api/app/resource';
 
   search(query: SearchQueryDto): Observable<SearchResultDto> {
-    return this.restService.request({ method: 'POST', url: `${this.apiUrl}/search-documents`, body: query }, { apiName: 'Resources' });
+    return this.restService.request({ method: 'POST', url: '/api/app/search/search', body: query }, { apiName: 'Search' });
   }
 
   searchDocuments(query: { query: string; limit?: number; offset?: number }): Observable<any> {

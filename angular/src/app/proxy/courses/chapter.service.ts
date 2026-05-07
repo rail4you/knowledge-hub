@@ -3,6 +3,7 @@ import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 import type { IFormFile } from '../microsoft/asp-net-core/http/models';
+import type { ChapterOrderDto } from './dtos/models';
 
 @Injectable({
   providedIn: 'root',
@@ -84,6 +85,14 @@ export class ChapterService {
       method: 'PUT',
       url: `/api/app/chapter/${id}`,
       body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+  reorderChapters = (orders: ChapterOrderDto[], config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'PUT',
+      url: '/api/app/chapter/reorder',
+      body: orders,
     },
     { apiName: this.apiName,...config });
 }

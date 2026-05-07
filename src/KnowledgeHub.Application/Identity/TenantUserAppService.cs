@@ -58,7 +58,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         }
     }
 
-    public async Task<PagedResultDto<IdentityUserDto>> GetListAsync(GetIdentityUsersInput input)
+    public async Task<PagedResultDto<IdentityUserDto>> GetListAsync(GetTenantUsersInput input)
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -71,6 +71,12 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                     u.Email.Contains(input.Filter) ||
                     (u.Name != null && u.Name.Contains(input.Filter)) ||
                     (u.Surname != null && u.Surname.Contains(input.Filter)));
+            }
+
+            // Filter by tenant
+            if (input.TenantId.HasValue)
+            {
+                queryable = queryable.Where(u => u.TenantId == input.TenantId.Value);
             }
 
             var totalCount = await queryable.CountAsync();

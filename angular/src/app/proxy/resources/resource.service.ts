@@ -119,6 +119,15 @@ export class ResourceService {
     { apiName: this.apiName,...config });
   
 
+  getCollectedList = (input: PagedResultRequestDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PagedResultDto<ResourceDto>>({
+      method: 'GET',
+      url: '/api/app/resource/collected-list',
+      params: { skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
   getFileUrl = (resourceId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, string>({
       method: 'GET',

@@ -25,6 +25,7 @@
     "@abp/ng.theme.lepton-x": "~5.1.0",
     "@abp/ng.theme.shared": "~10.1.0",
     "@angular/animations": "~21.0.0",
+    "@angular/cdk": "^21.2.10",
     "@angular/common": "~21.0.0",
     "@angular/compiler": "~21.0.0",
     "@angular/core": "~21.0.0",

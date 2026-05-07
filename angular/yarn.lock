@@ -485,10 +485,10 @@
   optionalDependencies:
     lmdb "3.5.1"
 
-"@angular/cdk@^21.0.0":
-  version "21.2.2"
-  resolved "https://registry.npmjs.org/@angular/cdk/-/cdk-21.2.2.tgz"
-  integrity sha512-9AsZkwqy07No7+0qPydcJfXB6SpA9qLDBanoesNj5KsiZJ62PJH3oIjVyNeQEEe1HQWmSwBnhwN12OPLNMUlnw==
+"@angular/cdk@^21.0.0", "@angular/cdk@^21.2.10":
+  version "21.2.10"
+  resolved "https://registry.npmjs.org/@angular/cdk/-/cdk-21.2.10.tgz"
+  integrity sha512-yfCzUFNfeSMNnCkc0P5Pozqz1EViDe9KLPQyHVY/hApsNgBWvckpA+ZEWgKNfAf72f8bUJvZoHejaSMGYrpvuw==
   dependencies:
     parse5 "^8.0.0"
     tslib "^2.3.0"

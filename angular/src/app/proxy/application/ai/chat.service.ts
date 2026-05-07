@@ -10,13 +10,13 @@ export class ChatService {
   apiName = 'KnowledgeHub';
   
 
-  chatStreaming = (input: ChatInputDto, onChunk: (chunk: ChatMessageChunkDto) => void, config?: Partial<Rest.Config>) =>
+  chatStreaming = (input: ChatInputDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',
       url: '/api/app/chat/chat-streaming',
       body: input,
     },
-    { apiName: this.apiName,...config });
+    { apiName: this.apiName, ...config });
   
 
   getResourcesWithPageIndex = (config?: Partial<Rest.Config>) =>
@@ -24,5 +24,5 @@ export class ChatService {
       method: 'GET',
       url: '/api/app/chat/resources-with-page-index',
     },
-    { apiName: this.apiName,...config });
+    { apiName: this.apiName, ...config });
 }

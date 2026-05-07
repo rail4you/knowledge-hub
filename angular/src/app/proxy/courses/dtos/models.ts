@@ -24,6 +24,11 @@ export interface ChapterImportResultDto {
   errors?: string[];
 }
 
+export interface ChapterOrderDto {
+  chapterId?: string;
+  sortOrder?: number;
+}
+
 export interface CourseDetailDto extends CourseDto {
   chapters?: ChapterDto[];
 }

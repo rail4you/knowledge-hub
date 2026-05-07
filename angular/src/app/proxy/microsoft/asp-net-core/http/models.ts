@@ -1,4 +1,3 @@
-
 export interface IFormFile {
   contentType?: string;
   contentDisposition?: string;
@@ -6,4 +5,9 @@ export interface IFormFile {
   length?: number;
   name?: string;
   fileName?: string;
+}
+
+export interface StringValues {
+  count: number;
+  item: (index: number) => string;
 }

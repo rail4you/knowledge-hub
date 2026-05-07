@@ -274,4 +274,15 @@ public class ChapterAppService : ApplicationService, IChapterAppService
 
         return result;
     }
+
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
+    public async Task ReorderChaptersAsync(List<ChapterOrderDto> orders)
+    {
+        foreach (var order in orders)
+        {
+            var chapter = await _chapterRepository.GetAsync(order.ChapterId);
+            chapter.SortOrder = order.SortOrder;
+            await _chapterRepository.UpdateAsync(chapter);
+        }
+    }
 }

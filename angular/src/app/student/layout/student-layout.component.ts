@@ -6,6 +6,7 @@ import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { hasRole } from '../../auth/current-user.utils';
+import { AuthErrorModalComponent } from '../../core/auth/auth-error-modal.component';
 
 @Component({
   selector: 'app-student-layout',
@@ -15,7 +16,8 @@ import { hasRole } from '../../auth/current-user.utils';
     RouterModule,
     NzIconModule,
     NzAvatarModule,
-    NzDropDownModule
+    NzDropDownModule,
+    AuthErrorModalComponent,
   ],
   templateUrl: './student-layout.component.html',
   styleUrls: ['./student-layout.component.scss'],

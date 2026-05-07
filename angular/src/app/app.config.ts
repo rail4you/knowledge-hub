@@ -12,6 +12,7 @@ import { provideThemeLeptonX } from '@abp/ng.theme.lepton-x';
 import { LPX_LAYOUT_PROVIDER, provideSideMenuLayout } from '@abp/ng.theme.lepton-x/layouts';
 import { provideLogo, withEnvironmentOptions } from "@abp/ng.theme.shared";
 import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
@@ -53,6 +54,7 @@ import { IDENTITY_USERS_PROVIDER } from './identity-users.config';
 import { IdentityUserService } from '@abp/ng.identity/proxy';
 import { CustomIdentityUserService } from './custom-identity-user.service';
 import { checkInstallStatus } from './install/install.initializer';
+import { authErrorInterceptor } from './core/auth/auth-error.interceptor';
 
 const icons = [
   PlusOutline,
@@ -84,6 +86,9 @@ const icons = [
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(APP_ROUTES),
+    provideHttpClient(
+      withInterceptors([authErrorInterceptor])
+    ),
     APP_ROUTE_PROVIDER,
     ALLIANCE_ROUTE_PROVIDER,
     FOOTER_PROVIDER,

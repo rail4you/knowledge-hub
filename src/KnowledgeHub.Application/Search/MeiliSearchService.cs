@@ -273,12 +273,12 @@ public class MeiliSearchService : IMeiliSearchService
 
         if (query.StartDate.HasValue)
         {
-            filters.Add($"uploadDate >= {query.StartDate.Value:yyyy-MM-dd}");
+            filters.Add($"uploadDate >= \"{query.StartDate.Value:yyyy-MM-dd}\"");
         }
 
         if (query.EndDate.HasValue)
         {
-            filters.Add($"uploadDate <= {query.EndDate.Value:yyyy-MM-dd}");
+            filters.Add($"uploadDate <= \"{query.EndDate.Value:yyyy-MM-dd}\"");
         }
 
         filters.Add("status IN [0, 1, 2, 3]");
@@ -289,11 +289,7 @@ public class MeiliSearchService : IMeiliSearchService
             // 租户用户：只能搜索该租户的文档
             filters.Add($"tenantId = \"{tenantId}\"");
         }
-        else
-        {
-            // Host 用户或空租户：只搜索没有租户的文档（空字符串）
-            filters.Add("tenantId = \"\"");
-        }
+        // Host 用户不加 tenantId 过滤，可以搜索所有文档
 
         var searchParams = new
         {
@@ -319,13 +315,12 @@ public class MeiliSearchService : IMeiliSearchService
             {
                 items.Add(new DocumentSearchResultDto
                 {
-                    ResourceId = Guid.TryParse(hit.ResourceId, out var rid) ? rid : Guid.Empty,
+                    ResourceId = hit.ResourceId ?? string.Empty,
                     ResourceName = hit.ResourceName ?? string.Empty,
                     PageNumber = hit.PageNumber,
-                    PageContent = hit.PageContent ?? string.Empty,
-                    PageTitle = hit.PageTitle,
-                    HighlightedText = hit._formatted?.PageContent ?? hit.PageContent ?? string.Empty,
-                    PreviewText = hit.PageContent?.Length > 200 ? hit.PageContent[..200] + "..." : hit.PageContent ?? string.Empty,
+                    Content = hit.PageContent ?? string.Empty,
+                    Title = hit.PageTitle,
+                    HighlightedContent = hit._formatted?.PageContent ?? hit.PageContent ?? string.Empty,
                     RelevanceScore = (float)hit.RankingScore,
                     FileExtension = hit.FileExtension ?? string.Empty,
                     ResourceType = (ResourceType)(hit.ResourceType),
@@ -373,12 +368,12 @@ public class MeiliSearchService : IMeiliSearchService
 
         if (query.StartDate.HasValue)
         {
-            filters.Add($"uploadDate >= {query.StartDate.Value:yyyy-MM-dd}");
+            filters.Add($"uploadDate >= \"{query.StartDate.Value:yyyy-MM-dd}\"");
         }
 
         if (query.EndDate.HasValue)
         {
-            filters.Add($"uploadDate <= {query.EndDate.Value:yyyy-MM-dd}");
+            filters.Add($"uploadDate <= \"{query.EndDate.Value:yyyy-MM-dd}\"");
         }
 
         filters.Add("status IN [0, 1, 2, 3]");
@@ -389,11 +384,7 @@ public class MeiliSearchService : IMeiliSearchService
             // 租户用户：只能搜索该租户的文档
             filters.Add($"tenantId = \"{tenantId}\"");
         }
-        else
-        {
-            // Host 用户或空租户：只搜索没有租户的文档（空字符串）
-            filters.Add("tenantId = \"\"");
-        }
+        // Host 用户不加 tenantId 过滤，可以搜索所有文档
 
         var searchParams = new
         {
@@ -424,13 +415,12 @@ public class MeiliSearchService : IMeiliSearchService
             {
                 items.Add(new DocumentSearchResultDto
                 {
-                    ResourceId = Guid.TryParse(hit.ResourceId, out var rid) ? rid : Guid.Empty,
+                    ResourceId = hit.ResourceId ?? string.Empty,
                     ResourceName = hit.ResourceName ?? string.Empty,
                     PageNumber = hit.PageNumber,
-                    PageContent = hit.PageContent ?? string.Empty,
-                    PageTitle = hit.PageTitle,
-                    HighlightedText = hit._formatted?.PageContent ?? hit.PageContent ?? string.Empty,
-                    PreviewText = hit.PageContent?.Length > 200 ? hit.PageContent[..200] + "..." : hit.PageContent ?? string.Empty,
+                    Content = hit.PageContent ?? string.Empty,
+                    Title = hit.PageTitle,
+                    HighlightedContent = hit._formatted?.PageContent ?? hit.PageContent ?? string.Empty,
                     RelevanceScore = (float)hit.RankingScore,
                     FileExtension = hit.FileExtension ?? string.Empty,
                     ResourceType = (ResourceType)(hit.ResourceType),

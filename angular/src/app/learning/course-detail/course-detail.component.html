@@ -82,34 +82,46 @@
     </div>
     
     <nz-card class="chapters-card" nzTitle="课程章节">
-      <app-chapter-tree [courseId]="courseId()"></app-chapter-tree>
-      
-      <nz-divider nzType="horizontal"></nz-divider>
-      
-      <nz-collapse>
-        @for (chapter of course()!.chapters; track chapter.id) {
-          <nz-collapse-panel [nzHeader]="chapter.title">
-            <nz-list [nzDataSource]="chapter.knowledgeResources" [nzRenderItem]="resourceTemplate">
-              <ng-template #resourceTemplate let-resource>
-                <nz-list-item>
-                  <nz-list-item-meta
-                    [nzTitle]="resource.name"
-                    [nzDescription]="resource.description"
-                  >
-                  </nz-list-item-meta>
-                  <ul nz-list-item-actions>
-                    <nz-list-item-action>
-                      <nz-tag [nzColor]="getDifficultyColor(resource.difficulty)">
-                        {{ getDifficultyLabel(resource.difficulty) }}
-                      </nz-tag>
-                    </nz-list-item-action>
-                  </ul>
-                </nz-list-item>
-              </ng-template>
-            </nz-list>
-          </nz-collapse-panel>
-        }
-      </nz-collapse>
+      @if (chaptersLoading()) {
+        <div class="loading-container">
+          <nz-spin nzSimple nzSize="large"></nz-spin>
+        </div>
+      } @else if (chapters().length === 0) {
+        <nz-empty nzNotFoundContent="暂无章节"></nz-empty>
+      } @else {
+        <div class="tree-view">
+          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: chapters(), depth: 0 }"></ng-container>
+        </div>
+      }
     </nz-card>
   }
 </div>
+
+<!-- Recursive tree template -->
+<ng-template #treeNode let-nodes let-depth="depth">
+  @for (node of nodes; track node.id) {
+    <div class="tree-node" [style.padding-left.px]="depth * 20">
+      <div class="tree-node-content">
+        @if (node.children && node.children.length > 0) {
+          <span class="toggle-icon" (click)="toggleNode(node.id!); $event.stopPropagation()">
+            <span nz-icon [nzType]="isExpanded(node.id!) ? 'down' : 'right'"></span>
+          </span>
+        } @else {
+          <span class="toggle-icon placeholder"></span>
+        }
+        <span class="node-icon">
+          <span nz-icon [nzType]="node.children && node.children.length > 0 ? 'folder' : 'file-text'"></span>
+        </span>
+        <span class="node-title">{{ node.title }}</span>
+        @if (node.description) {
+          <span class="node-desc" nz-tooltip [nzTooltipTitle]="node.description">···</span>
+        }
+      </div>
+      @if (node.children && node.children.length > 0 && isExpanded(node.id!)) {
+        <div class="tree-children">
+          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+        </div>
+      }
+    </div>
+  }
+</ng-template>

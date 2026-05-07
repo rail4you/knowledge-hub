@@ -1,7 +1,7 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizationPipe, RestService } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -44,6 +44,7 @@ export class ChapterExerciseComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly chapterService = inject(ChapterService);
   private readonly exerciseService = inject(ExerciseService);
+  private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -303,7 +304,14 @@ export class ChapterExerciseComponent implements OnInit {
     this.importing = true;
     const file = this.selectedImportFile;
 
-    this.exerciseService.importFromExcel(courseId, file).subscribe({
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    this.restService.request<any, ExerciseImportResultDto>({
+      method: 'POST',
+      url: `/api/app/exercise/import-from-excel/${courseId}`,
+      body: formData,
+    }, { apiName: 'KnowledgeHub' }).subscribe({
       next: (result: ExerciseImportResultDto) => {
         this.importing = false;
         if (result.failCount === 0) {

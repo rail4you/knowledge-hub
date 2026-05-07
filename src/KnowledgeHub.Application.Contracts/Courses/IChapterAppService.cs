@@ -25,4 +25,10 @@ public interface IChapterAppService : ICrudAppService<
     /// <param name="file">Excel 文件</param>
     /// <returns>导入结果</returns>
     Task<ChapterImportResultDto> ImportFromExcelAsync(Guid courseId, IFormFile file);
+
+    /// <summary>
+    /// 批量更新章节顺序
+    /// </summary>
+    /// <param name="orders">章节顺序列表</param>
+    Task ReorderChaptersAsync(List<ChapterOrderDto> orders);
 }

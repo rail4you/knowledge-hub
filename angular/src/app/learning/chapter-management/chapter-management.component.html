@@ -47,7 +47,7 @@
         } @else if (chapters().length === 0) {
           <nz-empty nzNotFoundContent="暂无章节，请新建根章节"></nz-empty>
         } @else {
-          <div class="tree-view">
+          <div class="tree-view" cdkDropListGroup>
             <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: chapters(), depth: 0 }"></ng-container>
           </div>
         }
@@ -68,10 +68,6 @@
                 <span>{{ chapter.description }}</span>
               </div>
             }
-            <div class="detail-field">
-              <label>排序：</label>
-              <span>{{ chapter.sortOrder ?? 0 }}</span>
-            </div>
             @if (chapter.parentId) {
               <div class="detail-field">
                 <label>父章节 ID：</label>
@@ -106,13 +102,21 @@
 
   <!-- Recursive tree template -->
   <ng-template #treeNode let-nodes let-depth="depth">
-    @for (node of nodes; track node.id) {
-      <div class="tree-node" [style.padding-left.px]="depth * 20">
+    @for (node of nodes; track node.id; let i = $index) {
+      <div 
+        class="tree-node" 
+        [style.padding-left.px]="depth * 20"
+      >
         <div
           class="tree-node-content"
           [class.selected]="selectedChapter()?.id === node.id"
           (click)="selectChapter(node)"
+          cdkDrag
+          [cdkDragData]="node"
         >
+          <span class="drag-handle" cdkDragHandle>
+            <span nz-icon nzType="holder"></span>
+          </span>
           @if (hasChildren(node)) {
             <span class="toggle-icon" (click)="toggleNode(node.id!); $event.stopPropagation()">
               <span nz-icon [nzType]="isExpanded(node.id!) ? 'down' : 'right'"></span>
@@ -137,7 +141,14 @@
           </span>
         </div>
         @if (hasChildren(node) && isExpanded(node.id!)) {
-          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+          <div 
+            class="tree-children"
+            cdkDropList
+            [cdkDropListData]="node.children"
+            (cdkDropListDropped)="onChapterDrop($event, node.id)"
+          >
+            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+          </div>
         }
       </div>
     }
@@ -200,19 +211,6 @@
             </nz-form-control>
           </nz-form-item>
         }
-
-        <nz-form-item>
-          <nz-form-label>排序</nz-form-label>
-          <nz-form-control>
-            <nz-input-number
-              [(ngModel)]="formData.sortOrder"
-              [ngModelOptions]="{ standalone: true }"
-              [nzMin]="0"
-              [nzStep]="10"
-              style="width: 100%"
-            ></nz-input-number>
-          </nz-form-control>
-        </nz-form-item>
       </form>
     </ng-container>
   </nz-modal>

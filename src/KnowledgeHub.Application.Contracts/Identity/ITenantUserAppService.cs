@@ -11,7 +11,7 @@ public interface ITenantUserAppService : IApplicationService
 {
     Task<IdentityUserDto> CreateUserForTenantAsync(CreateTenantUserDto input);
     
-    Task<PagedResultDto<IdentityUserDto>> GetListAsync(GetIdentityUsersInput input);
+    Task<PagedResultDto<IdentityUserDto>> GetListAsync(GetTenantUsersInput input);
     
     Task<IdentityUserDto> GetAsync(Guid id);
 

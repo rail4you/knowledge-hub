@@ -52,6 +52,42 @@
   }
 
   .tree-view {
+    // CDK drag-drop styles
+    .cdk-drag-preview {
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    .cdk-drag-placeholder {
+      background: #f5f5f5;
+      border: 2px dashed #d9d9d9;
+      border-radius: 4px;
+      min-height: 36px;
+    }
+
+    .cdk-drag-animating {
+      transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    .cdk-drop-list-dragging .tree-node:not(.cdk-drag-placeholder) {
+      transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    .tree-node {
+      &.cdk-drag-disabled {
+        cursor: default;
+      }
+    }
+
+    .tree-node-content.cdk-drag-connected-disabled {
+      cursor: default;
+    }
+
+    .tree-children {
+      min-height: 20px;
+    }
+
     .tree-node {
       .tree-node-content {
         display: flex;
@@ -86,6 +122,26 @@
 
           &.placeholder {
             visibility: hidden;
+          }
+        }
+
+        .drag-handle {
+          width: 20px;
+          height: 20px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: grab;
+          flex-shrink: 0;
+          color: #999;
+          transition: color 0.2s;
+
+          &:hover {
+            color: #666;
+          }
+
+          &:active {
+            cursor: grabbing;
           }
         }
 

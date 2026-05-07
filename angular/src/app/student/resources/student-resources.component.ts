@@ -20,6 +20,7 @@ import { FilePreviewComponent } from '../../shared/preview/file-preview.componen
 import { ResourceReviewComponent } from '../../search/resource-review/resource-review.component';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
+import { AuthErrorService } from '../../core/auth/auth-error.service';
 
 @Component({
   selector: 'app-student-resources',
@@ -49,6 +50,7 @@ export class StudentResourcesComponent implements OnInit {
   private readonly resourceService = inject(ResourceService);
   private readonly reviewService = inject(ResourceReviewService);
   private readonly recommendationService = inject(RecommendationService);
+  private readonly authErrorService = inject(AuthErrorService);
   private readonly message = inject(NzMessageService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
@@ -120,8 +122,15 @@ export class StudentResourcesComponent implements OnInit {
         this.loadRatingSummaries(result.items || []);
         this.loadCollectionStatus(result.items || []);
       },
-      error: () => {
+      error: (err) => {
         this.loading.set(false);
+        // 触发重新登录弹窗
+        if (err.status === 401 || err.status === 403) {
+          this.authErrorService.setAuthError(
+            err.status,
+            err.error?.error?.message || err.error?.message || '您未获得授权！'
+          );
+        }
       }
     });
   }
@@ -303,17 +312,14 @@ export class StudentResourcesComponent implements OnInit {
         this.recommendedResources.set(result);
         this.recommendationsLoading.set(false);
       },
-      error: () => {
-        // Fallback to trending
-        this.recommendationService.getTrendingResources(10).subscribe({
-          next: (result) => {
-            this.recommendedResources.set(result);
-            this.recommendationsLoading.set(false);
-          },
-          error: () => {
-            this.recommendationsLoading.set(false);
-          }
-        });
+      error: (err) => {
+        this.recommendationsLoading.set(false);
+        if (err.status === 401 || err.status === 403) {
+          this.authErrorService.setAuthError(
+            err.status,
+            err.error?.error?.message || err.error?.message || '您未获得授权！'
+          );
+        }
       }
     });
   }
@@ -325,8 +331,14 @@ export class StudentResourcesComponent implements OnInit {
         this.relatedResources.set(result);
         this.relatedLoading.set(false);
       },
-      error: () => {
+      error: (err) => {
         this.relatedLoading.set(false);
+        if (err.status === 401 || err.status === 403) {
+          this.authErrorService.setAuthError(
+            err.status,
+            err.error?.error?.message || err.error?.message || '您未获得授权！'
+          );
+        }
       }
     });
   }

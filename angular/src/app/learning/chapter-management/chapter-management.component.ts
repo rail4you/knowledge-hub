@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { LocalizationPipe } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -24,6 +25,7 @@ import { ChapterMindMapComponent } from './chapter-mind-map/chapter-mind-map.com
   imports: [
     CommonModule,
     FormsModule,
+    DragDropModule,
     LocalizationPipe,
     NzCardModule,
     NzButtonModule,
@@ -272,6 +274,106 @@ export class ChapterManagementComponent implements OnInit {
     const courseId = this.selectedCourseId();
     const course = this.courses().find(c => c.id === courseId);
     return course?.title ?? '';
+  }
+
+  // Drag and drop for chapter reordering
+  onChapterDrop(event: CdkDragDrop<ChapterDto[]>, parentId: string | null = null) {
+    // Don't do anything if dropped in the same position
+    if (event.previousIndex === event.currentIndex && event.previousContainer === event.container) {
+      return;
+    }
+
+    const chaptersCopy = this.deepCloneChapters(this.chapters());
+    
+    // Find the source and target containers in the tree
+    const sourceNodes = this.findNodeList(chaptersCopy, event.previousContainer.id);
+    const targetNodes = event.container === event.previousContainer 
+      ? sourceNodes 
+      : this.findNodeList(chaptersCopy, event.container.id);
+
+    if (!sourceNodes || !targetNodes) {
+      this.loadChapterTree(); // Reload if we can't find the nodes
+      return;
+    }
+
+    // Move the item
+    const movedNode = sourceNodes.splice(event.previousIndex, 1)[0];
+    
+    if (event.previousContainer === event.container) {
+      // Same container - just reorder
+      targetNodes.splice(event.currentIndex, 0, movedNode);
+    } else {
+      // Different container - move to new parent
+      targetNodes.splice(event.currentIndex, 0, movedNode);
+      
+      // Update parent ID
+      const oldParentId = event.previousContainer.id === 'root' ? null : event.previousContainer.id;
+      const newParentId = event.container.id === 'root' ? null : event.container.id;
+      
+      // Find the moved node and update its parent
+      this.updateNodeParent(chaptersCopy, movedNode.id!, newParentId);
+    }
+
+    // Update local state
+    this.chapters.set(chaptersCopy);
+    this.cdr.markForCheck();
+
+    // Sync order to server
+    this.syncChapterOrderAfterDrop(targetNodes, event.container.id === 'root' ? null : event.container.id);
+  }
+
+  private deepCloneChapters(nodes: ChapterDto[]): ChapterDto[] {
+    return nodes.map(node => ({
+      ...node,
+      children: node.children ? this.deepCloneChapters(node.children) : []
+    }));
+  }
+
+  private findNodeList(nodes: ChapterDto[], containerId: string): ChapterDto[] | null {
+    if (containerId === 'root' || containerId === '') {
+      return nodes;
+    }
+
+    for (const node of nodes) {
+      if (node.id === containerId) {
+        return node.children || [];
+      }
+      if (node.children?.length) {
+        const found = this.findNodeList(node.children, containerId);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  private updateNodeParent(nodes: ChapterDto[], nodeId: string, newParentId: string | null) {
+    for (const node of nodes) {
+      if (node.id === nodeId) {
+        node.parentId = newParentId;
+        return;
+      }
+      if (node.children?.length) {
+        this.updateNodeParent(node.children, nodeId, newParentId);
+      }
+    }
+  }
+
+  private syncChapterOrderAfterDrop(nodes: ChapterDto[], parentId: string | null) {
+    const orders = nodes.map((node, index) => ({
+      chapterId: node.id!,
+      sortOrder: index * 10
+    }));
+
+    this.chapterService.reorderChapters(orders).subscribe({
+      next: () => {
+        // Order saved successfully
+        this.message.success('章节顺序已更新');
+      },
+      error: () => {
+        this.message.error('保存顺序失败');
+        this.loadChapterTree();
+      }
+    });
   }
 
   // Import modal state
