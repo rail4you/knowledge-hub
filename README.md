@@ -1,5 +1,11 @@
 # KnowledgeHub
 
+## Documentation
+
+- [本地开发环境配置](docs/LOCAL_DEVELOPMENT.md) - 本地开发环境设置指南
+- [远程部署手册](etc/docker/DEPLOY.md) - 生产环境部署指南
+- [管理员功能介绍](docs/admin-guide.md) - 管理端功能说明
+
 ## About this solution
 
 This is a layered startup solution based on [Domain Driven Design (DDD)](https://abp.io/docs/latest/framework/architecture/domain-driven-design) practises. All the fundamental ABP modules are already installed. Check the [Application Startup Template](https://abp.io/docs/latest/solution-templates/layered-web-application) documentation for more info.
