@@ -2,10 +2,26 @@
 </nz-page-header>
 
 <nz-card>
-  <div class="mb-4 flex gap-4 items-center">
-    <button nz-button nzType="primary" (click)="createUser()">
-      <span>{{ '::NewUser' | abpLocalization }}</span>
-    </button>
+  <div class="mb-4 flex gap-4 items-center justify-between">
+    <div class="flex gap-4 items-center">
+      <button nz-button nzType="primary" (click)="createUser()">
+        <span>{{ '::NewUser' | abpLocalization }}</span>
+      </button>
+    </div>
+    <div class="flex gap-2 items-center">
+      <span class="text-sm text-gray-500">按租户筛选：</span>
+      <nz-select 
+        [(ngModel)]="selectedTenantId" 
+        (ngModelChange)="onTenantFilterChange($event)"
+        nzPlaceHolder="全部租户"
+        nzAllowClear
+        style="width: 180px;"
+      >
+        @for (tenant of tenants; track tenant.id) {
+          <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || '未命名'"></nz-option>
+        }
+      </nz-select>
+    </div>
   </div>
 
   <nz-table
@@ -22,6 +38,7 @@
       <tr>
         <th>{{ '::UserName' | abpLocalization }}</th>
         <th>{{ '::Email' | abpLocalization }}</th>
+        <th>租户</th>
         <th>{{ '::Roles' | abpLocalization }}</th>
         <th>{{ '::Actions' | abpLocalization }}</th>
       </tr>
@@ -31,6 +48,7 @@
         <tr>
           <td>{{ user.userName }}</td>
           <td>{{ user.email }}</td>
+          <td>{{ getTenantName(user.tenantId) }}</td>
           <td>
             @for (role of getUserRoles(user.id); track role) {
               <nz-tag>{{ getRoleDisplayName(role) }}</nz-tag>

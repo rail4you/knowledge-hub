@@ -14,8 +14,10 @@ import { PermissionManagementComponent } from '@abp/ng.permission-management';
 import { finalize, catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { FormsModule } from '@angular/forms';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -25,7 +27,6 @@ import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
@@ -104,6 +105,7 @@ interface IdentityUserDto {
     NzGridModule,
     NzAlertModule,
     PermissionManagementComponent,
+    FormsModule,
   ],
   providers: [ListService],
   templateUrl: './identity-users.component.html',
@@ -174,6 +176,7 @@ export class IdentityUsersComponent implements OnInit {
           ...query,
           maxResultCount: this.pageSize,
           skipCount: (this.pageIndex - 1) * this.pageSize,
+          tenantId: this.selectedTenantId || undefined,
         },
       });
 
@@ -201,6 +204,12 @@ export class IdentityUsersComponent implements OnInit {
   getUserRoles(userId: string | undefined): string[] {
     if (!userId) return [];
     return this.userRolesMap[userId] || [];
+  }
+
+  getTenantName(tenantId: string | undefined | null): string {
+    if (!tenantId) return 'Host';
+    const tenant = this.tenants.find(t => t.id === tenantId);
+    return tenant?.name || tenantId;
   }
 
   buildForm() {
@@ -369,6 +378,12 @@ export class IdentityUsersComponent implements OnInit {
         }).subscribe(() => this.list.get());
       }
     });
+  }
+
+  onTenantFilterChange(tenantId: string | null): void {
+    this.selectedTenantId = tenantId;
+    this.pageIndex = 1;
+    this.loadUsers();
   }
 
   onPageIndexChange(index: number): void {
