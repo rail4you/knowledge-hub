@@ -1,0 +1,91 @@
+<div class="student-news-page">
+  <div class="page-header">
+    <h1>资讯中心</h1>
+    <p>查看行业动态、政策解读、教学资讯与企业资讯</p>
+  </div>
+
+  <div class="filters">
+    <input
+      nz-input
+      placeholder="搜索标题、摘要或标签"
+      [ngModel]="filter()"
+      (ngModelChange)="filter.set($event)"
+      (keyup.enter)="loadArticles()"
+    />
+    <nz-select
+      nzAllowClear
+      nzPlaceHolder="全部分类"
+      [ngModel]="categoryId()"
+      (ngModelChange)="categoryId.set($event)"
+    >
+      @for (category of categoryOptions(); track category.id) {
+        <nz-option [nzValue]="category.id" [nzLabel]="category.name"></nz-option>
+      }
+    </nz-select>
+    <button nz-button nzType="primary" (click)="loadArticles()">筛选</button>
+  </div>
+
+  <div class="content-layout">
+    <div class="main-content">
+      @if (loading()) {
+        <div class="state">
+          <nz-spin nzTip="加载中..."></nz-spin>
+        </div>
+      } @else if (articles().length === 0) {
+        <div class="state">
+          <nz-empty nzNotFoundContent="暂无资讯"></nz-empty>
+        </div>
+      } @else {
+        <div class="article-list">
+          @for (article of articles(); track article.id) {
+            <nz-card class="article-item" (click)="openArticle(article.id)" [nzHoverable]="true">
+              <div class="article-header">
+                <div class="article-meta">
+                  @if (article.categoryName) {
+                    <nz-tag nzColor="blue">{{ article.categoryName }}</nz-tag>
+                  }
+                  @if (article.isTop) {
+                    <nz-tag nzColor="red">置顶</nz-tag>
+                  }
+                  @if (article.isHot) {
+                    <nz-tag nzColor="orange">热门</nz-tag>
+                  }
+                </div>
+                <span class="article-date">{{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd' }}</span>
+              </div>
+              <h3 class="article-title">{{ article.title }}</h3>
+              @if (article.summary) {
+                <p class="article-summary">{{ article.summary }}</p>
+              }
+              <div class="article-footer">
+                <span class="author">{{ article.authorName || '系统发布' }}</span>
+                <span class="stats">
+                  <span nz-icon nzType="eye" nzTheme="outline"></span> {{ article.viewCount }}
+                  <span nz-icon nzType="like" nzTheme="outline"></span> {{ article.likeCount }}
+                  <span nz-icon nzType="message" nzTheme="outline"></span> {{ article.commentCount }}
+                </span>
+              </div>
+            </nz-card>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="sidebar">
+      <nz-card nzTitle="热门资讯">
+        @if (hotArticles().length === 0) {
+          <nz-empty nzNotFoundContent="暂无热门资讯"></nz-empty>
+        } @else {
+          <div class="hot-list">
+            @for (article of hotArticles(); track article.id) {
+              <button class="hot-item" type="button" (click)="openArticle(article.id)">
+                <span class="hot-title">{{ article.title }}</span>
+                <span class="hot-views">{{ article.viewCount }} 浏览</span>
+              </button>
+            }
+          </div>
+        }
+      </nz-card>
+    </div>
+  </div>
+</div>

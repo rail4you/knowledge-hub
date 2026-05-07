@@ -349,6 +349,8 @@ export const APP_ROUTES: Routes = [
     children: [
       { path: '', redirectTo: 'resources', pathMatch: 'full' },
       { path: 'resources', loadComponent: () => import('./student/resources/student-resources.component').then(c => c.StudentResourcesComponent) },
+      { path: 'news', loadComponent: () => import('./student/news/student-news.component').then(c => c.StudentNewsComponent) },
+      { path: 'news/:id', loadComponent: () => import('./student/news/student-news-detail.component').then(c => c.StudentNewsDetailComponent) },
       { path: 'favorites', loadComponent: () => import('./student/favorites/student-favorites.component').then(c => c.StudentFavoritesComponent) },
       { path: 'search', loadComponent: () => import('./search/search.component').then(c => c.SearchComponent), canActivate: [permissionGuard], data: { requiredPolicy: 'KnowledgeHub.Search' } },
       { path: 'search-history', loadComponent: () => import('./search/search-history/search-history.component').then(c => c.SearchHistoryComponent) },

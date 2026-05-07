@@ -124,6 +124,7 @@
     "Permission:News.ManageComment": "管理评论",
     "Menu:News": "资讯中心",
     "Menu:NewsManagement": "资讯管理",
+    "Menu:NewsRepository": "资讯库",
     "Permission:MicroMajors": "微专业",
     "Permission:MicroMajors.Create": "创建微专业",
     "Permission:MicroMajors.Edit": "编辑微专业",

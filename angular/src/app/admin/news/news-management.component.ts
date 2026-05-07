@@ -10,6 +10,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import {
   CreateUpdateNewsArticleDto,
   CreateUpdateNewsCategoryDto,
@@ -35,6 +36,7 @@ import {
     NzSwitchModule,
     NzTableModule,
     NzTagModule,
+    NzTabsModule,
   ],
   templateUrl: './news-management.component.html',
   styleUrls: ['./news-management.component.scss'],
@@ -56,6 +58,7 @@ export class NewsManagementComponent implements OnInit {
   editingArticleId: string | null = null;
   articleForm: CreateUpdateNewsArticleDto = this.createEmptyArticle();
 
+  activeTabIndex = 0;
   readonly articleStatuses = NewsArticleStatus;
   readonly commentStatuses = NewsCommentStatus;
 
