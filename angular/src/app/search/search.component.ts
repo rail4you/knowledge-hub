@@ -120,14 +120,14 @@ import { ResourceReviewComponent } from './resource-review/resource-review.compo
                 <span class="ext-filter-label">按类型筛选：</span>
                 <nz-tag
                   class="ext-tag"
-                  [nzColor]="selectedFileExtension === '' ? 'blue' : ''"
-                  (click)="selectedFileExtension = ''"
+                  [nzColor]="selectedFileExtension() === '' ? 'blue' : ''"
+                  (click)="selectedFileExtension.set('')"
                 >全部</nz-tag>
                 @for (ext of availableExtensions(); track ext) {
                   <nz-tag
                     class="ext-tag"
-                    [nzColor]="selectedFileExtension === ext ? 'blue' : ''"
-                    (click)="selectedFileExtension = ext"
+                    [nzColor]="selectedFileExtension() === ext ? 'blue' : ''"
+                    (click)="selectedFileExtension.set(ext)"
                   >{{ ext }}</nz-tag>
                 }
               </div>
@@ -510,7 +510,7 @@ export class SearchComponent implements OnInit {
   private readonly environmentService = inject(EnvironmentService);
 
   searchQuery = '';
-  selectedFileExtension = '';
+  selectedFileExtension = signal('');
   searchType: 'keyword' | 'hybrid' = 'keyword';
   selectedIndex = 'documents';
   startDate: Date | null = null;
@@ -534,8 +534,9 @@ export class SearchComponent implements OnInit {
 
   filteredResults = computed(() => {
     const all = this.results();
-    if (!this.selectedFileExtension) return all;
-    return all.filter(r => r.fileExtension === this.selectedFileExtension);
+    const ext = this.selectedFileExtension();
+    if (!ext) return all;
+    return all.filter(r => r.fileExtension === ext);
   });
 
   isVideoModalOpen = signal(false);
@@ -615,7 +616,7 @@ export class SearchComponent implements OnInit {
       this.results.set(s.results);
       this.totalCount.set(s.totalCount);
       this.pageIndex = s.pageIndex;
-      this.selectedFileExtension = s.selectedFileExtension;
+      this.selectedFileExtension.set(s.selectedFileExtension);
       this.searchType = s.searchType;
       this.selectedIndex = s.selectedIndex;
       this.startDate = s.startDate ? new Date(s.startDate) : null;
@@ -757,7 +758,7 @@ export class SearchComponent implements OnInit {
             results: this.results(),
             totalCount: this.totalCount(),
             pageIndex: this.pageIndex,
-            selectedFileExtension: this.selectedFileExtension,
+            selectedFileExtension: this.selectedFileExtension(),
             searchType: this.searchType,
             selectedIndex: this.selectedIndex,
             startDate: this.startDate ? this.startDate.toISOString() : null,

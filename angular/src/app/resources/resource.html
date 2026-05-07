@@ -126,10 +126,8 @@
             [nzTotal]="resources.totalCount"
             [nzPageIndex]="pageIndex"
             [nzPageSize]="pageSize"
-            [nzShowSizeChanger]="true"
             [nzFrontPagination]="false"
             (nzPageIndexChange)="onPageIndexChange($event)"
-            (nzPageSizeChange)="onPageSizeChange($event)"
             nzSize="middle"
             [nzScroll]="{ y: 'calc(100vh - 280px)' }"
           >

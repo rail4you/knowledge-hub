@@ -39,7 +39,28 @@ export class PptxViewerComponent implements OnDestroy {
   readonly zoomLabel = computed(() => `${Math.round(this.zoom() * 100)}%`);
   readonly canGoPrev = computed(() => this.currentSlide() > 0);
   readonly canGoNext = computed(() => this.currentSlide() < this.slideCount() - 1);
-  readonly slideIndexes = computed(() => Array.from({ length: this.slideCount() }, (_, index) => index));
+  readonly visiblePageIndexes = computed(() => {
+    const total = this.slideCount();
+    const current = this.currentSlide();
+    const maxVisible = 10;
+
+    if (total <= maxVisible) {
+      return Array.from({ length: total }, (_, index) => index);
+    }
+
+    const half = Math.floor(maxVisible / 2);
+    let start = Math.max(0, current - half);
+    let end = Math.min(total - 1, start + maxVisible - 1);
+
+    if (end - start < maxVisible - 1) {
+      start = Math.max(0, end - maxVisible + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  });
+
+  readonly hasLeftEllipsis = computed(() => this.visiblePageIndexes()[0] > 0);
+  readonly hasRightEllipsis = computed(() => this.visiblePageIndexes()[this.visiblePageIndexes().length - 1] < this.slideCount() - 1);
 
   private viewer: PPTXViewer | null = null;
   private renderToken = 0;

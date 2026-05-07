@@ -98,6 +98,14 @@
   transition: all 0.2s ease;
 }
 
+.page-ellipsis {
+  display: flex;
+  align-items: center;
+  color: #667085;
+  font-size: 13px;
+  padding: 0 4px;
+}
+
 .page-pill:hover {
   border-color: #2563eb;
   color: #1d4ed8;
