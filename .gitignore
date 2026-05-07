@@ -108,3 +108,10 @@ src/KnowledgeHub.HttpApi.Host/uploads/
 # PDF 解析器和 OCR 语言包 (可从构建脚本下载) 
 document-parser.jar
 eng.traineddata
+
+# Meilisearch 二进制和数据
+meilisearch
+data.ms/
+
+# 本地开发工具
+utils/pdf-parser/node_modules/
