@@ -1,0 +1,1 @@
+{"nodes": [{"id": "feedback", "label": "Feedback.cs", "file_type": "code", "source_file": "src/KnowledgeHub.AI.Api/Models/Feedback.cs", "source_location": "L1"}], "edges": [{"source": "feedback", "target": "serialization", "relation": "imports", "confidence": "EXTRACTED", "source_file": "src/KnowledgeHub.AI.Api/Models/Feedback.cs", "source_location": "L1", "weight": 1.0}]}

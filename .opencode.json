@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "GLM-5.1",
+  "env": {
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "GLM-4.5-air",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "GLM-5.1",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "GLM-5.1"
+  },
+  "mcp": {
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["npx", "-y", "chrome-devtools-mcp@latest"]
+    }
+  }
+}

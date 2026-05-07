@@ -60,13 +60,25 @@ publish/
 Logs/
 *.log
 
-# Development
-.dev/
-.opencode.json
-.superset/
-etc/build/
-meilisearch/
-data.ms/
+# Java / PDF Parser
+src/KnowledgeHub.HttpApi.Host/utils/pdf-parser/target/
+temp-pom/
+
+# 大文件 (可重新生成)
+eng.traineddata
+angular/src/app/proxy/generate-proxy.json
+
+# 示例文件
+src/pageindex-cli/PageIndex/examples/documents/*.pdf
+src/pageindex-cli/PageIndex/examples/documents/results/*.json
+
+# 锁文件
+package-lock.json
+angular/package-lock.json
+angular/yarn.lock
+angular/bun.lock
+src/KnowledgeHub.HttpApi.Host/yarn.lock
+src/KnowledgeHub.HttpApi.Host/utils/pdf-parser/package-lock.json
 
 # Environment
 etc/docker/.env.production
@@ -90,3 +102,5 @@ src/KnowledgeHub.HttpApi.Host/uploads/
 *.tmp
 *.bak
 *~
+# node_modules
+**/node_modules/
