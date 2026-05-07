@@ -104,3 +104,7 @@ src/KnowledgeHub.HttpApi.Host/uploads/
 *~
 # node_modules
 **/node_modules/
+
+# PDF 解析器和 OCR 语言包 (可从构建脚本下载) 
+document-parser.jar
+eng.traineddata
