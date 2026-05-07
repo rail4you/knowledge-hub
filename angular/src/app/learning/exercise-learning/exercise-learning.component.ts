@@ -25,6 +25,7 @@ import { ExerciseDto } from '../../proxy/exams/dtos';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { SelfAssessment } from '../../proxy/learning/enums/self-assessment.enum';
 import { ChapterService } from '../../proxy/courses/chapter.service';
+import { ChapterDto } from '../../proxy/courses/dtos/models';
 
 interface OptionItem {
   key: string;
@@ -128,7 +129,9 @@ export class ExerciseLearningComponent implements OnInit {
               }
             }
 
-            const chaptersWithExercises: ChapterWithExercises[] = chapters.map(ch => ({
+            // Flatten tree structure - collect all chapters including nested children
+            const flatChapters = this.flattenChapters(chapters);
+            const chaptersWithExercises: ChapterWithExercises[] = flatChapters.map(ch => ({
               id: ch.id!,
               title: ch.title ?? '未命名章节',
               exercises: chapterMap.get(ch.id!) ?? []
@@ -212,7 +215,18 @@ export class ExerciseLearningComponent implements OnInit {
   parseOptions(exercise: ExerciseDto): OptionItem[] {
     if (!exercise.options) return [];
     try {
-      return JSON.parse(exercise.options);
+      const parsed = JSON.parse(exercise.options);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item: string, index: number) => {
+          // Support both "A. content" format and plain strings
+          const match = item.match(/^([A-Z])[.、)\s]+(.*)$/);
+          if (match) {
+            return { key: match[1], content: match[2].trim() };
+          }
+          return { key: String.fromCharCode(65 + index), content: item };
+        });
+      }
+      return [];
     } catch {
       return [];
     }
@@ -333,6 +347,17 @@ export class ExerciseLearningComponent implements OnInit {
       ? ['/student/course-detail', this.courseId()]
       : ['/learning/course-detail', this.courseId()];
     this.router.navigate(route);
+  }
+
+  private flattenChapters(nodes: ChapterDto[]): ChapterDto[] {
+    const result: ChapterDto[] = [];
+    for (const node of nodes) {
+      result.push(node);
+      if (node.children?.length) {
+        result.push(...this.flattenChapters(node.children));
+      }
+    }
+    return result;
   }
 
   getTypeName(type: ExerciseType): string {
