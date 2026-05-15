@@ -210,6 +210,7 @@ public class ClassroomAgentAssignmentDto : FullAuditedEntityDto<Guid>
     public DateTime? LastActiveAt { get; set; }
     public string? SubmissionSummary { get; set; }
     public string? HelpReason { get; set; }
+    public string? TeacherResponse { get; set; }
 }
 
 public class ClassroomAgentTaskDto : FullAuditedEntityDto<Guid>
@@ -282,6 +283,11 @@ public class SubmitAgentAssignmentDto
 public class NeedTeacherHelpDto
 {
     public string Reason { get; set; } = string.Empty;
+}
+
+public class TeacherRespondDto
+{
+    public string Response { get; set; } = string.Empty;
 }
 
 public class SendAgentRunMessageDto

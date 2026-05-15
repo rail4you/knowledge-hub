@@ -313,6 +313,21 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         return await BuildTaskDetailAsync(task, assignments);
     }
 
+    [Authorize(KnowledgeHubPermissions.TeachingAgents.Assign)]
+    public async Task<ClassroomAgentAssignmentDto> RespondToStudentHelpAsync(Guid assignmentId, TeacherRespondDto input)
+    {
+        var assignment = await _assignmentRepository.GetAsync(assignmentId);
+        var task = await _taskRepository.GetAsync(assignment.ClassroomAgentTaskId);
+        await EnsureCanViewAsTeacherAsync(task);
+
+        assignment.TeacherResponse = input.Response;
+        assignment.Status = ClassroomAgentAssignmentStatus.InProgress;
+        assignment.LastActiveAt = Clock.Now;
+        await _assignmentRepository.UpdateAsync(assignment, autoSave: true);
+
+        return await MapSingleAssignmentAsync(assignment, task);
+    }
+
     private async Task EnsureCanViewAsTeacherAsync(ClassroomAgentTask task)
     {
         var canReview = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.TeachingAgents.Review);
@@ -364,7 +379,8 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
     {
         var agent = await _teachingAgentRepository.GetAsync(task.TeachingAgentId);
         var version = await _versionRepository.GetAsync(task.TeachingAgentVersionId);
-        var userNames = await GetUserNamesAsync(assignments.Select(x => x.StudentId).Distinct().ToList());
+        var studentIds = assignments.Select(x => x.StudentId).Distinct().ToList();
+        var userNames = await GetUserNamesAsync(studentIds, task.TenantId);
         var dto = MapTask(task, agent, version, assignments);
 
         return new ClassroomAgentTaskDetailDto
@@ -401,6 +417,7 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
                 LastActiveAt = x.LastActiveAt,
                 SubmissionSummary = x.SubmissionSummary,
                 HelpReason = x.HelpReason,
+                TeacherResponse = x.TeacherResponse,
                 CreationTime = x.CreationTime,
                 CreatorId = x.CreatorId,
                 LastModificationTime = x.LastModificationTime,
@@ -502,17 +519,43 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         return await query.Where(x => x.ClassroomAgentTaskId == taskId).ToListAsync();
     }
 
-    private async Task<Dictionary<Guid, string>> GetUserNamesAsync(List<Guid> userIds)
+    private async Task<ClassroomAgentAssignmentDto> MapSingleAssignmentAsync(ClassroomAgentAssignment assignment, ClassroomAgentTask task)
+    {
+        var userNames = await GetUserNamesAsync(new List<Guid> { assignment.StudentId }, task.TenantId);
+        return new ClassroomAgentAssignmentDto
+        {
+            Id = assignment.Id,
+            ClassroomAgentTaskId = assignment.ClassroomAgentTaskId,
+            StudentId = assignment.StudentId,
+            StudentName = userNames.GetValueOrDefault(assignment.StudentId, string.Empty),
+            Status = assignment.Status,
+            StartedAt = assignment.StartedAt,
+            CompletedAt = assignment.CompletedAt,
+            LastActiveAt = assignment.LastActiveAt,
+            SubmissionSummary = assignment.SubmissionSummary,
+            HelpReason = assignment.HelpReason,
+            TeacherResponse = assignment.TeacherResponse,
+            CreationTime = assignment.CreationTime,
+            CreatorId = assignment.CreatorId,
+            LastModificationTime = assignment.LastModificationTime,
+            LastModifierId = assignment.LastModifierId
+        };
+    }
+
+    private async Task<Dictionary<Guid, string>> GetUserNamesAsync(List<Guid> userIds, Guid? tenantId = null)
     {
         if (userIds.Count == 0)
         {
             return new Dictionary<Guid, string>();
         }
 
-        var query = await _userRepository.GetQueryableAsync();
-        return await query
-            .Where(x => userIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, x => x.Name ?? x.UserName);
+        using (_currentTenant.Change(tenantId))
+        {
+            var query = await _userRepository.GetQueryableAsync();
+            return await query
+                .Where(x => userIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Name ?? x.UserName);
+        }
     }
 
     private static TaskTargetSnapshotDto? DeserializeSnapshot(string value)

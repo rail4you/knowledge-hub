@@ -5,13 +5,14 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { ClassroomAgentTaskService } from '../../teaching-agents/classroom-agent-task.service';
 import { StudentAgentTask, assignmentStatusLabel, formatDateTime } from '../../teaching-agents/models';
 
 @Component({
   selector: 'app-student-agent-task-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, NzButtonModule, NzCardModule, NzEmptyModule, NzTagModule],
+  imports: [CommonModule, RouterModule, NzButtonModule, NzCardModule, NzEmptyModule, NzTagModule, NzTableModule],
   templateUrl: './student-agent-task-list.component.html',
   styleUrls: ['./student-agent-task-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

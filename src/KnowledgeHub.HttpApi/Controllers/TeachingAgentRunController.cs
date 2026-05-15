@@ -1,5 +1,7 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.TeachingAgents;
 using KnowledgeHub.TeachingAgents.Dtos;
@@ -29,7 +31,7 @@ public class TeachingAgentRunController : AbpControllerBase
     [Authorize(KnowledgeHubPermissions.TeachingAgents.Execute)]
     [IgnoreAntiforgeryToken]
     [Produces("text/event-stream")]
-    public async Task<IActionResult> Chat(Guid assignmentId, [FromBody] SendAgentRunMessageDto input)
+    public async Task<IActionResult> Chat(Guid assignmentId, [FromBody] SendAgentRunMessageDto input, CancellationToken cancellationToken)
     {
         var httpContext = HttpContext;
         httpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
@@ -37,16 +39,19 @@ public class TeachingAgentRunController : AbpControllerBase
         httpContext.Response.Headers["Cache-Control"] = "no-cache";
         httpContext.Response.Headers["Connection"] = "keep-alive";
         httpContext.Response.Headers["X-Accel-Buffering"] = "no";
-        await httpContext.Response.StartAsync();
+        await httpContext.Response.StartAsync(cancellationToken);
 
-        var chunk = await _agentRunAppService.SendMessageAsync(assignmentId, input);
-        var json = JsonSerializer.Serialize(chunk, new JsonSerializerOptions
+        await foreach (var chunk in _agentRunAppService.SendMessageStreamAsync(assignmentId, input, cancellationToken))
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+            var json = JsonSerializer.Serialize(chunk, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
 
-        await httpContext.Response.WriteAsync($"data: {json}\n\n");
-        await httpContext.Response.Body.FlushAsync();
+            await httpContext.Response.WriteAsync($"data: {json}\n\n", cancellationToken);
+            await httpContext.Response.Body.FlushAsync(cancellationToken);
+        }
+
         await httpContext.Response.CompleteAsync();
         return new EmptyResult();
     }

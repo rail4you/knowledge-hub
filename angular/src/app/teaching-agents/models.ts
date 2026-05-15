@@ -178,6 +178,7 @@ export interface ClassroomAgentAssignment {
   lastActiveAt?: string;
   submissionSummary?: string;
   helpReason?: string;
+  teacherResponse?: string;
 }
 
 export interface ClassroomAgentTask {

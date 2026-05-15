@@ -1,23 +1,31 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { MarkdownComponent, MarkdownPipe, provideMarkdown } from 'ngx-markdown';
 import { AgentRunService } from '../../teaching-agents/agent-run.service';
 import {
   AgentRunDetail,
   AgentRunMessage,
+  ClassroomAgentAssignment,
   assignmentStatusLabel,
   formatDateTime,
   targetTypeLabel,
 } from '../../teaching-agents/models';
+
+interface HelpRecord {
+  helpReason: string;
+  teacherResponse?: string;
+}
 
 @Component({
   selector: 'app-student-agent-task-detail',
@@ -32,15 +40,20 @@ import {
     NzDividerModule,
     NzEmptyModule,
     NzInputModule,
+    NzModalModule,
     NzSpinModule,
     NzTagModule,
+    MarkdownComponent,
+    MarkdownPipe,
   ],
+  providers: [provideMarkdown()],
   templateUrl: './student-agent-task-detail.component.html',
   styleUrls: ['./student-agent-task-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentAgentTaskDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly agentRunService = inject(AgentRunService);
 
   readonly loading = signal(false);
@@ -52,6 +65,31 @@ export class StudentAgentTaskDetailComponent implements OnInit {
   readonly chatError = signal('');
   readonly summary = signal('');
   readonly helpReason = signal('');
+  readonly submitModalVisible = signal(false);
+  readonly helpModalVisible = signal(false);
+
+  readonly isCompleted = computed(() => this.detail()?.assignment.status === 2);
+  readonly isHelpActive = computed(() => this.detail()?.assignment.status === 3);
+
+  /** Build help history from assignment data. */
+  readonly helpRecords = computed<HelpRecord[]>(() => {
+    const assignment = this.detail()?.assignment;
+    if (!assignment) return [];
+
+    const records: HelpRecord[] = [];
+
+    // Current help request
+    if (assignment.helpReason) {
+      records.push({
+        helpReason: assignment.helpReason,
+        teacherResponse: assignment.teacherResponse || undefined,
+      });
+    }
+
+    // Previous help history stored in extraProperties or just show current
+    // For now we show the current active help record
+    return records;
+  });
 
   ngOnInit(): void {
     void this.load();
@@ -117,7 +155,7 @@ export class StudentAgentTaskDetailComponent implements OnInit {
         const message = error instanceof Error ? error.message : '智能体暂时不可用，请稍后重试。';
         this.chatError.set(message);
         this.messages.update(items =>
-          items.filter(item => item.id !== assistantMessage.id || item.content.trim().length > 0)
+          items.filter(item => item.id === assistantMessage.id || item.content.trim().length > 0)
         );
         this.sending.set(false);
       },
@@ -136,7 +174,8 @@ export class StudentAgentTaskDetailComponent implements OnInit {
     this.submitting.set(true);
     try {
       const assignment = await this.agentRunService.submit(assignmentId, this.summary().trim()).toPromise();
-      this.detail.update(current => current ? { ...current, assignment: assignment ?? current.assignment } : current);
+      this.submitModalVisible.set(false);
+      await this.router.navigate(['/student/agent-tasks']);
     } finally {
       this.submitting.set(false);
     }
@@ -152,6 +191,8 @@ export class StudentAgentTaskDetailComponent implements OnInit {
     try {
       const assignment = await this.agentRunService.markNeedHelp(assignmentId, this.helpReason().trim()).toPromise();
       this.detail.update(current => current ? { ...current, assignment: assignment ?? current.assignment } : current);
+      this.helpReason.set('');
+      this.helpModalVisible.set(false);
     } finally {
       this.submitting.set(false);
     }

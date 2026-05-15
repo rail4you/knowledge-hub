@@ -15,6 +15,7 @@ namespace KnowledgeHub.TeachingAgents;
 public interface ITeachingAgentRuntimeClient
 {
     Task<TeachingAgentRuntimeResponse> GenerateReplyAsync(TeachingAgentRuntimeRequest input, CancellationToken cancellationToken = default);
+    IAsyncEnumerable<string> GenerateReplyStreamingAsync(TeachingAgentRuntimeRequest input, CancellationToken cancellationToken = default);
 }
 
 public class TeachingAgentRuntimeClient : ITeachingAgentRuntimeClient
@@ -69,6 +70,32 @@ public class TeachingAgentRuntimeClient : ITeachingAgentRuntimeClient
             Content = content,
             ToolCalls = new List<string>()
         };
+    }
+
+    public async IAsyncEnumerable<string> GenerateReplyStreamingAsync(TeachingAgentRuntimeRequest input, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var apiKey = _configuration["Qwen:ApiKey"]
+            ?? throw new AbpException("Qwen:ApiKey is not configured");
+        var baseUrl = _configuration["Qwen:BaseUrl"]
+            ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
+
+        var openaiClient = new OpenAIClient(
+            new ApiKeyCredential(apiKey),
+            new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
+
+        IChatClient chatClient = openaiClient.GetChatClient(FixedModelId).AsIChatClient();
+        var chatOptions = new ChatOptions
+        {
+            Instructions = BuildInstructions(input),
+        };
+
+        await foreach (var update in chatClient.GetStreamingResponseAsync(BuildHistory(input), chatOptions, cancellationToken))
+        {
+            if (!string.IsNullOrWhiteSpace(update.Text))
+            {
+                yield return update.Text;
+            }
+        }
     }
 
     private static List<ChatMessage> BuildHistory(TeachingAgentRuntimeRequest input)

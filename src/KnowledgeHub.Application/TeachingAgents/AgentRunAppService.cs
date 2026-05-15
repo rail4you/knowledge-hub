@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.TeachingAgents.Dtos;
@@ -145,6 +148,91 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
         }
     }
 
+    public async IAsyncEnumerable<AgentMessageChunkDto> SendMessageStreamAsync(
+        Guid assignmentId,
+        SendAgentRunMessageDto input,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var assignment = await _assignmentRepository.GetAsync(assignmentId, cancellationToken: cancellationToken);
+        var task = await _taskRepository.GetAsync(assignment.ClassroomAgentTaskId, cancellationToken: cancellationToken);
+        await EnsureCanAccessAssignmentAsync(task, assignment);
+
+        var run = await GetOrCreateRunEntityAsync(assignment);
+        assignment.Status = ClassroomAgentAssignmentStatus.InProgress;
+        assignment.StartedAt ??= Clock.Now;
+        assignment.LastActiveAt = Clock.Now;
+        await _assignmentRepository.UpdateAsync(assignment, autoSave: true, cancellationToken: cancellationToken);
+
+        await CreateMessageAsync(run.Id, "user", input.Message, "[]", cancellationToken);
+
+        run.RuntimeStatus = AgentRunStatus.InProgress;
+        run.LastError = null;
+        await _runRepository.UpdateAsync(run, autoSave: true, cancellationToken: cancellationToken);
+
+        var runtimeRequest = await BuildRuntimeRequestAsync(task, assignment, run);
+        var contentBuilder = new StringBuilder();
+
+        IAsyncEnumerable<string> stream;
+        try
+        {
+            stream = _runtimeClient.GenerateReplyStreamingAsync(runtimeRequest, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            run.RuntimeStatus = AgentRunStatus.Failed;
+            run.LastError = ex.Message;
+            run.EndedAt = Clock.Now;
+            await _runRepository.UpdateAsync(run, autoSave: true, cancellationToken: cancellationToken);
+            throw;
+        }
+
+        var enumerator = stream.GetAsyncEnumerator(cancellationToken);
+        await using (enumerator)
+        {
+            bool hasMore;
+            try
+            {
+                hasMore = await enumerator.MoveNextAsync();
+            }
+            catch (Exception ex)
+            {
+                run.RuntimeStatus = AgentRunStatus.Failed;
+                run.LastError = ex.Message;
+                run.EndedAt = Clock.Now;
+                await _runRepository.UpdateAsync(run, autoSave: true, cancellationToken: cancellationToken);
+                throw;
+            }
+
+            while (hasMore)
+            {
+                var textChunk = enumerator.Current;
+                contentBuilder.Append(textChunk);
+
+                hasMore = await enumerator.MoveNextAsync();
+
+                yield return new AgentMessageChunkDto
+                {
+                    Content = textChunk,
+                    ThreadId = run.ThreadId,
+                    IsComplete = false
+                };
+            }
+        }
+
+        // Save the complete assistant message and update run status
+        await CreateMessageAsync(run.Id, "assistant", contentBuilder.ToString(), "[]", cancellationToken);
+        run.RuntimeStatus = AgentRunStatus.Completed;
+        run.EndedAt = Clock.Now;
+        await _runRepository.UpdateAsync(run, autoSave: true, cancellationToken: cancellationToken);
+
+        yield return new AgentMessageChunkDto
+        {
+            Content = "",
+            ThreadId = run.ThreadId,
+            IsComplete = true
+        };
+    }
+
     private async Task EnsureCanAccessAssignmentAsync(ClassroomAgentTask task, ClassroomAgentAssignment assignment)
     {
         var canReview = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.TeachingAgents.Review);
@@ -188,7 +276,7 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
         return run;
     }
 
-    private async Task CreateMessageAsync(Guid runId, string role, string content, string toolCallsJson)
+    private async Task CreateMessageAsync(Guid runId, string role, string content, string toolCallsJson, CancellationToken cancellationToken = default)
     {
         await _messageRepository.InsertAsync(new AgentRunMessage(
             GuidGenerator.Create(),
@@ -198,7 +286,7 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
         {
             TenantId = CurrentTenant.Id,
             ToolCallsJson = toolCallsJson
-        }, autoSave: true);
+        }, autoSave: true, cancellationToken: cancellationToken);
     }
 
     private async Task<TeachingAgentRuntimeRequest> BuildRuntimeRequestAsync(
@@ -234,7 +322,7 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
         AgentRun run)
     {
         var messages = await GetMessagesAsync(run.Id);
-        var userNames = await GetUserNamesAsync(new List<Guid> { assignment.StudentId });
+        var userNames = await GetUserNamesAsync(new List<Guid> { assignment.StudentId }, assignment.TenantId);
         var version = await _versionRepository.GetAsync(task.TeachingAgentVersionId);
         var agent = await _teachingAgentRepository.GetAsync(task.TeachingAgentId);
 
@@ -270,6 +358,7 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
                     LastActiveAt = assignment.LastActiveAt,
                     SubmissionSummary = assignment.SubmissionSummary,
                     HelpReason = assignment.HelpReason,
+                    TeacherResponse = assignment.TeacherResponse,
                     CreationTime = assignment.CreationTime,
                     CreatorId = assignment.CreatorId,
                     LastModificationTime = assignment.LastModificationTime,
@@ -317,7 +406,7 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
 
     private async Task<ClassroomAgentAssignmentDto> MapAssignmentAsync(ClassroomAgentAssignment assignment)
     {
-        var userNames = await GetUserNamesAsync(new List<Guid> { assignment.StudentId });
+        var userNames = await GetUserNamesAsync(new List<Guid> { assignment.StudentId }, assignment.TenantId);
         return new ClassroomAgentAssignmentDto
         {
             Id = assignment.Id,
@@ -330,6 +419,7 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
             LastActiveAt = assignment.LastActiveAt,
             SubmissionSummary = assignment.SubmissionSummary,
             HelpReason = assignment.HelpReason,
+            TeacherResponse = assignment.TeacherResponse,
             CreationTime = assignment.CreationTime,
             CreatorId = assignment.CreatorId,
             LastModificationTime = assignment.LastModificationTime,
@@ -346,12 +436,15 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
             .ToListAsync();
     }
 
-    private async Task<Dictionary<Guid, string>> GetUserNamesAsync(List<Guid> userIds)
+    private async Task<Dictionary<Guid, string>> GetUserNamesAsync(List<Guid> userIds, Guid? tenantId = null)
     {
-        var query = await _userRepository.GetQueryableAsync();
-        return await query
-            .Where(x => userIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, x => x.Name ?? x.UserName);
+        using (CurrentTenant.Change(tenantId))
+        {
+            var query = await _userRepository.GetQueryableAsync();
+            return await query
+                .Where(x => userIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Name ?? x.UserName);
+        }
     }
 
     private static TaskTargetSnapshotDto? DeserializeSnapshot(string value)

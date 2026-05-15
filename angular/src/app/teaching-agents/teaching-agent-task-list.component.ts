@@ -3,11 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -35,6 +34,17 @@ interface TaskFormState {
   studentIds: string[];
 }
 
+const initialForm: TaskFormState = {
+  title: '',
+  description: '',
+  teachingAgentVersionId: null,
+  taskPrompt: '',
+  targetType: CLASSROOM_AGENT_TARGET_TYPE.course,
+  targetId: null,
+  dueTime: null,
+  studentIds: [],
+};
+
 @Component({
   selector: 'app-teaching-agent-task-list',
   standalone: true,
@@ -43,11 +53,10 @@ interface TaskFormState {
     FormsModule,
     RouterModule,
     NzButtonModule,
-    NzCardModule,
     NzDatePickerModule,
     NzEmptyModule,
-    NzIconModule,
     NzInputModule,
+    NzModalModule,
     NzPopconfirmModule,
     NzSelectModule,
     NzSpinModule,
@@ -62,6 +71,7 @@ export class TeachingAgentTaskListComponent implements OnInit {
 
   readonly loading = signal(false);
   readonly creating = signal(false);
+  readonly createModalVisible = signal(false);
   readonly options = signal<TaskCreationOptions>({
     agents: [],
     students: [],
@@ -70,16 +80,7 @@ export class TeachingAgentTaskListComponent implements OnInit {
   });
   readonly tasks = signal<ClassroomAgentTask[]>([]);
   readonly studentSelectOpen = signal(false);
-  readonly form = signal<TaskFormState>({
-    title: '',
-    description: '',
-    teachingAgentVersionId: null,
-    taskPrompt: '',
-    targetType: CLASSROOM_AGENT_TARGET_TYPE.course,
-    targetId: null,
-    dueTime: null,
-    studentIds: [],
-  });
+  readonly form = signal<TaskFormState>({ ...initialForm });
 
   readonly targetOptions = computed(() => {
     if (this.form().targetType === CLASSROOM_AGENT_TARGET_TYPE.resource) {
@@ -121,6 +122,15 @@ export class TeachingAgentTaskListComponent implements OnInit {
     }
   }
 
+  openCreateModal(): void {
+    this.form.set({ ...initialForm });
+    this.createModalVisible.set(true);
+  }
+
+  closeCreateModal(): void {
+    this.createModalVisible.set(false);
+  }
+
   setFormField<K extends keyof TaskFormState>(key: K, value: TaskFormState[K]): void {
     this.form.update(current => ({ ...current, [key]: value }));
   }
@@ -154,16 +164,7 @@ export class TeachingAgentTaskListComponent implements OnInit {
     this.creating.set(true);
     try {
       await this.classroomAgentTaskService.create(payload).toPromise();
-      this.form.set({
-        title: '',
-        description: '',
-        teachingAgentVersionId: null,
-        taskPrompt: '',
-        targetType: CLASSROOM_AGENT_TARGET_TYPE.course,
-        targetId: null,
-        dueTime: null,
-        studentIds: [],
-      });
+      this.createModalVisible.set(false);
       await this.load();
     } finally {
       this.creating.set(false);

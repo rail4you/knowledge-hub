@@ -1,118 +1,210 @@
 <section class="page-shell">
-  <header class="hero">
-    <div>
-      <p class="eyebrow">Teaching Workbench</p>
-      <h1>教师智能体工作台</h1>
-      <p class="summary">课前配置智能体模板，课堂按课程、资源或习题集分发交互任务。</p>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <div class="header-icon">
+        <span nz-icon nzType="robot" nzTheme="outline"></span>
+      </div>
+      <div class="header-text">
+        <h1>教师智能体工作台</h1>
+        <p class="subtitle">配置智能体模板，按课程、资源或习题集分发课堂交互任务</p>
+      </div>
     </div>
-    <div class="hero-actions">
-      <button nz-button nzType="default" routerLink="/teaching/agent-tasks">
+    <div class="header-actions">
+      <button nz-button nzType="default" routerLink="/teaching/agent-tasks" class="action-btn">
         <span nz-icon nzType="deployment-unit"></span>
         课堂任务
       </button>
-      <button nz-button nzType="primary" routerLink="/teaching/agents/new">
+      <button nz-button nzType="primary" routerLink="/teaching/agents/new" class="action-btn">
         <span nz-icon nzType="plus"></span>
         新建智能体
       </button>
     </div>
   </header>
 
-  <section class="toolbar">
+  <!-- Toolbar -->
+  <div class="toolbar">
     <label class="search-box">
-      <span nz-icon nzType="search"></span>
+      <span nz-icon nzType="search" class="search-icon"></span>
       <input
         nz-input
         [ngModel]="filter()"
-        (ngModelChange)="filter.set($event)"
-        (keyup.enter)="load()"
-        placeholder="按名称或说明筛选"
+        (ngModelChange)="onSearchInput($event)"
+        placeholder="搜索智能体名称或说明…"
       />
     </label>
-    <button nz-button nzType="default" (click)="load()">刷新</button>
-  </section>
+    <button nz-button nzType="default" nzShape="circle" (click)="load()" class="refresh-btn">
+      <span nz-icon nzType="reload"></span>
+    </button>
+  </div>
 
+  <!-- Main Content -->
   <nz-spin [nzSpinning]="loading()">
-    <section class="preset-strip">
-      <div class="section-head">
-        <h2>引接模板</h2>
-        <p>先用预置模板起草，再按课程场景微调 system prompt 和 skills。</p>
-      </div>
-      <div class="preset-grid">
-        @for (preset of presets(); track preset.code) {
-          <article class="preset-card">
-            <div>
-              <h3>{{ preset.name }}</h3>
-              <p>{{ preset.description }}</p>
-            </div>
-            <div class="preset-skills">
-              @for (skill of preset.skills; track skill.code) {
-                <nz-tag>{{ skill.name }}</nz-tag>
+    <div class="tabs-container">
+      <nz-tabs
+        [(nzSelectedIndex)]="activeTabIndex"
+        nzSize="default"
+        nzTabPosition="top"
+        [nzAnimated]="true"
+      >
+        <!-- Tab 1: 智能体模板 -->
+        <nz-tab nzTitle="智能体模板">
+          <ng-template nz-tab>
+            <div class="tab-panel">
+              @if (filteredPresets().length === 0 && filter().trim()) {
+                <div class="empty-state">
+                  <nz-empty nzNotFoundContent="没有匹配的模板"></nz-empty>
+                </div>
+              } @else if (filteredPresets().length === 0) {
+                <div class="empty-state">
+                  <nz-empty nzNotFoundContent="暂无可用模板"></nz-empty>
+                </div>
+              } @else {
+                <nz-table
+                  [nzData]="filteredPresets()"
+                  [nzPageSize]="20"
+                  [nzShowPagination]="filteredPresets().length > 20"
+                  nzSize="middle"
+                  class="agent-table"
+                  [nzBordered]="false"
+                >
+                  <thead>
+                    <tr>
+                      <th nzWidth="180px">模板名称</th>
+                      <th>说明</th>
+                      <th nzWidth="240px">包含技能</th>
+                      <th nzWidth="120px" nzAlign="center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (preset of filteredPresets(); track preset.code) {
+                      <tr>
+                        <td>
+                          <div class="preset-name">
+                            <span class="preset-icon"><span nz-icon nzType="file-text" nzTheme="outline"></span></span>
+                            <strong>{{ preset.name }}</strong>
+                          </div>
+                        </td>
+                        <td><span class="desc-text">{{ preset.description }}</span></td>
+                        <td>
+                          <div class="skill-tags">
+                            @for (skill of preset.skills; track skill.code) {
+                              <nz-tag nzColor="processing" class="skill-tag">{{ skill.name }}</nz-tag>
+                            }
+                          </div>
+                        </td>
+                        <td nzAlign="center">
+                          <a
+                            nz-button
+                            nzType="link"
+                            nzSize="small"
+                            [routerLink]="['/teaching/agents/new']"
+                            [queryParams]="{ preset: preset.code }"
+                          >
+                            <span nz-icon nzType="copy" nzTheme="outline"></span>
+                            使用模板
+                          </a>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </nz-table>
               }
             </div>
-            <a
-              nz-button
-              nzType="link"
-              [routerLink]="['/teaching/agents/new']"
-              [queryParams]="{ preset: preset.code }"
-            >
-              使用模板
-            </a>
-          </article>
-        }
-      </div>
-    </section>
+          </ng-template>
+        </nz-tab>
 
-    <section class="list-section">
-      <div class="section-head">
-        <h2>我的智能体</h2>
-        <p>当前展示你可管理的智能体草稿与已发布版本。</p>
-      </div>
-
-      @if (agents().length === 0) {
-        <nz-empty nzNotFoundContent="暂无智能体，请先创建或引接模板"></nz-empty>
-      } @else {
-        <div class="agent-grid">
-          @for (agent of agents(); track trackById($index, agent)) {
-            <article class="agent-card">
-              <div class="agent-card-top">
-                <div>
-                  <h3>{{ agent.name }}</h3>
-                  <p>{{ agent.description || '未填写说明' }}</p>
+        <!-- Tab 2: 我的智能体 -->
+        <nz-tab nzTitle="我的智能体">
+          <ng-template nz-tab>
+            <div class="tab-panel">
+              @if (agents().length === 0) {
+                <div class="empty-state">
+                  <nz-empty nzNotFoundContent="暂无智能体，请先创建或从模板生成">
+                    <nz-empty-footer>
+                      <a nz-button nzType="primary" [routerLink]="['/teaching/agents/new']">
+                        <span nz-icon nzType="plus"></span>
+                        新建智能体
+                      </a>
+                    </nz-empty-footer>
+                  </nz-empty>
                 </div>
-                <nz-tag [nzColor]="agent.status === 1 ? 'green' : 'gold'">{{ statusLabel(agent.status) }}</nz-tag>
-              </div>
-
-              <dl class="agent-meta">
-                <div>
-                  <dt>所有者</dt>
-                  <dd>{{ agent.ownerUserName }}</dd>
-                </div>
-                <div>
-                  <dt>可见范围</dt>
-                  <dd>{{ visibilityText(agent.visibility) }}</dd>
-                </div>
-                <div>
-                  <dt>当前版本</dt>
-                  <dd>v{{ agent.draftVersion?.versionNumber || 1 }}</dd>
-                </div>
-              </dl>
-
-              <div class="skill-row">
-                @for (skill of agent.draftVersion?.skills || []; track skill.code) {
-                  @if (skill.enabled) {
-                    <nz-tag>{{ skill.name }}</nz-tag>
-                  }
-                }
-              </div>
-
-              <div class="card-actions">
-                <a nz-button nzType="default" [routerLink]="['/teaching/agents', agent.id]">编辑</a>
-                <a nz-button nzType="link" [routerLink]="['/teaching/agent-tasks']">用于分发任务</a>
-              </div>
-            </article>
-          }
-        </div>
-      }
-    </section>
+              } @else {
+                <nz-table
+                  [nzData]="agents()"
+                  [nzPageSize]="20"
+                  [nzShowPagination]="agents().length > 20"
+                  nzSize="middle"
+                  class="agent-table"
+                  [nzBordered]="false"
+                >
+                  <thead>
+                    <tr>
+                      <th nzWidth="160px">名称</th>
+                      <th>说明</th>
+                      <th nzWidth="100px" nzAlign="center">状态</th>
+                      <th nzWidth="100px">所有者</th>
+                      <th nzWidth="100px" nzAlign="center">可见范围</th>
+                      <th nzWidth="60px" nzAlign="center">版本</th>
+                      <th nzWidth="200px">技能</th>
+                      <th nzWidth="180px" nzAlign="center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (agent of agents(); track trackById($index, agent)) {
+                      <tr>
+                        <td>
+                          <a class="agent-name-link" [routerLink]="['/teaching/agents', agent.id]">
+                            {{ agent.name }}
+                          </a>
+                        </td>
+                        <td><span class="desc-text">{{ agent.description || '—' }}</span></td>
+                        <td nzAlign="center">
+                          <nz-tag
+                            [nzColor]="agent.status === 1 ? 'success' : agent.status === 2 ? 'default' : 'warning'"
+                            class="status-tag"
+                          >
+                            {{ statusLabel(agent.status) }}
+                          </nz-tag>
+                        </td>
+                        <td>{{ agent.ownerUserName }}</td>
+                        <td nzAlign="center">
+                          <span class="visibility-badge" [class.is-private]="agent.visibility === 0" [class.is-school]="agent.visibility === 1" [class.is-public]="agent.visibility === 2">
+                            {{ visibilityText(agent.visibility) }}
+                          </span>
+                        </td>
+                        <td nzAlign="center">
+                          <span class="version-badge">v{{ agent.draftVersion?.versionNumber || 1 }}</span>
+                        </td>
+                        <td>
+                          <div class="skill-tags">
+                            @for (skill of enabledSkills(agent); track skill.code) {
+                              <nz-tag nzColor="processing" class="skill-tag">{{ skill.name }}</nz-tag>
+                            }
+                            @if (enabledSkills(agent).length === 0) {
+                              <span class="no-skills">—</span>
+                            }
+                          </div>
+                        </td>
+                        <td nzAlign="center">
+                          <div class="row-actions">
+                            <a nz-button nzType="link" nzSize="small" [routerLink]="['/teaching/agents', agent.id]">
+                              编辑
+                            </a>
+                            <a nz-button nzType="link" nzSize="small" [routerLink]="['/teaching/agent-tasks']">
+                              分发任务
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </nz-table>
+              }
+            </div>
+          </ng-template>
+        </nz-tab>
+      </nz-tabs>
+    </div>
   </nz-spin>
 </section>

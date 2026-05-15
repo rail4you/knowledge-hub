@@ -10,26 +10,40 @@
   @if (tasks().length === 0) {
     <nz-empty nzNotFoundContent="当前没有待处理任务"></nz-empty>
   } @else {
-    <div class="task-list">
-      @for (task of tasks(); track task.assignmentId) {
-        <article class="task-card">
-          <div class="top-line">
-            <div>
-              <h2>{{ task.title }}</h2>
-              <p>{{ task.description || '进入任务后查看详细要求' }}</p>
-            </div>
-            <nz-tag [nzColor]="task.status === 2 ? 'green' : task.status === 3 ? 'red' : 'blue'">
-              {{ statusText(task.status) }}
-            </nz-tag>
-          </div>
-          <div class="meta-line">
-            <span>{{ task.teachingAgentName }}</span>
-            <span>截止：{{ formatDate(task.dueTime) }}</span>
-            <span>最近活跃：{{ formatDate(task.lastActiveAt) }}</span>
-          </div>
-          <a nz-button nzType="primary" [routerLink]="['/student/agent-tasks', task.assignmentId]">进入任务</a>
-        </article>
-      }
-    </div>
+    <nz-table [nzData]="tasks()" [nzPageSize]="20" nzSize="middle" [nzShowPagination]="tasks().length > 20">
+      <thead>
+        <tr>
+          <th>任务名称</th>
+          <th>智能体</th>
+          <th>状态</th>
+          <th>截止时间</th>
+          <th>最近活跃</th>
+          <th nzAlign="center">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (task of tasks(); track task.assignmentId) {
+          <tr>
+            <td>
+              <strong>{{ task.title }}</strong>
+              @if (task.description) {
+                <br><span class="desc-text">{{ task.description }}</span>
+              }
+            </td>
+            <td>{{ task.teachingAgentName }}</td>
+            <td>
+              <nz-tag [nzColor]="task.status === 2 ? 'green' : task.status === 3 ? 'red' : 'blue'">
+                {{ statusText(task.status) }}
+              </nz-tag>
+            </td>
+            <td>{{ formatDate(task.dueTime) }}</td>
+            <td>{{ formatDate(task.lastActiveAt) }}</td>
+            <td nzAlign="center">
+              <a nz-button nzType="primary" nzSize="small" [routerLink]="['/student/agent-tasks', task.assignmentId]">进入任务</a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
   }
 </section>

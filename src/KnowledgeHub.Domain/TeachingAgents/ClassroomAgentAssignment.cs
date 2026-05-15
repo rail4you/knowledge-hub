@@ -16,6 +16,7 @@ public class ClassroomAgentAssignment : FullAuditedAggregateRoot<Guid>, IMultiTe
     public DateTime? LastActiveAt { get; set; }
     public string? SubmissionSummary { get; set; }
     public string? HelpReason { get; set; }
+    public string? TeacherResponse { get; set; }
 
     public ClassroomAgentAssignment()
     {

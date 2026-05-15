@@ -11,47 +11,16 @@
   text-transform: uppercase;
 }
 
-.page-head h1,
-.task-card h2 {
+.page-head h1 {
   margin: 0.4rem 0;
   color: #17324b;
 }
 
-.page-head p,
-.task-card p,
-.meta-line {
+.page-head p {
   color: #607286;
 }
 
-.task-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  gap: 1rem;
-}
-
-.task-card {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(23, 50, 75, 0.08);
-  border-radius: 1rem;
-  padding: 1.15rem;
-  display: grid;
-  gap: 1rem;
-}
-
-.top-line {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.meta-line {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-@media (max-width: 768px) {
-  .top-line {
-    flex-direction: column;
-  }
+.desc-text {
+  color: #607286;
+  font-size: 0.85em;
 }

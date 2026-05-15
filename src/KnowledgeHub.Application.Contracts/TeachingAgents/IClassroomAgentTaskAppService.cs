@@ -15,4 +15,5 @@ public interface IClassroomAgentTaskAppService : IApplicationService
     Task<PagedResultDto<ClassroomAgentTaskDto>> GetTeacherTaskListAsync(PagedAndSortedResultRequestDto input);
     Task<PagedResultDto<StudentAgentTaskDto>> GetStudentTaskListAsync(PagedAndSortedResultRequestDto input);
     Task<ClassroomAgentTaskDetailDto> GetTaskDetailAsync(Guid id);
+    Task<ClassroomAgentAssignmentDto> RespondToStudentHelpAsync(Guid assignmentId, TeacherRespondDto input);
 }

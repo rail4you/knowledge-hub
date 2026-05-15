@@ -60,73 +60,167 @@
             }
           </nz-card>
 
+          <!-- Submit & Help section -->
           <nz-card nzTitle="提交与求助">
-            <label class="field">
-              <span>完成摘要</span>
-              <textarea
-                nz-input
-                rows="4"
-                [ngModel]="summary()"
-                (ngModelChange)="summary.set($event)"
-                placeholder="概括你已完成的结论、重点或答案"
-              ></textarea>
-            </label>
-            <button nz-button nzType="primary" (click)="submitSummary()">提交任务</button>
+            @if (isCompleted()) {
+              <!-- Completed: read-only summary -->
+              <div class="done-banner">
+                <nz-tag nzColor="green">✅ 已提交</nz-tag>
+                @if (currentDetail.assignment.submissionSummary) {
+                  <p class="done-summary">{{ currentDetail.assignment.submissionSummary }}</p>
+                }
+              </div>
+            } @else {
+              <!-- Not completed -->
+              <!-- Submit button -->
+              <div class="action-block">
+                <button nz-button nzType="primary" (click)="submitModalVisible.set(true)" nzBlock>
+                  📝 提交任务
+                </button>
+              </div>
 
-            <nz-divider></nz-divider>
+              <nz-divider></nz-divider>
 
-            <label class="field">
-              <span>需要教师帮助</span>
-              <textarea
-                nz-input
-                rows="4"
-                [ngModel]="helpReason()"
-                (ngModelChange)="helpReason.set($event)"
-                placeholder="说明卡住的位置、需要老师介入的原因"
-              ></textarea>
-            </label>
-            <button nz-button nzType="default" (click)="requestHelp()">请求教师介入</button>
+              <!-- Help request button -->
+              <div class="action-block">
+                <button nz-button nzType="default" (click)="helpModalVisible.set(true)" nzBlock [disabled]="isHelpActive()">
+                  🆘 请求教师帮助
+                </button>
+                @if (isHelpActive()) {
+                  <p class="hint-text">已发送求助请求，等待教师回复中</p>
+                }
+              </div>
+
+              <!-- Help history timeline -->
+              @if (helpRecords().length > 0) {
+                <div class="help-timeline">
+                  <div class="timeline-title">💬 求助记录</div>
+                  @for (record of helpRecords(); track $index) {
+                    <div class="timeline-item">
+                      <div class="timeline-dot" [class.replied]="record.teacherResponse"></div>
+                      <div class="timeline-body">
+                        <div class="timeline-question">
+                          <span class="timeline-label">我的提问</span>
+                          <p>{{ record.helpReason }}</p>
+                        </div>
+                        @if (record.teacherResponse) {
+                          <div class="timeline-reply">
+                            <span class="timeline-label">👨‍🏫 教师回复</span>
+                            <p>{{ record.teacherResponse }}</p>
+                          </div>
+                        } @else {
+                          <div class="timeline-pending">
+                            <nz-tag nzColor="orange">等待教师回复</nz-tag>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            }
           </nz-card>
         </aside>
 
+        <!-- Chat column: read-only if completed -->
         <section class="chat-column">
-	          <nz-card nzTitle="与智能体对话">
-	            @if (currentDetail.assignment.status === 3) {
-	              <nz-alert nzType="warning" nzMessage="你已标记需要教师帮助，仍可继续补充上下文。"></nz-alert>
-	            }
+          <nz-card [nzTitle]="isCompleted() ? '对话记录（已提交）' : '与智能体对话'">
+            @if (isHelpActive() && !isCompleted()) {
+              <nz-alert nzType="warning" nzMessage="你已标记需要教师帮助，仍可继续补充上下文。"></nz-alert>
+            }
 
-	            @if (chatError()) {
-	              <nz-alert nzType="error" [nzMessage]="chatError()"></nz-alert>
-	            }
+            @if (chatError()) {
+              <nz-alert nzType="error" [nzMessage]="chatError()"></nz-alert>
+            }
 
-	            <div class="message-list">
+            <div class="message-list">
               @for (message of messages(); track message.id) {
                 <article class="message" [class.assistant]="message.role === 'assistant'">
                   <div class="message-role">{{ message.role === 'assistant' ? '智能体' : '我' }}</div>
-                  <div class="message-content">{{ message.content }}</div>
+                  @if (message.role === 'assistant') {
+                    <div class="message-content markdown-body" markdown [data]="message.content"></div>
+                  } @else {
+                    <div class="message-content">{{ message.content }}</div>
+                  }
                 </article>
               }
             </div>
 
-            <div class="composer">
-              <textarea
-                nz-input
-                rows="4"
-                [ngModel]="draftMessage()"
-                (ngModelChange)="draftMessage.set($event)"
-                placeholder="向智能体提问，例如：先概括课程重点，再给我一个答题步骤"
-              ></textarea>
-              <div class="composer-actions">
-                <button nz-button nzType="primary" [disabled]="sending()" (click)="sendMessage()">
-                  {{ sending() ? '发送中...' : '发送消息' }}
-                </button>
+            @if (!isCompleted()) {
+              <div class="composer">
+                <textarea
+                  nz-input
+                  rows="4"
+                  [ngModel]="draftMessage()"
+                  (ngModelChange)="draftMessage.set($event)"
+                  placeholder="向智能体提问，例如：先概括课程重点，再给我一个答题步骤"
+                ></textarea>
+                <div class="composer-actions">
+                  <button nz-button nzType="primary" [disabled]="sending()" (click)="sendMessage()">
+                    {{ sending() ? '发送中...' : '发送消息' }}
+                  </button>
+                </div>
               </div>
-            </div>
+            }
           </nz-card>
         </section>
       </div>
+
+
     } @else {
       <nz-empty nzNotFoundContent="未找到任务"></nz-empty>
     }
+
+    <!-- Submit Modal (outside @if to prevent destruction) -->
+    <nz-modal
+      [nzVisible]="submitModalVisible()"
+      (nzVisibleChange)="submitModalVisible.set($event)"
+      nzTitle="📝 提交任务"
+      [nzFooter]="submitFooter"
+      nzWidth="480px"
+    >
+      <ng-container *nzModalContent>
+        <p class="modal-desc">提交后任务将标记为已完成，无法继续修改。</p>
+        <textarea
+          nz-input
+          rows="5"
+          [ngModel]="summary()"
+          (ngModelChange)="summary.set($event)"
+          placeholder="概括你已完成的结论、重点或答案"
+        ></textarea>
+      </ng-container>
+      <ng-template #submitFooter>
+        <button nz-button (click)="submitModalVisible.set(false)">取消</button>
+        <button nz-button nzType="primary" [disabled]="!summary().trim() || submitting()" [nzLoading]="submitting()" (click)="submitSummary()">
+          确认提交
+        </button>
+      </ng-template>
+    </nz-modal>
+
+    <!-- Help Modal (outside @if to prevent destruction) -->
+    <nz-modal
+      [nzVisible]="helpModalVisible()"
+      (nzVisibleChange)="helpModalVisible.set($event)"
+      nzTitle="🆘 请求教师帮助"
+      [nzFooter]="helpFooter"
+      nzWidth="480px"
+    >
+      <ng-container *nzModalContent>
+        <p class="modal-desc">描述你遇到的问题，教师会尽快回复。</p>
+        <textarea
+          nz-input
+          rows="5"
+          [ngModel]="helpReason()"
+          (ngModelChange)="helpReason.set($event)"
+          placeholder="说明卡住的位置、需要老师介入的原因"
+        ></textarea>
+      </ng-container>
+      <ng-template #helpFooter>
+        <button nz-button (click)="helpModalVisible.set(false)">取消</button>
+        <button nz-button nzType="primary" [disabled]="!helpReason().trim() || submitting()" [nzLoading]="submitting()" (click)="requestHelp()">
+          发送求助
+        </button>
+      </ng-template>
+    </nz-modal>
   </nz-spin>
 </section>

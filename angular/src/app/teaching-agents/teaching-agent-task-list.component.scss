@@ -1,24 +1,20 @@
 .task-page {
-  padding: 2rem;
+  padding: 1.5rem;
   min-height: 100%;
   background:
     radial-gradient(circle at right top, rgba(15, 118, 110, 0.14), transparent 24rem),
     linear-gradient(180deg, #f2fbf9 0%, #ffffff 100%);
   display: grid;
-  gap: 1.25rem;
-}
-
-.page-head,
-.task-grid,
-.form-grid,
-.summary-strip {
-  display: grid;
   gap: 1rem;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .page-head {
-  grid-template-columns: 1fr auto;
-  align-items: start;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
 }
 
 .eyebrow {
@@ -29,60 +25,50 @@
   font-weight: 700;
 }
 
-.page-head h1,
-.section-head h2,
-.title-cell strong {
+.page-head h1 {
   margin: 0.4rem 0 0;
   color: #14323e;
 }
 
-.page-head p,
-.section-head p,
-.title-cell p,
-.runtime-copy {
+.page-head p {
   color: #5a6f78;
 }
 
-.task-grid {
-  grid-template-columns: minmax(21rem, 26rem) minmax(0, 1fr);
-  align-items: start;
+.head-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
-.form-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.field {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.full-width {
-  grid-column: 1 / -1;
-}
-
+/* ── Summary strip ── */
 .summary-strip {
+  display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .summary-strip article {
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(12, 43, 89, 0.08);
-  border-radius: 1rem;
-  padding: 1rem 1.1rem;
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.5rem;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.04);
+  text-align: center;
 }
 
 .summary-strip strong {
   display: block;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   color: #14323e;
 }
 
 .summary-strip span {
   color: #5a6f78;
+  font-size: 0.88em;
 }
 
+/* ── Task table ── */
 .task-table-shell {
   overflow-x: auto;
   background: rgba(255, 255, 255, 0.94);
@@ -94,14 +80,16 @@
 .task-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 68rem;
+  table-layout: fixed;
 }
 
 .task-table th,
 .task-table td {
-  padding: 1rem;
+  padding: 0.65rem 0.75rem;
   vertical-align: top;
   border-bottom: 1px solid rgba(12, 43, 89, 0.08);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .task-table th {
@@ -124,12 +112,20 @@
 
 .task-table td span {
   color: #5a6f78;
-  margin-top: 0.2rem;
+  margin-top: 0.15rem;
+  font-size: 0.85em;
+}
+
+.title-cell strong {
+  color: #14323e;
 }
 
 .title-cell p {
-  margin: 0.35rem 0 0;
-  max-width: 30rem;
+  margin: 0.25rem 0 0;
+  color: #5a6f78;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .progress-cell,
@@ -141,24 +137,57 @@
 
 .progress-cell span {
   margin: 0;
-  padding: 0.3rem 0.65rem;
+  padding: 0.15rem 0.5rem;
   border-radius: 999px;
   background: #f4fbfa;
   color: #285965;
+  font-size: 0.82em;
+  white-space: nowrap;
 }
 
+/* ── Modal form ── */
+.modal-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.modal-form .field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.modal-form .field > span {
+  font-weight: 500;
+  color: #18324d;
+  font-size: 0.9em;
+}
+
+.modal-form .field > span em {
+  color: #ef4444;
+  font-style: normal;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ── Responsive ── */
 @media (max-width: 980px) {
   .task-page {
     padding: 1rem;
   }
 
-  .page-head,
-  .task-grid,
-  .form-grid {
-    grid-template-columns: 1fr;
+  .page-head {
+    flex-direction: column;
   }
 
   .summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
   }
 }

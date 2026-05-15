@@ -25,115 +25,245 @@
 
   <nz-spin [nzSpinning]="loading()">
     @if (task(); as currentTask) {
-      <div class="layout">
-        <section class="main-column">
-          <nz-card nzTitle="任务概览">
-            <div class="meta-grid">
-              <div>
-                <span>智能体</span>
-                <strong>{{ currentTask.teachingAgentName }} · v{{ currentTask.teachingAgentVersionNumber }}</strong>
-              </div>
-              <div>
-                <span>发布状态</span>
-                <strong>{{ publishText(currentTask.publishStatus) }}</strong>
-              </div>
-              <div>
-                <span>任务类型</span>
-                <strong>{{ targetText(currentTask.targetType) }}</strong>
-              </div>
-              <div>
-                <span>截止时间</span>
-                <strong>{{ formatDate(currentTask.dueTime) }}</strong>
-              </div>
-            </div>
-
-            <div class="prompt-box">
-              <h3>教师任务提示词</h3>
-              <p>{{ currentTask.taskPrompt }}</p>
-            </div>
-          </nz-card>
-
-          <nz-card nzTitle="任务对象快照">
-            @if (currentTask.targetSnapshot?.course; as course) {
-              <article class="snapshot-card">
-                <h3>{{ course.title }}</h3>
-                <p>{{ course.description || '暂无课程描述' }}</p>
-                <div class="chips">
-                  <nz-tag>教师：{{ course.teacherName || '未设置' }}</nz-tag>
-                  <nz-tag>学期：{{ course.semester || '未设置' }}</nz-tag>
-                  <nz-tag>章节：{{ course.chapters.length }}</nz-tag>
+      <nz-tabs [(nzSelectedIndex)]="activeTabIndex" nzSize="large" class="main-tabs">
+        <!-- Tab 1: Task Overview -->
+        <nz-tab nzTitle="任务概览">
+          <div class="tab-content">
+            <div class="overview-grid">
+              <div class="info-card">
+                <div class="info-icon">🤖</div>
+                <div class="info-body">
+                  <span class="info-label">智能体</span>
+                  <strong>{{ currentTask.teachingAgentName }}</strong>
+                  <span class="info-sub">v{{ currentTask.teachingAgentVersionNumber }}</span>
                 </div>
-              </article>
+              </div>
+              <div class="info-card">
+                <div class="info-icon">📋</div>
+                <div class="info-body">
+                  <span class="info-label">发布状态</span>
+                  <nz-tag [nzColor]="currentTask.publishStatus === 1 ? 'green' : currentTask.publishStatus === 2 ? 'red' : 'orange'">
+                    {{ publishText(currentTask.publishStatus) }}
+                  </nz-tag>
+                </div>
+              </div>
+              <div class="info-card">
+                <div class="info-icon">🎯</div>
+                <div class="info-body">
+                  <span class="info-label">任务类型</span>
+                  <strong>{{ targetText(currentTask.targetType) }}</strong>
+                </div>
+              </div>
+              <div class="info-card">
+                <div class="info-icon">⏰</div>
+                <div class="info-body">
+                  <span class="info-label">截止时间</span>
+                  <strong>{{ formatDate(currentTask.dueTime) }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <nz-card nzTitle="📝 任务要求" class="section-card">
+              <div class="prompt-content">{{ currentTask.taskPrompt }}</div>
+            </nz-card>
+
+            @if (currentTask.targetSnapshot?.course; as course) {
+              <nz-card nzTitle="📚 任务对象 — 课程" class="section-card">
+                <div class="target-detail">
+                  <h4>{{ course.title }}</h4>
+                  <p class="target-desc">{{ course.description || '暂无课程描述' }}</p>
+                  <div class="target-meta">
+                    @if (course.teacherName) {
+                      <span class="meta-chip">👨‍🏫 {{ course.teacherName }}</span>
+                    }
+                    @if (course.semester) {
+                      <span class="meta-chip">📅 {{ course.semester }}</span>
+                    }
+                    <span class="meta-chip">📖 {{ course.chapters.length }} 个章节</span>
+                    <span class="meta-chip">📌 {{ course.knowledgeResources.length }} 个知识点</span>
+                  </div>
+                  @if (course.chapters.length) {
+                    <div class="chapter-list">
+                      @for (chapter of course.chapters; track chapter.id) {
+                        <div class="chapter-item">
+                          <span class="chapter-title">{{ chapter.title }}</span>
+                          <span class="chapter-count">{{ chapter.knowledgeResources?.length || 0 }} 知识点</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </nz-card>
             }
 
             @if (currentTask.targetSnapshot?.resource; as resource) {
-              <article class="snapshot-card">
-                <h3>{{ resource.name }}</h3>
-                <p>{{ resource.description || '暂无资源说明' }}</p>
-                <div class="chips">
-                  <nz-tag>{{ resource.categoryName || '未分类' }}</nz-tag>
-                  <nz-tag>{{ resource.fileExtension || '无扩展名' }}</nz-tag>
+              <nz-card nzTitle="📎 任务对象 — 资源" class="section-card">
+                <div class="target-detail">
+                  <h4>{{ resource.name }}</h4>
+                  <p class="target-desc">{{ resource.description || '暂无资源说明' }}</p>
+                  <div class="target-meta">
+                    <span class="meta-chip">📂 {{ resource.categoryName || '未分类' }}</span>
+                    @if (resource.fileExtension) {
+                      <span class="meta-chip">📄 {{ resource.fileExtension }}</span>
+                    }
+                  </div>
                 </div>
-              </article>
+              </nz-card>
             }
 
             @if (currentTask.targetSnapshot?.exercises?.length) {
-              <article class="snapshot-card">
-                <h3>习题集摘要</h3>
-                <p>共 {{ currentTask.targetSnapshot?.exercises?.length }} 道题，面向课堂辅导与分步提示。</p>
-              </article>
+              <nz-card nzTitle="✏️ 任务对象 — 习题集" class="section-card">
+                <div class="target-detail">
+                  <p class="target-desc">共 {{ currentTask.targetSnapshot!.exercises!.length }} 道题，面向课堂辅导与分步提示。</p>
+                </div>
+              </nz-card>
             }
-          </nz-card>
 
-          <nz-card nzTitle="学生分配">
+            <nz-card nzTitle="📊 任务统计" class="section-card">
+              <div class="stats-row">
+                <div class="stat-item">
+                  <span class="stat-value">{{ currentTask.assignments.length }}</span>
+                  <span class="stat-label">分配学生</span>
+                </div>
+                <div class="stat-item stat-success">
+                  <span class="stat-value">{{ currentTask.completedCount }}</span>
+                  <span class="stat-label">已完成</span>
+                </div>
+                <div class="stat-item stat-warning">
+                  <span class="stat-value">{{ currentTask.needsHelpCount }}</span>
+                  <span class="stat-label">需帮助</span>
+                </div>
+                <div class="stat-item stat-info">
+                  <span class="stat-value">{{ currentTask.assignments.length - currentTask.completedCount - currentTask.needsHelpCount }}</span>
+                  <span class="stat-label">进行中/待开始</span>
+                </div>
+              </div>
+            </nz-card>
+          </div>
+        </nz-tab>
+
+        <!-- Tab 2: Student Interactions -->
+        <nz-tab nzTitle="学生交互">
+          <div class="tab-content">
             @if (currentTask.assignments.length === 0) {
               <nz-empty nzNotFoundContent="暂无学生分配记录"></nz-empty>
             } @else {
-              <div class="assignment-list">
+              <div class="student-grid">
                 @for (assignment of currentTask.assignments; track assignment.id) {
-                  <button class="assignment-row" type="button" (click)="inspectAssignment(assignment)">
-                    <div>
-                      <strong>{{ assignment.studentName }}</strong>
-                      <p>最后活跃：{{ formatDate(assignment.lastActiveAt) }}</p>
+                  <div
+                    class="student-card"
+                    [class.expanded]="expandedAssignmentId() === assignment.id"
+                  >
+                    <div class="student-header" (click)="toggleAssignment(assignment)">
+                      <div class="student-avatar">
+                        {{ getInitial(assignment.studentName) }}
+                      </div>
+                      <div class="student-info">
+                        <strong class="student-name">{{ assignment.studentName || '未知学生' }}</strong>
+                        <div class="student-meta">
+                          <span>{{ assignmentText(assignment.status) }}</span>
+                          <span class="dot">·</span>
+                          <span>最后活跃 {{ formatDate(assignment.lastActiveAt) }}</span>
+                        </div>
+                        @if (assignment.startedAt) {
+                          <div class="student-meta">
+                            <span>开始于 {{ formatDate(assignment.startedAt) }}</span>
+                          </div>
+                        }
+                        @if (assignment.completedAt) {
+                          <div class="student-meta">
+                            <span>提交于 {{ formatDate(assignment.completedAt) }}</span>
+                          </div>
+                        }
+                      </div>
+                      <nz-tag
+                        [nzColor]="statusColor(assignment.status)"
+                        class="status-tag"
+                      >
+                        {{ assignmentText(assignment.status) }}
+                      </nz-tag>
+                      <span class="expand-icon">{{ expandedAssignmentId() === assignment.id ? '▲' : '▼' }}</span>
                     </div>
-                    <nz-tag [nzColor]="assignment.status === 2 ? 'green' : assignment.status === 3 ? 'red' : 'blue'">
-                      {{ assignmentText(assignment.status) }}
-                    </nz-tag>
-                  </button>
+
+                    @if (expandedAssignmentId() === assignment.id) {
+                      <div class="transcript-panel">
+                        @if (assignment.submissionSummary) {
+                          <div class="submission-summary">
+                            <span class="summary-label">📝 学生提交摘要</span>
+                            <p>{{ assignment.submissionSummary }}</p>
+                          </div>
+                        }
+                        @if (assignment.helpReason) {
+                          <div class="help-reason">
+                            <span class="summary-label">🆘 求助原因</span>
+                            <p>{{ assignment.helpReason }}</p>
+                          </div>
+                        }
+
+                        @if (assignment.teacherResponse) {
+                          <div class="teacher-response">
+                            <span class="summary-label">📝 教师回复</span>
+                            <p>{{ assignment.teacherResponse }}</p>
+                          </div>
+                        }
+
+                        @if (assignment.status === 3) {
+                          <div class="respond-section">
+                            <span class="summary-label">💬 回复学生求助</span>
+                            <textarea
+                              nz-input
+                              rows="3"
+                              [ngModel]="teacherResponseText"
+                              (ngModelChange)="onResponseInput($event)"
+                              placeholder="输入回复内容，回复后任务状态将恢复为进行中"
+                            ></textarea>
+                            <button
+                              nz-button
+                              nzType="primary"
+                              nzSize="small"
+                              [disabled]="!teacherResponseText.trim()"
+                              [nzLoading]="responding()"
+                              (click)="respondToHelp(assignment)"
+                            >
+                              发送回复
+                            </button>
+                          </div>
+                        }
+
+                        <nz-spin [nzSpinning]="transcriptLoading()">
+                          @if (selectedRun(); as run) {
+                            @if (run.messages.length === 0) {
+                              <nz-empty nzNotFoundContent="暂无交互记录"></nz-empty>
+                            } @else {
+                              <div class="transcript">
+                                <div class="transcript-header">对话记录（共 {{ run.messages.length }} 条）</div>
+                                @for (message of run.messages; track message.id) {
+                                  <article class="message" [class.assistant]="message.role === 'assistant'">
+                                    <div class="message-role">
+                                      {{ message.role === 'assistant' ? '🤖 智能体' : '💬 学生' }}
+                                    </div>
+                                    @if (message.role === 'assistant') {
+                                      <div class="message-content markdown-body" markdown [data]="message.content"></div>
+                                    } @else {
+                                      <div class="message-content">{{ message.content }}</div>
+                                    }
+                                  </article>
+                                }
+                              </div>
+                            }
+                          } @else if (!transcriptLoading()) {
+                            <nz-empty nzNotFoundContent="当前没有交互记录"></nz-empty>
+                          }
+                        </nz-spin>
+                      </div>
+                    }
+                  </div>
                 }
               </div>
             }
-          </nz-card>
-        </section>
-
-        <aside class="side-column">
-          <nz-card nzTitle="交互记录">
-            @if (selectedAssignment()) {
-              <div class="selected-head">
-                <strong>{{ selectedAssignment()?.studentName }}</strong>
-                <span>{{ assignmentText(selectedAssignment()?.status || 0) }}</span>
-              </div>
-            }
-
-            <nz-spin [nzSpinning]="transcriptLoading()">
-              @if (!selectedAssignment()) {
-                <nz-empty nzNotFoundContent="点击左侧学生查看 transcript"></nz-empty>
-              } @else if (selectedRun(); as run) {
-                <div class="transcript">
-                  @for (message of run.messages; track message.id) {
-                    <article class="message" [class.assistant]="message.role === 'assistant'">
-                      <div class="message-role">{{ message.role === 'assistant' ? '智能体' : '学生' }}</div>
-                      <div class="message-content">{{ message.content }}</div>
-                    </article>
-                  }
-                </div>
-              } @else {
-                <nz-empty nzNotFoundContent="当前没有交互记录"></nz-empty>
-              }
-            </nz-spin>
-          </nz-card>
-        </aside>
-      </div>
+          </div>
+        </nz-tab>
+      </nz-tabs>
     } @else {
       <nz-empty nzNotFoundContent="未找到任务"></nz-empty>
     }
