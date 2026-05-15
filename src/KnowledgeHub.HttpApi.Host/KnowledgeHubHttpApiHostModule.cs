@@ -51,6 +51,7 @@ using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 using Volo.Abp.BackgroundJobs;
 using KnowledgeHub.Json;
+using KnowledgeHub.TeachingAgents;
 using Volo.Abp.Json;
 
 namespace KnowledgeHub;
@@ -180,6 +181,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.AddScoped<KnowledgeHub.Resources.ISearchService>(sp => 
     new global::KnowledgeHub.Resources.MeiliSearchService(new HttpClient { BaseAddress = new Uri(configuration["Meilisearch:Host"] ?? "http://localhost:7700") }));
         context.Services.AddHttpClient<IEmbeddingService, EmbeddingService>();
+        context.Services.AddTransient<ITeachingAgentRuntimeClient, TeachingAgentRuntimeClient>();
         context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();
         context.Services.AddScoped<ISearchAppService, SearchAppService>();
         context.Services.AddHttpClient<IMeiliSearchAdminAppService, MeiliSearchAdminAppService>();

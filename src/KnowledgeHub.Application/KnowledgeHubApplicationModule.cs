@@ -31,5 +31,6 @@ public class KnowledgeHubApplicationModule : AbpModule
     {
         context.Services.AddSingleton<OpenDataLoaderService>();
         context.Services.AddSingleton<IDocumentExtractionService>(sp => sp.GetRequiredService<OpenDataLoaderService>());
+        context.Services.AddTransient<TeachingAgents.TeachingAgentContextBuilder>();
     }
 }

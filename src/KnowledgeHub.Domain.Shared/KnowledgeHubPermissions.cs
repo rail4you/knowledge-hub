@@ -64,6 +64,15 @@ public static class KnowledgeHubPermissions
         public const string CareerGuidance = Default + ".CareerGuidance";
     }
 
+    public static class TeachingAgents
+    {
+        public const string Default = GroupName + ".TeachingAgents";
+        public const string Manage = Default + ".Manage";
+        public const string Assign = Default + ".Assign";
+        public const string Execute = Default + ".Execute";
+        public const string Review = Default + ".Review";
+    }
+
     public static class Alliance
     {
         public const string Default = GroupName + ".Alliance";

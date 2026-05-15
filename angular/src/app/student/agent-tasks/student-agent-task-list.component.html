@@ -1,0 +1,35 @@
+<section class="student-task-page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">My Classroom Tasks</p>
+      <h1>智能体交互任务</h1>
+      <p>进入任务后可直接与课堂智能体对话，并提交完成摘要或请求教师帮助。</p>
+    </div>
+  </header>
+
+  @if (tasks().length === 0) {
+    <nz-empty nzNotFoundContent="当前没有待处理任务"></nz-empty>
+  } @else {
+    <div class="task-list">
+      @for (task of tasks(); track task.assignmentId) {
+        <article class="task-card">
+          <div class="top-line">
+            <div>
+              <h2>{{ task.title }}</h2>
+              <p>{{ task.description || '进入任务后查看详细要求' }}</p>
+            </div>
+            <nz-tag [nzColor]="task.status === 2 ? 'green' : task.status === 3 ? 'red' : 'blue'">
+              {{ statusText(task.status) }}
+            </nz-tag>
+          </div>
+          <div class="meta-line">
+            <span>{{ task.teachingAgentName }}</span>
+            <span>截止：{{ formatDate(task.dueTime) }}</span>
+            <span>最近活跃：{{ formatDate(task.lastActiveAt) }}</span>
+          </div>
+          <a nz-button nzType="primary" [routerLink]="['/student/agent-tasks', task.assignmentId]">进入任务</a>
+        </article>
+      }
+    </div>
+  }
+</section>

@@ -24,6 +24,8 @@ using KnowledgeHub.MicroMajors;
 using KnowledgeHub.Practicums;
 using KnowledgeHub.DoubleHigh;
 using KnowledgeHub.Employment;
+using KnowledgeHub.TeachingAgents;
+using KnowledgeHub.EntityFrameworkCore.TeachingAgents;
 
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -148,6 +150,14 @@ public class KnowledgeHubDbContext :
     public DbSet<InterviewSchedule> InterviewSchedules { get; set; }
     public DbSet<EmploymentGuidanceRecord> EmploymentGuidanceRecords { get; set; }
     public DbSet<EmploymentOutcome> EmploymentOutcomes { get; set; }
+    
+    // Teaching agent entities
+    public DbSet<TeachingAgent> TeachingAgents { get; set; }
+    public DbSet<TeachingAgentVersion> TeachingAgentVersions { get; set; }
+    public DbSet<ClassroomAgentTask> ClassroomAgentTasks { get; set; }
+    public DbSet<ClassroomAgentAssignment> ClassroomAgentAssignments { get; set; }
+    public DbSet<AgentRun> AgentRuns { get; set; }
+    public DbSet<AgentRunMessage> AgentRunMessages { get; set; }
 
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
@@ -184,5 +194,6 @@ public class KnowledgeHubDbContext :
         builder.ConfigurePracticum();
         builder.ConfigureDoubleHigh();
         builder.ConfigureEmployment();
+        builder.ConfigureTeachingAgents();
     }
 }

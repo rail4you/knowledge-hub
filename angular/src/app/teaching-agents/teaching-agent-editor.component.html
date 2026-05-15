@@ -1,0 +1,164 @@
+<section class="editor-page">
+  <header class="page-head">
+    <div>
+      <a routerLink="/teaching/agents" class="back-link">
+        <span nz-icon nzType="arrow-left"></span>
+        返回列表
+      </a>
+      <h1>{{ isEditMode() ? '智能体编辑器' : '新建智能体' }}</h1>
+      <p>围绕课程、资源与习题集配置 prompt、欢迎语与业务 skills。</p>
+    </div>
+    @if (currentAgent(); as agent) {
+      <div class="status-box">
+        <nz-tag [nzColor]="agent.status === 1 ? 'green' : 'gold'">{{ statusText(agent.status) }}</nz-tag>
+        <span>{{ visibilityText(agent.visibility) }}</span>
+      </div>
+    }
+  </header>
+
+  <nz-spin [nzSpinning]="loading() || saving()">
+    <div class="editor-grid">
+      <section class="main-column">
+        <nz-card nzTitle="基础信息">
+          <div class="field-grid">
+            <label class="field">
+              <span>名称</span>
+              <input nz-input [ngModel]="form().name" (ngModelChange)="setField('name', $event)" />
+            </label>
+
+            <label class="field">
+              <span>可见范围</span>
+              <nz-select [ngModel]="form().visibility" (ngModelChange)="setField('visibility', $event)">
+                <nz-option [nzValue]="0" nzLabel="仅自己可见"></nz-option>
+                <nz-option [nzValue]="1" nzLabel="校内共享"></nz-option>
+                <nz-option [nzValue]="2" nzLabel="全局公开"></nz-option>
+              </nz-select>
+            </label>
+
+	            <label class="field full-width">
+	              <span>说明</span>
+	              <textarea
+	                nz-input
+                rows="3"
+                [ngModel]="form().description"
+                (ngModelChange)="setField('description', $event)"
+	                placeholder="描述这个智能体适合什么教学场景"
+	              ></textarea>
+	            </label>
+
+	            <div class="runtime-note full-width">
+	              <div>
+	                <span class="runtime-label">运行模型</span>
+	                <strong>{{ runtimeModel }}</strong>
+	              </div>
+	              <p>教学智能体与其他 AI 功能共用同一套 Qwen Key，模型固定为 qwen-plus，不再单独配置模型。</p>
+	            </div>
+
+	            <label class="field">
+	              <span>Temperature</span>
+	              <nz-input-number
+                [ngModel]="form().temperature"
+                (ngModelChange)="setField('temperature', $event ?? 0.2)"
+                [nzMin]="0"
+                [nzMax]="1"
+                [nzStep]="0.1"
+              ></nz-input-number>
+            </label>
+          </div>
+        </nz-card>
+
+        <nz-card nzTitle="系统提示词">
+          <textarea
+            nz-input
+            rows="10"
+            [ngModel]="form().systemPrompt"
+            (ngModelChange)="setField('systemPrompt', $event)"
+            placeholder="定义课堂任务规则、回答边界和工具使用原则"
+          ></textarea>
+        </nz-card>
+
+        <nz-card nzTitle="欢迎语与版本备注">
+          <div class="field-grid">
+            <label class="field full-width">
+              <span>欢迎语</span>
+              <textarea
+                nz-input
+                rows="4"
+                [ngModel]="form().welcomeMessage"
+                (ngModelChange)="setField('welcomeMessage', $event)"
+                placeholder="学生进入任务页时看到的首条引导"
+              ></textarea>
+            </label>
+            <label class="field full-width">
+              <span>版本备注</span>
+              <textarea
+                nz-input
+                rows="3"
+                [ngModel]="publishNote()"
+                (ngModelChange)="publishNote.set($event)"
+                placeholder="记录本次发布或草稿修改重点"
+              ></textarea>
+            </label>
+          </div>
+        </nz-card>
+      </section>
+
+      <aside class="side-column">
+        <nz-card nzTitle="Skills">
+          <div class="skill-list">
+            @for (skill of skillCatalog(); track skill.code) {
+              <label class="skill-item">
+                <input
+                  type="checkbox"
+                  [checked]="skill.enabled"
+                  (change)="toggleSkill(skill.code, $any($event.target).checked)"
+                />
+                <div>
+                  <strong>{{ skill.name }}</strong>
+                  <p>{{ skill.description }}</p>
+                </div>
+              </label>
+            }
+          </div>
+        </nz-card>
+
+        <nz-card nzTitle="模板">
+          @if (presets().length === 0) {
+            <nz-empty nzNotFoundContent="暂无模板"></nz-empty>
+          } @else {
+            <div class="preset-actions">
+              @for (preset of presets(); track preset.code) {
+                <button nz-button nzType="default" (click)="applyPreset(preset.code)">
+                  {{ preset.name }}
+                </button>
+              }
+            </div>
+          }
+        </nz-card>
+
+        @if (currentAgent()?.versions?.length) {
+          <nz-card nzTitle="版本历史">
+            <div class="version-list">
+              @for (version of currentAgent()?.versions || []; track version.id) {
+                <article class="version-row">
+                  <div>
+                    <strong>v{{ version.versionNumber }}</strong>
+                    <p>{{ version.versionNote || '未填写备注' }}</p>
+                  </div>
+                  <nz-tag [nzColor]="version.isPublished ? 'green' : 'blue'">
+                    {{ version.isPublished ? '已发布' : '草稿' }}
+                  </nz-tag>
+                </article>
+              }
+            </div>
+          </nz-card>
+        }
+
+        <div class="action-bar">
+          <button nz-button nzType="default" (click)="saveDraft()">保存草稿</button>
+          <button nz-button nzType="primary" (click)="publish()">发布版本</button>
+        </div>
+      </aside>
+    </div>
+  </nz-spin>
+</section>

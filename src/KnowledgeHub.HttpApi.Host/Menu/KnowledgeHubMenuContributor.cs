@@ -68,5 +68,23 @@ public class KnowledgeHubMenuContributor : IMenuContributor
                 "/search"
             ).RequirePermissions(KnowledgeHubPermissions.Search.Default)
         );
+
+        administration.AddItem(
+            new ApplicationMenuItem(
+                "TeachingAgents",
+                "教学智能体",
+                "fa fa-robot",
+                "/teaching/agents"
+            ).RequirePermissions(KnowledgeHubPermissions.TeachingAgents.Manage)
+        );
+
+        administration.AddItem(
+            new ApplicationMenuItem(
+                "TeachingAgentTasks",
+                "课堂智能体任务",
+                "fa fa-chalkboard",
+                "/teaching/agent-tasks"
+            ).RequirePermissions(KnowledgeHubPermissions.TeachingAgents.Assign)
+        );
     }
 }

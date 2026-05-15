@@ -340,6 +340,46 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'teaching/agents',
+    loadComponent: () => import('./teaching-agents/teaching-agent-list.component').then(c => c.TeachingAgentListComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.TeachingAgents.Manage',
+    },
+  },
+  {
+    path: 'teaching/agents/new',
+    loadComponent: () => import('./teaching-agents/teaching-agent-editor.component').then(c => c.TeachingAgentEditorComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.TeachingAgents.Manage',
+    },
+  },
+  {
+    path: 'teaching/agents/:id',
+    loadComponent: () => import('./teaching-agents/teaching-agent-editor.component').then(c => c.TeachingAgentEditorComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.TeachingAgents.Manage',
+    },
+  },
+  {
+    path: 'teaching/agent-tasks',
+    loadComponent: () => import('./teaching-agents/teaching-agent-task-list.component').then(c => c.TeachingAgentTaskListComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.TeachingAgents.Assign',
+    },
+  },
+  {
+    path: 'teaching/agent-tasks/:id',
+    loadComponent: () => import('./teaching-agents/teaching-agent-task-detail.component').then(c => c.TeachingAgentTaskDetailComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.TeachingAgents.Assign',
+    },
+  },
+  {
     path: 'student',
     loadComponent: () => import('./student/layout/student-layout.component').then(c => c.StudentLayoutComponent),
     canActivate: [authGuard, studentPortalGuard],
@@ -358,6 +398,8 @@ export const APP_ROUTES: Routes = [
       { path: 'ai/lesson-plan', loadComponent: () => import('./ai/lesson-plan/lesson-plan.component').then(c => c.LessonPlanComponent) },
       { path: 'ai/case-analysis', loadComponent: () => import('./ai/case-analysis/case-analysis.component').then(c => c.CaseAnalysisComponent) },
       { path: 'ai/career-guidance', loadComponent: () => import('./ai/career-guidance/career-guidance.component').then(c => c.CareerGuidanceComponent) },
+      { path: 'agent-tasks', loadComponent: () => import('./student/agent-tasks/student-agent-task-list.component').then(c => c.StudentAgentTaskListComponent) },
+      { path: 'agent-tasks/:id', loadComponent: () => import('./student/agent-tasks/student-agent-task-detail.component').then(c => c.StudentAgentTaskDetailComponent) },
       { path: 'courses', loadComponent: () => import('./learning/my-courses/my-courses.component').then(c => c.MyCoursesComponent) },
       { path: 'course-detail/:id', loadComponent: () => import('./learning/course-detail/course-detail.component').then(c => c.CourseDetailComponent) },
       { path: 'exercise-learning/:courseId', loadComponent: () => import('./learning/exercise-learning/exercise-learning.component').then(c => c.ExerciseLearningComponent) },

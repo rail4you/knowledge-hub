@@ -93,6 +93,11 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.AI.LessonPlan, true);
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.AI.CaseAnalysis, true);
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.AI.CareerGuidance, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.TeachingAgents.Default, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.TeachingAgents.Manage, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.TeachingAgents.Assign, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.TeachingAgents.Execute, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.TeachingAgents.Review, true);
 
         // Courses permissions - LeagueAdmin
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Courses.Default, true);
@@ -132,6 +137,11 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.AI.LessonPlan, true);
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.AI.CaseAnalysis, true);
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.AI.CareerGuidance, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Default, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Manage, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Assign, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Execute, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Review, true);
 
         // Courses permissions - SchoolAdmin
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Courses.Default, true);
@@ -167,6 +177,10 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.AI.LessonPlan, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.AI.CaseAnalysis, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.AI.CareerGuidance, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.TeachingAgents.Default, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.TeachingAgents.Manage, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.TeachingAgents.Assign, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.TeachingAgents.Review, true);
 
         // Courses permissions - Teacher
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Courses.Default, true);
@@ -191,6 +205,8 @@ public class IdentityDataSeederContributor
         // AI permissions - Student
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.AI.Default, true);
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.AI.Chat, true);
+        await GrantPermissionAsync("Student", KnowledgeHubPermissions.TeachingAgents.Default, true);
+        await GrantPermissionAsync("Student", KnowledgeHubPermissions.TeachingAgents.Execute, true);
 
         // Courses permissions - Student
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Courses.Default, true);

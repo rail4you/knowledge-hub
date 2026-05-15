@@ -66,6 +66,13 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         aiPermission.AddChild(KnowledgeHubPermissions.AI.CaseAnalysis, L("Permission:AI.CaseAnalysis"));
         aiPermission.AddChild(KnowledgeHubPermissions.AI.CareerGuidance, L("Permission:AI.CareerGuidance"));
 
+        // Teaching agent permissions
+        var teachingAgentsPermission = myGroup.AddPermission(KnowledgeHubPermissions.TeachingAgents.Default, L("Permission:TeachingAgents"));
+        teachingAgentsPermission.AddChild(KnowledgeHubPermissions.TeachingAgents.Manage, L("Permission:TeachingAgents.Manage"));
+        teachingAgentsPermission.AddChild(KnowledgeHubPermissions.TeachingAgents.Assign, L("Permission:TeachingAgents.Assign"));
+        teachingAgentsPermission.AddChild(KnowledgeHubPermissions.TeachingAgents.Execute, L("Permission:TeachingAgents.Execute"));
+        teachingAgentsPermission.AddChild(KnowledgeHubPermissions.TeachingAgents.Review, L("Permission:TeachingAgents.Review"));
+
         //Alliance permissions
         var alliancePermission = myGroup.AddPermission(KnowledgeHubPermissions.Alliance.Default, L("Permission:Alliance"));
         alliancePermission.AddChild(KnowledgeHubPermissions.Alliance.Create, L("Permission:Alliance.Create"));

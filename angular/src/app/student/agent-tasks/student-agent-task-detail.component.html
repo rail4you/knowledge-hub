@@ -1,0 +1,132 @@
+<section class="student-detail-page">
+  <a routerLink="/student/agent-tasks" class="back-link">返回任务列表</a>
+
+  <nz-spin [nzSpinning]="loading()">
+    @if (detail(); as currentDetail) {
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Assignment Workspace</p>
+          <h1>{{ currentDetail.task.title }}</h1>
+          <p>{{ currentDetail.task.description || currentDetail.task.taskPrompt }}</p>
+        </div>
+        <div class="status-box">
+          <nz-tag [nzColor]="currentDetail.assignment.status === 2 ? 'green' : currentDetail.assignment.status === 3 ? 'red' : 'blue'">
+            {{ statusText(currentDetail.assignment.status) }}
+          </nz-tag>
+          <span>截止：{{ formatDate(currentDetail.task.dueTime) }}</span>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="context-column">
+          <nz-card nzTitle="任务上下文">
+            <div class="meta-list">
+              <div>
+                <span>智能体</span>
+                <strong>{{ currentDetail.task.teachingAgentName }}</strong>
+              </div>
+              <div>
+                <span>任务类型</span>
+                <strong>{{ targetText(currentDetail.task.targetType) }}</strong>
+              </div>
+              <div>
+                <span>最后活跃</span>
+                <strong>{{ formatDate(currentDetail.assignment.lastActiveAt) }}</strong>
+              </div>
+            </div>
+
+            @if (currentDetail.task.targetSnapshot?.course; as course) {
+              <div class="snapshot">
+                <h3>{{ course.title }}</h3>
+                <p>{{ course.description || '暂无课程描述' }}</p>
+                <nz-tag>章节 {{ course.chapters.length }}</nz-tag>
+                <nz-tag>知识点 {{ course.knowledgeResources.length }}</nz-tag>
+              </div>
+            }
+
+            @if (currentDetail.task.targetSnapshot?.resource; as resource) {
+              <div class="snapshot">
+                <h3>{{ resource.name }}</h3>
+                <p>{{ resource.description || '暂无资源说明' }}</p>
+                <nz-tag>{{ resource.categoryName || '未分类' }}</nz-tag>
+              </div>
+            }
+
+            @if (currentDetail.task.targetSnapshot?.exercises?.length) {
+              <div class="snapshot">
+                <h3>习题上下文</h3>
+                <p>本次任务包含 {{ currentDetail.task.targetSnapshot?.exercises?.length }} 道题目。</p>
+              </div>
+            }
+          </nz-card>
+
+          <nz-card nzTitle="提交与求助">
+            <label class="field">
+              <span>完成摘要</span>
+              <textarea
+                nz-input
+                rows="4"
+                [ngModel]="summary()"
+                (ngModelChange)="summary.set($event)"
+                placeholder="概括你已完成的结论、重点或答案"
+              ></textarea>
+            </label>
+            <button nz-button nzType="primary" (click)="submitSummary()">提交任务</button>
+
+            <nz-divider></nz-divider>
+
+            <label class="field">
+              <span>需要教师帮助</span>
+              <textarea
+                nz-input
+                rows="4"
+                [ngModel]="helpReason()"
+                (ngModelChange)="helpReason.set($event)"
+                placeholder="说明卡住的位置、需要老师介入的原因"
+              ></textarea>
+            </label>
+            <button nz-button nzType="default" (click)="requestHelp()">请求教师介入</button>
+          </nz-card>
+        </aside>
+
+        <section class="chat-column">
+	          <nz-card nzTitle="与智能体对话">
+	            @if (currentDetail.assignment.status === 3) {
+	              <nz-alert nzType="warning" nzMessage="你已标记需要教师帮助，仍可继续补充上下文。"></nz-alert>
+	            }
+
+	            @if (chatError()) {
+	              <nz-alert nzType="error" [nzMessage]="chatError()"></nz-alert>
+	            }
+
+	            <div class="message-list">
+              @for (message of messages(); track message.id) {
+                <article class="message" [class.assistant]="message.role === 'assistant'">
+                  <div class="message-role">{{ message.role === 'assistant' ? '智能体' : '我' }}</div>
+                  <div class="message-content">{{ message.content }}</div>
+                </article>
+              }
+            </div>
+
+            <div class="composer">
+              <textarea
+                nz-input
+                rows="4"
+                [ngModel]="draftMessage()"
+                (ngModelChange)="draftMessage.set($event)"
+                placeholder="向智能体提问，例如：先概括课程重点，再给我一个答题步骤"
+              ></textarea>
+              <div class="composer-actions">
+                <button nz-button nzType="primary" [disabled]="sending()" (click)="sendMessage()">
+                  {{ sending() ? '发送中...' : '发送消息' }}
+                </button>
+              </div>
+            </div>
+          </nz-card>
+        </section>
+      </div>
+    } @else {
+      <nz-empty nzNotFoundContent="未找到任务"></nz-empty>
+    }
+  </nz-spin>
+</section>
