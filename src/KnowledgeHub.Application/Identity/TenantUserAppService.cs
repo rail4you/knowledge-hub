@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using KnowledgeHub.Permissions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
@@ -13,6 +15,7 @@ using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Application.Identity;
 
+[Authorize(KnowledgeHubPermissions.Users.Default)]
 public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppService
 {
     private readonly IdentityUserManager _userManager;
@@ -29,8 +32,15 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         _userRepository = userRepository;
     }
 
+    [Authorize(KnowledgeHubPermissions.Users.Create)]
     public async Task<IdentityUserDto> CreateUserForTenantAsync(CreateTenantUserDto input)
     {
+        // Non-host users can only create users in their own tenant
+        if (_currentTenant.Id.HasValue)
+        {
+            input.TenantId = _currentTenant.Id.Value;
+        }
+
         using (_currentTenant.Change(input.TenantId))
         {
             var user = new Volo.Abp.Identity.IdentityUser(
@@ -73,11 +83,18 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                     (u.Surname != null && u.Surname.Contains(input.Filter)));
             }
 
-            // Filter by tenant
-            if (input.TenantId.HasValue)
+            // Filter by tenant - ensure tenant isolation
+            if (_currentTenant.Id.HasValue)
             {
+                // Non-host users: always restrict to own tenant, ignore input.TenantId
+                queryable = queryable.Where(u => u.TenantId == _currentTenant.Id.Value);
+            }
+            else if (input.TenantId.HasValue)
+            {
+                // Host users: filter by specified tenant
                 queryable = queryable.Where(u => u.TenantId == input.TenantId.Value);
             }
+            // Host users with no TenantId filter see all users
 
             var totalCount = await queryable.CountAsync();
             
@@ -103,6 +120,8 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             {
                 throw new UserFriendlyException($"用户不存在: {id}");
             }
+
+            CheckTenantOwnership(user);
             return ObjectMapper.Map<Volo.Abp.Identity.IdentityUser, IdentityUserDto>(user);
         }
     }
@@ -117,6 +136,8 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                 throw new UserFriendlyException($"用户不存在: {userId}");
             }
 
+            CheckTenantOwnership(user);
+
             using (_currentTenant.Change(user.TenantId))
             {
                 return (await _userManager.GetRolesAsync(user)).ToList();
@@ -124,6 +145,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         }
     }
 
+    [Authorize(KnowledgeHubPermissions.Users.Edit)]
     public async Task<IdentityUserDto> UpdateAsync(Guid id, UpdateTenantUserDto input)
     {
         using (DataFilter.Disable<IMultiTenant>())
@@ -133,6 +155,8 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             {
                 throw new UserFriendlyException($"用户不存在: {id}");
             }
+
+            CheckTenantOwnership(user);
 
             using (_currentTenant.Change(user.TenantId))
             {
@@ -166,6 +190,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         }
     }
 
+    [Authorize(KnowledgeHubPermissions.Users.Delete)]
     public async Task DeleteAsync(Guid id)
     {
         using (DataFilter.Disable<IMultiTenant>())
@@ -176,11 +201,25 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                 throw new UserFriendlyException($"用户不存在: {id}");
             }
 
+            CheckTenantOwnership(user);
+
             using (_currentTenant.Change(user.TenantId))
             {
                 (await _userManager.DeleteAsync(user))
                     .CheckErrors();
             }
+        }
+    }
+
+    /// <summary>
+    /// Verify that the target user belongs to the same tenant as the current user.
+    /// Host users can access any tenant's users.
+    /// </summary>
+    private void CheckTenantOwnership(Volo.Abp.Identity.IdentityUser user)
+    {
+        if (_currentTenant.Id.HasValue && user.TenantId != _currentTenant.Id)
+        {
+            throw new UserFriendlyException("您没有权限访问该租户的用户数据");
         }
     }
 }

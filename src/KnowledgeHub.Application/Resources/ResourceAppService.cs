@@ -855,7 +855,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         return Task.FromResult(true);
     }
 
-    [Authorize(KnowledgeHubPermissions.Resources.SchoolAudit)]
+    [Authorize(KnowledgeHubPermissions.Resources.Default)]
     public virtual async Task<PagedResultDto<ResourceDto>> GetPendingAuditListAsync(ResourceListQueryDto input)
     {
         var query = await ResourceRepository.GetQueryableAsync();
@@ -865,9 +865,27 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             query = query.Where(x => x.Name.Contains(input.Filter));
         }
 
-        query = query.Where(r =>
-            r.Status == ResourceStatus.PendingReview ||
-            r.Status == ResourceStatus.SchoolApproved);
+        // Filter by audit permissions - users only see resources they have permission to audit
+        var hasSchoolAudit = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Resources.SchoolAudit);
+        var hasLeagueAudit = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Resources.LeagueAudit);
+
+        if (hasSchoolAudit && !hasLeagueAudit)
+        {
+            // School admin: only see pending review resources
+            query = query.Where(r => r.Status == ResourceStatus.PendingReview);
+        }
+        else if (hasLeagueAudit && !hasSchoolAudit)
+        {
+            // League auditor: only see school-approved resources
+            query = query.Where(r => r.Status == ResourceStatus.SchoolApproved);
+        }
+        else
+        {
+            // Both permissions: see both statuses
+            query = query.Where(r =>
+                r.Status == ResourceStatus.PendingReview ||
+                r.Status == ResourceStatus.SchoolApproved);
+        }
 
         var totalCount = await AsyncExecuter.CountAsync(query);
 
