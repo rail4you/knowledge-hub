@@ -102,40 +102,11 @@ export class FilePreviewComponent {
 
   download() {
     if (!this.resourceId()) return;
-    this.resourceService.download(this.resourceId()).subscribe({
-      next: (data: any) => {
-        const arrayBuffer = this.toArrayBuffer(data);
-        const ext = this.fileExtension().toLowerCase().replace('.', '');
-        const mimeMap: Record<string, string> = {
-          pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        };
-        const blob = new Blob([arrayBuffer], { type: mimeMap[ext] || 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = this.fileName;
-        a.click();
-        URL.revokeObjectURL(url);
-      },
-    });
-  }
-
-  private toArrayBuffer(data: any): ArrayBuffer {
-    if (typeof data === 'string') {
-      const binary = atob(data);
-      const buffer = new ArrayBuffer(binary.length);
-      const view = new Uint8Array(buffer);
-      for (let i = 0; i < binary.length; i++) {
-        view[i] = binary.charCodeAt(i);
-      }
-      return buffer;
-    }
-    // If it's already an ArrayBuffer, return directly
-    if (data instanceof ArrayBuffer) return data;
-    // Otherwise convert from typed array
-    return new Uint8Array(data).buffer.slice(0) as ArrayBuffer;
+    const url = `/api/resource-file/${this.resourceId()}/download`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = this.fileName;
+    a.click();
   }
 
   private loadFile() {
@@ -165,10 +136,18 @@ export class FilePreviewComponent {
       return;
     }
 
-    // Other file types: download to memory
-    this.resourceService.download(this.resourceId()).subscribe({
-      next: (data: any) => {
-        const arrayBuffer = this.toArrayBuffer(data);
+    // PDF: use preview URL directly for the viewer
+    if (type === 'pdf') {
+      const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
+      this.fileUrl.set(previewUrl);
+      this.isLoading.set(false);
+      return;
+    }
+
+    // Other file types: fetch as blob for in-memory processing
+    const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
+    this.http.get(previewUrl, { responseType: 'arraybuffer' }).subscribe({
+      next: (arrayBuffer: ArrayBuffer) => {
         this.fileData.set(arrayBuffer);
         this.isLoading.set(false);
       },

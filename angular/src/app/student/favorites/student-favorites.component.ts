@@ -92,22 +92,12 @@ export class StudentFavoritesComponent {
       return;
     }
 
-    this.resourceService.download(resource.id).subscribe({
-      next: data => {
-        const arrayBuffer = this.toArrayBuffer(data);
-        const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = resource.originalFileName || resource.name || 'download';
-        link.click();
-        URL.revokeObjectURL(url);
-        this.message.success('下载已开始');
-      },
-      error: () => {
-        this.message.error('下载失败');
-      }
-    });
+    const url = `/api/resource-file/${resource.id}/download`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = resource.originalFileName || resource.name || 'download';
+    a.click();
+    this.message.success('下载已开始');
   }
 
   removeFavorite(resource: ResourceDto) {
@@ -159,21 +149,4 @@ export class StudentFavoritesComponent {
     return icons[type ?? ResourceType.Document] || 'file-text';
   }
 
-  private toArrayBuffer(data: string | number[] | ArrayBuffer): ArrayBuffer {
-    if (typeof data === 'string') {
-      const binary = atob(data);
-      const buffer = new ArrayBuffer(binary.length);
-      const view = new Uint8Array(buffer);
-      for (let index = 0; index < binary.length; index++) {
-        view[index] = binary.charCodeAt(index);
-      }
-      return buffer;
-    }
-
-    if (data instanceof ArrayBuffer) {
-      return data;
-    }
-
-    return new Uint8Array(data).buffer.slice(0) as ArrayBuffer;
-  }
 }

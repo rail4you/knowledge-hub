@@ -205,28 +205,23 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     {
         var userId = CurrentUser.Id ?? throw new UserFriendlyException("请先登录");
         var collections = await CollectionRepository.GetByUserIdAsync(userId);
-        var totalCount = collections.Count;
 
-        var pagedResourceIds = collections
-            .Skip(input.SkipCount)
-            .Take(input.MaxResultCount)
-            .Select(x => x.ResourceId)
-            .ToList();
-
-        if (pagedResourceIds.Count == 0)
-        {
-            return new PagedResultDto<ResourceDto>(totalCount, new List<ResourceDto>());
-        }
+        var collectionIds = collections.Select(x => x.ResourceId).ToList();
 
         var resourceQuery = await Repository.GetQueryableAsync();
-        var resources = await AsyncExecuter.ToListAsync(
-            resourceQuery.Where(x => pagedResourceIds.Contains(x.Id))
+        // Only include approved resources in collection list
+        var approvedResources = await AsyncExecuter.ToListAsync(
+            resourceQuery.Where(x => collectionIds.Contains(x.Id) &&
+                                     (x.Status == ResourceStatus.SchoolApproved ||
+                                      x.Status == ResourceStatus.LeagueApproved))
         );
 
-        var resourceMap = resources.ToDictionary(x => x.Id);
-        var orderedResources = pagedResourceIds
-            .Where(resourceMap.ContainsKey)
-            .Select(resourceId => resourceMap[resourceId])
+        var totalCount = approvedResources.Count;
+
+        var orderedResources = approvedResources
+            .OrderByDescending(x => x.CreationTime)
+            .Skip(input.SkipCount)
+            .Take(input.MaxResultCount)
             .ToList();
 
         return new PagedResultDto<ResourceDto>(
@@ -1055,8 +1050,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     {
         var query = await Repository.GetQueryableAsync();
         
-        query = query.Where(x => x.Status == ResourceStatus.Draft || 
-                                  x.Status == ResourceStatus.SchoolApproved || 
+        query = query.Where(x => x.Status == ResourceStatus.SchoolApproved ||
                                   x.Status == ResourceStatus.LeagueApproved);
 
         if (!string.IsNullOrWhiteSpace(input.Query))

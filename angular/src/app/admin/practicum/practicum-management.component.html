@@ -86,6 +86,7 @@
   </div>
 
   <nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editingId ? '编辑实训项目' : '新建实训项目'" [nzFooter]="null" nzWidth="960">
+    <ng-container *nzModalContent>
     <div class="form-grid">
       <input nz-input [(ngModel)]="form.title" placeholder="项目名称" />
       <input nz-input [(ngModel)]="form.summary" placeholder="项目简介" />
@@ -146,9 +147,11 @@
       <button nz-button (click)="modalVisible = false">取消</button>
       <button nz-button nzType="primary" (click)="save()">保存</button>
     </div>
+    </ng-container>
   </nz-modal>
 
   <nz-modal [(nzVisible)]="guidanceVisible" nzTitle="新增指导记录" [nzFooter]="null">
+    <ng-container *nzModalContent>
     <textarea nz-input [(ngModel)]="guidanceForm.content" rows="5" placeholder="填写指导意见"></textarea>
     <label class="switch-row">
       学生可见
@@ -158,9 +161,11 @@
       <button nz-button (click)="guidanceVisible = false">取消</button>
       <button nz-button nzType="primary" (click)="saveGuidance()">保存</button>
     </div>
+    </ng-container>
   </nz-modal>
 
   <nz-modal [(nzVisible)]="scoreVisible" nzTitle="实训评分" [nzFooter]="null">
+    <ng-container *nzModalContent>
     <div class="nested-grid">
       <input nz-input type="number" [(ngModel)]="scoreForm.score" placeholder="得分" />
       <input nz-input [(ngModel)]="scoreForm.gradeLevel" placeholder="等级，如 A / B / 优秀" />
@@ -171,5 +176,6 @@
       <button nz-button (click)="scoreVisible = false">取消</button>
       <button nz-button nzType="primary" (click)="saveScore()">保存评分</button>
     </div>
+    </ng-container>
   </nz-modal>
 </div>

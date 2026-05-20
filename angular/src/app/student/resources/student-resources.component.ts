@@ -222,36 +222,12 @@ export class StudentResourcesComponent implements OnInit {
 
   downloadResource(resource: ResourceDto) {
     if (!resource?.id) return;
-    this.resourceService.download(resource.id).subscribe({
-      next: (data: any) => {
-        const arrayBuffer = this.toArrayBuffer(data);
-        const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = resource.originalFileName || resource.name || 'download';
-        a.click();
-        URL.revokeObjectURL(url);
-        this.message.success('下载已开始');
-      },
-      error: () => {
-        this.message.error('下载失败');
-      }
-    });
-  }
-
-  private toArrayBuffer(data: any): ArrayBuffer {
-    if (typeof data === 'string') {
-      const binary = atob(data);
-      const buffer = new ArrayBuffer(binary.length);
-      const view = new Uint8Array(buffer);
-      for (let i = 0; i < binary.length; i++) {
-        view[i] = binary.charCodeAt(i);
-      }
-      return buffer;
-    }
-    if (data instanceof ArrayBuffer) return data;
-    return new Uint8Array(data).buffer.slice(0) as ArrayBuffer;
+    const url = `/api/resource-file/${resource.id}/download`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = resource.originalFileName || resource.name || 'download';
+    a.click();
+    this.message.success('下载已开始');
   }
 
   isCollected(resourceId?: string) {

@@ -787,31 +787,11 @@ export class ResourceComponent implements OnInit {
     const res = this.selectedResource();
     if (!res.id || !res.isDownloadable) return;
 
-    this.resourceService.download(res.id).subscribe({
-      next: (data: any) => {
-        let bytes: Uint8Array;
-        if (typeof data === 'string') {
-          const binary = atob(data);
-          bytes = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i++) {
-            bytes[i] = binary.charCodeAt(i);
-          }
-        } else {
-          bytes = new Uint8Array(data);
-        }
-        const blob = new Blob([new Uint8Array(bytes) as any], { type: 'application/octet-stream' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = res.originalFileName || 'download';
-        a.click();
-        window.URL.revokeObjectURL(url);
-      },
-      error: (err) => {
-        console.error('Download error:', err);
-        this.message.error(this.l('DownloadFailed'));
-      }
-    });
+    const url = `/api/resource-file/${res.id}/download`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = res.originalFileName || 'download';
+    a.click();
   }
 
   previewFile() {
