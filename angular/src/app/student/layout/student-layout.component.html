@@ -63,6 +63,32 @@
           <span nz-icon nzType="laptop" nzTheme="outline"></span>
           <span>我的实训</span>
         </a>
+        <div class="nav-divider"></div>
+        <div class="nav-dropdown">
+          <a routerLink="/student/jobs" routerLinkActive="active" class="nav-link">
+            <span nz-icon nzType="briefcase" nzTheme="outline"></span>
+            <span>就业服务</span>
+            <span nz-icon nzType="down" nzTheme="outline" class="dropdown-arrow"></span>
+          </a>
+          <div class="dropdown-menu">
+            <a routerLink="/student/jobs" class="dropdown-item">
+              <span nz-icon nzType="search" nzTheme="outline"></span>
+              岗位大厅
+            </a>
+            <a routerLink="/student/my-resumes" class="dropdown-item">
+              <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              我的简历
+            </a>
+            <a routerLink="/student/my-applications" class="dropdown-item">
+              <span nz-icon nzType="send" nzTheme="outline"></span>
+              我的投递
+            </a>
+            <a routerLink="/student/my-guidance" class="dropdown-item">
+              <span nz-icon nzType="compass" nzTheme="outline"></span>
+              就业指导
+            </a>
+          </div>
+        </div>
         <a routerLink="/student/agent-tasks" routerLinkActive="active" class="nav-link">
           <span nz-icon nzType="robot" nzTheme="outline"></span>
           <span>课堂任务</span>

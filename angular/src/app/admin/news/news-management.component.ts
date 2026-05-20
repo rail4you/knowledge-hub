@@ -6,11 +6,13 @@ import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzResultModule } from 'ng-zorro-antd/result';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import {
   CreateUpdateNewsArticleDto,
   CreateUpdateNewsCategoryDto,
@@ -19,6 +21,7 @@ import {
   NewsCategoryDto,
   NewsCommentDto,
   NewsCommentStatus,
+  NewsImportResultDto,
   NewsService,
 } from '../../news/news.service';
 
@@ -32,11 +35,13 @@ import {
     NzCardModule,
     NzInputModule,
     NzModalModule,
+    NzResultModule,
     NzSelectModule,
     NzSwitchModule,
     NzTableModule,
     NzTagModule,
     NzTabsModule,
+    NzUploadModule,
   ],
   templateUrl: './news-management.component.html',
   styleUrls: ['./news-management.component.scss'],
@@ -61,6 +66,13 @@ export class NewsManagementComponent implements OnInit {
   activeTabIndex = 0;
   readonly articleStatuses = NewsArticleStatus;
   readonly commentStatuses = NewsCommentStatus;
+
+  // Import state
+  importModalVisible = false;
+  importFileList: NzUploadFile[] = [];
+  importing = false;
+  importSuccess = false;
+  importResult: NewsImportResultDto | null = null;
 
   ngOnInit(): void {
     this.reloadAll();
@@ -296,5 +308,46 @@ export class NewsManagementComponent implements OnInit {
       [NewsCommentStatus.Rejected]: '已拒绝',
     };
     return labels[status] || '未知';
+  }
+
+  beforeImportUpload = (file: NzUploadFile): boolean => {
+    this.importFileList = [file];
+    return false;
+  };
+
+  handleImport(): void {
+    const file = this.importFileList[0];
+    if (!file) {
+      this.message.warning('请选择要导入的 Excel 文件');
+      return;
+    }
+
+    this.importing = true;
+    const reader = new FileReader();
+    reader.readAsArrayBuffer(file as any);
+    reader.onload = () => {
+      const arrayBuffer = reader.result as ArrayBuffer;
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      this.newsService.importArticles(uint8Array as any).subscribe({
+        next: (result) => {
+          this.importing = false;
+          this.importSuccess = true;
+          this.importResult = result;
+          this.message.success(`导入完成：成功 ${result.successCount} 条，失败 ${result.failCount} 条`);
+          this.loadArticles();
+        },
+        error: (err) => {
+          this.importing = false;
+          this.message.error('导入失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+        },
+      });
+    };
+  }
+
+  resetImport(): void {
+    this.importFileList = [];
+    this.importSuccess = false;
+    this.importResult = null;
   }
 }

@@ -1,4 +1,12 @@
 <nz-card nzTitle="企业档案">
+  <div extra-actions style="margin-bottom: 16px;">
+    <a routerLink="/identity/users/import">
+      <button nz-button>
+        <span nz-icon nzType="upload" nzTheme="outline"></span>
+        批量导入企业用户
+      </button>
+    </a>
+  </div>
   <div class="profile-form">
     <input nz-input [(ngModel)]="form.companyName" placeholder="企业名称" />
     <input nz-input [(ngModel)]="form.unifiedSocialCreditCode" placeholder="统一社会信用代码" />

@@ -282,4 +282,25 @@ export class NewsService {
       url: `/api/app/news-comment/${id}`,
     }, { apiName: this.apiName });
   }
+
+  importArticles(excelFile: Uint8Array): Observable<NewsImportResultDto> {
+    return this.restService.request<any, NewsImportResultDto>({
+      method: 'POST',
+      url: '/api/app/news-import/import',
+      body: excelFile,
+    }, { apiName: this.apiName });
+  }
+}
+
+export interface NewsImportResultDto {
+  totalCount: number;
+  successCount: number;
+  failCount: number;
+  failItems: NewsImportFailItemDto[];
+}
+
+export interface NewsImportFailItemDto {
+  rowNumber: number;
+  title: string;
+  reason: string;
 }

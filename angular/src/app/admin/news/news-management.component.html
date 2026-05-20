@@ -33,6 +33,10 @@
     <nz-tab nzTitle="资讯内容">
       <nz-card [nzExtra]="articleExtra">
         <ng-template #articleExtra>
+          <button nz-button (click)="importModalVisible = true" style="margin-right: 8px;">
+            <span nz-icon nzType="upload" nzTheme="outline"></span>
+            批量导入
+          </button>
           <button nz-button nzType="primary" (click)="openCreateArticle()">新建资讯</button>
         </ng-template>
 
@@ -161,6 +165,74 @@
         <label>允许评论</label>
         <nz-switch [(ngModel)]="articleForm.allowComments"></nz-switch>
       </div>
+    </ng-container>
+  </nz-modal>
+
+  <nz-modal
+    [nzVisible]="importModalVisible"
+    nzTitle="批量导入资讯"
+    [nzWidth]="640"
+    (nzOnCancel)="importModalVisible = false"
+    [nzFooter]="null"
+  >
+    <ng-container *nzModalContent>
+      @if (!importSuccess) {
+        <div class="import-section">
+          <p style="color:#666;margin-bottom:16px;">
+            Excel 模板列：分类名称、标题、摘要、正文、封面链接、标签。标题和正文为必填。
+          </p>
+          <nz-upload
+            nzType="drag"
+            [nzMultiple]="false"
+            [nzBeforeUpload]="beforeImportUpload"
+            [nzFileList]="importFileList"
+            nzAccept=".xlsx,.xls"
+          >
+            <p class="ant-upload-drag-icon">
+              <span nz-icon nzType="inbox"></span>
+            </p>
+            <p class="ant-upload-text">点击或拖拽 Excel 文件到此区域</p>
+            <p class="ant-upload-hint">支持 .xlsx / .xls 格式</p>
+          </nz-upload>
+          <div style="margin-top:16px;text-align:right;">
+            <button
+              nz-button
+              nzType="primary"
+              [nzLoading]="importing"
+              [disabled]="importFileList.length === 0"
+              (click)="handleImport()"
+            >
+              {{ importing ? '导入中...' : '开始导入' }}
+            </button>
+          </div>
+        </div>
+      } @else {
+        <nz-result
+          nzStatus="success"
+          nzTitle="导入完成"
+          [nzSubTitle]="'成功: ' + (importResult?.successCount || 0) + ' 条, 失败: ' + (importResult?.failCount || 0) + ' 条'"
+        >
+          <div nz-result-extra>
+            @if (importResult?.failCount > 0) {
+              <nz-table [nzData]="importResult?.failItems || []" [nzPageSize]="5" nzSize="small">
+                <thead>
+                  <tr><th>行号</th><th>标题</th><th>失败原因</th></tr>
+                </thead>
+                <tbody>
+                  @for (item of importResult?.failItems || []; track item.rowNumber) {
+                    <tr>
+                      <td>{{ item.rowNumber }}</td>
+                      <td>{{ item.title }}</td>
+                      <td>{{ item.reason }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </nz-table>
+            }
+            <button nz-button nzType="primary" (click)="resetImport()">继续导入</button>
+          </div>
+        </nz-result>
+      }
     </ng-container>
   </nz-modal>
 </div>
