@@ -47,3 +47,53 @@
 | 编辑场景处理 | 通过 - `openEditCategory` 时 `code` 已有值，`saveCategory` 检查 `code` 非空则跳过自动生成，不会覆盖已有编码 |
 | 名称含特殊字符 | 备注 - 中文名称经 `toLowerCase().replace(/\s+/g, '-')` 处理后仍可能包含非 ASCII 字符作为 code，但后端无字符限制，不影响功能 |
 | 副作用 | 无 - 仅影响新建分类时 code 的自动生成逻辑 |
+
+---
+
+## 批次 8 (提交: `aeb12fb`, 审查修复: `eddde7f`)
+
+### S-01 学生账号看不到二期功能模块
+
+**修改文件**：`angular/src/app/student/layout/student-layout.component.html`, `angular/src/app/app.routes.ts`
+
+**审查结论**：通过
+
+| 检查项 | 结果 |
+|--------|------|
+| 路由正确性 | 通过 - 所有路由正确引用已存在的组件（MicroMajorListComponent, PracticumListComponent 等） |
+| 导航入口合理性 | 通过 - 放在"我的课程"和"课堂任务"之间，图标选择恰当 |
+| 权限守卫 | 通过 - student 路由已有 `canActivate: [authGuard, studentPortalGuard]` 守卫 |
+| 组件复用 | 通过 - 直接复用管理端已有组件，无需创建学生专用版本 |
+
+---
+
+### M-02 资讯封面要求填写链接但前台没有展示闭环
+
+**修改文件**：`news-detail.component.html/scss`, `news-list.component.html/scss`, `news-management.component.html/scss`
+
+**审查结论**：通过（审查修复后）
+
+| 检查项 | 结果 |
+|--------|------|
+| 详情页封面展示 | 通过 - 在摘要和正文之间展示封面图，宽度自适应，最大高度 400px |
+| 列表页封面缩略图 | 通过 - 卡片顶部封面图，高度 160px，无封面时正常显示文本 |
+| 管理后台预览 | 通过 - 输入 URL 后实时预览，添加 placeholder 说明 |
+| 图片加载失败 | 通过(已修复) - 审查发现缺少容错，已添加 `(error)` 事件移除失败图片 |
+| XSS 防护 | 通过 - 使用 Angular `[src]` 属性绑定，自动防御 XSS |
+| 副作用 | 无 - 封面展示为可选（`@if` 条件判断），不影响无封面的资讯 |
+
+---
+
+### M-03 微专业与实训入口建议从课程模块中独立
+
+**修改文件**：`angular/src/app/route.provider.ts`, `zh-Hans.json`
+
+**审查结论**：通过（审查修复后）
+
+| 检查项 | 结果 |
+|--------|------|
+| 菜单独立性 | 通过 - MicroMajorsGroup(order:5) 和 PracticumGroup(order:7) 成为独立一级菜单 |
+| 子菜单挂载 | 通过 - 微专业3个子项、实训3个子项正确挂载到各自一级菜单下 |
+| 本地化 | 通过 - 新增 `Menu:MicroMajorsGroup`(微专业) 和 `Menu:PracticumGroup`(实训) 翻译 |
+| order 冲突 | 通过(已修复) - 审查发现 PracticumGroup(order:6) 与 Assessment(order:6) 冲突，已改为 7 |
+| 课程模块瘦身 | 通过 - 课程模块不再包含微专业和实训，结构更清晰 |
