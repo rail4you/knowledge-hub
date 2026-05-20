@@ -41,6 +41,11 @@
         <div class="article-grid">
           @for (article of articles(); track article.id) {
             <nz-card class="article-card" (click)="openArticle(article.id)" [nzHoverable]="true">
+              @if (article.coverImageUrl) {
+                <div class="article-card__cover">
+                  <img [src]="article.coverImageUrl" [alt]="article.title" />
+                </div>
+              }
               <div class="article-card__meta">
                 @if (article.categoryName) {
                   <nz-tag nzColor="blue">{{ article.categoryName }}</nz-tag>

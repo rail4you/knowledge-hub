@@ -137,7 +137,14 @@
         <textarea nz-input rows="3" [(ngModel)]="articleForm.summary"></textarea>
 
         <label>封面链接</label>
-        <input nz-input [(ngModel)]="articleForm.coverImageUrl" />
+        <div class="cover-input-group">
+          <input nz-input [(ngModel)]="articleForm.coverImageUrl" placeholder="输入图片链接，如 https://example.com/cover.jpg" />
+          @if (articleForm.coverImageUrl) {
+            <div class="cover-preview">
+              <img [src]="articleForm.coverImageUrl" alt="封面预览" />
+            </div>
+          }
+        </div>
 
         <label>标签</label>
         <input nz-input [(ngModel)]="articleForm.tags" />

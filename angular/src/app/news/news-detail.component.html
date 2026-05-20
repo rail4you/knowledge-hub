@@ -33,6 +33,12 @@
         <blockquote>{{ article.summary }}</blockquote>
       }
 
+      @if (article.coverImageUrl) {
+        <div class="cover-image">
+          <img [src]="article.coverImageUrl" [alt]="article.title" />
+        </div>
+      }
+
       <div class="content">{{ article.content }}</div>
 
       <div class="actions">
