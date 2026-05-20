@@ -138,6 +138,13 @@ export class NewsManagementComponent implements OnInit {
   }
 
   saveCategory(): void {
+    // 自动根据名称生成编码，用户无需手动填写
+    if (!this.categoryForm.code || this.categoryForm.code.trim() === '') {
+      this.categoryForm.code = this.categoryForm.name
+        ? this.categoryForm.name.trim().toLowerCase().replace(/\s+/g, '-') + '-' + Date.now().toString(36)
+        : 'cat-' + Date.now().toString(36);
+    }
+
     const request = this.editingCategoryId
       ? this.newsService.updateCategory(this.editingCategoryId, this.categoryForm)
       : this.newsService.createCategory(this.categoryForm);

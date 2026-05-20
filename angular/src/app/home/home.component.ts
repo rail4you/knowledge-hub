@@ -38,7 +38,9 @@ export class HomeComponent implements OnInit {
 
   logout() {
     this.authService.logout().subscribe(() => {
-      this.router.navigate(['/']);
+      // 使用完整页面刷新清除 ABP 框架缓存的布局状态（LeptonX header 用户信息等）
+      // 避免 SPA 路由跳转导致退出后页面状态异常
+      window.location.href = '/';
     });
   }
 

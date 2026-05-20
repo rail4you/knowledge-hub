@@ -336,6 +336,7 @@ export class StudentResourcesComponent implements OnInit {
         creationTime: resource.creationTime,
       } as ResourceDto);
     }
+    this.drawerVisible.set(true);
     this.loadRelatedResources(resource.resourceId);
   }
 
