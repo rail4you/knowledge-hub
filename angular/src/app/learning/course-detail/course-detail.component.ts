@@ -122,13 +122,10 @@ export class CourseDetailComponent implements OnInit {
   }
   
   viewKnowledgeGraph() {
-    if (this.isStudentView()) {
-      return;
-    }
-
     const course = this.course();
     if (course) {
-      this.router.navigate(['/learning/knowledge-graph', course.id]);
+      const basePath = this.isStudentView() ? '/student/knowledge-graph' : '/learning/knowledge-graph';
+      this.router.navigate([basePath, course.id]);
     }
   }
 

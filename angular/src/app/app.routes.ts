@@ -403,6 +403,7 @@ export const APP_ROUTES: Routes = [
       { path: 'courses', loadComponent: () => import('./learning/my-courses/my-courses.component').then(c => c.MyCoursesComponent) },
       { path: 'course-detail/:id', loadComponent: () => import('./learning/course-detail/course-detail.component').then(c => c.CourseDetailComponent) },
       { path: 'exercise-learning/:courseId', loadComponent: () => import('./learning/exercise-learning/exercise-learning.component').then(c => c.ExerciseLearningComponent) },
+      { path: 'knowledge-graph/:courseId', loadComponent: () => import('./learning/knowledge-graph/knowledge-graph.component').then(c => c.KnowledgeGraphComponent) },
     ]
   },
   {

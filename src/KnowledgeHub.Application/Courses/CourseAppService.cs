@@ -193,13 +193,18 @@ public class CourseAppService : ApplicationService, ITransientDependency
                 {
                     Id = ch.Id,
                     CourseId = ch.CourseId,
+                    ParentId = ch.ParentId,
                     Title = ch.Title,
                     Description = ch.Description,
                     SortOrder = ch.SortOrder,
+                    Children = new List<ChapterDto>(),
                     KnowledgeResources = chResources
                 };
             })
             .ToList();
+
+        // Organize flat chapter list into a tree based on ParentId
+        var chapterTree = BuildChapterTree(chapterDtos);
 
         return new CourseDetailDto
         {
@@ -220,7 +225,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
             ChapterCount = chapters.Count,
             IsEnrolled = enrollment != null,
             Progress = enrollment?.Progress ?? 0,
-            Chapters = chapterDtos
+            Chapters = chapterTree
         };
     }
 
@@ -360,6 +365,27 @@ public class CourseAppService : ApplicationService, ITransientDependency
                     .Distinct()
                     .OrderBy(x => x)
                     .ToList();
+    }
+
+    private List<ChapterDto> BuildChapterTree(List<ChapterDto> chapters)
+    {
+        var lookup = chapters.ToDictionary(c => c.Id, c => c);
+        var roots = new List<ChapterDto>();
+
+        foreach (var chapter in chapters)
+        {
+            if (chapter.ParentId == null || !lookup.ContainsKey(chapter.ParentId.Value))
+            {
+                roots.Add(chapter);
+            }
+            else
+            {
+                var parent = lookup[chapter.ParentId.Value];
+                parent.Children.Add(chapter);
+            }
+        }
+
+        return roots;
     }
 
     private CourseDto MapToDto(Course course)

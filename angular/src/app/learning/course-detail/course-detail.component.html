@@ -60,11 +60,11 @@
                 选课
               </button>
             }
+            <button nz-button (click)="viewKnowledgeGraph()">
+              <span nz-icon nzType="apartment"></span>
+              知识图谱
+            </button>
             @if (!isStudentView()) {
-              <button nz-button (click)="viewKnowledgeGraph()">
-                <span nz-icon nzType="apartment"></span>
-                知识图谱
-              </button>
               <button nz-button (click)="viewExercises()">
                 <span nz-icon nzType="form"></span>
                 习题管理
