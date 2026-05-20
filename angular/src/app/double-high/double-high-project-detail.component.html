@@ -133,7 +133,7 @@
       </nz-table>
     </nz-card>
 
-    <nz-modal [(nzVisible)]="evidenceVisible" nzTitle="新增佐证材料" [nzFooter]="null">
+    <nz-modal [(nzVisible)]="evidenceVisible" nzTitle="新增佐证材料" [nzFooter]="null" (nzOnCancel)="evidenceVisible = false">
       <div class="evidence-form">
         <input nz-input [(ngModel)]="evidenceForm.title" placeholder="标题" />
         <textarea nz-input rows="3" [(ngModel)]="evidenceForm.description" placeholder="说明"></textarea>

@@ -148,7 +148,10 @@ export class NewsManagementComponent implements OnInit {
         this.message.success('分类已保存');
         this.loadCategories();
       },
-      error: () => this.message.error('分类保存失败'),
+      error: (err) => {
+        const msg = err?.error?.error?.message || err?.error?.message || '分类保存失败';
+        this.message.error(msg);
+      },
     });
   }
 
@@ -195,7 +198,10 @@ export class NewsManagementComponent implements OnInit {
         this.message.success('资讯已保存');
         this.loadArticles();
       },
-      error: () => this.message.error('资讯保存失败'),
+      error: (err) => {
+        const msg = err?.error?.error?.message || err?.error?.message || '资讯保存失败';
+        this.message.error(msg);
+      },
     });
   }
 

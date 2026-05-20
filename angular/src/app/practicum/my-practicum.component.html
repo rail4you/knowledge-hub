@@ -24,7 +24,7 @@
     </nz-table>
   </nz-card>
 
-  <nz-modal [(nzVisible)]="timelineVisible" [nzTitle]="timelineTitle" [nzFooter]="null" nzWidth="760">
+  <nz-modal [(nzVisible)]="timelineVisible" [nzTitle]="timelineTitle" [nzFooter]="null" nzWidth="760" (nzOnCancel)="timelineVisible = false">
     <div class="timeline-list">
       @for (item of timeline(); track item.time + item.title) {
         <div class="timeline-item">

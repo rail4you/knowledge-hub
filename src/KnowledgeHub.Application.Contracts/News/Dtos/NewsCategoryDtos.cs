@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using Volo.Abp.Application.Dtos;
 
 namespace KnowledgeHub.News.Dtos;
@@ -17,8 +18,13 @@ public class NewsCategoryDto : FullAuditedEntityDto<Guid>
 public class CreateUpdateNewsCategoryDto
 {
     public Guid? ParentId { get; set; }
+
+    [Required]
     public string Name { get; set; } = string.Empty;
+
+    [Required]
     public string Code { get; set; } = string.Empty;
+
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
 }

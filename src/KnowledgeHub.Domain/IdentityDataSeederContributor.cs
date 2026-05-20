@@ -159,6 +159,14 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ViewStatistics, true);
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ExportReport, true);
 
+        // News permissions - SchoolAdmin
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.News.Default, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.News.Create, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.News.Edit, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.News.Delete, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.News.Review, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.News.Publish, true);
+
         // Teacher - Can create and manage own resources
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Resources.Default, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Resources.Create, true);
@@ -192,6 +200,11 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ManageGuidance, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ManageOutcome, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ViewStatistics, true);
+
+        // News permissions - Teacher
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.News.Default, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.News.Create, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.News.Edit, true);
 
         // Student - Read-only access
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Resources.Default, true);

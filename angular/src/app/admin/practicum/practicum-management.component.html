@@ -85,7 +85,7 @@
     </nz-card>
   </div>
 
-  <nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editingId ? '编辑实训项目' : '新建实训项目'" [nzFooter]="null" nzWidth="960">
+  <nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editingId ? '编辑实训项目' : '新建实训项目'" [nzFooter]="null" nzWidth="960" (nzOnCancel)="modalVisible = false">
     <ng-container *nzModalContent>
     <div class="form-grid">
       <input nz-input [(ngModel)]="form.title" placeholder="项目名称" />
@@ -150,7 +150,7 @@
     </ng-container>
   </nz-modal>
 
-  <nz-modal [(nzVisible)]="guidanceVisible" nzTitle="新增指导记录" [nzFooter]="null">
+  <nz-modal [(nzVisible)]="guidanceVisible" nzTitle="新增指导记录" [nzFooter]="null" (nzOnCancel)="guidanceVisible = false">
     <ng-container *nzModalContent>
     <textarea nz-input [(ngModel)]="guidanceForm.content" rows="5" placeholder="填写指导意见"></textarea>
     <label class="switch-row">
@@ -164,7 +164,7 @@
     </ng-container>
   </nz-modal>
 
-  <nz-modal [(nzVisible)]="scoreVisible" nzTitle="实训评分" [nzFooter]="null">
+  <nz-modal [(nzVisible)]="scoreVisible" nzTitle="实训评分" [nzFooter]="null" (nzOnCancel)="scoreVisible = false">
     <ng-container *nzModalContent>
     <div class="nested-grid">
       <input nz-input type="number" [(ngModel)]="scoreForm.score" placeholder="得分" />
