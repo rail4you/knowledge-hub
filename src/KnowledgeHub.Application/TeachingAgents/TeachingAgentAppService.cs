@@ -259,7 +259,7 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
         var query = await _userRepository.GetQueryableAsync();
         return await query
             .Where(x => userIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, x => x.Name ?? x.UserName);
+            .ToDictionaryAsync(x => x.Id, x => !string.IsNullOrEmpty(x.Name) ? x.Name : x.UserName);
     }
 
     private async Task<TeachingAgentDto> MapAgentAsync(TeachingAgent agent, IEnumerable<TeachingAgentVersion> versions)

@@ -72,16 +72,11 @@ export class ExerciseManagementComponent implements OnInit {
   importing = false;
   selectedImportFile: File | null = null;
 
-  // Options for choice questions
-  optionA = '';
-  optionB = '';
-  optionC = '';
-  optionD = '';
-  selectedAnswer = '';
-  multiAnswerA = false;
-  multiAnswerB = false;
-  multiAnswerC = false;
-  multiAnswerD = false;
+  // Options for choice questions - dynamic array approach
+  readonly letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  options = signal<string[]>(['', '', '', '']);
+  selectedAnswerIndex = signal<number>(-1);
+  multiSelectedAnswers = signal<Set<number>>(new Set());
 
   filteredExercises = computed(() => {
     const type = this.selectedType();
@@ -167,27 +162,31 @@ export class ExerciseManagementComponent implements OnInit {
       score: exercise.score,
     };
 
-    this.selectedAnswer = exercise.answer ?? '';
-    this.multiAnswerA = exercise.answer?.includes('A') ?? false;
-    this.multiAnswerB = exercise.answer?.includes('B') ?? false;
-    this.multiAnswerC = exercise.answer?.includes('C') ?? false;
-    this.multiAnswerD = exercise.answer?.includes('D') ?? false;
-
     if (exercise.options && (exercise.type === ExerciseType.SingleChoice || exercise.type === ExerciseType.MultiChoice)) {
       try {
-        const opts = JSON.parse(exercise.options);
-        this.optionA = opts[0] ?? '';
-        this.optionB = opts[1] ?? '';
-        this.optionC = opts[2] ?? '';
-        this.optionD = opts[3] ?? '';
+        const opts: string[] = JSON.parse(exercise.options);
+        // Pad with empty strings to at least 4 options
+        while (opts.length < 4) opts.push('');
+        this.options.set(opts);
+
+        // Parse answer into selected index / multi-selected set
+        const answerStr = exercise.answer ?? '';
+        if (exercise.type === ExerciseType.SingleChoice) {
+          const letter = answerStr.trim().toUpperCase();
+          const idx = letter ? this.letters.indexOf(letter) : -1;
+          this.selectedAnswerIndex.set(idx >= 0 && idx < opts.length ? idx : -1);
+          this.multiSelectedAnswers.set(new Set());
+        } else {
+          // Multi-choice: answer is like "A,C"
+          this.selectedAnswerIndex.set(-1);
+          const indices = answerStr.split(',').map(s => this.letters.indexOf(s.trim().toUpperCase())).filter(i => i >= 0);
+          this.multiSelectedAnswers.set(new Set(indices));
+        }
       } catch {
         this.resetOptionFields();
       }
     } else {
-      this.optionA = '';
-      this.optionB = '';
-      this.optionC = '';
-      this.optionD = '';
+      this.resetOptionFields();
     }
 
     this.isModalVisible = true;
@@ -200,14 +199,9 @@ export class ExerciseManagementComponent implements OnInit {
   handleModalOk() {
     const type = this.formData.type;
 
-    // Pre-build answer for multi-choice from checkboxes before validation
-    if (type === ExerciseType.MultiChoice) {
-      const answers: string[] = [];
-      if (this.multiAnswerA) answers.push('A');
-      if (this.multiAnswerB) answers.push('B');
-      if (this.multiAnswerC) answers.push('C');
-      if (this.multiAnswerD) answers.push('D');
-      this.formData.answer = answers.join(',');
+    // Build answer string for choice questions
+    if (type === ExerciseType.SingleChoice || type === ExerciseType.MultiChoice) {
+      this.formData.answer = this.getAnswerString();
     }
 
     if (!this.formData.title?.trim() || !this.formData.questionContent?.trim() || !this.formData.answer?.trim()) {
@@ -216,16 +210,12 @@ export class ExerciseManagementComponent implements OnInit {
     }
 
     if (type === ExerciseType.SingleChoice || type === ExerciseType.MultiChoice) {
-      if (!this.optionA.trim() || !this.optionB.trim()) {
+      const nonEmptyOptions = this.options().filter(o => o.trim() !== '');
+      if (nonEmptyOptions.length < 2) {
         this.message.warning('选择题至少需要两个选项');
         return;
       }
-      this.formData.options = JSON.stringify([
-        this.optionA.trim(),
-        this.optionB.trim(),
-        this.optionC.trim(),
-        this.optionD.trim(),
-      ]);
+      this.formData.options = JSON.stringify(this.options().map(o => o.trim()));
     } else {
       this.formData.options = null;
     }
@@ -276,19 +266,63 @@ export class ExerciseManagementComponent implements OnInit {
   }
 
   private resetOptionFields() {
-    this.selectedAnswer = '';
-    this.optionA = '';
-    this.optionB = '';
-    this.optionC = '';
-    this.optionD = '';
-    this.multiAnswerA = false;
-    this.multiAnswerB = false;
-    this.multiAnswerC = false;
-    this.multiAnswerD = false;
+    this.options.set(['', '', '', '']);
+    this.selectedAnswerIndex.set(-1);
+    this.multiSelectedAnswers.set(new Set());
   }
 
   isChoiceType(): boolean {
     return this.formData.type === ExerciseType.SingleChoice || this.formData.type === ExerciseType.MultiChoice;
+  }
+
+  getAnswerString(): string {
+    const form = this.formData;
+    if (form.type === ExerciseType.SingleChoice) {
+      const idx = this.selectedAnswerIndex();
+      return idx >= 0 ? this.letters[idx] : '';
+    } else if (form.type === ExerciseType.MultiChoice) {
+      return Array.from(this.multiSelectedAnswers()).sort().map(i => this.letters[i]).join(',');
+    }
+    return form.answer || '';
+  }
+
+  updateOption(index: number, value: string): void {
+    this.options.update(opts => {
+      const newOpts = [...opts];
+      newOpts[index] = value;
+      return newOpts;
+    });
+  }
+
+  toggleMultiAnswer(index: number): void {
+    this.multiSelectedAnswers.update(s => {
+      const newSet = new Set(s);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  }
+
+  addOption(): void {
+    this.options.update(opts => [...opts, '']);
+  }
+
+  removeOption(index: number): void {
+    if (this.options().length <= 2) return; // minimum 2 options
+    this.options.update(opts => opts.filter((_, i) => i !== index));
+    // Clean up selected answers
+    this.multiSelectedAnswers.update(s => {
+      const newSet = new Set(Array.from(s).filter(i => i < this.options().length));
+      return newSet;
+    });
+    if (this.selectedAnswerIndex() === index) {
+      this.selectedAnswerIndex.set(-1);
+    } else if (this.selectedAnswerIndex() > index) {
+      this.selectedAnswerIndex.update(i => i - 1);
+    }
   }
 
   getTypeName(type: ExerciseType): string {

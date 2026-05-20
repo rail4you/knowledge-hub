@@ -130,8 +130,16 @@ export class ExerciseLearningComponent implements OnInit {
             }
 
             // Flatten tree structure - collect all chapters including nested children
+            // getChaptersByCourse returns a flat list that also includes children in parent nodes
+            // We need to deduplicate to avoid showing the same chapter twice
             const flatChapters = this.flattenChapters(chapters);
-            const chaptersWithExercises: ChapterWithExercises[] = flatChapters.map(ch => ({
+            const seenIds = new Set<string>();
+            const dedupedChapters = flatChapters.filter(ch => {
+              if (!ch.id || seenIds.has(ch.id)) return false;
+              seenIds.add(ch.id);
+              return true;
+            });
+            const chaptersWithExercises: ChapterWithExercises[] = dedupedChapters.map(ch => ({
               id: ch.id!,
               title: ch.title ?? '未命名章节',
               exercises: chapterMap.get(ch.id!) ?? []
@@ -170,6 +178,8 @@ export class ExerciseLearningComponent implements OnInit {
         }
         this.exerciseRecords.set(map);
         this.loading.set(false);
+        // Restore the initial exercise state after records are loaded
+        this.loadCurrentRecordState();
       },
       error: () => {
         this.loading.set(false);
@@ -181,6 +191,7 @@ export class ExerciseLearningComponent implements OnInit {
     this.selectedChapterIndex.set(index);
     this.currentExerciseIndex.set(0);
     this.resetCurrentState();
+    this.loadCurrentRecordState();
   }
 
   selectExercise(index: number) {

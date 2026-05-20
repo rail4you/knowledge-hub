@@ -141,22 +141,19 @@
             <nz-form-label nzRequired>选项</nz-form-label>
             <nz-form-control>
               <div class="options-form">
-                <div class="option-row">
-                  <nz-tag nzColor="blue">A</nz-tag>
-                  <input nz-input [(ngModel)]="optionA" [ngModelOptions]="{ standalone: true }" placeholder="选项 A" />
-                </div>
-                <div class="option-row">
-                  <nz-tag nzColor="blue">B</nz-tag>
-                  <input nz-input [(ngModel)]="optionB" [ngModelOptions]="{ standalone: true }" placeholder="选项 B" />
-                </div>
-                <div class="option-row">
-                  <nz-tag nzColor="blue">C</nz-tag>
-                  <input nz-input [(ngModel)]="optionC" [ngModelOptions]="{ standalone: true }" placeholder="选项 C（可选）" />
-                </div>
-                <div class="option-row">
-                  <nz-tag nzColor="blue">D</nz-tag>
-                  <input nz-input [(ngModel)]="optionD" [ngModelOptions]="{ standalone: true }" placeholder="选项 D（可选）" />
-                </div>
+                @for (opt of options(); track $index) {
+                  <div class="option-row">
+                    <nz-tag nzColor="blue">{{ letters[$index] }}</nz-tag>
+                    <input nz-input [ngModel]="options()[$index]" (ngModelChange)="updateOption($index, $event)" [ngModelOptions]="{ standalone: true }" placeholder="选项 {{ letters[$index] }}" style="flex: 1" />
+                    <button nz-button nzSize="small" nzDanger (click)="removeOption($index)" [disabled]="options().length <= 2">
+                      <span nz-icon nzType="delete"></span>
+                    </button>
+                  </div>
+                }
+                <button nz-button nzSize="small" (click)="addOption()" [disabled]="options().length >= 10">
+                  <span nz-icon nzType="plus"></span>
+                  添加选项
+                </button>
               </div>
             </nz-form-control>
           </nz-form-item>
@@ -165,18 +162,16 @@
             <nz-form-label nzRequired>正确答案</nz-form-label>
             <nz-form-control>
               @if (formData.type === 0) {
-                <nz-radio-group [(ngModel)]="selectedAnswer" (ngModelChange)="formData.answer = $event" [ngModelOptions]="{ standalone: true }">
-                  <label nz-radio nzValue="A">A</label>
-                  <label nz-radio nzValue="B">B</label>
-                  <label nz-radio nzValue="C">C</label>
-                  <label nz-radio nzValue="D">D</label>
+                <nz-radio-group [(ngModel)]="selectedAnswerIndex" [ngModelOptions]="{ standalone: true }">
+                  @for (opt of options(); track $index) {
+                    <label nz-radio [nzValue]="$index">{{ letters[$index] }}</label>
+                  }
                 </nz-radio-group>
               } @else {
                 <div class="multi-answer-checkboxes">
-                  <label><input type="checkbox" [(ngModel)]="multiAnswerA" [ngModelOptions]="{ standalone: true }" /> A</label>
-                  <label><input type="checkbox" [(ngModel)]="multiAnswerB" [ngModelOptions]="{ standalone: true }" /> B</label>
-                  <label><input type="checkbox" [(ngModel)]="multiAnswerC" [ngModelOptions]="{ standalone: true }" /> C</label>
-                  <label><input type="checkbox" [(ngModel)]="multiAnswerD" [ngModelOptions]="{ standalone: true }" /> D</label>
+                  @for (opt of options(); track $index) {
+                    <label><input type="checkbox" [checked]="multiSelectedAnswers().has($index)" (change)="toggleMultiAnswer($index)" /> {{ letters[$index] }}</label>
+                  }
                 </div>
               }
             </nz-form-control>

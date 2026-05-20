@@ -111,6 +111,11 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
 
     public async Task<PagedResultDto<StudentExerciseRecordDto>> GetRecordsByCourseAsync(GetStudentExerciseRecordsInput input)
     {
+        if (CurrentUser.Id == null)
+        {
+            return new PagedResultDto<StudentExerciseRecordDto>(0, new List<StudentExerciseRecordDto>());
+        }
+
         var studentId = CurrentUser.GetId();
 
         List<StudentExerciseRecord> items;
