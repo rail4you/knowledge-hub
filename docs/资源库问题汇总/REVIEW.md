@@ -97,3 +97,52 @@
 | 本地化 | 通过 - 新增 `Menu:MicroMajorsGroup`(微专业) 和 `Menu:PracticumGroup`(实训) 翻译 |
 | order 冲突 | 通过(已修复) - 审查发现 PracticumGroup(order:6) 与 Assessment(order:6) 冲突，已改为 7 |
 | 课程模块瘦身 | 通过 - 课程模块不再包含微专业和实训，结构更清晰 |
+
+---
+
+## 批次 9+10 (提交: `d6d7692`)
+
+### M-08 资讯内容维护缺少批量录入能力
+
+**修改文件**：`NewsImportAppService.cs`(新建), `INewsImportAppService.cs`(新建), `NewsImportDtos.cs`(新建), `news-management.component.html/ts`, `news.service.ts`
+
+**审查结论**：通过
+
+| 检查项 | 结果 |
+|--------|------|
+| 后端实现 | 通过 - 使用 ClosedXML 解析 Excel，预加载分类映射，逐行解析+校验+入库 |
+| API 注册 | 通过 - 类名 `NewsImportAppService` 符合 ABP 约定，自动注册 `/api/app/news-import/import` |
+| 权限控制 | 通过 - 类级别 `[Authorize(KnowledgeHubPermissions.News.Create)]` |
+| 前端上传 | 通过 - 复用 ng-zorro Upload 组件，FileReader 读取为 Uint8Array 发送 |
+| 错误展示 | 通过 - 导入结果显示成功/失败统计，失败条目表格展示行号、标题、原因 |
+| 边界处理 | 通过 - 空标题/空正文跳过并记录失败原因，分类名称不匹配时 categoryId 为空 |
+
+---
+
+### M-12 企业档案缺少批量导入入口
+
+**修改文件**：`employer-profile.component.html`
+
+**审查结论**：通过
+
+| 检查项 | 结果 |
+|--------|------|
+| 方案合理性 | 通过 - 企业档案数据存储在 IdentityUser ExtraProperties 中，复用已有用户导入的"企业用户"工作表 |
+| 入口可见性 | 通过 - 在企业档案页顶部添加"批量导入企业用户"按钮，跳转 `/identity/users/import` |
+| 避免重复代码 | 通过 - 不创建冗余导入服务，直接复用现有功能 |
+
+---
+
+### S-08 学生端不同页面界面风格不统一
+
+**修改文件**：`app.routes.ts`, `student-layout.component.html`
+
+**审查结论**：通过
+
+| 检查项 | 结果 |
+|--------|------|
+| 根因分析 | 通过 - 就业页面在管理端布局(LeptonX)下渲染，与资源库门户风格不一致 |
+| 修复方案 | 通过 - 将就业页面注册到 `/student/` 路由下，统一使用学生门户布局 |
+| 导航入口 | 通过 - 新增"就业服务"下拉菜单（岗位大厅、我的简历、我的投递、就业指导） |
+| 组件复用 | 通过 - 直接复用管理端组件，无需创建学生专用版本 |
+| 管理端兼容 | 通过 - 原管理端路由保留，两端可独立访问同一组件 |
