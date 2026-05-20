@@ -43,7 +43,7 @@
             <nz-card class="article-card" (click)="openArticle(article.id)" [nzHoverable]="true">
               @if (article.coverImageUrl) {
                 <div class="article-card__cover">
-                  <img [src]="article.coverImageUrl" [alt]="article.title" />
+                  <img [src]="article.coverImageUrl" [alt]="article.title" (error)="$event.target.parentElement.remove()" />
                 </div>
               }
               <div class="article-card__meta">

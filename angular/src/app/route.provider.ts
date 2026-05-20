@@ -245,7 +245,7 @@ function configureRoutes() {
         path: '/practicum/projects',
         name: '::Menu:PracticumGroup',
         iconClass: 'fas fa-flask',
-        order: 6,
+        order: 7,
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.Practicum',
       },

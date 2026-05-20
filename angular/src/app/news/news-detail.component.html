@@ -35,7 +35,7 @@
 
       @if (article.coverImageUrl) {
         <div class="cover-image">
-          <img [src]="article.coverImageUrl" [alt]="article.title" />
+          <img [src]="article.coverImageUrl" [alt]="article.title" (error)="$event.target.remove()" />
         </div>
       }
 
