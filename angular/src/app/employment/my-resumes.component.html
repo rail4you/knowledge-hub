@@ -34,6 +34,7 @@
 </nz-card>
 
 <nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editingId ? '编辑简历' : '新增简历'" (nzOnCancel)="modalVisible = false" (nzOnOk)="save()">
+  <ng-container *nzModalContent>
   <div class="resume-form">
     <input nz-input [(ngModel)]="form.title" placeholder="简历标题" />
     <input nz-input [(ngModel)]="form.fullName" placeholder="姓名" />
@@ -48,4 +49,5 @@
     <textarea nz-input rows="3" [(ngModel)]="form.projectExperience" placeholder="项目经历"></textarea>
     <input nz-input [(ngModel)]="form.attachmentUrl" placeholder="简历附件链接" />
   </div>
+  </ng-container>
 </nz-modal>

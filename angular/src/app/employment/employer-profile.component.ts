@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -18,6 +19,7 @@ import { EmploymentService, UpdateEmployerProfileDto } from './employment.servic
 export class EmployerProfileComponent implements OnInit {
   private readonly employmentService = inject(EmploymentService);
   private readonly message = inject(NzMessageService);
+  private readonly router = inject(Router);
 
   form: UpdateEmployerProfileDto = {
     contactName: '',
@@ -49,7 +51,10 @@ export class EmployerProfileComponent implements OnInit {
 
   save(): void {
     this.employmentService.updateMyEmployerProfile(this.form).subscribe({
-      next: () => this.message.success('企业档案已更新'),
+      next: () => {
+        this.message.success('企业档案已更新');
+        this.router.navigate(['/employment/jobs']);
+      },
       error: () => this.message.error('保存失败'),
     });
   }

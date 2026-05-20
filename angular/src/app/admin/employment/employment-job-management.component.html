@@ -44,12 +44,14 @@
 </nz-card>
 
 <nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editingId ? '编辑岗位' : '新增岗位'" (nzOnCancel)="modalVisible = false" (nzOnOk)="save()">
-  <div class="job-form">
-    <input nz-input [(ngModel)]="form.title" placeholder="岗位名称" />
-    <input nz-input [(ngModel)]="form.summary" placeholder="岗位摘要" />
-    <textarea nz-input rows="4" [(ngModel)]="form.description" placeholder="岗位描述"></textarea>
-    <input nz-input [(ngModel)]="form.location" placeholder="工作地区" />
-    <input nz-input [(ngModel)]="form.salaryRange" placeholder="薪资范围" />
-    <input nz-input [(ngModel)]="form.skillTags" placeholder="技能标签" />
-  </div>
+  <ng-container *nzModalContent>
+    <div class="job-form">
+      <input nz-input [(ngModel)]="form.title" placeholder="岗位名称" />
+      <input nz-input [(ngModel)]="form.summary" placeholder="岗位摘要" />
+      <textarea nz-input rows="4" [(ngModel)]="form.description" placeholder="岗位描述"></textarea>
+      <input nz-input [(ngModel)]="form.location" placeholder="工作地区" />
+      <input nz-input [(ngModel)]="form.salaryRange" placeholder="薪资范围" />
+      <input nz-input [(ngModel)]="form.skillTags" placeholder="技能标签" />
+    </div>
+  </ng-container>
 </nz-modal>

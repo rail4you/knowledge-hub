@@ -10,5 +10,6 @@
     <input nz-input [(ngModel)]="form.partnerSchool" placeholder="合作院校" />
     <textarea nz-input rows="4" [(ngModel)]="form.remark" placeholder="企业简介 / 备注"></textarea>
     <button nz-button nzType="primary" (click)="save()">保存档案</button>
+    <button nz-button (click)="router.navigate(['/employment/jobs'])">返回</button>
   </div>
 </nz-card>
