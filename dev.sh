@@ -5,6 +5,7 @@ set -e
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 PID_DIR="$PROJECT_ROOT/.dev"
 LOG_DIR="$PROJECT_ROOT/.dev/logs"
+DOTNET_RUN_FLAGS="${DOTNET_RUN_FLAGS:---no-restore}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -32,6 +33,14 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+require_command() {
+    local command_name="$1"
+    if ! command -v "$command_name" >/dev/null 2>&1; then
+        log_error "Required command not found: $command_name"
+        exit 1
+    fi
+}
+
 is_running() {
     local pid_file="$1"
     if [ -f "$pid_file" ]; then
@@ -43,32 +52,83 @@ is_running() {
     return 1
 }
 
-start_api() {
-    local pid_file="$PID_DIR/api.pid"
-    if is_running "$pid_file"; then
-        log_warn "API is already running (PID: $(cat $pid_file))"
-        return
+is_tmux_running() {
+    local name="$1"
+    local session
+    session=$(tmux_session_name "$name")
+    command -v tmux >/dev/null 2>&1 && tmux has-session -t "$session" >/dev/null 2>&1
+}
+
+is_service_running() {
+    local name="$1"
+    local pid_file="$PID_DIR/${name}.pid"
+    is_running "$pid_file" || is_tmux_running "$name"
+}
+
+service_pid() {
+    local name="$1"
+    local pid_file="$PID_DIR/${name}.pid"
+    if [ -f "$pid_file" ]; then
+        cat "$pid_file"
+    else
+        echo "-"
     fi
-    
-    log_info "Starting API (HttpApi.Host)..."
-    cd "$PROJECT_ROOT"
-    ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_Kestrel__Certificates__Default__Path="$HOME/.aspnet/https/aspnetapp.pfx" ASPNETCORE_Kestrel__Certificates__Default__Password="devcert" dotnet run --project src/KnowledgeHub.HttpApi.Host > "$LOG_DIR/api.log" 2>&1 &
-    echo $! > "$pid_file"
-    log_success "API started (PID: $(cat $pid_file))"
-    log_info "API URL: https://localhost:44305"
-    log_info "Swagger: https://localhost:44305/swagger"
+}
+
+service_ports() {
+    case "$1" in
+        api) echo "44305" ;;
+        angular) echo "4200" ;;
+        meilisearch) echo "7700" ;;
+        ai) echo "5001" ;;
+    esac
+}
+
+kill_service_ports() {
+    local name="$1"
+    local port
+    local pids
+
+    for port in $(service_ports "$name"); do
+        pids=$(lsof -ti:"$port" 2>/dev/null || true)
+        if [ -n "$pids" ]; then
+            log_warn "Cleaning $name port $port"
+            kill -9 $pids 2>/dev/null || true
+        fi
+    done
+}
+
+tmux_session_name() {
+    echo "knowledgehub-$1"
+}
+
+start_detached() {
+    local name="$1"
+    local pid_file="$2"
+    local command="$3"
+    local session
+    session=$(tmux_session_name "$name")
+
+    if command -v tmux >/dev/null 2>&1; then
+        tmux kill-session -t "$session" >/dev/null 2>&1 || true
+        tmux new-session -d -s "$session" "$command"
+        sleep 0.2
+        tmux list-panes -t "$session" -F '#{pane_pid}' | head -n 1 > "$pid_file"
+    else
+        nohup /bin/bash -lc "$command" >/dev/null 2>&1 &
+        echo $! > "$pid_file"
+    fi
 }
 
 # Wait for a HTTP endpoint to return 200, with timeout
 # Usage: wait_for_http <url> <description> [timeout_seconds]
 wait_for_http() {
     local url="$1"
-    local desc="$2"
     local timeout="${3:-60}"
     local elapsed=0
 
     while [ $elapsed -lt $timeout ]; do
-        if curl -sf -o /dev/null "$url" 2>/dev/null; then
+        if curl --max-time 2 -sf -o /dev/null "$url" 2>/dev/null; then
             return 0
         fi
         sleep 2
@@ -81,12 +141,11 @@ wait_for_http() {
 # Usage: wait_for_https <url> <description> [timeout_seconds]
 wait_for_https() {
     local url="$1"
-    local desc="$2"
     local timeout="${3:-60}"
     local elapsed=0
 
     while [ $elapsed -lt $timeout ]; do
-        if curl -skf -o /dev/null "$url" 2>/dev/null; then
+        if curl --max-time 2 -skf -o /dev/null "$url" 2>/dev/null; then
             return 0
         fi
         sleep 2
@@ -112,10 +171,29 @@ wait_for_port_free() {
     return 1
 }
 
+wait_for_tcp_listen() {
+    local port="$1"
+    local timeout="${2:-30}"
+    local elapsed=0
+
+    while [ $elapsed -lt $timeout ]; do
+        if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+    return 1
+}
+
 start_api() {
     local pid_file="$PID_DIR/api.pid"
-    if is_running "$pid_file"; then
-        log_warn "API is already running (PID: $(cat $pid_file))"
+    require_command curl
+    require_command dotnet
+    require_command lsof
+
+    if is_service_running "api"; then
+        log_warn "API is already running (PID: $(service_pid api))"
         return
     fi
 
@@ -127,9 +205,7 @@ start_api() {
     fi
 
     log_info "Starting API (HttpApi.Host)..."
-    cd "$PROJECT_ROOT"
-    ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_Kestrel__Certificates__Default__Path="$HOME/.aspnet/https/aspnetapp.pfx" ASPNETCORE_Kestrel__Certificates__Default__Password="devcert" dotnet run --project src/KnowledgeHub.HttpApi.Host > "$LOG_DIR/api.log" 2>&1 &
-    echo $! > "$pid_file"
+    start_detached "api" "$pid_file" "cd \"$PROJECT_ROOT\" && exec env ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_Kestrel__Certificates__Default__Path=\"$HOME/.aspnet/https/aspnetapp.pfx\" ASPNETCORE_Kestrel__Certificates__Default__Password=\"devcert\" dotnet run --project src/KnowledgeHub.HttpApi.Host $DOTNET_RUN_FLAGS > \"$LOG_DIR/api.log\" 2>&1"
 
     if wait_for_https "https://localhost:44305/health-status" "API" 90; then
         log_success "API started (PID: $(cat $pid_file))"
@@ -137,14 +213,19 @@ start_api() {
         log_info "Swagger: https://localhost:44305/swagger"
     else
         log_error "API failed to start. Check logs: $0 log api"
+        stop_service "api"
         exit 1
     fi
 }
 
 start_angular() {
     local pid_file="$PID_DIR/angular.pid"
-    if is_running "$pid_file"; then
-        log_warn "Angular is already running (PID: $(cat $pid_file))"
+    require_command curl
+    require_command npm
+    require_command lsof
+
+    if is_service_running "angular"; then
+        log_warn "Angular is already running (PID: $(service_pid angular))"
         return
     fi
 
@@ -163,23 +244,30 @@ start_angular() {
     fi
 
     log_info "Starting Angular..."
-    cd "$PROJECT_ROOT/angular"
-    npm run start -- --configuration=development > "$LOG_DIR/angular.log" 2>&1 &
-    echo $! > "$pid_file"
+    start_detached "angular" "$pid_file" "cd \"$PROJECT_ROOT/angular\" && exec npm run start -- --configuration=development > \"$LOG_DIR/angular.log\" 2>&1"
 
     if wait_for_http "http://localhost:4200" "Angular" 60; then
         log_success "Angular started (PID: $(cat $pid_file))"
         log_info "Angular URL: http://localhost:4200"
     else
         log_error "Angular failed to start. Check logs: $0 log angular"
+        stop_service "angular"
         exit 1
     fi
 }
 
 start_meilisearch() {
     local pid_file="$PID_DIR/meilisearch.pid"
-    if is_running "$pid_file"; then
-        log_warn "Meilisearch is already running (PID: $(cat $pid_file))"
+    require_command curl
+    require_command lsof
+
+    if [ ! -x "$PROJECT_ROOT/meilisearch" ]; then
+        log_error "Meilisearch binary is missing or not executable: $PROJECT_ROOT/meilisearch"
+        exit 1
+    fi
+
+    if is_service_running "meilisearch"; then
+        log_warn "Meilisearch is already running (PID: $(service_pid meilisearch))"
         return
     fi
 
@@ -191,54 +279,75 @@ start_meilisearch() {
     fi
 
     log_info "Starting Meilisearch..."
-    cd "$PROJECT_ROOT"
-    ./meilisearch --master-key="aSampleMasterKey" > "$LOG_DIR/meilisearch.log" 2>&1 &
-    echo $! > "$pid_file"
+    start_detached "meilisearch" "$pid_file" "cd \"$PROJECT_ROOT\" && exec ./meilisearch --master-key=\"aSampleMasterKey\" > \"$LOG_DIR/meilisearch.log\" 2>&1"
 
     if wait_for_http "http://localhost:7700/health" "Meilisearch" 30; then
         log_success "Meilisearch started (PID: $(cat $pid_file))"
         log_info "Meilisearch URL: http://localhost:7700"
     else
         log_error "Meilisearch failed to start. Check logs: $0 log meilisearch"
+        stop_service "meilisearch"
         exit 1
     fi
 }
 
 start_ai() {
     local pid_file="$PID_DIR/ai.pid"
-    if is_running "$pid_file"; then
-        log_warn "AI API is already running (PID: $(cat $pid_file))"
+    require_command dotnet
+    require_command lsof
+
+    if is_service_running "ai"; then
+        log_warn "AI API is already running (PID: $(service_pid ai))"
         return
     fi
     
     log_info "Starting AI API..."
-    cd "$PROJECT_ROOT"
-    dotnet run --project src/KnowledgeHub.AI.Api > "$LOG_DIR/ai.log" 2>&1 &
-    echo $! > "$pid_file"
-    log_success "AI API started (PID: $(cat $pid_file))"
-    log_info "AI API URL: http://localhost:5001"
+    start_detached "ai" "$pid_file" "cd \"$PROJECT_ROOT\" && exec dotnet run --project src/KnowledgeHub.AI.Api $DOTNET_RUN_FLAGS > \"$LOG_DIR/ai.log\" 2>&1"
+
+    if wait_for_tcp_listen 5001 45; then
+        log_success "AI API started (PID: $(cat $pid_file))"
+        log_info "AI API URL: http://localhost:5001"
+    else
+        log_error "AI API failed to start. Check logs: $0 log ai"
+        stop_service "ai"
+        exit 1
+    fi
 }
 
 stop_service() {
     local name="$1"
     local pid_file="$PID_DIR/${name}.pid"
+    local session
+    session=$(tmux_session_name "$name")
     
     if [ -f "$pid_file" ]; then
         local pid=$(cat "$pid_file")
         if kill -0 "$pid" 2>/dev/null; then
             log_info "Stopping $name (PID: $pid)..."
+            if command -v tmux >/dev/null 2>&1; then
+                tmux kill-session -t "$session" >/dev/null 2>&1 || true
+            fi
             kill "$pid" 2>/dev/null || true
             sleep 1
             if kill -0 "$pid" 2>/dev/null; then
                 kill -9 "$pid" 2>/dev/null || true
             fi
+            kill_service_ports "$name"
             log_success "$name stopped"
         else
             log_warn "$name is not running"
+            if command -v tmux >/dev/null 2>&1; then
+                tmux kill-session -t "$session" >/dev/null 2>&1 || true
+            fi
+            kill_service_ports "$name"
         fi
         rm -f "$pid_file"
     else
         log_warn "$name is not running"
+        if command -v tmux >/dev/null 2>&1; then
+            tmux kill-session -t "$session" >/dev/null 2>&1 || true
+        fi
+        kill_service_ports "$name"
     fi
 }
 
@@ -252,41 +361,59 @@ stop_all() {
 }
 
 show_status() {
+    local api_health="Down"
+    local angular_health="Down"
+    local meilisearch_health="Down"
+    local ai_health="Down"
+
+    if command -v curl >/dev/null 2>&1 && curl --max-time 2 -skf -o /dev/null "https://localhost:44305/health-status" 2>/dev/null; then
+        api_health="Healthy"
+    fi
+    if command -v curl >/dev/null 2>&1 && curl --max-time 2 -sf -o /dev/null "http://localhost:4200" 2>/dev/null; then
+        angular_health="Healthy"
+    fi
+    if command -v curl >/dev/null 2>&1 && curl --max-time 2 -sf -o /dev/null "http://localhost:7700/health" 2>/dev/null; then
+        meilisearch_health="Healthy"
+    fi
+    if command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:5001 -sTCP:LISTEN >/dev/null 2>&1; then
+        ai_health="Listening"
+    fi
+
     echo ""
     echo "================================"
     echo "  Development Services Status"
     echo "================================"
     echo ""
     
-    printf "%-15s %-10s %-10s\n" "Service" "Status" "PID/Port"
-    printf "%-15s %-10s %-10s\n" "-------" "------" "--------"
+    printf "%-15s %-10s %-10s %-10s\n" "Service" "Status" "Health" "PID/Port"
+    printf "%-15s %-10s %-10s %-10s\n" "-------" "------" "------" "--------"
     
-    if is_running "$PID_DIR/api.pid"; then
-        printf "%-15s ${GREEN}%-10s${NC} %-10s\n" "API" "Running" "$(cat $PID_DIR/api.pid)"
-        printf "%-15s %-10s %-10s\n" "" "" "https://localhost:44305"
+    if is_service_running "api"; then
+        printf "%-15s ${GREEN}%-10s${NC} %-10s %-10s\n" "API" "Running" "$api_health" "$(service_pid api)"
+        printf "%-15s %-10s %-10s %-10s\n" "" "" "" "https://localhost:44305"
     else
-        printf "%-15s ${RED}%-10s${NC} %-10s\n" "API" "Stopped" "-"
+        printf "%-15s ${RED}%-10s${NC} %-10s %-10s\n" "API" "Stopped" "$api_health" "-"
     fi
     
-    if is_running "$PID_DIR/angular.pid"; then
-        printf "%-15s ${GREEN}%-10s${NC} %-10s\n" "Angular" "Running" "$(cat $PID_DIR/angular.pid)"
-        printf "%-15s %-10s %-10s\n" "" "" "http://localhost:4200"
+    if is_service_running "angular"; then
+        printf "%-15s ${GREEN}%-10s${NC} %-10s %-10s\n" "Angular" "Running" "$angular_health" "$(service_pid angular)"
+        printf "%-15s %-10s %-10s %-10s\n" "" "" "" "http://localhost:4200"
     else
-        printf "%-15s ${RED}%-10s${NC} %-10s\n" "Angular" "Stopped" "-"
+        printf "%-15s ${RED}%-10s${NC} %-10s %-10s\n" "Angular" "Stopped" "$angular_health" "-"
     fi
     
-    if is_running "$PID_DIR/meilisearch.pid"; then
-        printf "%-15s ${GREEN}%-10s${NC} %-10s\n" "Meilisearch" "Running" "$(cat $PID_DIR/meilisearch.pid)"
-        printf "%-15s %-10s %-10s\n" "" "" "http://localhost:7700"
+    if is_service_running "meilisearch"; then
+        printf "%-15s ${GREEN}%-10s${NC} %-10s %-10s\n" "Meilisearch" "Running" "$meilisearch_health" "$(service_pid meilisearch)"
+        printf "%-15s %-10s %-10s %-10s\n" "" "" "" "http://localhost:7700"
     else
-        printf "%-15s ${RED}%-10s${NC} %-10s\n" "Meilisearch" "Stopped" "-"
+        printf "%-15s ${RED}%-10s${NC} %-10s %-10s\n" "Meilisearch" "Stopped" "$meilisearch_health" "-"
     fi
     
-    if is_running "$PID_DIR/ai.pid"; then
-        printf "%-15s ${GREEN}%-10s${NC} %-10s\n" "AI API" "Running" "$(cat $PID_DIR/ai.pid)"
-        printf "%-15s %-10s %-10s\n" "" "" "http://localhost:5001"
+    if is_service_running "ai"; then
+        printf "%-15s ${GREEN}%-10s${NC} %-10s %-10s\n" "AI API" "Running" "$ai_health" "$(service_pid ai)"
+        printf "%-15s %-10s %-10s %-10s\n" "" "" "" "http://localhost:5001"
     else
-        printf "%-15s ${RED}%-10s${NC} %-10s\n" "AI API" "Stopped" "-"
+        printf "%-15s ${RED}%-10s${NC} %-10s %-10s\n" "AI API" "Stopped" "$ai_health" "-"
     fi
     
     echo ""
@@ -448,9 +575,9 @@ case "${1:-help}" in
                 start_ai
                 ;;
             all)
+                start_meilisearch
                 start_api
                 start_angular
-                start_meilisearch
                 start_ai
                 ;;
             *)
@@ -509,9 +636,9 @@ case "${1:-help}" in
             all)
                 stop_all
                 ensure_dirs
+                start_meilisearch
                 start_api
                 start_angular
-                start_meilisearch
                 start_ai
                 ;;
             *)

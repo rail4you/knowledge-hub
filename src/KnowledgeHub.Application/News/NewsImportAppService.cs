@@ -110,7 +110,7 @@ public class NewsImportAppService : KnowledgeHubAppService, INewsImportAppServic
                     IsHot = false,
                     AllowComments = true,
                     Status = NewsArticleStatus.Draft,
-                    AuthorId = CurrentUser.GetId(),
+                    AuthorId = CurrentUser.Id,
                     TenantId = CurrentTenant.Id
                 };
 

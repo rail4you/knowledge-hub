@@ -19,7 +19,7 @@ import { EmploymentService, UpdateEmployerProfileDto } from './employment.servic
 export class EmployerProfileComponent implements OnInit {
   private readonly employmentService = inject(EmploymentService);
   private readonly message = inject(NzMessageService);
-  private readonly router = inject(Router);
+  readonly router = inject(Router);
 
   form: UpdateEmployerProfileDto = {
     contactName: '',

@@ -24,6 +24,7 @@ import {
   NewsImportResultDto,
   NewsService,
 } from '../../news/news.service';
+import { OssUploadService } from '../../shared/oss-upload.service';
 
 @Component({
   selector: 'app-news-management',
@@ -49,6 +50,7 @@ import {
 })
 export class NewsManagementComponent implements OnInit {
   private readonly newsService = inject(NewsService);
+  private readonly ossUploadService = inject(OssUploadService);
   private readonly message = inject(NzMessageService);
 
   readonly categories = signal<NewsCategoryDto[]>([]);
@@ -73,6 +75,10 @@ export class NewsManagementComponent implements OnInit {
   importing = false;
   importSuccess = false;
   importResult: NewsImportResultDto | null = null;
+
+  // Cover upload state
+  coverUploading = false;
+  coverFileList: NzUploadFile[] = [];
 
   ngOnInit(): void {
     this.reloadAll();
@@ -187,6 +193,7 @@ export class NewsManagementComponent implements OnInit {
   openCreateArticle(): void {
     this.editingArticleId = null;
     this.articleForm = this.createEmptyArticle();
+    this.coverFileList = [];
     this.articleModalVisible = true;
   }
 
@@ -203,6 +210,17 @@ export class NewsManagementComponent implements OnInit {
       isHot: item.isHot,
       allowComments: item.allowComments,
     };
+    // Set cover file list for preview if coverImageUrl exists
+    if (item.coverImageUrl) {
+      this.coverFileList = [{
+        uid: '-1',
+        name: 'cover.jpg',
+        status: 'done',
+        url: item.coverImageUrl,
+      }];
+    } else {
+      this.coverFileList = [];
+    }
     this.articleModalVisible = true;
   }
 
@@ -344,6 +362,51 @@ export class NewsManagementComponent implements OnInit {
       });
     };
   }
+
+  // ===== Cover image upload handlers =====
+
+  beforeCoverUpload = (file: NzUploadFile): boolean => {
+    const rawFile = file as any as File;
+    // Validate type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+    if (!allowedTypes.includes(rawFile.type)) {
+      this.message.error('仅支持上传 JPG、PNG、GIF、WebP、BMP 格式的图片');
+      return false;
+    }
+    // Validate size (10MB)
+    if (rawFile.size > 10 * 1024 * 1024) {
+      this.message.error('图片大小不能超过 10MB');
+      return false;
+    }
+
+    // Upload to OSS
+    this.coverUploading = true;
+    this.ossUploadService.uploadImage(rawFile).subscribe({
+      next: (result) => {
+        this.coverUploading = false;
+        this.articleForm.coverImageUrl = result.url;
+        this.coverFileList = [{
+          uid: result.objectKey,
+          name: result.originalFileName,
+          status: 'done',
+          url: result.url,
+        }];
+        this.message.success('封面上传成功');
+      },
+      error: (err) => {
+        this.coverUploading = false;
+        this.coverFileList = [];
+        this.message.error('封面上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+      },
+    });
+    return false; // prevent default upload behavior
+  };
+
+  removeCover = (): boolean => {
+    this.articleForm.coverImageUrl = '';
+    this.coverFileList = [];
+    return true;
+  };
 
   resetImport(): void {
     this.importFileList = [];

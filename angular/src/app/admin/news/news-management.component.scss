@@ -24,6 +24,19 @@
   gap: 8px;
 }
 
+.cover-upload-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .cover-upload-trigger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #999;
+  }
+}
+
 .cover-preview {
   border-radius: 6px;
   overflow: hidden;
