@@ -312,6 +312,9 @@ export class ChapterMindMapComponent implements AfterViewInit, OnChanges, OnDest
   private resizeObserver: ResizeObserver | null = null;
   private initFailed = false;
   private scaleVal = 1;
+  /** Track pointer-down position to distinguish clicks from pans */
+  private pointerDownPos = { x: 0, y: 0 };
+  private pointerDownTime = 0;
 
   ngAfterViewInit() {
     this.zone.runOutsideAngular(() => {
@@ -400,13 +403,15 @@ export class ChapterMindMapComponent implements AfterViewInit, OnChanges, OnDest
         nodeMenu: false,
         keypress: false,
         allowUndo: false,
-        overflowHidden: true,
+        // MUST be false – when true, MindElixir skips Pn() which sets up
+        // ALL mouse handlers (pan, click, zoom). Parent .graph-stage already
+        // clips overflow via CSS.
+        overflowHidden: false,
         scaleSensitivity: 0.5,
         scaleMax: 2.5,
         scaleMin: 0.3,
         handleWheel: true,
         editable: false,
-        selectLocal: false,
       });
 
       this.me.install(() => {});
@@ -428,46 +433,88 @@ export class ChapterMindMapComponent implements AfterViewInit, OnChanges, OnDest
   private bindEvents(): void {
     if (!this.me) return;
 
-    const el = this.containerRef().nativeElement;
+    const mind = this.me;
 
-    el.addEventListener('selectNode', ((e: CustomEvent) => {
-      const topic = e.detail as any;
-      if (topic?.nodeObj) {
-        const nodeObj = topic.nodeObj;
+    // Use MindElixir's internal bus (NOT DOM events)
+    mind.bus.addListener('selectNodes', (nodes: any[]) => {
+      if (nodes?.length) {
+        const info = this.extractNodeInfo(nodes[0]);
+        this.zone.run(() => this.selectedNode.set(info));
+      }
+    });
+
+    mind.bus.addListener('selectNewNode', (nodeObj: any) => {
+      if (nodeObj) {
         const info = this.extractNodeInfo(nodeObj);
         this.zone.run(() => this.selectedNode.set(info));
       }
-    }) as EventListener);
+    });
 
-    el.addEventListener('unselectNode', (() => {
-      this.zone.run(() => this.selectedNode.set(null));
-    }) as EventListener);
-
-    el.addEventListener('editNode', ((e: CustomEvent) => {
-      const topic = e.detail as any;
-      if (topic?.nodeObj) {
-        const nodeObj = topic.nodeObj;
+    mind.bus.addListener('expandNode', (nodeObj: any) => {
+      // Update inspector when a node is expanded/collapsed via ME-EPD button
+      if (nodeObj) {
         const info = this.extractNodeInfo(nodeObj);
         this.zone.run(() => this.selectedNode.set(info));
+      }
+    });
+
+    // Custom click handler for node selection & expand/collapse when editable=false.
+    // When editable=false, MindElixir's built-in click handler ignores topic clicks,
+    // so we handle it ourselves.
+    const container = mind.container;
+
+    container.addEventListener('pointerdown', ((e: PointerEvent) => {
+      this.pointerDownPos = { x: e.clientX, y: e.clientY };
+      this.pointerDownTime = Date.now();
+    }) as EventListener, { passive: true });
+
+    container.addEventListener('click', ((e: MouseEvent) => {
+      // Ignore right-clicks
+      if (e.button !== 0) return;
+
+      // Distinguish click from pan: if pointer moved >5px or held >500ms, treat as pan
+      const dx = e.clientX - this.pointerDownPos.x;
+      const dy = e.clientY - this.pointerDownPos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const elapsed = Date.now() - this.pointerDownTime;
+      if (dist > 5 || elapsed > 500) return;
+
+      // Find the closest topic element
+      const target = e.target as HTMLElement;
+      const tpc = target.closest('me-tpc') as any;
+      if (!tpc?.nodeObj) return;
+
+      const nodeObj = tpc.nodeObj;
+
+      // Update inspector panel
+      const info = this.extractNodeInfo(nodeObj);
+      this.zone.run(() => this.selectedNode.set(info));
+
+      // Toggle expand/collapse if the node has children
+      if (nodeObj.children?.length) {
+        const isExpanded = nodeObj.expanded !== false;
+        this.zone.runOutsideAngular(() => {
+          mind.expandNode(tpc, !isExpanded);
+        });
       }
     }) as EventListener);
   }
 
-  private extractNodeInfo(nodeObj: NodeObj): NodeInfo {
+  private extractNodeInfo(nodeObj: any): NodeInfo {
     return {
-      id: (nodeObj as any).id || '',
+      id: nodeObj.id || '',
       title: nodeObj.topic || '未命名节点',
-      description: (nodeObj as any).note || '',
+      description: nodeObj.note || '',
       depth: this.calcDepth(nodeObj),
-      sortOrder: (nodeObj as any)._sortOrder ?? 0,
+      sortOrder: nodeObj._sortOrder ?? 0,
       childCount: nodeObj.children?.length ?? 0,
-      isRoot: (nodeObj as any).id === 'course-root',
+      isRoot: nodeObj.id === 'course-root',
     };
   }
 
-  private calcDepth(node: NodeObj): number {
+  private calcDepth(node: any): number {
     let depth = 0;
-    let current: NodeObj | undefined = node;
+    let current = node;
     while (current?.parent) {
       depth++;
       current = current.parent;

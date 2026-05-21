@@ -115,3 +115,10 @@ data.ms/
 
 # 本地开发工具
 utils/pdf-parser/node_modules/
+
+# Pi agent runtime
+.pi-pids/
+agent-runtime/
+
+# Test results
+test-results/
