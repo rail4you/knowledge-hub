@@ -44,7 +44,7 @@ export function NewsPage() {
   }, []);
 
   const loadCategories = () => {
-    api.get('/api/app/news/categories/tree').then(res => {
+    api.get('/api/app/news-category/tree').then(res => {
       setCategories(res.data || []);
     }).catch(() => {});
   };
@@ -55,14 +55,14 @@ export function NewsPage() {
     if (filter) params.filter = filter;
     if (selectedCategory) params.categoryId = selectedCategory;
 
-    api.get('/api/app/news/published', { params }).then(res => {
+    api.get('/api/app/news-article/published-list', { params }).then(res => {
       setArticles(res.data?.items || []);
       setLoading(false);
     }).catch(() => setLoading(false));
   };
 
   const loadHotArticles = () => {
-    api.get('/api/app/news/hot').then(res => {
+    api.get('/api/app/news-article/hot-list', { params: { maxCount: 10 } }).then(res => {
       setHotArticles(res.data || []);
     }).catch(() => {});
   };
