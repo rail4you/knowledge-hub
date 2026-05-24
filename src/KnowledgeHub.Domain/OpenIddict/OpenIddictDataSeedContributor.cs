@@ -86,6 +86,32 @@ public class OpenIddictDataSeedContributor : OpenIddictDataSeedContributorBase, 
             );
         }
 
+        var studentReactClientId = configurationSection["KnowledgeHub_StudentReact:ClientId"];
+        if (!studentReactClientId.IsNullOrWhiteSpace())
+        {
+            var studentReactRootUrl = configurationSection["KnowledgeHub_StudentReact:RootUrl"]?.TrimEnd('/');
+            await CreateOrUpdateApplicationAsync(
+                applicationType: OpenIddictConstants.ApplicationTypes.Web,
+                name: studentReactClientId!,
+                type: OpenIddictConstants.ClientTypes.Public,
+                consentType: OpenIddictConstants.ConsentTypes.Implicit,
+                displayName: "Student React Application",
+                secret: null,
+                grantTypes: new List<string> {
+                    OpenIddictConstants.GrantTypes.AuthorizationCode,
+                    OpenIddictConstants.GrantTypes.RefreshToken
+                },
+                scopes: commonScopes,
+                redirectUris: new List<string> {
+                    studentReactRootUrl,
+                    $"{studentReactRootUrl}/auth/callback"
+                },
+                postLogoutRedirectUris: new List<string> { studentReactRootUrl },
+                clientUri: studentReactRootUrl,
+                logoUri: "/images/clients/react.svg"
+            );
+        }
+
         
         
 

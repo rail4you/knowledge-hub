@@ -7,6 +7,9 @@ WORKDIR /src
 # 复制项目文件
 COPY . .
 
+# 替换 NuGet.Config：移除本地源（Docker 内不存在 /Users/... 路径），仅保留 nuget.org
+RUN printf '<?xml version="1.0" encoding="utf-8"?>\n<configuration>\n  <packageSources>\n    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />\n  </packageSources>\n</configuration>' > NuGet.Config
+
 # 还原依赖并发布
 RUN dotnet restore src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj && \
     dotnet publish src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj \

@@ -16,7 +16,100 @@ export interface Course {
   teacherName?: string | null;
   studentCount?: number;
   chapterCount?: number;
+  isEnrolled?: boolean;
+  progress?: number;
+  status?: number;
   creationTime?: string;
+}
+
+export interface CourseDetail {
+  id?: string;
+  title?: string;
+  description?: string;
+  coverImageUrl?: string;
+  major?: string;
+  semester?: string;
+  credits?: number;
+  semesterHours?: number;
+  difficulty?: number;
+  teacherName?: string;
+  studentCount?: number;
+  isEnrolled?: boolean;
+  progress?: number;
+  chapters?: ChapterDto[];
+}
+
+export interface ChapterDto {
+  id: string;
+  courseId?: string;
+  parentId?: string;
+  title?: string;
+  description?: string;
+  sortOrder?: number;
+  children?: ChapterDto[];
+}
+
+export interface ExerciseDto {
+  id: string;
+  courseId?: string;
+  chapterId?: string;
+  title?: string;
+  questionContent?: string;
+  type: ExerciseType;
+  options?: string;
+  answer?: string;
+  answerExplanation?: string;
+  difficulty: number;
+  score: number;
+  sortOrder?: number;
+}
+
+export enum ExerciseType {
+  SingleChoice = 0,
+  MultiChoice = 1,
+  TrueFalse = 2,
+  FillBlank = 3,
+  ShortAnswer = 4,
+  Essay = 5,
+  CaseAnalysis = 6,
+}
+
+export interface StudentExerciseRecordDto {
+  id?: string;
+  exerciseId?: string;
+  courseId?: string;
+  chapterId?: string;
+  studentAnswer?: string;
+  isCorrect?: boolean;
+  score?: number;
+  timeSpentTicks?: number;
+  selfAssessment?: SelfAssessment;
+  completedAt?: string;
+  hasViewedAnswer?: boolean;
+  creationTime?: string;
+}
+
+export enum SelfAssessment {
+  None = 0,
+  Correct = 1,
+  PartiallyCorrect = 2,
+  Incorrect = 3,
+}
+
+export interface SaveExerciseRecordInput {
+  courseId: string;
+  chapterId?: string;
+  exerciseId: string;
+  studentAnswer: string;
+  timeSpentTicks: number;
+}
+
+export interface ChapterProgressDto {
+  chapterId?: string;
+  chapterTitle?: string;
+  totalExercises?: number;
+  completedExercises?: number;
+  correctExercises?: number;
 }
 
 export interface Resource {
