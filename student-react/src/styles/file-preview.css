@@ -1,0 +1,351 @@
+/* ========================================
+   File Preview Modal
+   ======================================== */
+
+.file-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 24px;
+  overflow-y: auto;
+  backdrop-filter: blur(4px);
+}
+
+.file-preview-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2);
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.file-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.file-preview-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+  margin: 0;
+}
+
+.file-preview-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.file-preview-close:hover {
+  background: #f3f4f6;
+  color: var(--foreground);
+}
+
+.file-preview-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 400px;
+}
+
+.file-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ========================================
+   Viewer Common
+   ======================================== */
+
+.file-viewer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 420px;
+}
+
+.file-viewer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 24px 0;
+  flex-wrap: wrap;
+}
+
+.viewer-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+  color: #344054;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewer-toolbar-btn:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.viewer-toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.file-viewer-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+}
+
+.file-viewer-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  color: #d92d20;
+  padding: 24px;
+  font-size: 14px;
+}
+
+.file-viewer-unsupported {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  padding: 24px;
+}
+
+/* ========================================
+   PDF Viewer
+   ======================================== */
+
+.file-viewer-canvas-container {
+  display: flex;
+  justify-content: center;
+  padding: 16px 24px 24px;
+  overflow: auto;
+  max-height: calc(100vh - 280px);
+}
+
+.file-viewer-canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ========================================
+   Word Viewer
+   ======================================== */
+
+.word-viewer-content {
+  padding: 24px;
+  overflow: auto;
+  max-height: calc(100vh - 240px);
+}
+
+.word-viewer-html {
+  color: var(--foreground);
+  line-height: 1.75;
+}
+
+.word-viewer-html h1 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 1em 0 0.5em;
+}
+
+.word-viewer-html h2 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 0.8em 0 0.4em;
+}
+
+.word-viewer-html h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+}
+
+.word-viewer-html p {
+  margin: 0.5em 0;
+}
+
+.word-viewer-html table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.word-viewer-html th,
+.word-viewer-html td {
+  border: 1px solid #d0d5dd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.word-viewer-html th {
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+.word-viewer-html img {
+  max-width: 100%;
+  height: auto;
+}
+
+.word-viewer-html ul,
+.word-viewer-html ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.word-viewer-html li {
+  margin: 0.25em 0;
+}
+
+/* ========================================
+   PPTX Viewer
+   ======================================== */
+
+.pptx-viewer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 420px;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  border-radius: 0;
+}
+
+.pptx-slide-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 8px 24px 0;
+  min-height: 420px;
+  max-height: calc(90vh - 280px);
+  overflow: auto;
+}
+
+.pptx-slide-canvas {
+  display: block;
+  width: min(100%, 1280px);
+  height: auto;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+.pptx-rendering-mask {
+  position: absolute;
+  inset: 8px 24px 0;
+  background: rgba(248, 250, 252, 0.72);
+  backdrop-filter: blur(2px);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  color: #475467;
+  font-size: 14px;
+}
+
+.pptx-page-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 24px 16px;
+}
+
+.pptx-page-pill {
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #344054;
+  border-radius: 999px;
+  min-width: 36px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pptx-page-pill:hover {
+  border-color: #2563eb;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.pptx-page-pill.active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.pptx-page-ellipsis {
+  display: flex;
+  align-items: center;
+  color: #667085;
+  font-size: 13px;
+  padding: 0 4px;
+}
+
+/* ========================================
+   Text Viewer
+   ======================================== */
+
+.text-viewer-content {
+  padding: 24px;
+  overflow: auto;
+  max-height: calc(100vh - 240px);
+  background: #f9fafb;
+}
