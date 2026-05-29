@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   GraduationCap,
   Library,
@@ -15,20 +15,29 @@ import { useAuth } from '../../lib/auth';
 
 const mainNavItems = [
   { path: '/', label: '首页', icon: null },
-  { path: '#resources', label: '资源库', icon: Library },
-  { path: '#courses', label: '课程', icon: BookOpen },
-  { path: '#materials', label: '素材', icon: FileText },
-  { path: '#news', label: '资讯', icon: Newspaper },
+  { path: 'resources', label: '资源库', icon: Library },
+  { path: 'courses', label: '课程', icon: BookOpen },
+  { path: 'news', label: '资讯', icon: Newspaper },
 ];
 
 export function TopBar() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  // Build nav paths with tenant context when available
+  const navItems = useMemo(() => {
+    const tenantId = auth.currentTenantId;
+    return mainNavItems.map(item => ({
+      ...item,
+      path: item.path === '/' ? '/' : tenantId ? `/tenant/${tenantId}/${item.path}` : `/${item.path}`,
+    }));
+  }, [auth.currentTenantId]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -67,7 +76,7 @@ export function TopBar() {
 
         {/* Main Nav */}
         <nav className="hidden lg:flex items-center gap-1 ml-8">
-          {mainNavItems.map(item => {
+          {navItems.map(item => {
             const Icon = item.icon;
             return (
               <Link

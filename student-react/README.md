@@ -12,9 +12,9 @@ npm run dev
 
 默认地址：
 
-- React: `http://localhost:5173`
+- React: `http://localhost:3000`
 - API: `https://localhost:44305`
-- OIDC Client: `KnowledgeHub_StudentReact`
+- OIDC Client: `KnowledgeHub_App`（与 Angular 管理端共享登录态）
 
 ## 当前范围
 
@@ -28,7 +28,7 @@ npm run dev
 
 ## 后端配置
 
-本项目需要 API 放行 `http://localhost:5173`，并通过 DbMigrator 写入 OpenIddict client。
+本项目需要 API 放行 `http://localhost:3000`，并通过 DbMigrator 写入 OpenIddict client。
 
 如果新增 client 后首次运行，请执行：
 

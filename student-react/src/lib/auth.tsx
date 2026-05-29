@@ -3,12 +3,15 @@ import type { PropsWithChildren } from 'react';
 import { User, UserManager, WebStorageStateStore } from 'oidc-client-ts';
 import { appConfig } from './config';
 
+export type PortalKind = 'student' | 'staff';
+const authorityUrl = appConfig.oidcAuthority.replace(/\/$/, '');
+
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (tenantId?: string) => Promise<void>;
-  loginByAccount: (username: string, password: string, tenantId?: string) => Promise<{ success: boolean; error?: string }>;
+  loginByAccount: (username: string, password: string, tenantId?: string) => Promise<{ success: boolean; error?: string; portal?: PortalKind }>;
   logout: () => Promise<void>;
   completeLogin: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
@@ -16,6 +19,7 @@ interface AuthContextValue {
   setCurrentTenantId: (tenantId: string | null) => void;
   tenants: { id: string | null; name: string }[];
   loadTenants: () => Promise<void>;
+  getPortalKind: () => PortalKind;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -38,7 +42,34 @@ export async function getAccessTokenFromStorage(): Promise<string | null> {
 async function fetchTenants(): Promise<{ id: string | null; name: string }[]> {
   const response = await fetch(`${appConfig.apiUrl}/api/public/tenants`);
   const data = await response.json();
-  return data;
+  return [{ id: null, name: '全局' }, ...data];
+}
+
+function decodeJwtPayload(token: string): Record<string, any> {
+  const [, payload] = token.split('.');
+  if (!payload) return {};
+  const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+  try {
+    return JSON.parse(window.atob(padded));
+  } catch {
+    return {};
+  }
+}
+
+function normalizeRoles(payload: Record<string, any>): string[] {
+  const roleClaim =
+    payload.role ??
+    payload.roles ??
+    payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+  if (!roleClaim) return [];
+  return Array.isArray(roleClaim) ? roleClaim : [roleClaim];
+}
+
+function portalFromRoles(roles: string[]): PortalKind {
+  const normalized = roles.map(role => role.toLowerCase());
+  const staffRoles = ['admin', 'leagueadmin', 'schooladmin', 'teacher'];
+  return normalized.some(role => staffRoles.includes(role)) ? 'staff' : 'student';
 }
 
 function createUserManager(extraQueryParams: Record<string, string> = {}) {
@@ -48,7 +79,7 @@ function createUserManager(extraQueryParams: Record<string, string> = {}) {
     redirect_uri: `${appConfig.appBaseUrl}/auth/callback`,
     post_logout_redirect_uri: appConfig.appBaseUrl,
     response_type: 'code',
-    scope: 'offline_access KnowledgeHub',
+    scope: 'offline_access openid profile email phone roles KnowledgeHub',
     automaticSilentRenew: false,
     userStore: new WebStorageStateStore({ store: window.localStorage }),
     extraQueryParams,
@@ -58,7 +89,7 @@ function createUserManager(extraQueryParams: Record<string, string> = {}) {
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
+  const [currentTenantId, setCurrentTenantIdState] = useState<string | null>(() => localStorage.getItem('knowledgehub.tenantId'));
   const [tenants, setTenants] = useState<{ id: string | null; name: string }[]>([]);
 
   // 创建默认的 UserManager
@@ -122,6 +153,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, []);
 
+  const setCurrentTenantId = useCallback((tenantId: string | null) => {
+    setCurrentTenantIdState(tenantId);
+    if (tenantId) {
+      localStorage.setItem('knowledgehub.tenantId', tenantId);
+    } else {
+      localStorage.removeItem('knowledgehub.tenantId');
+    }
+  }, []);
+
   // OIDC 登录（通过重定向到授权页面）
   const login = useCallback(async (tenantId?: string) => {
     const effectiveTenantId = tenantId ?? currentTenantId;
@@ -140,7 +180,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     username: string,
     password: string,
     tenantId?: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; error?: string; portal?: PortalKind }> => {
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -156,10 +196,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         client_id: appConfig.oidcClientId,
         username,
         password,
-        scope: 'offline_access KnowledgeHub',
+        scope: 'offline_access openid profile email phone roles KnowledgeHub',
       });
 
-      const response = await fetch(`${appConfig.oidcAuthority}/connect/token`, {
+      const response = await fetch(`${authorityUrl}/connect/token`, {
         method: 'POST',
         headers,
         body: params.toString(),
@@ -168,26 +208,30 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const data = await response.json();
 
       if (data.access_token) {
+        const payload = decodeJwtPayload(data.access_token);
+        const roles = normalizeRoles(payload);
+        const portal = portalFromRoles(roles);
         // 保存租户 ID
-        if (tenantId) {
-          setCurrentTenantId(tenantId);
-        }
+        setCurrentTenantId(tenantId || null);
         
         // 创建用户并保存到 storage
         const userData = {
           access_token: data.access_token,
           refresh_token: data.refresh_token,
           token_type: 'Bearer',
-          expires_at: Date.now() + (data.expires_in * 1000),
+          expires_at: Math.floor(Date.now() / 1000) + data.expires_in,
           scope: data.scope,
           profile: {
-            sub: username,
-            iss: '',
-            aud: '',
-            exp: 0,
-            iat: 0,
+            ...payload,
+            sub: payload.sub || username,
+            iss: payload.iss || '',
+            aud: payload.aud || '',
+            exp: payload.exp || 0,
+            iat: payload.iat || 0,
             email: username,
-            username: username,
+            username: payload.name || payload.unique_name || username,
+            roles,
+            portal,
           } as any,
         };
         
@@ -195,7 +239,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await userManager.storeUser(user);
         setUser(user);
         
-        return { success: true };
+        return { success: true, portal };
       } else {
         return { success: false, error: data.error_description || '登录失败' };
       }
@@ -203,14 +247,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       console.error('Login error:', err);
       return { success: false, error: '登录失败，请检查网络连接' };
     }
-  }, [userManager]);
+  }, [setCurrentTenantId, userManager]);
 
   // 保持向后兼容
   const loginByAccount = loginByPassword;
 
   const logout = useCallback(async () => {
-    await userManager.signoutRedirect();
-  }, [userManager]);
+    await userManager.removeUser();
+    setUser(null);
+    setCurrentTenantId(null);
+    window.location.assign(appConfig.appBaseUrl);
+  }, [setCurrentTenantId, userManager]);
 
   const completeLogin = useCallback(async () => {
     const loggedInUser = await userManager.signinRedirectCallback();
@@ -222,6 +269,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (!currentUser || currentUser.expired) return null;
     return currentUser.access_token;
   }, [user, userManager]);
+
+  const getPortalKind = useCallback((): PortalKind => {
+    const profile = user?.profile as any;
+    if (profile?.portal === 'staff') return 'staff';
+    return portalFromRoles(normalizeRoles(profile || {}));
+  }, [user]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -237,8 +290,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setCurrentTenantId,
       tenants,
       loadTenants,
+      getPortalKind,
     }),
-    [completeLogin, getAccessToken, isLoading, login, logout, user, currentTenantId, tenants, loadTenants, loginByPassword],
+    [completeLogin, getAccessToken, getPortalKind, isLoading, login, logout, user, currentTenantId, tenants, loadTenants, loginByPassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

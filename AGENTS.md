@@ -613,3 +613,130 @@ openPermissions(role: IdentityRoleDto) {
 | 问题 | 原因 | 解决方案 |
 |------|------|---------|
 | POST 请求返回 400 错误，日志显示 "Antiforgery token validation failed" | 使用 JWT 认证的 API Controller 的 POST 方法被 antiforgery 中间件拦截，Angular `RestService` 不自动处理 antiforgery token | 在 Controller 或 Action 上添加 `[IgnoreAntiforgeryToken]` 属性 |
+
+### React 学生端 API 调用模式
+
+#### 1. POST AppService 公开访问（需要 AllowAnonymous + IgnoreAntiforgeryToken）
+
+当 React 前端需要公开调用 ABP AppService 的 POST 方法时（无需登录），必须同时加两个属性：
+
+```csharp
+// src/KnowledgeHub.Application/Search/SearchAppService.cs
+[IgnoreAntiforgeryToken]  // 防止浏览器端 POST 被 ABP antiforgery 中间件拦截返回 400
+[AllowAnonymous]          // 允许未登录用户访问
+public class SearchAppService : KnowledgeHubAppService, ISearchAppService
+{
+    public async Task<SearchResultDto> SearchAsync(SearchQueryDto input) { ... }
+}
+```
+
+**为什么 curl 正常但浏览器 400？**
+- curl 不发送 cookies，ABP antiforgery 检查跳过
+- 浏览器可能携带 cookies（即使是跨端口），触发 antiforgery 验证
+- Vite proxy 将请求从 `http://localhost:3000` 转发到 `https://localhost:44305`
+
+**排查方法：**
+```bash
+# 用 curl 测试 POST API（模拟前端请求）
+curl -sk "http://localhost:3000/api/app/search/search" -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"query":"test","skipCount":0,"maxResultCount":5}'
+```
+
+#### 2. ABP AppService 路由规则
+
+ABP 根据方法名自动生成路由，前端需要精准匹配：
+
+| 方法签名 | 生成的路由 | HTTP 方法 |
+|----------|-----------|-----------|
+| `GetAsync(Guid id)` | `/api/app/{service}/{id}` | GET |
+| `GetListAsync(...)` | `/api/app/{service}` | GET |
+| `CreateAsync(...)` | `/api/app/{service}` | POST |
+| `GetByCourseAsync(Guid courseId)` | `/api/app/{service}/by-course/{courseId}` | GET |
+| `GetFilteredListAsync(...)` | `/api/app/{service}/filtered-list` | GET |
+| `SearchAsync(SearchQueryDto)` | `/api/app/{service}/search` | POST |
+| `GetHomeDataAsync(Guid tenantId)` | `/api/app/{service}/home-data/{tenantId}` | GET |
+
+**关键规则：**
+- 方法名去掉 `Async` 后缀，转为 kebab-case
+- 简单类型参数（Guid, string）放在路径中：`/api/app/{service}/{action}/{id}`
+- 复杂类型参数（DTO）作为 query string（GET）或 request body（POST）
+- `ICrudAppService` 自动生成完整 CRUD 路由
+
+**验证路由是否正确：**
+```bash
+curl -sk https://localhost:44305/api/abp/api-definition | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+for k, v in d['modules']['app']['controllers'].items():
+    if 'Search' in k:
+        for name, action in v['actions'].items():
+            print(f'{action[\"httpMethod\"]} {action[\"url\"]}')"
+```
+
+#### 3. React 前端 API 调用模式
+
+```typescript
+// student-react/src/lib/api.ts
+
+// GET with path params
+const { data } = await api.get<CourseDetail>(`/api/app/course/${courseId}/detail`);
+
+// GET with query params
+const { data } = await api.get<PagedResult<Resource>>('/api/app/resource', {
+  params: { skipCount: 0, maxResultCount: 20 },
+});
+
+// POST with body
+const { data } = await api.post('/api/app/search/search', {
+  query: 'keyword',
+  skipCount: 0,
+  maxResultCount: 12,
+});
+
+// POST with path params (one-arg methods)
+const { data } = await api.post(`/api/app/resource/collect/${resourceId}`);
+```
+
+#### 4. 登录后才能调用的 API
+
+部分 API（收藏、习题提交等）需要认证。前端调用模式：
+
+```typescript
+const toggleCollection = (r: Resource) => {
+  if (!auth.isAuthenticated) return;  // 未登录静默跳过
+  api.post(`/api/app/resource/collect/${r.id}`)
+    .then(() => { /* success */ })
+    .catch(() => { /* silent fail */ });
+};
+```
+
+请求拦截器自动附加 Bearer token（`student-react/src/lib/api.ts`）：
+```typescript
+api.interceptors.request.use(async (config) => {
+  const token = await getAccessTokenFromStorage();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+```
+
+#### 5. 租户上下文传递
+
+```typescript
+import { setTenantId } from '../lib/api';
+
+useEffect(() => {
+  if (tenantId) setTenantId(tenantId);  // 设置 __tenant header
+}, [tenantId]);
+```
+
+#### 6. 常见 400 错误排查清单
+
+| 现象 | 可能原因 | 检查方法 |
+|------|---------|----------|
+| curl 返回 200，浏览器 400 | antiforgery 拦截 | 给 AppService 加 `[IgnoreAntiforgeryToken]` |
+| 所有 API 返回 400 | `Content-Type` 缺失 | 确认 axios 请求带 `application/json` |
+| 路径参数 API 返回 400/404 | 参数在路径还是 query？ | 用 api-definition 确认路由，GET 简单类型用路径，复杂类型用 query |
+| POST 返回 400 "The input field is required" | JSON key 大小写不对 | ABP 接受 camelCase，检查 payload key 名 |
+| 返回 302 重定向 | 需登录但未登录 | 给 AppService 或方法加 `[AllowAnonymous]` |
+| 租户数据为空 | 未传 `__tenant` header | 调用 `setTenantId(tenantId)` |

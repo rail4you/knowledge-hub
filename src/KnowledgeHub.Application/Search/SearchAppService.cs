@@ -4,11 +4,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Application.Search;
 
+[IgnoreAntiforgeryToken]
+[AllowAnonymous]
 public class SearchAppService : KnowledgeHubAppService, ISearchAppService
 {
     private readonly IMeiliSearchService _meiliSearchService;

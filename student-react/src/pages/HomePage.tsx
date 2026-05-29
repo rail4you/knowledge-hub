@@ -16,6 +16,7 @@ import {
   Bot,
 } from 'lucide-react';
 import { getLeagueApprovedResources, getPublishedCourses, getPublishedNews } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { compactNumber, formatDate } from '../lib/utils';
 import type { Course, NewsArticle, Resource } from '../lib/types';
 
@@ -36,6 +37,7 @@ const tabNavigation = [
 ];
 
 export function HomePage() {
+  const auth = useAuth();
   const [coursesQuery, resourcesQuery, newsQuery] = useQueries({
     queries: [
       { queryKey: ['courses', 'published'], queryFn: () => getPublishedCourses(8) },
@@ -52,6 +54,28 @@ export function HomePage() {
 
   return (
     <>
+      <header className="bg-white border-b border-slate-200">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link to="/" className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white">
+              <GraduationCap className="h-6 w-6" />
+            </span>
+            <span className="text-lg font-semibold text-slate-950">易课通资源库</span>
+          </Link>
+          <div className="flex items-center gap-3">
+            {auth.isAuthenticated ? (
+              <Link to="/student" className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-white">
+                进入学习中心
+              </Link>
+            ) : (
+              <Link to="/login" className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-white">
+                登录
+              </Link>
+            )}
+          </div>
+        </div>
+      </header>
+
       {/* Tab Navigation */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -61,7 +85,7 @@ export function HomePage() {
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
+                  to={auth.isAuthenticated ? item.path : (item.path.includes('favorites') || item.path.includes('agent-tasks') ? '/login' : '/resources')}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-primary hover:bg-slate-50 transition whitespace-nowrap"
                 >
                   <Icon className="h-4 w-4" />
@@ -78,28 +102,28 @@ export function HomePage() {
           <div className="flex flex-col justify-center">
             <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-1 text-sm backdrop-blur">
               <Flame className="h-4 w-4 text-amber-200" />
-              职业教育资源库学生入口
+              职业教育资源库
             </div>
             <h1 className="max-w-3xl text-4xl font-semibold tracking-normal sm:text-5xl">
-              学课程、查资源、看资讯，一站式开始学习
+              面向职业教育的资源库首页
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-white/88">
-              面向学生的独立 React 门户预览版，已连接 KnowledgeHub 后端课程、资源和资讯接口。
+              游客可以预览公开资源、课程和资讯；登录后学生进入 React 学习中心，教师和管理端进入原 Angular 工作台。
             </p>
 
             <div className="mt-8 flex max-w-2xl items-center gap-2 rounded-lg bg-white p-2 shadow-xl shadow-sky-950/20">
               <Search className="ml-3 h-5 w-5 text-slate-400" />
               <Link 
-                to="/student/resources?tab=search"
+                to={auth.isAuthenticated ? '/student/resources?tab=search' : '/resources'}
                 className="h-11 min-w-0 flex-1 border-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
               >
                 搜索课程、资源、文档、视频
               </Link>
               <Link 
-                to="/student/resources?tab=search"
+                to={auth.isAuthenticated ? '/student/resources?tab=search' : '/login'}
                 className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground"
               >
-                搜索
+                {auth.isAuthenticated ? '搜索' : '登录后搜索'}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

@@ -19,6 +19,7 @@ import { CourseDetailPage } from './pages/CourseDetailPage';
 import { MicroMajorListPage } from './pages/MicroMajorListPage';
 import { MicroMajorDetailPage } from './pages/MicroMajorDetailPage';
 import { ResourceDetailPage } from './pages/ResourceDetailPage';
+import { ResourceListPage } from './pages/ResourceListPage';
 function PlaceholderPage({ title }: { title: string }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] text-[#999]">
@@ -48,7 +49,7 @@ function AppRoutes() {
 
         {/* Tenant portal (Phase 2 - placeholder for now) */}
         <Route path="/tenant/:tenantId" element={<TenantPortalPage />} />
-        <Route path="/tenant/:tenantId/resources" element={<PlaceholderPage title="素材列表" />} />
+        <Route path="/tenant/:tenantId/resources" element={<ResourceListPage />} />
         <Route path="/tenant/:tenantId/resources/:resourceId" element={<ResourceDetailPage />} />
         <Route path="/tenant/:tenantId/courses" element={<CoursesPage />} />
         <Route path="/tenant/:tenantId/courses/:courseId" element={<CourseDetailPage />} />

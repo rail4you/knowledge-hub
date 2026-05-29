@@ -99,6 +99,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
                 serverBuilder.AddEncryptionKey(new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
                     System.Security.Cryptography.RandomNumberGenerator.GetBytes(256 / 8)));
                 serverBuilder.DisableAccessTokenEncryption();
+                serverBuilder.SetIssuer(new Uri(configuration["AuthServer:Authority"]!));
             });
         }
 

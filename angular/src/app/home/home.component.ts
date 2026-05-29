@@ -27,7 +27,8 @@ export class HomeComponent implements OnInit {
     if (this.hasLoggedIn) {
       const returnUrl = this.route.snapshot.queryParams['returnUrl'];
       if (!returnUrl && this.isStudent) {
-        this.router.navigate(['/student/resources']);
+        // 学生登录后跳转到 React 学生端门户
+        window.location.href = 'http://localhost:3000';
       }
     }
   }

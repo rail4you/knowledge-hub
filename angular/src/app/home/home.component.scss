@@ -78,6 +78,27 @@
   }
 }
 
+.student-react-btn {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  padding: 0.75rem 1.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  margin-top: 0.5rem;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: white;
+    color: white;
+  }
+}
+
 .hero-actions {
   display: flex;
   align-items: center;

@@ -87,12 +87,14 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         PageIndexRepository = pageIndexRepository;
     }
 
+    [AllowAnonymous]
     public virtual async Task<ResourceDto> GetAsync(Guid id)
     {
         var resource = await ResourceRepository.GetWithDetailsAsync(id);
         return ObjectMapper.Map<Resource, ResourceDto>(resource);
     }
 
+    [AllowAnonymous]
     public virtual async Task<PagedResultDto<ResourceDto>> GetListAsync(PagedAndSortedResultRequestDto input)
     {
         var totalCount = await ResourceRepository.GetCountAsync("");
@@ -109,12 +111,14 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         );
     }
 
+    [AllowAnonymous]
     public virtual async Task<ResourceDto> GetWithVersionsAsync(Guid id)
     {
         var resource = await ResourceRepository.GetWithDetailsAsync(id);
         return ObjectMapper.Map<Resource, ResourceDto>(resource);
     }
 
+    [AllowAnonymous]
     public virtual async Task<PagedResultDto<ResourceDto>> GetFilteredListAsync(ResourceListQueryDto input)
     {
         var query = await ResourceRepository.GetQueryableAsync();
@@ -516,6 +520,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         }
     }
 
+    [AllowAnonymous]
     public virtual async Task<List<ResourceCategoryDto>> GetCategoriesAsync()
     {
         var categories = await CategoryRepository.GetListAsync();

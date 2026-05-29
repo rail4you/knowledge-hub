@@ -63,6 +63,10 @@ public class OpenIddictDataSeedContributor : OpenIddictDataSeedContributorBase, 
         if (!consoleAndAngularClientId.IsNullOrWhiteSpace())
         {
             var consoleAndAngularClientRootUrl = configurationSection["KnowledgeHub_App:RootUrl"]?.TrimEnd('/');
+            var consoleAndAngularRedirectUrls = GetConfiguredUrls(
+                configurationSection["KnowledgeHub_App:RedirectAllowedUrls"],
+                consoleAndAngularClientRootUrl
+            );
             await CreateOrUpdateApplicationAsync(
                 applicationType: OpenIddictConstants.ApplicationTypes.Web,
                 name: consoleAndAngularClientId!,
@@ -79,8 +83,8 @@ public class OpenIddictDataSeedContributor : OpenIddictDataSeedContributorBase, 
                     "Impersonation"
                 },
                 scopes: commonScopes,
-                redirectUris: new List<string> { consoleAndAngularClientRootUrl },
-                postLogoutRedirectUris: new List<string> { consoleAndAngularClientRootUrl },
+                redirectUris: consoleAndAngularRedirectUrls,
+                postLogoutRedirectUris: consoleAndAngularRedirectUrls,
                 clientUri: consoleAndAngularClientRootUrl,
                 logoUri: "/images/clients/angular.svg"
             );
@@ -99,6 +103,7 @@ public class OpenIddictDataSeedContributor : OpenIddictDataSeedContributorBase, 
                 secret: null,
                 grantTypes: new List<string> {
                     OpenIddictConstants.GrantTypes.AuthorizationCode,
+                    OpenIddictConstants.GrantTypes.Password,
                     OpenIddictConstants.GrantTypes.RefreshToken
                 },
                 scopes: commonScopes,
@@ -140,5 +145,25 @@ public class OpenIddictDataSeedContributor : OpenIddictDataSeedContributorBase, 
         }
 
 
+    }
+
+    private static List<string> GetConfiguredUrls(string? configuredUrls, string? fallbackUrl)
+    {
+        var urls = new List<string>();
+
+        if (!configuredUrls.IsNullOrWhiteSpace())
+        {
+            foreach (var url in configuredUrls!.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                urls.Add(url.TrimEnd('/'));
+            }
+        }
+
+        if (urls.Count == 0 && !fallbackUrl.IsNullOrWhiteSpace())
+        {
+            urls.Add(fallbackUrl!);
+        }
+
+        return urls;
     }
 }

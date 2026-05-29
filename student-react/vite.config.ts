@@ -11,10 +11,35 @@ export default defineConfig({
     include: ['chart.js/auto'],
   },
   server: {
-    port: 5173,
+    port: 3000,
     strictPort: true,
     proxy: {
       '/api': {
+        target: 'https://localhost:44305',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/connect': {
+        target: 'https://localhost:44305',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/.well-known': {
+        target: 'https://localhost:44305',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/signin-oidc': {
+        target: 'https://localhost:44305',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/signout-callback-oidc': {
+        target: 'https://localhost:44305',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/AbpApplicationConfiguration': {
         target: 'https://localhost:44305',
         changeOrigin: true,
         secure: false,
@@ -24,6 +49,31 @@ export default defineConfig({
   preview: {
     proxy: {
       '/api': {
+        target: 'https://localhost:44305',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/connect': {
+        target: 'https://localhost:44305',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/.well-known': {
+        target: 'https://localhost:44305',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/signin-oidc': {
+        target: 'https://localhost:44305',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/signout-callback-oidc': {
+        target: 'https://localhost:44305',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/AbpApplicationConfiguration': {
         target: 'https://localhost:44305',
         changeOrigin: true,
         secure: false,

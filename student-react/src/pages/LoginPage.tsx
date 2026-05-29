@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Loader2 } from 'lucide-react';
+import { Building2, GraduationCap, Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { appConfig } from '../lib/config';
 
 export function LoginPage() {
   const auth = useAuth();
@@ -9,9 +10,9 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [username, setUsername] = useState('zmq');
-  const [password, setPassword] = useState('123456');
-  const [selectedTenant, setSelectedTenant] = useState('3a2034d1-6c43-2219-8149-45182659c849'); // qidi
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [selectedTenant, setSelectedTenant] = useState('');
 
   // 加载租户列表
   useEffect(() => {
@@ -21,9 +22,13 @@ export function LoginPage() {
   // 如果已经登录，跳转到首页
   useEffect(() => {
     if (auth.isAuthenticated) {
-      navigate('/');
+      if (auth.getPortalKind() === 'staff') {
+        window.location.assign(appConfig.adminUrl);
+      } else {
+        navigate('/');
+      }
     }
-  }, [auth.isAuthenticated, navigate]);
+  }, [auth, auth.isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +42,11 @@ export function LoginPage() {
         setError(result.error || '登录失败');
         setIsLoading(false);
       } else {
-        // 登录成功，跳转到首页
-        navigate('/');
+        if (result.portal === 'staff') {
+          window.location.assign(appConfig.adminUrl);
+        } else {
+          navigate('/');
+        }
       }
     } catch (err) {
       setError('登录失败，请检查网络连接');
@@ -47,7 +55,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-cyan-500 to-teal-500 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[linear-gradient(135deg,#0b5fc4_0%,#0f8fbe_48%,#13a67d_100%)] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
@@ -56,8 +64,8 @@ export function LoginPage() {
               <GraduationCap className="h-8 w-8" />
             </div>
             <div>
-              <div className="text-2xl font-bold">学生学习中心</div>
-              <div className="text-sm text-white/80">KnowledgeHub Student Portal</div>
+              <div className="text-2xl font-bold">易课通资源库</div>
+              <div className="text-sm text-white/80">统一登录入口</div>
             </div>
           </div>
         </div>
@@ -76,18 +84,20 @@ export function LoginPage() {
             {/* 租户选择 */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">租户</label>
+              <div className="relative">
+                <Building2 className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
               <select
                 value={selectedTenant}
                 onChange={e => setSelectedTenant(e.target.value)}
-                className="w-full h-11 rounded-lg border border-slate-300 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
+                className="w-full h-11 rounded-lg border border-slate-300 pl-9 pr-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
               >
-                <option value="">选择租户</option>
                 {auth.tenants.map(t => (
                   <option key={t.id || 'global'} value={t.id || ''}>
                     {t.name}
                   </option>
                 ))}
               </select>
+              </div>
             </div>
 
             {/* 用户名 */}
@@ -134,7 +144,7 @@ export function LoginPage() {
           </form>
 
           <div className="mt-6 text-center text-xs text-slate-500">
-            <p>示例账号: zmq / 123456 (qidi 租户)</p>
+            <p>学生账号进入 React 学生端，教师和管理账号进入 Angular 管理端。</p>
           </div>
         </div>
       </div>
