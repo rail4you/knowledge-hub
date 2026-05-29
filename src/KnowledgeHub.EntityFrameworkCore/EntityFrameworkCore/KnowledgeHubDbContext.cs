@@ -26,6 +26,7 @@ using KnowledgeHub.DoubleHigh;
 using KnowledgeHub.Employment;
 using KnowledgeHub.TeachingAgents;
 using KnowledgeHub.EntityFrameworkCore.TeachingAgents;
+using KnowledgeHub.KnowledgeGraph;
 
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -121,11 +122,16 @@ public class KnowledgeHubDbContext :
     public DbSet<NewsComment> NewsComments { get; set; }
     public DbSet<NewsReaction> NewsReactions { get; set; }
 
+    // KnowledgeGraph entities
+    public DbSet<KnowledgeNode> KnowledgeNodes { get; set; }
+    public DbSet<KnowledgeRelation> KnowledgeRelations { get; set; }
+
     // Micro major entities
     public DbSet<MicroMajor> MicroMajors { get; set; }
     public DbSet<MicroMajorCourse> MicroMajorCourses { get; set; }
     public DbSet<MicroMajorEnrollment> MicroMajorEnrollments { get; set; }
     public DbSet<MicroMajorCertificate> MicroMajorCertificates { get; set; }
+    public DbSet<MicroMajorResource> MicroMajorResources { get; set; }
 
     // Practicum entities
     public DbSet<PracticumProject> PracticumProjects { get; set; }
@@ -187,6 +193,7 @@ public class KnowledgeHubDbContext :
         builder.ConfigureAI();
         builder.ConfigureCourse();
         builder.ConfigureLearning();
+        builder.ConfigureKnowledgeGraph();
         builder.ConfigureExam();
         builder.ConfigureAlliance();
         builder.ConfigureNews();

@@ -26,8 +26,10 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
     private readonly IRepository<MicroMajorCourse, Guid> _microMajorCourseRepository;
     private readonly IRepository<MicroMajorEnrollment, Guid> _microMajorEnrollmentRepository;
     private readonly IRepository<MicroMajorCertificate, Guid> _microMajorCertificateRepository;
+    private readonly IRepository<MicroMajorResource, Guid> _microMajorResourceRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
+    private readonly IRepository<Resources.Resource, Guid> _resourceRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly ICurrentUser _currentUser;
     private readonly ICurrentTenant _currentTenant;
@@ -37,9 +39,11 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         IRepository<MicroMajorCourse, Guid> microMajorCourseRepository,
         IRepository<MicroMajorEnrollment, Guid> microMajorEnrollmentRepository,
         IRepository<MicroMajorCertificate, Guid> microMajorCertificateRepository,
+        IRepository<MicroMajorResource, Guid> microMajorResourceRepository,
         IRepository<Course, Guid> courseRepository,
         IRepository<StudentCourse, Guid> studentCourseRepository,
         IRepository<IdentityUser, Guid> userRepository,
+        IRepository<Resources.Resource, Guid> resourceRepository,
         ICurrentUser currentUser,
         ICurrentTenant currentTenant)
     {
@@ -47,9 +51,11 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         _microMajorCourseRepository = microMajorCourseRepository;
         _microMajorEnrollmentRepository = microMajorEnrollmentRepository;
         _microMajorCertificateRepository = microMajorCertificateRepository;
+        _microMajorResourceRepository = microMajorResourceRepository;
         _courseRepository = courseRepository;
         _studentCourseRepository = studentCourseRepository;
         _userRepository = userRepository;
+        _resourceRepository = resourceRepository;
         _currentUser = currentUser;
         _currentTenant = currentTenant;
     }
@@ -621,5 +627,33 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         target.IsDeleted = source.IsDeleted;
         target.DeleterId = source.DeleterId;
         target.DeletionTime = source.DeletionTime;
+    }
+
+    [AllowAnonymous]
+    public async Task<List<MicroMajorResourceDto>> GetResourcesAsync(Guid microMajorId)
+    {
+        var query = await _microMajorResourceRepository.GetQueryableAsync();
+        var bridges = query.Where(x => x.MicroMajorId == microMajorId)
+            .OrderBy(x => x.SortOrder)
+            .ToList();
+
+        var result = new List<MicroMajorResourceDto>();
+        foreach (var b in bridges)
+        {
+            var resource = await _resourceRepository.FindAsync(b.ResourceId);
+            result.Add(new MicroMajorResourceDto
+            {
+                Id = b.Id,
+                MicroMajorId = b.MicroMajorId,
+                ResourceId = b.ResourceId,
+                ResourceName = resource?.Name ?? "未知素材",
+                FileExtension = resource?.FileExtension,
+                DownloadCount = resource?.DownloadCount ?? 0,
+                SortOrder = b.SortOrder,
+                Description = b.Description
+            });
+        }
+
+        return result;
     }
 }

@@ -1,22 +1,29 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/auth';
-import { StudentLayout } from './layouts/StudentLayout';
-import { HomePage } from './pages/HomePage';
+import { PortalLayout } from './layouts/PortalLayout';
+import { PortalHomePage } from './pages/PortalHomePage';
+import { TenantPortalPage } from './pages/TenantPortalPage';
 import { LoginPage } from './pages/LoginPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
+
+// === Old Route Components (kept for backward compatibility during migration) ===
+import { StudentLayout } from './layouts/StudentLayout';
+import { HomePage } from './pages/HomePage';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { NewsPage } from './pages/NewsPage';
 import { NewsDetailPage } from './pages/NewsDetailPage';
 import { AgentTasksPage } from './pages/AgentTasksPage';
+import { CoursesPage } from './pages/CoursesPage';
+import { CourseDetailPage } from './pages/CourseDetailPage';
 
-// Placeholder components for pages not yet implemented
+import { MicroMajorListPage } from './pages/MicroMajorListPage';
+import { MicroMajorDetailPage } from './pages/MicroMajorDetailPage';
+import { ResourceDetailPage } from './pages/ResourceDetailPage';
 function PlaceholderPage({ title }: { title: string }) {
   return (
-    <div className="student-page">
-      <div className="empty-state">
-        <div className="empty-state-title">{title}</div>
-        <div className="empty-state-desc">该页面正在开发中...</div>
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-[400px] text-[#999]">
+      <div className="text-lg font-semibold mb-2">{title}</div>
+      <div className="text-sm">该页面正在开发中...</div>
     </div>
   );
 }
@@ -26,20 +33,43 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* 公开路由 */}
+      {/* ====================================== */}
+      {/* Auth routes                            */}
+      {/* ====================================== */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
-      {/* 学生端布局 - 所有学生页面都通过 /student/* 访问 */}
+      {/* ====================================== */}
+      {/* NEW: Portal routes (icve style)        */}
+      {/* ====================================== */}
+      <Route element={<PortalLayout />}>
+        {/* Home */}
+        <Route path="/" element={<PortalHomePage />} />
+
+        {/* Tenant portal (Phase 2 - placeholder for now) */}
+        <Route path="/tenant/:tenantId" element={<TenantPortalPage />} />
+        <Route path="/tenant/:tenantId/resources" element={<PlaceholderPage title="素材列表" />} />
+        <Route path="/tenant/:tenantId/resources/:resourceId" element={<ResourceDetailPage />} />
+        <Route path="/tenant/:tenantId/courses" element={<CoursesPage />} />
+        <Route path="/tenant/:tenantId/courses/:courseId" element={<CourseDetailPage />} />
+        <Route path="/tenant/:tenantId/micro-majors" element={<MicroMajorListPage />} />
+        <Route path="/tenant/:tenantId/micro-majors/:id" element={<MicroMajorDetailPage />} />
+        <Route path="/tenant/:tenantId/news" element={<NewsPage />} />
+        <Route path="/tenant/:tenantId/news/:id" element={<NewsDetailPage />} />
+      </Route>
+
+      {/* ====================================== */}
+      {/* OLD: Student routes (backward compat)  */}
+      {/* ====================================== */}
       <Route path="/student" element={
         auth.isAuthenticated ? <StudentLayout /> : <Navigate to="/login" />
       }>
         <Route index element={<Navigate to="resources" />} />
-        {/* 资源中心 — 包含资源库/我的收藏/资源搜索/搜索历史 四个 tab */}
         <Route path="resources" element={<ResourcesPage />} />
         <Route path="news" element={<NewsPage />} />
         <Route path="news/:id" element={<NewsDetailPage />} />
-        <Route path="courses" element={<PlaceholderPage title="我的课程" />} />
+        <Route path="courses" element={<CoursesPage />} />
+        <Route path="course-detail/:id" element={<CourseDetailPage />} />
         <Route path="micro-majors" element={<PlaceholderPage title="微专业" />} />
         <Route path="my-micro-majors" element={<PlaceholderPage title="我的微专业" />} />
         <Route path="practicum" element={<PlaceholderPage title="实训项目" />} />
@@ -56,17 +86,13 @@ function AppRoutes() {
         <Route path="ai/career-guidance" element={<PlaceholderPage title="职业规划" />} />
       </Route>
 
-      {/* 首页 - 独立的简单首页 */}
-      <Route path="/" element={
-        auth.isAuthenticated ? <HomePage /> : <Navigate to="/login" />
-      } />
-
-      {/* 兼容旧链接：重定向到资源中心 */}
+      {/* Compat redirects */}
+      <Route path="/resources" element={<HomePage />} />
       <Route path="/student/favorites" element={<Navigate to="/student/resources?tab=favorites" />} />
       <Route path="/student/search" element={<Navigate to="/student/resources?tab=search" />} />
       <Route path="/student/search-history" element={<Navigate to="/student/resources?tab=history" />} />
 
-      {/* 默认重定向 */}
+      {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

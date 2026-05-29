@@ -106,10 +106,11 @@ export interface SaveExerciseRecordInput {
 
 export interface ChapterProgressDto {
   chapterId?: string;
-  chapterTitle?: string;
-  totalExercises?: number;
-  completedExercises?: number;
-  correctExercises?: number;
+  chapterName?: string;
+  totalCount?: number;
+  completedCount?: number;
+  completionRate?: number;
+  correctRate?: number;
 }
 
 export interface Resource {
@@ -195,4 +196,83 @@ export interface ApplicationConfiguration {
     surName?: string;
     roles?: string[];
   };
+}
+
+// === Knowledge Resource (from Phase 0 backend) ===
+export interface KnowledgeResourceDto {
+  id: string;
+  courseId: string;
+  chapterId?: string | null;
+  name: string;
+  description?: string | null;
+  content?: string | null;
+  importanceLevel: string;
+  difficulty: number;
+  sortOrder: number;
+  tags?: string | null;
+  parentId?: string | null;
+  children?: KnowledgeResourceDto[];
+}
+
+// === Micro Major ===
+export interface MicroMajorDto {
+  id: string;
+  title: string;
+  summary?: string;
+  description?: string;
+  coverImageUrl?: string;
+  industryField?: string;
+  collaborationUnit?: string;
+  status: number;
+  courseCount: number;
+  enrollmentCount: number;
+  currentUserProgress?: number;
+  isCurrentUserEnrolled: boolean;
+}
+
+export interface MicroMajorDetailDto extends MicroMajorDto {
+  courses: MicroMajorCourseDto[];
+}
+
+export interface MicroMajorCourseDto {
+  id: string;
+  microMajorId: string;
+  courseId: string;
+  courseTitle?: string;
+  courseCoverImageUrl?: string;
+  major?: string;
+  semester?: string;
+  sortOrder: number;
+  isCore: boolean;
+}
+
+export interface MicroMajorResourceDto {
+  id: string;
+  microMajorId: string;
+  resourceId: string;
+  resourceName: string;
+  fileExtension?: string;
+  downloadCount: number;
+  sortOrder: number;
+  description?: string;
+}
+
+// === Resource Detail ===
+export interface ResourceDetail {
+  id: string;
+  name: string;
+  description?: string | null;
+  resourceType: number;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  fileExtension?: string | null;
+  fileSize?: number | null;
+  originalFileName?: string | null;
+  filePath?: string | null;
+  keywords?: string | null;
+  collectionCount?: number;
+  downloadCount?: number;
+  viewCount?: number;
+  creatorName?: string | null;
+  creationTime?: string;
 }

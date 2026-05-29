@@ -65,3 +65,15 @@ public class PagedMicroMajorRequestDto : PagedAndSortedResultRequestDto
     public string? Filter { get; set; }
     public MicroMajorStatus? Status { get; set; }
 }
+
+public class MicroMajorResourceDto
+{
+    public Guid Id { get; set; }
+    public Guid MicroMajorId { get; set; }
+    public Guid ResourceId { get; set; }
+    public string ResourceName { get; set; } = string.Empty;
+    public string? FileExtension { get; set; }
+    public int DownloadCount { get; set; }
+    public int SortOrder { get; set; }
+    public string? Description { get; set; }
+}

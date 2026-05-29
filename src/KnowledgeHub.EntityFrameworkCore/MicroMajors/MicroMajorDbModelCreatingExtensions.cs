@@ -61,5 +61,18 @@ public static class MicroMajorDbModelCreatingExtensions
             b.HasIndex(x => x.StudentId);
             b.HasIndex(x => x.TenantId);
         });
+
+        builder.Entity<MicroMajorResource>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "MicroMajorResources", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Description).HasMaxLength(500);
+
+            b.HasIndex(x => x.MicroMajorId);
+            b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => new { x.MicroMajorId, x.ResourceId }).IsUnique();
+            b.HasIndex(x => x.TenantId);
+        });
     }
 }
