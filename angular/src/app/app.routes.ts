@@ -1,4 +1,4 @@
-import { authGuard, permissionGuard } from '@abp/ng.core';
+import { authGuard, permissionGuard, eLayoutType } from '@abp/ng.core';
 import { Routes } from '@angular/router';
 import { identityUserCreateFormPropContributors, identityUserEntityPropContributors } from './identity-form-prop-contributors';
 import { installGuard } from './install/install.guard';
@@ -20,6 +20,9 @@ export const APP_ROUTES: Routes = [
     path: '',
     pathMatch: 'full',
     loadComponent: () => import('./home/home.component').then(c => c.HomeComponent),
+    data: {
+      layout: eLayoutType.empty  // 首页不使用管理端布局
+    }
   },
   {
     path: 'account',
