@@ -19,7 +19,10 @@ export const APP_ROUTES: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    loadComponent: () => import('./home/home.component').then(c => c.HomeComponent),
+    loadComponent: () => import('./home/portal-home.component').then(c => c.PortalHomeComponent),
+    data: {
+      layout: eLayoutType.empty
+    }
   },
   {
     path: 'account',
