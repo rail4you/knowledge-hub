@@ -8,6 +8,11 @@ namespace KnowledgeHub.Portal;
 public interface IPortalAppService : IApplicationService
 {
     Task<PortalHomeDataDto> GetHomeDataAsync(Guid tenantId);
+
+    /// <summary>
+    /// 获取所有租户的资源库摘要列表（公开访问）
+    /// </summary>
+    Task<List<TenantResourceSummaryDto>> GetPublicTenantListAsync();
 }
 
 public class PortalHomeDataDto
@@ -19,6 +24,21 @@ public class PortalHomeDataDto
     public List<MaterialBriefDto> LatestMaterials { get; set; } = new();
     public List<NewsBriefDto> LatestNews { get; set; } = new();
     public List<PartnerBriefDto> Partners { get; set; } = new();
+}
+
+/// <summary>
+/// 租户资源库摘要（公开访问）
+/// </summary>
+public class TenantResourceSummaryDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? LogoUrl { get; set; }
+    public string? IndustryField { get; set; }
+    public int CourseCount { get; set; }
+    public int ResourceCount { get; set; }
+    public int MicroMajorCount { get; set; }
 }
 
 public class PartnerBriefDto

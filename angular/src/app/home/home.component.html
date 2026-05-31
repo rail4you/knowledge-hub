@@ -1,4 +1,5 @@
 <div class="home-container">
+  <!-- 英雄区域 -->
   <div class="hero-section">
     <div class="hero-content">
       <div class="hero-logo">
@@ -19,7 +20,7 @@
         @if(hasLoggedIn){
           <div class="logged-in-actions">
             @if (isStudent) {
-              <a routerLink="/student/resources" class="student-portal-btn">
+              <a routerLink="/student" class="student-portal-btn">
                 <i class="fa fa-graduation-cap me-2"></i>
                 进入学生门户
               </a>
@@ -34,11 +35,12 @@
               退出登录
             </button>
           </div>
+        } @else {
+          <button (click)="login()" class="login-btn">
+            <i class="fa fa-sign-in me-2"></i>
+            登录 / 注册
+          </button>
         }
-        <a href="http://localhost:3000" target="_blank" class="student-react-btn">
-          <i class="fa fa-external-link me-2"></i>
-          访问学生端首页
-        </a>
       </div>
     </div>
     <div class="hero-decoration">
@@ -48,6 +50,66 @@
     </div>
   </div>
 
+  <!-- 租户资源库区域 -->
+  <div class="tenants-section">
+    <h2 class="section-title">资源库广场</h2>
+    <p class="section-subtitle">探索各教育机构的学习资源库</p>
+    
+    @if (loadingTenants) {
+      <div class="loading-state">
+        <nz-spin nzSimple></nz-spin>
+        <span>加载中...</span>
+      </div>
+    } @else if (tenantList().length > 0) {
+      <div class="tenants-grid">
+        @for (tenant of tenantList(); track tenant.id) {
+          <div class="tenant-card" (click)="onTenantClick(tenant)">
+            <div class="tenant-header">
+              <div class="tenant-icon">
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="40" height="40" rx="8" fill="url(#tenant-gradient)"/>
+                  <path d="M12 12h16v4H12v-4zm0 6h16v4H12v-4zm0 6h12v4H12v-4z" fill="white" opacity="0.9"/>
+                  <defs>
+                    <linearGradient id="tenant-gradient" x1="0" y1="0" x2="40" y2="40">
+                      <stop stop-color="#0056D2"/>
+                      <stop offset="1" stop-color="#1A73E8"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <div class="tenant-info">
+                <h3 class="tenant-name">{{ tenant.name }}</h3>
+                <span class="tenant-industry">{{ tenant.industryField || '教育机构' }}</span>
+              </div>
+            </div>
+            <p class="tenant-description">{{ tenant.description || '暂无描述' }}</p>
+            <div class="tenant-stats">
+              <div class="stat-item">
+                <i class="fa fa-book"></i>
+                <span>{{ tenant.courseCount }} 课程</span>
+              </div>
+              <div class="stat-item">
+                <i class="fa fa-file-text"></i>
+                <span>{{ tenant.resourceCount }} 资源</span>
+              </div>
+              <div class="stat-item">
+                <i class="fa fa-layer-group"></i>
+                <span>{{ tenant.microMajorCount }} 微专业</span>
+              </div>
+            </div>
+            <div class="tenant-action">
+              <span>预览资源库</span>
+              <i class="fa fa-arrow-right"></i>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <nz-empty nzNotFoundContent="暂无资源库"></nz-empty>
+    }
+  </div>
+
+  <!-- 功能区域 -->
   <div class="features-section">
     <h2 class="section-title">核心功能</h2>
     <div class="features-grid">
@@ -67,6 +129,7 @@
     </div>
   </div>
 
+  <!-- 统计区域 -->
   <div class="stats-section">
     <div class="stats-grid">
       <div class="stat-card">

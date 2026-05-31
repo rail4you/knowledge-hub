@@ -134,4 +134,37 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             Partners = new List<PartnerBriefDto>()
         };
     }
+
+    /// <summary>
+    /// 获取所有租户的资源库摘要列表（公开访问）
+    /// 用于主页展示所有租户
+    /// </summary>
+    public async Task<List<TenantResourceSummaryDto>> GetPublicTenantListAsync()
+    {
+        // Get all tenants
+        var tenants = await _tenantRepository.GetListAsync();
+
+        var result = new List<TenantResourceSummaryDto>();
+
+        foreach (var tenant in tenants)
+        {
+            // Count stats for each tenant
+            var courseCount = await _courseRepository.CountAsync(x => x.TenantId == tenant.Id);
+            var resourceCount = await _resourceRepository.CountAsync(x => x.TenantId == tenant.Id);
+            var microMajorCount = await _microMajorRepository.CountAsync(
+                x => x.TenantId == tenant.Id && x.Status == MicroMajorStatus.Published);
+
+            result.Add(new TenantResourceSummaryDto
+            {
+                Id = tenant.Id,
+                Name = tenant.Name,
+                Description = tenant.Name + "教育资源库",
+                CourseCount = (int)courseCount,
+                ResourceCount = (int)resourceCount,
+                MicroMajorCount = (int)microMajorCount
+            });
+        }
+
+        return result;
+    }
 }

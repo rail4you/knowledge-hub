@@ -1,19 +1,28 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { AuthService, ConfigStateService, LocalizationPipe } from '@abp/ng.core';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { CommonModule } from '@angular/common';
 import { hasRole } from '../auth/current-user.utils';
+import { PortalService, TenantResourceSummaryDto } from '../proxy/portal/portal.service';
 
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
-  imports: [LocalizationPipe, RouterLink]
+  imports: [LocalizationPipe, RouterLink, NzSpinModule, NzEmptyModule, CommonModule]
 })
 export class HomeComponent implements OnInit {
   private authService = inject(AuthService);
   private configService = inject(ConfigStateService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private portalService = inject(PortalService);
+
+  // Tenant list signals
+  tenantList = signal<TenantResourceSummaryDto[]>([]);
+  loadingTenants = signal(false);
 
   get hasLoggedIn(): boolean {
     return this.authService.isAuthenticated
@@ -24,6 +33,8 @@ export class HomeComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.loadTenants();
+    
     if (this.hasLoggedIn) {
       const returnUrl = this.route.snapshot.queryParams['returnUrl'];
       if (!returnUrl && this.isStudent) {
@@ -33,14 +44,45 @@ export class HomeComponent implements OnInit {
     }
   }
 
+  /**
+   * 加载租户列表
+   */
+  loadTenants() {
+    this.loadingTenants.set(true);
+    this.portalService.getPublicTenantList().subscribe({
+      next: (tenants) => {
+        this.tenantList.set(tenants || []);
+        this.loadingTenants.set(false);
+      },
+      error: (err) => {
+        console.error('Failed to load tenants:', err);
+        this.tenantList.set([]);
+        this.loadingTenants.set(false);
+      }
+    });
+  }
+
+  /**
+   * 点击租户卡片
+   */
+  onTenantClick(tenant: TenantResourceSummaryDto) {
+    // 未登录用户点击租户可以查看预览
+    // 如果已登录，可以跳转到该租户的学生端
+    if (this.hasLoggedIn && this.isStudent) {
+      this.router.navigate(['/student'], { queryParams: { tenantId: tenant.id } });
+    } else {
+      // 未登录用户，显示提示或跳转到登录
+      this.login();
+    }
+  }
+
   login() {
     this.authService.navigateToLogin();
   }
 
   logout() {
     this.authService.logout().subscribe(() => {
-      // 使用完整页面刷新清除 ABP 框架缓存的布局状态（LeptonX header 用户信息等）
-      // 避免 SPA 路由跳转导致退出后页面状态异常
+      // 使用完整页面刷新清除 ABP 框架缓存的布局状态
       window.location.href = '/';
     });
   }
