@@ -1,7 +1,7 @@
 <div class="student-layout">
   <header class="app-header">
     <div class="header-container">
-      <a routerLink="/student/resources" class="brand">
+      <a routerLink="/student" class="brand">
         <div class="brand-logo">
           <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect width="40" height="40" rx="8" fill="url(#logo-gradient)"/>
@@ -16,109 +16,26 @@
             </defs>
           </svg>
         </div>
-        <span class="brand-text">易课通资源库系统</span>
+        <span class="brand-text">易课通资源库</span>
       </a>
 
       <nav class="main-nav">
-        <div class="nav-group">
-          <a routerLink="/student/resources" routerLinkActive="active" class="nav-link">
-            <span nz-icon nzType="book" nzTheme="outline"></span>
-            <span>资源库</span>
-          </a>
-          <a routerLink="/student/news" routerLinkActive="active" class="nav-link">
-            <span nz-icon nzType="file-text" nzTheme="outline"></span>
-            <span>资讯中心</span>
-          </a>
-          <a routerLink="/student/favorites" routerLinkActive="active" class="nav-link">
-            <span nz-icon nzType="star" nzTheme="outline"></span>
-            <span>我的收藏</span>
-          </a>
-          <a routerLink="/student/search" routerLinkActive="active" class="nav-link">
-            <span nz-icon nzType="search" nzTheme="outline"></span>
-            <span>搜索</span>
-          </a>
-          <a routerLink="/student/search-history" routerLinkActive="active" class="nav-link">
-            <span nz-icon nzType="history" nzTheme="outline"></span>
-            <span>搜索历史</span>
-          </a>
-        </div>
-        <div class="nav-divider"></div>
-        <a routerLink="/student/courses" routerLinkActive="active" class="nav-link">
-          <span nz-icon nzType="schedule" nzTheme="outline"></span>
-          <span>我的课程</span>
+        <a routerLink="/student/resources" routerLinkActive="active" class="nav-link">
+          <span nz-icon nzType="book" nzTheme="outline"></span>
+          <span>资源库</span>
         </a>
-        <a routerLink="/student/micro-majors" routerLinkActive="active" class="nav-link">
-          <span nz-icon nzType="cluster" nzTheme="outline"></span>
-          <span>微专业</span>
+        <a routerLink="/student/news" routerLinkActive="active" class="nav-link">
+          <span nz-icon nzType="file-text" nzTheme="outline"></span>
+          <span>资讯中心</span>
         </a>
-        <a routerLink="/student/my-micro-majors" routerLinkActive="active" class="nav-link">
-          <span nz-icon nzType="id-card" nzTheme="outline"></span>
-          <span>我的微专业</span>
+        <a routerLink="/student/favorites" routerLinkActive="active" class="nav-link">
+          <span nz-icon nzType="star" nzTheme="outline"></span>
+          <span>我的收藏</span>
         </a>
-        <a routerLink="/student/practicum" routerLinkActive="active" class="nav-link">
-          <span nz-icon nzType="experiment" nzTheme="outline"></span>
-          <span>实训项目</span>
-        </a>
-        <a routerLink="/student/my-practicum" routerLinkActive="active" class="nav-link">
-          <span nz-icon nzType="laptop" nzTheme="outline"></span>
-          <span>我的实训</span>
-        </a>
-        <div class="nav-divider"></div>
-        <div class="nav-dropdown">
-          <a routerLink="/student/jobs" routerLinkActive="active" class="nav-link">
-            <span nz-icon nzType="briefcase" nzTheme="outline"></span>
-            <span>就业服务</span>
-            <span nz-icon nzType="down" nzTheme="outline" class="dropdown-arrow"></span>
-          </a>
-          <div class="dropdown-menu">
-            <a routerLink="/student/jobs" class="dropdown-item">
-              <span nz-icon nzType="search" nzTheme="outline"></span>
-              岗位大厅
-            </a>
-            <a routerLink="/student/my-resumes" class="dropdown-item">
-              <span nz-icon nzType="file-text" nzTheme="outline"></span>
-              我的简历
-            </a>
-            <a routerLink="/student/my-applications" class="dropdown-item">
-              <span nz-icon nzType="send" nzTheme="outline"></span>
-              我的投递
-            </a>
-            <a routerLink="/student/my-guidance" class="dropdown-item">
-              <span nz-icon nzType="compass" nzTheme="outline"></span>
-              就业指导
-            </a>
-          </div>
-        </div>
         <a routerLink="/student/agent-tasks" routerLinkActive="active" class="nav-link">
           <span nz-icon nzType="robot" nzTheme="outline"></span>
           <span>课堂任务</span>
         </a>
-        <div class="nav-divider"></div>
-        <div class="nav-dropdown">
-          <a routerLink="/student/ai/chat" routerLinkActive="active" class="nav-link">
-            <span nz-icon nzType="robot" nzTheme="outline"></span>
-            <span>AI 助手</span>
-            <span nz-icon nzType="down" nzTheme="outline" class="dropdown-arrow"></span>
-          </a>
-          <div class="dropdown-menu">
-            <a routerLink="/student/ai/chat" class="dropdown-item">
-              <span nz-icon nzType="comment" nzTheme="outline"></span>
-              智能问答
-            </a>
-            <a routerLink="/student/ai/lesson-plan" class="dropdown-item">
-              <span nz-icon nzType="file-text" nzTheme="outline"></span>
-              教案生成
-            </a>
-            <a routerLink="/student/ai/case-analysis" class="dropdown-item">
-              <span nz-icon nzType="bulb" nzTheme="outline"></span>
-              案例分析
-            </a>
-            <a routerLink="/student/ai/career-guidance" class="dropdown-item">
-              <span nz-icon nzType="solution" nzTheme="outline"></span>
-              职业规划
-            </a>
-          </div>
-        </div>
       </nav>
 
       <div class="header-actions">
@@ -160,10 +77,9 @@
         <a href="#">关于我们</a>
         <a href="#">帮助中心</a>
         <a href="#">隐私政策</a>
-        <a href="#">服务条款</a>
       </div>
       <div class="footer-copyright">
-        &copy; 2026 易课通资源库系统 - 让学习更高效
+        &copy; 2026 易课通资源库系统
       </div>
     </div>
   </footer>

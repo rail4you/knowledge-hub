@@ -20,6 +20,12 @@
 - [x] 审查计划并识别关键 blocker
 - [x] 提交计划到 git
 
+### Phase 1: 关键修复（Blocker）
+- [x] 创建 `student.routes.ts` 学生路由模块
+- [x] 在 `app.routes.ts` 中注册学生路由
+- [x] 修改 `home.component.ts` 登录跳转逻辑（从 localhost:3000 改为 /student）
+- [x] 简化学生端布局导航菜单
+
 ---
 
 ## 🎯 待执行任务

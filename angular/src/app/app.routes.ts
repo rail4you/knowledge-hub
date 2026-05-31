@@ -1,7 +1,8 @@
-import { authGuard, permissionGuard, eLayoutType } from '@abp/ng.core';
+import { authGuard, permissionGuard } from '@abp/ng.core';
 import { Routes } from '@angular/router';
 import { identityUserCreateFormPropContributors, identityUserEntityPropContributors } from './identity-form-prop-contributors';
 import { installGuard } from './install/install.guard';
+import { STUDENT_ROUTES } from './student/student.routes';
 import { studentPortalGuard } from './student/student-portal.guard';
 
 export const APP_ROUTES: Routes = [
@@ -9,6 +10,11 @@ export const APP_ROUTES: Routes = [
     path: 'install',
     loadComponent: () => import('./install/install.component').then(c => c.InstallComponent),
     canActivate: [installGuard],
+  },
+  {
+    path: 'student',
+    canActivate: [authGuard, studentPortalGuard],
+    loadChildren: () => Promise.resolve(STUDENT_ROUTES),
   },
   {
     path: '',
@@ -378,44 +384,6 @@ export const APP_ROUTES: Routes = [
     data: {
       requiredPolicy: 'KnowledgeHub.TeachingAgents.Assign',
     },
-  },
-  {
-    path: 'student',
-    loadComponent: () => import('./student/layout/student-layout.component').then(c => c.StudentLayoutComponent),
-    canActivate: [authGuard, studentPortalGuard],
-    data: {
-      layout: eLayoutType.empty
-    },
-    children: [
-      { path: '', redirectTo: 'resources', pathMatch: 'full' },
-      { path: 'resources', loadComponent: () => import('./student/resources/student-resources.component').then(c => c.StudentResourcesComponent) },
-      { path: 'news', loadComponent: () => import('./student/news/student-news.component').then(c => c.StudentNewsComponent) },
-      { path: 'news/:id', loadComponent: () => import('./student/news/student-news-detail.component').then(c => c.StudentNewsDetailComponent) },
-      { path: 'favorites', loadComponent: () => import('./student/favorites/student-favorites.component').then(c => c.StudentFavoritesComponent) },
-      { path: 'search', loadComponent: () => import('./search/search.component').then(c => c.SearchComponent), canActivate: [permissionGuard], data: { requiredPolicy: 'KnowledgeHub.Search' } },
-      { path: 'search-history', loadComponent: () => import('./search/search-history/search-history.component').then(c => c.SearchHistoryComponent) },
-      { path: 'ai/chat', loadComponent: () => import('./ai/chat/chat.component').then(c => c.ChatComponent) },
-      { path: 'ai/lesson-plan', loadComponent: () => import('./ai/lesson-plan/lesson-plan.component').then(c => c.LessonPlanComponent) },
-      { path: 'ai/case-analysis', loadComponent: () => import('./ai/case-analysis/case-analysis.component').then(c => c.CaseAnalysisComponent) },
-      { path: 'ai/career-guidance', loadComponent: () => import('./ai/career-guidance/career-guidance.component').then(c => c.CareerGuidanceComponent) },
-      { path: 'agent-tasks', loadComponent: () => import('./student/agent-tasks/student-agent-task-list.component').then(c => c.StudentAgentTaskListComponent) },
-      { path: 'agent-tasks/:id', loadComponent: () => import('./student/agent-tasks/student-agent-task-detail.component').then(c => c.StudentAgentTaskDetailComponent) },
-      { path: 'courses', loadComponent: () => import('./learning/my-courses/my-courses.component').then(c => c.MyCoursesComponent) },
-      { path: 'micro-majors', loadComponent: () => import('./micro-majors/micro-major-list.component').then(c => c.MicroMajorListComponent) },
-      { path: 'micro-majors/:id', loadComponent: () => import('./micro-majors/micro-major-detail.component').then(c => c.MicroMajorDetailComponent) },
-      { path: 'my-micro-majors', loadComponent: () => import('./micro-majors/my-micro-majors.component').then(c => c.MyMicroMajorsComponent) },
-      { path: 'practicum', loadComponent: () => import('./practicum/practicum-list.component').then(c => c.PracticumListComponent) },
-      { path: 'practicum/:id', loadComponent: () => import('./practicum/practicum-detail.component').then(c => c.PracticumDetailComponent) },
-      { path: 'my-practicum', loadComponent: () => import('./practicum/my-practicum.component').then(c => c.MyPracticumComponent) },
-      { path: 'my-resumes', loadComponent: () => import('./employment/my-resumes.component').then(c => c.MyResumesComponent) },
-      { path: 'my-applications', loadComponent: () => import('./employment/my-applications.component').then(c => c.MyApplicationsComponent) },
-      { path: 'my-guidance', loadComponent: () => import('./employment/my-guidance.component').then(c => c.MyGuidanceComponent) },
-      { path: 'jobs', loadComponent: () => import('./employment/job-list.component').then(c => c.EmploymentJobListComponent) },
-      { path: 'jobs/:id', loadComponent: () => import('./employment/job-detail.component').then(c => c.EmploymentJobDetailComponent) },
-      { path: 'course-detail/:id', loadComponent: () => import('./learning/course-detail/course-detail.component').then(c => c.CourseDetailComponent) },
-      { path: 'exercise-learning/:courseId', loadComponent: () => import('./learning/exercise-learning/exercise-learning.component').then(c => c.ExerciseLearningComponent) },
-      { path: 'knowledge-graph/:courseId', loadComponent: () => import('./learning/knowledge-graph/knowledge-graph.component').then(c => c.KnowledgeGraphComponent) },
-    ]
   },
   {
     path: 'learning',
