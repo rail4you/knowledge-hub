@@ -15,7 +15,7 @@ function configureRoutes() {
         name: '::Menu:Home',
         iconClass: 'fas fa-home',
         order: 1,
-        layout: eLayoutType.application,
+        layout: eLayoutType.empty,  // 首页不使用管理端布局
       },
       {
         path: '/knowledge-hub',

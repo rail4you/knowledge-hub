@@ -20,9 +20,6 @@ export const APP_ROUTES: Routes = [
     path: '',
     pathMatch: 'full',
     loadComponent: () => import('./home/home.component').then(c => c.HomeComponent),
-    data: {
-      layout: eLayoutType.empty  // 首页不使用管理端布局
-    }
   },
   {
     path: 'account',
