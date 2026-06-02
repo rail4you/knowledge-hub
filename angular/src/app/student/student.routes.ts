@@ -29,6 +29,14 @@ export const STUDENT_ROUTES: Routes = [
         loadComponent: () => import('./course-detail/student-course-detail.component').then(m => m.StudentCourseDetailComponent),
       },
       {
+        path: 'courses/:id/learn/:chapterId',
+        loadComponent: () => import('./course-learn/student-course-learn.component').then(m => m.StudentCourseLearnComponent),
+      },
+      {
+        path: 'courses/:id/learn',
+        loadComponent: () => import('./course-learn/student-course-learn.component').then(m => m.StudentCourseLearnComponent),
+      },
+      {
         path: 'resources',
         loadComponent: () => import('./resources/student-resources.component').then(m => m.StudentResourcesComponent),
         data: {

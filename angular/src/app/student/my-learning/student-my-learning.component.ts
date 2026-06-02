@@ -138,25 +138,15 @@ export class StudentMyLearningComponent implements OnInit {
 
   loadRecords() {
     this.recordsLoading.set(true);
-    // 拉取最近 10 条学习记录：使用 getRecordsByCourse，对所有已选课课程聚合
-    const myCourses = this.myCourses();
-    if (myCourses.length === 0) {
-      this.records.set([]);
-      this.recordsLoading.set(false);
-      return;
-    }
-
-    // 简单实现：取第一门课程 10 条记录（实际应从 dashboard 聚合）
-    const targetCourse = myCourses[0];
-    this.recordService.getRecordsByCourse({
-      courseId: targetCourse.courseId,
+    // 拉取最近 10 条跨课程记录
+    this.recordService.getMyRecentRecords({
       skipCount: 0,
       maxResultCount: 10,
     } as any).subscribe({
       next: result => {
         const items = (result?.items || []).map((r: any) => ({
           id: r.id,
-          courseName: r.courseName || targetCourse.courseTitle || '未命名课程',
+          courseName: r.courseName || '未命名课程',
           exerciseTitle: r.exerciseTitle || '习题练习',
           isCorrect: r.isCorrect,
           completedAt: r.completedAt,

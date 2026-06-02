@@ -5,7 +5,8 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { CommonModule } from '@angular/common';
 import { hasRole } from '../auth/current-user.utils';
-import { PortalService, TenantResourceSummaryDto } from '../proxy/portal/portal.service';
+import { PortalService } from '../proxy/portal/portal.service';
+import { TenantResourceSummaryDto } from '../proxy/portal/models';
 
 @Component({
   selector: 'app-home',

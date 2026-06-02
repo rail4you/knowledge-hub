@@ -13,6 +13,7 @@ public interface IStudentExerciseRecordAppService : IApplicationService
     Task<StudentExerciseRecordDto> SaveOrUpdateRecordAsync(SaveExerciseRecordInput input);
     Task<PagedResultDto<StudentExerciseRecordDto>> GetRecordsByCourseAsync(GetStudentExerciseRecordsInput input);
     Task<PagedResultDto<StudentExerciseRecordDto>> GetRecordsByChapterAsync(GetStudentExerciseRecordsInput input);
+    Task<PagedResultDto<StudentExerciseRecordDto>> GetMyRecentRecordsAsync(GetMyRecentRecordsInput input);
     Task MarkAnswerViewedAsync(MarkAnswerViewedInput input);
     Task SubmitSelfAssessmentAsync(SubmitSelfAssessmentInput input);
     Task<ListResultDto<ChapterProgressDto>> GetChapterProgressAsync(Guid courseId);

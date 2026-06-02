@@ -143,6 +143,71 @@
 
 ---
 
+## 五、Phase 2 - 未完成任务（需继续开发）
+
+### 5.1 现状分析
+
+现有学生端三个页面只提供了“入口”和“统计”，但**学生还未真正进入学习闭环**：
+- 课程详情页的“开始练习”按钮目前路由到 `/learning/exercise-learning/:id`（教师页面）
+- “继续学习”按钮未实现跳转目标
+- 学生无法查看章节的知识点资源、做题、查看提交记录
+- 我的学习页面的“最近提交记录”只取自`getRecordsByCourse`（需要先有课），并没有“跨课程最近记录”API
+
+### 5.2 待开发任务
+
+#### 任务 1：后端 - 新增「我的最近提交」API
+- 接口：`GET /api/app/student-exercise-record/my-recent`
+- 位置：`IStudentExerciseRecordAppService`
+- 作用：返回当前学生在所有课程上最近 N 条记录，供 my-learning 页面使用
+- 输入：`GetMyRecentRecordsInput { skipCount, maxResultCount, courseId? }`
+- 输出：`PagedResultDto<StudentExerciseRecordDto>`
+
+#### 任务 2：前端 - 学生学习页面（新页面）
+- 路由：`/student/courses/:id/learn/:chapterId?`
+- 布局：
+  - 左侧：章节树（点击切换），显示当前选中章节
+  - 右侧：Tab 区域
+    - 资源 Tab：`KnowledgeResource[]`（本章节），点击查看内容
+    - 习题 Tab：`Exercise[]`（本章节），单选/多选/判断/填空题答题表单，提交后查看结果
+    - 提交记录 Tab：`StudentExerciseRecord[]`（本章节），可查看之前的答案
+- 行为：
+  - 进入页面/切换章节时调用 `LearningService.recordProgress` 上报进度
+  - 提交答案调用 `StudentExerciseRecordService.saveOrUpdateRecord`
+  - 查看答案调用 `markAnswerViewed`
+
+#### 任务 3：前端 - 修复课程详情页按钮路由
+- “开始练习”、“继续学习”按钮改为跳转到新学习页面
+- “查看知识图谱”按钮保留当前 tab 切换
+
+#### 任务 4：前端 - my-learning 页面接入真实最近记录
+- 使用新增的 `getMyRecentRecords` API
+- 移除现在“以第一门课程的记录作占位”的逻辑
+- 添加 my-learning 记录的空状态和加载态
+
+### 5.3 任务优先级
+
+| 优先级 | 任务 | 原因 |
+|--------|------|------|
+| P0 | 任务 1（后端） | 后续前端任务依赖 |
+| P0 | 任务 2（学习页面） | 完整学习闭环的核心 |
+| P0 | 任务 3（按钮路由） | 与任务 2 同步发布 |
+| P1 | 任务 4（my-learning 真实记录） | 优化体验 |
+
+### 5.4 预期文件
+
+后端：
+- `src/KnowledgeHub.Application.Contracts/Learning/IStudentExerciseRecordAppService.cs`（修改）
+- `src/KnowledgeHub.Application/Learning/StudentExerciseRecordAppService.cs`（修改）
+- `src/KnowledgeHub.Application.Contracts/Learning/Dtos/*.cs`（可能需新增 DTO）
+
+前端：
+- `angular/src/app/student/course-learn/student-course-learn.component.{ts,html,scss}`（新文件）
+- `angular/src/app/student/student.routes.ts`（修改，新增路由）
+- `angular/src/app/student/course-detail/student-course-detail.component.ts`（修改）
+- `angular/src/app/student/my-learning/student-my-learning.component.ts`（修改）
+
+---
+
 ## 五、风险与对策
 
 | 风险 | 对策 |

@@ -229,13 +229,13 @@ export class StudentCourseDetailComponent implements OnInit {
   startLearning() {
     const c = this.course();
     if (!c?.id) return;
-    this.router.navigate(['/student/courses', c.id]);
+    this.router.navigate(['/student/courses', c.id, 'learn']);
   }
 
   startExercise() {
     const c = this.course();
     if (!c?.id) return;
-    this.router.navigate(['/learning/exercise-learning', c.id]);
+    this.router.navigate(['/student/courses', c.id, 'learn']);
   }
 
   viewKnowledgeGraph() {

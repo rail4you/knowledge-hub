@@ -9,8 +9,10 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
+import { OssUploadService } from '../../shared/oss-upload.service';
 import {
   CreateUpdateMicroMajorDto,
   MicroMajorDto,
@@ -32,6 +34,7 @@ import {
     NzSelectModule,
     NzSwitchModule,
     NzTableModule,
+    NzUploadModule,
   ],
   templateUrl: './micro-major-management.component.html',
   styleUrls: ['./micro-major-management.component.scss'],
@@ -40,6 +43,7 @@ import {
 export class MicroMajorManagementComponent implements OnInit {
   private readonly microMajorService = inject(MicroMajorService);
   private readonly courseService = inject(CourseService);
+  private readonly ossUploadService = inject(OssUploadService);
   private readonly message = inject(NzMessageService);
 
   readonly items = signal<MicroMajorDto[]>([]);
@@ -51,6 +55,10 @@ export class MicroMajorManagementComponent implements OnInit {
   editingId: string | null = null;
   selectedCourseIds: string[] = [];
   form: CreateUpdateMicroMajorDto = this.createEmptyForm();
+
+  // Cover upload state
+  coverUploading = false;
+  coverFileList: NzUploadFile[] = [];
 
   ngOnInit(): void {
     this.loadCourses();
@@ -101,6 +109,7 @@ export class MicroMajorManagementComponent implements OnInit {
     this.editingId = null;
     this.selectedCourseIds = [];
     this.form = this.createEmptyForm();
+    this.coverFileList = [];
     this.modalVisible = true;
   }
 
@@ -124,10 +133,65 @@ export class MicroMajorManagementComponent implements OnInit {
         this.selectedCourseIds = detail.courses
           .sort((a, b) => a.sortOrder - b.sortOrder)
           .map(x => x.courseId);
+
+        // Set cover file list for preview
+        if (item.coverImageUrl) {
+          this.coverFileList = [{
+            uid: '-1',
+            name: 'cover.jpg',
+            status: 'done',
+            url: item.coverImageUrl,
+          }];
+        } else {
+          this.coverFileList = [];
+        }
+
         this.modalVisible = true;
       },
     });
   }
+
+  beforeCoverUpload = (rawFile: NzUploadFile): boolean => {
+    // Validate type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+    if (!allowedTypes.includes(rawFile.type!)) {
+      this.message.error('仅支持上传 JPG、PNG、GIF、WebP、BMP 格式的图片');
+      return false;
+    }
+    // Validate size (10MB)
+    if (rawFile.size! > 10 * 1024 * 1024) {
+      this.message.error('图片大小不能超过 10MB');
+      return false;
+    }
+
+    // Upload to OSS
+    this.coverUploading = true;
+    this.ossUploadService.uploadImage(rawFile as unknown as File).subscribe({
+      next: (result) => {
+        this.coverUploading = false;
+        this.form.coverImageUrl = result.url;
+        this.coverFileList = [{
+          uid: result.objectKey,
+          name: result.originalFileName,
+          status: 'done',
+          url: result.url,
+        }];
+        this.message.success('封面上传成功');
+      },
+      error: (err) => {
+        this.coverUploading = false;
+        this.coverFileList = [];
+        this.message.error('封面上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+      },
+    });
+    return false; // prevent default upload behavior
+  };
+
+  removeCover = (): boolean => {
+    this.form.coverImageUrl = '';
+    this.coverFileList = [];
+    return true;
+  };
 
   save(): void {
     this.form.courses = this.selectedCourseIds.map((courseId, index) => ({

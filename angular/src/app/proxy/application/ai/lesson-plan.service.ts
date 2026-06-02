@@ -16,14 +16,14 @@ export class LessonPlanService {
       url: '/api/app/lesson-plan/export-docx',
       params: { lessonPlanJson },
     },
-    { apiName: this.apiName, ...config });
+    { apiName: this.apiName,...config });
   
 
-  generateStreaming = (input: LessonPlanGenerationInputDto, config?: Partial<Rest.Config>) =>
+  generateStreaming = (input: LessonPlanGenerationInputDto, onChunk: (chunk: ChatMessageChunkDto) => any, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',
       url: '/api/app/lesson-plan/generate-streaming',
-      body: input,
+      body: onChunk,
     },
-    { apiName: this.apiName, ...config });
+    { apiName: this.apiName,...config });
 }

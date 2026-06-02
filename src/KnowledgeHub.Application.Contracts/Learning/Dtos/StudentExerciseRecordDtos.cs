@@ -52,6 +52,15 @@ public class GetStudentExerciseRecordsInput : PagedAndSortedResultRequestDto
     public Guid? ChapterId { get; set; }
 }
 
+public class GetMyRecentRecordsInput : PagedAndSortedResultRequestDto
+{
+    public Guid? CourseId { get; set; }
+    /// <summary>
+    /// 0=wrong, 1=correct. Null=no filter.
+    /// </summary>
+    public int? IsCorrect { get; set; }
+}
+
 public class StudentLearningStatisticsDto
 {
     public Guid StudentId { get; set; }

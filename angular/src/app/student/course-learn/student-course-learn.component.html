@@ -1,0 +1,454 @@
+<div class="learn-page">
+  <!-- 顶部条 -->
+  <div class="learn-top">
+    <button class="back-btn" (click)="goBack()">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+      <span>返回课程详情</span>
+    </button>
+    @if (course(); as c) {
+      <div class="learn-course-info">
+        <h1 class="learn-course-title">{{ c.title }}</h1>
+        <div class="learn-course-meta">
+          <span class="meta-pill">
+            <span nz-icon nzType="book" nzTheme="outline"></span>
+            {{ c.teacherName || '未指定' }}
+          </span>
+          @if (c.major) {
+            <span class="meta-pill">{{ c.major }}</span>
+          }
+          <span class="meta-pill progress-pill">
+            <span nz-icon nzType="line-chart" nzTheme="outline"></span>
+            进度 {{ courseProgress() }}%
+          </span>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzSimple nzSize="large" nzTip="课程加载中..."></nz-spin>
+    </div>
+  } @else {
+    <div class="learn-grid">
+      <!-- 左侧：章节树 -->
+      <aside class="learn-sidebar">
+        <div class="sidebar-card">
+          <h3 class="sidebar-card__title">
+            <span class="sidebar-card__bar"></span>
+            课程章节
+            <span class="sidebar-card__count">{{ flatChapters().length }}</span>
+          </h3>
+          @if (flatChapters().length === 0) {
+            <div class="sidebar-empty">
+              <span nz-icon nzType="inbox" nzTheme="outline"></span>
+              <p>暂无章节</p>
+            </div>
+          } @else {
+            <div class="chapter-tree">
+              @for (c of flatChapters(); track trackChapter($index, c)) {
+                <button
+                  class="chapter-item"
+                  [class.is-active]="currentChapterId() === c.id"
+                  [style.padding-left.px]="c.depth * 14 + 12"
+                  (click)="selectChapter(c.id)"
+                >
+                  <span class="chapter-item__icon" nz-icon
+                    [nzType]="c.depth === 0 ? 'folder' : 'file-text'"
+                    nzTheme="outline"></span>
+                  <span class="chapter-item__title">{{ c.title }}</span>
+                  @if (currentChapterId() === c.id) {
+                    <span class="chapter-item__pulse"></span>
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </aside>
+
+      <!-- 右侧：内容区 -->
+      <main class="learn-main">
+        @if (currentChapter(); as chapter) {
+          <div class="chapter-header">
+            <div class="chapter-header__left">
+              <h2 class="chapter-header__title">{{ chapter.title }}</h2>
+              @if (chapter.description) {
+                <p class="chapter-header__desc">{{ chapter.description }}</p>
+              }
+            </div>
+            <div class="chapter-header__right">
+              <span class="chapter-stat">
+                <span nz-icon nzType="bulb" nzTheme="outline"></span>
+                {{ currentResources().length }} 知识点
+              </span>
+              <span class="chapter-stat">
+                <span nz-icon nzType="form" nzTheme="outline"></span>
+                {{ currentExercises().length }} 习题
+              </span>
+            </div>
+          </div>
+
+          <nav class="learn-tabs">
+            <button
+              class="learn-tab"
+              [class.is-active]="activeTab() === 'resources'"
+              (click)="setTab('resources')"
+            >
+              <span nz-icon nzType="bulb" nzTheme="outline"></span>
+              <span>资源</span>
+              <span class="learn-tab__count">{{ currentResources().length }}</span>
+            </button>
+            <button
+              class="learn-tab"
+              [class.is-active]="activeTab() === 'exercises'"
+              (click)="setTab('exercises')"
+            >
+              <span nz-icon nzType="form" nzTheme="outline"></span>
+              <span>习题</span>
+              <span class="learn-tab__count">{{ currentExercises().length }}</span>
+            </button>
+            <button
+              class="learn-tab"
+              [class.is-active]="activeTab() === 'submissions'"
+              (click)="setTab('submissions')"
+            >
+              <span nz-icon nzType="history" nzTheme="outline"></span>
+              <span>提交记录</span>
+              <span class="learn-tab__count">{{ chapterRecords().length }}</span>
+            </button>
+          </nav>
+
+          <!-- 资源 Tab -->
+          @if (activeTab() === 'resources') {
+            <div class="resources-pane">
+              @if (resourcesLoading()) {
+                <div class="loading-state loading-state--small">
+                  <nz-spin nzSimple nzSize="default"></nz-spin>
+                </div>
+              } @else if (currentResources().length === 0) {
+                <div class="empty-state">
+                  <span nz-icon nzType="bulb" nzTheme="outline" class="empty-icon"></span>
+                  <p>本章暂无知识点资源</p>
+                </div>
+              } @else {
+                <div class="resources-grid">
+                  <aside class="resource-list">
+                    @for (r of currentResources(); track trackResource($index, r)) {
+                      <button
+                        class="resource-item"
+                        [class.is-active]="currentResource()?.id === r.id"
+                        (click)="selectResource(r)"
+                      >
+                        <div class="resource-item__head">
+                          <span class="resource-item__name">{{ r.name }}</span>
+                          <span
+                            class="resource-item__importance"
+                            [style.background]="importanceColor(r.importanceLevel) + '22'"
+                            [style.color]="importanceColor(r.importanceLevel)"
+                          >
+                            {{ importanceLabel(r.importanceLevel) }}
+                          </span>
+                        </div>
+                        <p class="resource-item__excerpt">{{ contentExcerpt(r.content) || r.description || '暂无描述' }}</p>
+                        <div class="resource-item__meta">
+                          <span>
+                            <span nz-icon nzType="thunderbolt" nzTheme="outline"></span>
+                            {{ difficultyLabel(r.difficulty) }}
+                          </span>
+                        </div>
+                      </button>
+                    }
+                  </aside>
+                  <div class="resource-detail">
+                    @if (currentResource(); as r) {
+                      <h3 class="resource-detail__title">{{ r.name }}</h3>
+                      <div class="resource-detail__meta">
+                        <span
+                          class="resource-detail__chip"
+                          [style.background]="importanceColor(r.importanceLevel) + '22'"
+                          [style.color]="importanceColor(r.importanceLevel)"
+                        >
+                          {{ importanceLabel(r.importanceLevel) }}知识点
+                        </span>
+                        <span class="resource-detail__chip resource-detail__chip--neutral">
+                          <span nz-icon nzType="thunderbolt" nzTheme="outline"></span>
+                          难度：{{ difficultyLabel(r.difficulty) }}
+                        </span>
+                      </div>
+                      @if (r.description) {
+                        <p class="resource-detail__desc">{{ r.description }}</p>
+                      }
+                      <div class="resource-detail__content">
+                        @if (r.content) {
+                          <pre>{{ r.content }}</pre>
+                        } @else {
+                          <p class="resource-detail__empty">该知识点暂无详细内容</p>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- 习题 Tab -->
+          @if (activeTab() === 'exercises') {
+            <div class="exercises-pane">
+              @if (exercisesLoading()) {
+                <div class="loading-state loading-state--small">
+                  <nz-spin nzSimple nzSize="default"></nz-spin>
+                </div>
+              } @else if (currentExercises().length === 0) {
+                <div class="empty-state">
+                  <span nz-icon nzType="form" nzTheme="outline" class="empty-icon"></span>
+                  <p>本章暂无习题</p>
+                </div>
+              } @else {
+                <div class="exercises-grid">
+                  <aside class="exercise-list">
+                    @for (e of currentExercises(); track trackExercise($index, e); let i = $index) {
+                      <button
+                        class="exercise-item"
+                        [class.is-active]="currentExercise()?.id === e.id"
+                        [class.is-answered]="chapterRecords().length > 0 && chapterRecords()[0]?.exerciseId === e.id"
+                        (click)="selectExercise(e)"
+                      >
+                        <span class="exercise-item__num">{{ i + 1 }}</span>
+                        <div class="exercise-item__body">
+                          <span class="exercise-item__title">{{ e.title || '未命名题目' }}</span>
+                          <span class="exercise-item__meta">
+                            <span class="exercise-type">{{ exerciseTypeLabel(e.type) }}</span>
+                            <span>{{ e.score || 1 }} 分</span>
+                          </span>
+                        </div>
+                      </button>
+                    }
+                  </aside>
+                  <div class="exercise-detail">
+                    @if (currentExercise(); as e) {
+                      <div class="exercise-detail__head">
+                        <span class="exercise-detail__type">{{ exerciseTypeLabel(e.type) }}</span>
+                        <span class="exercise-detail__score">{{ e.score || 1 }} 分</span>
+                      </div>
+                      <h3 class="exercise-detail__title">{{ e.title }}</h3>
+                      <div class="exercise-detail__content">{{ e.questionContent }}</div>
+
+                      <!-- 答案输入区 -->
+                      <div class="exercise-answer">
+                        @if (e.type === ExerciseType.SingleChoice) {
+                          <nz-radio-group
+                            [ngModel]="currentAnswer()"
+                            (ngModelChange)="currentAnswer.set($event)"
+                            [nzDisabled]="!!submittedRecord()"
+                          >
+                            @for (o of parseOptions(e.options); track o.key) {
+                              <label nz-radio [nzValue]="o.key" class="answer-option">{{ o.key }}. {{ o.content }}</label>
+                            }
+                          </nz-radio-group>
+                        } @else if (e.type === ExerciseType.MultiChoice) {
+                          <div class="multi-options">
+                            @for (o of parseOptions(e.options); track o.key) {
+                              <label class="answer-option" [class.is-disabled]="!!submittedRecord()">
+                                <label
+                                  nz-checkbox
+                                  [ngModel]="isMultiSelected(o.key)"
+                                  (ngModelChange)="setMultiOption(o.key, $event)"
+                                  [nzDisabled]="!!submittedRecord()"
+                                ></label>
+                                <span>{{ o.key }}. {{ o.content }}</span>
+                              </label>
+                            }
+                          </div>
+                        } @else if (e.type === ExerciseType.TrueFalse) {
+                          <nz-radio-group
+                            [ngModel]="currentAnswer()"
+                            (ngModelChange)="currentAnswer.set($event)"
+                            [nzDisabled]="!!submittedRecord()"
+                          >
+                            <label nz-radio nzValue="true" class="answer-option">正确</label>
+                            <label nz-radio nzValue="false" class="answer-option">错误</label>
+                          </nz-radio-group>
+                        } @else if (e.type === ExerciseType.FillBlank) {
+                          <input
+                            nz-input
+                            placeholder="请输入答案"
+                            [ngModel]="currentAnswer()"
+                            (ngModelChange)="currentAnswer.set($event)"
+                            [disabled]="!!submittedRecord()"
+                          />
+                        } @else {
+                          <textarea
+                            nz-input
+                            rows="6"
+                            placeholder="请输入你的答案..."
+                            [ngModel]="currentAnswer()"
+                            (ngModelChange)="currentAnswer.set($event)"
+                            [disabled]="!!submittedRecord()"
+                          ></textarea>
+                        }
+                      </div>
+
+                      <!-- 提交按钮 -->
+                      @if (!submittedRecord()) {
+                        <div class="exercise-actions">
+                          <button
+                            class="primary-btn"
+                            [disabled]="submitting()"
+                            (click)="submitAnswer()"
+                          >
+                            <span nz-icon [nzType]="submitting() ? 'loading' : 'send'" nzTheme="outline"></span>
+                            <span>{{ submitting() ? '提交中...' : '提交答案' }}</span>
+                          </button>
+                        </div>
+                      } @else {
+                        <div class="exercise-result">
+                          <div class="result-banner" [class.is-correct]="isCorrect(submittedRecord()) === true" [class.is-wrong]="isCorrect(submittedRecord()) === false">
+                            @if (isCorrect(submittedRecord()) === true) {
+                              <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+                              <span>回答正确</span>
+                            } @else if (isCorrect(submittedRecord()) === false) {
+                              <span nz-icon nzType="close-circle" nzTheme="fill"></span>
+                              <span>回答错误，你的答案：{{ submittedRecord()?.studentAnswer }}</span>
+                            } @else {
+                              <span nz-icon nzType="info-circle" nzTheme="fill"></span>
+                              <span>已提交，等待批改</span>
+                            }
+                          </div>
+
+                          @if (hasViewedAnswer() && e.answer) {
+                            <div class="answer-block">
+                              <strong>参考答案：</strong>
+                              <p>{{ e.answer }}</p>
+                              @if (e.answerExplanation) {
+                                <p class="answer-explain">{{ e.answerExplanation }}</p>
+                              }
+                            </div>
+                          } @else if (!hasViewedAnswer()) {
+                            <button class="ghost-btn" (click)="viewAnswer()">
+                              <span nz-icon nzType="eye" nzTheme="outline"></span>
+                              <span>查看答案</span>
+                            </button>
+                          }
+
+                          @if (submittedRecord()?.isCorrect != null) {
+                            <div class="self-assessment">
+                              <span class="self-assessment__label">自评掌握程度：</span>
+                              <div class="self-assessment__options">
+                                <button
+                                  class="assess-btn"
+                                  [class.is-active]="selfAssessment() === SelfAssessment.Incorrect"
+                                  (click)="setSelfAssessment(SelfAssessment.Incorrect)"
+                                >
+                                  😣 未掌握
+                                </button>
+                                <button
+                                  class="assess-btn"
+                                  [class.is-active]="selfAssessment() === SelfAssessment.PartiallyCorrect"
+                                  (click)="setSelfAssessment(SelfAssessment.PartiallyCorrect)"
+                                >
+                                  😐 部分掌握
+                                </button>
+                                <button
+                                  class="assess-btn"
+                                  [class.is-active]="selfAssessment() === SelfAssessment.Correct"
+                                  (click)="setSelfAssessment(SelfAssessment.Correct)"
+                                >
+                                  😊 已掌握
+                                </button>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    } @else {
+                      <div class="empty-state">
+                        <span nz-icon nzType="form" nzTheme="outline" class="empty-icon"></span>
+                        <p>请选择左侧题目</p>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- 提交记录 Tab -->
+          @if (activeTab() === 'submissions') {
+            <div class="submissions-pane">
+              @if (recordsLoading()) {
+                <div class="loading-state loading-state--small">
+                  <nz-spin nzSimple nzSize="default"></nz-spin>
+                </div>
+              } @else if (chapterRecords().length === 0) {
+                <div class="empty-state">
+                  <span nz-icon nzType="history" nzTheme="outline" class="empty-icon"></span>
+                  <p>本章暂无提交记录，去做几道题试试</p>
+                </div>
+              } @else {
+                <ul class="record-list">
+                  @for (r of chapterRecords(); track trackRecord($index, r); let i = $index) {
+                    <li class="record-row">
+                      <span
+                        class="record-row__icon"
+                        [class.is-correct]="r.isCorrect === true"
+                        [class.is-wrong]="r.isCorrect === false"
+                      >
+                        <span nz-icon [nzType]="r.isCorrect === true ? 'check' : (r.isCorrect === false ? 'close' : 'question')" nzTheme="outline"></span>
+                      </span>
+                      <div class="record-row__body">
+                        <span class="record-row__title">{{ r.exerciseTitle || '习题' }}</span>
+                        <span class="record-row__meta">
+                          @if (r.completedAt) {
+                            <span>
+                              <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                              {{ r.completedAt | date:'yyyy-MM-dd HH:mm' }}
+                            </span>
+                          }
+                          @if (r.timeSpent) {
+                            <span>
+                              <span nz-icon nzType="hourglass" nzTheme="outline"></span>
+                              {{ r.timeSpent }}
+                            </span>
+                          }
+                          @if (r.hasViewedAnswer) {
+                            <span class="record-row__viewed">
+                              <span nz-icon nzType="eye" nzTheme="outline"></span>
+                              已查看答案
+                            </span>
+                          }
+                        </span>
+                        @if (r.studentAnswer) {
+                          <span class="record-row__answer">我的答案：{{ r.studentAnswer }}</span>
+                        }
+                      </div>
+                      <span
+                        class="record-row__tag"
+                        [class.is-correct]="r.isCorrect === true"
+                        [class.is-wrong]="r.isCorrect === false"
+                      >
+                        @if (r.isCorrect === true) {
+                          答对
+                        } @else if (r.isCorrect === false) {
+                          答错
+                        } @else {
+                          未判定
+                        }
+                      </span>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        } @else {
+          <div class="empty-state">
+            <span nz-icon nzType="folder-open" nzTheme="outline" class="empty-icon"></span>
+            <p>请从左侧选择一个章节开始学习</p>
+          </div>
+        }
+      </main>
+    </div>
+  }
+</div>

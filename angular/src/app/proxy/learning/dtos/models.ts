@@ -36,6 +36,11 @@ export interface GetLearningStatisticsInput extends PagedAndSortedResultRequestD
   endTime?: string | null;
 }
 
+export interface GetMyRecentRecordsInput extends PagedAndSortedResultRequestDto {
+  courseId?: string | null;
+  isCorrect?: number | null;
+}
+
 export interface GetStudentExerciseRecordsInput extends PagedAndSortedResultRequestDto {
   courseId?: string;
   chapterId?: string | null;

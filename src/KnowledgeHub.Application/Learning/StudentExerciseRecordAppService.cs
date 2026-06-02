@@ -145,6 +145,51 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         return await GetRecordsByCourseAsync(input);
     }
 
+    public async Task<PagedResultDto<StudentExerciseRecordDto>> GetMyRecentRecordsAsync(GetMyRecentRecordsInput input)
+    {
+        if (CurrentUser.Id == null)
+        {
+            return new PagedResultDto<StudentExerciseRecordDto>(0, new List<StudentExerciseRecordDto>());
+        }
+
+        var studentId = CurrentUser.GetId();
+
+        List<StudentExerciseRecord> items;
+        long totalCount;
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _recordRepository.GetQueryableAsync();
+            query = query.Where(x => x.StudentId == studentId);
+
+            if (input.CourseId.HasValue)
+            {
+                query = query.Where(x => x.CourseId == input.CourseId.Value);
+            }
+
+            if (input.IsCorrect.HasValue)
+            {
+                if (input.IsCorrect.Value == 1)
+                {
+                    query = query.Where(x => x.IsCorrect == true);
+                }
+                else if (input.IsCorrect.Value == 0)
+                {
+                    query = query.Where(x => x.IsCorrect == false);
+                }
+            }
+
+            totalCount = await query.LongCountAsync();
+            items = await query
+                .OrderByDescending(x => x.CreationTime)
+                .PageBy(input.SkipCount, input.MaxResultCount)
+                .ToListAsync();
+        }
+
+        var dtos = await MapToDtoListAsync(items);
+        return new PagedResultDto<StudentExerciseRecordDto>(totalCount, dtos);
+    }
+
     public async Task MarkAnswerViewedAsync(MarkAnswerViewedInput input)
     {
         var studentId = CurrentUser.GetId();
