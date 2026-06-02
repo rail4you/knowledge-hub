@@ -48,6 +48,11 @@ public class SubmitSelfAssessmentInput
 
 public class GetStudentExerciseRecordsInput : PagedAndSortedResultRequestDto
 {
+    public GetStudentExerciseRecordsInput()
+    {
+        MaxMaxResultCount = 10000;
+    }
+
     public Guid CourseId { get; set; }
     public Guid? ChapterId { get; set; }
 }
@@ -97,6 +102,11 @@ public class ChapterProgressDto
 
 public class GetLearningStatisticsInput : PagedAndSortedResultRequestDto
 {
+    public GetLearningStatisticsInput()
+    {
+        MaxMaxResultCount = 10000;
+    }
+
     public Guid CourseId { get; set; }
     public Guid? ChapterId { get; set; }
     public Guid? TenantId { get; set; }

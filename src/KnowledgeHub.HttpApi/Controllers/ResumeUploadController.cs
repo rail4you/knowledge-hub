@@ -3,23 +3,24 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
-using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Volo.Abp.AspNetCore.Mvc;
+using Aliyun.OSS;
 
 namespace KnowledgeHub.Controllers;
 
 /// <summary>
 /// 学生简历附件上传接口（PDF / Word / 图片）
-/// 文件保存在后端 uploads 目录并返回公开访问 URL。
+/// 上传到 OSS 并返回公开访问 URL。
 /// </summary>
 [Authorize(KnowledgeHubPermissions.Employment.ManageResume)]
 [IgnoreAntiforgeryToken]
 public class ResumeUploadController : AbpControllerBase
 {
-    private readonly IFileStorageService _fileStorageService;
+    private readonly IConfiguration _configuration;
 
     private static readonly string[] AllowedExtensions =
     {
@@ -29,9 +30,9 @@ public class ResumeUploadController : AbpControllerBase
 
     private const long MaxFileSize = 10L * 1024 * 1024; // 10 MB
 
-    public ResumeUploadController(IFileStorageService fileStorageService)
+    public ResumeUploadController(IConfiguration configuration)
     {
-        _fileStorageService = fileStorageService;
+        _configuration = configuration;
     }
 
     [HttpPost]
@@ -55,17 +56,34 @@ public class ResumeUploadController : AbpControllerBase
             throw new ArgumentException("简历文件大小不能超过 10MB");
         }
 
-        var directory = Path.Combine("resumes", DateTime.Now.ToString("yyyyMMdd"));
-        var storedFileName = $"{Guid.NewGuid():N}{extension}";
+        var endpoint = _configuration["Oss:Endpoint"] ?? "oss-cn-beijing.aliyuncs.com";
+        var accessKeyId = _configuration["Oss:AccessKeyId"] ?? "";
+        var accessKeySecret = _configuration["Oss:AccessKeySecret"] ?? "";
+        var bucketName = _configuration["Oss:BucketName"] ?? "kg-edu";
+        var uploadPath = _configuration["Oss:UploadPath"] ?? "knowledgehub";
 
-        await using var stream = file.OpenReadStream();
-        var relativePath = await _fileStorageService.SaveAsync(stream, storedFileName, directory);
-        var url = _fileStorageService.GetFileUrl(relativePath);
+        var client = new OssClient(endpoint, accessKeyId, accessKeySecret);
+
+        var datePrefix = DateTime.Now.ToString("yyyyMMdd");
+        var uniqueName = $"{Guid.NewGuid():N}{extension}";
+        var objectKey = $"{uploadPath}/resumes/{datePrefix}/{uniqueName}";
+
+        using var stream = file.OpenReadStream();
+        var metadata = new ObjectMetadata
+        {
+            ContentType = file.ContentType,
+            CacheControl = "max-age=31536000",
+        };
+
+        await Task.Run(() => client.PutObject(bucketName, objectKey, stream, metadata));
+
+        var region = endpoint.Replace(".aliyuncs.com", "").Replace("oss-", "");
+        var url = $"https://{bucketName}.oss-{region}.aliyuncs.com/{objectKey}";
 
         return new ResumeUploadResultDto
         {
             Url = url,
-            FilePath = relativePath,
+            FilePath = objectKey,
             OriginalFileName = file.FileName,
             Size = file.Length,
         };
