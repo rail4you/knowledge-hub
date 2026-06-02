@@ -167,6 +167,15 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.News.Review, true);
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.News.Publish, true);
 
+        // MicroMajor permissions - SchoolAdmin
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.MicroMajors.Default, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.MicroMajors.Create, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.MicroMajors.Edit, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.MicroMajors.Delete, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.MicroMajors.ManageEnrollment, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.MicroMajors.IssueCertificate, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.MicroMajors.ViewStatistics, true);
+
         // Teacher - Can create and manage own resources
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Resources.Default, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Resources.Create, true);
@@ -206,6 +215,14 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.News.Create, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.News.Edit, true);
 
+        // MicroMajor permissions - Teacher
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.MicroMajors.Default, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.MicroMajors.Create, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.MicroMajors.Edit, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.MicroMajors.Delete, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.MicroMajors.ManageEnrollment, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.MicroMajors.IssueCertificate, true);
+
         // Student - Read-only access
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Resources.Default, true);
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Resources.Download, true);
@@ -226,6 +243,15 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Courses.Enroll, true);
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Employment.Default, true);
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Employment.ManageResume, true);
+
+        // MicroMajor permissions - LeagueAdmin (full access)
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Default, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Create, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Edit, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Delete, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.ManageEnrollment, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.IssueCertificate, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.ViewStatistics, true);
 
         // Enterprise User - Limited access
         await GrantPermissionAsync("EnterpriseUser", KnowledgeHubPermissions.Resources.Default, true);

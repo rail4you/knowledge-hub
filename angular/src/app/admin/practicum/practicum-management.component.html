@@ -1,181 +1,250 @@
-<div class="practicum-management-page">
-  <nz-card nzTitle="实训项目管理">
+<div class="page">
+  <!-- Project list -->
+  <nz-card nzTitle="实训项目列表">
     <div class="toolbar">
       <button nz-button nzType="primary" (click)="openCreate()">新建实训项目</button>
-      <button nz-button (click)="export()">导出成绩</button>
     </div>
 
-    <nz-table [nzData]="projects()" [nzFrontPagination]="false">
+    <nz-table [nzData]="projects()" [nzFrontPagination]="false" nzSize="small">
       <thead>
         <tr>
-          <th>项目</th>
+          <th>项目名称</th>
           <th>课程</th>
           <th>状态</th>
-          <th>任务数</th>
+          <th>任务</th>
+          <th>资料</th>
           <th>参与人数</th>
           <th>操作</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let item of projects()">
-          <td>
-            <a (click)="selectProject(item.id)">{{ item.title }}</a>
-          </td>
+        <tr *ngFor="let item of projects()" [class.selected]="item.id === selectedProjectId">
+          <td><a (click)="openEdit(item)">{{ item.title }}</a></td>
           <td>{{ item.courseTitle || '-' }}</td>
-          <td>{{ getStatusLabel(item.status) }}</td>
+          <td>
+            <nz-tag [nzColor]="item.status === statuses.Published ? 'green' : item.status === statuses.Archived ? 'default' : 'orange'">
+              {{ statusLabel(item.status) }}
+            </nz-tag>
+          </td>
           <td>{{ item.taskCount }}</td>
+          <td>{{ item.materialCount }}</td>
           <td>{{ item.enrollmentCount }}</td>
           <td>
             <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
-            <button nz-button nzType="link" nzDanger (click)="delete(item.id)">删除</button>
+            <button nz-button nzType="link" nzDanger (click)="deleteProject(item.id)">删除</button>
           </td>
         </tr>
       </tbody>
     </nz-table>
   </nz-card>
 
-  <div class="dashboard-grid">
-    <nz-card nzTitle="参与名单">
-      <nz-table [nzData]="enrollments()" [nzFrontPagination]="false" nzSize="small">
-        <thead>
-          <tr>
-            <th>学生</th>
-            <th>状态</th>
-            <th>进度</th>
-            <th>得分</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of enrollments()">
-            <td>{{ item.studentName }}</td>
-            <td>{{ item.status }}</td>
-            <td>{{ item.progress }}%</td>
-            <td>{{ item.finalScore ?? '-' }}</td>
-          </tr>
-        </tbody>
-      </nz-table>
-    </nz-card>
+  <!-- Detail tabs (shown after selecting/creating a project) -->
+  <nz-card *ngIf="selectedProjectId">
+    <div class="tabs-bar">
+      <button class="tab-btn" [class.active]="activeTab === 0" (click)="activeTab = 0">基本信息</button>
+      <button class="tab-btn" [class.active]="activeTab === 1" (click)="activeTab = 1">关联任务</button>
+      <button class="tab-btn" [class.active]="activeTab === 2" (click)="activeTab = 2">关联资料</button>
+      <button class="tab-btn" [class.active]="activeTab === 3" (click)="activeTab = 3">参与与评分</button>
+    </div>
 
-    <nz-card nzTitle="提交与评分">
-      <nz-table [nzData]="submissions()" [nzFrontPagination]="false" nzSize="small">
-        <thead>
-          <tr>
-            <th>学生</th>
-            <th>任务</th>
-            <th>版本</th>
-            <th>状态</th>
-            <th>分数</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of submissions()">
-            <td>{{ item.studentName }}</td>
-            <td>{{ item.taskTitle }}</td>
-            <td>V{{ item.versionNo }}</td>
-            <td>{{ getSubmissionStatusLabel(item.status) }}</td>
-            <td>{{ item.score ?? '-' }}</td>
-            <td>
-              <button nz-button nzType="link" (click)="openGuidance(item)">指导</button>
-              <button nz-button nzType="link" (click)="openScore(item)">评分</button>
-            </td>
-          </tr>
-        </tbody>
-      </nz-table>
-    </nz-card>
-  </div>
+    <div class="tab-content">
+      <!-- Tab 0: 基本信息（只读摘要） -->
+      <div *ngIf="activeTab === 0">
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="summary-label">项目名称</span>
+            <span class="summary-value">{{ form.title }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">关联课程</span>
+            <span class="summary-value">{{ form.courseId || '-' }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">状态</span>
+            <span class="summary-value">{{ statusLabel(form.status) }}</span>
+          </div>
+          <div class="summary-item" *ngIf="form.summary">
+            <span class="summary-label">简介</span>
+            <span class="summary-value">{{ form.summary }}</span>
+          </div>
+        </div>
+        <div class="actions-bar">
+          <button nz-button (click)="openEditFromTab0()">编辑基本信息</button>
+        </div>
+      </div>
 
-  <nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editingId ? '编辑实训项目' : '新建实训项目'" [nzFooter]="null" nzWidth="960" (nzOnCancel)="modalVisible = false">
-    <ng-container *nzModalContent>
+      <!-- Tab 1: 任务 -->
+      <div *ngIf="activeTab === 1">
+        <div class="sub-toolbar">
+          <span class="sub-count">已配置 {{ form.tasks.length }} 个任务</span>
+          <button nz-button (click)="addTask()">新增任务</button>
+        </div>
+
+        <div class="nested-card" *ngFor="let task of form.tasks; let i = index">
+          <div class="nested-header">
+            <strong>任务 {{ i + 1 }}</strong>
+            <button nz-button nzType="link" nzDanger (click)="removeTask(i)">删除</button>
+          </div>
+          <div class="nested-grid">
+            <input nz-input [(ngModel)]="task.title" placeholder="任务名称" />
+            <input nz-input type="number" [(ngModel)]="task.scoreWeight" placeholder="权重（如 50）" />
+            <input nz-input type="datetime-local" [(ngModel)]="task.dueTime" />
+            <textarea nz-input [(ngModel)]="task.description" rows="2" placeholder="任务描述"></textarea>
+            <textarea nz-input [(ngModel)]="task.requirement" rows="2" placeholder="任务要求"></textarea>
+          </div>
+        </div>
+
+        <div class="actions-bar" *ngIf="form.tasks.length > 0">
+          <button nz-button nzType="primary" (click)="saveTasks()">保存任务</button>
+        </div>
+      </div>
+
+      <!-- Tab 2: 资料 -->
+      <div *ngIf="activeTab === 2">
+        <div class="sub-toolbar">
+          <span class="sub-count">已配置 {{ form.materials.length }} 份资料</span>
+          <button nz-button (click)="addMaterial()">新增资料</button>
+        </div>
+
+        <div class="nested-card" *ngFor="let material of form.materials; let i = index">
+          <div class="nested-header">
+            <strong>资料 {{ i + 1 }}</strong>
+            <button nz-button nzType="link" nzDanger (click)="removeMaterial(i)">删除</button>
+          </div>
+          <div class="nested-grid">
+            <input nz-input [(ngModel)]="material.title" placeholder="资料名称" />
+            <input nz-input [(ngModel)]="material.resourceUrl" placeholder="资料 URL" />
+            <textarea nz-input [(ngModel)]="material.description" rows="2" placeholder="资料说明"></textarea>
+          </div>
+        </div>
+
+        <div class="actions-bar" *ngIf="form.materials.length > 0">
+          <button nz-button nzType="primary" (click)="saveMaterials()">保存资料</button>
+        </div>
+      </div>
+
+      <!-- Tab 3: 参与与评分 -->
+      <div *ngIf="activeTab === 3">
+        <div class="section-header">
+          <h3>参与名单</h3>
+          <button nz-button (click)="exportScores()">导出成绩</button>
+        </div>
+        <nz-table [nzData]="enrollments()" [nzFrontPagination]="false" nzSize="small">
+          <thead><tr><th>学生</th><th>状态</th><th>进度</th><th>得分</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let e of enrollments()">
+              <td>{{ e.studentName }}</td>
+              <td>{{ e.status }}</td>
+              <td>{{ e.progress }}%</td>
+              <td>{{ e.finalScore ?? '-' }}</td>
+            </tr>
+          </tbody>
+        </nz-table>
+
+        <div class="section-header" style="margin-top:24px;">
+          <h3>提交与评分</h3>
+        </div>
+        <nz-table [nzData]="submissions()" [nzFrontPagination]="false" nzSize="small">
+          <thead><tr><th>学生</th><th>任务</th><th>版本</th><th>状态</th><th>分数</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let s of submissions()">
+              <td>{{ s.studentName }}</td>
+              <td>{{ s.taskTitle }}</td>
+              <td>V{{ s.versionNo }}</td>
+              <td>
+                <nz-tag [nzColor]="s.status === submissionStatuses.Reviewed ? 'green' : s.status === submissionStatuses.Returned ? 'red' : 'blue'">
+                  {{ submissionLabel(s.status) }}
+                </nz-tag>
+              </td>
+              <td>{{ s.score ?? '-' }}</td>
+              <td>
+                <button nz-button nzType="link" (click)="openGuidance(s)">指导</button>
+                <button nz-button nzType="link" (click)="openScore(s)">评分</button>
+              </td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </div>
+    </div>
+  </nz-card>
+</div>
+
+<!-- Create / Edit modal -->
+<nz-modal [(nzVisible)]="modalVisible"
+  [nzTitle]="editingId ? '编辑实训项目' : '新建实训项目'"
+  nzWidth="700"
+  (nzOnOk)="saveModal()"
+  (nzOnCancel)="modalVisible = false">
+  <div *nzModalContent>
     <div class="form-grid">
-      <input nz-input [(ngModel)]="form.title" placeholder="项目名称" />
-      <input nz-input [(ngModel)]="form.summary" placeholder="项目简介" />
-      <textarea nz-input [(ngModel)]="form.description" rows="4" placeholder="项目说明"></textarea>
-      <input nz-input [(ngModel)]="form.coverImageUrl" placeholder="封面图片 URL" />
-      <nz-select [(ngModel)]="form.courseId" nzAllowClear nzPlaceHolder="关联课程">
+      <label>项目名称</label>
+      <input nz-input [(ngModel)]="form.title" placeholder="输入实训项目名称" />
+
+      <label>项目简介</label>
+      <textarea nz-input rows="3" [(ngModel)]="form.summary" placeholder="简要描述实训项目"></textarea>
+
+      <label>封面图片 URL</label>
+      <input nz-input [(ngModel)]="form.coverImageUrl" placeholder="可选" />
+
+      <label>关联课程</label>
+      <nz-select [(ngModel)]="form.courseId" nzAllowClear nzPlaceHolder="选择关联课程（可选）">
         <nz-option *ngFor="let course of courses()" [nzValue]="course.id" [nzLabel]="course.title"></nz-option>
       </nz-select>
-      <input nz-input [(ngModel)]="form.major" placeholder="专业" />
-      <input nz-input [(ngModel)]="form.className" placeholder="班级" />
+
+      <label>专业方向</label>
+      <input nz-input [(ngModel)]="form.major" placeholder="可选" />
+
+      <label>班级</label>
+      <input nz-input [(ngModel)]="form.className" placeholder="可选" />
+
+      <label>状态</label>
       <nz-select [(ngModel)]="form.status">
         <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
         <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
         <nz-option [nzValue]="statuses.Archived" nzLabel="已归档"></nz-option>
       </nz-select>
+
+      <label>开始时间</label>
       <input nz-input type="datetime-local" [(ngModel)]="form.startTime" />
+
+      <label>结束时间</label>
       <input nz-input type="datetime-local" [(ngModel)]="form.endTime" />
-      <input nz-input type="number" [(ngModel)]="form.maxScore" placeholder="满分" />
-      <label class="switch-row">
-        允许重复提交
-        <nz-switch [(ngModel)]="form.allowResubmission"></nz-switch>
-      </label>
-    </div>
 
-    <div class="sub-section">
-      <div class="sub-toolbar">
-        <h3>任务清单</h3>
-        <button nz-button (click)="addTask()">新增任务</button>
-      </div>
-      @for (task of form.tasks; track $index) {
-        <div class="nested-grid">
-          <input nz-input [(ngModel)]="task.title" placeholder="任务名称" />
-          <input nz-input type="number" [(ngModel)]="task.scoreWeight" placeholder="权重" />
-          <input nz-input type="datetime-local" [(ngModel)]="task.dueTime" />
-          <textarea nz-input [(ngModel)]="task.description" rows="2" placeholder="任务描述"></textarea>
-          <textarea nz-input [(ngModel)]="task.requirement" rows="2" placeholder="任务要求"></textarea>
-          <button nz-button nzDanger (click)="removeTask($index)">删除任务</button>
-        </div>
-      }
-    </div>
+      <label>满分</label>
+      <input nz-input type="number" [(ngModel)]="form.maxScore" />
 
-    <div class="sub-section">
-      <div class="sub-toolbar">
-        <h3>资料清单</h3>
-        <button nz-button (click)="addMaterial()">新增资料</button>
-      </div>
-      @for (material of form.materials; track $index) {
-        <div class="nested-grid">
-          <input nz-input [(ngModel)]="material.title" placeholder="资料名称" />
-          <input nz-input [(ngModel)]="material.resourceUrl" placeholder="资料 URL" />
-          <textarea nz-input [(ngModel)]="material.description" rows="2" placeholder="资料说明"></textarea>
-          <button nz-button nzDanger (click)="removeMaterial($index)">删除资料</button>
-        </div>
-      }
+      <label>允许重复提交</label>
+      <nz-switch [(ngModel)]="form.allowResubmission"></nz-switch>
     </div>
+  </div>
+</nz-modal>
 
-    <div class="footer-actions">
-      <button nz-button (click)="modalVisible = false">取消</button>
-      <button nz-button nzType="primary" (click)="save()">保存</button>
-    </div>
-    </ng-container>
-  </nz-modal>
-
-  <nz-modal [(nzVisible)]="guidanceVisible" nzTitle="新增指导记录" [nzFooter]="null" (nzOnCancel)="guidanceVisible = false">
-    <ng-container *nzModalContent>
+<!-- Guidance modal -->
+<nz-modal [(nzVisible)]="guidanceVisible" nzTitle="新增指导记录" [nzFooter]="null" (nzOnCancel)="guidanceVisible = false">
+  <div *nzModalContent>
     <textarea nz-input [(ngModel)]="guidanceForm.content" rows="5" placeholder="填写指导意见"></textarea>
-    <label class="switch-row">
-      学生可见
-      <nz-switch [(ngModel)]="guidanceForm.isVisibleToStudent"></nz-switch>
+    <label class="switch-row" style="margin-top:12px;">
+      学生可见 <nz-switch [(ngModel)]="guidanceForm.isVisibleToStudent"></nz-switch>
     </label>
-    <div class="footer-actions">
+    <div class="actions-bar">
       <button nz-button (click)="guidanceVisible = false">取消</button>
       <button nz-button nzType="primary" (click)="saveGuidance()">保存</button>
     </div>
-    </ng-container>
-  </nz-modal>
+  </div>
+</nz-modal>
 
-  <nz-modal [(nzVisible)]="scoreVisible" nzTitle="实训评分" [nzFooter]="null" (nzOnCancel)="scoreVisible = false">
-    <ng-container *nzModalContent>
+<!-- Score modal -->
+<nz-modal [(nzVisible)]="scoreVisible" nzTitle="实训评分" [nzFooter]="null" (nzOnCancel)="scoreVisible = false">
+  <div *nzModalContent>
     <div class="nested-grid">
       <input nz-input type="number" [(ngModel)]="scoreForm.score" placeholder="得分" />
       <input nz-input [(ngModel)]="scoreForm.gradeLevel" placeholder="等级，如 A / B / 优秀" />
       <textarea nz-input [(ngModel)]="scoreForm.comment" rows="4" placeholder="评分意见"></textarea>
       <textarea nz-input [(ngModel)]="scoreForm.rubricJson" rows="3" placeholder="评分规则 JSON，可选"></textarea>
     </div>
-    <div class="footer-actions">
+    <div class="actions-bar">
       <button nz-button (click)="scoreVisible = false">取消</button>
       <button nz-button nzType="primary" (click)="saveScore()">保存评分</button>
     </div>
-    </ng-container>
-  </nz-modal>
-</div>
+  </div>
+</nz-modal>

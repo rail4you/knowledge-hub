@@ -1,7 +1,8 @@
-.practicum-management-page {
+.page {
   padding: 24px;
-  display: grid;
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .toolbar {
@@ -10,28 +11,138 @@
   margin-bottom: 16px;
 }
 
-.dashboard-grid {
+.form-grid {
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 20px;
-}
-
-.form-grid,
-.nested-grid {
-  display: grid;
+  grid-template-columns: 120px 1fr;
   gap: 12px;
-  margin-bottom: 16px;
+  align-items: center;
+  max-width: 700px;
+
+  label {
+    text-align: right;
+    color: #666;
+    font-size: 14px;
+  }
 }
 
-.sub-section {
-  margin-top: 24px;
+.actions-bar {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
 }
 
 .sub-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
+}
+
+.sub-count {
+  color: #999;
+  font-size: 13px;
+}
+
+.nested-card {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
   margin-bottom: 12px;
+  background: #fafafa;
+}
+
+.nested-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.nested-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+
+  h3 {
+    margin: 0;
+    font-size: 15px;
+  }
+}
+
+.tabs-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #e8e8e8;
+  margin-bottom: 0;
+}
+
+.tab-btn {
+  padding: 10px 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    color: #1890ff;
+  }
+
+  &.active {
+    color: #1890ff;
+    border-bottom-color: #1890ff;
+    font-weight: 500;
+  }
+
+  &:disabled {
+    color: #d9d9d9;
+    cursor: not-allowed;
+  }
+}
+
+.tab-content {
+  padding: 20px 0;
+}
+
+.summary-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 600px;
+}
+
+.summary-item {
+  display: flex;
+  gap: 16px;
+  align-items: baseline;
+}
+
+.summary-label {
+  min-width: 80px;
+  color: #999;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.summary-value {
+  color: #333;
+  font-size: 14px;
+}
+
+.hint {
+  color: #999;
+  text-align: center;
+  padding: 40px 0;
+  font-size: 14px;
 }
 
 .switch-row {
@@ -41,15 +152,17 @@
   gap: 12px;
 }
 
-.footer-actions {
-  display: flex;
-  justify-content: end;
-  gap: 12px;
-  margin-top: 20px;
+::ng-deep .ant-table-row.selected {
+  background-color: #e6f7ff !important;
 }
 
-@media (max-width: 960px) {
-  .dashboard-grid {
+::ng-deep .ant-table-row {
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .form-grid {
     grid-template-columns: 1fr;
+    label { text-align: left; }
   }
 }

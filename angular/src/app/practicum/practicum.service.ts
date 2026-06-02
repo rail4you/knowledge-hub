@@ -357,7 +357,6 @@ export class PracticumService {
     this.restService.request<any, Blob>({
       method: 'POST',
       responseType: 'blob',
-      url: '/api/app/practicum/export-assessments',
-      params: { projectId },
+      url: projectId ? `/api/app/practicum/export-assessments/${projectId}` : '/api/app/practicum/export-assessments',
     }, { apiName: this.apiName, ...config });
 }

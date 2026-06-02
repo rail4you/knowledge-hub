@@ -11,6 +11,7 @@ using KnowledgeHub.Permissions;
 using KnowledgeHub.Practicums.Dtos;
 using KnowledgeHub.Practicums.Enums;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -24,6 +25,7 @@ using Volo.Abp.Users;
 
 namespace KnowledgeHub.Practicums;
 
+[IgnoreAntiforgeryToken]
 public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
 {
     private readonly IRepository<PracticumProject, Guid> _projectRepository;

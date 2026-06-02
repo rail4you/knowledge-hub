@@ -73,17 +73,32 @@
         <label>简介</label>
         <textarea nz-input rows="3" [(ngModel)]="form.summary"></textarea>
 
-        <label>说明</label>
-        <textarea nz-input rows="5" [(ngModel)]="form.description"></textarea>
-
         <label>行业方向</label>
         <input nz-input [(ngModel)]="form.industryField" />
 
         <label>协同单位</label>
         <input nz-input [(ngModel)]="form.collaborationUnit" />
 
-        <label>封面链接</label>
-        <input nz-input [(ngModel)]="form.coverImageUrl" />
+        <label>封面图片</label>
+        <div class="cover-upload-group">
+          <nz-upload
+            nzListType="picture-card"
+            [nzMultiple]="false"
+            [nzMaxCount]="1"
+            [nzBeforeUpload]="beforeCoverUpload"
+            [nzFileList]="coverFileList"
+            [nzRemove]="removeCover"
+            [nzDisabled]="coverUploading"
+            nzAccept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+          >
+            @if (coverFileList.length === 0) {
+              <div class="cover-upload-trigger">
+                <span nz-icon nzType="plus"></span>
+                <div style="margin-top: 8px">上传封面</div>
+              </div>
+            }
+          </nz-upload>
+        </div>
 
         <label>状态</label>
         <nz-select [(ngModel)]="form.status">

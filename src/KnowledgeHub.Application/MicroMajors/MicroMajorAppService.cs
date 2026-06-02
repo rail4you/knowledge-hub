@@ -9,6 +9,7 @@ using KnowledgeHub.Learning;
 using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -20,6 +21,7 @@ using Volo.Abp.Users;
 
 namespace KnowledgeHub.MicroMajors;
 
+[IgnoreAntiforgeryToken]
 public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppService
 {
     private readonly IRepository<MicroMajor, Guid> _microMajorRepository;
@@ -304,9 +306,9 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
 
     private async Task EnsureCoursesValidAsync(List<CreateUpdateMicroMajorCourseDto> courses)
     {
-        if (courses.Count < 3)
+        if (courses.Count == 0)
         {
-            throw new UserFriendlyException("微专业至少需要配置 3 门课程。");
+            return;
         }
 
         var ids = courses.Select(x => x.CourseId).Distinct().ToList();
@@ -324,11 +326,12 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
 
     private async Task ReplaceCoursesAsync(Guid microMajorId, List<CreateUpdateMicroMajorCourseDto> courses)
     {
-        var existing = await _microMajorCourseRepository.GetListAsync(x => x.MicroMajorId == microMajorId);
-        foreach (var item in existing)
-        {
-            await _microMajorCourseRepository.DeleteAsync(item);
-        }
+        // Hard-delete existing links directly in SQL to avoid unique constraint violations
+        // when re-inserting with the same (MicroMajorId, CourseId) pairs
+        var dbContext = await _microMajorCourseRepository.GetDbContextAsync();
+        await dbContext.Set<MicroMajorCourse>()
+            .Where(x => x.MicroMajorId == microMajorId)
+            .ExecuteDeleteAsync();
 
         foreach (var item in courses.OrderBy(x => x.SortOrder))
         {
