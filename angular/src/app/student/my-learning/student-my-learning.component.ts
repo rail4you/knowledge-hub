@@ -12,6 +12,7 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
+import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { LearningDashboardDto, LearningProgressDto, StudentCourseDto, RecentLearningDto } from '../../proxy/learning/dtos/models';
 
@@ -54,6 +55,7 @@ interface DailyPoint {
     NzProgressModule,
     NzEmptyModule,
     NzDividerModule,
+    MasteryRadarComponent,
   ],
   templateUrl: './student-my-learning.component.html',
   styleUrls: ['./student-my-learning.component.scss'],
@@ -107,6 +109,22 @@ export class StudentMyLearningComponent implements OnInit {
       max: d.maxValue || 100,
       value: dash.masteryValues?.[i] ?? 0,
     }));
+  });
+
+  /** 掌握度雷达图数据 */
+  readonly radarData = computed<RadarAxis[]>(() =>
+    this.knowledgeStats().map(s => ({
+      name: s.name,
+      value: s.value,
+      max: s.max,
+    }))
+  );
+
+  /** 掌握度平均值 */
+  readonly radarAverage = computed<number>(() => {
+    const stats = this.knowledgeStats();
+    if (stats.length === 0) return 0;
+    return Math.round(stats.reduce((s, k) => s + k.value, 0) / stats.length);
   });
 
   ngOnInit() {

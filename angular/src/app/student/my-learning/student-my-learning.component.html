@@ -255,22 +255,13 @@
             <p>完成更多习题后将自动生成掌握度报告</p>
           </div>
         } @else {
-          <ul class="mastery-mini-list">
-            @for (k of knowledgeStats(); track k.name) {
-              <li class="mastery-mini-item">
-                <div class="mastery-mini-item__head">
-                  <span class="mastery-mini-item__name">{{ k.name }}</span>
-                  <span class="mastery-mini-item__value">{{ k.value }} / {{ k.max }}</span>
-                </div>
-                <div class="mastery-mini-item__bar">
-                  <span
-                    class="mastery-mini-item__fill"
-                    [style.width.%]="(k.value / k.max) * 100"
-                  ></span>
-                </div>
-              </li>
-            }
-          </ul>
+          <div class="mastery-radar-wrap">
+            <app-mastery-radar [data]="radarData()" [showValues]="true"></app-mastery-radar>
+            <div class="mastery-radar-summary">
+              <span class="mastery-radar-summary__num">{{ radarAverage() }}</span>
+              <span class="mastery-radar-summary__label">综合掌握度</span>
+            </div>
+          </div>
         }
       </div>
 

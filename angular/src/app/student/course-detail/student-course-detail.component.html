@@ -286,29 +286,38 @@
                 <p>暂无掌握度数据，完成一些习题后将自动生成</p>
               </div>
             } @else {
-              <ul class="mastery-list">
-                @for (m of mastery(); track m.id) {
-                  <li class="mastery-item">
-                    <div class="mastery-item__head">
-                      <span class="mastery-item__name">{{ m.knowledgeResourceName }}</span>
-                      <span class="mastery-item__level" [class]="'level-' + (m.level || 0)">
-                        {{ m.level === 0 ? '未学习' : m.level === 1 ? '入门' : m.level === 2 ? '熟练' : '精通' }}
-                      </span>
-                    </div>
-                    <div class="mastery-item__bar">
-                      <span
-                        class="mastery-item__fill"
-                        [style.width.%]="(m.accuracy || 0)"
-                      ></span>
-                    </div>
-                    <div class="mastery-item__meta">
-                      <span>练习 {{ m.practiceCount || 0 }} 次</span>
-                      <span>正确 {{ m.correctCount || 0 }} 题</span>
-                      <span class="mastery-item__accuracy">正确率 {{ m.accuracy || 0 }}%</span>
-                    </div>
-                  </li>
-                }
-              </ul>
+              <div class="mastery-layout">
+                <div class="mastery-radar">
+                  <app-mastery-radar [data]="masteryRadarData()"></app-mastery-radar>
+                  <div class="mastery-radar__summary">
+                    <span class="mastery-radar__average">{{ masteryAverage() }}</span>
+                    <span class="mastery-radar__label">综合掌握度</span>
+                  </div>
+                </div>
+                <ul class="mastery-list">
+                  @for (m of mastery(); track m.id) {
+                    <li class="mastery-item">
+                      <div class="mastery-item__head">
+                        <span class="mastery-item__name">{{ m.knowledgeResourceName }}</span>
+                        <span class="mastery-item__level" [class]="'level-' + (m.level || 0)">
+                          {{ m.level === 0 ? '未学习' : m.level === 1 ? '入门' : m.level === 2 ? '熟练' : '精通' }}
+                        </span>
+                      </div>
+                      <div class="mastery-item__bar">
+                        <span
+                          class="mastery-item__fill"
+                          [style.width.%]="(m.accuracy || 0)"
+                        ></span>
+                      </div>
+                      <div class="mastery-item__meta">
+                        <span>练习 {{ m.practiceCount || 0 }} 次</span>
+                        <span>正确 {{ m.correctCount || 0 }} 题</span>
+                        <span class="mastery-item__accuracy">正确率 {{ m.accuracy || 0 }}%</span>
+                      </div>
+                    </li>
+                  }
+                </ul>
+              </div>
             }
           </section>
         }

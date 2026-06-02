@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -17,6 +17,7 @@ import { LearningService } from '../../proxy/learning/learning.service';
 import type { CourseDetailDto, ChapterDto } from '../../proxy/courses/dtos/models';
 import type { LearningProgressDto, KnowledgeMasteryDto } from '../../proxy/learning/dtos/models';
 import { ChapterTreeGraphComponent } from '../../learning/knowledge-graph/chapter-tree-graph.component';
+import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
 
 type TabKey = 'chapters' | 'graph' | 'progress' | 'related';
 
@@ -53,6 +54,7 @@ interface ResourceItem {
     NzTooltipModule,
     NzDividerModule,
     ChapterTreeGraphComponent,
+    MasteryRadarComponent,
   ],
   templateUrl: './student-course-detail.component.html',
   styleUrls: ['./student-course-detail.component.scss'],
@@ -325,4 +327,22 @@ export class StudentCourseDetailComponent implements OnInit {
   /** 跟踪模板：递归渲染章节树 */
   trackById = (_: number, n: ChapterDto) => n.id;
   trackByResource = (_: number, r: ResourceItem) => r.id;
+
+  /** 掌握度雷达图数据（按知识点归类） */
+  masteryRadarData = computed<RadarAxis[]>(() => {
+    const data = this.mastery();
+    if (data.length === 0) return [];
+    return data.map(m => ({
+      name: m.knowledgeResourceName || '未命名',
+      value: m.accuracy || 0,
+      max: 100,
+    }));
+  });
+
+  /** 掌握度平均值 */
+  masteryAverage = computed<number>(() => {
+    const data = this.mastery();
+    if (data.length === 0) return 0;
+    return Math.round(data.reduce((s, m) => s + (m.accuracy || 0), 0) / data.length);
+  });
 }

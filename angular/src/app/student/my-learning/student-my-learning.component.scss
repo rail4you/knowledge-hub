@@ -785,6 +785,34 @@
   }
 }
 
+.mastery-radar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 0;
+}
+
+.mastery-radar-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+
+  &__num {
+    font-size: 26px;
+    font-weight: 700;
+    color: ds.$student-primary;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+
+  &__label {
+    color: ds.$student-text-light;
+    font-size: 11px;
+  }
+}
+
 .recent-list {
   list-style: none;
   margin: 0;

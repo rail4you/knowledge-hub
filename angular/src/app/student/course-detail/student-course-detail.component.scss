@@ -659,6 +659,45 @@
 }
 
 /* ===== 掌握度列表 ===== */
+.mastery-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.mastery-radar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: ds.$student-radius;
+  background: linear-gradient(180deg, #f0f6ff 0%, #f8fbff 100%);
+
+  &__summary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  &__average {
+    font-size: 32px;
+    font-weight: 700;
+    color: ds.$student-primary;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+
+  &__label {
+    color: ds.$student-text-light;
+    font-size: 12px;
+  }
+}
+
 .mastery-list {
   list-style: none;
   margin: 0;
@@ -1116,6 +1155,16 @@
 
   .related-grid {
     grid-template-columns: 1fr;
+  }
+
+  .mastery-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .mastery-radar {
+    position: static;
+    max-width: 320px;
+    margin: 0 auto;
   }
 
   .detail-aside {
