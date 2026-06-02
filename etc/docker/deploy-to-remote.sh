@@ -190,17 +190,13 @@ build_and_push() {
 # 构建 Angular
 # ============================================================
 build_angular() {
-    info "准备构建前端（React 首页 + Angular 管理端）..."
+    info "准备构建前端（Angular 首页 + 管理端）..."
 
     cd "$PROJECT_ROOT"
 
     if [ ! -d "$PROJECT_ROOT/angular/node_modules" ]; then
         info "安装 Angular npm 依赖..."
         (cd "$PROJECT_ROOT/angular" && npm install)
-    fi
-    if [ ! -d "$PROJECT_ROOT/student-react/node_modules" ]; then
-        info "安装 React npm 依赖..."
-        (cd "$PROJECT_ROOT/student-react" && npm install)
     fi
 
     # 构建并推送镜像

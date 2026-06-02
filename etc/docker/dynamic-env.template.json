@@ -1,12 +1,12 @@
 {
   "production": true,
   "application": {
-    "baseUrl": "${PUBLIC_URL}/admin",
+    "baseUrl": "${PUBLIC_URL}",
     "name": "易课通知识库系统"
   },
   "oAuthConfig": {
     "issuer": "${PUBLIC_URL}/",
-    "redirectUri": "${PUBLIC_URL}/admin",
+    "redirectUri": "${PUBLIC_URL}",
     "postLogoutRedirectUri": "${PUBLIC_URL}",
     "clientId": "KnowledgeHub_App",
     "responseType": "code",
