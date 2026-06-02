@@ -120,14 +120,18 @@ public class LearningAppService : ApplicationService, ILearningAppService
     public async Task<LearningProgressDto> GetProgressAsync(Guid courseId)
     {
         var studentId = _currentUser.Id ?? throw new Volo.Abp.AbpException("User not found");
-        
+
         var progressList = await _progressRepository.GetListAsync(
             x => x.StudentId == studentId && x.CourseId == courseId);
-        
-        var totalProgress = progressList.Sum(x => x.Progress) / Math.Max(1, progressList.Count);
+
+        var totalProgress = progressList.Count == 0
+            ? 0
+            : progressList.Sum(x => x.Progress) / progressList.Count;
         var totalTime = progressList.Sum(x => x.TimeSpent.TotalMinutes);
-        var lastAccess = progressList.Max(x => x.LastAccessAt);
-        
+        var lastAccess = progressList.Count == 0
+            ? DateTime.MinValue
+            : progressList.Max(x => x.LastAccessAt);
+
         return new LearningProgressDto
         {
             CourseId = courseId,
@@ -173,9 +177,12 @@ public class LearningAppService : ApplicationService, ILearningAppService
         {
             var allProgress = await _progressRepository.GetListAsync(
                 x => x.StudentId == studentId && x.CourseId == input.CourseId);
-            
-            studentCourse.UpdateProgress(allProgress.Sum(x => x.Progress) / allProgress.Count);
-            await _studentCourseRepository.UpdateAsync(studentCourse);
+
+            if (allProgress.Count > 0)
+            {
+                studentCourse.UpdateProgress(allProgress.Sum(x => x.Progress) / allProgress.Count);
+                await _studentCourseRepository.UpdateAsync(studentCourse);
+            }
         }
         
         return ObjectMapper.Map<LearningProgress, LearningProgressDto>(progress);
