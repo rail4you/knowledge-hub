@@ -152,7 +152,7 @@ export const STUDENT_ROUTES: Routes = [
       },
       {
         path: 'recruitment-live/:id',
-        loadComponent: () => import('./recruitment-live/live-room.component').then(m => m.LiveRoomComponent),
+        loadComponent: () => import('../recruitment-live/live-room.component').then(m => m.LiveRoomComponent),
       },
     ]
   }

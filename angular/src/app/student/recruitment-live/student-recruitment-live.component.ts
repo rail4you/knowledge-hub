@@ -7,6 +7,7 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { RecruitmentLiveService } from '../../recruitment-live/recruitment-live.service';
 import { RecruitmentLiveDto, RecruitmentLiveStatus } from '../../recruitment-live/recruitment-live.models';
 
@@ -21,6 +22,7 @@ import { RecruitmentLiveDto, RecruitmentLiveStatus } from '../../recruitment-liv
     NzTagModule,
     NzIconModule,
     NzEmptyModule,
+    NzSpinModule,
   ],
   templateUrl: './student-recruitment-live.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

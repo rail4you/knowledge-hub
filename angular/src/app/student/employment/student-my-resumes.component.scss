@@ -427,27 +427,26 @@
 .resume-form {
   display: flex;
   flex-direction: column;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px 16px;
+  gap: 20px;
 }
 
 .form-item {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  &--full {
-    grid-column: 1 / -1;
-  }
 }
 
 .form-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: ds.$student-text;
+}
+
+.form-hint {
+  margin: 0;
+  font-size: 12px;
+  color: ds.$student-text-muted;
+  line-height: 1.5;
 }
 
 .required {
@@ -455,98 +454,99 @@
   margin-left: 2px;
 }
 
-.upload-area {
+/* =================== UPLOAD DROPZONE =================== */
+.form-upload {
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
-.upload-btn {
+.upload-dropzone {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 80px;
+  min-height: 120px;
+  padding: 28px 20px;
   border: 1.5px dashed ds.$student-border;
-  background: ds.$student-surface-soft;
   border-radius: ds.$student-radius;
-  color: ds.$student-text-muted;
-  font-size: 13px;
+  background: ds.$student-surface-soft;
   cursor: pointer;
   transition: all 0.2s ease;
-  span[nz-icon] {
-    font-size: 20px;
-    color: ds.$student-primary;
-  }
+
   &:hover {
     border-color: ds.$student-primary;
-    color: ds.$student-primary;
-    background: rgba(ds.$student-primary, 0.04);
+    background: rgba(ds.$student-primary, 0.03);
   }
 }
 
-.uploaded-file {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  background: rgba(ds.$student-primary, 0.06);
-  border: 1px solid rgba(ds.$student-primary, 0.18);
-  border-radius: ds.$student-radius;
-}
-
-.uploaded-file__icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+.upload-zone-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  span[nz-icon] {
+    font-size: 22px;
+  }
+}
+
+.upload-zone-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: ds.$student-text;
+}
+
+.upload-zone-hint {
+  font-size: 12px;
+  color: ds.$student-text-muted;
+}
+
+.upload-zone-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: ds.$student-primary;
   span[nz-icon] {
     font-size: 18px;
   }
 }
 
-.uploaded-file__name {
-  flex: 1;
-  font-size: 13px;
-  color: ds.$student-text;
-  font-weight: 500;
-  word-break: break-all;
+.upload-zone-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.uploaded-file__remove,
-.uploaded-file__replace {
+.upload-action {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
   height: 28px;
-  padding: 0 10px;
+  padding: 0 12px;
   border: 0;
+  border-radius: ds.$student-radius;
   background: #fff;
-  border-radius: 999px;
+  color: ds.$student-primary;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  span[nz-icon] {
-    font-size: 12px;
-  }
-}
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 
-.uploaded-file__remove {
-  color: #ef4444;
   &:hover {
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(ds.$student-primary, 0.08);
   }
-}
 
-.uploaded-file__replace {
-  color: ds.$student-primary;
-  &:hover {
-    background: rgba(ds.$student-primary, 0.1);
+  &--danger {
+    color: #ef4444;
+    &:hover {
+      background: rgba(239, 68, 68, 0.08);
+    }
   }
 }
 

@@ -76,41 +76,22 @@
               <span class="info-row__label">姓名</span>
               <span class="info-row__value">{{ item.fullName }}</span>
             </div>
-            <div class="info-row">
-              <span class="info-row__label">联系方式</span>
-              <span class="info-row__value">
-                {{ item.phoneNumber || '-' }}
-                @if (item.email) {
-                  <span class="info-row__divider">·</span>
-                  {{ item.email }}
-                }
-              </span>
-            </div>
-            <div class="info-row">
-              <span class="info-row__label">学校 / 专业</span>
-              <span class="info-row__value">
-                {{ item.schoolName || '-' }} ·
-                @if (item.major) { {{ item.major }} }
-              </span>
-            </div>
-            <div class="info-row">
-              <span class="info-row__label">年级 / 班级</span>
-              <span class="info-row__value">
-                {{ item.grade || '-' }}
-                @if (item.className) {
-                  <span class="info-row__divider">·</span>
-                  {{ item.className }}
-                }
-              </span>
-            </div>
-            @if (item.summary) {
-              <p class="resume-summary">{{ item.summary }}</p>
+            @if (item.phoneNumber || item.email) {
+              <div class="info-row">
+                <span class="info-row__label">联系方式</span>
+                <span class="info-row__value">
+                  {{ item.phoneNumber || '-' }}
+                  @if (item.email) {
+                    <span class="info-row__divider">·</span>
+                    {{ item.email }}
+                  }
+                </span>
+              </div>
             }
-            @if (item.skills) {
-              <div class="skill-row">
-                @for (skill of getSkillTags(item.skills); track skill) {
-                  <span class="skill-chip">{{ skill }}</span>
-                }
+            @if (item.schoolName) {
+              <div class="info-row">
+                <span class="info-row__label">学校</span>
+                <span class="info-row__value">{{ item.schoolName }}</span>
               </div>
             }
             @if (item.attachmentUrl) {
@@ -158,198 +139,82 @@
 >
   <ng-container *nzModalContent>
     <div class="resume-form">
-      <div class="form-grid">
-        <div class="form-item">
-          <label class="form-label">简历标题 <span class="required">*</span></label>
-          <input
-            nz-input
-            type="text"
-            [(ngModel)]="form.title"
-            placeholder="如：前端开发实习简历 v1"
-            maxlength="60"
-          />
-        </div>
-        <div class="form-item">
-          <label class="form-label">姓名 <span class="required">*</span></label>
-          <input
-            nz-input
-            type="text"
-            [(ngModel)]="form.fullName"
-            placeholder="您的真实姓名"
-            maxlength="20"
-          />
-        </div>
-        <div class="form-item">
-          <label class="form-label">手机号</label>
-          <input
-            nz-input
-            type="text"
-            [(ngModel)]="form.phoneNumber"
-            placeholder="11位手机号"
-            maxlength="20"
-          />
-        </div>
-        <div class="form-item">
-          <label class="form-label">邮箱</label>
-          <input
-            nz-input
-            type="text"
-            [(ngModel)]="form.email"
-            placeholder="电子邮箱"
-            maxlength="60"
-          />
-        </div>
-        <div class="form-item">
-          <label class="form-label">学校</label>
-          <input
-            nz-input
-            type="text"
-            [(ngModel)]="form.schoolName"
-            placeholder="所在学校"
-          />
-        </div>
-        <div class="form-item">
-          <label class="form-label">专业</label>
-          <input
-            nz-input
-            type="text"
-            [(ngModel)]="form.major"
-            placeholder="所学专业"
-          />
-        </div>
-        <div class="form-item">
-          <label class="form-label">年级</label>
-          <input
-            nz-input
-            type="text"
-            [(ngModel)]="form.grade"
-            placeholder="如：2023级"
-          />
-        </div>
-        <div class="form-item">
-          <label class="form-label">班级</label>
-          <input
-            nz-input
-            type="text"
-            [(ngModel)]="form.className"
-            placeholder="所在班级"
-          />
-        </div>
-        <div class="form-item">
-          <label class="form-label">学号</label>
-          <input
-            nz-input
-            type="text"
-            [(ngModel)]="form.studentNumber"
-            placeholder="学号（可选）"
-          />
-        </div>
-        <div class="form-item form-item--full">
-          <label class="form-label">个人简介</label>
-          <textarea
-            nz-input
-            rows="3"
-            [(ngModel)]="form.summary"
-            placeholder="一段话介绍自己，突出优势"
-            maxlength="300"
-          ></textarea>
-        </div>
-        <div class="form-item form-item--full">
-          <label class="form-label">技能标签</label>
-          <textarea
-            nz-input
-            rows="2"
-            [(ngModel)]="form.skills"
-            placeholder="多个标签以逗号或换行分隔，如：JavaScript, Vue, React"
-            maxlength="200"
-          ></textarea>
-        </div>
-        <div class="form-item form-item--full">
-          <label class="form-label">教育经历</label>
-          <textarea
-            nz-input
-            rows="2"
-            [(ngModel)]="form.educationExperience"
-            placeholder="如：2022.09-2026.06 XX大学 XX专业 本科"
-            maxlength="300"
-          ></textarea>
-        </div>
-        <div class="form-item form-item--full">
-          <label class="form-label">实习/工作经历</label>
-          <textarea
-            nz-input
-            rows="3"
-            [(ngModel)]="form.internshipExperience"
-            placeholder="公司、岗位、时间、职责与成果"
-            maxlength="500"
-          ></textarea>
-        </div>
-        <div class="form-item form-item--full">
-          <label class="form-label">项目经历</label>
-          <textarea
-            nz-input
-            rows="3"
-            [(ngModel)]="form.projectExperience"
-            placeholder="项目名称、角色、技术栈、产出"
-            maxlength="500"
-          ></textarea>
-        </div>
-        <div class="form-item form-item--full">
-          <label class="form-label">获奖 / 证书</label>
-          <textarea
-            nz-input
-            rows="2"
-            [(ngModel)]="form.certificateText"
-            placeholder="获得奖项、资格证书等"
-            maxlength="300"
-          ></textarea>
-        </div>
+      <!-- 标题 -->
+      <div class="form-item">
+        <label class="form-label">
+          简历标题
+          <span class="required">*</span>
+        </label>
+        <input
+          nz-input
+          type="text"
+          [(ngModel)]="form.title"
+          placeholder="如：前端开发实习简历"
+          maxlength="60"
+        />
+      </div>
 
-        <div class="form-item form-item--full">
-          <label class="form-label">简历附件</label>
-          <div class="upload-area">
-            <input
-              #fileInput
-              type="file"
-              accept=".pdf,.doc,.docx,.rtf,.jpg,.jpeg,.png,.webp"
-              (change)="onFileSelected($event)"
-              hidden
-            />
+      <!-- 姓名 -->
+      <div class="form-item">
+        <label class="form-label">
+          姓名
+          <span class="required">*</span>
+        </label>
+        <input
+          nz-input
+          type="text"
+          [(ngModel)]="form.fullName"
+          placeholder="您的真实姓名"
+          maxlength="20"
+        />
+      </div>
+
+      <!-- 附件上传 -->
+      <div class="form-item">
+        <label class="form-label">简历附件</label>
+        <p class="form-hint">上传 PDF、Word 或图片格式的简历文件（最大 10MB）</p>
+        <div class="form-upload">
+          <input
+            #fileInput
+            type="file"
+            accept=".pdf,.doc,.docx,.rtf,.jpg,.jpeg,.png,.webp"
+            (change)="onFileSelected($event)"
+            hidden
+          />
+          <div
+            class="upload-dropzone"
+            (click)="fileInput.click()"
+          >
+            <span class="upload-zone-icon">
+              <span nz-icon nzType="cloud-upload" nzTheme="outline"></span>
+            </span>
             @if (!form.hasAttachment) {
-              <button type="button" class="upload-btn" (click)="fileInput.click()">
-                <span nz-icon nzType="upload" nzTheme="outline"></span>
-                <span>点击上传 PDF / Word / 图片（最大 10MB）</span>
-              </button>
+              <span class="upload-zone-text">点击或拖拽文件到此处上传</span>
+              <span class="upload-zone-hint">支持 .pdf .doc .docx .jpg .png 等格式</span>
             } @else {
-              <div class="uploaded-file">
-                <span class="uploaded-file__icon">
-                  <span nz-icon [nzType]="getFileIcon(form.attachmentUrl || '')" nzTheme="outline"></span>
-                </span>
-                <span class="uploaded-file__name">{{ form.attachmentFileName || '已上传附件' }}</span>
-                <button type="button" class="uploaded-file__remove" (click)="removeAttachment()">
-                  <span nz-icon nzType="close" nzTheme="outline"></span>
-                  移除
+              <span class="upload-zone-file">
+                <span nz-icon [nzType]="getFileIcon(form.attachmentUrl || '')" nzTheme="outline"></span>
+                {{ form.attachmentFileName || '已选择文件' }}
+              </span>
+              <div class="upload-zone-actions">
+                <button type="button" class="upload-action" (click)="$event.stopPropagation(); fileInput.click()">
+                  重新选择
                 </button>
-                <button type="button" class="uploaded-file__replace" (click)="fileInput.click()">
-                  <span nz-icon nzType="reload" nzTheme="outline"></span>
-                  替换
+                <button type="button" class="upload-action upload-action--danger" (click)="$event.stopPropagation(); removeAttachment()">
+                  移除
                 </button>
               </div>
             }
           </div>
         </div>
-
-        <div class="form-item form-item--full">
-          <label class="default-toggle">
-            <input
-              type="checkbox"
-              [(ngModel)]="form.isDefault"
-            />
-            <span class="default-toggle__box"></span>
-            <span class="default-toggle__label">设为默认简历（投递时优先使用）</span>
-          </label>
-        </div>
       </div>
+
+      <!-- 设为默认 -->
+      <label class="default-toggle">
+        <input type="checkbox" [(ngModel)]="form.isDefault" />
+        <span class="default-toggle__box"></span>
+        <span class="default-toggle__label">设为默认简历（投递时优先使用）</span>
+      </label>
     </div>
   </ng-container>
 </nz-modal>

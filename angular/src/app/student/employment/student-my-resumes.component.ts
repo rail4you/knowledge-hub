@@ -5,6 +5,10 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzUploadModule } from 'ng-zorro-antd/upload';
 import { CreateUpdateStudentResumeDto, EmploymentService, StudentResumeDto } from '../../employment/employment.service';
 
 interface ResumeFormState extends CreateUpdateStudentResumeDto {
@@ -15,7 +19,7 @@ interface ResumeFormState extends CreateUpdateStudentResumeDto {
 @Component({
   selector: 'app-student-my-resumes',
   standalone: true,
-  imports: [CommonModule, DatePipe, DecimalPipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule],
+  imports: [CommonModule, DatePipe, DecimalPipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule, NzInputModule, NzButtonModule, NzCheckboxModule, NzUploadModule],
   templateUrl: './student-my-resumes.component.html',
   styleUrls: ['./student-my-resumes.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
