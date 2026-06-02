@@ -255,6 +255,14 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/employment/applications',
+    loadComponent: () => import('./admin/employment/employment-application-management.component').then(c => c.EmploymentApplicationManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Employment.ManageApplication',
+    },
+  },
+  {
     path: 'admin/employment/interviews',
     loadComponent: () => import('./admin/employment/employment-interview-management.component').then(c => c.EmploymentInterviewManagementComponent),
     canActivate: [authGuard, permissionGuard],
@@ -269,6 +277,27 @@ export const APP_ROUTES: Routes = [
     data: {
       requiredPolicy: 'KnowledgeHub.Employment.ViewStatistics',
     },
+  },
+  {
+    path: 'admin/recruitment-live',
+    loadComponent: () => import('./admin/recruitment-live/recruitment-live-management.component').then(c => c.RecruitmentLiveManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
+    },
+  },
+  {
+    path: 'admin/recruitment-live/create',
+    loadComponent: () => import('./admin/recruitment-live/recruitment-live-create.component').then(c => c.RecruitmentLiveCreateComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
+    },
+  },
+  {
+    path: 'admin/recruitment-live/:id',
+    loadComponent: () => import('./recruitment-live/live-room.component').then(c => c.LiveRoomComponent),
+    canActivate: [authGuard],
   },
   {
     path: 'practicum/projects',

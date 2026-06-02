@@ -53,6 +53,7 @@ using Volo.Abp.BackgroundJobs;
 using KnowledgeHub.Json;
 using KnowledgeHub.TeachingAgents;
 using Volo.Abp.Json;
+using KnowledgeHub.LiveWs;
 
 namespace KnowledgeHub;
 
@@ -380,8 +381,26 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             var configuration = context.ServiceProvider.GetRequiredService<IConfiguration>();
             options.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
         });
+        app.UseWebSockets(new WebSocketOptions
+        {
+            KeepAliveInterval = TimeSpan.FromSeconds(30)
+        });
+
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
+
+        // 映射 WebSocket 端点
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path == "/api/recruitment-live/ws" && context.WebSockets.IsWebSocketRequest)
+            {
+                var handler = context.RequestServices.GetRequiredService<RecruitmentLiveWebSocketHandler>();
+                var ws = await context.WebSockets.AcceptWebSocketAsync();
+                await handler.HandleAsync(ws, context);
+                return;
+            }
+            await next();
+        });
     }
 }

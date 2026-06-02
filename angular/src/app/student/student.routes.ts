@@ -112,6 +112,48 @@ export const STUDENT_ROUTES: Routes = [
         path: 'practicums/:id',
         loadComponent: () => import('./practicums/student-practicum-detail.component').then(m => m.StudentPracticumDetailComponent),
       },
+      {
+        path: 'employment',
+        children: [
+          {
+            path: '',
+            redirectTo: 'jobs',
+            pathMatch: 'full',
+          },
+          {
+            path: 'jobs',
+            loadComponent: () => import('./employment/student-jobs.component').then(m => m.StudentJobsComponent),
+            data: {
+              name: '就业',
+              icon: 'briefcase'
+            }
+          },
+          {
+            path: 'jobs/:id',
+            loadComponent: () => import('./employment/student-job-detail.component').then(m => m.StudentJobDetailComponent),
+          },
+          {
+            path: 'my-resumes',
+            loadComponent: () => import('./employment/student-my-resumes.component').then(m => m.StudentMyResumesComponent),
+          },
+          {
+            path: 'my-applications',
+            loadComponent: () => import('./employment/student-my-applications.component').then(m => m.StudentMyApplicationsComponent),
+          },
+        ]
+      },
+      {
+        path: 'recruitment-live',
+        loadComponent: () => import('./recruitment-live/student-recruitment-live.component').then(m => m.StudentRecruitmentLiveComponent),
+        data: {
+          name: '招聘直播',
+          icon: 'video-camera'
+        }
+      },
+      {
+        path: 'recruitment-live/:id',
+        loadComponent: () => import('./recruitment-live/live-room.component').then(m => m.LiveRoomComponent),
+      },
     ]
   }
 ];

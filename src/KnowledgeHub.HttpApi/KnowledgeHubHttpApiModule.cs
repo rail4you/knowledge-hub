@@ -9,6 +9,8 @@ using Volo.Abp.PermissionManagement.HttpApi;
 using Volo.Abp.Localization;
 using Volo.Abp.TenantManagement;
 using Volo.Abp.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using KnowledgeHub.LiveWs;
 
 namespace KnowledgeHub;
 
@@ -33,6 +35,8 @@ public class KnowledgeHubHttpApiModule : AbpModule
         });
 
         ConfigureLocalization();
+
+        context.Services.AddSingleton<RecruitmentLiveWebSocketHandler>();
     }
 
     private void ConfigureLocalization()

@@ -1,0 +1,238 @@
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import {
+  EmploymentApplicationStatus,
+  EmploymentService,
+  JobApplicationDto,
+  UpdateJobApplicationStatusDto,
+} from '../../employment/employment.service';
+
+interface StatItem {
+  label: string;
+  value: number;
+  icon: string;
+  color: string;
+}
+
+@Component({
+  selector: 'app-employment-application-management',
+  standalone: true,
+  imports: [
+    CommonModule,
+    DatePipe,
+    DecimalPipe,
+    FormsModule,
+    NzIconModule,
+    NzSpinModule,
+    NzModalModule,
+    NzInputModule,
+  ],
+  templateUrl: './employment-application-management.component.html',
+  styleUrls: ['./employment-application-management.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class EmploymentApplicationManagementComponent implements OnInit {
+  private readonly employmentService = inject(EmploymentService);
+  private readonly router = inject(Router);
+  private readonly message = inject(NzMessageService);
+  private readonly modal = inject(NzModalService);
+
+  readonly items = signal<JobApplicationDto[]>([]);
+  readonly loading = signal(false);
+  readonly updating = signal(false);
+  readonly totalCount = signal(0);
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(10);
+
+  readonly keyword = signal('');
+  readonly statusFilter = signal<EmploymentApplicationStatus | null>(null);
+  readonly statuses = EmploymentApplicationStatus;
+
+  /** 选中的条目（用于详情/审核弹窗） */
+  selectedItem: JobApplicationDto | null = null;
+  reviewVisible = false;
+  reviewStatus: EmploymentApplicationStatus = EmploymentApplicationStatus.Rejected;
+  reviewRemark = '';
+
+  readonly stats = computed<StatItem[]>(() => {
+    const items = this.items();
+    const total = this.totalCount();
+    const submitted = items.filter(x => x.status === EmploymentApplicationStatus.Submitted).length;
+    const interview = items.filter(x => x.status === EmploymentApplicationStatus.InterviewScheduled).length;
+    const offered = items.filter(x => x.status === EmploymentApplicationStatus.Offered).length;
+    const rejected = items.filter(x => x.status === EmploymentApplicationStatus.Rejected).length;
+    return [
+      { label: '累计投递', value: total, icon: 'paper-plane', color: 'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)' },
+      { label: '待审核', value: submitted, icon: 'clock-circle', color: 'linear-gradient(135deg, #f59e0b 0%, #fb923c 100%)' },
+      { label: '面试邀请', value: interview, icon: 'calendar', color: 'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 100%)' },
+      { label: '已录用', value: offered, icon: 'trophy', color: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)' },
+    ];
+  });
+
+  ngOnInit(): void {
+    this.loadItems();
+  }
+
+  loadItems(): void {
+    this.loading.set(true);
+    this.employmentService.getJobApplicationList({
+      status: this.statusFilter() ?? undefined,
+      skipCount: (this.pageIndex() - 1) * this.pageSize(),
+      maxResultCount: this.pageSize(),
+    }).subscribe({
+      next: result => {
+        this.items.set(result.items || []);
+        this.totalCount.set(result.totalCount || 0);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.message.error('加载投递记录失败');
+      },
+    });
+  }
+
+  onFilterChange(): void {
+    this.pageIndex.set(1);
+    this.loadItems();
+  }
+
+  onSearch(): void {
+    this.pageIndex.set(1);
+    this.loadItems();
+  }
+
+  onPageChange(page: number): void {
+    this.pageIndex.set(page);
+    this.loadItems();
+  }
+
+  /** 快速通过 */
+  quickApprove(item: JobApplicationDto): void {
+    if (item.status === EmploymentApplicationStatus.Offered) {
+      this.message.warning('该投递已是录用状态');
+      return;
+    }
+    this.modal.confirm({
+      nzTitle: '确认通过该投递？',
+      nzContent: `学生【${item.studentName || '-'}】投递【${item.jobTitle || '-'}】将标记为"已录用"。`,
+      nzOkText: '确认通过',
+      nzOkType: 'primary',
+      nzCancelText: '取消',
+      nzOnOk: () => {
+        return new Promise<void>(resolve => {
+          this.employmentService
+            .updateApplicationStatus(item.id, {
+              status: EmploymentApplicationStatus.Offered,
+              employerRemark: '教师端已审核通过',
+            })
+            .subscribe({
+              next: () => {
+                this.message.success('已通过');
+                this.loadItems();
+                resolve();
+              },
+              error: () => {
+                this.message.error('操作失败');
+                resolve();
+              },
+            });
+        });
+      },
+    });
+  }
+
+  /** 快速拒绝 */
+  quickReject(item: JobApplicationDto): void {
+    if (item.status === EmploymentApplicationStatus.Rejected) {
+      this.message.warning('该投递已是未通过状态');
+      return;
+    }
+    this.selectedItem = item;
+    this.reviewStatus = EmploymentApplicationStatus.Rejected;
+    this.reviewRemark = '';
+    this.reviewVisible = true;
+  }
+
+  openReview(item: JobApplicationDto): void {
+    this.selectedItem = item;
+    this.reviewStatus =
+      item.status === EmploymentApplicationStatus.Rejected
+        ? EmploymentApplicationStatus.Rejected
+        : EmploymentApplicationStatus.InterviewScheduled;
+    this.reviewRemark = '';
+    this.reviewVisible = true;
+  }
+
+  closeReview(): void {
+    this.reviewVisible = false;
+    this.selectedItem = null;
+    this.reviewRemark = '';
+  }
+
+  submitReview(): void {
+    if (!this.selectedItem) {
+      return;
+    }
+    if (this.reviewStatus === EmploymentApplicationStatus.Rejected && !this.reviewRemark.trim()) {
+      this.message.warning('请填写拒绝原因');
+      return;
+    }
+
+    this.updating.set(true);
+    const payload: UpdateJobApplicationStatusDto = {
+      status: this.reviewStatus,
+      employerRemark: this.reviewRemark.trim() || undefined,
+    };
+    this.employmentService.updateApplicationStatus(this.selectedItem.id, payload).subscribe({
+      next: () => {
+        this.updating.set(false);
+        this.message.success('审核完成');
+        this.closeReview();
+        this.loadItems();
+      },
+      error: () => {
+        this.updating.set(false);
+        this.message.error('审核失败');
+      },
+    });
+  }
+
+  openJobDetail(item: JobApplicationDto): void {
+    this.router.navigate(['/employment/jobs', item.jobPostingId]);
+  }
+
+  getStatusInfo(status: EmploymentApplicationStatus): { label: string; color: string; icon: string } {
+    const map: Record<number, { label: string; color: string; icon: string }> = {
+      [EmploymentApplicationStatus.Submitted]: { label: '已投递', color: '#1e6ce8', icon: 'paper-plane' },
+      [EmploymentApplicationStatus.Viewed]: { label: '已查看', color: '#6366f1', icon: 'eye' },
+      [EmploymentApplicationStatus.InterviewScheduled]: { label: '面试邀请', color: '#00b7ff', icon: 'calendar' },
+      [EmploymentApplicationStatus.Offered]: { label: '已录用', color: '#10b981', icon: 'trophy' },
+      [EmploymentApplicationStatus.Rejected]: { label: '未通过', color: '#ef4444', icon: 'close-circle' },
+      [EmploymentApplicationStatus.Withdrawn]: { label: '已撤回', color: '#94a3b8', icon: 'rollback' },
+    };
+    return map[status] || { label: '未知', color: '#94a3b8', icon: 'question' };
+  }
+
+  /** 用于过滤后端已加载的列表（前端关键字过滤） */
+  filteredItems(): JobApplicationDto[] {
+    const k = this.keyword().trim().toLowerCase();
+    if (!k) return this.items();
+    return this.items().filter(item => {
+      const fields = [
+        item.jobTitle,
+        item.companyName,
+        item.studentName,
+        item.resumeTitle,
+      ];
+      return fields.some(f => (f || '').toLowerCase().includes(k));
+    });
+  }
+}

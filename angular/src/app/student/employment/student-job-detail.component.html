@@ -1,0 +1,235 @@
+@if (loading()) {
+  <div class="loading-state">
+    <nz-spin nzSimple nzSize="large"></nz-spin>
+    <p>正在加载岗位详情...</p>
+  </div>
+} @else if (job(); as item) {
+  <div class="detail-page">
+    <!-- 顶部 Hero 区域 -->
+    <section class="hero" [style.background]="coverGradient(item)">
+      <div class="hero__bg" aria-hidden="true">
+        <span class="hero__shape hero__shape--1"></span>
+        <span class="hero__shape hero__shape--2"></span>
+        <span class="hero__shape hero__shape--3"></span>
+      </div>
+      <div class="hero__inner">
+        <a class="back-link" routerLink="/student/employment/jobs">
+          <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+          返回岗位列表
+        </a>
+
+        <div class="hero__head">
+          <div class="hero__title-block">
+            <div class="hero__type" [style.background]="getTypeColor(item.jobType) + '22'" [style.color]="getTypeColor(item.jobType)">
+              {{ getTypeLabel(item.jobType) }}
+            </div>
+            <h1 class="hero__title">{{ item.title }}</h1>
+            <p class="hero__company">
+              <span nz-icon nzType="bank" nzTheme="outline"></span>
+              <span class="hero__company-name">{{ item.companyName }}</span>
+              @if (item.industry) {
+                <span class="hero__industry">{{ item.industry }}</span>
+              }
+            </p>
+          </div>
+          @if (item.hasApplied) {
+            <span class="hero__applied">
+              <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+              已投递
+            </span>
+          }
+        </div>
+
+        <div class="hero__meta">
+          <span class="meta-item">
+            <span class="meta-item__icon"><span nz-icon nzType="environment" nzTheme="outline"></span></span>
+            <span class="meta-item__body">
+              <span class="meta-item__label">工作地点</span>
+              <span class="meta-item__value">{{ item.location || '地点待定' }}</span>
+            </span>
+          </span>
+          <span class="meta-item">
+            <span class="meta-item__icon"><span nz-icon nzType="red-envelope" nzTheme="outline"></span></span>
+            <span class="meta-item__body">
+              <span class="meta-item__label">薪资范围</span>
+              <span class="meta-item__value meta-item__value--money">{{ item.salaryRange || '薪资面议' }}</span>
+            </span>
+          </span>
+          <span class="meta-item">
+            <span class="meta-item__icon"><span nz-icon nzType="team" nzTheme="outline"></span></span>
+            <span class="meta-item__body">
+              <span class="meta-item__label">招聘人数</span>
+              <span class="meta-item__value">{{ item.recruitmentCount }} 人</span>
+            </span>
+          </span>
+          <span class="meta-item">
+            <span class="meta-item__icon"><span nz-icon nzType="book" nzTheme="outline"></span></span>
+            <span class="meta-item__body">
+              <span class="meta-item__label">学历要求</span>
+              <span class="meta-item__value">{{ item.educationRequirement || '不限' }}</span>
+            </span>
+          </span>
+          @if (item.deadline) {
+            <span class="meta-item">
+              <span class="meta-item__icon"><span nz-icon nzType="clock-circle" nzTheme="outline"></span></span>
+              <span class="meta-item__body">
+                <span class="meta-item__label">投递截止</span>
+                <span class="meta-item__value">{{ item.deadline | date:'yyyy-MM-dd' }}</span>
+              </span>
+            </span>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- 主体两栏 -->
+    <div class="detail-grid">
+      <!-- 左：岗位详情 -->
+      <div class="detail-main">
+        <div class="info-card">
+          <h3 class="info-card__title">
+            <span class="info-card__bar"></span>
+            岗位描述
+          </h3>
+          @if (item.summary) {
+            <p class="summary">{{ item.summary }}</p>
+          }
+          <p class="description">{{ item.description }}</p>
+        </div>
+
+        @if (getSkillTags(item).length > 0) {
+          <div class="info-card">
+            <h3 class="info-card__title">
+              <span class="info-card__bar"></span>
+              技能要求
+            </h3>
+            <div class="tag-list">
+              @for (tag of getSkillTags(item); track tag) {
+                <span class="skill-tag">{{ tag }}</span>
+              }
+            </div>
+          </div>
+        }
+
+        @if (getBenefitItems(item).length > 0) {
+          <div class="info-card">
+            <h3 class="info-card__title">
+              <span class="info-card__bar"></span>
+              福利待遇
+            </h3>
+            <ul class="benefit-list">
+              @for (b of getBenefitItems(item); track b) {
+                <li><span nz-icon nzType="check" nzTheme="outline"></span>{{ b }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        <div class="info-card">
+          <h3 class="info-card__title">
+            <span class="info-card__bar"></span>
+            联系方式
+          </h3>
+          <div class="contact-list">
+            <div class="contact-row">
+              <span class="contact-row__label">联系人</span>
+              <span class="contact-row__value">{{ item.contactName || '企业待补充' }}</span>
+            </div>
+            <div class="contact-row">
+              <span class="contact-row__label">联系电话</span>
+              <span class="contact-row__value">{{ item.contactPhone || '-' }}</span>
+            </div>
+            <div class="contact-row">
+              <span class="contact-row__label">联系邮箱</span>
+              <span class="contact-row__value">{{ item.contactEmail || '-' }}</span>
+            </div>
+            <div class="contact-row">
+              <span class="contact-row__label">详细地址</span>
+              <span class="contact-row__value">{{ item.address || item.location || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右：投递面板 -->
+      <aside class="detail-side">
+        <div class="apply-card">
+          <h3 class="apply-card__title">
+            <span class="apply-card__bar"></span>
+            投递岗位
+          </h3>
+
+          @if (item.hasApplied) {
+            <div class="applied-banner">
+              <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+              您已投递过该岗位，请耐心等待企业反馈
+            </div>
+          } @else if (resumes().length === 0) {
+            <div class="empty-banner">
+              <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+              您还没有可用的简历，请先创建一份简历再投递
+              <button class="ghost-btn" (click)="goMyResumes()">前往创建</button>
+            </div>
+          } @else {
+            <div class="form-block">
+              <label class="form-label">选择简历</label>
+              <div class="resume-list">
+                @for (resume of resumes(); track resume.id) {
+                  <label
+                    class="resume-option"
+                    [class.is-active]="selectedResumeId() === resume.id"
+                  >
+                    <input
+                      type="radio"
+                      name="resume"
+                      [value]="resume.id"
+                      [ngModel]="selectedResumeId()"
+                      (ngModelChange)="selectedResumeId.set($event)"
+                    />
+                    <span class="resume-option__radio"></span>
+                    <div class="resume-option__body">
+                      <div class="resume-option__title">
+                        {{ resume.title }}
+                        <span class="resume-option__version">v{{ resume.versionNo }}</span>
+                        @if (resume.isDefault) {
+                          <span class="resume-option__default">默认</span>
+                        }
+                      </div>
+                      <div class="resume-option__sub">
+                        {{ resume.fullName }} ·
+                        @if (resume.major) { {{ resume.major }} · }
+                        @if (resume.grade) { {{ resume.grade }} }
+                      </div>
+                    </div>
+                  </label>
+                }
+              </div>
+            </div>
+
+            <div class="form-block">
+              <label class="form-label">求职说明 <span class="form-label__optional">（可选）</span></label>
+              <textarea
+                class="cover-textarea"
+                [ngModel]="coverLetter()"
+                (ngModelChange)="coverLetter.set($event)"
+                rows="5"
+                placeholder="可以补充您的优势、期望到岗时间或其他需要说明的内容"
+                maxlength="500"
+              ></textarea>
+              <div class="char-count">{{ coverLetter().length }} / 500</div>
+            </div>
+
+            <button
+              class="apply-btn"
+              (click)="apply()"
+              [disabled]="submitting() || !selectedResumeId()"
+            >
+              <span nz-icon nzType="send" nzTheme="outline"></span>
+              {{ submitting() ? '投递中...' : '立即投递' }}
+            </button>
+          }
+        </div>
+      </aside>
+    </div>
+  </div>
+}

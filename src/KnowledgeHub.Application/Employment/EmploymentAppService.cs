@@ -174,18 +174,27 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         ValidateJobInput(input);
 
         var currentUser = await GetCurrentIdentityUserAsync();
-        var companyName = currentUser.GetProperty<string>("CompanyName");
-        if (string.IsNullOrWhiteSpace(companyName))
+        var canReview = await CanReviewJobsAsync();
+        var profileCompanyName = currentUser.GetProperty<string>("CompanyName");
+        var companyName = !string.IsNullOrWhiteSpace(input.CompanyName)
+            ? input.CompanyName.Trim()
+            : profileCompanyName;
+        if (string.IsNullOrWhiteSpace(companyName) && !canReview)
         {
             throw new UserFriendlyException("请先完善企业档案后再发布岗位。");
         }
+        if (string.IsNullOrWhiteSpace(companyName))
+        {
+            companyName = "平台代发";
+        }
 
-        var canReview = await CanReviewJobsAsync();
         var status = ResolveCreateOrUpdateStatus(input.Status, canReview);
         var entity = new JobPosting(GuidGenerator.Create(), currentUser.Id, companyName!, input.Title.Trim(), input.Description.Trim())
         {
             TenantId = CurrentTenant.Id,
-            Industry = currentUser.GetProperty<string>("Industry"),
+            Industry = !string.IsNullOrWhiteSpace(input.Industry)
+                ? input.Industry.Trim()
+                : currentUser.GetProperty<string>("Industry"),
             Summary = input.Summary?.Trim(),
             Location = input.Location?.Trim(),
             Address = input.Address?.Trim(),
@@ -216,6 +225,14 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         var canReview = await CanReviewJobsAsync();
         var status = ResolveCreateOrUpdateStatus(input.Status, canReview);
 
+        if (!string.IsNullOrWhiteSpace(input.CompanyName))
+        {
+            entity.CompanyName = input.CompanyName.Trim();
+        }
+        if (!string.IsNullOrWhiteSpace(input.Industry))
+        {
+            entity.Industry = input.Industry.Trim();
+        }
         entity.Title = input.Title.Trim();
         entity.Summary = input.Summary?.Trim();
         entity.Description = input.Description.Trim();
@@ -460,13 +477,15 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.Employment.PublishJob)]
+    [Authorize(KnowledgeHubPermissions.Employment.ManageApplication)]
     public async Task<PagedResultDto<JobApplicationDto>> GetJobApplicationListAsync(GetJobApplicationsInput input)
     {
         var canReview = await CanReviewJobsAsync();
+        var canManageApplications = await CanManageApplicationsAsync();
         var currentUserId = GetCurrentUserId();
         var ownJobIds = new HashSet<Guid>();
 
-        if (!canReview)
+        if (!canReview && !canManageApplications)
         {
             using (DataFilter.Disable<IMultiTenant>())
             {
@@ -495,7 +514,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                 query = query.Where(x => x.Status == input.Status.Value);
             }
 
-            if (!canReview)
+            if (!canReview && !canManageApplications)
             {
                 query = query.Where(x => ownJobIds.Contains(x.JobPostingId));
             }
@@ -512,6 +531,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.Employment.PublishJob)]
+    [Authorize(KnowledgeHubPermissions.Employment.ManageApplication)]
     public async Task<JobApplicationDto> UpdateApplicationStatusAsync(Guid id, UpdateJobApplicationStatusDto input)
     {
         var entity = await GetManageableApplicationAsync(id);
@@ -1304,6 +1324,11 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             return entity;
         }
 
+        if (await CanManageApplicationsAsync())
+        {
+            return entity;
+        }
+
         JobPosting job;
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -1396,6 +1421,11 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     private async Task<bool> CanReviewJobsAsync()
     {
         return await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Employment.ReviewJob);
+    }
+
+    private async Task<bool> CanManageApplicationsAsync()
+    {
+        return await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Employment.ManageApplication);
     }
 
     private static string GetUserDisplayName(IdentityUser user)

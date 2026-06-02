@@ -191,7 +191,7 @@ function configureRoutes() {
         iconClass: 'fas fa-paper-plane',
         parentName: '::Menu:Employment',
         layout: eLayoutType.application,
-        requiredPolicy: 'KnowledgeHub.Employment',
+        requiredPolicy: 'KnowledgeHub.Employment.ViewMyApplication',
       },
       {
         path: '/employment/my-guidance',
@@ -200,6 +200,14 @@ function configureRoutes() {
         parentName: '::Menu:Employment',
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.Employment',
+      },
+      {
+        path: '/admin/employment/applications',
+        name: '::Menu:EmploymentApplicationManagement',
+        iconClass: 'fas fa-clipboard-check',
+        parentName: '::Menu:Employment',
+        layout: eLayoutType.application,
+        requiredPolicy: 'KnowledgeHub.Employment.ManageApplication',
       },
       {
         path: '/admin/employment/jobs',
@@ -224,6 +232,14 @@ function configureRoutes() {
         parentName: '::Menu:Employment',
         layout: eLayoutType.application,
         requiredPolicy: 'KnowledgeHub.Employment.ViewStatistics',
+      },
+      {
+        path: '/admin/recruitment-live',
+        name: '::Menu:RecruitmentLive',
+        iconClass: 'fas fa-video',
+        parentName: '::Menu:Employment',
+        layout: eLayoutType.application,
+        requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
       },
       {
         path: '/practicum/projects',

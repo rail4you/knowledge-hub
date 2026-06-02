@@ -1,57 +1,260 @@
 <nz-card nzTitle="岗位管理" [nzExtra]="extraTpl">
   <ng-template #extraTpl>
     <div class="toolbar">
-      <nz-select [(ngModel)]="statusFilter" nzAllowClear nzPlaceHolder="状态筛选" (ngModelChange)="reload()">
-        <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
-        <nz-option [nzValue]="statuses.PendingReview" nzLabel="待审"></nz-option>
-        <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
-        <nz-option [nzValue]="statuses.Rejected" nzLabel="已驳回"></nz-option>
-        <nz-option [nzValue]="statuses.Closed" nzLabel="已关闭"></nz-option>
-      </nz-select>
       <button nz-button nzType="primary" (click)="openCreate()">新增岗位</button>
     </div>
   </ng-template>
 
-  <nz-table [nzData]="items()" [nzFrontPagination]="false">
+  <div class="filter-bar">
+    <input
+      nz-input
+      [(ngModel)]="keyword"
+      placeholder="搜索岗位 / 企业 / 技能"
+      (keyup.enter)="onFilterChange()"
+    />
+    <input
+      nz-input
+      [(ngModel)]="locationFilter"
+      placeholder="地区"
+      (keyup.enter)="onFilterChange()"
+    />
+    <nz-select
+      [(ngModel)]="jobTypeFilter"
+      nzAllowClear
+      nzPlaceHolder="岗位类型"
+    >
+      <nz-option [nzValue]="jobTypes.FullTime" nzLabel="全职"></nz-option>
+      <nz-option [nzValue]="jobTypes.Internship" nzLabel="实习"></nz-option>
+      <nz-option [nzValue]="jobTypes.PartTime" nzLabel="兼职"></nz-option>
+      <nz-option [nzValue]="jobTypes.Apprenticeship" nzLabel="学徒"></nz-option>
+    </nz-select>
+    <nz-select
+      [(ngModel)]="statusFilter"
+      nzAllowClear
+      nzPlaceHolder="状态"
+    >
+      <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+      <nz-option [nzValue]="statuses.PendingReview" nzLabel="待审"></nz-option>
+      <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
+      <nz-option [nzValue]="statuses.Rejected" nzLabel="已驳回"></nz-option>
+      <nz-option [nzValue]="statuses.Closed" nzLabel="已关闭"></nz-option>
+    </nz-select>
+    <button nz-button nzType="primary" (click)="search()">搜索</button>
+    <button nz-button (click)="resetFilter()">重置</button>
+  </div>
+
+  <nz-table
+    [nzData]="items()"
+    [nzFrontPagination]="false"
+    [nzLoading]="loading()"
+    [nzTotal]="totalCount()"
+    [nzPageSize]="pageSize"
+    [nzPageIndex]="pageIndex"
+    [nzShowSizeChanger]="true"
+    [nzPageSizeOptions]="[10, 20, 50, 100]"
+    (nzPageIndexChange)="onPageIndexChange($event)"
+    (nzPageSizeChange)="onPageSizeChange($event)"
+  >
     <thead>
       <tr>
         <th>岗位</th>
         <th>企业</th>
         <th>类型</th>
         <th>状态</th>
+        <th>招聘人数</th>
         <th>投递数</th>
+        <th>创建时间</th>
         <th>操作</th>
       </tr>
     </thead>
     <tbody>
       @for (item of items(); track item.id) {
         <tr>
-          <td>{{ item.title }}</td>
-          <td>{{ item.companyName }}</td>
-          <td>{{ item.jobType }}</td>
-          <td>{{ item.status }}</td>
-          <td>{{ item.applicationCount }}</td>
-          <td class="actions">
-            <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
-            <button nz-button nzType="link" (click)="review(item, statuses.Published)">通过</button>
-            <button nz-button nzType="link" (click)="review(item, statuses.Rejected)">驳回</button>
-            <button nz-button nzType="link" nzDanger (click)="delete(item.id)">删除</button>
+          <td>
+            <strong>{{ item.title }}</strong>
+            <div class="muted">{{ item.location || '地点待定' }}</div>
           </td>
+          <td>{{ item.companyName }}</td>
+          <td>{{ getTypeLabel(item.jobType) }}</td>
+          <td>
+            <nz-tag [nzColor]="getStatusColor(item.status)">{{ getStatusLabel(item.status) }}</nz-tag>
+          </td>
+          <td>{{ item.recruitmentCount }}</td>
+          <td>{{ item.applicationCount }}</td>
+          <td>{{ item.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
+          <td class="actions">
+            <a nz-button nzType="link" [routerLink]="['/employment/jobs', item.id]">查看</a>
+            <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
+            @if (canReview(item, statuses.Published)) {
+              <button nz-button nzType="link" (click)="review(item, statuses.Published)">通过</button>
+            }
+            @if (canReview(item, statuses.Rejected)) {
+              <button nz-button nzType="link" nzDanger (click)="review(item, statuses.Rejected)">驳回</button>
+            }
+            @if (canReview(item, statuses.Closed)) {
+              <button nz-button nzType="link" (click)="review(item, statuses.Closed)">关闭</button>
+            }
+            @if (canReopen(item)) {
+              <button nz-button nzType="link" style="color: #52c41a" (click)="review(item, statuses.Published)">重新开放</button>
+            }
+            <button
+              nz-button
+              nzType="link"
+              nzDanger
+              nz-popconfirm
+              nzPopconfirmTitle="确认删除该岗位？相关投递与面试记录会一并删除。"
+              (nzOnConfirm)="delete(item.id)"
+            >
+              删除
+            </button>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="8" class="empty-row">暂无岗位数据</td>
         </tr>
       }
     </tbody>
   </nz-table>
 </nz-card>
 
-<nz-modal [(nzVisible)]="modalVisible" [nzTitle]="editingId ? '编辑岗位' : '新增岗位'" (nzOnCancel)="modalVisible = false" (nzOnOk)="save()">
+<nz-modal
+  [(nzVisible)]="modalVisible"
+  [nzTitle]="editingId ? '编辑岗位' : '新增岗位'"
+  [nzOkLoading]="saving()"
+  [nzOkText]="editingId ? '保存' : '创建'"
+  nzWidth="780px"
+  (nzOnCancel)="modalVisible = false"
+  (nzOnOk)="save()"
+>
   <ng-container *nzModalContent>
     <div class="job-form">
-      <input nz-input [(ngModel)]="form.title" placeholder="岗位名称" />
-      <input nz-input [(ngModel)]="form.summary" placeholder="岗位摘要" />
-      <textarea nz-input rows="4" [(ngModel)]="form.description" placeholder="岗位描述"></textarea>
-      <input nz-input [(ngModel)]="form.location" placeholder="工作地区" />
-      <input nz-input [(ngModel)]="form.salaryRange" placeholder="薪资范围" />
-      <input nz-input [(ngModel)]="form.skillTags" placeholder="技能标签" />
+      <label class="field">
+        <span class="label">企业名称 <em>*</em></span>
+        <input nz-input [(ngModel)]="form.companyName" name="companyName" placeholder="代发时填写发布企业" />
+      </label>
+
+      <label class="field">
+        <span class="label">所属行业</span>
+        <input nz-input [(ngModel)]="form.industry" name="industry" placeholder="例：互联网 / 教育" />
+      </label>
+
+      <label class="field full">
+        <span class="label">岗位名称 <em>*</em></span>
+        <input nz-input [(ngModel)]="form.title" name="title" placeholder="例：前端开发工程师" />
+      </label>
+
+      <label class="field full">
+        <span class="label">岗位摘要</span>
+        <input nz-input [(ngModel)]="form.summary" name="summary" placeholder="一句话概括岗位亮点" />
+      </label>
+
+      <label class="field full">
+        <span class="label">岗位描述 <em>*</em></span>
+        <textarea
+          nz-input
+          rows="4"
+          [(ngModel)]="form.description"
+          name="description"
+          placeholder="岗位职责、任职要求等"
+        ></textarea>
+      </label>
+
+      <div class="field">
+        <span class="label">岗位类型</span>
+        <nz-select [(ngModel)]="form.jobType" name="jobType">
+          <nz-option [nzValue]="jobTypes.FullTime" nzLabel="全职"></nz-option>
+          <nz-option [nzValue]="jobTypes.Internship" nzLabel="实习"></nz-option>
+          <nz-option [nzValue]="jobTypes.PartTime" nzLabel="兼职"></nz-option>
+          <nz-option [nzValue]="jobTypes.Apprenticeship" nzLabel="学徒"></nz-option>
+        </nz-select>
+      </div>
+
+      <div class="field">
+        <span class="label">状态</span>
+        <nz-select [(ngModel)]="form.status" name="status">
+          <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+          <nz-option [nzValue]="statuses.PendingReview" nzLabel="待审"></nz-option>
+          <nz-option [nzValue]="statuses.Published" nzLabel="直接发布"></nz-option>
+        </nz-select>
+      </div>
+
+      <label class="field">
+        <span class="label">工作地区</span>
+        <input nz-input [(ngModel)]="form.location" name="location" placeholder="例：北京" />
+      </label>
+
+      <label class="field">
+        <span class="label">详细地址</span>
+        <input nz-input [(ngModel)]="form.address" name="address" placeholder="例：北京市海淀区中关村大街 1 号" />
+      </label>
+
+      <label class="field">
+        <span class="label">学历要求</span>
+        <input nz-input [(ngModel)]="form.educationRequirement" name="educationRequirement" placeholder="例：本科及以上" />
+      </label>
+
+      <label class="field">
+        <span class="label">薪资范围</span>
+        <input nz-input [(ngModel)]="form.salaryRange" name="salaryRange" placeholder="例：15k-25k · 14 薪" />
+      </label>
+
+      <label class="field">
+        <span class="label">招聘人数</span>
+        <nz-input-number
+          [(ngModel)]="form.recruitmentCount"
+          name="recruitmentCount"
+          [nzMin]="1"
+          [nzMax]="9999"
+          style="width: 100%"
+        ></nz-input-number>
+      </label>
+
+      <label class="field">
+        <span class="label">截止日期</span>
+        <nz-date-picker
+          [(ngModel)]="formDeadline"
+          name="deadline"
+          style="width: 100%"
+          nzFormat="yyyy-MM-dd"
+        ></nz-date-picker>
+      </label>
+
+      <label class="field full">
+        <span class="label">技能标签</span>
+        <input
+          nz-input
+          [(ngModel)]="form.skillTags"
+          name="skillTags"
+          placeholder="多个标签用逗号分隔，例：Angular, TypeScript, RxJS"
+        />
+      </label>
+
+      <label class="field full">
+        <span class="label">福利待遇</span>
+        <textarea
+          nz-input
+          rows="2"
+          [(ngModel)]="form.benefits"
+          name="benefits"
+          placeholder="例：六险一金、弹性工作、年度体检"
+        ></textarea>
+      </label>
+
+      <label class="field">
+        <span class="label">联系人</span>
+        <input nz-input [(ngModel)]="form.contactName" name="contactName" placeholder="HR 姓名" />
+      </label>
+
+      <label class="field">
+        <span class="label">联系电话</span>
+        <input nz-input [(ngModel)]="form.contactPhone" name="contactPhone" placeholder="座机或手机号" />
+      </label>
+
+      <label class="field full">
+        <span class="label">联系邮箱</span>
+        <input nz-input [(ngModel)]="form.contactEmail" name="contactEmail" placeholder="接收简历邮箱" />
+      </label>
     </div>
   </ng-container>
 </nz-modal>

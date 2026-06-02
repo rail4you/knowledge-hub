@@ -143,5 +143,14 @@ public static class KnowledgeHubPermissions
         public const string ManageOutcome = Default + ".ManageOutcome";
         public const string ViewStatistics = Default + ".ViewStatistics";
         public const string ExportReport = Default + ".ExportReport";
+        public const string ManageApplication = Default + ".ManageApplication";
+        public const string ViewMyApplication = Default + ".ViewMyApplication";
+    }
+
+    public static class RecruitmentLive
+    {
+        public const string Default = GroupName + ".RecruitmentLive";
+        public const string Create = Default + ".Create";
+        public const string Manage = Default + ".Manage";
     }
 }

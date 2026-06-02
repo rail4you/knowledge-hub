@@ -1,0 +1,54 @@
+<div class="student-recruitment-live">
+  <div class="page-header">
+    <h2>
+      <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+      招聘直播
+    </h2>
+    <p class="page-desc">查看分配给您的招聘直播，点击进入直播间参与面试</p>
+  </div>
+
+  <nz-spin [nzSpinning]="loading()">
+    <!-- Empty state -->
+    <nz-empty *ngIf="!loading() && lives().length === 0" nzNotFoundContent="暂无直播安排"></nz-empty>
+
+    <!-- Card grid -->
+    <div class="live-cards" *ngIf="lives().length > 0">
+      <nz-card
+        *ngFor="let live of lives()"
+        class="live-card"
+        [nzHoverable]="canEnter(live)"
+        (click)="canEnter(live) && enterLive(live)"
+      >
+        <div class="live-card-header">
+          <nz-tag [nzColor]="statusColor(live.status)">
+            <span nz-icon [nzType]="statusIcon(live.status)" nzTheme="outline"></span>
+            {{ statusText(live.status) }}
+          </nz-tag>
+        </div>
+
+        <div class="live-card-body">
+          <h3 class="live-card-title">{{ live.title }}</h3>
+          <p class="live-card-desc" *ngIf="live.description">{{ live.description }}</p>
+
+          <div class="live-card-meta">
+            <div class="meta-item">
+              <span class="meta-label">面试官</span>
+              <span class="meta-value">{{ live.teacherName }}</span>
+            </div>
+            <div class="meta-item" *ngIf="live.scheduledAt">
+              <span class="meta-label">计划时间</span>
+              <span class="meta-value">{{ live.scheduledAt | date: 'yyyy-MM-dd HH:mm' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="live-card-action" *ngIf="canEnter(live)">
+          <button nz-button nzType="primary" nzBlock>
+            <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+            进入直播间
+          </button>
+        </div>
+      </nz-card>
+    </div>
+  </nz-spin>
+</div>

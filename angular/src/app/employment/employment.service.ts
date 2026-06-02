@@ -103,6 +103,8 @@ export interface JobPostingDto {
 }
 
 export interface CreateUpdateJobPostingDto {
+  companyName?: string;
+  industry?: string;
   title: string;
   summary?: string;
   description: string;
@@ -379,7 +381,7 @@ export class EmploymentService {
   getJob = (id: string) =>
     this.restService.request<any, JobPostingDto>({
       method: 'GET',
-      url: `/api/app/employment/job/${id}`,
+      url: `/api/app/employment/${id}/job`,
     }, { apiName: this.apiName });
 
   getPublishedJobList = (input: PagedJobPostingRequestDto) =>
@@ -406,20 +408,20 @@ export class EmploymentService {
   updateJob = (id: string, input: CreateUpdateJobPostingDto) =>
     this.restService.request<any, JobPostingDto>({
       method: 'PUT',
-      url: `/api/app/employment/job/${id}`,
+      url: `/api/app/employment/${id}/job`,
       body: input,
     }, { apiName: this.apiName });
 
   deleteJob = (id: string) =>
     this.restService.request<any, void>({
       method: 'DELETE',
-      url: `/api/app/employment/job/${id}`,
+      url: `/api/app/employment/${id}/job`,
     }, { apiName: this.apiName });
 
   reviewJob = (id: string, input: ReviewJobPostingDto) =>
     this.restService.request<any, JobPostingDto>({
-      method: 'PUT',
-      url: `/api/app/employment/job/${id}/review`,
+      method: 'POST',
+      url: `/api/app/employment/${id}/review-job`,
       body: input,
     }, { apiName: this.apiName });
 
@@ -439,20 +441,20 @@ export class EmploymentService {
   updateResume = (id: string, input: CreateUpdateStudentResumeDto) =>
     this.restService.request<any, StudentResumeDto>({
       method: 'PUT',
-      url: `/api/app/employment/resume/${id}`,
+      url: `/api/app/employment/${id}/resume`,
       body: input,
     }, { apiName: this.apiName });
 
   deleteResume = (id: string) =>
     this.restService.request<any, void>({
       method: 'DELETE',
-      url: `/api/app/employment/resume/${id}`,
+      url: `/api/app/employment/${id}/resume`,
     }, { apiName: this.apiName });
 
   setDefaultResume = (id: string) =>
     this.restService.request<any, StudentResumeDto>({
-      method: 'PUT',
-      url: `/api/app/employment/resume/${id}/default`,
+      method: 'POST',
+      url: `/api/app/employment/${id}/set-default-resume`,
     }, { apiName: this.apiName });
 
   createApplication = (input: CreateJobApplicationDto) =>
@@ -479,28 +481,28 @@ export class EmploymentService {
   updateApplicationStatus = (id: string, input: UpdateJobApplicationStatusDto) =>
     this.restService.request<any, JobApplicationDto>({
       method: 'PUT',
-      url: `/api/app/employment/application/${id}/status`,
+      url: `/api/app/employment/${id}/application-status`,
       body: input,
     }, { apiName: this.apiName });
 
   scheduleInterview = (input: CreateUpdateInterviewScheduleDto) =>
     this.restService.request<any, InterviewScheduleDto>({
       method: 'POST',
-      url: '/api/app/employment/interview',
+      url: '/api/app/employment/schedule-interview',
       body: input,
     }, { apiName: this.apiName });
 
   updateInterview = (id: string, input: CreateUpdateInterviewScheduleDto) =>
     this.restService.request<any, InterviewScheduleDto>({
       method: 'PUT',
-      url: `/api/app/employment/interview/${id}`,
+      url: `/api/app/employment/${id}/interview`,
       body: input,
     }, { apiName: this.apiName });
 
   recordInterviewResult = (id: string, input: RecordInterviewResultDto) =>
     this.restService.request<any, InterviewScheduleDto>({
-      method: 'PUT',
-      url: `/api/app/employment/interview/${id}/result`,
+      method: 'POST',
+      url: `/api/app/employment/${id}/record-interview-result`,
       body: input,
     }, { apiName: this.apiName });
 
@@ -535,7 +537,7 @@ export class EmploymentService {
   saveOutcome = (input: CreateUpdateEmploymentOutcomeDto) =>
     this.restService.request<any, EmploymentOutcomeDto>({
       method: 'POST',
-      url: '/api/app/employment/outcome',
+      url: '/api/app/employment/save-outcome',
       body: input,
     }, { apiName: this.apiName });
 
@@ -560,4 +562,21 @@ export class EmploymentService {
       body: input,
       responseType: 'blob' as 'json',
     }, { apiName: this.apiName });
+
+  uploadResumeAttachment = (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.restService.request<any, ResumeUploadResultDto>({
+      method: 'POST',
+      url: '/api/app/resume-upload',
+      body: formData,
+    }, { apiName: this.apiName });
+  }
+}
+
+export interface ResumeUploadResultDto {
+  url: string;
+  filePath: string;
+  originalFileName: string;
+  size: number;
 }

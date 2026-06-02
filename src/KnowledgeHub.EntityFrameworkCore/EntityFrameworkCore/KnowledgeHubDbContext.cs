@@ -27,6 +27,8 @@ using KnowledgeHub.Employment;
 using KnowledgeHub.TeachingAgents;
 using KnowledgeHub.EntityFrameworkCore.TeachingAgents;
 using KnowledgeHub.KnowledgeGraph;
+using KnowledgeHub.RecruitmentLive;
+using KnowledgeHub.EntityFrameworkCore.RecruitmentLive;
 
 namespace KnowledgeHub.EntityFrameworkCore;
 
@@ -165,6 +167,9 @@ public class KnowledgeHubDbContext :
     public DbSet<AgentRun> AgentRuns { get; set; }
     public DbSet<AgentRunMessage> AgentRunMessages { get; set; }
 
+    // RecruitmentLive entities
+    public DbSet<global::KnowledgeHub.RecruitmentLive.RecruitmentLive> RecruitmentLives { get; set; }
+
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
     {
@@ -201,6 +206,7 @@ public class KnowledgeHubDbContext :
         builder.ConfigurePracticum();
         builder.ConfigureDoubleHigh();
         builder.ConfigureEmployment();
+        builder.ConfigureRecruitmentLive();
         builder.ConfigureTeachingAgents();
     }
 }

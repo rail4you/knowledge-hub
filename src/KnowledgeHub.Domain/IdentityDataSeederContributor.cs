@@ -114,6 +114,8 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ManageOutcome, true);
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ViewStatistics, true);
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ExportReport, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ManageApplication, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ViewMyApplication, true);
 
         // School Admin - School level access
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.Default, true);
@@ -158,6 +160,8 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ManageOutcome, true);
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ViewStatistics, true);
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ExportReport, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ManageApplication, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ViewMyApplication, true);
 
         // News permissions - SchoolAdmin
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.News.Default, true);
@@ -209,6 +213,7 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ManageGuidance, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ManageOutcome, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ViewStatistics, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ManageApplication, true);
 
         // News permissions - Teacher
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.News.Default, true);
@@ -243,6 +248,7 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Courses.Enroll, true);
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Employment.Default, true);
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Employment.ManageResume, true);
+        await GrantPermissionAsync("Student", KnowledgeHubPermissions.Employment.ViewMyApplication, true);
 
         // MicroMajor permissions - LeagueAdmin (full access)
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Default, true);

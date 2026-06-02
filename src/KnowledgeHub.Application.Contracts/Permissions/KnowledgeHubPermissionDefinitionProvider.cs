@@ -130,6 +130,13 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ManageOutcome, L("Permission:Employment.ManageOutcome"));
         employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ViewStatistics, L("Permission:Employment.ViewStatistics"));
         employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ExportReport, L("Permission:Employment.ExportReport"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ManageApplication, L("Permission:Employment.ManageApplication"));
+        employmentPermission.AddChild(KnowledgeHubPermissions.Employment.ViewMyApplication, L("Permission:Employment.ViewMyApplication"));
+
+        // RecruitmentLive permissions
+        var recruitmentLivePermission = myGroup.AddPermission(KnowledgeHubPermissions.RecruitmentLive.Default, L("Permission:RecruitmentLive"));
+        recruitmentLivePermission.AddChild(KnowledgeHubPermissions.RecruitmentLive.Create, L("Permission:RecruitmentLive.Create"));
+        recruitmentLivePermission.AddChild(KnowledgeHubPermissions.RecruitmentLive.Manage, L("Permission:RecruitmentLive.Manage"));
     }
 
     private static LocalizableString L(string name)

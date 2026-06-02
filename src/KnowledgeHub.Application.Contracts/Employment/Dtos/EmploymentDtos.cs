@@ -63,6 +63,8 @@ public class JobPostingDto : FullAuditedEntityDto<Guid>
 
 public class CreateUpdateJobPostingDto
 {
+    public string? CompanyName { get; set; }
+    public string? Industry { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Summary { get; set; }
     public string Description { get; set; } = string.Empty;

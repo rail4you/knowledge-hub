@@ -1,0 +1,336 @@
+<div class="mgmt-page">
+  <!-- =================== HERO =================== -->
+  <section class="page-hero" aria-label="投递管理">
+    <div class="hero__bg" aria-hidden="true">
+      <span class="hero__shape hero__shape--1"></span>
+      <span class="hero__shape hero__shape--2"></span>
+      <span class="hero__shape hero__shape--3"></span>
+    </div>
+    <div class="page-hero__inner">
+      <div class="page-hero__body">
+        <span class="page-hero__label">APPLICATION REVIEW</span>
+        <h1 class="page-hero__title">
+          <span class="page-hero__bar"></span>
+          投递管理
+        </h1>
+        <p class="page-hero__desc">查看学生投递情况，审核并反馈面试或录用结果，及时跟进每一位学生的求职进展</p>
+      </div>
+    </div>
+    <div class="page-hero__stats">
+      <div class="stats-card">
+        @for (s of stats(); track s.label) {
+          <div class="stat-cell">
+            <div class="stat-cell__icon" [style.background]="s.color">
+              <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+            </div>
+            <div class="stat-cell__body">
+              <div class="stat-cell__value">
+                <strong>{{ s.value | number }}</strong>
+              </div>
+              <div class="stat-cell__label">{{ s.label }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== 筛选 =================== -->
+  <section class="filter-bar">
+    <div class="filter-bar__inner">
+      <div class="search-pill">
+        <span class="search-pill__icon">
+          <span nz-icon nzType="search" nzTheme="outline"></span>
+        </span>
+        <input
+          type="text"
+          [ngModel]="keyword()"
+          (ngModelChange)="keyword.set($event)"
+          (keyup.enter)="onSearch()"
+          placeholder="搜索学生 / 岗位 / 简历"
+          class="search-pill__input"
+        />
+      </div>
+      <div class="type-chips">
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === null"
+          (click)="statusFilter.set(null); onFilterChange()"
+        >全部</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.Submitted"
+          (click)="statusFilter.set(statuses.Submitted); onFilterChange()"
+        >待审核</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.Viewed"
+          (click)="statusFilter.set(statuses.Viewed); onFilterChange()"
+        >已查看</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.InterviewScheduled"
+          (click)="statusFilter.set(statuses.InterviewScheduled); onFilterChange()"
+        >面试邀请</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.Offered"
+          (click)="statusFilter.set(statuses.Offered); onFilterChange()"
+        >已录用</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.Rejected"
+          (click)="statusFilter.set(statuses.Rejected); onFilterChange()"
+        >未通过</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== 列表 =================== -->
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+      <p>正在加载投递记录...</p>
+    </div>
+  } @else if (filteredItems().length === 0) {
+    <div class="empty-state">
+      <div class="empty-state__art">
+        <span nz-icon nzType="inbox" nzTheme="outline"></span>
+      </div>
+      <h3>暂无投递记录</h3>
+      <p>当前筛选条件下没有可审核的投递</p>
+    </div>
+  } @else {
+    <div class="app-table">
+      <div class="app-table__head">
+        <div class="col col--student">学生</div>
+        <div class="col col--job">岗位 / 企业</div>
+        <div class="col col--resume">简历</div>
+        <div class="col col--time">投递时间</div>
+        <div class="col col--status">状态</div>
+        <div class="col col--actions">操作</div>
+      </div>
+
+      @for (item of filteredItems(); track item.id) {
+        @let info = getStatusInfo(item.status);
+        <div class="app-table__row">
+          <div class="col col--student">
+            <div class="student-cell">
+              <span class="student-avatar" [style.background]="getAvatarGradient(item.studentName || '')">
+                {{ (item.studentName || 'U').charAt(0).toUpperCase() }}
+              </span>
+              <div class="student-cell__body">
+                <div class="student-cell__name">{{ item.studentName || '-' }}</div>
+                @if (item.studentId) {
+                  <div class="student-cell__id">ID: {{ item.studentId.substring(0, 8) }}</div>
+                }
+              </div>
+            </div>
+          </div>
+          <div class="col col--job">
+            <div class="job-cell">
+              <div class="job-cell__title" (click)="openJobDetail(item)">{{ item.jobTitle || '岗位已下线' }}</div>
+              <div class="job-cell__company">
+                <span nz-icon nzType="bank" nzTheme="outline"></span>
+                {{ item.companyName || '-' }}
+              </div>
+            </div>
+          </div>
+          <div class="col col--resume">
+            <div class="resume-cell">
+              <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              <span>{{ item.resumeTitle || '-' }}</span>
+            </div>
+            @if (item.coverLetter) {
+              <div class="resume-cell__cover" [title]="item.coverLetter">
+                <span nz-icon nzType="message" nzTheme="outline"></span>
+                {{ item.coverLetter }}
+              </div>
+            }
+          </div>
+          <div class="col col--time">
+            <div class="time-cell">{{ item.appliedAt | date:'MM-dd HH:mm' }}</div>
+            <div class="time-cell__sub">{{ item.appliedAt | date:'yyyy-MM-dd' }}</div>
+            @if (item.reviewedAt) {
+              <div class="time-cell__reviewed">
+                <span nz-icon nzType="check" nzTheme="outline"></span>
+                反馈 {{ item.reviewedAt | date:'MM-dd' }}
+              </div>
+            }
+          </div>
+          <div class="col col--status">
+            <span class="status-tag" [style.background]="info.color + '15'" [style.color]="info.color" [style.borderColor]="info.color + '40'">
+              <span nz-icon [nzType]="info.icon" nzTheme="outline"></span>
+              {{ info.label }}
+            </span>
+            @if (item.employerRemark) {
+              <div class="remark-preview" [title]="item.employerRemark">
+                {{ item.employerRemark }}
+              </div>
+            }
+          </div>
+          <div class="col col--actions">
+            <div class="action-group">
+              <button
+                class="action-btn action-btn--primary"
+                (click)="quickApprove(item)"
+                [disabled]="item.status === statuses.Offered"
+                title="通过"
+              >
+                <span nz-icon nzType="check" nzTheme="outline"></span>
+                通过
+              </button>
+              <button
+                class="action-btn action-btn--danger"
+                (click)="quickReject(item)"
+                [disabled]="item.status === statuses.Rejected"
+                title="拒绝"
+              >
+                <span nz-icon nzType="close" nzTheme="outline"></span>
+                拒绝
+              </button>
+              <button class="action-btn action-btn--ghost" (click)="openReview(item)">
+                <span nz-icon nzType="form" nzTheme="outline"></span>
+                详细审核
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (totalCount() > pageSize()) {
+      <div class="pagination-wrapper">
+        <nz-pagination
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          [nzTotal]="totalCount()"
+          (nzPageIndexChange)="onPageChange($event)"
+          nzAlign="center"
+        ></nz-pagination>
+      </div>
+    }
+  }
+</div>
+
+<!-- =================== 审核弹窗 =================== -->
+<nz-modal
+  [nzVisible]="reviewVisible"
+  [nzTitle]="'审核投递 - ' + (selectedItem?.studentName || '')"
+  [nzWidth]="560"
+  [nzMaskClosable]="false"
+  [nzOkLoading]="updating()"
+  nzOkText="提交审核"
+  nzCancelText="取消"
+  (nzOnCancel)="closeReview()"
+  (nzOnOk)="submitReview()"
+>
+  <ng-container *nzModalContent>
+    @if (selectedItem) {
+      <div class="review-modal">
+        <div class="review-summary">
+          <div class="review-summary__row">
+            <span class="review-summary__label">岗位：</span>
+            <span class="review-summary__value">{{ selectedItem.jobTitle || '-' }}</span>
+          </div>
+          <div class="review-summary__row">
+            <span class="review-summary__label">企业：</span>
+            <span class="review-summary__value">{{ selectedItem.companyName || '-' }}</span>
+          </div>
+          <div class="review-summary__row">
+            <span class="review-summary__label">简历：</span>
+            <span class="review-summary__value">{{ selectedItem.resumeTitle || '-' }}</span>
+          </div>
+          <div class="review-summary__row">
+            <span class="review-summary__label">当前状态：</span>
+            <span
+              class="status-tag"
+              [style.background]="getStatusInfo(selectedItem.status).color + '15'"
+              [style.color]="getStatusInfo(selectedItem.status).color"
+              [style.borderColor]="getStatusInfo(selectedItem.status).color + '40'"
+            >
+              {{ getStatusInfo(selectedItem.status).label }}
+            </span>
+          </div>
+        </div>
+
+        <div class="form-block">
+          <label class="form-label">审核结果 <span class="required">*</span></label>
+          <div class="radio-group">
+            <label
+              class="radio-card"
+              [class.is-active]="reviewStatus === statuses.InterviewScheduled"
+            >
+              <input
+                type="radio"
+                name="reviewStatus"
+                [value]="statuses.InterviewScheduled"
+                [(ngModel)]="reviewStatus"
+              />
+              <span class="radio-card__icon" style="background: #00b7ff;">
+                <span nz-icon nzType="calendar" nzTheme="outline"></span>
+              </span>
+              <span class="radio-card__body">
+                <span class="radio-card__title">推荐面试</span>
+                <span class="radio-card__sub">企业应安排面试</span>
+              </span>
+            </label>
+            <label
+              class="radio-card"
+              [class.is-active]="reviewStatus === statuses.Offered"
+            >
+              <input
+                type="radio"
+                name="reviewStatus"
+                [value]="statuses.Offered"
+                [(ngModel)]="reviewStatus"
+              />
+              <span class="radio-card__icon" style="background: #10b981;">
+                <span nz-icon nzType="trophy" nzTheme="outline"></span>
+              </span>
+              <span class="radio-card__body">
+                <span class="radio-card__title">直接录用</span>
+                <span class="radio-card__sub">教师端标记为已录用</span>
+              </span>
+            </label>
+            <label
+              class="radio-card radio-card--danger"
+              [class.is-active]="reviewStatus === statuses.Rejected"
+            >
+              <input
+                type="radio"
+                name="reviewStatus"
+                [value]="statuses.Rejected"
+                [(ngModel)]="reviewStatus"
+              />
+              <span class="radio-card__icon" style="background: #ef4444;">
+                <span nz-icon nzType="close-circle" nzTheme="outline"></span>
+              </span>
+              <span class="radio-card__body">
+                <span class="radio-card__title">不予通过</span>
+                <span class="radio-card__sub">需填写原因</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-block">
+          <label class="form-label">
+            审核意见
+            @if (reviewStatus === statuses.Rejected) {
+              <span class="required">*</span>
+            }
+          </label>
+          <textarea
+            nz-input
+            rows="4"
+            [(ngModel)]="reviewRemark"
+            [placeholder]="reviewStatus === statuses.Rejected ? '请说明拒绝原因，便于学生调整方向' : '可填写补充说明，例如：建议面试时间、岗位匹配度等'"
+            maxlength="300"
+          ></textarea>
+          <div class="char-count">{{ reviewRemark.length }} / 300</div>
+        </div>
+      </div>
+    }
+  </ng-container>
+</nz-modal>

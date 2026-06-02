@@ -1,0 +1,143 @@
+<!-- ===== 直播间 ===== -->
+<div class="live-room">
+  <!-- Top bar -->
+  <div class="live-topbar">
+    <div class="live-info">
+      <div class="live-title" *ngIf="live">
+        <span *ngIf="myRole === 'teacher'">📋 面试官 · {{ live.teacherName }}</span>
+        <span *ngIf="myRole === 'student'">📋 候选人 · {{ live.studentName }}</span>
+      </div>
+      <div class="live-timer">{{ formattedTime() }}</div>
+    </div>
+    <div class="live-conn">
+      <span class="conn-dot" [class.active]="liveState() === 'connected'"></span>
+      <span>{{ connectionLabel() }}</span>
+    </div>
+    <button nz-button nzType="default" nzSize="small" (click)="goBack()">退出</button>
+  </div>
+
+  <!-- Room code share area (waiting state) -->
+  <div class="share-area" *ngIf="liveState() === 'waiting' && myRole === 'teacher'">
+    <div class="share-card">
+      <div class="share-label">📎 邀请学生加入直播间</div>
+      <div class="room-code-display">{{ roomCode() }}</div>
+      <button nz-button nzType="primary" (click)="copyRoomCode()">
+        <span nz-icon nzType="copy" nzTheme="outline"></span>
+        复制房间码
+      </button>
+      <div class="waiting-badge">
+        <span class="pulse"></span> {{ waitingText() }}
+      </div>
+    </div>
+  </div>
+
+  <div class="share-area" *ngIf="liveState() === 'waiting' && myRole === 'student'">
+    <div class="share-card">
+      <span class="pulse"></span> {{ waitingText() }}
+    </div>
+  </div>
+
+  <!-- Video area -->
+  <div class="video-area" [class.hidden]="liveState() === 'waiting' && myRole === 'teacher'">
+    <!-- Remote video (full screen) -->
+    <div class="video-placeholder" *ngIf="!remoteVideoActive()">
+      <div class="avatar-placeholder">👤</div>
+      <span>{{ liveState() === 'connected' ? '对方摄像头未开启' : '等待对方视频...' }}</span>
+    </div>
+    <video
+      *ngIf="remoteVideoActive()"
+      #remoteVideo
+      [srcObject]="remoteStream()"
+      autoplay
+      playsinline
+      class="remote-video"
+    ></video>
+
+    <!-- Local video (PiP) -->
+    <video
+      *ngIf="localStreamActive()"
+      #localVideo
+      [srcObject]="liveService.getLocalStream()"
+      autoplay
+      playsinline
+      muted
+      class="local-video-pip"
+    ></video>
+  </div>
+
+  <!-- Ended state -->
+  <div class="ended-area" *ngIf="liveState() === 'ended'">
+    <div class="ended-card">
+      <div class="ended-icon">📵</div>
+      <h3>通话已结束</h3>
+      <p>通话时长: {{ formattedTime() }}</p>
+      <button nz-button nzType="primary" (click)="goBack()">返回列表</button>
+    </div>
+  </div>
+
+  <!-- Bottom controls -->
+  <div class="bottom-panel" *ngIf="liveState() !== 'idle' && liveState() !== 'ended'">
+    <!-- Chat area -->
+    <div class="chat-area" [class.open]="chatOpen()">
+      <div class="chat-messages" #chatMessagesContainer>
+        <div class="chat-msg" *ngFor="let msg of chatMessages()"
+             [class.self]="msg.self" [class.other]="!msg.self">
+          <div class="chat-who">{{ msg.from === 'teacher' ? '面试官' : '候选人' }}</div>
+          <div class="chat-bubble">{{ msg.text }}</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input
+          nz-input
+          [(ngModel)]="chatInput"
+          placeholder="发送消息..."
+          maxlength="200"
+          (keydown)="onChatKeydown($event)"
+        />
+        <button nz-button nzType="primary" nzShape="circle" (click)="sendChatMessage()">
+          <span nz-icon nzType="send" nzTheme="outline"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button nz-button nzShape="circle" nzSize="large"
+              [nzType]="micEnabled() ? 'default' : 'primary'"
+              [nzDanger]="!micEnabled()"
+              nz-tooltip [nzTooltipTitle]="micEnabled() ? '关闭麦克风' : '开启麦克风'"
+              (click)="liveService.toggleMic()">
+        <span nz-icon [nzType]="micEnabled() ? 'audio' : 'audio-muted'" nzTheme="outline"></span>
+      </button>
+
+      <button nz-button nzShape="circle" nzSize="large"
+              [nzType]="camEnabled() ? 'default' : 'primary'"
+              [nzDanger]="!camEnabled()"
+              nz-tooltip [nzTooltipTitle]="camEnabled() ? '关闭摄像头' : '开启摄像头'"
+              (click)="liveService.toggleCam()">
+        <span nz-icon [nzType]="camEnabled() ? 'video-camera' : 'stop'" nzTheme="outline"></span>
+      </button>
+
+      <button nz-button nzShape="circle" nzSize="large"
+              nzType="primary" nzDanger
+              nz-tooltip nzTooltipTitle="挂断"
+              (click)="hangUp()">
+        <span nz-icon nzType="phone" nzTheme="outline" style="transform: rotate(135deg)"></span>
+      </button>
+
+      <button nz-button nzShape="circle" nzSize="large"
+              nzType="default"
+              nz-tooltip nzTooltipTitle="切换摄像头"
+              (click)="liveService.switchCamera()">
+        <span nz-icon nzType="swap" nzTheme="outline"></span>
+      </button>
+
+      <button nz-button nzShape="circle" nzSize="large"
+              [nzType]="chatOpen() ? 'primary' : 'default'"
+              nz-tooltip nzTooltipTitle="聊天"
+              (click)="liveService.toggleChat()">
+        <span nz-icon nzType="message" nzTheme="outline"></span>
+      </button>
+    </div>
+  </div>
+</div>

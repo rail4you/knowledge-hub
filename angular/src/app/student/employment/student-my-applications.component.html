@@ -1,0 +1,190 @@
+<div class="applications-page">
+  <!-- =================== HERO =================== -->
+  <section class="page-hero" aria-label="我的投递">
+    <div class="hero__bg" aria-hidden="true">
+      <span class="hero__shape hero__shape--1"></span>
+      <span class="hero__shape hero__shape--2"></span>
+      <span class="hero__shape hero__shape--3"></span>
+    </div>
+    <div class="page-hero__inner">
+      <div class="page-hero__body">
+        <span class="page-hero__label">MY APPLICATIONS</span>
+        <h1 class="page-hero__title">
+          <span class="page-hero__bar"></span>
+          我的投递
+        </h1>
+        <p class="page-hero__desc">跟踪每一份简历的投递进度，查看企业反馈，及时把握面试与录用机会</p>
+      </div>
+    </div>
+    <div class="page-hero__stats">
+      <div class="stats-card">
+        @for (s of stats(); track s.label) {
+          <div class="stat-cell">
+            <div class="stat-cell__icon" [style.background]="s.color">
+              <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+            </div>
+            <div class="stat-cell__body">
+              <div class="stat-cell__value">
+                <strong>{{ s.value | number }}</strong>
+                <span class="stat-cell__suffix">{{ s.suffix }}</span>
+              </div>
+              <div class="stat-cell__label">{{ s.label }}</div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== 筛选 =================== -->
+  <section class="filter-bar">
+    <div class="filter-bar__inner">
+      <div class="type-chips">
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === null"
+          (click)="statusFilter.set(null); onFilterChange()"
+        >全部状态</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.Submitted"
+          (click)="statusFilter.set(statuses.Submitted); onFilterChange()"
+        >已投递</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.Viewed"
+          (click)="statusFilter.set(statuses.Viewed); onFilterChange()"
+        >已查看</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.InterviewScheduled"
+          (click)="statusFilter.set(statuses.InterviewScheduled); onFilterChange()"
+        >面试邀请</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.Offered"
+          (click)="statusFilter.set(statuses.Offered); onFilterChange()"
+        >已录用</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.Rejected"
+          (click)="statusFilter.set(statuses.Rejected); onFilterChange()"
+        >未通过</button>
+        <button
+          class="type-chip"
+          [class.is-active]="statusFilter() === statuses.Withdrawn"
+          (click)="statusFilter.set(statuses.Withdrawn); onFilterChange()"
+        >已撤回</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== 列表 =================== -->
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+      <p>正在加载投递记录...</p>
+    </div>
+  } @else if (items().length === 0) {
+    <div class="empty-state">
+      <div class="empty-state__art">
+        <span nz-icon nzType="paper-plane" nzTheme="outline"></span>
+      </div>
+      <h3>暂无投递记录</h3>
+      <p>快去岗位大厅看看有没有合适的机会吧</p>
+      <a class="empty-btn" routerLink="/student/employment/jobs">
+        <span nz-icon nzType="search" nzTheme="outline"></span>
+        去发现岗位
+      </a>
+    </div>
+  } @else {
+    <div class="app-list">
+      @for (item of items(); track item.id) {
+        @let info = getStatusInfo(item.status);
+        @let step = getStatusStep(item.status);
+        <article class="app-card" (click)="openJobDetail(item)" tabindex="0" (keyup.enter)="openJobDetail(item)">
+          <div class="app-card__cover" [style.background]="coverGradient(item)">
+            <div class="cover-decor" aria-hidden="true">
+              <span class="decor-line decor-line--1"></span>
+              <span class="decor-line decor-line--2"></span>
+              <span class="decor-circle"></span>
+            </div>
+            <div class="cover-icon">
+              <span nz-icon nzType="briefcase" nzTheme="outline"></span>
+            </div>
+            <div class="app-card__cover-status" [style.background]="info.color">
+              <span nz-icon [nzType]="info.icon" nzTheme="outline"></span>
+              {{ info.label }}
+            </div>
+          </div>
+
+          <div class="app-card__body">
+            <div class="app-card__head">
+              <div>
+                <h3 class="app-card__title">{{ item.jobTitle || '岗位已下线' }}</h3>
+                <p class="app-card__company">
+                  <span nz-icon nzType="bank" nzTheme="outline"></span>
+                  {{ item.companyName || '-' }}
+                </p>
+              </div>
+              <span class="app-card__time">{{ item.appliedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+            </div>
+
+            <div class="app-card__meta">
+              <span class="meta-item">
+                <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                使用简历：<strong>{{ item.resumeTitle || '-' }}</strong>
+              </span>
+            </div>
+
+            <!-- 进度条 -->
+            <div class="progress">
+              <div class="progress__steps">
+                <div class="progress__step" [class.is-done]="step.current >= 1" [class.is-current]="step.current === 1">
+                  <span class="dot">1</span>
+                  <span class="label">已投递</span>
+                </div>
+                <div class="progress__bar" [class.is-done]="step.current >= 2"></div>
+                <div class="progress__step" [class.is-done]="step.current >= 2" [class.is-current]="step.current === 2 && item.status === statuses.InterviewScheduled">
+                  <span class="dot">2</span>
+                  <span class="label">企业查看 / 面试</span>
+                </div>
+                <div class="progress__bar" [class.is-done]="step.current >= 3 && item.status === statuses.Offered"></div>
+                <div class="progress__step" [class.is-done]="step.current >= 3 && item.status === statuses.Offered" [class.is-current]="step.current === 3 && item.status === statuses.Offered">
+                  <span class="dot">3</span>
+                  <span class="label">录用结果</span>
+                </div>
+              </div>
+            </div>
+
+            @if (item.employerRemark) {
+              <div class="app-card__remark">
+                <span class="remark-label">企业反馈：</span>
+                <span class="remark-text">{{ item.employerRemark }}</span>
+              </div>
+            }
+
+            @if (item.reviewedAt) {
+              <div class="app-card__reviewed">
+                <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                反馈时间：{{ item.reviewedAt | date:'yyyy-MM-dd HH:mm' }}
+              </div>
+            }
+          </div>
+        </article>
+      }
+    </div>
+
+    @if (totalCount() > pageSize()) {
+      <div class="pagination-wrapper">
+        <nz-pagination
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          [nzTotal]="totalCount()"
+          (nzPageIndexChange)="onPageChange($event)"
+          nzAlign="center"
+        ></nz-pagination>
+      </div>
+    }
+  }
+</div>
