@@ -41,9 +41,11 @@ services:
     container_name: knowledgehub-angular
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
       - ./dynamic-env.json:/usr/share/nginx/html/dynamic-env.json:ro
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
       - knowledgehub-api
     restart: unless-stopped
@@ -64,7 +66,7 @@ services:
       - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
       # 应用 URL（浏览器实际访问地址，即 Nginx 的地址）
       - App__SelfUrl=${PUBLIC_URL}
-      - App__HealthCheckUrl=http://knowledgehub-api/health-status
+      - App__HealthCheckUrl=http://knowledgehub-api:44354/health-status
       - App__AngularUrl=${PUBLIC_URL}
       - App__CorsOrigins=${PUBLIC_URL}
       - App__RedirectAllowedUrls=${PUBLIC_URL}
@@ -133,8 +135,8 @@ services:
     container_name: knowledgehub-db-migrator
     environment:
       - OpenIddict__Applications__KnowledgeHub_App__ClientId=KnowledgeHub_App
-      - OpenIddict__Applications__KnowledgeHub_App__RootUrl=${PUBLIC_URL}/admin
-      - OpenIddict__Applications__KnowledgeHub_App__RedirectAllowedUrls=${PUBLIC_URL}/admin,${PUBLIC_URL}
+      - OpenIddict__Applications__KnowledgeHub_App__RootUrl=${PUBLIC_URL}
+      - OpenIddict__Applications__KnowledgeHub_App__RedirectAllowedUrls=${PUBLIC_URL}
       - OpenIddict__Applications__KnowledgeHub_Swagger__ClientId=KnowledgeHub_Swagger
       - OpenIddict__Applications__KnowledgeHub_Swagger__RootUrl=${PUBLIC_URL}
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}
