@@ -83,6 +83,17 @@ export interface MicroMajorEnrollmentDto extends FullAuditedEntityDto<string> {
   certificateIssuedAt?: string | null;
 }
 
+export interface MicroMajorResourceDto {
+  id?: string;
+  microMajorId?: string;
+  resourceId?: string;
+  resourceName?: string;
+  fileExtension?: string | null;
+  downloadCount?: number;
+  sortOrder?: number;
+  description?: string | null;
+}
+
 export interface PagedMicroMajorRequestDto extends PagedAndSortedResultRequestDto {
   filter?: string | null;
   status?: MicroMajorStatus | null;

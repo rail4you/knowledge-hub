@@ -1,9 +1,8 @@
-import type { ChapterDto, ChapterImportResultDto, CreateUpdateChapterDto } from './dtos/models';
+import type { ChapterDto, ChapterImportResultDto, ChapterOrderDto, CreateUpdateChapterDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 import type { IFormFile } from '../microsoft/asp-net-core/http/models';
-import type { ChapterOrderDto } from './dtos/models';
 
 @Injectable({
   providedIn: 'root',
@@ -80,19 +79,20 @@ export class ChapterService {
     { apiName: this.apiName,...config });
   
 
+  reorderChapters = (orders: ChapterOrderDto[], config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: '/api/app/chapter/reorder-chapters',
+      body: orders,
+    },
+    { apiName: this.apiName,...config });
+  
+
   update = (id: string, input: CreateUpdateChapterDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, ChapterDto>({
       method: 'PUT',
       url: `/api/app/chapter/${id}`,
       body: input,
-    },
-    { apiName: this.apiName,...config });
-  
-  reorderChapters = (orders: ChapterOrderDto[], config?: Partial<Rest.Config>) =>
-    this.restService.request<any, void>({
-      method: 'PUT',
-      url: '/api/app/chapter/reorder',
-      body: orders,
     },
     { apiName: this.apiName,...config });
 }

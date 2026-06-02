@@ -20,10 +20,9 @@ export interface DocumentSearchResultDto {
   resourceId?: string;
   resourceName?: string;
   pageNumber?: number;
-  pageContent?: string;
-  pageTitle?: string | null;
-  highlightedText?: string;
-  previewText?: string;
+  content?: string;
+  title?: string | null;
+  highlightedContent?: string | null;
   relevanceScore?: number;
   fileExtension?: string;
   resourceType?: ResourceType;

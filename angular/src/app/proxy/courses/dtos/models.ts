@@ -125,6 +125,22 @@ export interface PagedCourseRequestDto extends PagedAndSortedResultRequestDto {
   status?: CourseStatus | null;
 }
 
+export interface RelatedChapterInfoDto {
+  chapterId?: string;
+  chapterTitle?: string;
+}
+
+export interface RelatedCourseInfoDto {
+  courseId?: string;
+  chapters?: RelatedChapterInfoDto[];
+}
+
+export interface RelatedCoursesResultDto {
+  knowledgeResourceId?: string;
+  name?: string;
+  courses?: RelatedCourseInfoDto[];
+}
+
 export interface StudentCourseDto extends FullAuditedEntityDto<string> {
   tenantId?: string | null;
   studentId?: string;

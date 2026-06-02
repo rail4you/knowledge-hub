@@ -22,8 +22,8 @@ export interface CreateUpdateNewsArticleDto {
 
 export interface CreateUpdateNewsCategoryDto {
   parentId?: string | null;
-  name?: string;
-  code?: string;
+  name: string;
+  code: string;
   sortOrder?: number;
   isActive?: boolean;
 }
@@ -65,6 +65,19 @@ export interface NewsCommentDto extends FullAuditedEntityDto<string> {
   userName?: string | null;
   content?: string;
   status?: NewsCommentStatus;
+}
+
+export interface NewsImportFailItemDto {
+  rowNumber?: number;
+  title?: string;
+  reason?: string;
+}
+
+export interface NewsImportResultDto {
+  totalCount?: number;
+  successCount?: number;
+  failCount?: number;
+  failItems?: NewsImportFailItemDto[];
 }
 
 export interface PagedNewsArticleRequestDto extends PagedAndSortedResultRequestDto {

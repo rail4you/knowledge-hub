@@ -1,4 +1,4 @@
-import type { CreateUpdateMicroMajorDto, GetMicroMajorEnrollmentsInput, MicroMajorCertificateDto, MicroMajorDetailDto, MicroMajorDto, MicroMajorEnrollmentDto, PagedMicroMajorRequestDto } from './dtos/models';
+import type { CreateUpdateMicroMajorDto, GetMicroMajorEnrollmentsInput, MicroMajorCertificateDto, MicroMajorDetailDto, MicroMajorDto, MicroMajorEnrollmentDto, MicroMajorResourceDto, PagedMicroMajorRequestDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -91,6 +91,14 @@ export class MicroMajorService {
       method: 'GET',
       url: '/api/app/micro-major/published',
       params: { filter: input.filter, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getResources = (microMajorId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MicroMajorResourceDto[]>({
+      method: 'GET',
+      url: `/api/app/micro-major/resources/${microMajorId}`,
     },
     { apiName: this.apiName,...config });
   

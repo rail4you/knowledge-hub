@@ -13,6 +13,11 @@ public interface IPortalAppService : IApplicationService
     /// 获取所有租户的资源库摘要列表（公开访问）
     /// </summary>
     Task<List<TenantResourceSummaryDto>> GetPublicTenantListAsync();
+
+    /// <summary>
+    /// 获取首页公共统计数据（公开访问）
+    /// </summary>
+    Task<PublicHomeStatsDto> GetPublicHomeStatsAsync();
 }
 
 public class PortalHomeDataDto
@@ -39,6 +44,17 @@ public class TenantResourceSummaryDto
     public int CourseCount { get; set; }
     public int ResourceCount { get; set; }
     public int MicroMajorCount { get; set; }
+}
+
+/// <summary>
+/// 首页公共统计数据（公开访问）
+/// </summary>
+public class PublicHomeStatsDto
+{
+    public int TenantCount { get; set; }
+    public int TotalCourseCount { get; set; }
+    public int TotalResourceCount { get; set; }
+    public int TotalMicroMajorCount { get; set; }
 }
 
 public class PartnerBriefDto

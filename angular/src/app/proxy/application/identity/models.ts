@@ -1,4 +1,5 @@
 import type { EntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { GetIdentityUsersInput } from '../../volo/abp/identity/models';
 
 export interface CreateTenantRoleDto {
   tenantId?: string | null;
@@ -21,6 +22,10 @@ export interface CreateTenantUserDto {
 export interface GetTenantRolesInput extends PagedAndSortedResultRequestDto {
   tenantId?: string | null;
   filter?: string | null;
+}
+
+export interface GetTenantUsersInput extends GetIdentityUsersInput {
+  tenantId?: string | null;
 }
 
 export interface TenantRoleDto extends EntityDto<string> {

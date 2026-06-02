@@ -1,8 +1,8 @@
-import type { CreateTenantUserDto, UpdateTenantUserDto } from './models';
+import type { CreateTenantUserDto, GetTenantUsersInput, UpdateTenantUserDto } from './models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { GetIdentityUsersInput, IdentityUserDto } from '../../volo/abp/identity/models';
+import type { IdentityUserDto } from '../../volo/abp/identity/models';
 
 @Injectable({
   providedIn: 'root',
@@ -37,11 +37,11 @@ export class TenantUserService {
     { apiName: this.apiName,...config });
   
 
-  getList = (input: GetIdentityUsersInput, config?: Partial<Rest.Config>) =>
+  getList = (input: GetTenantUsersInput, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<IdentityUserDto>>({
       method: 'GET',
       url: '/api/app/tenant-user',
-      params: { filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount, extraProperties: input.extraProperties },
+      params: { tenantId: input.tenantId, filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount, extraProperties: input.extraProperties },
     },
     { apiName: this.apiName,...config });
   
