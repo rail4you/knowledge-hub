@@ -1,15 +1,31 @@
 <div class="favorites-page">
-  <div class="page-header">
-    <div>
-      <h1>我的收藏</h1>
-      <p>集中查看你已收藏的资源，支持继续预览、下载或取消收藏。</p>
+  <!-- =================== 顶部标题区 =================== -->
+  <section class="page-hero">
+    <div class="page-hero__inner">
+      <div class="page-hero__body">
+        <span class="page-hero__label">MY FAVORITES</span>
+        <h1 class="page-hero__title">
+          <span class="page-hero__bar"></span>
+          我的收藏
+        </h1>
+        <p class="page-hero__desc">集中查看你已收藏的资源，支持预览、下载或取消收藏</p>
+      </div>
+      <div class="page-hero__actions">
+        <button class="hero-btn" (click)="browseResources()">
+          <span nz-icon nzType="appstore" nzTheme="outline"></span>
+          去资源库
+        </button>
+      </div>
     </div>
-    <button nz-button nzType="default" (click)="browseResources()">
-      <span nz-icon nzType="appstore" nzTheme="outline"></span>
-      去资源库
-    </button>
-  </div>
+    <div class="page-hero__stats">
+      <span class="stat-chip">
+        <span class="stat-chip__dot"></span>
+        共收藏 <strong>{{ totalCount() | number }}</strong> 个资源
+      </span>
+    </div>
+  </section>
 
+  <!-- =================== 加载态 / 空态 =================== -->
   @if (loading()) {
     <div class="loading-state">
       <nz-spin nzSimple nzSize="large"></nz-spin>
@@ -17,52 +33,105 @@
     </div>
   } @else if (resources().length === 0) {
     <div class="empty-state">
-      <nz-empty nzNotFoundContent="你还没有收藏任何资源"></nz-empty>
-      <button nz-button nzType="primary" (click)="browseResources()">去看看资源</button>
+      <div class="empty-state__art">
+        <span nz-icon nzType="heart" nzTheme="outline"></span>
+      </div>
+      <h3>暂无收藏</h3>
+      <p>去资源库发现更多优质内容吧</p>
+      <button class="hero-btn hero-btn--primary" (click)="browseResources()">
+        <span nz-icon nzType="appstore" nzTheme="outline"></span>
+        去看看资源
+      </button>
     </div>
   } @else {
-    <div class="favorites-summary">
-      共收藏 <strong>{{ totalCount() }}</strong> 个资源
-    </div>
-
+    <!-- =================== 资源卡片网格 =================== -->
     <div class="resources-grid">
       @for (resource of resources(); track resource.id) {
-        <article class="resource-card" [class]="'type-' + (resource.resourceType || 0)">
-          <div class="card-thumbnail">
-            <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
+        <article
+          class="resource-card"
+          [ngClass]="'type-' + (resource.resourceType || 0)"
+          (click)="openDetail(resource)"
+          tabindex="0"
+          (keyup.enter)="openDetail(resource)"
+        >
+          <!-- 封面 -->
+          <div class="resource-card__cover">
+            <div class="cover-decor" aria-hidden="true">
+              <span class="decor-line decor-line--1"></span>
+              <span class="decor-line decor-line--2"></span>
+              <span class="decor-circle"></span>
+            </div>
+            <div class="cover-icon">
+              <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
+            </div>
+            <div class="cover-extension" *ngIf="resource.fileExtension">
+              .{{ (resource.fileExtension || '').toUpperCase() }}
+            </div>
+            <button
+              class="cover-favorite is-active"
+              (click)="toggleCollection($event, resource)"
+              [attr.aria-label]="'取消收藏'"
+            >
+              <span nz-icon nzType="heart" nzTheme="fill"></span>
+            </button>
           </div>
 
-          <div class="card-content">
-            <div class="card-top">
-              <span class="type-badge">{{ getResourceTypeLabel(resource.resourceType) }}</span>
-              <button class="remove-btn" nz-tooltip="取消收藏" (click)="removeFavorite(resource)">
-                <span nz-icon nzType="star" nzTheme="fill"></span>
-              </button>
+          <!-- 卡片内容 -->
+          <div class="resource-card__body">
+            <div class="resource-card__top">
+              <span class="type-badge" [ngClass]="'type-badge--' + (resource.resourceType || 0)">
+                <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
+                <span>{{ getResourceTypeName(resource.resourceType) }}</span>
+              </span>
+              @if (resource.categoryName) {
+                <span class="category-name" [title]="resource.categoryName">
+                  <span nz-icon nzType="folder" nzTheme="outline"></span>
+                  {{ resource.categoryName }}
+                </span>
+              }
             </div>
 
-            <h3 class="card-title" [title]="resource.name || ''">{{ resource.name || '未命名资源' }}</h3>
-            <p class="card-desc">{{ resource.description || '暂无描述' }}</p>
+            <h3 class="resource-card__title" [title]="resource.name || ''">
+              {{ resource.name }}
+            </h3>
 
-            <div class="card-meta">
-              <span>
+            <p class="resource-card__desc">
+              {{ resource.description || '该资源暂无简介描述' }}
+            </p>
+
+            <div class="resource-card__meta">
+              <span class="meta-item">
                 <span nz-icon nzType="calendar" nzTheme="outline"></span>
                 {{ resource.creationTime | date:'yyyy-MM-dd' }}
               </span>
-              <span>
+              <span class="meta-item">
                 <span nz-icon nzType="database" nzTheme="outline"></span>
-                {{ (resource.fileSize || 0) / 1024 / 1024 | number:'1.1-1' }} MB
+                {{ formatFileSize(resource.fileSize) }}
+              </span>
+              <span class="meta-item">
+                <span nz-icon nzType="eye" nzTheme="outline"></span>
+                {{ resource.viewCount || 0 }}
               </span>
             </div>
+
+            @if (ratingSummaries()[resource.id!]; as summary) {
+              <div class="resource-card__rating">
+                <nz-rate [ngModel]="summary.averageRating" [nzDisabled]="true" nzSize="small" nzAllowHalf></nz-rate>
+                <span class="rating-score">{{ summary.averageRating | number:'1.1-1' }}</span>
+                <span class="rating-count">({{ summary.totalReviews }})</span>
+              </div>
+            }
           </div>
 
-          <div class="card-actions">
-            <button class="action-btn" nz-tooltip="预览" (click)="previewResource(resource)">
+          <!-- 操作按钮 -->
+          <div class="resource-card__actions">
+            <button class="action-btn action-btn--preview" (click)="previewResource($event, resource)">
               <span nz-icon nzType="eye" nzTheme="outline"></span>
-              预览
+              <span>预览</span>
             </button>
-            <button class="action-btn" nz-tooltip="下载" (click)="downloadResource(resource)">
+            <button class="action-btn action-btn--download" (click)="downloadResource($event, resource)">
               <span nz-icon nzType="download" nzTheme="outline"></span>
-              下载
+              <span>下载</span>
             </button>
           </div>
         </article>

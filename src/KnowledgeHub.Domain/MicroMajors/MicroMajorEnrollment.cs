@@ -10,7 +10,7 @@ public class MicroMajorEnrollment : FullAuditedEntity<Guid>, IMultiTenant
     public Guid? TenantId { get; set; }
     public Guid MicroMajorId { get; set; }
     public Guid StudentId { get; set; }
-    public MicroMajorEnrollmentStatus Status { get; set; } = MicroMajorEnrollmentStatus.Enrolled;
+    public MicroMajorEnrollmentStatus Status { get; set; } = MicroMajorEnrollmentStatus.Pending;
     public decimal Progress { get; set; }
     public DateTime EnrolledAt { get; set; }
     public DateTime? CompletedAt { get; set; }

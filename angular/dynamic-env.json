@@ -1,23 +1,25 @@
 {
   "production": true,
   "application": {
-    "baseUrl": "http://119.45.170.4",
-    "name": "KnowledgeHub"
+    "baseUrl": "https://119.45.170.4/admin",
+    "name": "易课通知识库系统"
   },
   "oAuthConfig": {
-    "issuer": "http://119.45.170.4:44354/",
-    "redirectUri": "http://119.45.170.4",
+    "issuer": "https://119.45.170.4/",
+    "redirectUri": "https://119.45.170.4/admin",
+    "postLogoutRedirectUri": "https://119.45.170.4",
     "clientId": "KnowledgeHub_App",
     "responseType": "code",
-    "scope": "offline_access openid profile email phone KnowledgeHub"
+    "scope": "offline_access openid profile email phone KnowledgeHub",
+    "requireHttps": false
   },
   "apis": {
     "default": {
-      "url": "http://119.45.170.4:44354",
+      "url": "https://119.45.170.4",
       "rootNamespace": "KnowledgeHub"
     },
     "AbpAccountPublic": {
-      "url": "http://119.45.170.4:44354",
+      "url": "https://119.45.170.4",
       "rootNamespace": "AbpAccountPublic"
     }
   }

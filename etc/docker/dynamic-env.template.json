@@ -1,12 +1,13 @@
 {
   "production": true,
   "application": {
-    "baseUrl": "${PUBLIC_URL}",
+    "baseUrl": "${PUBLIC_URL}/admin",
     "name": "易课通知识库系统"
   },
   "oAuthConfig": {
     "issuer": "${PUBLIC_URL}/",
-    "redirectUri": "${PUBLIC_URL}",
+    "redirectUri": "${PUBLIC_URL}/admin",
+    "postLogoutRedirectUri": "${PUBLIC_URL}",
     "clientId": "KnowledgeHub_App",
     "responseType": "code",
     "scope": "offline_access openid profile email phone KnowledgeHub",

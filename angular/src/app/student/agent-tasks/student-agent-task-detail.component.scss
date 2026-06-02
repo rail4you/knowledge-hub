@@ -1,134 +1,382 @@
+@use '../styles/student-design' as ds;
+
+:host {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  background: ds.$student-bg;
+}
+
 .student-detail-page {
-  display: grid;
-  gap: 1rem;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  width: 100%;
+  @include ds.student-container;
+  padding-top: 24px;
+  padding-bottom: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.back-link,
-.eyebrow,
-.page-head p,
-.meta-list span,
-.snapshot p,
-.message-role {
-  color: #5d6f82;
-}
-
+/* =================== Back Link =================== */
 .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: ds.$student-text-muted;
+  font-size: 13px;
+  font-weight: 500;
   text-decoration: none;
+  padding: 6px 12px;
+  border-radius: ds.$student-radius;
+  transition: all 0.2s ease;
+
+  &::before {
+    content: '←';
+    font-size: 15px;
+  }
+
+  &:hover {
+    color: ds.$student-primary;
+    background: #f0f6ff;
+  }
+}
+
+/* =================== Header =================== */
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 24px 28px;
+  border-radius: ds.$student-radius-lg;
+  background: #fff;
+  border: 1px solid ds.$student-border-soft;
+  box-shadow: ds.$student-shadow-soft;
+}
+
+.page-head h1 {
+  margin: 4px 0 8px;
+  color: ds.$student-text;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.page-head p {
+  margin: 0;
+  color: ds.$student-text-muted;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .eyebrow {
   margin: 0;
+  color: ds.$student-primary;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 
-.page-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: start;
-}
-
-.page-head h1,
-.snapshot h3 {
-  margin: 0.4rem 0;
-  color: #17314a;
-}
-
-.status-box,
-.workspace,
-.context-column,
-.chat-column,
-.meta-list,
-.message-list {
-  display: grid;
-  gap: 1rem;
-}
-
 .status-box {
-  justify-items: end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+
+  span {
+    color: ds.$student-text-light;
+    font-size: 12px;
+  }
 }
 
+/* =================== Workspace =================== */
 .workspace {
-  grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
 }
 
-.meta-list div,
-.snapshot,
-.message {
-  background: #f6f9fd;
-  border-radius: 1rem;
-  padding: 1rem;
-}
-
-.meta-list strong,
-.message-content {
-  color: #17314a;
-}
-
-.field {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.message.assistant {
-  background: #edf8f6;
-}
-
-.composer {
-  margin-top: 1rem;
-  display: grid;
-  gap: 0.75rem;
-}
-
-.composer-actions {
+.context-column {
+  position: sticky;
+  top: 144px;
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 16px;
 }
 
-/* Markdown rendering styles */
-.message-content.markdown-body {
+.chat-column {
+  min-width: 0;
+}
+
+/* =================== Cards =================== */
+.student-detail-page ::ng-deep {
+  .ant-card {
+    border-radius: ds.$student-radius-lg;
+    border: 1px solid ds.$student-border-soft;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    overflow: hidden;
+  }
+
+  .ant-card-head {
+    border-bottom: 1px solid ds.$student-border-soft;
+    background: #fafbfc;
+    padding: 0 18px;
+    min-height: 48px;
+
+    .ant-card-head-title {
+      padding: 12px 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: ds.$student-text;
+    }
+  }
+
+  .ant-card-body {
+    padding: 18px;
+  }
+}
+
+/* =================== Meta list =================== */
+.meta-list {
+  display: grid;
+  gap: 12px;
+
+  > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: ds.$student-radius;
+    background: ds.$student-surface-soft;
+
+    span {
+      color: ds.$student-text-light;
+      font-size: 13px;
+    }
+
+    strong {
+      color: ds.$student-text;
+      font-size: 13px;
+      font-weight: 600;
+    }
+  }
+}
+
+/* =================== Snapshot =================== */
+.snapshot {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: ds.$student-radius;
+  background: ds.$student-surface-soft;
+
+  h3 {
+    margin: 0 0 6px;
+    color: ds.$student-text;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0 0 10px;
+    color: ds.$student-text-muted;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .ant-tag {
+    margin-right: 4px;
+    margin-bottom: 4px;
+  }
+}
+
+/* =================== Action blocks =================== */
+.action-block {
+  margin-bottom: 12px;
+
+  button {
+    border-radius: ds.$student-radius;
+    height: 40px;
+    font-weight: 600;
+  }
+}
+
+.hint-text {
+  margin: 8px 0 0;
+  color: #d97706;
+  font-size: 13px;
+}
+
+/* =================== Done banner =================== */
+.done-banner {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: ds.$student-radius;
+  padding: 14px;
+
+  .ant-tag {
+    margin-bottom: 8px;
+  }
+}
+
+.done-summary {
+  margin: 8px 0 0;
+  color: ds.$student-text;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* =================== Help timeline =================== */
+.help-timeline {
+  margin-top: 14px;
+}
+
+.timeline-title {
+  font-weight: 700;
+  color: ds.$student-text;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 14px;
+  position: relative;
+}
+
+.timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f59e0b;
+  margin-top: 6px;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+
+  &.replied {
+    background: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  }
+}
+
+.timeline-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-label {
+  font-size: 11px;
+  color: ds.$student-text-light;
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.timeline-question {
+  background: #fffbeb;
+  border-radius: ds.$student-radius;
+  padding: 10px 14px;
+  border: 1px solid #fef3c7;
+
+  p {
+    margin: 0;
+    color: ds.$student-text;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+.timeline-reply {
+  margin-top: 8px;
+  background: #eff6ff;
+  border-radius: ds.$student-radius;
+  padding: 10px 14px;
+  border: 1px solid #dbeafe;
+
+  p {
+    margin: 0;
+    color: ds.$student-text;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+.timeline-pending {
+  margin-top: 8px;
+}
+
+/* =================== Chat messages =================== */
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 120px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.message {
+  padding: 14px 16px;
+  border-radius: ds.$student-radius;
+  background: ds.$student-surface-soft;
+
+  &.assistant {
+    background: #f0fdf4;
+    border: 1px solid #dcfce7;
+  }
+}
+
+.message-role {
+  font-size: 11px;
+  font-weight: 700;
+  color: ds.$student-text-light;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.message-content {
+  color: ds.$student-text;
+  font-size: 14px;
   line-height: 1.7;
   word-break: break-word;
+}
 
-  :first-child {
-    margin-top: 0;
-  }
-
-  :last-child {
-    margin-bottom: 0;
-  }
+/* Markdown in chat */
+.message-content.markdown-body {
+  :first-child { margin-top: 0; }
+  :last-child { margin-bottom: 0; }
 
   h1, h2, h3, h4, h5, h6 {
     margin: 1em 0 0.4em;
-    color: #17314a;
-    font-weight: 600;
+    color: ds.$student-text;
+    font-weight: 700;
   }
+  h1 { font-size: 1.3em; }
+  h2 { font-size: 1.15em; }
+  h3 { font-size: 1.05em; }
 
-  h1 { font-size: 1.4em; }
-  h2 { font-size: 1.25em; }
-  h3 { font-size: 1.1em; }
-
-  p {
-    margin: 0.6em 0;
-  }
+  p { margin: 0.5em 0; }
 
   ul, ol {
-    padding-left: 1.8em;
-    margin: 0.5em 0;
+    padding-left: 1.6em;
+    margin: 0.4em 0;
   }
 
-  li {
-    margin: 0.25em 0;
-  }
+  li { margin: 0.2em 0; }
 
   code {
     background: rgba(0, 0, 0, 0.06);
     border-radius: 4px;
-    padding: 0.15em 0.4em;
-    font-size: 0.9em;
+    padding: 0.1em 0.4em;
+    font-size: 0.88em;
     font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
   }
 
@@ -138,7 +386,7 @@
     border-radius: 8px;
     padding: 1em;
     overflow-x: auto;
-    margin: 0.75em 0;
+    margin: 0.6em 0;
 
     code {
       background: none;
@@ -149,154 +397,120 @@
   }
 
   blockquote {
-    border-left: 4px solid #94a3b8;
-    margin: 0.75em 0;
-    padding: 0.4em 1em;
-    color: #5d6f82;
-    background: rgba(0, 0, 0, 0.02);
-    border-radius: 0 8px 8px 0;
+    border-left: 3px solid ds.$student-border;
+    margin: 0.6em 0;
+    padding: 0.3em 1em;
+    color: ds.$student-text-muted;
+    background: rgba(0, 0, 0, 0.015);
+    border-radius: 0 6px 6px 0;
   }
 
   table {
     border-collapse: collapse;
     width: 100%;
-    margin: 0.75em 0;
+    margin: 0.6em 0;
 
     th, td {
-      border: 1px solid #e2e8f0;
-      padding: 0.5em 0.75em;
+      border: 1px solid ds.$student-border-soft;
+      padding: 0.4em 0.7em;
       text-align: left;
     }
-
     th {
       background: #f1f5f9;
       font-weight: 600;
-    }
-
-    tr:nth-child(even) td {
-      background: #f8fafc;
     }
   }
 
   hr {
     border: none;
-    border-top: 1px solid #e2e8f0;
-    margin: 1em 0;
+    border-top: 1px solid ds.$student-border-soft;
+    margin: 0.8em 0;
   }
 
-  strong {
-    font-weight: 600;
-    color: #17314a;
-  }
+  strong { color: ds.$student-text; }
+}
 
-  em {
-    color: #475569;
+/* =================== Composer =================== */
+.composer {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: ds.$student-radius;
+  background: ds.$student-surface-soft;
+  border: 1px solid ds.$student-border-soft;
+
+  textarea {
+    border-radius: ds.$student-radius;
+    resize: vertical;
+    border: 1px solid ds.$student-border;
+    font-size: 14px;
+
+    &:focus {
+      border-color: rgba(ds.$student-primary, 0.4);
+      box-shadow: 0 0 0 3px rgba(ds.$student-primary, 0.08);
+    }
   }
 }
 
+.composer-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  button {
+    border-radius: ds.$student-radius;
+    height: 36px;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(30, 108, 232, 0.18);
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(30, 108, 232, 0.26);
+    }
+  }
+}
+
+/* =================== Modal =================== */
+.modal-desc {
+  margin: 0 0 14px;
+  color: ds.$student-text-muted;
+  font-size: 14px;
+}
+
+/* =================== Alerts =================== */
+.nz-alert {
+  margin-bottom: 12px;
+  border-radius: ds.$student-radius;
+}
+
+/* =================== Responsive =================== */
 @media (max-width: 980px) {
-  .page-head,
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .context-column {
+    position: static;
+  }
+
+  .page-head {
     flex-direction: column;
+    padding: 20px;
+
+    h1 {
+      font-size: 18px;
+    }
+  }
+
+  .status-box {
+    align-items: flex-start;
   }
 }
 
-/* Action buttons */
-.action-block {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.hint-text {
-  margin: 0.5rem 0 0;
-  color: #d48806;
-  font-size: 0.85em;
-}
-
-/* Completed read-only banner */
-.done-banner {
-  background: #f6ffed;
-  border: 1px solid #b7eb8f;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.done-summary {
-  margin: 0.5rem 0 0;
-  color: #17314a;
-}
-
-/* Help timeline */
-.help-timeline {
-  margin-top: 1rem;
-}
-
-.timeline-title {
-  font-weight: 600;
-  color: #17314a;
-  margin-bottom: 0.75rem;
-}
-
-.timeline-item {
-  display: flex;
-  gap: 0.75rem;
-  padding-bottom: 1rem;
-  position: relative;
-}
-
-.timeline-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #faad14;
-  margin-top: 6px;
-  flex-shrink: 0;
-}
-
-.timeline-dot.replied {
-  background: #52c41a;
-}
-
-.timeline-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.timeline-label {
-  font-size: 0.8em;
-  color: #8c8c8c;
-  display: block;
-  margin-bottom: 2px;
-}
-
-.timeline-question p,
-.timeline-reply p {
-  margin: 0;
-  color: #17314a;
-}
-
-.timeline-question {
-  background: #fff7e6;
-  border-radius: 8px;
-  padding: 0.6rem 0.8rem;
-}
-
-.timeline-reply {
-  margin-top: 0.5rem;
-  background: #e6f7ff;
-  border-radius: 8px;
-  padding: 0.6rem 0.8rem;
-}
-
-.timeline-pending {
-  margin-top: 0.5rem;
-}
-
-/* (nz-modal handles overlay & dialog styling) */
-
-.modal-desc {
-  margin: 0 0 1rem;
-  color: #5d6f82;
-  font-size: 0.9em;
+@media (max-width: 768px) {
+  .student-detail-page {
+    padding-top: 16px;
+    padding-bottom: 32px;
+  }
 }

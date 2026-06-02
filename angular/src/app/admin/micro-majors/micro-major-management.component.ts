@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -17,6 +17,7 @@ import {
   CreateUpdateMicroMajorDto,
   MicroMajorDto,
   MicroMajorEnrollmentDto,
+  MicroMajorEnrollmentStatus,
   MicroMajorService,
   MicroMajorStatus,
 } from '../../micro-majors/micro-major.service';
@@ -26,6 +27,7 @@ import {
   standalone: true,
   imports: [
     CommonModule,
+    DatePipe,
     FormsModule,
     NzButtonModule,
     NzCardModule,
@@ -50,6 +52,8 @@ export class MicroMajorManagementComponent implements OnInit {
   readonly enrollments = signal<MicroMajorEnrollmentDto[]>([]);
   readonly courses = signal<CourseDto[]>([]);
   readonly statuses = MicroMajorStatus;
+  readonly enrollmentStatuses = MicroMajorEnrollmentStatus;
+  readonly enrollmentFilter = signal<number | null>(MicroMajorEnrollmentStatus.Pending);
 
   modalVisible = false;
   editingId: string | null = null;
@@ -89,6 +93,11 @@ export class MicroMajorManagementComponent implements OnInit {
     });
   }
 
+  setEnrollmentFilter(status: number | null): void {
+    this.enrollmentFilter.set(status);
+    this.reload();
+  }
+
   reload(): void {
     this.microMajorService.getList({
       skipCount: 0,
@@ -100,6 +109,7 @@ export class MicroMajorManagementComponent implements OnInit {
     this.microMajorService.getEnrollmentList({
       skipCount: 0,
       maxResultCount: 100,
+      status: this.enrollmentFilter() ?? undefined,
     }).subscribe({
       next: result => this.enrollments.set(result.items || []),
     });
@@ -240,11 +250,43 @@ export class MicroMajorManagementComponent implements OnInit {
     });
   }
 
+  approveEnrollment(enrollmentId: string): void {
+    this.microMajorService.approveEnrollment(enrollmentId).subscribe({
+      next: () => {
+        this.message.success('报名已通过');
+        this.reload();
+      },
+      error: () => this.message.error('操作失败'),
+    });
+  }
+
+  rejectEnrollment(enrollmentId: string): void {
+    this.microMajorService.rejectEnrollment(enrollmentId).subscribe({
+      next: () => {
+        this.message.success('报名已拒绝');
+        this.reload();
+      },
+      error: () => this.message.error('操作失败'),
+    });
+  }
+
   getStatusLabel(status: MicroMajorStatus): string {
     const labels: Record<number, string> = {
       [MicroMajorStatus.Draft]: '草稿',
       [MicroMajorStatus.Published]: '已发布',
       [MicroMajorStatus.Archived]: '已归档',
+    };
+    return labels[status] || '未知';
+  }
+
+  getEnrollmentStatusLabel(status: MicroMajorEnrollmentStatus): string {
+    const labels: Record<number, string> = {
+      [MicroMajorEnrollmentStatus.Pending]: '待审批',
+      [MicroMajorEnrollmentStatus.Enrolled]: '已通过',
+      [MicroMajorEnrollmentStatus.InProgress]: '学习中',
+      [MicroMajorEnrollmentStatus.Completed]: '已完成',
+      [MicroMajorEnrollmentStatus.Certified]: '已发证',
+      [MicroMajorEnrollmentStatus.Cancelled]: '已取消',
     };
     return labels[status] || '未知';
   }

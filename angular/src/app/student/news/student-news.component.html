@@ -150,15 +150,20 @@
                   tabindex="0"
                   (keyup.enter)="openArticle(article.id)"
                 >
-                  @if (hasCover(article)) {
-                    <img class="featured-card__bg" [src]="article.coverImageUrl" [alt]="article.title" />
-                  } @else {
-                    <div class="featured-card__pattern" aria-hidden="true">
-                      <span class="featured-pattern-circle featured-pattern-circle--1"></span>
-                      <span class="featured-pattern-circle featured-pattern-circle--2"></span>
-                      <span class="featured-pattern-circle featured-pattern-circle--3"></span>
-                    </div>
-                  }
+                  <!-- 封面背景 -->
+                  <img
+                    class="featured-card__bg"
+                    [src]="article.coverImageUrl"
+                    [alt]="article.title"
+                    loading="lazy"
+                    (error)="onCoverError($event)"
+                    [class.is-hidden]="!hasCover(article)"
+                  />
+                  <div class="featured-card__pattern" aria-hidden="true">
+                    <span class="featured-pattern-circle featured-pattern-circle--1"></span>
+                    <span class="featured-pattern-circle featured-pattern-circle--2"></span>
+                    <span class="featured-pattern-circle featured-pattern-circle--3"></span>
+                  </div>
                   <div class="featured-card__overlay" aria-hidden="true"></div>
 
                   <div class="featured-card__content">
@@ -240,14 +245,18 @@
                   (keyup.enter)="openArticle(article.id)"
                 >
                   <div class="news-card__cover" [style.background]="coverGradient(article)">
-                    @if (hasCover(article)) {
-                      <img class="news-card__cover-img" [src]="article.coverImageUrl" [alt]="article.title" />
-                    } @else {
-                      <div class="news-card__pattern" aria-hidden="true">
-                        <span class="news-pattern-circle news-pattern-circle--1"></span>
-                        <span class="news-pattern-circle news-pattern-circle--2"></span>
-                      </div>
-                    }
+                    <img
+                      class="news-card__cover-img"
+                      [src]="article.coverImageUrl"
+                      [alt]="article.title"
+                      loading="lazy"
+                      (error)="onCoverError($event)"
+                      [class.is-hidden]="!hasCover(article)"
+                    />
+                    <div class="news-card__pattern" aria-hidden="true">
+                      <span class="news-pattern-circle news-pattern-circle--1"></span>
+                      <span class="news-pattern-circle news-pattern-circle--2"></span>
+                    </div>
                     <div class="news-card__cover-mask" aria-hidden="true"></div>
 
                     @if (article.isHot) {

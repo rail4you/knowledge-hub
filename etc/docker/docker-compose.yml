@@ -67,9 +67,9 @@ services:
       # 应用 URL（浏览器实际访问地址，即 Nginx 的地址）
       - App__SelfUrl=${PUBLIC_URL}
       - App__HealthCheckUrl=http://knowledgehub-api/health-status
-      - App__AngularUrl=${PUBLIC_URL}
+      - App__AngularUrl=${PUBLIC_URL}/admin
       - App__CorsOrigins=${PUBLIC_URL}
-      - App__RedirectAllowedUrls=${PUBLIC_URL}
+      - App__RedirectAllowedUrls=${PUBLIC_URL},${PUBLIC_URL}/admin
       # AuthServer（外部可访问地址，用于 token 验证）
       - AuthServer__Authority=${PUBLIC_URL}/
       - AuthServer__RequireHttpsMetadata=false
@@ -135,7 +135,10 @@ services:
     container_name: knowledgehub-db-migrator
     environment:
       - OpenIddict__Applications__KnowledgeHub_App__ClientId=KnowledgeHub_App
-      - OpenIddict__Applications__KnowledgeHub_App__RootUrl=${PUBLIC_URL}
+      - OpenIddict__Applications__KnowledgeHub_App__RootUrl=${PUBLIC_URL}/admin
+      - OpenIddict__Applications__KnowledgeHub_App__RedirectAllowedUrls=${PUBLIC_URL}/admin,${PUBLIC_URL}
+      - OpenIddict__Applications__KnowledgeHub_StudentReact__ClientId=KnowledgeHub_StudentReact
+      - OpenIddict__Applications__KnowledgeHub_StudentReact__RootUrl=${PUBLIC_URL}
       - OpenIddict__Applications__KnowledgeHub_Swagger__ClientId=KnowledgeHub_Swagger
       - OpenIddict__Applications__KnowledgeHub_Swagger__RootUrl=${PUBLIC_URL}
       - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}

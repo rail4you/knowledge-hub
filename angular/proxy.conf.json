@@ -13,5 +13,15 @@
     "target": "https://localhost:44305",
     "secure": false,
     "changeOrigin": true
+  },
+  "/signin-oidc": {
+    "target": "https://localhost:44305",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/signout-callback-oidc": {
+    "target": "https://localhost:44305",
+    "secure": false,
+    "changeOrigin": true
   }
 }

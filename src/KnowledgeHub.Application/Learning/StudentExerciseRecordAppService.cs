@@ -24,6 +24,7 @@ using Volo.Abp.Users;
 
 namespace KnowledgeHub.Learning;
 
+[IgnoreAntiforgeryToken]
 public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentExerciseRecordAppService
 {
     private readonly IRepository<StudentExerciseRecord, Guid> _recordRepository;

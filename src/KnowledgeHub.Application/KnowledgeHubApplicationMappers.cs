@@ -4,6 +4,8 @@ using KnowledgeHub.Courses;
 using KnowledgeHub.Courses.Dtos;
 using KnowledgeHub.Alliance;
 using KnowledgeHub.Application.Contracts.Alliance;
+using KnowledgeHub.Learning;
+using KnowledgeHub.Learning.Dtos;
 using Riok.Mapperly.Abstractions;
 using Volo.Abp.Mapperly;
 
@@ -111,4 +113,12 @@ public partial class PhysicalDeleteRequestToPhysicalDeleteRequestDtoMapper : Map
     public override partial PhysicalDeleteRequestDto Map(PhysicalDeleteRequest source);
 
     public override partial void Map(PhysicalDeleteRequest source, PhysicalDeleteRequestDto destination);
+}
+
+[Mapper]
+public partial class LearningProgressToLearningProgressDtoMapper : MapperBase<LearningProgress, LearningProgressDto>
+{
+    public override partial LearningProgressDto Map(LearningProgress source);
+
+    public override partial void Map(LearningProgress source, LearningProgressDto destination);
 }

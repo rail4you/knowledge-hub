@@ -1,4 +1,4 @@
-import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, AfterViewInit, Renderer2, inject, NgZone } from '@angular/core';
 import { DynamicLayoutComponent } from '@abp/ng.core';
 import { AuthErrorModalComponent } from './core/auth/auth-error-modal.component';
 

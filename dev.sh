@@ -79,6 +79,7 @@ service_ports() {
     case "$1" in
         api) echo "44305" ;;
         angular) echo "4200" ;;
+        react) echo "3000" ;;
         meilisearch) echo "7700" ;;
         ai) echo "5001" ;;
     esac
@@ -256,6 +257,36 @@ start_angular() {
     fi
 }
 
+start_react() {
+    local pid_file="$PID_DIR/react.pid"
+    require_command curl
+    require_command npm
+    require_command lsof
+
+    if is_service_running "react"; then
+        log_warn "React is already running (PID: $(service_pid react))"
+        return
+    fi
+
+    if ! wait_for_port_free 3000; then
+        log_warn "Port 3000 still occupied, force cleaning..."
+        lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+        sleep 1
+    fi
+
+    log_info "Starting React student portal..."
+    start_detached "react" "$pid_file" "cd \"$PROJECT_ROOT/student-react\" && exec npm run dev > \"$LOG_DIR/react.log\" 2>&1"
+
+    if wait_for_http "http://localhost:3000" "React student portal" 60; then
+        log_success "React student portal started (PID: $(cat $pid_file))"
+        log_info "React URL: http://localhost:3000"
+    else
+        log_error "React student portal failed to start. Check logs: $0 log react"
+        stop_service "react"
+        exit 1
+    fi
+}
+
 start_meilisearch() {
     local pid_file="$PID_DIR/meilisearch.pid"
     require_command curl
@@ -354,6 +385,7 @@ stop_service() {
 stop_all() {
     log_info "Stopping all services..."
     stop_service "api"
+    stop_service "react"
     stop_service "angular"
     stop_service "meilisearch"
     stop_service "ai"
@@ -363,6 +395,7 @@ stop_all() {
 show_status() {
     local api_health="Down"
     local angular_health="Down"
+    local react_health="Down"
     local meilisearch_health="Down"
     local ai_health="Down"
 
@@ -371,6 +404,9 @@ show_status() {
     fi
     if command -v curl >/dev/null 2>&1 && curl --max-time 2 -sf -o /dev/null "http://localhost:4200" 2>/dev/null; then
         angular_health="Healthy"
+    fi
+    if command -v curl >/dev/null 2>&1 && curl --max-time 2 -sf -o /dev/null "http://localhost:3000" 2>/dev/null; then
+        react_health="Healthy"
     fi
     if command -v curl >/dev/null 2>&1 && curl --max-time 2 -sf -o /dev/null "http://localhost:7700/health" 2>/dev/null; then
         meilisearch_health="Healthy"
@@ -400,6 +436,13 @@ show_status() {
         printf "%-15s %-10s %-10s %-10s\n" "" "" "" "http://localhost:4200"
     else
         printf "%-15s ${RED}%-10s${NC} %-10s %-10s\n" "Angular" "Stopped" "$angular_health" "-"
+    fi
+
+    if is_service_running "react"; then
+        printf "%-15s ${GREEN}%-10s${NC} %-10s %-10s\n" "React" "Running" "$react_health" "$(service_pid react)"
+        printf "%-15s %-10s %-10s %-10s\n" "" "" "" "http://localhost:3000"
+    else
+        printf "%-15s ${RED}%-10s${NC} %-10s %-10s\n" "React" "Stopped" "$react_health" "-"
     fi
     
     if is_service_running "meilisearch"; then
@@ -444,6 +487,14 @@ show_log() {
                 log_error "No log file found. Is Angular running?"
             fi
             ;;
+        react|student)
+            local log_file="$LOG_DIR/react.log"
+            if [ -f "$log_file" ]; then
+                tail -100 "$log_file"
+            else
+                log_error "No log file found. Is React running?"
+            fi
+            ;;
         meilisearch|search)
             local log_file="$LOG_DIR/meilisearch.log"
             if [ -f "$log_file" ]; then
@@ -462,7 +513,7 @@ show_log() {
             ;;
         *)
             log_error "Unknown service: $service"
-            echo "Usage: $0 log [api|angular|meilisearch]"
+            echo "Usage: $0 log [api|angular|react|meilisearch]"
             exit 1
             ;;
     esac
@@ -496,6 +547,14 @@ tail_logs() {
                 log_error "No log file found. Start Angular first."
             fi
             ;;
+        react|student)
+            local log_file="$LOG_DIR/react.log"
+            if [ -f "$log_file" ]; then
+                tail -f "$log_file"
+            else
+                log_error "No log file found. Start React first."
+            fi
+            ;;
         meilisearch|search)
             local log_file="$LOG_DIR/meilisearch.log"
             if [ -f "$log_file" ]; then
@@ -518,7 +577,7 @@ tail_logs() {
             ;;
         *)
             log_error "Unknown service: $service"
-            echo "Usage: $0 tail [api|angular|meilisearch|all]"
+            echo "Usage: $0 tail [api|angular|react|meilisearch|all]"
             exit 1
             ;;
     esac
@@ -531,9 +590,9 @@ show_help() {
     echo "Usage: $0 <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  start [api|angular|meilisearch|ai]  Start services (default: all)"
-    echo "  stop [api|angular|meilisearch|ai]   Stop services (default: all)"
-    echo "  restart [api|angular|meilisearch|ai] Restart services (default: all)"
+    echo "  start [api|angular|react|meilisearch|ai]  Start services (default: all)"
+    echo "  stop [api|angular|react|meilisearch|ai]   Stop services (default: all)"
+    echo "  restart [api|angular|react|meilisearch|ai] Restart services (default: all)"
     echo "  status                           Show service status"
     echo "  log <service>                    Show last 100 lines of log"
     echo "  tail [service]                   Tail logs in real-time"
@@ -551,6 +610,7 @@ show_help() {
     echo ""
     echo "Services:"
     echo "  API:         https://localhost:44305 (Swagger: /swagger)"
+    echo "  React:       http://localhost:3000"
     echo "  Angular:     http://localhost:4200"
     echo "  Meilisearch: http://localhost:7700"
     echo "  AI API:      http://localhost:5001"
@@ -568,6 +628,9 @@ case "${1:-help}" in
             angular|frontend|ng)
                 start_angular
                 ;;
+            react|student)
+                start_react
+                ;;
             meilisearch|search)
                 start_meilisearch
                 ;;
@@ -577,6 +640,7 @@ case "${1:-help}" in
             all)
                 start_meilisearch
                 start_api
+                start_react
                 start_angular
                 start_ai
                 ;;
@@ -594,6 +658,9 @@ case "${1:-help}" in
                 ;;
             angular|frontend|ng)
                 stop_service "angular"
+                ;;
+            react|student)
+                stop_service "react"
                 ;;
             meilisearch|search)
                 stop_service "meilisearch"
@@ -623,6 +690,11 @@ case "${1:-help}" in
                 ensure_dirs
                 start_angular
                 ;;
+            react|student)
+                stop_service "react"
+                ensure_dirs
+                start_react
+                ;;
             meilisearch|search)
                 stop_service "meilisearch"
                 ensure_dirs
@@ -638,6 +710,7 @@ case "${1:-help}" in
                 ensure_dirs
                 start_meilisearch
                 start_api
+                start_react
                 start_angular
                 start_ai
                 ;;
@@ -654,7 +727,7 @@ case "${1:-help}" in
     log|logs)
         if [ -z "$2" ]; then
             log_error "Please specify a service"
-            echo "Usage: $0 log [api|angular|meilisearch]"
+            echo "Usage: $0 log [api|angular|react|meilisearch]"
             exit 1
         fi
         show_log "$2"

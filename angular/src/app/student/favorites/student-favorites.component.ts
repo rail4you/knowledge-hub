@@ -1,18 +1,18 @@
-import { ChangeDetectionStrategy, Component, ViewChild, inject, signal } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzRateModule } from 'ng-zorro-antd/rate';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import type { ResourceDto } from '../../proxy/resources/models';
 import { ResourceService } from '../../proxy/resources/resource.service';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { StudentResourceCollectionService } from '../resource-collection.service';
+import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 
 @Component({
   selector: 'app-student-favorites',
@@ -20,22 +20,23 @@ import { StudentResourceCollectionService } from '../resource-collection.service
   imports: [
     CommonModule,
     DatePipe,
+    DecimalPipe,
     RouterModule,
     NzButtonModule,
-    NzEmptyModule,
     NzIconModule,
     NzPaginationModule,
+    NzRateModule,
     NzSpinModule,
-    NzTooltipModule,
     FilePreviewComponent,
   ],
   templateUrl: './student-favorites.component.html',
   styleUrls: ['./student-favorites.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class StudentFavoritesComponent {
+export class StudentFavoritesComponent implements OnInit {
   private readonly resourceService = inject(ResourceService);
   private readonly resourceCollectionService = inject(StudentResourceCollectionService);
+  private readonly reviewService = inject(ResourceReviewService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
 
@@ -47,7 +48,9 @@ export class StudentFavoritesComponent {
   pageIndex = signal(1);
   pageSize = signal(12);
 
-  constructor() {
+  ratingSummaries = signal<Record<string, ResourceRatingSummaryDto>>({});
+
+  ngOnInit() {
     this.loadFavorites();
   }
 
@@ -58,9 +61,11 @@ export class StudentFavoritesComponent {
       maxResultCount: this.pageSize(),
     }).subscribe({
       next: result => {
-        this.resources.set(result.items || []);
+        const items = result.items || [];
+        this.resources.set(items);
         this.totalCount.set(result.totalCount || 0);
         this.loading.set(false);
+        this.loadRatingSummaries(items);
       },
       error: () => {
         this.loading.set(false);
@@ -69,16 +74,32 @@ export class StudentFavoritesComponent {
     });
   }
 
+  loadRatingSummaries(items: ResourceDto[]) {
+    const summaries = { ...this.ratingSummaries() };
+    items.forEach(resource => {
+      if (!resource.id) return;
+      this.reviewService.getRatingSummary(resource.id).subscribe({
+        next: summary => {
+          summaries[resource.id!] = summary;
+          this.ratingSummaries.set({ ...summaries });
+        }
+      });
+    });
+  }
+
   onPageChange(pageIndex: number) {
     this.pageIndex.set(pageIndex);
     this.loadFavorites();
   }
 
-  previewResource(resource: ResourceDto) {
-    if (!resource.id) {
-      return;
-    }
+  openDetail(resource: ResourceDto) {
+    if (!resource.id) return;
+    this.router.navigate(['/student/resources', resource.id]);
+  }
 
+  previewResource(event: Event, resource: ResourceDto) {
+    event.stopPropagation();
+    if (!resource?.id) return;
     this.filePreview.open(
       resource.id,
       resource.originalFileName || resource.name || '未命名',
@@ -87,11 +108,9 @@ export class StudentFavoritesComponent {
     );
   }
 
-  downloadResource(resource: ResourceDto) {
-    if (!resource.id) {
-      return;
-    }
-
+  downloadResource(event: Event, resource: ResourceDto) {
+    event.stopPropagation();
+    if (!resource?.id) return;
     const url = `/api/resource-file/${resource.id}/download`;
     const a = document.createElement('a');
     a.href = url;
@@ -100,10 +119,9 @@ export class StudentFavoritesComponent {
     this.message.success('下载已开始');
   }
 
-  removeFavorite(resource: ResourceDto) {
-    if (!resource.id) {
-      return;
-    }
+  toggleCollection(event: Event, resource: ResourceDto) {
+    event.stopPropagation();
+    if (!resource.id) return;
 
     this.resourceService.uncollect(resource.id).subscribe({
       next: () => {
@@ -114,7 +132,6 @@ export class StudentFavoritesComponent {
         if (isLastItemOnPage) {
           this.pageIndex.update(value => value - 1);
         }
-
         this.loadFavorites();
       },
       error: () => {
@@ -127,26 +144,32 @@ export class StudentFavoritesComponent {
     this.router.navigate(['/student/resources']);
   }
 
-  getResourceTypeLabel(type?: number) {
-    const labels: Record<number, string> = {
-      [ResourceType.Document]: '文档',
-      [ResourceType.Video]: '视频',
-      [ResourceType.Audio]: '音频',
-      [ResourceType.Image]: '图片',
-      [ResourceType.PPT]: 'PPT',
-    };
-    return labels[type ?? ResourceType.Document] || '资源';
-  }
-
   getResourceTypeIcon(type?: number): string {
     const icons: Record<number, string> = {
       [ResourceType.Document]: 'file-text',
       [ResourceType.Video]: 'video-camera',
-      [ResourceType.Audio]: 'audio',
+      [ResourceType.Audio]: 'sound',
       [ResourceType.Image]: 'picture',
       [ResourceType.PPT]: 'file-ppt',
     };
-    return icons[type ?? ResourceType.Document] || 'file-text';
+    return icons[type ?? 0] || 'file-text';
   }
 
+  getResourceTypeName(type?: number): string {
+    const names: Record<number, string> = {
+      [ResourceType.Document]: '文档',
+      [ResourceType.Video]: '视频',
+      [ResourceType.Audio]: '音频',
+      [ResourceType.Image]: '图片',
+      [ResourceType.PPT]: '演示文稿',
+    };
+    return names[type ?? 0] || '资料';
+  }
+
+  formatFileSize(size?: number): string {
+    if (!size) return '未知大小';
+    if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
+    if (size >= 1024) return `${(size / 1024).toFixed(0)} KB`;
+    return `${size} B`;
+  }
 }

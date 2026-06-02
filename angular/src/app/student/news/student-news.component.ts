@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -60,13 +60,20 @@ export class StudentNewsComponent implements OnInit {
   readonly activeHeroSlide = signal(0);
   private heroTimer: ReturnType<typeof setInterval> | null = null;
 
-  // 站点统计（演示数据）
-  readonly stats = signal<StatItem[]>([
-    { label: '今日资讯', value: 12, suffix: '篇', icon: 'fire', color: '#ef4444' },
-    { label: '本月更新', value: 86, suffix: '篇', icon: 'calendar', color: '#1e6ce8' },
-    { label: '总阅读量', value: 28, suffix: '万次', icon: 'eye', color: '#10b981' },
-    { label: '订阅用户', value: 5400, suffix: '+人', icon: 'team', color: '#f59e0b' },
-  ]);
+  // 数据统计（从实际数据计算）
+  readonly stats = computed<StatItem[]>(() => {
+    const all = this.articles();
+    const hot = this.hotArticles();
+    const totalViews = all.reduce((sum, a) => sum + (a.viewCount || 0), 0);
+    const viewsText = totalViews >= 10000
+      ? (totalViews / 10000).toFixed(1) + '万'
+      : totalViews.toString();
+    return [
+      { label: '资讯总数', value: all.length, suffix: '篇', icon: 'file-text', color: '#1e6ce8' },
+      { label: '热门资讯', value: hot.length, suffix: '篇', icon: 'fire', color: '#f59e0b' },
+      { label: '总阅读量', value: totalViews, suffix: totalViews >= 10000 ? '万次' : '次', icon: 'eye', color: '#10b981' },
+    ];
+  });
 
   readonly heroSlides = signal<HeroSlide[]>([
     {
@@ -83,7 +90,7 @@ export class StudentNewsComponent implements OnInit {
       description: '紧跟职业教育发展最新动态，解读国家政策、院校改革、产业升级等热门话题。',
       tag: '行业动态',
       icon: 'rise',
-      gradient: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
+      gradient: 'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 60%, #00b7ff 100%)',
     },
     {
       title: '教学资讯',
@@ -91,7 +98,7 @@ export class StudentNewsComponent implements OnInit {
       description: '分享优秀教学案例、课程建设经验与教师成长故事，启发教学创新灵感。',
       tag: '教学资讯',
       icon: 'read',
-      gradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+      gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 60%, #60a5fa 100%)',
     },
   ]);
 
@@ -271,5 +278,13 @@ export class StudentNewsComponent implements OnInit {
   /** 热门资讯排行榜数字 */
   rankNumber(index: number): string {
     return (index + 1).toString().padStart(2, '0');
+  }
+
+  /** 封面图加载失败时隐藏 img，露出底层渐变 pattern */
+  onCoverError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img) {
+      img.classList.add('is-hidden');
+    }
   }
 }

@@ -23,6 +23,7 @@ angular/.angular
 
 # Logs
 **/logs
+**/Logs
 **/*.log
 
 # Test results
@@ -34,6 +35,8 @@ angular/.angular
 **/docker-compose*
 
 # Misc
+meilisearch
+docker-deploy.tar.gz
 **/uploads
 **/uploads_data
 etc/docker/meilisearch_data

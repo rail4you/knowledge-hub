@@ -1,0 +1,136 @@
+<div class="mm-detail">
+  <a routerLink="/student/micro-majors" class="back-link">← 返回微专业列表</a>
+
+  @if (loading()) {
+    <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>
+  } @else if (detail(); as d) {
+    <!-- Header -->
+    <div class="detail-header">
+      <div class="detail-header__cover" [style.background]="'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)'">
+        <span nz-icon nzType="trophy" nzTheme="outline"></span>
+      </div>
+      <div class="detail-header__body">
+        <div class="detail-header__tags">
+          @if (d.industryField) {
+            <span class="tag tag--green">{{ d.industryField }}</span>
+          }
+          @if (d.isCertificateEnabled) {
+            <span class="tag tag--blue">
+              <span nz-icon nzType="safety-certificate" nzTheme="outline"></span> 可获证书
+            </span>
+          }
+        </div>
+        <h1>{{ d.title }}</h1>
+        <p class="detail-header__summary">{{ d.summary || '暂无简介' }}</p>
+        <div class="detail-header__stats">
+          <span><span nz-icon nzType="read" nzTheme="outline"></span> {{ d.courseCount || 0 }} 门课程</span>
+          <span><span nz-icon nzType="team" nzTheme="outline"></span> {{ d.enrollmentCount || 0 }} 人已报</span>
+          @if (d.collaborationUnit) {
+            <span><span nz-icon nzType="bank" nzTheme="outline"></span> {{ d.collaborationUnit }}</span>
+          }
+        </div>
+      </div>
+      <div class="detail-header__action">
+        @if (d.isCurrentUserEnrolled) {
+          @if (d.currentUserProgress == null) {
+            <span class="status-badge status-badge--pending">⏳ 待审批</span>
+          } @else {
+            @if (d.currentUserProgress != null) {
+              <div class="enroll-progress">
+                <span class="enroll-progress__label">学习进度</span>
+                <nz-progress [nzPercent]="d.currentUserProgress || 0" nzStrokeColor="#1e6ce8"></nz-progress>
+              </div>
+            }
+            <span class="enrolled-badge">
+              <span nz-icon nzType="check-circle" nzTheme="fill"></span> 已通过
+            </span>
+          }
+        } @else {
+          <button class="enroll-btn" (click)="enroll()">
+            <span nz-icon nzType="user-add" nzTheme="outline"></span> 立即报名
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Description -->
+    @if (d.description) {
+      <div class="detail-desc">
+        <h2><span nz-icon nzType="info-circle" nzTheme="outline"></span> 微专业介绍</h2>
+        <p>{{ d.description }}</p>
+      </div>
+    }
+
+    <!-- Tabs: Courses & Resources -->
+    <div class="detail-tabs">
+      <nav class="tab-nav">
+        <button [class.active]="activeTab() === 'courses'" (click)="activeTab.set('courses')">
+          <span nz-icon nzType="read" nzTheme="outline"></span> 课程列表
+          <span class="tab-count">{{ d.courses?.length || 0 }}</span>
+        </button>
+        <button [class.active]="activeTab() === 'resources'" (click)="activeTab.set('resources')">
+          <span nz-icon nzType="folder-open" nzTheme="outline"></span> 学习资料
+          <span class="tab-count">{{ resources().length }}</span>
+        </button>
+      </nav>
+
+      @if (activeTab() === 'courses') {
+        @if (!d.courses?.length) {
+          <div class="empty-small">暂无课程</div>
+        } @else {
+          <div class="courses-grid">
+            @for (course of d.courses; track course.courseId) {
+              <article class="course-card" [routerLink]="['/student/courses', course.courseId]">
+                <div class="course-card__cover" [style.background]="coverGradient(course)">
+                  <div class="cover-decor" aria-hidden="true">
+                    <span class="decor-line decor-line--1"></span>
+                    <span class="decor-line decor-line--2"></span>
+                    <span class="decor-circle"></span>
+                  </div>
+                  <span class="cover-icon-sm">
+                    <span nz-icon nzType="read" nzTheme="outline"></span>
+                  </span>
+                  @if (course.isCore) {
+                    <span class="core-badge">核心课</span>
+                  }
+                </div>
+                <div class="course-card__body">
+                  <h3>{{ course.courseTitle || '未命名课程' }}</h3>
+                  <div class="course-card__meta">
+                    @if (course.major) { <span><span nz-icon nzType="tag" nzTheme="outline"></span> {{ course.major }}</span> }
+                    @if (course.semester) { <span><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ course.semester }}</span> }
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      }
+
+      @if (activeTab() === 'resources') {
+        @if (resources().length === 0) {
+          <div class="empty-small">暂无学习资料</div>
+        } @else {
+          <div class="resources-list">
+            @for (res of resources(); track res.id) {
+              <a class="resource-item" [href]="'/api/resource-file/' + res.resourceId + '/download'" target="_blank">
+                <span class="resource-item__icon">
+                  <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                </span>
+                <div class="resource-item__body">
+                  <span class="resource-item__name">{{ res.resourceName || '未命名资料' }}</span>
+                  @if (res.description) {
+                    <span class="resource-item__desc">{{ res.description }}</span>
+                  }
+                </div>
+                <span class="resource-item__action">
+                  <span nz-icon nzType="download" nzTheme="outline"></span>
+                </span>
+              </a>
+            }
+          </div>
+        }
+      }
+    </div>
+  }
+</div>

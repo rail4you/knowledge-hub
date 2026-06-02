@@ -88,6 +88,30 @@ export const STUDENT_ROUTES: Routes = [
         path: 'agent-tasks/:id',
         loadComponent: () => import('./agent-tasks/student-agent-task-detail.component').then(m => m.StudentAgentTaskDetailComponent),
       },
+      {
+        path: 'micro-majors',
+        loadComponent: () => import('./micro-majors/student-micro-majors.component').then(m => m.StudentMicroMajorsComponent),
+        data: {
+          name: '微专业',
+          icon: 'trophy'
+        }
+      },
+      {
+        path: 'micro-majors/:id',
+        loadComponent: () => import('./micro-majors/student-micro-major-detail.component').then(m => m.StudentMicroMajorDetailComponent),
+      },
+      {
+        path: 'practicums',
+        loadComponent: () => import('./practicums/student-practicums.component').then(m => m.StudentPracticumsComponent),
+        data: {
+          name: '实训',
+          icon: 'experiment'
+        }
+      },
+      {
+        path: 'practicums/:id',
+        loadComponent: () => import('./practicums/student-practicum-detail.component').then(m => m.StudentPracticumDetailComponent),
+      },
     ]
   }
 ];

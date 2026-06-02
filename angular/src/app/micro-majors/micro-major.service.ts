@@ -10,6 +10,7 @@ export enum MicroMajorStatus {
 }
 
 export enum MicroMajorEnrollmentStatus {
+  Pending = 5,
   Enrolled = 0,
   InProgress = 1,
   Completed = 2,
@@ -211,6 +212,20 @@ export class MicroMajorService {
     return this.restService.request<any, MicroMajorCertificateDto>({
       method: 'POST',
       url: `/api/app/micro-major/issue-certificate/${enrollmentId}`,
+    }, { apiName: this.apiName });
+  }
+
+  approveEnrollment(enrollmentId: string): Observable<void> {
+    return this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/micro-major/approve-enrollment/${enrollmentId}`,
+    }, { apiName: this.apiName });
+  }
+
+  rejectEnrollment(enrollmentId: string): Observable<void> {
+    return this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/micro-major/reject-enrollment/${enrollmentId}`,
     }, { apiName: this.apiName });
   }
 }

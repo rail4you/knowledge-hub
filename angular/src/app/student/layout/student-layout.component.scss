@@ -1,39 +1,49 @@
+@use '../styles/student-design' as ds;
+
 .student-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f5f5;
+  background: ds.$student-bg;
+  font-family: ds.$student-font;
+  overflow-x: hidden;
 }
 
-.app-header {
+/* ============ 品牌栏 (Part 1) ============ */
+.brand-bar {
   background: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid ds.$student-border-soft;
   position: sticky;
   top: 0;
-  z-index: 100;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  z-index: 200;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+  flex-shrink: 0;
 }
 
-.header-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 24px;
-  height: 60px;
+.brand-bar__inner {
+  @include ds.student-container;
+  height: 68px;
   display: flex;
   align-items: center;
-  gap: 32px;
+  justify-content: space-between;
+  gap: 24px;
 }
 
 .brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   text-decoration: none;
-  flex-shrink: 0;
+  color: ds.$student-text;
+  min-width: 0;
+  flex: 1 1 auto;
 
-  .brand-logo {
-    width: 36px;
-    height: 36px;
+  &__logo {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    flex-shrink: 0;
+    filter: drop-shadow(0 6px 12px rgba(30, 108, 232, 0.25));
 
     svg {
       width: 100%;
@@ -42,199 +52,296 @@
     }
   }
 
-  .brand-text {
+  &__text {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+    max-width: 520px;
+  }
+
+  &__title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: ds.$student-text;
+    background: linear-gradient(90deg, #1e6ce8 0%, #00b7ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    white-space: nowrap;
+  }
+
+  &__divider {
+    color: ds.$student-border;
+    font-weight: 300;
     font-size: 18px;
-    font-weight: 600;
-    color: #1f1f1f;
-    letter-spacing: -0.3px;
+  }
+
+  &__subtitle {
+    font-size: 14px;
+    color: ds.$student-text-muted;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
-.main-nav {
-  display: flex;
+.brand-bar__actions {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  flex: 1;
+  gap: 14px;
+  min-width: 0;
+  flex: 0 0 auto;
 }
 
-.nav-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.nav-divider {
-  width: 1px;
-  height: 24px;
-  background: #e0e0e0;
-  margin: 0 8px;
-}
-
-.nav-link {
-  display: flex;
+.brand-bar__back {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  color: #5c5c5c;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: ds.$student-surface-soft;
+  color: ds.$student-text-muted;
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 8px;
+  font-size: 13px;
   transition: all 0.2s ease;
 
   &:hover {
-    color: #0056d2;
-    background: #f0f6ff;
-  }
-
-  &.active {
-    color: #0056d2;
     background: #e8f0fe;
-  }
-
-  .dropdown-arrow {
-    font-size: 10px;
-    margin-left: 2px;
-    transition: transform 0.2s;
+    color: ds.$student-primary;
   }
 }
 
-.nav-dropdown {
-  position: relative;
+.brand-bar__user {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px 0 6px;
+  border-radius: 999px;
+  background: ds.$student-surface-soft;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
   &:hover {
-    .dropdown-menu {
-      opacity: 1;
-      visibility: visible;
-      transform: translateY(0);
-    }
-
-    .dropdown-arrow {
-      transform: rotate(180deg);
-    }
+    background: #eaf2ff;
   }
 
-  .dropdown-menu {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
-    min-width: 180px;
-    padding: 8px;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.2s ease;
-    z-index: 200;
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -0.5px;
+  }
 
-    .dropdown-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      color: #5c5c5c;
-      text-decoration: none;
-      font-size: 14px;
-      border-radius: 8px;
-      transition: all 0.15s;
+  .user-meta {
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 1.2;
 
-      &:hover {
-        background: #f5f5f5;
-        color: #0056d2;
-      }
+    &__name {
+      color: ds.$student-text;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    &__role {
+      color: ds.$student-text-light;
+      font-size: 11px;
+    }
+
+    &__caret {
+      color: ds.$student-text-light;
+      font-size: 10px;
+      margin-left: 4px;
     }
   }
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.user-menu {
+  min-width: 220px;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+
+  &__info {
+    pointer-events: none;
+    padding: 10px 12px !important;
+  }
+
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  &__detail {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__name {
+    color: ds.$student-text;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  &__role {
+    color: ds.$student-text-light;
+    font-size: 12px;
+  }
+}
+
+/* ============ Tab 栏 (Part 2) ============ */
+.tab-bar {
+  background: #fff;
+  border-bottom: 1px solid ds.$student-border-soft;
+  position: sticky;
+  top: 68px;
+  z-index: 180;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
   flex-shrink: 0;
 }
 
-.back-link {
+.tab-bar__inner {
+  @include ds.student-container;
+  height: 56px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #5c5c5c;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.tab-bar__tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.tab-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 22px;
+  color: ds.$student-text-muted;
   text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: color 0.2s ease;
+
+  span[nz-icon] {
+    font-size: 16px;
+  }
+
+  &:hover {
+    color: ds.$student-primary;
+  }
+
+  &.active {
+    color: ds.$student-primary;
+    font-weight: 600;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 22px;
+      right: 22px;
+      bottom: 0;
+      height: 3px;
+      border-radius: 3px 3px 0 0;
+      background: linear-gradient(90deg, #1e6ce8 0%, #00b7ff 100%);
+    }
+  }
+}
+
+.tab-bar__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: ds.$student-text-light;
   font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: all 0.2s;
-
-  &:hover {
-    color: #0056d2;
-    background: #f5f5f5;
-  }
 }
 
-.user-avatar {
-  cursor: pointer;
-  padding: 4px;
+.tab-bar__pulse {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  transition: all 0.2s;
+  background: #22c55e;
+  position: relative;
 
-  &:hover {
-    background: #f0f0f0;
-  }
-
-  ::ng-deep {
-    .ant-avatar {
-      background: #0056d2;
-      font-size: 12px;
-    }
-  }
-}
-
-.user-info-item {
-  pointer-events: none;
-
-  .user-details {
-    .user-name {
-      font-weight: 600;
-      color: #1f1f1f;
-      font-size: 14px;
-    }
-
-    .user-role {
-      font-size: 12px;
-      color: #757575;
-      margin-top: 2px;
-    }
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: #22c55e;
+    opacity: 0.35;
+    animation: tab-pulse 1.8s ease-in-out infinite;
   }
 }
 
+@keyframes tab-pulse {
+  0% { transform: scale(0.7); opacity: 0.6; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ============ Main + Footer ============ */
 .main-content {
   flex: 1;
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: ds.$student-bg;
+  min-height: 0;
 }
 
 .app-footer {
-  background: #1f1f1f;
+  background: linear-gradient(180deg, #1f2a44 0%, #0f172a 100%);
   padding: 32px 24px;
-  margin-top: auto;
+  margin-top: 0;
+  color: rgba(255, 255, 255, 0.72);
+  flex-shrink: 0;
 }
 
 .footer-container {
-  max-width: 1400px;
-  margin: 0 auto;
+  @include ds.student-container;
 }
 
 .footer-links {
   display: flex;
   gap: 32px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 
   a {
-    color: #b3b3b3;
+    color: rgba(255, 255, 255, 0.72);
     text-decoration: none;
     font-size: 13px;
     transition: color 0.2s;
@@ -246,43 +353,64 @@
 }
 
 .footer-copyright {
-  color: #757575;
+  color: rgba(255, 255, 255, 0.5);
   font-size: 12px;
 }
 
-@media (max-width: 768px) {
-  .header-container {
-    padding: 0 16px;
-    gap: 16px;
+/* ============ Responsive ============ */
+@media (max-width: 960px) {
+  .brand-bar__inner {
+    height: 60px;
+    gap: 12px;
   }
 
-  .brand .brand-text {
+  .brand__subtitle,
+  .brand__divider {
     display: none;
   }
 
-  .main-nav {
-    gap: 2px;
+  .brand-bar__back-text {
+    display: none;
   }
 
-  .nav-link {
-    padding: 8px 10px;
-    font-size: 13px;
+  .user-meta {
+    display: none !important;
+  }
 
-    span:not([nz-icon]) {
-      display: none;
+  .brand-bar__user {
+    padding: 4px;
+  }
+
+  .tab-bar {
+    top: 60px;
+  }
+
+  .tab-bar__inner {
+    height: 50px;
+    overflow-x: auto;
+  }
+
+  .tab-link {
+    padding: 0 14px;
+    font-size: 14px;
+
+    &.active::after {
+      left: 14px;
+      right: 14px;
     }
   }
 
-  .back-link span:not([nz-icon]) {
+  .tab-bar__hint {
     display: none;
   }
+}
 
-  .main-content {
-    padding: 16px;
+@media (max-width: 600px) {
+  .brand {
+    gap: 10px;
   }
 
-  .footer-links {
-    flex-direction: column;
-    gap: 16px;
+  .brand__title {
+    font-size: 18px;
   }
 }

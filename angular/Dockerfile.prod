@@ -1,19 +1,21 @@
 # ============================================================
-# Dockerfile.prod - Angular 生产环境镜像
+# Dockerfile.prod - React 首页 + Angular 管理端生产镜像
 # ============================================================
-FROM node:20-alpine AS build
+FROM node:20-alpine AS angular-build
 
-WORKDIR /app
+WORKDIR /src/angular
 
-# 安装依赖
-COPY package.json package-lock.json ./
+COPY . /src
 RUN npm ci --legacy-peer-deps
+RUN npm run build -- --configuration production --base-href /admin/ --deploy-url /admin/
 
-# 复制源码
-COPY . .
+FROM node:20-alpine AS react-build
 
-# 构建
-RUN npm run build -- --configuration production
+WORKDIR /src/student-react
+
+COPY . /src
+RUN npm ci
+RUN npm run build
 
 # ----------------------------------------------------------
 # 生产镜像
@@ -22,14 +24,15 @@ FROM nginx:alpine
 
 WORKDIR /app
 
-# 复制构建产物
-COPY --from=build /app/dist/KnowledgeHub/browser /usr/share/nginx/html
+# React 作为站点根首页，Angular 作为 /admin 管理端
+COPY --from=react-build /src/student-react/dist /usr/share/nginx/html
+COPY --from=angular-build /src/angular/dist/KnowledgeHub/browser /usr/share/nginx/html/admin
 
 # 复制 nginx 配置
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY angular/nginx.conf /etc/nginx/conf.d/default.conf
 
 # 复制动态环境配置（运行时可覆盖）
-COPY dynamic-env.json /usr/share/nginx/html/
+COPY angular/dynamic-env.json /usr/share/nginx/html/dynamic-env.json
 
 EXPOSE 80
 

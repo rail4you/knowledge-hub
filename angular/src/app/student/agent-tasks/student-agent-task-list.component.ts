@@ -1,24 +1,23 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzTableModule } from 'ng-zorro-antd/table';
 import { ClassroomAgentTaskService } from '../../teaching-agents/classroom-agent-task.service';
 import { StudentAgentTask, assignmentStatusLabel, formatDateTime } from '../../teaching-agents/models';
 
 @Component({
   selector: 'app-student-agent-task-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, NzButtonModule, NzCardModule, NzEmptyModule, NzTagModule, NzTableModule],
+  imports: [CommonModule, RouterModule, NzButtonModule, NzIconModule, NzEmptyModule],
   templateUrl: './student-agent-task-list.component.html',
   styleUrls: ['./student-agent-task-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentAgentTaskListComponent implements OnInit {
   private readonly classroomAgentTaskService = inject(ClassroomAgentTaskService);
+  private readonly router = inject(Router);
 
   readonly tasks = signal<StudentAgentTask[]>([]);
 
@@ -33,6 +32,26 @@ export class StudentAgentTaskListComponent implements OnInit {
     }).toPromise();
 
     this.tasks.set(result?.items ?? []);
+  }
+
+  openTask(assignmentId: string): void {
+    this.router.navigate(['/student/agent-tasks', assignmentId]);
+  }
+
+  coverGradient(task: StudentAgentTask): string {
+    const palettes = [
+      'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
+      'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+      'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+      'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
+      'linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%)',
+    ];
+    const key = task.teachingAgentName || task.title || '';
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = (hash * 31 + key.charCodeAt(i)) | 0;
+    }
+    return palettes[Math.abs(hash) % palettes.length];
   }
 
   statusText(status: number): string {

@@ -32,6 +32,11 @@
   </nz-card>
 
   <nz-card nzTitle="报名与发证">
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button nz-button [nzType]="enrollmentFilter() === null ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(null)">全部</button>
+      <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.Pending ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.Pending)">待审批</button>
+      <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.Enrolled ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.Enrolled)">已通过</button>
+    </div>
     <nz-table [nzData]="enrollments()" [nzFrontPagination]="false">
       <thead>
         <tr>
@@ -39,6 +44,7 @@
           <th>学生</th>
           <th>进度</th>
           <th>状态</th>
+          <th>报名时间</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -48,9 +54,13 @@
             <td>{{ item.microMajorTitle }}</td>
             <td>{{ item.studentName }}</td>
             <td>{{ item.progress }}%</td>
-            <td>{{ item.status }}</td>
-            <td>
-              <button nz-button nzType="link" (click)="issueCertificate(item.id)">发证</button>
+            <td>{{ getEnrollmentStatusLabel(item.status) }}</td>
+            <td>{{ item.enrolledAt | date:'yyyy-MM-dd' }}</td>
+            <td class="actions">
+              @if (item.status === enrollmentStatuses.Pending) {
+                <button nz-button nzType="primary" nzSize="small" (click)="approveEnrollment(item.id)">通过</button>
+                <button nz-button nzType="default" nzSize="small" nzDanger (click)="rejectEnrollment(item.id)">拒绝</button>
+              }
             </td>
           </tr>
         }

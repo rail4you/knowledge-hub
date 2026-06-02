@@ -130,9 +130,19 @@ export class PracticumManagementComponent implements OnInit {
         endTime: detail.endTime,
         maxScore: detail.maxScore,
         allowResubmission: detail.allowResubmission,
-        tasks: [],  // managed in tabs after save
-        materials: [],
+        tasks: detail.tasks.map(t => ({
+          title: t.title, description: t.description || '', requirement: t.requirement || '',
+          dueTime: t.dueTime, scoreWeight: t.scoreWeight, sortOrder: t.sortOrder,
+        })),
+        materials: detail.materials.map(m => ({
+          taskId: m.taskId, title: m.title, description: m.description || '',
+          materialType: m.materialType, resourceUrl: m.resourceUrl, sortOrder: m.sortOrder,
+        })),
       };
+      this.selectedProjectId = p.id;
+      this.activeTab = 1;
+      this.modalVisible = false;
+      this.loadEnrollmentsAndSubmissions(p.id);
       this.cdr.markForCheck();
     });
   }
@@ -148,10 +158,36 @@ export class PracticumManagementComponent implements OnInit {
         this.message.success('实训项目已保存');
         this.modalVisible = false;
         this.selectedProjectId = r.id;
-        this.reload();
         this.activeTab = 1;
         this.cdr.markForCheck();
-        this.loadEnrollmentsAndSubmissions(r.id);
+        // Reload detail so tabs have tasks/materials data
+        this.practicumService.getDetail(r.id).subscribe(detail => {
+          this.form = {
+            title: detail.title,
+            summary: detail.summary || '',
+            description: detail.description || '',
+            coverImageUrl: detail.coverImageUrl || '',
+            courseId: detail.courseId,
+            major: detail.major || '',
+            className: detail.className || '',
+            status: detail.status,
+            startTime: detail.startTime,
+            endTime: detail.endTime,
+            maxScore: detail.maxScore,
+            allowResubmission: detail.allowResubmission,
+            tasks: detail.tasks.map(t => ({
+              title: t.title, description: t.description || '', requirement: t.requirement || '',
+              dueTime: t.dueTime, scoreWeight: t.scoreWeight, sortOrder: t.sortOrder,
+            })),
+            materials: detail.materials.map(m => ({
+              taskId: m.taskId, title: m.title, description: m.description || '',
+              materialType: m.materialType, resourceUrl: m.resourceUrl, sortOrder: m.sortOrder,
+            })),
+          };
+          this.reload();
+          this.loadEnrollmentsAndSubmissions(r.id);
+          this.cdr.markForCheck();
+        });
       },
       error: () => this.message.error('保存失败'),
     });

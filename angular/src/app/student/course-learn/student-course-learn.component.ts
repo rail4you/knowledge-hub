@@ -307,17 +307,24 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   }
 
   private loadAllExercises(courseId: string, flat: FlatChapter[]) {
-    // 简单实现：拉取课程下所有习题，按 chapterId 归类
     this.exerciseService.getByCourse(courseId).subscribe({
       next: (data: any) => {
         const list = (data?.items || data || []) as ExerciseDto[];
         this.totalExercises.set(list.length);
-        const completedIds = new Set<string>();
-        // 用 chapter 记录中已完成的 exerciseId
-        list.forEach(e => {
-          // 不再调用 recordByChapter 聚合；保留 hook
+        // 拉取课程下所有提交记录，统计已完成习题数
+        this.recordService.getRecordsByCourse({
+          courseId,
+          skipCount: 0,
+          maxResultCount: 10000,
+        } as any).subscribe({
+          next: (recordResult: any) => {
+            const records = (recordResult?.items || []) as StudentExerciseRecordDto[];
+            const completedIds = new Set<string>(
+              records.filter(r => r.exerciseId).map(r => r.exerciseId!)
+            );
+            this.completedCount.set(completedIds.size);
+          },
         });
-        this.completedCount.set(completedIds.size);
       },
       error: () => {},
     });
@@ -366,11 +373,21 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     if (!optionsStr) return [];
     try {
       const parsed = JSON.parse(optionsStr);
-      if (Array.isArray(parsed)) {
-        return parsed.map((o: any) => ({
-          key: o.key || o.Key || '',
-          content: o.content || o.Content || '',
-        }));
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((o: any, idx: number) => {
+          // 对象格式: {key: "A", content: "..."}
+          if (typeof o === 'object' && o !== null) {
+            return {
+              key: o.key || o.Key || String.fromCharCode(65 + idx),
+              content: o.content || o.Content || '',
+            };
+          }
+          // 字符串数组格式: ["选项A", "选项B", ...]
+          return {
+            key: String.fromCharCode(65 + idx),
+            content: String(o),
+          };
+        });
       }
     } catch {
       // 不是 JSON，尝试按换行分割
@@ -424,6 +441,12 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       next: (record: any) => {
         this.submitting.set(false);
         this.submittedRecord.set(record);
+        // 更新进度计数
+        if (this.chapterRecords().find(r => r.exerciseId === ex.id)) {
+          // 已有记录（重提交），不增加计数
+        } else {
+          this.completedCount.update(c => c + 1);
+        }
         this.message.success('提交成功');
         this.loadChapterRecords(chapter.id!);
       },

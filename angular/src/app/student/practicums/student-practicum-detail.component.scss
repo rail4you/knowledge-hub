@@ -1,0 +1,72 @@
+@use '../styles/student-design' as ds;
+
+:host { flex: 1 1 auto; display: flex; flex-direction: column; background: ds.$student-bg; }
+
+.px-detail {
+  box-sizing: border-box; flex: 1 1 auto; width: 100%;
+  @include ds.student-container; padding-top: 24px; padding-bottom: 48px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.back-link { display: inline-flex; align-items: center; align-self: flex-start; color: ds.$student-text-muted; font-size: 13px; font-weight: 500; text-decoration: none; padding: 6px 12px; border-radius: ds.$student-radius; transition: all .2s ease; &:hover { color: ds.$student-primary; background: #f0f6ff; } }
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; background: #fff; border-radius: ds.$student-radius-lg; box-shadow: ds.$student-shadow-soft; color: ds.$student-text-muted; p { margin: 12px 0 0; } }
+
+/* =================== Header =================== */
+.detail-header { display: grid; grid-template-columns: 100px 1fr auto; gap: 20px; align-items: center; background: #fff; border-radius: ds.$student-radius-lg; padding: 24px; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft; }
+.detail-header__cover { width: 100px; height: 100px; border-radius: ds.$student-radius-lg; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 42px; }
+.detail-header__body { min-width: 0; }
+.detail-header__tags { display: flex; gap: 8px; margin-bottom: 10px; }
+.tag { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 11px; font-weight: 600; &--blue { background: #eff6ff; color: #2563eb; } }
+.detail-header__body h1 { margin: 0 0 8px; color: ds.$student-text; font-size: 24px; font-weight: 700; }
+.detail-header__summary { margin: 0 0 12px; color: ds.$student-text-muted; font-size: 14px; line-height: 1.6; }
+.detail-header__stats { display: flex; flex-wrap: wrap; gap: 16px; color: ds.$student-text-light; font-size: 13px; span { display: inline-flex; align-items: center; gap: 4px; } span[nz-icon] { font-size: 13px; } }
+.detail-header__action { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.enroll-btn { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 24px; border: 0; border-radius: ds.$student-radius; background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px rgba(2,132,199,.28); transition: all .2s ease; &:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(2,132,199,.36); } }
+.enrolled-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #eff6ff; color: #2563eb; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
+
+/* =================== Description =================== */
+.detail-desc { background: #fff; border-radius: ds.$student-radius-lg; padding: 20px 24px; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft; h2 { margin: 0 0 12px; display: flex; align-items: center; gap: 8px; color: ds.$student-text; font-size: 16px; font-weight: 700; } p { margin: 0; color: ds.$student-text-muted; font-size: 14px; line-height: 1.8; white-space: pre-wrap; } }
+
+/* =================== Tabs =================== */
+.detail-tabs { background: #fff; border-radius: ds.$student-radius-lg; padding: 20px 24px; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft; }
+.tab-nav { display: flex; gap: 4px; margin-bottom: 20px; padding: 4px; border-radius: ds.$student-radius; background: ds.$student-surface-soft;
+  button { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border: 0; border-radius: ds.$student-radius; background: transparent; color: ds.$student-text-muted; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s ease;
+    .tab-count { color: ds.$student-text-light; font-size: 12px; }
+    &.active { background: #fff; color: ds.$student-primary; font-weight: 600; box-shadow: 0 1px 3px rgba(15,23,42,.06); .tab-count { color: ds.$student-primary; } }
+  }
+}
+
+/* =================== Tasks =================== */
+.tasks-list { display: flex; flex-direction: column; gap: 12px; }
+.task-item { display: flex; gap: 16px; padding: 16px; border-radius: ds.$student-radius; border: 1px solid ds.$student-border-soft; background: #fff; transition: all .2s; &:hover { border-color: rgba(ds.$student-primary,.3); box-shadow: 0 4px 12px rgba(15,23,42,.04); } }
+.task-item__num { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+.task-item__body { flex: 1; min-width: 0; }
+.task-item__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; h4 { margin: 0; color: ds.$student-text; font-size: 15px; font-weight: 600; } }
+.task-score { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: #fef3c7; color: #d97706; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.task-desc { margin: 0 0 6px; color: ds.$student-text-muted; font-size: 13px; line-height: 1.5; }
+.task-req { margin: 0 0 6px; color: #d97706; font-size: 13px; line-height: 1.5; display: flex; align-items: flex-start; gap: 4px; span[nz-icon] { font-size: 13px; margin-top: 1px; } }
+.task-due { color: ds.$student-text-light; font-size: 12px; }
+.task-item__action { display: flex; align-items: center; flex-shrink: 0; }
+.submit-btn { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 16px; border: 0; border-radius: ds.$student-radius; background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 8px rgba(30,108,232,.2); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(30,108,232,.3); } }
+
+/* =================== Materials =================== */
+.materials-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.material-card { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: ds.$student-radius; border: 1px solid ds.$student-border-soft; background: #fff; cursor: pointer; transition: all .2s; &:hover { border-color: rgba(ds.$student-primary,.4); background: #f8fbff; transform: translateY(-1px); box-shadow: 0 6px 14px rgba(15,23,42,.05); } }
+.material-card__icon { width: 44px; height: 44px; border-radius: 10px; background: ds.$student-surface-soft; display: flex; align-items: center; justify-content: center; color: ds.$student-primary; font-size: 20px; flex-shrink: 0; }
+.material-card__body { flex: 1; min-width: 0; h4 { margin: 0 0 4px; color: ds.$student-text; font-size: 14px; font-weight: 600; } p { margin: 0 0 4px; color: ds.$student-text-light; font-size: 12px; @include ds.line-clamp(1); } }
+.material-type { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 4px; background: ds.$student-surface-soft; color: ds.$student-text-light; font-size: 11px; }
+.material-card__action { color: ds.$student-text-light; font-size: 18px; flex-shrink: 0; }
+
+.empty-small { text-align: center; padding: 40px 0; color: ds.$student-text-light; font-size: 14px; }
+.modal-desc { margin: 0 0 4px; color: ds.$student-text-muted; font-size: 14px; }
+
+@media (max-width: 768px) {
+  .px-detail { padding-top: 16px; padding-bottom: 32px; }
+  .detail-header { grid-template-columns: 1fr; text-align: center; }
+  .detail-header__cover { margin: 0 auto; }
+  .detail-header__tags { justify-content: center; }
+  .detail-header__stats { justify-content: center; }
+  .detail-header__action { flex-direction: row; }
+  .materials-grid { grid-template-columns: 1fr; }
+  .task-item { flex-wrap: wrap; }
+  .task-item__action { width: 100%; justify-content: flex-end; }
+}

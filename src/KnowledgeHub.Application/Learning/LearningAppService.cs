@@ -5,12 +5,14 @@ using System.Threading.Tasks;
 using KnowledgeHub.Courses;
 using KnowledgeHub.Learning.Dtos;
 using KnowledgeHub.Learning.Enums;
+using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Learning;
 
+[IgnoreAntiforgeryToken]
 public class LearningAppService : ApplicationService, ILearningAppService
 {
     private readonly IRepository<StudentCourse> _studentCourseRepository;

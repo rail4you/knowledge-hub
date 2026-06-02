@@ -237,12 +237,12 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             x => x.MicroMajorId == microMajorId && x.StudentId == studentId);
         if (existing != null && existing.Status != MicroMajorEnrollmentStatus.Cancelled)
         {
-            throw new UserFriendlyException("您已报名该微专业。");
+            throw new UserFriendlyException("您已报名该微专业，请等待审核。");
         }
 
         if (existing != null)
         {
-            existing.Status = MicroMajorEnrollmentStatus.Enrolled;
+            existing.Status = MicroMajorEnrollmentStatus.Pending;
             existing.Progress = 0;
             existing.EnrolledAt = DateTime.UtcNow;
             existing.CompletedAt = null;
@@ -257,8 +257,34 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             };
             await _microMajorEnrollmentRepository.InsertAsync(enrollment, autoSave: true);
         }
+    }
 
-        await EnsureStudentCoursesAsync(studentId, microMajorId);
+    [Authorize(KnowledgeHubPermissions.MicroMajors.ManageEnrollment)]
+    public async Task ApproveEnrollmentAsync(Guid enrollmentId)
+    {
+        var enrollment = await _microMajorEnrollmentRepository.GetAsync(enrollmentId);
+        if (enrollment.Status != MicroMajorEnrollmentStatus.Pending)
+        {
+            throw new UserFriendlyException("该报名记录不在待审批状态。");
+        }
+
+        enrollment.Status = MicroMajorEnrollmentStatus.Enrolled;
+        enrollment.EnrolledAt = DateTime.UtcNow;
+        await _microMajorEnrollmentRepository.UpdateAsync(enrollment, autoSave: true);
+        await EnsureStudentCoursesAsync(enrollment.StudentId, enrollment.MicroMajorId);
+    }
+
+    [Authorize(KnowledgeHubPermissions.MicroMajors.ManageEnrollment)]
+    public async Task RejectEnrollmentAsync(Guid enrollmentId)
+    {
+        var enrollment = await _microMajorEnrollmentRepository.GetAsync(enrollmentId);
+        if (enrollment.Status != MicroMajorEnrollmentStatus.Pending)
+        {
+            throw new UserFriendlyException("该报名记录不在待审批状态。");
+        }
+
+        enrollment.Status = MicroMajorEnrollmentStatus.Cancelled;
+        await _microMajorEnrollmentRepository.UpdateAsync(enrollment, autoSave: true);
     }
 
     [Authorize(KnowledgeHubPermissions.MicroMajors.IssueCertificate)]
@@ -385,6 +411,10 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
 
     private async Task RefreshEnrollmentProgressAsync(MicroMajorEnrollment enrollment)
     {
+        // Pending 状态的报名尚未审批，不计算进度
+        if (enrollment.Status == MicroMajorEnrollmentStatus.Pending)
+            return;
+
         var microMajor = await _microMajorRepository.GetAsync(enrollment.MicroMajorId);
         var courseIds = (await _microMajorCourseRepository.GetListAsync(x => x.MicroMajorId == enrollment.MicroMajorId))
             .Select(x => x.CourseId)
@@ -394,7 +424,8 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         if (courseIds.Count == 0)
         {
             enrollment.Progress = 0;
-            enrollment.Status = MicroMajorEnrollmentStatus.Enrolled;
+            if (enrollment.Status != MicroMajorEnrollmentStatus.Pending)
+                enrollment.Status = MicroMajorEnrollmentStatus.Enrolled;
             await _microMajorEnrollmentRepository.UpdateAsync(enrollment, autoSave: true);
             return;
         }
@@ -425,7 +456,8 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         }
         else
         {
-            enrollment.Status = MicroMajorEnrollmentStatus.Enrolled;
+            if (enrollment.Status != MicroMajorEnrollmentStatus.Pending)
+                enrollment.Status = MicroMajorEnrollmentStatus.Enrolled;
             enrollment.CompletedAt = null;
         }
 

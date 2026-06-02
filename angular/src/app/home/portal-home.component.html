@@ -1,453 +1,161 @@
-<!-- 易课通资源库系统 - 首页 -->
-<div class="kh-home">
-  <!-- ====== 顶部导航 ====== -->
-  <header class="kh-navbar">
-    <div class="kh-navbar-inner">
-      <a routerLink="/" class="kh-navbar-brand">
-        <svg class="kh-logo" viewBox="0 0 40 40" fill="none">
-          <defs>
-            <linearGradient id="homeLogoGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#1E6CE8"/>
-              <stop offset="1" stop-color="#00B7FF"/>
-            </linearGradient>
-          </defs>
-          <rect width="40" height="40" rx="8" fill="url(#homeLogoGrad)"/>
-          <path d="M10 10h20v5H10v-5zm0 8h20v5H10v-5zm0 8h14v5H10v-5z" fill="white"/>
-        </svg>
-        <span class="kh-brand-text">易课通资源库</span>
+<div class="site">
+  <!-- ===== NAV ===== -->
+  <header class="nav">
+    <div class="nav__inner">
+      <a routerLink="/" class="brand">
+        <span class="brand__mark">易</span>
+        <span class="brand__name">易课通</span>
       </a>
-
-      <div class="kh-navbar-actions">
-        @if (hasLoggedIn) {
-          <div class="kh-user-area">
-            <!-- 角色标签 -->
-            <span class="kh-user-role" [class.is-student]="isStudent" [class.is-admin]="isAdmin">
-              {{ userRoleLabel() }}
-            </span>
-            <!-- 用户头像下拉 -->
-            <div class="kh-user-dropdown" [class.dropdown-open]="userDropdownOpen">
-              <button class="kh-user-avatar-btn" (click)="toggleUserDropdown()">
-                <nz-avatar [nzText]="userInitial()" nzSize="small" [style.background]="'#0056D2'"></nz-avatar>
-                <span class="kh-user-name">{{ currentUserName() }}</span>
-                <i class="fa fa-chevron-down kh-dropdown-icon"></i>
-              </button>
-              <div class="kh-dropdown-menu" [class.visible]="userDropdownOpen">
-                <div class="kh-dropdown-header">
-                  <nz-avatar [nzText]="userInitial()" nzSize="large" [style.background]="'#0056D2'"></nz-avatar>
-                  <div class="kh-dropdown-user-info">
-                    <span class="kh-dropdown-name">{{ currentUserName() }}</span>
-                    <span class="kh-dropdown-role">{{ userRoleLabel() }}</span>
-                  </div>
-                </div>
-                <div class="kh-dropdown-divider"></div>
-                @if (isStudent) {
-                  <button class="kh-dropdown-item" (click)="goToStudentPortal()">
-                    <i class="fa fa-graduation-cap"></i>
-                    <span>学生门户</span>
-                  </button>
-                } @else {
-                  <button class="kh-dropdown-item" (click)="goToAdminPanel()">
-                    <i class="fa fa-cog"></i>
-                    <span>管理后台</span>
-                  </button>
-                }
-                <button class="kh-dropdown-item kh-dropdown-item-danger" (click)="logout()">
-                  <i class="fa fa-sign-out"></i>
-                  <span>退出登录</span>
-                </button>
-              </div>
-            </div>
-          </div>
+      <div class="nav__links">
+        <a routerLink="/student/courses">课程中心</a>
+        <a routerLink="/student/resources">资源库</a>
+        <a routerLink="/student/micro-majors">微专业</a>
+        <a routerLink="/student/practicums">实训</a>
+      </div>
+      <div class="nav__end">
+        @if (isLoggedIn) {
+          <span class="nav__user">{{ userName() }}</span>
+          @if (isStudent) {
+            <a routerLink="/student" class="btn btn--sm">学生门户</a>
+          } @else {
+            <a routerLink="/resources" class="btn btn--sm">管理后台</a>
+          }
+          <button class="btn btn--sm btn--ghost" (click)="logout()">退出</button>
         } @else {
-          <button class="kh-btn kh-btn-primary" (click)="login()">登录 / 注册</button>
+          <button class="btn btn--sm" (click)="login()">登录</button>
         }
       </div>
     </div>
   </header>
 
-  <!-- ====== Hero 轮播区 ====== -->
-  <section class="kh-hero">
-    <div class="kh-hero-slides" [style.transform]="'translateX(-' + heroIndex() * 100 + '%)'">
-      @for (slide of heroSlides; track slide.title) {
-        <div class="kh-hero-slide" [style.background]="slide.bg">
-          <div class="kh-hero-content">
-            @if (slide.icon) {
-              <div class="kh-hero-icon">
-                <i [class]="slide.icon"></i>
-              </div>
-            }
-            <h1 class="kh-hero-title">{{ slide.title }}</h1>
-            <p class="kh-hero-subtitle">{{ slide.subtitle }}</p>
-            <p class="kh-hero-desc">{{ slide.description }}</p>
-            <div class="kh-hero-actions">
-              @if (hasLoggedIn) {
-                <div class="kh-logged-in-actions">
-                  @if (isStudent) {
-                    <a routerLink="/student" class="kh-btn kh-btn-hero-primary">
-                      <i class="fa fa-graduation-cap me-2"></i>
-                      进入学生门户
-                    </a>
-                  } @else {
-                    <a routerLink="/resources" class="kh-btn kh-btn-hero-primary">
-                      <i class="fa fa-cog me-2"></i>
-                      进入管理后台
-                    </a>
-                  }
-                  <span class="kh-hero-user-info">
-                    <nz-avatar [nzText]="userInitial()" nzSize="small" [style.background]="'rgba(255,255,255,0.25)'"></nz-avatar>
-                    <span>{{ currentUserName() }}</span>
-                    <span class="kh-hero-role">{{ userRoleLabel() }}</span>
-                  </span>
-                </div>
-              } @else {
-                <a routerLink="/" class="kh-btn kh-btn-hero-primary">
-                  探索资源库
-                </a>
-                <button class="kh-btn kh-btn-hero-secondary" (click)="login()">
-                  <i class="fa fa-sign-in me-2"></i>
-                  登录 / 注册
-                </button>
-              }
-            </div>
-          </div>
-        </div>
-      }
-    </div>
-    <!-- 轮播指示器 -->
-    <div class="kh-hero-dots">
-      @for (slide of heroSlides; track slide.title; let i = $index) {
-        <button
-          class="kh-hero-dot"
-          [class.active]="heroIndex() === i"
-          (click)="setHeroSlide(i)"
-          [attr.aria-label]="'切换到第' + (i + 1) + '张'"
-        ></button>
-      }
-    </div>
-  </section>
-
-  <!-- ====== 统计条 ====== -->
-  <section class="kh-stats-bar">
-    <div class="kh-section-inner">
-      <div class="kh-stats-grid">
-        @for (stat of statsItems; track stat.label) {
-          <div class="kh-stat-item">
-            <span class="kh-stat-number">{{ stat.value }}</span>
-            <span class="kh-stat-label">{{ stat.label }}</span>
-          </div>
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div class="hero__inner">
+      <h1 class="hero__title">知识赋能教育，智慧引领未来</h1>
+      <p class="hero__desc">集成 AI 技术的新一代知识管理系统，为院校提供课程建设、资源管理、微专业培养与实训教学的完整解决方案。</p>
+      <div class="hero__cta">
+        @if (!isLoggedIn) {
+          <button class="btn btn--lg btn--white" (click)="login()">免费使用</button>
         }
+        <a routerLink="/student/courses" class="btn btn--lg btn--outline-white">浏览课程</a>
+      </div>
+      <div class="hero__stats">
+        <div class="hero-stat"><strong>{{ (stats()?.totalCourseCount || 0) | number }}</strong> <span>门课程</span></div>
+        <div class="hero-stat"><strong>{{ (stats()?.totalResourceCount || 0) | number }}</strong> <span>份资源</span></div>
+        <div class="hero-stat"><strong>{{ (stats()?.totalMicroMajorCount || 0) | number }}</strong> <span>个微专业</span></div>
+        <div class="hero-stat"><strong>AI</strong> <span>智能驱动</span></div>
       </div>
     </div>
   </section>
 
-  <!-- ====== 资源库广场 ====== -->
-  <section class="kh-section kh-section-resources">
-    <div class="kh-section-inner">
-      <div class="kh-section-header">
-        <div class="kh-section-title-group">
-          <span class="kh-section-accent"></span>
-          <h2 class="kh-section-title">资源库广场</h2>
-          <p class="kh-section-desc">探索各教育机构的学习资源库</p>
+  <!-- ===== 精选课程 ===== -->
+  @if (homeData()?.featuredCourses?.length) {
+    <section class="section">
+      <div class="section__inner">
+        <div class="section__head">
+          <h2>精选课程</h2>
+          <a routerLink="/student/courses" class="link-arrow">查看全部 →</a>
         </div>
-        <div class="kh-section-actions">
-          <div class="kh-filter-tabs">
-            <button
-              class="kh-filter-tab"
-              [class.active]="resourceFilter() === 'all'"
-              (click)="resourceFilter.set('all')"
-            >全部</button>
-            <button
-              class="kh-filter-tab"
-              [class.active]="resourceFilter() === 'national'"
-              (click)="resourceFilter.set('national')"
-            >国家级</button>
-            <button
-              class="kh-filter-tab"
-              [class.active]="resourceFilter() === 'provincial'"
-              (click)="resourceFilter.set('provincial')"
-            >省级</button>
-            <button
-              class="kh-filter-tab"
-              [class.active]="resourceFilter() === 'school'"
-              (click)="resourceFilter.set('school')"
-            >校级</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 加载状态 -->
-      @if (loadingTenants()) {
-        <div class="kh-loading-state">
-          <div class="kh-skeleton-grid">
-            @for (i of [1,2,3,4]; track i) {
-              <div class="kh-skeleton-card">
-                <div class="kh-skeleton-line kh-skeleton-avatar"></div>
-                <div class="kh-skeleton-line kh-skeleton-title"></div>
-                <div class="kh-skeleton-line kh-skeleton-text"></div>
-                <div class="kh-skeleton-line kh-skeleton-text short"></div>
+        <div class="course-grid">
+          @for (c of homeData()?.featuredCourses; track c.id) {
+            <a class="card course-card" [routerLink]="['/student/courses', c.id]">
+              <div class="course-card__cover">
+                <span class="course-card__emoji">📖</span>
               </div>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- 错误状态 -->
-      @else if (tenantsError()) {
-        <div class="kh-empty-state">
-          <div class="kh-empty-icon">⚠️</div>
-          <h3 class="kh-empty-title">数据加载失败</h3>
-          <p class="kh-empty-desc">请检查网络连接后重试</p>
-          <button class="kh-btn kh-btn-primary" (click)="loadTenants()">重新加载</button>
-        </div>
-      }
-
-      <!-- 空状态 -->
-      @else if (filteredTenants().length === 0 && tenantList().length > 0) {
-        <div class="kh-empty-state">
-          <div class="kh-empty-icon">📭</div>
-          <h3 class="kh-empty-title">暂无该分类的资源库</h3>
-          <p class="kh-empty-desc">试试查看其他分类</p>
-        </div>
-      }
-
-      <!-- 内容 -->
-      @else if (filteredTenants().length > 0) {
-        <div class="kh-resource-grid">
-          @for (tenant of filteredTenants(); track tenant.id) {
-            <article class="kh-resource-card" (click)="onTenantClick(tenant)" (keydown.enter)="onTenantClick(tenant)" tabindex="0" role="button" [attr.aria-label]="'预览' + tenant.name + '资源库'">
-              <div class="kh-resource-card-top">
-                <div class="kh-resource-icon">
-                  <svg viewBox="0 0 48 48" fill="none">
-                    <rect width="48" height="48" rx="10" fill="#0056D2"/>
-                    <path d="M12 12h24v5H12v-5zm0 8h24v5H12v-5zm0 8h16v5H12v-5z" fill="white" opacity="0.9"/>
-                  </svg>
-                </div>
-                <div class="kh-resource-info">
-                  <h3 class="kh-resource-name">{{ tenant.name }}</h3>
-                  <span class="kh-resource-tag">{{ tenant.industryField || '教育机构' }}</span>
+              <div class="course-card__body">
+                <h4>{{ c.title }}</h4>
+                <div class="course-card__meta">
+                  <span>{{ c.teacherName || '专业教师' }}</span>
+                  <span>{{ c.studentCount || 0 }} 人在学</span>
                 </div>
               </div>
-              <p class="kh-resource-desc">{{ tenant.description || '暂无描述' }}</p>
-              <div class="kh-resource-stats">
-                <span class="kh-resource-stat">
-                  <i class="fa fa-book"></i> {{ tenant.courseCount }} 课程
-                </span>
-                <span class="kh-resource-stat">
-                  <i class="fa fa-file-text"></i> {{ tenant.resourceCount }} 资源
-                </span>
-                <span class="kh-resource-stat">
-                  <i class="fa fa-layer-group"></i> {{ tenant.microMajorCount }} 微专业
-                </span>
-              </div>
-              <div class="kh-resource-action">
-                <span>预览资源库</span>
-                <i class="fa fa-chevron-right"></i>
-              </div>
-            </article>
+            </a>
           }
-        </div>
-      }
-    </div>
-  </section>
-
-  <!-- ====== 学科分类导航 ====== -->
-  <section class="kh-section kh-section-subjects">
-    <div class="kh-section-inner">
-      <div class="kh-section-header">
-        <div class="kh-section-title-group">
-          <span class="kh-section-accent"></span>
-          <h2 class="kh-section-title">学科分类</h2>
-        </div>
-      </div>
-      <div class="kh-subjects-grid">
-        @for (subject of subjectCategories; track subject.name) {
-          <a [routerLink]="subject.link" class="kh-subject-card">
-            <span class="kh-subject-icon">{{ subject.icon }}</span>
-            <span class="kh-subject-name">{{ subject.name }}</span>
-          </a>
-        }
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== 热门课程 / 最新资源 ====== -->
-  <section class="kh-section kh-section-courses">
-    <div class="kh-section-inner">
-      <div class="kh-section-header">
-        <div class="kh-section-title-group">
-          <span class="kh-section-accent"></span>
-          <h2 class="kh-section-title">精选内容</h2>
-        </div>
-        <div class="kh-tab-switch">
-          <button
-            class="kh-tab-btn"
-            [class.active]="contentTab() === 'courses'"
-            (click)="contentTab.set('courses')"
-          >热门课程</button>
-          <button
-            class="kh-tab-btn"
-            [class.active]="contentTab() === 'materials'"
-            (click)="contentTab.set('materials')"
-          >最新资源</button>
-        </div>
-      </div>
-
-      @if (contentTab() === 'courses') {
-        @if (loadingContent()) {
-          <div class="kh-loading-state">
-            <div class="kh-skeleton-grid kh-skeleton-grid-3">
-              @for (i of [1,2,3]; track i) {
-                <div class="kh-skeleton-card">
-                  <div class="kh-skeleton-line kh-skeleton-thumb"></div>
-                  <div class="kh-skeleton-line kh-skeleton-title"></div>
-                  <div class="kh-skeleton-line kh-skeleton-text short"></div>
-                </div>
-              }
-            </div>
-          </div>
-        } @else if (featuredCourses().length > 0) {
-          <div class="kh-course-grid">
-            @for (course of featuredCourses(); track course.id) {
-              <article class="kh-course-card">
-                <div class="kh-course-thumb">
-                  @if (course.coverImageUrl) {
-                    <img [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" />
-                  } @else {
-                    <div class="kh-course-thumb-placeholder">
-                      <i class="fa fa-book-open"></i>
-                    </div>
-                  }
-                </div>
-                <div class="kh-course-body">
-                  <h3 class="kh-course-title">{{ course.title }}</h3>
-                  @if (course.teacherName) {
-                    <p class="kh-course-teacher">👤 {{ course.teacherName }}</p>
-                  }
-                  <div class="kh-course-meta">
-                    <span class="kh-course-students">
-                      <i class="fa fa-users"></i> {{ course.studentCount || 0 }} 人学习
-                    </span>
-                  </div>
-                </div>
-              </article>
-            }
-          </div>
-        } @else {
-          <div class="kh-empty-state">
-            <div class="kh-empty-icon">📚</div>
-            <h3 class="kh-empty-title">暂无课程数据</h3>
-            <p class="kh-empty-desc">课程资源正在准备中</p>
-          </div>
-        }
-      }
-
-      @if (contentTab() === 'materials') {
-        @if (loadingContent()) {
-          <div class="kh-loading-state">
-            <div class="kh-skeleton-grid kh-skeleton-grid-4">
-              @for (i of [1,2,3,4]; track i) {
-                <div class="kh-skeleton-card">
-                  <div class="kh-skeleton-line kh-skeleton-thumb"></div>
-                  <div class="kh-skeleton-line kh-skeleton-title"></div>
-                </div>
-              }
-            </div>
-          </div>
-        } @else if (latestMaterials().length > 0) {
-          <div class="kh-material-grid">
-            @for (material of latestMaterials(); track material.id) {
-              <article class="kh-material-card">
-                <div class="kh-material-thumb">
-                  @if (material.coverUrl) {
-                    <img [src]="material.coverUrl" [alt]="material.name" loading="lazy" />
-                  } @else {
-                    <div class="kh-material-thumb-placeholder">
-                      <i class="fa" [class.fa-file-pdf]="material.fileExtension === 'pdf'" [class.fa-file-word]="material.fileExtension === 'doc' || material.fileExtension === 'docx'" [class.fa-file-video]="material.fileExtension === 'mp4'" [class.fa-file-image]="material.fileExtension === 'jpg' || material.fileExtension === 'png'" [class.fa-file-alt]="!['pdf','doc','docx','mp4','jpg','png'].includes(material.fileExtension || '')"></i>
-                    </div>
-                  }
-                </div>
-                <div class="kh-material-body">
-                  <h3 class="kh-material-name">{{ material.name }}</h3>
-                  <span class="kh-material-downloads">
-                    <i class="fa fa-eye"></i> {{ material.downloadCount || 0 }}
-                  </span>
-                </div>
-              </article>
-            }
-          </div>
-        } @else {
-          <div class="kh-empty-state">
-            <div class="kh-empty-icon">📄</div>
-            <h3 class="kh-empty-title">暂无资源数据</h3>
-            <p class="kh-empty-desc">教学资源正在准备中</p>
-          </div>
-        }
-      }
-    </div>
-  </section>
-
-  <!-- ====== 合作院校 Logo 轮播 ====== -->
-  @if (partners().length > 0) {
-    <section class="kh-section kh-section-partners">
-      <div class="kh-section-inner">
-        <div class="kh-section-header">
-          <div class="kh-section-title-group">
-            <span class="kh-section-accent"></span>
-            <h2 class="kh-section-title">合作院校</h2>
-          </div>
-        </div>
-        <div class="kh-partners-scroll" (mouseenter)="pausePartners()" (mouseleave)="resumePartners()">
-          <div class="kh-partners-track" [style.animation-play-state]="partnersPaused() ? 'paused' : 'running'">
-            <!-- 双份以支持无缝滚动 -->
-            @for (p of partners(); track p.id) {
-              <div class="kh-partner-item">
-                <span class="kh-partner-name">{{ p.name }}</span>
-              </div>
-            }
-            @for (p of partners(); track p.id + '-dup') {
-              <div class="kh-partner-item">
-                <span class="kh-partner-name">{{ p.name }}</span>
-              </div>
-            }
-          </div>
         </div>
       </div>
     </section>
   }
 
-  <!-- ====== 页脚 ====== -->
-  <footer class="kh-footer">
-    <div class="kh-footer-inner">
-      <div class="kh-footer-grid">
-        <div class="kh-footer-brand">
-          <svg class="kh-logo" viewBox="0 0 40 40" fill="none">
-            <rect width="40" height="40" rx="8" fill="white" opacity="0.9"/>
-            <path d="M10 10h20v5H10v-5zm0 8h20v5H10v-5zm0 8h14v5H10v-5z" fill="#0056D2"/>
-          </svg>
-          <h3 class="kh-footer-site-name">易课通资源库</h3>
-          <p class="kh-footer-desc">智能化知识管理与学习平台，为教育机构构建完整的知识体系</p>
+  <!-- ===== 微专业 ===== -->
+  @if (homeData()?.microMajors?.length) {
+    <section class="section section--alt">
+      <div class="section__inner">
+        <div class="section__head">
+          <h2>微专业</h2>
+          <a routerLink="/student/micro-majors" class="link-arrow">查看全部 →</a>
         </div>
-        <div class="kh-footer-links">
-          <h4 class="kh-footer-heading">快速链接</h4>
-          <ul>
-            <li><a routerLink="/resources">资源管理</a></li>
-            <li><a routerLink="/search">智能搜索</a></li>
-            <li><a routerLink="/ai/chat">AI 助手</a></li>
-            <li><a routerLink="/learning/course-list">课程学习</a></li>
-          </ul>
-        </div>
-        <div class="kh-footer-links">
-          <h4 class="kh-footer-heading">关于我们</h4>
-          <ul>
-            <li><a routerLink="/">平台介绍</a></li>
-            <li><a routerLink="/">帮助中心</a></li>
-            <li><a routerLink="/">联系我们</a></li>
-          </ul>
+        <div class="mm-grid">
+          @for (m of homeData()?.microMajors; track m.id) {
+            <a class="card mm-card" [routerLink]="['/student/micro-majors', m.id]">
+              <span class="mm-card__icon">🏆</span>
+              <h4>{{ m.title }}</h4>
+              <p>{{ m.courseCount || 0 }} 门课程</p>
+            </a>
+          }
         </div>
       </div>
-      <div class="kh-footer-bottom">
-        <p>© 2026 易课通资源库系统 - 让学习更高效</p>
+    </section>
+  }
+
+  <!-- ===== 最新资源 ===== -->
+  @if (homeData()?.latestMaterials?.length) {
+    <section class="section">
+      <div class="section__inner">
+        <div class="section__head">
+          <h2>最新资源</h2>
+          <a routerLink="/student/resources" class="link-arrow">查看全部 →</a>
+        </div>
+        <div class="material-grid">
+          @for (m of homeData()?.latestMaterials; track m.id) {
+            <div class="card material-card">
+              <span class="material-card__icon"><span nz-icon nzType="file-text" nzTheme="outline"></span></span>
+              <div class="material-card__body">
+                <h5>{{ m.name }}</h5>
+                <span>{{ m.fileExtension ? '.' + m.fileExtension : '' }} · {{ m.downloadCount || 0 }} 次下载</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ===== 最新资讯 ===== -->
+  @if (homeData()?.latestNews?.length) {
+    <section class="section section--alt">
+      <div class="section__inner">
+        <div class="section__head">
+          <h2>最新资讯</h2>
+          <a routerLink="/student/news" class="link-arrow">查看全部 →</a>
+        </div>
+        <div class="news-list">
+          @for (n of homeData()?.latestNews; track n.id) {
+            <a class="news-item" [routerLink]="['/student/news', n.id]">
+              <span class="news-item__title">{{ n.title }}</span>
+              <span class="news-item__date">{{ n.publishedAt | date:'MM-dd' }}</span>
+            </a>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer__inner">
+      <div class="footer__brand">
+        <span class="brand__mark">易</span>
+        <strong>易课通</strong>
+        <p>在线教学资源库</p>
+      </div>
+      <div class="footer__links">
+        <a routerLink="/student/courses">课程中心</a>
+        <a routerLink="/student/resources">资源库</a>
+        <a routerLink="/student/micro-majors">微专业</a>
+        <a routerLink="/student/practicums">实训</a>
+        <a routerLink="/student/news">资讯</a>
       </div>
     </div>
+    <div class="footer__copy">&copy; 2026 易课通</div>
   </footer>
 </div>

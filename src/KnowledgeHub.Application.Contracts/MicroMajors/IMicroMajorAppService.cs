@@ -21,5 +21,7 @@ public interface IMicroMajorAppService : IApplicationService
     Task<MicroMajorDto> UpdateAsync(Guid id, CreateUpdateMicroMajorDto input);
     Task DeleteAsync(Guid id);
     Task EnrollAsync(Guid microMajorId);
+    Task ApproveEnrollmentAsync(Guid enrollmentId);
+    Task RejectEnrollmentAsync(Guid enrollmentId);
     Task<MicroMajorCertificateDto> IssueCertificateAsync(Guid enrollmentId);
 }

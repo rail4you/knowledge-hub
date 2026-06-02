@@ -1,49 +1,99 @@
-<section class="student-task-page">
-  <header class="page-head">
-    <div>
-      <p class="eyebrow">My Classroom Tasks</p>
-      <h1>智能体交互任务</h1>
-      <p>进入任务后可直接与课堂智能体对话，并提交完成摘要或请求教师帮助。</p>
+<div class="task-page">
+  <!-- =================== HERO 区域 =================== -->
+  <section class="page-hero">
+    <div class="page-hero__inner">
+      <div class="page-hero__body">
+        <span class="page-hero__label">CLASSROOM TASKS</span>
+        <h1 class="page-hero__title">
+          <span class="page-hero__bar"></span>
+          智能体交互任务
+        </h1>
+        <p class="page-hero__desc">进入任务后可直接与课堂智能体对话，完成学习任务并提交摘要</p>
+      </div>
     </div>
-  </header>
+    <div class="page-hero__stats">
+      <span class="stat-chip">
+        <span class="stat-chip__dot"></span>
+        共 <strong>{{ tasks().length }}</strong> 个任务
+      </span>
+    </div>
+  </section>
 
+  <!-- =================== 任务列表 =================== -->
   @if (tasks().length === 0) {
-    <nz-empty nzNotFoundContent="当前没有待处理任务"></nz-empty>
+    <div class="empty-state">
+      <div class="empty-state__art">
+        <span nz-icon nzType="robot" nzTheme="outline"></span>
+      </div>
+      <h3>暂无任务</h3>
+      <p>当前没有待处理的智能体交互任务</p>
+    </div>
   } @else {
-    <nz-table [nzData]="tasks()" [nzPageSize]="20" nzSize="middle" [nzShowPagination]="tasks().length > 20">
-      <thead>
-        <tr>
-          <th>任务名称</th>
-          <th>智能体</th>
-          <th>状态</th>
-          <th>截止时间</th>
-          <th>最近活跃</th>
-          <th nzAlign="center">操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (task of tasks(); track task.assignmentId) {
-          <tr>
-            <td>
-              <strong>{{ task.title }}</strong>
-              @if (task.description) {
-                <br><span class="desc-text">{{ task.description }}</span>
+    <div class="task-grid">
+      @for (task of tasks(); track task.assignmentId) {
+        <article
+          class="task-card"
+          (click)="openTask(task.assignmentId)"
+          tabindex="0"
+          (keyup.enter)="openTask(task.assignmentId)"
+        >
+          <!-- 封面区域 -->
+          <div class="task-card__cover" [style.background]="coverGradient(task)">
+            <div class="cover-decor" aria-hidden="true">
+              <span class="decor-line decor-line--1"></span>
+              <span class="decor-line decor-line--2"></span>
+              <span class="decor-circle"></span>
+            </div>
+            <div class="cover-icon">
+              <span nz-icon nzType="robot" nzTheme="outline"></span>
+            </div>
+            <span class="cover-status" [class]="'status--' + (task.status || 0)">
+              {{ statusText(task.status) }}
+            </span>
+          </div>
+
+          <!-- 卡片内容 -->
+          <div class="task-card__body">
+            <div class="task-card__top">
+              <span class="agent-badge">
+                <span class="agent-badge__avatar">{{ (task.teachingAgentName || 'AI')[0] }}</span>
+                <span>{{ task.teachingAgentName || '智能体' }}</span>
+              </span>
+            </div>
+
+            <h3 class="task-card__title" [title]="task.title">
+              {{ task.title }}
+            </h3>
+
+            @if (task.description) {
+              <p class="task-card__desc">{{ task.description }}</p>
+            }
+
+            <div class="task-card__meta">
+              @if (task.dueTime) {
+                <span class="meta-item">
+                  <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                  截止 {{ formatDate(task.dueTime) }}
+                </span>
               }
-            </td>
-            <td>{{ task.teachingAgentName }}</td>
-            <td>
-              <nz-tag [nzColor]="task.status === 2 ? 'green' : task.status === 3 ? 'red' : 'blue'">
-                {{ statusText(task.status) }}
-              </nz-tag>
-            </td>
-            <td>{{ formatDate(task.dueTime) }}</td>
-            <td>{{ formatDate(task.lastActiveAt) }}</td>
-            <td nzAlign="center">
-              <a nz-button nzType="primary" nzSize="small" [routerLink]="['/student/agent-tasks', task.assignmentId]">进入任务</a>
-            </td>
-          </tr>
-        }
-      </tbody>
-    </nz-table>
+              @if (task.lastActiveAt) {
+                <span class="meta-item">
+                  <span nz-icon nzType="history" nzTheme="outline"></span>
+                  {{ formatDate(task.lastActiveAt) }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="task-card__actions">
+            <button class="action-btn" (click)="openTask(task.assignmentId)">
+              <span nz-icon nzType="login" nzTheme="outline"></span>
+              <span>进入任务</span>
+            </button>
+          </div>
+        </article>
+      }
+    </div>
   }
-</section>
+</div>

@@ -190,22 +190,21 @@ build_and_push() {
 # 构建 Angular
 # ============================================================
 build_angular() {
-    info "准备构建 Angular..."
+    info "准备构建前端（React 首页 + Angular 管理端）..."
 
-    cd "$PROJECT_ROOT/angular"
+    cd "$PROJECT_ROOT"
 
-    # 检查依赖
-    if [ ! -d "node_modules" ]; then
-        info "安装 npm 依赖..."
-        npm install
+    if [ ! -d "$PROJECT_ROOT/angular/node_modules" ]; then
+        info "安装 Angular npm 依赖..."
+        (cd "$PROJECT_ROOT/angular" && npm install)
+    fi
+    if [ ! -d "$PROJECT_ROOT/student-react/node_modules" ]; then
+        info "安装 React npm 依赖..."
+        (cd "$PROJECT_ROOT/student-react" && npm install)
     fi
 
-    # 构建生产包
-    info "构建 Angular 生产包..."
-    npm run build:prod 2>/dev/null || npx ng build --configuration production
-
     # 构建并推送镜像
-    build_and_push "angular" "Dockerfile.prod" "$PROJECT_ROOT/angular"
+    build_and_push "angular" "angular/Dockerfile.prod" "$PROJECT_ROOT"
 }
 
 # ============================================================

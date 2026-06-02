@@ -1,0 +1,133 @@
+<div class="px-detail">
+  <a routerLink="/student/practicums" class="back-link">← 返回实训列表</a>
+
+  @if (loading()) {
+    <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>
+  } @else if (detail(); as d) {
+    <!-- Header -->
+    <div class="detail-header">
+      <div class="detail-header__cover" [style.background]="'linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%)'">
+        <span nz-icon nzType="experiment" nzTheme="outline"></span>
+      </div>
+      <div class="detail-header__body">
+        <div class="detail-header__tags">
+          @if (d.major) { <span class="tag tag--blue">{{ d.major }}</span> }
+          @if (d.className) { <span class="tag tag--green">{{ d.className }}</span> }
+        </div>
+        <h1>{{ d.title }}</h1>
+        <p class="detail-header__summary">{{ d.summary || '暂无简介' }}</p>
+        <div class="detail-header__stats">
+          <span><span nz-icon nzType="profile" nzTheme="outline"></span> {{ d.tasks?.length || 0 }} 任务</span>
+          <span><span nz-icon nzType="folder-open" nzTheme="outline"></span> {{ d.materials?.length || 0 }} 资料</span>
+          <span><span nz-icon nzType="team" nzTheme="outline"></span> {{ d.enrollmentCount || 0 }} 人已报</span>
+          @if (d.startTime || d.endTime) {
+            <span><span nz-icon nzType="calendar" nzTheme="outline"></span>
+              {{ d.startTime | date:'MM-dd' }} ~ {{ d.endTime | date:'MM-dd' }}
+            </span>
+          }
+        </div>
+      </div>
+      <div class="detail-header__action">
+        @if (d.isCurrentUserEnrolled) {
+          <span class="enrolled-badge"><span nz-icon nzType="check-circle" nzTheme="fill"></span> 已报名</span>
+        } @else {
+          <button class="enroll-btn" (click)="enroll()">
+            <span nz-icon nzType="user-add" nzTheme="outline"></span> 报名参加
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Description -->
+    @if (d.description) {
+      <div class="detail-desc">
+        <h2><span nz-icon nzType="info-circle" nzTheme="outline"></span> 项目介绍</h2>
+        <p>{{ d.description }}</p>
+      </div>
+    }
+
+    <!-- Tabs -->
+    <div class="detail-tabs">
+      <nav class="tab-nav">
+        <button [class.active]="activeTab() === 'tasks'" (click)="activeTab.set('tasks')">
+          <span nz-icon nzType="profile" nzTheme="outline"></span> 实训任务
+          <span class="tab-count">{{ d.tasks?.length || 0 }}</span>
+        </button>
+        <button [class.active]="activeTab() === 'materials'" (click)="activeTab.set('materials')">
+          <span nz-icon nzType="folder-open" nzTheme="outline"></span> 实训资料
+          <span class="tab-count">{{ d.materials?.length || 0 }}</span>
+        </button>
+      </nav>
+
+      @if (activeTab() === 'tasks') {
+        @if (!d.tasks?.length) {
+          <div class="empty-small">暂无实训任务</div>
+        } @else {
+          <div class="tasks-list">
+            @for (task of d.tasks; track task.id) {
+              <div class="task-item">
+                <div class="task-item__num">{{ $index + 1 }}</div>
+                <div class="task-item__body">
+                  <div class="task-item__head">
+                    <h4>{{ task.title }}</h4>
+                    @if (task.scoreWeight) { <span class="task-score">{{ task.scoreWeight }} 分</span> }
+                  </div>
+                  @if (task.description) { <p class="task-desc">{{ task.description }}</p> }
+                  @if (task.requirement) { <p class="task-req"><span nz-icon nzType="exclamation-circle" nzTheme="outline"></span> {{ task.requirement }}</p> }
+                  @if (task.dueTime) { <span class="task-due">截止 {{ task.dueTime | date:'yyyy-MM-dd HH:mm' }}</span> }
+                </div>
+                <div class="task-item__action">
+                  @if (d.isCurrentUserEnrolled) {
+                    <button class="submit-btn" (click)="openSubmit(task.id)">
+                      <span nz-icon nzType="upload" nzTheme="outline"></span> 提交
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+
+      @if (activeTab() === 'materials') {
+        @if (!d.materials?.length) {
+          <div class="empty-small">暂无实训资料</div>
+        } @else {
+          <div class="materials-grid">
+            @for (mat of d.materials; track mat.id) {
+              <div class="material-card" (click)="downloadMaterial(mat)">
+                <div class="material-card__icon">
+                  <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                </div>
+                <div class="material-card__body">
+                  <h4>{{ mat.title }}</h4>
+                  @if (mat.description) { <p>{{ mat.description }}</p> }
+                  <span class="material-type">{{ mat.materialType === 0 ? '文档' : mat.materialType === 1 ? '视频' : mat.materialType === 2 ? '链接' : '其他' }}</span>
+                </div>
+                <div class="material-card__action">
+                  <span nz-icon nzType="download" nzTheme="outline"></span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Submit Modal -->
+    <nz-modal [nzVisible]="submitModalVisible()" (nzVisibleChange)="submitModalVisible.set($event)"
+      nzTitle="提交任务" [nzFooter]="null" nzWidth="500px">
+      <ng-container *nzModalContent>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <p class="modal-desc">提交内容将发送给教师进行批阅</p>
+          <textarea nz-input rows="5" [ngModel]="submissionContent()" (ngModelChange)="submissionContent.set($event)" placeholder="描述你的完成内容或答案..."></textarea>
+          <input nz-input [ngModel]="submissionUrl()" (ngModelChange)="submissionUrl.set($event)" placeholder="参考链接（可选）" />
+          <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button nz-button (click)="submitModalVisible.set(false)">取消</button>
+            <button nz-button nzType="primary" [nzLoading]="submitting()" (click)="submitWork()">确认提交</button>
+          </div>
+        </div>
+      </ng-container>
+    </nz-modal>
+  }
+</div>
