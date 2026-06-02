@@ -116,6 +116,9 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ExportReport, true);
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ManageApplication, true);
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ViewMyApplication, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.RecruitmentLive.Default, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.RecruitmentLive.Create, true);
+        await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.RecruitmentLive.Manage, true);
 
         // School Admin - School level access
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.Default, true);
@@ -162,6 +165,8 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ExportReport, true);
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ManageApplication, true);
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.Employment.ViewMyApplication, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.RecruitmentLive.Default, true);
+        await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.RecruitmentLive.Create, true);
 
         // News permissions - SchoolAdmin
         await GrantPermissionAsync("SchoolAdmin", KnowledgeHubPermissions.News.Default, true);
@@ -210,6 +215,8 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Courses.Enroll, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.Default, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ScheduleInterview, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.RecruitmentLive.Default, true);
+        await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.RecruitmentLive.Create, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ManageGuidance, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ManageOutcome, true);
         await GrantPermissionAsync("Teacher", KnowledgeHubPermissions.Employment.ViewStatistics, true);
@@ -274,6 +281,24 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("EnterpriseUser", KnowledgeHubPermissions.Employment.Default, true);
         await GrantPermissionAsync("EnterpriseUser", KnowledgeHubPermissions.Employment.PublishJob, true);
         await GrantPermissionAsync("EnterpriseUser", KnowledgeHubPermissions.Employment.ScheduleInterview, true);
+        await GrantPermissionAsync("EnterpriseUser", KnowledgeHubPermissions.RecruitmentLive.Default, true);
+        await GrantPermissionAsync("EnterpriseUser", KnowledgeHubPermissions.RecruitmentLive.Create, true);
+
+        // Admin (host) - full access to Employment and RecruitmentLive
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.Default, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.PublishJob, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.ReviewJob, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.ManageResume, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.ScheduleInterview, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.ManageGuidance, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.ManageOutcome, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.ViewStatistics, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.ExportReport, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.ManageApplication, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.Employment.ViewMyApplication, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Default, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Create, true);
+        await GrantPermissionAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Manage, true);
     }
 
     private async Task GrantPermissionAsync(string roleName, string permission, bool isGranted)

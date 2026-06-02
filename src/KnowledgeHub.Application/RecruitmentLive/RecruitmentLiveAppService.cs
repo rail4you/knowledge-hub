@@ -149,30 +149,49 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         await _liveRepository.DeleteAsync(entity);
     }
 
-    [Authorize(KnowledgeHubPermissions.RecruitmentLive.Create)]
+    [Authorize]
     public async Task<WsTokenDto> GetWebSocketTokenAsync(Guid liveId)
     {
-        var entity = await GetOwnedLiveAsync(liveId);
-
-        if (entity.Status == RecruitmentLiveStatus.Ended || entity.Status == RecruitmentLiveStatus.Cancelled)
+        using (DataFilter.Disable<IMultiTenant>())
         {
-            throw new UserFriendlyException("该直播已结束或已取消。");
+            var entity = await _liveRepository.GetAsync(liveId);
+            var currentUserId = _currentUser.GetId();
+
+            // 验证当前用户是否为该直播的参与者
+            var isTeacher = entity.TeacherId == currentUserId;
+            var isStudent = entity.StudentId == currentUserId;
+
+            if (!isTeacher && !isStudent)
+            {
+                var canManage = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.RecruitmentLive.Manage);
+                if (!canManage)
+                {
+                    throw new UserFriendlyException("您不是该直播的参与者。");
+                }
+                isTeacher = true; // 管理员当教师处理
+            }
+
+            if (entity.Status == RecruitmentLiveStatus.Ended || entity.Status == RecruitmentLiveStatus.Cancelled)
+            {
+                throw new UserFriendlyException("该直播已结束或已取消。");
+            }
+
+            var role = isTeacher ? "teacher" : "student";
+            var token = GenerateWsToken(liveId, currentUserId, role);
+            var wsBase = _configuration["App:SelfUrl"] ?? "https://localhost:44305";
+            var wsUrl = wsBase.Replace("https://", "wss://").Replace("http://", "ws://").TrimEnd('/');
+
+            return new WsTokenDto
+            {
+                Token = token,
+                WsUrl = $"{wsUrl}/api/recruitment-live/ws"
+            };
         }
-
-        var token = GenerateWsToken(liveId, _currentUser.GetId(), "teacher");
-        var wsBase = _configuration["App:SelfUrl"] ?? "https://localhost:44305";
-        var wsUrl = wsBase.Replace("https://", "wss://").Replace("http://", "ws://").TrimEnd('/');
-
-        return new WsTokenDto
-        {
-            Token = token,
-            WsUrl = $"{wsUrl}/api/recruitment-live/ws"
-        };
     }
 
     // ── 学生端 ──
 
-    [Authorize(KnowledgeHubPermissions.RecruitmentLive.Default)]
+    [Authorize]
     public async Task<PagedResultDto<RecruitmentLiveDto>> GetStudentLivesAsync(PagedRecruitmentLiveRequestDto input)
     {
         var currentUserId = _currentUser.GetId();
