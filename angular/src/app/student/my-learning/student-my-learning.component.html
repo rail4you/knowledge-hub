@@ -1,0 +1,339 @@
+<div class="my-learning-page">
+  <!-- =================== 数据总览 Hero =================== -->
+  <section class="hero" aria-label="学习数据总览">
+    <div class="hero__bg" aria-hidden="true">
+      <span class="hero__shape hero__shape--1"></span>
+      <span class="hero__shape hero__shape--2"></span>
+      <span class="hero__shape hero__shape--3"></span>
+    </div>
+
+    <div class="hero__inner">
+      <div class="hero__welcome">
+        <span class="welcome-tag">
+          <span nz-icon nzType="line-chart" nzTheme="outline"></span>
+          我的学习
+        </span>
+        <h1 class="welcome-title">学习数据 · 一目了然</h1>
+        <p class="welcome-desc">
+          记录每一次学习足迹，掌握学习节奏与进步轨迹。从章节学习到习题训练，从知识掌握到学习曲线，让成长可视化。
+        </p>
+
+        <div class="welcome-actions">
+          <button class="hero-btn hero-btn--primary" (click)="goCourses()">
+            <span nz-icon nzType="plus" nzTheme="outline"></span>
+            <span>继续学习</span>
+          </button>
+          <button class="hero-btn" routerLink="/student/courses">
+            <span nz-icon nzType="appstore" nzTheme="outline"></span>
+            <span>浏览课程</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="hero__stats">
+        <div class="stats-card">
+          <h3 class="stats-card__title">
+            <span class="stats-card__bar"></span>
+            学习概览
+            <span class="stats-card__hint">实时同步</span>
+          </h3>
+          <div class="stats-grid">
+            @for (s of stats(); track s.label) {
+              <div class="stat-cell">
+                <div class="stat-cell__icon" [style.background]="s.color">
+                  <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+                </div>
+                <div class="stat-cell__body">
+                  <div class="stat-cell__value">
+                    <strong>{{ s.value | number }}</strong>
+                    <span class="stat-cell__suffix">{{ s.suffix }}</span>
+                  </div>
+                  <div class="stat-cell__label">{{ s.label }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== 学习曲线 =================== -->
+  <section class="curve-card">
+    <header class="curve-card__header">
+      <div>
+        <h3 class="curve-card__title">
+          <span class="curve-card__bar"></span>
+          本周学习曲线
+        </h3>
+        <p class="curve-card__sub">展示最近 7 天的每日学习时长（分钟）</p>
+      </div>
+      <div class="curve-card__total">
+        <span class="curve-card__total-num">
+          {{ curveMax * 7 | number:'1.0-0' }}
+        </span>
+        <span class="curve-card__total-label">累计分钟（mock）</span>
+      </div>
+    </header>
+
+    @if (loading()) {
+      <div class="loading-state">
+        <nz-spin nzSimple nzSize="default"></nz-spin>
+      </div>
+    } @else {
+      <div class="curve-chart">
+        @for (point of learningCurve(); track $index) {
+          <div class="curve-bar-wrap">
+            <div class="curve-bar-track">
+              <div
+                class="curve-bar"
+                [style.height.%]="barHeight(point.minutes)"
+                [attr.title]="point.label + ': ' + point.minutes + ' 分钟'"
+              >
+                <span class="curve-bar-tip">{{ point.minutes }}</span>
+              </div>
+            </div>
+            <span class="curve-label">{{ point.label }}</span>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- =================== 主体两栏 =================== -->
+  <div class="content-grid">
+    <main class="content-main">
+      <!-- 进行中课程 -->
+      <section class="block-card">
+        <header class="block-card__header">
+          <h3 class="block-card__title">
+            <span class="block-card__bar"></span>
+            学习中课程
+            <span class="block-card__count">{{ inProgressCourses().length }}</span>
+          </h3>
+        </header>
+
+        @if (inProgressCourses().length === 0) {
+          <div class="empty-state">
+            <span nz-icon nzType="book" nzTheme="outline" class="empty-icon"></span>
+            <p>暂无学习中的课程，去课程中心选课吧</p>
+            <button class="empty-btn" (click)="goCourses()">
+              <span nz-icon nzType="plus" nzTheme="outline"></span>
+              去选课
+            </button>
+          </div>
+        } @else {
+          <div class="course-progress-grid">
+            @for (c of inProgressCourses(); track c.id) {
+              <article class="course-progress" (click)="openCourse(c.courseId!)">
+                <div class="course-progress__cover" [style.background]="courseGradient(c)">
+                  @if (hasCover(c)) {
+                    <img class="course-progress__cover-img" [src]="c.courseCoverImageUrl" [alt]="c.courseTitle" />
+                  } @else {
+                    <span class="course-progress__cover-icon" nz-icon nzType="read" nzTheme="outline"></span>
+                  }
+                  <span class="course-progress__status" [style.background]="statusColor(c.status)">
+                    {{ statusLabel(c.status) }}
+                  </span>
+                </div>
+                <div class="course-progress__body">
+                  <h4 class="course-progress__title" [title]="c.courseTitle">{{ c.courseTitle }}</h4>
+                  <div class="course-progress__meta">
+                    @if (c.major) {
+                      <span>
+                        <span nz-icon nzType="book" nzTheme="outline"></span>
+                        {{ c.major }}
+                      </span>
+                    }
+                    @if (c.credits) {
+                      <span>
+                        <span nz-icon nzType="trophy" nzTheme="outline"></span>
+                        {{ c.credits }} 学分
+                      </span>
+                    }
+                    <span>
+                      <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                      {{ c.enrolledAt | date:'MM-dd' }} 选课
+                    </span>
+                  </div>
+                  <div class="course-progress__bar">
+                    <div class="progress-row">
+                      <span>学习进度</span>
+                      <strong>{{ c.progress || 0 }}%</strong>
+                    </div>
+                    <nz-progress
+                      [nzPercent]="c.progress || 0"
+                      [nzShowInfo]="false"
+                      [nzStrokeLinecap]="'round'"
+                      nzSize="small"
+                    ></nz-progress>
+                  </div>
+                </div>
+              </article>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- 学习记录 -->
+      <section class="block-card">
+        <header class="block-card__header">
+          <h3 class="block-card__title">
+            <span class="block-card__bar"></span>
+            习题学习记录
+            <span class="block-card__sub">最近 10 条</span>
+          </h3>
+        </header>
+
+        @if (recordsLoading()) {
+          <div class="loading-state">
+            <nz-spin nzSimple nzSize="default"></nz-spin>
+          </div>
+        } @else if (records().length === 0) {
+          <div class="empty-state">
+            <span nz-icon nzType="file-text" nzTheme="outline" class="empty-icon"></span>
+            <p>暂无学习记录，完成习题后将自动生成</p>
+          </div>
+        } @else {
+          <ul class="record-list">
+            @for (r of records(); track r.id) {
+              <li class="record-item">
+                <span
+                  class="record-item__icon"
+                  [class.record-item__icon--correct]="r.isCorrect === true"
+                  [class.record-item__icon--wrong]="r.isCorrect === false"
+                >
+                  <span nz-icon [nzType]="r.isCorrect ? 'check' : (r.isCorrect === false ? 'close' : 'question')" nzTheme="outline"></span>
+                </span>
+                <div class="record-item__body">
+                  <span class="record-item__title">{{ r.exerciseTitle }}</span>
+                  <span class="record-item__meta">
+                    <span><span nz-icon nzType="book" nzTheme="outline"></span> {{ r.courseName }}</span>
+                    @if (r.completedAt) {
+                      <span><span nz-icon nzType="clock-circle" nzTheme="outline"></span> {{ r.completedAt | date:'MM-dd HH:mm' }}</span>
+                    }
+                    @if (r.timeSpent) {
+                      <span><span nz-icon nzType="hourglass" nzTheme="outline"></span> {{ r.timeSpent }}</span>
+                    }
+                    @if (r.selfAssessment !== undefined && r.selfAssessment !== null) {
+                      <span class="record-item__assess">自评：{{ selfAssessmentLabel(r.selfAssessment) }}</span>
+                    }
+                  </span>
+                </div>
+                <span
+                  class="record-item__tag"
+                  [class.record-item__tag--correct]="r.isCorrect === true"
+                  [class.record-item__tag--wrong]="r.isCorrect === false"
+                >
+                  @if (r.isCorrect === true) {
+                    答对
+                  } @else if (r.isCorrect === false) {
+                    答错
+                  } @else {
+                    未判定
+                  }
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </main>
+
+    <!-- 侧栏 -->
+    <aside class="content-aside">
+      <!-- 知识掌握度 -->
+      <div class="aside-card">
+        <h3 class="aside-card__title">
+          <span nz-icon nzType="bulb" nzTheme="outline"></span>
+          知识掌握度
+        </h3>
+
+        @if (knowledgeStats().length === 0) {
+          <div class="aside-empty">
+            <span nz-icon nzType="bulb" nzTheme="outline" class="aside-empty__icon"></span>
+            <p>完成更多习题后将自动生成掌握度报告</p>
+          </div>
+        } @else {
+          <ul class="mastery-mini-list">
+            @for (k of knowledgeStats(); track k.name) {
+              <li class="mastery-mini-item">
+                <div class="mastery-mini-item__head">
+                  <span class="mastery-mini-item__name">{{ k.name }}</span>
+                  <span class="mastery-mini-item__value">{{ k.value }} / {{ k.max }}</span>
+                </div>
+                <div class="mastery-mini-item__bar">
+                  <span
+                    class="mastery-mini-item__fill"
+                    [style.width.%]="(k.value / k.max) * 100"
+                  ></span>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <!-- 最近学习 -->
+      @if (recentLearnings().length > 0) {
+        <div class="aside-card">
+          <h3 class="aside-card__title">
+            <span nz-icon nzType="history" nzTheme="outline"></span>
+            最近学习
+          </h3>
+          <ul class="recent-list">
+            @for (r of recentLearnings(); track r.courseId) {
+              <li class="recent-item" (click)="r.courseId && openCourse(r.courseId)">
+                <div class="recent-item__body">
+                  <span class="recent-item__title">{{ r.courseName || '未命名课程' }}</span>
+                  <span class="recent-item__time">{{ r.lastAccessAt | date:'MM-dd HH:mm' }}</span>
+                </div>
+                <div class="recent-item__bar">
+                  <div class="recent-item__fill" [style.width.%]="r.progress || 0"></div>
+                </div>
+                <span class="recent-item__progress">{{ r.progress || 0 }}%</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      <!-- 学习目标 -->
+      <div class="aside-card">
+        <h3 class="aside-card__title">
+          <span nz-icon nzType="aim" nzTheme="outline"></span>
+          本月目标
+        </h3>
+        <ul class="goal-list">
+          <li class="goal-item">
+            <div class="goal-item__head">
+              <span>完成 3 门课程</span>
+              <span class="goal-item__count">2 / 3</span>
+            </div>
+            <div class="goal-item__bar">
+              <span class="goal-item__fill" [style.width.%]="66"></span>
+            </div>
+          </li>
+          <li class="goal-item">
+            <div class="goal-item__head">
+              <span>累计学习 30 小时</span>
+              <span class="goal-item__count">18 / 30</span>
+            </div>
+            <div class="goal-item__bar">
+              <span class="goal-item__fill" [style.width.%]="60"></span>
+            </div>
+          </li>
+          <li class="goal-item">
+            <div class="goal-item__head">
+              <span>完成 200 道习题</span>
+              <span class="goal-item__count">156 / 200</span>
+            </div>
+            <div class="goal-item__bar">
+              <span class="goal-item__fill" [style.width.%]="78"></span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</div>

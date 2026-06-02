@@ -1,0 +1,552 @@
+<div class="course-detail">
+  <!-- 顶部面包屑 -->
+  <div class="detail-breadcrumb">
+    <button class="back-btn" (click)="goBack()">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+      <span>返回课程中心</span>
+    </button>
+    <nav class="breadcrumb" aria-label="breadcrumb">
+      <a routerLink="/student">首页</a>
+      <span class="breadcrumb__sep">/</span>
+      <a routerLink="/student/courses">课程中心</a>
+      <span class="breadcrumb__sep">/</span>
+      <span class="breadcrumb__current">课程详情</span>
+    </nav>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzSimple nzSize="large" nzTip="课程加载中..."></nz-spin>
+    </div>
+  } @else if (course(); as c) {
+    <!-- 课程 Hero 卡 -->
+    <section class="hero-card" [style.background]="courseGradient(c)">
+      <div class="hero-card__pattern" aria-hidden="true">
+        <span class="pattern-circle pattern-circle--1"></span>
+        <span class="pattern-circle pattern-circle--2"></span>
+        <span class="pattern-circle pattern-circle--3"></span>
+        <span class="pattern-line pattern-line--1"></span>
+        <span class="pattern-line pattern-line--2"></span>
+      </div>
+      <div class="hero-card__overlay" aria-hidden="true"></div>
+
+      <div class="hero-card__inner">
+        <div class="hero-card__left">
+          <div class="hero-card__badges">
+            <span
+              class="hero-card__difficulty"
+              [style.background]="difficultyColor(c.difficulty)"
+            >
+              <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
+              {{ difficultyLabel(c.difficulty) }}
+            </span>
+            @if (c.major) {
+              <span class="hero-card__major">
+                <span nz-icon nzType="book" nzTheme="outline"></span>
+                {{ c.major }}
+              </span>
+            }
+            @if (c.semester) {
+              <span class="hero-card__major">
+                <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                {{ c.semester }}
+              </span>
+            }
+          </div>
+
+          <h1 class="hero-card__title">{{ c.title }}</h1>
+
+          @if (c.description) {
+            <p class="hero-card__desc">{{ c.description }}</p>
+          }
+
+          <div class="hero-card__stats">
+            <span class="stat-block">
+              <span class="stat-block__value">{{ countChapters(chapters()) }}</span>
+              <span class="stat-block__label">章节</span>
+            </span>
+            <span class="stat-block__divider"></span>
+            <span class="stat-block">
+              <span class="stat-block__value">{{ countResources(chapters()) }}</span>
+              <span class="stat-block__label">知识点</span>
+            </span>
+            <span class="stat-block__divider"></span>
+            <span class="stat-block">
+              <span class="stat-block__value">{{ c.studentCount || 0 | number }}</span>
+              <span class="stat-block__label">学习者</span>
+            </span>
+            @if (c.credits) {
+              <span class="stat-block__divider"></span>
+              <span class="stat-block">
+                <span class="stat-block__value">{{ c.credits }}</span>
+                <span class="stat-block__label">学分</span>
+              </span>
+            }
+            @if (c.semesterHours) {
+              <span class="stat-block__divider"></span>
+              <span class="stat-block">
+                <span class="stat-block__value">{{ c.semesterHours }}</span>
+                <span class="stat-block__label">学时</span>
+              </span>
+            }
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="hero-card__actions">
+            @if (c.isEnrolled) {
+              <button class="action-btn action-btn--primary" (click)="startLearning()">
+                <span nz-icon nzType="play-circle" nzTheme="fill"></span>
+                <span>继续学习</span>
+              </button>
+              <button class="action-btn" (click)="startExercise()">
+                <span nz-icon nzType="form" nzTheme="outline"></span>
+                <span>开始练习</span>
+              </button>
+            } @else {
+              <button
+                class="action-btn action-btn--primary"
+                [disabled]="enrolling()"
+                (click)="enrollCourse()"
+              >
+                <span nz-icon [nzType]="enrolling() ? 'loading' : 'plus'" nzTheme="outline"></span>
+                <span>{{ enrolling() ? '选课中...' : '立即选课' }}</span>
+              </button>
+            }
+            <button class="action-btn" (click)="setTab('graph')">
+              <span nz-icon nzType="apartment" nzTheme="outline"></span>
+              <span>查看知识图谱</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="hero-card__right">
+          <!-- 进度卡 -->
+          @if (c.isEnrolled) {
+            <div class="progress-card">
+              <div class="progress-card__title">
+                <span nz-icon nzType="line-chart" nzTheme="outline"></span>
+                <span>我的学习进度</span>
+              </div>
+              <div class="progress-card__ring">
+                <div class="ring">
+                  <svg viewBox="0 0 100 100" class="ring__svg" aria-hidden="true">
+                    <circle cx="50" cy="50" r="42" class="ring__bg"></circle>
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      class="ring__fg"
+                      [attr.stroke-dasharray]="264"
+                      [attr.stroke-dashoffset]="264 - (264 * (c.progress || 0)) / 100"
+                    ></circle>
+                  </svg>
+                  <div class="ring__center">
+                    <strong>{{ c.progress || 0 }}%</strong>
+                    <span>已学</span>
+                  </div>
+                </div>
+              </div>
+              <div class="progress-card__meta">
+                <span><strong>{{ progress()?.chapterId || '—' }}</strong> 当前章节</span>
+                @if (progress()?.timeSpent) {
+                  <span>累计 <strong>{{ progress()?.timeSpent }}</strong></span>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="cover-card" [style.background]="courseGradient(c)">
+              @if (hasCover(c)) {
+                <img class="cover-card__img" [src]="c.coverImageUrl" [alt]="c.title" />
+              } @else {
+                <span nz-icon nzType="read" class="cover-card__icon"></span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- 主体两栏 -->
+    <div class="detail-grid">
+      <!-- 左侧：Tabs + 内容 -->
+      <main class="detail-main">
+        <nav class="tab-bar-detail" role="tablist">
+          <button
+            class="tab-pill"
+            [class.is-active]="activeTab() === 'chapters'"
+            (click)="setTab('chapters')"
+            role="tab"
+          >
+            <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
+            <span>课程章节</span>
+            <span class="tab-pill__count">{{ countChapters(chapters()) }}</span>
+          </button>
+          <button
+            class="tab-pill"
+            [class.is-active]="activeTab() === 'graph'"
+            (click)="setTab('graph')"
+            role="tab"
+          >
+            <span nz-icon nzType="apartment" nzTheme="outline"></span>
+            <span>知识图谱</span>
+          </button>
+          <button
+            class="tab-pill"
+            [class.is-active]="activeTab() === 'progress'"
+            (click)="setTab('progress')"
+            role="tab"
+          >
+            <span nz-icon nzType="line-chart" nzTheme="outline"></span>
+            <span>学习进度</span>
+          </button>
+          <button
+            class="tab-pill"
+            [class.is-active]="activeTab() === 'related'"
+            (click)="setTab('related')"
+            role="tab"
+          >
+            <span nz-icon nzType="link" nzTheme="outline"></span>
+            <span>相关课程</span>
+            <span class="tab-pill__count">{{ related().length }}</span>
+          </button>
+        </nav>
+
+        <!-- 章节 Tab -->
+        @if (activeTab() === 'chapters') {
+          <section class="content-card">
+            <header class="content-card__header">
+              <h3 class="content-card__title">
+                <span class="content-card__bar"></span>
+                课程目录
+                <span class="content-card__sub">点击展开章节查看详情</span>
+              </h3>
+            </header>
+
+            @if (chaptersLoading()) {
+              <div class="loading-state loading-state--small">
+                <nz-spin nzSimple nzSize="default"></nz-spin>
+              </div>
+            } @else if (chapters().length === 0) {
+              <div class="empty-state empty-state--small">
+                <span nz-icon nzType="inbox" nzTheme="outline" class="empty-icon"></span>
+                <p>该课程暂无章节</p>
+              </div>
+            } @else {
+              <div class="chapter-tree">
+                <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: chapters(), depth: 0 }"></ng-container>
+              </div>
+            }
+          </section>
+        }
+
+        <!-- 知识图谱 Tab -->
+        @if (activeTab() === 'graph') {
+          <section class="content-card">
+            <header class="content-card__header">
+              <h3 class="content-card__title">
+                <span class="content-card__bar"></span>
+                知识图谱
+                <span class="content-card__sub">点击节点查看详情</span>
+              </h3>
+            </header>
+
+            @if (chaptersLoading()) {
+              <div class="loading-state loading-state--small">
+                <nz-spin nzSimple nzSize="default"></nz-spin>
+              </div>
+            } @else if (chapters().length === 0) {
+              <div class="empty-state empty-state--small">
+                <span nz-icon nzType="apartment" nzTheme="outline" class="empty-icon"></span>
+                <p>暂无章节数据用于构建知识图谱</p>
+              </div>
+            } @else {
+              <div class="graph-wrap">
+                <app-chapter-tree-graph
+                  [chapters]="chapters()"
+                ></app-chapter-tree-graph>
+              </div>
+            }
+          </section>
+        }
+
+        <!-- 学习进度 Tab -->
+        @if (activeTab() === 'progress') {
+          <section class="content-card">
+            <header class="content-card__header">
+              <h3 class="content-card__title">
+                <span class="content-card__bar"></span>
+                知识掌握度
+                <span class="content-card__sub">基于习题完成情况统计</span>
+              </h3>
+            </header>
+
+            @if (mastery().length === 0) {
+              <div class="empty-state empty-state--small">
+                <span nz-icon nzType="bulb" nzTheme="outline" class="empty-icon"></span>
+                <p>暂无掌握度数据，完成一些习题后将自动生成</p>
+              </div>
+            } @else {
+              <ul class="mastery-list">
+                @for (m of mastery(); track m.id) {
+                  <li class="mastery-item">
+                    <div class="mastery-item__head">
+                      <span class="mastery-item__name">{{ m.knowledgeResourceName }}</span>
+                      <span class="mastery-item__level" [class]="'level-' + (m.level || 0)">
+                        {{ m.level === 0 ? '未学习' : m.level === 1 ? '入门' : m.level === 2 ? '熟练' : '精通' }}
+                      </span>
+                    </div>
+                    <div class="mastery-item__bar">
+                      <span
+                        class="mastery-item__fill"
+                        [style.width.%]="(m.accuracy || 0)"
+                      ></span>
+                    </div>
+                    <div class="mastery-item__meta">
+                      <span>练习 {{ m.practiceCount || 0 }} 次</span>
+                      <span>正确 {{ m.correctCount || 0 }} 题</span>
+                      <span class="mastery-item__accuracy">正确率 {{ m.accuracy || 0 }}%</span>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+        }
+
+        <!-- 相关课程 Tab -->
+        @if (activeTab() === 'related') {
+          <section class="content-card">
+            <header class="content-card__header">
+              <h3 class="content-card__title">
+                <span class="content-card__bar"></span>
+                相关课程推荐
+                <span class="content-card__sub">基于专业与学习兴趣推荐</span>
+              </h3>
+            </header>
+
+            @if (related().length === 0) {
+              <div class="empty-state empty-state--small">
+                <span nz-icon nzType="compass" nzTheme="outline" class="empty-icon"></span>
+                <p>暂无相关课程</p>
+              </div>
+            } @else {
+              <div class="related-grid">
+                @for (r of related(); track r.id) {
+                  <article class="related-card" (click)="openRelated(r.id)">
+                    <div class="related-card__head" [style.background]="courseGradient(r)">
+                      <span class="related-card__icon" nz-icon nzType="read" nzTheme="outline"></span>
+                    </div>
+                    <div class="related-card__body">
+                      <h4 class="related-card__title">{{ r.title }}</h4>
+                      <div class="related-card__meta">
+                        @if (r.major) {
+                          <span class="meta-mini">
+                            <span nz-icon nzType="book" nzTheme="outline"></span>
+                            {{ r.major }}
+                          </span>
+                        }
+                        <span class="meta-mini">
+                          <span nz-icon nzType="team" nzTheme="outline"></span>
+                          {{ r.studentCount | number }}
+                        </span>
+                        <span class="meta-mini" [style.color]="difficultyColor(r.difficulty)">
+                          <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
+                          {{ difficultyLabel(r.difficulty) }}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </section>
+        }
+      </main>
+
+      <!-- 侧栏 -->
+      <aside class="detail-aside">
+        <!-- 课程信息卡 -->
+        <div class="aside-card">
+          <h3 class="aside-card__title">
+            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+            课程信息
+          </h3>
+          <ul class="info-list">
+            @if (c.teacherName) {
+              <li>
+                <span class="info-list__label">授课教师</span>
+                <span class="info-list__value">{{ c.teacherName }}</span>
+              </li>
+            }
+            @if (c.major) {
+              <li>
+                <span class="info-list__label">所属专业</span>
+                <span class="info-list__value">{{ c.major }}</span>
+              </li>
+            }
+            @if (c.semester) {
+              <li>
+                <span class="info-list__label">开课学期</span>
+                <span class="info-list__value">{{ c.semester }}</span>
+              </li>
+            }
+            @if (c.credits) {
+              <li>
+                <span class="info-list__label">学分数</span>
+                <span class="info-list__value">{{ c.credits }} 学分</span>
+              </li>
+            }
+            @if (c.semesterHours) {
+              <li>
+                <span class="info-list__label">学时数</span>
+                <span class="info-list__value">{{ c.semesterHours }} 学时</span>
+              </li>
+            }
+            <li>
+              <span class="info-list__label">学习难度</span>
+              <span class="info-list__value">
+                <span
+                  class="difficulty-tag"
+                  [style.background]="difficultyColor(c.difficulty) + '22'"
+                  [style.color]="difficultyColor(c.difficulty)"
+                >
+                  {{ difficultyLabel(c.difficulty) }}
+                </span>
+              </span>
+            </li>
+            <li>
+              <span class="info-list__label">课程状态</span>
+              <span class="info-list__value">
+                <span class="status-tag">
+                  <span class="status-dot"></span>
+                  {{ statusLabel(c.status) }}
+                </span>
+              </span>
+            </li>
+            <li>
+              <span class="info-list__label">更新时间</span>
+              <span class="info-list__value">{{ c.lastModificationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- 课程统计 -->
+        <div class="aside-card">
+          <h3 class="aside-card__title">
+            <span nz-icon nzType="bar-chart" nzTheme="outline"></span>
+            课程统计
+          </h3>
+          <ul class="stats-mini">
+            <li>
+              <span class="stats-mini__icon" style="background: linear-gradient(135deg, #38bdf8, #1e6ce8);">
+                <span nz-icon nzType="team" nzTheme="outline"></span>
+              </span>
+              <div class="stats-mini__body">
+                <strong>{{ c.studentCount || 0 | number }}</strong>
+                <span>累计学习者</span>
+              </div>
+            </li>
+            <li>
+              <span class="stats-mini__icon" style="background: linear-gradient(135deg, #06b6d4, #0e7490);">
+                <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
+              </span>
+              <div class="stats-mini__body">
+                <strong>{{ countChapters(chapters()) }}</strong>
+                <span>章节数</span>
+              </div>
+            </li>
+            <li>
+              <span class="stats-mini__icon" style="background: linear-gradient(135deg, #34d399, #10b981);">
+                <span nz-icon nzType="bulb" nzTheme="outline"></span>
+              </span>
+              <div class="stats-mini__body">
+                <strong>{{ countResources(chapters()) }}</strong>
+                <span>知识点数</span>
+              </div>
+            </li>
+            <li>
+              <span class="stats-mini__icon" style="background: linear-gradient(135deg, #1e6ce8, #0c4cb8);">
+                <span nz-icon nzType="fire" nzTheme="outline"></span>
+              </span>
+              <div class="stats-mini__body">
+                <strong>{{ mastery().length }}</strong>
+                <span>已掌握知识点</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- 学习小贴士 -->
+        <div class="aside-card aside-tip">
+          <h3 class="aside-card__title">
+            <span nz-icon nzType="bulb" nzTheme="outline"></span>
+            学习小贴士
+          </h3>
+          <ul class="tip-list">
+            <li>
+              <strong>1. 循序渐进</strong>
+              <p>按章节顺序学习，前置知识是后续内容的基础。</p>
+            </li>
+            <li>
+              <strong>2. 学完即练</strong>
+              <p>每学完一节建议立即完成配套习题巩固知识。</p>
+            </li>
+            <li>
+              <strong>3. 善用图谱</strong>
+              <p>知识图谱帮你建立整体认知，避免"只见树木不见森林"。</p>
+            </li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  }
+</div>
+
+<!-- Recursive chapter tree template -->
+<ng-template #treeNode let-nodes let-depth="depth">
+  @for (node of nodes; track trackById($index, node)) {
+    <div class="tree-node" [class.tree-node--leaf]="!node.children || node.children.length === 0">
+      <div class="tree-node__content" [style.padding-left.px]="depth * 20 + 12">
+        @if (node.children && node.children.length > 0) {
+          <button
+            class="tree-node__toggle"
+            (click)="toggleNode(node.id!); $event.stopPropagation()"
+            [attr.aria-label]="isExpanded(node.id!) ? '折叠' : '展开'"
+          >
+            <span nz-icon [nzType]="isExpanded(node.id!) ? 'down' : 'right'" nzTheme="outline"></span>
+          </button>
+        } @else {
+          <span class="tree-node__toggle tree-node__toggle--placeholder"></span>
+        }
+        <span class="tree-node__icon">
+          <span nz-icon
+            [nzType]="node.children && node.children.length > 0 ? 'folder' : 'file-text'"
+            nzTheme="outline"
+          ></span>
+        </span>
+        <span class="tree-node__title">{{ node.title }}</span>
+        @if ((node.knowledgeResources?.length || 0) > 0) {
+          <span class="tree-node__count">
+            <span nz-icon nzType="bulb" nzTheme="outline"></span>
+            {{ node.knowledgeResources?.length }} 知识点
+          </span>
+        }
+        @if (node.description) {
+          <span
+            class="tree-node__desc"
+            nz-tooltip
+            [nzTooltipTitle]="node.description"
+            nzTooltipPlacement="top"
+          >
+            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+          </span>
+        }
+      </div>
+      @if (node.children && node.children.length > 0 && isExpanded(node.id!)) {
+        <div class="tree-node__children">
+          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+        </div>
+      }
+    </div>
+  }
+</ng-template>

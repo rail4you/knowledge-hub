@@ -1,14 +1,12 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzRateModule } from 'ng-zorro-antd/rate';
 import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.service';
 
 @Component({
@@ -16,14 +14,14 @@ import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.ser
   standalone: true,
   imports: [
     CommonModule,
+    DatePipe,
+    DecimalPipe,
     FormsModule,
     RouterModule,
-    NzButtonModule,
-    NzCardModule,
-    NzInputModule,
-    NzSpinModule,
-    NzTagModule,
     NzIconModule,
+    NzButtonModule,
+    NzSpinModule,
+    NzRateModule,
   ],
   templateUrl: './student-news-detail.component.html',
   styleUrls: ['./student-news-detail.component.scss'],
@@ -40,14 +38,22 @@ export class StudentNewsDetailComponent implements OnInit {
   readonly comments = signal<NewsCommentDto[]>([]);
   readonly commentText = signal('');
 
+  readonly relatedArticles = signal<NewsArticleDto[]>([]);
+  readonly hotArticles = signal<NewsArticleDto[]>([]);
+  readonly relatedLoading = signal(false);
+
+  readonly copyLinkSuccess = signal(false);
+
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
+      this.router.navigate(['/student/news']);
       return;
     }
 
     this.loadArticle(id);
     this.loadComments(id);
+    this.loadHot();
   }
 
   loadArticle(id: string): void {
@@ -56,9 +62,12 @@ export class StudentNewsDetailComponent implements OnInit {
       next: article => {
         this.article.set(article);
         this.loading.set(false);
+        this.loadRelated(article);
       },
       error: () => {
         this.loading.set(false);
+        this.message.error('资讯加载失败');
+        this.router.navigate(['/student/news']);
       },
     });
   }
@@ -69,15 +78,44 @@ export class StudentNewsDetailComponent implements OnInit {
     });
   }
 
+  loadRelated(article: NewsArticleDto): void {
+    this.relatedLoading.set(true);
+    // 优先加载同分类的资讯
+    if (article.categoryId) {
+      this.newsService.getPublishedArticles({
+        categoryId: article.categoryId,
+        skipCount: 0,
+        maxResultCount: 6,
+      }).subscribe({
+        next: result => {
+          const items = (result.items || []).filter(a => a.id !== article.id).slice(0, 5);
+          this.relatedArticles.set(items);
+          this.relatedLoading.set(false);
+        },
+        error: () => {
+          this.relatedLoading.set(false);
+          this.loadHot();
+        },
+      });
+    } else {
+      this.relatedLoading.set(false);
+      this.loadHot();
+    }
+  }
+
+  loadHot(): void {
+    this.newsService.getHotArticles(6).subscribe({
+      next: items => this.hotArticles.set(items || []),
+    });
+  }
+
   goBack(): void {
     this.router.navigate(['/student/news']);
   }
 
   likeArticle(): void {
     const article = this.article();
-    if (!article || article.userHasLiked) {
-      return;
-    }
+    if (!article || article.userHasLiked) return;
 
     this.newsService.like(article.id).subscribe({
       next: () => {
@@ -88,15 +126,46 @@ export class StudentNewsDetailComponent implements OnInit {
         });
         this.message.success('已点赞');
       },
+      error: () => this.message.error('点赞失败'),
     });
+  }
+
+  copyLink(): void {
+    const article = this.article();
+    if (!article?.id) return;
+    const url = `${window.location.origin}/student/news/${article.id}`;
+
+    const showSuccess = () => {
+      this.copyLinkSuccess.set(true);
+      this.message.success('链接已复制到剪贴板');
+      setTimeout(() => this.copyLinkSuccess.set(false), 1800);
+    };
+
+    const fallback = () => {
+      const input = document.createElement('input');
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      try {
+        document.execCommand('copy');
+        showSuccess();
+      } catch {
+        this.message.error('复制失败，请手动复制');
+      }
+      document.body.removeChild(input);
+    };
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(showSuccess).catch(fallback);
+    } else {
+      fallback();
+    }
   }
 
   submitComment(): void {
     const article = this.article();
     const content = this.commentText().trim();
-    if (!article || !content) {
-      return;
-    }
+    if (!article || !content) return;
 
     this.newsService.createComment({
       articleId: article.id,
@@ -111,9 +180,106 @@ export class StudentNewsDetailComponent implements OnInit {
         });
         this.message.success('评论已发布');
       },
-      error: () => {
-        this.message.error('评论提交失败');
-      },
+      error: () => this.message.error('评论提交失败'),
     });
+  }
+
+  openArticle(id: string): void {
+    this.router.navigate(['/student/news', id]);
+  }
+
+  /** 资讯封面渐变（与列表页一致） */
+  coverGradient(article: NewsArticleDto | { title?: string; id?: string; categoryName?: string }): string {
+    return this.gradientByKey(
+      article?.title || article?.id || 'x',
+      article?.categoryName || ''
+    );
+  }
+
+  gradientByCategory(name: string): string {
+    return this.gradientByKey(name, name);
+  }
+
+  private gradientByKey(primary: string, secondary: string): string {
+    const palettes = [
+      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
+      'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
+      'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+      'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+      'linear-gradient(135deg, #ec4899 0%, #f97316 100%)',
+      'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+      'linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%)',
+      'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)',
+    ];
+    const key = (primary || 'x') + (secondary || '');
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = (hash * 31 + key.charCodeAt(i)) | 0;
+    }
+    return palettes[Math.abs(hash) % palettes.length];
+  }
+
+  hasCover(article: NewsArticleDto): boolean {
+    return !!article.coverImageUrl && article.coverImageUrl.trim().length > 0;
+  }
+
+  parseTags(tags?: string): string[] {
+    if (!tags) return [];
+    return tags
+      .split(/[,，;；\s]+/)
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
+  }
+
+  authorInitial(name?: string): string {
+    if (!name) return 'S';
+    return name.charAt(0).toUpperCase();
+  }
+
+  authorGradient(name?: string): string {
+    const palettes = [
+      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
+      'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
+      'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+      'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+      'linear-gradient(135deg, #ec4899 0%, #f97316 100%)',
+    ];
+    const n = name || 'S';
+    let hash = 0;
+    for (let i = 0; i < n.length; i++) {
+      hash = (hash * 31 + n.charCodeAt(i)) | 0;
+    }
+    return palettes[Math.abs(hash) % palettes.length];
+  }
+
+  commentAuthorInitial(name?: string): string {
+    if (!name) return 'U';
+    return name.charAt(0).toUpperCase();
+  }
+
+  commentAuthorGradient(name?: string): string {
+    const palettes = [
+      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
+      'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+      'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+      'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+      'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
+      'linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%)',
+    ];
+    const n = name || 'U';
+    let hash = 0;
+    for (let i = 0; i < n.length; i++) {
+      hash = (hash * 31 + n.charCodeAt(i)) | 0;
+    }
+    return palettes[Math.abs(hash) % palettes.length];
+  }
+
+  /** 渲染文章正文（处理段落、空行） */
+  getContentParagraphs(content: string): string[] {
+    if (!content) return [];
+    return content
+      .split(/\n\s*\n/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
   }
 }

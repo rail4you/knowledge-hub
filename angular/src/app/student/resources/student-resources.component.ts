@@ -1,26 +1,41 @@
-import { Component, signal, computed, inject, OnInit, ChangeDetectionStrategy, ViewChild } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NzRateModule } from 'ng-zorro-antd/rate';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { ResourceService } from '../../proxy/resources/resource.service';
 import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import type { ResourceDto, ResourceCategoryDto } from '../../proxy/resources/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
-import { ResourceReviewComponent } from '../../search/resource-review/resource-review.component';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
 import { AuthErrorService } from '../../core/auth/auth-error.service';
+
+interface HeroSlide {
+  title: string;
+  subtitle: string;
+  description: string;
+  gradient: string;
+  tag: string;
+  icon: string;
+  backgroundImage: string;
+}
+
+interface StatItem {
+  label: string;
+  value: number;
+  suffix: string;
+  icon: string;
+  color: string;
+}
 
 @Component({
   selector: 'app-student-resources',
@@ -28,30 +43,28 @@ import { AuthErrorService } from '../../core/auth/auth-error.service';
   imports: [
     CommonModule,
     DatePipe,
+    DecimalPipe,
     FormsModule,
     NzIconModule,
     NzButtonModule,
     NzInputModule,
     NzSpinModule,
-    NzEmptyModule,
-    NzTooltipModule,
     NzPaginationModule,
-    NzDrawerModule,
     NzRateModule,
     NzDividerModule,
     FilePreviewComponent,
-    ResourceReviewComponent,
   ],
   templateUrl: './student-resources.component.html',
   styleUrls: ['./student-resources.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class StudentResourcesComponent implements OnInit {
+export class StudentResourcesComponent implements OnInit, OnDestroy {
   private readonly resourceService = inject(ResourceService);
   private readonly reviewService = inject(ResourceReviewService);
   private readonly recommendationService = inject(RecommendationService);
   private readonly authErrorService = inject(AuthErrorService);
   private readonly message = inject(NzMessageService);
+  private readonly router = inject(Router);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
@@ -60,47 +73,108 @@ export class StudentResourcesComponent implements OnInit {
   filterText = signal('');
   selectedType = signal<ResourceType | null>(null);
   selectedCategoryId = signal<string | null>(null);
-  expandedCategories = signal<Set<string>>(new Set());
   categories = signal<ResourceCategoryDto[]>([]);
 
   totalCount = signal(0);
   pageIndex = signal(1);
   pageSize = signal(12);
 
-  drawerVisible = signal(false);
-  selectedResource = signal<ResourceDto | null>(null);
   ratingSummaries = signal<Record<string, ResourceRatingSummaryDto>>({});
   collectedResourceIds = signal<Record<string, boolean>>({});
 
-  // Recommendation signals
   recommendedResources = signal<RecommendedResourceDto[]>([]);
   recommendationsLoading = signal(false);
-  recommendationsCollapsed = signal(false);
-  relatedResources = signal<RecommendedResourceDto[]>([]);
-  relatedLoading = signal(false);
-  relatedTab = signal<string>('all');
 
-  relatedReasons = computed(() => {
-    const reasons = new Set(this.relatedResources().map(r => r.recommendationReason));
-    return [...reasons];
-  });
+  activeHeroSlide = signal(0);
+  heroAutoPlayTimer: ReturnType<typeof setInterval> | null = null;
 
-  filteredRelatedResources = computed(() => {
-    const tab = this.relatedTab();
-    if (tab === 'all') return this.relatedResources();
-    return this.relatedResources().filter(r => r.recommendationReason === tab);
-  });
+  readonly ResourceType = ResourceType;
+
+  // 站点统计（演示数据，实际可从后端获取）
+  stats = signal<StatItem[]>([
+    { label: '课程数', value: 168, suffix: '门', icon: 'book', color: '#1e6ce8' },
+    { label: '微课数', value: 928, suffix: '节', icon: 'play-circle', color: '#00b7ff' },
+    { label: '素材数', value: 5460, suffix: '份', icon: 'appstore', color: '#7c3aed' },
+    { label: '学员数', value: 12, suffix: '万人', icon: 'team', color: '#f59e0b' },
+  ]);
+
+  heroSlides = signal<HeroSlide[]>([
+    {
+      title: '数字资源 · 一站获取',
+      subtitle: 'DIGITAL RESOURCE HUB',
+      description: '整合课程、微课、素材与文献资料，覆盖专业基础、专业核心与拓展课程，让学习更高效。',
+      gradient: 'linear-gradient(120deg, #1e6ce8 0%, #00b7ff 100%)',
+      tag: '资源库简介',
+      icon: 'cloud',
+      backgroundImage: 'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 60%, #38bdf8 100%)',
+    },
+    {
+      title: '名师优课 · 在线学习',
+      subtitle: 'ONLINE PROFESSIONAL COURSES',
+      description: '汇聚国家级精品在线开放课程，专业教学团队系统讲解，支持在线学习与互动交流。',
+      gradient: 'linear-gradient(120deg, #7c3aed 0%, #ec4899 100%)',
+      tag: '学历课程体系',
+      icon: 'read',
+      backgroundImage: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 60%, #f472b6 100%)',
+    },
+    {
+      title: '知识图谱 · 体系化认知',
+      subtitle: 'KNOWLEDGE GRAPH',
+      description: '基于知识图谱构建专业认知体系，节点关系一目了然，助力学习者构建结构化知识网络。',
+      gradient: 'linear-gradient(120deg, #10b981 0%, #06b6d4 100%)',
+      tag: '知识图谱',
+      icon: 'apartment',
+      backgroundImage: 'linear-gradient(135deg, #10b981 0%, #06b6d4 60%, #22d3ee 100%)',
+    },
+  ]);
 
   resourceTypes = [
-    { label: '全部', value: null as ResourceType | null },
-    { label: '文档', value: ResourceType.Document },
-    { label: '视频', value: ResourceType.Video },
+    { label: '全部', value: null as ResourceType | null, icon: 'appstore' },
+    { label: '文档', value: ResourceType.Document, icon: 'file-text' },
+    { label: '视频', value: ResourceType.Video, icon: 'video-camera' },
+    { label: '音频', value: ResourceType.Audio, icon: 'sound' },
+    { label: '图片', value: ResourceType.Image, icon: 'picture' },
+    { label: 'PPT', value: ResourceType.PPT, icon: 'file-ppt' },
   ];
+
+  // 热门分类（演示数据）
+  hotCategories = signal([
+    { name: '专业基础课', icon: 'book', color: '#1e6ce8' },
+    { name: '专业核心课', icon: 'trophy', color: '#7c3aed' },
+    { name: '专业拓展课', icon: 'rocket', color: '#10b981' },
+    { name: '公共基础课', icon: 'read', color: '#f59e0b' },
+    { name: '培训课程', icon: 'solution', color: '#ec4899' },
+    { name: '知识图谱', icon: 'apartment', color: '#06b6d4' },
+  ]);
 
   ngOnInit() {
     this.loadCategories();
     this.loadResources();
     this.loadRecommendations();
+    this.startHeroAutoPlay();
+  }
+
+  ngOnDestroy() {
+    this.stopHeroAutoPlay();
+  }
+
+  startHeroAutoPlay() {
+    this.stopHeroAutoPlay();
+    this.heroAutoPlayTimer = setInterval(() => {
+      this.activeHeroSlide.set((this.activeHeroSlide() + 1) % this.heroSlides().length);
+    }, 6000);
+  }
+
+  stopHeroAutoPlay() {
+    if (this.heroAutoPlayTimer) {
+      clearInterval(this.heroAutoPlayTimer);
+      this.heroAutoPlayTimer = null;
+    }
+  }
+
+  selectHeroSlide(index: number) {
+    this.activeHeroSlide.set(index);
+    this.startHeroAutoPlay();
   }
 
   loadResources() {
@@ -124,7 +198,6 @@ export class StudentResourcesComponent implements OnInit {
       },
       error: (err) => {
         this.loading.set(false);
-        // 触发重新登录弹窗
         if (err.status === 401 || err.status === 403) {
           this.authErrorService.setAuthError(
             err.status,
@@ -137,9 +210,7 @@ export class StudentResourcesComponent implements OnInit {
 
   loadCategories() {
     this.resourceService.getCategories().subscribe({
-      next: (cats) => {
-        this.categories.set(cats);
-      }
+      next: (cats) => this.categories.set(cats || [])
     });
   }
 
@@ -165,10 +236,7 @@ export class StudentResourcesComponent implements OnInit {
     const collectedMap: Record<string, boolean> = {};
 
     items.forEach(resource => {
-      if (!resource.id) {
-        return;
-      }
-
+      if (!resource.id) return;
       this.resourceService.isCollected(resource.id).subscribe({
         next: (isCollected) => {
           collectedMap[resource.id!] = isCollected;
@@ -182,16 +250,6 @@ export class StudentResourcesComponent implements OnInit {
     this.selectedCategoryId.set(categoryId);
     this.pageIndex.set(1);
     this.loadResources();
-  }
-
-  toggleCategoryExpand(categoryId: string) {
-    const current = new Set(this.expandedCategories());
-    if (current.has(categoryId)) {
-      current.delete(categoryId);
-    } else {
-      current.add(categoryId);
-    }
-    this.expandedCategories.set(current);
   }
 
   selectType(type: ResourceType | null) {
@@ -210,7 +268,13 @@ export class StudentResourcesComponent implements OnInit {
     this.loadResources();
   }
 
-  previewResource(resource: ResourceDto) {
+  openDetail(resource: ResourceDto) {
+    if (!resource.id) return;
+    this.router.navigate(['/student/resources', resource.id]);
+  }
+
+  previewResource(event: Event, resource: ResourceDto) {
+    event.stopPropagation();
     if (!resource?.id) return;
     this.filePreview.open(
       resource.id,
@@ -220,7 +284,8 @@ export class StudentResourcesComponent implements OnInit {
     );
   }
 
-  downloadResource(resource: ResourceDto) {
+  downloadResource(event: Event, resource: ResourceDto) {
+    event.stopPropagation();
     if (!resource?.id) return;
     const url = `/api/resource-file/${resource.id}/download`;
     const a = document.createElement('a');
@@ -230,22 +295,18 @@ export class StudentResourcesComponent implements OnInit {
     this.message.success('下载已开始');
   }
 
-  isCollected(resourceId?: string) {
-    return !!resourceId && !!this.collectedResourceIds()[resourceId];
-  }
+  toggleCollection(event: Event, resource: ResourceDto) {
+    event.stopPropagation();
+    if (!resource.id) return;
 
-  toggleCollection(resource: ResourceDto) {
-    if (!resource.id) {
-      return;
-    }
-
-    const request$ = this.isCollected(resource.id)
+    const isCollected = this.isCollected(resource.id);
+    const request$ = isCollected
       ? this.resourceService.uncollect(resource.id)
       : this.resourceService.collect(resource.id);
 
     request$.subscribe({
       next: () => {
-        const nextValue = !this.isCollected(resource.id);
+        const nextValue = !isCollected;
         this.collectedResourceIds.set({
           ...this.collectedResourceIds(),
           [resource.id!]: nextValue,
@@ -253,39 +314,49 @@ export class StudentResourcesComponent implements OnInit {
         this.message.success(nextValue ? '已加入收藏' : '已取消收藏');
       },
       error: () => {
-        this.message.error(this.isCollected(resource.id) ? '取消收藏失败' : '收藏失败');
+        this.message.error(isCollected ? '取消收藏失败' : '收藏失败');
       }
     });
+  }
+
+  isCollected(resourceId?: string) {
+    return !!resourceId && !!this.collectedResourceIds()[resourceId];
   }
 
   getResourceTypeIcon(type?: number): string {
     const icons: Record<number, string> = {
       [ResourceType.Document]: 'file-text',
       [ResourceType.Video]: 'video-camera',
-      [ResourceType.Audio]: 'audio',
+      [ResourceType.Audio]: 'sound',
       [ResourceType.Image]: 'picture',
       [ResourceType.PPT]: 'file-ppt',
     };
     return icons[type ?? 0] || 'file-text';
   }
 
-  selectResource(resource: ResourceDto) {
-    this.selectedResource.set(resource);
-    this.drawerVisible.set(true);
-    if (resource.id) {
-      this.loadRelatedResources(resource.id);
-    }
+  getResourceTypeName(type?: number): string {
+    const names: Record<number, string> = {
+      [ResourceType.Document]: '文档',
+      [ResourceType.Video]: '视频',
+      [ResourceType.Audio]: '音频',
+      [ResourceType.Image]: '图片',
+      [ResourceType.PPT]: '演示文稿',
+    };
+    return names[type ?? 0] || '资料';
   }
 
-  closeDrawer() {
-    this.drawerVisible.set(false);
+  formatFileSize(size?: number): string {
+    if (!size) return '未知大小';
+    if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
+    if (size >= 1024) return `${(size / 1024).toFixed(0)} KB`;
+    return `${size} B`;
   }
 
   loadRecommendations() {
     this.recommendationsLoading.set(true);
-    this.recommendationService.getPersonalizedRecommendations(10).subscribe({
+    this.recommendationService.getPersonalizedRecommendations(8).subscribe({
       next: (result) => {
-        this.recommendedResources.set(result);
+        this.recommendedResources.set(result || []);
         this.recommendationsLoading.set(false);
       },
       error: (err) => {
@@ -300,53 +371,9 @@ export class StudentResourcesComponent implements OnInit {
     });
   }
 
-  loadRelatedResources(resourceId: string) {
-    this.relatedLoading.set(true);
-    this.recommendationService.getRelatedResources(resourceId, 6).subscribe({
-      next: (result) => {
-        this.relatedResources.set(result);
-        this.relatedLoading.set(false);
-      },
-      error: (err) => {
-        this.relatedLoading.set(false);
-        if (err.status === 401 || err.status === 403) {
-          this.authErrorService.setAuthError(
-            err.status,
-            err.error?.error?.message || err.error?.message || '您未获得授权！'
-          );
-        }
-      }
-    });
-  }
-
-  selectRelatedResource(resource: RecommendedResourceDto) {
-    // Find the resource in the existing list or create a partial ResourceDto
-    const existing = this.resources().find(r => r.id === resource.resourceId);
-    if (existing) {
-      this.selectedResource.set(existing);
-    } else {
-      this.selectedResource.set({
-        id: resource.resourceId,
-        name: resource.resourceName,
-        description: resource.description,
-        resourceType: resource.resourceType,
-        categoryId: resource.categoryId,
-        fileSize: resource.fileSize,
-        fileExtension: resource.fileExtension,
-        creationTime: resource.creationTime,
-      } as ResourceDto);
-    }
-    this.drawerVisible.set(true);
-    this.loadRelatedResources(resource.resourceId);
-  }
-
-  onReviewChanged(resourceId: string) {
-    this.reviewService.getRatingSummary(resourceId).subscribe({
-      next: (summary) => {
-        const summaries = { ...this.ratingSummaries() };
-        summaries[resourceId] = summary;
-        this.ratingSummaries.set(summaries);
-      }
-    });
+  openRecommended(event: Event, rec: RecommendedResourceDto) {
+    event.preventDefault();
+    if (!rec.resourceId) return;
+    this.router.navigate(['/student/resources', rec.resourceId]);
   }
 }

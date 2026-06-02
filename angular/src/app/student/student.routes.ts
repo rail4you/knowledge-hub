@@ -13,8 +13,20 @@ export const STUDENT_ROUTES: Routes = [
     children: [
       {
         path: '',
-        redirectTo: 'resources',
+        redirectTo: 'courses',
         pathMatch: 'full'
+      },
+      {
+        path: 'courses',
+        loadComponent: () => import('./courses/student-courses.component').then(m => m.StudentCoursesComponent),
+        data: {
+          name: '课程中心',
+          icon: 'read'
+        }
+      },
+      {
+        path: 'courses/:id',
+        loadComponent: () => import('./course-detail/student-course-detail.component').then(m => m.StudentCourseDetailComponent),
       },
       {
         path: 'resources',
@@ -22,6 +34,18 @@ export const STUDENT_ROUTES: Routes = [
         data: {
           name: '资源库',
           icon: 'folder-open'
+        }
+      },
+      {
+        path: 'resources/:id',
+        loadComponent: () => import('./resources/student-resource-detail.component').then(m => m.StudentResourceDetailComponent),
+      },
+      {
+        path: 'my-learning',
+        loadComponent: () => import('./my-learning/student-my-learning.component').then(m => m.StudentMyLearningComponent),
+        data: {
+          name: '我的学习',
+          icon: 'line-chart'
         }
       },
       {

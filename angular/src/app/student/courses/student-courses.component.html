@@ -1,0 +1,392 @@
+<div class="courses-page">
+  <!-- =================== HERO 区域 =================== -->
+  <section class="hero" aria-label="课程中心简介">
+    <div class="hero__bg" aria-hidden="true">
+      <span class="hero__shape hero__shape--1"></span>
+      <span class="hero__shape hero__shape--2"></span>
+      <span class="hero__shape hero__shape--3"></span>
+      <span class="hero__shape hero__shape--4"></span>
+    </div>
+
+    <div class="hero__inner">
+      <div class="hero__carousel">
+        <div class="carousel-stage">
+          @for (slide of heroSlides(); track $index; let i = $index) {
+            <article
+              class="carousel-slide"
+              [class.is-active]="activeHeroSlide() === i"
+              [style.background]="slide.gradient"
+            >
+              <div class="slide-tag">
+                <span nz-icon [nzType]="slide.icon" nzTheme="outline"></span>
+                {{ slide.tag }}
+              </div>
+              <h2 class="slide-title">{{ slide.title }}</h2>
+              <p class="slide-subtitle">{{ slide.subtitle }}</p>
+              <p class="slide-desc">{{ slide.description }}</p>
+              <div class="slide-deco" aria-hidden="true">
+                <span class="deco-ring"></span>
+                <span class="deco-ring deco-ring--alt"></span>
+                <span class="deco-dot"></span>
+              </div>
+            </article>
+          }
+        </div>
+
+        <div class="carousel-dots" role="tablist">
+          @for (slide of heroSlides(); track $index; let i = $index) {
+            <button
+              class="carousel-dot"
+              [class.is-active]="activeHeroSlide() === i"
+              (click)="selectHeroSlide(i)"
+              role="tab"
+              [attr.aria-selected]="activeHeroSlide() === i"
+            >
+              <span class="dot-index">0{{ i + 1 }}</span>
+              <span class="dot-line"></span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="hero__stats">
+        <div class="stats-card">
+          <h3 class="stats-card__title">
+            <span class="stats-card__bar"></span>
+            学习概览
+            <span class="stats-card__hint">实时更新</span>
+          </h3>
+          <div class="stats-grid">
+            @for (s of stats(); track s.label) {
+              <div class="stat-cell">
+                <div class="stat-cell__icon" [style.background]="s.color">
+                  <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+                </div>
+                <div class="stat-cell__body">
+                  <div class="stat-cell__value">
+                    <strong>{{ s.value | number }}</strong>
+                    <span class="stat-cell__suffix">{{ s.suffix }}</span>
+                  </div>
+                  <div class="stat-cell__label">{{ s.label }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== 搜索 + 筛选 =================== -->
+  <section class="quick-bar" aria-label="课程筛选">
+    <div class="quick-bar__inner">
+      <div class="search-pill">
+        <span class="search-pill__icon">
+          <span nz-icon nzType="search" nzTheme="outline"></span>
+        </span>
+        <input
+          type="text"
+          [ngModel]="filter()"
+          (ngModelChange)="filter.set($event)"
+          (keyup.enter)="onSearch()"
+          placeholder="搜索课程名称、关键词或专业..."
+          class="search-pill__input"
+          aria-label="搜索课程"
+        />
+        @if (filter()) {
+          <button class="search-pill__clear" (click)="filter.set('')" aria-label="清空">
+            <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
+          </button>
+        }
+        <button class="search-pill__btn" (click)="onSearch()">
+          <span nz-icon nzType="search" nzTheme="outline"></span>
+          <span>搜索</span>
+        </button>
+      </div>
+
+      <div class="filter-chips" role="tablist" aria-label="专业筛选">
+        @for (m of majors(); track m.id) {
+          <button
+            class="filter-chip"
+            [class.is-active]="selectedMajor() === m.id"
+            (click)="selectMajor(m.id)"
+            role="tab"
+            [attr.aria-selected]="selectedMajor() === m.id"
+            [style.--chip-color]="m.color"
+          >
+            <span nz-icon [nzType]="m.icon" nzTheme="outline"></span>
+            <span>{{ m.name }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="difficulty-row">
+        <div class="difficulty-chips">
+          @for (d of difficulties; track d.value) {
+            <button
+              class="difficulty-chip"
+              [class.is-active]="selectedDifficulty() === d.value"
+              (click)="selectDifficulty(d.value)"
+            >
+              <span nz-icon [nzType]="d.icon" nzTheme="outline"></span>
+              <span>{{ d.label }}</span>
+            </button>
+          }
+        </div>
+        <button class="reset-btn" (click)="onReset()">
+          <span nz-icon nzType="reload" nzTheme="outline"></span>
+          <span>重置筛选</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== 主体两栏 =================== -->
+  <div class="content-grid">
+    <!-- 左侧：状态切换 + 课程列表 -->
+    <main class="content-main">
+      <div class="status-tabs" role="tablist">
+        @for (s of statusFilters; track s.value) {
+          <button
+            class="status-tab"
+            [class.is-active]="selectedStatus() === s.value"
+            (click)="selectStatus(s.value)"
+            role="tab"
+          >
+            <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+            <span>{{ s.label }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="section-header">
+        <h2 class="section-header__title">
+          <span class="section-header__bar"></span>
+          @if (selectedStatus() === 'enrolled') {
+            <span>我的课程</span>
+          } @else if (selectedStatus() === 'recommended') {
+            <span>推荐课程</span>
+          } @else {
+            <span>全部课程</span>
+          }
+          <span class="section-header__sub">共 {{ visibleCourses().length }} 门</span>
+        </h2>
+      </div>
+
+      @if (loading()) {
+        <div class="loading-state">
+          <nz-spin nzSimple nzSize="large" nzTip="课程加载中..."></nz-spin>
+        </div>
+      } @else if (visibleCourses().length === 0) {
+        <div class="empty-state">
+          <nz-empty
+            [nzNotFoundContent]="selectedStatus() === 'enrolled' ? '你还没有选课，去浏览全部课程开始学习吧' : '未找到符合条件的课程'"
+            [nzNotFoundImage]="null"
+          >
+            <ng-template #default>
+              <div class="empty-illustration">
+                <span class="empty-icon" nz-icon nzType="book" nzTheme="outline"></span>
+              </div>
+            </ng-template>
+          </nz-empty>
+        </div>
+      } @else {
+        <div class="course-grid">
+          @for (course of visibleCourses(); track course.id) {
+            <article class="course-card" (click)="openCourse(course.id!)">
+              <!-- 封面 -->
+              <div class="course-card__cover" [style.background]="courseGradient(course)">
+                @if (hasCover(course)) {
+                  <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" />
+                } @else {
+                  <div class="course-card__pattern" aria-hidden="true">
+                    <span class="pattern-circle pattern-circle--1"></span>
+                    <span class="pattern-circle pattern-circle--2"></span>
+                    <span class="pattern-circle pattern-circle--3"></span>
+                    <span class="pattern-line pattern-line--1"></span>
+                    <span class="pattern-line pattern-line--2"></span>
+                  </div>
+                }
+                <div class="course-card__overlay" aria-hidden="true"></div>
+
+                <!-- 难度标签 -->
+                <span
+                  class="course-card__difficulty"
+                  [style.background]="difficultyColor(course.difficulty)"
+                >
+                  <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
+                  {{ difficultyLabel(course.difficulty) }}
+                </span>
+
+                <!-- 选课状态 -->
+                @if (isEnrolled(course.id!)) {
+                  <span class="course-card__badge course-card__badge--enrolled">
+                    <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+                    已选课
+                  </span>
+                }
+              </div>
+
+              <!-- 信息 -->
+              <div class="course-card__body">
+                <h3 class="course-card__title" [title]="course.title">{{ course.title }}</h3>
+
+                @if (course.description) {
+                  <p class="course-card__desc">{{ course.description }}</p>
+                }
+
+                <div class="course-card__meta">
+                  @if (course.major) {
+                    <span class="meta-pill">
+                      <span nz-icon nzType="book" nzTheme="outline"></span>
+                      {{ course.major }}
+                    </span>
+                  }
+                  @if (course.semester) {
+                    <span class="meta-pill">
+                      <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                      {{ course.semester }}
+                    </span>
+                  }
+                  @if (course.credits) {
+                    <span class="meta-pill">
+                      <span nz-icon nzType="trophy" nzTheme="outline"></span>
+                      {{ course.credits }} 学分
+                    </span>
+                  }
+                </div>
+
+                <div class="course-card__stats">
+                  <span class="stat-pill">
+                    <span nz-icon nzType="team" nzTheme="outline"></span>
+                    {{ course.studentCount || 0 }} 人学习
+                  </span>
+                  <span class="stat-pill">
+                    <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
+                    {{ course.chapterCount || 0 }} 章节
+                  </span>
+                  @if (course.teacherName) {
+                    <span class="stat-pill" nz-tooltip [nzTooltipTitle]="'授课教师：' + course.teacherName">
+                      <span nz-icon nzType="user" nzTheme="outline"></span>
+                      {{ course.teacherName }}
+                    </span>
+                  }
+                </div>
+
+                <!-- 进度条（仅已选课显示） -->
+                @if (isEnrolled(course.id!)) {
+                  <div class="course-card__progress">
+                    <div class="progress-label">
+                      <span>学习进度</span>
+                      <strong>{{ getMyProgress(course.id!) }}%</strong>
+                    </div>
+                    <nz-progress
+                      [nzPercent]="getMyProgress(course.id!)"
+                      [nzShowInfo]="false"
+                      [nzStrokeLinecap]="'round'"
+                      nzSize="small"
+                    ></nz-progress>
+                  </div>
+                }
+              </div>
+
+              <!-- 底部操作 -->
+              <div class="course-card__footer">
+                @if (isEnrolled(course.id!)) {
+                  <button
+                    class="footer-btn footer-btn--primary"
+                    (click)="startLearning(course, $event)"
+                  >
+                    <span nz-icon nzType="play-circle" nzTheme="outline"></span>
+                    <span>继续学习</span>
+                  </button>
+                } @else {
+                  <button
+                    class="footer-btn footer-btn--primary"
+                    [disabled]="enrolling() === course.id"
+                    (click)="enroll(course, $event)"
+                  >
+                    <span nz-icon [nzType]="enrolling() === course.id ? 'loading' : 'plus'" nzTheme="outline"></span>
+                    <span>{{ enrolling() === course.id ? '选课中...' : '选课学习' }}</span>
+                  </button>
+                }
+                <button class="footer-btn" (click)="openCourse(course.id!); $event.stopPropagation()">
+                  <span nz-icon nzType="eye" nzTheme="outline"></span>
+                  <span>详情</span>
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </main>
+
+    <!-- 侧栏 -->
+    <aside class="content-aside">
+      <!-- 热门课程 -->
+      <div class="aside-card">
+        <h3 class="aside-card__title">
+          <span nz-icon nzType="fire" nzTheme="fill"></span>
+          本周热门
+        </h3>
+        <ul class="hot-list">
+          @for (h of hotCourses(); track h.rank) {
+            <li class="hot-item">
+              <span class="hot-item__rank" [style.background]="h.color">{{ h.rank }}</span>
+              <div class="hot-item__body">
+                <span class="hot-item__title" [title]="h.title">{{ h.title }}</span>
+                <span class="hot-item__meta">
+                  <span nz-icon nzType="team" nzTheme="outline"></span>
+                  {{ h.students | number }} 人学习
+                </span>
+              </div>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <!-- 学习建议 -->
+      <div class="aside-card">
+        <h3 class="aside-card__title">
+          <span nz-icon nzType="bulb" nzTheme="outline"></span>
+          学习建议
+        </h3>
+        <ul class="tip-list">
+          <li class="tip-item">
+            <span class="tip-num">1</span>
+            <div class="tip-body">
+              <strong>制定学习计划</strong>
+              <p>每周固定 3-5 小时学习时间，按章节逐步推进。</p>
+            </div>
+          </li>
+          <li class="tip-item">
+            <span class="tip-num">2</span>
+            <div class="tip-body">
+              <strong>章节配套练习</strong>
+              <p>完成每个章节后立即做配套习题，及时巩固知识。</p>
+            </div>
+          </li>
+          <li class="tip-item">
+            <span class="tip-num">3</span>
+            <div class="tip-body">
+              <strong>善用知识图谱</strong>
+              <p>通过知识图谱建立整体认知，把握课程脉络。</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 我的学习入口 -->
+      <a class="aside-cta" routerLink="/student/my-learning">
+        <div class="aside-cta__icon">
+          <span nz-icon nzType="line-chart" nzTheme="outline"></span>
+        </div>
+        <div class="aside-cta__body">
+          <strong>查看我的学习数据</strong>
+          <span>学习时长、答题正确率、知识掌握度一应俱全</span>
+        </div>
+        <span nz-icon nzType="right" nzTheme="outline" class="aside-cta__arrow"></span>
+      </a>
+    </aside>
+  </div>
+</div>

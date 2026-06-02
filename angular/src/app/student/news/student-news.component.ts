@@ -1,30 +1,46 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed } from '@angular/core';
+import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
-import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzSelectModule } from 'ng-zorro-antd/select';
-import { NzTagModule } from 'ng-zorro-antd/tag';
+import { Router } from '@angular/router';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { NewsArticleDto, NewsCategoryDto, NewsService } from '../../news/news.service';
+
+interface HeroSlide {
+  title: string;
+  subtitle: string;
+  description: string;
+  tag: string;
+  icon: string;
+  gradient: string;
+}
+
+interface StatItem {
+  label: string;
+  value: number;
+  suffix: string;
+  icon: string;
+  color: string;
+}
+
+interface CategoryChip {
+  id: string | null;
+  name: string;
+  icon: string;
+  color: string;
+}
 
 @Component({
   selector: 'app-student-news',
   standalone: true,
   imports: [
     CommonModule,
+    DatePipe,
+    DecimalPipe,
     FormsModule,
-    RouterModule,
-    NzCardModule,
-    NzInputModule,
-    NzSelectModule,
-    NzTagModule,
+    NzIconModule,
     NzSpinModule,
-    NzEmptyModule,
-    NzButtonModule,
   ],
   templateUrl: './student-news.component.html',
   styleUrls: ['./student-news.component.scss'],
@@ -33,6 +49,7 @@ import { NewsArticleDto, NewsCategoryDto, NewsService } from '../../news/news.se
 export class StudentNewsComponent implements OnInit {
   private readonly newsService = inject(NewsService);
   private readonly router = inject(Router);
+  private readonly message = inject(NzMessageService);
 
   readonly loading = signal(false);
   readonly articles = signal<NewsArticleDto[]>([]);
@@ -40,16 +57,120 @@ export class StudentNewsComponent implements OnInit {
   readonly categories = signal<NewsCategoryDto[]>([]);
   readonly filter = signal('');
   readonly categoryId = signal<string | null>(null);
+  readonly activeHeroSlide = signal(0);
+  private heroTimer: ReturnType<typeof setInterval> | null = null;
+
+  // 站点统计（演示数据）
+  readonly stats = signal<StatItem[]>([
+    { label: '今日资讯', value: 12, suffix: '篇', icon: 'fire', color: '#ef4444' },
+    { label: '本月更新', value: 86, suffix: '篇', icon: 'calendar', color: '#1e6ce8' },
+    { label: '总阅读量', value: 28, suffix: '万次', icon: 'eye', color: '#10b981' },
+    { label: '订阅用户', value: 5400, suffix: '+人', icon: 'team', color: '#f59e0b' },
+  ]);
+
+  readonly heroSlides = signal<HeroSlide[]>([
+    {
+      title: '资讯中心',
+      subtitle: 'NEWS CENTER',
+      description: '汇集行业动态、政策解读、教学资讯与企业新闻，让你随时掌握最新前沿信息。',
+      tag: '资讯简介',
+      icon: 'bulb',
+      gradient: 'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
+    },
+    {
+      title: '行业动态',
+      subtitle: 'INDUSTRY NEWS',
+      description: '紧跟职业教育发展最新动态，解读国家政策、院校改革、产业升级等热门话题。',
+      tag: '行业动态',
+      icon: 'rise',
+      gradient: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
+    },
+    {
+      title: '教学资讯',
+      subtitle: 'TEACHING HIGHLIGHTS',
+      description: '分享优秀教学案例、课程建设经验与教师成长故事，启发教学创新灵感。',
+      tag: '教学资讯',
+      icon: 'read',
+      gradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+    },
+  ]);
+
+  // 分类筛选 chips
+  readonly categoryChips = signal<CategoryChip[]>([
+    { id: null, name: '全部资讯', icon: 'appstore', color: '#1e6ce8' },
+  ]);
+
+  readonly featuredArticles = computed(() => {
+    return this.articles()
+      .filter(a => a.isTop)
+      .slice(0, 2);
+  });
+
+  readonly latestArticles = computed(() => {
+    const featuredIds = new Set(this.featuredArticles().map(a => a.id));
+    return this.articles()
+      .filter(a => !featuredIds.has(a.id))
+      .slice(0, 12);
+  });
+
+  readonly trendingArticles = computed(() => {
+    return [...this.articles()]
+      .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
+      .slice(0, 5);
+  });
 
   ngOnInit(): void {
     this.loadCategories();
     this.loadArticles();
     this.loadHotArticles();
+    this.startHeroAutoPlay();
+  }
+
+  ngOnDestroy(): void {
+    this.stopHeroAutoPlay();
+  }
+
+  startHeroAutoPlay() {
+    this.stopHeroAutoPlay();
+    this.heroTimer = setInterval(() => {
+      this.activeHeroSlide.set((this.activeHeroSlide() + 1) % this.heroSlides().length);
+    }, 6000);
+  }
+
+  stopHeroAutoPlay() {
+    if (this.heroTimer) {
+      clearInterval(this.heroTimer);
+      this.heroTimer = null;
+    }
+  }
+
+  selectHeroSlide(index: number) {
+    this.activeHeroSlide.set(index);
+    this.startHeroAutoPlay();
   }
 
   loadCategories(): void {
     this.newsService.getCategoryTree().subscribe({
-      next: categories => this.categories.set(categories),
+      next: categories => {
+        this.categories.set(categories || []);
+        // 同步生成快捷分类 chips
+        const chips: CategoryChip[] = [
+          { id: null, name: '全部资讯', icon: 'appstore', color: '#1e6ce8' },
+        ];
+        const colorPalette = ['#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
+        let colorIndex = 0;
+        const flat = this.categoryOptions();
+        flat.slice(0, 6).forEach(cat => {
+          chips.push({
+            id: cat.id,
+            name: cat.name,
+            icon: 'folder',
+            color: colorPalette[colorIndex % colorPalette.length],
+          });
+          colorIndex++;
+        });
+        this.categoryChips.set(chips);
+      },
     });
   }
 
@@ -67,6 +188,7 @@ export class StudentNewsComponent implements OnInit {
       },
       error: () => {
         this.loading.set(false);
+        this.message.error('资讯加载失败');
       },
     });
   }
@@ -81,6 +203,15 @@ export class StudentNewsComponent implements OnInit {
     this.router.navigate(['/student/news', id]);
   }
 
+  selectCategory(id: string | null): void {
+    this.categoryId.set(id);
+    this.loadArticles();
+  }
+
+  onSearch(): void {
+    this.loadArticles();
+  }
+
   categoryOptions(): NewsCategoryDto[] {
     const result: NewsCategoryDto[] = [];
     const append = (items: NewsCategoryDto[]) => {
@@ -91,8 +222,54 @@ export class StudentNewsComponent implements OnInit {
         }
       }
     };
-
     append(this.categories());
     return result;
+  }
+
+  /**
+   * 文章封面渐变（基于标题 hash，确保稳定）
+   */
+  coverGradient(article: NewsArticleDto): string {
+    return this.gradientByKey(article.title || article.id || 'x', article.categoryName || '');
+  }
+
+  /**
+   * 基于分类名生成稳定的渐变色（用于侧边栏分类图标）
+   */
+  gradientByCategory(categoryName: string): string {
+    return this.gradientByKey(categoryName, categoryName);
+  }
+
+  private gradientByKey(primary: string, secondary: string): string {
+    const palettes = [
+      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
+      'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
+      'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+      'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+      'linear-gradient(135deg, #ec4899 0%, #f97316 100%)',
+      'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+      'linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%)',
+      'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)',
+    ];
+    const key = (primary || 'x') + (secondary || '');
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = (hash * 31 + key.charCodeAt(i)) | 0;
+    }
+    return palettes[Math.abs(hash) % palettes.length];
+  }
+
+  hasCover(article: NewsArticleDto): boolean {
+    return !!article.coverImageUrl && article.coverImageUrl.trim().length > 0;
+  }
+
+  parseTags(tags?: string): string[] {
+    if (!tags) return [];
+    return tags.split(/[,，;；\s]+/).map(t => t.trim()).filter(t => t.length > 0).slice(0, 3);
+  }
+
+  /** 热门资讯排行榜数字 */
+  rankNumber(index: number): string {
+    return (index + 1).toString().padStart(2, '0');
   }
 }

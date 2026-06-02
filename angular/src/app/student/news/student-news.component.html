@@ -1,91 +1,393 @@
-<div class="student-news-page">
-  <div class="page-header">
-    <h1>资讯中心</h1>
-    <p>查看行业动态、政策解读、教学资讯与企业资讯</p>
-  </div>
-
-  <div class="filters">
-    <input
-      nz-input
-      placeholder="搜索标题、摘要或标签"
-      [ngModel]="filter()"
-      (ngModelChange)="filter.set($event)"
-      (keyup.enter)="loadArticles()"
-    />
-    <nz-select
-      nzAllowClear
-      nzPlaceHolder="全部分类"
-      [ngModel]="categoryId()"
-      (ngModelChange)="categoryId.set($event)"
-    >
-      @for (category of categoryOptions(); track category.id) {
-        <nz-option [nzValue]="category.id" [nzLabel]="category.name"></nz-option>
-      }
-    </nz-select>
-    <button nz-button nzType="primary" (click)="loadArticles()">筛选</button>
-  </div>
-
-  <div class="content-layout">
-    <div class="main-content">
-      @if (loading()) {
-        <div class="state">
-          <nz-spin nzTip="加载中..."></nz-spin>
-        </div>
-      } @else if (articles().length === 0) {
-        <div class="state">
-          <nz-empty nzNotFoundContent="暂无资讯"></nz-empty>
-        </div>
-      } @else {
-        <div class="article-list">
-          @for (article of articles(); track article.id) {
-            <nz-card class="article-item" (click)="openArticle(article.id)" [nzHoverable]="true">
-              <div class="article-header">
-                <div class="article-meta">
-                  @if (article.categoryName) {
-                    <nz-tag nzColor="blue">{{ article.categoryName }}</nz-tag>
-                  }
-                  @if (article.isTop) {
-                    <nz-tag nzColor="red">置顶</nz-tag>
-                  }
-                  @if (article.isHot) {
-                    <nz-tag nzColor="orange">热门</nz-tag>
-                  }
-                </div>
-                <span class="article-date">{{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd' }}</span>
-              </div>
-              <h3 class="article-title">{{ article.title }}</h3>
-              @if (article.summary) {
-                <p class="article-summary">{{ article.summary }}</p>
-              }
-              <div class="article-footer">
-                <span class="author">{{ article.authorName || '系统发布' }}</span>
-                <span class="stats">
-                  <span nz-icon nzType="eye" nzTheme="outline"></span> {{ article.viewCount }}
-                  <span nz-icon nzType="like" nzTheme="outline"></span> {{ article.likeCount }}
-                  <span nz-icon nzType="message" nzTheme="outline"></span> {{ article.commentCount }}
-                </span>
-              </div>
-            </nz-card>
-          }
-        </div>
-      }
+<div class="news-page">
+  <!-- =================== HERO 区域 =================== -->
+  <section class="hero" aria-label="资讯中心简介">
+    <div class="hero__bg" aria-hidden="true">
+      <span class="hero__shape hero__shape--1"></span>
+      <span class="hero__shape hero__shape--2"></span>
+      <span class="hero__shape hero__shape--3"></span>
+      <span class="hero__shape hero__shape--4"></span>
     </div>
 
-    <div class="sidebar">
-      <nz-card nzTitle="热门资讯">
-        @if (hotArticles().length === 0) {
-          <nz-empty nzNotFoundContent="暂无热门资讯"></nz-empty>
-        } @else {
-          <div class="hot-list">
-            @for (article of hotArticles(); track article.id) {
-              <button class="hot-item" type="button" (click)="openArticle(article.id)">
-                <span class="hot-title">{{ article.title }}</span>
-                <span class="hot-views">{{ article.viewCount }} 浏览</span>
+    <div class="hero__inner">
+      <div class="hero__carousel">
+        <div class="carousel-stage">
+          @for (slide of heroSlides(); track $index; let i = $index) {
+            <article
+              class="carousel-slide"
+              [class.is-active]="activeHeroSlide() === i"
+              [style.background]="slide.gradient"
+            >
+              <div class="slide-tag">
+                <span nz-icon [nzType]="slide.icon" nzTheme="outline"></span>
+                {{ slide.tag }}
+              </div>
+              <h2 class="slide-title">{{ slide.title }}</h2>
+              <p class="slide-subtitle">{{ slide.subtitle }}</p>
+              <p class="slide-desc">{{ slide.description }}</p>
+              <div class="slide-deco" aria-hidden="true">
+                <span class="deco-ring"></span>
+                <span class="deco-ring deco-ring--alt"></span>
+                <span class="deco-dot"></span>
+              </div>
+            </article>
+          }
+        </div>
+
+        <div class="carousel-dots" role="tablist">
+          @for (slide of heroSlides(); track $index; let i = $index) {
+            <button
+              class="carousel-dot"
+              [class.is-active]="activeHeroSlide() === i"
+              (click)="selectHeroSlide(i)"
+              role="tab"
+              [attr.aria-selected]="activeHeroSlide() === i"
+            >
+              <span class="dot-index">0{{ i + 1 }}</span>
+              <span class="dot-line"></span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="hero__stats">
+        <div class="stats-card">
+          <h3 class="stats-card__title">
+            <span class="stats-card__bar"></span>
+            数据总览
+            <span class="stats-card__hint">实时更新</span>
+          </h3>
+          <div class="stats-grid">
+            @for (s of stats(); track s.label) {
+              <div class="stat-cell">
+                <div class="stat-cell__icon" [style.background]="s.color">
+                  <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+                </div>
+                <div class="stat-cell__body">
+                  <div class="stat-cell__value">
+                    <strong>{{ s.value | number }}</strong>
+                    <span class="stat-cell__suffix">{{ s.suffix }}</span>
+                  </div>
+                  <div class="stat-cell__label">{{ s.label }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== 搜索 + 分类筛选 =================== -->
+  <section class="quick-bar" aria-label="资讯筛选">
+    <div class="quick-bar__inner">
+      <div class="search-pill">
+        <span class="search-pill__icon">
+          <span nz-icon nzType="search" nzTheme="outline"></span>
+        </span>
+        <input
+          type="text"
+          [ngModel]="filter()"
+          (ngModelChange)="filter.set($event)"
+          (keyup.enter)="onSearch()"
+          placeholder="搜索资讯标题、摘要或关键词..."
+          class="search-pill__input"
+          aria-label="搜索资讯"
+        />
+        @if (filter()) {
+          <button class="search-pill__clear" (click)="filter.set('')" aria-label="清空">
+            <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
+          </button>
+        }
+        <button class="search-pill__btn" (click)="onSearch()">
+          <span nz-icon nzType="search" nzTheme="outline"></span>
+          <span>搜索</span>
+        </button>
+      </div>
+
+      <div class="category-chips">
+        <span class="category-chips__label">资讯分类</span>
+        <div class="category-chips__list">
+          @for (chip of categoryChips(); track chip.id) {
+            <button
+              class="cat-chip"
+              [class.is-active]="categoryId() === chip.id"
+              (click)="selectCategory(chip.id)"
+            >
+              @if (chip.id) {
+                <span class="cat-chip__dot" [style.background]="chip.color"></span>
+              } @else {
+                <span nz-icon [nzType]="chip.icon" nzTheme="outline"></span>
+              }
+              <span>{{ chip.name }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== 主体：资讯卡片 + 侧边栏 =================== -->
+  <section class="news-content">
+    <div class="news-layout">
+      <!-- 左侧主内容 -->
+      <div class="news-main">
+        <!-- 头条（置顶）资讯 -->
+        @if (featuredArticles().length > 0) {
+          <div class="featured-section">
+            <div class="section-header">
+              <h2 class="section-header__title">
+                <span class="section-header__bar"></span>
+                头条资讯
+                <span class="section-header__sub">置顶推荐 · 不容错过</span>
+              </h2>
+            </div>
+            <div class="featured-grid" [class.featured-single]="featuredArticles().length === 1">
+              @for (article of featuredArticles(); track article.id; let i = $index) {
+                <article
+                  class="featured-card"
+                  [style.background]="coverGradient(article)"
+                  (click)="openArticle(article.id)"
+                  tabindex="0"
+                  (keyup.enter)="openArticle(article.id)"
+                >
+                  @if (hasCover(article)) {
+                    <img class="featured-card__bg" [src]="article.coverImageUrl" [alt]="article.title" />
+                  } @else {
+                    <div class="featured-card__pattern" aria-hidden="true">
+                      <span class="featured-pattern-circle featured-pattern-circle--1"></span>
+                      <span class="featured-pattern-circle featured-pattern-circle--2"></span>
+                      <span class="featured-pattern-circle featured-pattern-circle--3"></span>
+                    </div>
+                  }
+                  <div class="featured-card__overlay" aria-hidden="true"></div>
+
+                  <div class="featured-card__content">
+                    <div class="featured-card__top">
+                      <span class="featured-badge">
+                        <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
+                        头条
+                      </span>
+                      @if (article.categoryName) {
+                        <span class="featured-category">
+                          <span nz-icon nzType="folder" nzTheme="outline"></span>
+                          {{ article.categoryName }}
+                        </span>
+                      }
+                    </div>
+
+                    <h3 class="featured-card__title">{{ article.title }}</h3>
+                    @if (article.summary) {
+                      <p class="featured-card__summary">{{ article.summary }}</p>
+                    }
+
+                    <div class="featured-card__meta">
+                      <span class="meta-item">
+                        <span nz-icon nzType="user" nzTheme="outline"></span>
+                        {{ article.authorName || '系统发布' }}
+                      </span>
+                      <span class="meta-item">
+                        <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                        {{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd' }}
+                      </span>
+                      <span class="meta-item">
+                        <span nz-icon nzType="eye" nzTheme="outline"></span>
+                        {{ article.viewCount || 0 }} 阅读
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- 最新资讯 -->
+        <div class="latest-section">
+          <div class="section-header">
+            <h2 class="section-header__title">
+              <span class="section-header__bar"></span>
+              最新资讯
+              <span class="section-header__sub">持续更新 · 把握脉搏</span>
+            </h2>
+            @if (categoryId()) {
+              <button class="section-header__more" (click)="selectCategory(null)">
+                <span nz-icon nzType="reload" nzTheme="outline"></span>
+                查看全部分类
               </button>
             }
           </div>
-        }
-      </nz-card>
+
+          @if (loading()) {
+            <div class="loading-state">
+              <nz-spin nzSimple nzSize="large"></nz-spin>
+              <p>正在加载资讯...</p>
+            </div>
+          } @else if (articles().length === 0) {
+            <div class="empty-state">
+              <div class="empty-state__art">
+                <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              </div>
+              <h3>暂无资讯</h3>
+              <p>请尝试更换关键词或选择其他分类</p>
+            </div>
+          } @else {
+            <div class="news-grid">
+              @for (article of latestArticles(); track article.id) {
+                <article
+                  class="news-card"
+                  (click)="openArticle(article.id)"
+                  tabindex="0"
+                  (keyup.enter)="openArticle(article.id)"
+                >
+                  <div class="news-card__cover" [style.background]="coverGradient(article)">
+                    @if (hasCover(article)) {
+                      <img class="news-card__cover-img" [src]="article.coverImageUrl" [alt]="article.title" />
+                    } @else {
+                      <div class="news-card__pattern" aria-hidden="true">
+                        <span class="news-pattern-circle news-pattern-circle--1"></span>
+                        <span class="news-pattern-circle news-pattern-circle--2"></span>
+                      </div>
+                    }
+                    <div class="news-card__cover-mask" aria-hidden="true"></div>
+
+                    @if (article.isHot) {
+                      <span class="news-card__hot">
+                        <span nz-icon nzType="fire" nzTheme="fill"></span>
+                        热门
+                      </span>
+                    }
+                    @if (article.categoryName) {
+                      <span class="news-card__category">
+                        <span nz-icon nzType="folder" nzTheme="outline"></span>
+                        {{ article.categoryName }}
+                      </span>
+                    }
+                  </div>
+
+                  <div class="news-card__body">
+                    <h3 class="news-card__title" [title]="article.title">
+                      {{ article.title }}
+                    </h3>
+
+                    @if (article.summary) {
+                      <p class="news-card__summary">{{ article.summary }}</p>
+                    } @else {
+                      <p class="news-card__summary news-card__summary--empty">暂无摘要</p>
+                    }
+
+                    @if (parseTags(article.tags).length > 0) {
+                      <div class="news-card__tags">
+                        @for (tag of parseTags(article.tags); track tag) {
+                          <span class="news-tag">#{{ tag }}</span>
+                        }
+                      </div>
+                    }
+
+                    <div class="news-card__meta">
+                      <span class="news-card__author" [title]="article.authorName || '系统发布'">
+                        <span class="news-card__avatar">
+                          {{ ((article.authorName || '系统')[0]).toUpperCase() }}
+                        </span>
+                        <span class="news-card__author-name">{{ article.authorName || '系统发布' }}</span>
+                      </span>
+                      <span class="news-card__date">
+                        {{ article.publishedAt || article.creationTime | date:'MM-dd' }}
+                      </span>
+                    </div>
+
+                    <div class="news-card__stats">
+                      <span class="stat-pill">
+                        <span nz-icon nzType="eye" nzTheme="outline"></span>
+                        {{ article.viewCount || 0 }}
+                      </span>
+                      <span class="stat-pill">
+                        <span nz-icon nzType="like" nzTheme="outline"></span>
+                        {{ article.likeCount || 0 }}
+                      </span>
+                      <span class="stat-pill">
+                        <span nz-icon nzType="message" nzTheme="outline"></span>
+                        {{ article.commentCount || 0 }}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- 右侧侧边栏 -->
+      <aside class="news-aside">
+        <!-- 热门资讯 Top 5 -->
+        <div class="aside-card aside-hot">
+          <h3 class="aside-card__title">
+            <span nz-icon nzType="fire" nzTheme="outline"></span>
+            热门资讯
+            <span class="aside-card__count">{{ trendingArticles().length }}</span>
+          </h3>
+          @if (trendingArticles().length === 0) {
+            <div class="hot-empty">
+              <span nz-icon nzType="inbox" nzTheme="outline"></span>
+              <p>暂无热门资讯</p>
+            </div>
+          } @else {
+            <ul class="hot-ranking">
+              @for (article of trendingArticles(); track article.id; let i = $index) {
+                <li class="hot-item" (click)="openArticle(article.id)">
+                  <span class="hot-rank" [class]="'hot-rank--' + (i < 3 ? 'top' : 'normal')">
+                    {{ rankNumber(i) }}
+                  </span>
+                  <div class="hot-item__body">
+                    <span class="hot-item__title" [title]="article.title">{{ article.title }}</span>
+                    <span class="hot-item__meta">
+                      <span>
+                        <span nz-icon nzType="eye" nzTheme="outline"></span>
+                        {{ article.viewCount || 0 }}
+                      </span>
+                      @if (article.categoryName) {
+                        <span>{{ article.categoryName }}</span>
+                      }
+                    </span>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        <!-- 资讯分类导航 -->
+        <div class="aside-card aside-nav">
+          <h3 class="aside-card__title">
+            <span nz-icon nzType="menu" nzTheme="outline"></span>
+            资讯分类
+          </h3>
+          <ul class="aside-nav-list">
+            <li
+              class="aside-nav-item"
+              [class.is-active]="categoryId() === null"
+              (click)="selectCategory(null)"
+            >
+              <span class="aside-nav-item__icon" style="background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)">
+                <span nz-icon nzType="appstore" nzTheme="outline"></span>
+              </span>
+              <span class="aside-nav-item__name">全部资讯</span>
+            </li>
+            @for (cat of categoryOptions(); track cat.id) {
+              <li
+                class="aside-nav-item"
+                [class.is-active]="categoryId() === cat.id"
+                (click)="selectCategory(cat.id)"
+              >
+                <span class="aside-nav-item__icon" [style.background]="gradientByCategory(cat.name)">
+                  <span nz-icon nzType="folder" nzTheme="outline"></span>
+                </span>
+                <span class="aside-nav-item__name">{{ cat.name }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      </aside>
     </div>
-  </div>
+  </section>
 </div>
