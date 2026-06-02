@@ -2,7 +2,6 @@ import { Component, ChangeDetectionStrategy, inject, signal, OnInit } from '@ang
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { hasRole } from '../../auth/current-user.utils';
@@ -15,7 +14,6 @@ import { AuthErrorModalComponent } from '../../core/auth/auth-error-modal.compon
     CommonModule,
     RouterModule,
     NzIconModule,
-    NzAvatarModule,
     NzDropDownModule,
     AuthErrorModalComponent,
   ],
@@ -60,11 +58,28 @@ export class StudentLayoutComponent implements OnInit {
     return this.userName()?.charAt(0)?.toUpperCase() || 'U';
   }
 
+  /** 头像渐变背景色（基于用户名稳定生成） */
+  avatarGradient(): string {
+    const name = this.userName() || 'U';
+    const palettes = [
+      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
+      'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
+      'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+      'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+      'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+      'linear-gradient(135deg, #f43f5e 0%, #f97316 100%)',
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = (hash * 31 + name.charCodeAt(i)) | 0;
+    }
+    return palettes[Math.abs(hash) % palettes.length];
+  }
+
   logout() {
-    this.authService.logout().subscribe(() => {
-      // 使用完整页面刷新清除 ABP 框架缓存的布局状态
-      // 避免 SPA 路由跳转导致退出后页面状态异常
-      window.location.href = '/';
-    });
+    // ABP authService.logout() 会清除本地 token 并重定向到 IdP 的 end_session_endpoint
+    // IdP 清除 session cookie 后会自动重定向回 postLogoutRedirectUri
+    // 不要在 subscribe 回调中手动 window.location.href，这会覆盖 OAuth end_session 重定向
+    this.authService.logout().subscribe();
   }
 }
