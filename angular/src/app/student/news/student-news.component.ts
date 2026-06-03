@@ -13,7 +13,8 @@ interface HeroSlide {
   description: string;
   tag: string;
   icon: string;
-  gradient: string;
+  gradient?: string;
+  color?: string;
 }
 
 interface StatItem {
@@ -82,7 +83,7 @@ export class StudentNewsComponent implements OnInit {
       description: '汇集行业动态、政策解读、教学资讯与企业新闻，让你随时掌握最新前沿信息。',
       tag: '资讯简介',
       icon: 'bulb',
-      gradient: 'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
+      color: '#1e6ce8',
     },
     {
       title: '行业动态',
@@ -90,7 +91,7 @@ export class StudentNewsComponent implements OnInit {
       description: '紧跟职业教育发展最新动态，解读国家政策、院校改革、产业升级等热门话题。',
       tag: '行业动态',
       icon: 'rise',
-      gradient: 'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 60%, #00b7ff 100%)',
+      color: '#0c4cb8',
     },
     {
       title: '教学资讯',
@@ -98,7 +99,7 @@ export class StudentNewsComponent implements OnInit {
       description: '分享优秀教学案例、课程建设经验与教师成长故事，启发教学创新灵感。',
       tag: '教学资讯',
       icon: 'read',
-      gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 60%, #60a5fa 100%)',
+      color: '#2563eb',
     },
   ]);
 
@@ -249,14 +250,14 @@ export class StudentNewsComponent implements OnInit {
 
   private gradientByKey(primary: string, secondary: string): string {
     const palettes = [
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
-      'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
-      'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-      'linear-gradient(135deg, #ec4899 0%, #f97316 100%)',
-      'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-      'linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%)',
-      'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)',
+      '#1e6ce8',
+      '#0891b2',
+      '#10b981',
+      '#059669',
+      '#0284c7',
+      '#2563eb',
+      '#0891b2',
+      '#0c4cb8',
     ];
     const key = (primary || 'x') + (secondary || '');
     let hash = 0;

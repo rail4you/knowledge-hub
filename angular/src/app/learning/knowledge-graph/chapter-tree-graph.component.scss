@@ -14,10 +14,10 @@
   border: 1px solid ds.$student-border-soft;
   overflow: hidden;
   transition: grid-template-columns 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  min-height: 720px;
+  min-height: 640px;
 
   &--has-detail {
-    grid-template-columns: 1fr 340px;
+    grid-template-columns: 1fr 320px;
 
     @media (max-width: 1100px) {
       grid-template-columns: 1fr;
@@ -32,7 +32,7 @@
   position: relative;
 }
 
-// ============= 浮动工具栏 (glassmorphism) =============
+// ============= 浮动工具栏 =============
 .kg-floating-toolbar {
   position: absolute;
   top: 16px;
@@ -43,7 +43,7 @@
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.5);
@@ -94,6 +94,7 @@
     font-size: 11px;
     color: ds.$student-text-muted;
     margin-top: 2px;
+    font-weight: 500;
   }
 
   &__divider {
@@ -107,49 +108,10 @@
     );
     flex-shrink: 0;
   }
-
-  &__stats {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  &__actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-}
-
-.kg-stat-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: 999px;
-  background: rgba(238, 242, 247, 0.9);
-  color: ds.$student-text-muted;
-  font-weight: 600;
-  border: 1px solid rgba(221, 228, 238, 0.6);
-
-  span[nz-icon] {
-    font-size: 12px;
-  }
-
-  &--accent {
-    background: linear-gradient(
-      135deg,
-      rgba(30, 108, 232, 0.12),
-      rgba(0, 183, 255, 0.12)
-    );
-    color: ds.$student-primary;
-    border-color: rgba(30, 108, 232, 0.18);
-  }
 }
 
 .kg-search {
-  width: 180px;
+  width: 200px;
   border-radius: 8px;
   overflow: hidden;
 
@@ -168,36 +130,6 @@
     background: rgba(245, 248, 252, 0.7) !important;
     border: 1px solid ds.$student-border !important;
     color: ds.$student-text-muted !important;
-  }
-}
-
-::ng-deep .kg-floating-toolbar .ant-radio-group {
-  .ant-radio-button-wrapper {
-    height: 30px;
-    line-height: 28px;
-    padding: 0 10px;
-    font-size: 12px;
-    border-color: ds.$student-border;
-    background: rgba(255, 255, 255, 0.7);
-
-    &::before {
-      background: ds.$student-border !important;
-    }
-
-    &.ant-radio-button-wrapper-checked {
-      background: ds.$student-primary;
-      border-color: ds.$student-primary;
-      color: #fff;
-      box-shadow: 0 2px 6px rgba(30, 108, 232, 0.25);
-
-      &:hover {
-        color: #fff;
-      }
-
-      &::before {
-        background: #fff !important;
-      }
-    }
   }
 }
 
@@ -229,13 +161,23 @@
   &:active {
     transform: translateY(0);
   }
+
+  &--ghost {
+    background: transparent;
+    border-color: transparent;
+
+    &:hover {
+      background: rgba(30, 108, 232, 0.08);
+      border-color: rgba(30, 108, 232, 0.2);
+    }
+  }
 }
 
 // ============= 画布 =============
 .kg-canvas-wrap {
   position: relative;
   width: 100%;
-  height: 700px;
+  height: 640px;
   overflow: hidden;
   background:
     radial-gradient(
@@ -255,8 +197,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(30, 108, 232, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(30, 108, 232, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(30, 108, 232, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 108, 232, 0.045) 1px, transparent 1px);
   background-size: 32px 32px;
   pointer-events: none;
   mask-image: radial-gradient(ellipse at center, #000 30%, transparent 90%);
@@ -390,121 +332,6 @@
   }
 }
 
-// ============= 缩略图 =============
-.kg-minimap {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  width: 200px;
-  height: 140px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 12px;
-  box-shadow:
-    0 8px 24px rgba(15, 23, 42, 0.1),
-    0 2px 6px rgba(15, 23, 42, 0.05);
-  overflow: hidden;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-
-  &__title {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 10px;
-    font-size: 10px;
-    font-weight: 700;
-    color: ds.$student-text-muted;
-    background: rgba(248, 251, 255, 0.8);
-    border-bottom: 1px solid ds.$student-border-soft;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-
-    span[nz-icon] {
-      font-size: 10px;
-      color: ds.$student-primary;
-    }
-  }
-
-  &__canvas {
-    flex: 1;
-    min-height: 0;
-    position: relative;
-  }
-
-  &__viewport {
-    position: absolute;
-    border: 1.5px solid ds.$student-primary;
-    background: rgba(30, 108, 232, 0.08);
-    border-radius: 2px;
-    pointer-events: none;
-    transition: all 0.2s ease-out;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
-  }
-}
-
-// ============= 图例 =============
-.kg-legend {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 18px;
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid ds.$student-border-soft;
-  font-size: 12px;
-  color: ds.$student-text-muted;
-  flex-wrap: wrap;
-
-  &__title {
-    font-weight: 700;
-    color: ds.$student-text;
-    margin-right: 4px;
-  }
-
-  &__item {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-
-  &__dot,
-  &__square,
-  &__circle {
-    width: 12px;
-    height: 12px;
-    display: inline-block;
-  }
-
-  &__dot {
-    border-radius: 50%;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7);
-  }
-
-  &__square {
-    border-radius: 3px;
-
-    &--parent {
-      background: linear-gradient(135deg, #1e6ce8, #0c4cb8);
-      box-shadow: 0 2px 4px rgba(30, 108, 232, 0.3);
-    }
-
-    &--child {
-      background: linear-gradient(135deg, #10b981, #047857);
-      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
-    }
-  }
-
-  &__circle {
-    border-radius: 50%;
-    background: linear-gradient(135deg, #f59e0b, #ef4444);
-    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
-  }
-}
-
 // ============= 详情面板 =============
 .kg-detail {
   background: #fff;
@@ -514,7 +341,7 @@
   flex-direction: column;
   overflow: hidden;
   animation: kg-detail-slide 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  max-height: 780px;
+  max-height: 700px;
   align-self: stretch;
 
   @media (max-width: 1100px) {
@@ -529,6 +356,7 @@
     color: #fff;
     position: relative;
     overflow: hidden;
+    background: linear-gradient(135deg, #1e6ce8 0%, #0c4cb8 100%);
 
     &::after {
       content: '';
@@ -604,13 +432,6 @@
     position: relative;
   }
 
-  &__subtitle {
-    margin: 0;
-    font-size: 12px;
-    opacity: 0.9;
-    position: relative;
-  }
-
   &__body {
     flex: 1;
     overflow-y: auto;
@@ -664,31 +485,17 @@
     border-left: 3px solid ds.$student-primary;
   }
 
-  &__stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
   &__stat {
     background: linear-gradient(135deg, #f8fbff 0%, #f0f6ff 100%);
     border: 1px solid ds.$student-border-soft;
     border-radius: 10px;
     padding: 12px;
     text-align: center;
-    transition: all 0.2s ease;
-
-    &:hover {
-      transform: translateY(-1px);
-      border-color: rgba(ds.$student-primary, 0.3);
-      box-shadow: 0 4px 10px rgba(30, 108, 232, 0.08);
-    }
 
     strong {
       display: block;
       font-size: 22px;
       font-weight: 800;
-      color: ds.$student-primary;
       line-height: 1.2;
       background: linear-gradient(135deg, #1e6ce8, #0c4cb8);
       -webkit-background-clip: text;
@@ -702,28 +509,6 @@
       color: ds.$student-text-muted;
       margin-top: 4px;
       font-weight: 500;
-    }
-  }
-
-  &__chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  &__chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    border: 1px solid currentColor;
-    border-color: transparent;
-
-    span[nz-icon] {
-      font-size: 11px;
     }
   }
 
@@ -827,12 +612,7 @@
 // ============= 响应式 =============
 @media (max-width: 1100px) {
   .kg-canvas-wrap {
-    height: 540px;
-  }
-
-  .kg-minimap {
-    width: 160px;
-    height: 110px;
+    height: 520px;
   }
 }
 
@@ -864,12 +644,7 @@
   }
 
   .kg-search {
-    width: 120px;
-  }
-
-  .kg-stat-pill {
-    font-size: 11px;
-    padding: 3px 8px;
+    width: 130px;
   }
 
   .kg-icon-btn {
@@ -879,11 +654,6 @@
 
   .kg-canvas-wrap {
     height: 480px;
-  }
-
-  .kg-minimap {
-    width: 130px;
-    height: 90px;
   }
 
   .kg-hint {
