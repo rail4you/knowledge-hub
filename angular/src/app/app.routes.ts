@@ -199,38 +199,6 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
-    path: 'employment/jobs',
-    loadComponent: () => import('./employment/job-list.component').then(c => c.EmploymentJobListComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.Employment',
-    },
-  },
-  {
-    path: 'employment/jobs/:id',
-    loadComponent: () => import('./employment/job-detail.component').then(c => c.EmploymentJobDetailComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.Employment',
-    },
-  },
-  {
-    path: 'employment/employer-profile',
-    loadComponent: () => import('./employment/employer-profile.component').then(c => c.EmployerProfileComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.Employment.PublishJob',
-    },
-  },
-  {
-    path: 'employment/my-resumes',
-    loadComponent: () => import('./employment/my-resumes.component').then(c => c.MyResumesComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.Employment.ManageResume',
-    },
-  },
-  {
     path: 'employment/my-applications',
     loadComponent: () => import('./employment/my-applications.component').then(c => c.MyApplicationsComponent),
     canActivate: [authGuard, permissionGuard],
