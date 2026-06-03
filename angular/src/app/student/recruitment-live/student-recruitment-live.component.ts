@@ -1,12 +1,8 @@
-import { Component, OnInit, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { RecruitmentLiveService } from '../../recruitment-live/recruitment-live.service';
 import { RecruitmentLiveDto, RecruitmentLiveStatus } from '../../recruitment-live/recruitment-live.models';
@@ -17,14 +13,11 @@ import { RecruitmentLiveDto, RecruitmentLiveStatus } from '../../recruitment-liv
   imports: [
     CommonModule,
     RouterModule,
-    NzCardModule,
-    NzButtonModule,
-    NzTagModule,
     NzIconModule,
-    NzEmptyModule,
     NzSpinModule,
   ],
   templateUrl: './student-recruitment-live.component.html',
+  styleUrls: ['./student-recruitment-live.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentRecruitmentLiveComponent implements OnInit {
@@ -34,6 +27,7 @@ export class StudentRecruitmentLiveComponent implements OnInit {
 
   loading = signal(false);
   lives = signal<RecruitmentLiveDto[]>([]);
+  activeCount = computed(() => this.lives().filter(l => l.status === RecruitmentLiveStatus.Active).length);
 
   ngOnInit() {
     this.loadLives();
@@ -60,16 +54,6 @@ export class StudentRecruitmentLiveComponent implements OnInit {
     this.router.navigate(['/student/recruitment-live', live.id]);
   }
 
-  statusColor(status: RecruitmentLiveStatus): string {
-    switch (status) {
-      case RecruitmentLiveStatus.Waiting: return 'gold';
-      case RecruitmentLiveStatus.Active: return 'green';
-      case RecruitmentLiveStatus.Ended: return 'default';
-      case RecruitmentLiveStatus.Cancelled: return 'red';
-      default: return 'default';
-    }
-  }
-
   statusText(status: RecruitmentLiveStatus): string {
     switch (status) {
       case RecruitmentLiveStatus.Waiting: return '等待中';
@@ -82,15 +66,5 @@ export class StudentRecruitmentLiveComponent implements OnInit {
 
   canEnter(live: RecruitmentLiveDto): boolean {
     return live.status === RecruitmentLiveStatus.Waiting || live.status === RecruitmentLiveStatus.Active;
-  }
-
-  statusIcon(status: RecruitmentLiveStatus): string {
-    switch (status) {
-      case RecruitmentLiveStatus.Waiting: return 'clock-circle';
-      case RecruitmentLiveStatus.Active: return 'play-circle';
-      case RecruitmentLiveStatus.Ended: return 'check-circle';
-      case RecruitmentLiveStatus.Cancelled: return 'close-circle';
-      default: return 'question-circle';
-    }
   }
 }

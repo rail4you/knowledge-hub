@@ -1,54 +1,117 @@
-<div class="student-recruitment-live">
-  <div class="page-header">
-    <h2>
-      <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-      招聘直播
-    </h2>
-    <p class="page-desc">查看分配给您的招聘直播，点击进入直播间参与面试</p>
-  </div>
-
-  <nz-spin [nzSpinning]="loading()">
-    <!-- Empty state -->
-    <nz-empty *ngIf="!loading() && lives().length === 0" nzNotFoundContent="暂无直播安排"></nz-empty>
-
-    <!-- Card grid -->
-    <div class="live-cards" *ngIf="lives().length > 0">
-      <nz-card
-        *ngFor="let live of lives()"
-        class="live-card"
-        [nzHoverable]="canEnter(live)"
-        (click)="canEnter(live) && enterLive(live)"
-      >
-        <div class="live-card-header">
-          <nz-tag [nzColor]="statusColor(live.status)">
-            <span nz-icon [nzType]="statusIcon(live.status)" nzTheme="outline"></span>
-            {{ statusText(live.status) }}
-          </nz-tag>
+<div class="recruitment-page">
+  <!-- =================== HERO =================== -->
+  <section class="page-hero" aria-label="招聘直播">
+    <div class="page-hero__inner">
+      <div class="page-hero__body">
+        <span class="page-hero__label">RECRUITMENT LIVE</span>
+        <h1 class="page-hero__title">招聘直播</h1>
+        <p class="page-hero__desc">与面试官面对面实时视频沟通，展现最好的自己</p>
+      </div>
+      <div class="page-hero__actions">
+        <div class="hero-stat">
+          <span class="hero-stat__num">{{ lives().length }}</span>
+          <span class="hero-stat__text">场直播安排</span>
         </div>
+      </div>
+    </div>
+    <div class="page-hero__stats">
+      <span class="stat-chip" *ngIf="activeCount() > 0">
+        <span class="stat-chip__dot stat-chip__dot--live"></span>
+        进行中 <strong>{{ activeCount() }}</strong> 场
+      </span>
+      <span class="stat-chip">
+        <span class="stat-chip__dot"></span>
+        共 <strong>{{ lives().length }}</strong> 场直播
+      </span>
+    </div>
+  </section>
 
-        <div class="live-card-body">
-          <h3 class="live-card-title">{{ live.title }}</h3>
-          <p class="live-card-desc" *ngIf="live.description">{{ live.description }}</p>
-
-          <div class="live-card-meta">
-            <div class="meta-item">
-              <span class="meta-label">面试官</span>
-              <span class="meta-value">{{ live.teacherName }}</span>
+  <!-- =================== LOADING =================== -->
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+      <p>正在加载直播...</p>
+    </div>
+  }
+  <!-- =================== EMPTY =================== -->
+  @else if (lives().length === 0) {
+    <div class="empty-state">
+      <div class="empty-state__art">
+        <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+      </div>
+      <h3>暂无直播安排</h3>
+      <p>您的老师还没有为您创建招聘直播，请耐心等待</p>
+    </div>
+  }
+  <!-- =================== GRID =================== -->
+  @else {
+    <div class="live-grid">
+      @for (live of lives(); track live.id) {
+        <article
+          class="live-card"
+          [class.is-active]="live.status === 1"
+          [class.is-clickable]="canEnter(live)"
+          (click)="canEnter(live) && enterLive(live)"
+        >
+          <!-- 顶部状态条 -->
+          <div class="live-card__banner" [class.is-live]="live.status === 1">
+            <div class="live-card__status">
+              <span class="live-dot" [class.pulse]="live.status === 1"></span>
+              {{ statusText(live.status) }}
             </div>
-            <div class="meta-item" *ngIf="live.scheduledAt">
-              <span class="meta-label">计划时间</span>
-              <span class="meta-value">{{ live.scheduledAt | date: 'yyyy-MM-dd HH:mm' }}</span>
+            @if (live.scheduledAt) {
+              <div class="live-card__time">
+                <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                {{ live.scheduledAt | date: 'yyyy-MM-dd HH:mm' }}
+              </div>
+            }
+          </div>
+
+          <!-- 内容区 -->
+          <div class="live-card__body">
+            <h3 class="live-card__title">{{ live.title }}</h3>
+            @if (live.description) {
+              <p class="live-card__desc">{{ live.description }}</p>
+            }
+
+            <div class="live-card__info">
+              <div class="info-item">
+                <span class="info-item__icon">
+                  <span nz-icon nzType="user" nzTheme="outline"></span>
+                </span>
+                <div class="info-item__text">
+                  <span class="info-item__label">面试官</span>
+                  <span class="info-item__value">{{ live.teacherName }}</span>
+                </div>
+              </div>
+              <div class="info-item">
+                <span class="info-item__icon">
+                  <span nz-icon nzType="key" nzTheme="outline"></span>
+                </span>
+                <div class="info-item__text">
+                  <span class="info-item__label">房间码</span>
+                  <span class="info-item__value info-item__value--mono">{{ live.roomCode }}</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="live-card-action" *ngIf="canEnter(live)">
-          <button nz-button nzType="primary" nzBlock>
-            <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-            进入直播间
-          </button>
-        </div>
-      </nz-card>
+          <!-- 操作区 -->
+          @if (canEnter(live)) {
+            <div class="live-card__action">
+              <button class="enter-btn">
+                <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+                进入直播间
+              </button>
+            </div>
+          } @else if (live.status === 2) {
+            <div class="live-card__footer-end">
+              <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+              直播已结束 · 通话 {{ live.durationSeconds | number: '1.0-0' }}秒
+            </div>
+          }
+        </article>
+      }
     </div>
-  </nz-spin>
+  }
 </div>
