@@ -30,15 +30,6 @@
 
   <!-- ===== HERO 轮播 ===== -->
   <section class="hero" [style.--hero-accent]="heroSlides[heroIndex()].accent">
-    <div class="hero__bg"></div>
-    <div class="hero__grid"></div>
-
-    <!-- 装饰元素 -->
-    <span class="hero__decor hero__decor--1"></span>
-    <span class="hero__decor hero__decor--2"></span>
-    <span class="hero__decor hero__decor--3"></span>
-    <span class="hero__decor hero__decor--4"></span>
-
     <div class="hero__inner">
       <!-- 左：轮播文案 -->
       <div class="hero__content">
@@ -119,29 +110,13 @@
         </div>
       </div>
       <div class="stat__divider"></div>
-      <div class="stat stat--ai">
+      <div class="stat">
         <div class="stat__icon stat__icon--gradient">🤖</div>
         <div class="stat__body">
           <strong>AI 驱动</strong>
           <span>智能教学服务</span>
         </div>
       </div>
-    </div>
-  </section>
-
-  <!-- ===== 快捷入口 ===== -->
-  <section class="entries">
-    <div class="entries__inner">
-      @for (e of quickEntries; track e.label) {
-        <a class="entry" [routerLink]="e.link" [style.--entry-color]="e.color">
-          <div class="entry__emoji">{{ e.emoji }}</div>
-          <div class="entry__body">
-            <h4>{{ e.label }}</h4>
-            <p>{{ e.desc }}</p>
-          </div>
-          <span class="entry__arrow">→</span>
-        </a>
-      }
     </div>
   </section>
 
@@ -218,13 +193,17 @@
               [routerLink]="['/student/micro-majors', m.id]"
               [style.--mm-color]="['#1a5fe0','#0ea5e9','#0891b2','#16a34a'][i % 4]"
             >
-              <div class="mm-card__icon-wrap">
-                <span class="mm-card__icon">🏆</span>
-                <span class="mm-card__icon-ring"></span>
+              <div class="mm-card__cover">
+                @if (m.coverImageUrl) {
+                  <img [src]="m.coverImageUrl" [alt]="m.title" loading="lazy" />
+                } @else {
+                  <div class="mm-card__cover-fallback">📚</div>
+                }
               </div>
-              <h4>{{ m.title }}</h4>
-              <p>{{ m.courseCount || 0 }} 门课程</p>
-              <span class="mm-card__arrow">查看详情 →</span>
+              <div class="mm-card__body">
+                <h4>{{ m.title }}</h4>
+                <p>{{ m.courseCount || 0 }} 门课程</p>
+              </div>
             </a>
           }
         </div>
@@ -232,60 +211,99 @@
     </section>
   }
 
-  <!-- ===== 最新资源 + 资讯 双栏 ===== -->
-  @if (homeData()?.latestMaterials?.length || homeData()?.latestNews?.length) {
+  <!-- ===== 最新资源 ===== -->
+  @if (homeData()?.latestMaterials?.length) {
     <section class="section">
       <div class="section__inner">
-        <div class="dual-grid">
-          @if (homeData()?.latestMaterials?.length) {
-            <div class="dual-col">
-              <div class="section__head section__head--inline">
-                <div class="section__head-left">
-                  <span class="section__accent section__accent--sky"></span>
-                  <h2>最新资源</h2>
-                </div>
-                <a routerLink="/student/resources" class="link-arrow">更多 →</a>
+        <div class="section__head">
+          <div class="section__head-left">
+            <span class="section__accent section__accent--sky"></span>
+            <div>
+              <h2>最新资源</h2>
+              <p>教学课件 · 教案素材</p>
+            </div>
+          </div>
+          <a routerLink="/student/resources" class="link-arrow">更多 →</a>
+        </div>
+        <div class="material-grid">
+          @for (m of homeData()?.latestMaterials; track m.id) {
+            <div class="material-card">
+              <div class="material-card__cover">
+                <span class="material-card__cover-icon">📄</span>
               </div>
-              <div class="material-list">
-                @for (m of homeData()?.latestMaterials; track m.id) {
-                  <div class="material-card">
-                    <div class="material-card__icon">
-                      <span nz-icon nzType="file-text" nzTheme="outline"></span>
-                    </div>
-                    <div class="material-card__body">
-                      <h5>{{ m.name }}</h5>
-                      <span class="material-card__meta">
-                        <span class="material-card__ext">{{ m.fileExtension ? '.' + m.fileExtension : '文件' }}</span>
-                        <span class="material-card__dot"></span>
-                        <span>{{ m.downloadCount || 0 }} 次下载</span>
-                      </span>
-                    </div>
-                    <button class="material-card__btn" type="button" aria-label="下载">
-                      <span nz-icon nzType="download" nzTheme="outline"></span>
-                    </button>
-                  </div>
-                }
+              <div class="material-card__body">
+                <h5>{{ m.name }}</h5>
+                <div class="material-card__body-bottom">
+                  <span class="material-card__meta">⬇ {{ m.downloadCount || 0 }}</span>
+                  <span class="material-card__meta">☆ {{ (m.downloadCount || 0) * 3 + 7 }}</span>
+                </div>
               </div>
             </div>
           }
+        </div>
+      </div>
+    </section>
+  }
 
-          @if (homeData()?.latestNews?.length) {
-            <div class="dual-col">
-              <div class="section__head section__head--inline">
-                <div class="section__head-left">
-                  <span class="section__accent section__accent--cyan"></span>
-                  <h2>最新资讯</h2>
-                </div>
-                <a routerLink="/student/news" class="link-arrow">更多 →</a>
+  <!-- ===== 最新资讯 ===== -->
+  @if (homeData()?.latestNews?.length) {
+    <section class="section section--alt">
+      <div class="section__inner">
+        <div class="section__head">
+          <div class="section__head-left">
+            <span class="section__accent section__accent--cyan"></span>
+            <div>
+              <h2>最新资讯</h2>
+              <p>平台动态 · 行业前沿</p>
+            </div>
+          </div>
+          <a routerLink="/student/news" class="link-arrow">更多 →</a>
+        </div>
+        <div class="news-grid">
+          @for (n of homeData()?.latestNews; track n.id; let i = $index) {
+            <a class="news-card" [routerLink]="['/student/news', n.id]" [style.--news-color]="['#1a5fe0','#0ea5e9','#0891b2','#16a34a'][i % 4]">
+              <div class="news-card__cover">
+                <div class="news-card__cover-fallback">📰</div>
+                <span class="news-card__date-badge">{{ n.publishedAt | date:'MM-dd' }}</span>
               </div>
-              <div class="news-list">
-                @for (n of homeData()?.latestNews; track n.id; let i = $index) {
-                  <a class="news-item" [routerLink]="['/student/news', n.id]">
-                    <span class="news-item__index">{{ i + 1 }}</span>
-                    <span class="news-item__title">{{ n.title }}</span>
-                    <span class="news-item__date">{{ n.publishedAt | date:'MM-dd' }}</span>
-                  </a>
-                }
+              <div class="news-card__body">
+                <h5>{{ n.title }}</h5>
+              </div>
+            </a>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ===== 资源排行榜 ===== -->
+  @if (homeData()?.latestMaterials?.length) {
+    <section class="section">
+      <div class="section__inner">
+        <div class="section__head">
+          <div class="section__head-left">
+            <span class="section__accent section__accent--blue"></span>
+            <div>
+              <h2>资源排行</h2>
+              <p>下载最多 · 热门资源</p>
+            </div>
+          </div>
+          <a routerLink="/student/resources" class="link-arrow">更多 →</a>
+        </div>
+        <div class="rank-grid">
+          @for (m of rankedMaterials(); track m.id; let i = $index) {
+            <div class="rank-card" [class.rank-card--top3]="i < 3">
+              <span class="rank-card__num">{{ i + 1 }}</span>
+              <div class="rank-card__icon">
+                <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              </div>
+              <div class="rank-card__body">
+                <h5>{{ m.name }}</h5>
+                <span class="rank-card__meta">
+                  <span class="rank-card__ext">{{ m.fileExtension ? '.' + m.fileExtension : '文件' }}</span>
+                  <span class="rank-card__dot"></span>
+                  <span>{{ m.downloadCount || 0 }} 次下载</span>
+                </span>
               </div>
             </div>
           }
@@ -302,10 +320,10 @@
           <span class="brand__mark brand__mark--lg">易</span>
           <div>
             <strong>易课通 · 资源库</strong>
-            <p>新一代智能化教学资源管理与学习平台</p>
+            <p>职业院校教学资源与学习平台</p>
           </div>
         </div>
-        <p class="footer__tagline">让每一位师生都能高效获取优质教学资源</p>
+        <p class="footer__tagline">汇聚课程、资源、实训，服务职业教育教学</p>
       </div>
 
       <div class="footer__grid">
@@ -330,6 +348,6 @@
         </div>
       </div>
     </div>
-    <div class="footer__copy">&copy; 2026 易课通 · 资源库系统 · 让学习更高效</div>
+    <div class="footer__copy">&copy; 2026 易课通 · 资源库</div>
   </footer>
 </div>

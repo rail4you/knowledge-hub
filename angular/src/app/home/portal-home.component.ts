@@ -19,15 +19,6 @@ interface HeroSlide {
   accent: string;
 }
 
-interface QuickEntry {
-  icon: string;
-  label: string;
-  desc: string;
-  link: string;
-  color: string;
-  emoji: string;
-}
-
 @Component({
   selector: 'app-portal-home',
   standalone: true,
@@ -83,13 +74,11 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     },
   ];
 
-  /** 快捷入口 —— 纯 UI 配置 */
-  readonly quickEntries: QuickEntry[] = [
-    { icon: 'book', label: '课程中心', desc: '名师在线课程', link: '/student/courses', color: '#1a5fe0', emoji: '📘' },
-    { icon: 'database', label: '资源库', desc: '海量教学素材', link: '/student/resources', color: '#0ea5e9', emoji: '📚' },
-    { icon: 'trophy', label: '微专业', desc: '系统化能力培养', link: '/student/micro-majors', color: '#0891b2', emoji: '🏆' },
-    { icon: 'experiment', label: '实训项目', desc: '真实项目演练', link: '/student/practicums', color: '#16a34a', emoji: '🛠️' },
-  ];
+  /** 资源排行：按下载量降序取前 8 */
+  readonly rankedMaterials = () => {
+    const mats = this.homeData()?.latestMaterials || [];
+    return [...mats].sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0)).slice(0, 8);
+  };
 
   get isLoggedIn() { return this.authService.isAuthenticated; }
   get isStudent() { return hasRole(this.config, 'Student'); }
