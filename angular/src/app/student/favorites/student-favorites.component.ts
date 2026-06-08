@@ -94,7 +94,15 @@ export class StudentFavoritesComponent implements OnInit {
 
   openDetail(resource: ResourceDto) {
     if (!resource.id) return;
-    this.router.navigate(['/student/resources', resource.id]);
+    // 关键修复 P1-12：原实现硬编码 /student/resources 前缀，
+    // 教师端被复用时点进去会触发 studentPortalGuard 把教师踢到登录页。
+    // 教师端没有 /resources/:id 详情页，回退到教师资源列表 /resources（至少能正常加载）。
+    const url = this.router.url;
+    if (url.startsWith('/student')) {
+      this.router.navigate(['/student/resources', resource.id]);
+    } else {
+      this.router.navigate(['/resources'], { queryParams: { keyword: resource.name } });
+    }
   }
 
   previewResource(event: Event, resource: ResourceDto) {
@@ -141,7 +149,13 @@ export class StudentFavoritesComponent implements OnInit {
   }
 
   browseResources() {
-    this.router.navigate(['/student/resources']);
+    // 同 P1-12 修复：根据当前 URL 推断门户前缀。
+    const url = this.router.url;
+    if (url.startsWith('/student')) {
+      this.router.navigate(['/student/resources']);
+    } else {
+      this.router.navigate(['/resources']);
+    }
   }
 
   getResourceTypeIcon(type?: number): string {

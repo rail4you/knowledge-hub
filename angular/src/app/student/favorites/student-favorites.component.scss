@@ -24,7 +24,7 @@
   position: relative;
   border-radius: ds.$student-radius-xl;
   overflow: hidden;
-  background: linear-gradient(120deg, #1e6ce8 0%, #00b7ff 100%);
+  background: #1e6ce8;
   color: #fff;
   box-shadow: 0 20px 40px rgba(30, 108, 232, 0.18);
 
@@ -75,7 +75,7 @@
   letter-spacing: -0.4px;
 
   &::before {
-    background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+    background: #fff;
   }
 }
 
@@ -252,11 +252,11 @@
     }
   }
 
-  &.type-0 .resource-card__cover { background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%); }
-  &.type-1 .resource-card__cover { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); }
-  &.type-2 .resource-card__cover { background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); }
-  &.type-3 .resource-card__cover { background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%); }
-  &.type-4 .resource-card__cover { background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); }
+  &.type-0 .resource-card__cover { background: #1e6ce8; }
+  &.type-1 .resource-card__cover { background: #1e6ce8; }
+  &.type-2 .resource-card__cover { background: #059669; }
+  &.type-3 .resource-card__cover { background: #10b981; }
+  &.type-4 .resource-card__cover { background: #0284c7; }
 }
 
 .resource-card__cover {
