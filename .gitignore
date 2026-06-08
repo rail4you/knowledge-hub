@@ -122,3 +122,6 @@ agent-runtime/
 
 # Test results
 test-results/
+
+# 问题排查临时图片（.md 报告本身可入库）
+docs/资源库问题汇总/*/images/
