@@ -237,10 +237,13 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     if (!course?.id || !chapterId) return;
     const minutes = (Date.now() - this.chapterStartTime()) / 60000;
     if (!force && minutes < 0.1) return;
+    // 关键修复：原来硬编码 progress: 5，导致后端 LearningProgress.Progress 全部为 5，
+    // 拉低 StudentCourse.Progress 平均值 → 用户的"我的课程"列表里所有课程都显示 5%。
+    // 改为使用 courseProgress()（基于已完成习题数/总习题数计算），与前端 UI 展示的进度一致。
     this.learningService.recordProgress({
       courseId: course.id,
       chapterId,
-      progress: 5,
+      progress: this.courseProgress(),
       additionalMinutes: Math.round(minutes),
     } as any).subscribe({
       next: () => {

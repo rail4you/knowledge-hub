@@ -142,7 +142,7 @@
 .hero-card__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.06) 0%, rgba(0, 0, 0, 0.45) 100%);
+  background: rgba(0, 0, 0, 0.2);
   pointer-events: none;
 }
 
@@ -512,7 +512,7 @@
   }
 
   &.is-active {
-    background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+    background: #1e6ce8;
     color: #fff;
     box-shadow: 0 4px 10px rgba(30, 108, 232, 0.24);
 
@@ -675,7 +675,7 @@
   gap: 12px;
   padding: 16px;
   border-radius: ds.$student-radius;
-  background: linear-gradient(180deg, #f0f6ff 0%, #f8fbff 100%);
+  background: #f0f6ff;
 
   &__summary {
     display: flex;
@@ -767,7 +767,7 @@
   &__fill {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, #1e6ce8 0%, #00b7ff 100%);
+    background: #1e6ce8;
     border-radius: 4px;
     transition: width 0.6s ease;
   }
