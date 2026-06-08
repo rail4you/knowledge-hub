@@ -54,22 +54,22 @@ export class MyCoursesComponent implements OnInit {
     });
   }
   
+  // 关键修复 P1-23：原实现只用 switch 处理 1/2/3，且 default 全部回退到"初级"，
+  // 与学生端 student-courses.component / student-course-detail.component 的
+  // ['入门','初级','中级','高级','专家'] 五档映射不一致。
+  // 教师端打开"我的课程"时会看到课程的"入门"档被错渲染为"初级"，用户感知为"0 入门"
+  // 文案含义不明。统一为数组下标方式，并对 0/null/undefined 显式返回"未设置"。
   getDifficultyLabel(difficulty?: number): string {
-    switch (difficulty) {
-      case 1: return '初级';
-      case 2: return '中级';
-      case 3: return '高级';
-      default: return '初级';
-    }
+    const labels = ['入门', '初级', '中级', '高级', '专家'];
+    if (!difficulty || difficulty < 1 || difficulty > labels.length) return '未设置';
+    return labels[difficulty - 1];
   }
-  
+
   getDifficultyColor(difficulty?: number): string {
-    switch (difficulty) {
-      case 1: return 'green';
-      case 2: return 'orange';
-      case 3: return 'red';
-      default: return 'green';
-    }
+    // 颜色按档位从低到高递进，0/越界统一用 blue（"未设置"语义中性色）。
+    const colors = ['blue', 'green', 'cyan', 'orange', 'red'];
+    if (!difficulty || difficulty < 1 || difficulty > colors.length) return 'blue';
+    return colors[difficulty - 1];
   }
 
   continueLearning(courseId: string) {
