@@ -127,9 +127,11 @@
                   <nz-spin nzSimple nzSize="default"></nz-spin>
                 </div>
               } @else if (currentResources().length === 0) {
+                <!-- P1-21：空状态提示。明确说明"教师尚未配置"——避免学生以为系统出错。 -->
                 <div class="empty-state">
                   <span nz-icon nzType="bulb" nzTheme="outline" class="empty-icon"></span>
-                  <p>本章暂无知识点资源</p>
+                  <p class="empty-title">本章暂无知识点资源</p>
+                  <p class="empty-hint">老师还没有为本章配置知识点，请联系老师或耐心等待更新</p>
                 </div>
               } @else {
                 <div class="resources-grid">

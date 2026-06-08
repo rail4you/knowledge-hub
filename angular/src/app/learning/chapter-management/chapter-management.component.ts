@@ -194,8 +194,12 @@ export class ChapterManagementComponent implements OnInit {
   openEditModal(chapter: ChapterDto) {
     this.isEdit = true;
     this.editId = chapter.id ?? null;
+    // 关键修复：直接用 chapter 自身的 courseId，而不是 selectedCourseId() ?? ''。
+    // 旧实现在 selectedCourseId 为 null 时会发空字符串到后端，触发 Guid 解析失败，
+    // 前端仅显示笼统的"更新失败"，用户（包括开发者）无法定位原因。
+    const courseId = (chapter as any).courseId || this.selectedCourseId() || '';
     this.formData = {
-      courseId: this.selectedCourseId() ?? '',
+      courseId,
       parentId: chapter.parentId ?? null,
       title: chapter.title ?? '',
       description: chapter.description ?? '',
@@ -221,9 +225,7 @@ export class ChapterManagementComponent implements OnInit {
             }
             this.loadChapterTree();
           },
-          error: () => {
-            this.message.error('删除失败');
-          },
+          error: (err) => this.showApiError(err, '删除失败'),
         });
       },
     });
@@ -236,6 +238,11 @@ export class ChapterManagementComponent implements OnInit {
   handleModalOk() {
     if (!this.formData.title?.trim()) {
       this.message.warning('请输入章节名称');
+      return;
+    }
+    // 兜底：courseId 为空时拒绝发送，避免后端 Guid 解析失败
+    if (!this.formData.courseId) {
+      this.message.error('课程 ID 缺失，请重新打开编辑窗口');
       return;
     }
 
@@ -251,11 +258,28 @@ export class ChapterManagementComponent implements OnInit {
         this.message.success(this.isEdit ? '章节更新成功' : '章节创建成功');
         this.loadChapterTree();
       },
-      error: () => {
+      error: (err) => {
         this.saving = false;
-        this.message.error(this.isEdit ? '更新失败' : '创建失败');
+        this.showApiError(err, this.isEdit ? '更新失败' : '创建失败');
       },
     });
+  }
+
+  /**
+   * 统一提取并展示后端真实错误。
+   * 旧实现 error: () => {...} 丢弃了 err，前端消息只显示"更新失败"，
+   * 导致像 "PN结与MOSFET" 这种带特殊字符的章节保存失败时，
+   * 用户和开发者都无法定位真正原因（可能是 Guid 解析失败、长度超限、外键冲突等）。
+   * 现在把后端 message 透传出来，必要时再附 console 详细堆栈。
+   */
+  private showApiError(err: any, fallback: string): void {
+    const detail =
+      err?.error?.error?.message ||
+      err?.error?.message ||
+      err?.message ||
+      '未知错误';
+    console.error('[ChapterManagement]', fallback, err);
+    this.message.error(`${fallback}：${detail}`);
   }
 
   openMindMap() {
@@ -274,6 +298,28 @@ export class ChapterManagementComponent implements OnInit {
     const courseId = this.selectedCourseId();
     const course = this.courses().find(c => c.id === courseId);
     return course?.title ?? '';
+  }
+
+  // P1-21：教师端章节详情面板展示知识点列表时使用的辅助方法（标签 + 配色）。
+  // 与学生端 student-course-learn 保持一致，方便用户视觉上对应起来。
+  importanceLabel(level?: string): string {
+    const map: Record<string, string> = {
+      core: '核心',
+      important: '重要',
+      normal: '一般',
+      extended: '拓展',
+    };
+    return map[level || 'normal'] || '一般';
+  }
+
+  importanceColor(level?: string): string {
+    const map: Record<string, string> = {
+      core: '#ef4444',
+      important: '#f59e0b',
+      normal: '#1e6ce8',
+      extended: '#10b981',
+    };
+    return map[level || 'normal'] || '#1e6ce8';
   }
 
   // Drag and drop for chapter reordering
