@@ -99,6 +99,57 @@ export class EmploymentApplicationManagementComponent implements OnInit {
     });
   }
 
+  /**
+   * 乐观更新：本地修改 item 的状态字段，并按"是否仍在当前 status 过滤范围内"增删 totalCount。
+   * 替代原来的 loadItems() 全量刷新，避免出现：
+   *   1. 整页跳到 loading spinner（min-height: 360px 与表格实际高度不一致 → 抖动）
+   *   2. 状态切换后该条目被服务端从当前页过滤掉 → 表格瞬间空白
+   *   3. 顶部 4 个统计数字前后矛盾（累计/待审/面试/录用）
+   *
+   * 当某条被改成与 statusFilter 不符的状态时：
+   *   - totalCount -1
+   *   - 从 items 数组里移除该条
+   * 否则（没过滤 或 改后仍符合过滤）：
+   *   - 仅替换 items 中对应条目的状态字段
+   *
+   * 注意：服务端排序/分页可能不再准确。极端情况下若 totalCount 因此变 0，
+   * 可在外部 catch 时再走一次 loadItems() 重置。
+   */
+  private applyLocalStatusChange(itemId: string, newStatus: EmploymentApplicationStatus): void {
+    const statusFilter = this.statusFilter();
+    const list = this.items();
+    const idx = list.findIndex(x => x.id === itemId);
+    if (idx < 0) return;
+
+    const oldItem = list[idx];
+    const oldStatus = oldItem.status;
+    const newItem = { ...oldItem, status: newStatus };
+
+    // 当前 status 过滤会"过滤掉"该条 → 移除
+    if (statusFilter != null && statusFilter !== newStatus) {
+      const next = [...list.slice(0, idx), ...list.slice(idx + 1)];
+      this.items.set(next);
+      this.totalCount.update(n => Math.max(0, n - 1));
+      return;
+    }
+
+    // 当前 status 过滤下仍然显示该条 → 仅更新状态
+    // 这种情况：old 不在过滤内（被替换上来）？不可能。
+    // 或 statusFilter 为 null → 任意状态都显示。
+    if (statusFilter == null) {
+      this.items.set([...list.slice(0, idx), newItem, ...list.slice(idx + 1)]);
+      return;
+    }
+
+    // statusFilter === newStatus，但 old !== newStatus：说明该条被切换进了当前过滤范围。
+    // 这种情况理论上不会发生（后端初始列表就是按 statusFilter 过滤的），
+    // 但为保险起见，仍用替换 + totalCount +1。
+    this.items.set([...list.slice(0, idx), newItem, ...list.slice(idx + 1)]);
+    if (oldStatus !== newStatus) {
+      this.totalCount.update(n => n + 1);
+    }
+  }
+
   onFilterChange(): void {
     this.pageIndex.set(1);
     this.loadItems();
@@ -136,7 +187,8 @@ export class EmploymentApplicationManagementComponent implements OnInit {
             .subscribe({
               next: () => {
                 this.message.success('已通过');
-                this.loadItems();
+                // 乐观更新本地数据，避免 loadItems() 造成的整页闪烁 / 表格瞬间空白 / 统计数字矛盾
+                this.applyLocalStatusChange(item.id, EmploymentApplicationStatus.Offered);
                 resolve();
               },
               error: () => {
@@ -196,7 +248,8 @@ export class EmploymentApplicationManagementComponent implements OnInit {
         this.updating.set(false);
         this.message.success('审核完成');
         this.closeReview();
-        this.loadItems();
+        // 乐观更新本地数据，避免 loadItems() 造成的整页闪烁 / 表格瞬间空白 / 统计数字矛盾
+        this.applyLocalStatusChange(this.selectedItem!.id, this.reviewStatus);
       },
       error: () => {
         this.updating.set(false);
