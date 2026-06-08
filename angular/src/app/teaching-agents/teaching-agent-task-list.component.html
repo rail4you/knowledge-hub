@@ -188,55 +188,33 @@
               已选 {{ selectedStudentCount() }} / 共 {{ totalStudentCount() }}
             </span>
           </span>
-          <!-- P1-16：批量选学生工具条。提供全选 / 清空 / 反选三个一键操作。 -->
-          <div class="student-bulk-bar">
+          <!-- P1-17：学生选择改为「触发按钮 + 已选摘要 + 弹窗表格」模式。
+               学生数量多时，下拉选择体验差，难以快速搜索/批量勾选；改为表格弹窗后
+               可以一屏看到所有候选、按列对齐姓名/学号，并提供独立的搜索框。 -->
+          <div class="student-picker-trigger">
             <button
               type="button"
               nz-button
-              nzSize="small"
-              nzType="default"
-              [disabled]="allStudentsSelected() || totalStudentCount() === 0"
-              (click)="selectAllStudents()"
-            >
-              全选
-            </button>
-            <button
-              type="button"
-              nz-button
-              nzSize="small"
-              nzType="default"
-              [disabled]="selectedStudentCount() === 0"
-              (click)="clearAllStudents()"
-            >
-              清空
-            </button>
-            <button
-              type="button"
-              nz-button
-              nzSize="small"
               nzType="default"
               [disabled]="totalStudentCount() === 0"
-              (click)="invertStudentSelection()"
+              (click)="openStudentPicker()"
             >
-              反选
+              {{ selectedStudentCount() === 0 ? '点击选择学生' : '修改学生（' + selectedStudentCount() + ' 人）' }}
             </button>
             @if (totalStudentCount() === 0) {
               <span class="bulk-hint">暂无学生可选</span>
             }
           </div>
-          <nz-select
-            nzMode="multiple"
-            nzShowSearch
-            [nzOpen]="studentSelectOpen()"
-            (nzOpenChange)="setStudentSelectOpen($event)"
-            [ngModel]="form().studentIds"
-            (ngModelChange)="setStudentIds($event)"
-            nzPlaceHolder="选择参与本次任务的学生"
-          >
-            @for (student of options().students; track student.id) {
-              <nz-option [nzValue]="student.id" [nzLabel]="student.name + ' (' + student.userName + ')'"></nz-option>
-            }
-          </nz-select>
+          @if (selectedStudentSummary().length > 0) {
+            <div class="student-chip-list">
+              @for (label of selectedStudentSummary().slice(0, 6); track label) {
+                <span class="student-chip">{{ label }}</span>
+              }
+              @if (selectedStudentSummary().length > 6) {
+                <span class="student-chip more">+{{ selectedStudentSummary().length - 6 }} 人</span>
+              }
+            </div>
+          }
         </label>
 
         <label class="field">
@@ -248,6 +226,113 @@
             [nzShowTime]="true"
           ></nz-date-picker>
         </label>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- P1-17：学生选择弹窗。用 nz-table + nz-checkbox 实现勾选式选择。
+       与外层 createModal 解耦：picker 只读 options().students，写 pickedIds，
+       仅在「确定」时同步回 form.studentIds，「取消」直接关闭丢弃 pickedIds。 -->
+  <nz-modal
+    [(nzVisible)]="studentPickerVisible"
+    nzTitle="选择学生"
+    nzWidth="720px"
+    nzOkText="确定"
+    nzCancelText="取消"
+    (nzOnOk)="confirmStudentPicker()"
+    (nzOnCancel)="closeStudentPicker()"
+  >
+    <ng-container *nzModalContent>
+      <div class="student-picker">
+        <div class="picker-toolbar">
+          <input
+            nz-input
+            class="picker-search"
+            placeholder="按姓名或学号搜索"
+            [ngModel]="pickerKeyword()"
+            (ngModelChange)="setPickerKeyword($event)"
+          />
+          <div class="picker-bulk">
+            <button
+              type="button"
+              nz-button
+              nzSize="small"
+              nzType="default"
+              [disabled]="filteredStudents().length === 0"
+              (click)="invertFilteredSelection()"
+            >
+              反选当前
+            </button>
+            <button
+              type="button"
+              nz-button
+              nzSize="small"
+              nzType="default"
+              [disabled]="pickedCount() === 0"
+              (click)="clearAllPicked()"
+            >
+              清空全部
+            </button>
+          </div>
+        </div>
+
+        <div class="picker-summary">
+          已勾选 <strong>{{ pickedCount() }}</strong> 人 / 共 {{ totalStudentCount() }} 人
+          @if (pickerKeyword().trim().length > 0) {
+            <span class="filter-hint">（当前筛选 {{ filteredStudents().length }} 人，匹配已勾选 {{ filteredPickedCount() }} 人）</span>
+          }
+        </div>
+
+        <nz-table
+          #studentTable
+          [nzData]="filteredStudents()"
+          [nzShowPagination]="true"
+          [nzPageSize]="10"
+          [nzScroll]="{ y: '320px' }"
+          nzSize="small"
+        >
+          <thead>
+            <tr>
+              <th nzWidth="48px">
+                <label
+                  nz-checkbox
+                  [nzDisabled]="filteredStudents().length === 0"
+                  [ngModel]="allFilteredPicked()"
+                  [nzIndeterminate]="someFilteredPicked()"
+                  (ngModelChange)="toggleAllFiltered($event)"
+                ></label>
+              </th>
+              <th>姓名</th>
+              <th>学号 / 用户名</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (student of studentTable.data; track student.id) {
+              <tr
+                class="picker-row"
+                [class.picker-row--picked]="isPicked(student.id)"
+                (click)="togglePicked(student.id, !isPicked(student.id))"
+              >
+                <td (click)="$event.stopPropagation()">
+                  <label
+                    nz-checkbox
+                    [ngModel]="isPicked(student.id)"
+                    (ngModelChange)="togglePicked(student.id, $event)"
+                  ></label>
+                </td>
+                <td>{{ student.name }}</td>
+                <td>{{ student.userName }}</td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+
+        @if (filteredStudents().length === 0) {
+          <nz-empty
+            nzNotFoundContent="未找到匹配的学生"
+            class="picker-empty"
+          ></nz-empty>
+        }
       </div>
     </ng-container>
   </nz-modal>

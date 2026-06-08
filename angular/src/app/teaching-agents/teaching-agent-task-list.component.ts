@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -10,6 +11,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { ClassroomAgentTaskService } from './classroom-agent-task.service';
 import {
@@ -17,6 +19,7 @@ import {
   CLASSROOM_AGENT_TARGET_TYPE,
   ClassroomAgentTask,
   CreateClassroomAgentTaskPayload,
+  StudentOption,
   TaskCreationOptions,
   formatDateTime,
   publishStatusLabel,
@@ -53,6 +56,7 @@ const initialForm: TaskFormState = {
     FormsModule,
     RouterModule,
     NzButtonModule,
+    NzCheckboxModule,
     NzDatePickerModule,
     NzEmptyModule,
     NzInputModule,
@@ -60,6 +64,7 @@ const initialForm: TaskFormState = {
     NzPopconfirmModule,
     NzSelectModule,
     NzSpinModule,
+    NzTableModule,
     NzTagModule,
   ],
   templateUrl: './teaching-agent-task-list.component.html',
@@ -79,7 +84,12 @@ export class TeachingAgentTaskListComponent implements OnInit {
     resources: [],
   });
   readonly tasks = signal<ClassroomAgentTask[]>([]);
-  readonly studentSelectOpen = signal(false);
+  // P1-17：学生选择改为「弹窗 + 表格 + 复选框」模式。
+  // 表单里仍然保留 studentIds（最终提交用），picker 自己维护一份临时
+  // pickedIds，确认时才同步到 form，取消则丢弃，避免半成品状态污染表单。
+  readonly studentPickerVisible = signal(false);
+  readonly pickerKeyword = signal('');
+  readonly pickedIds = signal<string[]>([]);
   readonly form = signal<TaskFormState>({ ...initialForm });
 
   readonly targetOptions = computed(() => {
@@ -95,6 +105,48 @@ export class TeachingAgentTaskListComponent implements OnInit {
   readonly allStudentsSelected = computed(
     () => this.totalStudentCount() > 0 && this.selectedStudentCount() === this.totalStudentCount(),
   );
+
+  // P1-17：picker 内部状态计算
+  // - pickedIdSet：把 pickedIds 转成 Set，方便表格逐行 O(1) 判断是否勾选。
+  // - filteredStudents：按 pickerKeyword（姓名 + 学号 不区分大小写）过滤。
+  // - allFiltered / someFiltered：用于表头 master checkbox 的 checked / indeterminate。
+  readonly pickedIdSet = computed(() => new Set(this.pickedIds()));
+  readonly filteredStudents = computed<StudentOption[]>(() => {
+    const k = this.pickerKeyword().trim().toLowerCase();
+    const students = this.options().students;
+    if (!k) {
+      return students;
+    }
+    return students.filter(s =>
+      (s.name || '').toLowerCase().includes(k) ||
+      (s.userName || '').toLowerCase().includes(k),
+    );
+  });
+  readonly filteredPickedCount = computed(() => {
+    const set = this.pickedIdSet();
+    return this.filteredStudents().filter(s => set.has(s.id)).length;
+  });
+  readonly allFilteredPicked = computed(() => {
+    const filtered = this.filteredStudents();
+    if (filtered.length === 0) {
+      return false;
+    }
+    return this.filteredPickedCount() === filtered.length;
+  });
+  readonly someFilteredPicked = computed(() => {
+    const count = this.filteredPickedCount();
+    return count > 0 && count < this.filteredStudents().length;
+  });
+  readonly pickedCount = computed(() => this.pickedIds().length);
+
+  // P1-17：在表单主区域展示已选学生的「姓名 (学号)」摘要。学生很多时
+  // 限制最多展示 6 条，多余的用「+N 人」省略，避免一屏被压爆。
+  readonly selectedStudentSummary = computed<string[]>(() => {
+    const ids = new Set(this.form().studentIds);
+    return this.options().students
+      .filter(s => ids.has(s.id))
+      .map(s => `${s.name} (${s.userName})`);
+  });
   readonly summary = computed(() => {
     const tasks = this.tasks();
 
@@ -141,32 +193,83 @@ export class TeachingAgentTaskListComponent implements OnInit {
     this.form.update(current => ({ ...current, [key]: value }));
   }
 
-  setStudentSelectOpen(value: boolean): void {
-    this.studentSelectOpen.set(value);
+  // P1-17：student picker —— 打开弹窗时把当前 form.studentIds 拷贝到临时
+  // pickedIds，确保进入时反映已选状态；关键字也清空，避免上次过滤残留。
+  openStudentPicker(): void {
+    this.pickedIds.set([...this.form().studentIds]);
+    this.pickerKeyword.set('');
+    this.studentPickerVisible.set(true);
   }
 
-  setStudentIds(value: string[] | null): void {
-    this.setFormField('studentIds', value ?? []);
-    setTimeout(() => this.studentSelectOpen.set(true));
+  closeStudentPicker(): void {
+    this.studentPickerVisible.set(false);
   }
 
-  // P1-16：批量选学生。当学生数量大时，一个个在下拉里点选极不友好。
-  // 提供全选 / 清空 / 反选三个一键操作，并在标签栏显示实时统计。
-  selectAllStudents(): void {
-    const allIds = this.options().students.map(s => s.id);
-    this.setFormField('studentIds', allIds);
+  // 确认：把 pickedIds 写回表单。取消：直接关闭，丢弃 pickedIds。
+  confirmStudentPicker(): void {
+    this.setFormField('studentIds', [...this.pickedIds()]);
+    this.studentPickerVisible.set(false);
   }
 
-  clearAllStudents(): void {
-    this.setFormField('studentIds', []);
+  setPickerKeyword(value: string): void {
+    this.pickerKeyword.set(value ?? '');
   }
 
-  invertStudentSelection(): void {
-    const selected = new Set(this.form().studentIds);
-    const inverted = this.options().students
-      .filter(s => !selected.has(s.id))
-      .map(s => s.id);
-    this.setFormField('studentIds', inverted);
+  isPicked(id: string): boolean {
+    return this.pickedIdSet().has(id);
+  }
+
+  // 单行勾选：在 pickedIds 数组里增减 id。
+  togglePicked(id: string, checked: boolean): void {
+    const current = this.pickedIds();
+    if (checked) {
+      if (!current.includes(id)) {
+        this.pickedIds.set([...current, id]);
+      }
+      return;
+    }
+    this.pickedIds.set(current.filter(x => x !== id));
+  }
+
+  // 表头复选框：勾选 -> 把当前过滤结果全部并入 pickedIds（保留过滤外已勾选项）；
+  // 取消 -> 仅把当前过滤结果从 pickedIds 中移除（同样保留过滤外已勾选项）。
+  // 这样在搜索后再点全选只影响可见行，符合直觉。
+  toggleAllFiltered(checked: boolean): void {
+    const filteredIds = this.filteredStudents().map(s => s.id);
+    const filteredSet = new Set(filteredIds);
+    const current = this.pickedIds();
+    if (checked) {
+      const merged = new Set(current);
+      filteredIds.forEach(id => merged.add(id));
+      this.pickedIds.set(Array.from(merged));
+      return;
+    }
+    this.pickedIds.set(current.filter(id => !filteredSet.has(id)));
+  }
+
+  // 反选：只反转当前过滤结果，过滤外的已勾选项保持不动。
+  invertFilteredSelection(): void {
+    const filteredIds = this.filteredStudents().map(s => s.id);
+    const filteredSet = new Set(filteredIds);
+    const current = new Set(this.pickedIds());
+    const next: string[] = [];
+    // 先保留所有过滤外的已勾选项
+    current.forEach(id => {
+      if (!filteredSet.has(id)) {
+        next.push(id);
+      }
+    });
+    // 再加入过滤内未勾选的项
+    filteredIds.forEach(id => {
+      if (!current.has(id)) {
+        next.push(id);
+      }
+    });
+    this.pickedIds.set(next);
+  }
+
+  clearAllPicked(): void {
+    this.pickedIds.set([]);
   }
 
   async createTask(): Promise<void> {
