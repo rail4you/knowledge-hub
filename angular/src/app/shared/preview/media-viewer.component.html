@@ -20,8 +20,43 @@
 
   <!-- Video -->
   <ng-container *ngIf="fileType() === 'video'">
-    <div class="video-container" *ngIf="blobUrl()">
-      <video controls [src]="blobUrl()" style="width: 100%; max-height: 70vh;"></video>
+    <div class="video-container" *ngIf="blobUrl() && !playbackError()">
+      <!--
+        关键属性：
+        - preload="metadata"：让浏览器在用户点击播放前先拉取 metadata（时长、首帧），
+          否则进度条/总时长会一直是 0。
+        - playsinline：iOS Safari 必须在 video 标签上加 playsinline，否则会自动全屏。
+        - <source type="video/mp4">：显式声明 MIME，帮助浏览器判断是否支持，
+          避免拿到 application/octet-stream 时不识别。
+        - (error)="onVideoError()"：捕获 codec 不支持 / 网络错误等播放失败场景，
+          走 fallback 引导用户下载。
+      -->
+      <video
+        controls
+        preload="metadata"
+        playsinline
+        crossorigin="anonymous"
+        (error)="onVideoError($event)"
+        style="width: 100%; max-height: 70vh;"
+      >
+        <source [src]="blobUrl()" [type]="videoMimeType()" />
+        {{ '::PreviewNotSupported' | abpLocalization }}
+      </video>
+    </div>
+
+    <!-- Fallback：浏览器无法播放此视频（codec 不支持、文件损坏、MIME 错误等） -->
+    <div class="video-fallback" *ngIf="playbackError()">
+      <nz-result
+        nzStatus="warning"
+        [nzTitle]="'该格式暂不支持在线预览，请下载后用本地播放器打开'"
+        [nzSubTitle]="fileName()"
+      >
+        <ng-template #nzResultExtra>
+          <p class="video-fallback__hint">
+            可能原因：浏览器不支持该视频编码（如 rmvb / 老版 AVI），或文件 MIME 类型不匹配。
+          </p>
+        </ng-template>
+      </nz-result>
     </div>
   </ng-container>
 
