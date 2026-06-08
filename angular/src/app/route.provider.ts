@@ -34,6 +34,17 @@ function configureRoutes() {
         requiredPolicy: 'KnowledgeHub.Resources',
       },
       {
+        // 关键修复 P1-12：教师/管理员的"我的收藏"入口。
+        // 学生端已在 student-layout.component.html 顶栏独立入口。
+        // 路由 /favorites 走通用收集列表 API（按当前用户过滤），与学生端用同一组件。
+        path: '/favorites',
+        name: '::Menu:MyFavorites',
+        iconClass: 'fas fa-star',
+        parentName: '::Menu:KnowledgeHub',
+        layout: eLayoutType.application,
+        requiredPolicy: 'KnowledgeHub.Resources',
+      },
+      {
         path: '/document-search',
         name: '::Menu:DocumentSearch',
         iconClass: 'fas fa-search',

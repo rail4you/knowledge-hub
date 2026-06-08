@@ -257,6 +257,16 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Employment.ManageResume, true);
         await GrantPermissionAsync("Student", KnowledgeHubPermissions.Employment.ViewMyApplication, true);
 
+        // News permissions - Student (允许查看资讯、点赞、评论)
+        // 注意：News.Create/Edit/Delete/Review/Publish/ManageComment 都是子权限，
+        //       未授予 → 学生不会获得发文/审核/管理评论的权限。
+        await GrantPermissionAsync("Student", KnowledgeHubPermissions.News.Default, true);
+
+        // MicroMajor permissions - Student (允许浏览微专业、报名)
+        // 注意：MicroMajors.Create/Edit/Delete/ManageEnrollment/IssueCertificate/ViewStatistics
+        //       都是子权限，未授予 → 学生不会获得管理类操作权限。
+        await GrantPermissionAsync("Student", KnowledgeHubPermissions.MicroMajors.Default, true);
+
         // MicroMajor permissions - LeagueAdmin (full access)
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Default, true);
         await GrantPermissionAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Create, true);
