@@ -4,6 +4,7 @@ import { identityUserCreateFormPropContributors, identityUserEntityPropContribut
 import { installGuard } from './install/install.guard';
 import { STUDENT_ROUTES } from './student/student.routes';
 import { studentPortalGuard } from './student/student-portal.guard';
+import { nonStudentGuard } from './auth/non-student.guard';
 
 export const APP_ROUTES: Routes = [
   {
@@ -73,7 +74,19 @@ export const APP_ROUTES: Routes = [
   {
     path: 'resources',
     loadComponent: () => import('./resources/resource').then(c => c.ResourceComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Resources',
+    },
+  },
+  {
+    // 关键修复 P1-12：教师/管理员的"我的收藏"入口。
+    // 复用 StudentFavoritesComponent：它内部已经走通用的 /api/app/resource/collected-list
+    // 端点（按当前用户过滤），只是硬编码跳 /student/resources/:id，已在组件里改为根据 URL
+    // 前缀推断门户路径。nonStudentGuard 阻止学生身份误入此路由。
+    path: 'favorites',
+    loadComponent: () => import('./student/favorites/student-favorites.component').then(c => c.StudentFavoritesComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Resources',
     },
@@ -89,7 +102,7 @@ export const APP_ROUTES: Routes = [
   {
     path: 'admin/indexing-jobs',
     loadComponent: () => import('./admin/indexing-jobs/indexing-jobs.component').then(c => c.IndexingJobsComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Resources',
     },
@@ -161,7 +174,7 @@ export const APP_ROUTES: Routes = [
   {
     path: 'admin/micro-majors',
     loadComponent: () => import('./admin/micro-majors/micro-major-management.component').then(c => c.MicroMajorManagementComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.MicroMajors',
     },
@@ -265,36 +278,41 @@ export const APP_ROUTES: Routes = [
   {
     path: 'admin/recruitment-live/:id',
     loadComponent: () => import('./recruitment-live/live-room.component').then(c => c.LiveRoomComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, nonStudentGuard],
   },
   {
+    // P1-20：教师/管理员端的"实训项目"列表——学生应走 /student/practicums，
+    // 在此加 nonStudentGuard 把学生重定向到学生门户。
     path: 'practicum/projects',
     loadComponent: () => import('./practicum/practicum-list.component').then(c => c.PracticumListComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
   },
   {
+    // P1-20：教师/管理员端的"实训项目详情"——学生应走 /student/practicums/:id。
     path: 'practicum/project/:id',
     loadComponent: () => import('./practicum/practicum-detail.component').then(c => c.PracticumDetailComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
   },
   {
+    // P1-20：教师/管理员端的"我的实训"——学生应走学生门户的"我的实训"入口。
     path: 'practicum/my',
     loadComponent: () => import('./practicum/my-practicum.component').then(c => c.MyPracticumComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
   },
   {
+    // P1-20：实训项目管理——只允许非学生角色。
     path: 'admin/practicum/projects',
     loadComponent: () => import('./admin/practicum/practicum-management.component').then(c => c.PracticumManagementComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
@@ -302,7 +320,7 @@ export const APP_ROUTES: Routes = [
   {
     path: 'admin/news',
     loadComponent: () => import('./admin/news/news-management.component').then(c => c.NewsManagementComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.News',
     },
@@ -387,7 +405,7 @@ export const APP_ROUTES: Routes = [
   },
   {
     path: 'learning',
-    canActivate: [authGuard],
+    canActivate: [authGuard, nonStudentGuard],
     children: [
       {
         path: 'my-courses',
