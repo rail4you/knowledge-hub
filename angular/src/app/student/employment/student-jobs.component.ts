@@ -46,10 +46,10 @@ export class StudentJobsComponent implements OnInit {
     const fullTime = items.filter(x => x.jobType === EmploymentJobType.FullTime).length;
     const intern = items.filter(x => x.jobType === EmploymentJobType.Internship).length;
     return [
-      { label: '在招岗位', value: total, suffix: '个', icon: 'briefcase', color: 'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)' },
-      { label: '全职岗位', value: fullTime, suffix: '个', icon: 'rocket', color: 'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 100%)' },
-      { label: '实习岗位', value: intern, suffix: '个', icon: 'experiment', color: 'linear-gradient(135deg, #00b7ff 0%, #38bdf8 100%)' },
-      { label: '已投递', value: items.filter(x => x.hasApplied).length, suffix: '份', icon: 'paper-plane', color: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)' },
+      { label: '在招岗位', value: total, suffix: '个', icon: 'briefcase', color: '#1e6ce8' },
+      { label: '全职岗位', value: fullTime, suffix: '个', icon: 'rocket', color: '#0c4cb8' },
+      { label: '实习岗位', value: intern, suffix: '个', icon: 'experiment', color: '#0891b2' },
+      { label: '已投递', value: items.filter(x => x.hasApplied).length, suffix: '份', icon: 'paper-plane', color: '#10b981' },
     ];
   });
 
@@ -123,11 +123,11 @@ export class StudentJobsComponent implements OnInit {
   /** 封面渐变（基于 id 稳定生成） */
   coverGradient(item: JobPostingDto): string {
     const palettes = [
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 60%, #00b7ff 100%)',
-      'linear-gradient(135deg, #1d4ed8 0%, #38bdf8 100%)',
-      'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)',
-      'linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%)',
+      '#1e6ce8',
+      '#0c4cb8',
+      '#1d4ed8',
+      '#2563eb',
+      '#0284c7',
     ];
     const key = item.id || item.title || '';
     let hash = 0;

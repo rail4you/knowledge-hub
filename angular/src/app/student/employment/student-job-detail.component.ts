@@ -133,10 +133,10 @@ export class StudentJobDetailComponent implements OnInit {
 
   coverGradient(item: JobPostingDto): string {
     const palettes = [
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 60%, #00b7ff 100%)',
-      'linear-gradient(135deg, #1d4ed8 0%, #38bdf8 100%)',
-      'linear-gradient(135deg, #2563eb 0%, #06b6d4 100%)',
+      '#1e6ce8',
+      '#0c4cb8',
+      '#1d4ed8',
+      '#2563eb',
     ];
     const key = item.id || item.title || '';
     let hash = 0;

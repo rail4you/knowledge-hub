@@ -62,12 +62,12 @@ export class StudentLayoutComponent implements OnInit {
   avatarGradient(): string {
     const name = this.userName() || 'U';
     const palettes = [
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
-      'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-      'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
-      'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-      'linear-gradient(135deg, #f43f5e 0%, #f97316 100%)',
+      '#1e6ce8',
+      '#0891b2',
+      '#059669',
+      '#10b981',
+      '#0284c7',
+      '#0c4cb8',
     ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {

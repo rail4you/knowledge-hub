@@ -24,7 +24,7 @@
   position: relative;
   border-radius: ds.$student-radius-xl;
   overflow: hidden;
-  background: linear-gradient(120deg, #1e6ce8 0%, #00b7ff 100%);
+  background: #1e6ce8;
   color: #fff;
   box-shadow: 0 20px 40px rgba(30, 108, 232, 0.18);
 
@@ -74,7 +74,7 @@
   margin: 0 0 8px;
   letter-spacing: -0.4px;
   &::before {
-    background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+    background: #fff;
   }
 }
 
@@ -178,7 +178,7 @@
 
   &.is-default {
     border-color: rgba(245, 158, 11, 0.45);
-    background: linear-gradient(180deg, #fffbeb 0%, #fff 30%);
+    background: #fffbeb;
   }
 }
 
@@ -194,7 +194,7 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+  background: #1e6ce8;
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -231,7 +231,7 @@
   height: 24px;
   padding: 0 10px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #f59e0b 0%, #fb923c 100%);
+  background: #059669;
   color: #fff;
   font-size: 11px;
   font-weight: 600;
@@ -410,7 +410,7 @@
   padding: 0 22px;
   border: 0;
   border-radius: ds.$student-radius;
-  background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+  background: #1e6ce8;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -484,7 +484,7 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+  background: #1e6ce8;
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -572,7 +572,7 @@
 }
 
 .default-toggle input:checked + .default-toggle__box {
-  background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+  background: #1e6ce8;
   border-color: transparent;
 
   &::after {
