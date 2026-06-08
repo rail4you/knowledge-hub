@@ -80,6 +80,11 @@
           <button nz-button (click)="addTask()">新增任务</button>
         </div>
 
+        <div *ngIf="form.tasks.length === 0" class="empty-state">
+          <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+          尚未配置任何任务，请点击上方"新增任务"开始。
+        </div>
+
         <div class="nested-card" *ngFor="let task of form.tasks; let i = index">
           <div class="nested-header">
             <strong>任务 {{ i + 1 }}</strong>
@@ -94,8 +99,12 @@
           </div>
         </div>
 
-        <div class="actions-bar" *ngIf="form.tasks.length > 0">
-          <button nz-button nzType="primary" (click)="saveTasks()">保存任务</button>
+        <!-- P1-15：空任务时禁用保存按钮 + tooltip，原先是 *ngIf 隐藏（用户看不到任何反馈）。 -->
+        <div class="actions-bar">
+          <button nz-button nzType="primary"
+                  [disabled]="form.tasks.length === 0"
+                  [nz-tooltip]="form.tasks.length === 0 ? '请先添加至少一个任务' : ''"
+                  (click)="saveTasks()">保存任务</button>
         </div>
       </div>
 
@@ -172,51 +181,100 @@
 <!-- Create / Edit modal -->
 <nz-modal [(nzVisible)]="modalVisible"
   [nzTitle]="editingId ? '编辑实训项目' : '新建实训项目'"
-  nzWidth="700"
-  (nzOnOk)="saveModal()"
+  nzWidth="760"
+  [nzFooter]="modalFooter"
   (nzOnCancel)="modalVisible = false">
   <div *nzModalContent>
-    <div class="form-grid">
-      <label>项目名称</label>
-      <input nz-input [(ngModel)]="form.title" placeholder="输入实训项目名称" />
+    <!-- P1-15：表单拆成"基本信息" + "任务配置"两段，任务配置在下方，加显眼的 "+ 添加任务" 按钮。 -->
+    <!-- Section 1: 基本信息 -->
+    <div class="form-section">
+      <h3 class="form-section-title">基本信息</h3>
+      <div class="form-grid">
+        <label>项目名称</label>
+        <input nz-input [(ngModel)]="form.title" placeholder="输入实训项目名称" />
 
-      <label>项目简介</label>
-      <textarea nz-input rows="3" [(ngModel)]="form.summary" placeholder="简要描述实训项目"></textarea>
+        <label>项目简介</label>
+        <textarea nz-input rows="3" [(ngModel)]="form.summary" placeholder="简要描述实训项目"></textarea>
 
-      <label>封面图片 URL</label>
-      <input nz-input [(ngModel)]="form.coverImageUrl" placeholder="可选" />
+        <label>封面图片 URL</label>
+        <input nz-input [(ngModel)]="form.coverImageUrl" placeholder="可选" />
 
-      <label>关联课程</label>
-      <nz-select [(ngModel)]="form.courseId" nzAllowClear nzPlaceHolder="选择关联课程（可选）">
-        <nz-option *ngFor="let course of courses()" [nzValue]="course.id" [nzLabel]="course.title"></nz-option>
-      </nz-select>
+        <label>关联课程</label>
+        <nz-select [(ngModel)]="form.courseId" nzAllowClear nzPlaceHolder="选择关联课程（可选）">
+          <nz-option *ngFor="let course of courses()" [nzValue]="course.id" [nzLabel]="course.title"></nz-option>
+        </nz-select>
 
-      <label>专业方向</label>
-      <input nz-input [(ngModel)]="form.major" placeholder="可选" />
+        <label>专业方向</label>
+        <input nz-input [(ngModel)]="form.major" placeholder="可选" />
 
-      <label>班级</label>
-      <input nz-input [(ngModel)]="form.className" placeholder="可选" />
+        <label>班级</label>
+        <input nz-input [(ngModel)]="form.className" placeholder="可选" />
 
-      <label>状态</label>
-      <nz-select [(ngModel)]="form.status">
-        <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
-        <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
-        <nz-option [nzValue]="statuses.Archived" nzLabel="已归档"></nz-option>
-      </nz-select>
+        <label>状态</label>
+        <nz-select [(ngModel)]="form.status">
+          <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+          <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
+          <nz-option [nzValue]="statuses.Archived" nzLabel="已归档"></nz-option>
+        </nz-select>
 
-      <label>开始时间</label>
-      <input nz-input type="datetime-local" [(ngModel)]="form.startTime" />
+        <label>开始时间</label>
+        <input nz-input type="datetime-local" [(ngModel)]="form.startTime" />
 
-      <label>结束时间</label>
-      <input nz-input type="datetime-local" [(ngModel)]="form.endTime" />
+        <label>结束时间</label>
+        <input nz-input type="datetime-local" [(ngModel)]="form.endTime" />
 
-      <label>满分</label>
-      <input nz-input type="number" [(ngModel)]="form.maxScore" />
+        <label>满分</label>
+        <input nz-input type="number" [(ngModel)]="form.maxScore" />
 
-      <label>允许重复提交</label>
-      <nz-switch [(ngModel)]="form.allowResubmission"></nz-switch>
+        <label>允许重复提交</label>
+        <nz-switch [(ngModel)]="form.allowResubmission"></nz-switch>
+      </div>
+    </div>
+
+    <!-- Section 2: 任务配置 — P1-15 -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <h3 class="form-section-title">
+          任务配置
+          <span class="required-hint">（至少添加 1 个任务才能保存）</span>
+        </h3>
+        <!-- 显眼的 "+" 按钮 -->
+        <button nz-button nzType="primary" nzShape="round" (click)="addTask()">
+          <span nz-icon nzType="plus"></span> 添加任务
+        </button>
+      </div>
+
+      <div *ngIf="form.tasks.length === 0" class="empty-state">
+        <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+        尚未添加任何任务，请点击右上角"添加任务"开始配置。
+      </div>
+
+      <div class="nested-card" *ngFor="let task of form.tasks; let i = index">
+        <div class="nested-header">
+          <strong>任务 {{ i + 1 }}</strong>
+          <button nz-button nzType="link" nzDanger (click)="removeTask(i)">删除</button>
+        </div>
+        <div class="nested-grid">
+          <input nz-input [(ngModel)]="task.title" placeholder="任务名称" />
+          <input nz-input type="number" [(ngModel)]="task.scoreWeight" placeholder="权重（如 50）" />
+          <input nz-input type="datetime-local" [(ngModel)]="task.dueTime" />
+          <textarea nz-input [(ngModel)]="task.description" rows="2" placeholder="任务描述"></textarea>
+          <textarea nz-input [(ngModel)]="task.requirement" rows="2" placeholder="任务要求"></textarea>
+        </div>
+      </div>
     </div>
   </div>
+
+  <!-- 自定义 footer，保存按钮在任务为空时禁用 + tooltip 解释 -->
+  <ng-template #modalFooter>
+    <button nz-button (click)="modalVisible = false">取消</button>
+    <button nz-button nzType="primary"
+            [disabled]="!canSaveModal"
+            [nz-tooltip]="saveModalTooltip"
+            (click)="saveModal()">
+      保存
+    </button>
+  </ng-template>
 </nz-modal>
 
 <!-- Guidance modal -->

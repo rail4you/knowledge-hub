@@ -10,6 +10,8 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import {
@@ -38,6 +40,8 @@ import {
     NzSwitchModule,
     NzTableModule,
     NzTagModule,
+    NzTooltipModule,
+    NzIconModule,
   ],
   templateUrl: './practicum-management.component.html',
   styleUrls: ['./practicum-management.component.scss'],
@@ -148,7 +152,9 @@ export class PracticumManagementComponent implements OnInit {
   }
 
   saveModal(): void {
-    const body: CreateUpdatePracticumProjectDto = { ...this.form, tasks: [], materials: [] };
+    // P1-15：保存时同时提交任务（原先在 saveModal 里把 tasks/materials 强制清空，迫使用户"先保存基本信息，再到 Tab1 保存任务"——分两步走容易漏）。
+    // 现在 modal 内的"基本信息 + 任务配置"是同一个表单，一次性提交。
+    const body: CreateUpdatePracticumProjectDto = { ...this.form };
     const obs = this.editingId
       ? this.practicumService.update(this.editingId, body)
       : this.practicumService.create(body);
@@ -191,6 +197,18 @@ export class PracticumManagementComponent implements OnInit {
       },
       error: () => this.message.error('保存失败'),
     });
+  }
+
+  /**
+   * P1-15：保存按钮的启用条件——至少要有一条任务。
+   * 没任务时点保存没意义，禁用 + tooltip 提示用户先加任务。
+   */
+  get canSaveModal(): boolean {
+    return Array.isArray(this.form?.tasks) && this.form.tasks.length > 0;
+  }
+
+  get saveModalTooltip(): string {
+    return this.canSaveModal ? '' : '请先添加至少一个任务（点击上方"添加任务"按钮）';
   }
 
   /** Re-open the edit modal from the detail tab */

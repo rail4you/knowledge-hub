@@ -152,6 +152,62 @@
   gap: 12px;
 }
 
+/* P1-15：modal 内"基本信息" + "任务配置"分段样式。 */
+.form-section {
+  padding: 4px 0 16px;
+  border-bottom: 1px dashed #f0f0f0;
+  margin-bottom: 16px;
+
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+}
+
+.form-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.form-section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.required-hint {
+  font-weight: 400;
+  font-size: 12px;
+  color: #fa8c16;
+}
+
+/* P1-15：空状态提示（任务 / 资料为空时给用户明确反馈）。 */
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  background: #fafafa;
+  border: 1px dashed #e0e0e0;
+  border-radius: 8px;
+  color: #8c8c8c;
+  font-size: 13px;
+  margin: 12px 0;
+}
+
+::ng-deep .ant-modal-body {
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
 ::ng-deep .ant-table-row.selected {
   background-color: #e6f7ff !important;
 }
