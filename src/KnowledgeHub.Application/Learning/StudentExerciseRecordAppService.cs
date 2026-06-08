@@ -333,7 +333,9 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             return new StudentLearningStatisticsDto
             {
                 StudentId = studentId,
-                StudentName = studentMap.GetValueOrDefault(studentId, ""),
+                // 关键修复：原回退 "" 在用户被删除/软删除时会让导出和列表的「学生姓名」列空白。
+                // 与 ResolveStudentName 保持一致：缺失时回退到 `学员#<短ID>`，让老师至少能看出"有这个人"。
+                StudentName = studentMap.GetValueOrDefault(studentId, $"学员#{studentId.ToString()[..8]}"),
                 CompletedCount = completedCount,
                 TotalCount = exerciseCount,
                 CompletionRate = exerciseCount > 0
@@ -494,7 +496,11 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             var item = result.Items[i];
             var row = i + 2;
             worksheet.Cell(row, 1).Value = item.StudentName;
-            worksheet.Cell(row, 2).Value = loginAccountMap.TryGetValue(item.StudentId, out var acct) ? acct : "";
+            // 关键修复：登录账号缺失（用户被删除）时不要留空，避免和正常用户混在一起时无法区分。
+            // 复用 `学员#<短ID>` 与姓名列保持一致，老师一眼看出"该用户已注销"。
+            worksheet.Cell(row, 2).Value = loginAccountMap.TryGetValue(item.StudentId, out var acct) && !string.IsNullOrEmpty(acct)
+                ? acct
+                : $"学员#{item.StudentId.ToString()[..8]}";
             worksheet.Cell(row, 3).Value = item.CompletedCount;
             worksheet.Cell(row, 4).Value = item.TotalCount;
             worksheet.Cell(row, 5).Value = item.CompletionRate;
