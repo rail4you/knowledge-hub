@@ -112,7 +112,9 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
 
   private loadResources() {
     this.resourcesLoading.set(true);
-    this.chatService.getResources()
+    // P1-13：职业规划下拉只列"当前用户的简历资源"。
+    // 旧逻辑调用 getResources() 会返回全平台已建索引的资源（命中 0 → 用户看不到任何可选项）。
+    this.chatService.getResumes()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
@@ -120,9 +122,9 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
           this.resourcesLoading.set(false);
         },
         error: (err) => {
-          console.error('Failed to load resources:', err);
+          console.error('Failed to load resumes:', err);
           this.resourcesLoading.set(false);
-          this.messageService.error('加载资源列表失败');
+          this.messageService.error('加载简历资源失败');
         }
       });
   }

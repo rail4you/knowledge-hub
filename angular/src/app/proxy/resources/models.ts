@@ -44,6 +44,8 @@ export interface CreateUpdateResourceDto {
   keywords?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
+  // P1-13：与后端 Resource.IsResume 对应。等待下次 abp generate-proxy 重新生成时同步。
+  isResume?: boolean;
   organizationId?: string | null;
   filePath?: string | null;
   fileSize?: number | null;
@@ -148,6 +150,8 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   keywords?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
+  // P1-13：与后端 Resource.IsResume 对应。等待下次 abp generate-proxy 重新生成时同步。
+  isResume?: boolean;
   collectionCount?: number;
   downloadCount?: number;
   viewCount?: number;

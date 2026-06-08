@@ -202,6 +202,35 @@ TOOL USE:
         return result;
     }
 
+    /// <summary>
+    /// P1-13：获取当前用户"作为简历"使用的、已审核通过的资源。
+    /// 过滤条件：IsResume=true AND Status IN (SchoolApproved, LeagueApproved) AND CreatorId=当前用户。
+    /// 用于 AI 职业规划下拉（避免暴露其他人的资源，也不会把草稿/被拒的资源拉进来）。
+    /// </summary>
+    public async Task<List<ResourceForChatDto>> GetResumesForUserAsync()
+    {
+        var currentUserId = _currentUser.GetId();
+
+        var resources = await _resourceRepository.GetListAsync(r =>
+            r.IsResume
+            && (r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
+                || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved)
+            && r.CreatorId == currentUserId);
+
+        // 按创建时间倒序，最近上传的简历排在前面
+        return resources
+            .OrderByDescending(r => r.CreationTime)
+            .Select(r => new ResourceForChatDto
+            {
+                Id = r.Id,
+                Name = r.Name,
+                FileExtension = r.FileExtension,
+                SourceFormat = null,
+                NodeCount = 0
+            })
+            .ToList();
+    }
+
     private List<AITool> BuildTools()
     {
         return new List<AITool>

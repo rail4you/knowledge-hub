@@ -214,6 +214,9 @@ export class ResourceComponent implements OnInit {
       keywords: [res.keywords || ''],
       copyrightInfo: [res.copyrightInfo || ''],
       isDownloadable: [res.isDownloadable ?? true],
+      // P1-13：勾选后该资源会作为"简历"出现在 AI 职业规划下拉中。
+      // 仅对 Document 类型（resourceType=0）有意义。
+      isResume: [res.isResume ?? false],
     });
   }
 

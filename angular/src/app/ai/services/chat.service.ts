@@ -68,6 +68,33 @@ export class ChatService {
     });
   }
 
+  /**
+   * P1-13：获取当前用户已审核通过的"简历"资源，供职业规划下拉使用。
+   * 后端过滤：IsResume=true AND Status IN (SchoolApproved, LeagueApproved) AND CreatorId=currentUser。
+   * 与 getResources() 的差异：getResources 返回全部已建索引资源（用于 AI 通用对话 / 教案 / 案例分析），
+   * getResumes 仅返回当前用户的简历资源（用于职业规划）。
+   */
+  getResumes(): Observable<ResourceForChat[]> {
+    return new Observable<ResourceForChat[]>(observer => {
+      fetch(`${this.apiUrl}/resumes`, {
+        credentials: 'include',
+      })
+        .then(async response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          this.ngZone.run(() => {
+            observer.next(data);
+            observer.complete();
+          });
+        })
+        .catch(err => {
+          this.ngZone.run(() => observer.error(err));
+        });
+    });
+  }
+
   chat(input: ChatInput): Observable<ChatMessageChunk> {
     return new Observable<ChatMessageChunk>(observer => {
       const body = JSON.stringify({

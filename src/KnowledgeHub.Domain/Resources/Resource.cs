@@ -22,6 +22,12 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public string? Keywords { get; set; }
     public string? CopyrightInfo { get; set; }
     public bool IsDownloadable { get; set; }
+    /// <summary>
+    /// P1-13：是否作为简历使用。
+    /// 上传"文档"时勾选后，此资源会出现在 AI 职业规划下拉里。
+    /// 与 Status 配合：仅 LeagueApproved 状态且 IsResume=true 且 CreatorId=当前用户 才会出现在下拉。
+    /// </summary>
+    public bool IsResume { get; set; }
     public int CollectionCount { get; set; }
     public int DownloadCount { get; set; }
     public int ViewCount { get; set; }

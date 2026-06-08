@@ -639,6 +639,16 @@
         </nz-form-control>
       </nz-form-item>
 
+      <!-- P1-13：仅在上传"文档"时显示"作为简历"勾选 -->
+      <nz-form-item *ngIf="form.get('resourceType')?.value === 0">
+        <nz-form-label>{{ '::UseAsResume' | abpLocalization }}</nz-form-label>
+        <nz-form-control>
+          <label nz-checkbox formControlName="isResume">
+            {{ '::UseAsResumeHint' | abpLocalization }}
+          </label>
+        </nz-form-control>
+      </nz-form-item>
+
       <!-- File Upload Area - only for new resources -->
       <nz-form-item *ngIf="!selectedResource()?.id">
         <nz-form-label [nzRequired]="true">{{ '::UploadFile' | abpLocalization }}</nz-form-label>

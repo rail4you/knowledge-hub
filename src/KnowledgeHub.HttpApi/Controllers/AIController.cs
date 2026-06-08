@@ -45,6 +45,15 @@ public class AIController : AbpControllerBase
         return await _chatAppService.GetResourcesWithPageIndexAsync();
     }
 
+    /// <summary>
+    /// P1-13：当前用户已审核通过的"简历"资源（IsResume=true），供职业规划下拉使用。
+    /// </summary>
+    [HttpGet("resumes")]
+    public async Task<List<ResourceForChatDto>> GetResumes()
+    {
+        return await _chatAppService.GetResumesForUserAsync();
+    }
+
     [HttpPost("chat")]
     [IgnoreAntiforgeryToken]
     public async Task Chat([FromBody] ChatInputDto input)

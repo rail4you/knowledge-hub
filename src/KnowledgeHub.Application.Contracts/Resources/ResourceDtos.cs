@@ -21,6 +21,8 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     public string? Keywords { get; set; }
     public string? CopyrightInfo { get; set; }
     public bool IsDownloadable { get; set; }
+    /// <summary>P1-13：是否作为简历使用。AI 职业规划下拉会列出当前用户已审核通过的简历资源。</summary>
+    public bool IsResume { get; set; }
     public int CollectionCount { get; set; }
     public int DownloadCount { get; set; }
     public int ViewCount { get; set; }
@@ -74,6 +76,8 @@ public class CreateUpdateResourceDto
     public string? Keywords { get; set; }
     public string? CopyrightInfo { get; set; }
     public bool IsDownloadable { get; set; } = true;
+    /// <summary>P1-13：上传"文档"类型时可勾选"作为简历使用"，职业规划下拉按此过滤。</summary>
+    public bool IsResume { get; set; }
     public Guid? OrganizationId { get; set; }
     
     public string? FilePath { get; set; }
