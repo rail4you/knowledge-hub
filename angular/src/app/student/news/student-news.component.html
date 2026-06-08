@@ -15,7 +15,7 @@
             <article
               class="carousel-slide"
               [class.is-active]="activeHeroSlide() === i"
-              [style.background]="slide.gradient"
+              [style.background]="slide.color"
             >
               <div class="slide-tag">
                 <span nz-icon [nzType]="slide.icon" nzTheme="outline"></span>
@@ -377,7 +377,7 @@
               [class.is-active]="categoryId() === null"
               (click)="selectCategory(null)"
             >
-              <span class="aside-nav-item__icon" style="background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)">
+              <span class="aside-nav-item__icon" style="background: #1e6ce8">
                 <span nz-icon nzType="appstore" nzTheme="outline"></span>
               </span>
               <span class="aside-nav-item__name">全部资讯</span>

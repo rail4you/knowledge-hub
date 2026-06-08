@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, inject, signal, viewChild } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -43,6 +43,11 @@ export class StudentNewsDetailComponent implements OnInit {
   readonly relatedLoading = signal(false);
 
   readonly copyLinkSuccess = signal(false);
+
+  /** 评论区根元素（用于滚动定位） */
+  readonly commentSection = viewChild<ElementRef<HTMLElement>>('commentSection');
+  /** 评论输入框（用于聚焦） */
+  readonly commentTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('commentTextarea');
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -188,6 +193,23 @@ export class StudentNewsDetailComponent implements OnInit {
     this.router.navigate(['/student/news', id]);
   }
 
+  /**
+   * 滚动到评论区，并聚焦评论输入框（如果已开启评论）。
+   * 修复 bug：旧实现是 `<a href="#comments">`，在某些路由配置下被 Angular 路由器误解为
+   * 路由片段，回退到首页。改为按钮事件后由组件显式处理。
+   */
+  focusComment(): void {
+    const section = this.commentSection()?.nativeElement;
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // 评论可能被作者关闭，此时 textarea 不存在
+    const textarea = this.commentTextarea()?.nativeElement;
+    if (textarea) {
+      // 等待滚动开始 + 内容渲染后再聚焦，避免 iOS Safari 因聚焦中断滚动
+      setTimeout(() => textarea.focus({ preventScroll: true }), 350);
+    }
+  }
+
   /** 资讯封面渐变（与列表页一致） */
   coverGradient(article: NewsArticleDto | { title?: string; id?: string; categoryName?: string }): string {
     return this.gradientByKey(
@@ -202,14 +224,14 @@ export class StudentNewsDetailComponent implements OnInit {
 
   private gradientByKey(primary: string, secondary: string): string {
     const palettes = [
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
-      'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
-      'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-      'linear-gradient(135deg, #ec4899 0%, #f97316 100%)',
-      'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-      'linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%)',
-      'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)',
+      '#1e6ce8',
+      '#0891b2',
+      '#10b981',
+      '#059669',
+      '#0284c7',
+      '#2563eb',
+      '#0891b2',
+      '#0c4cb8',
     ];
     const key = (primary || 'x') + (secondary || '');
     let hash = 0;
@@ -238,11 +260,11 @@ export class StudentNewsDetailComponent implements OnInit {
 
   authorGradient(name?: string): string {
     const palettes = [
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
-      'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-      'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
-      'linear-gradient(135deg, #ec4899 0%, #f97316 100%)',
+      '#1e6ce8',
+      '#0891b2',
+      '#059669',
+      '#10b981',
+      '#0284c7',
     ];
     const n = name || 'S';
     let hash = 0;
@@ -259,12 +281,12 @@ export class StudentNewsDetailComponent implements OnInit {
 
   commentAuthorGradient(name?: string): string {
     const palettes = [
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-      'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-      'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
-      'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
-      'linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%)',
+      '#1e6ce8',
+      '#2563eb',
+      '#059669',
+      '#10b981',
+      '#0284c7',
+      '#0891b2',
     ];
     const n = name || 'U';
     let hash = 0;

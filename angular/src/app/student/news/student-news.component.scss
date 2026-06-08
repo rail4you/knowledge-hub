@@ -15,7 +15,7 @@
   position: relative;
   border-radius: ds.$student-radius-xl;
   overflow: hidden;
-  background: linear-gradient(120deg, #1e6ce8 0%, #00b7ff 100%);
+  background: #1e6ce8;
   color: #fff;
   box-shadow: 0 20px 40px rgba(30, 108, 232, 0.18);
 }
@@ -266,7 +266,7 @@
   width: 4px;
   height: 18px;
   border-radius: 3px;
-  background: linear-gradient(180deg, #1e6ce8 0%, #00b7ff 100%);
+  background: #1e6ce8;
 }
 
 .stats-card__hint {
@@ -435,7 +435,7 @@
     padding: 0 22px;
     border: 0;
     border-radius: 999px;
-    background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+    background: #1e6ce8;
     color: #fff;
     font-size: 15px;
     font-weight: 600;
@@ -499,7 +499,7 @@
   }
 
   &.is-active {
-    background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+    background: #1e6ce8;
     color: #fff;
     border-color: transparent;
   }
@@ -620,7 +620,7 @@
   &__overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.75) 100%);
+    background: rgba(0, 0, 0, 0.45);
     pointer-events: none;
   }
 
@@ -679,7 +679,7 @@
   height: 26px;
   padding: 0 10px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+  background: #059669;
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -809,7 +809,7 @@
   &__cover-mask {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.2) 100%);
+    background: rgba(0, 0, 0, 0.1);
     pointer-events: none;
   }
 
@@ -917,7 +917,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+    background: #1e6ce8;
     color: #fff;
     font-size: 11px;
     font-weight: 700;
@@ -1126,7 +1126,7 @@
 
   &--top {
     color: #fff;
-    background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+    background: #0284c7;
 
     &.hot-rank {
       // 第一个是金，第二三个是橙
@@ -1134,15 +1134,15 @@
   }
 
   &--top:nth-child(1) {
-    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+    background: #1e6ce8;
   }
 
   &--top:nth-child(2) {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    background: #0891b2;
   }
 
   &--top:nth-child(3) {
-    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+    background: #059669;
   }
 }
 
@@ -1231,7 +1231,7 @@
   }
 
   &.is-active {
-    background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+    background: #1e6ce8;
     color: #fff;
 
     .aside-nav-item__name {

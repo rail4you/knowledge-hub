@@ -148,16 +148,16 @@
               <span nz-icon [nzType]="copyLinkSuccess() ? 'check' : 'link'" nzTheme="outline"></span>
               <span>{{ copyLinkSuccess() ? '已复制' : '分享链接' }}</span>
             </button>
-            <a class="action-pill" href="#comments">
+            <button type="button" class="action-pill" (click)="focusComment()">
               <span nz-icon nzType="message" nzTheme="outline"></span>
               <span>写评论</span>
               <span class="action-pill__count">{{ article.commentCount || 0 }}</span>
-            </a>
+            </button>
           </div>
         </article>
 
         <!-- 评论区 -->
-        <section id="comments" class="comment-section">
+        <section #commentSection id="comments" class="comment-section">
           <header class="section-header">
             <h2 class="section-header__title">
               <span class="section-header__bar"></span>
@@ -173,6 +173,7 @@
               </span>
               <div class="comment-form__body">
                 <textarea
+                  #commentTextarea
                   [ngModel]="commentText()"
                   (ngModelChange)="commentText.set($event)"
                   rows="3"
