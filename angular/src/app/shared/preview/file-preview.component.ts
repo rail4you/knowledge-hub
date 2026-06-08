@@ -50,6 +50,23 @@ export class FilePreviewComponent {
   fileUrl = signal('');
   isLoading = signal(false);
   loadError = signal('');
+  /** P0-1 轻量版：文件过大时不走在线预览（避免前端解析卡死 / 内存爆掉），降级为"提示 + 下载"页。 */
+  tooLarge = signal(false);
+  /** P0-1 轻量版：文件类型不受支持时也走降级页（不强行预览）。 */
+  unsupported = signal(false);
+
+  // P0-1 轻量版：按文件类型设置不同的大小阈值。
+  // 阈值依据：Word/Excel/PPTX 在前端解析需要把整个文件读进 ArrayBuffer 再处理；
+  // PDF 用 pdf.js 流式渲染可以稍大；图片太大影响首屏。
+  // 视频/音频走流式，不设阈值（浏览器自带的播放器更稳）。
+  private static readonly PREVIEW_SIZE_LIMIT: Partial<Record<FileType, number>> = {
+    text: 2 * 1024 * 1024,         // 2 MB
+    pdf: 30 * 1024 * 1024,         // 30 MB
+    word: 20 * 1024 * 1024,        // 20 MB
+    excel: 20 * 1024 * 1024,       // 20 MB
+    pptx: 20 * 1024 * 1024,        // 20 MB
+    image: 50 * 1024 * 1024,       // 50 MB
+  };
 
   private readonly http = inject(HttpClient);
   private readonly resourceService = inject(ResourceService);
@@ -89,7 +106,25 @@ export class FilePreviewComponent {
     this.loadError.set('');
     this.fileData.set(new ArrayBuffer(0));
     this.fileUrl.set('');
+    // P0-1 轻量版：打开前先判断大小 / 类型。
+    this.tooLarge.set(false);
+    this.unsupported.set(false);
     this.visible.set(true);
+
+    // 先看是否"类型不支持"——直接降级，避免无谓的请求。
+    if (this.fileType === 'unsupported') {
+      this.unsupported.set(true);
+      this.isLoading.set(false);
+      return;
+    }
+
+    // 再看是否"文件过大"——超过类型对应的阈值则降级。
+    const limit = FilePreviewComponent.PREVIEW_SIZE_LIMIT[this.fileType];
+    if (limit && fileSize > limit) {
+      this.tooLarge.set(true);
+      this.isLoading.set(false);
+      return;
+    }
 
     this.loadFile();
   }

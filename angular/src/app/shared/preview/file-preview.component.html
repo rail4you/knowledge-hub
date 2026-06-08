@@ -15,12 +15,56 @@
     </div>
 
     <!-- Error -->
-    <div *ngIf="loadError() && !isLoading()" class="preview-error">
+    <div *ngIf="loadError() && !isLoading() && !tooLarge() && !unsupported()" class="preview-error">
       <nz-result nzStatus="error" [nzTitle]="loadError()"></nz-result>
     </div>
 
+    <!-- P0-1 轻量版：文件过大降级页——明确告诉用户为什么没预览 + 提供显眼下载按钮。 -->
+    <div *ngIf="tooLarge() && !isLoading()" class="preview-degrade">
+      <div class="degrade-card">
+        <span nz-icon nzType="file-zip" nzTheme="outline" class="degrade-icon"></span>
+        <h3 class="degrade-title">文件过大，暂不支持在线预览</h3>
+        <p class="degrade-desc">
+          本文件大小为 <strong>{{ formatFileSize(fileSize()) }}</strong>，
+          已超过 {{ fileType === 'pdf' ? 'PDF 30 MB' :
+                     fileType === 'image' ? '图片 50 MB' :
+                     fileType === 'text' ? '文本 2 MB' : '20 MB' }} 的在线预览上限。
+          请下载到本地后查看。
+        </p>
+        <div class="degrade-actions">
+          <button nz-button nzType="primary" nzSize="large" (click)="download()">
+            <span nz-icon nzType="download"></span>
+            下载文件（{{ formatFileSize(fileSize()) }}）
+          </button>
+          <button nz-button nzSize="large" (click)="close()">关闭</button>
+        </div>
+        <p class="degrade-hint">
+          如需在线预览，请联系资源上传者压缩文件后重新上传。
+        </p>
+      </div>
+    </div>
+
+    <!-- P0-1 轻量版：类型不支持降级页——给用户一个明确的"下载到本地打开"路径。 -->
+    <div *ngIf="unsupported() && !isLoading() && !tooLarge()" class="preview-degrade">
+      <div class="degrade-card">
+        <span nz-icon nzType="file-unknown" nzTheme="outline" class="degrade-icon"></span>
+        <h3 class="degrade-title">{{ '::PreviewNotSupported' | abpLocalization }}</h3>
+        <p class="degrade-desc">
+          {{ fileName }}（{{ formatFileSize(fileSize()) }}）
+          暂不支持在线预览，请下载到本地打开查看。
+        </p>
+        <div class="degrade-actions">
+          <button nz-button nzType="primary" nzSize="large" (click)="download()">
+            <span nz-icon nzType="download"></span>
+            下载文件
+          </button>
+          <button nz-button nzSize="large" (click)="close()">关闭</button>
+        </div>
+      </div>
+    </div>
+
     <!-- File Content -->
-    <div *ngIf="!isLoading() && !loadError() && (fileData().byteLength > 0 || fileUrl())" class="preview-content">
+    <div *ngIf="!isLoading() && !loadError() && !tooLarge() && !unsupported() && (fileData().byteLength > 0 || fileUrl())" class="preview-content">
       @switch (fileType) {
         @case ('pdf') {
           <app-pdf-viewer [data]="fileData()" [fileName]="fileName"></app-pdf-viewer>
