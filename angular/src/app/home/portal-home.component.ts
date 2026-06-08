@@ -87,11 +87,9 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     const cu = this.config.getDeep('currentUser') as Record<string, unknown> | undefined;
     if (typeof cu?.['userName'] === 'string') this.userName.set(cu['userName'] as string);
 
-    // 登录后按角色跳转：教师/管理员 → 管理后台，学生 → 留在首页
-    if (this.isLoggedIn && !this.isStudent) {
-      this.router.navigate(['/resources']);
-      return;
-    }
+    // P1-18 修复：移除原先"教师/管理员进入 / 自动重定向到 /resources"的逻辑。
+    // 该重定向让教师/管理员根本无法看到首页 CTA，导致"首页按钮无反应"的体感 bug。
+    // 导航目标在 hero CTAs（heroPrimaryLink / heroSecondaryLink）中按角色分发。
 
     this.portal.getPublicHomeStats().subscribe(d => this.stats.set(d));
     this.portal.getPublicTenantList().subscribe(ts => {
@@ -101,6 +99,29 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
 
     // 启动 hero 自动轮播
     this.startHeroAutoplay();
+  }
+
+  /**
+   * P1-18：根据当前用户角色返回主 CTA 的实际跳转目标。
+   * - 未登录：引导去登录页（避免被 authGuard 静默踢走造成的"无反应"感）
+   * - 学生：保留原 student 路径
+   * - 教师/管理员：把 student 路径翻译到对应的管理端入口
+   */
+  heroPrimaryLink(s: HeroSlide): string { return this.resolveHeroLink(s.primaryCta.link); }
+  heroSecondaryLink(s: HeroSlide): string { return this.resolveHeroLink(s.secondaryCta.link); }
+
+  private resolveHeroLink(path: string): string {
+    if (!this.isLoggedIn) return '/account/login';
+    if (this.isStudent) return path;
+    // 教师/管理员：把 student 路径映射到对应的管理端入口
+    const map: Record<string, string> = {
+      '/student/resources':   '/resources',
+      '/student/courses':     '/learning/course-list',
+      '/student/my-learning': '/learning/my-courses',
+      '/student/micro-majors': '/micro-majors',
+      '/student/practicums':  '/practicum/projects',
+    };
+    return map[path] ?? path;
   }
 
   ngOnDestroy() {

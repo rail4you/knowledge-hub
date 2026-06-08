@@ -45,11 +45,11 @@
             </h1>
             <p class="hero__desc">{{ s.desc }}</p>
             <div class="hero__cta">
-              <a [routerLink]="s.primaryCta.link" class="btn btn--hero-primary">
+              <a [routerLink]="heroPrimaryLink(s)" class="btn btn--hero-primary">
                 {{ s.primaryCta.label }}
                 <span class="btn__arrow">→</span>
               </a>
-              <a [routerLink]="s.secondaryCta.link" class="btn btn--hero-ghost">
+              <a [routerLink]="heroSecondaryLink(s)" class="btn btn--hero-ghost">
                 {{ s.secondaryCta.label }}
               </a>
             </div>
