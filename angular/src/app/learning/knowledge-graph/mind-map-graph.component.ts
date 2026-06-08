@@ -136,45 +136,65 @@ export class MindMapGraphComponent implements AfterViewInit, OnChanges {
         type: 'tree',
         name: '思维导图',
         data: [mindMapData],
-        top: '10%',
-        left: '50%',
-        bottom: '10%',
-        right: '20%',
+        // P1-22：给节点之间留更多水平空间——避免兄弟节点过多时挤在一起。
+        top: '5%',
+        left: '12%',
+        bottom: '5%',
+        right: '12%',
         symbol: 'circle',
         symbolSize: (value: any, params: any) => {
           const data = params.data as any;
           const depth = data.depth || 0;
-          if (depth === 0) return 80;
-          if (depth === 1) return 60;
-          return 40;
+          if (depth === 0) return 56;
+          if (depth === 1) return 44;
+          return 30;
         },
-        orient: 'RL',
-        initialTreeDepth: 3,
+        orient: 'LR',
+        initialTreeDepth: 2,
+        // P1-22：节点间距 + 缩放平移——节点多时可缩放查看。
+        nodeGap: 16,
+        layerPadding: 40,
+        roam: true,
+        zoom: 0.85,
         label: {
-          position: 'right',
+          // P1-22：根节点标签放右上，叶子节点放右侧，子节点用 echarts leaves 配置。
           formatter: '{b}',
           fontSize: 12,
-          color: '#333'
+          color: '#333',
+          position: 'right',
+          verticalAlign: 'middle',
+          align: 'left',
+        },
+        leaves: {
+          label: {
+            position: 'right',
+            verticalAlign: 'middle',
+            align: 'left',
+            fontSize: 11,
+            color: '#555',
+          },
         },
         labelLayout: {
-          draggable: true
+          // P1-22：标签碰撞自动隐藏——进一步避免文字重叠。
+          hideOverlap: true,
+          draggable: true,
         },
         emphasis: {
-          focus: 'ancestor'
+          focus: 'ancestor',
         },
         lineStyle: {
           color: '#91caff',
-          width: 2,
-          curveness: 0.5
+          width: 1.5,
+          curveness: 0.5,
         },
         itemStyle: {
           color: '#1890ff',
           borderWidth: 0,
-          borderRadius: 4
+          borderRadius: 4,
         },
         expandAndCollapse: true,
-        animationDurationUpdate: 750
-      }]
+        animationDurationUpdate: 600,
+      }],
     };
     
     this.chart.setOption(option);
