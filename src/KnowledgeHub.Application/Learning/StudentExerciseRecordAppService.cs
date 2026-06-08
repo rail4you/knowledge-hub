@@ -319,7 +319,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         {
             var userQuery = await _userRepository.GetQueryableAsync();
             studentMap = (await userQuery.Where(u => studentIds.Contains(u.Id)).ToListAsync())
-                .ToDictionary(u => u.Id, u => u.Name ?? u.UserName);
+                .ToDictionary(u => u.Id, u => ResolveStudentName(u));
         }
 
         var statistics = studentIds.Select(studentId =>
@@ -454,20 +454,37 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
 
         var result = await GetLearningStatisticsAsync(input);
 
+        // 关键修复 P1-17：批量预加载学生登录账号（UserName），
+        // 避免在写每行 Excel 时 N+1 查 IdentityUser。空表时跳过。
+        var studentIds = result.Items.Select(i => i.StudentId).Distinct().ToList();
+        Dictionary<Guid, string> loginAccountMap = new();
+        if (studentIds.Count > 0)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var userQuery = await _userRepository.GetQueryableAsync();
+                loginAccountMap = (await userQuery.Where(u => studentIds.Contains(u.Id)).ToListAsync())
+                    .ToDictionary(u => u.Id, u => u.UserName ?? u.Email ?? string.Empty);
+            }
+        }
+
         using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add("学习统计");
 
         // Headers
         worksheet.Cell(1, 1).Value = "学生姓名";
-        worksheet.Cell(1, 2).Value = "完成数";
-        worksheet.Cell(1, 3).Value = "总题数";
-        worksheet.Cell(1, 4).Value = "完成率(%)";
-        worksheet.Cell(1, 5).Value = "正确率(%)";
-        worksheet.Cell(1, 6).Value = "总用时";
-        worksheet.Cell(1, 7).Value = "最后活跃时间";
+        // 关键修复 P1-17：在姓名右侧加一列"登录账号"，当 ResolveStudentName 落到 UserName/邮箱
+        // 回退分支时，老师也能从登录账号反查学生（学生一般记得自己的登录账号）。
+        worksheet.Cell(1, 2).Value = "登录账号";
+        worksheet.Cell(1, 3).Value = "完成数";
+        worksheet.Cell(1, 4).Value = "总题数";
+        worksheet.Cell(1, 5).Value = "完成率(%)";
+        worksheet.Cell(1, 6).Value = "正确率(%)";
+        worksheet.Cell(1, 7).Value = "总用时";
+        worksheet.Cell(1, 8).Value = "最后活跃时间";
 
         // Style header
-        var headerRange = worksheet.Range(1, 1, 1, 7);
+        var headerRange = worksheet.Range(1, 1, 1, 8);
         headerRange.Style.Font.Bold = true;
         headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
 
@@ -477,12 +494,13 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             var item = result.Items[i];
             var row = i + 2;
             worksheet.Cell(row, 1).Value = item.StudentName;
-            worksheet.Cell(row, 2).Value = item.CompletedCount;
-            worksheet.Cell(row, 3).Value = item.TotalCount;
-            worksheet.Cell(row, 4).Value = item.CompletionRate;
-            worksheet.Cell(row, 5).Value = item.CorrectRate;
-            worksheet.Cell(row, 6).Value = item.TotalTimeSpent.ToString(@"hh\:mm\:ss");
-            worksheet.Cell(row, 7).Value = item.LastActiveTime?.ToString("yyyy-MM-dd HH:mm") ?? "";
+            worksheet.Cell(row, 2).Value = loginAccountMap.TryGetValue(item.StudentId, out var acct) ? acct : "";
+            worksheet.Cell(row, 3).Value = item.CompletedCount;
+            worksheet.Cell(row, 4).Value = item.TotalCount;
+            worksheet.Cell(row, 5).Value = item.CompletionRate;
+            worksheet.Cell(row, 6).Value = item.CorrectRate;
+            worksheet.Cell(row, 7).Value = item.TotalTimeSpent.ToString(@"hh\:mm\:ss");
+            worksheet.Cell(row, 8).Value = item.LastActiveTime?.ToString("yyyy-MM-dd HH:mm") ?? "";
         }
 
         worksheet.Columns().AdjustToContents();
@@ -560,7 +578,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
 
             var userQuery = await _userRepository.GetQueryableAsync();
             studentMap = (await userQuery.Where(u => studentIds.Contains(u.Id)).ToListAsync())
-                .ToDictionary(u => u.Id, u => u.Name ?? u.UserName);
+                .ToDictionary(u => u.Id, u => ResolveStudentName(u));
         }
 
         return records.Select(r => new StudentExerciseRecordDto
@@ -606,6 +624,27 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             "totalTimeSpent" => desc ? items.OrderByDescending(x => x.TotalTimeSpent) : items.OrderBy(x => x.TotalTimeSpent),
             _ => items.OrderByDescending(x => x.LastActiveTime)
         };
+    }
+
+    /// <summary>
+    /// 关键修复 P1-17：原实现只用 `u.Name ?? u.UserName`，当 IdentityUser 的 Name
+    /// 字段为空（管理员通过导入/接口创建用户时常未填写 Name，只填了 UserName 或
+    /// 邮箱）时，导出的"学生姓名"列就是空字符串或邮箱号，老师看不出是谁。
+    /// 改为按 Surname+Name（中文姓名常用形式）→ Name → UserName → 邮箱 → "学员#<短ID>"
+    /// 的优先级组合出有意义的展示名。
+    /// </summary>
+    private static string ResolveStudentName(IdentityUser u)
+    {
+        var surname = u.Surname?.Trim();
+        var name = u.Name?.Trim();
+        if (!string.IsNullOrEmpty(surname) && !string.IsNullOrEmpty(name))
+        {
+            return $"{surname}{name}";
+        }
+        if (!string.IsNullOrEmpty(name)) return name;
+        if (!string.IsNullOrEmpty(u.UserName)) return u.UserName;
+        if (!string.IsNullOrEmpty(u.Email)) return u.Email;
+        return $"学员#{u.Id.ToString()[..8]}";
     }
 
     #endregion

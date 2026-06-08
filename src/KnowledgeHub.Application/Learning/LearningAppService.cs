@@ -19,6 +19,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
     private readonly IRepository<LearningProgress> _progressRepository;
     private readonly IRepository<KnowledgeMastery> _masteryRepository;
     private readonly ICourseRepository _courseRepository;
+    private readonly IRepository<KnowledgeResource> _knowledgeResourceRepository;
     private readonly ICurrentUser _currentUser;
 
     public LearningAppService(
@@ -26,12 +27,14 @@ public class LearningAppService : ApplicationService, ILearningAppService
         IRepository<LearningProgress> progressRepository,
         IRepository<KnowledgeMastery> masteryRepository,
         ICourseRepository courseRepository,
+        IRepository<KnowledgeResource> knowledgeResourceRepository,
         ICurrentUser currentUser)
     {
         _studentCourseRepository = studentCourseRepository;
         _progressRepository = progressRepository;
         _masteryRepository = masteryRepository;
         _courseRepository = courseRepository;
+        _knowledgeResourceRepository = knowledgeResourceRepository;
         _currentUser = currentUser;
     }
 
@@ -69,19 +72,35 @@ public class LearningAppService : ApplicationService, ILearningAppService
             new() { Name = "综合能力" }
         };
         dashboard.MasteryValues = new List<decimal> { 60, 50, 40, 70, 55 };
-        
+
+        // 课程名 lookup：用最近学习列表涉及的 5 门课程做一次批量查询，
+        // 比 GetMyCoursesAsync 里的 N+1 循环（每门课一次 FindAsync）更高效。
+        var recentCourseIds = studentCourses
+            .OrderByDescending(x => x.LastModificationTime)
+            .Take(5)
+            .Select(sc => sc.CourseId)
+            .Distinct()
+            .ToList();
+        var recentCourses = recentCourseIds.Count == 0
+            ? new List<KnowledgeHub.Courses.Course>()
+            : await _courseRepository.GetListAsync(c => recentCourseIds.Contains(c.Id));
+        var courseMap = recentCourses.ToDictionary(c => c.Id, c => c.Title ?? "未命名课程");
+
         dashboard.RecentLearning = studentCourses
             .OrderByDescending(x => x.LastModificationTime)
             .Take(5)
             .Select(sc => new RecentLearningDto
             {
                 CourseId = sc.CourseId,
-                CourseName = "Course " + sc.CourseId.ToString()[..8],
+                // 关键修复：原实现硬编码 "Course " + GUID 前 8 位作为课程名，
+                // 导致学生仪表盘"最近学习"显示 "Course 3a219eac" 这种不可读字串。
+                // 改为按 CourseId 查 Course 表，用真实 Title；找不到时回退到默认占位。
+                CourseName = courseMap.TryGetValue(sc.CourseId, out var name) ? name : "未命名课程",
                 Progress = sc.Progress,
                 LastAccessAt = sc.LastModificationTime ?? DateTime.UtcNow
             })
             .ToList();
-        
+
         return dashboard;
     }
 
@@ -193,15 +212,28 @@ public class LearningAppService : ApplicationService, ILearningAppService
     public async Task<List<KnowledgeMasteryDto>> GetKnowledgeMasteryAsync(Guid courseId)
     {
         var studentId = _currentUser.Id ?? throw new Volo.Abp.AbpException("User not found");
-        
+
         var masteryList = await _masteryRepository.GetListAsync(
             x => x.StudentId == studentId);
-        
+
+        // 关键修复：和 GetDashboardAsync 同样的问题——之前用 "Knowledge " + GUID 前 8 位
+        // 拼成"知识点名称"，前端会显示 "Knowledge 7f3a1b2c" 这种无意义字串。
+        // 改为按 KnowledgeResourceId 批量查 KnowledgeResource 表，用真实 Name。
+        var resourceIds = masteryList
+            .Where(m => m.KnowledgeResourceId != Guid.Empty)
+            .Select(m => m.KnowledgeResourceId)
+            .Distinct()
+            .ToList();
+        var resources = resourceIds.Count == 0
+            ? new List<KnowledgeResource>()
+            : await _knowledgeResourceRepository.GetListAsync(r => resourceIds.Contains(r.Id));
+        var resourceMap = resources.ToDictionary(r => r.Id, r => r.Name ?? "未命名知识点");
+
         return masteryList.Select(m => new KnowledgeMasteryDto
         {
             Id = m.Id,
             KnowledgeResourceId = m.KnowledgeResourceId,
-            KnowledgeResourceName = "Knowledge " + m.KnowledgeResourceId.ToString()[..8],
+            KnowledgeResourceName = resourceMap.TryGetValue(m.KnowledgeResourceId, out var n) ? n : "未命名知识点",
             Level = m.Level,
             PracticeCount = m.PracticeCount,
             CorrectCount = m.CorrectCount,
