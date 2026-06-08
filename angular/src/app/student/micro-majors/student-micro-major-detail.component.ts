@@ -64,10 +64,10 @@ export class StudentMicroMajorDetailComponent implements OnInit {
 
   coverGradient(course: MicroMajorCourseDto): string {
     const palettes = [
-      'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
-      'linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%)',
+      '#2563eb',
+      '#1e6ce8',
+      '#0891b2',
+      '#0284c7',
     ];
     const key = course.courseTitle || course.courseId || '';
     let hash = 0;

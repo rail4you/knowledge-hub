@@ -24,7 +24,7 @@
   position: relative;
   border-radius: ds.$student-radius-xl;
   overflow: hidden;
-  background: linear-gradient(120deg, #7c3aed 0%, #ec4899 100%);
+  background: #1e6ce8;
   color: #fff;
   box-shadow: 0 20px 40px rgba(124, 58, 237, 0.2);
 
@@ -73,7 +73,7 @@
   margin: 0 0 8px;
   letter-spacing: -0.4px;
   &::before {
-    background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+    background: #fff;
   }
 }
 
@@ -236,11 +236,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  background: #f5f3ff;
   border-bottom: 1px solid #ede9fe;
 
   &.is-live {
-    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    background: #ecfdf5;
     border-bottom-color: #a7f3d0;
   }
 }
@@ -381,7 +381,7 @@
   height: 38px;
   border: 0;
   border-radius: ds.$student-radius;
-  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+  background: #1e6ce8;
   color: #fff;
   font-size: 14px;
   font-weight: 600;

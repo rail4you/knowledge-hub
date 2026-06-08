@@ -106,11 +106,11 @@ export class StudentMicroMajorsComponent implements OnInit {
 
   coverGradient(item: MicroMajorDto): string {
     const palettes = [
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 100%)',
-      'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
-      'linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%)',
-      'linear-gradient(135deg, #0284c7 0%, #06b6d4 100%)',
+      '#1e6ce8',
+      '#0c4cb8',
+      '#2563eb',
+      '#0284c7',
+      '#0891b2',
     ];
     const key = item.title || item.id || '';
     let hash = 0;

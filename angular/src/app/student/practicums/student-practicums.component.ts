@@ -76,10 +76,10 @@ export class StudentPracticumsComponent implements OnInit {
 
   coverGradient(item: PracticumProjectDto): string {
     const palettes = [
-      'linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%)',
-      'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
+      '#0284c7',
+      '#2563eb',
+      '#1e6ce8',
+      '#1d4ed8',
     ];
     const key = item.title || item.id || '';
     let hash = 0;

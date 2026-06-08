@@ -232,14 +232,14 @@ export class StudentMyLearningComponent implements OnInit {
 
   private gradientByKey(primary: string, secondary: string): string {
     const palettes = [
-      'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 100%)',
-      'linear-gradient(135deg, #1e6ce8 0%, #38bdf8 100%)',
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #06b6d4 0%, #1e6ce8 100%)',
-      'linear-gradient(135deg, #0c4cb8 0%, #06b6d4 100%)',
-      'linear-gradient(135deg, #047857 0%, #10b981 100%)',
-      'linear-gradient(135deg, #10b981 0%, #22c55e 100%)',
-      'linear-gradient(135deg, #0e7490 0%, #14b8a6 100%)',
+      '#0c4cb8',
+      '#1e6ce8',
+      '#1e6ce8',
+      '#0891b2',
+      '#0284c7',
+      '#059669',
+      '#10b981',
+      '#0e7490',
     ];
     const key = (primary || 'x') + (secondary || '');
     let hash = 0;

@@ -24,7 +24,7 @@
   position: relative;
   border-radius: ds.$student-radius-xl;
   overflow: hidden;
-  background: linear-gradient(120deg, #7c3aed 0%, #6366f1 60%, #4338ca 100%);
+  background: #1e6ce8;
   color: #fff;
   box-shadow: 0 20px 40px rgba(99, 102, 241, 0.18);
 
@@ -75,7 +75,7 @@
   letter-spacing: -0.4px;
 
   &::before {
-    background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+    background: #fff;
   }
 }
 
@@ -316,7 +316,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+    background: #1e6ce8;
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -377,7 +377,7 @@
   height: 38px;
   border: 0;
   border-radius: ds.$student-radius;
-  background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+  background: #1e6ce8;
   color: #fff;
   font-size: 14px;
   font-weight: 600;

@@ -20,7 +20,7 @@
 .detail-header__summary { margin: 0 0 12px; color: ds.$student-text-muted; font-size: 14px; line-height: 1.6; }
 .detail-header__stats { display: flex; flex-wrap: wrap; gap: 16px; color: ds.$student-text-light; font-size: 13px; span { display: inline-flex; align-items: center; gap: 4px; } span[nz-icon] { font-size: 13px; } }
 .detail-header__action { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.enroll-btn { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 24px; border: 0; border-radius: ds.$student-radius; background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px rgba(2,132,199,.28); transition: all .2s ease; &:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(2,132,199,.36); } }
+.enroll-btn { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 24px; border: 0; border-radius: ds.$student-radius; background: #0284c7; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px rgba(2,132,199,.28); transition: all .2s ease; &:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(2,132,199,.36); } }
 .enrolled-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #eff6ff; color: #2563eb; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
 
 /* =================== Description =================== */
@@ -38,7 +38,7 @@
 /* =================== Tasks =================== */
 .tasks-list { display: flex; flex-direction: column; gap: 12px; }
 .task-item { display: flex; gap: 16px; padding: 16px; border-radius: ds.$student-radius; border: 1px solid ds.$student-border-soft; background: #fff; transition: all .2s; &:hover { border-color: rgba(ds.$student-primary,.3); box-shadow: 0 4px 12px rgba(15,23,42,.04); } }
-.task-item__num { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+.task-item__num { width: 32px; height: 32px; border-radius: 50%; background: #0284c7; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
 .task-item__body { flex: 1; min-width: 0; }
 .task-item__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; h4 { margin: 0; color: ds.$student-text; font-size: 15px; font-weight: 600; } }
 .task-score { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: #fef3c7; color: #d97706; font-size: 11px; font-weight: 600; flex-shrink: 0; }
@@ -46,7 +46,7 @@
 .task-req { margin: 0 0 6px; color: #d97706; font-size: 13px; line-height: 1.5; display: flex; align-items: flex-start; gap: 4px; span[nz-icon] { font-size: 13px; margin-top: 1px; } }
 .task-due { color: ds.$student-text-light; font-size: 12px; }
 .task-item__action { display: flex; align-items: center; flex-shrink: 0; }
-.submit-btn { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 16px; border: 0; border-radius: ds.$student-radius; background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 8px rgba(30,108,232,.2); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(30,108,232,.3); } }
+.submit-btn { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 16px; border: 0; border-radius: ds.$student-radius; background: #1e6ce8; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 3px 8px rgba(30,108,232,.2); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(30,108,232,.3); } }
 
 /* =================== Materials =================== */
 .materials-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }

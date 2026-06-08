@@ -40,11 +40,11 @@ export class StudentAgentTaskListComponent implements OnInit {
 
   coverGradient(task: StudentAgentTask): string {
     const palettes = [
-      'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
-      'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-      'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-      'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
-      'linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%)',
+      '#1e6ce8',
+      '#0c4cb8',
+      '#2563eb',
+      '#0891b2',
+      '#0284c7',
     ];
     const key = task.teachingAgentName || task.title || '';
     let hash = 0;

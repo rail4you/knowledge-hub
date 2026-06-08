@@ -23,7 +23,7 @@ interface HeroSlide {
   title: string;
   subtitle: string;
   description: string;
-  gradient: string;
+  color: string;
   tag: string;
   icon: string;
   backgroundImage: string;
@@ -103,28 +103,28 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
       title: '数字资源 · 一站获取',
       subtitle: 'DIGITAL RESOURCE HUB',
       description: '整合课程、微课、素材与文献资料，覆盖专业基础、专业核心与拓展课程，让学习更高效。',
-      gradient: 'linear-gradient(120deg, #1e6ce8 0%, #00b7ff 100%)',
+      color: '#1e6ce8',
       tag: '资源库简介',
       icon: 'cloud',
-      backgroundImage: 'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 60%, #38bdf8 100%)',
+      backgroundImage: '#1e6ce8',
     },
     {
       title: '名师优课 · 在线学习',
       subtitle: 'ONLINE PROFESSIONAL COURSES',
       description: '汇聚国家级精品在线开放课程，专业教学团队系统讲解，支持在线学习与互动交流。',
-      gradient: 'linear-gradient(120deg, #7c3aed 0%, #ec4899 100%)',
+      color: '#0891b2',
       tag: '学历课程体系',
       icon: 'read',
-      backgroundImage: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 60%, #f472b6 100%)',
+      backgroundImage: '#0891b2',
     },
     {
       title: '知识图谱 · 体系化认知',
       subtitle: 'KNOWLEDGE GRAPH',
       description: '基于知识图谱构建专业认知体系，节点关系一目了然，助力学习者构建结构化知识网络。',
-      gradient: 'linear-gradient(120deg, #10b981 0%, #06b6d4 100%)',
+      color: '#10b981',
       tag: '知识图谱',
       icon: 'apartment',
-      backgroundImage: 'linear-gradient(135deg, #10b981 0%, #06b6d4 60%, #22d3ee 100%)',
+      backgroundImage: '#10b981',
     },
   ]);
 
@@ -250,6 +250,32 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     this.selectedCategoryId.set(categoryId);
     this.pageIndex.set(1);
     this.loadResources();
+  }
+
+  /**
+   * 点击"热门分类"chip：把展示用的名称映射到真实分类 id，再走 selectCategory。
+   * 旧实现里所有 hot-chip 都调用 selectCategory(null)，导致点击热门分类永远回到"全部"，
+   * 用户体验上看就是"分类 Tab 点击无反应"。
+   */
+  selectHotCategory(name: string) {
+    const match = this.categories().find(c => c.name === name);
+    if (match?.id) {
+      this.selectCategory(match.id);
+    } else {
+      // 没有匹配到真实分类（可能是演示数据），回退到"全部"以避免假死
+      this.selectCategory(null);
+    }
+  }
+
+  /**
+   * 热门分类 chip 的高亮判断：当且仅当当前选中的真实分类的 name 与 chip name 一致时高亮。
+   * 选中"全部"时所有 chip 都不高亮。
+   */
+  isHotCategoryActive(name: string): boolean {
+    const id = this.selectedCategoryId();
+    if (!id) return false;
+    const current = this.categories().find(c => c.id === id);
+    return current?.name === name;
   }
 
   selectType(type: ResourceType | null) {

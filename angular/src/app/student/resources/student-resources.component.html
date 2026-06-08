@@ -118,7 +118,11 @@
             <span>全部</span>
           </button>
           @for (cat of hotCategories(); track cat.name) {
-            <button class="hot-chip" (click)="selectCategory(null)">
+            <button
+              class="hot-chip"
+              [class.is-active]="isHotCategoryActive(cat.name)"
+              (click)="selectHotCategory(cat.name)"
+            >
               <span class="hot-chip__dot" [style.background]="cat.color"></span>
               <span>{{ cat.name }}</span>
             </button>
