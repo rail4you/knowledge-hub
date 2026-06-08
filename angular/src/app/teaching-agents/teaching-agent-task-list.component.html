@@ -182,7 +182,48 @@
         </div>
 
         <label class="field">
-          <span>学生范围 <em>*</em></span>
+          <span>
+            学生范围 <em>*</em>
+            <span class="student-counter">
+              已选 {{ selectedStudentCount() }} / 共 {{ totalStudentCount() }}
+            </span>
+          </span>
+          <!-- P1-16：批量选学生工具条。提供全选 / 清空 / 反选三个一键操作。 -->
+          <div class="student-bulk-bar">
+            <button
+              type="button"
+              nz-button
+              nzSize="small"
+              nzType="default"
+              [disabled]="allStudentsSelected() || totalStudentCount() === 0"
+              (click)="selectAllStudents()"
+            >
+              全选
+            </button>
+            <button
+              type="button"
+              nz-button
+              nzSize="small"
+              nzType="default"
+              [disabled]="selectedStudentCount() === 0"
+              (click)="clearAllStudents()"
+            >
+              清空
+            </button>
+            <button
+              type="button"
+              nz-button
+              nzSize="small"
+              nzType="default"
+              [disabled]="totalStudentCount() === 0"
+              (click)="invertStudentSelection()"
+            >
+              反选
+            </button>
+            @if (totalStudentCount() === 0) {
+              <span class="bulk-hint">暂无学生可选</span>
+            }
+          </div>
           <nz-select
             nzMode="multiple"
             nzShowSearch

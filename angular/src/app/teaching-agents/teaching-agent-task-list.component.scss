@@ -173,6 +173,26 @@
   gap: 1rem;
 }
 
+/* P1-16：批量选学生工具条 + 实时统计。 */
+.student-counter {
+  margin-left: 8px;
+  font-weight: 400;
+  color: #5a6f78;
+  font-size: 0.85em;
+}
+
+.student-bulk-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 0 2px;
+
+  .bulk-hint {
+    color: #94a3b8;
+    font-size: 12px;
+  }
+}
+
 /* ── Responsive ── */
 @media (max-width: 980px) {
   .task-page {

@@ -89,6 +89,12 @@ export class TeachingAgentTaskListComponent implements OnInit {
 
     return this.options().courses.map(item => ({ id: item.id, label: item.title }));
   });
+  // P1-16：批量选学生——暴露给模板的统计 getter，避免在模板里写三目运算。
+  readonly totalStudentCount = computed(() => this.options().students.length);
+  readonly selectedStudentCount = computed(() => this.form().studentIds.length);
+  readonly allStudentsSelected = computed(
+    () => this.totalStudentCount() > 0 && this.selectedStudentCount() === this.totalStudentCount(),
+  );
   readonly summary = computed(() => {
     const tasks = this.tasks();
 
@@ -142,6 +148,25 @@ export class TeachingAgentTaskListComponent implements OnInit {
   setStudentIds(value: string[] | null): void {
     this.setFormField('studentIds', value ?? []);
     setTimeout(() => this.studentSelectOpen.set(true));
+  }
+
+  // P1-16：批量选学生。当学生数量大时，一个个在下拉里点选极不友好。
+  // 提供全选 / 清空 / 反选三个一键操作，并在标签栏显示实时统计。
+  selectAllStudents(): void {
+    const allIds = this.options().students.map(s => s.id);
+    this.setFormField('studentIds', allIds);
+  }
+
+  clearAllStudents(): void {
+    this.setFormField('studentIds', []);
+  }
+
+  invertStudentSelection(): void {
+    const selected = new Set(this.form().studentIds);
+    const inverted = this.options().students
+      .filter(s => !selected.has(s.id))
+      .map(s => s.id);
+    this.setFormField('studentIds', inverted);
   }
 
   async createTask(): Promise<void> {
