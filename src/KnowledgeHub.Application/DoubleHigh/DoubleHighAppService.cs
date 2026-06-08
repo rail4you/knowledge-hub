@@ -452,15 +452,31 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
 
         foreach (var input in inputs.OrderBy(x => x.SortOrder))
         {
+            // 关键修复：DTO 上 CategoryName / IndicatorCode / Name 标注了非空且默认 string.Empty，
+            // 但 ABP 反序列化 JSON 时如果前端送来 null，仍会得到 null；此时原实现直接 .Trim() 会
+            // 抛 NullReferenceException → 500 → 前端只看到笼统"保存失败"。
+            // 这里统一用空串兜底再 Trim，保证构造 DoubleHighIndicator 时不会 NRE。
+            // 注：entity 构造函数的 code/name 参数理论上应该非空，但保持传入已 Trim 字符串以便兼容
+            // 早期可能由其他调用方构造的 DTO。
+            var code = (input.IndicatorCode ?? string.Empty).Trim();
+            var name = (input.Name ?? string.Empty).Trim();
+            var categoryName = (input.CategoryName ?? string.Empty).Trim();
+
+            if (code.Length == 0 || name.Length == 0 || categoryName.Length == 0)
+            {
+                throw new UserFriendlyException(
+                    $"指标 {input.SortOrder} 缺少必填字段：分类、编码、名称均不能为空。");
+            }
+
             var entity = new DoubleHighIndicator(
                 GuidGenerator.Create(),
                 projectId,
-                input.IndicatorCode.Trim(),
-                input.Name.Trim())
+                code,
+                name)
             {
                 TenantId = CurrentTenant.Id,
                 ParentId = input.ParentId,
-                CategoryName = input.CategoryName.Trim(),
+                CategoryName = categoryName,
                 Description = input.Description?.Trim(),
                 Unit = input.Unit?.Trim(),
                 DataSourceType = input.DataSourceType,

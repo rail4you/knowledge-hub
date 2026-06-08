@@ -92,9 +92,14 @@ export class DoubleHighManagementComponent implements OnInit {
         endTime: detail.endTime,
         indicators: detail.indicators.map(x => ({
           parentId: x.parentId,
-          categoryName: x.categoryName,
-          indicatorCode: x.indicatorCode,
-          name: x.name,
+          // 关键修复：原实现 categoryName / indicatorCode / name 没有 `|| ''` 兜底，
+          // 一旦后端返回 null（例如手动构造的数据 / 旧版数据 / 测试桩），前端会把 null
+          // 原样发回；后端 ReplaceIndicatorsAsync 中的 .Trim() 会抛 NullReferenceException，
+          // 直接 500，前端只看到笼统的"保存失败"。
+          // 改为与 description / unit 同样的兜底，把字符串字段都规整成 '' 再发出去。
+          categoryName: x.categoryName || '',
+          indicatorCode: x.indicatorCode || '',
+          name: x.name || '',
           description: x.description || '',
           unit: x.unit || '',
           dataSourceType: x.dataSourceType,
@@ -127,7 +132,11 @@ export class DoubleHighManagementComponent implements OnInit {
         this.message.success('双高评估项目已保存');
         this.reload();
       },
-      error: () => this.message.error('保存失败'),
+      // 关键修复：旧实现 `error: () => this.message.error('保存失败')` 丢弃了 err 形参，
+      // 一旦后端返回 500（例如 ReplaceIndicatorsAsync 中 NRE、外键冲突、唯一索引冲突），
+      // 用户和开发者都看不到真实原因。
+      // 现在把后端 message 透传出来，并打 console.error 留详细堆栈供排查。
+      error: err => this.showApiError(err, '保存失败'),
     });
   }
 
@@ -137,8 +146,24 @@ export class DoubleHighManagementComponent implements OnInit {
         this.message.success('项目已删除');
         this.reload();
       },
-      error: () => this.message.error('删除失败'),
+      error: err => this.showApiError(err, '删除失败'),
     });
+  }
+
+  /**
+   * 统一提取并展示后端真实错误（与 chapter-management.component.ts 保持一致）。
+   * 提取顺序与 ABP 默认 UserFriendlyException 响应体一致：
+   *   { error: { code, message, details, ... } }
+   * 兼容直接的 { message } 包装与原生 Error。
+   */
+  private showApiError(err: any, fallback: string): void {
+    const detail =
+      err?.error?.error?.message ||
+      err?.error?.message ||
+      err?.message ||
+      '未知错误';
+    console.error('[DoubleHigh]', fallback, err);
+    this.message.error(`${fallback}：${detail}`);
   }
 
   getStatusLabel(status: DoubleHighProjectStatus): string {
