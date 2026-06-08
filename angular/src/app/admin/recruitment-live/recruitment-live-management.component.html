@@ -4,7 +4,7 @@
       <span nz-icon nzType="video-camera" nzTheme="outline"></span>
       我的直播
     </h2>
-    <button nz-button nzType="primary" (click)="createLive()">
+    <button nz-button nzType="primary" (click)="openCreateModal()">
       <span nz-icon nzType="plus" nzTheme="outline"></span>
       创建直播
     </button>
@@ -73,3 +73,69 @@
     </tbody>
   </nz-table>
 </div>
+
+<!-- Create live modal -->
+<nz-modal
+  [(nzVisible)]="createModalVisible"
+  nzTitle="创建直播"
+  [nzFooter]="createModalFooter"
+  (nzOnCancel)="closeCreateModal()"
+>
+  <div *nzModalContent>
+    <form nz-form [formGroup]="form" class="create-form">
+      <nz-form-item>
+        <nz-form-label nzRequired>直播标题</nz-form-label>
+        <nz-form-control [nzErrorTip]="'请输入直播标题'">
+          <input nz-input formControlName="title" placeholder="输入直播标题" maxlength="200" />
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>描述</nz-form-label>
+        <nz-form-control>
+          <textarea nz-input formControlName="description" placeholder="直播描述（可选）" rows="3" maxlength="1000"></textarea>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>分配学生</nz-form-label>
+        <nz-form-control>
+          <nz-select
+            formControlName="studentId"
+            nzAllowClear
+            nzPlaceHolder="搜索并选择学生（可选）"
+            [nzLoading]="studentLoading()"
+            nzShowSearch
+            nzServerSearch
+            (nzOnSearch)="onStudentSearch($event)"
+          >
+            <nz-option *ngFor="let s of students()" [nzValue]="s.id" [nzLabel]="s.name + ' (' + s.userName + ')'">
+              {{ s.name }}（{{ s.userName }}）
+            </nz-option>
+          </nz-select>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>计划时间</nz-form-label>
+        <nz-form-control>
+          <nz-date-picker
+            formControlName="scheduledAt"
+            nzShowTime
+            nzShowNow
+            nzPlaceHolder="选择计划开始时间（可选）"
+            style="width: 100%"
+          ></nz-date-picker>
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </div>
+
+  <ng-template #createModalFooter>
+    <button nz-button (click)="closeCreateModal()">取消</button>
+    <button nz-button nzType="primary" [nzLoading]="loading()" (click)="submit()">
+      <span nz-icon nzType="plus" nzTheme="outline"></span>
+      确认创建
+    </button>
+  </ng-template>
+</nz-modal>

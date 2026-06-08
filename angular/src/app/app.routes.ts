@@ -268,14 +268,6 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
-    path: 'admin/recruitment-live/create',
-    loadComponent: () => import('./admin/recruitment-live/recruitment-live-create.component').then(c => c.RecruitmentLiveCreateComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
-    },
-  },
-  {
     path: 'admin/recruitment-live/:id',
     loadComponent: () => import('./recruitment-live/live-room.component').then(c => c.LiveRoomComponent),
     canActivate: [authGuard, nonStudentGuard],

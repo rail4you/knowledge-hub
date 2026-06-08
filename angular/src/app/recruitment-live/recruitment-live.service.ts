@@ -17,7 +17,7 @@ export class RecruitmentLiveService {
 
   getLive = (id: string) =>
     this.restService.request<any, RecruitmentLiveDto>({
-      method: 'GET', url: `/api/app/recruitment-live/${id}`,
+      method: 'GET', url: `/api/app/recruitment-live/${id}/live`,
     }, { apiName: this.apiName });
 
   getTeacherLives = (input: PagedRecruitmentLiveRequestDto) =>
@@ -32,12 +32,12 @@ export class RecruitmentLiveService {
 
   createLive = (input: CreateRecruitmentLiveDto) =>
     this.restService.request<any, RecruitmentLiveDto>({
-      method: 'POST', url: '/api/app/recruitment-live', body: input,
+      method: 'POST', url: '/api/app/recruitment-live/live', body: input,
     }, { apiName: this.apiName });
 
   updateLive = (id: string, input: UpdateRecruitmentLiveDto) =>
     this.restService.request<any, RecruitmentLiveDto>({
-      method: 'PUT', url: `/api/app/recruitment-live/${id}`, body: input,
+      method: 'PUT', url: `/api/app/recruitment-live/${id}/live`, body: input,
     }, { apiName: this.apiName });
 
   cancelLive = (id: string) =>
@@ -47,12 +47,12 @@ export class RecruitmentLiveService {
 
   deleteLive = (id: string) =>
     this.restService.request<any, void>({
-      method: 'DELETE', url: `/api/app/recruitment-live/${id}`,
+      method: 'DELETE', url: `/api/app/recruitment-live/${id}/live`,
     }, { apiName: this.apiName });
 
   getWebSocketToken = (liveId: string) =>
     this.restService.request<any, WsTokenDto>({
-      method: 'GET', url: `/api/app/recruitment-live/${liveId}/web-socket-token`,
+      method: 'GET', url: `/api/app/recruitment-live/web-socket-token/${liveId}`,
     }, { apiName: this.apiName });
 
   getTenantStudents = (filter?: string) =>

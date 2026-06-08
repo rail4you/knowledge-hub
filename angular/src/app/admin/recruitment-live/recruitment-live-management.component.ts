@@ -1,14 +1,20 @@
 import { Component, OnInit, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzFormModule } from 'ng-zorro-antd/form';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { RecruitmentLiveService } from '../../recruitment-live/recruitment-live.service';
-import { RecruitmentLiveDto, RecruitmentLiveStatus } from '../../recruitment-live/recruitment-live.models';
+import { RecruitmentLiveDto, RecruitmentLiveStatus, UserBriefDto } from '../../recruitment-live/recruitment-live.models';
 
 @Component({
   selector: 'app-recruitment-live-management',
@@ -16,11 +22,18 @@ import { RecruitmentLiveDto, RecruitmentLiveStatus } from '../../recruitment-liv
   imports: [
     CommonModule,
     RouterModule,
+    FormsModule,
+    ReactiveFormsModule,
     NzTableModule,
     NzButtonModule,
     NzTagModule,
     NzIconModule,
     NzPopconfirmModule,
+    NzModalModule,
+    NzFormModule,
+    NzInputModule,
+    NzSelectModule,
+    NzDatePickerModule,
   ],
   templateUrl: './recruitment-live-management.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,6 +42,7 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   private liveService = inject(RecruitmentLiveService);
   private router = inject(Router);
   private message = inject(NzMessageService);
+  private fb = inject(FormBuilder);
 
   loading = signal(false);
   lives = signal<RecruitmentLiveDto[]>([]);
@@ -36,6 +50,19 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   pageIndex = signal(1);
   pageSize = signal(10);
   filter = signal('');
+
+  // ── Create modal state ──
+  createModalVisible = signal(false);
+  students = signal<UserBriefDto[]>([]);
+  studentLoading = signal(false);
+  studentSearch = signal('');
+
+  form = this.fb.group({
+    title: ['', [Validators.required, Validators.maxLength(200)]],
+    description: [''],
+    studentId: [null as string | null],
+    scheduledAt: [null as Date | null],
+  });
 
   ngOnInit() {
     this.loadLives();
@@ -60,8 +87,68 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     });
   }
 
-  createLive() {
-    this.router.navigate(['/admin/recruitment-live/create']);
+  openCreateModal() {
+    this.form.reset({
+      title: '',
+      description: '',
+      studentId: null,
+      scheduledAt: null,
+    });
+    this.studentSearch.set('');
+    this.loadStudents();
+    this.createModalVisible.set(true);
+  }
+
+  closeCreateModal() {
+    this.createModalVisible.set(false);
+  }
+
+  loadStudents() {
+    this.studentLoading.set(true);
+    this.liveService.getTenantStudents(this.studentSearch()).subscribe({
+      next: (users) => {
+        this.students.set(users);
+        this.studentLoading.set(false);
+      },
+      error: () => {
+        this.students.set([]);
+        this.studentLoading.set(false);
+      },
+    });
+  }
+
+  onStudentSearch(value: string) {
+    this.studentSearch.set(value);
+    this.loadStudents();
+  }
+
+  submit() {
+    if (this.form.invalid) {
+      Object.values(this.form.controls).forEach(c => {
+        if (c.invalid) { c.markAsDirty(); c.updateValueAndValidity({ onlySelf: true }); }
+      });
+      return;
+    }
+
+    this.loading.set(true);
+    const val = this.form.value;
+    this.liveService.createLive({
+      title: val.title!,
+      description: val.description || undefined,
+      studentId: val.studentId || undefined,
+      scheduledAt: val.scheduledAt ? val.scheduledAt.toISOString() : undefined,
+    }).subscribe({
+      next: (live) => {
+        this.loading.set(false);
+        this.message.success(`直播创建成功，房间码: ${live.roomCode}`);
+        this.closeCreateModal();
+        this.loadLives();
+      },
+      error: (err) => {
+        this.loading.set(false);
+        this.message.error(err?.error?.error?.message || '创建失败');
+      },
+    });
   }
 
   enterLive(live: RecruitmentLiveDto) {

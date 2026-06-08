@@ -41,6 +41,24 @@ import {
   AppstoreOutline,
   RightOutline,
   DownOutline,
+  FolderOutline,
+  FolderOpenOutline,
+  MenuFoldOutline,
+  MenuUnfoldOutline,
+  AuditOutline,
+  IdcardOutline,
+  IdcardFill,
+  // P0：employment-application 页用到的图标（之前未注册，导致 nz-icon 报 "does not exist"）
+  BankOutline,
+  CheckOutline,
+  CloseOutline,
+  CloseCircleOutline,
+  FormOutline,
+  MessageOutline,
+  TrophyOutline,
+  ClockCircleOutline,
+  QuestionOutline,
+  RollbackOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -80,6 +98,24 @@ const icons = [
   AppstoreOutline,
   RightOutline,
   DownOutline,
+  FolderOutline,
+  FolderOpenOutline,
+  MenuFoldOutline,
+  MenuUnfoldOutline,
+  AuditOutline,
+  IdcardOutline,
+  IdcardFill,
+  // P0：employment-application 页用到的图标
+  BankOutline,
+  CheckOutline,
+  CloseOutline,
+  CloseCircleOutline,
+  FormOutline,
+  MessageOutline,
+  TrophyOutline,
+  ClockCircleOutline,
+  QuestionOutline,
+  RollbackOutline,
 ];
 
 export const appConfig: ApplicationConfig = {
