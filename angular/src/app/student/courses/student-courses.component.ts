@@ -21,7 +21,7 @@ interface HeroSlide {
   description: string;
   tag: string;
   icon: string;
-  gradient: string;
+  color: string;
 }
 
 interface StatItem {
@@ -123,7 +123,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       description: '汇聚专业精品课程，章节清晰、资源丰富、习题完备，构建从知识获取到技能掌握的完整学习路径。',
       tag: '课程简介',
       icon: 'read',
-      gradient: 'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
+      color: '#1e6ce8',
     },
     {
       title: '知识图谱 · 体系化学习',
@@ -131,7 +131,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       description: '基于专业知识点关系构建认知图谱，可视化呈现章节与资源脉络，让学习更系统、更高效。',
       tag: '知识图谱',
       icon: 'apartment',
-      gradient: 'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 100%)',
+      color: '#0c4cb8',
     },
     {
       title: '在线练习 · 巩固提升',
@@ -139,7 +139,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       description: '每章配备精选习题与详细解析，自主评估掌握情况，让学习效果可量化、可追溯。',
       tag: '在线练习',
       icon: 'form',
-      gradient: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+      color: '#059669',
     },
   ]);
 
@@ -163,11 +163,11 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
 
   /** 热门课程（基于已选学生数排序，mock） */
   readonly hotCourses = signal<HotCourse[]>([
-    { rank: 1, title: 'Python 程序设计基础', students: 2840, color: 'linear-gradient(135deg, #0c4cb8, #1e6ce8)' },
-    { rank: 2, title: '高等数学（上）', students: 2654, color: 'linear-gradient(135deg, #1e6ce8, #3b82f6)' },
-    { rank: 3, title: '大学英语（一）', students: 2320, color: 'linear-gradient(135deg, #06b6d4, #0e7490)' },
-    { rank: 4, title: '计算机网络原理', students: 1987, color: '#10b981' },
-    { rank: 5, title: '机械制图与 CAD', students: 1854, color: '#94a3b8' },
+    { rank: 1, title: 'Python 程序设计基础', students: 2840, color: '#1e6ce8' },
+    { rank: 2, title: '高等数学（上）', students: 2654, color: '#0c4cb8' },
+    { rank: 3, title: '大学英语（一）', students: 2320, color: '#0891b2' },
+    { rank: 4, title: '计算机网络原理', students: 1987, color: '#059669' },
+    { rank: 5, title: '机械制图与 CAD', students: 1854, color: '#0284c7' },
   ]);
 
   ngOnInit(): void {
@@ -202,13 +202,23 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
 
   loadCourses(): void {
     this.loading.set(true);
-    this.courseService.getPublished({
+    // 'enrolled' 是客户端基于 myCourses() 过滤，不发请求
+    // 'all' / 'recommended' 都是从 getPublished 拉取，由 selectedStatus() 触发
+    const status = this.selectedStatus();
+    const input: any = {
       filter: this.filter() || undefined,
       major: this.selectedMajor() || undefined,
       difficulty: this.selectedDifficulty() ?? undefined,
       skipCount: 0,
       maxResultCount: 30,
-    } as any).subscribe({
+    };
+    // 'recommended' 透传 status 字段；后端 PagedCourseRequestDto 支持 status 过滤；
+    // 未来若后端加专门的推荐接口，可在此处改为调用 getRecommendedCourses。
+    if (status === 'recommended') {
+      // 暂不附加 status：让 API 返回所有已发布课程，再由前端按热度/进度等本地排序。
+      // 这样 'all' 与 'recommended' 至少都能响应点击、显示 loading、并刷新数据。
+    }
+    this.courseService.getPublished(input).subscribe({
       next: result => {
         this.courses.set(result.items || []);
         this.loading.set(false);
@@ -291,6 +301,11 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
 
   selectStatus(value: string) {
     this.selectedStatus.set(value);
+    // 'enrolled' 是基于 myCourses() 的客户端过滤，不需要重新发请求
+    // 'all' / 'recommended' 需要重新拉取，否则点击"全部课程/推荐课程"看上去无反应
+    if (value !== 'enrolled') {
+      this.loadCourses();
+    }
   }
 
   onSearch() {
@@ -343,14 +358,14 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
 
   gradientByKey(primary: string, secondary: string): string {
     const palettes = [
-      'linear-gradient(135deg, #0c4cb8 0%, #1e6ce8 100%)',
-      'linear-gradient(135deg, #1e6ce8 0%, #38bdf8 100%)',
-      'linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%)',
-      'linear-gradient(135deg, #06b6d4 0%, #1e6ce8 100%)',
-      'linear-gradient(135deg, #0c4cb8 0%, #06b6d4 100%)',
-      'linear-gradient(135deg, #047857 0%, #10b981 100%)',
-      'linear-gradient(135deg, #10b981 0%, #22c55e 100%)',
-      'linear-gradient(135deg, #0e7490 0%, #14b8a6 100%)',
+      '#1e6ce8',
+      '#0c4cb8',
+      '#2563eb',
+      '#0891b2',
+      '#0284c7',
+      '#059669',
+      '#0d9488',
+      '#16a34a',
     ];
     const key = (primary || 'x') + (secondary || '');
     let hash = 0;
