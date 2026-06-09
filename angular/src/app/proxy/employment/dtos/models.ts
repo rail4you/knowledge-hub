@@ -48,6 +48,8 @@ export interface CreateUpdateInterviewScheduleDto {
 }
 
 export interface CreateUpdateJobPostingDto {
+  companyName?: string | null;
+  industry?: string | null;
   title?: string;
   summary?: string | null;
   description?: string;

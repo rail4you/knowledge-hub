@@ -12,8 +12,10 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
+import { OssUploadService } from '../../shared/oss-upload.service';
 import {
   CreatePracticumAssessmentDto,
   CreatePracticumGuidanceRecordDto,
@@ -42,6 +44,7 @@ import {
     NzTagModule,
     NzTooltipModule,
     NzIconModule,
+    NzUploadModule,
   ],
   templateUrl: './practicum-management.component.html',
   styleUrls: ['./practicum-management.component.scss'],
@@ -50,6 +53,7 @@ import {
 export class PracticumManagementComponent implements OnInit {
   private readonly practicumService = inject(PracticumService);
   private readonly courseService = inject(CourseService);
+  private readonly ossUploadService = inject(OssUploadService);
   private readonly message = inject(NzMessageService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -64,6 +68,15 @@ export class PracticumManagementComponent implements OnInit {
   selectedProjectId: string | null = null;
   modalVisible = false;
   editingId: string | null = null;
+  /** 基本信息 Tab 显示用：后端 detail 返回的关联课程名称（不是 ID）。 */
+  selectedCourseTitle = '';
+
+  // ===== OSS 上传状态 =====
+  /** 封面图片上传进度 + 已上传文件列表（picture-card 模式）。 */
+  coverUploading = false;
+  coverFileList: NzUploadFile[] = [];
+  /** 资料上传进度：key=material index, value=true 表示上传中。 */
+  materialUploading: Record<number, boolean> = {};
 
   /** Form for basic info, tasks, and materials (all in one DTO) */
   form: CreateUpdatePracticumProjectDto = this.freshForm();
@@ -81,10 +94,43 @@ export class PracticumManagementComponent implements OnInit {
   }
 
   private freshForm(): CreateUpdatePracticumProjectDto {
+    this.selectedCourseTitle = '';
+    this.coverFileList = [];
+    this.materialUploading = {};
     return { title: '', summary: '', description: '', coverImageUrl: '', courseId: undefined,
       major: '', className: '', status: PracticumProjectStatus.Draft,
       startTime: undefined, endTime: undefined, maxScore: 100, allowResubmission: true,
       tasks: [], materials: [] };
+  }
+
+  /** 把后端 detail 填到 form + 设置 selectedCourseTitle（用于 Tab 0 显示课程名称）。 */
+  private applyDetailToForm(detail: any): void {
+    this.form = {
+      title: detail.title,
+      summary: detail.summary || '',
+      description: detail.description || '',
+      coverImageUrl: detail.coverImageUrl || '',
+      courseId: detail.courseId,
+      major: detail.major || '',
+      className: detail.className || '',
+      status: detail.status,
+      startTime: detail.startTime,
+      endTime: detail.endTime,
+      maxScore: detail.maxScore,
+      allowResubmission: detail.allowResubmission,
+      tasks: (detail.tasks || []).map((t: any) => ({
+        title: t.title, description: t.description || '', requirement: t.requirement || '',
+        dueTime: t.dueTime, scoreWeight: t.scoreWeight, sortOrder: t.sortOrder,
+      })),
+      materials: (detail.materials || []).map((m: any) => ({
+        taskId: m.taskId, title: m.title, description: m.description || '',
+        materialType: m.materialType, resourceUrl: m.resourceUrl, sortOrder: m.sortOrder,
+      })),
+    };
+    this.selectedCourseTitle = detail.courseTitle || '';
+    // 同步封面 / 资料上传组件的显示状态（如果后端已有 URL，回显成"已上传"卡片）
+    this.syncCoverFileList();
+    this.materialUploading = {};
   }
 
   private emptyGuidance(): CreatePracticumGuidanceRecordDto {
@@ -121,28 +167,7 @@ export class PracticumManagementComponent implements OnInit {
     this.cdr.markForCheck();
 
     this.practicumService.getDetail(p.id).subscribe(detail => {
-      this.form = {
-        title: detail.title,
-        summary: detail.summary || '',
-        description: detail.description || '',
-        coverImageUrl: detail.coverImageUrl || '',
-        courseId: detail.courseId,
-        major: detail.major || '',
-        className: detail.className || '',
-        status: detail.status,
-        startTime: detail.startTime,
-        endTime: detail.endTime,
-        maxScore: detail.maxScore,
-        allowResubmission: detail.allowResubmission,
-        tasks: detail.tasks.map(t => ({
-          title: t.title, description: t.description || '', requirement: t.requirement || '',
-          dueTime: t.dueTime, scoreWeight: t.scoreWeight, sortOrder: t.sortOrder,
-        })),
-        materials: detail.materials.map(m => ({
-          taskId: m.taskId, title: m.title, description: m.description || '',
-          materialType: m.materialType, resourceUrl: m.resourceUrl, sortOrder: m.sortOrder,
-        })),
-      };
+      this.applyDetailToForm(detail);
       this.selectedProjectId = p.id;
       this.activeTab = 1;
       this.modalVisible = false;
@@ -168,28 +193,7 @@ export class PracticumManagementComponent implements OnInit {
         this.cdr.markForCheck();
         // Reload detail so tabs have tasks/materials data
         this.practicumService.getDetail(r.id).subscribe(detail => {
-          this.form = {
-            title: detail.title,
-            summary: detail.summary || '',
-            description: detail.description || '',
-            coverImageUrl: detail.coverImageUrl || '',
-            courseId: detail.courseId,
-            major: detail.major || '',
-            className: detail.className || '',
-            status: detail.status,
-            startTime: detail.startTime,
-            endTime: detail.endTime,
-            maxScore: detail.maxScore,
-            allowResubmission: detail.allowResubmission,
-            tasks: detail.tasks.map(t => ({
-              title: t.title, description: t.description || '', requirement: t.requirement || '',
-              dueTime: t.dueTime, scoreWeight: t.scoreWeight, sortOrder: t.sortOrder,
-            })),
-            materials: detail.materials.map(m => ({
-              taskId: m.taskId, title: m.title, description: m.description || '',
-              materialType: m.materialType, resourceUrl: m.resourceUrl, sortOrder: m.sortOrder,
-            })),
-          };
+          this.applyDetailToForm(detail);
           this.reload();
           this.loadEnrollmentsAndSubmissions(r.id);
           this.cdr.markForCheck();
@@ -211,11 +215,12 @@ export class PracticumManagementComponent implements OnInit {
     return this.canSaveModal ? '' : '请先添加至少一个任务（点击上方"添加任务"按钮）';
   }
 
-  /** Re-open the edit modal from the detail tab */
+  /** 从基本信息 Tab 直接打开编辑 modal（不再走 openEdit → 切到任务 Tab 的路径）。 */
   openEditFromTab0(): void {
-    if (this.selectedProjectId) {
-      this.openEdit({ id: this.selectedProjectId } as PracticumProjectDto);
-    }
+    if (!this.selectedProjectId) return;
+    this.editingId = this.selectedProjectId;
+    this.modalVisible = true;
+    this.cdr.markForCheck();
   }
 
   deleteProject(id: string): void {
@@ -281,10 +286,19 @@ export class PracticumManagementComponent implements OnInit {
       .subscribe(r => { this.submissions.set(r.items || []); this.cdr.markForCheck(); });
   }
 
+  /**
+   * 保存任务 / 资料后调用：拉最新 detail 刷新 form 内的 tasks / materials，
+   * 同时 reload 列表（让表格的 taskCount / materialCount 同步）。
+   * 不走 openEdit——openEdit 会切 activeTab、闪一下 modal、且不 reload。
+   */
   private refreshDetail(): void {
-    if (this.selectedProjectId) {
-      this.openEdit({ id: this.selectedProjectId } as PracticumProjectDto);
-    }
+    const pid = this.selectedProjectId;
+    if (!pid) return;
+    this.practicumService.getDetail(pid).subscribe(detail => {
+      this.applyDetailToForm(detail);
+      this.reload();
+      this.cdr.markForCheck();
+    });
   }
 
   openGuidance(item: PracticumSubmissionDto): void {
@@ -337,4 +351,115 @@ export class PracticumManagementComponent implements OnInit {
   submissionLabel(s: PracticumSubmissionStatus): string {
     return ({ [PracticumSubmissionStatus.Submitted]: '已提交', [PracticumSubmissionStatus.Returned]: '已退回', [PracticumSubmissionStatus.Reviewed]: '已评阅' } as Record<number, string>)[s] || '未知';
   }
+
+  // ===== OSS 上传 handlers =====
+
+  /** 用 form.coverImageUrl 同步 nz-upload 卡片（已存在的封面直接显示）。 */
+  private syncCoverFileList(): void {
+    const url = this.form?.coverImageUrl;
+    if (url) {
+      this.coverFileList = [{
+        uid: 'cover-existing',
+        name: this.fileNameFromUrl(url),
+        status: 'done',
+        url,
+      }];
+    } else {
+      this.coverFileList = [];
+    }
+  }
+
+  private fileNameFromUrl(url: string): string {
+    try {
+      const u = new URL(url);
+      const last = u.pathname.split('/').pop() || 'cover';
+      return decodeURIComponent(last);
+    } catch {
+      return 'cover';
+    }
+  }
+
+  /** 封面上传前的校验 + 触发 OSS 上传。返回 false 阻止 nz-upload 默认行为。 */
+  beforeCoverUpload = (file: NzUploadFile): boolean => {
+    const rawFile = file as any as File;
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+    if (!allowed.includes(rawFile.type)) {
+      this.message.error('封面仅支持 JPG/PNG/GIF/WebP/BMP 格式');
+      return false;
+    }
+    if (rawFile.size > 10 * 1024 * 1024) {
+      this.message.error('封面大小不能超过 10MB');
+      return false;
+    }
+    this.coverUploading = true;
+    this.ossUploadService.uploadImage(rawFile).subscribe({
+      next: (res) => {
+        this.coverUploading = false;
+        this.form.coverImageUrl = res.url;
+        this.coverFileList = [{
+          uid: res.objectKey,
+          name: res.originalFileName,
+          status: 'done',
+          url: res.url,
+        }];
+        this.message.success('封面上传成功');
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.coverUploading = false;
+        this.coverFileList = [];
+        this.message.error('封面上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+        this.cdr.markForCheck();
+      },
+    });
+    return false;
+  };
+
+  removeCover = (): boolean => {
+    this.form.coverImageUrl = '';
+    this.coverFileList = [];
+    this.cdr.markForCheck();
+    return true;
+  };
+
+  /**
+   * 资料文件上传前的校验 + 触发 OSS 上传。
+   * 上传成功后将 OSS 返回的 URL 写回对应 material.resourceUrl。
+   */
+  beforeMaterialUpload = (index: number) => (file: NzUploadFile): boolean => {
+    const rawFile = file as any as File;
+    if (rawFile.size > 50 * 1024 * 1024) {
+      this.message.error('资料文件不能超过 50MB');
+      return false;
+    }
+    this.materialUploading = { ...this.materialUploading, [index]: true };
+    this.cdr.markForCheck();
+    this.ossUploadService.uploadFile(rawFile).subscribe({
+      next: (res) => {
+        const m = this.form.materials[index];
+        if (m) {
+          m.resourceUrl = res.url;
+          // 没填标题时，用文件名兜底
+          if (!m.title) m.title = res.originalFileName;
+        }
+        this.materialUploading = { ...this.materialUploading, [index]: false };
+        this.message.success(`资料上传成功：${res.originalFileName}`);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.materialUploading = { ...this.materialUploading, [index]: false };
+        this.message.error('资料上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+        this.cdr.markForCheck();
+      },
+    });
+    return false;
+  };
+
+  /** 资料卡片清除已上传的文件（仅清空 resourceUrl，不删 OSS 对象）。 */
+  removeMaterialFile = (index: number) => (): boolean => {
+    const m = this.form.materials[index];
+    if (m) m.resourceUrl = '';
+    this.cdr.markForCheck();
+    return true;
+  };
 }

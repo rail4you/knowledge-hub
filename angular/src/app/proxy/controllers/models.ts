@@ -6,6 +6,13 @@ export interface OssUploadResultDto {
   size?: number;
 }
 
+export interface ResumeUploadResultDto {
+  url?: string;
+  filePath?: string;
+  originalFileName?: string;
+  size?: number;
+}
+
 export interface TenantInfoDto {
   id?: string | null;
   name?: string | null;

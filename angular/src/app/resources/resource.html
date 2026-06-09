@@ -137,6 +137,7 @@
                 <th>{{ '::ResourceType' | abpLocalization }}</th>
                 <th>{{ '::Version' | abpLocalization }}</th>
                 <th>{{ '::Status' | abpLocalization }}</th>
+                <th>是否简历</th>
                 <th>{{ '::Creator' | abpLocalization }}</th>
                 <th>{{ '::CreationTime' | abpLocalization }}</th>
                 <th>{{ '::Actions' | abpLocalization }}</th>
@@ -160,9 +161,29 @@
                     {{ getStatusName(item.status) }}
                   </nz-tag>
                 </td>
+                <td (click)="$event.stopPropagation()">
+                  @if (item.isResume) {
+                    <nz-tag nzColor="purple" title="已设为简历，会出现在 AI 职业规划下拉中">
+                      <span nz-icon nzType="idcard" nzTheme="outline"></span>
+                      <span> 简历</span>
+                    </nz-tag>
+                  } @else {
+                    <span class="resume-empty">—</span>
+                  }
+                </td>
                 <td>{{ item.creatorName }}</td>
                 <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
-                <td>
+                <td (click)="$event.stopPropagation()">
+                  <!-- P1-15：仅资源创建者本人可切换"作为简历"（学生端不可见） -->
+                  @if (isCurrentUser(item.creatorId)) {
+                    <button nz-button nzType="link" nzSize="small"
+                            [class.resume-on]="item.isResume"
+                            (click)="toggleResume(item)"
+                            [nz-tooltip]="item.isResume ? '取消简历标记（AI 职业规划下拉将不再列出）' : '设为简历（会出现在 AI 职业规划下拉中）'">
+                      <span nz-icon nzType="idcard" [nzTheme]="item.isResume ? 'fill' : 'outline'"></span>
+                      {{ item.isResume ? '取消简历' : '设为简历' }}
+                    </button>
+                  }
                   <button nz-button nzType="link" nzSize="small" nzDanger (click)="openDeleteModalForResource(item)" nz-tooltip nzTooltipTitle="{{ '::RequestDelete' | abpLocalization }}">
                     <span nz-icon nzType="delete"></span>
                   </button>

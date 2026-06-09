@@ -439,16 +439,32 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
 
     private async Task ReplaceIndicatorsAsync(Guid projectId, List<CreateUpdateDoubleHighIndicatorDto> inputs)
     {
-        var existing = await _indicatorRepository.GetListAsync(x => x.ProjectId == projectId);
-        foreach (var indicator in existing)
+        // 关键修复：原实现用 _indicatorRepository.DeleteAsync 一条条删，
+        // EF 把删除和后续插入都挂在当前 UoW 上，最后一次 SaveChanges 时
+        // EF 按 "insert → update → delete" 顺序执行（delete 故意放最后，
+        // 是为了避免级联删除时父行先没了导致子行无法定位）。
+        // 但这就导致：新插入的指标若与未删除的旧指标撞 (ProjectId, IndicatorCode)
+        // 唯一键就直接 500：duplicate key value violates unique constraint
+        // "IX_AppDoubleHighIndicators_ProjectId_IndicatorCode"。
+        // 同样的坑 MicroMajorAppService.ReplaceCoursesAsync 也踩过，修法是改用
+        // ExecuteDeleteAsync 在 SQL 端 hard-delete，立即落库，插入时旧行已
+        // 不存在，唯一键不再冲突。
+        // 注：必须先删 DoubleHighIndicatorValue（无 ProjectId，只有 IndicatorId），
+        // 再删 DoubleHighIndicator，否则外键依赖会报错。
+        var dbContext = await _indicatorRepository.GetDbContextAsync();
+        var existingIds = await dbContext.Set<DoubleHighIndicator>()
+            .Where(x => x.ProjectId == projectId)
+            .Select(x => x.Id)
+            .ToListAsync();
+        if (existingIds.Count > 0)
         {
-            var values = await _valueRepository.GetListAsync(x => x.IndicatorId == indicator.Id);
-            foreach (var value in values)
-            {
-                await _valueRepository.DeleteAsync(value);
-            }
-            await _indicatorRepository.DeleteAsync(indicator);
+            await dbContext.Set<DoubleHighIndicatorValue>()
+                .Where(x => existingIds.Contains(x.IndicatorId))
+                .ExecuteDeleteAsync();
         }
+        await dbContext.Set<DoubleHighIndicator>()
+            .Where(x => x.ProjectId == projectId)
+            .ExecuteDeleteAsync();
 
         foreach (var input in inputs.OrderBy(x => x.SortOrder))
         {

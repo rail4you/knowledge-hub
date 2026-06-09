@@ -11,6 +11,14 @@ export class MicroMajorService {
   apiName = 'KnowledgeHub';
   
 
+  approveEnrollment = (enrollmentId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/micro-major/approve-enrollment/${enrollmentId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   create = (input: CreateUpdateMicroMajorDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, MicroMajorDto>({
       method: 'POST',
@@ -107,6 +115,14 @@ export class MicroMajorService {
     this.restService.request<any, MicroMajorCertificateDto>({
       method: 'POST',
       url: `/api/app/micro-major/issue-certificate/${enrollmentId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  rejectEnrollment = (enrollmentId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/micro-major/reject-enrollment/${enrollmentId}`,
     },
     { apiName: this.apiName,...config });
   

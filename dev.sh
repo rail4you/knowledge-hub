@@ -522,9 +522,26 @@ show_log() {
 run_migrate() {
     log_info "Running database migration..."
     cd "$PROJECT_ROOT"
-    ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/KnowledgeHub.DbMigrator --no-build 2>&1 || \
-    ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/KnowledgeHub.DbMigrator 2>&1
-    log_success "Migration completed"
+
+    # 强制 rebuild DbMigrator（含 EF Migrations / Application / Domain 依赖），
+    # 避免 "dotnet run --no-build" 拿过期 dll 跑出"假成功"：
+    # 脚本会照常输出 "Successfully completed"，但新 migration 实际没生效。
+    log_info "Building DbMigrator..."
+    if ! dotnet build src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj --nologo 2>&1 | tail -15; then
+        log_error "DbMigrator build failed. 请检查上方编译错误后再重试。"
+        return 1
+    fi
+
+    # build 完后用 --no-build 跑（避免 dotnet run 重复 build）。
+    ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/KnowledgeHub.DbMigrator --no-build 2>&1
+    local status=$?
+
+    if [ $status -eq 0 ]; then
+        log_success "Migration completed"
+    else
+        log_error "Migration failed (exit code: $status)"
+    fi
+    return $status
 }
 
 tail_logs() {

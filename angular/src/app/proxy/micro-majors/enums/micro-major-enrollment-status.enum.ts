@@ -6,6 +6,7 @@ export enum MicroMajorEnrollmentStatus {
   Completed = 2,
   Certified = 3,
   Cancelled = 4,
+  Pending = 5,
 }
 
 export const microMajorEnrollmentStatusOptions = mapEnumToOptions(MicroMajorEnrollmentStatus);

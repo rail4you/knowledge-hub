@@ -1,4 +1,4 @@
-import type { AuditResourceDto, CompleteUploadDto, CompleteUploadResultDto, CreatePhysicalDeleteRequestDto, CreateUpdateResourceCategoryDto, CreateUpdateResourceDto, InitiateUploadDto, InitiateUploadResultDto, MeiliSearchQueryDto, MeiliSearchResultDto, PhysicalDeleteRequestDto, ResourceAuditDto, ResourceCategoryDto, ResourceDto, ResourceListQueryDto, ResourceSearchQueryDto, ResourceVersionDto, UploadChunkDto, UploadVersionDto } from './models';
+import type { AuditResourceDto, CompleteUploadDto, CompleteUploadResultDto, CreatePhysicalDeleteRequestDto, CreateUpdateResourceCategoryDto, CreateUpdateResourceDto, InitiateUploadDto, InitiateUploadResultDto, MeiliSearchQueryDto, MeiliSearchResultDto, PhysicalDeleteRequestDto, ResourceAuditDto, ResourceCategoryDto, ResourceDto, ResourceListQueryDto, ResourceSearchQueryDto, ResourceVersionDto, SetResumeInput, UploadChunkDto, UploadVersionDto } from './models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto, PagedResultRequestDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -262,6 +262,15 @@ export class ResourceService {
     this.restService.request<any, void>({
       method: 'POST',
       url: '/api/app/resource/seed-test-documents',
+    },
+    { apiName: this.apiName,...config });
+  
+
+  setResume = (id: string, input: SetResumeInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/resource/${id}/set-resume`,
+      body: input,
     },
     { apiName: this.apiName,...config });
   

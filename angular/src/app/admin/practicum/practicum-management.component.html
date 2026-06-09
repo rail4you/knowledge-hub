@@ -57,7 +57,7 @@
           </div>
           <div class="summary-item">
             <span class="summary-label">关联课程</span>
-            <span class="summary-value">{{ form.courseId || '-' }}</span>
+            <span class="summary-value">{{ selectedCourseTitle || (form.courseId ? '已选择课程' : '-') }}</span>
           </div>
           <div class="summary-item">
             <span class="summary-label">状态</span>
@@ -92,7 +92,6 @@
           </div>
           <div class="nested-grid">
             <input nz-input [(ngModel)]="task.title" placeholder="任务名称" />
-            <input nz-input type="number" [(ngModel)]="task.scoreWeight" placeholder="权重（如 50）" />
             <input nz-input type="datetime-local" [(ngModel)]="task.dueTime" />
             <textarea nz-input [(ngModel)]="task.description" rows="2" placeholder="任务描述"></textarea>
             <textarea nz-input [(ngModel)]="task.requirement" rows="2" placeholder="任务要求"></textarea>
@@ -122,8 +121,29 @@
           </div>
           <div class="nested-grid">
             <input nz-input [(ngModel)]="material.title" placeholder="资料名称" />
-            <input nz-input [(ngModel)]="material.resourceUrl" placeholder="资料 URL" />
             <textarea nz-input [(ngModel)]="material.description" rows="2" placeholder="资料说明"></textarea>
+            <label class="material-file-row">
+              <span>资料文件</span>
+              <nz-upload
+                [nzMultiple]="false"
+                [nzMaxCount]="1"
+                [nzBeforeUpload]="beforeMaterialUpload(i)"
+                [nzFileList]="material.resourceUrl ? [{
+                  uid: 'material-existing-' + i,
+                  name: material.title || fileNameFromUrl(material.resourceUrl),
+                  status: 'done',
+                  url: material.resourceUrl
+                }] : []"
+                [nzRemove]="removeMaterialFile(i)"
+                [nzDisabled]="!!materialUploading[i]"
+                [nzShowUploadList]="true"
+              >
+                <button nz-button [nzLoading]="!!materialUploading[i]">
+                  <span nz-icon nzType="upload"></span>
+                  {{ material.resourceUrl ? '替换文件' : '点击上传' }}
+                </button>
+              </nz-upload>
+            </label>
           </div>
         </div>
 
@@ -196,8 +216,26 @@
         <label>项目简介</label>
         <textarea nz-input rows="3" [(ngModel)]="form.summary" placeholder="简要描述实训项目"></textarea>
 
-        <label>封面图片 URL</label>
-        <input nz-input [(ngModel)]="form.coverImageUrl" placeholder="可选" />
+        <label>封面图片</label>
+        <div class="cover-upload-group">
+          <nz-upload
+            nzListType="picture-card"
+            [nzMultiple]="false"
+            [nzMaxCount]="1"
+            [nzBeforeUpload]="beforeCoverUpload"
+            [nzFileList]="coverFileList"
+            [nzRemove]="removeCover"
+            [nzDisabled]="coverUploading"
+            nzAccept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+          >
+            @if (coverFileList.length === 0) {
+              <div class="cover-upload-trigger">
+                <span nz-icon nzType="plus"></span>
+                <div style="margin-top: 8px">上传封面</div>
+              </div>
+            }
+          </nz-upload>
+        </div>
 
         <label>关联课程</label>
         <nz-select [(ngModel)]="form.courseId" nzAllowClear nzPlaceHolder="选择关联课程（可选）">
@@ -256,7 +294,6 @@
         </div>
         <div class="nested-grid">
           <input nz-input [(ngModel)]="task.title" placeholder="任务名称" />
-          <input nz-input type="number" [(ngModel)]="task.scoreWeight" placeholder="权重（如 50）" />
           <input nz-input type="datetime-local" [(ngModel)]="task.dueTime" />
           <textarea nz-input [(ngModel)]="task.description" rows="2" placeholder="任务描述"></textarea>
           <textarea nz-input [(ngModel)]="task.requirement" rows="2" placeholder="任务要求"></textarea>

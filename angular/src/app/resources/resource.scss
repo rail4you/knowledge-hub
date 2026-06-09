@@ -298,6 +298,23 @@
       flex-shrink: 0;
     }
   }
+
+  // P1-15："设为/取消简历"按钮在激活态（已标记为简历）时改为紫色，
+  // 跟 isResume=true 的 nz-tag 保持一致。
+  button.resume-on {
+    color: #7c3aed !important;
+    font-weight: 600;
+
+    &:hover {
+      color: #6d28d9 !important;
+    }
+  }
+
+  // P1-15：未设为简历时的占位符
+  .resume-empty {
+    color: #d9d9d9;
+    font-size: 16px;
+  }
 }
 
 // ============================================

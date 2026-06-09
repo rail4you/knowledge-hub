@@ -125,3 +125,9 @@ test-results/
 
 # 问题排查临时图片（.md 报告本身可入库）
 docs/资源库问题汇总/*/images/
+*.png
+.agents
+.impeccable/design.json
+.impeccable
+.dev
+.playwright-cli

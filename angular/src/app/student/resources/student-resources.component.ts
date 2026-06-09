@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -137,15 +137,26 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     { label: 'PPT', value: ResourceType.PPT, icon: 'file-ppt' },
   ];
 
-  // 热门分类（演示数据）
-  hotCategories = signal([
-    { name: '专业基础课', icon: 'book', color: '#1e6ce8' },
-    { name: '专业核心课', icon: 'trophy', color: '#7c3aed' },
-    { name: '专业拓展课', icon: 'rocket', color: '#10b981' },
-    { name: '公共基础课', icon: 'read', color: '#f59e0b' },
-    { name: '培训课程', icon: 'solution', color: '#ec4899' },
-    { name: '知识图谱', icon: 'apartment', color: '#06b6d4' },
-  ]);
+  // 热门目录：从真实分类数据中取所有有效分类，按资源数量降序排列
+  hotCategories = computed(() => {
+    const cats = this.categories();
+    // 展平所有分类（根节点 + 子节点）
+    const flat: { id: string; name: string; count: number }[] = [];
+    const flatten = (list: ResourceCategoryDto[]) => {
+      for (const c of list) {
+        if (c.id && c.name) {
+          flat.push({ id: c.id, name: c.name, count: c.resourceCount ?? 0 });
+        }
+        if (c.children && c.children.length > 0) {
+          flatten(c.children);
+        }
+      }
+    };
+    flatten(cats);
+    // 按资源数量降序排列
+    flat.sort((a, b) => b.count - a.count);
+    return flat;
+  });
 
   ngOnInit() {
     this.loadCategories();
@@ -253,29 +264,17 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * 点击"热门分类"chip：把展示用的名称映射到真实分类 id，再走 selectCategory。
-   * 旧实现里所有 hot-chip 都调用 selectCategory(null)，导致点击热门分类永远回到"全部"，
-   * 用户体验上看就是"分类 Tab 点击无反应"。
+   * 点击"热门目录"chip：直接使用分类 id 走 selectCategory。
    */
-  selectHotCategory(name: string) {
-    const match = this.categories().find(c => c.name === name);
-    if (match?.id) {
-      this.selectCategory(match.id);
-    } else {
-      // 没有匹配到真实分类（可能是演示数据），回退到"全部"以避免假死
-      this.selectCategory(null);
-    }
+  selectHotCategory(categoryId: string) {
+    this.selectCategory(categoryId);
   }
 
   /**
-   * 热门分类 chip 的高亮判断：当且仅当当前选中的真实分类的 name 与 chip name 一致时高亮。
-   * 选中"全部"时所有 chip 都不高亮。
+   * 热门目录 chip 的高亮判断。
    */
-  isHotCategoryActive(name: string): boolean {
-    const id = this.selectedCategoryId();
-    if (!id) return false;
-    const current = this.categories().find(c => c.id === id);
-    return current?.name === name;
+  isHotCategoryActive(categoryId: string): boolean {
+    return this.selectedCategoryId() === categoryId;
   }
 
   selectType(type: ResourceType | null) {

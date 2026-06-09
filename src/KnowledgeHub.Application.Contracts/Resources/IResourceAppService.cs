@@ -46,6 +46,17 @@ public interface IResourceAppService : ICrudAppService<ResourceDto, Guid, PagedA
     Task<PagedResultDto<ResourceDto>> SearchAsync(ResourceSearchQueryDto input);
     Task<MeiliSearchResultDto> SearchDocumentsAsync(MeiliSearchQueryDto input);
     Task SeedTestDocumentsAsync();
+
+    /// <summary>
+    /// P1-15：切换资源"作为简历"标记。供前端资料库列表的"设为简历/取消简历"按钮调用。
+    /// 权限：Resources.Default（学生可访问）+ 仅资源创建者可调用。
+    /// </summary>
+    Task SetResumeAsync(Guid id, SetResumeInput input);
+}
+
+public class SetResumeInput
+{
+    public bool IsResume { get; set; }
 }
 
 public class ResourceListQueryDto : PagedAndSortedResultRequestDto

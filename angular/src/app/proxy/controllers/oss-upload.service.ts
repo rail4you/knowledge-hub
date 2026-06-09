@@ -11,6 +11,15 @@ export class OssUploadService {
   apiName = 'KnowledgeHub';
   
 
+  uploadFileByFile = (file: IFormFile, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, OssUploadResultDto>({
+      method: 'POST',
+      url: '/api/oss-upload/file',
+      body: file,
+    },
+    { apiName: this.apiName,...config });
+  
+
   uploadImageByFile = (file: IFormFile, config?: Partial<Rest.Config>) =>
     this.restService.request<any, OssUploadResultDto>({
       method: 'POST',

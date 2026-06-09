@@ -34,10 +34,10 @@
   </nz-card>
 
   <nz-modal
-    [nzVisible]="modalVisible"
+    [nzVisible]="modalVisible()"
     [nzTitle]="editingId ? '编辑双高评估项目' : '新建双高评估项目'"
     [nzWidth]="980"
-    (nzOnCancel)="modalVisible = false"
+    (nzOnCancel)="modalVisible.set(false)"
     (nzOnOk)="save()"
   >
     <ng-container *nzModalContent>

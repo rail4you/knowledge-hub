@@ -44,7 +44,6 @@ export interface CreateUpdateResourceDto {
   keywords?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
-  // P1-13：与后端 Resource.IsResume 对应。等待下次 abp generate-proxy 重新生成时同步。
   isResume?: boolean;
   organizationId?: string | null;
   filePath?: string | null;
@@ -132,6 +131,7 @@ export interface ResourceCategoryDto extends FullAuditedEntityDto<string> {
   code?: string | null;
   sortOrder?: number;
   isActive?: boolean;
+  resourceCount?: number;
   children?: ResourceCategoryDto[];
 }
 
@@ -150,7 +150,6 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   keywords?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
-  // P1-13：与后端 Resource.IsResume 对应。等待下次 abp generate-proxy 重新生成时同步。
   isResume?: boolean;
   collectionCount?: number;
   downloadCount?: number;
@@ -188,6 +187,10 @@ export interface ResourceVersionDto extends EntityDto<string> {
   creationTime?: string;
   creatorId?: string;
   creatorName?: string | null;
+}
+
+export interface SetResumeInput {
+  isResume?: boolean;
 }
 
 export interface UploadChunkDto {

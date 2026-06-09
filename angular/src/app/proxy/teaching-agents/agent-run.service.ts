@@ -45,7 +45,7 @@ export class AgentRunService {
   
 
   sendMessageStream = (assignmentId: string, input: SendAgentRunMessageDto, cancellationToken?: any, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, AgentMessageChunkDto[]>({
+    this.restService.request<any, any>({
       method: 'POST',
       url: `/api/app/agent-run/send-message-stream/${assignmentId}`,
       body: input,

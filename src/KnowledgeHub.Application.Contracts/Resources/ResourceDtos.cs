@@ -53,6 +53,8 @@ public class ResourceCategoryDto : FullAuditedEntityDto<Guid>
     public string? Code { get; set; }
     public int SortOrder { get; set; }
     public bool IsActive { get; set; }
+    /// <summary>该分类下的资源总数（包括子分类下的资源）。</summary>
+    public int ResourceCount { get; set; }
     public List<ResourceCategoryDto> Children { get; set; } = new();
 }
 

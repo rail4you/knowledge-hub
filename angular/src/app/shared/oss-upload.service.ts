@@ -30,4 +30,19 @@ export class OssUploadService {
       body: formData,
     }, { apiName: this.apiName });
   }
+
+  /**
+   * Upload an arbitrary file (PDF / Word / Excel / 视频 等) to Aliyun OSS.
+   * 后端限制 50MB；返回公开 URL。
+   */
+  uploadFile(file: File): Observable<OssUploadResultDto> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.restService.request<any, OssUploadResultDto>({
+      method: 'POST',
+      url: '/api/oss-upload/file',
+      body: formData,
+    }, { apiName: this.apiName });
+  }
 }

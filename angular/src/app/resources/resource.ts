@@ -1,4 +1,4 @@
-import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest} from '@abp/ng.core';
+import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest, ConfigStateService} from '@abp/ng.core';
 import {Component, OnInit, inject, signal, ViewChild} from '@angular/core';
 import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto} from '../proxy/resources';
 import {AllianceService} from '../proxy/application/alliance/alliance.service';
@@ -168,6 +168,10 @@ export class ResourceComponent implements OnInit {
   private readonly localization = inject(LocalizationService);
   private readonly message = inject(NzMessageService);
   private readonly recommendationService = inject(RecommendationService);
+  private readonly configState = inject(ConfigStateService);
+
+  // P1-15：当前用户 ID（用于判断资源是否是"我的"——只有创建者本人可切换 isResume 标记）
+  private currentUserId: string | null = null;
 
   
   private readonly resourceTypeNames: Record<string, Record<number, string>> = {
@@ -188,6 +192,37 @@ export class ResourceComponent implements OnInit {
     this.buildForm();
     this.loadCategories();
     this.loadResources();
+    this.loadCurrentUser();
+  }
+
+  /** P1-15：从 ConfigState 读取当前登录用户 ID（用于判断"我的资源"）。 */
+  private loadCurrentUser(): void {
+    const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
+    this.currentUserId = (cu?.id as string) ?? null;
+  }
+
+  /** P1-15：判断资源创建者是否就是当前用户（用于控制"设为简历"按钮的显隐）。 */
+  isCurrentUser(creatorId?: string): boolean {
+    return !!creatorId && !!this.currentUserId && creatorId === this.currentUserId;
+  }
+
+  /**
+   * P1-15：切换资源的"作为简历"标记。
+   * 调专用 SetResumeAsync 端点（学生资源库 API 也共用），权限 Resources.Default + 仅创建者本人可调用。
+   * 标记为简历后，AI 职业规划的下拉中会列出该资源。
+   */
+  toggleResume(item: ResourceDto): void {
+    if (!item.id) return;
+    const next = !item.isResume;
+    this.resourceService.setResume(item.id, { isResume: next }).subscribe({
+      next: () => {
+        item.isResume = next;
+        this.message.success(next ? '已设为简历，会出现在 AI 职业规划的下拉中' : '已取消简历标记');
+      },
+      error: (err) => {
+        this.message.error((next ? '设为' : '取消') + '简历失败：' + (err?.error?.error?.message || err?.message || '未知错误'));
+      }
+    });
   }
 
   loadResources() {

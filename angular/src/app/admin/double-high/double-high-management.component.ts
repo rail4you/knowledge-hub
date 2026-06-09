@@ -33,7 +33,11 @@ export class DoubleHighManagementComponent implements OnInit {
   readonly statuses = DoubleHighProjectStatus;
   readonly dataSources = DoubleHighDataSourceType;
 
-  modalVisible = false;
+  // 关键修复：原实现是普通 boolean 属性，OnPush 组件在 subscribe 回调里
+  // 改写它后不会触发变更检测，导致编辑弹窗永远不渲染（DOM 里 modal 元素
+  // 都不存在，但组件实例里 modalVisible 已经是 true）。改用 signal 后，
+  // set() 会自动把组件标脏，下一帧模板就能拿到最新值并把 modal 渲染出来。
+  readonly modalVisible = signal(false);
   editingId: string | null = null;
   form: CreateUpdateDoubleHighProjectDto = this.createEmptyForm();
 
@@ -77,7 +81,7 @@ export class DoubleHighManagementComponent implements OnInit {
   openCreate(): void {
     this.editingId = null;
     this.form = this.createEmptyForm();
-    this.modalVisible = true;
+    this.modalVisible.set(true);
   }
 
   openEdit(item: DoubleHighProjectDto): void {
@@ -88,8 +92,12 @@ export class DoubleHighManagementComponent implements OnInit {
         batchCode: detail.batchCode,
         description: detail.description || '',
         status: detail.status,
-        startTime: detail.startTime,
-        endTime: detail.endTime,
+        // 关键修复：<input type="datetime-local"> 只接受 YYYY-MM-DDTHH:MM
+        // 格式，但后端返回的是 ISO 8601 带秒（"2026-07-01T09:00:00" 或带 Z），
+        // 浏览器拿到不认识的格式会把 input 显示成空白，让用户以为时间没设。
+        // 截断到 16 位正好是 datetime-local 期望的格式，input 能正确回显。
+        startTime: detail.startTime?.slice(0, 16),
+        endTime: detail.endTime?.slice(0, 16),
         indicators: detail.indicators.map(x => ({
           parentId: x.parentId,
           // 关键修复：原实现 categoryName / indicatorCode / name 没有 `|| ''` 兜底，
@@ -108,7 +116,9 @@ export class DoubleHighManagementComponent implements OnInit {
           sortOrder: x.sortOrder,
         })),
       };
-      this.modalVisible = true;
+      // 关键修复：用 signal.set() 而不是 =，确保 OnPush 组件在异步回调里
+      // 也能触发变更检测，让 modal 真正渲染到 DOM。
+      this.modalVisible.set(true);
     });
   }
 
@@ -128,7 +138,7 @@ export class DoubleHighManagementComponent implements OnInit {
 
     request.subscribe({
       next: () => {
-        this.modalVisible = false;
+        this.modalVisible.set(false);
         this.message.success('双高评估项目已保存');
         this.reload();
       },

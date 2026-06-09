@@ -206,6 +206,7 @@ TOOL USE:
     /// P1-13：获取当前用户"作为简历"使用的、已审核通过的资源。
     /// 过滤条件：IsResume=true AND Status IN (SchoolApproved, LeagueApproved) AND CreatorId=当前用户。
     /// 用于 AI 职业规划下拉（避免暴露其他人的资源，也不会把草稿/被拒的资源拉进来）。
+    /// IsResume 由用户在前端资料库列表的"设为简历/取消简历"按钮维护（P1-15）。
     /// </summary>
     public async Task<List<ResourceForChatDto>> GetResumesForUserAsync()
     {

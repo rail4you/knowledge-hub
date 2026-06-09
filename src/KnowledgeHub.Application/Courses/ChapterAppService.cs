@@ -27,6 +27,13 @@ public class ChapterAppService : ApplicationService, IChapterAppService
     public async Task<ChapterDto> GetAsync(Guid id)
     {
         var chapter = await _chapterRepository.GetAsync(id);
+
+        // 关键修复：与 UpdateAsync 同源问题。GetAsync 只加载实体本身，
+        // 不填充 Children / KnowledgeResources；mapper 迭代时会 NRE。
+        // 见 ChapterAppService.UpdateAsync 与 GetChaptersByCourseAsync:107-111。
+        chapter.Children ??= new List<Chapter>();
+        chapter.KnowledgeResources ??= new List<KnowledgeResource>();
+
         return ObjectMapper.Map<Chapter, ChapterDto>(chapter);
     }
 
@@ -34,7 +41,14 @@ public class ChapterAppService : ApplicationService, IChapterAppService
     {
         var query = await _chapterRepository.GetQueryableAsync();
         var chapters = query.Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
-        
+
+        // 关键修复：同上，列表里的每个 chapter 都做兜底。
+        foreach (var chapter in chapters)
+        {
+            chapter.Children ??= new List<Chapter>();
+            chapter.KnowledgeResources ??= new List<KnowledgeResource>();
+        }
+
         return new PagedResultDto<ChapterDto>(
             query.Count(),
             ObjectMapper.Map<List<Chapter>, List<ChapterDto>>(chapters)
@@ -65,8 +79,19 @@ public class ChapterAppService : ApplicationService, IChapterAppService
         chapter.Description = input.Description;
         chapter.SortOrder = input.SortOrder;
         chapter.SetParent(input.ParentId);
-        
+
         await _chapterRepository.UpdateAsync(chapter);
+
+        // 关键修复：_chapterRepository.GetAsync(id) 只加载 Chapter 实体本身，
+        // 不会填充导航属性 Children / KnowledgeResources。这两个集合保持为 null。
+        // 接着下面 ObjectMapper.Map<Chapter, ChapterDto> 走 Mapperly 生成的 mapper，
+        // mapper 会迭代 source.Children / source.KnowledgeResources（g.cs:38
+        // MapToListOfChapterDto），直接抛 NullReferenceException → 500。
+        // 与 GetChaptersByCourseAsync:107-111 同样的防御：在 mapper 之前把两个
+        // 集合兜底为 new List<>()，mapper 不会去查数据库，没有性能损失。
+        chapter.Children ??= new List<Chapter>();
+        chapter.KnowledgeResources ??= new List<KnowledgeResource>();
+
         return ObjectMapper.Map<Chapter, ChapterDto>(chapter);
     }
 

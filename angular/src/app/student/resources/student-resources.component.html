@@ -107,7 +107,7 @@
       </div>
 
       <div class="hot-categories">
-        <span class="hot-categories__label">热门分类</span>
+        <span class="hot-categories__label">热门目录</span>
         <div class="hot-categories__list">
           <button
             class="hot-chip"
@@ -115,16 +115,16 @@
             (click)="selectCategory(null)"
           >
             <span nz-icon nzType="appstore" nzTheme="outline"></span>
-            <span>全部</span>
+            <span>全部（{{ totalCount() }}）</span>
           </button>
-          @for (cat of hotCategories(); track cat.name) {
+          @for (cat of hotCategories(); track cat.id) {
             <button
               class="hot-chip"
-              [class.is-active]="isHotCategoryActive(cat.name)"
-              (click)="selectHotCategory(cat.name)"
+              [class.is-active]="isHotCategoryActive(cat.id)"
+              (click)="selectHotCategory(cat.id)"
             >
-              <span class="hot-chip__dot" [style.background]="cat.color"></span>
-              <span>{{ cat.name }}</span>
+              <span nz-icon nzType="folder" nzTheme="outline"></span>
+              <span>{{ cat.name }}（{{ cat.count }}）</span>
             </button>
           }
         </div>
@@ -233,6 +233,7 @@
                   <span nz-icon nzType="folder" nzTheme="outline"></span>
                 </span>
                 <span class="tree-item__name">{{ category.name }}</span>
+                <span class="tree-item__count">{{ category.resourceCount ?? 0 }}</span>
               </button>
 
               @if (category.children && category.children.length > 0) {
@@ -243,6 +244,7 @@
                     (click)="selectCategory(child.id!)"
                   >
                     <span class="tree-item__name">{{ child.name }}</span>
+                    <span class="tree-item__count">{{ child.resourceCount ?? 0 }}</span>
                   </button>
                 }
               }

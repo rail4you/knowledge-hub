@@ -13,6 +13,7 @@ using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -363,6 +364,28 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         return ObjectMapper.Map<Resource, ResourceDto>(resource);
     }
 
+    /// <summary>
+    /// P1-15：切换"作为简历"标记。
+    /// 权限：Resources.Default（学生即可调用）+ 仅资源创建者可修改自己资源的 IsResume。
+    /// 目的：让学生能在资料库列表的"设为简历/取消简历"按钮维护自己的简历资源，
+    ///       而不必走 Resources.Edit 完整编辑流程（也不需要带走 Name/CategoryId 等其他字段）。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Resources.Default)]
+    public virtual async Task SetResumeAsync(Guid id, SetResumeInput input)
+    {
+        var resource = await Repository.GetAsync(id);
+
+        // 仅资源创建者本人可切换 IsResume；管理员/教师通过原 Update 走完整编辑流程。
+        var currentUserId = CurrentUser.Id ?? throw new UserFriendlyException("请先登录");
+        if (resource.CreatorId != currentUserId)
+        {
+            throw new UserFriendlyException("只有资源创建者可以切换简历标记");
+        }
+
+        resource.IsResume = input.IsResume;
+        await Repository.UpdateAsync(resource);
+    }
+
     [Authorize(KnowledgeHubPermissions.Resources.Delete)]
     public virtual async Task DeleteAsync(Guid id)
     {
@@ -526,6 +549,14 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var categories = await CategoryRepository.GetListAsync();
         var dtos = ObjectMapper.Map<List<ResourceCategory>, List<ResourceCategoryDto>>(categories);
 
+        // 统计每个分类下的资源数量（仅 LeagueApproved 状态的资源）
+        var resourceQuery = await ResourceRepository.GetQueryableAsync();
+        var categoryCounts = await resourceQuery
+            .Where(r => r.CategoryId != null && r.Status == ResourceStatus.LeagueApproved)
+            .GroupBy(r => r.CategoryId!.Value)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.CategoryId, x => x.Count);
+
         var lookup = dtos.ToDictionary(c => c.Id);
         var roots = new List<ResourceCategoryDto>();
 
@@ -540,7 +571,27 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             {
                 roots.Add(dto);
             }
+
+            // 分配直接资源数量
+            dto.ResourceCount = categoryCounts.GetValueOrDefault(dto.Id, 0);
         }
+
+        // 累计子分类的资源数量到父分类
+        void AccumulateCounts(List<ResourceCategoryDto> nodes)
+        {
+            foreach (var node in nodes)
+            {
+                if (node.Children.Count > 0)
+                {
+                    AccumulateCounts(node.Children);
+                    foreach (var child in node.Children)
+                    {
+                        node.ResourceCount += child.ResourceCount;
+                    }
+                }
+            }
+        }
+        AccumulateCounts(roots);
 
         return roots;
     }

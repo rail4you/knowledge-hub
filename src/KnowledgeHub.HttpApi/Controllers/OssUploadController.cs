@@ -44,6 +44,38 @@ public class OssUploadController : AbpControllerBase
             throw new ArgumentException("图片大小不能超过 10MB");
         }
 
+        // 图片保持原路径（Oss:UploadPath/images/{date}/{name}），不要重命名以免历史 URL 失效。
+        return await UploadToOssAsync(file, subDir: null);
+    }
+
+    /// <summary>
+    /// 通用文件上传（不限制类型）— 供实训资料、章节目录、模板等场景使用。
+    /// 文件大小限制 50MB；返回公开 URL。
+    /// </summary>
+    [HttpPost]
+    [Route("api/oss-upload/file")]
+    [DisableRequestSizeLimit]
+    [RequestFormLimits(MultipartBodyLengthLimit = 52428800)] // 50MB
+    public async Task<OssUploadResultDto> UploadFile(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            throw new ArgumentException("请选择要上传的文件");
+        }
+        if (file.Length > 50 * 1024 * 1024)
+        {
+            throw new ArgumentException("文件大小不能超过 50MB");
+        }
+        // 通用文件落到 Oss:UploadPath/files/{date}/{name}，与图片分目录。
+        return await UploadToOssAsync(file, subDir: "files");
+    }
+
+    /// <summary>
+    /// 实际执行 OSS 上传。subDir 为 null 时直接拼到 uploadPath 后面（保持向后兼容）；
+    /// 否则多一层子目录（用于文件 / 视频 / 音频 等大文件分类）。
+    /// </summary>
+    private async Task<OssUploadResultDto> UploadToOssAsync(IFormFile file, string? subDir)
+    {
         var endpoint = _configuration["Oss:Endpoint"] ?? "oss-cn-beijing.aliyuncs.com";
         var accessKeyId = _configuration["Oss:AccessKeyId"] ?? "";
         var accessKeySecret = _configuration["Oss:AccessKeySecret"] ?? "";
@@ -53,10 +85,13 @@ public class OssUploadController : AbpControllerBase
         var client = new OssClient(endpoint, accessKeyId, accessKeySecret);
 
         // Generate unique object key
-        var extension = Path.GetExtension(file.FileName) ?? ".jpg";
+        var extension = Path.GetExtension(file.FileName);
+        if (string.IsNullOrEmpty(extension)) extension = ".bin";
         var datePrefix = DateTime.Now.ToString("yyyyMMdd");
         var uniqueName = $"{Guid.NewGuid():N}{extension}";
-        var objectKey = $"{uploadPath}/{datePrefix}/{uniqueName}";
+        var objectKey = string.IsNullOrEmpty(subDir)
+            ? $"{uploadPath}/{datePrefix}/{uniqueName}"
+            : $"{uploadPath}/{subDir}/{datePrefix}/{uniqueName}";
 
         using var stream = file.OpenReadStream();
         var metadata = new ObjectMetadata

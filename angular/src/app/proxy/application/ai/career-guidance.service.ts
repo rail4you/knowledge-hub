@@ -23,7 +23,7 @@ export class CareerGuidanceService {
     this.restService.request<any, void>({
       method: 'POST',
       url: '/api/app/career-guidance/generate-streaming',
-      body: input,
+      body: onChunk,
     },
     { apiName: this.apiName,...config });
 }

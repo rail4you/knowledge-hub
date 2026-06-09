@@ -25,4 +25,12 @@ export class ChatService {
       url: '/api/app/chat/resources-with-page-index',
     },
     { apiName: this.apiName,...config });
+  
+
+  getResumesForUser = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ResourceForChatDto[]>({
+      method: 'GET',
+      url: '/api/app/chat/resumes-for-user',
+    },
+    { apiName: this.apiName,...config });
 }
