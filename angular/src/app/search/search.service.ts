@@ -12,6 +12,8 @@ export interface SearchQueryDto {
   maxResultCount: number;
   sorting: string;
   indexName?: string;
+  /** 学生端传 "2,3" 限制仅已审核资源 */
+  statusFilter?: string;
 }
 
 export interface HybridSearchQueryDto extends SearchQueryDto {

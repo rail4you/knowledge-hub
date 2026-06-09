@@ -15,6 +15,8 @@ public class SearchQueryDto
     public int MaxResultCount { get; set; } = 20;
     public string Sorting { get; set; } = "relevance";
     public string? IndexName { get; set; }
+    /// <summary>MeiliSearch status 过滤器，如 "2,3" 仅已审核资源。null/空则不过滤。</summary>
+    public string? StatusFilter { get; set; }
 }
 
 public class HybridSearchQueryDto : SearchQueryDto

@@ -281,7 +281,9 @@ public class MeiliSearchService : IMeiliSearchService
             filters.Add($"uploadDate <= \"{query.EndDate.Value:yyyy-MM-dd}\"");
         }
 
-        filters.Add("status IN [0, 1, 2, 3]");
+        filters.Add(!string.IsNullOrWhiteSpace(query.StatusFilter)
+            ? $"status IN [{query.StatusFilter}]"
+            : "status IN [0, 1, 2, 3]");
 
         var tenantId = _currentTenant.Id;
         if (tenantId.HasValue)
@@ -376,7 +378,9 @@ public class MeiliSearchService : IMeiliSearchService
             filters.Add($"uploadDate <= \"{query.EndDate.Value:yyyy-MM-dd}\"");
         }
 
-        filters.Add("status IN [0, 1, 2, 3]");
+        filters.Add(!string.IsNullOrWhiteSpace(query.StatusFilter)
+            ? $"status IN [{query.StatusFilter}]"
+            : "status IN [0, 1, 2, 3]");
 
         var tenantId = _currentTenant.Id;
         if (tenantId.HasValue)

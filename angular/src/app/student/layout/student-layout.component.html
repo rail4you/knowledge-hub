@@ -103,6 +103,33 @@
         <div
           class="tab-link tab-link--dropdown"
           nz-dropdown
+          [nzDropdownMenu]="employmentMenu"
+          nzTrigger="hover"
+          [class.active]="isEmploymentActive()"
+        >
+          <span nz-icon nzType="briefcase" nzTheme="outline"></span>
+          <span>就业服务</span>
+          <span nz-icon nzType="down" class="tab-link__caret"></span>
+        </div>
+        <nz-dropdown-menu #employmentMenu="nzDropdownMenu">
+          <ul nz-menu class="employment-menu">
+            <li nz-menu-item routerLink="/student/recruitment-live">
+              <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+              <span>招聘直播</span>
+            </li>
+            <li nz-menu-item routerLink="/student/employment/jobs">
+              <span nz-icon nzType="briefcase" nzTheme="outline"></span>
+              <span>就业大厅</span>
+            </li>
+            <li nz-menu-item routerLink="/student/employment/guidance">
+              <span nz-icon nzType="compass" nzTheme="outline"></span>
+              <span>就业指导</span>
+            </li>
+          </ul>
+        </nz-dropdown-menu>
+        <div
+          class="tab-link tab-link--dropdown"
+          nz-dropdown
           [nzDropdownMenu]="aiMenu"
           nzTrigger="hover"
           [class.active]="isAIActive()"
@@ -120,33 +147,6 @@
             <li nz-menu-item routerLink="/student/search">
               <span nz-icon nzType="search" nzTheme="outline"></span>
               <span>智能搜索</span>
-            </li>
-          </ul>
-        </nz-dropdown-menu>
-        <div
-          class="tab-link tab-link--dropdown"
-          nz-dropdown
-          [nzDropdownMenu]="employmentMenu"
-          nzTrigger="hover"
-          [class.active]="isEmploymentActive()"
-        >
-          <span nz-icon nzType="briefcase" nzTheme="outline"></span>
-          <span>就业服务</span>
-          <span nz-icon nzType="down" class="tab-link__caret"></span>
-        </div>
-        <nz-dropdown-menu #employmentMenu="nzDropdownMenu">
-          <ul nz-menu class="employment-menu">
-            <li nz-menu-item routerLink="/student/recruitment-live">
-              <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-              <span>招聘直播</span>
-            </li>
-            <li nz-menu-item routerLink="/student/employment/jobs">
-              <span nz-icon nzType="briefcase" nzTheme="outline"></span>
-              <span>就业</span>
-            </li>
-            <li nz-menu-item routerLink="/student/employment/guidance">
-              <span nz-icon nzType="compass" nzTheme="outline"></span>
-              <span>就业指导</span>
             </li>
           </ul>
         </nz-dropdown-menu>

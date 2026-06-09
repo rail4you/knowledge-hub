@@ -658,7 +658,9 @@ export class SearchComponent implements OnInit {
       sorting: 'relevance',
       startDate: this.startDate ? this.startDate.toISOString() : undefined,
       endDate: this.endDate ? this.endDate.toISOString() : undefined,
-      indexName: this.selectedIndex
+      indexName: this.selectedIndex,
+      // 学生端仅搜索已审核资源
+      statusFilter: this.router.url.startsWith('/student') ? '2,3' : undefined,
     };
 
     const searchObservable = this.searchType === 'hybrid' 
@@ -748,6 +750,9 @@ export class SearchComponent implements OnInit {
 
     if (result.sourceType === 'video') {
       this.openVideoModal(result);
+    } else if (this.router.url.startsWith('/student')) {
+      // 学生端：跳转到资源详情页
+      this.router.navigate(['/student/resources', result.resourceId]);
     } else {
       this.router.navigate(['/document-viewer', result.resourceId], {
         queryParams: { page: result.pageNumber },
