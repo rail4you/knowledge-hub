@@ -38,8 +38,11 @@ export interface CaseAnalysisGenerationInput {
 }
 
 export interface CareerGuidanceGenerationInput {
-  resourceId: string;
+  resourceId?: string;
   careerGoal?: string;
+  /** 学生端：直接提供简历文本（优先级高于 resourceId） */
+  resumeContent?: string;
+  resumeTitle?: string;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -5,8 +5,12 @@ namespace KnowledgeHub.Application.AI.Dtos;
 
 public class CareerGuidanceGenerationInputDto
 {
-    public Guid ResourceId { get; set; }
+    public Guid? ResourceId { get; set; }
     public string? CareerGoal { get; set; }
+    /// <summary>学生简历内容（学生端用，优先级高于 ResourceId）</summary>
+    public string? ResumeContent { get; set; }
+    /// <summary>学生简历标题</summary>
+    public string? ResumeTitle { get; set; }
 }
 
 public class CareerGuidanceExportInputDto

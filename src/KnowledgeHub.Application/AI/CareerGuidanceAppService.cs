@@ -97,38 +97,62 @@ JSON 结构：
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-plus";
 
-        var resource = await _resourceRepository.GetAsync(input.ResourceId);
-        var pageIndexList = await _pageIndexRepository.GetListAsync(x => x.ResourceId == input.ResourceId);
-        var latestPageIndex = pageIndexList.OrderByDescending(x => x.CreatedAt).FirstOrDefault();
+        string userPrompt;
 
-        if (latestPageIndex == null)
+        // 学生端：使用简历文本直接构建提示词
+        if (!string.IsNullOrWhiteSpace(input.ResumeContent))
         {
-            await onChunk(new ChatMessageChunkDto
-            {
-                Content = JsonSerializer.Serialize(new { error = "该资源尚未生成页面索引，无法生成职业规划建议。" }),
-                ThreadId = threadId,
-                IsComplete = false
-            });
-            await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
-            return;
+            var titleSection = !string.IsNullOrWhiteSpace(input.ResumeTitle)
+                ? $"## 简历标题\n{input.ResumeTitle}\n"
+                : "";
+            var goalSection = !string.IsNullOrWhiteSpace(input.CareerGoal)
+                ? $"\n## 职业目标\n{input.CareerGoal}"
+                : "";
+
+            userPrompt = $@"请根据以下简历内容，生成一份全面的职业规划建议报告。
+
+{titleSection}
+## 简历内容
+{input.ResumeContent}
+{goalSection}
+
+请生成职业规划建议JSON。";
         }
+        else if (input.ResourceId.HasValue)
+        {
+            // 管理端：使用 Resource 文档
+            var resource = await _resourceRepository.GetAsync(input.ResourceId.Value);
+            var pageIndexList = await _pageIndexRepository.GetListAsync(x => x.ResourceId == input.ResourceId);
+            var latestPageIndex = pageIndexList.OrderByDescending(x => x.CreatedAt).FirstOrDefault();
 
-        var docTools = new DocumentChatTools(latestPageIndex.PageIndexJson, _logger);
+            if (latestPageIndex == null)
+            {
+                await onChunk(new ChatMessageChunkDto
+                {
+                    Content = JsonSerializer.Serialize(new { error = "该资源尚未生成页面索引，无法生成职业规划建议。" }),
+                    ThreadId = threadId,
+                    IsComplete = false
+                });
+                await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
+                return;
+            }
 
-        var docMeta = docTools.GetDocument();
-        var docStructure = docTools.GetDocumentStructure();
+            var docTools = new DocumentChatTools(latestPageIndex.PageIndexJson, _logger);
 
-        var maxPage = ExtractMaxPage(docMeta);
-        var contentRange = maxPage > 0 ? $"1-{Math.Min(maxPage, 30)}" : "";
-        var docContent = !string.IsNullOrEmpty(contentRange)
-            ? docTools.GetPageContent(contentRange)
-            : "";
+            var docMeta = docTools.GetDocument();
+            var docStructure = docTools.GetDocumentStructure();
 
-        var goalSection = !string.IsNullOrWhiteSpace(input.CareerGoal)
-            ? $"\n## 职业目标\n{input.CareerGoal}"
-            : "";
+            var maxPage = ExtractMaxPage(docMeta);
+            var contentRange = maxPage > 0 ? $"1-{Math.Min(maxPage, 30)}" : "";
+            var docContent = !string.IsNullOrEmpty(contentRange)
+                ? docTools.GetPageContent(contentRange)
+                : "";
 
-        var userPrompt = $@"请根据以下简历/个人文档内容，生成一份全面的职业规划建议报告。
+            var goalSection = !string.IsNullOrWhiteSpace(input.CareerGoal)
+                ? $"\n## 职业目标\n{input.CareerGoal}"
+                : "";
+
+            userPrompt = $@"请根据以下简历/个人文档内容，生成一份全面的职业规划建议报告。
 
 ## 文档信息
 {docMeta}
@@ -141,6 +165,18 @@ JSON 结构：
 {goalSection}
 
 请生成职业规划建议JSON。";
+        }
+        else
+        {
+            await onChunk(new ChatMessageChunkDto
+            {
+                Content = JsonSerializer.Serialize(new { error = "请提供简历内容或选择简历资源。" }),
+                ThreadId = threadId,
+                IsComplete = false
+            });
+            await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
+            return;
+        }
 
         var openaiClient = new OpenAIClient(
             new ApiKeyCredential(apiKey),

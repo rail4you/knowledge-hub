@@ -788,6 +788,18 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.Employment.Default)]
+    public async Task DeleteMyGuidanceRecordAsync(Guid id)
+    {
+        var currentUserId = GetCurrentUserId();
+        var record = await _guidanceRepository.GetAsync(id);
+        if (record.StudentId != currentUserId)
+        {
+            throw new Volo.Abp.Authorization.AbpAuthorizationException("只能删除自己的指导记录");
+        }
+        await _guidanceRepository.DeleteAsync(record);
+    }
+
+    [Authorize(KnowledgeHubPermissions.Employment.Default)]
     public async Task<EmploymentOutcomeDto> SaveOutcomeAsync(CreateUpdateEmploymentOutcomeDto input)
     {
         var currentUserId = CurrentUser.Id;

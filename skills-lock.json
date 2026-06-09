@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": ".agents/skills/impeccable/SKILL.md",
       "computedHash": "16180e7175cb29ef050926233b8514d7323294156890e1f1b17024ba8d9dab71"
+    },
+    "minimax-understand-image": {
+      "source": "thincher/awsome_skills",
+      "sourceType": "github",
+      "skillPath": "minimax-understand-image/SKILL.md",
+      "computedHash": "827310420ace64d1ddf81f293d6f8201e999961814c6994788975715dc09a319"
     }
   }
 }
