@@ -177,7 +177,7 @@
 .kg-canvas-wrap {
   position: relative;
   width: 100%;
-  height: 640px;
+  min-height: 640px;
   overflow: hidden;
   background:
     radial-gradient(

@@ -108,7 +108,11 @@ interface ChapterDto {
               <p>暂无章节数据用于构建图谱</p>
             </div>
           } @else {
-            <div #chartContainer class="kg-canvas"></div>
+            <div
+              #chartContainer
+              class="kg-canvas"
+              [style.min-height.px]="chartMinHeight()"
+            ></div>
 
             <!-- 浮层：缩放比例 -->
             @if (zoomPercent() !== 100) {
@@ -231,6 +235,25 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
   ];
 
   chapterCount = computed(() => this.countChapters(this.chapters));
+
+  /** 最大同层节点数 — 用于动态计算图谱高度，避免子节点多时拥挤 */
+  maxSiblingCount = computed(() => {
+    let maxCount = 0;
+    const walk = (nodes: ChapterDto[]) => {
+      maxCount = Math.max(maxCount, nodes.length);
+      nodes.forEach(n => n.children && walk(n.children));
+    };
+    walk(this.chapters || []);
+    return maxCount;
+  });
+
+  /** 图谱画布最小高度：每个节点约 44px 垂直空间，最少 640px */
+  chartMinHeight = computed(() => {
+    const nodes = this.maxSiblingCount();
+    // 每个节点需要约 52px（symbolSize 44 + 间距 8）
+    const neededHeight = nodes * 52;
+    return Math.max(640, Math.min(neededHeight, 2400)); // 上限 2400px
+  });
 
   ngAfterViewInit() {
     this.initChart();
@@ -444,10 +467,10 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
           type: 'tree',
           name: '章节图谱',
           data: treeData,
-          top: '5%',
+          top: '8%',
           left: '4%',
-          bottom: '5%',
-          right: '20%',
+          bottom: '8%',
+          right: '22%',
           symbol: 'circle',
           symbolSize: 44,
           orient: 'LR',
