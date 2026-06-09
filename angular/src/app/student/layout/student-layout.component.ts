@@ -82,4 +82,10 @@ export class StudentLayoutComponent implements OnInit {
     // 不要在 subscribe 回调中手动 window.location.href，这会覆盖 OAuth end_session 重定向
     this.authService.logout().subscribe();
   }
+
+  /** 「就业服务」tab 是否应处于激活态 */
+  isEmploymentActive(): boolean {
+    const url = this.router.url || '';
+    return url.startsWith('/student/employment') || url.startsWith('/student/recruitment-live');
+  }
 }

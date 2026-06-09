@@ -100,22 +100,33 @@
           <span nz-icon nzType="experiment" nzTheme="outline"></span>
           <span>实训</span>
         </a>
-        <a routerLink="/student/recruitment-live" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-          <span>招聘直播</span>
-        </a>
-        <a routerLink="/student/employment/jobs" routerLinkActive="active" class="tab-link">
+        <div
+          class="tab-link tab-link--dropdown"
+          nz-dropdown
+          [nzDropdownMenu]="employmentMenu"
+          nzTrigger="hover"
+          [class.active]="isEmploymentActive()"
+        >
           <span nz-icon nzType="briefcase" nzTheme="outline"></span>
-          <span>就业</span>
-        </a>
-        <a routerLink="/student/employment/guidance" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="compass" nzTheme="outline"></span>
-          <span>就业指导</span>
-        </a>
-      </div>
-      <div class="tab-bar__hint" aria-hidden="true">
-        <span class="tab-bar__pulse"></span>
-        <span>数字资源 · 助力教学</span>
+          <span>就业服务</span>
+          <span nz-icon nzType="down" class="tab-link__caret"></span>
+        </div>
+        <nz-dropdown-menu #employmentMenu="nzDropdownMenu">
+          <ul nz-menu class="employment-menu">
+            <li nz-menu-item routerLink="/student/recruitment-live">
+              <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+              <span>招聘直播</span>
+            </li>
+            <li nz-menu-item routerLink="/student/employment/jobs">
+              <span nz-icon nzType="briefcase" nzTheme="outline"></span>
+              <span>就业</span>
+            </li>
+            <li nz-menu-item routerLink="/student/employment/guidance">
+              <span nz-icon nzType="compass" nzTheme="outline"></span>
+              <span>就业指导</span>
+            </li>
+          </ul>
+        </nz-dropdown-menu>
       </div>
     </div>
   </nav>
