@@ -22,7 +22,7 @@
     <!-- 文件过大降级页 -->
     <div *ngIf="tooLarge() && !isLoading()" class="preview-degrade">
       <div class="degrade-card">
-        <span nz-icon nzType="file-zip" nzTheme="outline" class="degrade-icon"></span>
+        <span nz-icon nzType="warning" nzTheme="outline" class="degrade-icon"></span>
         <h3 class="degrade-title">文件过大，暂不支持在线预览</h3>
         <p class="degrade-desc">
           本文件大小为 <strong>{{ formatFileSize(fileSize()) }}</strong>，
@@ -42,7 +42,7 @@
     <!-- 类型不支持降级页 -->
     <div *ngIf="unsupported() && !isLoading() && !tooLarge()" class="preview-degrade">
       <div class="degrade-card">
-        <span nz-icon nzType="file-unknown" nzTheme="outline" class="degrade-icon"></span>
+        <span nz-icon nzType="file" nzTheme="outline" class="degrade-icon"></span>
         <h3 class="degrade-title">此文件类型不支持预览</h3>
         <p class="degrade-desc">
           {{ fileName }}（{{ formatFileSize(fileSize()) }}）
