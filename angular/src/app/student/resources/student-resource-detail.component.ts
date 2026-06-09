@@ -122,10 +122,19 @@ export class StudentResourceDetailComponent implements OnInit {
   preview() {
     const r = this.resource();
     if (!r?.id) return;
+    // 若 fileExtension 为空，尝试从 originalFileName 或 name 提取扩展名
+    let ext = r.fileExtension;
+    if (!ext) {
+      const fileName = r.originalFileName || r.name || '';
+      const dot = fileName.lastIndexOf('.');
+      if (dot >= 0) {
+        ext = fileName.substring(dot); // 包含 . 前缀
+      }
+    }
     this.filePreview.open(
       r.id,
       r.originalFileName || r.name || '未命名',
-      r.fileExtension || '',
+      ext || '',
       r.fileSize || 0
     );
   }

@@ -835,10 +835,19 @@ export class ResourceComponent implements OnInit {
   previewFile() {
     const res = this.selectedResource();
     if (!res.id || !res.filePath) return;
+    // 若 fileExtension 为空，尝试从 originalFileName 或 name 提取扩展名
+    let ext = res.fileExtension;
+    if (!ext) {
+      const fileName = res.originalFileName || res.name || '';
+      const dot = fileName.lastIndexOf('.');
+      if (dot >= 0) {
+        ext = fileName.substring(dot);
+      }
+    }
     this.filePreview.open(
       res.id,
       res.originalFileName || res.name,
-      res.fileExtension || '',
+      ext || '',
       res.fileSize || 0
     );
   }

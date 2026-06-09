@@ -1,13 +1,11 @@
-import { Component, signal, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzResultModule } from 'ng-zorro-antd/result';
-import { LocalizationPipe, EnvironmentService } from '@abp/ng.core';
-import { ResourceService } from '../../proxy/resources';
+import { LocalizationPipe } from '@abp/ng.core';
 import { PdfViewerComponent } from './pdf-viewer.component';
 import { WordViewerComponent } from './word-viewer.component';
 import { ExcelViewerComponent } from './excel-viewer.component';
@@ -66,9 +64,10 @@ export class FilePreviewComponent {
     image: 50 * 1024 * 1024,       // 50 MB
   };
 
-  private readonly http = inject(HttpClient);
-  private readonly resourceService = inject(ResourceService);
-  private readonly environmentService = inject(EnvironmentService);
+  // 使用原生 fetch() 而非 Angular HttpClient/RestService，
+  // 因为 fetch() 自动携带同源 cookie（ABP OIDC 认证 cookie），
+  // 而 HttpClient 裸请求不走 ABP RestService 的 Bearer token 拦截器。
+  // 参考：kg-edu-vite-antd FilePreview.tsx 使用 fetch() 加载文件预览数据。
 
   private static readonly EXTENSION_MAP: Record<string, FileType> = {
     pdf: 'pdf',
@@ -87,13 +86,41 @@ export class FilePreviewComponent {
   };
 
   get fileType(): FileType {
-    const ext = this.fileExtension().toLowerCase().replace('.', '');
-    return FilePreviewComponent.EXTENSION_MAP[ext] || 'unsupported';
+    // 优先使用显式传入的 fileExtension
+    let ext = this.fileExtension().toLowerCase().replace('.', '');
+    if (ext && FilePreviewComponent.EXTENSION_MAP[ext]) {
+      return FilePreviewComponent.EXTENSION_MAP[ext];
+    }
+    // 回退：从 resourceName（通常是 originalFileName）提取扩展名
+    const nameExt = this.extractExtension(this.resourceName());
+    if (nameExt) {
+      return FilePreviewComponent.EXTENSION_MAP[nameExt] || 'unsupported';
+    }
+    return 'unsupported';
+  }
+
+  /** 从文件名中提取小写无点扩展名，如 "test.docx" => "docx" */
+  private extractExtension(fileName: string): string {
+    if (!fileName) return '';
+    const dot = fileName.lastIndexOf('.');
+    if (dot >= 0 && dot < fileName.length - 1) {
+      return fileName.substring(dot + 1).toLowerCase();
+    }
+    return '';
   }
 
   get fileName(): string {
-    const ext = this.fileExtension().toLowerCase().replace('.', '');
-    return this.resourceName() || `file.${ext}`;
+    const name = this.resourceName();
+    if (!name) return 'file';
+    // 从 resourceName 或 fileExtension 推导扩展名，确保文件名始终带扩展名
+    let ext = this.fileExtension().toLowerCase().replace('.', '');
+    if (!ext) {
+      ext = this.extractExtension(name);
+    }
+    if (!ext) return name;
+    // 如果文件名已以此扩展名结尾，不重复追加
+    if (name.toLowerCase().endsWith('.' + ext)) return name;
+    return name + '.' + ext;
   }
 
   open(resourceId: string, resourceName: string, fileExtension: string, fileSize: number) {
@@ -150,38 +177,45 @@ export class FilePreviewComponent {
 
     const type = this.fileType;
 
-    // Video and audio: use streaming URL for native browser playback
-    if (type === 'video' || type === 'audio') {
-      this.resourceService.getFileUrl(this.resourceId()).subscribe({
-        next: (url: string) => {
-          const env = this.environmentService.getEnvironment();
-          const baseUrl = env?.apis?.default?.url || '';
-          const fullUrl = url.startsWith('http') ? url : baseUrl + url;
-          this.fileUrl.set(fullUrl);
-          this.isLoading.set(false);
-        },
-        error: (err) => {
-          console.error('Failed to get file URL:', err);
-          this.loadError.set('预览加载失败，请稍后重试');
-          this.isLoading.set(false);
-        },
-      });
+    // Video, audio, and pptx: use preview endpoint directly as the source URL.
+    // Using the API endpoint (proxied through /api) ensures:
+    // 1. Auth cookie is forwarded through the Angular dev proxy
+    // 2. Proper Content-Type is returned
+    // 3. No cross-origin or CORS issues (same origin via proxy)
+    // PPTX is treated as streamed because large files can exceed fetch/ArrayBuffer limits.
+    if (type === 'video' || type === 'audio' || type === 'pptx') {
+      const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
+      this.fileUrl.set(previewUrl);
+      this.isLoading.set(false);
       return;
     }
 
-    // 所有要解析的文件（pdf / word / excel / pptx / image / text）都走 fetch 拿到 ArrayBuffer
+    // 所有要解析的文件（pdf / word / excel / image / text）都通过 fetch 拿到 ArrayBuffer。
+    // 使用原生 fetch() 而非 Angular HttpClient：
+    // - fetch() 自动携带同源 cookie（ABP OIDC 认证 cookie 通过代理转发）
+    // - 参考 kg-edu-vite-antd FilePreview.tsx 的实现方式
     const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
-    this.http.get(previewUrl, { responseType: 'arraybuffer' }).subscribe({
-      next: (arrayBuffer: ArrayBuffer) => {
+    fetch(previewUrl)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
         this.fileData.set(arrayBuffer);
         this.isLoading.set(false);
-      },
-      error: (err) => {
+      })
+      .catch((err) => {
         console.error('File load error:', err);
-        this.loadError.set('预览加载失败，请稍后重试');
+        const msg = err instanceof Error ? err.message : '';
+        if (msg.includes('403') || msg.includes('401')) {
+          this.loadError.set('资源暂未审核通过或您没有访问权限');
+        } else if (msg.includes('404')) {
+          this.loadError.set('文件不存在，可能已被删除');
+        } else {
+          this.loadError.set('预览加载失败，请稍后重试');
+        }
         this.isLoading.set(false);
-      },
-    });
+      });
   }
 
   formatFileSize(bytes: number): string {

@@ -92,7 +92,31 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<ResourceDto> GetAsync(Guid id)
     {
         var resource = await ResourceRepository.GetWithDetailsAsync(id);
-        return ObjectMapper.Map<Resource, ResourceDto>(resource);
+        var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
+        EnsureFileMetadata(dto);
+        return dto;
+    }
+
+    /// <summary>
+    /// 确保单个 DTO 的 FileExtension 正确：去前导点，为空则从 FilePath 推导。
+    /// </summary>
+    private void EnsureFileMetadata(ResourceDto dto)
+    {
+        // 去掉可能的前导点（如 ".docx" → "docx"）
+        if (!string.IsNullOrEmpty(dto.FileExtension))
+        {
+            dto.FileExtension = dto.FileExtension.TrimStart('.');
+        }
+        
+        // 若仍然为空，从 FilePath 推导
+        if (string.IsNullOrEmpty(dto.FileExtension) && !string.IsNullOrEmpty(dto.FilePath))
+        {
+            var ext = System.IO.Path.GetExtension(dto.FilePath);
+            if (!string.IsNullOrEmpty(ext))
+            {
+                dto.FileExtension = ext.TrimStart('.');
+            }
+        }
     }
 
     [AllowAnonymous]
@@ -106,9 +130,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             ""
         );
 
+        var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
+        EnsureFileMetadata(dtos);
         return new PagedResultDto<ResourceDto>(
             totalCount,
-            ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources)
+            dtos
         );
     }
 
@@ -116,7 +142,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<ResourceDto> GetWithVersionsAsync(Guid id)
     {
         var resource = await ResourceRepository.GetWithDetailsAsync(id);
-        return ObjectMapper.Map<Resource, ResourceDto>(resource);
+        var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
+        EnsureFileMetadata(dto);
+        return dto;
     }
 
     [AllowAnonymous]
@@ -163,6 +191,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         var resources = await AsyncExecuter.ToListAsync(query);
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
+        EnsureFileMetadata(dtos);
 
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
@@ -200,9 +229,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             count = query.Count(r => r.Status == ResourceStatus.SchoolApproved || r.Status == ResourceStatus.LeagueApproved);
         }
         
+        var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
+        EnsureFileMetadata(dtos);
         return new PagedResultDto<ResourceDto>(
             count,
-            ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources)
+            dtos
         );
     }
 
@@ -229,9 +260,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             .Take(input.MaxResultCount)
             .ToList();
 
+        var dtos2 = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(orderedResources);
+        EnsureFileMetadata(dtos2);
         return new PagedResultDto<ResourceDto>(
             totalCount,
-            ObjectMapper.Map<List<Resource>, List<ResourceDto>>(orderedResources)
+            dtos2
         );
     }
 
@@ -277,6 +310,18 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         }
 
         return ObjectMapper.Map<Resource, ResourceDto>(resource);
+    }
+
+    /// <summary>
+    /// 确保 DTO 的 FileExtension 正确：去前导点，为空则从 FilePath 推导。
+    /// 修复旧数据中 fileExtension 为 null 或带点导致前端"不支持预览"的问题。
+    /// </summary>
+    private void EnsureFileMetadata(List<ResourceDto> dtos)
+    {
+        foreach (var dto in dtos)
+        {
+            EnsureFileMetadata(dto);
+        }
     }
 
     private bool IsVideoResource(CreateUpdateResourceDto input)
@@ -946,6 +991,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         var resources = await AsyncExecuter.ToListAsync(query);
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
+        EnsureFileMetadata(dtos);
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
 
@@ -1145,6 +1191,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         
         var items = await AsyncExecuter.ToListAsync(query);
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(items);
+        EnsureFileMetadata(dtos);
         
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }

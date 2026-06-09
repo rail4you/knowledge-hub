@@ -1,40 +1,53 @@
 <div class="pptx-viewer">
-  @if (error()) {
+  @if (isLoading()) {
+    <div class="viewer-stage loading">正在加载 PPTX…</div>
+  } @else if (error()) {
     <div class="viewer-error">{{ error() }}</div>
   } @else {
     <div class="viewer-toolbar">
       <div class="toolbar-group">
-        <button nz-button nzSize="small" (click)="prevSlide()" [disabled]="!canGoPrev() || isLoading() || isRendering()">
+        <button nz-button nzSize="small" (click)="prevSlide()" [disabled]="!canGoPrev()">
           <span nz-icon nzType="left"></span>
         </button>
         <span class="viewer-status">{{ slideLabel() }}</span>
-        <button nz-button nzSize="small" (click)="nextSlide()" [disabled]="!canGoNext() || isLoading() || isRendering()">
+        <button nz-button nzSize="small" (click)="nextSlide()" [disabled]="!canGoNext()">
           <span nz-icon nzType="right"></span>
         </button>
       </div>
 
       <div class="toolbar-group">
-        <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="zoom() <= 0.5 || isLoading() || isRendering()">
+        <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="zoom() <= 0.5">
           <span nz-icon nzType="zoom-out"></span>
         </button>
-        <button nz-button nzSize="small" (click)="resetZoom()" [disabled]="zoom() === 1 || isLoading() || isRendering()">
+        <button nz-button nzSize="small" (click)="resetZoom()">
           {{ zoomLabel() }}
         </button>
-        <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="zoom() >= 2 || isLoading() || isRendering()">
+        <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="zoom() >= 2">
           <span nz-icon nzType="zoom-in"></span>
         </button>
       </div>
     </div>
 
-    <div class="slide-stage">
-      <canvas #slideCanvas class="slide-canvas" [class.hidden]="isLoading()"></canvas>
-
-      @if (isLoading()) {
-        <div class="stage-placeholder">正在加载 PPTX…</div>
-      }
-
-      @if (isRendering()) {
-        <div class="rendering-mask">正在渲染幻灯片…</div>
+    <div class="slide-stage" [style.transform]="'scale(' + zoom() + ')'" [style.transformOrigin]="'top center'">
+      @if (currentSlide(); as slide) {
+        <div class="slide-card">
+          @for (t of slide.texts; track $index) {
+            <p
+              class="slide-text"
+              [style.fontSize.px]="t.fontSize"
+              [style.fontWeight]="t.bold ? 'bold' : 'normal'"
+              [style.color]="t.color"
+            >{{ t.text }}</p>
+          }
+          @if (slide.texts.length === 0 && !slide.error) {
+            <p class="slide-text" style="color: #999; font-style: italic;">
+              （此幻灯片无可提取的文字内容）
+            </p>
+          }
+          @if (slide.error) {
+            <p class="slide-text" style="color: #ff4d4f;">{{ slide.error }}</p>
+          }
+        </div>
       }
     </div>
 
@@ -48,7 +61,7 @@
           <button
             type="button"
             class="page-pill"
-            [class.active]="pageIndex === currentSlide()"
+            [class.active]="pageIndex === currentIndex()"
             (click)="goToSlide(pageIndex)"
           >
             {{ pageIndex + 1 }}
@@ -56,7 +69,9 @@
         }
         @if (hasRightEllipsis()) {
           <span class="page-ellipsis">...</span>
-          <button type="button" class="page-pill" (click)="goToSlide(slideCount() - 1)">{{ slideCount() }}</button>
+          <button type="button" class="page-pill" (click)="goToSlide(slideCount() - 1)">
+            {{ slideCount() }}
+          </button>
         }
       </div>
     }

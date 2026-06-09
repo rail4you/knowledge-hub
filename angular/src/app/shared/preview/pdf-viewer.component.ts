@@ -24,7 +24,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy {
   isLoading = signal(true);
   error = signal('');
 
-  private canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('pdfCanvas');
+  private canvasRef = viewChild<ElementRef<HTMLCanvasElement>>('pdfCanvas');
   private pdfDoc: any = null;
   private rendering = false;
 
@@ -61,6 +61,8 @@ export class PdfViewerComponent implements OnInit, OnDestroy {
       this.pdfDoc = await loadingTask.promise;
       this.totalPages.set(this.pdfDoc.numPages);
       this.currentPage.set(1);
+      // Wait for Angular to render the canvas before rendering the PDF page
+      await new Promise(resolve => setTimeout(resolve, 0));
       await this.renderPage(1);
     } catch (e: any) {
       console.error('PDF load error:', e);
@@ -72,14 +74,15 @@ export class PdfViewerComponent implements OnInit, OnDestroy {
 
   async renderPage(pageNum: number) {
     if (!this.pdfDoc || this.rendering) return;
+    const canvasEl = this.canvasRef()?.nativeElement;
+    if (!canvasEl) return;
     this.rendering = true;
     try {
       const page = await this.pdfDoc.getPage(pageNum);
       const viewport = page.getViewport({ scale: this.scale() * 1.5 });
-      const canvas = this.canvasRef().nativeElement;
-      const context = canvas.getContext('2d')!;
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
+      const context = canvasEl.getContext('2d')!;
+      canvasEl.height = viewport.height;
+      canvasEl.width = viewport.width;
 
       await page.render({ canvasContext: context, viewport }).promise;
     } catch (e) {

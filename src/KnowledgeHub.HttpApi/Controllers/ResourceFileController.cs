@@ -72,9 +72,13 @@ public class ResourceFileController : AbpControllerBase
     {
         var resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
 
-        // Only allow previewing approved resources
-        if (resource.Status != ResourceStatus.SchoolApproved &&
-            resource.Status != ResourceStatus.LeagueApproved)
+        // Allow preview if resource is approved, OR if current user is the creator
+        // (so uploaders can preview their own content before submitting for review)
+        var isApproved = resource.Status == ResourceStatus.SchoolApproved ||
+                         resource.Status == ResourceStatus.LeagueApproved;
+        var isCreator = CurrentUser.Id.HasValue && CurrentUser.Id.Value == resource.CreatorId;
+        
+        if (!isApproved && !isCreator)
         {
             return Forbid();
         }
@@ -91,12 +95,12 @@ public class ResourceFileController : AbpControllerBase
             return NotFound(new { message = "资源文件不存在" });
         }
 
-        var stream = await FileStorageService.GetAsync(filePath);
+        var fullPath = System.IO.Path.Combine(FileStorageService.RootPath, filePath);
         var fileName = resource.OriginalFileName ?? resource.Name ?? "preview";
         var contentType = GetContentType(fileName);
 
-        // For preview, return inline instead of attachment
-        return File(stream, contentType);
+        // PhysicalFile supports EnableRangeProcessing for chunked download
+        return PhysicalFile(fullPath, contentType, enableRangeProcessing: true);
     }
 
     private static string GetContentType(string fileName)
