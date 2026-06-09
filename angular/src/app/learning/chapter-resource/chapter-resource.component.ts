@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocalizationPipe } from '@abp/ng.core';
@@ -14,8 +14,11 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { KnowledgeResourceService } from '../../proxy/courses/knowledge-resource.service';
+import { ResourceService } from '../../proxy/resources/resource.service';
+import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import type { CourseDto, ChapterDto } from '../../proxy/courses/dtos/models';
 import type { CreateUpdateKnowledgeResourceDto, KnowledgeResourceDto } from '../../proxy/courses/dtos/models';
+import type { ResourceDto } from '../../proxy/resources/models';
 
 @Component({
   selector: 'app-chapter-resource',
@@ -41,8 +44,8 @@ export class ChapterResourceComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly chapterService = inject(ChapterService);
   private readonly knowledgeResourceService = inject(KnowledgeResourceService);
+  private readonly resourceService = inject(ResourceService);
   private readonly message = inject(NzMessageService);
-  private readonly cdr = inject(ChangeDetectorRef);
 
   courses = signal<CourseDto[]>([]);
   selectedCourseId = signal<string | null>(null);
@@ -52,15 +55,23 @@ export class ChapterResourceComponent implements OnInit {
   selectedChapterTitle = signal('');
 
   chapterResources = signal<KnowledgeResourceDto[]>([]);
-  courseResources = signal<KnowledgeResourceDto[]>([]);
+  // 资源库中「联盟审核通过」的资源
+  libraryResources = signal<ResourceDto[]>([]);
   loading = signal(false);
+  libraryLoading = signal(false);
   searchText = signal('');
 
-  // Resources available to add: course resources not linked to any chapter
+  // 过滤掉已在本章节关联过的资源（按名称去重，因为同一份资源在库只出现一次）
   availableResources = computed(() => {
-    const linked = new Set(this.chapterResources().map(r => r.id));
+    const linkedNames = new Set(
+      this.chapterResources()
+        .map(r => (r.name ?? '').trim().toLowerCase())
+        .filter(n => !!n)
+    );
     const search = this.searchText().toLowerCase();
-    let available = this.courseResources().filter(r => !linked.has(r.id));
+    let available = this.libraryResources().filter(
+      r => !linkedNames.has((r.name ?? '').trim().toLowerCase())
+    );
     if (search) {
       available = available.filter(r =>
         r.name?.toLowerCase().includes(search) ||
@@ -89,7 +100,7 @@ export class ChapterResourceComponent implements OnInit {
     this.chapterResources.set([]);
     this.searchText.set('');
     this.loadChapterTree();
-    this.loadCourseResources();
+    this.loadLibraryResources();
   }
 
   loadChapterTree() {
@@ -106,13 +117,16 @@ export class ChapterResourceComponent implements OnInit {
     });
   }
 
-  loadCourseResources() {
-    const courseId = this.selectedCourseId();
-    if (!courseId) return;
-
-    this.knowledgeResourceService.getByCourse(courseId).subscribe({
-      next: (data) => {
-        this.courseResources.set(data || []);
+  loadLibraryResources() {
+    this.libraryLoading.set(true);
+    this.resourceService.getLeagueApproved({ skipCount: 0, maxResultCount: 1000 }).subscribe({
+      next: (result) => {
+        this.libraryResources.set(result.items || []);
+        this.libraryLoading.set(false);
+      },
+      error: () => {
+        this.libraryLoading.set(false);
+        this.message.error('加载资源库失败');
       },
     });
   }
@@ -165,30 +179,37 @@ export class ChapterResourceComponent implements OnInit {
     return !!node.children && node.children.length > 0;
   }
 
-  linkResource(resource: KnowledgeResourceDto) {
+  linkResource(resource: ResourceDto) {
     const chapterId = this.selectedChapterId();
-    if (!chapterId || !resource.id) return;
+    const courseId = this.selectedCourseId();
+    if (!chapterId || !courseId) return;
 
+    // 以资源库条目为模板创建 KnowledgeResource，绑定到当前章节
     const dto: CreateUpdateKnowledgeResourceDto = {
-      courseId: resource.courseId,
+      courseId: courseId,
       chapterId: chapterId,
-      name: resource.name,
-      description: resource.description,
-      content: resource.content,
-      importanceLevel: resource.importanceLevel,
-      difficulty: resource.difficulty,
-      sortOrder: resource.sortOrder,
-      tags: resource.tags,
-      parentId: resource.parentId,
+      name: resource.name ?? '',
+      description: resource.description ?? '',
+      content: resource.filePath ?? '',
+      importanceLevel: 'normal',
+      difficulty: 1,
+      sortOrder: 0,
+      tags: resource.keywords ?? '',
+      parentId: null,
     };
 
-    this.knowledgeResourceService.update(resource.id, dto).subscribe({
+    this.knowledgeResourceService.create(dto).subscribe({
       next: () => {
         this.message.success('资源已关联到章节');
         this.loadChapterResources();
       },
-      error: () => {
-        this.message.error('关联失败');
+      error: (err) => {
+        const detail =
+          err?.error?.error?.message ||
+          err?.error?.message ||
+          err?.message ||
+          '';
+        this.message.error('关联失败：' + (detail || '未知错误'));
       },
     });
   }
@@ -214,8 +235,13 @@ export class ChapterResourceComponent implements OnInit {
         this.message.success('已取消关联');
         this.loadChapterResources();
       },
-      error: () => {
-        this.message.error('取消关联失败');
+      error: (err) => {
+        const detail =
+          err?.error?.error?.message ||
+          err?.error?.message ||
+          err?.message ||
+          '';
+        this.message.error('取消关联失败：' + (detail || '未知错误'));
       },
     });
   }
@@ -240,15 +266,27 @@ export class ChapterResourceComponent implements OnInit {
     return map[level ?? 'normal'] ?? 'default';
   }
 
-  getDifficultyLabel(difficulty: number | undefined): string {
-    if (difficulty === undefined || difficulty === null) return '';
+  getResourceTypeLabel(type: ResourceType | undefined): string {
+    if (type === undefined || type === null) return '';
     const map: Record<number, string> = {
-      1: '入门',
-      2: '基础',
-      3: '进阶',
-      4: '高级',
-      5: '专家',
+      [ResourceType.Document]: '文档',
+      [ResourceType.Video]: '视频',
+      [ResourceType.Audio]: '音频',
+      [ResourceType.Image]: '图片',
+      [ResourceType.PPT]: 'PPT',
     };
-    return map[difficulty] ?? '';
+    return map[type] ?? '其他';
+  }
+
+  getResourceTypeColor(type: ResourceType | undefined): string {
+    if (type === undefined || type === null) return 'default';
+    const map: Record<number, string> = {
+      [ResourceType.Document]: 'blue',
+      [ResourceType.Video]: 'purple',
+      [ResourceType.Audio]: 'cyan',
+      [ResourceType.Image]: 'green',
+      [ResourceType.PPT]: 'orange',
+    };
+    return map[type] ?? 'default';
   }
 }

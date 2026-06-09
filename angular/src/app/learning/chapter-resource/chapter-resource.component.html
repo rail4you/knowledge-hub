@@ -1,6 +1,7 @@
 <div class="chapter-resource-container">
   <div class="page-header">
     <h1>{{ '::Menu:ChapterResource' | abpLocalization }}</h1>
+    <p class="page-hint">从资源库（已联盟审核通过）选择资源关联到章节</p>
   </div>
 
   <!-- Course selector -->
@@ -57,9 +58,6 @@
                       <nz-tag [nzColor]="getImportanceColor(resource.importanceLevel)">
                         {{ getImportanceLabel(resource.importanceLevel) }}
                       </nz-tag>
-                      @if (getDifficultyLabel(resource.difficulty)) {
-                        <span class="difficulty-badge">{{ getDifficultyLabel(resource.difficulty) }}</span>
-                      }
                     </div>
                     @if (resource.description) {
                       <div class="resource-item-content">{{ resource.description }}</div>
@@ -73,10 +71,10 @@
             </div>
           }
 
-          <!-- Add from course resources -->
+          <!-- Add from resource library -->
           <div class="add-section">
             <div class="add-section-header">
-              <h4>从课程资源中添加</h4>
+              <h4>从资源库中添加（已审核通过）</h4>
               <input
                 nz-input
                 [ngModel]="searchText()"
@@ -85,8 +83,12 @@
                 style="width: 200px"
               />
             </div>
-            @if (availableResources().length === 0) {
-              <nz-empty nzNotFoundContent="没有可添加的资源"></nz-empty>
+            @if (libraryLoading()) {
+              <div class="loading-container">
+                <nz-spin nzSimple nzSize="small"></nz-spin>
+              </div>
+            } @else if (availableResources().length === 0) {
+              <nz-empty nzNotFoundContent="没有可添加的资源（资源库中所有已审核资源都已在当前章节）"></nz-empty>
             } @else {
               <div class="available-resources">
                 @for (resource of availableResources(); track resource.id) {
@@ -94,15 +96,17 @@
                     <div class="resource-item-left">
                       <div class="resource-item-title">
                         {{ resource.name }}
-                        <nz-tag [nzColor]="getImportanceColor(resource.importanceLevel)">
-                          {{ getImportanceLabel(resource.importanceLevel) }}
+                        <nz-tag [nzColor]="getResourceTypeColor(resource.resourceType)">
+                          {{ getResourceTypeLabel(resource.resourceType) }}
                         </nz-tag>
-                        @if (getDifficultyLabel(resource.difficulty)) {
-                          <span class="difficulty-badge">{{ getDifficultyLabel(resource.difficulty) }}</span>
+                        @if (resource.fileExtension) {
+                          <span class="ext-badge">.{{ resource.fileExtension }}</span>
                         }
                       </div>
                       @if (resource.description) {
                         <div class="resource-item-content">{{ resource.description }}</div>
+                      } @else if (resource.categoryName) {
+                        <div class="resource-item-content">分类：{{ resource.categoryName }}</div>
                       }
                     </div>
                     <button nz-button nzType="primary" nzSize="small" (click)="linkResource(resource)">
