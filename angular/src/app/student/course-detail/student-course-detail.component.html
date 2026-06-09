@@ -67,11 +67,6 @@
             </span>
             <span class="stat-block__divider"></span>
             <span class="stat-block">
-              <span class="stat-block__value">{{ countResources(chapters()) }}</span>
-              <span class="stat-block__label">知识点</span>
-            </span>
-            <span class="stat-block__divider"></span>
-            <span class="stat-block">
               <span class="stat-block__value">{{ c.studentCount || 0 | number }}</span>
               <span class="stat-block__label">学习者</span>
             </span>
@@ -525,12 +520,6 @@
           ></span>
         </span>
         <span class="tree-node__title">{{ node.title }}</span>
-        @if ((node.knowledgeResources?.length || 0) > 0) {
-          <span class="tree-node__count">
-            <span nz-icon nzType="bulb" nzTheme="outline"></span>
-            {{ node.knowledgeResources?.length }} 知识点
-          </span>
-        }
         @if (node.description) {
           <span
             class="tree-node__desc"

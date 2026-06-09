@@ -106,7 +106,9 @@ public static class EmploymentDbModelCreatingExtensions
             b.ConfigureByConvention();
 
             b.Property(x => x.Title).IsRequired().HasMaxLength(200);
-            b.Property(x => x.Content).IsRequired().HasMaxLength(4000);
+            // AI 生成的就业指导内容是 raw JSON（评估/路径/技能差距/行动计划/下一步），
+            // 单条报告可能远超 4000 字符，留 16000 兜底。
+            b.Property(x => x.Content).IsRequired().HasMaxLength(16000);
             b.Property(x => x.CareerGoal).HasMaxLength(1000);
 
             b.HasIndex(x => x.StudentId);
