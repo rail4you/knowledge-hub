@@ -38,6 +38,7 @@ public interface IEmploymentAppService : IApplicationService
     Task<PagedResultDto<InterviewScheduleDto>> GetInterviewListAsync(GetInterviewSchedulesInput input);
 
     Task<EmploymentGuidanceRecordDto> CreateGuidanceRecordAsync(CreateEmploymentGuidanceRecordDto input);
+    Task<EmploymentGuidanceRecordDto> CreateMyAIGuidanceRecordAsync(CreateMyAIGuidanceRecordDto input);
     Task<PagedResultDto<EmploymentGuidanceRecordDto>> GetMyGuidanceRecordListAsync(GetEmploymentGuidanceRecordsInput input);
     Task<PagedResultDto<EmploymentGuidanceRecordDto>> GetGuidanceRecordListAsync(GetEmploymentGuidanceRecordsInput input);
 

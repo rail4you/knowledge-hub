@@ -233,7 +233,8 @@ public class EmploymentGuidanceRecordDto : FullAuditedEntityDto<Guid>
     public Guid StudentId { get; set; }
     public string? StudentName { get; set; }
     public Guid? ApplicationId { get; set; }
-    public Guid TeacherId { get; set; }
+    /// <summary>教师 ID；AI 生成的指导记录为 null。</summary>
+    public Guid? TeacherId { get; set; }
     public string? TeacherName { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
@@ -249,6 +250,17 @@ public class CreateEmploymentGuidanceRecordDto
     public string Title { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public EmploymentGuidanceSourceType SourceType { get; set; }
+    public string? CareerGoal { get; set; }
+}
+
+/// <summary>
+/// 学生端保存自己 AI 生成的就业指导。
+/// StudentId 强制绑定当前用户，SourceType 固定为 AI，TeacherId 固定为 null。
+/// </summary>
+public class CreateMyAIGuidanceRecordDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
     public string? CareerGoal { get; set; }
 }
 

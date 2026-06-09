@@ -108,6 +108,14 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         {
             options.MenuContributors.Add(new KnowledgeHubMenuContributor());
         });
+
+        // Store all DateTime values as UTC in database.
+        // Combined with UtcDateTimeConverter in JSON, ensures frontend
+        // Angular DatePipe correctly converts UTC to China timezone (UTC+8).
+        Configure<Volo.Abp.Timing.AbpClockOptions>(options =>
+        {
+            options.Kind = DateTimeKind.Utc;
+        });
     }
 
     private void PreConfigureServicesPre75(ServiceConfigurationContext context)
@@ -201,6 +209,12 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         Configure<Microsoft.AspNetCore.Mvc.JsonOptions>(options =>
         {
             options.JsonSerializerOptions.Converters.Add(new NullableGuidConverter());
+            // Serialize DateTime as UTC to fix timezone display on frontend.
+            // PostgreSQL stores timestamp without timezone; without this,
+            // dates are serialized without Z suffix and Angular DatePipe treats them
+            // as local server time (UTC) instead of converting to China timezone (UTC+8).
+            options.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter());
+            options.JsonSerializerOptions.Converters.Add(new UtcNullableDateTimeConverter());
         });
     }
 

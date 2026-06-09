@@ -713,6 +713,35 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.Employment.Default)]
+    public async Task<EmploymentGuidanceRecordDto> CreateMyAIGuidanceRecordAsync(CreateMyAIGuidanceRecordDto input)
+    {
+        if (string.IsNullOrWhiteSpace(input.Title) || string.IsNullOrWhiteSpace(input.Content))
+        {
+            throw new UserFriendlyException("指导标题和内容不能为空。");
+        }
+
+        var studentId = GetCurrentUserId();
+
+        // AI 记录无教师：TeacherId = null，SourceType = AI
+        var entity = new EmploymentGuidanceRecord(
+            GuidGenerator.Create(),
+            studentId,
+            teacherId: null,
+            input.Title.Trim(),
+            input.Content)
+        {
+            TenantId = CurrentTenant.Id,
+            ApplicationId = null,
+            SourceType = EmploymentGuidanceSourceType.AI,
+            CareerGoal = input.CareerGoal?.Trim(),
+            GuidedAt = Clock.Now
+        };
+
+        await _guidanceRepository.InsertAsync(entity, autoSave: true);
+        return await MapGuidanceDtoAsync(entity);
+    }
+
+    [Authorize(KnowledgeHubPermissions.Employment.Default)]
     public async Task<PagedResultDto<EmploymentGuidanceRecordDto>> GetMyGuidanceRecordListAsync(GetEmploymentGuidanceRecordsInput input)
     {
         var currentUserId = GetCurrentUserId();
@@ -1199,7 +1228,8 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         using (DataFilter.Disable<IMultiTenant>())
         {
             var studentIds = items.Select(x => x.StudentId).Distinct().ToList();
-            var teacherIds = items.Select(x => x.TeacherId).Distinct().ToList();
+            // AI 记录 TeacherId 为 null，过滤掉避免无效查询
+            var teacherIds = items.Where(x => x.TeacherId.HasValue).Select(x => x.TeacherId!.Value).Distinct().ToList();
             var users = await _userRepository.GetListAsync(x => studentIds.Contains(x.Id) || teacherIds.Contains(x.Id));
             var userMap = users.ToDictionary(x => x.Id, x => x);
 
@@ -1212,7 +1242,9 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                 StudentName = userMap.TryGetValue(item.StudentId, out var student) ? GetUserDisplayName(student) : null,
                 ApplicationId = item.ApplicationId,
                 TeacherId = item.TeacherId,
-                TeacherName = userMap.TryGetValue(item.TeacherId, out var teacher) ? GetUserDisplayName(teacher) : null,
+                TeacherName = item.TeacherId.HasValue && userMap.TryGetValue(item.TeacherId.Value, out var teacher)
+                    ? GetUserDisplayName(teacher)
+                    : null,
                 Title = item.Title,
                 Content = item.Content,
                 SourceType = item.SourceType,

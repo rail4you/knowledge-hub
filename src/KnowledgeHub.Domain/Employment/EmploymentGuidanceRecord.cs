@@ -10,7 +10,10 @@ public class EmploymentGuidanceRecord : FullAuditedAggregateRoot<Guid>, IMultiTe
     public Guid? TenantId { get; set; }
     public Guid StudentId { get; set; }
     public Guid? ApplicationId { get; set; }
-    public Guid TeacherId { get; set; }
+    /// <summary>
+    /// 教师 ID。AI 生成的指导记录无教师，可为 null。
+    /// </summary>
+    public Guid? TeacherId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public EmploymentGuidanceSourceType SourceType { get; set; } = EmploymentGuidanceSourceType.Manual;
@@ -21,7 +24,7 @@ public class EmploymentGuidanceRecord : FullAuditedAggregateRoot<Guid>, IMultiTe
     {
     }
 
-    public EmploymentGuidanceRecord(Guid id, Guid studentId, Guid teacherId, string title, string content)
+    public EmploymentGuidanceRecord(Guid id, Guid studentId, Guid? teacherId, string title, string content)
         : base(id)
     {
         StudentId = studentId;
