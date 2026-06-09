@@ -4,11 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
 using KnowledgeHub.Courses.Dtos;
+using KnowledgeHub.Permissions;
+using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Domain.Repositories;
 
 namespace KnowledgeHub.Courses;
 
-[Microsoft.AspNetCore.Authorization.AllowAnonymous]
 public class KnowledgeResourceAppService : KnowledgeHubAppService, IKnowledgeResourceAppService
 {
     private readonly IRepository<KnowledgeResource, Guid> _knowledgeResourceRepository;
@@ -47,9 +48,9 @@ public class KnowledgeResourceAppService : KnowledgeHubAppService, IKnowledgeRes
     public async Task<RelatedCoursesResultDto> GetRelatedCoursesAsync(Guid knowledgeResourceId)
     {
         var resource = await _knowledgeResourceRepository.GetAsync(knowledgeResourceId);
-        
+
         var chapterQuery = await _chapterRepository.GetQueryableAsync();
-        
+
         var relatedChapters = chapterQuery
             .Where(x => x.Id == resource.ChapterId)
             .Select(x => new { ChapterId = x.Id, ChapterTitle = x.Title, x.CourseId })
@@ -71,6 +72,52 @@ public class KnowledgeResourceAppService : KnowledgeHubAppService, IKnowledgeRes
                     }).ToList()
                 }).ToList()
         };
+    }
+
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
+    public async Task<KnowledgeResourceDto> CreateAsync(CreateUpdateKnowledgeResourceDto input)
+    {
+        var resource = new KnowledgeResource(
+            GuidGenerator.Create(),
+            input.CourseId,
+            input.Name)
+        {
+            ChapterId = input.ChapterId,
+            Description = input.Description,
+            Content = input.Content,
+            ImportanceLevel = input.ImportanceLevel,
+            Difficulty = input.Difficulty,
+            SortOrder = input.SortOrder,
+            Tags = input.Tags,
+            ParentId = input.ParentId
+        };
+
+        await _knowledgeResourceRepository.InsertAsync(resource);
+        return MapToDto(resource);
+    }
+
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
+    public async Task<KnowledgeResourceDto> UpdateAsync(Guid id, CreateUpdateKnowledgeResourceDto input)
+    {
+        var resource = await _knowledgeResourceRepository.GetAsync(id);
+        resource.Name = input.Name;
+        resource.ChapterId = input.ChapterId;
+        resource.Description = input.Description;
+        resource.Content = input.Content;
+        resource.ImportanceLevel = input.ImportanceLevel;
+        resource.Difficulty = input.Difficulty;
+        resource.SortOrder = input.SortOrder;
+        resource.Tags = input.Tags;
+        resource.ParentId = input.ParentId;
+
+        await _knowledgeResourceRepository.UpdateAsync(resource);
+        return MapToDto(resource);
+    }
+
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
+    public async Task DeleteAsync(Guid id)
+    {
+        await _knowledgeResourceRepository.DeleteAsync(id);
     }
 
     private static KnowledgeResourceDto MapToDto(KnowledgeResource resource)

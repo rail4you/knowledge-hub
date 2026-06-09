@@ -296,6 +296,7 @@
     "Menu:Admin": "Admin",
     "Menu:ExerciseManagement": "Exercise Management",
     "Menu:ChapterExercise": "Chapter Exercises",
+    "Menu:ChapterResource": "Chapter Resources",
     "Menu:IdentityRoles": "Roles",
     "IsDefault": "Default",
     "IsPublic": "Public",

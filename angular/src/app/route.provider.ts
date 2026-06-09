@@ -348,6 +348,15 @@ function configureRoutes() {
         requiredPolicy: 'KnowledgeHub.Courses.Edit',
       },
       {
+        path: '/learning/chapter-resource',
+        name: '::Menu:ChapterResource',
+        iconClass: 'fas fa-file-lines',
+        parentName: '::Menu:Learning',
+        order: 6,
+        layout: eLayoutType.application,
+        requiredPolicy: 'KnowledgeHub.Courses.Edit',
+      },
+      {
         path: '/learning/knowledge-graph/:courseId',
         name: '::Menu:KnowledgeGraph',
         parentName: '::Menu:Learning',

@@ -371,6 +371,7 @@
     "Menu:Alliance": "联盟管理",
     "Menu:ExerciseManagement": "习题管理",
     "Menu:ChapterExercise": "章节习题",
+    "Menu:ChapterResource": "章节资源",
     "Menu:IdentityRoles": "角色管理",
     "AbpIdentity::NewUser": "新建用户",
     "AbpIdentity::Edit": "编辑用户",

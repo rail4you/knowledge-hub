@@ -88,6 +88,19 @@ export interface CreateUpdateCourseDto {
   status?: CourseStatus;
 }
 
+export interface CreateUpdateKnowledgeResourceDto {
+  courseId?: string;
+  chapterId?: string | null;
+  name?: string;
+  description?: string | null;
+  content?: string | null;
+  importanceLevel?: string;
+  difficulty?: number;
+  sortOrder?: number;
+  tags?: string | null;
+  parentId?: string | null;
+}
+
 export interface GetAvailableStudentsInput extends PagedAndSortedResultRequestDto {
   courseId?: string;
   tenantId?: string | null;

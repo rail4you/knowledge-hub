@@ -1,0 +1,147 @@
+<div class="chapter-resource-container">
+  <div class="page-header">
+    <h1>{{ '::Menu:ChapterResource' | abpLocalization }}</h1>
+  </div>
+
+  <!-- Course selector -->
+  <nz-card class="selector-card">
+    <div class="course-selector">
+      <label>选择课程：</label>
+      <nz-select
+        [ngModel]="selectedCourseId()"
+        (ngModelChange)="onCourseSelected($event)"
+        nzPlaceHolder="请选择课程"
+        nzAllowClear
+        class="course-select"
+      >
+        @for (course of courses(); track course.id) {
+          <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+        }
+      </nz-select>
+    </div>
+  </nz-card>
+
+  @if (selectedCourseId()) {
+    <div class="content-layout">
+      <!-- Left: Chapter tree (30%) -->
+      <nz-card class="tree-panel" nzTitle="章节列表">
+        @if (chapters().length === 0) {
+          <nz-empty nzNotFoundContent="暂无章节"></nz-empty>
+        } @else {
+          <div class="tree-view">
+            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: chapters(), depth: 0 }"></ng-container>
+          </div>
+        }
+      </nz-card>
+
+      <!-- Right: Resource management (70%) -->
+      <nz-card class="resource-panel">
+        @if (selectedChapterId()) {
+          <div class="resource-panel-header">
+            <h3>{{ selectedChapterTitle() }} - 已关联资源 ({{ chapterResources().length }})</h3>
+          </div>
+
+          @if (loading()) {
+            <div class="loading-container">
+              <nz-spin nzSimple nzSize="large"></nz-spin>
+            </div>
+          } @else if (chapterResources().length === 0) {
+            <nz-empty nzNotFoundContent="暂无关联资源，可从下方添加"></nz-empty>
+          } @else {
+            <div class="linked-resources">
+              @for (resource of chapterResources(); track resource.id) {
+                <div class="resource-item">
+                  <div class="resource-item-left">
+                    <div class="resource-item-title">
+                      {{ resource.name }}
+                      <nz-tag [nzColor]="getImportanceColor(resource.importanceLevel)">
+                        {{ getImportanceLabel(resource.importanceLevel) }}
+                      </nz-tag>
+                      @if (getDifficultyLabel(resource.difficulty)) {
+                        <span class="difficulty-badge">{{ getDifficultyLabel(resource.difficulty) }}</span>
+                      }
+                    </div>
+                    @if (resource.description) {
+                      <div class="resource-item-content">{{ resource.description }}</div>
+                    }
+                  </div>
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkResource(resource)">
+                    取消关联
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Add from course resources -->
+          <div class="add-section">
+            <div class="add-section-header">
+              <h4>从课程资源中添加</h4>
+              <input
+                nz-input
+                [ngModel]="searchText()"
+                (ngModelChange)="searchText.set($event)"
+                placeholder="搜索资源..."
+                style="width: 200px"
+              />
+            </div>
+            @if (availableResources().length === 0) {
+              <nz-empty nzNotFoundContent="没有可添加的资源"></nz-empty>
+            } @else {
+              <div class="available-resources">
+                @for (resource of availableResources(); track resource.id) {
+                  <div class="resource-item available">
+                    <div class="resource-item-left">
+                      <div class="resource-item-title">
+                        {{ resource.name }}
+                        <nz-tag [nzColor]="getImportanceColor(resource.importanceLevel)">
+                          {{ getImportanceLabel(resource.importanceLevel) }}
+                        </nz-tag>
+                        @if (getDifficultyLabel(resource.difficulty)) {
+                          <span class="difficulty-badge">{{ getDifficultyLabel(resource.difficulty) }}</span>
+                        }
+                      </div>
+                      @if (resource.description) {
+                        <div class="resource-item-content">{{ resource.description }}</div>
+                      }
+                    </div>
+                    <button nz-button nzType="primary" nzSize="small" (click)="linkResource(resource)">
+                      添加到章节
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <nz-empty nzNotFoundContent="请选择左侧章节查看关联资源"></nz-empty>
+        }
+      </nz-card>
+    </div>
+  }
+
+  <!-- Recursive tree template -->
+  <ng-template #treeNode let-nodes let-depth="depth">
+    @for (node of nodes; track node.id) {
+      <div class="tree-node" [style.padding-left.px]="depth * 20">
+        <div
+          class="tree-node-content"
+          [class.selected]="selectedChapterId() === node.id"
+          (click)="selectChapter(node)"
+        >
+          @if (hasChildren(node)) {
+            <span class="toggle-icon" (click)="toggleNode(node.id!); $event.stopPropagation()">
+              <span nz-icon [nzType]="isExpanded(node.id!) ? 'down' : 'right'"></span>
+            </span>
+          } @else {
+            <span class="toggle-icon placeholder"></span>
+          }
+          <span class="node-title">{{ node.title }}</span>
+        </div>
+        @if (hasChildren(node) && isExpanded(node.id!)) {
+          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+        }
+      </div>
+    }
+  </ng-template>
+</div>
