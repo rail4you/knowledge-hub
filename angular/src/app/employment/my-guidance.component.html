@@ -1,20 +1,159 @@
 <div class="guidance-page">
   <nz-card nzTitle="就业指导" [nzExtra]="extraTpl">
     <ng-template #extraTpl>
-      <a nz-button nzType="default" [routerLink]="['/ai/career-guidance']">打开 AI 职业规划</a>
+      <a nz-button nzType="default" [routerLink]="['/ai/career-guidance']">
+        <span nz-icon nzType="thunderbolt" nzTheme="outline"></span>
+        AI 职业规划
+      </a>
     </ng-template>
 
-    <div class="guidance-list">
-      @for (item of items(); track item.id) {
-        <nz-card class="guidance-item">
-          <div class="guidance-head">
-            <strong>{{ item.title }}</strong>
-            <span>{{ getSourceLabel(item.sourceType) }} · {{ item.guidedAt }}</span>
-          </div>
-          <p>{{ item.content }}</p>
-          <p>目标：{{ item.careerGoal || '未填写' }}</p>
-        </nz-card>
-      }
-    </div>
+    @if (viewItems().length === 0) {
+      <nz-empty nzNotFoundContent="暂无就业指导记录"></nz-empty>
+    } @else {
+      <div class="guidance-list">
+        @for (v of viewItems(); track v.raw.id) {
+          <nz-card class="guidance-item">
+            <div class="guidance-head">
+              <div class="guidance-head-left">
+                <strong class="guidance-title">{{ v.raw.title }}</strong>
+                <nz-tag [nzColor]="v.raw.sourceType === sourceTypes.AI ? 'blue' : 'green'">
+                  {{ getSourceLabel(v.raw.sourceType) }}
+                </nz-tag>
+              </div>
+              <span class="guidance-time">{{ v.raw.guidedAt | date: 'yyyy-MM-dd HH:mm' }}</span>
+            </div>
+
+            @if (v.raw.careerGoal) {
+              <p class="guidance-goal">目标：{{ v.raw.careerGoal }}</p>
+            }
+
+            @if (v.isAi && v.ai) {
+              <!-- AI 结构化结果：按报告形式分块展示 -->
+              <div class="ai-content">
+                <!-- 能力评估 -->
+                <div class="ai-section">
+                  <h4 class="ai-section-heading">个人能力评估</h4>
+                  <nz-descriptions nzBordered [nzColumn]="2" nzSize="small">
+                    <nz-descriptions-item nzTitle="职业匹配度" [nzSpan]="2">
+                      <nz-progress
+                        [nzPercent]="v.ai.assessment.careerMatchScore"
+                        [nzStatus]="v.ai.assessment.careerMatchScore >= 70 ? 'success' : 'normal'"
+                      ></nz-progress>
+                    </nz-descriptions-item>
+                    <nz-descriptions-item nzTitle="综合评估" [nzSpan]="2">
+                      {{ v.ai.assessment.summary }}
+                    </nz-descriptions-item>
+                    <nz-descriptions-item nzTitle="核心优势">
+                      @for (s of v.ai.assessment.strengths; track s) {
+                        <nz-tag nzColor="green">{{ s }}</nz-tag>
+                      }
+                    </nz-descriptions-item>
+                    <nz-descriptions-item nzTitle="待提升领域">
+                      @for (a of v.ai.assessment.areasForImprovement; track a) {
+                        <nz-tag nzColor="orange">{{ a }}</nz-tag>
+                      }
+                    </nz-descriptions-item>
+                  </nz-descriptions>
+                </div>
+
+                <!-- 推荐路径 -->
+                @if (v.ai.recommendedPaths?.length) {
+                  <div class="ai-section">
+                    <h4 class="ai-section-heading">推荐职业路径</h4>
+                    <nz-collapse>
+                      @for (path of v.ai.recommendedPaths; track path.title) {
+                        <nz-collapse-panel
+                          [nzHeader]="path.title + ' (匹配度 ' + path.matchScore + '%)'"
+                        >
+                          <p>{{ path.description }}</p>
+                          <nz-descriptions [nzColumn]="2" nzSize="small">
+                            <nz-descriptions-item nzTitle="薪资范围">{{ path.salaryRange }}</nz-descriptions-item>
+                            <nz-descriptions-item nzTitle="发展潜力">{{ path.growthPotential }}</nz-descriptions-item>
+                            <nz-descriptions-item nzTitle="所需技能" [nzSpan]="2">
+                              @for (skill of path.requiredSkills; track skill) {
+                                <nz-tag>{{ skill }}</nz-tag>
+                              }
+                            </nz-descriptions-item>
+                          </nz-descriptions>
+                        </nz-collapse-panel>
+                      }
+                    </nz-collapse>
+                  </div>
+                }
+
+                <!-- 技能差距 -->
+                @if (v.ai.skillGaps?.length) {
+                  <div class="ai-section">
+                    <h4 class="ai-section-heading">技能差距分析</h4>
+                    <nz-table
+                      [nzData]="v.ai.skillGaps"
+                      nzSize="small"
+                      [nzShowPagination]="false"
+                      [nzNoResult]="'暂无数据'"
+                    >
+                      <thead>
+                        <tr>
+                          <th>技能</th>
+                          <th>当前水平</th>
+                          <th>目标水平</th>
+                          <th>优先级</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (gap of v.ai.skillGaps; track gap.skill) {
+                          <tr>
+                            <td>{{ gap.skill }}</td>
+                            <td>{{ gap.currentLevel }}</td>
+                            <td>{{ gap.targetLevel }}</td>
+                            <td>
+                              <nz-tag [nzColor]="getPriorityColor(gap.priority)">
+                                {{ gap.priority }}
+                              </nz-tag>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </nz-table>
+                  </div>
+                }
+
+                <!-- 行动计划 -->
+                @if (v.ai.actionPlan?.length) {
+                  <div class="ai-section">
+                    <h4 class="ai-section-heading">行动计划</h4>
+                    <nz-timeline>
+                      @for (action of v.ai.actionPlan; track action.id) {
+                        <nz-timeline-item [nzColor]="getPriorityColor(action.priority)">
+                          <strong>{{ action.title }}</strong>
+                          <p class="ai-action-desc">{{ action.description }}</p>
+                          <small class="ai-action-meta">
+                            时间线：{{ action.timeline }} · 优先级：{{ action.priority }}
+                          </small>
+                        </nz-timeline-item>
+                      }
+                    </nz-timeline>
+                  </div>
+                }
+
+                <!-- 下一步行动 -->
+                @if (v.ai.nextSteps?.length) {
+                  <div class="ai-section">
+                    <h4 class="ai-section-heading">下一步行动</h4>
+                    <ul class="ai-next-steps">
+                      @for (step of v.ai.nextSteps; track step) {
+                        <li>{{ step }}</li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </div>
+            } @else {
+              <!-- 人工记录 / 解析失败：按纯文本展示 -->
+              <div class="guidance-content">{{ v.raw.content }}</div>
+            }
+          </nz-card>
+        }
+      </div>
+    }
   </nz-card>
 </div>

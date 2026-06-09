@@ -21,6 +21,12 @@ export interface CreateJobApplicationDto {
   coverLetter?: string | null;
 }
 
+export interface CreateMyAIGuidanceRecordDto {
+  title?: string;
+  content?: string;
+  careerGoal?: string | null;
+}
+
 export interface CreateUpdateEmploymentOutcomeDto {
   id?: string | null;
   studentId?: string;
@@ -105,7 +111,7 @@ export interface EmploymentGuidanceRecordDto extends FullAuditedEntityDto<string
   studentId?: string;
   studentName?: string | null;
   applicationId?: string | null;
-  teacherId?: string;
+  teacherId?: string | null;
   teacherName?: string | null;
   title?: string;
   content?: string;

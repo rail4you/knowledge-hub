@@ -245,6 +245,22 @@ public class CourseAppService : ApplicationService, ITransientDependency
                            .Take(input.MaxResultCount)
                            .ToList();
 
+        // 批量查询章节数和选课人数
+        var courseIds = courses.Select(c => c.Id).ToList();
+        var chapterQuery = await _chapterRepository.GetQueryableAsync();
+        var chapterCounts = await AsyncExecuter.ToListAsync(
+            chapterQuery.Where(ch => courseIds.Contains(ch.CourseId))
+                .GroupBy(ch => ch.CourseId)
+                .Select(g => new { CourseId = g.Key, Count = g.Count() }));
+        var studentQuery = await _studentCourseRepository.GetQueryableAsync();
+        var studentCounts = await AsyncExecuter.ToListAsync(
+            studentQuery.Where(sc => courseIds.Contains(sc.CourseId) && sc.Status != StudentCourseStatus.Dropped)
+                .GroupBy(sc => sc.CourseId)
+                .Select(g => new { CourseId = g.Key, Count = g.Count() }));
+
+        var chapterCountMap = chapterCounts.ToDictionary(x => x.CourseId, x => x.Count);
+        var studentCountMap = studentCounts.ToDictionary(x => x.CourseId, x => x.Count);
+
         return new PagedResultDto<CourseDto>(
             totalCount,
             courses.Select(c => new CourseDto
@@ -261,6 +277,8 @@ public class CourseAppService : ApplicationService, ITransientDependency
                 Difficulty = c.Difficulty,
                 TeacherId = c.TeacherId,
                 CategoryId = c.CategoryId,
+                ChapterCount = chapterCountMap.GetValueOrDefault(c.Id, 0),
+                StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0),
                 CreationTime = c.CreationTime,
                 CreatorId = c.CreatorId,
                 LastModificationTime = c.LastModificationTime,

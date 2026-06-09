@@ -274,7 +274,7 @@ export interface EmploymentGuidanceRecordDto {
   studentId: string;
   studentName?: string;
   applicationId?: string;
-  teacherId: string;
+  teacherId?: string;
   teacherName?: string;
   title: string;
   content: string;
@@ -290,6 +290,12 @@ export interface CreateEmploymentGuidanceRecordDto {
   title: string;
   content: string;
   sourceType: EmploymentGuidanceSourceType;
+  careerGoal?: string;
+}
+
+export interface CreateMyAIGuidanceRecordDto {
+  title: string;
+  content: string;
   careerGoal?: string;
 }
 
@@ -517,6 +523,13 @@ export class EmploymentService {
     this.restService.request<any, EmploymentGuidanceRecordDto>({
       method: 'POST',
       url: '/api/app/employment/guidance-record',
+      body: input,
+    }, { apiName: this.apiName });
+
+  createMyAIGuidanceRecord = (input: CreateMyAIGuidanceRecordDto) =>
+    this.restService.request<any, EmploymentGuidanceRecordDto>({
+      method: 'POST',
+      url: '/api/app/employment/my-aIGuidance-record',
       body: input,
     }, { apiName: this.apiName });
 

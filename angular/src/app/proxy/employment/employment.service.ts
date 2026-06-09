@@ -1,4 +1,4 @@
-import type { CreateEmploymentGuidanceRecordDto, CreateJobApplicationDto, CreateUpdateEmploymentOutcomeDto, CreateUpdateInterviewScheduleDto, CreateUpdateJobPostingDto, CreateUpdateStudentResumeDto, EmployerProfileDto, EmploymentGuidanceRecordDto, EmploymentOutcomeDto, EmploymentStatisticsInput, EmploymentStatisticsRowDto, GetEmploymentGuidanceRecordsInput, GetEmploymentOutcomeListInput, GetInterviewSchedulesInput, GetJobApplicationsInput, GetManageJobsInput, InterviewScheduleDto, JobApplicationDto, JobPostingDto, PagedJobPostingRequestDto, RecordInterviewResultDto, ReviewJobPostingDto, StudentResumeDto, UpdateEmployerProfileDto, UpdateJobApplicationStatusDto } from './dtos/models';
+import type { CreateEmploymentGuidanceRecordDto, CreateJobApplicationDto, CreateMyAIGuidanceRecordDto, CreateUpdateEmploymentOutcomeDto, CreateUpdateInterviewScheduleDto, CreateUpdateJobPostingDto, CreateUpdateStudentResumeDto, EmployerProfileDto, EmploymentGuidanceRecordDto, EmploymentOutcomeDto, EmploymentStatisticsInput, EmploymentStatisticsRowDto, GetEmploymentGuidanceRecordsInput, GetEmploymentOutcomeListInput, GetInterviewSchedulesInput, GetJobApplicationsInput, GetManageJobsInput, InterviewScheduleDto, JobApplicationDto, JobPostingDto, PagedJobPostingRequestDto, RecordInterviewResultDto, ReviewJobPostingDto, StudentResumeDto, UpdateEmployerProfileDto, UpdateJobApplicationStatusDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -33,6 +33,15 @@ export class EmploymentService {
     this.restService.request<any, JobPostingDto>({
       method: 'POST',
       url: '/api/app/employment/job',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  createMyAIGuidanceRecord = (input: CreateMyAIGuidanceRecordDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, EmploymentGuidanceRecordDto>({
+      method: 'POST',
+      url: '/api/app/employment/my-aIGuidance-record',
       body: input,
     },
     { apiName: this.apiName,...config });

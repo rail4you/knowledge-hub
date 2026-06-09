@@ -1,6 +1,7 @@
 import { Component, signal, inject, computed, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -18,6 +19,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
 import { ChatService, ResourceForChat } from '../services/chat.service';
+import { EmploymentService } from '../../employment/employment.service';
 
 interface CareerGuidanceResult {
   title: string;
@@ -57,6 +59,7 @@ interface CareerGuidanceResult {
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     NzInputModule,
     NzButtonModule,
     NzCardModule,
@@ -78,6 +81,7 @@ interface CareerGuidanceResult {
 })
 export class CareerGuidanceComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
+  private readonly employmentService = inject(EmploymentService);
   private readonly messageService = inject(NzMessageService);
   private readonly destroy$ = new Subject<void>();
 
@@ -96,6 +100,9 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   rawJson = signal('');
   isLoading = signal(false);
   isExporting = signal(false);
+  isSaving = signal(false);
+  /** 已成功保存的数据库记录 ID，保存后展示「已保存」状态。 */
+  savedRecordId = signal<string | null>(null);
 
   canGenerate = computed(() => {
     return !!this.selectedResourceId() && !this.isLoading();
@@ -136,6 +143,7 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
     this.isLoading.set(true);
     this.result.set(null);
     this.rawJson.set('');
+    this.savedRecordId.set(null);
 
     let fullResponse = '';
 
@@ -214,6 +222,48 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
     this.careerGoal.set('');
     this.result.set(null);
     this.rawJson.set('');
+    this.savedRecordId.set(null);
+  }
+
+  /**
+   * 把当前 AI 生成结果持久化到「我的就业指导」。
+   * - Content 存 raw JSON，前端展示时可解析还原结构化数据。
+   * - Title 取自结果 title 或 careerGoal 兜底。
+   * - StudentId/SourceType/TeacherId 由后端自动填。
+   */
+  saveToMyGuidance() {
+    if (this.isSaving() || this.savedRecordId()) return;
+    const r = this.result();
+    const rawJson = this.rawJson();
+    if (!r || !rawJson) {
+      this.messageService.warning('请先生成职业规划');
+      return;
+    }
+    this.isSaving.set(true);
+    const title = (r.title || this.careerGoal() || 'AI 职业规划').trim();
+    this.employmentService
+      .createMyAIGuidanceRecord({
+        title,
+        content: rawJson,
+        careerGoal: this.careerGoal() || undefined,
+      })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (saved) => {
+          this.isSaving.set(false);
+          this.savedRecordId.set(saved.id);
+          this.messageService.success('已保存到我的就业指导');
+        },
+        error: (err) => {
+          this.isSaving.set(false);
+          const detail =
+            err?.error?.error?.message ||
+            err?.error?.message ||
+            err?.message ||
+            '';
+          this.messageService.error('保存失败：' + (detail || '未知错误'));
+        },
+      });
   }
 
   getPriorityColor(priority: string): string {
