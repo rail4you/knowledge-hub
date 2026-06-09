@@ -301,10 +301,21 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   previewResource(event: Event, resource: ResourceDto) {
     event.stopPropagation();
     if (!resource?.id) return;
+
+    // 若 fileExtension 为空，尝试从 originalFileName 或 name 提取扩展名
+    let ext = resource.fileExtension;
+    if (!ext || ext === '') {
+      const fileName = resource.originalFileName || resource.name || '';
+      const dot = fileName.lastIndexOf('.');
+      if (dot >= 0) {
+        ext = fileName.substring(dot); // 包含 . 前缀
+      }
+    }
+
     this.filePreview.open(
       resource.id,
       resource.originalFileName || resource.name || '未命名',
-      resource.fileExtension || '',
+      ext || '',
       resource.fileSize || 0
     );
   }

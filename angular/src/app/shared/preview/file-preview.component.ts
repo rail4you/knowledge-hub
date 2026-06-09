@@ -55,16 +55,14 @@ export class FilePreviewComponent {
   /** P0-1 轻量版：文件类型不受支持时也走降级页（不强行预览）。 */
   unsupported = signal(false);
 
-  // P0-1 轻量版：按文件类型设置不同的大小阈值。
-  // 阈值依据：Word/Excel/PPTX 在前端解析需要把整个文件读进 ArrayBuffer 再处理；
-  // PDF 用 pdf.js 流式渲染可以稍大；图片太大影响首屏。
-  // 视频/音频走流式，不设阈值（浏览器自带的播放器更稳）。
+  // 在线预览大小上限：超过此大小提示用户下载。
+  // docx/pdf/pptx 按 25MB 统一限制，图片/视频/音频流式播放不设严格上限。
   private static readonly PREVIEW_SIZE_LIMIT: Partial<Record<FileType, number>> = {
     text: 2 * 1024 * 1024,         // 2 MB
-    pdf: 30 * 1024 * 1024,         // 30 MB
-    word: 20 * 1024 * 1024,        // 20 MB
+    pdf: 25 * 1024 * 1024,         // 25 MB
+    word: 25 * 1024 * 1024,        // 25 MB
     excel: 20 * 1024 * 1024,       // 20 MB
-    pptx: 20 * 1024 * 1024,        // 20 MB
+    pptx: 25 * 1024 * 1024,        // 25 MB
     image: 50 * 1024 * 1024,       // 50 MB
   };
 
@@ -171,15 +169,7 @@ export class FilePreviewComponent {
       return;
     }
 
-    // PDF: use preview URL directly for the viewer
-    if (type === 'pdf') {
-      const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
-      this.fileUrl.set(previewUrl);
-      this.isLoading.set(false);
-      return;
-    }
-
-    // Other file types: fetch as blob for in-memory processing
+    // 所有要解析的文件（pdf / word / excel / pptx / image / text）都走 fetch 拿到 ArrayBuffer
     const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
     this.http.get(previewUrl, { responseType: 'arraybuffer' }).subscribe({
       next: (arrayBuffer: ArrayBuffer) => {
