@@ -112,7 +112,14 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
 
   private resolveHeroLink(path: string): string {
     if (!this.isLoggedIn) return '/account/login';
-    if (this.isStudent) return path;
+    if (this.isStudent) {
+      // 学生：把教师端 AI/搜索路径映射到学生端入口
+      const studentMap: Record<string, string> = {
+        '/ai/chat': '/student/ai/chat',
+        '/search':  '/student/search',
+      };
+      return studentMap[path] ?? path;
+    }
     // 教师/管理员：把 student 路径映射到对应的管理端入口
     const map: Record<string, string> = {
       '/student/resources':   '/resources',

@@ -1,0 +1,100 @@
+<div class="student-search">
+  <header class="student-search__hero">
+    <div class="student-search__hero-icon" aria-hidden="true">
+      <span nz-icon nzType="search" nzTheme="outline"></span>
+    </div>
+    <div class="student-search__hero-text">
+      <h1 class="student-search__title">智能搜索</h1>
+      <p class="student-search__desc">在资源库中按关键词搜索已建索引的文档内容，点击结果查看完整资源。</p>
+    </div>
+  </header>
+
+  <section class="student-search__bar">
+    <nz-input-group [nzPrefix]="prefixTemplate" nzSize="large" class="student-search__input">
+      <input
+        nz-input
+        placeholder="输入关键词搜索资源…"
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="onKeyEnter($event)"
+        name="searchQuery"
+        nzSize="large"
+      />
+    </nz-input-group>
+    <ng-template #prefixTemplate>
+      <span nz-icon nzType="search" style="color: #94a3b8;"></span>
+    </ng-template>
+    <button nz-button nzType="primary" nzSize="large" (click)="search()" [nzLoading]="loading()">
+      <span nz-icon nzType="search"></span>
+      搜索
+    </button>
+  </section>
+
+  <section class="student-search__content">
+    <nz-spin [nzSpinning]="loading()">
+      @if (results().length === 0 && !loading() && searchQuery) {
+        <nz-empty nzNotFoundContent="未找到匹配的资源，换个关键词试试吧"></nz-empty>
+      } @else if (results().length === 0 && !loading()) {
+        <div class="student-search__hint">
+          <span nz-icon nzType="search" class="student-search__hint-icon"></span>
+          <p>输入关键词开始搜索资源</p>
+          <p class="student-search__hint-sub">例如：Kubernetes 入门、机器学习 课程标准、Vue 组件设计</p>
+        </div>
+      } @else {
+        <div class="student-search__toolbar">
+          <span class="student-search__count">找到 <strong>{{ totalCount() }}</strong> 条结果</span>
+          <nz-divider nzType="vertical"></nz-divider>
+          <div class="student-search__ext">
+            <span class="student-search__ext-label">类型：</span>
+            <nz-tag
+              class="student-search__tag"
+              [nzColor]="selectedFileExtension() === '' ? 'blue' : 'default'"
+              (click)="selectedFileExtension.set('')"
+            >全部</nz-tag>
+            @for (ext of availableExtensions(); track ext) {
+              <nz-tag
+                class="student-search__tag"
+                [nzColor]="selectedFileExtension() === ext ? 'blue' : 'default'"
+                (click)="selectedFileExtension.set(ext)"
+              >{{ ext }}</nz-tag>
+            }
+          </div>
+        </div>
+
+        <div class="student-search__results">
+          @for (r of filteredResults(); track r.resourceId + '-' + r.pageNumber) {
+            <article class="result-card" (click)="viewDocument(r)">
+              <header class="result-card__head">
+                <div class="result-card__title">
+                  <span nz-icon [nzType]="getFileIcon(r.fileExtension)" class="result-card__icon"></span>
+                  <span class="result-card__name">{{ r.resourceName }}</span>
+                  <nz-tag class="result-card__page">第 {{ r.pageNumber }} 页</nz-tag>
+                </div>
+                <div class="result-card__meta">
+                  @if (r.categoryName) {
+                    <nz-tag nzColor="blue">{{ r.categoryName }}</nz-tag>
+                  }
+                  <nz-tag [nzColor]="getScoreColor(r.relevanceScore)">
+                    相关度 {{ (r.relevanceScore * 100).toFixed(0) }}%
+                  </nz-tag>
+                  <span class="result-card__ext">{{ r.fileExtension }}</span>
+                </div>
+              </header>
+              <div class="result-card__body" [innerHTML]="r.highlightedContent || r.content"></div>
+            </article>
+          }
+        </div>
+
+        @if (totalCount() > pageSize) {
+          <div class="student-search__pagination">
+            <nz-pagination
+              [(nzPageIndex)]="pageIndex"
+              [nzTotal]="totalCount()"
+              [nzPageSize]="pageSize"
+              (nzPageIndexChange)="onPageChange()"
+            ></nz-pagination>
+          </div>
+        }
+      }
+    </nz-spin>
+  </section>
+</div>

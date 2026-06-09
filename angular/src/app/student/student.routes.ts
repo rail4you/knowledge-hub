@@ -166,6 +166,26 @@ export const STUDENT_ROUTES: Routes = [
         path: 'recruitment-live/:id',
         loadComponent: () => import('../recruitment-live/live-room.component').then(m => m.LiveRoomComponent),
       },
+      {
+        // AI 助手：包装 ChatComponent，对学生展示"AI 学习助手"标识。
+        // 权限 KnowledgeHub.AI.Chat（已在 IdentityDataSeeder 授予 Student 角色）。
+        path: 'ai/chat',
+        loadComponent: () => import('./ai/chat/student-chat.component').then(m => m.StudentChatComponent),
+        data: {
+          name: 'AI 助手',
+          icon: 'robot'
+        }
+      },
+      {
+        // 智能搜索：使用 SearchService 检索已建索引资源，跳到学生端资源详情。
+        // 不暴露教师的资源审核、索引管理、视频回放等入口。
+        path: 'search',
+        loadComponent: () => import('./search/student-search.component').then(m => m.StudentSearchComponent),
+        data: {
+          name: '智能搜索',
+          icon: 'search'
+        }
+      },
     ]
   }
 ];

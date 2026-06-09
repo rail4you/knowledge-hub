@@ -1,0 +1,71 @@
+@use '../../../student/styles/student-design' as ds;
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.student-chat {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 230px);
+  min-height: 600px;
+  padding: 0;
+  background: ds.$student-bg;
+}
+
+.student-chat__hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 28px;
+  background: linear-gradient(135deg, rgba(30, 108, 232, 0.08), rgba(8, 145, 178, 0.06));
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.student-chat__hero-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e6ce8, #00b7ff);
+  color: #fff;
+  font-size: 22px;
+  box-shadow: 0 4px 12px rgba(30, 108, 232, 0.25);
+  flex-shrink: 0;
+}
+
+.student-chat__hero-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.student-chat__title {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 600;
+  color: ds.$student-text;
+}
+
+.student-chat__desc {
+  margin: 0;
+  font-size: 13px;
+  color: ds.$student-text-muted;
+  line-height: 1.6;
+}
+
+.student-chat__panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 0;
+  background: #fff;
+
+  app-chat {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}

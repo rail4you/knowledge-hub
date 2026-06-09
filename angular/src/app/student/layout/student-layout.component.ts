@@ -88,4 +88,10 @@ export class StudentLayoutComponent implements OnInit {
     const url = this.router.url || '';
     return url.startsWith('/student/employment') || url.startsWith('/student/recruitment-live');
   }
+
+  /** 「AI 功能」tab 是否应处于激活态（AI 助手 / 智能搜索） */
+  isAIActive(): boolean {
+    const url = this.router.url || '';
+    return url.startsWith('/student/ai') || url.startsWith('/student/search');
+  }
 }

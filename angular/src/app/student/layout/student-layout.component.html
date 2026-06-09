@@ -103,6 +103,29 @@
         <div
           class="tab-link tab-link--dropdown"
           nz-dropdown
+          [nzDropdownMenu]="aiMenu"
+          nzTrigger="hover"
+          [class.active]="isAIActive()"
+        >
+          <span nz-icon nzType="robot" nzTheme="outline"></span>
+          <span>AI 功能</span>
+          <span nz-icon nzType="down" class="tab-link__caret"></span>
+        </div>
+        <nz-dropdown-menu #aiMenu="nzDropdownMenu">
+          <ul nz-menu class="employment-menu">
+            <li nz-menu-item routerLink="/student/ai/chat">
+              <span nz-icon nzType="robot" nzTheme="outline"></span>
+              <span>AI 助手</span>
+            </li>
+            <li nz-menu-item routerLink="/student/search">
+              <span nz-icon nzType="search" nzTheme="outline"></span>
+              <span>智能搜索</span>
+            </li>
+          </ul>
+        </nz-dropdown-menu>
+        <div
+          class="tab-link tab-link--dropdown"
+          nz-dropdown
           [nzDropdownMenu]="employmentMenu"
           nzTrigger="hover"
           [class.active]="isEmploymentActive()"
