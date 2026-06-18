@@ -200,7 +200,16 @@
           <nz-form-item>
             <nz-form-label>专业</nz-form-label>
             <nz-form-control>
-              <input nz-input formControlName="major" />
+              <nz-select
+                formControlName="majorId"
+                nzPlaceHolder="请选择专业"
+                nzAllowClear
+                [nzShowSearch]="true"
+              >
+                @for (major of majors(); track major.id) {
+                  <nz-option [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
+                }
+              </nz-select>
             </nz-form-control>
           </nz-form-item>
         </div>

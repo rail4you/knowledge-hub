@@ -149,7 +149,7 @@ export class StudentCourseDetailComponent implements OnInit {
   loadRelated(courseId: string) {
     const c = this.course();
     this.courseService.getPublished({
-      major: c?.major || undefined,
+      majorId: c?.majorId || undefined,
       skipCount: 0,
       maxResultCount: 6,
     } as any).subscribe({
@@ -160,7 +160,7 @@ export class StudentCourseDetailComponent implements OnInit {
           .map(x => ({
             id: x.id!,
             title: x.title || '未命名课程',
-            major: x.major,
+            major: x.majorName,
             studentCount: x.studentCount || 0,
             difficulty: x.difficulty || 1,
           }));
@@ -275,10 +275,10 @@ export class StudentCourseDetailComponent implements OnInit {
   }
 
   /** 课程封面渐变（与列表一致） */
-  courseGradient(course: CourseDetailDto | { title?: string; id?: string; major?: string }): string {
+  courseGradient(course: CourseDetailDto | { title?: string; id?: string; majorName?: string }): string {
     return this.gradientByKey(
       course?.title || course?.id || 'x',
-      course?.major || ''
+      course?.majorName || ''
     );
   }
 

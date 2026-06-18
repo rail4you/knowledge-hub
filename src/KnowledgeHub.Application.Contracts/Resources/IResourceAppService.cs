@@ -65,6 +65,7 @@ public class ResourceListQueryDto : PagedAndSortedResultRequestDto
     public ResourceStatus? Status { get; set; }
     public ResourceType? ResourceType { get; set; }
     public Guid? CategoryId { get; set; }
+    public Guid? MajorId { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 }
@@ -74,6 +75,7 @@ public class ResourceSearchQueryDto : PagedAndSortedResultRequestDto
     public string? Query { get; set; }
     public ResourceType? ResourceType { get; set; }
     public Guid? CategoryId { get; set; }
+    public Guid? MajorId { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 }

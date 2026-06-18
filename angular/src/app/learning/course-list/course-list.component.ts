@@ -17,6 +17,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto, CreateUpdateCourseDto } from '../../proxy/courses/dtos/models';
 import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
+import { MajorService } from '../../proxy/majors/major.service';
+import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 
 @Component({
   selector: 'app-course-list',
@@ -43,6 +45,7 @@ import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 })
 export class CourseListComponent implements OnInit {
   private readonly courseService = inject(CourseService);
+  private readonly majorService = inject(MajorService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -50,6 +53,7 @@ export class CourseListComponent implements OnInit {
   courses = signal<CourseDto[]>([]);
   loading = signal(false);
   filterText = signal('');
+  readonly majors = signal<MajorLookupDto[]>([]);
 
   // Modal state
   isModalVisible = false;
@@ -78,7 +82,7 @@ export class CourseListComponent implements OnInit {
       title: '',
       description: '',
       coverImageUrl: '',
-      major: '',
+      majorId: undefined,
       semester: '',
       credits: undefined,
       semesterHours: undefined,
@@ -90,6 +94,9 @@ export class CourseListComponent implements OnInit {
 
   ngOnInit() {
     this.loadCourses();
+    this.majorService.getLookupList().subscribe({
+      next: (list) => this.majors.set(list || []),
+    });
   }
 
   loadCourses() {
@@ -156,7 +163,7 @@ export class CourseListComponent implements OnInit {
       title: course.title ?? '',
       description: course.description ?? '',
       coverImageUrl: course.coverImageUrl ?? '',
-      major: course.major ?? '',
+      majorId: course.majorId ?? undefined,
       semester: course.semester ?? '',
       credits: course.credits ?? undefined,
       semesterHours: course.semesterHours ?? undefined,
@@ -165,6 +172,13 @@ export class CourseListComponent implements OnInit {
       status: course.status ?? CourseStatus.Draft
     };
     this.isModalVisible = true;
+  }
+
+  getMajorName(id?: string | null): string {
+    if (!id) {
+      return '-';
+    }
+    return this.majors().find((m) => m.id === id)?.name || '-';
   }
 
   deleteCourse(course: CourseDto) {

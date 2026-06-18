@@ -114,11 +114,12 @@ export interface SaveExerciseRecordInput {
   timeSpentTicks?: number;
 }
 
-export interface StudentCourseDto extends FullAuditedEntityDto<string> {
+export interface StudentCourseListItemDto extends EntityDto<string> {
   courseId?: string;
   courseTitle?: string;
   courseCoverImageUrl?: string | null;
-  major?: string | null;
+  majorId?: string | null;
+  majorName?: string | null;
   semester?: string | null;
   status?: StudentCourseStatus;
   enrolledAt?: string;

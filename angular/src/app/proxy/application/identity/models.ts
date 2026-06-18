@@ -1,5 +1,5 @@
 import type { EntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
-import type { GetIdentityUsersInput } from '../../volo/abp/identity/models';
+import type { GetIdentityUsersInput, IdentityUserDto } from '../../volo/abp/identity/models';
 
 export interface CreateTenantRoleDto {
   tenantId?: string | null;
@@ -16,6 +16,7 @@ export interface CreateTenantUserDto {
   name?: string;
   surname?: string;
   isActive?: boolean;
+  majorId?: string | null;
   roleNames?: string[];
 }
 
@@ -35,6 +36,11 @@ export interface TenantRoleDto extends EntityDto<string> {
   isPublic?: boolean;
   tenantId?: string | null;
   concurrencyStamp?: string | null;
+}
+
+export interface TenantUserDto extends IdentityUserDto {
+  majorId?: string | null;
+  majorName?: string | null;
 }
 
 export interface UpdateTenantRoleDto {
@@ -57,6 +63,7 @@ export interface UpdateTenantUserDto {
   twoFactorEnabled?: boolean;
   lockoutEnabled?: boolean;
   accessFailedCount?: number;
+  majorId?: string | null;
   className?: string | null;
   companyName?: string | null;
   course?: string | null;

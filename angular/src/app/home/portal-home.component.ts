@@ -5,7 +5,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { hasRole } from '../auth/current-user.utils';
 import { PortalService } from '../proxy/portal/portal.service';
-import type { PublicHomeStatsDto, PortalHomeDataDto } from '../proxy/portal/models';
+import type { PublicHomeStatsDto, PortalHomeDataDto, TenantResourceSummaryDto } from '../proxy/portal/models';
 
 interface HeroSlide {
   eyebrow: string;
@@ -35,6 +35,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
 
   readonly stats = signal<PublicHomeStatsDto | null>(null);
   readonly homeData = signal<PortalHomeDataDto | null>(null);
+  readonly tenants = signal<TenantResourceSummaryDto[]>([]);
   readonly userName = signal('');
 
   /** Hero 轮播状态 —— 纯 UI 信号，不涉及任何后端数据 */
@@ -93,6 +94,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
 
     this.portal.getPublicHomeStats().subscribe(d => this.stats.set(d));
     this.portal.getPublicTenantList().subscribe(ts => {
+      this.tenants.set(ts || []);
       const id = ts?.[0]?.id;
       if (id) this.portal.getHomeData(id).subscribe(d => this.homeData.set(d));
     });

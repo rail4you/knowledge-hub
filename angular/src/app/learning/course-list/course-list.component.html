@@ -61,7 +61,7 @@
                   }
                 </div>
               </td>
-              <td>{{ course.major || '-' }}</td>
+              <td>{{ course.majorName || getMajorName(course.majorId) }}</td>
               <td>{{ course.semester || '-' }}</td>
               <td>{{ course.credits ?? '-' }}</td>
               <td>{{ course.semesterHours ?? '-' }}</td>
@@ -139,12 +139,16 @@
             <nz-form-item>
               <nz-form-label>专业</nz-form-label>
               <nz-form-control>
-                <input
-                  nz-input
-                  [(ngModel)]="formData.major"
+                <nz-select
+                  [(ngModel)]="formData.majorId"
                   [ngModelOptions]="{ standalone: true }"
-                  placeholder="请输入专业"
-                />
+                  nzPlaceHolder="请选择专业"
+                  nzAllowClear
+                >
+                  @for (major of majors(); track major.id) {
+                    <nz-option [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
+                  }
+                </nz-select>
               </nz-form-control>
             </nz-form-item>
           </div>

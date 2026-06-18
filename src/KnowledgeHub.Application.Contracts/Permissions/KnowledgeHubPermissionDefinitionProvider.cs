@@ -103,6 +103,12 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         microMajorPermission.AddChild(KnowledgeHubPermissions.MicroMajors.IssueCertificate, L("Permission:MicroMajors.IssueCertificate"));
         microMajorPermission.AddChild(KnowledgeHubPermissions.MicroMajors.ViewStatistics, L("Permission:MicroMajors.ViewStatistics"));
 
+        // Major permissions
+        var majorPermission = myGroup.AddPermission(KnowledgeHubPermissions.Majors.Default, L("Permission:Majors"));
+        majorPermission.AddChild(KnowledgeHubPermissions.Majors.Create, L("Permission:Majors.Create"));
+        majorPermission.AddChild(KnowledgeHubPermissions.Majors.Edit, L("Permission:Majors.Edit"));
+        majorPermission.AddChild(KnowledgeHubPermissions.Majors.Delete, L("Permission:Majors.Delete"));
+
         // Practicum permissions
         var practicumPermission = myGroup.AddPermission(KnowledgeHubPermissions.Practicum.Default, L("Permission:Practicum"));
         practicumPermission.AddChild(KnowledgeHubPermissions.Practicum.Create, L("Permission:Practicum.Create"));
@@ -137,6 +143,10 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         var recruitmentLivePermission = myGroup.AddPermission(KnowledgeHubPermissions.RecruitmentLive.Default, L("Permission:RecruitmentLive"));
         recruitmentLivePermission.AddChild(KnowledgeHubPermissions.RecruitmentLive.Create, L("Permission:RecruitmentLive.Create"));
         recruitmentLivePermission.AddChild(KnowledgeHubPermissions.RecruitmentLive.Manage, L("Permission:RecruitmentLive.Manage"));
+
+        // TenantInfo permissions
+        var tenantInfoPermission = myGroup.AddPermission(KnowledgeHubPermissions.TenantInfo.Default, L("Permission:TenantInfo"));
+        tenantInfoPermission.AddChild(KnowledgeHubPermissions.TenantInfo.Edit, L("Permission:TenantInfo.Edit"));
     }
 
     private static LocalizableString L(string name)

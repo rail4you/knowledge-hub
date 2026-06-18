@@ -7,10 +7,30 @@ namespace KnowledgeHub.Learning.Dtos;
 
 public class StudentCourseDto : FullAuditedEntityDto<Guid>
 {
+    public Guid? TenantId { get; set; }
+    public Guid StudentId { get; set; }
+    public string? StudentName { get; set; }
+    public Guid CourseId { get; set; }
+    public string? CourseName { get; set; }
+    public Guid? MajorId { get; set; }
+    public string? MajorName { get; set; }
+    public string? Semester { get; set; }
+    public StudentCourseStatus Status { get; set; }
+    public DateTime EnrolledAt { get; set; }
+    public DateTime? StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public decimal Progress { get; set; }
+    public DateTime? LastLearnedAt { get; set; }
+    public int StudyMinutes { get; set; }
+}
+
+public class StudentCourseListItemDto : EntityDto<Guid>
+{
     public Guid CourseId { get; set; }
     public string CourseTitle { get; set; } = string.Empty;
     public string? CourseCoverImageUrl { get; set; }
-    public string? Major { get; set; }
+    public Guid? MajorId { get; set; }
+    public string? MajorName { get; set; }
     public string? Semester { get; set; }
     public StudentCourseStatus Status { get; set; }
     public DateTime EnrolledAt { get; set; }

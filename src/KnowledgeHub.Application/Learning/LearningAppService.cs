@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using KnowledgeHub.Courses;
 using KnowledgeHub.Learning.Dtos;
 using KnowledgeHub.Learning.Enums;
+using KnowledgeHub.Majors;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
@@ -104,26 +105,54 @@ public class LearningAppService : ApplicationService, ILearningAppService
         return dashboard;
     }
 
-    public async Task<List<StudentCourseDto>> GetMyCoursesAsync()
+    public async Task<List<StudentCourseListItemDto>> GetMyCoursesAsync()
     {
         var studentId = _currentUser.Id ?? throw new Volo.Abp.AbpException("User not found");
-        
+
         var studentCourses = await _studentCourseRepository.GetListAsync(x => x.StudentId == studentId);
-        
-        var result = new List<StudentCourseDto>();
-        
+
+        var result = new List<StudentCourseListItemDto>();
+
+        var majorIds = new HashSet<Guid>();
+        foreach (var sc in studentCourses)
+        {
+            var course = await _courseRepository.FindAsync(sc.CourseId);
+            if (course?.MajorId is Guid mid)
+            {
+                majorIds.Add(mid);
+            }
+        }
+
+        var majorMap = new Dictionary<Guid, string>();
+        if (majorIds.Count > 0)
+        {
+            var majorRepo = LazyServiceProvider.LazyGetRequiredService<IRepository<Major, Guid>>();
+            var majorQuery = await majorRepo.GetQueryableAsync();
+            var majors = await AsyncExecuter.ToListAsync(majorQuery.Where(m => majorIds.Contains(m.Id)));
+            foreach (var m in majors)
+            {
+                majorMap[m.Id] = m.Name;
+            }
+        }
+
         foreach (var sc in studentCourses)
         {
             var course = await _courseRepository.FindAsync(sc.CourseId);
             if (course != null)
             {
-                result.Add(new StudentCourseDto
+                string? majorName = null;
+                if (course.MajorId.HasValue && majorMap.TryGetValue(course.MajorId.Value, out var name))
+                {
+                    majorName = name;
+                }
+                result.Add(new StudentCourseListItemDto
                 {
                     Id = sc.Id,
                     CourseId = sc.CourseId,
                     CourseTitle = course.Title,
                     CourseCoverImageUrl = course.CoverImageUrl,
-                    Major = course.Major,
+                    MajorId = course.MajorId,
+                    MajorName = majorName,
                     Semester = course.Semester,
                     Status = sc.Status,
                     EnrolledAt = sc.EnrolledAt,
@@ -134,7 +163,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
                 });
             }
         }
-        
+
         return result;
     }
 

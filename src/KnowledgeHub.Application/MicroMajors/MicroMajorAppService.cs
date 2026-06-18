@@ -534,11 +534,33 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         var courses = await _courseRepository.GetListAsync(x => courseIds.Contains(x.Id));
         var courseMap = courses.ToDictionary(x => x.Id);
 
+        var majorIds = courses
+            .Where(x => x.MajorId.HasValue)
+            .Select(x => x.MajorId!.Value)
+            .Distinct()
+            .ToList();
+        var majorMap = new Dictionary<Guid, string>();
+        if (majorIds.Count > 0)
+        {
+            var majorRepo = LazyServiceProvider.LazyGetRequiredService<IRepository<KnowledgeHub.Majors.Major, Guid>>();
+            var queryable = await majorRepo.GetQueryableAsync();
+            var majorList = await AsyncExecuter.ToListAsync(queryable.Where(m => majorIds.Contains(m.Id)));
+            foreach (var m in majorList)
+            {
+                majorMap[m.Id] = m.Name;
+            }
+        }
+
         return links
             .OrderBy(x => x.SortOrder)
             .Select(link =>
             {
                 courseMap.TryGetValue(link.CourseId, out var course);
+                string? majorName = null;
+                if (course?.MajorId.HasValue == true && majorMap.TryGetValue(course.MajorId.Value, out var name))
+                {
+                    majorName = name;
+                }
                 return new MicroMajorCourseDto
                 {
                     Id = link.Id,
@@ -546,7 +568,8 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
                     CourseId = link.CourseId,
                     CourseTitle = course?.Title,
                     CourseCoverImageUrl = course?.CoverImageUrl,
-                    Major = course?.Major,
+                    MajorId = course?.MajorId,
+                    MajorName = majorName,
                     Semester = course?.Semester,
                     SortOrder = link.SortOrder,
                     IsCore = link.IsCore

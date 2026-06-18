@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json;
 using KnowledgeHub.MicroMajors;
 using KnowledgeHub.MicroMajors.Enums;
 using KnowledgeHub.News;
 using KnowledgeHub.Resources;
+using KnowledgeHub.TenantInfos;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.TenantManagement;
@@ -21,7 +23,10 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     private readonly IRepository<Courses.Course, Guid> _courseRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<NewsArticle, Guid> _newsArticleRepository;
+    private readonly IRepository<Majors.Major, Guid> _majorRepository;
     private readonly ITenantRepository _tenantRepository;
+    private readonly ITenantInfoRepository _tenantInfoRepository;
+    private readonly Volo.Abp.Identity.IIdentityUserRepository _identityUserRepository;
 
     public PortalAppService(
         IRepository<MicroMajor, Guid> microMajorRepository,
@@ -30,15 +35,21 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         IRepository<Courses.Course, Guid> courseRepository,
         IRepository<Resource, Guid> resourceRepository,
         IRepository<NewsArticle, Guid> newsArticleRepository,
-        ITenantRepository tenantRepository)
+        IRepository<Majors.Major, Guid> majorRepository,
+        ITenantRepository tenantRepository,
+        ITenantInfoRepository tenantInfoRepository,
+        Volo.Abp.Identity.IIdentityUserRepository identityUserRepository)
     {
-        _microMajorRepository = microMajorRepository;
-        _microMajorCourseRepository = microMajorCourseRepository;
-        _microMajorResourceRepository = microMajorResourceRepository;
         _courseRepository = courseRepository;
         _resourceRepository = resourceRepository;
         _newsArticleRepository = newsArticleRepository;
+        _majorRepository = majorRepository;
         _tenantRepository = tenantRepository;
+        _tenantInfoRepository = tenantInfoRepository;
+        _identityUserRepository = identityUserRepository;
+        _microMajorRepository = microMajorRepository;
+        _microMajorCourseRepository = microMajorCourseRepository;
+        _microMajorResourceRepository = microMajorResourceRepository;
     }
 
     public async Task<PortalHomeDataDto> GetHomeDataAsync(Guid tenantId)
@@ -72,21 +83,47 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             mm.CourseCount = (int)await _microMajorCourseRepository.CountAsync(x => x.MicroMajorId == mm.Id);
         }
 
-        // Featured courses (latest 8 published)
+        // Featured courses (latest 8 published) - populate real teacher/major names
         var courseQuery = await _courseRepository.GetQueryableAsync();
-        var featuredCourses = courseQuery
+        var rawCourses = courseQuery
             .Where(x => x.TenantId == tenantId)
             .OrderByDescending(x => x.CreationTime)
             .Take(8)
-            .Select(x => new CourseBriefDto
-            {
-                Id = x.Id,
-                Title = x.Title,
-                CoverImageUrl = x.CoverImageUrl,
-                TeacherName = string.Empty,
-                StudentCount = 0
-            })
             .ToList();
+
+        var featuredCourses = new List<CourseBriefDto>();
+        foreach (var c in rawCourses)
+        {
+            var teacherName = string.Empty;
+            if (c.TeacherId.HasValue)
+            {
+                try
+                {
+                    var user = await _identityUserRepository.FindAsync(c.TeacherId.Value);
+                    teacherName = user?.Name ?? user?.UserName ?? string.Empty;
+                }
+                catch { /* user not found */ }
+            }
+            var majorName = string.Empty;
+            if (c.MajorId.HasValue)
+            {
+                try
+                {
+                    var major = await _majorRepository.FindAsync(c.MajorId.Value);
+                    majorName = major?.Name ?? string.Empty;
+                }
+                catch { /* major not found */ }
+            }
+            featuredCourses.Add(new CourseBriefDto
+            {
+                Id = c.Id,
+                Title = c.Title,
+                CoverImageUrl = c.CoverImageUrl,
+                TeacherName = teacherName,
+                MajorName = majorName,
+                StudentCount = 0
+            });
+        }
 
         // Latest materials (latest 8)
         var resourceQuery = await _resourceRepository.GetQueryableAsync();
@@ -159,28 +196,42 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
 
     /// <summary>
     /// 获取所有租户的资源库摘要列表（公开访问）
-    /// 用于主页展示所有租户
+    /// 用于主页展示所有租户，包含 TenantInfo 的扩展信息
     /// </summary>
     public async Task<List<TenantResourceSummaryDto>> GetPublicTenantListAsync()
     {
-        // Get all tenants
         var tenants = await _tenantRepository.GetListAsync();
-
         var result = new List<TenantResourceSummaryDto>();
 
         foreach (var tenant in tenants)
         {
-            // Count stats for each tenant
+            var tenantInfo = await _tenantInfoRepository.FindByTenantIdAsync(tenant.Id);
             var courseCount = await _courseRepository.CountAsync(x => x.TenantId == tenant.Id);
             var resourceCount = await _resourceRepository.CountAsync(x => x.TenantId == tenant.Id);
             var microMajorCount = await _microMajorRepository.CountAsync(
                 x => x.TenantId == tenant.Id && x.Status == MicroMajorStatus.Published);
 
+            var coverImage = string.Empty;
+            if (tenantInfo?.CoverImages != null)
+            {
+                try
+                {
+                    var images = JsonSerializer.Deserialize<List<string>>(tenantInfo.CoverImages);
+                    if (images != null && images.Count > 0)
+                        coverImage = images[0];
+                }
+                catch { }
+            }
+
             result.Add(new TenantResourceSummaryDto
             {
                 Id = tenant.Id,
                 Name = tenant.Name,
-                Description = tenant.Name + "教育资源库",
+                TenantName = tenantInfo?.Name ?? tenant.Name,
+                TenantDescription = tenantInfo?.Description,
+                Description = tenantInfo?.Description ?? tenant.Name + "教育资源库",
+                TenantType = (int)(tenantInfo?.Type ?? 0),
+                CoverImage = coverImage,
                 CourseCount = (int)courseCount,
                 ResourceCount = (int)resourceCount,
                 MicroMajorCount = (int)microMajorCount

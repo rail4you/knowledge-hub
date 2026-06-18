@@ -11,7 +11,8 @@ public class CourseDto : FullAuditedEntityDto<Guid>
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? CoverImageUrl { get; set; }
-    public string? Major { get; set; }
+    public Guid? MajorId { get; set; }
+    public string? MajorName { get; set; }
     public string? Semester { get; set; }
     public int? Credits { get; set; }
     public int? SemesterHours { get; set; }
@@ -36,7 +37,7 @@ public class CreateUpdateCourseDto
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? CoverImageUrl { get; set; }
-    public string? Major { get; set; }
+    public Guid? MajorId { get; set; }
     public string? Semester { get; set; }
     public int? Credits { get; set; }
     public int? SemesterHours { get; set; }
@@ -48,7 +49,7 @@ public class CreateUpdateCourseDto
 public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
 {
     public string? Filter { get; set; }
-    public string? Major { get; set; }
+    public Guid? MajorId { get; set; }
     public string? Semester { get; set; }
     public int? Difficulty { get; set; }
     public Guid? CategoryId { get; set; }
@@ -58,7 +59,7 @@ public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
 public class CourseFilterDto
 {
     public string? Filter { get; set; }
-    public string? Major { get; set; }
+    public Guid? MajorId { get; set; }
     public string? Semester { get; set; }
     public int? Difficulty { get; set; }
     public Guid? CategoryId { get; set; }

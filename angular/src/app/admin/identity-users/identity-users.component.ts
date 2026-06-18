@@ -30,6 +30,8 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { MajorService } from '../../proxy/majors/major.service';
+import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 
 interface TenantDto {
   id?: string | null;
@@ -68,6 +70,8 @@ interface IdentityUserDto {
   grade?: string;
   industry?: string;
   major?: string;
+  majorId?: string;
+  majorName?: string;
   managementScope?: string;
   partnerSchool?: string;
   position?: string;
@@ -137,6 +141,9 @@ export class IdentityUsersComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly confirmation = inject(ConfirmationService);
   private readonly tenantUserService = inject(TenantUserService);
+  private readonly majorService = inject(MajorService);
+
+  readonly majors = signal<MajorLookupDto[]>([]);
 
   l(key: string): string {
     return this.localization.instant(key);
@@ -155,6 +162,9 @@ export class IdentityUsersComponent implements OnInit {
   ngOnInit(): void {
     this.loadTenants();
     this.buildForm();
+    this.majorService.getLookupList().subscribe({
+      next: (list) => this.majors.set(list || []),
+    });
   }
 
   loadTenants() {
@@ -227,6 +237,7 @@ export class IdentityUsersComponent implements OnInit {
       grade: [this.selectedUser.grade || ''],
       className: [this.selectedUser.className || ''],
       major: [this.selectedUser.major || ''],
+      majorId: [this.selectedUser.majorId || null],
       department: [this.selectedUser.department || ''],
       position: [this.selectedUser.position || ''],
       title: [this.selectedUser.title || ''],

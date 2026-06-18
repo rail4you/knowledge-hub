@@ -14,6 +14,9 @@ import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { CourseService } from '../../../proxy/courses/course.service';
 import type { CreateUpdateCourseDto } from '../../../proxy/courses/dtos/models';
+import { MajorService } from '../../../proxy/majors/major.service';
+import type { MajorLookupDto } from '../../../proxy/majors/dtos/models';
+import { FindMajorNamePipe } from '../../../shared/find-major-name.pipe';
 
 @Component({
   selector: 'app-course-create',
@@ -29,7 +32,8 @@ import type { CreateUpdateCourseDto } from '../../../proxy/courses/dtos/models';
     NzButtonModule,
     NzIconModule,
     NzStepsModule,
-    NzSpinModule
+    NzSpinModule,
+    FindMajorNamePipe,
   ],
   templateUrl: './course-create.component.html',
   styleUrls: ['./course-create.component.scss'],
@@ -37,29 +41,14 @@ import type { CreateUpdateCourseDto } from '../../../proxy/courses/dtos/models';
 })
 export class CourseCreateComponent {
   private readonly courseService = inject(CourseService);
+  private readonly majorService = inject(MajorService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
 
   loading = signal(false);
   currentStep = signal(0);
 
-  majors = [
-    '计算机科学与技术',
-    '软件工程',
-    '数据科学与大数据技术',
-    '人工智能',
-    '电子信息工程',
-    '通信工程',
-    '自动化',
-    '机械工程',
-    '电气工程',
-    '工商管理',
-    '金融学',
-    '会计学',
-    '市场营销',
-    '经济学',
-    '法学'
-  ];
+  readonly majors = signal<MajorLookupDto[]>([]);
 
   semesters = [
     '2024春季',
@@ -79,13 +68,19 @@ export class CourseCreateComponent {
     title: '',
     description: '',
     coverImageUrl: '',
-    major: '',
+    majorId: undefined,
     semester: '',
     credits: 3,
     semesterHours: 48,
     difficulty: 1,
     categoryId: undefined
   });
+
+  constructor() {
+    this.majorService.getLookupList().subscribe({
+      next: (list) => this.majors.set(list || []),
+    });
+  }
 
   updateField<K extends keyof CreateUpdateCourseDto>(field: K, value: CreateUpdateCourseDto[K]) {
     this.formData.update(data => ({ ...data, [field]: value }));

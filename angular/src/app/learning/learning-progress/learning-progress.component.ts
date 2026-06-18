@@ -11,7 +11,7 @@ import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Router } from '@angular/router';
 import { LearningService } from '../../proxy/learning/learning.service';
-import { StudentCourseDto } from '../../proxy/learning/dtos/models';
+import { StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
 
 @Component({
   selector: 'app-learning-progress',
@@ -37,7 +37,7 @@ export class LearningProgressComponent implements OnInit {
   private readonly message = inject(NzMessageService);
 
   loading = signal(true);
-  courses = signal<StudentCourseDto[]>([]);
+  courses = signal<StudentCourseListItemDto[]>([]);
 
   ngOnInit() {
     this.loadCourses();

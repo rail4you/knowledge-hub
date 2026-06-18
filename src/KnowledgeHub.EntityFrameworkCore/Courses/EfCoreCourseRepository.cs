@@ -24,27 +24,27 @@ public class EfCoreCourseRepository : EfCoreRepository<KnowledgeHubDbContext, Co
         int maxResultCount,
         string? sorting = null,
         string? filter = null,
-        string? major = null,
+        Guid? majorId = null,
         string? semester = null,
         int? difficulty = null,
         Guid? categoryId = null,
         Guid? teacherId = null,
         bool? publishedOnly = false)
     {
-        var query = await ApplyFilterAsync(skipCount, maxResultCount, sorting, filter, major, semester, difficulty, categoryId, teacherId, publishedOnly ?? false);
+        var query = await ApplyFilterAsync(skipCount, maxResultCount, sorting, filter, majorId, semester, difficulty, categoryId, teacherId, publishedOnly ?? false);
         return await query.ToListAsync();
     }
 
     public async Task<long> GetCountAsync(
         string? filter = null,
-        string? major = null,
+        Guid? majorId = null,
         string? semester = null,
         int? difficulty = null,
         Guid? categoryId = null,
         Guid? teacherId = null,
         bool? publishedOnly = false)
     {
-        var query = await ApplyFilterAsync(0, int.MaxValue, null, filter, major, semester, difficulty, categoryId, teacherId, publishedOnly ?? false);
+        var query = await ApplyFilterAsync(0, int.MaxValue, null, filter, majorId, semester, difficulty, categoryId, teacherId, publishedOnly ?? false);
         return await query.LongCountAsync();
     }
 
@@ -75,7 +75,7 @@ public class EfCoreCourseRepository : EfCoreRepository<KnowledgeHubDbContext, Co
         int maxResultCount,
         string? sorting,
         string? filter,
-        string? major,
+        Guid? majorId,
         string? semester,
         int? difficulty,
         Guid? categoryId,
@@ -89,9 +89,9 @@ public class EfCoreCourseRepository : EfCoreRepository<KnowledgeHubDbContext, Co
             query = query.Where(c => c.Title.Contains(filter!) || (c.Description != null && c.Description.Contains(filter!)));
         }
 
-        if (!string.IsNullOrWhiteSpace(major))
+        if (majorId.HasValue)
         {
-            query = query.Where(c => c.Major == major);
+            query = query.Where(c => c.MajorId == majorId.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(semester))

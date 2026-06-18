@@ -23,5 +23,7 @@ public class CreateTenantUserDto
 
     public bool IsActive { get; set; } = true;
 
+    public Guid? MajorId { get; set; }
+
     public List<string> RoleNames { get; set; } = new();
 }

@@ -41,6 +41,10 @@ public class TenantResourceSummaryDto
     public string? Description { get; set; }
     public string? LogoUrl { get; set; }
     public string? IndustryField { get; set; }
+    public int TenantType { get; set; } = 0; // 0=专业, 1=项目
+    public string? TenantName { get; set; } // 取自 TenantInfo 的显示名称
+    public string? TenantDescription { get; set; } // 取自 TenantInfo
+    public string? CoverImage { get; set; } // 第一张封面图
     public int CourseCount { get; set; }
     public int ResourceCount { get; set; }
     public int MicroMajorCount { get; set; }
@@ -94,6 +98,7 @@ public class CourseBriefDto
     public string Title { get; set; } = string.Empty;
     public string? CoverImageUrl { get; set; }
     public string? TeacherName { get; set; }
+    public string? MajorName { get; set; }
     public int StudentCount { get; set; }
 }
 

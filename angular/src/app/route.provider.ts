@@ -133,6 +133,14 @@ function configureRoutes() {
         requiredPolicy: 'KnowledgeHub.MicroMajors',
       },
       {
+        path: '/admin/majors',
+        name: '::Menu:MajorManagement',
+        iconClass: 'fas fa-graduation-cap',
+        parentName: '::Menu:Learning',
+        order: 0,
+        layout: eLayoutType.application,
+      },
+      {
         path: '/assessment/double-high/projects',
         name: '::Menu:Assessment',
         iconClass: 'fas fa-chart-pie',
@@ -411,6 +419,14 @@ function configureRoutes() {
         name: '::Menu:StudentPortal',
         layout: eLayoutType.empty,
         invisible: true,
+      },
+      {
+        path: '/admin/tenant-info',
+        name: '::Menu:TenantInfo',
+        iconClass: 'fas fa-building',
+        parentName: 'AbpUiNavigation::Menu:Administration',
+        order: 100,
+        layout: eLayoutType.application,
       },
   ]);
 }

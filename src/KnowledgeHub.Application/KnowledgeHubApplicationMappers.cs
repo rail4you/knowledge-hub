@@ -6,6 +6,8 @@ using KnowledgeHub.Alliance;
 using KnowledgeHub.Application.Contracts.Alliance;
 using KnowledgeHub.Learning;
 using KnowledgeHub.Learning.Dtos;
+using KnowledgeHub.Majors;
+using KnowledgeHub.Majors.Dtos;
 using Riok.Mapperly.Abstractions;
 using Volo.Abp.Mapperly;
 
@@ -121,4 +123,20 @@ public partial class LearningProgressToLearningProgressDtoMapper : MapperBase<Le
     public override partial LearningProgressDto Map(LearningProgress source);
 
     public override partial void Map(LearningProgress source, LearningProgressDto destination);
+}
+
+[Mapper]
+public partial class MajorToMajorDtoMapper : MapperBase<Major, MajorDto>
+{
+    public override partial MajorDto Map(Major source);
+
+    public override partial void Map(Major source, MajorDto destination);
+}
+
+[Mapper]
+public partial class CreateUpdateMajorDtoToMajorMapper : MapperBase<CreateUpdateMajorDto, Major>
+{
+    public override partial Major Map(CreateUpdateMajorDto source);
+
+    public override partial void Map(CreateUpdateMajorDto source, Major destination);
 }

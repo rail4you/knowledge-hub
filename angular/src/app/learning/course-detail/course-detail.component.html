@@ -25,8 +25,8 @@
             <nz-tag [nzColor]="getDifficultyColor(course()!.difficulty)">
               {{ getDifficultyLabel(course()!.difficulty) }}
             </nz-tag>
-            @if (course()!.major) {
-              <nz-tag nzColor="blue">{{ course()!.major }}</nz-tag>
+            @if (course()!.majorName) {
+              <nz-tag nzColor="blue">{{ course()!.majorName }}</nz-tag>
             }
             @if (course()!.credits) {
               <nz-tag nzColor="purple">{{ course()!.credits }} 学分</nz-tag>

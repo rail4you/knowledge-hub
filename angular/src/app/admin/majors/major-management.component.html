@@ -1,0 +1,77 @@
+<div class="page">
+  <nz-card nzTitle="专业管理" [nzExtra]="extraTpl">
+    <ng-template #extraTpl>
+      <button nz-button nzType="primary" (click)="openCreate()">新建专业</button>
+    </ng-template>
+
+    <div class="toolbar">
+      <input
+        nz-input
+        placeholder="搜索专业名称或代号"
+        [ngModel]="filter()"
+        (ngModelChange)="filter.set($event); reload()"
+        style="max-width: 320px;"
+      />
+    </div>
+
+    <nz-table [nzData]="items()" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>专业名称</th>
+          <th>专业代号</th>
+          <th>创建时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id) {
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.code || '-' }}</td>
+            <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+            <td class="actions">
+              <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
+              <button nz-button nzType="link" nzDanger (click)="delete(item)">删除</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </nz-card>
+
+  <nz-modal
+    [nzVisible]="modalVisible"
+    [nzTitle]="editingId ? '编辑专业' : '新建专业'"
+    [nzWidth]="640"
+    (nzOnCancel)="modalVisible = false"
+    (nzOnOk)="save()"
+  >
+    <ng-container *nzModalContent>
+      <div class="form-grid">
+        <label>专业名称 *</label>
+        <input nz-input [(ngModel)]="form.name" maxlength="128" placeholder="例如：计算机科学与技术" />
+
+        <label>专业代号</label>
+        <input nz-input [(ngModel)]="form.code" maxlength="64" placeholder="可选，例如：CS" />
+
+        <label>培养目标</label>
+        <textarea
+          nz-input
+          [(ngModel)]="form.trainingObjectives"
+          maxlength="2000"
+          [nzAutosize]="{ minRows: 3, maxRows: 8 }"
+          placeholder="本专业的培养目标、毕业要求等"
+        ></textarea>
+
+        <label>简介</label>
+        <textarea
+          nz-input
+          [(ngModel)]="form.description"
+          maxlength="2000"
+          [nzAutosize]="{ minRows: 3, maxRows: 8 }"
+          placeholder="专业简介、特色、课程概览等"
+        ></textarea>
+      </div>
+    </ng-container>
+  </nz-modal>
+</div>

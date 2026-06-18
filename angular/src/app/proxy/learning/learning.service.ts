@@ -1,4 +1,4 @@
-import type { KnowledgeMasteryDto, LearningDashboardDto, LearningProgressDto, RecordProgressInput, StudentCourseDto } from './dtos/models';
+import type { KnowledgeMasteryDto, LearningDashboardDto, LearningProgressDto, RecordProgressInput, StudentCourseListItemDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -27,7 +27,7 @@ export class LearningService {
   
 
   getMyCourses = (config?: Partial<Rest.Config>) =>
-    this.restService.request<any, StudentCourseDto[]>({
+    this.restService.request<any, StudentCourseListItemDto[]>({
       method: 'GET',
       url: '/api/app/learning/my-courses',
     },

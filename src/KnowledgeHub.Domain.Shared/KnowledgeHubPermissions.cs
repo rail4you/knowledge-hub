@@ -111,6 +111,14 @@ public static class KnowledgeHubPermissions
         public const string ViewStatistics = Default + ".ViewStatistics";
     }
 
+    public static class Majors
+    {
+        public const string Default = GroupName + ".Majors";
+        public const string Create = Default + ".Create";
+        public const string Edit = Default + ".Edit";
+        public const string Delete = Default + ".Delete";
+    }
+
     public static class Practicum
     {
         public const string Default = GroupName + ".Practicum";
@@ -152,5 +160,11 @@ public static class KnowledgeHubPermissions
         public const string Default = GroupName + ".RecruitmentLive";
         public const string Create = Default + ".Create";
         public const string Manage = Default + ".Manage";
+    }
+
+    public static class TenantInfo
+    {
+        public const string Default = GroupName + ".TenantInfo";
+        public const string Edit = Default + ".Edit";
     }
 }

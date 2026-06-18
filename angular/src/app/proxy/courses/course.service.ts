@@ -56,7 +56,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course/by-filter',
-      params: { filter: filter.filter, major: filter.major, semester: filter.semester, difficulty: filter.difficulty, categoryId: filter.categoryId, teacherId: filter.teacherId, status: filter.status },
+      params: { filter: filter.filter, majorId: filter.majorId, semester: filter.semester, difficulty: filter.difficulty, categoryId: filter.categoryId, teacherId: filter.teacherId, status: filter.status },
     },
     { apiName: this.apiName,...config });
   
@@ -73,15 +73,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course',
-      params: { filter: input.filter, major: input.major, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
-    },
-    { apiName: this.apiName,...config });
-  
-
-  getMajors = (config?: Partial<Rest.Config>) =>
-    this.restService.request<any, string[]>({
-      method: 'GET',
-      url: '/api/app/course/majors',
+      params: { filter: input.filter, majorId: input.majorId, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -90,7 +82,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course/my-courses',
-      params: { filter: input.filter, major: input.major, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, majorId: input.majorId, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -99,7 +91,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course/published',
-      params: { filter: input.filter, major: input.major, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, majorId: input.majorId, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

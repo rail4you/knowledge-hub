@@ -17,9 +17,13 @@ using Volo.Abp.TenantManagement.EntityFrameworkCore;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.EntityFrameworkCore.AI;
+using KnowledgeHub.EntityFrameworkCore.Majors;
+using KnowledgeHub.EntityFrameworkCore.TenantInfos;
 using KnowledgeHub.Exams;
 using KnowledgeHub.Alliance;
 using KnowledgeHub.News;
+using KnowledgeHub.Majors;
+using KnowledgeHub.TenantInfos;
 using KnowledgeHub.MicroMajors;
 using KnowledgeHub.Practicums;
 using KnowledgeHub.DoubleHigh;
@@ -135,6 +139,12 @@ public class KnowledgeHubDbContext :
     public DbSet<MicroMajorCertificate> MicroMajorCertificates { get; set; }
     public DbSet<MicroMajorResource> MicroMajorResources { get; set; }
 
+    // Major entities
+    public DbSet<Major> Majors { get; set; }
+
+    // TenantInfo entities
+    public DbSet<TenantInfo> TenantInfos { get; set; }
+
     // Practicum entities
     public DbSet<PracticumProject> PracticumProjects { get; set; }
     public DbSet<PracticumTask> PracticumTasks { get; set; }
@@ -203,10 +213,12 @@ public class KnowledgeHubDbContext :
         builder.ConfigureAlliance();
         builder.ConfigureNews();
         builder.ConfigureMicroMajor();
+        builder.ConfigureMajor();
         builder.ConfigurePracticum();
         builder.ConfigureDoubleHigh();
         builder.ConfigureEmployment();
         builder.ConfigureRecruitmentLive();
         builder.ConfigureTeachingAgents();
+        builder.ConfigureTenantInfo();
     }
 }

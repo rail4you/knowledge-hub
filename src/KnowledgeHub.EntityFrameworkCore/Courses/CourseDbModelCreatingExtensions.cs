@@ -1,5 +1,6 @@
 using KnowledgeHub;
 using KnowledgeHub.Courses;
+using KnowledgeHub.Majors;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore.Modeling;
 
@@ -11,19 +12,24 @@ public static class CourseDbModelCreatingExtensions
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "Courses", KnowledgeHubConsts.DbSchema);
             b.ConfigureByConvention();
-            
+
             b.Property(x => x.Title).IsRequired().HasMaxLength(256);
             b.Property(x => x.Description).HasMaxLength(2000);
             b.Property(x => x.CoverImageUrl).HasMaxLength(512);
-            b.Property(x => x.Major).HasMaxLength(128);
             b.Property(x => x.Semester).HasMaxLength(64);
-            
+
             b.HasIndex(x => x.Title);
             b.HasIndex(x => x.Status);
-            b.HasIndex(x => x.Major);
+            b.HasIndex(x => x.MajorId);
             b.HasIndex(x => x.TeacherId);
             b.HasIndex(x => x.TenantId);
-            
+
+            b.HasOne<Major>()
+                .WithMany()
+                .HasForeignKey(x => x.MajorId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
             b.HasMany(x => x.Chapters).WithOne().HasForeignKey(x => x.CourseId);
         });
         

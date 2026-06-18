@@ -179,7 +179,8 @@ export interface TeachingAgentCourseContextDto {
   title?: string;
   description?: string | null;
   teacherName?: string | null;
-  major?: string | null;
+  majorId?: string | null;
+  majorName?: string | null;
   semester?: string | null;
   credits?: number | null;
   difficulty?: number;

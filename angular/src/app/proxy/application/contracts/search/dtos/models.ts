@@ -294,6 +294,7 @@ export interface SearchQueryDto {
   maxResultCount?: number;
   sorting?: string;
   indexName?: string | null;
+  statusFilter?: string | null;
 }
 
 export interface SearchResultDto {

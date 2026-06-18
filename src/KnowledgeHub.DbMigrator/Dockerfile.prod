@@ -4,16 +4,28 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# 复制项目文件
-COPY . .
-
 # 替换 NuGet.Config：移除本地源（Docker 内不存在 /Users/... 路径），仅保留 nuget.org
-RUN printf '<?xml version="1.0" encoding="utf-8"?>\n<configuration>\n  <packageSources>\n    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />\n  </packageSources>\n</configuration>' > NuGet.Config
+COPY NuGet.Config .
 
-# 还原依赖并发布
-RUN dotnet restore src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj && \
-    dotnet publish src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj \
-    -c Release -o /app/publish
+# 只复制 .csproj 文件，确保 restore 层可缓存
+COPY src/KnowledgeHub.DbMigrator/*.csproj src/KnowledgeHub.DbMigrator/
+COPY src/KnowledgeHub.EntityFrameworkCore/*.csproj src/KnowledgeHub.EntityFrameworkCore/
+COPY src/KnowledgeHub.Application.Contracts/*.csproj src/KnowledgeHub.Application.Contracts/
+COPY src/KnowledgeHub.Domain/*.csproj src/KnowledgeHub.Domain/
+COPY src/KnowledgeHub.Domain.Shared/*.csproj src/KnowledgeHub.Domain.Shared/
+COPY src/KnowledgeHub.Application/*.csproj src/KnowledgeHub.Application/
+COPY src/KnowledgeHub.HttpApi/*.csproj src/KnowledgeHub.HttpApi/
+COPY src/KnowledgeHub.HttpApi.Client/*.csproj src/KnowledgeHub.HttpApi.Client/
+COPY src/KnowledgeHub.AI.Api/*.csproj src/KnowledgeHub.AI.Api/
+COPY common.props .
+
+# 还原依赖
+RUN dotnet restore src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj
+
+# 复制全部源码并发布
+COPY . .
+RUN dotnet publish src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj \
+    -c Release -o /app/publish --no-restore
 
 # ----------------------------------------------------------
 # 生产镜像

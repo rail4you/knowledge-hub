@@ -33,6 +33,8 @@ public class UpdateTenantUserDto
 
     public int AccessFailedCount { get; set; }
 
+    public Guid? MajorId { get; set; }
+
     public string? ClassName { get; set; }
 
     public string? CompanyName { get; set; }

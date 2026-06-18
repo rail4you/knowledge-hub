@@ -14,7 +14,7 @@ import { LearningService } from '../../proxy/learning/learning.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
-import type { LearningDashboardDto, LearningProgressDto, StudentCourseDto, RecentLearningDto } from '../../proxy/learning/dtos/models';
+import type { LearningDashboardDto, LearningProgressDto, StudentCourseListItemDto, RecentLearningDto } from '../../proxy/learning/dtos/models';
 
 interface StatItem {
   label: string;
@@ -70,7 +70,7 @@ export class StudentMyLearningComponent implements OnInit {
 
   readonly loading = signal(false);
   readonly dashboard = signal<LearningDashboardDto | null>(null);
-  readonly myCourses = signal<StudentCourseDto[]>([]);
+  readonly myCourses = signal<StudentCourseListItemDto[]>([]);
   readonly records = signal<ExerciseRecordItem[]>([]);
   readonly recordsLoading = signal(false);
 
@@ -84,15 +84,15 @@ export class StudentMyLearningComponent implements OnInit {
     { label: '平均进度', value: 0, suffix: '%', icon: 'rise', color: '#0c4cb8' },
   ]);
 
-  readonly inProgressCourses = computed<StudentCourseDto[]>(() =>
+  readonly inProgressCourses = computed<StudentCourseListItemDto[]>(() =>
     this.myCourses().filter(c => c.status === 1 || c.status === 2 || ((c.progress || 0) > 0 && (c.progress || 0) < 100))
   );
 
-  readonly completedCourses = computed<StudentCourseDto[]>(() =>
+  readonly completedCourses = computed<StudentCourseListItemDto[]>(() =>
     this.myCourses().filter(c => c.status === 3 || (c.progress || 0) >= 100)
   );
 
-  readonly notStartedCourses = computed<StudentCourseDto[]>(() =>
+  readonly notStartedCourses = computed<StudentCourseListItemDto[]>(() =>
     this.myCourses().filter(c => (c.progress || 0) === 0 && c.status !== 3)
   );
 
@@ -223,10 +223,10 @@ export class StudentMyLearningComponent implements OnInit {
   }
 
   /** 课程封面渐变 */
-  courseGradient(course: StudentCourseDto | { courseTitle?: string; courseId?: string; major?: string }): string {
+  courseGradient(course: StudentCourseListItemDto | { courseTitle?: string; courseId?: string; majorName?: string }): string {
     return this.gradientByKey(
       course?.courseTitle || course?.courseId || 'x',
-      course?.major || ''
+      course?.majorName || ''
     );
   }
 
@@ -249,7 +249,7 @@ export class StudentMyLearningComponent implements OnInit {
     return palettes[Math.abs(hash) % palettes.length];
   }
 
-  hasCover(c: StudentCourseDto): boolean {
+  hasCover(c: StudentCourseListItemDto): boolean {
     return !!c.courseCoverImageUrl && c.courseCoverImageUrl.trim().length > 0;
   }
 

@@ -148,7 +148,8 @@ public class TeachingAgentCourseContextDto
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? TeacherName { get; set; }
-    public string? Major { get; set; }
+    public Guid? MajorId { get; set; }
+    public string? MajorName { get; set; }
     public string? Semester { get; set; }
     public int? Credits { get; set; }
     public int Difficulty { get; set; }

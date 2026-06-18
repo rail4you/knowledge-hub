@@ -1,4 +1,5 @@
 using KnowledgeHub;
+using KnowledgeHub.Majors;
 using KnowledgeHub.Resources;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore.Modeling;
@@ -11,7 +12,7 @@ public static class ResourceDbModelCreatingExtensions
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "Resources", KnowledgeHubConsts.DbSchema);
             b.ConfigureByConvention();
-            
+
             b.Property(x => x.Name).IsRequired().HasMaxLength(256);
             b.Property(x => x.Description).HasMaxLength(2000);
             b.Property(x => x.FilePath).HasMaxLength(512);
@@ -19,12 +20,19 @@ public static class ResourceDbModelCreatingExtensions
             b.Property(x => x.OriginalFileName).HasMaxLength(256);
             b.Property(x => x.Keywords).HasMaxLength(500);
             b.Property(x => x.CopyrightInfo).HasMaxLength(500);
-            
+
             b.HasIndex(x => x.Name);
             b.HasIndex(x => x.Status);
             b.HasIndex(x => x.CategoryId);
             b.HasIndex(x => x.CreatorId);
             b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => x.MajorId);
+
+            b.HasOne<Major>()
+                .WithMany()
+                .HasForeignKey(x => x.MajorId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         builder.Entity<ResourceVersion>(b =>

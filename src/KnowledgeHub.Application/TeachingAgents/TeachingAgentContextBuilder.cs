@@ -4,10 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
 using KnowledgeHub.Exams;
+using KnowledgeHub.Majors;
 using KnowledgeHub.Resources;
 using KnowledgeHub.TeachingAgents.Dtos;
 using KnowledgeHub.TeachingAgents.Enums;
 using Microsoft.EntityFrameworkCore;
+using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Identity;
@@ -23,6 +25,7 @@ public class TeachingAgentContextBuilder : ITransientDependency
     private readonly IRepository<ResourceCategory, Guid> _resourceCategoryRepository;
     private readonly IRepository<Exercise, Guid> _exerciseRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IRepository<Major, Guid> _majorRepository;
 
     public TeachingAgentContextBuilder(
         IRepository<Course, Guid> courseRepository,
@@ -31,7 +34,8 @@ public class TeachingAgentContextBuilder : ITransientDependency
         IRepository<Resource, Guid> resourceRepository,
         IRepository<ResourceCategory, Guid> resourceCategoryRepository,
         IRepository<Exercise, Guid> exerciseRepository,
-        IRepository<IdentityUser, Guid> userRepository)
+        IRepository<IdentityUser, Guid> userRepository,
+        IRepository<Major, Guid> majorRepository)
     {
         _courseRepository = courseRepository;
         _chapterRepository = chapterRepository;
@@ -40,6 +44,7 @@ public class TeachingAgentContextBuilder : ITransientDependency
         _resourceCategoryRepository = resourceCategoryRepository;
         _exerciseRepository = exerciseRepository;
         _userRepository = userRepository;
+        _majorRepository = majorRepository;
     }
 
     public async Task<TaskTargetSnapshotDto> BuildAsync(ClassroomAgentTaskTargetType targetType, Guid targetId)
@@ -139,13 +144,21 @@ public class TeachingAgentContextBuilder : ITransientDependency
             teacherName = teacher?.Name ?? teacher?.UserName;
         }
 
+        string? majorName = null;
+        if (course.MajorId.HasValue)
+        {
+            var major = await _majorRepository.FindAsync(course.MajorId.Value);
+            majorName = major?.Name;
+        }
+
         return new TeachingAgentCourseContextDto
         {
             Id = course.Id,
             Title = course.Title,
             Description = course.Description,
             TeacherName = teacherName,
-            Major = course.Major,
+            MajorId = course.MajorId,
+            MajorName = majorName,
             Semester = course.Semester,
             Credits = course.Credits,
             Difficulty = course.Difficulty,

@@ -32,6 +32,7 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public int DownloadCount { get; set; }
     public int ViewCount { get; set; }
     public Guid? OrganizationId { get; set; }
+    public Guid? MajorId { get; set; }
     public Guid? TenantId { get; set; }
 
     public ICollection<ResourceVersion> Versions { get; set; }

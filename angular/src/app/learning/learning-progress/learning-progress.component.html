@@ -20,8 +20,8 @@
             <div class="course-info">
               <h4 class="course-title">{{ course.courseTitle }}</h4>
               <div class="course-meta">
-                @if (course.major) {
-                  <nz-tag nzColor="blue">{{ course.major }}</nz-tag>
+                @if (course.majorName) {
+                  <nz-tag nzColor="blue">{{ course.majorName }}</nz-tag>
                 }
                 @if (course.semester) {
                   <nz-tag>{{ course.semester }}</nz-tag>

@@ -20,6 +20,5 @@ public interface ICourseAppService : ICrudAppService<
     Task<PagedResultDto<CourseDto>> GetMyCoursesAsync(PagedCourseRequestDto input);
     Task<AuditResultDto> AuditAsync(Guid courseId, AuditCourseDto input);
     Task<PagedResultDto<CourseDto>> GetByFilterAsync(CourseFilterDto filter);
-    Task<List<string>> GetMajorsAsync();
     Task<List<string>> GetSemestersAsync();
 }

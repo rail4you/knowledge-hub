@@ -1,0 +1,254 @@
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header class="brand-bar">
+  <div class="brand-bar__inner">
+    <a routerLink="/" class="brand">
+      <span class="brand__logo" aria-hidden="true">
+        <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#1E6CE8"/><stop offset="1" stop-color="#00B7FF"/>
+            </linearGradient>
+          </defs>
+          <rect width="44" height="44" rx="10" fill="url(#bg)"/>
+          <path d="M12 14.5h20a1.5 1.5 0 011.5 1.5v9.4a1.5 1.5 0 01-1.5 1.5H21l-5.4 3.6a.5.5 0 01-.77-.42v-3.18H12a1.5 1.5 0 01-1.5-1.5V16a1.5 1.5 0 011.5-1.5z" fill="#fff" opacity=".95"/>
+          <circle cx="17.5" cy="20.7" r="1.4" fill="#1E6CE8"/>
+          <circle cx="22" cy="20.7" r="1.4" fill="#1E6CE8"/>
+          <circle cx="26.5" cy="20.7" r="1.4" fill="#1E6CE8"/>
+        </svg>
+      </span>
+      <span class="brand__text">
+        <span class="brand__title">易课通</span>
+        <span class="brand__divider">|</span>
+        <span class="brand__subtitle">在线教学资源库</span>
+      </span>
+    </a>
+    <div class="brand-bar__actions">
+      <a routerLink="/" class="brand-bar__back">
+        <span nz-icon nzType="home" nzTheme="outline"></span>
+        <span>主站首页</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<div class="tenant-homepage">
+  @if (loading()) {
+    <div class="loading-wrapper"><nz-spin nzSize="large" nzTip="加载中…"></nz-spin></div>
+  } @else {
+
+    <!-- ═══════ HERO — 轮播 ═══════ -->
+    <section class="hero">
+      @if (tenantInfo(); as info) {
+        @if (info.coverImageList && info.coverImageList.length > 0) {
+          <nz-carousel [nzAutoPlay]="true" [nzEffect]="'fade'" [nzDotPosition]="'bottom'" [nzAutoPlaySpeed]="5000">
+            @for (img of info.coverImageList; track img) {
+              <div nz-carousel-content>
+                <div class="hero-slide" [style.background-image]="'url(' + img + ')'">
+                  <div class="hero-overlay">
+                    <h1 class="hero-title">{{ info.name }}</h1>
+                    <p class="hero-subtitle">{{ info.description || '对接企业需求，应用新技术、创设新场景。增强产业转型升级的技术技能人才支撑。' }}</p>
+                  </div>
+                </div>
+              </div>
+            }
+          </nz-carousel>
+        } @else {
+          <div class="hero-fallback" [style.background-image]="'url(assets/images/tenant-hero_001.jpg)'">
+            <div class="hero-overlay">
+              <h1 class="hero-title">{{ info.name }}</h1>
+              <p class="hero-subtitle">{{ info.description || '对接企业需求，应用新技术、创设新场景。增强产业转型升级的技术技能人才支撑。' }}</p>
+            </div>
+          </div>
+        }
+      } @else {
+        <div class="hero-fallback" [style.background-image]="'url(assets/images/tenant-hero_001.jpg)'">
+          <div class="hero-overlay">
+            <h1 class="hero-title">专业教学资源库</h1>
+            <p class="hero-subtitle">对接企业需求，应用新技术、创设新场景。</p>
+          </div>
+        </div>
+      }
+
+      <!-- 用户入口 -->
+      <div class="user-entries">
+        <div class="entry-card">
+          <div class="entry-avatar student-avatar" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><circle cx="24" cy="16" r="8" fill="#fff" opacity="0.9"/><ellipse cx="24" cy="40" rx="16" ry="12" fill="#fff" opacity="0.6"/></svg>
+          </div>
+          <h4>学生用户</h4>
+          <p>在线自学带练，提升专业能力和职业素养</p>
+        </div>
+        <div class="entry-card">
+          <div class="entry-avatar teacher-avatar" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><circle cx="24" cy="16" r="8" fill="#fff" opacity="0.9"/><ellipse cx="24" cy="40" rx="16" ry="12" fill="#fff" opacity="0.6"/><rect x="18" y="21" width="12" height="4" rx="2" fill="#fff" opacity="0.3"/></svg>
+          </div>
+          <h4>教师用户</h4>
+          <p>整合教学资源，在线拓展教学项目课程</p>
+        </div>
+        <div class="entry-card">
+          <div class="entry-avatar social-avatar" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><circle cx="24" cy="18" r="10" fill="#fff" opacity="0.9"/><ellipse cx="24" cy="42" rx="18" ry="10" fill="#fff" opacity="0.6"/></svg>
+          </div>
+          <h4>社会用户</h4>
+          <p>核心技能平台，全面知识拓展和定制需求</p>
+        </div>
+        <div class="entry-card">
+          <div class="entry-avatar enterprise-avatar" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><rect x="12" y="8" width="24" height="28" rx="3" fill="#fff" opacity="0.9"/><rect x="18" y="18" width="5" height="8" rx="1" fill="rgba(30,108,232,0.3)"/><rect x="25" y="18" width="5" height="8" rx="1" fill="rgba(30,108,232,0.3)"/></svg>
+          </div>
+          <h4>企业用户</h4>
+          <p>前沿资讯，丰富资料库专业入门好帮手</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════ 资源库简介 ═══════ -->
+    <section class="section intro-section">
+      <div class="section-inner">
+        <h2 class="section-heading">资源库简介</h2>
+        <div class="intro-body">
+          <div class="intro-text">
+            @if (tenantInfo(); as info) {
+              <p>{{ info.description || '基于国家实施扩大内需战略的规划背景，围绕品牌强国、消费提振、构建双循环新发展格局等政策举措，瞄准数字经济下新型消费模式对营销人才的新需求，引入数字技术、AI智能技术，对接国家专业教学标准，重构营销领域新思维、新场景、新技能图谱。' }}</p>
+            }
+          </div>
+          <div class="intro-stats">
+            @if (portalData(); as pd) {
+              @if (pd.stats) {
+                <div class="stat-box"><span class="stat-num">{{ pd.stats.courseCount || 0 }}</span><span class="stat-label">课程数</span></div>
+                <div class="stat-box"><span class="stat-num">{{ pd.stats.resourceCount || 0 }}</span><span class="stat-label">素材数</span></div>
+                <div class="stat-box"><span class="stat-num">{{ pd.stats.microMajorCount || 0 }}</span><span class="stat-label">微专业</span></div>
+                <div class="stat-box"><span class="stat-num">{{ pd.stats.studentCount || 0 }}</span><span class="stat-label">学员数</span></div>
+              }
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════ 专业建设 ═══════ -->
+    @if (tenantInfo(); as info) {
+      @if (info.talentTrainingPlan || info.professionalTeachingStandards) {
+        <section class="section construction-section">
+          <div class="section-inner">
+            <h2 class="section-heading">专业建设</h2>
+            <div class="construction-grid">
+              @if (info.talentTrainingPlan) {
+                <div class="construct-card">
+                  <div class="construct-card__icon"><span nz-icon nzType="solution" nzTheme="outline"></span></div>
+                  <h4>人才培养方案</h4>
+                  <p>{{ info.talentTrainingPlan.length > 150 ? info.talentTrainingPlan.slice(0, 150) + '...' : info.talentTrainingPlan }}</p>
+                </div>
+              }
+              @if (info.professionalTeachingStandards) {
+                <div class="construct-card">
+                  <div class="construct-card__icon"><span nz-icon nzType="book" nzTheme="outline"></span></div>
+                  <h4>专业教学标准</h4>
+                  <p>{{ info.professionalTeachingStandards.length > 150 ? info.professionalTeachingStandards.slice(0, 150) + '...' : info.professionalTeachingStandards }}</p>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      }
+    }
+
+    <!-- ═══════ 特色项目 ═══════ -->
+    @if (tenantInfo(); as info) {
+      @if (info.specialProjectList && info.specialProjectList.length > 0) {
+        <section class="section project-section">
+          <div class="section-inner">
+            <h2 class="section-heading">特色项目</h2>
+            <div class="project-grid">
+              @for (p of info.specialProjectList; track p.title) {
+                <div class="project-card">
+                  <div class="project-card__index">{{ $index + 1 }}</div>
+                  <h4>{{ p.title }}</h4>
+                  @if (p.description) { <p>{{ p.description }}</p> }
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      }
+    }
+
+    <!-- ═══════ 学历课程体系 ═══════ -->
+    @if (portalData(); as pd) {
+      @if (pd.featuredCourses && pd.featuredCourses.length > 0) {
+        <section class="section course-section">
+          <div class="section-inner">
+            <h2 class="section-heading">学历课程体系</h2>
+            <div class="course-categories">
+              <span class="cat-tag active">专业基础课</span>
+              <span class="cat-tag">专业核心课</span>
+              <span class="cat-tag">专业拓展课</span>
+              <span class="cat-tag">公共基础课</span>
+            </div>
+            <div class="course-grid">
+              @for (c of pd.featuredCourses; track c.id) {
+                <div class="course-card">
+                  <div class="course-cover" [style.background]="'linear-gradient(135deg, ' + courseColors[$index % courseColors.length] + ' 0%, ' + courseColors[($index + 1) % courseColors.length] + ' 100%)'">
+                    @if (c.coverImageUrl) {
+                      <img [src]="c.coverImageUrl" class="course-img" [alt]="c.title" />
+                    } @else {
+                      <span class="course-emoji">{{ courseEmojis[$index % courseEmojis.length] }}</span>
+                    }
+                  </div>
+                  <div class="course-body">
+                    <h4>{{ c.title }}</h4>
+                    <div class="course-tags">
+                      @if (c.majorName) {
+                        <span class="course-tag major-tag">{{ c.majorName }}</span>
+                      }
+                      @if (c.teacherName) {
+                        <span class="course-tag teacher-tag">👨‍🏫 {{ c.teacherName }}</span>
+                      }
+                    </div>
+                    <div class="course-footer">
+                      <span class="course-students">
+                        <span nz-icon nzType="user" nzTheme="outline"></span> {{ c.studentCount || 0 }} 学员
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+      }
+    }
+
+    <!-- ═══════ 知识图谱 ═══════ -->
+    @if (knowledgeGraph(); as kg) {
+      <section class="section graph-section">
+        <div class="section-inner">
+          <h2 class="section-heading">知识图谱</h2>
+          <div class="graph-legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#e74c3c"></span><span>资源库</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#2980b9"></span><span>专业 ({{ getMajorCount(kg) }})</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#27ae60"></span><span>课程 ({{ getCourseCount(kg) }})</span></div>
+            <div class="legend-divider"></div>
+            <div class="legend-item"><span class="legend-line" style="background:#3498db"></span><span>包含关系</span></div>
+            <div class="legend-item"><span class="legend-line" style="background:#f39c12"></span><span>并列关系</span></div>
+            <div class="legend-item"><span class="legend-line" style="background:#e74c3c"></span><span>先后关系</span></div>
+          </div>
+          <div class="graph-chart" id="tenant-graph-chart"></div>
+        </div>
+      </section>
+    }
+  }
+</div>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer class="app-footer">
+  <div class="footer-inner">
+    <div class="footer-links">
+      <a href="#">关于我们</a>
+      <a href="#">帮助中心</a>
+      <a href="#">隐私政策</a>
+      <a href="#">联系客服</a>
+    </div>
+    <div class="footer-copyright">&copy; 2026 易课通在线教学资源库 · 让学习更简单</div>
+  </div>
+</footer>

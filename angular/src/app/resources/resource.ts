@@ -1,6 +1,8 @@
 import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest, ConfigStateService} from '@abp/ng.core';
 import {Component, OnInit, inject, signal, ViewChild} from '@angular/core';
 import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto} from '../proxy/resources';
+import {MajorService} from '../proxy/majors/major.service';
+import type {MajorLookupDto} from '../proxy/majors/dtos/models';
 import {AllianceService} from '../proxy/application/alliance/alliance.service';
 import {resourceTypeOptions, resourceStatusOptions} from '../proxy/resources/enums';
 import {ChunkUploadService} from '../proxy/controllers';
@@ -87,6 +89,7 @@ export class ResourceComponent implements OnInit {
   versions = signal<ResourceVersionDto[]>([]);
   categories = signal<ResourceCategoryDto[]>([]);
   categoryTreeNodes = signal<any[]>([]);
+  majors = signal<MajorLookupDto[]>([]);
   flatCategories = signal<any[]>([]);
   isCollected = signal<boolean>(false);
 
@@ -160,6 +163,7 @@ export class ResourceComponent implements OnInit {
 
   public readonly list = inject(ListService);
   private readonly resourceService = inject(ResourceService);
+  private readonly majorService = inject(MajorService);
   private readonly allianceService = inject(AllianceService);
   private readonly chunkUploadService = inject(ChunkUploadService);
   private readonly restService = inject(RestService);
@@ -191,6 +195,9 @@ export class ResourceComponent implements OnInit {
   ngOnInit() {
     this.buildForm();
     this.loadCategories();
+    this.majorService.getLookupList().subscribe({
+      next: (list) => this.majors.set(list || []),
+    });
     this.loadResources();
     this.loadCurrentUser();
   }
@@ -246,6 +253,7 @@ export class ResourceComponent implements OnInit {
       description: [res.description || ''],
       resourceType: [res.resourceType ?? null, Validators.required],
       categoryId: [res.categoryId ?? null],
+      majorId: [res.majorId ?? null],
       keywords: [res.keywords || ''],
       copyrightInfo: [res.copyrightInfo || ''],
       isDownloadable: [res.isDownloadable ?? true],

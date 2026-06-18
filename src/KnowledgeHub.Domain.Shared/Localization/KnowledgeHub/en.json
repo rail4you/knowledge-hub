@@ -282,6 +282,7 @@
     "Menu:MicroMajors": "Micro Majors",
     "Menu:MyMicroMajors": "My Micro Majors",
     "Menu:MicroMajorManagement": "Micro Major Management",
+    "Menu:MajorManagement": "Major Management",
     "Permission:DoubleHigh": "Double High Assessment",
     "Permission:DoubleHigh.ManageProject": "Manage Assessment Projects",
     "Permission:DoubleHigh.ManageIndicator": "Manage Assessment Indicators",

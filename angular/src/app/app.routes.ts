@@ -180,6 +180,21 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/majors',
+    loadComponent: () => import('./admin/majors/major-management.component').then(c => c.MajorManagementComponent),
+    canActivate: [authGuard, nonStudentGuard],
+  },
+  {
+    path: 'admin/tenant-info',
+    loadComponent: () => import('./admin/tenant-info/tenant-info-management.component').then(c => c.TenantInfoManagementComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'tenant/:id',
+    loadComponent: () => import('./admin/tenant-info/tenant-homepage.component').then(c => c.TenantHomepageComponent),
+  },
+
+  {
     path: 'assessment/double-high/projects',
     loadComponent: () => import('./double-high/double-high-project-list.component').then(c => c.DoubleHighProjectListComponent),
     canActivate: [authGuard, permissionGuard],

@@ -120,6 +120,51 @@
     </div>
   </section>
 
+  <!-- ===== 租户列表 ===== -->
+  @if (tenants().length > 0) {
+    <section class="section section--alt">
+      <div class="section__inner">
+        <div class="section__head">
+          <div class="section__head-left">
+            <span class="section__accent section__accent--blue"></span>
+            <div>
+              <h2>资源库</h2>
+              <p>选择资源库进入浏览</p>
+            </div>
+          </div>
+        </div>
+        <div class="tenant-grid">
+          @for (t of tenants(); track t.id) {
+            <a class="tenant-card" [routerLink]="['/tenant', t.id]">
+              @if (t.coverImage) {
+                <div class="tenant-card__cover">
+                  <img [src]="t.coverImage" [alt]="t.tenantName || t.name" loading="lazy" />
+                  <div class="tenant-card__type-badge">{{ (t.tenantType === 1 ? '项目' : '专业') + '园地' }}</div>
+                </div>
+              } @else {
+                <div class="tenant-card__cover tenant-card__cover--placeholder">
+                  <div class="tenant-card__type-badge">{{ (t.tenantType === 1 ? '项目' : '专业') + '园地' }}</div>
+                  <div class="tenant-card__cover-icon">📚</div>
+                </div>
+              }
+              <div class="tenant-card__body">
+                <h3>{{ t.tenantName || t.name }}</h3>
+                @if (t.tenantDescription) {
+                  <p class="tenant-card__desc">{{ t.tenantDescription.length > 80 ? (t.tenantDescription.slice(0, 80) + '...') : t.tenantDescription }}</p>
+                }
+                <div class="tenant-card__stats">
+                  <span>{{ t.courseCount || 0 }} 门课程</span>
+                  <span>{{ t.resourceCount || 0 }} 份资源</span>
+                  <span>{{ t.microMajorCount || 0 }} 个微专业</span>
+                </div>
+              </div>
+            </a>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
   <!-- ===== 精选课程 ===== -->
   @if (homeData()?.featuredCourses?.length) {
     <section class="section">

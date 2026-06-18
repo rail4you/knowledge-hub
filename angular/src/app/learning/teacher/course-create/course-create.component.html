@@ -65,14 +65,15 @@
               <nz-form-item>
                 <nz-form-label [nzSpan]="4" nzRequired>专业</nz-form-label>
                 <nz-form-control [nzSpan]="20">
-                  <nz-select 
-                    [ngModel]="formData().major"
-                    (ngModelChange)="updateField('major', $event)"
+                  <nz-select
+                    [ngModel]="formData().majorId"
+                    (ngModelChange)="updateField('majorId', $event)"
                     nzPlaceHolder="请选择专业"
+                    nzAllowClear
                     class="full-width"
                   >
-                    @for (major of majors; track major) {
-                      <nz-option [nzValue]="major" [nzLabel]="major"></nz-option>
+                    @for (major of majors(); track major.id) {
+                      <nz-option [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
                     }
                   </nz-select>
                 </nz-form-control>
@@ -148,7 +149,9 @@
               <nz-descriptions nzBordered [nzColumn]="1">
                 <nz-descriptions-item nzTitle="课程名称">{{ formData().title }}</nz-descriptions-item>
                 <nz-descriptions-item nzTitle="课程描述">{{ formData().description || '无' }}</nz-descriptions-item>
-                <nz-descriptions-item nzTitle="专业">{{ formData().major || '未选择' }}</nz-descriptions-item>
+                <nz-descriptions-item nzTitle="专业">
+                  {{ (majors() | findMajorName: formData().majorId) || '未选择' }}
+                </nz-descriptions-item>
                 <nz-descriptions-item nzTitle="学期">{{ formData().semester || '未选择' }}</nz-descriptions-item>
                 <nz-descriptions-item nzTitle="学分">{{ formData().credits }}</nz-descriptions-item>
                 <nz-descriptions-item nzTitle="课时">{{ formData().semesterHours }}</nz-descriptions-item>

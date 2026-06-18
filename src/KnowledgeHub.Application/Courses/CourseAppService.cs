@@ -7,8 +7,10 @@ using KnowledgeHub.Courses.Dtos;
 using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Learning;
 using KnowledgeHub.Learning.Enums;
+using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -28,6 +30,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
     private readonly IRepository<KnowledgeResource, Guid> _knowledgeResourceRepository;
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IRepository<Major, Guid> _majorRepository;
     private readonly ICurrentUser _currentUser;
     private readonly ILogger<CourseAppService> _logger;
 
@@ -37,6 +40,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
         IRepository<KnowledgeResource, Guid> knowledgeResourceRepository,
         IRepository<StudentCourse, Guid> studentCourseRepository,
         IRepository<IdentityUser, Guid> userRepository,
+        IRepository<Major, Guid> majorRepository,
         ICurrentUser currentUser,
         ILogger<CourseAppService> logger)
     {
@@ -45,6 +49,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
         _knowledgeResourceRepository = knowledgeResourceRepository;
         _studentCourseRepository = studentCourseRepository;
         _userRepository = userRepository;
+        _majorRepository = majorRepository;
         _currentUser = currentUser;
         _logger = logger;
     }
@@ -55,7 +60,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
         var course = new Course(GuidGenerator.Create(), input.Title);
         course.Description = input.Description;
         course.CoverImageUrl = input.CoverImageUrl;
-        course.Major = input.Major;
+        course.MajorId = input.MajorId;
         course.Semester = input.Semester;
         course.Credits = input.Credits;
         course.SemesterHours = input.SemesterHours;
@@ -65,8 +70,8 @@ public class CourseAppService : ApplicationService, ITransientDependency
         course.TeacherId = _currentUser.Id;
 
         await _courseRepository.InsertAsync(course);
-        
-        return MapToDto(course);
+
+        return await MapToDtoAsync(course);
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.Edit)]
@@ -77,11 +82,11 @@ public class CourseAppService : ApplicationService, ITransientDependency
         {
             throw new Volo.Abp.UserFriendlyException("Course不存在");
         }
-        
+
         course.Title = input.Title;
         course.Description = input.Description;
         course.CoverImageUrl = input.CoverImageUrl;
-        course.Major = input.Major;
+        course.MajorId = input.MajorId;
         course.Semester = input.Semester;
         course.Credits = input.Credits;
         course.SemesterHours = input.SemesterHours;
@@ -91,7 +96,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
 
         await _courseRepository.UpdateAsync(course);
 
-        return MapToDto(course);
+        return await MapToDtoAsync(course);
     }
 
     public async Task<CourseDto> GetAsync(Guid id)
@@ -101,14 +106,14 @@ public class CourseAppService : ApplicationService, ITransientDependency
         {
             return null;
         }
-        return MapToDto(course);
+        return await MapToDtoAsync(course);
     }
 
     public async Task<PagedResultDto<CourseDto>> GetListAsync(PagedCourseRequestDto input)
     {
         var query = await _courseRepository.GetQueryableAsync();
         query = query.WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
-                     .WhereIf(!string.IsNullOrWhiteSpace(input.Major), x => x.Major == input.Major)
+                     .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
                      .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
                      .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
                      .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
@@ -120,9 +125,10 @@ public class CourseAppService : ApplicationService, ITransientDependency
                            .Take(input.MaxResultCount)
                            .ToList();
 
+        var majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
         return new PagedResultDto<CourseDto>(
             totalCount,
-            courses.Select(MapToDto).ToList()
+            courses.Select(x => MapToDtoWithMajor(x, majorNames)).ToList()
         );
     }
 
@@ -212,7 +218,8 @@ public class CourseAppService : ApplicationService, ITransientDependency
             Title = course.Title,
             Description = course.Description,
             CoverImageUrl = course.CoverImageUrl,
-            Major = course.Major,
+            MajorId = course.MajorId,
+            MajorName = await ResolveMajorNameAsync(course.MajorId),
             Semester = course.Semester,
             Credits = course.Credits,
             SemesterHours = course.SemesterHours,
@@ -234,7 +241,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
         var query = await _courseRepository.GetQueryableAsync();
         query = query.Where(x => x.Status == CourseStatus.Published)
                      .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
-                     .WhereIf(!string.IsNullOrWhiteSpace(input.Major), x => x.Major == input.Major)
+                     .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
                      .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
                      .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
                      .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId);
@@ -260,6 +267,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
 
         var chapterCountMap = chapterCounts.ToDictionary(x => x.CourseId, x => x.Count);
         var studentCountMap = studentCounts.ToDictionary(x => x.CourseId, x => x.Count);
+        var majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
 
         return new PagedResultDto<CourseDto>(
             totalCount,
@@ -269,7 +277,8 @@ public class CourseAppService : ApplicationService, ITransientDependency
                 Title = c.Title,
                 Description = c.Description,
                 CoverImageUrl = c.CoverImageUrl,
-                Major = c.Major,
+                MajorId = c.MajorId,
+                MajorName = majorNames.GetValueOrDefault(c.MajorId ?? Guid.Empty),
                 Semester = c.Semester,
                 Credits = c.Credits,
                 SemesterHours = c.SemesterHours,
@@ -333,15 +342,16 @@ public class CourseAppService : ApplicationService, ITransientDependency
         var coursesQuery = await _courseRepository.GetQueryableAsync();
         var courses = coursesQuery.Where(x => courseIds.Contains(x.Id))
                                   .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
-                                  .WhereIf(!string.IsNullOrWhiteSpace(input.Major), x => x.Major == input.Major)
+                                  .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
                                   .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
                                   .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
                                   .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
                                   .ToList();
 
+        var majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
         return new PagedResultDto<CourseDto>(
             courses.Count,
-            courses.Select(MapToDto).ToList()
+            courses.Select(x => MapToDtoWithMajor(x, majorNames)).ToList()
         );
     }
 
@@ -350,7 +360,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
     {
         var query = await _courseRepository.GetQueryableAsync();
         query = query.WhereIf(!string.IsNullOrWhiteSpace(filter.Filter), x => x.Title.Contains(filter.Filter))
-                     .WhereIf(!string.IsNullOrWhiteSpace(filter.Major), x => x.Major == filter.Major)
+                     .WhereIf(filter.MajorId.HasValue, x => x.MajorId == filter.MajorId.Value)
                      .WhereIf(!string.IsNullOrWhiteSpace(filter.Semester), x => x.Semester == filter.Semester)
                      .WhereIf(filter.Difficulty.HasValue, x => x.Difficulty == filter.Difficulty)
                      .WhereIf(filter.CategoryId.HasValue, x => x.CategoryId == filter.CategoryId)
@@ -358,21 +368,12 @@ public class CourseAppService : ApplicationService, ITransientDependency
                      .WhereIf(filter.Status.HasValue, x => x.Status == filter.Status);
 
         var courses = query.OrderByDescending(x => x.CreationTime).ToList();
+        var majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
 
         return new PagedResultDto<CourseDto>(
             courses.Count,
-            courses.Select(MapToDto).ToList()
+            courses.Select(x => MapToDtoWithMajor(x, majorNames)).ToList()
         );
-    }
-
-    public async Task<List<string>> GetMajorsAsync()
-    {
-        var query = await _courseRepository.GetQueryableAsync();
-        return query.Where(x => x.Major != null)
-                    .Select(x => x.Major!)
-                    .Distinct()
-                    .OrderBy(x => x)
-                    .ToList();
     }
 
     public async Task<List<string>> GetSemestersAsync()
@@ -414,7 +415,7 @@ public class CourseAppService : ApplicationService, ITransientDependency
             Title = course.Title,
             Description = course.Description,
             CoverImageUrl = course.CoverImageUrl,
-            Major = course.Major,
+            MajorId = course.MajorId,
             Semester = course.Semester,
             Credits = course.Credits,
             SemesterHours = course.SemesterHours,
@@ -427,5 +428,49 @@ public class CourseAppService : ApplicationService, ITransientDependency
             LastModificationTime = course.LastModificationTime,
             LastModifierId = course.LastModifierId
         };
+    }
+
+    private async Task<CourseDto> MapToDtoAsync(Course course)
+    {
+        var dto = MapToDto(course);
+        dto.MajorName = await ResolveMajorNameAsync(course.MajorId);
+        return dto;
+    }
+
+    private CourseDto MapToDtoWithMajor(Course course, Dictionary<Guid, string> majorNames)
+    {
+        var dto = MapToDto(course);
+        if (course.MajorId.HasValue && majorNames.TryGetValue(course.MajorId.Value, out var name))
+        {
+            dto.MajorName = name;
+        }
+        return dto;
+    }
+
+    private async Task<Dictionary<Guid, string>> ResolveMajorNamesAsync(IEnumerable<Guid?> majorIds)
+    {
+        var ids = majorIds
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+        var query = await _majorRepository.GetQueryableAsync();
+        return await query
+            .Where(x => ids.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.Name);
+    }
+
+    private async Task<string?> ResolveMajorNameAsync(Guid? majorId)
+    {
+        if (!majorId.HasValue)
+        {
+            return null;
+        }
+        var major = await _majorRepository.FindAsync(majorId.Value);
+        return major?.Name;
     }
 }

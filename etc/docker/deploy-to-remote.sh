@@ -164,6 +164,8 @@ build_and_push() {
         --platform linux/amd64 \
         -f "$dockerfile" \
         -t "$image_name" \
+        --cache-from type=registry,ref=$REGISTRY/knowledgehub-$component:latest \
+        --cache-to type=inline \
         --load \
         .
 

@@ -1,0 +1,25 @@
+.page {
+  padding: 16px;
+}
+
+.toolbar {
+  margin-bottom: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 12px 16px;
+  align-items: start;
+
+  label {
+    text-align: right;
+    color: var(--ink-muted, #5b6573);
+    line-height: 32px;
+  }
+}

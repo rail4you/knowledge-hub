@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -18,22 +19,27 @@ namespace KnowledgeHub.Application.Identity;
 [Authorize(KnowledgeHubPermissions.Users.Default)]
 public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppService
 {
+    public const string MajorIdExtraProperty = "MajorId";
+
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly IRepository<Volo.Abp.Identity.IdentityUser, Guid> _userRepository;
+    private readonly IRepository<Major, Guid> _majorRepository;
 
     public TenantUserAppService(
         IdentityUserManager userManager,
         ICurrentTenant currentTenant,
-        IRepository<Volo.Abp.Identity.IdentityUser, Guid> userRepository)
+        IRepository<Volo.Abp.Identity.IdentityUser, Guid> userRepository,
+        IRepository<Major, Guid> majorRepository)
     {
         _userManager = userManager;
         _currentTenant = currentTenant;
         _userRepository = userRepository;
+        _majorRepository = majorRepository;
     }
 
     [Authorize(KnowledgeHubPermissions.Users.Create)]
-    public async Task<IdentityUserDto> CreateUserForTenantAsync(CreateTenantUserDto input)
+    public async Task<TenantUserDto> CreateUserForTenantAsync(CreateTenantUserDto input)
     {
         // Non-host users can only create users in their own tenant
         if (_currentTenant.Id.HasValue)
@@ -53,7 +59,12 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             user.Name = input.Name ?? string.Empty;
             user.Surname = input.Surname ?? "-";
             user.SetIsActive(input.IsActive);
-            
+
+            if (input.MajorId.HasValue)
+            {
+                user.SetProperty(MajorIdExtraProperty, input.MajorId.Value);
+            }
+
             var password = input.Password;
             (await _userManager.CreateAsync(user, password))
                 .CheckErrors();
@@ -64,20 +75,20 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                     .CheckErrors();
             }
 
-            return ObjectMapper.Map<Volo.Abp.Identity.IdentityUser, IdentityUserDto>(user);
+            return await MapToDtoAsync(user);
         }
     }
 
-    public async Task<PagedResultDto<IdentityUserDto>> GetListAsync(GetTenantUsersInput input)
+    public async Task<PagedResultDto<TenantUserDto>> GetListAsync(GetTenantUsersInput input)
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
             var queryable = await _userRepository.GetQueryableAsync();
-            
+
             if (!string.IsNullOrWhiteSpace(input.Filter))
             {
-                queryable = queryable.Where(u => 
-                    u.UserName.Contains(input.Filter) || 
+                queryable = queryable.Where(u =>
+                    u.UserName.Contains(input.Filter) ||
                     u.Email.Contains(input.Filter) ||
                     (u.Name != null && u.Name.Contains(input.Filter)) ||
                     (u.Surname != null && u.Surname.Contains(input.Filter)));
@@ -97,21 +108,24 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             // Host users with no TenantId filter see all users
 
             var totalCount = await queryable.CountAsync();
-            
+
             var users = await queryable
                 .OrderByDescending(u => u.CreationTime)
                 .Skip(input.SkipCount)
                 .Take(input.MaxResultCount)
                 .ToListAsync();
 
-            return new PagedResultDto<IdentityUserDto>(
-                totalCount,
-                ObjectMapper.Map<System.Collections.Generic.List<Volo.Abp.Identity.IdentityUser>, System.Collections.Generic.List<IdentityUserDto>>(users)
-            );
+            var dtos = new List<TenantUserDto>(users.Count);
+            foreach (var user in users)
+            {
+                dtos.Add(await MapToDtoAsync(user));
+            }
+
+            return new PagedResultDto<TenantUserDto>(totalCount, dtos);
         }
     }
 
-    public async Task<IdentityUserDto> GetAsync(Guid id)
+    public async Task<TenantUserDto> GetAsync(Guid id)
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -122,7 +136,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             }
 
             CheckTenantOwnership(user);
-            return ObjectMapper.Map<Volo.Abp.Identity.IdentityUser, IdentityUserDto>(user);
+            return await MapToDtoAsync(user);
         }
     }
 
@@ -146,7 +160,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.Users.Edit)]
-    public async Task<IdentityUserDto> UpdateAsync(Guid id, UpdateTenantUserDto input)
+    public async Task<TenantUserDto> UpdateAsync(Guid id, UpdateTenantUserDto input)
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -169,6 +183,15 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                 user.SetIsActive(input.IsActive);
                 user.SetPhoneNumber(input.PhoneNumber, input.PhoneNumberConfirmed);
 
+                if (input.MajorId.HasValue)
+                {
+                    user.SetProperty(MajorIdExtraProperty, input.MajorId.Value);
+                }
+                else
+                {
+                    user.RemoveProperty(MajorIdExtraProperty);
+                }
+
                 (await _userManager.UpdateAsync(user))
                     .CheckErrors();
 
@@ -185,7 +208,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                         .CheckErrors();
                 }
 
-                return ObjectMapper.Map<Volo.Abp.Identity.IdentityUser, IdentityUserDto>(user);
+                return await MapToDtoAsync(user);
             }
         }
     }
@@ -221,5 +244,23 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         {
             throw new UserFriendlyException("您没有权限访问该租户的用户数据");
         }
+    }
+
+    private async Task<TenantUserDto> MapToDtoAsync(Volo.Abp.Identity.IdentityUser user)
+    {
+        var dto = ObjectMapper.Map<Volo.Abp.Identity.IdentityUser, TenantUserDto>(user);
+
+        if (user.HasProperty(MajorIdExtraProperty))
+        {
+            var majorId = user.GetProperty<Guid?>(MajorIdExtraProperty);
+            dto.MajorId = majorId;
+            if (majorId.HasValue)
+            {
+                var major = await _majorRepository.FindAsync(majorId.Value);
+                dto.MajorName = major?.Name;
+            }
+        }
+
+        return dto;
     }
 }

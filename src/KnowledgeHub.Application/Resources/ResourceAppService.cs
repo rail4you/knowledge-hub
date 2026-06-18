@@ -8,6 +8,7 @@ using KnowledgeHub.Application.Search;
 using KnowledgeHub.Common;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Edition;
+using KnowledgeHub.Majors;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
@@ -47,6 +48,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IMeiliSearchService MeiliSearchService { get; }
     protected IDocumentIndexRepository DocumentIndexRepository { get; }
     protected IRepository<ResourcePageIndex, Guid> PageIndexRepository { get; }
+    protected IRepository<Major, Guid> MajorRepository { get; }
 
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
@@ -66,7 +68,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IEditionConfigService editionConfigService,
         IMeiliSearchService meiliSearchService,
         IDocumentIndexRepository documentIndexRepository,
-        IRepository<ResourcePageIndex, Guid> pageIndexRepository)
+        IRepository<ResourcePageIndex, Guid> pageIndexRepository,
+        IRepository<Major, Guid> majorRepository)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -86,6 +89,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         MeiliSearchService = meiliSearchService;
         DocumentIndexRepository = documentIndexRepository;
         PageIndexRepository = pageIndexRepository;
+        MajorRepository = majorRepository;
     }
 
     [AllowAnonymous]
@@ -94,6 +98,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var resource = await ResourceRepository.GetWithDetailsAsync(id);
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
         EnsureFileMetadata(dto);
+        dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
         return dto;
     }
 
@@ -175,6 +180,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             query = query.Where(x => x.CategoryId == input.CategoryId.Value);
         }
 
+        if (input.MajorId.HasValue)
+        {
+            query = query.Where(x => x.MajorId == input.MajorId.Value);
+        }
+
         if (input.StartDate.HasValue)
         {
             query = query.Where(x => x.CreationTime >= input.StartDate.Value);
@@ -192,6 +202,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var resources = await AsyncExecuter.ToListAsync(query);
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
         EnsureFileMetadata(dtos);
+        await FillMajorNamesAsync(dtos);
 
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
@@ -309,7 +320,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             }
         }
 
-        return ObjectMapper.Map<Resource, ResourceDto>(resource);
+        var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
+        dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
+        return dto;
     }
 
     /// <summary>
@@ -404,9 +417,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var resource = await Repository.GetAsync(id);
 
         ObjectMapper.Map(input, resource);
+        resource.MajorId = input.MajorId;
 
         await Repository.UpdateAsync(resource);
-        return ObjectMapper.Map<Resource, ResourceDto>(resource);
+        var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
+        dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
+        return dto;
     }
 
     /// <summary>
@@ -874,6 +890,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected virtual Resource MapToEntity(CreateUpdateResourceDto input)
     {
         var resource = ObjectMapper.Map<CreateUpdateResourceDto, Resource>(input);
+        resource.MajorId = input.MajorId;
         resource.Status = ResourceStatus.Draft;
         resource.CurrentVersion = 1;
         resource.CollectionCount = 0;
@@ -881,6 +898,43 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         resource.ViewCount = 0;
         resource.TenantId = CurrentTenant.Id;
         return resource;
+    }
+
+    private async Task<string?> ResolveMajorNameAsync(Guid? majorId)
+    {
+        if (!majorId.HasValue)
+        {
+            return null;
+        }
+
+        var major = await MajorRepository.FindAsync(majorId.Value);
+        return major?.Name;
+    }
+
+    private async Task FillMajorNamesAsync(List<ResourceDto> dtos)
+    {
+        var ids = dtos
+            .Where(x => x.MajorId.HasValue)
+            .Select(x => x.MajorId!.Value)
+            .Distinct()
+            .ToList();
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        var query = await MajorRepository.GetQueryableAsync();
+        var map = await query
+            .Where(x => ids.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.Name);
+
+        foreach (var dto in dtos)
+        {
+            if (dto.MajorId.HasValue && map.TryGetValue(dto.MajorId.Value, out var name))
+            {
+                dto.MajorName = name;
+            }
+        }
     }
 
     public virtual async Task<InitiateUploadResultDto> InitiateUploadAsync(InitiateUploadDto input)
@@ -1174,6 +1228,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             query = query.Where(x => x.CategoryId == input.CategoryId.Value);
         }
 
+        if (input.MajorId.HasValue)
+        {
+            query = query.Where(x => x.MajorId == input.MajorId.Value);
+        }
+
         if (input.StartDate.HasValue)
         {
             query = query.Where(x => x.CreationTime >= input.StartDate.Value);
@@ -1185,14 +1244,15 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         }
 
         var totalCount = query.Count();
-        
+
         query = query.OrderByDescending(x => x.CreationTime);
         query = query.Skip(input.SkipCount).Take(input.MaxResultCount);
-        
+
         var items = await AsyncExecuter.ToListAsync(query);
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(items);
         EnsureFileMetadata(dtos);
-        
+        await FillMajorNamesAsync(dtos);
+
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
 

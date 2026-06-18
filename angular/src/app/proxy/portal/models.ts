@@ -4,6 +4,7 @@ export interface CourseBriefDto {
   title?: string;
   coverImageUrl?: string | null;
   teacherName?: string | null;
+  majorName?: string | null;
   studentCount?: number;
 }
 
@@ -71,6 +72,10 @@ export interface TenantResourceSummaryDto {
   description?: string | null;
   logoUrl?: string | null;
   industryField?: string | null;
+  tenantType?: number;
+  tenantName?: string | null;
+  tenantDescription?: string | null;
+  coverImage?: string | null;
   courseCount?: number;
   resourceCount?: number;
   microMajorCount?: number;

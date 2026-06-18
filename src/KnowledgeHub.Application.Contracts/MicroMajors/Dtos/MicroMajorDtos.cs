@@ -33,7 +33,8 @@ public class MicroMajorCourseDto : EntityDto<Guid>
     public Guid CourseId { get; set; }
     public string? CourseTitle { get; set; }
     public string? CourseCoverImageUrl { get; set; }
-    public string? Major { get; set; }
+    public Guid? MajorId { get; set; }
+    public string? MajorName { get; set; }
     public string? Semester { get; set; }
     public int SortOrder { get; set; }
     public bool IsCore { get; set; }

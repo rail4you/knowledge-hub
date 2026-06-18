@@ -64,6 +64,14 @@ export class EmploymentService {
     { apiName: this.apiName,...config });
   
 
+  deleteMyGuidanceRecord = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/employment/${id}/my-guidance-record`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   deleteResume = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'DELETE',

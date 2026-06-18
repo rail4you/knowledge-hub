@@ -12,6 +12,8 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     public ResourceType ResourceType { get; set; }
     public Guid? CategoryId { get; set; }
     public string? CategoryName { get; set; }
+    public Guid? MajorId { get; set; }
+    public string? MajorName { get; set; }
     public string FilePath { get; set; }
     public long FileSize { get; set; }
     public string FileExtension { get; set; }
@@ -75,13 +77,14 @@ public class CreateUpdateResourceDto
     public string? Description { get; set; }
     public ResourceType ResourceType { get; set; }
     public Guid? CategoryId { get; set; }
+    public Guid? MajorId { get; set; }
     public string? Keywords { get; set; }
     public string? CopyrightInfo { get; set; }
     public bool IsDownloadable { get; set; } = true;
     /// <summary>P1-13：上传"文档"类型时可勾选"作为简历使用"，职业规划下拉按此过滤。</summary>
     public bool IsResume { get; set; }
     public Guid? OrganizationId { get; set; }
-    
+
     public string? FilePath { get; set; }
     public long? FileSize { get; set; }
     public string? FileExtension { get; set; }

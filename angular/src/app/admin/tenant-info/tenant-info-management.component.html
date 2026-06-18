@@ -1,0 +1,211 @@
+<div class="page-container">
+  <h2 class="page-title">租户管理</h2>
+  <p class="page-desc">设置租户基本信息、封面轮播图、专业建设内容和特色项目</p>
+
+  <!-- 基本信息 -->
+  <nz-card nzTitle="基本信息" class="mgmt-card">
+    <div class="info-grid">
+      <div class="info-field">
+        <label>租户类型</label>
+        <nz-select [(ngModel)]="form.type" style="width: 100%">
+          <nz-option [nzValue]="0" nzLabel="专业园地"></nz-option>
+          <nz-option [nzValue]="1" nzLabel="项目园地"></nz-option>
+        </nz-select>
+      </div>
+      <div class="info-field">
+        <label>名称</label>
+        <input nz-input [(ngModel)]="form.name" maxlength="256" placeholder="例如：市场营销专业教学资源库" />
+      </div>
+      <div class="info-field full-width">
+        <label>描述</label>
+        <textarea
+          nz-input
+          [(ngModel)]="form.description"
+          maxlength="4000"
+          [nzAutosize]="{ minRows: 3, maxRows: 8 }"
+          placeholder="资源库简介、特色描述等，会显示在公开首页"
+        ></textarea>
+      </div>
+    </div>
+  </nz-card>
+
+  <!-- 封面轮播图 -->
+  <nz-card nzTitle="封面轮播图" class="mgmt-card">
+    <p class="field-hint">支持上传多张图片，将在租户首页顶部自动轮播展示。建议尺寸 1920×480，单张不超过 5MB</p>
+
+    <!-- 已上传的图片预览 -->
+    @if (coverImages().length > 0) {
+      <div class="cover-gallery">
+        @for (url of coverImages(); track url; let i = $index) {
+          <div class="cover-item">
+            <img [src]="url" class="cover-img" [alt]="'封面 ' + (i + 1)" />
+            <button
+              class="cover-remove"
+              nz-button
+              nzDanger
+              nzSize="small"
+              nzShape="circle"
+              (click)="removeImage(i)"
+              title="移除"
+            >
+              <span nz-icon nzType="delete" nzTheme="outline"></span>
+            </button>
+            <span class="cover-index">{{ i + 1 }}</span>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- 上传按钮 -->
+    <div class="upload-area">
+      <input
+        #fileInput
+        type="file"
+        accept="image/*"
+        style="display:none"
+        (change)="onFileSelected($event)"
+      />
+      <button
+        nz-button
+        nzType="dashed"
+        [nzLoading]="uploading()"
+        (click)="fileInput.click()"
+      >
+        <span nz-icon nzType="upload" nzTheme="outline"></span>
+        {{ uploading() ? '上传中…' : '选择图片上传' }}
+      </button>
+    </div>
+  </nz-card>
+
+  <!-- 专业建设 -->
+  <nz-card nzTitle="专业建设内容" class="mgmt-card">
+    <div class="info-grid">
+      <div class="info-field full-width">
+        <label>人才培养方案</label>
+        <textarea
+          nz-input
+          [(ngModel)]="form.talentTrainingPlan"
+          maxlength="8000"
+          [nzAutosize]="{ minRows: 4, maxRows: 12 }"
+          placeholder="人才培养方案内容"
+        ></textarea>
+      </div>
+      <div class="info-field full-width">
+        <label>专业教学标准</label>
+        <textarea
+          nz-input
+          [(ngModel)]="form.professionalTeachingStandards"
+          maxlength="8000"
+          [nzAutosize]="{ minRows: 4, maxRows: 12 }"
+          placeholder="专业教学标准内容"
+        ></textarea>
+      </div>
+    </div>
+  </nz-card>
+
+  <!-- 特色项目 -->
+  <nz-card nzTitle="特色项目" class="mgmt-card">
+    <div class="special-projects">
+      @for (item of form.specialProjectList; track $index) {
+        <div class="special-project-item">
+          <input nz-input [(ngModel)]="item.title" placeholder="项目名称" style="flex: 2;" />
+          <input nz-input [(ngModel)]="item.description" placeholder="描述（可选）" style="flex: 3;" />
+          <button nz-button nzDanger nzSize="small" (click)="removeSpecialProject($index)">
+            <span nz-icon nzType="delete"></span>
+          </button>
+        </div>
+      }
+      <button nz-button nzType="dashed" (click)="addSpecialProject()" style="width: 100%;">
+        <span nz-icon nzType="plus"></span> 添加特色项目
+      </button>
+    </div>
+  </nz-card>
+
+  <!-- 保存 -->
+  <div class="save-bar">
+    <button nz-button nzType="primary" nzSize="large" (click)="save()" [nzLoading]="saving()">
+      <span nz-icon nzType="save" nzTheme="outline"></span>
+      保存设置
+    </button>
+  </div>
+
+  <nz-divider></nz-divider>
+
+  <!-- 租户数据概览 -->
+  <nz-card nzTitle="数据概览" class="mgmt-card">
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-value">{{ tenantInfo()?.majorCount || 0 }}</div>
+        <div class="stat-label">专业数</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">{{ tenantInfo()?.courseCount || 0 }}</div>
+        <div class="stat-label">课程数</div>
+      </div>
+    </div>
+    <div nz-card-extra>
+      <button nz-button nzType="primary" routerLink="/admin/majors" nzSize="small">管理专业</button>
+      <button nz-button nzType="default" routerLink="/learning/course-list" nzSize="small" style="margin-left: 8px;">管理课程</button>
+    </div>
+  </nz-card>
+
+  <nz-divider></nz-divider>
+
+  <!-- 知识图谱 -->
+  <nz-card nzTitle="知识图谱" class="mgmt-card">
+    @if (knowledgeGraph(); as kg) {
+      <div class="graph-info">
+        <p><strong>中心节点：</strong>{{ kg.centerNode.name }}</p>
+        <p><strong>专业节点：</strong>{{ kg.majors.length }} 个</p>
+        <p><strong>关系总数：</strong>{{ kg.relations.length }} 条</p>
+        @if (kg.majors.length > 0) {
+          <div class="major-tags">
+            @for (m of kg.majors; track m.id) {
+              <nz-tag [nzColor]="'blue'">{{ m.name }} ({{ m.childrenCount }}门课程)</nz-tag>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <nz-empty nzNotFoundContent="暂无知识图谱数据"></nz-empty>
+    }
+  </nz-card>
+
+  <nz-divider></nz-divider>
+
+  <!-- 专业课程管理 -->
+  <nz-card nzTitle="专业课程管理" class="mgmt-card">
+    <div class="major-course-list">
+      @for (major of majors(); track major.id) {
+        <nz-card [nzTitle]="major.name" [nzSize]="'small'" class="major-course-card">
+          @if (getCoursesByMajor(major.id); as courses) {
+            <nz-table [nzData]="courses" [nzFrontPagination]="false" [nzSize]="'small'">
+              <thead>
+                <tr>
+                  <th>课程名称</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of courses; track c.id) {
+                  <tr>
+                    <td>{{ c.title }}</td>
+                    <td>{{ c.status === 0 ? '草稿' : c.status === 1 ? '已发布' : '已归档' }}</td>
+                    <td>
+                      <button nz-button nzType="link" [routerLink]="['/learning/course-detail', c.id]">查看</button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          } @else {
+            <nz-empty nzNotFoundContent="暂无课程" [nzSize]="'small'"></nz-empty>
+          }
+        </nz-card>
+      } @empty {
+        <nz-empty nzNotFoundContent="暂无专业，请先创建专业"></nz-empty>
+      }
+    </div>
+  </nz-card>
+</div>

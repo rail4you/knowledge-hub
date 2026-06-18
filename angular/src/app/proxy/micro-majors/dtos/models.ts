@@ -45,7 +45,8 @@ export interface MicroMajorCourseDto extends EntityDto<string> {
   courseId?: string;
   courseTitle?: string | null;
   courseCoverImageUrl?: string | null;
-  major?: string | null;
+  majorId?: string | null;
+  majorName?: string | null;
   semester?: string | null;
   sortOrder?: number;
   isCore?: boolean;

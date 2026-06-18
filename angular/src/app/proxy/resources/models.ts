@@ -41,6 +41,7 @@ export interface CreateUpdateResourceDto {
   description?: string | null;
   resourceType?: ResourceType;
   categoryId?: string | null;
+  majorId?: string | null;
   keywords?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
@@ -141,6 +142,8 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   resourceType?: ResourceType;
   categoryId?: string | null;
   categoryName?: string | null;
+  majorId?: string | null;
+  majorName?: string | null;
   filePath?: string;
   fileSize?: number;
   fileExtension?: string;
@@ -165,6 +168,7 @@ export interface ResourceListQueryDto extends PagedAndSortedResultRequestDto {
   status?: ResourceStatus | null;
   resourceType?: ResourceType | null;
   categoryId?: string | null;
+  majorId?: string | null;
   startDate?: string | null;
   endDate?: string | null;
 }
@@ -173,6 +177,7 @@ export interface ResourceSearchQueryDto extends PagedAndSortedResultRequestDto {
   query?: string | null;
   resourceType?: ResourceType | null;
   categoryId?: string | null;
+  majorId?: string | null;
   startDate?: string | null;
   endDate?: string | null;
 }

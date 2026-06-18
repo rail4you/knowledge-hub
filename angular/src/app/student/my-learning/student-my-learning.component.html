@@ -139,10 +139,10 @@
                 <div class="course-progress__body">
                   <h4 class="course-progress__title" [title]="c.courseTitle">{{ c.courseTitle }}</h4>
                   <div class="course-progress__meta">
-                    @if (c.major) {
+                    @if (c.majorName) {
                       <span>
                         <span nz-icon nzType="book" nzTheme="outline"></span>
-                        {{ c.major }}
+                        {{ c.majorName }}
                       </span>
                     }
                     @if (c.credits) {

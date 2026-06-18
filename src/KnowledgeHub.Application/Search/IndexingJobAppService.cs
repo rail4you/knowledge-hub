@@ -8,6 +8,7 @@ using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -17,6 +18,7 @@ using Volo.Abp.Domain.Repositories;
 
 namespace KnowledgeHub.Application.Search;
 
+[IgnoreAntiforgeryToken]
 public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppService
 {
     private readonly IRepository<DocumentIndexingJob, Guid> _jobRepository;
@@ -322,7 +324,24 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
             TenantId = CurrentTenant.Id
         });
 
-        return await GetAsync(job.Id);
+        return new IndexingJobDto
+        {
+            Id = job.Id,
+            ResourceId = job.ResourceId,
+            ResourceName = resource.Name,
+            ResourceVersionId = job.ResourceVersionId,
+            Status = job.Status,
+            Progress = job.Progress,
+            ErrorMessage = job.ErrorMessage,
+            TotalPages = job.TotalPages,
+            ProcessedPages = job.ProcessedPages,
+            StartedAt = job.StartedAt,
+            CompletedAt = job.CompletedAt,
+            RetryCount = job.RetryCount,
+            NextRetryAt = job.NextRetryAt,
+            CreationTime = job.CreationTime,
+            JobType = "document"
+        };
     }
 
     public async Task<string> TestExecuteJobAsync(Guid id)

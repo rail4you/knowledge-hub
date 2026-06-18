@@ -207,7 +207,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     const status = this.selectedStatus();
     const input: any = {
       filter: this.filter() || undefined,
-      major: this.selectedMajor() || undefined,
+      majorId: this.selectedMajor() || undefined,
       difficulty: this.selectedDifficulty() ?? undefined,
       skipCount: 0,
       maxResultCount: 30,
@@ -277,7 +277,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   private syncMajorChips(items: CourseDto[]) {
     const set = new Set<string>();
     items.forEach(c => {
-      if (c.major) set.add(c.major);
+      if (c.majorName) set.add(c.majorName);
     });
     const colorPalette = ['#06b6d4', '#10b981', '#0c4cb8', '#22c55e', '#14b8a6', '#3b82f6'];
     const chips: MajorChip[] = [{ id: null, name: '全部专业', icon: 'appstore', color: '#1e6ce8' }];
@@ -349,10 +349,10 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   }
 
   /** 课程封面渐变（基于专业+标题 hash） */
-  courseGradient(course: CourseDto | { title?: string; id?: string; major?: string }): string {
+  courseGradient(course: CourseDto | { title?: string; id?: string; majorName?: string }): string {
     return this.gradientByKey(
       course?.title || course?.id || 'x',
-      course?.major || ''
+      course?.majorName || ''
     );
   }
 
