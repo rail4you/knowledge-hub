@@ -206,7 +206,11 @@ export class TenantInfoManagementComponent implements OnInit {
     this.form.coverImageList = this.coverImages();
 
     this.saving.set(true);
-    this.tenantInfoService.saveCurrent(this.form).subscribe({
+    const tenantId = this.tenantInfo()?.tenantId;
+    const save$ = tenantId
+      ? this.tenantInfoService.saveByTenantId(tenantId, this.form)
+      : this.tenantInfoService.saveCurrent(this.form);
+    save$.subscribe({
       next: () => {
         this.saving.set(false);
         this.message.success('租户信息已保存');

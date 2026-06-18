@@ -357,6 +357,154 @@
     </section>
   }
 
+  <!-- ═══════ 公开浏览：课程/资源/微专业 (游客可见) ═══════ -->
+  <section class="section browse-section">
+    <div class="browse-bg-decor"></div>
+    <div class="section__inner">
+      <div class="section__head">
+        <div class="section__head-left">
+          <span class="section__accent section__accent--blue"></span>
+          <div>
+            <h2>全部资源</h2>
+            <p>浏览所有资源库的课程、资源与微专业</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 切换 + 筛选器 -->
+      <div class="browse-toolbar">
+        <div class="browse-tabs">
+          <button class="browse-tab" [class.active]="activeTab() === 'courses'" (click)="setTab('courses')">
+            📘 课程 <span class="browse-tab__count">{{ browseData()?.totalCourseCount || 0 }}</span>
+          </button>
+          <button class="browse-tab" [class.active]="activeTab() === 'resources'" (click)="setTab('resources')">
+            📂 资源 <span class="browse-tab__count">{{ browseData()?.totalResourceCount || 0 }}</span>
+          </button>
+          <button class="browse-tab" [class.active]="activeTab() === 'microMajors'" (click)="setTab('microMajors')">
+            🏆 微专业 <span class="browse-tab__count">{{ browseData()?.totalMicroMajorCount || 0 }}</span>
+          </button>
+        </div>
+        <div class="browse-filters">
+          <nz-select
+            class="browse-filter"
+            [(ngModel)]="filterTenantId"
+            (ngModelChange)="onFilterChange()"
+            nzPlaceHolder="全部租户"
+            nzAllowClear
+            nzSize="small"
+          >
+            @for (t of browseTenants(); track t.id) {
+              <nz-option [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
+            }
+          </nz-select>
+          @if (activeTab() === 'courses') {
+            <nz-select
+              class="browse-filter"
+              [(ngModel)]="filterMajorId"
+              (ngModelChange)="onFilterChange()"
+              nzPlaceHolder="全部专业"
+              nzAllowClear
+              nzSize="small"
+            >
+              @for (m of browseMajors(); track m.id) {
+                <nz-option [nzValue]="m.id" [nzLabel]="m.name"></nz-option>
+              }
+            </nz-select>
+          }
+          <input
+            class="browse-search"
+            nz-input
+            [(ngModel)]="filterSearch"
+            (keyup.enter)="onFilterChange()"
+            placeholder="搜索…"
+            nzSize="small"
+          />
+        </div>
+      </div>
+
+      <!-- Tab content -->
+      @if (activeTab() === 'courses') {
+        <div class="course-grid">
+          @for (c of browseCourses(); track c.id; let i = $index) {
+            <a class="course-card" [routerLink]="['/student/courses', c.id]" [style.--cover-color]="['#1a5fe0','#0ea5e9','#0891b2','#16a34a','#7c3aed','#d97706'][i % 6]">
+              <div class="course-card__cover">
+                @if (c.coverImageUrl) {
+                  <img [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" class="course-card__cover-img" />
+                } @else {
+                  <div class="course-card__cover-bg"></div>
+                  <span class="course-card__emoji">{{ ['📖','📊','🎯','💡','📝','🌐'][i % 6] }}</span>
+                }
+              </div>
+              <div class="course-card__body">
+                <div class="course-card__tags">
+                  @if (c.tenantName) { <span class="course-card__tag course-card__tag--tenant">{{ c.tenantName }}</span> }
+                  @if (c.majorName) { <span class="course-card__tag course-card__tag--major">{{ c.majorName }}</span> }
+                </div>
+                <h4>{{ c.title }}</h4>
+                <div class="course-card__meta">
+                  @if (c.teacherName) {
+                    <span class="course-card__teacher">{{ c.teacherName }}</span>
+                  }
+                  <span class="course-card__students">👥 {{ c.studentCount || 0 }}</span>
+                </div>
+              </div>
+            </a>
+          } @empty {
+            <div class="browse-empty">暂无课程数据</div>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'resources') {
+        <div class="material-grid">
+          @for (r of browseResources(); track r.id) {
+            <div class="material-card">
+              @if (r.tenantName) {
+                <span class="material-card__tag">{{ r.tenantName }}</span>
+              }
+              <div class="material-card__cover">
+                <span class="material-card__cover-icon">{{ r.fileExtension === '.mp4' ? '🎬' : r.fileExtension === '.pdf' ? '📕' : r.fileExtension === '.pptx' ? '📊' : '📄' }}</span>
+              </div>
+              <div class="material-card__body">
+                <h5>{{ r.name }}</h5>
+                <div class="material-card__body-bottom">
+                  <span class="material-card__meta">⬇ {{ r.downloadCount || 0 }}</span>
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <div class="browse-empty">暂无资源数据</div>
+          }
+        </div>
+      }
+
+      @if (activeTab() === 'microMajors') {
+        <div class="mm-grid">
+          @for (m of browseMicroMajors(); track m.id; let i = $index) {
+            <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [style.--mm-color]="['#1a5fe0','#0ea5e9','#0891b2','#16a34a'][i % 4]">
+              <div class="mm-card__cover">
+                @if (m.coverImageUrl) {
+                  <img [src]="m.coverImageUrl" [alt]="m.title" loading="lazy" />
+                } @else {
+                  <div class="mm-card__cover-fallback">📚</div>
+                }
+                @if (m.tenantName) {
+                  <span class="mm-card__tag">{{ m.tenantName }}</span>
+                }
+              </div>
+              <div class="mm-card__body">
+                <h4>{{ m.title }}</h4>
+                <p>{{ m.courseCount || 0 }} 门课程</p>
+              </div>
+            </a>
+          } @empty {
+            <div class="browse-empty">暂无微专业数据</div>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
   <!-- FOOTER -->
   <footer class="footer">
     <div class="footer__inner">

@@ -80,3 +80,53 @@ export interface TenantResourceSummaryDto {
   resourceCount?: number;
   microMajorCount?: number;
 }
+
+// ── Public Browse DTOs ──
+
+export interface PublicBrowseDto {
+  courses?: PublicCourseDto[];
+  resources?: PublicResourceDto[];
+  microMajors?: PublicMicroMajorDto[];
+  tenants?: PublicBrowseFilterOption[];
+  majors?: PublicBrowseFilterOption[];
+  totalCourseCount?: number;
+  totalResourceCount?: number;
+  totalMicroMajorCount?: number;
+}
+
+export interface PublicCourseDto {
+  id?: string;
+  title?: string;
+  coverImageUrl?: string | null;
+  teacherName?: string | null;
+  majorName?: string | null;
+  majorId?: string | null;
+  tenantName?: string | null;
+  tenantId?: string;
+  studentCount?: number;
+  description?: string | null;
+}
+
+export interface PublicResourceDto {
+  id?: string;
+  name?: string;
+  fileExtension?: string | null;
+  downloadCount?: number;
+  coverUrl?: string | null;
+  tenantName?: string | null;
+  tenantId?: string;
+}
+
+export interface PublicMicroMajorDto {
+  id?: string;
+  title?: string;
+  coverImageUrl?: string | null;
+  courseCount?: number;
+  tenantName?: string | null;
+  tenantId?: string;
+}
+
+export interface PublicBrowseFilterOption {
+  id?: string;
+  name?: string;
+}

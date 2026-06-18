@@ -203,8 +203,27 @@ $card-radius: 14px;
 
 // ── Intro ──
 .intro-section {
-  background: #fff;
+  background: linear-gradient(135deg, #f8fafd 0%, #eef3fa 50%, #f5f7fc 100%);
   border-bottom: 1px solid $c-border;
+  position: relative;
+  overflow: hidden;
+}
+.intro-bg-decor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60%;
+  height: 100%;
+  background-size: cover;
+  background-position: center right;
+  opacity: 0.15;
+  pointer-events: none;
+  mask-image: linear-gradient(to left, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0) 90%);
+  -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0) 90%);
+}
+.intro-section .section-inner {
+  position: relative;
+  z-index: 1;
 }
 .intro-body {
   display: grid;

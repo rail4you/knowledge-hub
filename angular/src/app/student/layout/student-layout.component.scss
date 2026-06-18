@@ -111,6 +111,26 @@
   }
 }
 
+.brand-bar__login {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: ds.$student-primary;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ds.$student-primary-dark;
+  }
+}
+
 .brand-bar__user {
   display: inline-flex;
   align-items: center;

@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { AuthService } from '@abp/ng.core';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -66,6 +67,7 @@ export class StudentCourseDetailComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly chapterService = inject(ChapterService);
   private readonly learningService = inject(LearningService);
+  private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
 
   readonly loading = signal(true);
@@ -133,6 +135,7 @@ export class StudentCourseDetailComponent implements OnInit {
   }
 
   loadProgress(courseId: string) {
+    if (!this.authService.isAuthenticated) return;
     this.learningService.getProgress(courseId).subscribe({
       next: data => this.progress.set(data),
       error: () => this.progress.set(null),
@@ -140,6 +143,7 @@ export class StudentCourseDetailComponent implements OnInit {
   }
 
   loadMastery(courseId: string) {
+    if (!this.authService.isAuthenticated) return;
     this.learningService.getKnowledgeMastery(courseId).subscribe({
       next: data => this.mastery.set(data || []),
       error: () => this.mastery.set([]),
@@ -212,6 +216,7 @@ export class StudentCourseDetailComponent implements OnInit {
   }
 
   enrollCourse() {
+    if (!this.authService.isAuthenticated) return;
     const c = this.course();
     if (!c?.id || this.enrolling()) return;
     this.enrolling.set(true);

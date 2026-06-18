@@ -83,7 +83,12 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
         var tenantId = CurrentTenant.Id;
         if (tenantId == null)
         {
-            throw new UserFriendlyException("未找到租户信息，无法保存。");
+            // 如果没有租户上下文，回退到第一个租户（与 GetCurrentAsync 一致）
+            var tenants = await _tenantRepository.GetListAsync();
+            var first = tenants.FirstOrDefault();
+            if (first == null)
+                throw new UserFriendlyException("系统中没有租户，无法保存。");
+            tenantId = first.Id;
         }
         return await SaveTenantInfoInternalAsync(tenantId.Value, input);
     }

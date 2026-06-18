@@ -31,35 +31,42 @@
           <span class="brand-bar__back-text">主站首页</span>
         </a>
 
-        <div class="brand-bar__user" nz-dropdown [nzDropdownMenu]="userMenu" nzTrigger="click">
-          <span class="user-avatar" [style.background]="avatarGradient()">
-            {{ userInitial }}
-          </span>
-          <span class="user-meta">
-            <span class="user-meta__name">你好，{{ userName() }}</span>
-            <span class="user-meta__role">{{ userRoleLabel() }}</span>
-          </span>
-          <span nz-icon nzType="caret-down" class="user-meta__caret"></span>
-        </div>
+        @if (isLoggedIn) {
+          <div class="brand-bar__user" nz-dropdown [nzDropdownMenu]="userMenu" nzTrigger="click">
+            <span class="user-avatar" [style.background]="avatarGradient()">
+              {{ userInitial }}
+            </span>
+            <span class="user-meta">
+              <span class="user-meta__name">你好，{{ userName() }}</span>
+              <span class="user-meta__role">{{ userRoleLabel() }}</span>
+            </span>
+            <span nz-icon nzType="caret-down" class="user-meta__caret"></span>
+          </div>
 
-        <nz-dropdown-menu #userMenu="nzDropdownMenu">
-          <ul nz-menu class="user-menu">
-            <li nz-menu-item class="user-menu__info">
-              <div class="user-menu__avatar" [style.background]="avatarGradient()">
-                {{ userInitial }}
-              </div>
-              <div class="user-menu__detail">
-                <div class="user-menu__name">{{ userName() }}</div>
-                <div class="user-menu__role">{{ userRoleLabel() }} · 已登录</div>
-              </div>
-            </li>
-            <li nz-menu-divider></li>
-            <li nz-menu-item (click)="logout()">
-              <span nz-icon nzType="logout" nzTheme="outline"></span>
-              <span>退出登录</span>
-            </li>
-          </ul>
-        </nz-dropdown-menu>
+          <nz-dropdown-menu #userMenu="nzDropdownMenu">
+            <ul nz-menu class="user-menu">
+              <li nz-menu-item class="user-menu__info">
+                <div class="user-menu__avatar" [style.background]="avatarGradient()">
+                  {{ userInitial }}
+                </div>
+                <div class="user-menu__detail">
+                  <div class="user-menu__name">{{ userName() }}</div>
+                  <div class="user-menu__role">{{ userRoleLabel() }} · 已登录</div>
+                </div>
+              </li>
+              <li nz-menu-divider></li>
+              <li nz-menu-item (click)="logout()">
+                <span nz-icon nzType="logout" nzTheme="outline"></span>
+                <span>退出登录</span>
+              </li>
+            </ul>
+          </nz-dropdown-menu>
+        } @else {
+          <button class="brand-bar__login" (click)="login()">
+            <span nz-icon nzType="user" nzTheme="outline"></span>
+            <span>登录</span>
+          </button>
+        }
       </div>
     </div>
   </header>

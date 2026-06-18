@@ -10,6 +10,11 @@ public interface IPortalAppService : IApplicationService
     Task<PortalHomeDataDto> GetHomeDataAsync(Guid tenantId);
 
     /// <summary>
+    /// 获取所有租户的公开浏览数据（游客可见）：课程、资源、微专业 + 租户/专业筛选列表
+    /// </summary>
+    Task<PublicBrowseDto> GetPublicBrowseAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount);
+
+    /// <summary>
     /// 获取所有租户的资源库摘要列表（公开访问）
     /// </summary>
     Task<List<TenantResourceSummaryDto>> GetPublicTenantListAsync();
@@ -116,4 +121,62 @@ public class NewsBriefDto
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public DateTime? PublishedAt { get; set; }
+}
+
+// ── Public Browse DTOs ──
+
+/// <summary>
+/// 公开浏览数据：所有租户的课程/资源/微专业 + 筛选器选项
+/// </summary>
+public class PublicBrowseDto
+{
+    public List<PublicCourseDto> Courses { get; set; } = new();
+    public List<PublicResourceDto> Resources { get; set; } = new();
+    public List<PublicMicroMajorDto> MicroMajors { get; set; } = new();
+    public List<PublicBrowseFilterOption> Tenants { get; set; } = new();
+    public List<PublicBrowseFilterOption> Majors { get; set; } = new();
+    public long TotalCourseCount { get; set; }
+    public long TotalResourceCount { get; set; }
+    public long TotalMicroMajorCount { get; set; }
+}
+
+public class PublicCourseDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? CoverImageUrl { get; set; }
+    public string? TeacherName { get; set; }
+    public string? MajorName { get; set; }
+    public Guid? MajorId { get; set; }
+    public string? TenantName { get; set; }
+    public Guid TenantId { get; set; }
+    public int StudentCount { get; set; }
+    public string? Description { get; set; }
+}
+
+public class PublicResourceDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? FileExtension { get; set; }
+    public int DownloadCount { get; set; }
+    public string? CoverUrl { get; set; }
+    public string? TenantName { get; set; }
+    public Guid TenantId { get; set; }
+}
+
+public class PublicMicroMajorDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? CoverImageUrl { get; set; }
+    public int CourseCount { get; set; }
+    public string? TenantName { get; set; }
+    public Guid TenantId { get; set; }
+}
+
+public class PublicBrowseFilterOption
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
 }

@@ -195,6 +195,104 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     }
 
     /// <summary>
+    /// 公开浏览数据：所有租户的课程/资源/微专业，游客可见，支持筛选
+    /// </summary>
+    [AllowAnonymous]
+    public async Task<PublicBrowseDto> GetPublicBrowseAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount)
+    {
+        var tenants = await _tenantRepository.GetListAsync();
+        var tenantNames = tenants.ToDictionary(t => t.Id, t => t.Name);
+
+        // ── 课程 ──
+        var courseQuery = await _courseRepository.GetQueryableAsync();
+        var coursesFiltered = courseQuery.AsEnumerable();
+        if (tenantId.HasValue)
+            coursesFiltered = coursesFiltered.Where(c => c.TenantId == tenantId.Value);
+        if (majorId.HasValue)
+            coursesFiltered = coursesFiltered.Where(c => c.MajorId == majorId.Value);
+        if (!string.IsNullOrWhiteSpace(search))
+            coursesFiltered = coursesFiltered.Where(c => (c.Title ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
+                || (c.Description ?? "").Contains(search, StringComparison.OrdinalIgnoreCase));
+        var courses = coursesFiltered
+            .OrderByDescending(c => c.CreationTime)
+            .Skip(skipCount)
+            .Take(maxResultCount)
+            .Select(c => new PublicCourseDto
+            {
+                Id = c.Id,
+                Title = c.Title,
+                CoverImageUrl = c.CoverImageUrl,
+                MajorId = c.MajorId,
+                TenantId = c.TenantId ?? Guid.Empty,
+                TenantName = c.TenantId.HasValue && tenantNames.ContainsKey(c.TenantId.Value) ? tenantNames[c.TenantId.Value] : null,
+                StudentCount = 0,
+            }).ToList();
+        var totalCourseCount = coursesFiltered.LongCount();
+
+        // ── 资源 ──
+        var resourceQuery = await _resourceRepository.GetQueryableAsync();
+        var resourcesFiltered = resourceQuery.AsEnumerable();
+        if (tenantId.HasValue)
+            resourcesFiltered = resourcesFiltered.Where(r => r.TenantId == tenantId.Value);
+        if (!string.IsNullOrWhiteSpace(search))
+            resourcesFiltered = resourcesFiltered.Where(r => (r.Name ?? "").Contains(search, StringComparison.OrdinalIgnoreCase));
+        var resources = resourcesFiltered
+            .OrderByDescending(r => r.CreationTime)
+            .Skip(skipCount)
+            .Take(maxResultCount)
+            .Select(r => new PublicResourceDto
+            {
+                Id = r.Id,
+                Name = r.Name,
+                FileExtension = r.FileExtension,
+                DownloadCount = r.DownloadCount,
+                TenantId = r.TenantId ?? Guid.Empty,
+                TenantName = r.TenantId.HasValue && tenantNames.ContainsKey(r.TenantId.Value) ? tenantNames[r.TenantId.Value] : null,
+            }).ToList();
+        var totalResourceCount = resourcesFiltered.LongCount();
+
+        // ── 微专业 ──
+        var mmQuery = await _microMajorRepository.GetQueryableAsync();
+        var mmsFiltered = mmQuery.Where(m => m.Status == MicroMajorStatus.Published).AsEnumerable();
+        if (tenantId.HasValue)
+            mmsFiltered = mmsFiltered.Where(m => m.TenantId == tenantId.Value);
+        if (!string.IsNullOrWhiteSpace(search))
+            mmsFiltered = mmsFiltered.Where(m => (m.Title ?? "").Contains(search, StringComparison.OrdinalIgnoreCase));
+        var microMajors = mmsFiltered
+            .OrderByDescending(m => m.CreationTime)
+            .Skip(skipCount)
+            .Take(maxResultCount)
+            .Select(m => new PublicMicroMajorDto
+            {
+                Id = m.Id,
+                Title = m.Title,
+                CoverImageUrl = m.CoverImageUrl,
+                CourseCount = 0,
+                TenantId = m.TenantId ?? Guid.Empty,
+                TenantName = m.TenantId.HasValue && tenantNames.ContainsKey(m.TenantId.Value) ? tenantNames[m.TenantId.Value] : null,
+            }).ToList();
+        var totalMicroMajorCount = mmsFiltered.LongCount();
+
+        // ── 筛选选项 ──
+        var tenantOptions = tenants.Select(t => new PublicBrowseFilterOption { Id = t.Id, Name = t.Name }).ToList();
+        var majorQuery = await _majorRepository.GetQueryableAsync();
+        var majorOptions = majorQuery.AsEnumerable()
+            .Select(m => new PublicBrowseFilterOption { Id = m.Id, Name = m.Name }).ToList();
+
+        return new PublicBrowseDto
+        {
+            Courses = courses,
+            Resources = resources,
+            MicroMajors = microMajors,
+            Tenants = tenantOptions,
+            Majors = majorOptions,
+            TotalCourseCount = totalCourseCount,
+            TotalResourceCount = totalResourceCount,
+            TotalMicroMajorCount = totalMicroMajorCount,
+        };
+    }
+
+    /// <summary>
     /// 获取所有租户的资源库摘要列表（公开访问）
     /// 用于主页展示所有租户，包含 TenantInfo 的扩展信息
     /// </summary>

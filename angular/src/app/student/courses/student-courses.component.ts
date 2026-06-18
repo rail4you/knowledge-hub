@@ -8,6 +8,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { AuthService } from '@abp/ng.core';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
@@ -74,6 +75,7 @@ interface HotCourse {
 export class StudentCoursesComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
   private readonly learningService = inject(LearningService);
+  private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
 
@@ -232,6 +234,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   }
 
   loadMyCourses(): void {
+    if (!this.authService.isAuthenticated) return;
     this.learningService.getMyCourses().subscribe({
       next: list => {
         this.myCourses.set(list || []);
@@ -244,6 +247,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   }
 
   loadDashboard(): void {
+    if (!this.authService.isAuthenticated) return;
     this.learningService.getDashboard().subscribe({
       next: data => {
         this.dashboard.set(data);
