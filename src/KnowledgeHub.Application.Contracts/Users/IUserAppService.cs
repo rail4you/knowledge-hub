@@ -16,4 +16,14 @@ public interface IUserAppService : IApplicationService
     Task UpdateAsync(Guid id, UpdateUserDto input);
 
     Task DeleteAsync(Guid id);
+
+    /// <summary>
+    /// 当前登录用户的个人资料（供学生端修改联系方式）
+    /// </summary>
+    Task<MyProfileDto> GetMyProfileAsync();
+
+    /// <summary>
+    /// 当前登录用户更新联系方式（仅允许改 Email/Phone）
+    /// </summary>
+    Task UpdateMyProfileAsync(UpdateMyProfileDto input);
 }
