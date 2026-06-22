@@ -643,7 +643,9 @@
         <nz-form-label>专业</nz-form-label>
         <nz-form-control>
           <nz-select
-            formControlName="majorId"
+            [ngModel]="selectedMajorId()"
+            (ngModelChange)="selectedMajorId.set($event); loadResources()"
+            name="filterMajorId"
             nzPlaceHolder="请选择专业"
             nzAllowClear
           >

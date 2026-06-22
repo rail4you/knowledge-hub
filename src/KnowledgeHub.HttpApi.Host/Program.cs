@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
@@ -21,6 +24,19 @@ public class Program
         {
             Log.Information("Starting KnowledgeHub.HttpApi.Host.");
             var builder = WebApplication.CreateBuilder(args);
+
+            // 放宽上传文件大小限制（修复 25MB 资源上传太小的 bug）
+            // Kestrel 默认 MaxRequestBodySize = 30MB，无法上传教学视频/大型 PPT 等
+            builder.WebHost.ConfigureKestrel((context, options) =>
+            {
+                options.Limits.MaxRequestBodySize = 500L * 1024 * 1024; // 500MB
+            });
+            builder.Services.Configure<FormOptions>(options =>
+            {
+                options.MultipartBodyLengthLimit = 500L * 1024 * 1024; // 500MB
+                options.ValueLengthLimit = int.MaxValue;
+                options.MultipartHeadersLengthLimit = int.MaxValue;
+            });
             Log.Information("Step 1: WebApplication.CreateBuilder done");
             builder.Host
                 .AddAppSettingsSecretsJson()

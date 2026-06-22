@@ -116,6 +116,7 @@ export class ResourceComponent implements OnInit {
   // Filter state
   timeFilter = signal<string>('all');
   statusFilter = signal<number | null>(null);
+  selectedMajorId = signal<string | null>(null);
 
   // Drawer Tab state
   drawerTabIndex = signal<number>(0);
@@ -239,6 +240,7 @@ export class ResourceComponent implements OnInit {
       skipCount: (this.pageIndex - 1) * this.pageSize,
       categoryId: this.selectedCategoryId(),
       status: this.statusFilter(),
+      majorId: this.selectedMajorId(),
       startDate: dateRange.startDate,
       endDate: dateRange.endDate
     }).subscribe((response) => {
@@ -996,10 +998,17 @@ export class ResourceComponent implements OnInit {
     }
   }
 
+  // 上传文件大小上限（500MB），与后端 Kestrel 配置保持一致
+  readonly MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
+
   beforeUploadFile = (file: any): boolean => {
     const fileName = file.name || '';
     if (!this.isFileTypeAllowed(fileName)) {
       this.message.error(this.getResourceTypeHint());
+      return false;
+    }
+    if (file.size && file.size > this.MAX_FILE_SIZE_BYTES) {
+      this.message.error(`文件大小超过 500MB 上限（当前 ${this.formatFileSize(file.size)}），请压缩后重试。`);
       return false;
     }
     // Extract native File object from NzUploadFile
