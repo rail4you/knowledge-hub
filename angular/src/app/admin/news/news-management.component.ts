@@ -363,6 +363,32 @@ export class NewsManagementComponent implements OnInit {
     };
   }
 
+  /** 下载导入模板（P1-13 修复） */
+  downloadingTemplate = false;
+  downloadTemplate(): void {
+    if (this.downloadingTemplate) return;
+    this.downloadingTemplate = true;
+    this.newsService.downloadImportTemplate().subscribe({
+      next: (blob) => {
+        this.downloadingTemplate = false;
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const defaultName = `资讯导入模板_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.download = defaultName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        this.message.success('模板下载已开始');
+      },
+      error: (err) => {
+        this.downloadingTemplate = false;
+        this.message.error('模板下载失败：' + (err?.error?.error?.message || err?.message || '未知错误'));
+      },
+    });
+  }
+
   // ===== Cover image upload handlers =====
 
   beforeCoverUpload = (file: NzUploadFile): boolean => {

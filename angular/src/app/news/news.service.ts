@@ -290,6 +290,15 @@ export class NewsService {
       body: excelFile,
     }, { apiName: this.apiName });
   }
+
+  /** 下载资讯导入 Excel 模板（P1-13 修复） */
+  downloadImportTemplate(): Observable<Blob> {
+    return this.restService.request<any, Blob>({
+      method: 'GET',
+      url: '/api/app/news-import/download-template',
+      responseType: 'blob',
+    }, { apiName: this.apiName });
+  }
 }
 
 export interface NewsImportResultDto {

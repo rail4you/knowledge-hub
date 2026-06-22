@@ -33,6 +33,10 @@
     <nz-tab nzTitle="资讯内容">
       <nz-card [nzExtra]="articleExtra">
         <ng-template #articleExtra>
+          <button nz-button (click)="downloadTemplate()" [nzLoading]="downloadingTemplate" style="margin-right: 8px;">
+            <span nz-icon nzType="download" nzTheme="outline"></span>
+            下载导入模板
+          </button>
           <button nz-button (click)="importModalVisible = true" style="margin-right: 8px;">
             <span nz-icon nzType="upload" nzTheme="outline"></span>
             批量导入
