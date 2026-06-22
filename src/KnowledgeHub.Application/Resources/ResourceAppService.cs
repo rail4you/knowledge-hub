@@ -19,8 +19,10 @@ using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.BackgroundJobs;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.ObjectMapping;
 using KnowledgeHub.Permissions;
@@ -49,6 +51,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IDocumentIndexRepository DocumentIndexRepository { get; }
     protected IRepository<ResourcePageIndex, Guid> PageIndexRepository { get; }
     protected IRepository<Major, Guid> MajorRepository { get; }
+    protected IRepository<IdentityUser, Guid> UserRepository { get; }
 
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
@@ -69,7 +72,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IMeiliSearchService meiliSearchService,
         IDocumentIndexRepository documentIndexRepository,
         IRepository<ResourcePageIndex, Guid> pageIndexRepository,
-        IRepository<Major, Guid> majorRepository)
+        IRepository<Major, Guid> majorRepository,
+        IRepository<IdentityUser, Guid> userRepository)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -90,6 +94,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         DocumentIndexRepository = documentIndexRepository;
         PageIndexRepository = pageIndexRepository;
         MajorRepository = majorRepository;
+        UserRepository = userRepository;
     }
 
     [AllowAnonymous]
@@ -137,6 +142,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
         EnsureFileMetadata(dtos);
+        await FillCreatorNamesAsync(dtos);
         return new PagedResultDto<ResourceDto>(
             totalCount,
             dtos
@@ -203,6 +209,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
         EnsureFileMetadata(dtos);
         await FillMajorNamesAsync(dtos);
+        await FillCreatorNamesAsync(dtos);
 
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
@@ -242,6 +249,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
         EnsureFileMetadata(dtos);
+        await FillCreatorNamesAsync(dtos);
         return new PagedResultDto<ResourceDto>(
             count,
             dtos
@@ -909,6 +917,50 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         var major = await MajorRepository.FindAsync(majorId.Value);
         return major?.Name;
+    }
+
+    /// <summary>
+    /// P1-1 修复：根据 CreatorId 批量补 CreatorName（列表展示创建人）
+    /// </summary>
+    private async Task FillCreatorNamesAsync(List<ResourceDto> dtos)
+    {
+        var ids = dtos
+            .Where(x => x.CreatorId != Guid.Empty)
+            .Select(x => x.CreatorId)
+            .Distinct()
+            .ToList();
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        var query = await UserRepository.GetQueryableAsync();
+        var users = await AsyncExecuter.ToListAsync(
+            query.Where(u => ids.Contains(u.Id)));
+
+        var userMap = users.ToDictionary(u => u.Id, u => ResolveUserDisplayName(u));
+        foreach (var dto in dtos)
+        {
+            if (dto.CreatorId != Guid.Empty && userMap.TryGetValue(dto.CreatorId, out var name))
+            {
+                dto.CreatorName = name;
+            }
+        }
+    }
+
+    private static string ResolveUserDisplayName(IdentityUser user)
+    {
+        // 与 EmploymentAppService.GetUserDisplayName 同款策略：
+        // Name + Surname → ExtraProperties["FullName"] → UserName/Email/Id
+        var displayName = string.Join(" ", new[] { user.Name, user.Surname }
+            .Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+        if (!string.IsNullOrWhiteSpace(displayName)) return displayName;
+
+        var extraName = user.GetProperty<string>("FullName")
+            ?? user.GetProperty<string>("RealName");
+        if (!string.IsNullOrWhiteSpace(extraName)) return extraName!;
+
+        return user.UserName ?? user.Email ?? user.Id.ToString("N");
     }
 
     private async Task FillMajorNamesAsync(List<ResourceDto> dtos)
