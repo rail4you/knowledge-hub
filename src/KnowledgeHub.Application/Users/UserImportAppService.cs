@@ -214,7 +214,13 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
             GuidGenerator.Create(),
             dto.UserName,
             dto.Email ?? $"{dto.UserName}@default.com"
-        );
+        )
+        {
+            // P1-7 修复：把导入表里的"姓名"写入 ABP IdentityUser.Name，
+            // 否则就业/指导/投递等列表 GetUserDisplayName() 退化到 UserName/邮箱/GUID，
+            // 教师/HR 看到的学生列全是 ID 截断，没有姓名。
+            Name = dto.Name
+        };
 
         user.SetPhoneNumber(dto.PhoneNumber, false);
 

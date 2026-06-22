@@ -1474,8 +1474,23 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
 
     private static string GetUserDisplayName(IdentityUser user)
     {
+        // 优先：ABP 标准 Name + Surname
         var displayName = string.Join(" ", new[] { user.Name, user.Surname }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
-        return string.IsNullOrWhiteSpace(displayName) ? user.UserName ?? user.Email ?? user.Id.ToString("N") : displayName;
+
+        // 兜底 1：ExtraProperties 中的 FullName / RealName（兼容历史导入数据）
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            var extraName = user.GetProperty<string>("FullName")
+                ?? user.GetProperty<string>("RealName");
+            displayName = extraName?.Trim() ?? string.Empty;
+        }
+
+        // 兜底 2：UserName / Email / Id
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return user.UserName ?? user.Email ?? user.Id.ToString("N");
+        }
+        return displayName;
     }
 
     private static EmploymentJobStatus ResolveCreateOrUpdateStatus(EmploymentJobStatus inputStatus, bool canReview)
