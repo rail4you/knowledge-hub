@@ -8,6 +8,7 @@ using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Identity;
+using Volo.Abp.PermissionManagement;
 using Volo.Abp.Uow;
 
 namespace KnowledgeHub.Users;
@@ -21,6 +22,7 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
     private readonly IdentityUserManager _identityUserManager;
     private readonly IIdentityRoleRepository _identityRoleRepository;
     private readonly IMajorRepository _majorRepository;
+    private readonly IPermissionManager _permissionManager;
 
     private static readonly Dictionary<string, UserRoleType> SheetRoleMapping = new()
     {
@@ -44,12 +46,14 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         IIdentityUserRepository identityUserRepository,
         IdentityUserManager identityUserManager,
         IIdentityRoleRepository identityRoleRepository,
-        IMajorRepository majorRepository)
+        IMajorRepository majorRepository,
+        IPermissionManager permissionManager)
     {
         _identityUserRepository = identityUserRepository;
         _identityUserManager = identityUserManager;
         _identityRoleRepository = identityRoleRepository;
         _majorRepository = majorRepository;
+        _permissionManager = permissionManager;
     }
 
     [UnitOfWork]
@@ -320,5 +324,60 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
             UserRoleType.EnterpriseUser => "EnterpriseUser",
             _ => "User"
         };
+    }
+
+    // P1-2：角色 → 中文名 / 是否全局
+    private static readonly Dictionary<string, (string DisplayName, bool IsGlobal)> RoleMeta = new()
+    {
+        ["LeagueAdmin"] = ("联盟管理员", true),
+        ["SchoolAdmin"] = ("院校管理员", false),
+        ["Teacher"] = ("教师", false),
+        ["Student"] = ("学生", false),
+        ["EnterpriseUser"] = ("企业用户", true),
+        ["admin"] = ("平台管理员", true),
+    };
+
+    // P1-2：用于在前端突出显示「LeagueAdmin 独有」权限
+    private static readonly HashSet<string> LeagueExclusivePermissions = new()
+    {
+        KnowledgeHubPermissions.Resources.LeagueAudit,
+        KnowledgeHubPermissions.Resources.PhysicalDelete,
+        KnowledgeHubPermissions.RecruitmentLive.Manage,
+    };
+
+    /// <summary>
+    /// P1-2：返回所有预置角色的「权限概要」，让管理员确认 SchoolAdmin 与 LeagueAdmin
+    /// 实际差异。统计走 IPermissionManager.GetAllAsync → GrantedPermissions，
+    /// 不返回权限列表本身（避免泄漏内部命名），仅返回数量 + 关键权限标记。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Users.Default)]
+    public async Task<List<RolePermissionSummaryDto>> GetRolePermissionSummaryAsync()
+    {
+        var result = new List<RolePermissionSummaryDto>();
+        foreach (var (roleName, (displayName, isGlobal)) in RoleMeta)
+        {
+            // IPermissionManager.GetAllAsync("R", roleName) 在 ABP 新版返回
+            // List<PermissionWithGrantedProviders>，每条记录代表一个已声明的权限；
+            // 若该权限被授予过指定 provider，则 Providers 列表会非空。
+            var allPerms = await _permissionManager.GetAllAsync("R", roleName);
+            var granted = allPerms
+                .Where(p => p.Providers != null && p.Providers.Count > 0)
+                .ToList();
+
+            var highlights = granted
+                .Where(p => LeagueExclusivePermissions.Contains(p.Name))
+                .Select(p => p.Name)
+                .ToList();
+
+            result.Add(new RolePermissionSummaryDto
+            {
+                RoleName = roleName,
+                DisplayName = displayName,
+                IsGlobal = isGlobal,
+                GrantedPermissionCount = granted.Count,
+                HighlightPermissions = highlights,
+            });
+        }
+        return result;
     }
 }
