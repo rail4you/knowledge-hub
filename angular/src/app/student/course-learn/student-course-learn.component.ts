@@ -167,8 +167,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         this.chapters.set(list);
         const flat = this.flattenChapters(list);
         this.flatChapters.set(flat);
-        // 默认展开所有节点
-        const expanded = new Set(flat.map(c => c.id));
+        // 默认只展开顶级章节（depth = 0），子章节折叠，避免长课程章节列表撑爆侧边栏
+        const expanded = new Set(flat.filter(c => c.depth === 0).map(c => c.id));
         this.expandedNodes.set(expanded);
         // 选中目标章节
         if (preselectId && flat.find(c => c.id === preselectId)) {
@@ -223,12 +223,48 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.activeTab.set('resources');
     this.loadChapterContent(id);
     this.loadChapterRecords(id);
+    // 选中子章节时，自动展开其所有父级（保证侧边栏可见）
+    this.expandAncestors(id);
     // 同步 URL
     const course = this.course();
     if (course?.id) {
       this.router.navigate(['/student/courses', course.id, 'learn', id], { replaceUrl: true });
     }
     this.recordChapterProgress();
+  }
+
+  /** 判断某章节是否拥有子章节（用于显示折叠箭头） */
+  hasChildren(id: string): boolean {
+    return this.flatChapters().some(c => c.parentId === id);
+  }
+
+  /** 章节项点击：有子节点的父级，单独点击 caret 切换折叠；行内点击仍可选中 */
+  onChapterItemClick(c: FlatChapter): void {
+    this.selectChapter(c.id);
+  }
+
+  /** 切换折叠状态 */
+  toggleChapter(event: MouseEvent, id: string): void {
+    event.stopPropagation();
+    const set = new Set(this.expandedNodes());
+    if (set.has(id)) {
+      set.delete(id);
+    } else {
+      set.add(id);
+    }
+    this.expandedNodes.set(set);
+  }
+
+  /** 展开某节点的所有祖先 */
+  private expandAncestors(id: string): void {
+    const map = new Map(this.flatChapters().map(c => [c.id, c]));
+    const set = new Set(this.expandedNodes());
+    let cur = map.get(id);
+    while (cur?.parentId) {
+      set.add(cur.parentId);
+      cur = map.get(cur.parentId);
+    }
+    this.expandedNodes.set(set);
   }
 
   private recordChapterProgress(force = false) {

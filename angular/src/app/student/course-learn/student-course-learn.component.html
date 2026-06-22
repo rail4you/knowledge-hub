@@ -47,20 +47,34 @@
           } @else {
             <div class="chapter-tree">
               @for (c of flatChapters(); track trackChapter($index, c)) {
-                <button
-                  class="chapter-item"
-                  [class.is-active]="currentChapterId() === c.id"
-                  [style.padding-left.px]="c.depth * 14 + 12"
-                  (click)="selectChapter(c.id)"
-                >
-                  <span class="chapter-item__icon" nz-icon
-                    [nzType]="c.depth === 0 ? 'folder' : 'file-text'"
-                    nzTheme="outline"></span>
-                  <span class="chapter-item__title">{{ c.title }}</span>
-                  @if (currentChapterId() === c.id) {
-                    <span class="chapter-item__pulse"></span>
-                  }
-                </button>
+                @if (c.depth === 0 || (c.parentId && expandedNodes().has(c.parentId))) {
+                  <button
+                    class="chapter-item"
+                    [class.is-active]="currentChapterId() === c.id"
+                    [class.is-parent]="hasChildren(c.id)"
+                    [style.padding-left.px]="c.depth * 14 + 12"
+                    (click)="onChapterItemClick(c)"
+                  >
+                    @if (hasChildren(c.id)) {
+                      <span
+                        class="chapter-item__caret"
+                        nz-icon
+                        [nzType]="expandedNodes().has(c.id) ? 'caret-down' : 'caret-right'"
+                        nzTheme="outline"
+                        (click)="toggleChapter($event, c.id)"
+                      ></span>
+                    } @else {
+                      <span class="chapter-item__caret chapter-item__caret--placeholder"></span>
+                    }
+                    <span class="chapter-item__icon" nz-icon
+                      [nzType]="c.depth === 0 ? 'folder' : 'file-text'"
+                      nzTheme="outline"></span>
+                    <span class="chapter-item__title">{{ c.title }}</span>
+                    @if (currentChapterId() === c.id) {
+                      <span class="chapter-item__pulse"></span>
+                    }
+                  </button>
+                }
               }
             </div>
           }
