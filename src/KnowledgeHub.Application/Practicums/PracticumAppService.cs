@@ -79,8 +79,13 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
     {
         var entity = await _projectRepository.GetAsync(id);
         var dto = await MapProjectDetailDtoAsync(entity);
-        dto.Tasks = await GetTaskDtosAsync(id);
-        dto.Materials = await GetMaterialDtosAsync(id);
+        // 未报名学生只能浏览项目介绍/任务数/资料数等元信息，
+        // 不返回任务明细和资料下载链接，避免诱导后 403
+        if (dto.IsCurrentUserEnrolled)
+        {
+            dto.Tasks = await GetTaskDtosAsync(id);
+            dto.Materials = await GetMaterialDtosAsync(id);
+        }
         return dto;
     }
 
