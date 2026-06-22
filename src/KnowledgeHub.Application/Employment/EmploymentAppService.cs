@@ -545,9 +545,18 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     [Authorize(KnowledgeHubPermissions.Employment.ScheduleInterview)]
     public async Task<InterviewScheduleDto> ScheduleInterviewAsync(CreateUpdateInterviewScheduleDto input)
     {
-        if (string.IsNullOrWhiteSpace(input.InterviewerName))
+        // P1-8 修复：面试官改为可选 — 同时支持从下拉选 InterviewerId 和自由文本 InterviewerName，
+        // 二者至少有一个即可；如果选了 InterviewerId 但没填 Name，自动用用户显示名补全。
+        var interviewerName = input.InterviewerName?.Trim();
+        if (input.InterviewerId.HasValue && string.IsNullOrWhiteSpace(interviewerName))
         {
-            throw new UserFriendlyException("面试官不能为空。");
+            var interviewer = await _userRepository.GetAsync(input.InterviewerId.Value);
+            interviewerName = ResolveInterviewerName(interviewer);
+        }
+
+        if (string.IsNullOrWhiteSpace(interviewerName))
+        {
+            throw new UserFriendlyException("请选择或填写面试官。");
         }
 
         var application = await GetManageableApplicationAsync(input.ApplicationId);
@@ -556,11 +565,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             application.Id,
             application.JobPostingId,
             application.StudentId,
-            input.InterviewerName.Trim(),
+            interviewerName,
             input.ScheduledAt)
         {
             TenantId = application.TenantId,
             EmployerUserId = CurrentUser.Id,
+            InterviewerId = input.InterviewerId,
             InterviewerPhone = input.InterviewerPhone?.Trim(),
             Location = input.Location?.Trim(),
             MeetingUrl = input.MeetingUrl?.Trim(),
@@ -578,7 +588,14 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     public async Task<InterviewScheduleDto> UpdateInterviewAsync(Guid id, CreateUpdateInterviewScheduleDto input)
     {
         var entity = await GetManageableInterviewAsync(id);
-        entity.InterviewerName = input.InterviewerName.Trim();
+        var interviewerName = input.InterviewerName?.Trim();
+        if (input.InterviewerId.HasValue && string.IsNullOrWhiteSpace(interviewerName))
+        {
+            var interviewer = await _userRepository.GetAsync(input.InterviewerId.Value);
+            interviewerName = ResolveInterviewerName(interviewer);
+        }
+        entity.InterviewerId = input.InterviewerId;
+        entity.InterviewerName = interviewerName ?? string.Empty;
         entity.InterviewerPhone = input.InterviewerPhone?.Trim();
         entity.ScheduledAt = input.ScheduledAt;
         entity.Location = input.Location?.Trim();
@@ -1195,10 +1212,16 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         {
             var jobIds = items.Select(x => x.JobPostingId).Distinct().ToList();
             var studentIds = items.Select(x => x.StudentId).Distinct().ToList();
+            // P1-8：批量查 InterviewerId，缺则用 InterviewerName 自由文本兜底
+            var interviewerIds = items.Where(x => x.InterviewerId.HasValue).Select(x => x.InterviewerId!.Value).Distinct().ToList();
             var jobs = await _jobPostingRepository.GetListAsync(x => jobIds.Contains(x.Id));
             var students = await _userRepository.GetListAsync(x => studentIds.Contains(x.Id));
+            var interviewers = interviewerIds.Count == 0
+                ? []
+                : await _userRepository.GetListAsync(x => interviewerIds.Contains(x.Id));
             var jobMap = jobs.ToDictionary(x => x.Id, x => x);
             var studentMap = students.ToDictionary(x => x.Id, x => x);
+            var interviewerMap = interviewers.ToDictionary(x => x.Id, x => x);
 
             return items.Select(item => new InterviewScheduleDto
             {
@@ -1211,7 +1234,11 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                 StudentId = item.StudentId,
                 StudentName = studentMap.TryGetValue(item.StudentId, out var student) ? GetUserDisplayName(student) : null,
                 EmployerUserId = item.EmployerUserId,
-                InterviewerName = item.InterviewerName,
+                InterviewerId = item.InterviewerId,
+                // 优先 InterviewerId 解析的姓名；若 ID 为 null 则保留原 InterviewerName 自由文本
+                InterviewerName = item.InterviewerId.HasValue && interviewerMap.TryGetValue(item.InterviewerId.Value, out var u)
+                    ? ResolveInterviewerName(u)
+                    : item.InterviewerName,
                 InterviewerPhone = item.InterviewerPhone,
                 ScheduledAt = item.ScheduledAt,
                 Location = item.Location,
@@ -1491,6 +1518,15 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             return user.UserName ?? user.Email ?? user.Id.ToString("N");
         }
         return displayName;
+    }
+
+    /// <summary>
+    /// P1-8：面试官显示名解析（与 GetUserDisplayName 同款策略）。
+    /// 写库用 SaveName（UserName 兜底），返回 API 时 MapInterviewDtosAsync 重新解析。
+    /// </summary>
+    private static string ResolveInterviewerName(IdentityUser user)
+    {
+        return GetUserDisplayName(user);
     }
 
     private static EmploymentJobStatus ResolveCreateOrUpdateStatus(EmploymentJobStatus inputStatus, bool canReview)

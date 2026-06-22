@@ -54,7 +54,19 @@
 
 <nz-modal [(nzVisible)]="scheduleVisible" nzTitle="预约面试" (nzOnCancel)="scheduleVisible = false" (nzOnOk)="saveSchedule()">
   <div class="form-grid">
-    <input nz-input [(ngModel)]="scheduleForm.interviewerName" placeholder="面试官" />
+    <!-- P1-8：面试官下拉（教师/HR/管理员），选中后自动填充 Name；仍可手动覆盖 -->
+    <nz-select
+      nzPlaceHolder="选择面试官（可选）"
+      [ngModel]="scheduleForm.interviewerId ?? null"
+      (ngModelChange)="onInterviewerPicked($event)"
+      [nzAllowClear]="true"
+      nzShowSearch
+    >
+      @for (opt of interviewerOptions(); track opt.id) {
+        <nz-option [nzValue]="opt.id" [nzLabel]="opt.name"></nz-option>
+      }
+    </nz-select>
+    <input nz-input [(ngModel)]="scheduleForm.interviewerName" placeholder="面试官姓名（可手动修改）" />
     <input nz-input [(ngModel)]="scheduleForm.interviewerPhone" placeholder="联系电话" />
     <input nz-input [(ngModel)]="scheduleForm.location" placeholder="地点" />
     <input nz-input [(ngModel)]="scheduleForm.meetingUrl" placeholder="外部会议链接" />

@@ -12,6 +12,10 @@ public class InterviewSchedule : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public Guid JobPostingId { get; set; }
     public Guid StudentId { get; set; }
     public Guid? EmployerUserId { get; set; }
+    /// <summary>
+    /// 面试官用户 ID（P1-8）。可空：未指定面试官时仅保留 InterviewerName。
+    /// </summary>
+    public Guid? InterviewerId { get; set; }
     public string InterviewerName { get; set; } = string.Empty;
     public string? InterviewerPhone { get; set; }
     public DateTime ScheduledAt { get; set; }

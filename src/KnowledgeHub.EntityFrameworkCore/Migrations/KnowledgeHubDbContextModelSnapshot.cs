@@ -1738,6 +1738,9 @@ namespace KnowledgeHub.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid?>("InterviewerId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("InterviewerPhone")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");

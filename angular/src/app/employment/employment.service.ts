@@ -230,6 +230,8 @@ export interface InterviewScheduleDto {
   studentId: string;
   studentName?: string;
   employerUserId?: string;
+  /** P1-8：面试官用户 ID（与 interviewerName 二选一） */
+  interviewerId?: string;
   interviewerName: string;
   interviewerPhone?: string;
   scheduledAt: string;
@@ -245,6 +247,8 @@ export interface InterviewScheduleDto {
 
 export interface CreateUpdateInterviewScheduleDto {
   applicationId: string;
+  /** P1-8：面试官用户 ID（可选；未选则用 interviewerName 自由文本） */
+  interviewerId?: string;
   interviewerName: string;
   interviewerPhone?: string;
   scheduledAt: string;

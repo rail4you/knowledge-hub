@@ -190,6 +190,8 @@ public class InterviewScheduleDto : FullAuditedEntityDto<Guid>
     public Guid StudentId { get; set; }
     public string? StudentName { get; set; }
     public Guid? EmployerUserId { get; set; }
+    /// <summary>P1-8：面试官用户 ID（与 InterviewerName 二选一）</summary>
+    public Guid? InterviewerId { get; set; }
     public string InterviewerName { get; set; } = string.Empty;
     public string? InterviewerPhone { get; set; }
     public DateTime ScheduledAt { get; set; }
@@ -205,6 +207,10 @@ public class InterviewScheduleDto : FullAuditedEntityDto<Guid>
 public class CreateUpdateInterviewScheduleDto
 {
     public Guid ApplicationId { get; set; }
+    /// <summary>
+    /// 面试官用户 ID（P1-8）。可选：未选择则仅保留 InterviewerName 自由文本。
+    /// </summary>
+    public Guid? InterviewerId { get; set; }
     public string InterviewerName { get; set; } = string.Empty;
     public string? InterviewerPhone { get; set; }
     public DateTime ScheduledAt { get; set; }
