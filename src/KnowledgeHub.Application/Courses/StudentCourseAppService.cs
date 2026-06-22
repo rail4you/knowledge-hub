@@ -119,9 +119,41 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
     [Authorize(KnowledgeHubPermissions.Courses.ManageEnrollment)]
     public async Task<PagedResultDto<IdentityUserDto>> GetAvailableStudentsAsync(GetAvailableStudentsInput input)
     {
+        var available = await GetAvailableStudentListAsync(input);
+        var totalCount = available.Count;
+        var paged = available
+            .Skip(input.SkipCount)
+            .Take(input.MaxResultCount)
+            .ToList();
+
+        var dtos = paged.Select(u => new IdentityUserDto
+        {
+            Id = u.Id,
+            UserName = u.UserName,
+            Name = u.Name,
+            Surname = u.Surname,
+            Email = u.Email,
+            PhoneNumber = u.PhoneNumber,
+            IsActive = u.IsActive,
+            CreationTime = u.CreationTime,
+        }).ToList();
+
+        return new PagedResultDto<IdentityUserDto>(totalCount, dtos);
+    }
+
+    /// <summary>P1-10：仅返回 ID 列表（不分页），给「全选匹配结果」按钮用</summary>
+    [Authorize(KnowledgeHubPermissions.Courses.ManageEnrollment)]
+    public async Task<List<Guid>> GetAllAvailableStudentIdsAsync(GetAvailableStudentsInput input)
+    {
+        var available = await GetAvailableStudentListAsync(input);
+        return available.Select(u => u.Id).ToList();
+    }
+
+    /// <summary>P1-10：抽出可复用查询 — 同一筛选下「可选学生」的完整列表</summary>
+    private async Task<List<IdentityUser>> GetAvailableStudentListAsync(GetAvailableStudentsInput input)
+    {
         var tenantFilter = ResolveTenantFilter(input.TenantId);
 
-        // Get already enrolled student IDs (cross-tenant query)
         HashSet<Guid> enrolledStudentIds;
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -134,7 +166,6 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
                 .ToHashSet();
         }
 
-        // Query users (cross-tenant, then filter by tenant manually)
         List<IdentityUser> allStudents;
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -156,7 +187,6 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
             allStudents = await userQuery.OrderBy(u => u.UserName).ToListAsync();
         }
 
-        // Filter by "Student" role
         var studentsWithRole = new List<IdentityUser>();
         foreach (var user in allStudents)
         {
@@ -170,28 +200,7 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
             }
         }
 
-        // Exclude already enrolled
-        var available = studentsWithRole.Where(s => !enrolledStudentIds.Contains(s.Id)).ToList();
-
-        var totalCount = available.Count;
-        var paged = available
-            .Skip(input.SkipCount)
-            .Take(input.MaxResultCount)
-            .ToList();
-
-        var dtos = paged.Select(u => new IdentityUserDto
-        {
-            Id = u.Id,
-            UserName = u.UserName,
-            Name = u.Name,
-            Surname = u.Surname,
-            Email = u.Email,
-            PhoneNumber = u.PhoneNumber,
-            IsActive = u.IsActive,
-            CreationTime = u.CreationTime,
-        }).ToList();
-
-        return new PagedResultDto<IdentityUserDto>(totalCount, dtos);
+        return studentsWithRole.Where(s => !enrolledStudentIds.Contains(s.Id)).ToList();
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.ManageEnrollment)]

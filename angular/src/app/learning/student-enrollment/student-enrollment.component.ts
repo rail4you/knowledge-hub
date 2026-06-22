@@ -260,6 +260,31 @@ export class StudentEnrollmentComponent implements OnInit {
     });
   }
 
+  /** P1-10：跨页全选 — 后端一次性返回当前筛选下所有可选学生 ID */
+  selectingAll = false;
+  selectAllAcrossPages() {
+    if (this.selectingAll) return;
+    this.selectingAll = true;
+    this.studentCourseService
+      .getAllAvailableStudentIds({
+        courseId: this.selectedCourseId!,
+        tenantId: this.selectedTenantId || undefined,
+        filter: this.studentFilterText || undefined,
+      } as any)
+      .subscribe({
+        next: (ids) => {
+          ids.forEach(id => this.selectedStudentIds.add(id as string));
+          this.message.success(`已选中 ${ids.length} 人（跨页全选）`);
+          this.selectingAll = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.message.error('跨页全选失败');
+          this.selectingAll = false;
+        },
+      });
+  }
+
   deselectAllStudents() {
     this.selectedStudentIds.clear();
   }

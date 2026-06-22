@@ -45,6 +45,15 @@ export class StudentCourseService {
       params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
+
+  /** P1-10：跨页全选 — 一次性返回当前筛选下所有可加入学生 ID */
+  getAllAvailableStudentIds = (input: GetAvailableStudentsInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, string[]>({
+      method: 'GET',
+      url: '/api/app/student-course/all-available-student-ids',
+      params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter },
+    },
+    { apiName: this.apiName,...config });
   
 
   getPaged = (input: GetStudentCoursesInput, config?: Partial<Rest.Config>) =>

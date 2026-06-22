@@ -163,6 +163,9 @@
         </span>
 
         <button nz-button nzSize="small" (click)="selectAllStudents()">全选当前页</button>
+        <button nz-button nzSize="small" nzType="primary" (click)="selectAllAcrossPages()" [nzLoading]="selectingAll" nz-tooltip="一次性选中所有匹配当前筛选条件的学生">
+          全选匹配结果
+        </button>
         <button nz-button nzSize="small" (click)="deselectAllStudents()">清除选择</button>
       </div>
 
