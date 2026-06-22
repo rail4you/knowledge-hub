@@ -479,6 +479,12 @@
     border-color: ds.$student-primary;
     background: rgba(ds.$student-primary, 0.03);
   }
+
+  &--filled {
+    border-style: solid;
+    border-color: ds.$student-primary;
+    background: rgba(ds.$student-primary, 0.04);
+  }
 }
 
 .upload-zone-icon {

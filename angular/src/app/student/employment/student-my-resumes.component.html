@@ -183,17 +183,18 @@
           />
           <div
             class="upload-dropzone"
+            [class.upload-dropzone--filled]="form.hasAttachment"
             (click)="fileInput.click()"
           >
-            <span class="upload-zone-icon">
-              <span nz-icon nzType="cloud-upload" nzTheme="outline"></span>
-            </span>
             @if (!form.hasAttachment) {
+              <span class="upload-zone-icon">
+                <span nz-icon nzType="cloud-upload" nzTheme="outline"></span>
+              </span>
               <span class="upload-zone-text">点击或拖拽文件到此处上传</span>
               <span class="upload-zone-hint">支持 .pdf .doc .docx .jpg .png 等格式</span>
             } @else {
               <span class="upload-zone-file">
-                <span nz-icon [nzType]="getFileIcon(form.attachmentUrl || '')" nzTheme="outline"></span>
+                <span nz-icon [nzType]="getFileIcon(form.attachmentFileName || '')" nzTheme="outline"></span>
                 {{ form.attachmentFileName || '已选择文件' }}
               </span>
               <div class="upload-zone-actions">
