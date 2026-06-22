@@ -240,33 +240,50 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
     [Authorize(KnowledgeHubPermissions.RecruitmentLive.Create)]
     public async Task<List<UserBriefDto>> GetTenantStudentsAsync(string? filter)
     {
-        var users = await _userRepository.GetListAsync();
-        var studentRoleName = "Student";
-
-        var query = users.AsEnumerable();
-        
-        // 过滤当前租户的用户（通过 TenantId 属性）
+        const string studentRoleName = "Student";
         var currentTenantId = CurrentTenant.Id;
+
+        // P1-6 修复：原实现只过滤 TenantId，完全没过滤 Student 角色，导致 admin/教师全部出现。
+        // 这里走 EF IQueryable + JOIN IdentityUserRoles + IdentityRoles，强制仅返回 Student。
+        var query = await _userRepository.GetQueryableAsync();
         query = query.Where(u => u.TenantId == currentTenantId);
+
+        // 通过 AbpUserRoles / AbpRoles 子查询过滤 Student 角色（避免 N+1 GetRolesAsync）
+        var dbContext = await _userRepository.GetDbContextAsync();
+        var userRoles = dbContext.Set<IdentityUserRole>();
+        var roles = dbContext.Set<IdentityRole>();
+        var studentRoleIds = await roles
+            .Where(r => r.Name == studentRoleName)
+            .Select(r => r.Id)
+            .ToListAsync();
+        if (studentRoleIds.Count == 0)
+        {
+            return [];
+        }
+        var studentUserIds = await userRoles
+            .Where(ur => studentRoleIds.Contains(ur.RoleId))
+            .Select(ur => ur.UserId)
+            .ToListAsync();
+        query = query.Where(u => studentUserIds.Contains(u.Id));
 
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var f = filter.Trim();
             query = query.Where(u =>
-                (u.Name != null && u.Name.Contains(f, StringComparison.OrdinalIgnoreCase)) ||
-                (u.UserName != null && u.UserName.Contains(f, StringComparison.OrdinalIgnoreCase)));
+                (u.Name != null && u.Name.Contains(f)) ||
+                (u.UserName != null && u.UserName.Contains(f)));
         }
 
-        return query
+        return await query
             .OrderBy(u => u.Name)
             .Take(50)
             .Select(u => new UserBriefDto
             {
                 Id = u.Id,
                 UserName = u.UserName ?? string.Empty,
-                Name = u.Name ?? u.UserName ?? string.Empty
+                Name = !string.IsNullOrWhiteSpace(u.Name) ? u.Name : (u.UserName ?? string.Empty)
             })
-            .ToList();
+            .ToListAsync();
     }
 
     [AllowAnonymous]
