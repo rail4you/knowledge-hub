@@ -259,14 +259,19 @@ public class CourseAppService : ApplicationService, ITransientDependency
             chapterQuery.Where(ch => courseIds.Contains(ch.CourseId))
                 .GroupBy(ch => ch.CourseId)
                 .Select(g => new { CourseId = g.Key, Count = g.Count() }));
-        var studentQuery = await _studentCourseRepository.GetQueryableAsync();
-        var studentCounts = await AsyncExecuter.ToListAsync(
-            studentQuery.Where(sc => courseIds.Contains(sc.CourseId) && sc.Status != StudentCourseStatus.Dropped)
-                .GroupBy(sc => sc.CourseId)
-                .Select(g => new { CourseId = g.Key, Count = g.Count() }));
+
+        Dictionary<Guid, int> studentCountMap;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var studentQuery = await _studentCourseRepository.GetQueryableAsync();
+            var studentCounts = await AsyncExecuter.ToListAsync(
+                studentQuery.Where(sc => courseIds.Contains(sc.CourseId) && sc.Status != StudentCourseStatus.Dropped)
+                    .GroupBy(sc => sc.CourseId)
+                    .Select(g => new { CourseId = g.Key, Count = g.Count() }));
+            studentCountMap = studentCounts.ToDictionary(x => x.CourseId, x => x.Count);
+        }
 
         var chapterCountMap = chapterCounts.ToDictionary(x => x.CourseId, x => x.Count);
-        var studentCountMap = studentCounts.ToDictionary(x => x.CourseId, x => x.Count);
         var majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
 
         return new PagedResultDto<CourseDto>(
