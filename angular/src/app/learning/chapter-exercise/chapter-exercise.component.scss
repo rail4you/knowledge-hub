@@ -41,6 +41,12 @@
 // Tree panel
 .tree-panel {
   .tree-view {
+    // 限制左侧章节树的最大高度，超过时滚动，避免遮挡右侧习题
+    max-height: calc(100vh - 320px);
+    min-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+
     .tree-node {
       .tree-node-content {
         display: flex;
@@ -87,11 +93,21 @@
 
 // Exercise panel
 .exercise-panel {
+  position: relative;
+  min-height: 320px;
+
   .exercise-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fff;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 16px;
+
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
 
     h3 {
       margin: 0;

@@ -103,8 +103,8 @@ export class ChapterExerciseComponent implements OnInit {
     this.chapterService.getChapterTree(courseId).subscribe({
       next: (data) => {
         this.chapters.set(data || []);
-        const expanded = new Set<string>();
-        this.collectNodeIds(data || [], expanded);
+        // 默认只展开顶级章节，避免长课程章节列表过长遮挡右侧习题区
+        const expanded = new Set<string>((data || []).map(n => n.id!).filter(Boolean));
         this.expandedNodes.set(expanded);
       },
     });
