@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # ============================================================
 # deploy-to-remote.sh - KnowledgeHub 本地一键部署脚本
 # ============================================================
@@ -53,8 +53,9 @@ format_duration() {
     fi
 }
 
-# 时间报告数据（组件名 -> "build_seconds push_seconds pull_seconds"）
-declare -A TIMING_DATA
+# 时间报告临时文件（兼容 Bash 3.2，每行格式: component:phase:duration）
+TIMING_FILE=$(mktemp /tmp/knowledgehub-deploy-timing.XXXXXX)
+trap "rm -f '$TIMING_FILE'" EXIT
 
 # 记录组件某个阶段的时间
 # 用法: record_timing <component> <phase> <start_epoch> <end_epoch>
@@ -64,8 +65,7 @@ record_timing() {
     local start=$3
     local end=$4
     local duration=$((end - start))
-    # 存入关联数组，key 格式: component:phase
-    TIMING_DATA["${component}:${phase}"]=${duration}
+    echo "${component}:${phase}:${duration}" >> "$TIMING_FILE"
 }
 
 # 打印时间报告
@@ -81,44 +81,17 @@ print_timing_report() {
     echo -e "${BOLD}${CYAN}║${NC} ${BOLD}阶段                │ 组件         │ 耗时            ${CYAN}║${NC}"
     echo -e "${BOLD}${CYAN}╠══════════════════════════════════════════════════════════╣${NC}"
 
-    # 收集所有组件名
-    local components=()
-    for key in "${!TIMING_DATA[@]}"; do
-        local comp="${key%%:*}"
-        local found=0
-        for c in "${components[@]}"; do
-            [ "$c" = "$comp" ] && found=1 && break
-        done
-        [ $found -eq 0 ] && components+=("$comp")
-    done
-
-    local has_build=0 has_push=0 has_pull=0
-    for comp in "${components[@]}"; do
-        [ -n "${TIMING_DATA[${comp}:build]:-}" ] && has_build=1
-        [ -n "${TIMING_DATA[${comp}:push]:-}" ] && has_push=1
-        [ -n "${TIMING_DATA[${comp}:pull]:-}" ] && has_pull=1
-    done
-
-    for comp in "${components[@]}"; do
-        if [ $has_build -eq 1 ]; then
-            local build_t="${TIMING_DATA[${comp}:build]:--}"
-            local build_str=$( [ "$build_t" = "-" ] && echo "       -       " || printf "%-15s" "$(format_duration $build_t)" )
-            echo -e "${BOLD}${CYAN}║${NC} 构建 (build)        │ $(printf '%-12s' $comp) │ $build_str ${CYAN}║${NC}"
-        fi
-        if [ $has_push -eq 1 ]; then
-            local push_t="${TIMING_DATA[${comp}:push]:--}"
-            local push_str=$( [ "$push_t" = "-" ] && echo "       -       " || printf "%-15s" "$(format_duration $push_t)" )
-            echo -e "${BOLD}${CYAN}║${NC} 推送 (push)         │ $(printf '%-12s' $comp) │ $push_str ${CYAN}║${NC}"
-        fi
-    done
-
-    if [ $has_pull -eq 1 ]; then
-        for comp in "${components[@]}"; do
-            local pull_t="${TIMING_DATA[${comp}:pull]:--}"
-            local pull_str=$( [ "$pull_t" = "-" ] && echo "       -       " || printf "%-15s" "$(format_duration $pull_t)" )
-            echo -e "${BOLD}${CYAN}║${NC} 拉取 (pull)         │ $(printf '%-12s' $comp) │ $pull_str ${CYAN}║${NC}"
-        done
-    fi
+    # 从临时文件读取并输出
+    while IFS=: read -r comp phase duration; do
+        [ -z "$comp" ] && continue
+        case "$phase" in
+            build) local label="构建 (build)" ;;
+            push)  local label="推送 (push)" ;;
+            pull)  local label="拉取 (pull)" ;;
+            *)     local label="$phase" ;;
+        esac
+        echo -e "${BOLD}${CYAN}║${NC} $(printf '%-20s' "$label") │ $(printf '%-12s' "$comp") │ $(printf '%-15s' "$(format_duration $duration)") ${CYAN}║${NC}"
+    done < "$TIMING_FILE"
 
     echo -e "${BOLD}${CYAN}╠══════════════════════════════════════════════════════════╣${NC}"
     echo -e "${BOLD}${CYAN}║${NC} ${BOLD}总计                                          $(printf '%-15s' "$(format_duration $total_duration)") ${CYAN}║${NC}"
