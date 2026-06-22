@@ -14,6 +14,7 @@ import { ResourceService } from '../../proxy/resources/resource.service';
 import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import type { ResourceDto, ResourceCategoryDto } from '../../proxy/resources/models';
+import { PortalService } from '../../proxy/portal/portal.service';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
@@ -60,6 +61,7 @@ interface StatItem {
 })
 export class StudentResourcesComponent implements OnInit, OnDestroy {
   private readonly resourceService = inject(ResourceService);
+  private readonly portalService = inject(PortalService);
   private readonly reviewService = inject(ResourceReviewService);
   private readonly recommendationService = inject(RecommendationService);
   private readonly authErrorService = inject(AuthErrorService);
@@ -91,12 +93,30 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   readonly ResourceType = ResourceType;
 
   // 站点统计（演示数据，实际可从后端获取）
-  stats = signal<StatItem[]>([
-    { label: '课程数', value: 168, suffix: '门', icon: 'book', color: '#1e6ce8' },
-    { label: '微课数', value: 928, suffix: '节', icon: 'play-circle', color: '#00b7ff' },
-    { label: '素材数', value: 5460, suffix: '份', icon: 'appstore', color: '#7c3aed' },
-    { label: '学员数', value: 12, suffix: '万人', icon: 'team', color: '#f59e0b' },
-  ]);
+  stats = signal<StatItem[]>([]);
+
+  /** 加载首页数据总览：从 PortalService 拿真实数据，避免显示硬编码占位 */
+  private loadHomeStats(): void {
+    this.portalService.getPublicHomeStats().subscribe({
+      next: data => {
+        this.stats.set([
+          { label: '课程数', value: data.totalCourseCount ?? 0, suffix: '门', icon: 'book', color: '#1e6ce8' },
+          { label: '资源数', value: data.totalResourceCount ?? 0, suffix: '份', icon: 'play-circle', color: '#00b7ff' },
+          { label: '微专业数', value: data.totalMicroMajorCount ?? 0, suffix: '个', icon: 'appstore', color: '#7c3aed' },
+          { label: '入驻租户', value: data.tenantCount ?? 0, suffix: '家', icon: 'team', color: '#f59e0b' },
+        ]);
+      },
+      error: () => {
+        // 静默失败时显示 0 占位
+        this.stats.set([
+          { label: '课程数', value: 0, suffix: '门', icon: 'book', color: '#1e6ce8' },
+          { label: '资源数', value: 0, suffix: '份', icon: 'play-circle', color: '#00b7ff' },
+          { label: '微专业数', value: 0, suffix: '个', icon: 'appstore', color: '#7c3aed' },
+          { label: '入驻租户', value: 0, suffix: '家', icon: 'team', color: '#f59e0b' },
+        ]);
+      },
+    });
+  }
 
   heroSlides = signal<HeroSlide[]>([
     {
@@ -162,6 +182,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     this.loadCategories();
     this.loadResources();
     this.loadRecommendations();
+    this.loadHomeStats();
     this.startHeroAutoPlay();
   }
 
