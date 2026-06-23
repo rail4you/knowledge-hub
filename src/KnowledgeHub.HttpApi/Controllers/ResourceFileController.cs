@@ -67,7 +67,7 @@ public class ResourceFileController : AbpControllerBase
     }
 
     [HttpGet("{resourceId}/preview")]
-    [Authorize(KnowledgeHubPermissions.Resources.Default)]
+    [AllowAnonymous]
     public virtual async Task<IActionResult> Preview(Guid resourceId)
     {
         var resource = await ResourceRepository.GetWithDetailsAsync(resourceId);

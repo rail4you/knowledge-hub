@@ -29,7 +29,7 @@ export class HomeComponent implements OnInit {
   readonly homeData = signal<PortalHomeDataDto | null>(null);
   readonly loadingStats = signal(false);
 
-  @ViewChild(FilePreviewComponent) filePreview!: FilePreviewComponent;
+  @ViewChild('filePreview') filePreview!: FilePreviewComponent;
   readonly loadingTenants = signal(false);
 
   get hasLoggedIn(): boolean { return this.authService.isAuthenticated; }
@@ -82,7 +82,11 @@ export class HomeComponent implements OnInit {
 
   previewResource(resource: { id?: string; name?: string; fileExtension?: string | null; downloadCount?: number }): void {
     if (!resource.id) return;
-    this.filePreview?.open(resource.id, resource.name || '', resource.fileExtension || '', 0);
+    if (!this.filePreview) {
+      console.warn('FilePreviewComponent not initialized');
+      return;
+    }
+    this.filePreview.open(resource.id, resource.name || '', resource.fileExtension || '', 0);
   }
 
   coverGradient(index: number): string {
