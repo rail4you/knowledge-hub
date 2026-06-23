@@ -52,9 +52,9 @@ public class NewsImportAppService : KnowledgeHubAppService, INewsImportAppServic
         }
 
         // P1-13 修复：表头校验，不匹配则提示使用最新模板
-        ValidateTemplateHeader(worksheet);
+        var headerRowNumber = ValidateTemplateHeader(worksheet);
 
-        var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1); // Skip header
+        var rows = worksheet.RangeUsed()?.RowsUsed().Skip(headerRowNumber); // Skip header row
         if (rows == null)
         {
             return result;
@@ -66,7 +66,7 @@ public class NewsImportAppService : KnowledgeHubAppService, INewsImportAppServic
             .Where(c => !string.IsNullOrWhiteSpace(c.Name))
             .ToDictionary(c => c.Name.Trim(), c => c.Id);
 
-        var rowNumber = 2;
+        var rowNumber = headerRowNumber + 1;
         foreach (var row in rows)
         {
             try
@@ -208,15 +208,17 @@ public class NewsImportAppService : KnowledgeHubAppService, INewsImportAppServic
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
     }
 
-    private static void ValidateTemplateHeader(IXLWorksheet worksheet)
+    /// <summary>
+    /// 校验表头并返回表头所在行号（数据从 headerRow + 1 开始）。
+    /// 模板第 1-2 行为标题/说明，第 3 行为表头；也兼容表头在第 1 行的旧格式。
+    /// </summary>
+    private static int ValidateTemplateHeader(IXLWorksheet worksheet)
     {
-        // 表头必须在第 3 行（DownloadTemplateAsync 写入位置）；兼容第 1 行的旧格式
         for (var row = 1; row <= 3; row++)
         {
             var firstCell = worksheet.Cell(row, 1).GetString().Trim();
             if (firstCell == TemplateHeaders[0])
             {
-                // 该行疑似表头，校验其余列
                 var matched = true;
                 for (var i = 1; i < TemplateHeaders.Length; i++)
                 {
@@ -226,7 +228,7 @@ public class NewsImportAppService : KnowledgeHubAppService, INewsImportAppServic
                         break;
                     }
                 }
-                if (matched) return; // 找到匹配表头
+                if (matched) return row;
             }
         }
 
