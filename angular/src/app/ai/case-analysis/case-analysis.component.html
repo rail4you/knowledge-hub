@@ -33,12 +33,16 @@
               <span nz-icon nzType="file-text" nzTheme="outline" class="resource-icon"></span>
               <div class="resource-option-info">
                 <div class="resource-option-name">{{ resource.name }}</div>
+                @if (resource.sourceFormat || resource.nodeCount > 0) {
                 <div class="resource-option-meta">
                   @if (resource.sourceFormat) {
                     <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
                   }
-                  <span class="node-count">{{ resource.nodeCount }} 个索引节点</span>
+                  @if (resource.nodeCount > 0) {
+                    <span class="node-count">{{ resource.nodeCount }} 个索引节点</span>
+                  }
                 </div>
+                }
               </div>
             </div>
           </nz-option>
@@ -54,7 +58,9 @@
           @if (selectedResource()!.sourceFormat) {
             <nz-tag [nzColor]="'blue'">{{ selectedResource()!.sourceFormat }}</nz-tag>
           }
-          <span class="meta-text">{{ selectedResource()!.nodeCount }} 个索引节点</span>
+          @if (selectedResource()!.nodeCount > 0) {
+            <span class="meta-text">{{ selectedResource()!.nodeCount }} 个索引节点</span>
+          }
         </div>
       }
     }

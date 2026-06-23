@@ -68,50 +68,6 @@
                 <span>{{ chapter.description }}</span>
               </div>
             }
-            @if (chapter.parentId) {
-              <div class="detail-field">
-                <label>父章节 ID：</label>
-                <span>{{ chapter.parentId }}</span>
-              </div>
-            }
-            <div class="detail-field">
-              <label>子章节数：</label>
-              <span>{{ chapter.children?.length ?? 0 }}</span>
-            </div>
-            <div class="detail-field">
-              <label>知识点数：</label>
-              <span>{{ (chapter.knowledgeResources?.length ?? 0) }}</span>
-            </div>
-
-            <!-- P1-21：教师在详情面板可看到本章节的知识点列表（只读）。
-                 此前教师端 chapter-management 没有任何"知识点"入口，
-                 造成学生端"资源"Tab 为空时教师也无从知晓、无法下手。
-                 知识点添加需在知识图谱 / 资源库等处进行；这里只是只读展示与明确指引。 -->
-            <div class="knowledge-resources">
-              <h4>本章节知识点（只读）</h4>
-              @if ((chapter.knowledgeResources?.length ?? 0) === 0) {
-                <p class="empty-hint">本章节尚未配置知识点。可在"知识图谱"中为本章节添加知识点。</p>
-              } @else {
-                <ul class="resource-list">
-                  @for (kr of chapter.knowledgeResources; track kr.id) {
-                    <li class="resource-item">
-                      <div class="resource-item__head">
-                        <span class="resource-item__name">{{ kr.name }}</span>
-                        <span class="resource-item__importance"
-                              [style.background]="(importanceColor(kr.importanceLevel) || '#1e6ce8') + '22'"
-                              [style.color]="importanceColor(kr.importanceLevel) || '#1e6ce8'">
-                          {{ importanceLabel(kr.importanceLevel) }}
-                        </span>
-                      </div>
-                      @if (kr.description) {
-                        <p class="resource-item__excerpt">{{ kr.description }}</p>
-                      }
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
-
             <div class="detail-actions">
               <button nz-button nzType="primary" nzSize="small" (click)="openEditModal(chapter)">
                 <span nz-icon nzType="edit"></span>

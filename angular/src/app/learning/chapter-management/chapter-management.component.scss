@@ -185,79 +185,6 @@
       }
     }
 
-    /* P1-21：教师端章节详情面板展示知识点列表（只读）的样式。 */
-    .knowledge-resources {
-      margin-top: 8px;
-      margin-bottom: 16px;
-      padding: 12px;
-      background: #fafafa;
-      border: 1px solid #f0f0f0;
-      border-radius: 6px;
-
-      h4 {
-        margin: 0 0 10px;
-        font-size: 13px;
-        font-weight: 600;
-        color: #333;
-      }
-
-      .empty-hint {
-        margin: 0;
-        color: #999;
-        font-size: 12px;
-        line-height: 1.6;
-      }
-
-      .resource-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .resource-item {
-        background: #fff;
-        border: 1px solid #f0f0f0;
-        border-radius: 4px;
-        padding: 8px 10px;
-      }
-
-      .resource-item__head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 4px;
-      }
-
-      .resource-item__name {
-        font-size: 13px;
-        color: #333;
-        font-weight: 500;
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .resource-item__importance {
-        font-size: 11px;
-        padding: 2px 8px;
-        border-radius: 10px;
-        flex-shrink: 0;
-      }
-
-      .resource-item__excerpt {
-        margin: 0;
-        color: #888;
-        font-size: 12px;
-        line-height: 1.5;
-      }
-    }
-
     .detail-actions {
       display: flex;
       gap: 8px;
@@ -298,3 +225,5 @@
     overflow: hidden;
   }
 }
+
+

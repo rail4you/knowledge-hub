@@ -45,64 +45,66 @@
             <h3>{{ selectedChapterTitle() }} - 已关联习题 ({{ chapterExercises().length }}题)</h3>
           </div>
 
-          @if (loading()) {
-            <div class="loading-container">
-              <nz-spin nzSimple nzSize="large"></nz-spin>
-            </div>
-          } @else if (chapterExercises().length === 0) {
-            <nz-empty nzNotFoundContent="暂无关联习题，可从下方添加"></nz-empty>
-          } @else {
-            <div class="linked-exercises">
-              @for (exercise of chapterExercises(); track exercise.id) {
-                <div class="exercise-item">
-                  <div class="exercise-item-left">
-                    <div class="exercise-item-title">
-                      {{ exercise.title }}
-                      <nz-tag [nzColor]="getTypeColor(exercise.type)">{{ getTypeName(exercise.type) }}</nz-tag>
-                      <span class="score-badge">{{ exercise.score }}分</span>
-                    </div>
-                    <div class="exercise-item-content">{{ exercise.questionContent }}</div>
-                  </div>
-                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkExercise(exercise)">
-                    取消关联
-                  </button>
-                </div>
-              }
-            </div>
-          }
-
-          <!-- Add from course exercises -->
-          <div class="add-section">
-            <div class="add-section-header">
-              <h4>从习题列表中添加</h4>
-              <input
-                nz-input
-                [ngModel]="searchText()"
-                (ngModelChange)="searchText.set($event)"
-                placeholder="搜索习题..."
-                style="width: 200px"
-              />
-            </div>
-            @if (availableExercises().length === 0) {
-              <nz-empty nzNotFoundContent="没有可添加的习题"></nz-empty>
+          <div class="scrollable-body">
+            @if (loading()) {
+              <div class="loading-container">
+                <nz-spin nzSimple nzSize="large"></nz-spin>
+              </div>
+            } @else if (chapterExercises().length === 0) {
+              <nz-empty nzNotFoundContent="暂无关联习题，可从下方添加"></nz-empty>
             } @else {
-              <div class="available-exercises">
-                @for (exercise of availableExercises(); track exercise.id) {
-                  <div class="exercise-item available">
+              <div class="linked-exercises">
+                @for (exercise of chapterExercises(); track exercise.id) {
+                  <div class="exercise-item">
                     <div class="exercise-item-left">
                       <div class="exercise-item-title">
                         {{ exercise.title }}
                         <nz-tag [nzColor]="getTypeColor(exercise.type)">{{ getTypeName(exercise.type) }}</nz-tag>
+                        <span class="score-badge">{{ exercise.score }}分</span>
                       </div>
                       <div class="exercise-item-content">{{ exercise.questionContent }}</div>
                     </div>
-                    <button nz-button nzType="primary" nzSize="small" (click)="linkExercise(exercise)">
-                      添加到章节
+                    <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkExercise(exercise)">
+                      取消关联
                     </button>
                   </div>
                 }
               </div>
             }
+
+            <!-- Add from course exercises -->
+            <div class="add-section">
+              <div class="add-section-header">
+                <h4>从习题列表中添加</h4>
+                <input
+                  nz-input
+                  [ngModel]="searchText()"
+                  (ngModelChange)="searchText.set($event)"
+                  placeholder="搜索习题..."
+                  style="width: 200px"
+                />
+              </div>
+              @if (availableExercises().length === 0) {
+                <nz-empty nzNotFoundContent="没有可添加的习题"></nz-empty>
+              } @else {
+                <div class="available-exercises">
+                  @for (exercise of availableExercises(); track exercise.id) {
+                    <div class="exercise-item available">
+                      <div class="exercise-item-left">
+                        <div class="exercise-item-title">
+                          {{ exercise.title }}
+                          <nz-tag [nzColor]="getTypeColor(exercise.type)">{{ getTypeName(exercise.type) }}</nz-tag>
+                        </div>
+                        <div class="exercise-item-content">{{ exercise.questionContent }}</div>
+                      </div>
+                      <button nz-button nzType="primary" nzSize="small" (click)="linkExercise(exercise)">
+                        添加到章节
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
           </div>
         } @else {
           <nz-empty nzNotFoundContent="请选择左侧章节查看关联习题"></nz-empty>

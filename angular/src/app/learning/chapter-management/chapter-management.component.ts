@@ -14,6 +14,8 @@ import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzListModule } from 'ng-zorro-antd/list';
+import { NzTagModule } from 'ng-zorro-antd/tag';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import type { CourseDto, ChapterDto, CreateUpdateChapterDto, ChapterImportResultDto } from '../../proxy/courses/dtos/models';
@@ -37,6 +39,8 @@ import { ChapterMindMapComponent } from './chapter-mind-map/chapter-mind-map.com
     NzModalModule,
     NzFormModule,
     NzInputNumberModule,
+    NzListModule,
+    NzTagModule,
     ChapterMindMapComponent,
   ],
   templateUrl: './chapter-management.component.html',
@@ -298,28 +302,6 @@ export class ChapterManagementComponent implements OnInit {
     const courseId = this.selectedCourseId();
     const course = this.courses().find(c => c.id === courseId);
     return course?.title ?? '';
-  }
-
-  // P1-21：教师端章节详情面板展示知识点列表时使用的辅助方法（标签 + 配色）。
-  // 与学生端 student-course-learn 保持一致，方便用户视觉上对应起来。
-  importanceLabel(level?: string): string {
-    const map: Record<string, string> = {
-      core: '核心',
-      important: '重要',
-      normal: '一般',
-      extended: '拓展',
-    };
-    return map[level || 'normal'] || '一般';
-  }
-
-  importanceColor(level?: string): string {
-    const map: Record<string, string> = {
-      core: '#ef4444',
-      important: '#f59e0b',
-      normal: '#1e6ce8',
-      extended: '#10b981',
-    };
-    return map[level || 'normal'] || '#1e6ce8';
   }
 
   // Drag and drop for chapter reordering

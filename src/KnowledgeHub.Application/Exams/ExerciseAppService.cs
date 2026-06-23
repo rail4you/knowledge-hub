@@ -9,6 +9,7 @@ using KnowledgeHub.Exams.Dtos;
 using KnowledgeHub.Exams.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -17,25 +18,33 @@ using Volo.Abp.Domain.Repositories;
 namespace KnowledgeHub.Exams;
 
 [AllowAnonymous]
+[IgnoreAntiforgeryToken]
 public class ExerciseAppService : ApplicationService, IExerciseAppService
 {
     private readonly IRepository<Exercise, Guid> _exerciseRepository;
+    // P2-4：题目-章节多对多关联仓库
+    private readonly IRepository<ChapterExercise, Guid> _chapterExerciseRepository;
 
-    public ExerciseAppService(IRepository<Exercise, Guid> exerciseRepository)
+    public ExerciseAppService(
+        IRepository<Exercise, Guid> exerciseRepository,
+        IRepository<ChapterExercise, Guid> chapterExerciseRepository)
     {
         _exerciseRepository = exerciseRepository;
+        _chapterExerciseRepository = chapterExerciseRepository;
     }
 
     public async Task<ExerciseDto> GetAsync(Guid id)
     {
         var exercise = await _exerciseRepository.GetAsync(id);
-        return MapToDto(exercise);
+        // P2-4：填充该题的所有章节 ID（含主章节）
+        var chapterIds = await GetChapterIdsAsync(exercise);
+        return MapToDto(exercise, chapterIds);
     }
 
     public async Task<PagedResultDto<ExerciseDto>> GetListAsync(PagedAndSortedResultRequestDto input)
     {
         var query = await _exerciseRepository.GetQueryableAsync();
-        
+
         var totalCount = query.Count();
         var exercises = query
             .OrderByDescending(x => x.CreationTime)
@@ -43,9 +52,12 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
             .Take(input.MaxResultCount)
             .ToList();
 
+        // P2-4：批量预加载所有相关章节映射（避免 N+1）
+        var chapterMap = await GetChapterIdsBatchAsync(exercises.Select(e => e.Id).ToList());
+
         return new PagedResultDto<ExerciseDto>(
             totalCount,
-            exercises.Select(MapToDto).ToList()
+            exercises.Select(e => MapToDto(e, chapterMap.GetValueOrDefault(e.Id, new List<Guid>()))).ToList()
         );
     }
 
@@ -69,13 +81,21 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         };
 
         await _exerciseRepository.InsertAsync(exercise);
-        return MapToDto(exercise);
+
+        // P2-4：写入章节多对多关联。如果 ChapterId 与 ChapterIds 不一致，自动把 ChapterId 也加入。
+        var allChapterIds = MergeChapterIds(input.ChapterId, input.ChapterIds);
+        if (allChapterIds.Count > 0)
+        {
+            await SyncChapterExercisesAsync(exercise.Id, allChapterIds);
+        }
+
+        return MapToDto(exercise, allChapterIds);
     }
 
     public async Task<ExerciseDto> UpdateAsync(Guid id, CreateUpdateExerciseDto input)
     {
         var exercise = await _exerciseRepository.GetAsync(id);
-        
+
         exercise.Title = input.Title;
         exercise.QuestionContent = input.QuestionContent;
         exercise.Type = input.Type;
@@ -88,12 +108,27 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         exercise.Score = input.Score;
 
         await _exerciseRepository.UpdateAsync(exercise);
-        return MapToDto(exercise);
+
+        // P2-4：覆盖式同步章节关联
+        var allChapterIds = MergeChapterIds(input.ChapterId, input.ChapterIds);
+        await SyncChapterExercisesAsync(exercise.Id, allChapterIds);
+
+        return MapToDto(exercise, allChapterIds);
     }
 
     public async Task DeleteAsync(Guid id)
     {
         await _exerciseRepository.DeleteAsync(id);
+        // P2-4：删除题目的同时清理章节关联（避免孤立数据）
+        var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
+        var orphaned = ceQuery.Where(x => x.ExerciseId == id).ToList();
+        if (orphaned.Count > 0)
+        {
+            foreach (var row in orphaned)
+            {
+                await _chapterExerciseRepository.DeleteAsync(row);
+            }
+        }
     }
 
     public async Task<List<ExerciseDto>> GetByCourseAsync(Guid courseId)
@@ -104,19 +139,137 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
             .OrderBy(x => x.Type)
             .ThenBy(x => x.Difficulty)
             .ToList();
-        
-        return exercises.Select(MapToDto).ToList();
+
+        // P2-4：包含「主章节匹配」或「章节关联表匹配」的题目
+        var chapterMap = await GetChapterIdsBatchAsync(exercises.Select(e => e.Id).ToList());
+        return exercises
+            .Select(e => MapToDto(e, chapterMap.GetValueOrDefault(e.Id, new List<Guid>())))
+            .ToList();
     }
 
     public async Task<List<ExerciseDto>> GetByChapterAsync(Guid chapterId)
     {
-        var query = await _exerciseRepository.GetQueryableAsync();
-        var exercises = query
+        // P2-4：原本只查 Exercise.ChapterId == chapterId；现在扩展为：
+        //   (Exercise.ChapterId == chapterId) OR (ChapterExercise.ChapterId == chapterId)
+        var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
+        var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
+
+        var matchedChapterExerciseIds = ceQuery
             .Where(x => x.ChapterId == chapterId)
+            .Select(x => x.ExerciseId)
+            .ToList();
+
+        var exercises = exerciseQuery
+            .Where(x => x.ChapterId == chapterId || matchedChapterExerciseIds.Contains(x.Id))
             .OrderBy(x => x.Difficulty)
             .ToList();
-        
-        return exercises.Select(MapToDto).ToList();
+
+        var chapterMap = await GetChapterIdsBatchAsync(exercises.Select(e => e.Id).ToList());
+        return exercises
+            .Select(e => MapToDto(e, chapterMap.GetValueOrDefault(e.Id, new List<Guid>())))
+            .ToList();
+    }
+
+    /// <summary>
+    /// P2-4：合并主章节 + 章节列表（去重）。ChapterId 默认包含在 ChapterIds 中。
+    /// </summary>
+    private static List<Guid> MergeChapterIds(Guid? chapterId, List<Guid>? chapterIds)
+    {
+        var set = new HashSet<Guid>();
+        if (chapterId.HasValue) set.Add(chapterId.Value);
+        if (chapterIds != null)
+        {
+            foreach (var c in chapterIds)
+            {
+                if (c != Guid.Empty) set.Add(c);
+            }
+        }
+        return set.ToList();
+    }
+
+    /// <summary>
+    /// P2-4：查询某题的所有章节 ID（去重，主章节 + 关联表）。
+    /// </summary>
+    private async Task<List<Guid>> GetChapterIdsAsync(Exercise exercise)
+    {
+        var ids = new HashSet<Guid>();
+        if (exercise.ChapterId.HasValue) ids.Add(exercise.ChapterId.Value);
+        var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
+        var ceIds = ceQuery.Where(x => x.ExerciseId == exercise.Id).Select(x => x.ChapterId).ToList();
+        foreach (var c in ceIds) ids.Add(c);
+        return ids.ToList();
+    }
+
+    /// <summary>
+    /// P2-4：批量查询多道题目的章节 ID 映射，避免 N+1。
+    /// </summary>
+    private async Task<Dictionary<Guid, List<Guid>>> GetChapterIdsBatchAsync(List<Guid> exerciseIds)
+    {
+        var result = new Dictionary<Guid, List<Guid>>();
+        if (exerciseIds.Count == 0) return result;
+
+        var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
+        var grouped = ceQuery
+            .Where(x => exerciseIds.Contains(x.ExerciseId))
+            .GroupBy(x => x.ExerciseId)
+            .Select(g => new { ExerciseId = g.Key, ChapterIds = g.Select(x => x.ChapterId).ToList() })
+            .ToList();
+
+        // 同时也把 Exercise.ChapterId 加进去
+        var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
+        var exercises = exerciseQuery.Where(x => exerciseIds.Contains(x.Id)).ToList();
+        var primaryMap = exercises.ToDictionary(x => x.Id, x => x.ChapterId);
+
+        foreach (var exId in exerciseIds)
+        {
+            var set = new HashSet<Guid>();
+            if (primaryMap.TryGetValue(exId, out var primary) && primary.HasValue)
+            {
+                set.Add(primary.Value);
+            }
+            var row = grouped.FirstOrDefault(x => x.ExerciseId == exId);
+            if (row != null)
+            {
+                foreach (var c in row.ChapterIds) set.Add(c);
+            }
+            result[exId] = set.ToList();
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// P2-4：覆盖式同步题目-章节关联（先删后插）。
+    /// 简单可靠，避免老数据残留。如果以后性能有问题可以改成 diff 增量。
+    /// </summary>
+    private async Task SyncChapterExercisesAsync(Guid exerciseId, List<Guid> chapterIds)
+    {
+        var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
+        var existing = ceQuery.Where(x => x.ExerciseId == exerciseId).ToList();
+
+        var newIdSet = new HashSet<Guid>(chapterIds);
+        var existingIdSet = new HashSet<Guid>(existing.Select(x => x.ChapterId));
+
+        // 删除已不再关联的
+        foreach (var row in existing)
+        {
+            if (!newIdSet.Contains(row.ChapterId))
+            {
+                await _chapterExerciseRepository.DeleteAsync(row);
+            }
+        }
+
+        // 插入新关联
+        var currentTenantId = CurrentTenant.Id;
+        var sortOrder = 0;
+        foreach (var chapterId in chapterIds)
+        {
+            if (existingIdSet.Contains(chapterId)) continue;
+            var ce = new ChapterExercise(GuidGenerator.Create(), chapterId, exerciseId, sortOrder++)
+            {
+                TenantId = currentTenantId
+            };
+            await _chapterExerciseRepository.InsertAsync(ce);
+        }
     }
 
     public Task<List<ExerciseDto>> GenerateByAIAsync(GenerateExerciseInput input)
@@ -390,13 +543,15 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         public int DataStartRow { get; set; }
     }
 
-    private static ExerciseDto MapToDto(Exercise exercise)
+    private static ExerciseDto MapToDto(Exercise exercise, List<Guid>? chapterIds = null)
     {
         return new ExerciseDto
         {
             Id = exercise.Id,
             CourseId = exercise.CourseId,
             ChapterId = exercise.ChapterId,
+            // P2-4：填充分章节 ID 列表
+            ChapterIds = chapterIds ?? (exercise.ChapterId.HasValue ? new List<Guid> { exercise.ChapterId.Value } : new List<Guid>()),
             KnowledgeResourceId = exercise.KnowledgeResourceId,
             Title = exercise.Title,
             QuestionContent = exercise.QuestionContent,

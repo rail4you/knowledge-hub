@@ -44,7 +44,9 @@
                 @if (resource.sourceFormat) {
                   <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
                 }
+                @if (resource.nodeCount > 0) {
                 <span class="node-count">{{ resource.nodeCount }} 节点</span>
+              }
               </div>
             </div>
           </div>

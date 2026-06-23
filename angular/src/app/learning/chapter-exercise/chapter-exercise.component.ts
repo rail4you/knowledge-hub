@@ -173,9 +173,15 @@ export class ChapterExerciseComponent implements OnInit {
     const chapterId = this.selectedChapterId();
     if (!chapterId || !exercise.id) return;
 
+    // Preserve existing chapterIds and add the new one to the set
+    const existingIds = new Set(exercise.chapterIds?.filter((id): id is string => !!id) ?? []);
+    existingIds.add(chapterId);
+    const mergedChapterIds = Array.from(existingIds);
+
     const dto: CreateUpdateExerciseDto = {
       courseId: exercise.courseId,
       chapterId: chapterId,
+      chapterIds: mergedChapterIds,
       title: exercise.title,
       questionContent: exercise.questionContent,
       type: exercise.type,
@@ -198,11 +204,16 @@ export class ChapterExerciseComponent implements OnInit {
   }
 
   unlinkExercise(exercise: ExerciseDto) {
+    const currentChapterId = this.selectedChapterId();
     if (!exercise.id) return;
+
+    // Remove the current chapter from the exercise's chapterIds, keep the rest
+    const remainingIds = (exercise.chapterIds ?? []).filter(id => id !== currentChapterId);
 
     const dto: CreateUpdateExerciseDto = {
       courseId: exercise.courseId,
-      chapterId: null,
+      chapterId: remainingIds.length > 0 ? remainingIds[0] : null,
+      chapterIds: remainingIds,
       title: exercise.title,
       questionContent: exercise.questionContent,
       type: exercise.type,
