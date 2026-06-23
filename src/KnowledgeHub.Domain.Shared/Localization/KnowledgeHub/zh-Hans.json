@@ -170,7 +170,7 @@
     "Menu:DoubleHighReportCenter": "报表中心",
     "Menu:DoubleHighManagement": "评估管理",
     "Menu:ExerciseLearning": "习题学习",
-    "Menu:LearningProgress": "学习进度",
+    "Menu:LearningProgress": "课程学习统计",
     "Menu:LearningStatistics": "学习统计",
     "Enum:SelfAssessment.0": "未评估",
     "Enum:SelfAssessment.1": "正确",

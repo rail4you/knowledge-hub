@@ -1,50 +1,248 @@
-<div class="learning-progress-container">
-  <nz-card nzTitle="学习进度">
-    @if (loading()) {
-      <div class="loading-container">
-        <nz-spin nzSimple nzSize="large"></nz-spin>
-      </div>
-    } @else if (courses().length === 0) {
-      <nz-empty nzDescription="暂未选课，请先选课"></nz-empty>
-    } @else {
-      <div class="course-grid">
-        @for (course of courses(); track course.id) {
-          <nz-card nzSize="small" class="course-card" [nzActions]="[actionStart, actionDetail]">
-            <ng-template #actionStart>
-              <span nz-icon nzType="form" (click)="startExercise(course.courseId!)"></span>
-            </ng-template>
-            <ng-template #actionDetail>
-              <span nz-icon nzType="eye" (click)="viewCourseDetail(course.courseId!)"></span>
-            </ng-template>
+<div class="stats-container">
+  <!-- Header -->
+  <div class="page-header">
+    <h1>课程学习统计</h1>
+    <p class="subtitle">查看各课程的学生学习情况，包括习题完成度、学习时长等统计</p>
+  </div>
 
-            <div class="course-info">
-              <h4 class="course-title">{{ course.courseTitle }}</h4>
-              <div class="course-meta">
-                @if (course.majorName) {
-                  <nz-tag nzColor="blue">{{ course.majorName }}</nz-tag>
-                }
-                @if (course.semester) {
-                  <nz-tag>{{ course.semester }}</nz-tag>
-                }
-                <nz-tag [nzColor]="getStatusColor(course.status ?? 0)">
-                  {{ getStatusLabel(course.status ?? 0) }}
-                </nz-tag>
-              </div>
-              <div class="progress-section">
-                <span class="progress-label">学习进度 {{ course.progress ?? 0 }}%</span>
-                <nz-progress
-                  [nzPercent]="course.progress ?? 0"
-                  [nzStrokeColor]="getProgressColor(course.progress ?? 0)"
-                  nzSize="small"
-                ></nz-progress>
-              </div>
-              <div class="course-footer">
-                <span>选课时间：{{ course.enrolledAt | date:'yyyy-MM-dd' }}</span>
-              </div>
+  <!-- Course overview cards -->
+  @if (loadingCourses()) {
+    <div class="loading-container">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+    </div>
+  } @else if (courses().length === 0) {
+    <nz-empty nzNotFoundContent="暂无课程数据"></nz-empty>
+  } @else {
+    <div class="course-grid">
+      @for (course of courses(); track course.id) {
+        @let overview = courseOverviewMap()[course.id ?? ''];
+        <nz-card
+          class="course-card"
+          [class.selected]="selectedCourseId() === course.id"
+          (click)="selectCourse(course.id ?? '')"
+          nzHoverable
+        >
+          <div class="course-card-header">
+            <h4 class="course-title">{{ course.title }}</h4>
+            <nz-tag>{{ course.majorName || '通用' }}</nz-tag>
+          </div>
+          <div class="course-card-stats">
+            <div class="stat-item">
+              <span class="stat-value">{{ overview?.totalStudents ?? '-' }}</span>
+              <span class="stat-label">学习人数</span>
             </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ overview?.totalExercises ?? '-' }}</span>
+              <span class="stat-label">总习题数</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ overview?.totalLearningMinutes ?? 0 | number:'1.0-0' }}</span>
+              <span class="stat-label">学习时长(分钟)</span>
+            </div>
+          </div>
+          <div class="course-card-footer">
+            <span class="rate-item">
+              完成率
+              <span [style.color]="getScoreColor(overview?.averageCompletionRate ?? 0)">
+                {{ overview?.averageCompletionRate ?? 0 }}%
+              </span>
+            </span>
+            <span class="rate-item">
+              正确率
+              <span [style.color]="getScoreColor(overview?.averageCorrectRate ?? 0)">
+                {{ overview?.averageCorrectRate ?? 0 }}%
+              </span>
+            </span>
+          </div>
+        </nz-card>
+      }
+    </div>
+
+    <!-- Detail section -->
+    @if (selectedOverview(); as overview) {
+      <div class="detail-section">
+        <!-- Course summary -->
+        <nz-card class="summary-card">
+          <div class="summary-grid">
+            <div class="summary-item">
+              <span class="summary-value">{{ overview.totalStudents }}</span>
+              <span class="summary-label">学习人数</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value">{{ overview.activeStudents }}</span>
+              <span class="summary-label">活跃学生</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value">{{ overview.totalExercises }}</span>
+              <span class="summary-label">总习题数</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value">{{ overview.totalLearningMinutes | number:'1.0-0' }}</span>
+              <span class="summary-label">总学习时长(分钟)</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value" [style.color]="getScoreColor(overview.averageCompletionRate ?? 0)">
+                {{ overview.averageCompletionRate }}%
+              </span>
+              <span class="summary-label">平均完成率</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value" [style.color]="getScoreColor(overview.averageCorrectRate ?? 0)">
+                {{ overview.averageCorrectRate }}%
+              </span>
+              <span class="summary-label">平均正确率</span>
+            </div>
+          </div>
+        </nz-card>
+
+        <!-- Date filter -->
+        <nz-card class="filter-card">
+          <div class="filter-bar">
+            <label>时间范围：</label>
+            <input
+              nz-input
+              type="date"
+              [ngModel]="startDate() | date:'yyyy-MM-dd'"
+              (ngModelChange)="startDate.set($event ? $event + 'T00:00:00' : null)"
+              placeholder="开始日期"
+              style="width:160px"
+            />
+            <span class="filter-sep">~</span>
+            <input
+              nz-input
+              type="date"
+              [ngModel]="endDate() | date:'yyyy-MM-dd'"
+              (ngModelChange)="endDate.set($event ? $event + 'T23:59:59' : null)"
+              placeholder="结束日期"
+              style="width:160px"
+            />
+            <button nz-button nzSize="small" (click)="filterByDate()">查询</button>
+            <button nz-button nzSize="small" (click)="startDate.set(null); endDate.set(null); filterByDate()">重置</button>
+          </div>
+        </nz-card>
+
+        <!-- Chapter progress -->
+        @if (chapterProgress().length > 0) {
+          <nz-card nzTitle="章节学习进度">
+            <nz-table [nzData]="chapterProgress()" [nzFrontPagination]="false" nzSize="small">
+              <thead>
+                <tr>
+                  <th>章节</th>
+                  <th>习题数</th>
+                  <th>完成数</th>
+                  <th>完成率</th>
+                  <th>正确率</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (ch of chapterProgress(); track ch.chapterId) {
+                  <tr>
+                    <td>{{ ch.chapterName }}</td>
+                    <td>{{ ch.totalExercises }}</td>
+                    <td>{{ ch.completedCount }}</td>
+                    <td>
+                      <nz-progress
+                        [nzPercent]="ch.completionRate ?? 0"
+                        [nzStrokeColor]="getScoreColor(ch.completionRate ?? 0)"
+                        nzSize="small"
+                      ></nz-progress>
+                    </td>
+                    <td>
+                      <nz-tag [nzColor]="getScoreColor(ch.correctRate ?? 0)">{{ ch.correctRate }}%</nz-tag>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          </nz-card>
+        }
+
+        <!-- Student statistics table -->
+        <nz-card nzTitle="学生学习统计">
+          @if (loadingStudents()) {
+            <div class="loading-container">
+              <nz-spin nzSimple></nz-spin>
+            </div>
+          } @else if (studentStats().length === 0) {
+            <nz-empty nzNotFoundContent="暂无学习记录"></nz-empty>
+          } @else {
+            <nz-table [nzData]="studentStats()" [nzFrontPagination]="false" nzSize="small">
+              <thead>
+                <tr>
+                  <th>学生</th>
+                  <th>完成数/总题数</th>
+                  <th>完成率</th>
+                  <th>正确率</th>
+                  <th>学习时长</th>
+                  <th>最后活跃</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (stat of studentStats(); track stat.studentId) {
+                  <tr>
+                    <td>{{ stat.studentName }}</td>
+                    <td>{{ stat.completedCount }} / {{ stat.totalCount }}</td>
+                    <td>
+                      <nz-progress
+                        [nzPercent]="stat.completionRate ?? 0"
+                        [nzStrokeColor]="getScoreColor(stat.completionRate ?? 0)"
+                        nzSize="small"
+                      ></nz-progress>
+                    </td>
+                    <td>
+                      <nz-tag [nzColor]="getScoreColor(stat.correctRate ?? 0)">{{ stat.correctRate }}%</nz-tag>
+                    </td>
+                    <td>{{ formatTimeSpan(stat.totalTimeSpent) }}</td>
+                    <td>{{ formatDate(stat.lastActiveTime) }}</td>
+                    <td>
+                      <button nz-button nzType="link" nzSize="small" (click)="viewStudentRecords(stat.studentId)">
+                        学习记录
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          }
+        </nz-card>
+
+        <!-- Student exercise records -->
+        @if (studentRecords().length > 0) {
+          <nz-card nzTitle="学习记录（近 50 条）" class="records-card">
+            <nz-table [nzData]="studentRecords()" [nzFrontPagination]="false" nzSize="small">
+              <thead>
+                <tr>
+                  <th>习题</th>
+                  <th>章节</th>
+                  <th>是否正确</th>
+                  <th>用时</th>
+                  <th>完成时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (record of studentRecords(); track record.id) {
+                  <tr>
+                    <td>{{ record.exerciseTitle }}</td>
+                    <td>{{ record.chapterName || '-' }}</td>
+                    <td>
+                      @if (record.isCorrect === true) {
+                        <nz-tag [nzColor]="'success'">正确</nz-tag>
+                      } @else if (record.isCorrect === false) {
+                        <nz-tag [nzColor]="'error'">错误</nz-tag>
+                      } @else {
+                        <nz-tag>未批改</nz-tag>
+                      }
+                    </td>
+                    <td>{{ formatTimeSpan(record.timeSpent) }}</td>
+                    <td>{{ formatDate(record.completedAt) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
           </nz-card>
         }
       </div>
     }
-  </nz-card>
+  }
 </div>

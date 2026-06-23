@@ -1,5 +1,6 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
@@ -7,17 +8,23 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
+import { NzStatisticModule } from 'ng-zorro-antd/statistic';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Router } from '@angular/router';
-import { LearningService } from '../../proxy/learning/learning.service';
-import { StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
+import { CourseService } from '../../proxy/courses/course.service';
+import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
+import type { CourseDto } from '../../proxy/courses/dtos/models';
+import type { CourseLearningOverviewDto, StudentLearningStatisticsDto, StudentExerciseRecordDto, ChapterProgressDto } from '../../proxy/learning/dtos/models';
 
 @Component({
   selector: 'app-learning-progress',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     NzCardModule,
     NzButtonModule,
     NzProgressModule,
@@ -25,59 +32,177 @@ import { StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
     NzSpinModule,
     NzTagModule,
     NzEmptyModule,
-    NzCollapseModule
+    NzTableModule,
+    NzCollapseModule,
+    NzStatisticModule,
+    NzInputModule,
+    NzDatePickerModule,
   ],
   templateUrl: './learning-progress.component.html',
   styleUrls: ['./learning-progress.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LearningProgressComponent implements OnInit {
-  private readonly learningService = inject(LearningService);
-  private readonly router = inject(Router);
+  private readonly courseService = inject(CourseService);
+  private readonly statsService = inject(StudentExerciseRecordService);
   private readonly message = inject(NzMessageService);
 
-  loading = signal(true);
-  courses = signal<StudentCourseListItemDto[]>([]);
+  // Course list
+  loadingCourses = signal(false);
+  courses = signal<CourseDto[]>([]);
+  courseOverviewMap = signal<Record<string, CourseLearningOverviewDto>>({});
+
+  // Selected course detail
+  selectedCourseId = signal<string | null>(null);
+  selectedCourse = computed(() => {
+    const id = this.selectedCourseId();
+    if (!id) return null;
+    return this.courses().find(c => c.id === id) ?? null;
+  });
+  selectedOverview = computed(() => {
+    const id = this.selectedCourseId();
+    if (!id) return null;
+    return this.courseOverviewMap()[id] ?? null;
+  });
+
+  // Student statistics
+  loadingStudents = signal(false);
+  studentStats = signal<StudentLearningStatisticsDto[]>([]);
+  studentRecords = signal<StudentExerciseRecordDto[]>([]);
+
+  // Chapter progress
+  chapterProgress = signal<ChapterProgressDto[]>([]);
+
+  // Date filter
+  startDate = signal<string | null>(null);
+  endDate = signal<string | null>(null);
 
   ngOnInit() {
     this.loadCourses();
   }
 
   loadCourses() {
-    this.loading.set(true);
-    this.learningService.getMyCourses().subscribe({
-      next: (courses) => {
+    this.loadingCourses.set(true);
+    this.courseService.getList({ maxResultCount: 100, skipCount: 0 } as any).subscribe({
+      next: (result) => {
+        const courses = result.items || [];
         this.courses.set(courses);
-        this.loading.set(false);
+        // Load overview for each course
+        courses.forEach(c => {
+          if (c.id) this.loadCourseOverview(c.id);
+        });
+        this.loadingCourses.set(false);
       },
       error: () => {
+        this.loadingCourses.set(false);
         this.message.error('加载课程列表失败');
-        this.loading.set(false);
-      }
+      },
     });
   }
 
-  getProgressColor(progress: number): string {
-    if (progress >= 80) return '#52c41a';
-    if (progress >= 50) return '#faad14';
+  private loadCourseOverview(courseId: string) {
+    this.statsService.getCourseLearningOverview({ courseId }).subscribe({
+      next: (overview) => {
+        this.courseOverviewMap.update(m => ({ ...m, [courseId]: overview }));
+      },
+      error: () => {
+        // Silent fail for individual overviews
+      },
+    });
+  }
+
+  selectCourse(courseId: string) {
+    this.selectedCourseId.set(courseId);
+    this.studentStats.set([]);
+    this.studentRecords.set([]);
+    this.chapterProgress.set([]);
+    if (courseId) {
+      this.loadStudentStats(courseId);
+      this.loadChapterProgress(courseId);
+    }
+  }
+
+  private loadStudentStats(courseId: string) {
+    this.loadingStudents.set(true);
+    this.statsService.getLearningStatistics({
+      courseId,
+      startTime: this.startDate(),
+      endTime: this.endDate(),
+      skipCount: 0,
+      maxResultCount: 100,
+    }).subscribe({
+      next: (result) => {
+        this.studentStats.set(result.items || []);
+        this.loadingStudents.set(false);
+      },
+      error: () => {
+        this.loadingStudents.set(false);
+        this.message.error('加载学习统计失败');
+      },
+    });
+  }
+
+  private loadChapterProgress(courseId: string) {
+    this.statsService.getChapterProgress(courseId).subscribe({
+      next: (result) => {
+        this.chapterProgress.set(result.items || []);
+      },
+      // Silent fail
+    });
+  }
+
+  filterByDate() {
+    const courseId = this.selectedCourseId();
+    if (courseId) this.loadStudentStats(courseId);
+  }
+
+  viewStudentRecords(studentId: string) {
+    const courseId = this.selectedCourseId();
+    if (!courseId) return;
+
+    this.statsService.getMyRecentRecords({
+      courseId,
+      skipCount: 0,
+      maxResultCount: 50,
+    }).subscribe({
+      next: (result) => {
+        // Filter records for this specific student
+        const records = (result.items || []).filter(r => r.studentId === studentId);
+        this.studentRecords.set(records);
+      },
+      error: () => {
+        this.message.error('加载学习记录失败');
+      },
+    });
+  }
+
+  formatTimeSpan(ts?: string): string {
+    if (!ts) return '0分钟';
+    // Format time span string like "hh:mm:ss" to readable form
+    const parts = ts.split(':');
+    if (parts.length === 3) {
+      const h = parseInt(parts[0]);
+      const m = parseInt(parts[1]);
+      if (h > 0) return `${h}小时${m}分钟`;
+      if (m > 0) return `${m}分钟`;
+      return '不到1分钟';
+    }
+    return ts;
+  }
+
+  formatDate(d?: string | null): string {
+    if (!d) return '-';
+    return new Date(d).toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  getScoreColor(rate: number): string {
+    if (rate >= 80) return '#52c41a';
+    if (rate >= 60) return '#faad14';
     return '#ff4d4f';
-  }
-
-  getStatusLabel(status: number): string {
-    const labels: Record<number, string> = { 0: '已选课', 1: '学习中', 2: '已完成', 3: '已退课' };
-    return labels[status] ?? '未知';
-  }
-
-  getStatusColor(status: number): string {
-    const colors: Record<number, string> = { 0: 'default', 1: 'processing', 2: 'success', 3: 'error' };
-    return colors[status] ?? 'default';
-  }
-
-  startExercise(courseId: string) {
-    this.router.navigate(['/learning/exercise-learning', courseId]);
-  }
-
-  viewCourseDetail(courseId: string) {
-    this.router.navigate(['/learning/course-detail', courseId]);
   }
 }
