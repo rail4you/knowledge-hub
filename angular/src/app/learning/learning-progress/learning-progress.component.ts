@@ -28,7 +28,6 @@ import type { CourseLearningOverviewDto, StudentLearningStatisticsDto, StudentEx
     NzTagModule,
     NzEmptyModule,
     NzTableModule,
-    NzInputModule,
   ],
   templateUrl: './learning-progress.component.html',
   styleUrls: ['./learning-progress.component.scss'],
