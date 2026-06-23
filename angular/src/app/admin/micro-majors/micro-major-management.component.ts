@@ -64,6 +64,14 @@ export class MicroMajorManagementComponent implements OnInit {
   coverUploading = false;
   coverFileList: NzUploadFile[] = [];
 
+  // Certificate issue modal
+  certificateModalVisible = false;
+  certificateEnrollmentId = '';
+  certificateIssueLoading = false;
+  certificateImageUploading = false;
+  certificateImageUrl = '';
+  certificateFileList: NzUploadFile[] = [];
+
   ngOnInit(): void {
     this.loadCourses();
     this.reload();
@@ -238,14 +246,73 @@ export class MicroMajorManagementComponent implements OnInit {
     });
   }
 
-  issueCertificate(enrollmentId: string): void {
-    this.microMajorService.issueCertificate(enrollmentId).subscribe({
+  openIssueCertificateModal(enrollmentId: string): void {
+    this.certificateEnrollmentId = enrollmentId;
+    this.certificateImageUrl = '';
+    this.certificateFileList = [];
+    this.certificateModalVisible = true;
+  }
+
+  closeCertificateModal(): void {
+    this.certificateModalVisible = false;
+    this.certificateEnrollmentId = '';
+    this.certificateImageUrl = '';
+    this.certificateFileList = [];
+  }
+
+  beforeCertificateUpload = (rawFile: NzUploadFile): boolean => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+    if (!allowedTypes.includes(rawFile.type!)) {
+      this.message.error('仅支持上传 JPG、PNG、GIF、WebP、BMP 格式的图片');
+      return false;
+    }
+    if (rawFile.size! > 10 * 1024 * 1024) {
+      this.message.error('图片大小不能超过 10MB');
+      return false;
+    }
+
+    this.certificateImageUploading = true;
+    this.ossUploadService.uploadImage(rawFile as unknown as File).subscribe({
+      next: (result) => {
+        this.certificateImageUploading = false;
+        this.certificateImageUrl = result.url;
+        this.certificateFileList = [{
+          uid: result.objectKey,
+          name: result.originalFileName,
+          status: 'done',
+          url: result.url,
+        }];
+        this.message.success('证书图片上传成功');
+      },
+      error: (err) => {
+        this.certificateImageUploading = false;
+        this.certificateFileList = [];
+        this.message.error('上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+      },
+    });
+    return false;
+  };
+
+  removeCertificateImage = (): boolean => {
+    this.certificateImageUrl = '';
+    this.certificateFileList = [];
+    return true;
+  };
+
+  confirmIssueCertificate(): void {
+    if (!this.certificateEnrollmentId) return;
+
+    this.certificateIssueLoading = true;
+    this.microMajorService.issueCertificate(this.certificateEnrollmentId, this.certificateImageUrl || undefined).subscribe({
       next: () => {
+        this.certificateIssueLoading = false;
+        this.closeCertificateModal();
         this.message.success('证书已发放');
         this.reload();
       },
-      error: () => {
-        this.message.error('发证失败，可能尚未满足完成条件');
+      error: (err) => {
+        this.certificateIssueLoading = false;
+        this.message.error('发证失败: ' + (err?.error?.error?.message || err?.message || '可能尚未满足完成条件'));
       },
     });
   }

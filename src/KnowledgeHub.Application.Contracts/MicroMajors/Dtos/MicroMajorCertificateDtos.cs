@@ -13,6 +13,7 @@ public class MicroMajorCertificateDto : FullAuditedEntityDto<Guid>
     public string? StudentName { get; set; }
     public string CertificateNo { get; set; } = string.Empty;
     public string VerifyCode { get; set; } = string.Empty;
+    public string? CertificateImageUrl { get; set; }
     public MicroMajorCertificateStatus Status { get; set; }
     public DateTime IssuedAt { get; set; }
 }

@@ -13,6 +13,8 @@ public class MicroMajorCertificate : FullAuditedEntity<Guid>, IMultiTenant
     public Guid StudentId { get; set; }
     public string CertificateNo { get; set; } = string.Empty;
     public string VerifyCode { get; set; } = string.Empty;
+    /// <summary>证书图片 URL（由管理台上传，发证时关联）</summary>
+    public string? CertificateImageUrl { get; set; }
     public MicroMajorCertificateStatus Status { get; set; } = MicroMajorCertificateStatus.Active;
     public DateTime IssuedAt { get; set; }
 

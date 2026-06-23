@@ -61,6 +61,12 @@
                 <button nz-button nzType="primary" nzSize="small" (click)="approveEnrollment(item.id)">通过</button>
                 <button nz-button nzType="default" nzSize="small" nzDanger (click)="rejectEnrollment(item.id)">拒绝</button>
               }
+              @if (item.status === enrollmentStatuses.Completed) {
+                <button nz-button nzType="primary" nzSize="small" (click)="openIssueCertificateModal(item.id)">
+                  <span nz-icon nzType="safety-certificate"></span>
+                  发证
+                </button>
+              }
             </td>
           </tr>
         }
@@ -129,6 +135,42 @@
             <nz-option [nzValue]="course.id" [nzLabel]="course.title || '未命名课程'"></nz-option>
           }
         </nz-select>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- Certificate issue modal -->
+  <nz-modal
+    [(nzVisible)]="certificateModalVisible"
+    nzTitle="发放证书"
+    [nzWidth]="520"
+    [nzOkText]="'确认发放'"
+    [nzOkLoading]="certificateIssueLoading"
+    [nzOkDisabled]="certificateImageUploading"
+    [nzCancelText]="'取消'"
+    (nzOnOk)="confirmIssueCertificate()"
+    (nzOnCancel)="closeCertificateModal()"
+  >
+    <ng-container *nzModalContent>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <p>请上传该学生的证书图片（可选）。如不上传，系统将只生成电子证书记录。</p>
+        <nz-upload
+          nzListType="picture-card"
+          [nzMultiple]="false"
+          [nzMaxCount]="1"
+          [nzBeforeUpload]="beforeCertificateUpload"
+          [nzFileList]="certificateFileList"
+          [nzRemove]="removeCertificateImage"
+          [nzDisabled]="certificateImageUploading"
+          nzAccept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+        >
+          @if (certificateFileList.length === 0) {
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100px;height:100px;border:1px dashed #d9d9d9;border-radius:8px;cursor:pointer;color:#999;font-size:14px;">
+              <span nz-icon nzType="plus"></span>
+              <div style="margin-top:8px">上传证书</div>
+            </div>
+          }
+        </nz-upload>
       </div>
     </ng-container>
   </nz-modal>

@@ -1,6 +1,7 @@
 using System;
-using Volo.Abp.Domain.Entities.Auditing;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.MultiTenancy;
+using Volo.Abp.Auditing;
 
 namespace KnowledgeHub.Exams;
 
@@ -13,9 +14,10 @@ namespace KnowledgeHub.Exams;
 /// 3) SortOrder 用于同章节内题目排序，避免全表 OrderBy 创建时间导致顺序错乱。
 /// 4) IMultiTenant：跟随租户隔离，避免跨租户越权。
 /// </summary>
-public class ChapterExercise : FullAuditedEntity<Guid>, IMultiTenant
+public class ChapterExercise : Entity<Guid>, IMultiTenant, IHasCreationTime
 {
     public Guid? TenantId { get; set; }
+    public DateTime CreationTime { get; set; }
     public Guid ChapterId { get; set; }
     public Guid ExerciseId { get; set; }
     public int SortOrder { get; set; }

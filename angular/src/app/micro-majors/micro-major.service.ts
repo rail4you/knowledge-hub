@@ -208,10 +208,14 @@ export class MicroMajorService {
     }, { apiName: this.apiName });
   }
 
-  issueCertificate(enrollmentId: string): Observable<MicroMajorCertificateDto> {
+  issueCertificate(enrollmentId: string, certificateImageUrl?: string): Observable<MicroMajorCertificateDto> {
     return this.restService.request<any, MicroMajorCertificateDto>({
       method: 'POST',
-      url: `/api/app/micro-major/issue-certificate/${enrollmentId}`,
+      url: `/api/app/micro-major/issue-certificate`,
+      body: {
+        enrollmentId,
+        certificateImageUrl: certificateImageUrl || null,
+      },
     }, { apiName: this.apiName });
   }
 

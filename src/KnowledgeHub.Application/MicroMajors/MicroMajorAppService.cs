@@ -288,9 +288,9 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.MicroMajors.IssueCertificate)]
-    public async Task<MicroMajorCertificateDto> IssueCertificateAsync(Guid enrollmentId)
+    public async Task<MicroMajorCertificateDto> IssueCertificateAsync(IssueCertificateInputDto input)
     {
-        var enrollment = await _microMajorEnrollmentRepository.GetAsync(enrollmentId);
+        var enrollment = await _microMajorEnrollmentRepository.GetAsync(input.EnrollmentId);
         var microMajor = await _microMajorRepository.GetAsync(enrollment.MicroMajorId);
 
         if (!microMajor.IsCertificateEnabled)
@@ -305,7 +305,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             throw new UserFriendlyException("该学生尚未满足发证条件。");
         }
 
-        var existing = await _microMajorCertificateRepository.FirstOrDefaultAsync(x => x.EnrollmentId == enrollmentId);
+        var existing = await _microMajorCertificateRepository.FirstOrDefaultAsync(x => x.EnrollmentId == input.EnrollmentId);
         if (existing != null)
         {
             return (await MapCertificateDtosAsync(new List<MicroMajorCertificate> { existing }))[0];
@@ -314,12 +314,13 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         var certificate = new MicroMajorCertificate(
             GuidGenerator.Create(),
             enrollment.MicroMajorId,
-            enrollmentId,
+            input.EnrollmentId,
             enrollment.StudentId,
             $"MM-{Clock.Now:yyyyMMdd}-{GuidGenerator.Create():N}"[..21],
             GuidGenerator.Create().ToString("N")[..10].ToUpperInvariant())
         {
-            TenantId = enrollment.TenantId
+            TenantId = enrollment.TenantId,
+            CertificateImageUrl = input.CertificateImageUrl?.Trim()
         };
 
         await _microMajorCertificateRepository.InsertAsync(certificate, autoSave: true);
@@ -650,6 +651,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             StudentName = userMap.GetValueOrDefault(item.StudentId),
             CertificateNo = item.CertificateNo,
             VerifyCode = item.VerifyCode,
+            CertificateImageUrl = item.CertificateImageUrl,
             Status = item.Status,
             IssuedAt = item.IssuedAt,
             CreationTime = item.CreationTime,
