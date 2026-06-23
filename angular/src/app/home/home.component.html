@@ -96,7 +96,7 @@
       </div>
       <div class="materials-list">
         @for (mat of homeData()?.latestMaterials; track mat.id) {
-          <div class="material-item">
+          <div class="material-item" (click)="previewResource(mat)">
             <span class="material-item__icon">
               <span nz-icon nzType="file-text" nzTheme="outline"></span>
             </span>
@@ -159,3 +159,5 @@
     </section>
   }
 </div>
+
+<app-file-preview />
