@@ -7,6 +7,7 @@ using KnowledgeHub.News.Dtos;
 using KnowledgeHub.News.Enums;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Content;
@@ -15,6 +16,7 @@ using Volo.Abp.Domain.Repositories;
 namespace KnowledgeHub.News;
 
 [Authorize(KnowledgeHubPermissions.News.Create)]
+[IgnoreAntiforgeryToken]
 public class NewsImportAppService : KnowledgeHubAppService, INewsImportAppService
 {
     private readonly IRepository<NewsArticle, Guid> _articleRepository;
@@ -34,11 +36,13 @@ public class NewsImportAppService : KnowledgeHubAppService, INewsImportAppServic
         "分类(可选)", "标题(必填)", "摘要(可选)", "正文(必填)", "封面图URL(可选)", "标签(可选)"
     };
 
-    public async Task<NewsImportResultDto> ImportAsync(byte[] excelFile)
+    public async Task<NewsImportResultDto> ImportAsync(IFormFile file)
     {
         var result = new NewsImportResultDto();
 
-        using var stream = new System.IO.MemoryStream(excelFile);
+        using var stream = new System.IO.MemoryStream();
+        await file.CopyToAsync(stream);
+        stream.Position = 0;
         using var workbook = new XLWorkbook(stream);
 
         var worksheet = workbook.Worksheet(1);

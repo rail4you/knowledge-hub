@@ -283,11 +283,13 @@ export class NewsService {
     }, { apiName: this.apiName });
   }
 
-  importArticles(excelFile: Uint8Array): Observable<NewsImportResultDto> {
+  importArticles(file: Blob, fileName: string): Observable<NewsImportResultDto> {
+    const formData = new FormData();
+    formData.append('file', file, fileName);
     return this.restService.request<any, NewsImportResultDto>({
       method: 'POST',
       url: '/api/app/news-import/import',
-      body: excelFile,
+      body: formData,
     }, { apiName: this.apiName });
   }
 

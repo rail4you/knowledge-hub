@@ -341,26 +341,20 @@ export class NewsManagementComponent implements OnInit {
     }
 
     this.importing = true;
-    const reader = new FileReader();
-    reader.readAsArrayBuffer(file as any);
-    reader.onload = () => {
-      const arrayBuffer = reader.result as ArrayBuffer;
-      const uint8Array = new Uint8Array(arrayBuffer);
-
-      this.newsService.importArticles(uint8Array as any).subscribe({
-        next: (result) => {
-          this.importing = false;
-          this.importSuccess = true;
-          this.importResult = result;
-          this.message.success(`导入完成：成功 ${result.successCount} 条，失败 ${result.failCount} 条`);
-          this.loadArticles();
-        },
-        error: (err) => {
-          this.importing = false;
-          this.message.error('导入失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
-        },
-      });
-    };
+    const rawFile = file as any;
+    this.newsService.importArticles(rawFile, rawFile.name).subscribe({
+      next: (result) => {
+        this.importing = false;
+        this.importSuccess = true;
+        this.importResult = result;
+        this.message.success(`导入完成：成功 ${result.successCount} 条，失败 ${result.failCount} 条`);
+        this.loadArticles();
+      },
+      error: (err) => {
+        this.importing = false;
+        this.message.error('导入失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+      },
+    });
   }
 
   /** 下载导入模板（P1-13 修复） */
