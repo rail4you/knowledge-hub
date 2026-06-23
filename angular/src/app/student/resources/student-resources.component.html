@@ -12,7 +12,7 @@
       <!-- 左侧轮播 -->
       <div class="hero__carousel">
         <div class="carousel-stage">
-          @for (slide of heroSlides(); track $index; let i = $index) {
+          @for (slide of visibleHeroSlides(); track $index; let i = $index) {
             <article
               class="carousel-slide"
               [class.is-active]="activeHeroSlide() === i"
@@ -35,7 +35,7 @@
         </div>
 
         <div class="carousel-dots" role="tablist">
-          @for (slide of heroSlides(); track $index; let i = $index) {
+          @for (slide of visibleHeroSlides(); track $index; let i = $index) {
             <button
               class="carousel-dot"
               [class.is-active]="activeHeroSlide() === i"
@@ -178,6 +178,27 @@
     </section>
   }
 
+  <!-- =================== S-11 按专业分组 Tab =================== -->
+  @if (majorChips().length > 1) {
+    <section class="major-tabs" aria-label="按专业筛选">
+      <div class="major-tabs__inner">
+        <span class="major-tabs__label">按专业</span>
+        <div class="major-tabs__list">
+          @for (chip of majorChips(); track chip.id) {
+            <button
+              class="major-chip"
+              [class.is-active]="selectedMajorId() === chip.id"
+              (click)="selectMajor(chip.id)"
+            >
+              <span>{{ chip.name }}</span>
+              <span class="major-chip__count">{{ chip.count }}</span>
+            </button>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
   <!-- =================== 资源分类 + 素材列表 =================== -->
   <section class="resource-section">
     <div class="resource-layout">
@@ -280,8 +301,8 @@
             <div class="empty-state__art">
               <span nz-icon nzType="inbox" nzTheme="outline"></span>
             </div>
-            <h3>暂无资源</h3>
-            <p>请尝试更换关键词或选择其他分类</p>
+            <h3>该租户下暂无资源</h3>
+            <p>该院校/机构暂未发布任何资源，请尝试更换关键词或选择其他分类</p>
           </div>
         } @else {
           <div class="resources-grid">
@@ -289,9 +310,9 @@
               <article
                 class="resource-card"
                 [ngClass]="'type-' + (resource.resourceType || 0)"
-                (click)="openDetail(resource)"
+                (click)="previewResource($event, resource)"
                 tabindex="0"
-                (keyup.enter)="openDetail(resource)"
+                (keyup.enter)="previewResource($event, resource)"
               >
                 <div class="resource-card__cover">
                   <div class="cover-decor" aria-hidden="true">
