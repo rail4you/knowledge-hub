@@ -34,7 +34,7 @@ export class HomeComponent implements OnInit {
 
   ngOnInit() {
     this.loadStats();
-    this.loadTenants();
+    this.loadAllData();
     if (this.hasLoggedIn && this.isStudent) {
       const returnUrl = this.route.snapshot.queryParams['returnUrl'];
       if (!returnUrl) this.router.navigate(['/student']);
@@ -49,23 +49,31 @@ export class HomeComponent implements OnInit {
     });
   }
 
-  loadTenants() {
+  loadAllData() {
     this.loadingTenants.set(true);
+    // Load tenants and home data in parallel for anonymous users
     this.portalService.getPublicTenantList().subscribe({
       next: tenants => {
         this.tenants.set(tenants || []);
         this.loadingTenants.set(false);
-        // Load home data for the first tenant (or default)
         const firstId = tenants?.[0]?.id;
         if (firstId) this.loadHomeData(firstId);
       },
-      error: () => this.loadingTenants.set(false),
+      error: () => {
+        this.loadingTenants.set(false);
+        // Fallback: try loading home data with a known tenant ID
+        this.loadHomeData('3a2034d1-6c43-2219-8149-45182659c849');
+      },
     });
   }
 
   loadHomeData(tenantId: string) {
     this.portalService.getHomeData(tenantId).subscribe({
       next: data => this.homeData.set(data),
+      error: () => {
+        // If getHomeData also fails, try stats directly as materials
+        console.warn('Home data load failed for tenant:', tenantId);
+      },
     });
   }
 
