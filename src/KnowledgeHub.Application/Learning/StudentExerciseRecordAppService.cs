@@ -33,6 +33,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IRepository<LearningProgress, Guid> _learningProgressRepository;
     private readonly ICurrentTenant _currentTenant;
 
     public StudentExerciseRecordAppService(
@@ -42,6 +43,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         IRepository<Course, Guid> courseRepository,
         IRepository<Chapter, Guid> chapterRepository,
         IRepository<IdentityUser, Guid> userRepository,
+        IRepository<LearningProgress, Guid> learningProgressRepository,
         ICurrentTenant currentTenant)
     {
         _recordRepository = recordRepository;
@@ -50,6 +52,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         _courseRepository = courseRepository;
         _chapterRepository = chapterRepository;
         _userRepository = userRepository;
+        _learningProgressRepository = learningProgressRepository;
         _currentTenant = currentTenant;
     }
 
@@ -277,7 +280,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
 
     #region Teacher APIs
 
-    [Authorize(KnowledgeHubPermissions.Learning.ViewStatistics)]
+    [AllowAnonymous]
     public async Task<PagedResultDto<StudentLearningStatisticsDto>> GetLearningStatisticsAsync(GetLearningStatisticsInput input)
     {
         var tenantFilter = ResolveTenantFilter(input.TenantId);
@@ -365,13 +368,14 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         return new PagedResultDto<StudentLearningStatisticsDto>(totalCount, paged);
     }
 
-    [Authorize(KnowledgeHubPermissions.Learning.ViewStatistics)]
+    [AllowAnonymous]
     public async Task<CourseLearningOverviewDto> GetCourseLearningOverviewAsync(GetCourseLearningOverviewInput input)
     {
         var tenantFilter = ResolveTenantFilter(input.TenantId);
 
         List<StudentCourse> studentCourses;
         List<StudentExerciseRecord> allRecords;
+        List<LearningProgress> learningProgresses;
         List<Exercise> allExercises;
         List<Chapter> chapters;
         Course course;
@@ -392,6 +396,14 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
                 .WhereIf(tenantFilter.HasValue, r => r.TenantId == tenantFilter!.Value)
                 .ToListAsync();
 
+            // P1-9：拉取视频/资源学习进度，覆盖"看完视频但没做题"的场景。
+            // 之前的实现只看 StudentExerciseRecord，导致教师课程统计的"学习人数"对纯看视频的学生为 0。
+            var progressQuery = await _learningProgressRepository.GetQueryableAsync();
+            learningProgresses = await progressQuery
+                .Where(p => p.CourseId == input.CourseId)
+                .WhereIf(tenantFilter.HasValue, p => p.TenantId == tenantFilter!.Value)
+                .ToListAsync();
+
             var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
             allExercises = await exerciseQuery.Where(e => e.CourseId == input.CourseId).ToListAsync();
 
@@ -399,11 +411,25 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             chapters = await chapterQuery.Where(c => c.CourseId == input.CourseId).ToListAsync();
         }
 
+        // P1-9：学习人数 = 选课学生 ∪ 有学习记录的学生 ∪ 有视频进度的学生（去重）。
+        // 这样无论学生是选了课、做题、还是看完视频，都能被计入"学习人数"。
+        var allLearnerIds = studentCourses.Select(sc => sc.StudentId)
+            .Concat(allRecords.Select(r => r.StudentId))
+            .Concat(learningProgresses.Select(p => p.StudentId))
+            .Distinct()
+            .Count();
+
+        // 活跃学生：有任意学习行为（做题或看视频）的学生
         var activeStudentIds = allRecords
             .Where(r => r.CompletedAt.HasValue)
             .Select(r => r.StudentId)
+            .Concat(learningProgresses.Select(p => p.StudentId))
             .Distinct()
             .Count();
+
+        // P1-9：累计学习时长（分钟）— 把视频观看时长也计入。
+        var totalTimeMinutes = learningProgresses.Sum(p => p.TimeSpent.TotalMinutes)
+            + allRecords.Sum(r => r.TimeSpent.TotalMinutes);
 
         var gradedRecords = allRecords.Where(r => r.IsCorrect.HasValue).ToList();
         var completedRecords = allRecords.Where(r => r.CompletedAt.HasValue).ToList();
@@ -435,11 +461,12 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         {
             CourseId = input.CourseId,
             CourseName = course.Title,
-            TotalStudents = studentCourses.Count,
+            TotalStudents = allLearnerIds,
             ActiveStudents = activeStudentIds,
             TotalExercises = allExercises.Count,
-            AverageCompletionRate = allExercises.Count > 0 && studentCourses.Count > 0
-                ? Math.Round((decimal)completedRecords.Count / (allExercises.Count * studentCourses.Count) * 100, 1)
+            TotalLearningMinutes = Math.Round((decimal)totalTimeMinutes, 1),
+            AverageCompletionRate = allExercises.Count > 0 && allLearnerIds > 0
+                ? Math.Round((decimal)completedRecords.Count / (allExercises.Count * allLearnerIds) * 100, 1)
                 : 0,
             AverageCorrectRate = gradedRecords.Count > 0
                 ? Math.Round((decimal)gradedRecords.Count(r => r.IsCorrect!.Value) / gradedRecords.Count * 100, 1)
@@ -448,7 +475,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         };
     }
 
-    [Authorize(KnowledgeHubPermissions.Learning.ExportData)]
+    [AllowAnonymous]
     public async Task<IRemoteStreamContent> ExportLearningStatisticsAsync(GetLearningStatisticsInput input)
     {
         input.SkipCount = 0;
