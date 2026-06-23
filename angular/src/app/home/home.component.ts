@@ -87,8 +87,7 @@ export class HomeComponent implements OnInit {
 
   previewResource(resource: { id?: string; name?: string; fileExtension?: string | null; downloadCount?: number }): void {
     if (!resource.id) return;
-    const previewUrl = `/api/resource-file/${resource.id}/preview`;
-    window.open(previewUrl, '_blank');
+    window.location.href = `/api/resource-file/${resource.id}/preview`;
   }
 
   coverGradient(index: number): string {

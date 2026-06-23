@@ -9,7 +9,9 @@ using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Controllers;
 
@@ -19,15 +21,18 @@ public class ResourceFileController : AbpControllerBase
     protected IResourceRepository ResourceRepository { get; }
     protected IRepository<Resource, Guid> Repository { get; }
     protected IFileStorageService FileStorageService { get; }
+    protected IDataFilter DataFilter { get; }
 
     public ResourceFileController(
         IResourceRepository resourceRepository,
         IRepository<Resource, Guid> repository,
-        IFileStorageService fileStorageService)
+        IFileStorageService fileStorageService,
+        IDataFilter dataFilter)
     {
         ResourceRepository = resourceRepository;
         Repository = repository;
         FileStorageService = fileStorageService;
+        DataFilter = dataFilter;
     }
 
     [HttpGet("{resourceId}/download")]
@@ -70,7 +75,11 @@ public class ResourceFileController : AbpControllerBase
     [AllowAnonymous]
     public virtual async Task<IActionResult> Preview(Guid resourceId)
     {
-        var resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
+        Resource resource;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
+        }
 
         // Allow preview if resource is approved, OR if current user is the creator
         // (so uploaders can preview their own content before submitting for review)
