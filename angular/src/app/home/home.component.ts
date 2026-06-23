@@ -1,4 +1,4 @@
-import { Component, inject, ViewChild, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
@@ -7,7 +7,6 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { hasRole } from '../auth/current-user.utils';
 import { PortalService } from '../proxy/portal/portal.service';
-import { FilePreviewComponent } from '../shared/preview/file-preview.component';
 import type { TenantResourceSummaryDto, PublicHomeStatsDto, PortalHomeDataDto } from '../proxy/portal/models';
 
 @Component({
@@ -15,7 +14,7 @@ import type { TenantResourceSummaryDto, PublicHomeStatsDto, PortalHomeDataDto } 
   standalone: true,
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
-  imports: [CommonModule, DecimalPipe, RouterLink, NzSpinModule, NzEmptyModule, NzIconModule, FilePreviewComponent],
+  imports: [CommonModule, DecimalPipe, RouterLink, NzSpinModule, NzEmptyModule, NzIconModule],
 })
 export class HomeComponent implements OnInit {
   private authService = inject(AuthService);
@@ -28,8 +27,6 @@ export class HomeComponent implements OnInit {
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
   readonly homeData = signal<PortalHomeDataDto | null>(null);
   readonly loadingStats = signal(false);
-
-  @ViewChild('filePreview') filePreview!: FilePreviewComponent;
   readonly loadingTenants = signal(false);
 
   get hasLoggedIn(): boolean { return this.authService.isAuthenticated; }
@@ -82,11 +79,8 @@ export class HomeComponent implements OnInit {
 
   previewResource(resource: { id?: string; name?: string; fileExtension?: string | null; downloadCount?: number }): void {
     if (!resource.id) return;
-    if (!this.filePreview) {
-      console.warn('FilePreviewComponent not initialized');
-      return;
-    }
-    this.filePreview.open(resource.id, resource.name || '', resource.fileExtension || '', 0);
+    const previewUrl = `/api/resource-file/${resource.id}/preview`;
+    window.open(previewUrl, '_blank');
   }
 
   coverGradient(index: number): string {
