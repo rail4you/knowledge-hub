@@ -121,42 +121,6 @@
           </div>
         </nz-card>
 
-        <!-- Chapter progress -->
-        @if (chapterProgress().length > 0) {
-          <nz-card nzTitle="章节学习进度">
-            <nz-table [nzData]="chapterProgress()" [nzFrontPagination]="false" nzSize="small">
-              <thead>
-                <tr>
-                  <th>章节</th>
-                  <th>习题数</th>
-                  <th>完成数</th>
-                  <th>完成率</th>
-                  <th>正确率</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (ch of chapterProgress(); track ch.chapterId) {
-                  <tr>
-                    <td>{{ ch.chapterName }}</td>
-                    <td>{{ ch.totalExercises }}</td>
-                    <td>{{ ch.completedCount }}</td>
-                    <td>
-                      <nz-progress
-                        [nzPercent]="ch.completionRate ?? 0"
-                        [nzStrokeColor]="getScoreColor(ch.completionRate ?? 0)"
-                        nzSize="small"
-                      ></nz-progress>
-                    </td>
-                    <td>
-                      <nz-tag [nzColor]="getScoreColor(ch.correctRate ?? 0)">{{ ch.correctRate }}%</nz-tag>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </nz-table>
-          </nz-card>
-        }
-
         <!-- Student statistics table -->
         <nz-card nzTitle="学生学习统计">
           @if (loadingStudents()) {

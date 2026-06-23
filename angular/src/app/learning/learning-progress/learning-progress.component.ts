@@ -9,15 +9,12 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTableModule } from 'ng-zorro-antd/table';
-import { NzCollapseModule } from 'ng-zorro-antd/collapse';
-import { NzStatisticModule } from 'ng-zorro-antd/statistic';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
-import type { CourseLearningOverviewDto, StudentLearningStatisticsDto, StudentExerciseRecordDto, ChapterProgressDto } from '../../proxy/learning/dtos/models';
+import type { CourseLearningOverviewDto, StudentLearningStatisticsDto, StudentExerciseRecordDto } from '../../proxy/learning/dtos/models';
 
 @Component({
   selector: 'app-learning-progress',
@@ -33,10 +30,7 @@ import type { CourseLearningOverviewDto, StudentLearningStatisticsDto, StudentEx
     NzTagModule,
     NzEmptyModule,
     NzTableModule,
-    NzCollapseModule,
-    NzStatisticModule,
     NzInputModule,
-    NzDatePickerModule,
   ],
   templateUrl: './learning-progress.component.html',
   styleUrls: ['./learning-progress.component.scss'],
@@ -69,9 +63,6 @@ export class LearningProgressComponent implements OnInit {
   loadingStudents = signal(false);
   studentStats = signal<StudentLearningStatisticsDto[]>([]);
   studentRecords = signal<StudentExerciseRecordDto[]>([]);
-
-  // Chapter progress
-  chapterProgress = signal<ChapterProgressDto[]>([]);
 
   // Date filter
   startDate = signal<string | null>(null);
@@ -115,10 +106,8 @@ export class LearningProgressComponent implements OnInit {
     this.selectedCourseId.set(courseId);
     this.studentStats.set([]);
     this.studentRecords.set([]);
-    this.chapterProgress.set([]);
     if (courseId) {
       this.loadStudentStats(courseId);
-      this.loadChapterProgress(courseId);
     }
   }
 
@@ -142,15 +131,6 @@ export class LearningProgressComponent implements OnInit {
     });
   }
 
-  private loadChapterProgress(courseId: string) {
-    this.statsService.getChapterProgress(courseId).subscribe({
-      next: (result) => {
-        this.chapterProgress.set(result.items || []);
-      },
-      // Silent fail
-    });
-  }
-
   filterByDate() {
     const courseId = this.selectedCourseId();
     if (courseId) this.loadStudentStats(courseId);
@@ -160,15 +140,13 @@ export class LearningProgressComponent implements OnInit {
     const courseId = this.selectedCourseId();
     if (!courseId) return;
 
-    this.statsService.getMyRecentRecords({
+    this.statsService.getStudentRecords({
       courseId,
       skipCount: 0,
       maxResultCount: 50,
-    }).subscribe({
+    }, studentId).subscribe({
       next: (result) => {
-        // Filter records for this specific student
-        const records = (result.items || []).filter(r => r.studentId === studentId);
-        this.studentRecords.set(records);
+        this.studentRecords.set(result.items || []);
       },
       error: () => {
         this.message.error('加载学习记录失败');

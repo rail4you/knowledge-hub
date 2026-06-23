@@ -281,6 +281,30 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
     #region Teacher APIs
 
     [AllowAnonymous]
+    public async Task<PagedResultDto<StudentExerciseRecordDto>> GetStudentRecordsAsync(GetStudentExerciseRecordsInput input, Guid studentId)
+    {
+        List<StudentExerciseRecord> items;
+        long totalCount;
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _recordRepository.GetQueryableAsync();
+            query = query
+                .Where(x => x.StudentId == studentId && x.CourseId == input.CourseId)
+                .WhereIf(input.ChapterId.HasValue, x => x.ChapterId == input.ChapterId);
+
+            totalCount = await query.LongCountAsync();
+            items = await query
+                .OrderByDescending(x => x.CreationTime)
+                .PageBy(input.SkipCount, input.MaxResultCount)
+                .ToListAsync();
+        }
+
+        var dtos = await MapToDtoListAsync(items);
+        return new PagedResultDto<StudentExerciseRecordDto>(totalCount, dtos);
+    }
+
+    [AllowAnonymous]
     public async Task<PagedResultDto<StudentLearningStatisticsDto>> GetLearningStatisticsAsync(GetLearningStatisticsInput input)
     {
         var tenantFilter = ResolveTenantFilter(input.TenantId);
@@ -668,12 +692,8 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
     /// </summary>
     private static string ResolveStudentName(IdentityUser u)
     {
-        var surname = u.Surname?.Trim();
+        // 优先显示 Name（真实姓名），没有则用 UserName（登录名）
         var name = u.Name?.Trim();
-        if (!string.IsNullOrEmpty(surname) && !string.IsNullOrEmpty(name))
-        {
-            return $"{surname}{name}";
-        }
         if (!string.IsNullOrEmpty(name)) return name;
         if (!string.IsNullOrEmpty(u.UserName)) return u.UserName;
         if (!string.IsNullOrEmpty(u.Email)) return u.Email;
