@@ -7,6 +7,7 @@ using KnowledgeHub.News.Dtos;
 using KnowledgeHub.News.Enums;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Content;
 using Volo.Abp.Domain.Repositories;
@@ -145,6 +146,7 @@ public class NewsImportAppService : KnowledgeHubAppService, INewsImportAppServic
         return result;
     }
 
+    [HttpGet]
     public Task<IRemoteStreamContent> DownloadTemplateAsync()
     {
         using var workbook = new XLWorkbook();
