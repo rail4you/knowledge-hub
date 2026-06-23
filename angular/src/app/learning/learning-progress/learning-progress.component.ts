@@ -1,6 +1,5 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
@@ -9,7 +8,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTableModule } from 'ng-zorro-antd/table';
-import { NzInputModule } from 'ng-zorro-antd/input';
+
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
@@ -21,7 +20,6 @@ import type { CourseLearningOverviewDto, StudentLearningStatisticsDto, StudentEx
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     NzCardModule,
     NzButtonModule,
     NzProgressModule,
@@ -63,10 +61,6 @@ export class LearningProgressComponent implements OnInit {
   loadingStudents = signal(false);
   studentStats = signal<StudentLearningStatisticsDto[]>([]);
   studentRecords = signal<StudentExerciseRecordDto[]>([]);
-
-  // Date filter
-  startDate = signal<string | null>(null);
-  endDate = signal<string | null>(null);
 
   ngOnInit() {
     this.loadCourses();
@@ -115,8 +109,6 @@ export class LearningProgressComponent implements OnInit {
     this.loadingStudents.set(true);
     this.statsService.getLearningStatistics({
       courseId,
-      startTime: this.startDate(),
-      endTime: this.endDate(),
       skipCount: 0,
       maxResultCount: 100,
     }).subscribe({
@@ -129,11 +121,6 @@ export class LearningProgressComponent implements OnInit {
         this.message.error('加载学习统计失败');
       },
     });
-  }
-
-  filterByDate() {
-    const courseId = this.selectedCourseId();
-    if (courseId) this.loadStudentStats(courseId);
   }
 
   viewStudentRecords(studentId: string) {

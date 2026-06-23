@@ -5,7 +5,7 @@
     <p class="subtitle">查看各课程的学生学习情况，包括习题完成度、学习时长等统计</p>
   </div>
 
-  <!-- Course overview cards -->
+  <!-- Loading state -->
   @if (loadingCourses()) {
     <div class="loading-container">
       <nz-spin nzSimple nzSize="large"></nz-spin>
@@ -13,6 +13,7 @@
   } @else if (courses().length === 0) {
     <nz-empty nzNotFoundContent="暂无课程数据"></nz-empty>
   } @else {
+    <!-- Course overview cards -->
     <div class="course-grid">
       @for (course of courses(); track course.id) {
         @let overview = courseOverviewMap()[course.id ?? ''];
@@ -24,7 +25,7 @@
         >
           <div class="course-card-header">
             <h4 class="course-title">{{ course.title }}</h4>
-            <nz-tag>{{ course.majorName || '通用' }}</nz-tag>
+            <nz-tag nzColor="blue">{{ course.majorName || '通用' }}</nz-tag>
           </div>
           <div class="course-card-stats">
             <div class="stat-item">
@@ -33,7 +34,7 @@
             </div>
             <div class="stat-item">
               <span class="stat-value">{{ overview?.totalExercises ?? '-' }}</span>
-              <span class="stat-label">总习题数</span>
+              <span class="stat-label">总习题</span>
             </div>
             <div class="stat-item">
               <span class="stat-value">{{ overview?.totalLearningMinutes ?? 0 | number:'1.0-0' }}</span>
@@ -58,10 +59,10 @@
       }
     </div>
 
-    <!-- Detail section -->
+    <!-- Detail section for selected course -->
     @if (selectedOverview(); as overview) {
       <div class="detail-section">
-        <!-- Course summary -->
+        <!-- Summary statistics grid -->
         <nz-card class="summary-card">
           <div class="summary-grid">
             <div class="summary-item">
@@ -74,11 +75,11 @@
             </div>
             <div class="summary-item">
               <span class="summary-value">{{ overview.totalExercises }}</span>
-              <span class="summary-label">总习题数</span>
+              <span class="summary-label">总习题</span>
             </div>
             <div class="summary-item">
               <span class="summary-value">{{ overview.totalLearningMinutes | number:'1.0-0' }}</span>
-              <span class="summary-label">总学习时长(分钟)</span>
+              <span class="summary-label">学习时长(分钟)</span>
             </div>
             <div class="summary-item">
               <span class="summary-value" [style.color]="getScoreColor(overview.averageCompletionRate ?? 0)">
@@ -95,32 +96,6 @@
           </div>
         </nz-card>
 
-        <!-- Date filter -->
-        <nz-card class="filter-card">
-          <div class="filter-bar">
-            <label>时间范围：</label>
-            <input
-              nz-input
-              type="date"
-              [ngModel]="startDate() | date:'yyyy-MM-dd'"
-              (ngModelChange)="startDate.set($event ? $event + 'T00:00:00' : null)"
-              placeholder="开始日期"
-              style="width:160px"
-            />
-            <span class="filter-sep">~</span>
-            <input
-              nz-input
-              type="date"
-              [ngModel]="endDate() | date:'yyyy-MM-dd'"
-              (ngModelChange)="endDate.set($event ? $event + 'T23:59:59' : null)"
-              placeholder="结束日期"
-              style="width:160px"
-            />
-            <button nz-button nzSize="small" (click)="filterByDate()">查询</button>
-            <button nz-button nzSize="small" (click)="startDate.set(null); endDate.set(null); filterByDate()">重置</button>
-          </div>
-        </nz-card>
-
         <!-- Student statistics table -->
         <nz-card nzTitle="学生学习统计">
           @if (loadingStudents()) {
@@ -134,7 +109,7 @@
               <thead>
                 <tr>
                   <th>学生</th>
-                  <th>完成数/总题数</th>
+                  <th>完成数 / 总题数</th>
                   <th>完成率</th>
                   <th>正确率</th>
                   <th>学习时长</th>
@@ -145,7 +120,7 @@
               <tbody>
                 @for (stat of studentStats(); track stat.studentId) {
                   <tr>
-                    <td>{{ stat.studentName }}</td>
+                    <td><strong>{{ stat.studentName }}</strong></td>
                     <td>{{ stat.completedCount }} / {{ stat.totalCount }}</td>
                     <td>
                       <nz-progress
