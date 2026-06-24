@@ -62,6 +62,7 @@ Logs/
 
 # Java / PDF Parser
 src/KnowledgeHub.HttpApi.Host/utils/pdf-parser/target/
+utils/pdf-parser/target/
 temp-pom/
 
 # 大文件 (可重新生成)
