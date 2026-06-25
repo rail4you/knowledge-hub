@@ -751,12 +751,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         try
         {
-            var pageIndexList = await PageIndexRepository.GetListAsync(x => x.ResourceId == resourceId);
-            if (pageIndexList.Any())
-            {
-                await PageIndexRepository.DeleteManyAsync(pageIndexList);
-                Logger.LogInformation("Deleted {Count} ResourcePageIndex records for resource {ResourceId}", pageIndexList.Count, resourceId);
-            }
+            // KhResourcePageIndices 表已被迁移 RemoveResourcePageIndex 删除
+        // PageIndexRepository 查询该表会抛异常并污染事务，此处直接跳过
         }
         catch (Exception ex)
         {
@@ -790,6 +786,27 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         {
             Logger.LogError(ex, "Failed to delete VideoIndexingJob for resource {ResourceId}", resourceId);
         }
+    }
+
+    /// <summary>
+    /// 清理资源关联数据（外键约束相关表），物理删除 Resource 前必须先删子表。
+    /// </summary>
+    protected virtual async Task CleanupResourceRelatedDataAsync(Guid resourceId)
+    {
+        // 删除所有版本记录
+        var versions = await VersionRepository.GetListAsync(x => x.ResourceId == resourceId);
+        foreach (var v in versions)
+            await VersionRepository.DeleteAsync(v.Id);
+
+        // 删除所有审核记录
+        var audits = await AuditRepository.GetListAsync(x => x.ResourceId == resourceId);
+        foreach (var a in audits)
+            await AuditRepository.DeleteAsync(a.Id);
+
+        // 删除所有收藏记录
+        var collections = await CollectionRepository.GetListAsync(x => x.ResourceId == resourceId);
+        foreach (var c in collections)
+            await CollectionRepository.DeleteAsync(c.Id);
     }
 
     /// <summary>
@@ -1213,7 +1230,17 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         await CleanupResourceIndexDataAsync(request.ResourceId);
 
-        await FileStorageService.DeleteAsync(resource.FilePath);
+        // 清理关联数据（外键约束要求先删子表）
+        await CleanupResourceRelatedDataAsync(request.ResourceId);
+
+        try
+        {
+            await FileStorageService.DeleteAsync(resource.FilePath);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "删除资源文件失败: {FilePath}", resource.FilePath);
+        }
 
         using (DataFilter.Disable<IMultiTenant>())
         {
