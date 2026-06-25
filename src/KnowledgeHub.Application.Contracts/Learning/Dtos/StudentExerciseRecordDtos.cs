@@ -87,6 +87,7 @@ public class CourseLearningOverviewDto
     public int TotalExercises { get; set; }
     public decimal AverageCompletionRate { get; set; }
     public decimal AverageCorrectRate { get; set; }
+    public double TotalLearningMinutes { get; set; }
     public List<ChapterProgressDto> ChapterProgress { get; set; } = new();
 }
 

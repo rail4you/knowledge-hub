@@ -114,6 +114,8 @@ public class MaterialBriefDto
     public string? FileExtension { get; set; }
     public int DownloadCount { get; set; }
     public string? CoverUrl { get; set; }
+    public long FileSize { get; set; }
+    public string? OriginalFileName { get; set; }
 }
 
 public class NewsBriefDto
@@ -163,6 +165,8 @@ public class PublicResourceDto
     public string? CoverUrl { get; set; }
     public string? TenantName { get; set; }
     public Guid TenantId { get; set; }
+    public long FileSize { get; set; }
+    public string? OriginalFileName { get; set; }
 }
 
 public class PublicMicroMajorDto

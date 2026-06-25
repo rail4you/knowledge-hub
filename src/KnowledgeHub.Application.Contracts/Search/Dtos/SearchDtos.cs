@@ -17,6 +17,8 @@ public class SearchQueryDto
     public string? IndexName { get; set; }
     /// <summary>MeiliSearch status 过滤器，如 "2,3" 仅已审核资源。null/空则不过滤。</summary>
     public string? StatusFilter { get; set; }
+    /// <summary>按资源 ID 过滤（用于检索特定资源的文档）</summary>
+    public Guid? ResourceId { get; set; }
 }
 
 public class HybridSearchQueryDto : SearchQueryDto

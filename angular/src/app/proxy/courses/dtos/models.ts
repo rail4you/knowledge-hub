@@ -24,6 +24,16 @@ export interface ChapterImportResultDto {
   errors?: string[];
 }
 
+export interface ChapterResourceDto extends EntityDto<string> {
+  chapterId?: string;
+  knowledgeResourceId?: string | null;
+}
+
+export interface CreateChapterResourceDto {
+  chapterId?: string;
+  knowledgeResourceId?: string;
+}
+
 export interface ChapterOrderDto {
   chapterId?: string;
   sortOrder?: number;

@@ -80,19 +80,6 @@ export interface MeiliDocumentPageDto {
   endTime: string | null;
 }
 
-export interface PageIndexListItemDto {
-  id: string;
-  resourceName: string;
-  resourceId: string;
-  versionNumber: number;
-  tenantId: string | null;
-  sourceFormat: string | null;
-  model: string | null;
-  nodeCount: number;
-  docDescription: string | null;
-  createdAt: string;
-}
-
 @Injectable({
   providedIn: 'root'
 })
@@ -147,11 +134,4 @@ export class MeiliSearchAdminService {
     }, { apiName: 'Default' });
   }
 
-  getPageIndexList(tenantId?: string): Observable<PageIndexListItemDto[]> {
-    return this.restService.request({
-      method: 'GET',
-      url: `${this.apiUrl}/page-index-list`,
-      params: tenantId ? { tenantId } : {}
-    }, { apiName: 'Default' });
-  }
 }

@@ -17,6 +17,10 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public long? FileSize { get; set; }
     public string? FileExtension { get; set; }
     public string? OriginalFileName { get; set; }
+    /// <summary>
+    /// AI 生成的资源摘要（用于语义搜索和展示）
+    /// </summary>
+    public string? Summary { get; set; }
     public ResourceStatus Status { get; set; }
     public int CurrentVersion { get; set; }
     public string? Keywords { get; set; }

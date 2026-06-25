@@ -734,6 +734,17 @@ $pad:           24px;
   color: $ink-subtle;
 }
 
+// ── Clickable material/rank cards for preview ──
+.material-card--clickable,
+.rank-card--clickable {
+  cursor: pointer;
+  transition: all .2s;
+  &:hover {
+    box-shadow: $shadow-md;
+    transform: translateY(-2px);
+  }
+}
+
 // ============================================================
 //  NEWS GRID 最新资讯
 // ============================================================

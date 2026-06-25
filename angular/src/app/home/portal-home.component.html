@@ -272,15 +272,17 @@
         </div>
         <div class="material-grid">
           @for (m of homeData()?.latestMaterials; track m.id) {
-            <div class="material-card">
+            <div class="material-card" [class.material-card--clickable]="canPreview(m)" (click)="canPreview(m) && previewMaterial(m)">
               <div class="material-card__cover">
-                <span class="material-card__cover-icon">📄</span>
+                <span class="material-card__cover-icon">{{ m.fileExtension === '.mp4' ? '🎬' : m.fileExtension === '.pdf' ? '📕' : m.fileExtension === '.pptx' ? '📊' : '📄' }}</span>
               </div>
               <div class="material-card__body">
                 <h5>{{ m.name }}</h5>
                 <div class="material-card__body-bottom">
                   <span class="material-card__meta">⬇ {{ m.downloadCount || 0 }}</span>
-                  <span class="material-card__meta">☆ {{ (m.downloadCount || 0) * 3 + 7 }}</span>
+                  @if (canPreview(m)) {
+                    <span class="material-card__meta">👁️ 预览</span>
+                  }
                 </div>
               </div>
             </div>
@@ -337,7 +339,7 @@
         </div>
         <div class="rank-grid">
           @for (m of rankedMaterials(); track m.id; let i = $index) {
-            <div class="rank-card" [class.rank-card--top3]="i < 3">
+            <div class="rank-card" [class.rank-card--clickable]="canPreview(m)" [class.rank-card--top3]="i < 3" (click)="canPreview(m) && previewMaterial(m)">
               <span class="rank-card__num">{{ i + 1 }}</span>
               <div class="rank-card__icon">
                 <span nz-icon nzType="file-text" nzTheme="outline"></span>
@@ -458,7 +460,7 @@
       @if (activeTab() === 'resources') {
         <div class="material-grid">
           @for (r of browseResources(); track r.id) {
-            <div class="material-card">
+            <div class="material-card" [class.material-card--clickable]="canPreview(r)" (click)="canPreview(r) && previewMaterial(r)">
               @if (r.tenantName) {
                 <span class="material-card__tag">{{ r.tenantName }}</span>
               }
@@ -469,6 +471,9 @@
                 <h5>{{ r.name }}</h5>
                 <div class="material-card__body-bottom">
                   <span class="material-card__meta">⬇ {{ r.downloadCount || 0 }}</span>
+                  @if (canPreview(r)) {
+                    <span class="material-card__meta">👁️ 预览</span>
+                  }
                 </div>
               </div>
             </div>
@@ -544,3 +549,5 @@
     <div class="footer__copy">&copy; 2026 易课通 · 资源库</div>
   </footer>
 </div>
+
+<app-file-preview #filePreview></app-file-preview>

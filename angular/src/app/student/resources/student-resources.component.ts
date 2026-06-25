@@ -158,6 +158,14 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   ];
 
   // 热门目录：从真实分类数据中取所有有效分类，按资源数量降序排列
+  visibleHeroSlides = computed(() => this.heroSlides());
+
+  /** 从资源数据中提取专业筛选 chips */
+  majorChips = computed(() => {
+    const majors = this.categories().filter(c => !c.parentId);
+    return majors.map(m => ({ id: m.id!, name: m.name!, count: 0 }));
+  });
+
   hotCategories = computed(() => {
     const cats = this.categories();
     // 展平所有分类（根节点 + 子节点）

@@ -16,6 +16,14 @@ export interface UpdateUserDto {
   shortBio?: string | null;
 }
 
+export interface MyProfileDto {
+  userName?: string;
+  email?: string;
+  name?: string;
+  surname?: string;
+  phoneNumber?: string;
+}
+
 export interface UserDto extends EntityDto<string> {
   name?: string;
   birthDate?: string;

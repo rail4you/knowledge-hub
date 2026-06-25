@@ -9,6 +9,7 @@ using KnowledgeHub.MicroMajors;
 using KnowledgeHub.MicroMajors.Enums;
 using KnowledgeHub.News;
 using KnowledgeHub.Resources;
+using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.TenantInfos;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Data;
@@ -176,6 +177,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         var resourceQuery = await _resourceRepository.GetQueryableAsync();
         var latestMaterials = resourceQuery
             .Where(x => x.TenantId == tenantId)
+            .Where(x => x.Status >= ResourceStatus.SchoolApproved)
             .OrderByDescending(x => x.CreationTime)
             .Take(8)
             .Select(x => new MaterialBriefDto
@@ -183,7 +185,9 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                 Id = x.Id,
                 Name = x.Name,
                 FileExtension = x.FileExtension,
-                DownloadCount = x.DownloadCount
+                DownloadCount = x.DownloadCount,
+                FileSize = x.FileSize ?? 0,
+                OriginalFileName = x.OriginalFileName
             })
             .ToList();
 
@@ -306,6 +310,8 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         var resourcesFiltered = resourceQuery.AsEnumerable();
         if (tenantId.HasValue)
             resourcesFiltered = resourcesFiltered.Where(r => r.TenantId == tenantId.Value);
+        // 公开浏览只展示已审核通过的资源
+        resourcesFiltered = resourcesFiltered.Where(r => r.Status >= ResourceStatus.SchoolApproved);
         if (!string.IsNullOrWhiteSpace(search))
             resourcesFiltered = resourcesFiltered.Where(r => (r.Name ?? "").Contains(search, StringComparison.OrdinalIgnoreCase));
         var resources = resourcesFiltered
@@ -320,6 +326,8 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                 DownloadCount = r.DownloadCount,
                 TenantId = r.TenantId ?? Guid.Empty,
                 TenantName = r.TenantId.HasValue && tenantNames.ContainsKey(r.TenantId.Value) ? tenantNames[r.TenantId.Value] : null,
+                FileSize = r.FileSize ?? 0,
+                OriginalFileName = r.OriginalFileName,
             }).ToList();
         var totalResourceCount = resourcesFiltered.LongCount();
 

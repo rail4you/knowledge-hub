@@ -247,12 +247,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
     return maxCount;
   });
 
-  /** 图谱画布最小高度：每个节点约 44px 垂直空间，最少 640px */
+  /** 图谱画布最小高度：随同层节点数动态增长，确保节点不重叠 */
   chartMinHeight = computed(() => {
     const nodes = this.maxSiblingCount();
-    // 每个节点需要约 52px（symbolSize 44 + 间距 8）
-    const neededHeight = nodes * 52;
-    return Math.max(640, Math.min(neededHeight, 2400)); // 上限 2400px
+    // 每个节点需要约 56px（symbolSize 28 + 标签高度 + 间距），保证不重叠
+    const neededHeight = nodes * 56;
+    return Math.max(800, Math.min(neededHeight, 5000)); // 上限 5000px
   });
 
   ngAfterViewInit() {
@@ -467,12 +467,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
           type: 'tree',
           name: '章节图谱',
           data: treeData,
-          top: '8%',
-          left: '4%',
-          bottom: '8%',
+          top: '5%',
+          left: '2%',
+          bottom: '5%',
           right: '22%',
           symbol: 'circle',
-          symbolSize: 44,
+          symbolSize: 28,
           orient: 'LR',
           roam: true,
           nodeDraggable: false,
@@ -503,7 +503,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
           emphasis: {
             focus: 'ancestor',
             scale: true,
-            scaleSize: 8,
+            scaleSize: 6,
             itemStyle: {
               shadowBlur: 18,
               shadowColor: 'rgba(30, 108, 232, 0.5)',
@@ -519,12 +519,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
           label: {
             show: true,
             position: 'right',
-            distance: 12,
+            distance: 10,
             formatter: (params: any) => {
               const data = params.data as any;
               return data?.name || '';
             },
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: 600,
             color: '#1f2937',
             backgroundColor: 'transparent',
@@ -534,12 +534,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
             label: {
               show: true,
               position: 'right',
-              distance: 12,
+              distance: 10,
               formatter: (params: any) => {
                 const data = params.data as any;
                 return data?.name || '';
               },
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 600,
               color: '#1f2937',
             },

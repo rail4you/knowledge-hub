@@ -488,7 +488,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             TotalStudents = allLearnerIds,
             ActiveStudents = activeStudentIds,
             TotalExercises = allExercises.Count,
-            TotalLearningMinutes = Math.Round((decimal)totalTimeMinutes, 1),
+            TotalLearningMinutes = (double)Math.Round((decimal)totalTimeMinutes, 1),
             AverageCompletionRate = allExercises.Count > 0 && allLearnerIds > 0
                 ? Math.Round((decimal)completedRecords.Count / (allExercises.Count * allLearnerIds) * 100, 1)
                 : 0,

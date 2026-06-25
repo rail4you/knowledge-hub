@@ -14,6 +14,8 @@ export interface MaterialBriefDto {
   fileExtension?: string | null;
   downloadCount?: number;
   coverUrl?: string | null;
+  fileSize?: number;
+  originalFileName?: string | null;
 }
 
 export interface MicroMajorBriefDto {
@@ -115,6 +117,8 @@ export interface PublicResourceDto {
   coverUrl?: string | null;
   tenantName?: string | null;
   tenantId?: string;
+  fileSize?: number;
+  originalFileName?: string | null;
 }
 
 export interface PublicMicroMajorDto {

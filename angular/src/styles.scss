@@ -41,3 +41,20 @@
     background-image: url('assets/images/getting-started/x.svg');
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   侧边栏导航栏目分割线
+   每个有子菜单的导航组之间添加分割线
+   ═══════════════════════════════════════════════════ */
+lpx-navbar-item:has(> .lpx-menu-item-submenu) {
+  border-bottom: 1px solid var(--lpx-border-color, #e2e8f0);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+}
+
+/* 最后一个有子菜单的组不需要底部分割线 */
+lpx-navbar-item:has(> .lpx-menu-item-submenu):last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}

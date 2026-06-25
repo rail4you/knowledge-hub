@@ -147,26 +147,4 @@
     }
   }
 
-  .pageindex-detail-section {
-    margin-bottom: 12px;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-
-  .detail-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: #8c8c8c;
-    margin-bottom: 6px;
-  }
-
-  .detail-text {
-    font-size: 13px;
-    color: #333;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
 }

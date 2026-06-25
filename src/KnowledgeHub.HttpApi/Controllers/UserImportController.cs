@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Users;
@@ -23,5 +24,11 @@ public class UserImportController : AbpController, IUserImportAppService
     public async Task<UserImportResultDto> ImportAsync([FromBody] byte[] excelFile)
     {
         return await _userImportAppService.ImportAsync(excelFile);
+    }
+
+    [HttpGet("role-permission-summary")]
+    public async Task<List<RolePermissionSummaryDto>> GetRolePermissionSummaryAsync()
+    {
+        return await _userImportAppService.GetRolePermissionSummaryAsync();
     }
 }

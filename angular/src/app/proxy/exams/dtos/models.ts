@@ -4,6 +4,7 @@ import type { FullAuditedEntityDto } from '@abp/ng.core';
 export interface CreateUpdateExerciseDto {
   courseId?: string;
   chapterId?: string | null;
+  chapterIds?: string[];
   knowledgeResourceId?: string | null;
   title?: string;
   questionContent?: string;
@@ -18,6 +19,7 @@ export interface CreateUpdateExerciseDto {
 export interface ExerciseDto extends FullAuditedEntityDto<string> {
   courseId?: string;
   chapterId?: string | null;
+  chapterIds?: string[];
   knowledgeResourceId?: string | null;
   title?: string;
   questionContent?: string;

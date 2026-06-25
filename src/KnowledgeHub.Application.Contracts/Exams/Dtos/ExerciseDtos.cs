@@ -9,6 +9,7 @@ public class ExerciseDto : FullAuditedEntityDto<Guid>
 {
     public Guid CourseId { get; set; }
     public Guid? ChapterId { get; set; }
+    public List<Guid> ChapterIds { get; set; } = new();
     public Guid? KnowledgeResourceId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string QuestionContent { get; set; } = string.Empty;
@@ -25,6 +26,7 @@ public class CreateUpdateExerciseDto
 {
     public Guid CourseId { get; set; }
     public Guid? ChapterId { get; set; }
+    public List<Guid> ChapterIds { get; set; } = new();
     public Guid? KnowledgeResourceId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string QuestionContent { get; set; } = string.Empty;

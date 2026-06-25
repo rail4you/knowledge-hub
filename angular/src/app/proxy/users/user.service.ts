@@ -1,4 +1,4 @@
-import type { CreateUserDto, GetUserListDto, UpdateUserDto, UserDto } from './models';
+import type { CreateUserDto, GetUserListDto, MyProfileDto, UpdateUserDto, UserDto } from './models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -49,6 +49,14 @@ export class UserService {
     this.restService.request<any, void>({
       method: 'PUT',
       url: `/api/app/user/${id}`,
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+
+  updateMyProfile = (input: MyProfileDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MyProfileDto>({
+      method: 'PUT',
+      url: '/api/app/profile',
       body: input,
     },
     { apiName: this.apiName,...config });

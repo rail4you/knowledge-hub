@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -8,7 +8,8 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { hasRole } from '../auth/current-user.utils';
 import { PortalService } from '../proxy/portal/portal.service';
-import type { PublicHomeStatsDto, PortalHomeDataDto, TenantResourceSummaryDto, PublicBrowseDto, PublicCourseDto, PublicResourceDto, PublicMicroMajorDto, PublicBrowseFilterOption } from '../proxy/portal/models';
+import type { PublicHomeStatsDto, PortalHomeDataDto, TenantResourceSummaryDto, PublicBrowseDto, PublicCourseDto, PublicResourceDto, PublicMicroMajorDto, PublicBrowseFilterOption, MaterialBriefDto } from '../proxy/portal/models';
+import { FilePreviewComponent } from '../shared/preview/file-preview.component';
 
 interface HeroSlide {
   eyebrow: string;
@@ -23,7 +24,7 @@ interface HeroSlide {
 @Component({
   selector: 'app-portal-home',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, FormsModule, RouterLink, NzIconModule, NzSelectModule, NzInputModule],
+  imports: [CommonModule, DecimalPipe, FormsModule, RouterLink, NzIconModule, NzSelectModule, NzInputModule, FilePreviewComponent],
   templateUrl: './portal-home.component.html',
   styleUrls: ['./portal-home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -79,10 +80,36 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     },
   ];
 
+  @ViewChild('filePreview') filePreview!: FilePreviewComponent;
+
   readonly rankedMaterials = () => {
     const mats = this.homeData()?.latestMaterials || [];
     return [...mats].sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0)).slice(0, 8);
   };
+
+  previewMaterial(m: MaterialBriefDto | PublicResourceDto): void {
+    if (!m.id) return;
+    // 没有文件时直接跳过（无实际文件上传的资源无法预览）
+    if (!m.fileExtension && !m.originalFileName && !m.fileSize) {
+      return;
+    }
+    let ext = m.fileExtension || '';
+    if (!ext) {
+      const fileName = m.originalFileName || m.name || '';
+      const dot = fileName.lastIndexOf('.');
+      if (dot >= 0) ext = fileName.substring(dot);
+    }
+    this.filePreview.open(
+      m.id,
+      m.originalFileName || m.name || '',
+      ext,
+      m.fileSize || 0
+    );
+  }
+
+  canPreview(m: MaterialBriefDto | PublicResourceDto): boolean {
+    return !!(m.id && (m.fileExtension || m.originalFileName && m.originalFileName.includes('.')));
+  }
 
   readonly browseCourses = () => this.browseData()?.courses || [];
   readonly browseResources = () => this.browseData()?.resources || [];
