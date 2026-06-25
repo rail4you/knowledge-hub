@@ -1158,7 +1158,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [IgnoreAntiforgeryToken]
     public virtual async Task<PhysicalDeleteRequestDto> RequestPhysicalDeleteAsync(CreatePhysicalDeleteRequestDto input)
     {
-        var resource = await Repository.GetAsync(input.ResourceId);
+        Resource resource;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resource = await Repository.GetAsync(input.ResourceId);
+        }
         
         var existingRequest = await PhysicalDeleteRequestRepository.GetByResourceIdAsync(input.ResourceId);
         if (existingRequest != null && existingRequest.Status == PhysicalDeleteStatus.Pending)
@@ -1201,13 +1205,20 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     {
         var request = await PhysicalDeleteRequestRepository.GetAsync(id);
 
-        var resource = await Repository.GetAsync(request.ResourceId);
+        Resource resource;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resource = await Repository.GetAsync(request.ResourceId);
+        }
 
         await CleanupResourceIndexDataAsync(request.ResourceId);
 
         await FileStorageService.DeleteAsync(resource.FilePath);
 
-        await Repository.DeleteAsync(request.ResourceId);
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            await Repository.DeleteAsync(request.ResourceId);
+        }
 
         request.Status = PhysicalDeleteStatus.Approved;
         request.ApproverId = CurrentUser.Id ?? Guid.Empty;
