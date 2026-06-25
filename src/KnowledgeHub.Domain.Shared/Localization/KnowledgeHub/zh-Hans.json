@@ -621,6 +621,7 @@
     "Permission:RecruitmentLive.Create": "创建直播",
     "Permission:RecruitmentLive.Manage": "管理所有直播",
     "AbpUi::Logout": "退出登录",
+    "AbpUiNavigation::Menu:Administration": "搜索和租户管理",
     "Menu:TenantInfo": "租户管理",
     "Permission:TenantInfo": "租户信息",
     "Permission:TenantInfo.Default": "查看租户信息",
