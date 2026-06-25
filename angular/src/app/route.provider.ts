@@ -422,13 +422,20 @@ function configureRoutes() {
     },
 
     // ══════════════════════════════════════════════════════════
-    //  系统管理（ABP 内置管理菜单）
+    //  搜索和租户管理
     // ══════════════════════════════════════════════════════════
+    {
+      path: '/admin-search-tenant',
+      name: '::Menu:SearchAndTenantManagement',
+      iconClass: 'fas fa-search',
+      order: 7,
+      layout: eLayoutType.application,
+    },
     {
       path: '/admin/indexing-jobs',
       name: '::Menu:IndexingJobs',
       iconClass: 'fas fa-tasks',
-      parentName: 'AbpUiNavigation::Menu:Administration',
+      parentName: '::Menu:SearchAndTenantManagement',
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Resources',
     },
@@ -436,7 +443,7 @@ function configureRoutes() {
       path: '/admin/meilisearch',
       name: '::Menu:MeiliSearchDashboard',
       iconClass: 'fas fa-tachometer-alt',
-      parentName: 'AbpUiNavigation::Menu:Administration',
+      parentName: '::Menu:SearchAndTenantManagement',
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Search.ViewStatistics',
     },
@@ -444,7 +451,7 @@ function configureRoutes() {
       path: '/admin/search-statistics',
       name: '::Menu:SearchStatistics',
       iconClass: 'fas fa-chart-bar',
-      parentName: 'AbpUiNavigation::Menu:Administration',
+      parentName: '::Menu:SearchAndTenantManagement',
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Search.ViewStatistics',
     },
@@ -452,7 +459,7 @@ function configureRoutes() {
       path: '/admin/exercise',
       name: '::Menu:ExerciseManagement',
       iconClass: 'fas fa-pen-to-square',
-      parentName: 'AbpUiNavigation::Menu:Administration',
+      parentName: '::Menu:SearchAndTenantManagement',
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Exercises',
     },
@@ -460,7 +467,7 @@ function configureRoutes() {
       path: '/admin/tenant-info',
       name: '::Menu:TenantInfo',
       iconClass: 'fas fa-building',
-      parentName: 'AbpUiNavigation::Menu:Administration',
+      parentName: '::Menu:SearchAndTenantManagement',
       order: 100,
       layout: eLayoutType.application,
     },

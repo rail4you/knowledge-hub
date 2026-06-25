@@ -448,7 +448,7 @@
     "Enum:SelfAssessment.1": "Correct",
     "Enum:SelfAssessment.2": "Partially Correct",
     "Enum:SelfAssessment.3": "Incorrect",
-    "AbpUiNavigation::Menu:Administration": "Search & Tenant Management",
+    "Menu:SearchAndTenantManagement": "Search & Tenant Management",
     "AbpUi::Logout": "Log Out"
   }
 }
