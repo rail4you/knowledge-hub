@@ -152,7 +152,8 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         catch (Exception meiliEx)
         {
             _logger.LogWarning(meiliEx, "Meilisearch indexing failed for resource {ResourceId}", args.ResourceId);
-            // Non-fatal: PageContent is already saved, can be re-indexed later
+            // 将 Job 标记为失败而不是静默完成，方便用户在索引任务页面看到问题
+            throw new Exception($"Meilisearch 索引失败: {meiliEx.Message}", meiliEx);
         }
 
         // === PageIndex generation ===

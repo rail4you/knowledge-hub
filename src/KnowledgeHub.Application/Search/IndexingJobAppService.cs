@@ -82,9 +82,8 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
 
         if (input.Status.HasValue)
         {
-            // Map IndexingJobStatus to VideoIndexingJobStatus for filtering
-            var statusValue = input.Status.Value;
-            vidQuery = vidQuery.Where(x => (int)x.Status == (int)statusValue);
+            var statusValue = (int)input.Status.Value;
+            vidQuery = vidQuery.Where(x => (int)x.Status == statusValue);
         }
 
         if (input.ResourceId.HasValue)
