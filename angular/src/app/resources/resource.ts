@@ -899,6 +899,12 @@ export class ResourceComponent implements OnInit {
     this.loadResources();
   }
 
+  onMajorFilterChange(value: string | null): void {
+    this.selectedMajorId.set(value);
+    this.pageIndex = 1;
+    this.loadResources();
+  }
+
   clearAllFilters(): void {
     this.timeFilter.set('all');
     this.statusFilter.set(null);

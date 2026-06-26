@@ -103,6 +103,16 @@
               <nz-option *ngFor="let opt of timeFilterOptions" [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
             </nz-select>
             <nz-select
+              [ngModel]="selectedMajorId()"
+              (ngModelChange)="onMajorFilterChange($event)"
+              nzSize="small"
+              nzPlaceHolder="专业"
+              nzAllowClear
+              style="width: 140px;"
+            >
+              <nz-option *ngFor="let major of majors()" [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
+            </nz-select>
+            <nz-select
               [ngModel]="statusFilter()"
               (ngModelChange)="onStatusFilterChange($event)"
               nzSize="small"

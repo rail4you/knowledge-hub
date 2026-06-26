@@ -75,6 +75,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   filterText = signal('');
   selectedType = signal<ResourceType | null>(null);
   selectedCategoryId = signal<string | null>(null);
+  selectedMajorId = signal<string | null>(null);
   categories = signal<ResourceCategoryDto[]>([]);
 
   totalCount = signal(0);
@@ -162,8 +163,17 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   /** 从资源数据中提取专业筛选 chips */
   majorChips = computed(() => {
-    const majors = this.categories().filter(c => !c.parentId);
-    return majors.map(m => ({ id: m.id!, name: m.name!, count: 0 }));
+    // 使用已加载的资源提取专业名（用于快速筛选）
+    const seen = new Set<string>();
+    const chips: { id: string; name: string; count: number }[] = [];
+    for (const r of this.resources()) {
+      const name = r.majorName;
+      if (name && !seen.has(name)) {
+        seen.add(name);
+        chips.push({ id: name, name, count: 0 });
+      }
+    }
+    return chips;
   });
 
   hotCategories = computed(() => {
@@ -224,6 +234,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
       filter: this.filterText() || undefined,
       resourceType: this.selectedType() ?? undefined,
       categoryId: this.selectedCategoryId() || undefined,
+      majorId: this.selectedMajorId() || undefined,
       skipCount: (this.pageIndex() - 1) * this.pageSize(),
       maxResultCount: this.pageSize(),
     };
@@ -288,6 +299,12 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   selectCategory(categoryId: string | null) {
     this.selectedCategoryId.set(categoryId);
+    this.pageIndex.set(1);
+    this.loadResources();
+  }
+
+  selectMajor(majorId: string | null) {
+    this.selectedMajorId.set(majorId);
     this.pageIndex.set(1);
     this.loadResources();
   }
