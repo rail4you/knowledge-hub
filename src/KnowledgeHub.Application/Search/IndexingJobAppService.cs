@@ -392,7 +392,11 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
                 throw new UserFriendlyException("Only failed, pending, or completed jobs can be retried.");
             }
 
-            var resource = await _resourceRepository.GetAsync(docJob.ResourceId);
+            Resource? resource;
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                resource = await _resourceRepository.GetAsync(docJob.ResourceId);
+            }
 
             docJob.Status = IndexingJobStatus.Pending;
             docJob.ErrorMessage = null;
@@ -424,7 +428,11 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
                 throw new UserFriendlyException("Only failed, pending, or completed jobs can be retried.");
             }
 
-            var resource = await _resourceRepository.GetAsync(vidJob.ResourceId);
+            Resource? vidResource;
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                vidResource = await _resourceRepository.GetAsync(vidJob.ResourceId);
+            }
 
             vidJob.Status = VideoIndexingJobStatus.Pending;
             vidJob.ErrorMessage = null;
@@ -441,7 +449,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
             {
                 JobId = vidJob.Id,
                 ResourceId = vidJob.ResourceId,
-                FilePath = resource.FilePath,
+                FilePath = vidResource.FilePath,
                 TenantId = CurrentTenant.Id
             });
             return;
@@ -541,7 +549,11 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
     {
         var job = await _jobRepository.GetAsync(id);
         
-        var resource = await _resourceRepository.GetAsync(job.ResourceId);
+        Resource? resource;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resource = await _resourceRepository.GetAsync(job.ResourceId);
+        }
 
         var args = new DocumentIndexingJobArgs
         {

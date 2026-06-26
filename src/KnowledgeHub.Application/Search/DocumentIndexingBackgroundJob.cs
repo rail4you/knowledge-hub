@@ -94,6 +94,9 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
             throw new Exception($"Resource not found: {args.ResourceId}");
         }
 
+        // 切换到资源的租户上下文，确保后续文件路径查找、PageContent 保存等操作在正确的租户下执行
+        using (_currentTenant.Change(resource.TenantId))
+
         if (string.IsNullOrEmpty(resource.FilePath))
         {
             throw new Exception("Resource has no file path");
