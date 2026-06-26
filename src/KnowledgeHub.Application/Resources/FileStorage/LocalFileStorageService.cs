@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 
@@ -67,10 +68,20 @@ public class LocalFileStorageService : IFileStorageService
             Directory.CreateDirectory(directoryPath);
         }
 
-        var chunkFiles = Directory.GetFiles(chunkPath);
-        Array.Sort(chunkFiles);
+        var chunkFiles = Directory.GetFiles(chunkPath)
+            .OrderBy(f =>
+            {
+                // 按 chunkNumber 数值排序（而非字符串），
+                // 修复 "10_x" 排在 "2_x" 前面的 bug 导致合并后文件损坏
+                var name = Path.GetFileNameWithoutExtension(f);
+                var underscoreIndex = name.IndexOf('_');
+                if (underscoreIndex > 0 && int.TryParse(name.AsSpan(0, underscoreIndex), out var num))
+                    return num;
+                return int.MaxValue;
+            })
+            .ToList();
 
-        await using var outputStream = new FileStream(fullFinalPath, FileMode.Create);
+        await using var outputStream = new FileStream(fullFinalPath, FileMode.Create, FileAccess.Write);
         
         foreach (var chunkFile in chunkFiles)
         {

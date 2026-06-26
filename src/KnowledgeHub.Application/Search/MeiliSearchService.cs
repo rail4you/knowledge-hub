@@ -14,6 +14,7 @@ using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Enums;
 using Microsoft.Extensions.Options;
 using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 
@@ -28,6 +29,7 @@ public class MeiliSearchService : IMeiliSearchService
     private readonly IEmbeddingService _embeddingService;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IDataFilter _dataFilter;
 
     public MeiliSearchService(
         IOptions<MeilisearchOptions> options,
@@ -36,6 +38,7 @@ public class MeiliSearchService : IMeiliSearchService
         IEmbeddingService embeddingService,
         IRepository<Resource, Guid> resourceRepository,
         ICurrentTenant currentTenant,
+        IDataFilter dataFilter,
         HttpClient httpClient)
     {
         _options = options;
@@ -44,6 +47,7 @@ public class MeiliSearchService : IMeiliSearchService
         _embeddingService = embeddingService;
         _resourceRepository = resourceRepository;
         _currentTenant = currentTenant;
+        _dataFilter = dataFilter;
         
         _httpClient = httpClient;
         _httpClient.BaseAddress = new Uri(_options.Value.Host);
@@ -93,7 +97,12 @@ public class MeiliSearchService : IMeiliSearchService
 
     public async Task<IndexTaskResultDto> IndexDocumentAsync(Guid resourceId)
     {
-        var resource = await _resourceRepository.GetAsync(resourceId);
+        Resource? resource;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            resource = await _resourceRepository.FindAsync(resourceId);
+        }
+        if (resource == null) return new IndexTaskResultDto { TaskId = 0, DocumentIndexId = Guid.Empty, Status = "NotFound" };
         var pages = await _documentExtractionService.ExtractPagesAsync(resourceId);
 
         if (!pages.Any())
@@ -174,7 +183,12 @@ public class MeiliSearchService : IMeiliSearchService
     {
         await EnsureIndexExistsAsync();
         
-        var resource = await _resourceRepository.GetAsync(resourceId);
+        Resource? resource;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            resource = await _resourceRepository.FindAsync(resourceId);
+        }
+        if (resource == null) return new IndexTaskResultDto { TaskId = 0, DocumentIndexId = Guid.Empty, Status = "NotFound" };
 
         if (!pages.Any())
         {
