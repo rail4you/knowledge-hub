@@ -259,10 +259,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   }
 
   loadCategories() {
-    const majorId = this.selectedMajorId();
-    const params: Record<string, string> = {};
-    if (majorId) params['majorId'] = majorId;
-    this.resourceService.getCategories({ params }).subscribe({
+    this.resourceService.getCategories().subscribe({
       next: (cats) => this.categories.set(cats || [])
     });
   }
@@ -316,7 +313,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     this.selectedMajorId.set(majorId);
     this.pageIndex.set(1);
     this.loadResources();
-    this.loadCategories();
   }
 
   /**
