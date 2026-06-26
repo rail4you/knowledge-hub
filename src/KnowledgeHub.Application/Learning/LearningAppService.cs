@@ -225,6 +225,12 @@ public class LearningAppService : ApplicationService, ILearningAppService
         
         if (studentCourse != null)
         {
+            // 首次记录学习进度时，将状态从 Enrolled 转为 InProgress
+            if (studentCourse.Status == StudentCourseStatus.Enrolled)
+            {
+                studentCourse.StartLearning();
+            }
+
             var allProgress = await _progressRepository.GetListAsync(
                 x => x.StudentId == studentId && x.CourseId == input.CourseId);
 

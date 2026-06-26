@@ -99,11 +99,11 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
   );
 
   readonly inProgressCourses = computed<StudentCourseListItemDto[]>(() =>
-    this.myCourses().filter(c => c.status === 1 || c.status === 2 || ((c.progress || 0) > 0 && (c.progress || 0) < 100))
+    this.myCourses().filter(c => c.status === 1 || ((c.progress || 0) > 0 && (c.progress || 0) < 100))
   );
 
   readonly completedCourses = computed<StudentCourseListItemDto[]>(() =>
-    this.myCourses().filter(c => c.status === 3 || (c.progress || 0) >= 100)
+    this.myCourses().filter(c => c.status === 2 || (c.progress || 0) >= 100)
   );
 
   readonly notStartedCourses = computed<StudentCourseListItemDto[]>(() =>

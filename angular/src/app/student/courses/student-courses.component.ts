@@ -263,8 +263,8 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     const dash = this.dashboard();
     const my = this.myCourses();
     const totalCourses = my.length || 0;
-    const inProgress = my.filter(c => c.status === 1 || c.status === 2).length;
-    const completed = dash?.completedCourses ?? my.filter(c => c.status === 3).length;
+    const inProgress = my.filter(c => c.status === 1).length;
+    const completed = dash?.completedCourses ?? my.filter(c => c.status === 2).length;
     const avgProgress = Math.round(
       (dash?.averageProgress ??
         (my.length ? my.reduce((s, c) => s + (c.progress || 0), 0) / my.length : 0)) || 0
