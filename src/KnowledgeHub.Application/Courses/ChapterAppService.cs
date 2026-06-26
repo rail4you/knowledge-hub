@@ -18,10 +18,14 @@ namespace KnowledgeHub.Courses;
 public class ChapterAppService : ApplicationService, IChapterAppService
 {
     private readonly IRepository<Chapter, Guid> _chapterRepository;
+    private readonly IRepository<KnowledgeResource, Guid> _knowledgeResourceRepository;
 
-    public ChapterAppService(IRepository<Chapter, Guid> chapterRepository)
+    public ChapterAppService(
+        IRepository<Chapter, Guid> chapterRepository,
+        IRepository<KnowledgeResource, Guid> knowledgeResourceRepository)
     {
         _chapterRepository = chapterRepository;
+        _knowledgeResourceRepository = knowledgeResourceRepository;
     }
 
     public async Task<ChapterDto> GetAsync(Guid id)
@@ -148,6 +152,16 @@ public class ChapterAppService : ApplicationService, IChapterAppService
             return new List<ChapterDto>();
         }
 
+        // 加载课程下所有知识资源，按 ChapterId 分组
+        var resourceQuery = await _knowledgeResourceRepository.GetQueryableAsync();
+        var allResources = resourceQuery
+            .Where(r => r.CourseId == courseId)
+            .ToList();
+        var resourcesByChapter = allResources
+            .Where(r => r.ChapterId.HasValue)
+            .GroupBy(r => r.ChapterId!.Value)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         var chapterDtos = allChapters.Select(c => new ChapterDto
         {
             Id = c.Id,
@@ -157,7 +171,16 @@ public class ChapterAppService : ApplicationService, IChapterAppService
             Description = c.Description,
             SortOrder = c.SortOrder,
             Children = new List<ChapterDto>(),
-            KnowledgeResources = new List<KnowledgeResourceDto>(),
+            KnowledgeResources = (resourcesByChapter.TryGetValue(c.Id, out var list)
+                ? list.Select(r => new KnowledgeResourceDto
+                {
+                    Id = r.Id,
+                    Name = r.Name,
+                    Description = r.Description,
+                    Difficulty = r.Difficulty,
+                    ImportanceLevel = r.ImportanceLevel
+                }).ToList()
+                : new List<KnowledgeResourceDto>())
         }).ToList();
 
         return BuildTree(chapterDtos);
