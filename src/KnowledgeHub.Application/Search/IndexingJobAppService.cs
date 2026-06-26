@@ -510,7 +510,16 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
 
     public async Task<TestParseResultDto> TestParseAsync(Guid resourceId)
     {
-        var resource = await _resourceRepository.GetAsync(resourceId);
+        Resource? resource;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resource = await _resourceRepository.FindAsync(resourceId);
+        }
+        
+        if (resource == null)
+        {
+            throw new UserFriendlyException($"资源不存在: {resourceId}");
+        }
         
         if (string.IsNullOrEmpty(resource.FilePath))
         {

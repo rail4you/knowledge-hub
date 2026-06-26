@@ -29,8 +29,8 @@ public class KnowledgeHubApplicationModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        context.Services.AddSingleton<OpenDataLoaderService>();
-        context.Services.AddSingleton<IDocumentExtractionService>(sp => sp.GetRequiredService<OpenDataLoaderService>());
+        context.Services.AddSingleton<NpoiDocumentParserService>();
+        context.Services.AddSingleton<IDocumentExtractionService>(sp => sp.GetRequiredService<NpoiDocumentParserService>());
         context.Services.AddTransient<TeachingAgents.TeachingAgentContextBuilder>();
     }
 }
