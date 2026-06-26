@@ -183,7 +183,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         if (input.CategoryId.HasValue)
         {
-            query = query.Where(x => x.CategoryId == input.CategoryId.Value);
+            // 包含当前分类及其所有子分类的资源
+            var allCategoryIds = await GetAllCategoryIdsAsync(input.CategoryId.Value);
+            query = query.Where(x => x.CategoryId.HasValue && allCategoryIds.Contains(x.CategoryId.Value));
         }
 
         if (input.MajorId.HasValue)
@@ -663,6 +665,33 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         AccumulateCounts(roots);
 
         return roots;
+    }
+
+    /// <summary>
+    /// 获取指定分类及其所有子孙分类的 ID 集合
+    /// </summary>
+    private async Task<HashSet<Guid>> GetAllCategoryIdsAsync(Guid categoryId)
+    {
+        var allCategories = await CategoryRepository.GetListAsync();
+        var result = new HashSet<Guid> { categoryId };
+        var lookup = allCategories.ToDictionary(c => c.Id);
+
+        // BFS 收集所有子孙
+        var queue = new Queue<Guid>();
+        queue.Enqueue(categoryId);
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            foreach (var c in allCategories.Where(c => c.ParentId == current))
+            {
+                if (result.Add(c.Id))
+                {
+                    queue.Enqueue(c.Id);
+                }
+            }
+        }
+
+        return result;
     }
 
     [Authorize(KnowledgeHubPermissions.Resources.ManageCategory)]
