@@ -615,15 +615,20 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     }
 
     [AllowAnonymous]
-    public virtual async Task<List<ResourceCategoryDto>> GetCategoriesAsync()
+    public virtual async Task<List<ResourceCategoryDto>> GetCategoriesAsync(Guid? majorId = null)
     {
         var categories = await CategoryRepository.GetListAsync();
         var dtos = ObjectMapper.Map<List<ResourceCategory>, List<ResourceCategoryDto>>(categories);
 
-        // 统计每个分类下的资源数量（仅 LeagueApproved 状态的资源）
+        // 统计每个分类下的资源数量（仅 LeagueApproved 状态的资源，可选按专业过滤）
         var resourceQuery = await ResourceRepository.GetQueryableAsync();
-        var categoryCounts = await resourceQuery
-            .Where(r => r.CategoryId != null && r.Status == ResourceStatus.LeagueApproved)
+        var filteredQuery = resourceQuery
+            .Where(r => r.CategoryId != null && r.Status == ResourceStatus.LeagueApproved);
+        if (majorId.HasValue)
+        {
+            filteredQuery = filteredQuery.Where(r => r.MajorId == majorId.Value);
+        }
+        var categoryCounts = await filteredQuery
             .GroupBy(r => r.CategoryId!.Value)
             .Select(g => new { CategoryId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.CategoryId, x => x.Count);

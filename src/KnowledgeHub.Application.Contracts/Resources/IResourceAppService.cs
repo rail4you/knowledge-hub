@@ -18,7 +18,7 @@ public interface IResourceAppService : ICrudAppService<ResourceDto, Guid, PagedA
     Task<bool> IsCollectedAsync(Guid resourceId);
     Task CollectAsync(Guid resourceId);
     Task UncollectAsync(Guid resourceId);
-    Task<List<ResourceCategoryDto>> GetCategoriesAsync();
+    Task<List<ResourceCategoryDto>> GetCategoriesAsync(Guid? majorId = null);
     Task<ResourceCategoryDto> CreateCategoryAsync(CreateUpdateResourceCategoryDto input);
     Task<ResourceCategoryDto> UpdateCategoryAsync(Guid id, CreateUpdateResourceCategoryDto input);
     Task DeleteCategoryAsync(Guid id);
