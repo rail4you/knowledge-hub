@@ -39,6 +39,17 @@ public static class ExamDbModelCreatingExtensions
             b.HasIndex(x => x.TenantId);
         });
         
+        builder.Entity<ChapterExercise>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ChapterExercises", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.HasIndex(x => x.ChapterId);
+            b.HasIndex(x => x.ExerciseId);
+            b.HasIndex(x => x.TenantId);
+            b.HasIndex(x => new { x.ChapterId, x.ExerciseId });
+        });
+
         builder.Entity<ExamExercise>(b =>
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ExamExercises", KnowledgeHubConsts.DbSchema);

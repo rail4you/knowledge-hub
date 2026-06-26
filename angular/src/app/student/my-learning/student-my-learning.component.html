@@ -70,9 +70,9 @@
       </div>
       <div class="curve-card__total">
         <span class="curve-card__total-num">
-          {{ curveMax * 7 | number:'1.0-0' }}
+          {{ totalCurveMinutes() }}
         </span>
-        <span class="curve-card__total-label">累计分钟（mock）</span>
+        <span class="curve-card__total-label">本周累计 / 分钟</span>
       </div>
     </header>
 
@@ -81,22 +81,7 @@
         <nz-spin nzSimple nzSize="default"></nz-spin>
       </div>
     } @else {
-      <div class="curve-chart">
-        @for (point of learningCurve(); track $index) {
-          <div class="curve-bar-wrap">
-            <div class="curve-bar-track">
-              <div
-                class="curve-bar"
-                [style.height.%]="barHeight(point.minutes)"
-                [attr.title]="point.label + ': ' + point.minutes + ' 分钟'"
-              >
-                <span class="curve-bar-tip">{{ point.minutes }}</span>
-              </div>
-            </div>
-            <span class="curve-label">{{ point.label }}</span>
-          </div>
-        }
-      </div>
+      <div #curveChartContainer class="curve-chart"></div>
     }
   </section>
 

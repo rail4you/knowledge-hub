@@ -112,6 +112,7 @@ public class KnowledgeHubDbContext :
     // Exam entities
     public DbSet<Exam> Exams { get; set; }
     public DbSet<Exercise> Exercises { get; set; }
+    public DbSet<ChapterExercise> ChapterExercises { get; set; }
     public DbSet<ExamExercise> ExamExercises { get; set; }
     public DbSet<StudentExam> StudentExams { get; set; }
     public DbSet<StudentAnswer> StudentAnswers { get; set; }

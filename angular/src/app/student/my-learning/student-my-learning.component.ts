@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, computed, inject, signal, viewChild, ElementRef } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -9,10 +9,16 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import * as echarts from 'echarts/core';
+import { LineChart } from 'echarts/charts';
+import { CanvasRenderer } from 'echarts/renderers';
+import { TooltipComponent, GridComponent } from 'echarts/components';
 import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
+
+echarts.use([LineChart, CanvasRenderer, TooltipComponent, GridComponent]);
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { LearningDashboardDto, LearningProgressDto, StudentCourseListItemDto, RecentLearningDto } from '../../proxy/learning/dtos/models';
 
@@ -61,12 +67,15 @@ interface DailyPoint {
   styleUrls: ['./student-my-learning.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class StudentMyLearningComponent implements OnInit {
+export class StudentMyLearningComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
   private readonly learningService = inject(LearningService);
   private readonly recordService = inject(StudentExerciseRecordService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
+
+  private readonly chartContainerRef = viewChild<ElementRef<HTMLDivElement>>('curveChartContainer');
+  private chartInstance: echarts.ECharts | null = null;
 
   readonly loading = signal(false);
   readonly dashboard = signal<LearningDashboardDto | null>(null);
@@ -83,6 +92,11 @@ export class StudentMyLearningComponent implements OnInit {
     { label: '总学时', value: 0, suffix: 'h', icon: 'clock-circle', color: '#06b6d4' },
     { label: '平均进度', value: 0, suffix: '%', icon: 'rise', color: '#0c4cb8' },
   ]);
+
+  /** 学习曲线总分钟 */
+  readonly totalCurveMinutes = computed(() =>
+    this.learningCurve().reduce((s, p) => s + p.minutes, 0)
+  );
 
   readonly inProgressCourses = computed<StudentCourseListItemDto[]>(() =>
     this.myCourses().filter(c => c.status === 1 || c.status === 2 || ((c.progress || 0) > 0 && (c.progress || 0) < 100))
@@ -139,6 +153,7 @@ export class StudentMyLearningComponent implements OnInit {
         this.updateStats(data);
         this.buildLearningCurve(data);
         this.loading.set(false);
+        setTimeout(() => this.initLineChart(), 100);
       },
       error: () => {
         this.loading.set(false);
@@ -152,6 +167,81 @@ export class StudentMyLearningComponent implements OnInit {
     });
 
     this.loadRecords();
+  }
+
+  ngOnDestroy(): void {
+    this.chartInstance?.dispose();
+  }
+
+  private initLineChart(): void {
+    const container = this.chartContainerRef()?.nativeElement;
+    if (!container) return;
+
+    this.chartInstance?.dispose();
+    this.chartInstance = echarts.init(container);
+
+    const curve = this.learningCurve();
+    if (curve.length === 0) return;
+
+    const labels = curve.map(p => p.label);
+    const values = curve.map(p => p.minutes);
+    const maxVal = Math.max(...values, 1);
+
+    this.chartInstance.setOption({
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: '#fff',
+        borderColor: '#e8ecf1',
+        textStyle: { color: '#1e293b', fontSize: 13 },
+        formatter: (params: any) => {
+          const p = params[0];
+          return `<strong>${p.axisValue}</strong><br/>学习时长：<b style="color:#1e6ce8">${p.value} 分钟</b>`;
+        },
+      },
+      grid: { top: 30, right: 20, bottom: 30, left: 50 },
+      xAxis: {
+        type: 'category',
+        data: labels,
+        boundaryGap: false,
+        axisLine: { lineStyle: { color: '#e2e8f0' } },
+        axisTick: { show: false },
+        axisLabel: { color: '#64748b', fontSize: 12 },
+      },
+      yAxis: {
+        type: 'value',
+        name: '分钟',
+        nameTextStyle: { color: '#94a3b8', fontSize: 11 },
+        min: 0,
+        max: Math.ceil(maxVal * 1.2),
+        splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+        axisLabel: { color: '#94a3b8', fontSize: 11 },
+      },
+      series: [{
+        name: '学习时长',
+        type: 'line',
+        data: values,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        showSymbol: true,
+        lineStyle: { color: '#1e6ce8', width: 2.5 },
+        itemStyle: {
+          color: '#1e6ce8',
+          borderColor: '#fff',
+          borderWidth: 2,
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(30,108,232,0.18)' },
+            { offset: 1, color: 'rgba(30,108,232,0.02)' },
+          ]),
+        },
+        emphasis: {
+          scale: 1.5,
+          itemStyle: { shadowBlur: 8, shadowColor: 'rgba(30,108,232,0.4)' },
+        },
+      }],
+    });
   }
 
   loadRecords() {
@@ -271,16 +361,6 @@ export class StudentMyLearningComponent implements OnInit {
       3: '#10b981',
     };
     return map[s || 0] || '#1e6ce8';
-  }
-
-  /** 找到学习曲线最大值 */
-  get curveMax(): number {
-    return Math.max(1, ...this.learningCurve().map(p => p.minutes));
-  }
-
-  /** 计算柱状图高度百分比 */
-  barHeight(minutes: number): number {
-    return Math.max(4, (minutes / this.curveMax) * 100);
   }
 
   selfAssessmentLabel(v?: number): string {
