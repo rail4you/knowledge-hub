@@ -92,6 +92,10 @@ public class ResourceFileController : AbpControllerBase
             return Forbid();
         }
 
+        // 每次预览增加查看次数
+        resource.ViewCount++;
+        await Repository.UpdateAsync(resource);
+
         var filePath = resource.FilePath;
         if (string.IsNullOrEmpty(filePath))
         {

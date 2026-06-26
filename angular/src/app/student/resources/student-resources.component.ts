@@ -347,6 +347,11 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
       ext || '',
       resource.fileSize || 0
     );
+
+    // 本地乐观更新 viewCount
+    this.resources.update(list =>
+      list.map(r => r.id === resource.id ? { ...r, viewCount: (r.viewCount || 0) + 1 } : r)
+    );
   }
 
   downloadResource(event: Event, resource: ResourceDto) {
