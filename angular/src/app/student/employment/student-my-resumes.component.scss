@@ -488,16 +488,12 @@
 }
 
 .upload-zone-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: #1e6ce8;
-  color: #fff;
+  color: ds.$student-text-muted;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   span[nz-icon] {
-    font-size: 22px;
+    font-size: 36px;
   }
 }
 
