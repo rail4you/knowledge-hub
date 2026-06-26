@@ -193,10 +193,13 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
 
     private async Task DeleteExistingPagesAsync(Guid resourceId)
     {
-        var existingPages = await _pageContentRepository.GetListAsync(x => x.ResourceId == resourceId);
-        if (existingPages.Any())
+        using (_dataFilter.Disable<IMultiTenant>())
         {
-            await _pageContentRepository.DeleteManyAsync(existingPages);
+            var existingPages = await _pageContentRepository.GetListAsync(x => x.ResourceId == resourceId);
+            if (existingPages.Any())
+            {
+                await _pageContentRepository.DeleteManyAsync(existingPages);
+            }
         }
     }
 
