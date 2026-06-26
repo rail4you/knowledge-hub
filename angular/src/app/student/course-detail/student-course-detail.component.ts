@@ -98,7 +98,6 @@ export class StudentCourseDetailComponent implements OnInit {
     this.loadChapters(id);
     this.loadProgress(id);
     this.loadMastery(id);
-    this.loadRelated(id);
   }
 
   loadCourse(id: string) {
@@ -107,6 +106,8 @@ export class StudentCourseDetailComponent implements OnInit {
       next: result => {
         this.course.set(result);
         this.loading.set(false);
+        // 课程加载完成后再加载相关推荐（需要 majorId）
+        this.loadRelated(result?.majorId);
         // 默认展开一级章节
         const initial = new Set<string>();
         (result.chapters || []).forEach(c => c.id && initial.add(c.id));
@@ -150,16 +151,20 @@ export class StudentCourseDetailComponent implements OnInit {
     });
   }
 
-  loadRelated(courseId: string) {
-    const c = this.course();
+  loadRelated(majorId?: string | null) {
+    if (!majorId) {
+      this.related.set([]);
+      return;
+    }
     this.courseService.getPublished({
-      majorId: c?.majorId || undefined,
+      majorId: majorId,
       skipCount: 0,
       maxResultCount: 20,
     } as any).subscribe({
       next: result => {
+        const currentId = this.course()?.id;
         const items = (result.items || [])
-          .filter(x => x.id !== courseId)
+          .filter(x => x.id !== currentId)
           // 按选课人数降序排列
           .sort((a, b) => (b.studentCount || 0) - (a.studentCount || 0))
           .slice(0, 4)

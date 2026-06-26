@@ -140,7 +140,11 @@ public class CourseAppService : ApplicationService, ITransientDependency
 
     public async Task<CourseDetailDto> GetDetailAsync(Guid id)
     {
-        var course = await _courseRepository.FindAsync(id);
+        Course? course;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            course = await _courseRepository.FindAsync(id);
+        }
         if (course == null)
         {
             return null;
