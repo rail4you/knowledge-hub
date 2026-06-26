@@ -288,8 +288,8 @@ public class MeiliSearchService : IMeiliSearchService
         var tenantId = _currentTenant.Id;
         if (tenantId.HasValue)
         {
-            // 租户用户：只能搜索该租户的文档
-            filters.Add($"tenantId = \"{tenantId}\"");
+            // 租户用户：搜索该租户的文档 + Host 公共文档（tenantId 为空）
+            filters.Add($"(tenantId = \"{tenantId}\" OR tenantId = \"\")");
         }
         // Host 用户不加 tenantId 过滤，可以搜索所有文档
 
@@ -385,8 +385,8 @@ public class MeiliSearchService : IMeiliSearchService
         var tenantId = _currentTenant.Id;
         if (tenantId.HasValue)
         {
-            // 租户用户：只能搜索该租户的文档
-            filters.Add($"tenantId = \"{tenantId}\"");
+            // 租户用户：搜索该租户的文档 + Host 公共文档（tenantId 为空）
+            filters.Add($"(tenantId = \"{tenantId}\" OR tenantId = \"\")");
         }
         // Host 用户不加 tenantId 过滤，可以搜索所有文档
 

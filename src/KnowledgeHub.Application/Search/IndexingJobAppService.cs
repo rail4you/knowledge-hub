@@ -13,8 +13,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.BackgroundJobs;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Application.Search;
 
@@ -292,7 +294,17 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
 
     public async Task<IndexingJobDto> CreateAsync(CreateIndexingJobInput input)
     {
-        var resource = await _resourceRepository.GetAsync(input.ResourceId);
+        Resource? resource;
+        // 先尝试不限制租户查询（支持跨租户创建索引任务）
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resource = await _resourceRepository.FindAsync(input.ResourceId);
+        }
+        
+        if (resource == null)
+        {
+            throw new UserFriendlyException($"资源不存在: {input.ResourceId}");
+        }
         
         var existingJob = await _jobRepository.FirstOrDefaultAsync(x => 
             x.ResourceId == input.ResourceId && 

@@ -13,7 +13,9 @@ using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Application.Search;
 
@@ -22,6 +24,7 @@ public class OpenDataLoaderService : IDocumentExtractionService
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly IConfiguration _configuration;
+    private readonly IDataFilter _dataFilter;
     private readonly ILogger<OpenDataLoaderService> _logger;
     private static readonly string[] SupportedExtensions = { ".pdf", ".docx", ".pptx", ".xlsx" };
 
@@ -29,11 +32,13 @@ public class OpenDataLoaderService : IDocumentExtractionService
         IRepository<Resource, Guid> resourceRepository,
         IFileStorageService fileStorageService,
         IConfiguration configuration,
+        IDataFilter dataFilter,
         ILogger<OpenDataLoaderService> logger)
     {
         _resourceRepository = resourceRepository;
         _fileStorageService = fileStorageService;
         _configuration = configuration;
+        _dataFilter = dataFilter;
         _logger = logger;
     }
 
@@ -41,7 +46,17 @@ public class OpenDataLoaderService : IDocumentExtractionService
     {
         try
         {
-            var resource = await _resourceRepository.GetAsync(resourceId);
+            Resource? resource;
+            using (_dataFilter.Disable<IMultiTenant>())
+            {
+                resource = await _resourceRepository.FindAsync(resourceId);
+            }
+            
+            if (resource == null)
+            {
+                _logger.LogWarning("Resource not found during extraction: {ResourceId}", resourceId);
+                return new List<PageContentDto>();
+            }
             var extension = resource.FileExtension?.ToLowerInvariant();
 
             if (!SupportedExtensions.Contains(extension))

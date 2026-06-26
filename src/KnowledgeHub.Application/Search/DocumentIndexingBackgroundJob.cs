@@ -11,6 +11,7 @@ using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.BackgroundJobs;
+using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
@@ -29,6 +30,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
     private readonly IMeiliSearchService _meiliSearchService;
     private readonly IPageIndexService _pageIndexService;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IDataFilter _dataFilter;
     private readonly ILogger<DocumentIndexingBackgroundJob> _logger;
 
     public DocumentIndexingBackgroundJob(
@@ -41,6 +43,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         IMeiliSearchService meiliSearchService,
         IPageIndexService pageIndexService,
         ICurrentTenant currentTenant,
+        IDataFilter dataFilter,
         ILogger<DocumentIndexingBackgroundJob> logger)
     {
         _jobRepository = jobRepository;
@@ -52,6 +55,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _meiliSearchService = meiliSearchService;
         _pageIndexService = pageIndexService;
         _currentTenant = currentTenant;
+        _dataFilter = dataFilter;
         _logger = logger;
         _logger.LogInformation("DocumentIndexingBackgroundJob CONSTRUCTOR called");
     }
@@ -80,7 +84,11 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
 
     private async Task ExecuteJobAsync(DocumentIndexingJobArgs args)
     {
-        var resource = await _resourceRepository.FindAsync(args.ResourceId);
+        Resource? resource;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            resource = await _resourceRepository.FindAsync(args.ResourceId);
+        }
         if (resource == null)
         {
             throw new Exception($"Resource not found: {args.ResourceId}");
