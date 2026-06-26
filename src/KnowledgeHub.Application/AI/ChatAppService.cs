@@ -15,7 +15,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Application.AI;
@@ -28,7 +30,7 @@ public class ChatAppService : KnowledgeHubAppService
     private readonly IConfiguration _configuration;
     private readonly ILogger<ChatAppService> _logger;
     private readonly PageIndexTools _pageIndexTools;
-    private readonly IRepository<ResourcePageIndex, Guid> _pageIndexRepository;
+    private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
 
     private const string DefaultInstructions = @"你是 KnowledgeHub 平台的智能教育助手。
@@ -73,14 +75,14 @@ TOOL USE:
         IConfiguration configuration,
         ILogger<ChatAppService> logger,
         PageIndexTools pageIndexTools,
-        IRepository<ResourcePageIndex, Guid> pageIndexRepository,
+        IRepository<PageContent, Guid> pageContentRepository,
         IRepository<Resource, Guid> resourceRepository)
     {
         _currentUser = currentUser;
         _configuration = configuration;
         _logger = logger;
         _pageIndexTools = pageIndexTools;
-        _pageIndexRepository = pageIndexRepository;
+        _pageContentRepository = pageContentRepository;
         _resourceRepository = resourceRepository;
     }
 
@@ -108,14 +110,12 @@ TOOL USE:
 
         if (input.ResourceId.HasValue)
         {
-            // Document QA mode: fetch latest PageIndex for the resource
-            var pageIndexList = await _pageIndexRepository
-                .GetListAsync(x => x.ResourceId == input.ResourceId.Value);
-            var latestPageIndex = pageIndexList
-                .OrderByDescending(x => x.CreatedAt)
-                .FirstOrDefault();
+            // Document QA mode: check if resource has indexed content
+            var pcQuery = await _pageContentRepository.GetQueryableAsync();
+            var hasContent = await AsyncExecuter.AnyAsync(
+                pcQuery.Where(x => x.ResourceId == input.ResourceId.Value));
 
-            if (latestPageIndex == null)
+            if (!hasContent)
             {
                 await onChunk(new ChatMessageChunkDto
                 {
@@ -127,7 +127,7 @@ TOOL USE:
                 return;
             }
 
-            var docTools = new DocumentChatTools(latestPageIndex.PageIndexJson, _logger);
+            var docTools = new DocumentChatTools("{}", _logger);
             tools = BuildDocumentTools(docTools);
             instructions = DocumentChatInstructions;
         }
@@ -172,30 +172,33 @@ TOOL USE:
 
     public async Task<List<ResourceForChatDto>> GetResourcesWithPageIndexAsync()
     {
-        var pageIndices = await _pageIndexRepository.GetListAsync();
+        // 从 Meilisearch 已索引的 PageContent 中获取有内容的资源列表
+        var pcQuery = await _pageContentRepository.GetQueryableAsync();
+        var indexedResourceIds = await AsyncExecuter.ToListAsync(
+            pcQuery.Select(pc => pc.ResourceId).Distinct());
 
-        // Group by ResourceId, take the latest for each
-        var latestByResource = pageIndices
-            .GroupBy(pi => pi.ResourceId)
-            .Select(g => g.OrderByDescending(pi => pi.CreatedAt).First())
-            .ToList();
+        if (indexedResourceIds.Count == 0)
+            return new List<ResourceForChatDto>();
 
-        var resourceIds = latestByResource.Select(pi => pi.ResourceId).ToList();
-        var resources = await _resourceRepository.GetListAsync(r => resourceIds.Contains(r.Id));
+        List<Resource> resources;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resources = await _resourceRepository.GetListAsync(r => indexedResourceIds.Contains(r.Id));
+        }
         var resourceMap = resources.ToDictionary(r => r.Id);
 
         var result = new List<ResourceForChatDto>();
-        foreach (var pi in latestByResource)
+        foreach (var resourceId in indexedResourceIds)
         {
-            if (!resourceMap.TryGetValue(pi.ResourceId, out var resource)) continue;
+            if (!resourceMap.TryGetValue(resourceId, out var resource)) continue;
 
             result.Add(new ResourceForChatDto
             {
                 Id = resource.Id,
                 Name = resource.Name,
                 FileExtension = resource.FileExtension,
-                SourceFormat = pi.SourceFormat,
-                NodeCount = pi.NodeCount
+                SourceFormat = resource.FileExtension ?? "unknown",
+                NodeCount = 0
             });
         }
 
