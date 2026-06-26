@@ -173,9 +173,13 @@ TOOL USE:
     public async Task<List<ResourceForChatDto>> GetResourcesWithPageIndexAsync()
     {
         // 从 Meilisearch 已索引的 PageContent 中获取有内容的资源列表
-        var pcQuery = await _pageContentRepository.GetQueryableAsync();
-        var indexedResourceIds = await AsyncExecuter.ToListAsync(
-            pcQuery.Select(pc => pc.ResourceId).Distinct());
+        List<Guid> indexedResourceIds;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var pcQuery = await _pageContentRepository.GetQueryableAsync();
+            indexedResourceIds = await AsyncExecuter.ToListAsync(
+                pcQuery.Select(pc => pc.ResourceId).Distinct());
+        }
 
         if (indexedResourceIds.Count == 0)
             return new List<ResourceForChatDto>();
@@ -192,12 +196,27 @@ TOOL USE:
         {
             if (!resourceMap.TryGetValue(resourceId, out var resource)) continue;
 
+            var format = resource.FileExtension;
+            if (string.IsNullOrEmpty(format))
+            {
+                format = System.IO.Path.GetExtension(resource.OriginalFileName ?? "");
+            }
+            if (string.IsNullOrEmpty(format))
+            {
+                format = "unknown";
+            }
+            // 去掉前导点,显示为 "pptx" 而非 ".pptx"
+            if (format.StartsWith("."))
+            {
+                format = format.Substring(1);
+            }
+
             result.Add(new ResourceForChatDto
             {
                 Id = resource.Id,
                 Name = resource.Name,
                 FileExtension = resource.FileExtension,
-                SourceFormat = resource.FileExtension ?? "unknown",
+                SourceFormat = format,
                 NodeCount = 0
             });
         }
