@@ -155,11 +155,13 @@ export class StudentCourseDetailComponent implements OnInit {
     this.courseService.getPublished({
       majorId: c?.majorId || undefined,
       skipCount: 0,
-      maxResultCount: 6,
+      maxResultCount: 20,
     } as any).subscribe({
       next: result => {
         const items = (result.items || [])
           .filter(x => x.id !== courseId)
+          // 按选课人数降序排列
+          .sort((a, b) => (b.studentCount || 0) - (a.studentCount || 0))
           .slice(0, 4)
           .map(x => ({
             id: x.id!,
