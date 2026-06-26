@@ -54,13 +54,12 @@ export class FilePreviewComponent {
   unsupported = signal(false);
 
   // 在线预览大小上限：超过此大小提示用户下载。
-  // docx/pdf/pptx 按 25MB 统一限制，图片/视频/音频流式播放不设严格上限。
+  // docx/pdf 有上限因为它会解析 DOM，pptx 已改为流式播放不设上限
   private static readonly PREVIEW_SIZE_LIMIT: Partial<Record<FileType, number>> = {
     text: 2 * 1024 * 1024,         // 2 MB
     pdf: 25 * 1024 * 1024,         // 25 MB
     word: 25 * 1024 * 1024,        // 25 MB
     excel: 20 * 1024 * 1024,       // 20 MB
-    pptx: 25 * 1024 * 1024,        // 25 MB
     image: 50 * 1024 * 1024,       // 50 MB
   };
 
