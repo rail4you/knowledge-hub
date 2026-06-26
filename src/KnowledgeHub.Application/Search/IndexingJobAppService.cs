@@ -376,9 +376,9 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         var docJob = await _jobRepository.FindAsync(id);
         if (docJob != null)
         {
-            if (docJob.Status != IndexingJobStatus.Failed && docJob.Status != IndexingJobStatus.Pending)
+            if (docJob.Status != IndexingJobStatus.Failed && docJob.Status != IndexingJobStatus.Pending && docJob.Status != IndexingJobStatus.Completed)
             {
-                throw new UserFriendlyException("Only failed or pending jobs can be retried.");
+                throw new UserFriendlyException("Only failed, pending, or completed jobs can be retried.");
             }
 
             var resource = await _resourceRepository.GetAsync(docJob.ResourceId);
@@ -408,9 +408,9 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         var vidJob = await _videoJobRepository.FindAsync(id);
         if (vidJob != null)
         {
-            if (vidJob.Status != VideoIndexingJobStatus.Failed && vidJob.Status != VideoIndexingJobStatus.Pending)
+            if (vidJob.Status != VideoIndexingJobStatus.Failed && vidJob.Status != VideoIndexingJobStatus.Pending && vidJob.Status != VideoIndexingJobStatus.Completed)
             {
-                throw new UserFriendlyException("Only failed or pending jobs can be retried.");
+                throw new UserFriendlyException("Only failed, pending, or completed jobs can be retried.");
             }
 
             var resource = await _resourceRepository.GetAsync(vidJob.ResourceId);

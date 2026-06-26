@@ -192,6 +192,15 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
                         重试
                       </button>
                     }
+                    @if (job.status === IndexingJobStatus.Completed) {
+                      <button
+                        nz-button
+                        nzType="link"
+                        nzSize="small"
+                        (click)="retryJob(job.id)">
+                        重新索引
+                      </button>
+                    }
                     @if (job.status === IndexingJobStatus.Pending || job.status === IndexingJobStatus.Parsing) {
                       <button
                         nz-button
