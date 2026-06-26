@@ -435,6 +435,16 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+
+  &--half {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
 }
 
 .form-label {
