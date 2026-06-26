@@ -178,26 +178,7 @@
     </section>
   }
 
-  <!-- =================== S-11 按专业分组 Tab =================== -->
-  @if (majorChips().length > 1) {
-    <section class="major-tabs" aria-label="按专业筛选">
-      <div class="major-tabs__inner">
-        <span class="major-tabs__label">按专业</span>
-        <div class="major-tabs__list">
-          @for (chip of majorChips(); track chip.id) {
-            <button
-              class="major-chip"
-              [class.is-active]="selectedMajorId() === chip.id"
-              (click)="selectMajor(chip.id)"
-            >
-              <span>{{ chip.name }}</span>
-              <span class="major-chip__count">{{ chip.count }}</span>
-            </button>
-          }
-        </div>
-      </div>
-    </section>
-  }
+  <!-- =================== 按专业分组 Tab =================== -->
 
   <!-- =================== 资源分类 + 素材列表 =================== -->
   <section class="resource-section">
@@ -228,6 +209,34 @@
         </div>
 
         <nz-divider></nz-divider>
+
+        @if (majors().length > 0) {
+          <div class="sidebar-categories">
+            <span class="sidebar-categories__label">按专业</span>
+            <div class="category-tree">
+              <button
+                class="tree-item tree-item--root"
+                [class.is-active]="selectedMajorId() === null"
+                (click)="selectMajor(null)"
+              >
+                <span class="tree-item__icon">
+                  <span nz-icon nzType="book" nzTheme="outline"></span>
+                </span>
+                <span class="tree-item__name">全部专业</span>
+              </button>
+              @for (major of majors(); track major.id) {
+                <button
+                  class="tree-item"
+                  [class.is-active]="selectedMajorId() === major.id"
+                  (click)="selectMajor(major.id ?? null)"
+                >
+                  <span class="tree-item__name">{{ major.name }}</span>
+                </button>
+              }
+            </div>
+          </div>
+          <nz-divider></nz-divider>
+        }
 
         <div class="sidebar-categories">
           <span class="sidebar-categories__label">分类目录</span>

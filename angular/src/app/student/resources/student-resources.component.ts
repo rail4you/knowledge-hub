@@ -15,6 +15,8 @@ import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import type { ResourceDto, ResourceCategoryDto } from '../../proxy/resources/models';
 import { PortalService } from '../../proxy/portal/portal.service';
+import { MajorService } from '../../proxy/majors/major.service';
+import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
@@ -62,6 +64,7 @@ interface StatItem {
 export class StudentResourcesComponent implements OnInit, OnDestroy {
   private readonly resourceService = inject(ResourceService);
   private readonly portalService = inject(PortalService);
+  private readonly majorService = inject(MajorService);
   private readonly reviewService = inject(ResourceReviewService);
   private readonly recommendationService = inject(RecommendationService);
   private readonly authErrorService = inject(AuthErrorService);
@@ -77,6 +80,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   selectedCategoryId = signal<string | null>(null);
   selectedMajorId = signal<string | null>(null);
   categories = signal<ResourceCategoryDto[]>([]);
+  majors = signal<MajorLookupDto[]>([]);
 
   totalCount = signal(0);
   pageIndex = signal(1);
@@ -161,19 +165,13 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   // 热门目录：从真实分类数据中取所有有效分类，按资源数量降序排列
   visibleHeroSlides = computed(() => this.heroSlides());
 
-  /** 从资源数据中提取专业筛选 chips */
+  /** 从 MajorService 加载可用专业列表 */
   majorChips = computed(() => {
-    // 使用已加载的资源提取专业名（用于快速筛选）
-    const seen = new Set<string>();
-    const chips: { id: string; name: string; count: number }[] = [];
-    for (const r of this.resources()) {
-      const name = r.majorName;
-      if (name && !seen.has(name)) {
-        seen.add(name);
-        chips.push({ id: name, name, count: 0 });
-      }
-    }
-    return chips;
+    return this.majors().map(m => ({
+      id: m.id!,
+      name: m.name!,
+      count: 0
+    }));
   });
 
   hotCategories = computed(() => {
@@ -198,6 +196,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadCategories();
+    this.loadMajors();
     this.loadResources();
     this.loadRecommendations();
     this.loadHomeStats();
@@ -262,6 +261,13 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   loadCategories() {
     this.resourceService.getCategories().subscribe({
       next: (cats) => this.categories.set(cats || [])
+    });
+  }
+
+  loadMajors() {
+    this.majorService.getLookupList().subscribe({
+      next: (list) => this.majors.set(list || []),
+      error: () => this.majors.set([])
     });
   }
 
