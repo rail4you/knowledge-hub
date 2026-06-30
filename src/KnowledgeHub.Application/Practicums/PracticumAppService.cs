@@ -197,7 +197,6 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         await _projectRepository.DeleteAsync(id);
     }
 
-    [Authorize(KnowledgeHubPermissions.Practicum.Default)]
     public async Task EnrollAsync(Guid projectId)
     {
         var studentId = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
