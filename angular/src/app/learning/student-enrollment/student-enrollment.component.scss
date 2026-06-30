@@ -56,9 +56,14 @@
   gap: 12px;
   align-items: center;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 
   .modal-search-input {
     width: 200px;
+  }
+
+  .major-select {
+    min-width: 160px;
   }
 
   .selected-count {

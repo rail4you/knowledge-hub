@@ -117,4 +117,5 @@ public class GetAvailableStudentsInput : PagedAndSortedResultRequestDto
     public Guid CourseId { get; set; }
     public Guid? TenantId { get; set; }
     public string? Filter { get; set; }
+    public Guid? MajorId { get; set; }
 }

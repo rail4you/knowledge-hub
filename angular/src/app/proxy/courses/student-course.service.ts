@@ -2,7 +2,7 @@ import type { BatchEnrollDto, CreateStudentCourseDto, GetAvailableStudentsInput,
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { IdentityUserDto } from '../volo/abp/identity/models';
+import type { TenantUserDto } from '../application/identity/models';
 
 @Injectable({
   providedIn: 'root',
@@ -39,7 +39,7 @@ export class StudentCourseService {
   
 
   getAvailableStudents = (input: GetAvailableStudentsInput, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, PagedResultDto<IdentityUserDto>>({
+    this.restService.request<any, PagedResultDto<TenantUserDto>>({
       method: 'GET',
       url: '/api/app/student-course/available-students',
       params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },

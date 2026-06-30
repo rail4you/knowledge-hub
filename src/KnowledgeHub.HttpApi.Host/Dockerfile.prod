@@ -88,7 +88,7 @@ COPY --from=build /src/src/pageindex-cli/pageindex_cli.py /app/pageindex-cli/pag
 COPY --from=build /src/src/pageindex-cli/PageIndex/pageindex /app/pageindex-cli/PageIndex/pageindex
 
 # 创建上传目录
-RUN mkdir -p /app/uploads /tmp/opendataloader && chmod +x /app/utils/pdf-parser/document-parser.jar
+RUN mkdir -p /app/uploads /tmp/opendataloader /app/utils/pdf-parser && (test -f /app/utils/pdf-parser/document-parser.jar && chmod +x /app/utils/pdf-parser/document-parser.jar || true)
 
 # 设置 ASP.NET Core 环境
 ENV ASPNETCORE_ENVIRONMENT=Production

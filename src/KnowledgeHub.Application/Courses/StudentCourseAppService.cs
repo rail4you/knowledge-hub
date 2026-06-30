@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using KnowledgeHub.Application.Identity;
 using KnowledgeHub.Courses.Dtos;
 using KnowledgeHub.Learning;
 using KnowledgeHub.Learning.Enums;
+using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -24,19 +26,22 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IRepository<Major, Guid> _majorRepository;
 
     public StudentCourseAppService(
         IRepository<StudentCourse, Guid> studentCourseRepository,
         IRepository<Course, Guid> courseRepository,
         IRepository<IdentityUser, Guid> userRepository,
         IdentityUserManager userManager,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        IRepository<Major, Guid> majorRepository)
     {
         _studentCourseRepository = studentCourseRepository;
         _courseRepository = courseRepository;
         _userRepository = userRepository;
         _userManager = userManager;
         _currentTenant = currentTenant;
+        _majorRepository = majorRepository;
     }
 
     /// <summary>
@@ -117,7 +122,7 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.ManageEnrollment)]
-    public async Task<PagedResultDto<IdentityUserDto>> GetAvailableStudentsAsync(GetAvailableStudentsInput input)
+    public async Task<PagedResultDto<TenantUserDto>> GetAvailableStudentsAsync(GetAvailableStudentsInput input)
     {
         var available = await GetAvailableStudentListAsync(input);
         var totalCount = available.Count;
@@ -126,19 +131,41 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
             .Take(input.MaxResultCount)
             .ToList();
 
-        var dtos = paged.Select(u => new IdentityUserDto
+        // Build MajorId → MajorName map for all involved majors
+        var majorIds = paged
+            .Select(u => u.GetProperty<Guid?>("MajorId"))
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        Dictionary<Guid, string> majorNameMap;
+        using (DataFilter.Disable<IMultiTenant>())
         {
-            Id = u.Id,
-            UserName = u.UserName,
-            Name = u.Name,
-            Surname = u.Surname,
-            Email = u.Email,
-            PhoneNumber = u.PhoneNumber,
-            IsActive = u.IsActive,
-            CreationTime = u.CreationTime,
+            majorNameMap = (await _majorRepository.GetQueryableAsync())
+                .Where(m => majorIds.Contains(m.Id))
+                .ToDictionary(m => m.Id, m => m.Name);
+        }
+
+        var dtos = paged.Select(u =>
+        {
+            var majorId = u.GetProperty<Guid?>("MajorId");
+            return new TenantUserDto
+            {
+                Id = u.Id,
+                UserName = u.UserName,
+                Name = u.Name,
+                Surname = u.Surname,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                IsActive = u.IsActive,
+                CreationTime = u.CreationTime,
+                MajorId = majorId,
+                MajorName = majorId.HasValue ? majorNameMap.GetValueOrDefault(majorId.Value) : null,
+            };
         }).ToList();
 
-        return new PagedResultDto<IdentityUserDto>(totalCount, dtos);
+        return new PagedResultDto<TenantUserDto>(totalCount, dtos);
     }
 
     /// <summary>P1-10：仅返回 ID 列表（不分页），给「全选匹配结果」按钮用</summary>
@@ -198,6 +225,18 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
                     studentsWithRole.Add(user);
                 }
             }
+        }
+
+        // Filter by MajorId (stored as ExtraProperty)
+        if (input.MajorId.HasValue)
+        {
+            studentsWithRole = studentsWithRole
+                .Where(s =>
+                {
+                    var majorId = s.GetProperty<Guid?>("MajorId");
+                    return majorId.HasValue && majorId.Value == input.MajorId.Value;
+                })
+                .ToList();
         }
 
         return studentsWithRole.Where(s => !enrolledStudentIds.Contains(s.Id)).ToList();

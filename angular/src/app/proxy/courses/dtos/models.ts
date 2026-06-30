@@ -116,6 +116,7 @@ export interface GetAvailableStudentsInput extends PagedAndSortedResultRequestDt
   courseId?: string;
   tenantId?: string | null;
   filter?: string | null;
+  majorId?: string | null;
 }
 
 export interface GetStudentCoursesInput extends PagedAndSortedResultRequestDto {

@@ -22,7 +22,9 @@ import { CourseService } from '../../proxy/courses/course.service';
 import { StudentCourseService } from '../../proxy/courses/student-course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { StudentCourseDto } from '../../proxy/courses/dtos/models';
-import type { IdentityUserDto } from '../../proxy/volo/abp/identity/models';
+import type { TenantUserDto } from '../../proxy/application/identity/models';
+import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
+import { MajorService } from '../../proxy/majors/major.service';
 import { StudentCourseStatus } from '../../proxy/learning/enums/student-course-status.enum';
 
 interface TenantDto {
@@ -59,6 +61,7 @@ interface TenantDto {
 export class StudentEnrollmentComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly studentCourseService = inject(StudentCourseService);
+  private readonly majorService = inject(MajorService);
   private readonly restService = inject(RestService);
   private readonly configService = inject(ConfigStateService);
   private readonly message = inject(NzMessageService);
@@ -69,12 +72,14 @@ export class StudentEnrollmentComponent implements OnInit {
   courses = signal<CourseDto[]>([]);
   enrollments = signal<StudentCourseDto[]>([]);
   tenants = signal<TenantDto[]>([]);
-  availableStudents = signal<IdentityUserDto[]>([]);
+  majors = signal<MajorLookupDto[]>([]);
+  availableStudents = signal<TenantUserDto[]>([]);
   selectedStudentIds: Set<string> = new Set();
 
   // Filters
   selectedCourseId: string | null = null;
   selectedTenantId: string | null = null;
+  selectedMajorId: string | null = null;
   filterText = '';
   studentFilterText = '';
 
@@ -104,6 +109,7 @@ export class StudentEnrollmentComponent implements OnInit {
 
   ngOnInit() {
     this.loadCourses();
+    this.loadMajors();
     if (this.isHost) {
       this.loadTenants();
     }
@@ -113,6 +119,15 @@ export class StudentEnrollmentComponent implements OnInit {
     this.courseService.getList({ maxResultCount: 1000, skipCount: 0 } as any).subscribe({
       next: (result) => {
         this.courses.set(result.items || []);
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  loadMajors() {
+    this.majorService.getLookupList().subscribe({
+      next: (majors) => {
+        this.majors.set(majors || []);
         this.cdr.markForCheck();
       },
     });
@@ -211,6 +226,7 @@ export class StudentEnrollmentComponent implements OnInit {
     }
     this.selectedStudentIds.clear();
     this.studentFilterText = '';
+    this.selectedMajorId = null;
     this.studentPageIndex = 1;
     this.addModalVisible = true;
     this.loadAvailableStudents();
@@ -222,6 +238,7 @@ export class StudentEnrollmentComponent implements OnInit {
       courseId: this.selectedCourseId!,
       tenantId: this.selectedTenantId || undefined,
       filter: this.studentFilterText || undefined,
+      majorId: this.selectedMajorId || undefined,
       skipCount: (this.studentPageIndex - 1) * this.studentPageSize,
       maxResultCount: this.studentPageSize,
     } as any).subscribe({
@@ -235,6 +252,11 @@ export class StudentEnrollmentComponent implements OnInit {
         this.addModalLoading = false;
       },
     });
+  }
+
+  onMajorFilterChange() {
+    this.studentPageIndex = 1;
+    this.loadAvailableStudents();
   }
 
   onStudentPageChange(index: number) {
@@ -270,6 +292,7 @@ export class StudentEnrollmentComponent implements OnInit {
         courseId: this.selectedCourseId!,
         tenantId: this.selectedTenantId || undefined,
         filter: this.studentFilterText || undefined,
+        majorId: this.selectedMajorId || undefined,
       } as any)
       .subscribe({
         next: (ids) => {

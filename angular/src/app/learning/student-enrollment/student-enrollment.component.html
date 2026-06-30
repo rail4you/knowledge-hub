@@ -158,6 +158,18 @@
           <span nz-icon nzType="search"></span>
         </ng-template>
 
+        <nz-select
+          [(ngModel)]="selectedMajorId"
+          nzPlaceHolder="选择专业"
+          nzAllowClear
+          class="major-select"
+          (ngModelChange)="onMajorFilterChange()"
+        >
+          @for (major of majors(); track major.id) {
+            <nz-option [nzValue]="major.id" [nzLabel]="major.name"></nz-option>
+          }
+        </nz-select>
+
         <span class="selected-count">
           已选 {{ selectedStudentIds.size }} 人
         </span>
@@ -189,6 +201,7 @@
               <th nzWidth="50px">选择</th>
               <th>用户名</th>
               <th>姓名</th>
+              <th>专业</th>
               <th>邮箱</th>
             </tr>
           </thead>
@@ -203,6 +216,7 @@
                 </td>
                 <td>{{ student.userName }}</td>
                 <td>{{ student.name || '-' }}</td>
+                <td>{{ student.majorName || '-' }}</td>
                 <td>{{ student.email || '-' }}</td>
               </tr>
             }
