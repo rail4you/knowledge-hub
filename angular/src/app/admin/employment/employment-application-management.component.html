@@ -74,6 +74,11 @@
         >面试邀请</button>
         <button
           class="type-chip"
+          [class.is-active]="statusFilter() === statuses.InterviewCompleted"
+          (click)="statusFilter.set(statuses.InterviewCompleted); onFilterChange()"
+        >面试完成</button>
+        <button
+          class="type-chip"
           [class.is-active]="statusFilter() === statuses.Offered"
           (click)="statusFilter.set(statuses.Offered); onFilterChange()"
         >已录用</button>

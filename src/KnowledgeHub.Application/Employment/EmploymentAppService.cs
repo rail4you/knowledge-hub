@@ -634,17 +634,62 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         await _interviewRepository.UpdateAsync(entity, autoSave: true);
 
         var application = await _applicationRepository.GetAsync(entity.ApplicationId);
+        // 允许从 InterviewCompleted 或 InterviewScheduled 状态记录最终结果
         application.Status = input.Result switch
         {
             EmploymentInterviewResult.Passed => EmploymentApplicationStatus.Offered,
             EmploymentInterviewResult.Failed => EmploymentApplicationStatus.Rejected,
             EmploymentInterviewResult.Deferred => EmploymentApplicationStatus.Viewed,
-            _ => EmploymentApplicationStatus.InterviewScheduled
+            _ => application.Status // Pending 不改变状态
         };
         application.ReviewedAt = Clock.Now;
         await _applicationRepository.UpdateAsync(application, autoSave: true);
 
         return await MapInterviewDtoAsync(entity);
+    }
+
+    [Authorize(KnowledgeHubPermissions.Employment.ScheduleInterview)]
+    public async Task<InterviewScheduleDto> CompleteInterviewAsync(Guid id, CompleteInterviewDto input)
+    {
+        if (string.IsNullOrWhiteSpace(input.CompletionMessage))
+        {
+            throw new UserFriendlyException("请填写面试完成后的提示信息（如：请等待电话/邮件联系）。");
+        }
+
+        var entity = await GetManageableInterviewAsync(id);
+        entity.CompletionMessage = input.CompletionMessage.Trim();
+        entity.CompletedAt = Clock.Now;
+        await _interviewRepository.UpdateAsync(entity, autoSave: true);
+
+        var application = await _applicationRepository.GetAsync(entity.ApplicationId);
+        application.Status = EmploymentApplicationStatus.InterviewCompleted;
+        application.EmployerRemark = input.CompletionMessage.Trim();
+        application.ReviewedAt = Clock.Now;
+        await _applicationRepository.UpdateAsync(application, autoSave: true);
+
+        return await MapInterviewDtoAsync(entity);
+    }
+
+    [Authorize(KnowledgeHubPermissions.Employment.ScheduleInterview)]
+    public async Task DeleteInterviewAsync(Guid id)
+    {
+        var entity = await GetManageableInterviewAsync(id);
+        
+        // 恢复关联的投递状态：如果投递状态是 InterviewScheduled 或 InterviewCompleted
+        // 且没有其他面试记录，则恢复到 Viewed 状态
+        var application = await _applicationRepository.GetAsync(entity.ApplicationId);
+        var otherInterviews = await _interviewRepository.GetListAsync(
+            x => x.ApplicationId == entity.ApplicationId && x.Id != entity.Id);
+        
+        if (otherInterviews.Count == 0)
+        {
+            application.Status = EmploymentApplicationStatus.Viewed;
+            application.EmployerRemark = null;
+            application.ReviewedAt = null;
+        }
+        
+        await _applicationRepository.UpdateAsync(application, autoSave: true);
+        await _interviewRepository.DeleteAsync(entity, autoSave: true);
     }
 
     [Authorize(KnowledgeHubPermissions.Employment.Default)]
@@ -1135,11 +1180,13 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                 .ToDictionary(x => x.Key, x => x.Count());
 
             var currentUserId = CurrentUser.Id;
-            var appliedJobIds = currentUserId.HasValue
-                ? applications.Where(x => x.StudentId == currentUserId.Value).Select(x => x.JobPostingId).ToHashSet()
+            var myApps = currentUserId.HasValue
+                ? applications.Where(x => x.StudentId == currentUserId.Value).ToList()
                 : [];
+            var appliedJobIds = myApps.Select(x => x.JobPostingId).ToHashSet();
+            var appStatusMap = myApps.ToDictionary(x => x.JobPostingId, x => x.Status);
 
-            return items.Select(item => MapJobDto(item, applicationCountMap, appliedJobIds)).ToList();
+            return items.Select(item => MapJobDto(item, applicationCountMap, appliedJobIds, appStatusMap)).ToList();
         }
     }
 
@@ -1149,17 +1196,20 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         {
             var applications = await _applicationRepository.GetListAsync(x => x.JobPostingId == entity.Id);
             var applicationCountMap = new Dictionary<Guid, int> { [entity.Id] = applications.Count };
-            var appliedJobIds = CurrentUser.Id.HasValue
-                ? applications.Where(x => x.StudentId == CurrentUser.Id.Value).Select(x => x.JobPostingId).ToHashSet()
+            var myApps = CurrentUser.Id.HasValue
+                ? applications.Where(x => x.StudentId == CurrentUser.Id.Value).ToList()
                 : [];
-            return MapJobDto(entity, applicationCountMap, appliedJobIds);
+            var appliedJobIds = myApps.Select(x => x.JobPostingId).ToHashSet();
+            var appStatusMap = myApps.ToDictionary(x => x.JobPostingId, x => x.Status);
+            return MapJobDto(entity, applicationCountMap, appliedJobIds, appStatusMap);
         }
     }
 
     private static JobPostingDto MapJobDto(
         JobPosting entity,
         Dictionary<Guid, int> applicationCountMap,
-        HashSet<Guid> appliedJobIds)
+        HashSet<Guid> appliedJobIds,
+        Dictionary<Guid, EmploymentApplicationStatus> appStatusMap)
     {
         return new JobPostingDto
         {
@@ -1190,7 +1240,8 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             PublishedAt = entity.PublishedAt,
             ViewCount = entity.ViewCount,
             ApplicationCount = applicationCountMap.TryGetValue(entity.Id, out var count) ? count : 0,
-            HasApplied = appliedJobIds.Contains(entity.Id)
+            HasApplied = appliedJobIds.Contains(entity.Id),
+            ApplicationStatus = appStatusMap.TryGetValue(entity.Id, out var s) ? s : null
         };
     }
 
@@ -1324,7 +1375,9 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                 Result = item.Result,
                 Summary = item.Summary,
                 ResultComment = item.ResultComment,
-                ResultRecordedAt = item.ResultRecordedAt
+                ResultRecordedAt = item.ResultRecordedAt,
+                CompletionMessage = item.CompletionMessage,
+                CompletedAt = item.CompletedAt
             }).ToList();
         }
     }

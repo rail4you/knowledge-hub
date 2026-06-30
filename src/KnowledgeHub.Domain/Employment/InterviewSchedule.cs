@@ -26,6 +26,11 @@ public class InterviewSchedule : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public string? Summary { get; set; }
     public string? ResultComment { get; set; }
     public DateTime? ResultRecordedAt { get; set; }
+    /// <summary>
+    /// 面试完成后教师填写的后续提示信息（如"请等待电话/邮件联系"），学生端可见。
+    /// </summary>
+    public string? CompletionMessage { get; set; }
+    public DateTime? CompletedAt { get; set; }
 
     public InterviewSchedule()
     {

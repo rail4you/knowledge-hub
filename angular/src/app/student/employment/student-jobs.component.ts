@@ -6,15 +6,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { EmploymentJobType, EmploymentService, JobPostingDto } from '../../employment/employment.service';
-
-interface StatItem {
-  label: string;
-  value: number;
-  suffix: string;
-  icon: string;
-  color: string;
-}
+import { EmploymentApplicationStatus, EmploymentJobType, EmploymentService, JobPostingDto } from '../../employment/employment.service';
 
 @Component({
   selector: 'app-student-jobs',
@@ -25,9 +17,9 @@ interface StatItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentJobsComponent implements OnInit {
-  private readonly employmentService = inject(EmploymentService);
+  private readonly svc = inject(EmploymentService);
   private readonly router = inject(Router);
-  private readonly message = inject(NzMessageService);
+  private readonly msg = inject(NzMessageService);
 
   readonly jobs = signal<JobPostingDto[]>([]);
   readonly loading = signal(false);
@@ -37,106 +29,64 @@ export class StudentJobsComponent implements OnInit {
   readonly totalCount = signal(0);
   readonly pageIndex = signal(1);
   readonly pageSize = signal(12);
-
   readonly jobTypes = EmploymentJobType;
+  readonly as = EmploymentApplicationStatus;
 
-  readonly stats = computed<StatItem[]>(() => {
-    const items = this.jobs();
-    const total = this.totalCount();
-    const fullTime = items.filter(x => x.jobType === EmploymentJobType.FullTime).length;
-    const intern = items.filter(x => x.jobType === EmploymentJobType.Internship).length;
+  readonly stats = computed(() => {
+    const all = this.jobs();
+    const applied = all.filter(x => x.hasApplied).length;
+    const interview = all.filter(x =>
+      x.applicationStatus === EmploymentApplicationStatus.InterviewScheduled ||
+      x.applicationStatus === EmploymentApplicationStatus.InterviewCompleted
+    ).length;
     return [
-      { label: '在招岗位', value: total, suffix: '个', icon: 'briefcase', color: '#1e6ce8' },
-      { label: '全职岗位', value: fullTime, suffix: '个', icon: 'rocket', color: '#0c4cb8' },
-      { label: '实习岗位', value: intern, suffix: '个', icon: 'experiment', color: '#0891b2' },
-      { label: '已投递', value: items.filter(x => x.hasApplied).length, suffix: '份', icon: 'paper-plane', color: '#10b981' },
+      { label: '在招岗位', value: this.totalCount(), suffix: '个', color: '#1e6ce8', icon: 'briefcase' },
+      { label: '已投递', value: applied, suffix: '份', color: '#0c4cb8', icon: 'paper-plane' },
+      { label: '面试邀请', value: interview, suffix: '份', color: '#0891b2', icon: 'calendar' },
     ];
   });
 
-  ngOnInit(): void {
-    this.loadItems();
-  }
+  ngOnInit() { this.load(); }
 
-  loadItems(): void {
+  load() {
     this.loading.set(true);
-    this.employmentService.getPublishedJobList({
-      filter: this.keyword() || undefined,
-      location: this.location() || undefined,
+    this.svc.getPublishedJobList({
+      filter: this.keyword() || undefined, location: this.location() || undefined,
       jobType: this.jobType() ?? undefined,
-      skipCount: (this.pageIndex() - 1) * this.pageSize(),
-      maxResultCount: this.pageSize(),
+      skipCount: (this.pageIndex() - 1) * this.pageSize(), maxResultCount: this.pageSize(),
     }).subscribe({
-      next: result => {
-        this.jobs.set(result.items || []);
-        this.totalCount.set(result.totalCount || 0);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.message.error('加载岗位失败');
-      },
+      next: r => { this.jobs.set(r.items || []); this.totalCount.set(r.totalCount || 0); this.loading.set(false); },
+      error: () => { this.loading.set(false); this.msg.error('加载失败'); },
     });
   }
 
-  onSearch(): void {
-    this.pageIndex.set(1);
-    this.loadItems();
+  onSearch() { this.pageIndex.set(1); this.load(); }
+  onPage(p: number) { this.pageIndex.set(p); this.load(); }
+  reset() { this.keyword.set(''); this.location.set(''); this.jobType.set(null); this.pageIndex.set(1); this.load(); }
+  go(item: JobPostingDto) { this.router.navigate(['/student/employment/jobs', item.id]); }
+
+  // ---- 状态显示 ----
+  label(s?: EmploymentApplicationStatus): string {
+    const m: Record<number,string> = {0:'已投递',1:'已查看',2:'等待面试',3:'已录用',4:'未通过',5:'已撤回',6:'面试完成'};
+    return m[s??-1] ?? '已投递';
+  }
+  color(s?: EmploymentApplicationStatus): string {
+    const m: Record<number,string> = {0:'#1e6ce8',1:'#6366f1',2:'#0891b2',3:'#10b981',4:'#ef4444',5:'#94a3b8',6:'#7c3aed'};
+    return m[s??-1] ?? '#1e6ce8';
   }
 
-  onPageChange(page: number): void {
-    this.pageIndex.set(page);
-    this.loadItems();
-  }
+  // ---- 类型 ----
+  tl(t: EmploymentJobType) { const m: Record<number,string> = {0:'全职',1:'实习',2:'兼职',3:'学徒'}; return m[t]||'其他'; }
+  tc(t: EmploymentJobType) { const m: Record<number,string> = {0:'#1e6ce8',1:'#00b7ff',2:'#10b981',3:'#f59e0b'}; return m[t]||'#6b7280'; }
 
-  resetFilter(): void {
-    this.keyword.set('');
-    this.location.set('');
-    this.jobType.set(null);
-    this.pageIndex.set(1);
-    this.loadItems();
-  }
-
-  openDetail(item: JobPostingDto): void {
-    this.router.navigate(['/student/employment/jobs', item.id]);
-  }
-
-  getTypeLabel(type: EmploymentJobType): string {
-    const labels: Record<number, string> = {
-      [EmploymentJobType.FullTime]: '全职',
-      [EmploymentJobType.Internship]: '实习',
-      [EmploymentJobType.PartTime]: '兼职',
-      [EmploymentJobType.Apprenticeship]: '学徒',
-    };
-    return labels[type] || '其他';
-  }
-
-  getTypeColor(type: EmploymentJobType): string {
-    const colors: Record<number, string> = {
-      [EmploymentJobType.FullTime]: '#1e6ce8',
-      [EmploymentJobType.Internship]: '#00b7ff',
-      [EmploymentJobType.PartTime]: '#10b981',
-      [EmploymentJobType.Apprenticeship]: '#f59e0b',
-    };
-    return colors[type] || '#6b7280';
-  }
-
-  /** 封面渐变（基于 id 稳定生成） */
-  coverGradient(item: JobPostingDto): string {
-    const palettes = [
-      '#1e6ce8',
-      '#0c4cb8',
-      '#1d4ed8',
-      '#2563eb',
-      '#0284c7',
-    ];
-    const key = item.id || item.title || '';
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    return palettes[Math.abs(hash) % palettes.length];
-  }
-
-  getSkillTags(item: JobPostingDto): string[] {
+  tags(item: JobPostingDto): string[] {
     if (!item.skillTags) return [];
-    return item.skillTags.split(/[,,;;\n]/).map(s => s.trim()).filter(Boolean).slice(0, 4);
+    return item.skillTags.split(/[,,;;\n]/).map(s=>s.trim()).filter(Boolean).slice(0,4);
+  }
+
+  cg(item: JobPostingDto): string {
+    const p=['#1e6ce8','#0c4cb8','#1d4ed8','#2563eb','#0284c7'];
+    let h=0; for(let i=0;i<(item.id||'').length;i++)h=(h*31+(item.id||'').charCodeAt(i))|0;
+    return p[Math.abs(h)%p.length];
   }
 }

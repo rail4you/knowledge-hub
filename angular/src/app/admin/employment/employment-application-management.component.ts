@@ -65,7 +65,7 @@ export class EmploymentApplicationManagementComponent implements OnInit {
     const items = this.items();
     const total = this.totalCount();
     const submitted = items.filter(x => x.status === EmploymentApplicationStatus.Submitted).length;
-    const interview = items.filter(x => x.status === EmploymentApplicationStatus.InterviewScheduled).length;
+    const interview = items.filter(x => x.status === EmploymentApplicationStatus.InterviewScheduled || x.status === EmploymentApplicationStatus.InterviewCompleted).length;
     const offered = items.filter(x => x.status === EmploymentApplicationStatus.Offered).length;
     const rejected = items.filter(x => x.status === EmploymentApplicationStatus.Rejected).length;
     return [
@@ -215,10 +215,15 @@ export class EmploymentApplicationManagementComponent implements OnInit {
 
   openReview(item: JobApplicationDto): void {
     this.selectedItem = item;
-    this.reviewStatus =
-      item.status === EmploymentApplicationStatus.Rejected
-        ? EmploymentApplicationStatus.Rejected
-        : EmploymentApplicationStatus.InterviewScheduled;
+    // 如果已经是"面试完成"状态，默认推荐"直接录用"；否则默认"推荐面试"
+    if (item.status === EmploymentApplicationStatus.InterviewCompleted) {
+      this.reviewStatus = EmploymentApplicationStatus.Offered;
+    } else {
+      this.reviewStatus =
+        item.status === EmploymentApplicationStatus.Rejected
+          ? EmploymentApplicationStatus.Rejected
+          : EmploymentApplicationStatus.InterviewScheduled;
+    }
     this.reviewRemark = '';
     this.reviewVisible = true;
   }
@@ -272,6 +277,7 @@ export class EmploymentApplicationManagementComponent implements OnInit {
       [EmploymentApplicationStatus.Submitted]: { label: '已投递', color: '#1e6ce8', icon: 'send' },
       [EmploymentApplicationStatus.Viewed]: { label: '已查看', color: '#6366f1', icon: 'eye' },
       [EmploymentApplicationStatus.InterviewScheduled]: { label: '面试邀请', color: '#00b7ff', icon: 'calendar' },
+      [EmploymentApplicationStatus.InterviewCompleted]: { label: '面试完成', color: '#7c3aed', icon: 'check-circle' },
       [EmploymentApplicationStatus.Offered]: { label: '已录用', color: '#10b981', icon: 'trophy' },
       [EmploymentApplicationStatus.Rejected]: { label: '未通过', color: '#ef4444', icon: 'close-circle' },
       [EmploymentApplicationStatus.Withdrawn]: { label: '已撤回', color: '#94a3b8', icon: 'rollback' },

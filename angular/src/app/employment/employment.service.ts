@@ -24,6 +24,7 @@ export enum EmploymentApplicationStatus {
   Offered = 3,
   Rejected = 4,
   Withdrawn = 5,
+  InterviewCompleted = 6,
 }
 
 export enum EmploymentInterviewResult {
@@ -99,6 +100,7 @@ export interface JobPostingDto {
   viewCount: number;
   applicationCount: number;
   hasApplied: boolean;
+  applicationStatus?: EmploymentApplicationStatus;
   creationTime: string;
 }
 
@@ -242,6 +244,8 @@ export interface InterviewScheduleDto {
   summary?: string;
   resultComment?: string;
   resultRecordedAt?: string;
+  completionMessage?: string;
+  completedAt?: string;
   creationTime: string;
 }
 
@@ -261,6 +265,10 @@ export interface RecordInterviewResultDto {
   result: EmploymentInterviewResult;
   summary?: string;
   resultComment?: string;
+}
+
+export interface CompleteInterviewDto {
+  completionMessage: string;
 }
 
 export interface GetInterviewSchedulesInput {
@@ -514,6 +522,19 @@ export class EmploymentService {
       method: 'POST',
       url: `/api/app/employment/${id}/record-interview-result`,
       body: input,
+    }, { apiName: this.apiName });
+
+  completeInterview = (id: string, input: CompleteInterviewDto) =>
+    this.restService.request<any, InterviewScheduleDto>({
+      method: 'POST',
+      url: `/api/app/employment/${id}/complete-interview`,
+      body: input,
+    }, { apiName: this.apiName });
+
+  deleteInterview = (id: string) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/employment/${id}/interview`,
     }, { apiName: this.apiName });
 
   getInterviewList = (input: GetInterviewSchedulesInput) =>

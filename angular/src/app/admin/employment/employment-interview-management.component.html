@@ -1,131 +1,260 @@
 <div class="interview-page">
-  <nz-card nzTitle="待安排投递">
-    <nz-table [nzData]="applications()" [nzFrontPagination]="false">
-      <thead>
-        <tr>
-          <th>学生</th>
-          <th>岗位</th>
-          <th>企业</th>
-          <th>状态</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of applications(); track item.id) {
+  <!-- =================== 待安排面试 =================== -->
+  <nz-card nzTitle="待处理的投递">
+    @if (loading()) {
+      <div class="loading-wrap"><nz-spin nzSimple></nz-spin></div>
+    } @else if (applications().length === 0) {
+      <nz-empty nzNotFoundImage="simple" nzNotFoundContent="暂无待处理的投递"></nz-empty>
+    } @else {
+      <nz-table [nzData]="applications()" [nzFrontPagination]="true" [nzPageSize]="10">
+        <thead>
           <tr>
-            <td>{{ item.studentName || '-' }}</td>
-            <td>{{ item.jobTitle || '-' }}</td>
-            <td>{{ item.companyName || '-' }}</td>
-            <td>{{ item.status }}</td>
-            <td><button nz-button nzType="link" (click)="openSchedule(item)">预约面试</button></td>
+            <th>学生</th>
+            <th>岗位</th>
+            <th>企业</th>
+            <th>投递时间</th>
+            <th>状态</th>
+            <th>操作</th>
           </tr>
-        }
-      </tbody>
-    </nz-table>
+        </thead>
+        <tbody>
+          @for (item of applications(); track item.id) {
+            <tr>
+              <td>{{ item.studentName || '-' }}</td>
+              <td>{{ item.jobTitle || '-' }}</td>
+              <td>{{ item.companyName || '-' }}</td>
+              <td>{{ item.appliedAt | date:'yyyy-MM-dd HH:mm' }}</td>
+              <td>
+                <nz-tag [nzColor]="getAppStatusColor(item.status)">{{ getAppStatusLabel(item.status) }}</nz-tag>
+              </td>
+              <td>
+                <button nz-button nzType="primary" nzSize="small" (click)="openSchedule(item)"
+                  [disabled]="item.status === appStatus.Offered || item.status === appStatus.Rejected || item.status === appStatus.Withdrawn">
+                  <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                  安排面试
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    }
   </nz-card>
 
+  <!-- =================== 面试记录 =================== -->
   <nz-card nzTitle="面试记录">
-    <nz-table [nzData]="interviews()" [nzFrontPagination]="false">
-      <thead>
-        <tr>
-          <th>学生</th>
-          <th>岗位</th>
-          <th>面试官</th>
-          <th>时间</th>
-          <th>会议链接</th>
-          <th>结果</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of interviews(); track item.id) {
+    @if (interviews().length === 0) {
+      <nz-empty nzNotFoundImage="simple" nzNotFoundContent="暂无面试记录"></nz-empty>
+    } @else {
+      <nz-table [nzData]="interviews()" [nzFrontPagination]="true" [nzPageSize]="10">
+        <thead>
           <tr>
-            <td>{{ item.studentName || '-' }}</td>
-            <td>{{ item.jobTitle || '-' }}</td>
-            <td>{{ item.interviewerName || '-' }}</td>
-            <td>{{ item.scheduledAt }}</td>
-            <td>{{ item.meetingUrl || item.location || '-' }}</td>
-            <td>{{ item.result }}</td>
-            <td><button nz-button nzType="link" (click)="openResult(item)">回填结果</button></td>
+            <th>学生</th>
+            <th>岗位</th>
+            <th>面试官</th>
+            <th>面试时间</th>
+            <th>地点 / 会议链接</th>
+            <th>状态</th>
+            <th>操作</th>
           </tr>
-        }
-      </tbody>
-    </nz-table>
+        </thead>
+        <tbody>
+          @for (item of interviews(); track item.id) {
+            <tr>
+              <td>{{ item.studentName || '-' }}</td>
+              <td>{{ item.jobTitle || '-' }}</td>
+              <td>{{ item.interviewerName || '-' }}</td>
+              <td>{{ item.scheduledAt | date:'yyyy-MM-dd HH:mm' }}</td>
+              <td>
+                @if (item.location) {
+                  <span class="info-chip">
+                    <span nz-icon nzType="environment" nzTheme="outline"></span>
+                    {{ item.location }}
+                  </span>
+                }
+                @if (item.meetingUrl) {
+                  <a class="info-chip info-chip--link" [href]="item.meetingUrl" target="_blank" (click)="$event.stopPropagation()">
+                    <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+                    会议链接
+                  </a>
+                }
+                @if (!item.location && !item.meetingUrl) {
+                  <span class="text-muted">-</span>
+                }
+              </td>
+              <td>
+                @if (item.completedAt) {
+                  <nz-tag nzColor="geekblue">面试已完成</nz-tag>
+                }
+                <nz-tag [nzColor]="getResultColor(item.result)">{{ getResultLabel(item.result) }}</nz-tag>
+              </td>
+              <td>
+                <div class="action-group">
+                  @if (canComplete(item)) {
+                    <button nz-button nzType="primary" nzSize="small" nzDanger (click)="openComplete(item)"
+                      nz-tooltip nzTooltipTitle="标记面试完成并填写后续提示">
+                      <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                      完成面试
+                    </button>
+                  }
+                  <button nz-button nzSize="small" (click)="openUpdate(item)"
+                    nz-tooltip nzTooltipTitle="修改面试信息">
+                    <span nz-icon nzType="edit" nzTheme="outline"></span>
+                  </button>
+                  @if (canRecordResult(item)) {
+                    <button nz-button nzSize="small" (click)="openResult(item)"
+                      nz-tooltip nzTooltipTitle="回填面试结果（通过/未通过）">
+                      <span nz-icon nzType="file-done" nzTheme="outline"></span>
+                      结果
+                    </button>
+                  }
+                  <button nz-button nzSize="small" nzDanger
+                    nz-popconfirm nzPopconfirmTitle="确定删除该面试记录？关联的投递状态将恢复。"
+                    (nzOnConfirm)="deleteInterview(item)">
+                    <span nz-icon nzType="delete" nzTheme="outline"></span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    }
   </nz-card>
 </div>
 
-<nz-modal [(nzVisible)]="scheduleVisible" nzTitle="预约面试" (nzOnCancel)="scheduleVisible = false" (nzOnOk)="saveSchedule()" [nzOkText]="'确认预约'" [nzCancelText]="'取消'">
-  <div class="schedule-modal">
-    <!-- 上下文提示 -->
-    <div class="schedule-context">
-      <nz-tag nzColor="blue">岗位</nz-tag>
-      <span class="context-text">{{ selectedApplication?.jobTitle || '-' }}</span>
-      <nz-tag nzColor="green">学生</nz-tag>
-      <span class="context-text">{{ selectedApplication?.studentName || '-' }}</span>
+<!-- =================== 安排面试弹窗 =================== -->
+<nz-modal [(nzVisible)]="scheduleVisible" nzTitle="安排面试" (nzOnCancel)="scheduleVisible = false" (nzOnOk)="saveSchedule()"
+  [nzOkText]="'确认安排'" [nzCancelText]="'取消'" [nzWidth]="560">
+  <div *nzModalContent class="modal-body">
+    <div class="context-row">
+      <nz-tag nzColor="blue">岗位</nz-tag> <strong>{{ selectedApplication?.jobTitle || '-' }}</strong>
+      <nz-tag nzColor="green">学生</nz-tag> <strong>{{ selectedApplication?.studentName || '-' }}</strong>
       @if (selectedApplication?.companyName) {
-        <nz-tag nzColor="purple">企业</nz-tag>
-        <span class="context-text">{{ selectedApplication?.companyName }}</span>
+        <nz-tag nzColor="purple">企业</nz-tag> <strong>{{ selectedApplication?.companyName }}</strong>
       }
     </div>
 
-    <!-- 表单字段 -->
-    <div class="schedule-fields">
-      <div class="field-row">
-        <label class="field-label">面试官</label>
-        <div class="field-input-group">
-          <nz-select
-            class="field-select"
-            nzPlaceHolder="选择面试官（可选）"
-            [ngModel]="scheduleForm.interviewerId ?? null"
-            (ngModelChange)="onInterviewerPicked($event)"
-            [nzAllowClear]="true"
-            nzShowSearch
-          >
-            @for (opt of interviewerOptions(); track opt.id) {
-              <nz-option [nzValue]="opt.id" [nzLabel]="opt.name"></nz-option>
-            }
-          </nz-select>
-          <input nz-input [(ngModel)]="scheduleForm.interviewerName" placeholder="或手动输入姓名" />
-        </div>
+    <div class="form-item">
+      <label class="form-label">面试官 <span class="optional">（可选，可从下拉选择或手动输入）</span></label>
+      <div class="input-row">
+        <nz-select class="flex-1" nzPlaceHolder="选择面试官" [ngModel]="scheduleForm.interviewerId ?? null"
+          (ngModelChange)="onInterviewerPicked($event)" [nzAllowClear]="true" nzShowSearch>
+          @for (opt of interviewerOptions(); track opt.id) {
+            <nz-option [nzValue]="opt.id" [nzLabel]="opt.name"></nz-option>
+          }
+        </nz-select>
+        <input nz-input class="flex-1" [(ngModel)]="scheduleForm.interviewerName" placeholder="手动输入姓名" />
       </div>
+    </div>
 
-      <div class="field-row">
-        <label class="field-label">联系电话</label>
-        <input nz-input [(ngModel)]="scheduleForm.interviewerPhone" placeholder="面试官手机号" />
-      </div>
+    <div class="form-item">
+      <label class="form-label">联系电话</label>
+      <input nz-input [(ngModel)]="scheduleForm.interviewerPhone" placeholder="面试官手机号" />
+    </div>
 
-      <div class="field-row">
-        <label class="field-label">面试时间</label>
-        <input type="datetime-local" [(ngModel)]="scheduleForm.scheduledAt" class="ant-input" />
-      </div>
+    <div class="form-item">
+      <label class="form-label">面试时间 <span class="required">*</span></label>
+      <input type="datetime-local" [(ngModel)]="scheduleForm.scheduledAt" class="ant-input" />
+    </div>
 
-      <div class="field-row">
-        <label class="field-label">地点</label>
-        <input nz-input [(ngModel)]="scheduleForm.location" placeholder="线上/线下地点" />
-      </div>
+    <div class="form-item">
+      <label class="form-label">面试地点</label>
+      <input nz-input [(ngModel)]="scheduleForm.location" placeholder="如：教学楼A-301" />
+    </div>
 
-      <div class="field-row">
-        <label class="field-label">会议链接</label>
-        <input nz-input [(ngModel)]="scheduleForm.meetingUrl" placeholder="腾讯会议/Zoom 链接" />
-      </div>
+    <div class="form-item">
+      <label class="form-label">视频会议链接</label>
+      <input nz-input [(ngModel)]="scheduleForm.meetingUrl" placeholder="如：腾讯会议/Zoom 链接" />
+    </div>
 
-      <div class="field-row">
-        <label class="field-label">备注</label>
-        <textarea nz-input rows="3" [(ngModel)]="scheduleForm.note" placeholder="补充说明"></textarea>
-      </div>
+    <div class="form-item">
+      <label class="form-label">备注</label>
+      <textarea nz-input rows="3" [(ngModel)]="scheduleForm.note" placeholder="补充说明（如：请携带简历、作品集等）"></textarea>
     </div>
   </div>
 </nz-modal>
 
-<nz-modal [(nzVisible)]="resultVisible" nzTitle="面试结果" (nzOnCancel)="resultVisible = false" (nzOnOk)="saveResult()">
-  <div class="form-grid">
-    <nz-select [(ngModel)]="resultForm.result">
-      <nz-option [nzValue]="results.Pending" nzLabel="待定"></nz-option>
-      <nz-option [nzValue]="results.Passed" nzLabel="通过"></nz-option>
-      <nz-option [nzValue]="results.Deferred" nzLabel="待补充"></nz-option>
-      <nz-option [nzValue]="results.Failed" nzLabel="未通过"></nz-option>
-    </nz-select>
-    <textarea nz-input rows="4" [(ngModel)]="resultForm.summary" placeholder="面试纪要"></textarea>
-    <textarea nz-input rows="3" [(ngModel)]="resultForm.resultComment" placeholder="结果说明"></textarea>
+<!-- =================== 更新面试弹窗 =================== -->
+<nz-modal [(nzVisible)]="updateVisible" nzTitle="修改面试信息" (nzOnCancel)="updateVisible = false" (nzOnOk)="saveUpdate()"
+  [nzOkText]="'保存修改'" [nzCancelText]="'取消'" [nzWidth]="560">
+  <div *nzModalContent class="modal-body">
+    <div class="form-item">
+      <label class="form-label">面试官</label>
+      <div class="input-row">
+        <nz-select class="flex-1" nzPlaceHolder="选择面试官" [ngModel]="updateForm.interviewerId ?? null"
+          (ngModelChange)="onUpdateInterviewerPicked($event)" [nzAllowClear]="true" nzShowSearch>
+          @for (opt of interviewerOptions(); track opt.id) {
+            <nz-option [nzValue]="opt.id" [nzLabel]="opt.name"></nz-option>
+          }
+        </nz-select>
+        <input nz-input class="flex-1" [(ngModel)]="updateForm.interviewerName" placeholder="手动输入姓名" />
+      </div>
+    </div>
+    <div class="form-item">
+      <label class="form-label">联系电话</label>
+      <input nz-input [(ngModel)]="updateForm.interviewerPhone" placeholder="面试官手机号" />
+    </div>
+    <div class="form-item">
+      <label class="form-label">面试时间</label>
+      <input type="datetime-local" [(ngModel)]="updateForm.scheduledAt" class="ant-input" />
+    </div>
+    <div class="form-item">
+      <label class="form-label">面试地点</label>
+      <input nz-input [(ngModel)]="updateForm.location" placeholder="如：教学楼A-301" />
+    </div>
+    <div class="form-item">
+      <label class="form-label">视频会议链接</label>
+      <input nz-input [(ngModel)]="updateForm.meetingUrl" placeholder="如：腾讯会议/Zoom 链接" />
+    </div>
+    <div class="form-item">
+      <label class="form-label">备注</label>
+      <textarea nz-input rows="3" [(ngModel)]="updateForm.note" placeholder="补充说明"></textarea>
+    </div>
+  </div>
+</nz-modal>
+
+<!-- =================== 完成面试弹窗 =================== -->
+<nz-modal [(nzVisible)]="completeVisible" nzTitle="完成面试" (nzOnCancel)="completeVisible = false" (nzOnOk)="saveComplete()"
+  [nzOkText]="'确认完成'" [nzCancelText]="'取消'" [nzWidth]="500">
+  <div *nzModalContent class="modal-body">
+    <div class="context-row">
+      <nz-tag nzColor="green">学生</nz-tag> <strong>{{ completeTarget?.studentName || '-' }}</strong>
+      <nz-tag nzColor="blue">岗位</nz-tag> <strong>{{ completeTarget?.jobTitle || '-' }}</strong>
+    </div>
+    <p class="hint-text">确认该学生已按时完成面试后，请填写后续提示信息。学生将在投递详情中看到此信息。</p>
+    <div class="form-item">
+      <label class="form-label">后续提示信息 <span class="required">*</span></label>
+      <textarea nz-input rows="4" [(ngModel)]="completeMessage"
+        placeholder="如：面试已完成，请耐心等待，HR 将在 3 个工作日内通过电话或邮件与您联系。"></textarea>
+      <div class="char-count">{{ completeMessage.length }} / 500</div>
+    </div>
+  </div>
+</nz-modal>
+
+<!-- =================== 回填结果弹窗 =================== -->
+<nz-modal [(nzVisible)]="resultVisible" nzTitle="面试结果" (nzOnCancel)="resultVisible = false" (nzOnOk)="saveResult()"
+  [nzOkText]="'保存结果'" [nzCancelText]="'取消'">
+  <div *nzModalContent class="modal-body">
+    <div class="context-row">
+      <nz-tag nzColor="green">学生</nz-tag> <strong>{{ resultTarget?.studentName || '-' }}</strong>
+    </div>
+    <div class="form-item">
+      <label class="form-label">面试结果</label>
+      <nz-select [(ngModel)]="resultForm.result" style="width: 100%;">
+        <nz-option [nzValue]="interviewResults.Pending" nzLabel="待定"></nz-option>
+        <nz-option [nzValue]="interviewResults.Passed" nzLabel="通过（→ 已录用）"></nz-option>
+        <nz-option [nzValue]="interviewResults.Deferred" nzLabel="待补充（→ 已查看）"></nz-option>
+        <nz-option [nzValue]="interviewResults.Failed" nzLabel="未通过（→ 拒绝）"></nz-option>
+      </nz-select>
+    </div>
+    <div class="form-item">
+      <label class="form-label">面试纪要</label>
+      <textarea nz-input rows="4" [(ngModel)]="resultForm.summary" placeholder="记录面试中的关键信息"></textarea>
+    </div>
+    <div class="form-item">
+      <label class="form-label">结果说明</label>
+      <textarea nz-input rows="3" [(ngModel)]="resultForm.resultComment" placeholder="补充说明（学生可见）"></textarea>
+    </div>
   </div>
 </nz-modal>

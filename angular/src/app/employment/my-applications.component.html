@@ -7,18 +7,46 @@
         <th>简历</th>
         <th>状态</th>
         <th>投递时间</th>
+        <th>面试信息</th>
         <th>企业反馈</th>
       </tr>
     </thead>
     <tbody>
       @for (item of items(); track item.id) {
+        @let interview = interviewMap()[item.id];
         <tr>
           <td><a [routerLink]="['/employment/jobs', item.jobPostingId]">{{ item.jobTitle }}</a></td>
           <td>{{ item.companyName || '-' }}</td>
           <td>{{ item.resumeTitle || '-' }}</td>
-          <td>{{ getStatusLabel(item.status) }}</td>
-          <td>{{ item.appliedAt }}</td>
-          <td>{{ item.employerRemark || '-' }}</td>
+          <td>
+            <nz-tag [nzColor]="getStatusColor(item.status)">{{ getStatusLabel(item.status) }}</nz-tag>
+          </td>
+          <td>{{ item.appliedAt | date:'yyyy-MM-dd HH:mm' }}</td>
+          <td>
+            @if (interview) {
+              <div class="interview-brief">
+                <div>{{ interview.scheduledAt | date:'MM-dd HH:mm' }}</div>
+                @if (interview.location) {
+                  <div class="text-muted">{{ interview.location }}</div>
+                }
+                @if (interview.meetingUrl) {
+                  <a [href]="interview.meetingUrl" target="_blank" class="meeting-link">会议链接</a>
+                }
+                @if (interview.completionMessage) {
+                  <div class="completion-note">{{ interview.completionMessage }}</div>
+                }
+              </div>
+            } @else {
+              <span class="text-muted">-</span>
+            }
+          </td>
+          <td>
+            @if (item.employerRemark) {
+              {{ item.employerRemark }}
+            } @else {
+              <span class="text-muted">-</span>
+            }
+          </td>
         </tr>
       }
     </tbody>

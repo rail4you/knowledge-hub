@@ -91,6 +91,7 @@ public static class EmploymentDbModelCreatingExtensions
             b.Property(x => x.Note).HasMaxLength(1000);
             b.Property(x => x.Summary).HasMaxLength(4000);
             b.Property(x => x.ResultComment).HasMaxLength(1000);
+            b.Property(x => x.CompletionMessage).HasMaxLength(2000);
 
             b.HasIndex(x => x.ApplicationId);
             b.HasIndex(x => x.JobPostingId);

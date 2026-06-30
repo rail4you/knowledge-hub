@@ -279,15 +279,17 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   }
 
   private syncMajorChips(items: CourseDto[]) {
-    const set = new Set<string>();
+    const map = new Map<string, string>(); // majorName → majorId
     items.forEach(c => {
-      if (c.majorName) set.add(c.majorName);
+      if (c.majorName && c.majorId && !map.has(c.majorName)) {
+        map.set(c.majorName, c.majorId);
+      }
     });
     const colorPalette = ['#06b6d4', '#10b981', '#0c4cb8', '#22c55e', '#14b8a6', '#3b82f6'];
     const chips: MajorChip[] = [{ id: null, name: '全部专业', icon: 'appstore', color: '#1e6ce8' }];
     let i = 0;
-    Array.from(set).slice(0, 6).forEach(m => {
-      chips.push({ id: m, name: m, icon: 'book', color: colorPalette[i % colorPalette.length] });
+    Array.from(map.entries()).slice(0, 6).forEach(([name, id]) => {
+      chips.push({ id, name, icon: 'book', color: colorPalette[i % colorPalette.length] });
       i++;
     });
     this.majors.set(chips);

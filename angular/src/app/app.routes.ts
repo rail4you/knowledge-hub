@@ -251,14 +251,6 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
-    path: 'admin/employment/applications',
-    loadComponent: () => import('./admin/employment/employment-application-management.component').then(c => c.EmploymentApplicationManagementComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.Employment.ManageApplication',
-    },
-  },
-  {
     path: 'admin/employment/interviews',
     loadComponent: () => import('./admin/employment/employment-interview-management.component').then(c => c.EmploymentInterviewManagementComponent),
     canActivate: [authGuard, permissionGuard],

@@ -1,247 +1,95 @@
-<div class="jobs-page">
-  <!-- =================== HERO 区域 =================== -->
-  <section class="hero" aria-label="就业服务简介">
-    <div class="hero__bg" aria-hidden="true">
-      <span class="hero__shape hero__shape--1"></span>
-      <span class="hero__shape hero__shape--2"></span>
-      <span class="hero__shape hero__shape--3"></span>
-      <span class="hero__shape hero__shape--4"></span>
-    </div>
-
+<div class="page">
+  <!-- ===== HERO ===== -->
+  <header class="hero">
     <div class="hero__inner">
-      <div class="hero__left">
-        <span class="hero__label">EMPLOYMENT</span>
-        <h1 class="hero__title">
-          <span class="hero__bar"></span>
-          就业服务大厅
-        </h1>
-        <p class="hero__desc">汇集优质企业岗位，支持简历投递、面试跟踪与状态实时查看，让求职更高效</p>
-        <div class="hero__cta">
-          <button class="hero-btn hero-btn--primary" (click)="onSearch()">
-            <span nz-icon nzType="search" nzTheme="outline"></span>
-            搜索岗位
-          </button>
-          <button class="hero-btn hero-btn--ghost" routerLink="/student/employment/my-resumes">
-            <span nz-icon nzType="file-text" nzTheme="outline"></span>
-            管理我的简历
-          </button>
-        </div>
+      <div class="hero__text">
+        <span class="hero__badge">EMPLOYMENT</span>
+        <h1>就业服务大厅</h1>
+        <p>汇集优质岗位，支持简历投递、面试跟踪与状态实时查看</p>
       </div>
-
-      <div class="hero__right">
-        <div class="stats-card">
-          <h3 class="stats-card__title">
-            <span class="stats-card__bar"></span>
-            数据总览
-            <span class="stats-card__hint">实时更新</span>
-          </h3>
-          <div class="stats-grid">
-            @for (s of stats(); track s.label) {
-              <div class="stat-cell">
-                <div class="stat-cell__icon" [style.background]="s.color">
-                  <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
-                </div>
-                <div class="stat-cell__body">
-                  <div class="stat-cell__value">
-                    <strong>{{ s.value | number }}</strong>
-                    <span class="stat-cell__suffix">{{ s.suffix }}</span>
-                  </div>
-                  <div class="stat-cell__label">{{ s.label }}</div>
-                </div>
-              </div>
-            }
+      <div class="hero__stats">
+        @for (s of stats(); track s.label) {
+          <div class="stat">
+            <span class="stat__icon" [style.background]="s.color"><span nz-icon [nzType]="s.icon" nzTheme="outline"></span></span>
+            <div class="stat__val"><b>{{ s.value }}</b><small>{{ s.suffix }}</small></div>
+            <div class="stat__lbl">{{ s.label }}</div>
           </div>
-        </div>
+        }
       </div>
     </div>
-  </section>
+  </header>
 
-  <!-- =================== 搜索 + 筛选 =================== -->
-  <section class="filter-bar" aria-label="筛选条件">
-    <div class="filter-bar__inner">
-      <div class="search-pill">
-        <span class="search-pill__icon">
-          <span nz-icon nzType="search" nzTheme="outline"></span>
-        </span>
-        <input
-          type="text"
-          [ngModel]="keyword()"
-          (ngModelChange)="keyword.set($event)"
-          (keyup.enter)="onSearch()"
-          placeholder="搜索岗位 / 企业 / 技能"
-          class="search-pill__input"
-          aria-label="搜索关键词"
-        />
-      </div>
-
-      <div class="filter-chip">
-        <span class="filter-chip__icon">
-          <span nz-icon nzType="environment" nzTheme="outline"></span>
-        </span>
-        <input
-          type="text"
-          [ngModel]="location()"
-          (ngModelChange)="location.set($event)"
-          (keyup.enter)="onSearch()"
-          placeholder="工作地点"
-          class="filter-chip__input"
-        />
-      </div>
-
-      <div class="type-chips">
-        <button
-          class="type-chip"
-          [class.is-active]="jobType() === null"
-          (click)="jobType.set(null); onSearch()"
-        >全部</button>
-        <button
-          class="type-chip"
-          [class.is-active]="jobType() === jobTypes.FullTime"
-          (click)="jobType.set(jobTypes.FullTime); onSearch()"
-        >全职</button>
-        <button
-          class="type-chip"
-          [class.is-active]="jobType() === jobTypes.Internship"
-          (click)="jobType.set(jobTypes.Internship); onSearch()"
-        >实习</button>
-        <button
-          class="type-chip"
-          [class.is-active]="jobType() === jobTypes.PartTime"
-          (click)="jobType.set(jobTypes.PartTime); onSearch()"
-        >兼职</button>
-        <button
-          class="type-chip"
-          [class.is-active]="jobType() === jobTypes.Apprenticeship"
-          (click)="jobType.set(jobTypes.Apprenticeship); onSearch()"
-        >学徒</button>
-      </div>
-
-      <div class="filter-actions">
-        <button class="filter-btn filter-btn--primary" (click)="onSearch()">
-          <span nz-icon nzType="search" nzTheme="outline"></span>
-          搜索
-        </button>
-        <button class="filter-btn filter-btn--ghost" (click)="resetFilter()">
-          <span nz-icon nzType="reload" nzTheme="outline"></span>
-          重置
-        </button>
-      </div>
+  <!-- ===== SEARCH ===== -->
+  <div class="bar">
+    <div class="bar__search">
+      <span nz-icon nzType="search" nzTheme="outline"></span>
+      <input [ngModel]="keyword()" (ngModelChange)="keyword.set($event)" (keyup.enter)="onSearch()" placeholder="搜索岗位 / 企业 / 技能" />
     </div>
-  </section>
+    <div class="bar__chips">
+      <button class="chip" [class.on]="jobType()===null" (click)="jobType.set(null);onSearch()">全部</button>
+      <button class="chip" [class.on]="jobType()===jobTypes.FullTime" (click)="jobType.set(jobTypes.FullTime);onSearch()">全职</button>
+      <button class="chip" [class.on]="jobType()===jobTypes.Internship" (click)="jobType.set(jobTypes.Internship);onSearch()">实习</button>
+      <button class="chip" [class.on]="jobType()===jobTypes.PartTime" (click)="jobType.set(jobTypes.PartTime);onSearch()">兼职</button>
+      <button class="chip" [class.on]="jobType()===jobTypes.Apprenticeship" (click)="jobType.set(jobTypes.Apprenticeship);onSearch()">学徒</button>
+    </div>
+  </div>
 
-  <!-- =================== 列表 =================== -->
+  <!-- ===== LIST ===== -->
   @if (loading()) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>正在加载岗位信息...</p>
-    </div>
-  } @else if (jobs().length === 0) {
-    <div class="empty-state">
-      <div class="empty-state__art">
-        <span nz-icon nzType="briefcase" nzTheme="outline"></span>
-      </div>
-      <h3>暂无符合条件的岗位</h3>
-      <p>请调整筛选条件或稍后再来查看</p>
-      <button class="filter-btn filter-btn--primary" (click)="resetFilter()">
-        <span nz-icon nzType="reload" nzTheme="outline"></span>
-        重新筛选
-      </button>
+    <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中…</p></div>
+  } @else if (jobs().length===0) {
+    <div class="center">
+      <div class="empty-icon"><span nz-icon nzType="briefcase" nzTheme="outline"></span></div>
+      <h3>暂无岗位</h3><p>调整筛选条件试试</p>
+      <button class="btn" (click)="reset()">重置筛选</button>
     </div>
   } @else {
-    <div class="job-grid">
+    <div class="grid">
       @for (item of jobs(); track item.id) {
-        <article class="job-card" tabindex="0" (click)="openDetail(item)" (keyup.enter)="openDetail(item)">
-          <div class="job-card__cover" [style.background]="coverGradient(item)">
-            <div class="cover-decor" aria-hidden="true">
-              <span class="decor-line decor-line--1"></span>
-              <span class="decor-line decor-line--2"></span>
-              <span class="decor-circle"></span>
+        <article class="card" (click)="go(item)" (keyup.enter)="go(item)" tabindex="0">
+          <!-- 封面 -->
+          <div class="card-cover" [style.background]="cg(item)">
+            <div class="cover-decor">
+              <span class="d1"></span><span class="d2"></span><span class="dc"></span>
             </div>
-            <div class="cover-icon">
-              <span nz-icon nzType="briefcase" nzTheme="outline"></span>
-            </div>
-            <span class="cover-type" [style.background]="getTypeColor(item.jobType) + '22'" [style.color]="getTypeColor(item.jobType)">
-              {{ getTypeLabel(item.jobType) }}
-            </span>
+            <span class="cover-icon"><span nz-icon nzType="briefcase" nzTheme="outline"></span></span>
+            <span class="cover-type" [style.background]="tc(item.jobType)+'22'" [style.color]="tc(item.jobType)">{{ tl(item.jobType) }}</span>
             @if (item.hasApplied) {
-              <span class="cover-applied">
-                <span nz-icon nzType="check-circle" nzTheme="fill"></span>
-                已投递
-              </span>
+              <span class="cover-status" [style.background]="color(item.applicationStatus)">{{ label(item.applicationStatus) }}</span>
             }
           </div>
+          <!-- 内容 -->
+          <div class="card-body">
+            <h3 class="card-title">{{ item.title }}</h3>
+            <p class="card-co"><span nz-icon nzType="bank" nzTheme="outline"></span>{{ item.companyName }} @if(item.industry){<span class="ind">{{ item.industry }}</span>}</p>
+            <p class="card-desc">{{ item.summary || item.description }}</p>
 
-          <div class="job-card__body">
-            <h3 class="job-card__title">{{ item.title }}</h3>
-            <p class="job-card__company">
-              <span nz-icon nzType="bank" nzTheme="outline"></span>
-              {{ item.companyName }}
-              @if (item.industry) {
-                <span class="industry-tag">{{ item.industry }}</span>
-              }
-            </p>
-            <p class="job-card__desc">{{ item.summary || item.description }}</p>
-
-            @if (getSkillTags(item).length > 0) {
-              <div class="job-card__tags">
-                @for (tag of getSkillTags(item); track tag) {
-                  <span class="skill-tag">{{ tag }}</span>
-                }
-              </div>
+            @if (tags(item).length) {
+              <div class="card-tags">@for (t of tags(item); track t) {<span class="tag">{{ t }}</span>}</div>
             }
 
-            <div class="job-card__meta">
-              <span class="meta-item">
-                <span nz-icon nzType="environment" nzTheme="outline"></span>
-                {{ item.location || '地点待定' }}
-              </span>
-              <span class="meta-item meta-item--money">
-                <span nz-icon nzType="red-envelope" nzTheme="outline"></span>
-                {{ item.salaryRange || '薪资面议' }}
-              </span>
+            <div class="card-meta">
+              <span><span nz-icon nzType="environment" nzTheme="outline"></span>{{ item.location || '待定' }}</span>
+              <span class="salary"><span nz-icon nzType="red-envelope" nzTheme="outline"></span>{{ item.salaryRange || '面议' }}</span>
             </div>
-            <div class="job-card__stats">
-              <span><span nz-icon nzType="team" nzTheme="outline"></span> {{ item.recruitmentCount }} 人</span>
-              <span><span nz-icon nzType="paper-plane" nzTheme="outline"></span> {{ item.applicationCount }} 投递</span>
-              @if (item.deadline) {
-                <span class="deadline-hint">
-                  <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                  截止 {{ item.deadline | date:'MM-dd' }}
-                </span>
-              }
+            <div class="card-foot">
+              <span>{{ item.recruitmentCount }}人 · {{ item.applicationCount }}投递</span>
+              @if (item.deadline) {<span class="deadline">截止 {{ item.deadline | date:'MM-dd' }}</span>}
             </div>
           </div>
-
-          <div class="job-card__actions">
-            <button class="action-btn action-btn--view" (click)="openDetail(item)">
-              <span nz-icon nzType="eye" nzTheme="outline"></span>
-              查看详情
-            </button>
-            <button
-              class="action-btn"
-              [class.action-btn--applied]="item.hasApplied"
-              [class.action-btn--apply]="!item.hasApplied"
-              [disabled]="item.hasApplied"
-              (click)="openDetail(item)"
-            >
-              <span nz-icon [nzType]="item.hasApplied ? 'check' : 'send'" nzTheme="outline"></span>
-              {{ item.hasApplied ? '已投递' : '立即应聘' }}
-            </button>
+          <!-- 按钮 -->
+          <div class="card-actions">
+            <span class="act act-view"><span nz-icon nzType="eye" nzTheme="outline"></span>详情</span>
+            <span class="act" [class.act--applied]="item.hasApplied" [class.act--apply]="!item.hasApplied">
+              <span nz-icon [nzType]="item.hasApplied?'check':'send'" nzTheme="outline"></span>
+              {{ item.hasApplied ? label(item.applicationStatus) : '立即应聘' }}
+            </span>
           </div>
         </article>
       }
     </div>
-
-    @if (totalCount() > pageSize()) {
-      <div class="pagination-wrapper">
-        <nz-pagination
-          [nzPageIndex]="pageIndex()"
-          [nzPageSize]="pageSize()"
-          [nzTotal]="totalCount()"
-          (nzPageIndexChange)="onPageChange($event)"
-          nzAlign="center"
-        ></nz-pagination>
-      </div>
+    @if (totalCount()>pageSize()) {
+      <div class="pager"><nz-pagination [nzPageIndex]="pageIndex()" [nzPageSize]="pageSize()" [nzTotal]="totalCount()" (nzPageIndexChange)="onPage($event)" nzAlign="center"></nz-pagination></div>
     }
   }
 </div>

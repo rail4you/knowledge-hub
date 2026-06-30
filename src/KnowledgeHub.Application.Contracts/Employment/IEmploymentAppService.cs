@@ -35,6 +35,8 @@ public interface IEmploymentAppService : IApplicationService
     Task<InterviewScheduleDto> ScheduleInterviewAsync(CreateUpdateInterviewScheduleDto input);
     Task<InterviewScheduleDto> UpdateInterviewAsync(Guid id, CreateUpdateInterviewScheduleDto input);
     Task<InterviewScheduleDto> RecordInterviewResultAsync(Guid id, RecordInterviewResultDto input);
+    Task<InterviewScheduleDto> CompleteInterviewAsync(Guid id, CompleteInterviewDto input);
+    Task DeleteInterviewAsync(Guid id);
     Task<PagedResultDto<InterviewScheduleDto>> GetInterviewListAsync(GetInterviewSchedulesInput input);
 
     Task<EmploymentGuidanceRecordDto> CreateGuidanceRecordAsync(CreateEmploymentGuidanceRecordDto input);

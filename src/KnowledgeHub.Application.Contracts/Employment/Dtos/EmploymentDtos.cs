@@ -59,6 +59,7 @@ public class JobPostingDto : FullAuditedEntityDto<Guid>
     public int ViewCount { get; set; }
     public int ApplicationCount { get; set; }
     public bool HasApplied { get; set; }
+    public EmploymentApplicationStatus? ApplicationStatus { get; set; }
 }
 
 public class CreateUpdateJobPostingDto
@@ -202,6 +203,8 @@ public class InterviewScheduleDto : FullAuditedEntityDto<Guid>
     public string? Summary { get; set; }
     public string? ResultComment { get; set; }
     public DateTime? ResultRecordedAt { get; set; }
+    public string? CompletionMessage { get; set; }
+    public DateTime? CompletedAt { get; set; }
 }
 
 public class CreateUpdateInterviewScheduleDto
@@ -224,6 +227,11 @@ public class RecordInterviewResultDto
     public EmploymentInterviewResult Result { get; set; }
     public string? Summary { get; set; }
     public string? ResultComment { get; set; }
+}
+
+public class CompleteInterviewDto
+{
+    public string CompletionMessage { get; set; } = string.Empty;
 }
 
 public class GetInterviewSchedulesInput : PagedAndSortedResultRequestDto

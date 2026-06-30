@@ -7,29 +7,21 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { EmploymentApplicationStatus, EmploymentService, JobApplicationDto } from '../../employment/employment.service';
-
-interface StatItem {
-  label: string;
-  value: number;
-  suffix: string;
-  icon: string;
-  color: string;
-}
+import { NzTagModule } from 'ng-zorro-antd/tag';
+import {
+  EmploymentApplicationStatus,
+  EmploymentInterviewResult,
+  EmploymentService,
+  InterviewScheduleDto,
+  JobApplicationDto,
+} from '../../employment/employment.service';
 
 @Component({
   selector: 'app-student-my-applications',
   standalone: true,
   imports: [
-    CommonModule,
-    DatePipe,
-    DecimalPipe,
-    FormsModule,
-    RouterLink,
-    NzIconModule,
-    NzSpinModule,
-    NzEmptyModule,
-    NzPaginationModule,
+    CommonModule, DatePipe, DecimalPipe, FormsModule, RouterLink,
+    NzIconModule, NzSpinModule, NzEmptyModule, NzPaginationModule, NzTagModule,
   ],
   templateUrl: './student-my-applications.component.html',
   styleUrls: ['./student-my-applications.component.scss'],
@@ -48,18 +40,21 @@ export class StudentMyApplicationsComponent implements OnInit {
   readonly statusFilter = signal<EmploymentApplicationStatus | null>(null);
   readonly statuses = EmploymentApplicationStatus;
 
-  readonly stats = computed<StatItem[]>(() => {
+  /** applicationId → 该投递关联的最新面试记录 */
+  readonly interviewMap = signal<Record<string, InterviewScheduleDto>>({});
+
+  readonly stats = computed(() => {
     const items = this.items();
     const total = this.totalCount();
-    const submitted = items.filter(x => x.status === EmploymentApplicationStatus.Submitted).length;
-    const interview = items.filter(x => x.status === EmploymentApplicationStatus.InterviewScheduled).length;
+    const interview = items.filter(x =>
+      x.status === EmploymentApplicationStatus.InterviewScheduled ||
+      x.status === EmploymentApplicationStatus.InterviewCompleted
+    ).length;
     const offered = items.filter(x => x.status === EmploymentApplicationStatus.Offered).length;
-    const rejected = items.filter(x => x.status === EmploymentApplicationStatus.Rejected).length;
     return [
-      { label: '累计投递', value: total, suffix: '份', icon: 'paper-plane', color: '#1e6ce8' },
-      { label: '已投递', value: submitted, suffix: '份', icon: 'check-circle', color: '#0c4cb8' },
-      { label: '面试邀请', value: interview, suffix: '份', icon: 'calendar', color: '#0891b2' },
-      { label: '已录用', value: offered, suffix: '份', icon: 'trophy', color: '#10b981' },
+      { label: '累计投递', value: total, suffix: '份', color: '#1e6ce8', icon: 'paper-plane' },
+      { label: '面试中', value: interview, suffix: '份', color: '#0891b2', icon: 'calendar' },
+      { label: '已录用', value: offered, suffix: '份', color: '#10b981', icon: 'trophy' },
     ];
   });
 
@@ -75,14 +70,35 @@ export class StudentMyApplicationsComponent implements OnInit {
       maxResultCount: this.pageSize(),
     }).subscribe({
       next: result => {
-        this.items.set(result.items || []);
+        const apps = result.items || [];
+        this.items.set(apps);
         this.totalCount.set(result.totalCount || 0);
         this.loading.set(false);
+        // 加载关联的面试记录
+        if (apps.some(a =>
+          a.status === EmploymentApplicationStatus.InterviewScheduled ||
+          a.status === EmploymentApplicationStatus.InterviewCompleted
+        )) {
+          this.loadInterviews();
+        }
       },
-      error: () => {
-        this.loading.set(false);
-        this.message.error('加载投递记录失败');
+      error: () => { this.loading.set(false); this.message.error('加载投递记录失败'); },
+    });
+  }
+
+  private loadInterviews(): void {
+    this.employmentService.getInterviewList({ skipCount: 0, maxResultCount: 200 }).subscribe({
+      next: result => {
+        const map: Record<string, InterviewScheduleDto> = {};
+        for (const iv of (result.items || [])) {
+          // 每个 application 保留最新的一条面试
+          if (!map[iv.applicationId] || new Date(iv.creationTime) > new Date(map[iv.applicationId].creationTime)) {
+            map[iv.applicationId] = iv;
+          }
+        }
+        this.interviewMap.set(map);
       },
+      error: () => { /* 静默 - 面试数据加载失败不影响主列表 */ },
     });
   }
 
@@ -96,45 +112,47 @@ export class StudentMyApplicationsComponent implements OnInit {
     this.loadItems();
   }
 
-  openJobDetail(item: JobApplicationDto): void {
+  /** 跳转到岗位详情 */
+  goJob(item: JobApplicationDto): void {
     this.router.navigate(['/student/employment/jobs', item.jobPostingId]);
   }
 
-  getStatusInfo(status: EmploymentApplicationStatus): { label: string; color: string; icon: string } {
-    const map: Record<number, { label: string; color: string; icon: string }> = {
-      [EmploymentApplicationStatus.Submitted]: { label: '已投递', color: '#1e6ce8', icon: 'paper-plane' },
-      [EmploymentApplicationStatus.Viewed]: { label: '已查看', color: '#6366f1', icon: 'eye' },
-      [EmploymentApplicationStatus.InterviewScheduled]: { label: '面试邀请', color: '#00b7ff', icon: 'calendar' },
-      [EmploymentApplicationStatus.Offered]: { label: '已录用', color: '#10b981', icon: 'trophy' },
-      [EmploymentApplicationStatus.Rejected]: { label: '未通过', color: '#ef4444', icon: 'close-circle' },
-      [EmploymentApplicationStatus.Withdrawn]: { label: '已撤回', color: '#94a3b8', icon: 'rollback' },
+  getStatusLabel(s: EmploymentApplicationStatus): string {
+    const m: Record<number, string> = {
+      [EmploymentApplicationStatus.Submitted]: '已投递',
+      [EmploymentApplicationStatus.Viewed]: '已查看',
+      [EmploymentApplicationStatus.InterviewScheduled]: '等待面试',
+      [EmploymentApplicationStatus.InterviewCompleted]: '面试完成',
+      [EmploymentApplicationStatus.Offered]: '已录用',
+      [EmploymentApplicationStatus.Rejected]: '未通过',
+      [EmploymentApplicationStatus.Withdrawn]: '已撤回',
     };
-    return map[status] || { label: '未知', color: '#94a3b8', icon: 'question' };
+    return m[s] ?? '未知';
   }
 
-  /** 状态进度条 (0~3) */
-  getStatusStep(status: EmploymentApplicationStatus): { current: number; total: number } {
+  getStatusColor(s: EmploymentApplicationStatus): string {
+    const m: Record<number, string> = {
+      [EmploymentApplicationStatus.Submitted]: '#1e6ce8',
+      [EmploymentApplicationStatus.Viewed]: '#6366f1',
+      [EmploymentApplicationStatus.InterviewScheduled]: '#0891b2',
+      [EmploymentApplicationStatus.InterviewCompleted]: '#7c3aed',
+      [EmploymentApplicationStatus.Offered]: '#10b981',
+      [EmploymentApplicationStatus.Rejected]: '#ef4444',
+      [EmploymentApplicationStatus.Withdrawn]: '#94a3b8',
+    };
+    return m[s] ?? '#6b7280';
+  }
+
+  getStageIndex(s: EmploymentApplicationStatus): number {
     const order: Record<number, number> = {
       [EmploymentApplicationStatus.Submitted]: 1,
-      [EmploymentApplicationStatus.Viewed]: 2,
+      [EmploymentApplicationStatus.Viewed]: 1,
       [EmploymentApplicationStatus.InterviewScheduled]: 2,
-      [EmploymentApplicationStatus.Offered]: 3,
-      [EmploymentApplicationStatus.Rejected]: 3,
+      [EmploymentApplicationStatus.InterviewCompleted]: 3,
+      [EmploymentApplicationStatus.Offered]: 4,
+      [EmploymentApplicationStatus.Rejected]: -1,
       [EmploymentApplicationStatus.Withdrawn]: 0,
     };
-    return { current: order[status] ?? 0, total: 3 };
-  }
-
-  coverGradient(item: JobApplicationDto): string {
-    const palettes = [
-      '#1e6ce8',
-      '#0c4cb8',
-      '#1d4ed8',
-      '#2563eb',
-    ];
-    const key = item.id || item.jobTitle || '';
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    return palettes[Math.abs(hash) % palettes.length];
+    return order[s] ?? 0;
   }
 }

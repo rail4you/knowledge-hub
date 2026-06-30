@@ -7,6 +7,7 @@ export enum EmploymentApplicationStatus {
   Offered = 3,
   Rejected = 4,
   Withdrawn = 5,
+  InterviewCompleted = 6,
 }
 
 export const employmentApplicationStatusOptions = mapEnumToOptions(EmploymentApplicationStatus);
