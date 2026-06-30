@@ -154,6 +154,7 @@ public class KnowledgeHubDbContext :
     public DbSet<PracticumSubmission> PracticumSubmissions { get; set; }
     public DbSet<PracticumGuidanceRecord> PracticumGuidanceRecords { get; set; }
     public DbSet<PracticumAssessment> PracticumAssessments { get; set; }
+    public DbSet<PracticumChatMessage> PracticumChatMessages { get; set; }
 
     // Double high entities
     public DbSet<DoubleHighProject> DoubleHighProjects { get; set; }

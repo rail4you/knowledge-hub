@@ -47,6 +47,8 @@ public class PracticumProjectDto : FullAuditedEntityDto<Guid>
     public int EnrollmentCount { get; set; }
     public bool IsCurrentUserEnrolled { get; set; }
     public decimal? CurrentUserProgress { get; set; }
+    public string? AgentName { get; set; }
+    public string? AgentPrompt { get; set; }
 }
 
 public class PracticumProjectDetailDto : PracticumProjectDto
@@ -89,6 +91,8 @@ public class CreateUpdatePracticumProjectDto
     public DateTime? EndTime { get; set; }
     public decimal MaxScore { get; set; } = 100;
     public bool AllowResubmission { get; set; } = true;
+    public string? AgentName { get; set; }
+    public string? AgentPrompt { get; set; }
     public List<CreateUpdatePracticumTaskDto> Tasks { get; set; } = new();
     public List<CreateUpdatePracticumMaterialDto> Materials { get; set; } = new();
 }

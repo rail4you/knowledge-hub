@@ -153,33 +153,7 @@ $card-radius: 14px;
   padding: 32px 24px 28px;
   text-align: center;
   box-shadow: 0 10px 36px rgba(15,23,42,0.09), 0 1px 3px rgba(15,23,42,0.04);
-  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
   position: relative;
-
-  &--link {
-    display: block;
-    text-decoration: none;
-    color: inherit;
-    cursor: pointer;
-  }
-
-  .entry-arrow {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    font-size: 16px;
-    color: $c-light;
-    opacity: 0;
-    transform: translateX(-4px);
-    transition: all 0.3s ease;
-  }
-
-  &:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 48px rgba(30,108,232,0.16), 0 2px 6px rgba(15,23,42,0.06);
-    .entry-avatar { transform: scale(1.08); }
-    .entry-arrow { opacity: 1; transform: translateX(0); color: $c-primary; }
-  }
 }
 .entry-avatar {
   width: 60px;

@@ -1,0 +1,181 @@
+<div class="practicum-chat">
+  <!-- Header -->
+  <header class="chat-header">
+    <button nz-button nzType="text" class="back-btn" (click)="goBack()">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+      返回实训
+    </button>
+    <div class="chat-header__info">
+      <h2 class="chat-header__title">{{ projectDetail?.title || '实训聊天' }}</h2>
+      <span class="chat-header__subtitle">群聊 — 所有报名学生和教师可见</span>
+    </div>
+    @if (isConnecting()) {
+      <span class="chat-header__status connecting">
+        <nz-spin nzSize="small"></nz-spin>
+        连接中...
+      </span>
+    } @else {
+      <span class="chat-header__status online">● 已连接</span>
+    }
+  </header>
+
+  <!-- Messages Area -->
+  <div class="chat-messages"
+       #messagesContainer
+       (scroll)="onScroll()">
+
+    <!-- Load more trigger -->
+    @if (hasMoreHistory() && messages().length > 0) {
+      <div class="load-more">
+        @if (loadingHistory()) {
+          <nz-spin nzSize="small"></nz-spin>
+          <span>加载中...</span>
+        } @else {
+          <button nz-button nzType="link" nzSize="small" (click)="loadMoreHistory()">
+            加载更多历史消息
+          </button>
+        }
+      </div>
+    }
+
+    @if (messages().length === 0 && !loadingHistory()) {
+      <div class="chat-empty">
+        <span nz-icon nzType="message" nzTheme="outline" class="empty-icon"></span>
+        <h3>还没有消息</h3>
+        <p>发送第一条消息开始沟通吧！@{{ agentName() }} 可以召唤智能助手。</p>
+      </div>
+    }
+
+    @if (loadingHistory() && messages().length === 0) {
+      <div class="chat-loading">
+        <nz-spin nzSize="default"></nz-spin>
+        <p>加载聊天记录...</p>
+      </div>
+    }
+
+    @for (msg of messages(); track msg.id) {
+      @if (msg.messageType === messageTypes.Text) {
+        <!-- Text Message -->
+        @if (msg.senderType === senderTypes.AIAgent) {
+          <!-- AI Agent Message -->
+          <div class="msg-row">
+            <div class="msg-avatar msg-avatar--agent">
+              <span nz-icon nzType="robot" nzTheme="outline"></span>
+            </div>
+            <div class="msg-bubble msg-bubble--agent">
+              <div class="msg-sender">{{ msg.senderName }}</div>
+              <div class="msg-text">{{ msg.content }}</div>
+              <div class="msg-time">{{ msg.creationTime | date:'HH:mm' }}</div>
+            </div>
+          </div>
+        } @else if (isOwnMessage(msg)) {
+          <!-- My Message -->
+          <div class="msg-row msg-row--mine">
+            <div class="msg-bubble msg-bubble--mine">
+              <div class="msg-text">{{ msg.content }}</div>
+              <div class="msg-time">{{ msg.creationTime | date:'HH:mm' }}</div>
+            </div>
+            <div class="msg-avatar">
+              {{ msg.senderName.charAt(0) }}
+            </div>
+          </div>
+        } @else {
+          <!-- Other's Message -->
+          <div class="msg-row">
+            <div class="msg-avatar msg-avatar--other">
+              {{ msg.senderName.charAt(0) }}
+            </div>
+            <div class="msg-bubble msg-bubble--other">
+              <div class="msg-sender">{{ msg.senderName }}</div>
+              <div class="msg-text">{{ msg.content }}</div>
+              <div class="msg-time">{{ msg.creationTime | date:'HH:mm' }}</div>
+            </div>
+          </div>
+        }
+      } @else {
+        <!-- File Message -->
+        <div class="msg-row" [class.msg-row--mine]="isOwnMessage(msg)">
+          <div class="msg-file-card">
+            <span nz-icon nzType="file" nzTheme="outline"></span>
+            <div class="msg-file-info">
+              <a class="msg-file-name" [href]="msg.attachmentUrl" target="_blank">
+                {{ msg.attachmentName || '文件' }}
+              </a>
+              @if (msg.attachmentSize) {
+                <span class="msg-file-size">{{ formatFileSize(msg.attachmentSize) }}</span>
+              }
+            </div>
+            <a [href]="msg.attachmentUrl" target="_blank" class="msg-file-download" nz-tooltip nzTooltipTitle="下载">
+              <span nz-icon nzType="download" nzTheme="outline"></span>
+            </a>
+          </div>
+          <div class="msg-time">{{ msg.creationTime | date:'HH:mm' }}</div>
+        </div>
+      }
+    }
+
+    <!-- AI Typing Indicator -->
+    @if (isAgentReplying()) {
+      <div class="msg-row">
+        <div class="msg-avatar msg-avatar--agent">
+          <span nz-icon nzType="robot" nzTheme="outline"></span>
+        </div>
+        <div class="msg-bubble msg-bubble--agent typing">
+          <div class="msg-sender">{{ agentName() }}</div>
+          <div class="typing-indicator">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Input Area -->
+  <div class="chat-input-area">
+    <div class="chat-input-row">
+      <!-- File Upload -->
+      <button nz-button nzType="text"
+              class="upload-btn"
+              nz-tooltip nzTooltipTitle="发送文件（最大25MB）"
+              (click)="triggerFileUpload()"
+              [disabled]="uploadingFile()">
+        @if (uploadingFile()) {
+          <nz-spin nzSize="small"></nz-spin>
+        } @else {
+          <span nz-icon nzType="paper-clip" nzTheme="outline"></span>
+        }
+      </button>
+      <input #fileInput type="file" style="display:none" (change)="onFileSelected($event)" />
+
+      <!-- Mention Button -->
+      <button nz-button nzType="text"
+              class="mention-btn"
+              nz-tooltip [nzTooltipTitle]="'@' + agentName() + ' 召唤智能助手'"
+              (click)="insertAgentMention()">
+        <span nz-icon nzType="robot" nzTheme="outline"></span>
+        <span class="mention-label">@{{ agentName() }}</span>
+      </button>
+
+      <!-- Input -->
+      <input nz-input
+             class="chat-input"
+             [ngModel]="inputContent()"
+             (ngModelChange)="inputContent.set($event)"
+             (keydown)="onKeyPress($event)"
+             [placeholder]="'输入消息，输入 @' + agentName() + ' 召唤智能助手...'"
+             [disabled]="isLoading()" />
+
+      <!-- Send -->
+      <button nz-button nzType="primary"
+              class="send-btn"
+              (click)="sendMessage()"
+              [disabled]="!inputContent().trim() || isLoading()">
+        @if (isLoading()) {
+          <nz-spin nzSize="small"></nz-spin>
+        } @else {
+          <span nz-icon nzType="send" nzTheme="outline"></span>
+        }
+      </button>
+    </div>
+  </div>
+</div>

@@ -22,12 +22,6 @@
           <div>关联课程：{{ item.courseTitle || '未绑定' }}</div>
           <div>任务数：{{ item.taskCount }} | 资料数：{{ item.materialCount }}</div>
           <div>专业/班级：{{ item.major || '未设置' }} / {{ item.className || '未设置' }}</div>
-          @if (item.isCurrentUserEnrolled) {
-            <div class="progress-row">
-              <span>我的进度</span>
-              <nz-progress [nzPercent]="+(item.currentUserProgress || 0)" [nzStrokeColor]="'#0d9488'"></nz-progress>
-            </div>
-          }
         </div>
         <div class="actions">
           <a nz-button nzType="default" [routerLink]="['/practicum/project', item.id]">查看详情</a>

@@ -6,7 +6,7 @@ import { AuthErrorModalComponent } from './core/auth/auth-error-modal.component'
   selector: 'app-root',
   template: `
     <abp-loader-bar></abp-loader-bar>
-    <abp-dynamic-layout></abp-dynamic-layout>
+    <abp-dynamic-layout defaultLayout="application"></abp-dynamic-layout>
     <app-auth-error-modal></app-auth-error-modal>
   `,
   standalone: true,

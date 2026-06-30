@@ -27,4 +27,6 @@ public interface IPracticumAppService : IApplicationService
     Task<PracticumAssessmentDto> ScoreEnrollmentAsync(Guid enrollmentId, CreatePracticumAssessmentDto input);
     Task<List<PracticumTimelineItemDto>> GetTimelineAsync(Guid enrollmentId);
     Task<IRemoteStreamContent> ExportAssessmentsAsync(Guid? projectId);
+    Task<PracticumAgentConfigDto> GetAgentConfigAsync(Guid projectId);
+    Task UpdateAgentConfigAsync(Guid projectId, UpdatePracticumAgentConfigDto input);
 }

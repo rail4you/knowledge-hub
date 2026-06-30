@@ -295,6 +295,7 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Practicum',
+      layout: eLayoutType.application,
     },
   },
   {
@@ -304,6 +305,17 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Practicum',
+      layout: eLayoutType.application,
+    },
+  },
+  {
+    // 实训项目聊天室（教师端）
+    path: 'practicum/project/:id/chat',
+    loadComponent: () => import('./practicum/practicum-chat.component').then(c => c.PracticumChatComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Practicum',
+      layout: eLayoutType.application,
     },
   },
   {
@@ -313,6 +325,7 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Practicum',
+      layout: eLayoutType.application,
     },
   },
   {

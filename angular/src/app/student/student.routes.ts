@@ -113,6 +113,10 @@ export const STUDENT_ROUTES: Routes = [
         loadComponent: () => import('./practicums/student-practicum-detail.component').then(m => m.StudentPracticumDetailComponent),
       },
       {
+        path: 'practicums/:id/chat',
+        loadComponent: () => import('../practicum/practicum-chat.component').then(m => m.PracticumChatComponent),
+      },
+      {
         path: 'employment',
         children: [
           {

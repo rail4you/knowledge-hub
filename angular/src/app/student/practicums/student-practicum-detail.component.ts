@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -25,6 +25,7 @@ import type { PracticumProjectDetailDto, PracticumTaskDto, PracticumMaterialDto 
 })
 export class StudentPracticumDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly practicumService = inject(PracticumService);
   private readonly message = inject(NzMessageService);
 
@@ -93,5 +94,11 @@ export class StudentPracticumDetailComponent implements OnInit {
   downloadMaterial(material: PracticumMaterialDto): void {
     if (!material.resourceUrl) return;
     window.open(material.resourceUrl, '_blank');
+  }
+
+  openChat(): void {
+    const id = this.detail()?.id;
+    if (!id) return;
+    this.router.navigate(['/student/practicums', id, 'chat']);
   }
 }

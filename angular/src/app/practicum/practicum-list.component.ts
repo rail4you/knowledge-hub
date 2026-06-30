@@ -5,14 +5,13 @@ import { RouterLink } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { PracticumProjectDto, PracticumProjectStatus, PracticumService } from './practicum.service';
 
 @Component({
   selector: 'app-practicum-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, NzButtonModule, NzCardModule, NzInputModule, NzProgressModule, NzTagModule],
+  imports: [CommonModule, FormsModule, RouterLink, NzButtonModule, NzCardModule, NzInputModule, NzTagModule],
   templateUrl: './practicum-list.component.html',
   styleUrls: ['./practicum-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

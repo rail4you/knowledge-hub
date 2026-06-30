@@ -57,6 +57,11 @@
           <span nz-icon nzType="folder-open" nzTheme="outline"></span> 实训资料
           <span class="tab-count">{{ d.materials?.length || 0 }}</span>
         </button>
+        @if (d.isCurrentUserEnrolled) {
+          <button class="tab-chat" (click)="openChat()">
+            <span nz-icon nzType="message" nzTheme="outline"></span> 沟通
+          </button>
+        }
       </nav>
 
       @if (activeTab() === 'tasks') {

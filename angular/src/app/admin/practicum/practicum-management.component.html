@@ -45,6 +45,7 @@
       <button class="tab-btn" [class.active]="activeTab === 1" (click)="activeTab = 1">关联任务</button>
       <button class="tab-btn" [class.active]="activeTab === 2" (click)="activeTab = 2">关联资料</button>
       <button class="tab-btn" [class.active]="activeTab === 3" (click)="activeTab = 3">参与与评分</button>
+      <button class="tab-btn" [class.active]="activeTab === 4" (click)="activeTab = 4">智能体配置</button>
     </div>
 
     <div class="tab-content">
@@ -193,6 +194,27 @@
             </tr>
           </tbody>
         </nz-table>
+      </div>
+
+      <!-- Tab 4: 智能体配置 -->
+      <div *ngIf="activeTab === 4">
+        <div class="section-header">
+          <h3>实训智能体配置</h3>
+          <span class="hint">学生可在聊天室中 @@ 智能体名称进行提问</span>
+        </div>
+        <div class="form-grid agent-config-grid">
+          <label>智能体名称</label>
+          <input nz-input [(ngModel)]="agentConfigForm.agentName" placeholder="如：小智（默认）" />
+
+          <label>附加提示词</label>
+          <textarea nz-input
+                    [(ngModel)]="agentConfigForm.agentPrompt"
+                    rows="6"
+                    placeholder="自定义智能体行为。系统已自动注入项目描述和任务列表。&#10;&#10;例如：你是一个 Java 实训助教，专注于帮助学生理解 Spring Boot 的核心概念。"></textarea>
+        </div>
+        <div class="actions-bar">
+          <button nz-button nzType="primary" (click)="saveAgentConfig()">保存智能体配置</button>
+        </div>
       </div>
     </div>
   </nz-card>

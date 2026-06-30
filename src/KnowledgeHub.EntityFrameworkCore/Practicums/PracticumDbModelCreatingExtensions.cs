@@ -23,6 +23,9 @@ public static class PracticumDbModelCreatingExtensions
             b.HasIndex(x => x.Status);
             b.HasIndex(x => x.CourseId);
             b.HasIndex(x => x.TenantId);
+
+            b.Property(x => x.AgentName).HasMaxLength(100);
+            b.Property(x => x.AgentPrompt).HasMaxLength(4000);
         });
 
         builder.Entity<PracticumTask>(b =>
@@ -114,6 +117,23 @@ public static class PracticumDbModelCreatingExtensions
             b.HasIndex(x => x.EnrollmentId);
             b.HasIndex(x => x.SubmissionId);
             b.HasIndex(x => x.TeacherId);
+            b.HasIndex(x => x.TenantId);
+        });
+
+        builder.Entity<PracticumChatMessage>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "PracticumChatMessages", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.SenderName).IsRequired().HasMaxLength(128);
+            b.Property(x => x.Content).HasMaxLength(4000);
+            b.Property(x => x.AttachmentUrl).HasMaxLength(1000);
+            b.Property(x => x.AttachmentName).HasMaxLength(256);
+
+            b.HasIndex(x => x.ProjectId);
+            b.HasIndex(x => x.SenderId);
+            b.HasIndex(x => x.SenderType);
+            b.HasIndex(x => x.CreationTime);
             b.HasIndex(x => x.TenantId);
         });
     }

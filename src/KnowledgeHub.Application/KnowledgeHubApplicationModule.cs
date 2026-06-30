@@ -31,6 +31,7 @@ public class KnowledgeHubApplicationModule : AbpModule
     {
         context.Services.AddSingleton<NpoiDocumentParserService>();
         context.Services.AddSingleton<IDocumentExtractionService>(sp => sp.GetRequiredService<NpoiDocumentParserService>());
+        context.Services.AddSingleton<Practicums.PracticumChatConnectionManager>();
         context.Services.AddTransient<TeachingAgents.TeachingAgentContextBuilder>();
     }
 }

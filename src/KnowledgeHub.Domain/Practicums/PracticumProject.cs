@@ -20,6 +20,8 @@ public class PracticumProject : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public DateTime? EndTime { get; set; }
     public decimal MaxScore { get; set; } = 100;
     public bool AllowResubmission { get; set; } = true;
+    public string? AgentName { get; set; }
+    public string? AgentPrompt { get; set; }
 
     public PracticumProject()
     {

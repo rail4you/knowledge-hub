@@ -27,6 +27,8 @@ import {
   PracticumSubmissionDto,
   PracticumSubmissionStatus,
 } from '../../practicum/practicum.service';
+import { PracticumChatService } from '../../practicum/practicum-chat.service';
+import type { PracticumAgentConfigDto } from '../../practicum/practicum-chat.service';
 
 @Component({
   selector: 'app-practicum-management',
@@ -52,6 +54,7 @@ import {
 })
 export class PracticumManagementComponent implements OnInit {
   private readonly practicumService = inject(PracticumService);
+  private readonly pratChatService = inject(PracticumChatService);
   private readonly courseService = inject(CourseService);
   private readonly ossUploadService = inject(OssUploadService);
   private readonly message = inject(NzMessageService);
@@ -87,6 +90,7 @@ export class PracticumManagementComponent implements OnInit {
   scoreTarget: PracticumSubmissionDto | null = null;
   guidanceForm: CreatePracticumGuidanceRecordDto = this.emptyGuidance();
   scoreForm: CreatePracticumAssessmentDto = this.emptyScore();
+  agentConfigForm: PracticumAgentConfigDto = {};
 
   ngOnInit(): void {
     this.loadCourses();
@@ -284,6 +288,10 @@ export class PracticumManagementComponent implements OnInit {
       .subscribe(r => { this.enrollments.set(r.items || []); this.cdr.markForCheck(); });
     this.practicumService.getSubmissionList({ projectId: pid, skipCount: 0, maxResultCount: 200 })
       .subscribe(r => { this.submissions.set(r.items || []); this.cdr.markForCheck(); });
+    this.pratChatService.getAgentConfig(pid).subscribe({
+      next: c => { this.agentConfigForm = c; this.cdr.markForCheck(); },
+      error: () => {},
+    });
   }
 
   /**
@@ -462,4 +470,17 @@ export class PracticumManagementComponent implements OnInit {
     this.cdr.markForCheck();
     return true;
   };
+
+  // ─── Agent Config ───────────────────────────
+
+  saveAgentConfig(): void {
+    if (!this.selectedProjectId) return;
+    this.pratChatService.updateAgentConfig(this.selectedProjectId, {
+      agentName: this.agentConfigForm.agentName,
+      agentPrompt: this.agentConfigForm.agentPrompt,
+    }).subscribe({
+      next: () => { this.message.success('智能体配置已保存'); },
+      error: () => { this.message.error('保存智能体配置失败'); },
+    });
+  }
 }

@@ -1,111 +1,300 @@
-@if (project(); as project) {
-  <div class="practicum-detail-page">
-    <nz-card class="hero-card">
-      <div class="hero-grid">
-        <div>
-          <h1>{{ project.title }}</h1>
-          <p>{{ project.summary || '暂无简介' }}</p>
-          <nz-descriptions [nzColumn]="2" nzBordered>
-            <nz-descriptions-item nzTitle="关联课程">{{ project.courseTitle || '未绑定' }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="专业/班级">{{ project.major || '未设置' }} / {{ project.className || '未设置' }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="开始时间">{{ project.startTime || '未设置' }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="结束时间">{{ project.endTime || '未设置' }}</nz-descriptions-item>
-          </nz-descriptions>
+<div class="practicum-detail-page">
+  <a routerLink="/practicum/projects" class="back-link">
+    <span nz-icon nzType="arrow-left" nzTheme="outline"></span> 返回实训列表
+  </a>
+
+  @if (project(); as project) {
+    <!-- ─── Header ────────────────────────────── -->
+    <div class="detail-hero">
+      <div class="detail-hero__cover">
+        <span nz-icon nzType="experiment" nzTheme="outline"></span>
+      </div>
+      <div class="detail-hero__body">
+        <div class="detail-hero__tags">
+          @if (project.major) { <span class="tag tag--blue">{{ project.major }}</span> }
+          @if (project.className) { <span class="tag tag--green">{{ project.className }}</span> }
+          <span class="tag" [class.tag--published]="project.status === 1" [class.tag--draft]="project.status === 0">
+            {{ project.status === 1 ? '已发布' : project.status === 0 ? '草稿' : '已归档' }}
+          </span>
         </div>
-        <div class="side-panel">
-          @if (project.isCurrentUserEnrolled) {
-            <div class="progress-box">
-              <span>我的进度</span>
-              <nz-progress [nzPercent]="+(project.currentUserProgress || 0)" [nzStrokeColor]="'#0d9488'"></nz-progress>
-            </div>
-          } @else {
-            <button nz-button nzType="primary" (click)="enroll()">加入实训</button>
-          }
+        <h1>{{ project.title }}</h1>
+        <p class="detail-hero__summary">{{ project.summary || '暂无简介' }}</p>
+        <div class="detail-hero__meta">
+          <span><span nz-icon nzType="book" nzTheme="outline"></span> {{ project.courseTitle || '未绑定课程' }}</span>
+          <span><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ (project.startTime || '未设置') + ' ~ ' + (project.endTime || '未设置') }}</span>
+          <span><span nz-icon nzType="profile" nzTheme="outline"></span> {{ project.tasks?.length || 0 }} 个任务</span>
+          <span><span nz-icon nzType="team" nzTheme="outline"></span> {{ project.enrollmentCount || 0 }} 人已报</span>
         </div>
       </div>
-    </nz-card>
-
-    <nz-card nzTitle="任务清单" class="section-card">
-      @for (task of project.tasks; track task.id) {
-        <div class="task-block">
-          <div class="task-header">
-            <div>
-              <h3>{{ task.sortOrder }}. {{ task.title }}</h3>
-              <p>{{ task.description || '暂无任务描述' }}</p>
-            </div>
-            <span nz-tag nzColor="blue">权重 {{ task.scoreWeight }}%</span>
-          </div>
-
-          <div class="task-meta">
-            <div>任务要求：{{ task.requirement || '暂无' }}</div>
-            <div>截止时间：{{ task.dueTime || '未设置' }}</div>
-          </div>
-
-          @if (project.isCurrentUserEnrolled) {
-            <div class="submit-box">
-              <textarea nz-input [(ngModel)]="forms[task.id].content" rows="4" placeholder="提交说明、过程描述、阶段总结"></textarea>
-              <div class="submit-grid">
-                <input nz-input [(ngModel)]="forms[task.id].attachmentUrls" placeholder="附件 URL，多个逗号分隔" />
-                <input nz-input [(ngModel)]="forms[task.id].linkUrl" placeholder="成果链接 URL" />
-                <input nz-input [(ngModel)]="forms[task.id].screenshotUrls" placeholder="截图 URL，多个逗号分隔" />
-              </div>
-              <button nz-button nzType="primary" (click)="submit(task.id)">提交任务成果</button>
-            </div>
-          }
-
-          <nz-table [nzData]="getTaskSubmissions(task.id)" [nzFrontPagination]="false" nzSize="small">
-            <thead>
-              <tr>
-                <th>版本</th>
-                <th>提交时间</th>
-                <th>状态</th>
-                <th>评分</th>
-                <th>反馈</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of getTaskSubmissions(task.id)">
-                <td>V{{ item.versionNo }}</td>
-                <td>{{ item.submittedAt }}</td>
-                <td>{{ getSubmissionStatusLabel(item.status) }}</td>
-                <td>{{ item.score ?? '-' }}</td>
-                <td>{{ item.teacherFeedback || '-' }}</td>
-              </tr>
-            </tbody>
-          </nz-table>
-        </div>
-        <nz-divider></nz-divider>
-      }
-    </nz-card>
-
-    <nz-card nzTitle="实训资料" class="section-card">
-      <div class="materials">
-        @for (material of project.materials; track material.id) {
-          <a class="material-item" [href]="material.resourceUrl" target="_blank" rel="noreferrer">
-            <strong>{{ material.title }}</strong>
-            <span>{{ material.description || '点击打开资料' }}</span>
-          </a>
+      <div class="detail-hero__action">
+        @if (project.isCurrentUserEnrolled) {
+          <span class="enrolled-badge"><span nz-icon nzType="check-circle" nzTheme="fill"></span> 已加入</span>
+        } @else {
+          <button class="enroll-btn" (click)="enroll()">
+            <span nz-icon nzType="user-add" nzTheme="outline"></span> 加入实训
+          </button>
         }
       </div>
-    </nz-card>
+    </div>
 
-    @if (project.isCurrentUserEnrolled) {
-      <nz-card nzTitle="教师指导记录" class="section-card">
-        <div class="guidance-list">
-          @for (item of guidances(); track item.id) {
-            <div class="guidance-item">
-              <div class="guidance-head">
-                <strong>{{ item.teacherName || '教师' }}</strong>
-                <span>{{ item.guidedAt }}</span>
+    <!-- ─── Description ───────────────────────── -->
+    @if (project.description) {
+      <div class="detail-desc">
+        <h2><span nz-icon nzType="info-circle" nzTheme="outline"></span> 项目介绍</h2>
+        <pre>{{ project.description }}</pre>
+      </div>
+    }
+
+    <!-- ─── Tabs ──────────────────────────────── -->
+    <div class="detail-content">
+      <nav class="tab-nav">
+        @for (tab of ['基本信息', '实训任务', '实训资料', '沟通聊天']; track $index) {
+          <button [class.active]="activeTab() === $index" (click)="selectTab($index)">
+            @if ($index === 0) { <span nz-icon nzType="info-circle" nzTheme="outline"></span> }
+            @if ($index === 1) { <span nz-icon nzType="profile" nzTheme="outline"></span> }
+            @if ($index === 2) { <span nz-icon nzType="folder-open" nzTheme="outline"></span> }
+            @if ($index === 3) { <span nz-icon nzType="message" nzTheme="outline"></span> }
+            {{ tab }}
+          </button>
+        }
+      </nav>
+
+      <div class="tab-panel">
+        <!-- Tab 0: 基本信息 -->
+        @if (activeTab() === 0) {
+          <div class="tab-grid">
+            <div class="info-card">
+              <h3><span nz-icon nzType="setting" nzTheme="outline"></span> 基本信息</h3>
+              <div class="info-grid">
+                <div class="info-item"><span class="info-label">关联课程</span><span>{{ project.courseTitle || '未绑定' }}</span></div>
+                <div class="info-item"><span class="info-label">专业方向</span><span>{{ project.major || '未设置' }}</span></div>
+                <div class="info-item"><span class="info-label">班级</span><span>{{ project.className || '未设置' }}</span></div>
+                <div class="info-item"><span class="info-label">开始时间</span><span>{{ project.startTime || '未设置' }}</span></div>
+                <div class="info-item"><span class="info-label">结束时间</span><span>{{ project.endTime || '未设置' }}</span></div>
+                <div class="info-item"><span class="info-label">任务数</span><span>{{ project.tasks?.length || 0 }}</span></div>
+                <div class="info-item"><span class="info-label">资料数</span><span>{{ project.materials?.length || 0 }}</span></div>
+                <div class="info-item"><span class="info-label">报名人数</span><span>{{ project.enrollmentCount || 0 }}</span></div>
               </div>
-              <div>{{ item.content }}</div>
-              @if (item.taskTitle) {
-                <small>关联任务：{{ item.taskTitle }}</small>
+            </div>
+
+            @if (project.isCurrentUserEnrolled && guidances().length > 0) {
+              <div class="info-card">
+                <h3><span nz-icon nzType="compass" nzTheme="outline"></span> 教师指导记录</h3>
+                <div class="guidance-list">
+                  @for (item of guidances(); track item.id) {
+                    <div class="guidance-item">
+                      <div class="guidance-head">
+                        <strong>{{ item.teacherName || '教师' }}</strong>
+                        <span>{{ item.guidedAt }}</span>
+                      </div>
+                      <div>{{ item.content }}</div>
+                      @if (item.taskTitle) { <small>关联任务：{{ item.taskTitle }}</small> }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Tab 1: 实训任务 -->
+        @if (activeTab() === 1) {
+          @if (!project.tasks?.length) {
+            <div class="empty-state">
+              <span nz-icon nzType="inbox" nzTheme="outline"></span>
+              <p>暂无实训任务</p>
+            </div>
+          } @else {
+            <div class="tasks-list">
+              @for (task of project.tasks; track task.id) {
+                <div class="task-card">
+                  <div class="task-card__num">{{ $index + 1 }}</div>
+                  <div class="task-card__body">
+                    <div class="task-card__head">
+                      <h4>{{ task.title }}</h4>
+                      @if (task.scoreWeight) { <span class="task-score">{{ task.scoreWeight }} 分</span> }
+                    </div>
+                    @if (task.description) { <p class="task-text">{{ task.description }}</p> }
+                    @if (task.requirement) {
+                      <p class="task-req">
+                        <span nz-icon nzType="exclamation-circle" nzTheme="outline"></span> {{ task.requirement }}
+                      </p>
+                    }
+                    @if (task.dueTime) { <span class="task-due">截止 {{ task.dueTime }}</span> }
+
+                    @if (project.isCurrentUserEnrolled) {
+                      <div class="task-submit">
+                        <textarea nz-input [(ngModel)]="forms[task.id].content" rows="3" placeholder="提交说明、过程描述、阶段总结..."></textarea>
+                        <div class="task-submit__grid">
+                          <input nz-input [(ngModel)]="forms[task.id].attachmentUrls" placeholder="附件 URL，多个逗号分隔" />
+                          <input nz-input [(ngModel)]="forms[task.id].linkUrl" placeholder="成果链接 URL" />
+                          <input nz-input [(ngModel)]="forms[task.id].screenshotUrls" placeholder="截图 URL，多个逗号分隔" />
+                        </div>
+                        <button nz-button nzType="primary" (click)="submit(task.id)">
+                          <span nz-icon nzType="upload" nzTheme="outline"></span> 提交任务成果
+                        </button>
+                      </div>
+                    }
+
+                    @if (getTaskSubmissions(task.id).length) {
+                      <nz-table [nzData]="getTaskSubmissions(task.id)" [nzFrontPagination]="false" nzSize="small" class="submission-table">
+                        <thead>
+                          <tr>
+                            <th>版本</th>
+                            <th>提交时间</th>
+                            <th>状态</th>
+                            <th>评分</th>
+                            <th>反馈</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let item of getTaskSubmissions(task.id)">
+                            <td><span class="version-badge">V{{ item.versionNo }}</span></td>
+                            <td>{{ item.submittedAt }}</td>
+                            <td>
+                              <span class="status-tag" [class.status-submitted]="item.status === submissionStatuses.Submitted"
+                                    [class.status-returned]="item.status === submissionStatuses.Returned"
+                                    [class.status-reviewed]="item.status === submissionStatuses.Reviewed">
+                                {{ getSubmissionStatusLabel(item.status) }}
+                              </span>
+                            </td>
+                            <td>{{ item.score ?? '-' }}</td>
+                            <td class="feedback-cell">{{ item.teacherFeedback || '-' }}</td>
+                          </tr>
+                        </tbody>
+                      </nz-table>
+                    }
+                  </div>
+                </div>
               }
             </div>
           }
-        </div>
-      </nz-card>
-    }
-  </div>
-}
+        }
+
+        <!-- Tab 2: 实训资料 -->
+        @if (activeTab() === 2) {
+          @if (!project.materials?.length) {
+            <div class="empty-state">
+              <span nz-icon nzType="folder-open" nzTheme="outline"></span>
+              <p>暂无实训资料</p>
+            </div>
+          } @else {
+            <div class="materials-grid">
+              @for (mat of project.materials; track mat.id) {
+                <a class="material-card" [href]="mat.resourceUrl" target="_blank" rel="noreferrer">
+                  <div class="material-icon">
+                    <span nz-icon [nzType]="mat.materialType === 1 ? 'play-circle' : mat.materialType === 2 ? 'link' : 'file-text'" nzTheme="outline"></span>
+                  </div>
+                  <div class="material-body">
+                    <h4>{{ mat.title }}</h4>
+                    @if (mat.description) { <p>{{ mat.description }}</p> }
+                  </div>
+                  <div class="material-arrow">
+                    <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+                  </div>
+                </a>
+              }
+            </div>
+          }
+        }
+
+        <!-- Tab 3: 沟通聊天 -->
+        @if (activeTab() === 3) {
+          <div class="chat-tab">
+            <!-- Chat Header -->
+            <div class="chat-tab__header">
+              <h3><span nz-icon nzType="message" nzTheme="outline"></span> 项目群聊</h3>
+              <span class="chat-tab__subtitle">所有已报名的学生和教师均可见</span>
+              @if (chatConnecting()) {
+                <span class="chat-status connecting"><nz-spin nzSize="small"></nz-spin> 连接中...</span>
+              } @else {
+                <span class="chat-status online">● 已连接</span>
+              }
+            </div>
+
+            <!-- Messages -->
+            <div class="chat-tab__messages" #messagesContainer>
+              @if (chatLoading()) {
+                <div class="chat-empty"><nz-spin nzSize="default"></nz-spin><p>加载聊天记录...</p></div>
+              } @else if (chatMessages().length === 0) {
+                <div class="chat-empty">
+                  <span nz-icon nzType="message" nzTheme="outline" class="empty-icon"></span>
+                  <h3>还没有消息</h3>
+                  <p>发送第一条消息开始沟通吧！&#64;{{ agentName() }} 可以召唤智能助手。</p>
+                </div>
+              } @else {
+                @for (msg of chatMessages(); track msg.id) {
+                  @if (msg.senderType === chatSenderTypes.AIAgent) {
+                    <div class="chat-msg">
+                      <div class="chat-avatar chat-avatar--agent">
+                        <span nz-icon nzType="robot" nzTheme="outline"></span>
+                      </div>
+                      <div class="chat-bubble chat-bubble--agent">
+                        <div class="chat-sender">{{ msg.senderName }}</div>
+                        <div class="chat-text">{{ msg.content }}</div>
+                        <div class="chat-time">{{ msg.creationTime | date:'HH:mm' }}</div>
+                      </div>
+                    </div>
+                  } @else if (isOwnChatMessage(msg)) {
+                    <div class="chat-msg chat-msg--mine">
+                      <div class="chat-bubble chat-bubble--mine">
+                        <div class="chat-text">{{ msg.content }}</div>
+                        <div class="chat-time">{{ msg.creationTime | date:'HH:mm' }}</div>
+                      </div>
+                      <div class="chat-avatar chat-avatar--user">
+                        {{ msg.senderName.charAt(0) }}
+                      </div>
+                    </div>
+                  } @else {
+                    <div class="chat-msg">
+                      <div class="chat-avatar chat-avatar--other">
+                        {{ msg.senderName.charAt(0) }}
+                      </div>
+                      <div class="chat-bubble chat-bubble--other">
+                        <div class="chat-sender">{{ msg.senderName }}</div>
+                        <div class="chat-text">{{ msg.content }}</div>
+                        <div class="chat-time">{{ msg.creationTime | date:'HH:mm' }}</div>
+                      </div>
+                    </div>
+                  }
+                }
+              }
+
+              @if (agentReplying()) {
+                <div class="chat-msg">
+                  <div class="chat-avatar chat-avatar--agent">
+                    <span nz-icon nzType="robot" nzTheme="outline"></span>
+                  </div>
+                  <div class="chat-bubble chat-bubble--agent typing">
+                    <div class="chat-sender">{{ agentName() }}</div>
+                    <div class="typing-dots"><span></span><span></span><span></span></div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Input -->
+            <div class="chat-tab__input">
+              <button nz-button nzType="text" class="mention-btn" nz-tooltip [nzTooltipTitle]="'召唤 ' + agentName()" (click)="insertMention()">
+                <span nz-icon nzType="robot" nzTheme="outline"></span>&#64;{{ agentName() }}
+              </button>
+              <input nz-input
+                class="chat-field"
+                [ngModel]="chatInput()"
+                (ngModelChange)="chatInput.set($event)"
+                (keydown)="onChatKey($event)"
+                [placeholder]="'输入消息，输入 @' + agentName() + ' 召唤智能助手...'"
+                [disabled]="chatSending()" />
+              <button nz-button nzType="primary" class="send-btn"
+                (click)="chatSendMessage()"
+                [disabled]="!chatInput().trim() || chatSending()">
+                @if (chatSending()) { <nz-spin nzSize="small"></nz-spin> }
+                @else { <span nz-icon nzType="send" nzTheme="outline"></span> }
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>
