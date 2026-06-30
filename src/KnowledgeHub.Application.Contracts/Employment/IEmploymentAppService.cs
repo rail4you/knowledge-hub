@@ -47,4 +47,7 @@ public interface IEmploymentAppService : IApplicationService
     Task<PagedResultDto<EmploymentOutcomeDto>> GetOutcomeListAsync(GetEmploymentOutcomeListInput input);
     Task<List<EmploymentStatisticsRowDto>> GetStatisticsAsync(EmploymentStatisticsInput input);
     Task<IRemoteStreamContent> ExportStatisticsAsync(EmploymentStatisticsInput input);
+
+    /// <summary>获取可担任面试官的用户列表（教师/HR/管理员等）</summary>
+    Task<List<InterviewerCandidateDto>> GetInterviewerCandidatesAsync();
 }

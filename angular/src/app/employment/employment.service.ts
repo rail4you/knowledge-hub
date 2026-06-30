@@ -523,6 +523,12 @@ export class EmploymentService {
       params: input,
     }, { apiName: this.apiName });
 
+  getInterviewerCandidates = () =>
+    this.restService.request<any, InterviewerCandidateDto[]>({
+      method: 'GET',
+      url: '/api/app/employment/interviewer-candidates',
+    }, { apiName: this.apiName });
+
   createGuidanceRecord = (input: CreateEmploymentGuidanceRecordDto) =>
     this.restService.request<any, EmploymentGuidanceRecordDto>({
       method: 'POST',
@@ -595,6 +601,11 @@ export class EmploymentService {
       body: formData,
     }, { apiName: this.apiName });
   }
+}
+
+export interface InterviewerCandidateDto {
+  id: string;
+  name: string;
 }
 
 export interface ResumeUploadResultDto {

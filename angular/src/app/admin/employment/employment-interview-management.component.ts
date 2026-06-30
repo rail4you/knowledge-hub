@@ -8,27 +8,33 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
-import { CreateUpdateInterviewScheduleDto, EmploymentInterviewResult, EmploymentService, InterviewScheduleDto, JobApplicationDto, RecordInterviewResultDto } from '../../employment/employment.service';
-import { TenantUserService } from '../../proxy/application/identity/tenant-user.service';
-import { GetTenantUsersInput, TenantUserDto } from '../../proxy/application/identity/models';
+import { NzTagModule } from 'ng-zorro-antd/tag';
+import { ConfigStateService } from '@abp/ng.core';
+import { CreateUpdateInterviewScheduleDto, EmploymentInterviewResult, EmploymentService, InterviewScheduleDto, InterviewerCandidateDto, JobApplicationDto, RecordInterviewResultDto } from '../../employment/employment.service';
 
 @Component({
   selector: 'app-employment-interview-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, NzButtonModule, NzCardModule, NzInputModule, NzModalModule, NzSelectModule, NzTableModule],
+  imports: [CommonModule, FormsModule, NzButtonModule, NzCardModule, NzInputModule, NzModalModule, NzSelectModule, NzTableModule, NzTagModule],
   templateUrl: './employment-interview-management.component.html',
   styleUrls: ['./employment-interview-management.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmploymentInterviewManagementComponent implements OnInit {
   private readonly employmentService = inject(EmploymentService);
-  private readonly tenantUserService = inject(TenantUserService);
+  private readonly configState = inject(ConfigStateService);
   private readonly message = inject(NzMessageService);
+
+  /** 当前登录用户 ID */
+  private get currentUserId(): string | undefined {
+    const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
+    return cu?.['id'] as string | undefined;
+  }
 
   readonly applications = signal<JobApplicationDto[]>([]);
   readonly interviews = signal<InterviewScheduleDto[]>([]);
   /** P1-8：面试官候选列表（教师/HR） */
-  readonly interviewerOptions = signal<{ id: string; name: string }[]>([]);
+  readonly interviewerOptions = signal<InterviewerCandidateDto[]>([]);
   readonly results = EmploymentInterviewResult;
   scheduleVisible = false;
   resultVisible = false;
@@ -43,12 +49,14 @@ export class EmploymentInterviewManagementComponent implements OnInit {
   }
 
   createScheduleForm(): CreateUpdateInterviewScheduleDto {
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     return {
       applicationId: '',
       interviewerId: undefined,
       interviewerName: '',
       interviewerPhone: '',
-      scheduledAt: new Date().toISOString(),
+      scheduledAt: local,
       location: '',
       meetingUrl: '',
       note: '',
@@ -67,46 +75,29 @@ export class EmploymentInterviewManagementComponent implements OnInit {
     this.employmentService.getJobApplicationList({
       skipCount: 0,
       maxResultCount: 100,
-    }).subscribe(result => this.applications.set(result.items || []));
+    }).subscribe({
+      next: result => this.applications.set(result.items || []),
+      error: () => this.message.error('加载投递列表失败'),
+    });
 
     this.employmentService.getInterviewList({
       skipCount: 0,
       maxResultCount: 100,
-    }).subscribe(result => this.interviews.set(result.items || []));
+    }).subscribe({
+      next: result => this.interviews.set(result.items || []),
+      error: () => this.message.error('加载面试记录失败'),
+    });
   }
 
-  /** P1-8：拉取教师/HR 列表作为面试官候选（已包含登录名/邮箱/姓名） */
+  /** P1-8：拉取面试官候选（教师/HR/管理员） */
   loadInterviewerOptions(): void {
-    const input: GetTenantUsersInput = {
-      filter: '',
-      sorting: 'name',
-      skipCount: 0,
-      maxResultCount: 200,
-    };
-    this.tenantUserService.getList(input).subscribe({
-      next: result => {
-        const items = (result.items || [])
-          .filter(u => this.isInterviewerCandidate(u))
-          .map(u => ({ id: u.id, name: this.resolveDisplayName(u) }));
-        this.interviewerOptions.set(items);
-      },
+    this.employmentService.getInterviewerCandidates().subscribe({
+      next: result => this.interviewerOptions.set(result || []),
       error: () => {
         // 静默失败，下拉回退到自由文本输入
         this.interviewerOptions.set([]);
       },
     });
-  }
-
-  /** 候选规则：教师 / HR / 联盟管理员（这些角色通常担任面试官） */
-  private isInterviewerCandidate(u: TenantUserDto): boolean {
-    const roleType = (u as any).extraProperties?.['RoleType'];
-    return roleType === 2 /* Teacher */ || roleType === 3 /* EnterpriseUser */ || roleType === 1 /* LeagueAdmin */ || roleType === 0 /* SchoolAdmin */;
-  }
-
-  private resolveDisplayName(u: TenantUserDto): string {
-    const n = [u.name, u.surname].filter(x => !!x && !!x.trim()).join(' ').trim();
-    if (n) return n;
-    return u.userName || (u as any).email || u.id;
   }
 
   /** 下拉选中面试官 → 自动补全 Name（用户仍可手动改） */
@@ -124,12 +115,18 @@ export class EmploymentInterviewManagementComponent implements OnInit {
 
   openSchedule(item: JobApplicationDto): void {
     this.selectedApplication = item;
+    // P1-8：如果是教师/HR 等面试官角色，自动预填当前用户为面试官
+    const myId = this.currentUserId;
+    const myOption = myId ? this.interviewerOptions().find(o => o.id === myId) : undefined;
+    // datetime-local 格式：yyyy-MM-ddTHH:mm
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     this.scheduleForm = {
       applicationId: item.id,
-      interviewerId: undefined,
-      interviewerName: '',
+      interviewerId: myOption ? myId : undefined,
+      interviewerName: myOption ? myOption.name : '',
       interviewerPhone: '',
-      scheduledAt: new Date().toISOString(),
+      scheduledAt: local,
       location: '',
       meetingUrl: '',
       note: '',
@@ -138,7 +135,9 @@ export class EmploymentInterviewManagementComponent implements OnInit {
   }
 
   saveSchedule(): void {
-    this.employmentService.scheduleInterview(this.scheduleForm).subscribe({
+    // 将 datetime-local 格式转回 ISO 8601
+    const form = { ...this.scheduleForm, scheduledAt: new Date(this.scheduleForm.scheduledAt).toISOString() };
+    this.employmentService.scheduleInterview(form).subscribe({
       next: () => {
         this.scheduleVisible = false;
         this.message.success('面试已预约');

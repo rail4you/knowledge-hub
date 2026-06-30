@@ -478,13 +478,16 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
 
     [Authorize(KnowledgeHubPermissions.Employment.PublishJob)]
     [Authorize(KnowledgeHubPermissions.Employment.ManageApplication)]
+    [Authorize(KnowledgeHubPermissions.Employment.ScheduleInterview)]
     public async Task<PagedResultDto<JobApplicationDto>> GetJobApplicationListAsync(GetJobApplicationsInput input)
     {
         var canReview = await CanReviewJobsAsync();
         var canManageApplications = await CanManageApplicationsAsync();
+        var canSchedule = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Employment.ScheduleInterview);
         var currentUserId = GetCurrentUserId();
         var ownJobIds = new HashSet<Guid>();
 
+        // 非审核/管理员：按岗位发布者或面试官身份过滤
         if (!canReview && !canManageApplications)
         {
             using (DataFilter.Disable<IMultiTenant>())
@@ -492,6 +495,21 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                 ownJobIds = (await _jobPostingRepository.GetListAsync(x => x.EmployerUserId == currentUserId))
                     .Select(x => x.Id)
                     .ToHashSet();
+
+                // 同时纳入面试官被分配的岗位（通过 InterviewSchedule 反向查 JobPosting）
+                if (canSchedule)
+                {
+                    var interviewerJobIds = await _interviewRepository.GetQueryableAsync();
+                    var interviewerOwned = await interviewerJobIds
+                        .Where(x => x.InterviewerId == currentUserId)
+                        .Select(x => x.JobPostingId)
+                        .Distinct()
+                        .ToListAsync();
+                    foreach (var jid in interviewerOwned)
+                    {
+                        ownJobIds.Add(jid);
+                    }
+                }
             }
         }
 
@@ -675,7 +693,8 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             {
                 if (canSchedule && currentUserId.HasValue)
                 {
-                    query = query.Where(x => ownJobIds.Contains(x.JobPostingId));
+                    // 面试官可见：自己发布的岗位面试 + 自己被指定为面试官的面试
+                    query = query.Where(x => ownJobIds.Contains(x.JobPostingId) || x.InterviewerId == currentUserId.Value);
                 }
                 else if (currentUserId.HasValue)
                 {
@@ -932,6 +951,64 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                 .ToListAsync();
 
             return new PagedResultDto<EmploymentOutcomeDto>(totalCount, await MapOutcomeDtosAsync(items));
+        }
+    }
+
+    /// <summary>
+    /// 获取当前租户下可担任面试官的用户列表（教师/HR/管理员等）。
+    /// 拥有 ScheduleInterview 权限即可访问，不依赖 Users.Default。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Employment.ScheduleInterview)]
+    public async Task<List<InterviewerCandidateDto>> GetInterviewerCandidatesAsync()
+    {
+        // 面试官角色名
+        var interviewerRoleNames = new[] { "Teacher", "EnterpriseUser", "LeagueAdmin", "SchoolAdmin" };
+        var currentTenantId = CurrentTenant.Id;
+
+        var dbContext = await _userRepository.GetDbContextAsync();
+
+        // 全面解除租户过滤：角色/用户关系/用户均跨租户查询
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            // 查询所有面试官角色 ID
+            var roles = dbContext.Set<IdentityRole>();
+            var interviewerRoleIds = await roles
+                .Where(r => interviewerRoleNames.Contains(r.Name))
+                .Select(r => r.Id)
+                .ToListAsync();
+
+            if (interviewerRoleIds.Count == 0)
+            {
+                return [];
+            }
+
+            // 查询拥有这些角色的用户 ID
+            var userRoles = dbContext.Set<IdentityUserRole>();
+            var interviewerUserIds = await userRoles
+                .Where(ur => interviewerRoleIds.Contains(ur.RoleId))
+                .Select(ur => ur.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            if (interviewerUserIds.Count == 0)
+            {
+                return [];
+            }
+
+            // 查用户并限制到当前租户（host 时不过滤）
+            var query = await _userRepository.GetQueryableAsync();
+            var users = await query
+                .Where(u => interviewerUserIds.Contains(u.Id))
+                .Where(u => !currentTenantId.HasValue || u.TenantId == currentTenantId.Value)
+                .OrderBy(u => u.Name)
+                .Take(200)
+                .ToListAsync();
+
+            return users.Select(u => new InterviewerCandidateDto
+            {
+                Id = u.Id,
+                Name = ResolveInterviewerName(u)
+            }).ToList();
         }
     }
 
@@ -1501,8 +1578,9 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
 
     private static string GetUserDisplayName(IdentityUser user)
     {
-        // 优先：ABP 标准 Name + Surname
-        var displayName = string.Join(" ", new[] { user.Name, user.Surname }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+        // 优先：ABP 标准 Name + Surname（过滤占位符 "-"）
+        var displayName = string.Join(" ", new[] { user.Name, user.Surname }
+            .Where(x => !string.IsNullOrWhiteSpace(x) && x != "-")).Trim();
 
         // 兜底 1：ExtraProperties 中的 FullName / RealName（兼容历史导入数据）
         if (string.IsNullOrWhiteSpace(displayName))

@@ -7,3 +7,50 @@
   display: grid;
   gap: 12px;
 }
+
+.schedule-modal {
+  display: grid;
+  gap: 20px;
+}
+
+.schedule-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f6f8fa;
+  border-radius: 8px;
+
+  .context-text {
+    font-weight: 500;
+    margin-right: 8px;
+  }
+}
+
+.schedule-fields {
+  display: grid;
+  gap: 16px;
+}
+
+.field-row {
+  display: grid;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  margin: 0;
+}
+
+.field-input-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.field-select {
+  width: 100%;
+}

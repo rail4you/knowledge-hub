@@ -332,3 +332,12 @@ public class EmploymentStatisticsRowDto
     public int StudentCount { get; set; }
     public int OutcomeCount { get; set; }
 }
+
+/// <summary>
+/// 面试官候选简要信息（用于下拉列表）
+/// </summary>
+public class InterviewerCandidateDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}

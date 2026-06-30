@@ -30,6 +30,7 @@
         <tr>
           <th>学生</th>
           <th>岗位</th>
+          <th>面试官</th>
           <th>时间</th>
           <th>会议链接</th>
           <th>结果</th>
@@ -41,6 +42,7 @@
           <tr>
             <td>{{ item.studentName || '-' }}</td>
             <td>{{ item.jobTitle || '-' }}</td>
+            <td>{{ item.interviewerName || '-' }}</td>
             <td>{{ item.scheduledAt }}</td>
             <td>{{ item.meetingUrl || item.location || '-' }}</td>
             <td>{{ item.result }}</td>
@@ -52,25 +54,66 @@
   </nz-card>
 </div>
 
-<nz-modal [(nzVisible)]="scheduleVisible" nzTitle="预约面试" (nzOnCancel)="scheduleVisible = false" (nzOnOk)="saveSchedule()">
-  <div class="form-grid">
-    <!-- P1-8：面试官下拉（教师/HR/管理员），选中后自动填充 Name；仍可手动覆盖 -->
-    <nz-select
-      nzPlaceHolder="选择面试官（可选）"
-      [ngModel]="scheduleForm.interviewerId ?? null"
-      (ngModelChange)="onInterviewerPicked($event)"
-      [nzAllowClear]="true"
-      nzShowSearch
-    >
-      @for (opt of interviewerOptions(); track opt.id) {
-        <nz-option [nzValue]="opt.id" [nzLabel]="opt.name"></nz-option>
+<nz-modal [(nzVisible)]="scheduleVisible" nzTitle="预约面试" (nzOnCancel)="scheduleVisible = false" (nzOnOk)="saveSchedule()" [nzOkText]="'确认预约'" [nzCancelText]="'取消'">
+  <div class="schedule-modal">
+    <!-- 上下文提示 -->
+    <div class="schedule-context">
+      <nz-tag nzColor="blue">岗位</nz-tag>
+      <span class="context-text">{{ selectedApplication?.jobTitle || '-' }}</span>
+      <nz-tag nzColor="green">学生</nz-tag>
+      <span class="context-text">{{ selectedApplication?.studentName || '-' }}</span>
+      @if (selectedApplication?.companyName) {
+        <nz-tag nzColor="purple">企业</nz-tag>
+        <span class="context-text">{{ selectedApplication?.companyName }}</span>
       }
-    </nz-select>
-    <input nz-input [(ngModel)]="scheduleForm.interviewerName" placeholder="面试官姓名（可手动修改）" />
-    <input nz-input [(ngModel)]="scheduleForm.interviewerPhone" placeholder="联系电话" />
-    <input nz-input [(ngModel)]="scheduleForm.location" placeholder="地点" />
-    <input nz-input [(ngModel)]="scheduleForm.meetingUrl" placeholder="外部会议链接" />
-    <textarea nz-input rows="3" [(ngModel)]="scheduleForm.note" placeholder="备注"></textarea>
+    </div>
+
+    <!-- 表单字段 -->
+    <div class="schedule-fields">
+      <div class="field-row">
+        <label class="field-label">面试官</label>
+        <div class="field-input-group">
+          <nz-select
+            class="field-select"
+            nzPlaceHolder="选择面试官（可选）"
+            [ngModel]="scheduleForm.interviewerId ?? null"
+            (ngModelChange)="onInterviewerPicked($event)"
+            [nzAllowClear]="true"
+            nzShowSearch
+          >
+            @for (opt of interviewerOptions(); track opt.id) {
+              <nz-option [nzValue]="opt.id" [nzLabel]="opt.name"></nz-option>
+            }
+          </nz-select>
+          <input nz-input [(ngModel)]="scheduleForm.interviewerName" placeholder="或手动输入姓名" />
+        </div>
+      </div>
+
+      <div class="field-row">
+        <label class="field-label">联系电话</label>
+        <input nz-input [(ngModel)]="scheduleForm.interviewerPhone" placeholder="面试官手机号" />
+      </div>
+
+      <div class="field-row">
+        <label class="field-label">面试时间</label>
+        <input type="datetime-local" [(ngModel)]="scheduleForm.scheduledAt" class="ant-input" />
+      </div>
+
+      <div class="field-row">
+        <label class="field-label">地点</label>
+        <input nz-input [(ngModel)]="scheduleForm.location" placeholder="线上/线下地点" />
+      </div>
+
+      <div class="field-row">
+        <label class="field-label">会议链接</label>
+        <input nz-input [(ngModel)]="scheduleForm.meetingUrl" placeholder="腾讯会议/Zoom 链接" />
+      </div>
+
+      <div class="field-row">
+        <label class="field-label">备注</label>
+        <textarea nz-input rows="3" [(ngModel)]="scheduleForm.note" placeholder="补充说明"></textarea>
+      </div>
+    </div>
   </div>
 </nz-modal>
 
