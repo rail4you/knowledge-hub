@@ -17,6 +17,9 @@ public class KnowledgeResourceDto : FullAuditedEntityDto<Guid>
     public string? Tags { get; set; }
     public Guid? ParentId { get; set; }
     public Guid? ResourceId { get; set; }
+    public string? OriginalFileName { get; set; }
+    public string? FileExtension { get; set; }
+    public long? FileSize { get; set; }
     public List<KnowledgeResourceDto> Children { get; set; } = new();
 }
 

@@ -150,6 +150,9 @@ export interface KnowledgeResourceDto extends FullAuditedEntityDto<string> {
   tags?: string | null;
   parentId?: string | null;
   resourceId?: string | null;
+  originalFileName?: string | null;
+  fileExtension?: string | null;
+  fileSize?: number | null;
   children?: KnowledgeResourceDto[];
 }
 

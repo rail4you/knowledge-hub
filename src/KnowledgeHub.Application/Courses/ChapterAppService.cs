@@ -12,6 +12,9 @@ using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Domain.Repositories;
 using KnowledgeHub.Courses;
+using KnowledgeHub.Resources;
+using Volo.Abp.Data;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Courses;
 
@@ -19,13 +22,16 @@ public class ChapterAppService : ApplicationService, IChapterAppService
 {
     private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly IRepository<KnowledgeResource, Guid> _knowledgeResourceRepository;
+    private readonly IRepository<Resource, Guid> _resourceRepository;
 
     public ChapterAppService(
         IRepository<Chapter, Guid> chapterRepository,
-        IRepository<KnowledgeResource, Guid> knowledgeResourceRepository)
+        IRepository<KnowledgeResource, Guid> knowledgeResourceRepository,
+        IRepository<Resource, Guid> resourceRepository)
     {
         _chapterRepository = chapterRepository;
         _knowledgeResourceRepository = knowledgeResourceRepository;
+        _resourceRepository = resourceRepository;
     }
 
     public async Task<ChapterDto> GetAsync(Guid id)
@@ -157,6 +163,26 @@ public class ChapterAppService : ApplicationService, IChapterAppService
         var allResources = resourceQuery
             .Where(r => r.CourseId == courseId)
             .ToList();
+
+        // 加载关联的 Resource 文件信息（禁用多租户过滤器）
+        Dictionary<Guid, (string? fileName, string? extension, long? size)> fileInfoMap;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var resourceIds = allResources
+                .Where(r => r.ResourceId.HasValue)
+                .Select(r => r.ResourceId!.Value)
+                .Distinct()
+                .ToList();
+            var fileRepo = await _resourceRepository.GetQueryableAsync();
+            var files = fileRepo
+                .Where(f => resourceIds.Contains(f.Id))
+                .Select(f => new { f.Id, f.OriginalFileName, f.FileExtension, f.FileSize })
+                .ToList();
+            fileInfoMap = files.ToDictionary(
+                f => f.Id,
+                f => (f.OriginalFileName, f.FileExtension, f.FileSize as long?));
+        }
+
         var resourcesByChapter = allResources
             .Where(r => r.ChapterId.HasValue)
             .GroupBy(r => r.ChapterId!.Value)
@@ -172,20 +198,28 @@ public class ChapterAppService : ApplicationService, IChapterAppService
             SortOrder = c.SortOrder,
             Children = new List<ChapterDto>(),
             KnowledgeResources = (resourcesByChapter.TryGetValue(c.Id, out var list)
-                ? list.Select(r => new KnowledgeResourceDto
+                ? list.Select(r =>
                 {
-                    Id = r.Id,
-                    CourseId = r.CourseId,
-                    ChapterId = r.ChapterId,
-                    Name = r.Name,
-                    Description = r.Description,
-                    Content = r.Content,
-                    Difficulty = r.Difficulty,
-                    ImportanceLevel = r.ImportanceLevel,
-                    SortOrder = r.SortOrder,
-                    Tags = r.Tags,
-                    ParentId = r.ParentId,
-                    ResourceId = r.ResourceId
+                    var fi = r.ResourceId.HasValue && fileInfoMap.TryGetValue(r.ResourceId.Value, out var info)
+                        ? info : (null, null, null);
+                    return new KnowledgeResourceDto
+                    {
+                        Id = r.Id,
+                        CourseId = r.CourseId,
+                        ChapterId = r.ChapterId,
+                        Name = r.Name,
+                        Description = r.Description,
+                        Content = r.Content,
+                        Difficulty = r.Difficulty,
+                        ImportanceLevel = r.ImportanceLevel,
+                        SortOrder = r.SortOrder,
+                        Tags = r.Tags,
+                        ParentId = r.ParentId,
+                        ResourceId = r.ResourceId,
+                        OriginalFileName = fi.fileName,
+                        FileExtension = fi.extension,
+                        FileSize = fi.size
+                    };
                 }).ToList()
                 : new List<KnowledgeResourceDto>())
         }).ToList();

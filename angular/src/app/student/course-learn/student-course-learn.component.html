@@ -171,12 +171,7 @@
                         }
                         @if (r.content) {
                           <div class="resource-card__content">
-                            @if (r.resourceId) {
-                              <div class="resource-card__file-info">
-                                <span nz-icon nzType="paper-clip" nzTheme="outline"></span>
-                                <span>可预览/下载</span>
-                              </div>
-                            } @else {
+                            @if (!r.resourceId) {
                               <pre>{{ r.content }}</pre>
                             }
                           </div>

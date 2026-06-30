@@ -392,9 +392,9 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     // 使用共享的文件预览组件
     this.filePreview.open(
       r.resourceId,
-      r.name || '预览',
-      '',
-      0
+      r.originalFileName || r.name || '预览',
+      r.fileExtension || '',
+      r.fileSize || 0
     );
     // 记录学习进度
     if (course?.id) {
