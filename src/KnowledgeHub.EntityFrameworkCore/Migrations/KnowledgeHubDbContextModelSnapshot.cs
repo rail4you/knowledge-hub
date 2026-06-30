@@ -548,6 +548,8 @@ namespace KnowledgeHub.Migrations
 
                     b.HasIndex("ParentId");
 
+                    b.HasIndex("ResourceId");
+
                     b.ToTable("AppKnowledgeResources", (string)null);
                 });
 
@@ -1742,6 +1744,13 @@ namespace KnowledgeHub.Migrations
 
                     b.Property<Guid>("ApplicationId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CompletionMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -7971,7 +7980,7 @@ namespace KnowledgeHub.Migrations
 
                             b1.HasKey("IdentityUserPasskeyCredentialId");
 
-                            b1.ToTable("AbpUserPasskeys", (string)null);
+                            b1.ToTable("AbpUserPasskeys");
 
                             b1
                                 .ToJson("Data")
