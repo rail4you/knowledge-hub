@@ -43,6 +43,8 @@ export interface CareerGuidanceGenerationInput {
   /** 学生端：直接提供简历文本（优先级高于 resourceId） */
   resumeContent?: string;
   resumeTitle?: string;
+  /** 简历附件的存储路径（.docx/.pdf），后端读取全文交给 AI 解析 */
+  attachmentUrl?: string;
 }
 
 @Injectable({ providedIn: 'root' })

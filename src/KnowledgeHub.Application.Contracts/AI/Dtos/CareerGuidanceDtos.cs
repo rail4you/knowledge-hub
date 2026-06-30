@@ -11,6 +11,8 @@ public class CareerGuidanceGenerationInputDto
     public string? ResumeContent { get; set; }
     /// <summary>学生简历标题</summary>
     public string? ResumeTitle { get; set; }
+    /// <summary>简历附件的存储路径（如 .docx/.pdf），后端读取全文并交给 AI 解析</summary>
+    public string? AttachmentUrl { get; set; }
 }
 
 public class CareerGuidanceExportInputDto
@@ -34,6 +36,26 @@ public class CareerAssessmentDto
     public List<string> Strengths { get; set; } = new();
     public List<string> AreasForImprovement { get; set; } = new();
     public string Summary { get; set; } = string.Empty;
+    /// <summary>从简历中提取的教育背景，按时间倒序排列</summary>
+    public List<EducationEntryDto> EducationBackground { get; set; } = new();
+    /// <summary>从简历中提取的工作/实习经历，按时间倒序排列</summary>
+    public List<WorkExperienceEntryDto> WorkExperience { get; set; } = new();
+}
+
+public class EducationEntryDto
+{
+    public string School { get; set; } = string.Empty;
+    public string Degree { get; set; } = string.Empty;
+    public string Major { get; set; } = string.Empty;
+    public string Period { get; set; } = string.Empty;
+}
+
+public class WorkExperienceEntryDto
+{
+    public string Company { get; set; } = string.Empty;
+    public string Position { get; set; } = string.Empty;
+    public string Period { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
 }
 
 public class CareerPathDto

@@ -27,6 +27,18 @@ interface GuidanceAssessment {
   strengths: string[];
   areasForImprovement: string[];
   summary: string;
+  educationBackground?: {
+    school: string;
+    degree: string;
+    major: string;
+    period: string;
+  }[];
+  workExperience?: {
+    company: string;
+    position: string;
+    period: string;
+    description: string;
+  }[];
 }
 
 interface GuidanceRecommendedPath {
@@ -231,6 +243,7 @@ export class MyGuidanceComponent implements OnInit, OnDestroy {
       resumeContent,
       resumeTitle: resume.title,
       careerGoal: this.careerGoal() || undefined,
+      attachmentUrl: resume.attachmentUrl || undefined,
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({

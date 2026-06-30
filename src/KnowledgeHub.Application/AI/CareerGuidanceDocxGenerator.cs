@@ -44,6 +44,52 @@ public static class CareerGuidanceDocxGenerator
         AddBulletSection(doc, "核心优势", careerGuidance.Assessment.Strengths);
         AddBulletSection(doc, "待提升领域", careerGuidance.Assessment.AreasForImprovement);
 
+        // Education Background
+        if (careerGuidance.Assessment.EducationBackground?.Count > 0)
+        {
+            doc.CreateParagraph();
+            AddHeading(doc, "教育背景");
+
+            foreach (var edu in careerGuidance.Assessment.EducationBackground)
+            {
+                var eduPara = doc.CreateParagraph();
+                eduPara.IndentationLeft = 360;
+                var eduRun = eduPara.CreateRun();
+                var eduText = $"{edu.Period}  {edu.School}  {edu.Major}  {edu.Degree}";
+                eduRun.SetText(eduText);
+                eduRun.FontSize = 11;
+                eduRun.FontFamily = "微软雅黑";
+            }
+        }
+
+        // Work Experience
+        if (careerGuidance.Assessment.WorkExperience?.Count > 0)
+        {
+            doc.CreateParagraph();
+            AddHeading(doc, "工作/实习经历");
+
+            foreach (var work in careerGuidance.Assessment.WorkExperience)
+            {
+                var workPara = doc.CreateParagraph();
+                workPara.IndentationLeft = 360;
+                var workTitleRun = workPara.CreateRun();
+                workTitleRun.SetText($"{work.Period}  {work.Company} — {work.Position}");
+                workTitleRun.IsBold = true;
+                workTitleRun.FontSize = 11;
+                workTitleRun.FontFamily = "微软雅黑";
+
+                if (!string.IsNullOrWhiteSpace(work.Description))
+                {
+                    var descPara = doc.CreateParagraph();
+                    descPara.IndentationLeft = 720;
+                    var descRun = descPara.CreateRun();
+                    descRun.SetText(work.Description);
+                    descRun.FontSize = 10;
+                    descRun.FontFamily = "微软雅黑";
+                }
+            }
+        }
+
         doc.CreateParagraph();
 
         // Recommended Paths

@@ -126,6 +126,42 @@
           </nz-descriptions>
         </div>
 
+        <!-- Education & Work Experience -->
+        @if (r.assessment.educationBackground?.length || r.assessment.workExperience?.length) {
+          <div class="section-block">
+            @if (r.assessment.educationBackground?.length) {
+              <h4 class="section-heading">教育背景</h4>
+              <nz-table [nzData]="r.assessment.educationBackground!" nzSize="small" [nzBordered]="true">
+                <thead>
+                  <tr><th>时间</th><th>学校</th><th>专业</th><th>学历</th></tr>
+                </thead>
+                <tbody>
+                  @for (edu of r.assessment.educationBackground; track edu.period + edu.school + edu.major) {
+                    <tr>
+                      <td>{{ edu.period }}</td><td>{{ edu.school }}</td><td>{{ edu.major }}</td><td>{{ edu.degree }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </nz-table>
+            }
+            @if (r.assessment.workExperience?.length) {
+              <h4 class="section-heading">工作/实习经历</h4>
+              <nz-table [nzData]="r.assessment.workExperience!" nzSize="small" [nzBordered]="true">
+                <thead>
+                  <tr><th>时间</th><th>公司/单位</th><th>职位</th><th>工作内容</th></tr>
+                </thead>
+                <tbody>
+                  @for (work of r.assessment.workExperience; track work.period + work.company + work.position) {
+                    <tr>
+                      <td>{{ work.period }}</td><td>{{ work.company }}</td><td>{{ work.position }}</td><td>{{ work.description }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </nz-table>
+            }
+          </div>
+        }
+
         <!-- Paths -->
         <div class="section-block">
           <h4 class="section-heading">推荐职业路径</h4>
@@ -260,6 +296,42 @@
                         </nz-descriptions-item>
                       </nz-descriptions>
                     </div>
+
+                    <!-- Education & Work Experience -->
+                    @if (r.assessment.educationBackground?.length || r.assessment.workExperience?.length) {
+                      <div class="section-block">
+                        @if (r.assessment.educationBackground?.length) {
+                          <h4 class="section-heading">教育背景</h4>
+                          <nz-table [nzData]="r.assessment.educationBackground!" nzSize="small" [nzBordered]="true">
+                            <thead>
+                              <tr><th>时间</th><th>学校</th><th>专业</th><th>学历</th></tr>
+                            </thead>
+                            <tbody>
+                              @for (edu of r.assessment.educationBackground; track edu.period + edu.school + edu.major) {
+                                <tr>
+                                  <td>{{ edu.period }}</td><td>{{ edu.school }}</td><td>{{ edu.major }}</td><td>{{ edu.degree }}</td>
+                                </tr>
+                              }
+                            </tbody>
+                          </nz-table>
+                        }
+                        @if (r.assessment.workExperience?.length) {
+                          <h4 class="section-heading">工作/实习经历</h4>
+                          <nz-table [nzData]="r.assessment.workExperience!" nzSize="small" [nzBordered]="true">
+                            <thead>
+                              <tr><th>时间</th><th>公司/单位</th><th>职位</th><th>工作内容</th></tr>
+                            </thead>
+                            <tbody>
+                              @for (work of r.assessment.workExperience; track work.period + work.company + work.position) {
+                                <tr>
+                                  <td>{{ work.period }}</td><td>{{ work.company }}</td><td>{{ work.position }}</td><td>{{ work.description }}</td>
+                                </tr>
+                              }
+                            </tbody>
+                          </nz-table>
+                        }
+                      </div>
+                    }
 
                     <div class="section-block">
                       <h4 class="section-heading">推荐职业路径</h4>

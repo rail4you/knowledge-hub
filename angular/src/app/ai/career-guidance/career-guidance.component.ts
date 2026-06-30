@@ -28,6 +28,18 @@ interface CareerGuidanceResult {
     strengths: string[];
     areasForImprovement: string[];
     summary: string;
+    educationBackground: {
+      school: string;
+      degree: string;
+      major: string;
+      period: string;
+    }[];
+    workExperience: {
+      company: string;
+      position: string;
+      period: string;
+      description: string;
+    }[];
   };
   recommendedPaths: {
     title: string;
