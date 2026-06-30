@@ -38,7 +38,7 @@
             </div>
           } @else {
             @for (img of slide.images; track $index) {
-              <img class="slide-image" [src]="img" [alt]="'幻灯片图片'" />
+              <img class="slide-image" [src]="img" [alt]="'幻灯片图片'" (error)="$event.target.style.display='none'" />
             }
             @for (t of slide.texts; track $index) {
               <p

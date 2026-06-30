@@ -12,7 +12,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import { NzUploadModule } from 'ng-zorro-antd/upload';
 import { ConfigStateService } from '@abp/ng.core';
 import { Subject, takeUntil, Subscription } from 'rxjs';
 import {
@@ -24,8 +24,18 @@ import {
   PracticumAgentConfigDto,
 } from '../practicum/practicum-chat.service';
 import { OssUploadService } from '../shared/oss-upload.service';
-import type { PracticumProjectDetailDto } from '../proxy/practicums/dtos/models';
 import { PracticumService } from '../proxy/practicums/practicum.service';
+import type { PracticumProjectDetailDto } from '../proxy/practicums/dtos/models';
+
+export interface ChatContact {
+  id: string;
+  name: string;
+  type: 'teacher' | 'student' | 'agent';
+  avatarColor: string;
+  lastMessage?: string;
+  lastTime?: string;
+  unread?: number;
+}
 
 @Component({
   selector: 'app-practicum-chat',
@@ -63,6 +73,8 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
   loadingHistory = signal(false);
   hasMoreHistory = signal(true);
   uploadingFile = signal(false);
+  selectedContactId = signal<string>('all');
+  showSidebar = signal(true);
 
   private destroy$ = new Subject<void>();
   private sseSubscription: Subscription | null = null;
@@ -73,9 +85,24 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
   readonly senderTypes = PracticumChatSenderType;
   readonly messageTypes = PracticumChatMessageType;
 
-  // Agent name for mention
   agentName = computed(() => this.agentConfig.agentName || '小智');
   agentReplyTimeout: any = null;
+
+  /** Filtered messages based on selected contact */
+  readonly filteredMessages = computed(() => {
+    const contactId = this.selectedContactId();
+    if (contactId === 'all') return this.messages();
+    if (contactId === 'agent') {
+      return this.messages().filter(m => m.senderType === PracticumChatSenderType.AIAgent);
+    }
+    return this.messages().filter(m => m.senderId === contactId && m.senderType !== PracticumChatSenderType.AIAgent);
+  });
+
+  readonly selectedContact = computed(() => {
+    const id = this.selectedContactId();
+    if (id === 'all') return null;
+    return this.contacts().find(c => c.id === id) || null;
+  });
 
   ngOnInit(): void {
     this.projectId = this.route.snapshot.paramMap.get('id') || '';
@@ -124,12 +151,39 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
     });
   }
 
+  /** 从消息中提取联系人列表（自动响应消息变化） */
+  readonly contacts = computed(() => {
+    const msgs = this.messages();
+    const agent = this.agentName();
+    const seenIds = new Set<string>();
+    const list: ChatContact[] = [];
+
+    list.push({ id: 'agent', name: agent, type: 'agent', avatarColor: 'linear-gradient(135deg, #6366f1, #8b5cf6)' });
+    seenIds.add('agent');
+
+    for (const msg of msgs) {
+      if (msg.senderType === PracticumChatSenderType.AIAgent) continue;
+      const key = msg.senderId || 'unknown_' + msg.senderName;
+      if (seenIds.has(key)) continue;
+      seenIds.add(key);
+
+      const isCurrentUser = msg.senderId === this.currentUserId;
+      list.push({
+        id: msg.senderId || key,
+        name: isCurrentUser ? `${msg.senderName}（我）` : msg.senderName,
+        type: msg.senderType === PracticumChatSenderType.Teacher ? 'teacher' : 'student',
+        avatarColor: msg.senderType === PracticumChatSenderType.Teacher ? '#1e6ce8' : '#10b981',
+      });
+    }
+
+    return list;
+  });
+
   private loadHistory(beforeId?: string): void {
     this.loadingHistory.set(true);
     this.chatService.getMessages(this.projectId, beforeId, 25).subscribe({
       next: msgs => {
         if (beforeId) {
-          // Prepend older messages
           this.messages.update(existing => [...msgs, ...existing]);
           if (msgs.length < 25) this.hasMoreHistory.set(false);
           if (msgs.length > 0) this.oldestMessageId = msgs[msgs.length - 1].id;
@@ -154,11 +208,9 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
     this.chatService.connect(this.projectId).subscribe({
       next: () => {
         this.isConnecting.set(false);
-        // Listen for incoming SSE messages
         this.sseSubscription = this.chatService.messages$
           .pipe(takeUntil(this.destroy$))
           .subscribe(msg => {
-            // Check if this is the AI reply we've been waiting for
             if (msg.senderType === PracticumChatSenderType.AIAgent) {
               this.isAgentReplying.set(false);
               if (this.agentReplyTimeout) {
@@ -166,7 +218,6 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
                 this.agentReplyTimeout = null;
               }
             }
-            // Dedup: avoid adding message already inserted locally by sendMessage()
             const exists = this.messages().some(m => m.id === msg.id);
             if (!exists) {
               this.messages.update(existing => [...existing, msg]);
@@ -179,6 +230,17 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
         this.message.warning('聊天连接已断开，请刷新页面重试');
       },
     });
+  }
+
+  // ─── Contact Selection ──────────────────────────
+
+  selectContact(contactId: string): void {
+    this.selectedContactId.set(contactId);
+    this.shouldScrollToBottom = true;
+    // Close sidebar on mobile
+    if (window.innerWidth < 768) {
+      this.showSidebar.set(false);
+    }
   }
 
   // ─── Message Sending ─────────────────────────────
@@ -199,16 +261,13 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
     this.chatService.sendMessage(dto).subscribe({
       next: (msg) => {
         this.isLoading.set(false);
-        // Add message locally immediately (SSE will deliver it too, but this is a fallback)
         const exists = this.messages().some(m => m.id === msg.id);
         if (!exists) {
           this.messages.update(existing => [...existing, msg]);
         }
 
-        // Check if message triggered AI
         if (content.includes(`@${this.agentName()}`)) {
           this.isAgentReplying.set(true);
-          // Timeout: if AI doesn't reply within 30s, hide typing indicator
           this.agentReplyTimeout = setTimeout(() => {
             this.isAgentReplying.set(false);
           }, 30000);
@@ -250,7 +309,6 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
     this.ossUploadService.uploadFile(file).subscribe({
       next: (result) => {
         this.uploadingFile.set(false);
-        // Send file message
         const dto: SendPracticumChatMessageDto = {
           projectId: this.projectId,
           content: file.name,
@@ -282,18 +340,22 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
 
   loadMoreHistory(): void {
     if (this.loadingHistory() || !this.hasMoreHistory()) return;
-    const oldest = this.messages()[0];
+    const oldest = this.filteredMessages()[0];
     if (!oldest) return;
     this.loadHistory(oldest.id);
   }
 
   // ─── Mention ──────────────────────────────────────
 
+  getMentionText(): string {
+    return `@${this.agentName()} `;
+  }
+
   insertAgentMention(): void {
-    const name = this.agentName();
+    const mention = this.getMentionText();
     const current = this.inputContent();
-    if (current.includes(`@${name}`)) return;
-    this.inputContent.set(current ? `${current} @${name} ` : `@${name} `);
+    if (current.includes(mention.trim())) return;
+    this.inputContent.set(current ? `${current} ${mention}` : mention);
   }
 
   // ─── Navigation ──────────────────────────────────
@@ -311,7 +373,19 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
     return this.router.url.startsWith('/practicum/project');
   }
 
+  toggleSidebar(): void {
+    this.showSidebar.update(v => !v);
+  }
+
   // ─── Helpers ─────────────────────────────────────
+
+  autoResize(event: Event): void {
+    const textarea = event.target as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
+  }
 
   private scrollToBottom(): void {
     try {
@@ -330,5 +404,19 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
 
   isOwnMessage(msg: PracticumChatMessageDto): boolean {
     return msg.senderId === this.currentUserId;
+  }
+
+  getContactName(senderId: string | undefined, senderType: PracticumChatSenderType, senderName: string): string {
+    if (senderType === PracticumChatSenderType.AIAgent) return this.agentName();
+    if (senderId === this.currentUserId) return '我';
+    const contact = this.contacts().find(c => c.id === senderId);
+    return contact?.name || senderName || '未知';
+  }
+
+  getContactColor(senderId: string | undefined, senderType: PracticumChatSenderType): string {
+    if (senderType === PracticumChatSenderType.AIAgent) return 'linear-gradient(135deg, #6366f1, #8b5cf6)';
+    if (senderId === this.currentUserId) return '#2563eb';
+    const contact = this.contacts().find(c => c.id === senderId);
+    return contact?.avatarColor || '#64748b';
   }
 }
