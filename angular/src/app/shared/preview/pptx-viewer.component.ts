@@ -22,6 +22,7 @@ interface SlideText {
 interface SlideData {
   index: number;
   texts: SlideText[];
+  images: string[];
   loaded: boolean;
   error?: string;
 }
@@ -94,7 +95,9 @@ export class PptxViewerComponent implements OnDestroy {
   goToSlide(index: number) {
     if (index >= 0 && index < this.slideCount()) {
       this.currentIndex.set(index);
-      // Preload next slides
+      // 立即加载目标幻灯片
+      void this.loadSlide(this.resourceId(), index + 1, this.renderToken);
+      // 预加载邻近幻灯片
       this.preloadNearbySlides(index);
     }
   }
@@ -120,6 +123,7 @@ export class PptxViewerComponent implements OnDestroy {
       const slideArr: SlideData[] = Array.from({ length: count }, (_, i) => ({
         index: i + 1,
         texts: [],
+        images: [],
         loaded: false,
       }));
       this.slides.set(slideArr);
@@ -147,13 +151,18 @@ export class PptxViewerComponent implements OnDestroy {
       const resp = await fetch(`/api/resource-file/${resourceId}/slides/${slideNumber}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-      const data = await resp.json() as { slideNumber: number; texts: SlideText[] };
+      const data = await resp.json() as { slideNumber: number; texts: SlideText[]; images: string[] };
       if (token !== this.renderToken) return;
+
+      // 将 images 路径转为完整的 media API URL
+      const imageUrls = (data.images || []).map(
+        img => `/api/resource-file/${resourceId}/media/${encodeURIComponent(img)}`
+      );
 
       this.slides.update(arr => {
         const newArr = [...arr];
         if (newArr[idx]) {
-          newArr[idx] = { ...newArr[idx], texts: data.texts || [], loaded: true };
+          newArr[idx] = { ...newArr[idx], texts: data.texts || [], images: imageUrls, loaded: true };
         }
         return newArr;
       });

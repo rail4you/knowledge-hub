@@ -37,6 +37,9 @@
               <span>加载中…</span>
             </div>
           } @else {
+            @for (img of slide.images; track $index) {
+              <img class="slide-image" [src]="img" [alt]="'幻灯片图片'" />
+            }
             @for (t of slide.texts; track $index) {
               <p
                 class="slide-text"

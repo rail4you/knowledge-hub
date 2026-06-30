@@ -193,10 +193,17 @@ public class CourseAppService : ApplicationService, ITransientDependency
                     .Select(kr => new KnowledgeResourceDto
                     {
                         Id = kr.Id,
+                        CourseId = kr.CourseId,
+                        ChapterId = kr.ChapterId,
                         Name = kr.Name,
                         Description = kr.Description,
+                        Content = kr.Content,
                         Difficulty = kr.Difficulty,
-                        ImportanceLevel = kr.ImportanceLevel
+                        ImportanceLevel = kr.ImportanceLevel,
+                        SortOrder = kr.SortOrder,
+                        Tags = kr.Tags,
+                        ParentId = kr.ParentId,
+                        ResourceId = kr.ResourceId
                     }).ToList();
 
                 return new ChapterDto

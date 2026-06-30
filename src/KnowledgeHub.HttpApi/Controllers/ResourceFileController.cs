@@ -157,7 +157,7 @@ public class ResourceFileController : AbpControllerBase
     }
 
     /// <summary>
-    /// 获取 PPTX 单张幻灯片的文本内容（按需提取，不下载整个文件）
+    /// 获取 PPTX 单张幻灯片的内容（文本 + 图片引用，按需提取）
     /// </summary>
     [HttpGet("{resourceId}/slides/{slideNumber:int}")]
     [AllowAnonymous]
@@ -174,37 +174,40 @@ public class ResourceFileController : AbpControllerBase
         try
         {
             using var archive = ZipFile.OpenRead(fullPath);
-            var entryPath = $"ppt/slides/slide{slideNumber}.xml";
-            var entry = archive.GetEntry(entryPath);
-            if (entry == null)
+
+            // 读取幻灯片 XML
+            var slideEntry = archive.GetEntry($"ppt/slides/slide{slideNumber}.xml");
+            if (slideEntry == null)
                 return NotFound(new { message = $"幻灯片 {slideNumber} 不存在" });
 
-            using var stream = entry.Open();
+            using var stream = slideEntry.Open();
             var doc = XDocument.Load(stream);
             var ns = doc.Root?.Name.Namespace ?? XNamespace.None;
+            var aNs = XNamespace.Get("http://schemas.openxmlformats.org/drawingml/2006/main");
+            var rNs = XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
 
+            // 提取文本
             var texts = new List<SlideTextDto>();
-            foreach (var tEl in doc.Descendants(ns + "t"))
+            foreach (var tEl in doc.Descendants(aNs + "t"))
             {
                 var text = tEl.Value;
                 if (string.IsNullOrWhiteSpace(text)) continue;
 
-                // Walk up to find formatting (rPr)
                 int fontSize = 18;
                 bool bold = false;
                 string color = "#333333";
 
-                var rPr = tEl.Parent?.Element(ns + "rPr");
+                var rPr = tEl.Parent?.Element(aNs + "rPr");
                 if (rPr != null)
                 {
                     var sz = rPr.Attribute("sz");
                     if (sz != null && int.TryParse(sz.Value, out var szVal))
                         fontSize = szVal / 100;
-                    bold = rPr.Element(ns + "b") != null;
-                    var solidFill = rPr.Element(ns + "solidFill");
+                    bold = rPr.Element(aNs + "b") != null;
+                    var solidFill = rPr.Element(aNs + "solidFill");
                     if (solidFill != null)
                     {
-                        var srgb = solidFill.Element(ns + "srgbClr");
+                        var srgb = solidFill.Element(aNs + "srgbClr");
                         if (srgb != null)
                         {
                             var val = srgb.Attribute("val");
@@ -213,21 +216,96 @@ public class ResourceFileController : AbpControllerBase
                     }
                 }
 
-                texts.Add(new SlideTextDto
-                {
-                    Text = text,
-                    FontSize = fontSize,
-                    Bold = bold,
-                    Color = color
-                });
+                texts.Add(new SlideTextDto { Text = text, FontSize = fontSize, Bold = bold, Color = color });
             }
 
-            return new JsonResult(new { slideNumber, texts });
+            // 提取图片引用：从 slide XML 中收集 r:embed，再查 _rels 解析为媒体路径
+            var embedIds = new HashSet<string>();
+            foreach (var blip in doc.Descendants(aNs + "blip"))
+            {
+                var embed = blip.Attribute(rNs + "embed");
+                if (embed != null && !string.IsNullOrEmpty(embed.Value))
+                    embedIds.Add(embed.Value);
+            }
+
+            var images = new List<string>();
+            if (embedIds.Count > 0)
+            {
+                var relsEntry = archive.GetEntry($"ppt/slides/_rels/slide{slideNumber}.xml.rels");
+                if (relsEntry != null)
+                {
+                    using var relsStream = relsEntry.Open();
+                    var relsDoc = XDocument.Load(relsStream);
+                    var relNs = XNamespace.Get("http://schemas.openxmlformats.org/package/2006/relationships");
+                    foreach (var rel in relsDoc.Descendants(relNs + "Relationship"))
+                    {
+                        var id = rel.Attribute("Id")?.Value;
+                        var target = rel.Attribute("Target")?.Value;
+                        if (id != null && target != null && embedIds.Contains(id))
+                        {
+                            // target 是相对路径，如 "../media/image1.png"
+                            // 转为绝对路径: "ppt/media/image1.png"
+                            var resolved = ResolveRelativePath($"ppt/slides", target);
+                            if (archive.GetEntry(resolved) != null)
+                                images.Add(resolved);
+                        }
+                    }
+                }
+            }
+
+            return new JsonResult(new { slideNumber, texts, images });
         }
         catch
         {
             return BadRequest(new { message = "幻灯片提取失败" });
         }
+    }
+
+    /// <summary>
+    /// 获取 PPTX 内嵌媒体文件（图片等），路径格式: ppt/media/image1.png
+    /// </summary>
+    [HttpGet("{resourceId}/media/{*mediaPath}")]
+    [AllowAnonymous]
+    public virtual async Task<IActionResult> GetMedia(Guid resourceId, string mediaPath)
+    {
+        var fullPath = await GetResourceFullPathAsync(resourceId);
+        if (fullPath == null)
+            return NotFound(new { message = "资源文件不存在" });
+
+        var ext = Path.GetExtension(fullPath)?.ToLowerInvariant();
+        if (ext != ".pptx")
+            return BadRequest(new { message = "仅支持 PPTX 文件" });
+
+        try
+        {
+            using var archive = ZipFile.OpenRead(fullPath);
+            var entry = archive.GetEntry(mediaPath);
+            if (entry == null)
+                return NotFound(new { message = "媒体文件不存在" });
+
+            var contentType = GetContentType(mediaPath);
+            using var stream = entry.Open();
+            var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+            return File(ms.ToArray(), contentType);
+        }
+        catch
+        {
+            return BadRequest(new { message = "媒体提取失败" });
+        }
+    }
+
+    private static string ResolveRelativePath(string baseDir, string target)
+    {
+        var parts = target.Split('/');
+        var baseParts = baseDir.Split('/').ToList();
+        foreach (var part in parts)
+        {
+            if (part == "..") baseParts.RemoveAt(baseParts.Count - 1);
+            else baseParts.Add(part);
+        }
+        return string.Join("/", baseParts);
     }
 
     private async Task<string?> GetResourceFullPathAsync(Guid resourceId)

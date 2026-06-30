@@ -89,7 +89,8 @@ public class KnowledgeResourceAppService : KnowledgeHubAppService, IKnowledgeRes
             Difficulty = input.Difficulty,
             SortOrder = input.SortOrder,
             Tags = input.Tags,
-            ParentId = input.ParentId
+            ParentId = input.ParentId,
+            ResourceId = input.ResourceId
         };
 
         await _knowledgeResourceRepository.InsertAsync(resource);
@@ -109,6 +110,7 @@ public class KnowledgeResourceAppService : KnowledgeHubAppService, IKnowledgeRes
         resource.SortOrder = input.SortOrder;
         resource.Tags = input.Tags;
         resource.ParentId = input.ParentId;
+        resource.ResourceId = input.ResourceId;
 
         await _knowledgeResourceRepository.UpdateAsync(resource);
         return MapToDto(resource);
@@ -134,7 +136,8 @@ public class KnowledgeResourceAppService : KnowledgeHubAppService, IKnowledgeRes
             Difficulty = resource.Difficulty,
             SortOrder = resource.SortOrder,
             Tags = resource.Tags,
-            ParentId = resource.ParentId
+            ParentId = resource.ParentId,
+            ResourceId = resource.ResourceId
         };
     }
 }
