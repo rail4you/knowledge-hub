@@ -196,6 +196,7 @@ export class ChapterResourceComponent implements OnInit {
       sortOrder: 0,
       tags: resource.keywords ?? '',
       parentId: null,
+      resourceId: resource.id,
     };
 
     this.knowledgeResourceService.create(dto).subscribe({

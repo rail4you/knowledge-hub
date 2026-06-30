@@ -94,7 +94,7 @@
             <div class="chapter-header__right">
               <span class="chapter-stat">
                 <span nz-icon nzType="bulb" nzTheme="outline"></span>
-                {{ currentResources().length }} 知识点
+                {{ currentResources().length }} 学习资源
               </span>
               <span class="chapter-stat">
                 <span nz-icon nzType="form" nzTheme="outline"></span>
@@ -141,70 +141,91 @@
                   <nz-spin nzSimple nzSize="default"></nz-spin>
                 </div>
               } @else if (currentResources().length === 0) {
-                <!-- P1-21：空状态提示。明确说明"教师尚未配置"——避免学生以为系统出错。 -->
                 <div class="empty-state">
                   <span nz-icon nzType="bulb" nzTheme="outline" class="empty-icon"></span>
-                  <p class="empty-title">本章暂无知识点资源</p>
-                  <p class="empty-hint">老师还没有为本章配置知识点，请联系老师或耐心等待更新</p>
+                  <p class="empty-title">本章暂无学习资源</p>
+                  <p class="empty-hint">老师还没有为本章配置资源，请联系老师或耐心等待更新</p>
                 </div>
               } @else {
-                <div class="resources-grid">
-                  <aside class="resource-list">
-                    @for (r of currentResources(); track trackResource($index, r)) {
-                      <button
-                        class="resource-item"
-                        [class.is-active]="currentResource()?.id === r.id"
-                        (click)="selectResource(r)"
-                      >
-                        <div class="resource-item__head">
-                          <span class="resource-item__name">{{ r.name }}</span>
+                <div class="resources-panel">
+                  <h4 class="resources-panel__title">
+                    <span nz-icon nzType="bulb" nzTheme="outline"></span>
+                    学习资源
+                    <span class="resources-panel__count">{{ currentResources().length }}</span>
+                  </h4>
+                  <div class="resources-list">
+                    @for (r of pagedResources(); track trackResource($index, r)) {
+                      <div class="resource-card">
+                        <div class="resource-card__head">
+                          <span class="resource-card__name">{{ r.name }}</span>
                           <span
-                            class="resource-item__importance"
+                            class="resource-card__importance"
                             [style.background]="importanceColor(r.importanceLevel) + '22'"
                             [style.color]="importanceColor(r.importanceLevel)"
                           >
                             {{ importanceLabel(r.importanceLevel) }}
                           </span>
                         </div>
-                        <p class="resource-item__excerpt">{{ contentExcerpt(r.content) || r.description || '暂无描述' }}</p>
-                        <div class="resource-item__meta">
+                        @if (r.description) {
+                          <p class="resource-card__desc">{{ r.description }}</p>
+                        }
+                        @if (r.content) {
+                          <div class="resource-card__content">
+                            @if (r.resourceId) {
+                              <div class="resource-card__file-info">
+                                <span nz-icon nzType="paper-clip" nzTheme="outline"></span>
+                                <span>可预览/下载</span>
+                              </div>
+                            } @else {
+                              <pre>{{ r.content }}</pre>
+                            }
+                          </div>
+                        }
+                        <div class="resource-card__meta">
                           <span>
                             <span nz-icon nzType="thunderbolt" nzTheme="outline"></span>
                             {{ difficultyLabel(r.difficulty) }}
                           </span>
+                          @if (r.resourceId) {
+                            <div class="resource-card__actions">
+                              <button
+                                class="file-action-btn file-action-btn--preview"
+                                (click)="previewResource(r)"
+                              >
+                                <span nz-icon nzType="eye" nzTheme="outline"></span>
+                                <span>预览</span>
+                              </button>
+                              <button
+                                class="file-action-btn file-action-btn--download"
+                                (click)="downloadResource(r)"
+                              >
+                                <span nz-icon nzType="download" nzTheme="outline"></span>
+                                <span>下载</span>
+                              </button>
+                            </div>
+                          }
                         </div>
-                      </button>
-                    }
-                  </aside>
-                  <div class="resource-detail">
-                    @if (currentResource(); as r) {
-                      <h3 class="resource-detail__title">{{ r.name }}</h3>
-                      <div class="resource-detail__meta">
-                        <span
-                          class="resource-detail__chip"
-                          [style.background]="importanceColor(r.importanceLevel) + '22'"
-                          [style.color]="importanceColor(r.importanceLevel)"
-                        >
-                          {{ importanceLabel(r.importanceLevel) }}知识点
-                        </span>
-                        <span class="resource-detail__chip resource-detail__chip--neutral">
-                          <span nz-icon nzType="thunderbolt" nzTheme="outline"></span>
-                          难度：{{ difficultyLabel(r.difficulty) }}
-                        </span>
-                      </div>
-                      @if (r.description) {
-                        <p class="resource-detail__desc">{{ r.description }}</p>
-                      }
-                      <div class="resource-detail__content">
-                        @if (r.content) {
-                          <pre>{{ r.content }}</pre>
-                        } @else {
-                          <p class="resource-detail__empty">该知识点暂无详细内容</p>
-                        }
                       </div>
                     }
                   </div>
                 </div>
+
+                <!-- 分页 -->
+                @if (currentResources().length > resourcePageSize()) {
+                  <div class="resources-pagination">
+                    <nz-pagination
+                      [nzPageIndex]="resourcePage()"
+                      [nzPageSize]="resourcePageSize()"
+                      [nzTotal]="currentResources().length"
+                      [nzSize]="'small'"
+                      [nzShowSizeChanger]="false"
+                      (nzPageIndexChange)="onResourcePageChange($event)"
+                    ></nz-pagination>
+                  </div>
+                }
+
+                <!-- 文件预览组件 -->
+                <app-file-preview #filePreview></app-file-preview>
               }
             </div>
           }

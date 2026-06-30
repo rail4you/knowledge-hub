@@ -17,6 +17,7 @@ public class KnowledgeResource : FullAuditedEntity<Guid>
     public string? Tags { get; set; }
     
     public Guid? ParentId { get; set; }
+    public Guid? ResourceId { get; set; }
     public float[]? Embedding { get; set; }
     
     public KnowledgeResource? Parent { get; set; }

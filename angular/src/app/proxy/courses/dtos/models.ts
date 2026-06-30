@@ -26,12 +26,22 @@ export interface ChapterImportResultDto {
 
 export interface ChapterResourceDto extends EntityDto<string> {
   chapterId?: string;
-  knowledgeResourceId?: string | null;
+  resourceId?: string;
+  displayName?: string | null;
+  sortOrder?: number;
+  resourceName?: string | null;
+  originalFileName?: string | null;
+  fileExtension?: string | null;
+  fileSize?: number | null;
+  resourceType?: number;
+  isDownloadable?: boolean;
 }
 
 export interface CreateChapterResourceDto {
   chapterId?: string;
-  knowledgeResourceId?: string;
+  resourceId?: string;
+  displayName?: string | null;
+  sortOrder?: number;
 }
 
 export interface ChapterOrderDto {
@@ -110,6 +120,7 @@ export interface CreateUpdateKnowledgeResourceDto {
   sortOrder?: number;
   tags?: string | null;
   parentId?: string | null;
+  resourceId?: string | null;
 }
 
 export interface GetAvailableStudentsInput extends PagedAndSortedResultRequestDto {
@@ -138,6 +149,7 @@ export interface KnowledgeResourceDto extends FullAuditedEntityDto<string> {
   sortOrder?: number;
   tags?: string | null;
   parentId?: string | null;
+  resourceId?: string | null;
   children?: KnowledgeResourceDto[];
 }
 

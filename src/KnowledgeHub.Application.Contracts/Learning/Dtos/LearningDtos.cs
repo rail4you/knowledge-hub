@@ -79,6 +79,8 @@ public class LearningDashboardDto
     public int InProgressCourses { get; set; }
     public int NotStartedCourses { get; set; }
     public decimal TotalLearningTime { get; set; }
+    public int TotalExerciseRecords { get; set; }
+    public int TotalResourceActivities { get; set; }
     public decimal AverageProgress { get; set; }
     public List<string> DailyTimeLabels { get; set; } = new();
     public List<decimal> DailyTimeValues { get; set; } = new();

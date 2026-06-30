@@ -67,6 +67,8 @@ export interface LearningDashboardDto {
   inProgressCourses?: number;
   notStartedCourses?: number;
   totalLearningTime?: number;
+  totalExerciseRecords?: number;
+  totalResourceActivities?: number;
   averageProgress?: number;
   dailyTimeLabels?: string[];
   dailyTimeValues?: number[];

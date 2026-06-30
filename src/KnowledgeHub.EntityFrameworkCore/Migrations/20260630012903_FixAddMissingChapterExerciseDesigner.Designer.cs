@@ -3,6 +3,7 @@ using System;
 using KnowledgeHub.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Volo.Abp.EntityFrameworkCore;
@@ -12,9 +13,11 @@ using Volo.Abp.EntityFrameworkCore;
 namespace KnowledgeHub.Migrations
 {
     [DbContext(typeof(KnowledgeHubDbContext))]
-    partial class KnowledgeHubDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260630012903_FixAddMissingChapterExerciseDesigner")]
+    partial class FixAddMissingChapterExerciseDesigner
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -320,44 +323,6 @@ namespace KnowledgeHub.Migrations
                     b.ToTable("AppChapters", (string)null);
                 });
 
-            modelBuilder.Entity("KnowledgeHub.Courses.ChapterResource", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ChapterId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreationTime")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("CreationTime");
-
-                    b.Property<string>("DisplayName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<Guid>("ResourceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid?>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("TenantId");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChapterId");
-
-                    b.HasIndex("ResourceId");
-
-                    b.HasIndex("ChapterId", "ResourceId")
-                        .IsUnique();
-
-                    b.ToTable("AppChapterResources", (string)null);
-                });
-
             modelBuilder.Entity("KnowledgeHub.Courses.Course", b =>
                 {
                     b.Property<Guid>("Id")
@@ -528,9 +493,6 @@ namespace KnowledgeHub.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.Property<Guid?>("ParentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ResourceId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("SortOrder")

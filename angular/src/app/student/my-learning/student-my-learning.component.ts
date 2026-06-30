@@ -93,8 +93,8 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
     { label: '平均进度', value: 0, suffix: '%', icon: 'rise', color: '#0c4cb8' },
   ]);
 
-  /** 学习曲线总分钟 */
-  readonly totalCurveMinutes = computed(() =>
+  /** 学习曲线总次数 */
+  readonly totalCurveCount = computed(() =>
     this.learningCurve().reduce((s, p) => s + p.minutes, 0)
   );
 
@@ -195,7 +195,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
         textStyle: { color: '#1e293b', fontSize: 13 },
         formatter: (params: any) => {
           const p = params[0];
-          return `<strong>${p.axisValue}</strong><br/>学习时长：<b style="color:#1e6ce8">${p.value} 分钟</b>`;
+          return `<strong>${p.axisValue}</strong><br/>学习活动：<b style="color:#1e6ce8">${p.value} 次</b>`;
         },
       },
       grid: { top: 30, right: 20, bottom: 30, left: 50 },
@@ -209,15 +209,16 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
       },
       yAxis: {
         type: 'value',
-        name: '分钟',
+        name: '次',
         nameTextStyle: { color: '#94a3b8', fontSize: 11 },
         min: 0,
-        max: Math.ceil(maxVal * 1.2),
+        max: Math.ceil(maxVal * 1.2) || 10,
+        minInterval: 1,
         splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
         axisLabel: { color: '#94a3b8', fontSize: 11 },
       },
       series: [{
-        name: '学习时长',
+        name: '学习活动',
         type: 'line',
         data: values,
         smooth: true,
@@ -277,8 +278,8 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
     this.stats.set([
       { label: '总课程数', value: dash.totalCourses || 0, suffix: '门', icon: 'book', color: '#1e6ce8' },
       { label: '已完成', value: dash.completedCourses || 0, suffix: '门', icon: 'check-circle', color: '#10b981' },
-      { label: '总学时', value: totalHours, suffix: 'h', icon: 'clock-circle', color: '#06b6d4' },
-      { label: '平均进度', value: Math.round(dash.averageProgress || 0), suffix: '%', icon: 'rise', color: '#0c4cb8' },
+      { label: '习题练习', value: dash.totalExerciseRecords || 0, suffix: '次', icon: 'form', color: '#0891b2', hint: '已提交的习题' },
+      { label: '资源学习', value: dash.totalResourceActivities || 0, suffix: '次', icon: 'folder-open', color: '#8b5cf6', hint: '预览/下载学习资料' },
     ]);
   }
 
@@ -286,16 +287,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
     const labels = dash.dailyTimeLabels || [];
     const values = dash.dailyTimeValues || [];
     if (labels.length === 0) {
-      // 演示数据
-      this.learningCurve.set([
-        { label: '周一', minutes: 35 },
-        { label: '周二', minutes: 52 },
-        { label: '周三', minutes: 28 },
-        { label: '周四', minutes: 64 },
-        { label: '周五', minutes: 45 },
-        { label: '周六', minutes: 80 },
-        { label: '周日', minutes: 72 },
-      ]);
+      this.learningCurve.set([]);
       return;
     }
     this.learningCurve.set(labels.map((l, i) => ({

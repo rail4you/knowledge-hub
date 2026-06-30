@@ -175,10 +175,17 @@ public class ChapterAppService : ApplicationService, IChapterAppService
                 ? list.Select(r => new KnowledgeResourceDto
                 {
                     Id = r.Id,
+                    CourseId = r.CourseId,
+                    ChapterId = r.ChapterId,
                     Name = r.Name,
                     Description = r.Description,
+                    Content = r.Content,
                     Difficulty = r.Difficulty,
-                    ImportanceLevel = r.ImportanceLevel
+                    ImportanceLevel = r.ImportanceLevel,
+                    SortOrder = r.SortOrder,
+                    Tags = r.Tags,
+                    ParentId = r.ParentId,
+                    ResourceId = r.ResourceId
                 }).ToList()
                 : new List<KnowledgeResourceDto>())
         }).ToList();

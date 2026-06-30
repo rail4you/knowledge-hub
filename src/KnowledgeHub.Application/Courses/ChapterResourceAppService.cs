@@ -7,6 +7,7 @@ using KnowledgeHub.Resources;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Courses;
 
@@ -25,28 +26,37 @@ public class ChapterResourceAppService : KnowledgeHubAppService, IChapterResourc
 
     public async Task<List<ChapterResourceDto>> GetByChapterAsync(Guid chapterId)
     {
-        var joins = await (
-            from cr in await _chapterResourceRepository.GetQueryableAsync()
-            join r in await _resourceRepository.GetQueryableAsync() on cr.ResourceId equals r.Id
-            where cr.ChapterId == chapterId
-            orderby cr.SortOrder
-            select new ChapterResourceDto
-            {
-                Id = cr.Id,
-                ChapterId = cr.ChapterId,
-                ResourceId = cr.ResourceId,
-                DisplayName = cr.DisplayName,
-                SortOrder = cr.SortOrder,
-                ResourceName = r.Name,
-                OriginalFileName = r.OriginalFileName,
-                FileExtension = r.FileExtension,
-                FileSize = r.FileSize,
-                ResourceType = r.ResourceType,
-                IsDownloadable = r.IsDownloadable,
-            }
-        ).ToListAsync();
+        var chapterResources = await _chapterResourceRepository.GetQueryableAsync();
 
-        return joins;
+        // 禁用多租户过滤器，确保跨租户关联的资源也能被查询到
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var resources = await _resourceRepository.GetQueryableAsync();
+
+            var joins = await (
+                from cr in chapterResources
+                join r in resources on cr.ResourceId equals r.Id into crGroup
+                from r in crGroup.DefaultIfEmpty()
+                where cr.ChapterId == chapterId && r != null
+                orderby cr.SortOrder
+                select new ChapterResourceDto
+                {
+                    Id = cr.Id,
+                    ChapterId = cr.ChapterId,
+                    ResourceId = cr.ResourceId,
+                    DisplayName = cr.DisplayName,
+                    SortOrder = cr.SortOrder,
+                    ResourceName = r != null ? r.Name : null,
+                    OriginalFileName = r != null ? r.OriginalFileName : null,
+                    FileExtension = r != null ? r.FileExtension : null,
+                    FileSize = r != null ? r.FileSize : null,
+                    ResourceType = r != null ? r.ResourceType : Resources.Enums.ResourceType.Document,
+                    IsDownloadable = r != null && r.IsDownloadable,
+                }
+            ).ToListAsync();
+
+            return joins;
+        }
     }
 
     public async Task<ChapterResourceDto> CreateAsync(CreateChapterResourceDto input)

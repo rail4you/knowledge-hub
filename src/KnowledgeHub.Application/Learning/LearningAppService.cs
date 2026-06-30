@@ -19,6 +19,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
     private readonly IRepository<StudentCourse> _studentCourseRepository;
     private readonly IRepository<LearningProgress> _progressRepository;
     private readonly IRepository<KnowledgeMastery> _masteryRepository;
+    private readonly IRepository<StudentExerciseRecord> _exerciseRecordRepository;
     private readonly ICourseRepository _courseRepository;
     private readonly IRepository<KnowledgeResource> _knowledgeResourceRepository;
     private readonly ICurrentUser _currentUser;
@@ -27,6 +28,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
         IRepository<StudentCourse> studentCourseRepository,
         IRepository<LearningProgress> progressRepository,
         IRepository<KnowledgeMastery> masteryRepository,
+        IRepository<StudentExerciseRecord> exerciseRecordRepository,
         ICourseRepository courseRepository,
         IRepository<KnowledgeResource> knowledgeResourceRepository,
         ICurrentUser currentUser)
@@ -34,6 +36,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
         _studentCourseRepository = studentCourseRepository;
         _progressRepository = progressRepository;
         _masteryRepository = masteryRepository;
+        _exerciseRecordRepository = exerciseRecordRepository;
         _courseRepository = courseRepository;
         _knowledgeResourceRepository = knowledgeResourceRepository;
         _currentUser = currentUser;
@@ -45,24 +48,57 @@ public class LearningAppService : ApplicationService, ILearningAppService
         
         var studentCourses = await _studentCourseRepository.GetListAsync(x => x.StudentId == studentId);
         
+        // 从 LearningProgress 表计算真实学习时长（分钟）
+        var allProgress = await _progressRepository.GetListAsync(x => x.StudentId == studentId);
+        var totalMinutes = allProgress.Sum(x => (decimal)x.TimeSpent.TotalMinutes);
+
+        // 统计习题练习次数和资源学习次数
+        var exerciseRecords = await _exerciseRecordRepository.GetListAsync(x => x.StudentId == studentId);
+        var totalExerciseCount = exerciseRecords.Count;
+        var totalResourceCount = allProgress.Count(x => x.ResourceId.HasValue);
+        
         var dashboard = new LearningDashboardDto
         {
             TotalCourses = studentCourses.Count,
             CompletedCourses = studentCourses.Count(x => x.Status == StudentCourseStatus.Completed),
             InProgressCourses = studentCourses.Count(x => x.Status == StudentCourseStatus.InProgress),
             NotStartedCourses = studentCourses.Count(x => x.Status == StudentCourseStatus.Enrolled),
-            TotalLearningTime = studentCourses.Sum(x => (decimal)x.Progress) / 100 * 60,
+            TotalLearningTime = totalMinutes,
+            TotalExerciseRecords = totalExerciseCount,
+            TotalResourceActivities = totalResourceCount,
             AverageProgress = studentCourses.Count > 0 
                 ? studentCourses.Average(x => x.Progress) 
                 : 0
         };
         
+        // 最近 7 天每日学习活动次数（习题提交 + 资源学习）
+        var today = DateTime.UtcNow.Date;
         var last7Days = Enumerable.Range(0, 7)
-            .Select(offset => DateTime.UtcNow.AddDays(-offset).ToString("yyyy-MM-dd"))
+            .Select(offset => today.AddDays(-offset))
+            .Reverse()
             .ToList();
         
-        dashboard.DailyTimeLabels = last7Days;
-        dashboard.DailyTimeValues = last7Days.Select(_ => 0m).ToList();
+        dashboard.DailyTimeLabels = last7Days
+            .Select(d => d.ToString("MM-dd"))
+            .ToList();
+
+        // 按日期统计学习活动次数：习题提交 + 资源学习
+        var exerciseByDay = exerciseRecords
+            .GroupBy(r => r.CreationTime.Date)
+            .ToDictionary(g => g.Key, g => g.Count());
+        var progressByDay = allProgress
+            .GroupBy(p => p.LastAccessAt.Date)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        dashboard.DailyTimeValues = last7Days
+            .Select(day =>
+            {
+                var count = 0;
+                exerciseByDay.TryGetValue(day, out var exCount);
+                progressByDay.TryGetValue(day, out var pCount);
+                return (decimal)(exCount + pCount);
+            })
+            .ToList();
         
         dashboard.KnowledgeDimensions = new List<KnowledgeDimensionDto>
         {

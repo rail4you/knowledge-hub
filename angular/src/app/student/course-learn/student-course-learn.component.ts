@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -15,7 +15,9 @@ import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { RestService } from '@abp/ng.core';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { LearningService } from '../../proxy/learning/learning.service';
@@ -26,6 +28,7 @@ import type { ExerciseDto } from '../../proxy/exams/dtos/models';
 import type { StudentExerciseRecordDto } from '../../proxy/learning/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { SelfAssessment } from '../../proxy/learning/enums/self-assessment.enum';
+import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 
 type TabKey = 'resources' | 'exercises' | 'submissions';
 
@@ -64,6 +67,8 @@ interface FlatChapter {
     NzTagModule,
     NzAlertModule,
     NzDividerModule,
+    NzPaginationModule,
+    FilePreviewComponent,
   ],
   templateUrl: './student-course-learn.component.html',
   styleUrls: ['./student-course-learn.component.scss'],
@@ -77,7 +82,10 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   private readonly learningService = inject(LearningService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly recordService = inject(StudentExerciseRecordService);
+  private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
+
+  @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
   readonly loading = signal(true);
   readonly course = signal<CourseDetailDto | null>(null);
@@ -90,8 +98,15 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
   // 资源
   readonly currentResources = signal<KnowledgeResourceDto[]>([]);
-  readonly currentResource = signal<KnowledgeResourceDto | null>(null);
   readonly resourcesLoading = signal(false);
+
+  // 预览状态
+  readonly previewResourceId = signal<string | null>(null);
+  readonly previewTitle = signal<string>('');
+
+  // 分页
+  readonly resourcePage = signal(1);
+  readonly resourcePageSize = signal(10);
 
   // 习题
   readonly currentExercises = signal<ExerciseDto[]>([]);
@@ -296,7 +311,6 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.exercisesLoading.set(true);
     this.currentResources.set([]);
     this.currentExercises.set([]);
-    this.currentResource.set(null);
     this.currentExercise.set(null);
     this.submittedRecord.set(null);
     this.hasViewedAnswer.set(false);
@@ -306,9 +320,6 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     const chapter = this.findChapter(this.chapters(), chapterId);
     const resources = (chapter?.knowledgeResources || []) as KnowledgeResourceDto[];
     this.currentResources.set(resources);
-    if (resources.length > 0) {
-      this.currentResource.set(resources[0]);
-    }
     this.resourcesLoading.set(false);
 
     // 拉取章节习题
@@ -374,9 +385,78 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.activeTab.set(tab);
   }
 
-  // === 资源 ===
-  selectResource(r: KnowledgeResourceDto) {
-    this.currentResource.set(r);
+  previewResource(r: KnowledgeResourceDto) {
+    if (!r.resourceId) return;
+    const course = this.course();
+    const chapter = this.currentChapter();
+    // 使用共享的文件预览组件
+    this.filePreview.open(
+      r.resourceId,
+      r.name || '预览',
+      '',
+      0
+    );
+    // 记录学习进度
+    if (course?.id) {
+      this.learningService.recordProgress({
+        courseId: course.id,
+        chapterId: chapter?.id,
+        resourceId: r.resourceId,
+        progress: this.courseProgress(),
+        additionalMinutes: 1,
+      } as any).subscribe();
+      this.message.success('已记录学习数据');
+    }
+  }
+
+  downloadResource(r: KnowledgeResourceDto) {
+    if (!r.resourceId) return;
+    const course = this.course();
+    const chapter = this.currentChapter();
+    // 使用 RestService 下载（带 auth header + blob 响应）
+    this.restService.request<any, Blob>({
+      method: 'GET',
+      url: `/api/resource-file/${r.resourceId}/download`,
+      responseType: 'blob',
+    }, { apiName: 'KnowledgeHub' }).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = r.name || 'download';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        // 记录学习进度
+        if (course?.id) {
+          this.learningService.recordProgress({
+            courseId: course.id,
+            chapterId: chapter?.id,
+            resourceId: r.resourceId,
+            progress: this.courseProgress(),
+            additionalMinutes: 2,
+          } as any).subscribe();
+          this.message.success('已记录学习数据');
+        }
+      },
+      error: () => {
+        this.message.error('下载失败，请稍后重试');
+      },
+    });
+  }
+
+  // 分页辅助
+  readonly pagedResources = computed(() => {
+    const page = this.resourcePage();
+    const size = this.resourcePageSize();
+    const list = this.currentResources();
+    const start = (page - 1) * size;
+    return list.slice(start, start + size);
+  });
+
+  onResourcePageChange(page: number) {
+    this.resourcePage.set(page);
   }
 
   // === 习题 ===
@@ -468,6 +548,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.learningService.recordProgress({
       courseId: course.id,
       chapterId: chapter.id,
+      progress: this.courseProgress(),
       additionalMinutes: 1,
     } as any).subscribe();
 

@@ -16,6 +16,7 @@ public class KnowledgeResourceDto : FullAuditedEntityDto<Guid>
     public int SortOrder { get; set; }
     public string? Tags { get; set; }
     public Guid? ParentId { get; set; }
+    public Guid? ResourceId { get; set; }
     public List<KnowledgeResourceDto> Children { get; set; } = new();
 }
 
@@ -31,4 +32,5 @@ public class CreateUpdateKnowledgeResourceDto
     public int SortOrder { get; set; }
     public string? Tags { get; set; }
     public Guid? ParentId { get; set; }
+    public Guid? ResourceId { get; set; }
 }

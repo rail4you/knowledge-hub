@@ -63,8 +63,21 @@ public static class CourseDbModelCreatingExtensions
             b.HasIndex(x => x.CourseId);
             b.HasIndex(x => x.ChapterId);
             b.HasIndex(x => x.ParentId);
+            b.HasIndex(x => x.ResourceId);
             
             b.HasOne(x => x.Parent).WithMany(x => x.Children).HasForeignKey(x => x.ParentId);
+        });
+        
+        builder.Entity<ChapterResource>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ChapterResources", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.DisplayName).HasMaxLength(256);
+
+            b.HasIndex(x => x.ChapterId);
+            b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => new { x.ChapterId, x.ResourceId }).IsUnique();
         });
     }
 }
