@@ -54,7 +54,7 @@ export class FilePreviewComponent {
   unsupported = signal(false);
 
   // 在线预览大小上限：超过此大小提示用户下载。
-  // docx/pdf 有上限因为它会解析 DOM，pptx 已改为流式播放不设上限
+  // pptx 不设上限（服务端按需提取单张幻灯片）
   private static readonly PREVIEW_SIZE_LIMIT: Partial<Record<FileType, number>> = {
     text: 2 * 1024 * 1024,         // 2 MB
     pdf: 25 * 1024 * 1024,         // 25 MB
@@ -176,12 +176,8 @@ export class FilePreviewComponent {
 
     const type = this.fileType;
 
-    // Video, audio, and pptx: use preview endpoint directly as the source URL.
-    // Using the API endpoint (proxied through /api) ensures:
-    // 1. Auth cookie is forwarded through the Angular dev proxy
-    // 2. Proper Content-Type is returned
-    // 3. No cross-origin or CORS issues (same origin via proxy)
-    // PPTX is treated as streamed because large files can exceed fetch/ArrayBuffer limits.
+    // Video, audio, and pptx: use direct server endpoint without pre-download.
+    // PPTX viewer loads slides on-demand from /api/resource-file/{id}/slides/{n}
     if (type === 'video' || type === 'audio' || type === 'pptx') {
       const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
       this.fileUrl.set(previewUrl);

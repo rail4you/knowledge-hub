@@ -31,21 +31,28 @@
     <div class="slide-stage" [style.transform]="'scale(' + zoom() + ')'" [style.transformOrigin]="'top center'">
       @if (currentSlide(); as slide) {
         <div class="slide-card">
-          @for (t of slide.texts; track $index) {
-            <p
-              class="slide-text"
-              [style.fontSize.px]="t.fontSize"
-              [style.fontWeight]="t.bold ? 'bold' : 'normal'"
-              [style.color]="t.color"
-            >{{ t.text }}</p>
-          }
-          @if (slide.texts.length === 0 && !slide.error) {
-            <p class="slide-text" style="color: #999; font-style: italic;">
-              （此幻灯片无可提取的文字内容）
-            </p>
-          }
-          @if (slide.error) {
-            <p class="slide-text" style="color: #ff4d4f;">{{ slide.error }}</p>
+          @if (!slide.loaded) {
+            <div class="slide-loading">
+              <nz-spin nzSimple></nz-spin>
+              <span>加载中…</span>
+            </div>
+          } @else {
+            @for (t of slide.texts; track $index) {
+              <p
+                class="slide-text"
+                [style.fontSize.px]="t.fontSize"
+                [style.fontWeight]="t.bold ? 'bold' : 'normal'"
+                [style.color]="t.color"
+              >{{ t.text }}</p>
+            }
+            @if (slide.texts.length === 0 && !slide.error) {
+              <p class="slide-text" style="color: #999; font-style: italic;">
+                （此幻灯片无可提取的文字内容）
+              </p>
+            }
+            @if (slide.error) {
+              <p class="slide-text" style="color: #ff4d4f;">{{ slide.error }}</p>
+            }
           }
         </div>
       }

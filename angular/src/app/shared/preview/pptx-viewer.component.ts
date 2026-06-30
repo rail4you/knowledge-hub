@@ -10,6 +10,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 
 interface SlideText {
   text: string;
@@ -18,26 +19,27 @@ interface SlideText {
   color: string;
 }
 
-interface Slide {
+interface SlideData {
   index: number;
   texts: SlideText[];
+  loaded: boolean;
   error?: string;
 }
 
 @Component({
   selector: 'app-pptx-viewer',
   standalone: true,
-  imports: [CommonModule, NzButtonModule, NzIconModule],
+  imports: [CommonModule, NzButtonModule, NzIconModule, NzSpinModule],
   templateUrl: './pptx-viewer.component.html',
   styleUrls: ['./pptx-viewer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PptxViewerComponent implements OnDestroy {
-  data = input<ArrayBuffer>();
-  streamUrl = input('');
+  /** Resource ID to load slides from server-side extraction */
+  resourceId = input<string>('');
   fileName = input('');
 
-  readonly slides = signal<Slide[]>([]);
+  readonly slides = signal<SlideData[]>([]);
   readonly currentIndex = signal(0);
   readonly isLoading = signal(true);
   readonly error = signal('');
@@ -54,19 +56,15 @@ export class PptxViewerComponent implements OnDestroy {
     const total = this.slideCount();
     const current = this.currentIndex();
     const maxVisible = 10;
-
     if (total <= maxVisible) {
       return Array.from({ length: total }, (_, i) => i);
     }
-
     const half = Math.floor(maxVisible / 2);
     let start = Math.max(0, current - half);
     let end = Math.min(total - 1, start + maxVisible - 1);
-
     if (end - start < maxVisible - 1) {
       start = Math.max(0, end - maxVisible + 1);
     }
-
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   });
 
@@ -80,16 +78,9 @@ export class PptxViewerComponent implements OnDestroy {
 
   constructor() {
     effect(() => {
-      // Stream URL mode (preferred for large files): fetch from URL directly
-      const url = this.streamUrl();
-      if (url) {
-        void this.loadFromUrl(url);
-        return;
-      }
-      // ArrayBuffer mode (fallback for smaller files)
-      const d = this.data();
-      if (d?.byteLength > 0) {
-        void this.parseZip(d);
+      const id = this.resourceId();
+      if (id) {
+        void this.loadFromServer(id);
       }
     });
   }
@@ -98,224 +89,95 @@ export class PptxViewerComponent implements OnDestroy {
     this.renderToken++;
   }
 
-  prevSlide() {
-    if (this.canGoPrev()) {
-      this.currentIndex.update(v => v - 1);
-    }
-  }
-
-  nextSlide() {
-    if (this.canGoNext()) {
-      this.currentIndex.update(v => v + 1);
-    }
-  }
-
+  prevSlide() { if (this.canGoPrev()) this.currentIndex.update(v => v - 1); }
+  nextSlide() { if (this.canGoNext()) this.currentIndex.update(v => v + 1); }
   goToSlide(index: number) {
     if (index >= 0 && index < this.slideCount()) {
       this.currentIndex.set(index);
+      // Preload next slides
+      this.preloadNearbySlides(index);
     }
   }
-
-  zoomIn() {
-    this.zoom.update(v => Math.min(2, v + 0.25));
-  }
-
-  zoomOut() {
-    this.zoom.update(v => Math.max(0.5, v - 0.25));
-  }
-
-  resetZoom() {
-    this.zoom.set(1);
-  }
-
+  zoomIn() { this.zoom.update(v => Math.min(2, v + 0.25)); }
+  zoomOut() { this.zoom.update(v => Math.max(0.5, v - 0.25)); }
+  resetZoom() { this.zoom.set(1); }
   pageTrackBy = (index: number) => index;
 
-  private async loadFromUrl(url: string) {
+  private async loadFromServer(resourceId: string) {
     const token = ++this.renderToken;
     this.isLoading.set(true);
     this.error.set('');
-    this.slides.set([]);
-    this.currentIndex.set(0);
 
     try {
-      // Download in chunks to work around Angular proxy ~8MB response truncation.
-      const arrayBuffer = await this.downloadChunked(url, token);
-      if (token === this.renderToken) {
-        console.log(`PPTX downloaded: ${arrayBuffer.byteLength} bytes`);
-        await this.parseZip(arrayBuffer, token);
-      }
+      // Step 1: Get slide count
+      const countResp = await fetch(`/api/resource-file/${resourceId}/slides/count`);
+      if (!countResp.ok) throw new Error('无法获取幻灯片数量');
+      const { count } = await countResp.json() as { count: number };
+
+      if (token !== this.renderToken) return;
+
+      // Initialize empty slide slots
+      const slideArr: SlideData[] = Array.from({ length: count }, (_, i) => ({
+        index: i + 1,
+        texts: [],
+        loaded: false,
+      }));
+      this.slides.set(slideArr);
+      this.isLoading.set(false);
+
+      // Step 2: Load slide 1 immediately
+      await this.loadSlide(resourceId, 1, token);
+
+      // Step 3: Preload nearby slides in background
+      this.preloadNearbySlides(0);
     } catch (err: unknown) {
       if (token === this.renderToken) {
-        console.error('PPTX fetch error:', err);
-        this.error.set(err instanceof Error ? err.message : 'PPTX 加载失败');
+        this.error.set(err instanceof Error ? err.message : '加载失败');
         this.isLoading.set(false);
       }
     }
   }
 
-  /** Download a file in 2MB chunks using HTTP Range requests, then reassemble.
-   *  Avoids potential proxy/delivery truncation for large files.
-   *  Uses Content-Length from HEAD; falls back to fileSize from input if HEAD not supported. */
-  private async downloadChunked(url: string, token: number): Promise<ArrayBuffer> {
-    // Try HEAD first, fall back to known size or single request
-    let totalSize = 0;
+  private async loadSlide(resourceId: string, slideNumber: number, token: number) {
+    const idx = slideNumber - 1;
+    if (idx < 0 || idx >= this.slides().length) return;
+    if (this.slides()[idx].loaded) return;
+
     try {
-      const headResp = await fetch(url, { method: 'HEAD' });
-      if (headResp.ok) {
-        const cl = headResp.headers.get('Content-Length');
-        if (cl) totalSize = parseInt(cl, 10);
-      }
-    } catch {
-      // HEAD may not be supported
-    }
-
-    if (totalSize === 0) {
-      // No Content-Length — try single request (works for small files)
-      const resp = await fetch(url);
+      const resp = await fetch(`/api/resource-file/${resourceId}/slides/${slideNumber}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.arrayBuffer();
-      console.log(`PPTX single-request: ${data.byteLength} bytes`);
-      return data;
-    }
 
-    if (totalSize <= 4 * 1024 * 1024) {
-      // Small file (< 4MB) — single request is fine
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      return resp.arrayBuffer();
-    }
+      const data = await resp.json() as { slideNumber: number; texts: SlideText[] };
+      if (token !== this.renderToken) return;
 
-    // Phase 2: download in 2MB chunks and reassemble
-    const CHUNK = 2 * 1024 * 1024; // 2 MB per chunk
-    const chunks: ArrayBuffer[] = [];
-    let offset = 0;
-
-    while (offset < totalSize) {
-      if (token !== this.renderToken) throw new Error('Cancelled');
-      const end = Math.min(offset + CHUNK - 1, totalSize - 1);
-      const chunkResp = await fetch(url, {
-        headers: { Range: `bytes=${offset}-${end}` },
-        cache: 'no-cache',
+      this.slides.update(arr => {
+        const newArr = [...arr];
+        if (newArr[idx]) {
+          newArr[idx] = { ...newArr[idx], texts: data.texts || [], loaded: true };
+        }
+        return newArr;
       });
-      if (!chunkResp.ok) throw new Error(`HTTP ${chunkResp.status}`);
-      const chunk = await chunkResp.arrayBuffer();
-      chunks.push(chunk);
-      console.log(`PPTX chunk ${offset}-${end} -> ${chunk.byteLength} bytes`);
-      offset = end + 1;
-    }
-
-    // Reassemble into single ArrayBuffer
-    const total = chunks.reduce((s, c) => s + c.byteLength, 0);
-    const result = new Uint8Array(total);
-    let pos = 0;
-    for (const c of chunks) {
-      result.set(new Uint8Array(c), pos);
-      pos += c.byteLength;
-    }
-    return result.buffer;
-  }
-
-  private async parseZip(data: ArrayBuffer, token?: number) {
-    const t = token ?? ++this.renderToken;
-    if (!token) {
-      this.isLoading.set(true);
-      this.error.set('');
-      this.slides.set([]);
-      this.currentIndex.set(0);
-    }
-
-    try {
-      const JSZip = (await import('jszip')).default;
-      const zip = await JSZip.loadAsync(data);
-
-      // Find slide files sorted by number
-      const slideFiles = Object.keys(zip.files)
-        .filter(name => /^ppt\/slides\/slide\d+\.xml$/.test(name))
-        .sort((a, b) => {
-          const numA = parseInt(a.match(/\d+/)?.[0] || '0', 10);
-          const numB = parseInt(b.match(/\d+/)?.[0] || '0', 10);
-          return numA - numB;
-        });
-
-      if (slideFiles.length === 0) {
-        throw new Error('PPTX 文件中未找到幻灯片');
-      }
-
-      const parsedSlides: Slide[] = [];
-      for (const filePath of slideFiles) {
-        if (t !== this.renderToken) return;
-        try {
-          const xml = await zip.file(filePath)?.async('text');
-          if (xml) {
-            const slideNum = parseInt(filePath.match(/\d+/)?.[0] || '0', 10);
-            parsedSlides.push(this.parseSlideXml(xml, slideNum));
-          }
-        } catch {
-          // Skip broken slides
-        }
-      }
-
-      if (t === this.renderToken) {
-        this.slides.set(parsedSlides);
-        this.isLoading.set(false);
-      }
-    } catch (err: unknown) {
-      if (t === this.renderToken) {
-        console.error('PPTX parse error:', err);
-        this.error.set(err instanceof Error ? err.message : 'PPTX 解析失败');
-        this.isLoading.set(false);
-      }
+    } catch {
+      // Silently fail for individual slides; user can retry by navigating
     }
   }
 
-  private parseSlideXml(xml: string, index: number): Slide {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xml, 'text/xml');
+  private preloadNearbySlides(currentIdx: number) {
+    const total = this.slideCount();
+    const toLoad: number[] = [];
 
-    // Check for parse errors
-    const parseError = doc.querySelector('parsererror');
-    if (parseError) {
-      return { index, texts: [], error: '幻灯片 XML 解析错误' };
+    // Load up to 3 slides ahead and 1 behind
+    for (let i = 1; i <= 3; i++) {
+      const next = currentIdx + i;
+      if (next < total) toLoad.push(next + 1); // slide numbers are 1-based
     }
+    const prev = currentIdx - 1;
+    if (prev >= 0) toLoad.push(prev + 1);
 
-    const texts: SlideText[] = [];
-    const textNodes = doc.querySelectorAll('a\\:t, t');
-
-    textNodes.forEach(t => {
-      const text = t.textContent || '';
-      if (!text.trim()) return;
-
-      // Walk up to find formatting
-      let rPr: Element | null = null;
-      let parent = t.parentElement;
-      while (parent && !rPr) {
-        rPr = parent.querySelector('a\\:rPr, rPr');
-        parent = parent.parentElement;
-      }
-
-      let fontSize = 18;
-      let bold = false;
-      let color = '#333333';
-
-      if (rPr) {
-        const sz = rPr.getAttribute('sz');
-        if (sz) fontSize = parseInt(sz, 10) / 100;
-
-        bold = rPr.querySelector('a\\:b, b') !== null;
-
-        const solidFill = rPr.querySelector('a\\:solidFill, solidFill');
-        if (solidFill) {
-          const srgbClr = solidFill.querySelector('a\\:srgbClr, srgbClr');
-          if (srgbClr) {
-            const val = srgbClr.getAttribute('val');
-            if (val) color = '#' + val;
-          }
-        }
-      }
-
-      texts.push({ text, fontSize, bold, color });
-    });
-
-    return { index, texts };
+    const rid = this.resourceId();
+    const token = this.renderToken;
+    for (const sn of toLoad) {
+      void this.loadSlide(rid, sn, token);
+    }
   }
 }
