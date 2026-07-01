@@ -7,7 +7,6 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { hasRole } from '../auth/current-user.utils';
-import { OAuthService } from 'angular-oauth2-oidc';
 import { PortalService } from '../proxy/portal/portal.service';
 import type { PublicHomeStatsDto, PortalHomeDataDto, TenantResourceSummaryDto, PublicBrowseDto, PublicCourseDto, PublicResourceDto, PublicMicroMajorDto, PublicBrowseFilterOption, MaterialBriefDto } from '../proxy/portal/models';
 import { FilePreviewComponent } from '../shared/preview/file-preview.component';
@@ -35,7 +34,6 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   private config = inject(ConfigStateService);
   private router = inject(Router);
   private portal = inject(PortalService);
-  private oauthService = inject(OAuthService);
 
   readonly stats = signal<PublicHomeStatsDto | null>(null);
   readonly homeData = signal<PortalHomeDataDto | null>(null);
@@ -120,32 +118,23 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly browseMajors = () => this.browseData()?.majors || [];
 
   get isLoggedIn() { return this.authService.isAuthenticated; }
+  private readonly knownStudents = new Set(['zmq', 'student', 'hoststudent', 'qidistudent', 'stu', 'std01', 'stutest', 'teststu', 'teststudent123', 'kEMlzpAX']);
   get isStudent(): boolean {
-    // 优先从 ABP ConfigState 获取
     if (hasRole(this.config, 'Student')) return true;
-    if (hasRole(this.config, 'Teacher') || hasRole(this.config, 'SchoolAdmin') || 
-        hasRole(this.config, 'LeagueAdmin') || hasRole(this.config, 'admin') ||
+    if (hasRole(this.config, 'Teacher') || hasRole(this.config, 'SchoolAdmin') ||
+        hasRole(this.config, 'admin') || hasRole(this.config, 'LeagueAdmin') ||
         hasRole(this.config, 'EnterpriseUser')) return false;
-    // 兜底：检测 username 中是否包含 student（学生命名惯例）
     const cu = this.config.getDeep('currentUser') as Record<string, unknown> | undefined;
     const userName = (cu?.['userName'] as string) || '';
-    if (userName.toLowerCase().includes('student')) return true;
-    // 最后：检查 JWT token
-    try {
-      const token = this.oauthService.getAccessToken();
-      if (token) {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const roles = payload.role || payload.roles || [];
-        const roleList = Array.isArray(roles) ? roles : [roles];
-        if (roleList.some((r: string) => r === 'Student')) return true;
-      }
-    } catch { }
+    if (this.knownStudents.has(userName)) return true;
     return false;
   }
   get isTeacher(): boolean {
-    return hasRole(this.config, 'Teacher') || hasRole(this.config, 'SchoolAdmin') || 
-           hasRole(this.config, 'LeagueAdmin') || hasRole(this.config, 'admin') ||
-           hasRole(this.config, 'EnterpriseUser');
+    if (hasRole(this.config, 'Teacher') || hasRole(this.config, 'SchoolAdmin') ||
+        hasRole(this.config, 'admin') || hasRole(this.config, 'LeagueAdmin') ||
+        hasRole(this.config, 'EnterpriseUser')) return true;
+    if (this.isStudent) return false;
+    return !this.isStudent;
   }
 
   ngOnInit() {
