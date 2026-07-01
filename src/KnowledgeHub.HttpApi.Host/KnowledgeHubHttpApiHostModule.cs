@@ -194,8 +194,6 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.AddHttpClient<IEmbeddingService, EmbeddingService>();
         context.Services.AddTransient<ITeachingAgentRuntimeClient, TeachingAgentRuntimeClient>();
         context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();
-        context.Services.AddScoped<ISearchAppService, SearchAppService>();
-        context.Services.AddTransient<IApplicationConfigurationContributor, GrantAllPoliciesContributor>();
         context.Services.AddHttpClient<IMeiliSearchAdminAppService, MeiliSearchAdminAppService>();
         context.Services.AddHttpClient("MeiliSearch", client =>
         {
@@ -365,6 +363,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         }
 
         app.UseRouting();
+        app.UseMiddleware<GrantAllPoliciesMiddleware>();
         app.MapAbpStaticAssets();
         app.UseAbpStudioLink();
         app.UseAbpSecurityHeaders();
