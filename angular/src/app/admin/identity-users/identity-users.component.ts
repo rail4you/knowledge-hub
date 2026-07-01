@@ -194,6 +194,7 @@ export class IdentityUsersComponent implements OnInit {
       this.users = response;
       this.loadUsersRoles();
     });
+    this.list.get();
   }
 
   loadUsersRoles() {

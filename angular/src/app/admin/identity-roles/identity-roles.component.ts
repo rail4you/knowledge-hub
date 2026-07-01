@@ -148,6 +148,7 @@ export class IdentityRolesComponent implements OnInit {
     this.list.hookToQuery(roleStreamCreator).subscribe((response) => {
       this.roles = response;
     });
+    this.list.get();
   }
 
   onTenantFilterChange(tenantId: string | null) {
