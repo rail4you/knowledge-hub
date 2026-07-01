@@ -15,11 +15,8 @@
       <div class="nav__end">
         @if (isLoggedIn) {
           <span class="nav__user">👋 {{ userName() }}</span>
-          @if (isStudent) {
-            <a routerLink="/student" class="btn btn--sm">学生门户</a>
-          } @else {
-            <a routerLink="/resources" class="btn btn--sm">管理后台</a>
-          }
+          <a routerLink="/resources" class="btn btn--sm">管理后台</a>
+          <a routerLink="/student" class="btn btn--sm">学生门户</a>
           <button class="btn btn--sm btn--ghost" (click)="logout()">退出</button>
         } @else {
           <button class="btn btn--sm" (click)="login()">登录</button>
