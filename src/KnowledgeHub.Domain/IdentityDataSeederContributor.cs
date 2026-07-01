@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Domain.Entities;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.Uow;
 using KnowledgeHub.Permissions;
@@ -18,19 +20,21 @@ public class IdentityDataSeederContributor
     private readonly IIdentityRoleRepository _identityRoleRepository;
     private readonly IdentityRoleManager _identityRoleManager;
     private readonly IPermissionManager _permissionManager;
-
     private readonly IDataFilter _dataFilter;
+    private readonly IRepository<IdentityRole, Guid> _roleRepository;
 
     public IdentityDataSeederContributor(
         IIdentityRoleRepository identityRoleRepository,
         IdentityRoleManager identityRoleManager,
         IPermissionManager permissionManager,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IRepository<IdentityRole, Guid> roleRepository)
     {
         _identityRoleRepository = identityRoleRepository;
         _identityRoleManager = identityRoleManager;
         _permissionManager = permissionManager;
         _dataFilter = dataFilter;
+        _roleRepository = roleRepository;
     }
 
     [UnitOfWork]
@@ -55,7 +59,8 @@ public class IdentityDataSeederContributor
         IdentityRole? existingRole;
         using (_dataFilter.Disable<IMultiTenant>())
         {
-            existingRole = await _identityRoleRepository.FindByNormalizedNameAsync(roleName.ToUpperInvariant());
+            var query = await _roleRepository.GetQueryableAsync();
+            existingRole = query.Where(r => r.Name == roleName).FirstOrDefault();
         }
         if (existingRole != null)
         {
