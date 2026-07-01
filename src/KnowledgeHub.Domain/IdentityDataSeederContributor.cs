@@ -19,36 +19,44 @@ public class IdentityDataSeederContributor
     private readonly IdentityRoleManager _identityRoleManager;
     private readonly IPermissionManager _permissionManager;
 
+    private readonly IDataFilter _dataFilter;
+
     public IdentityDataSeederContributor(
         IIdentityRoleRepository identityRoleRepository,
         IdentityRoleManager identityRoleManager,
-        IPermissionManager permissionManager)
+        IPermissionManager permissionManager,
+        IDataFilter dataFilter)
     {
         _identityRoleRepository = identityRoleRepository;
         _identityRoleManager = identityRoleManager;
         _permissionManager = permissionManager;
+        _dataFilter = dataFilter;
     }
 
     [UnitOfWork]
     public async Task SeedAsync(DataSeedContext context)
     {
         // Create global roles (not tied to any tenant)
-        await CreateRoleIfNotExistsAsync("LeagueAdmin", "联盟管理员", isGlobal: true);
+        await CreateRoleIfNotExistsAsync("LeagueAdmin", "联盟管理员", isGlobal: true, context);
         
         // Create tenant-scoped roles (will be assigned within each tenant)
-        await CreateRoleIfNotExistsAsync("SchoolAdmin", "院校管理员", isGlobal: false);
-        await CreateRoleIfNotExistsAsync("Teacher", "教师", isGlobal: false);
-        await CreateRoleIfNotExistsAsync("Student", "学生", isGlobal: false);
+        await CreateRoleIfNotExistsAsync("SchoolAdmin", "院校管理员", isGlobal: false, context);
+        await CreateRoleIfNotExistsAsync("Teacher", "教师", isGlobal: false, context);
+        await CreateRoleIfNotExistsAsync("Student", "学生", isGlobal: false, context);
         
         // Enterprise users are global
-        await CreateRoleIfNotExistsAsync("EnterpriseUser", "企业用户", isGlobal: true);
+        await CreateRoleIfNotExistsAsync("EnterpriseUser", "企业用户", isGlobal: true, context);
 
         await SeedRolePermissionsAsync();
     }
 
-    private async Task CreateRoleIfNotExistsAsync(string roleName, string displayName, bool isGlobal)
+    private async Task CreateRoleIfNotExistsAsync(string roleName, string displayName, bool isGlobal, DataSeedContext context)
     {
-        var existingRole = await _identityRoleRepository.FindByNormalizedNameAsync(roleName.ToUpperInvariant());
+        IdentityRole? existingRole;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            existingRole = await _identityRoleRepository.FindByNormalizedNameAsync(roleName.ToUpperInvariant());
+        }
         if (existingRole != null)
         {
             return;
@@ -57,7 +65,7 @@ public class IdentityDataSeederContributor
         var role = new IdentityRole(
             Guid.NewGuid(),
             roleName,
-            null
+            isGlobal ? null : context?.TenantId
         )
         {
             IsStatic = false,
