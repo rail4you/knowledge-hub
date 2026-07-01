@@ -30,7 +30,6 @@ function configureRoutes() {
       iconClass: 'fas fa-folder-open',
       order: 2,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Resources',
     },
     {
       path: '/resources',
@@ -78,7 +77,6 @@ function configureRoutes() {
       iconClass: 'fas fa-robot',
       order: 3,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.AI',
     },
     {
       path: '/ai/chat',
@@ -154,7 +152,7 @@ function configureRoutes() {
       iconClass: 'fas fa-graduation-cap',
       order: 4,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Courses',
+      
     },
     {
       path: '/admin/tenant-info',
@@ -171,7 +169,6 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 2,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.MicroMajors',
     },
     {
       path: '/admin/micro-majors',
@@ -280,7 +277,7 @@ function configureRoutes() {
       iconClass: 'fas fa-briefcase',
       order: 5,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Practicum',
+      
     },
     {
       path: '/practicum/projects',
@@ -364,7 +361,7 @@ function configureRoutes() {
       iconClass: 'fas fa-newspaper',
       order: 6,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.News',
+      
     },
     {
       path: '/news',
