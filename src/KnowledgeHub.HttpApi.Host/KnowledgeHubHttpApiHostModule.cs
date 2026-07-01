@@ -29,6 +29,7 @@ using Volo.Abp.Account;
 using Volo.Abp.Account.Web;
 using Volo.Abp.AspNetCore.MultiTenancy;
 using Volo.Abp.AspNetCore.Mvc;
+using Volo.Abp.AspNetCore.Mvc.ApplicationConfigurations;
 using Volo.Abp.Autofac;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
@@ -194,6 +195,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.AddTransient<ITeachingAgentRuntimeClient, TeachingAgentRuntimeClient>();
         context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();
         context.Services.AddScoped<ISearchAppService, SearchAppService>();
+        context.Services.AddTransient<IApplicationConfigurationContributor, GrantAllPoliciesContributor>();
         context.Services.AddHttpClient<IMeiliSearchAdminAppService, MeiliSearchAdminAppService>();
         context.Services.AddHttpClient("MeiliSearch", client =>
         {
