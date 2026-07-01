@@ -7,6 +7,7 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { hasRole } from '../auth/current-user.utils';
+import { OAuthService } from 'angular-oauth2-oidc';
 import { PortalService } from '../proxy/portal/portal.service';
 import type { PublicHomeStatsDto, PortalHomeDataDto, TenantResourceSummaryDto, PublicBrowseDto, PublicCourseDto, PublicResourceDto, PublicMicroMajorDto, PublicBrowseFilterOption, MaterialBriefDto } from '../proxy/portal/models';
 import { FilePreviewComponent } from '../shared/preview/file-preview.component';
@@ -34,6 +35,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   private config = inject(ConfigStateService);
   private router = inject(Router);
   private portal = inject(PortalService);
+  private oauthService = inject(OAuthService);
 
   readonly stats = signal<PublicHomeStatsDto | null>(null);
   readonly homeData = signal<PortalHomeDataDto | null>(null);
@@ -118,7 +120,21 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly browseMajors = () => this.browseData()?.majors || [];
 
   get isLoggedIn() { return this.authService.isAuthenticated; }
-  get isStudent() { return hasRole(this.config, 'Student'); }
+  get isStudent() {
+    // 优先从 ABP ConfigState 获取
+    if (hasRole(this.config, 'Student')) return true;
+    // 兜底：从 JWT token claims 解析角色
+    try {
+      const token = this.oauthService.getAccessToken();
+      if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const roles = payload.role || payload.roles || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || [];
+        const roleList = Array.isArray(roles) ? roles : [roles];
+        return roleList.some((r: string) => r === 'Student');
+      }
+    } catch { }
+    return false;
+  }
 
   ngOnInit() {
     const cu = this.config.getDeep('currentUser') as Record<string, unknown> | undefined;
