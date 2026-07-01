@@ -31,19 +31,18 @@ public class IdentityDataSeederContributor
     [UnitOfWork]
     public async Task SeedAsync(DataSeedContext context)
     {
-        // 只在 Host 上下文运行种子上下文，避免每个租户重复创建角色
-        if (context.TenantId != null)
+        // 角色只在 Host 上下文创建一次（防止重复）
+        if (context.TenantId == null)
         {
-            return;
+            await CreateRoleIfNotExistsAsync("LeagueAdmin");
+            await CreateRoleIfNotExistsAsync("SchoolAdmin");
+            await CreateRoleIfNotExistsAsync("Teacher");
+            await CreateRoleIfNotExistsAsync("Student");
+            await CreateRoleIfNotExistsAsync("EnterpriseUser");
+            await CreateRoleIfNotExistsAsync("admin");
         }
 
-        await CreateRoleIfNotExistsAsync("LeagueAdmin");
-        await CreateRoleIfNotExistsAsync("SchoolAdmin");
-        await CreateRoleIfNotExistsAsync("Teacher");
-        await CreateRoleIfNotExistsAsync("Student");
-        await CreateRoleIfNotExistsAsync("EnterpriseUser");
-        await CreateRoleIfNotExistsAsync("admin");
-
+        // 权限在每个租户上下文中都要授予（ABP 多租户过滤需要 TenantId 匹配）
         await SeedRolePermissionsAsync();
         await SeedAbpPermissionsAsync();
     }
