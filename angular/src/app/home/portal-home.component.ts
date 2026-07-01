@@ -120,20 +120,32 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly browseMajors = () => this.browseData()?.majors || [];
 
   get isLoggedIn() { return this.authService.isAuthenticated; }
-  get isStudent() {
+  get isStudent(): boolean {
     // 优先从 ABP ConfigState 获取
     if (hasRole(this.config, 'Student')) return true;
-    // 兜底：从 JWT token claims 解析角色
+    if (hasRole(this.config, 'Teacher') || hasRole(this.config, 'SchoolAdmin') || 
+        hasRole(this.config, 'LeagueAdmin') || hasRole(this.config, 'admin') ||
+        hasRole(this.config, 'EnterpriseUser')) return false;
+    // 兜底：检测 username 中是否包含 student（学生命名惯例）
+    const cu = this.config.getDeep('currentUser') as Record<string, unknown> | undefined;
+    const userName = (cu?.['userName'] as string) || '';
+    if (userName.toLowerCase().includes('student')) return true;
+    // 最后：检查 JWT token
     try {
       const token = this.oauthService.getAccessToken();
       if (token) {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        const roles = payload.role || payload.roles || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || [];
+        const roles = payload.role || payload.roles || [];
         const roleList = Array.isArray(roles) ? roles : [roles];
-        return roleList.some((r: string) => r === 'Student');
+        if (roleList.some((r: string) => r === 'Student')) return true;
       }
     } catch { }
     return false;
+  }
+  get isTeacher(): boolean {
+    return hasRole(this.config, 'Teacher') || hasRole(this.config, 'SchoolAdmin') || 
+           hasRole(this.config, 'LeagueAdmin') || hasRole(this.config, 'admin') ||
+           hasRole(this.config, 'EnterpriseUser');
   }
 
   ngOnInit() {
