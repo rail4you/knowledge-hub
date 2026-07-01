@@ -75,6 +75,9 @@ export const APP_ROUTES: Routes = [
     path: 'resources',
     loadComponent: () => import('./resources/resource').then(c => c.ResourceComponent),
     canActivate: [authGuard, nonStudentGuard],
+    data: {
+      layout: eLayoutType.application,
+    },
   },
   {
     // 关键修复 P1-12：教师/管理员的"我的收藏"入口。
