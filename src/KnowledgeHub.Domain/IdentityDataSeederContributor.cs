@@ -45,6 +45,7 @@ public class IdentityDataSeederContributor
         await CreateRoleIfNotExistsAsync("admin");
 
         await SeedRolePermissionsAsync();
+        await SeedAbpPermissionsAsync();
     }
 
     private async Task CreateRoleIfNotExistsAsync(string roleName)
@@ -289,6 +290,48 @@ public class IdentityDataSeederContributor
         await GrantPermissionAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Default);
         await GrantPermissionAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Create);
         await GrantPermissionAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Manage);
+    }
+
+    private async Task SeedAbpPermissionsAsync()
+    {
+        // Admin - Full access to identity and tenant management
+        var adminRoles = new[] { "admin", "LeagueAdmin", "SchoolAdmin" };
+        foreach (var role in adminRoles)
+        {
+            await GrantPermissionAsync(role, "AbpIdentity.Roles");
+            await GrantPermissionAsync(role, "AbpIdentity.Roles.Create");
+            await GrantPermissionAsync(role, "AbpIdentity.Roles.Update");
+            await GrantPermissionAsync(role, "AbpIdentity.Roles.Delete");
+            await GrantPermissionAsync(role, "AbpIdentity.Roles.ManagePermissions");
+            await GrantPermissionAsync(role, "AbpIdentity.Users");
+            await GrantPermissionAsync(role, "AbpIdentity.Users.Create");
+            await GrantPermissionAsync(role, "AbpIdentity.Users.Update");
+            await GrantPermissionAsync(role, "AbpIdentity.Users.Delete");
+            await GrantPermissionAsync(role, "AbpIdentity.Users.ManagePermissions");
+            await GrantPermissionAsync(role, "AbpIdentity.Users.Update.ManageRoles");
+        }
+
+        await GrantPermissionAsync("admin", "AbpTenantManagement.Tenants");
+        await GrantPermissionAsync("admin", "AbpTenantManagement.Tenants.Create");
+        await GrantPermissionAsync("admin", "AbpTenantManagement.Tenants.Update");
+        await GrantPermissionAsync("admin", "AbpTenantManagement.Tenants.Delete");
+        await GrantPermissionAsync("admin", "AbpTenantManagement.Tenants.ManageFeatures");
+        await GrantPermissionAsync("admin", "AbpTenantManagement.Tenants.ManageConnectionStrings");
+        await GrantPermissionAsync("admin", "FeatureManagement.ManageHostFeatures");
+        await GrantPermissionAsync("admin", "SettingManagement.Emailing");
+
+        await GrantPermissionAsync("LeagueAdmin", "AbpTenantManagement.Tenants");
+        await GrantPermissionAsync("LeagueAdmin", "AbpTenantManagement.Tenants.Create");
+        await GrantPermissionAsync("LeagueAdmin", "AbpTenantManagement.Tenants.Update");
+        await GrantPermissionAsync("LeagueAdmin", "AbpTenantManagement.Tenants.Delete");
+        await GrantPermissionAsync("LeagueAdmin", "AbpTenantManagement.Tenants.ManageFeatures");
+        await GrantPermissionAsync("LeagueAdmin", "AbpTenantManagement.Tenants.ManageConnectionStrings");
+
+        // Teacher - can view users (for student management)
+        await GrantPermissionAsync("Teacher", "AbpIdentity.Users");
+        await GrantPermissionAsync("Teacher", "AbpIdentity.Roles");
+
+        // Student - no identity permissions needed
     }
 
     private async Task GrantPermissionAsync(string roleName, string permission)
