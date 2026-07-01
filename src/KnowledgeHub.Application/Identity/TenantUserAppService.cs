@@ -248,7 +248,28 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
 
     private async Task<TenantUserDto> MapToDtoAsync(Volo.Abp.Identity.IdentityUser user)
     {
-        var dto = ObjectMapper.Map<Volo.Abp.Identity.IdentityUser, TenantUserDto>(user);
+        var dto = new TenantUserDto
+        {
+            Id = user.Id,
+            TenantId = user.TenantId,
+            UserName = user.UserName,
+            Name = user.Name,
+            Surname = user.Surname,
+            Email = user.Email,
+            EmailConfirmed = user.EmailConfirmed,
+            PhoneNumber = user.PhoneNumber,
+            PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+            IsActive = user.IsActive,
+            LockoutEnabled = user.LockoutEnabled,
+            LockoutEnd = user.LockoutEnd,
+            AccessFailedCount = user.AccessFailedCount,
+            ConcurrencyStamp = user.ConcurrencyStamp,
+            CreationTime = user.CreationTime
+        };
+        foreach (var kv in user.ExtraProperties)
+        {
+            dto.SetProperty(kv.Key, kv.Value);
+        }
 
         if (user.HasProperty(MajorIdExtraProperty))
         {
