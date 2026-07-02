@@ -63,13 +63,19 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     "KnowledgeHub.Users", "KnowledgeHub.Users.Create", "KnowledgeHub.Users.Edit", "KnowledgeHub.Users.Delete", "KnowledgeHub.Users.Import",
                     "AbpIdentity.Roles", "AbpIdentity.Roles.Create", "AbpIdentity.Roles.Update", "AbpIdentity.Roles.Delete", "AbpIdentity.Roles.ManagePermissions",
                     "AbpIdentity.Users", "AbpIdentity.Users.Create", "AbpIdentity.Users.Update", "AbpIdentity.Users.Delete", "AbpIdentity.Users.ManagePermissions", "AbpIdentity.Users.Update.ManageRoles",
-                    "AbpTenantManagement.Tenants", "AbpTenantManagement.Tenants.Create", "AbpTenantManagement.Tenants.Update", "AbpTenantManagement.Tenants.Delete",
-                    // FeatureManagement 和 SettingManagement 只给 host admin（已有权限），这里不注入
+                    // AbpTenantManagement.Tenants 不给非 host admin（从已有数据库权限获取）
                 };
 
                 foreach (var perm in allPerms)
                 {
                     newPolicies[perm] = true;
+                }
+
+                // 移除租户管理权限（非 host admin 不应该看到）
+                var tenantPerms = new[] { "AbpTenantManagement.Tenants", "AbpTenantManagement.Tenants.Create", "AbpTenantManagement.Tenants.Update", "AbpTenantManagement.Tenants.Delete", "AbpTenantManagement.Tenants.ManageFeatures", "AbpTenantManagement.Tenants.ManageConnectionStrings" };
+                foreach (var tp in tenantPerms)
+                {
+                    newPolicies.Remove(tp);
                 }
 
                 // 重建 JSON
