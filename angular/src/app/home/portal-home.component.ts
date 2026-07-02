@@ -121,20 +121,11 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   private readonly knownStudents = new Set(['zmq', 'student', 'hoststudent', 'qidistudent', 'stu', 'std01', 'stutest', 'teststu', 'teststudent123', 'kEMlzpAX']);
   get isStudent(): boolean {
     if (hasRole(this.config, 'Student')) return true;
-    if (hasRole(this.config, 'Teacher') || hasRole(this.config, 'SchoolAdmin') ||
-        hasRole(this.config, 'admin') || hasRole(this.config, 'LeagueAdmin') ||
-        hasRole(this.config, 'EnterpriseUser')) return false;
     const cu = this.config.getDeep('currentUser') as Record<string, unknown> | undefined;
-    const userName = (cu?.['userName'] as string) || '';
-    if (this.knownStudents.has(userName)) return true;
-    return false;
+    return this.knownStudents.has((cu?.['userName'] as string) || '');
   }
   get isTeacher(): boolean {
-    if (hasRole(this.config, 'Teacher') || hasRole(this.config, 'SchoolAdmin') ||
-        hasRole(this.config, 'admin') || hasRole(this.config, 'LeagueAdmin') ||
-        hasRole(this.config, 'EnterpriseUser')) return true;
-    if (this.isStudent) return false;
-    return !this.isStudent;
+    return !this.isStudent && this.isLoggedIn;
   }
 
   ngOnInit() {
