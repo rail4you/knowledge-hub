@@ -215,23 +215,7 @@ function configureRoutes() {
       
     },
     {
-      path: '/learning/exercise-management',
-      name: '::Menu:ExerciseManagement',
-      iconClass: 'fas fa-pen-to-square',
-      parentName: '::Menu:CourseManagement',
-      order: 8,
-      layout: eLayoutType.application,
-      
-    },
-    {
       path: '/learning/chapter-exercise',
-      name: '::Menu:ChapterExercise',
-      iconClass: 'fas fa-link',
-      parentName: '::Menu:CourseManagement',
-      order: 9,
-      layout: eLayoutType.application,
-      
-    },
     {
       path: '/learning/chapter-resource',
       name: '::Menu:ChapterResource',
@@ -445,12 +429,6 @@ function configureRoutes() {
     },
     {
       path: '/admin/exercise',
-      name: '::Menu:ExerciseManagement',
-      iconClass: 'fas fa-pen-to-square',
-      parentName: '::Menu:SearchAndTenantManagement',
-      layout: eLayoutType.application,
-      
-    },
     {
       path: '/admin/tenant-info',
       name: '::Menu:TenantInfo',
