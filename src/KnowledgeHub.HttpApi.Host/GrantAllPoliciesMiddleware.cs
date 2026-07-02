@@ -64,7 +64,7 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     "AbpIdentity.Roles", "AbpIdentity.Roles.Create", "AbpIdentity.Roles.Update", "AbpIdentity.Roles.Delete", "AbpIdentity.Roles.ManagePermissions",
                     "AbpIdentity.Users", "AbpIdentity.Users.Create", "AbpIdentity.Users.Update", "AbpIdentity.Users.Delete", "AbpIdentity.Users.ManagePermissions", "AbpIdentity.Users.Update.ManageRoles",
                     "AbpTenantManagement.Tenants", "AbpTenantManagement.Tenants.Create", "AbpTenantManagement.Tenants.Update", "AbpTenantManagement.Tenants.Delete",
-                    "FeatureManagement.ManageHostFeatures", "SettingManagement.Emailing", "SettingManagement.TimeZone",
+                    // FeatureManagement 和 SettingManagement 只给 host admin（已有权限），这里不注入
                 };
 
                 foreach (var perm in allPerms)

@@ -212,19 +212,6 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 7,
       layout: eLayoutType.application,
-      
-    },
-    {
-      path: '/learning/chapter-exercise',
-    {
-      path: '/learning/chapter-resource',
-      name: '::Menu:ChapterResource',
-      iconClass: 'fas fa-file-lines',
-      parentName: '::Menu:CourseManagement',
-      order: 10,
-      layout: eLayoutType.application,
-      
-    },
     {
       path: '/learning/knowledge-graph/:courseId',
       name: '::Menu:KnowledgeGraph',
@@ -428,15 +415,6 @@ function configureRoutes() {
       
     },
     {
-      path: '/admin/exercise',
-    {
-      path: '/admin/tenant-info',
-      name: '::Menu:TenantInfo',
-      iconClass: 'fas fa-building',
-      parentName: '::Menu:SearchAndTenantManagement',
-      order: 100,
-      layout: eLayoutType.application,
-    },
 
     // ══════════════════════════════════════════════════════════
     //  隐藏 / 特殊路由（不显示在侧边栏）
