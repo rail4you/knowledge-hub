@@ -456,12 +456,13 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
     /// </summary>
     private static ExerciseHeaderMap ResolveExerciseHeader(IXLWorksheet worksheet)
     {
-        // 表头可能不在第 1 行：扫描前 3 行找首个包含「题目/题干」的
+        // 表头通常在第 2 行（第 1 行是指南，可能包含「题目类型」「答案」等子串触发误匹配）。
+        // 从第 2 行开始扫描，最多扫到第 4 行。
         var headerRow = 1;
         int questionCol = 0, typeCol = 0, answerCol = 0, mergedOptionsCol = 0;
         var optionCols = new List<int>();
 
-        for (var r = 1; r <= Math.Min(3, worksheet.LastRowUsed()?.RowNumber() ?? 0); r++)
+        for (var r = 2; r <= Math.Min(4, worksheet.LastRowUsed()?.RowNumber() ?? 0); r++)
         {
             var row = worksheet.Row(r);
             for (var c = 1; c <= Math.Min(12, worksheet.LastColumnUsed()?.ColumnNumber() ?? 0); c++)
