@@ -40,6 +40,7 @@
       >
         <thead>
           <tr>
+            <th nzWidth="72px">封面</th>
             <th>课程名称</th>
             <th>专业</th>
             <th>学期</th>
@@ -53,6 +54,17 @@
         <tbody>
           @for (course of courses(); track course.id) {
             <tr>
+              <td>
+                <div class="course-cover-cell">
+                  @if (course.coverImageUrl) {
+                    <img [src]="course.coverImageUrl" [alt]="course.title" />
+                  } @else {
+                    <div class="course-cover-cell__empty">
+                      <span nz-icon nzType="picture" nzTheme="outline"></span>
+                    </div>
+                  }
+                </div>
+              </td>
               <td>
                 <div class="course-name-cell">
                   <strong>{{ course.title }}</strong>
@@ -231,14 +243,50 @@
         </nz-form-item>
 
         <nz-form-item>
-          <nz-form-label>封面图片URL</nz-form-label>
+          <nz-form-label>课程封面</nz-form-label>
           <nz-form-control>
-            <input
-              nz-input
-              [(ngModel)]="formData.coverImageUrl"
-              [ngModelOptions]="{ standalone: true }"
-              placeholder="请输入封面图片URL"
-            />
+            <div class="cover-uploader">
+              <!-- 预览区：上传前/上传中/已上传 -->
+              <div class="cover-preview" [class.cover-preview--empty]="!formData.coverImageUrl">
+                @if (formData.coverImageUrl) {
+                  <img [src]="formData.coverImageUrl" alt="封面预览" />
+                  <div class="cover-preview__overlay">
+                    <button type="button" class="cover-preview__remove" (click)="onCoverRemove()" aria-label="移除封面">
+                      <span nz-icon nzType="delete"></span>
+                      <span>移除</span>
+                    </button>
+                  </div>
+                  @if (coverUploading) {
+                    <div class="cover-preview__mask">
+                      <nz-spin nzSimple></nz-spin>
+                      <span>上传中…</span>
+                    </div>
+                  }
+                } @else {
+                  <div class="cover-preview__placeholder">
+                    <span nz-icon nzType="picture" nzTheme="outline"></span>
+                    <span>暂无封面</span>
+                  </div>
+                }
+              </div>
+
+              <!-- 上传控件 -->
+              <div class="cover-actions">
+                <nz-upload
+                  nzListType="picture"
+                  [nzCustomRequest]="coverCustomRequest"
+                  [nzBeforeUpload]="coverBeforeUpload"
+                  [nzShowUploadList]="false"
+                  [nzAccept]="'image/*'"
+                  [nzDisabled]="coverUploading">
+                  <button nz-button type="button" [disabled]="coverUploading">
+                    <span nz-icon nzType="upload"></span>
+                    {{ formData.coverImageUrl ? '重新上传' : '上传封面' }}
+                  </button>
+                </nz-upload>
+                <span class="cover-hint">支持 JPG / PNG · 不超过 5MB · 自动保存为 OSS URL</span>
+              </div>
+            </div>
           </nz-form-control>
         </nz-form-item>
       </form>

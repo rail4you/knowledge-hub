@@ -23,7 +23,7 @@ using Volo.Abp.Users;
 
 namespace KnowledgeHub.Courses;
 
-public class CourseAppService : ApplicationService, ITransientDependency
+public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 {
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IRepository<Chapter, Guid> _chapterRepository;
@@ -136,6 +136,29 @@ public class CourseAppService : ApplicationService, ITransientDependency
     public async Task DeleteAsync(Guid id)
     {
         await _courseRepository.DeleteAsync(id);
+    }
+
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
+    public async Task<AuditResultDto> AuditAsync(Guid courseId, AuditCourseDto input)
+    {
+        var course = await _courseRepository.FindAsync(courseId);
+        if (course == null)
+        {
+            throw new Volo.Abp.UserFriendlyException("Course不存在");
+        }
+
+        if (input.Approved)
+        {
+            course.Status = CourseStatus.Published;
+        }
+
+        await _courseRepository.UpdateAsync(course);
+
+        return new AuditResultDto
+        {
+            Success = true,
+            Message = input.Approved ? "课程已审核通过并发布" : "课程审核未通过"
+        };
     }
 
     public async Task<CourseDetailDto> GetDetailAsync(Guid id)

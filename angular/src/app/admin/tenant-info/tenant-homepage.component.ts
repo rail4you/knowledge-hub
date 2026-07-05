@@ -1,15 +1,19 @@
 import {
   ChangeDetectionStrategy, Component, OnInit, inject, signal, AfterViewInit, OnDestroy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, ViewportScroller } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzCarouselModule } from 'ng-zorro-antd/carousel';
+import { NzDrawerModule } from 'ng-zorro-antd/drawer';
+import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { TenantInfoService } from '../../proxy/tenant-infos/tenant-info.service';
 import { PortalService } from '../../proxy/portal/portal.service';
-import type { TenantInfoDto, TenantKnowledgeGraphDto } from '../../proxy/tenant-infos/dtos/models';
-import type { PortalHomeDataDto } from '../../proxy/portal/models';
+import { CourseService } from '../../proxy/courses/course.service';
+import type { TenantInfoDto, TenantKnowledgeGraphDto, TenantGraphNodeDto } from '../../proxy/tenant-infos/dtos/models';
+import type { PortalHomeDataDto, CourseBriefDto } from '../../proxy/portal/models';
+import type { CourseDetailDto, ChapterDto } from '../../proxy/courses/dtos/models';
 import * as echarts from 'echarts/core';
 import { GraphChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -32,6 +36,15 @@ const EDGE_STYLE: Record<string, { color: string; width: number }> = {
   sequence: { color: '#e74c3c', width: 1.8 },
 };
 
+interface NavCard {
+  key: string;
+  title: string;
+  desc: string;
+  icon: string;
+  gradient: string;
+  targetId: string;
+}
+
 @Component({
   selector: 'app-tenant-homepage',
   standalone: true,
@@ -41,6 +54,8 @@ const EDGE_STYLE: Record<string, { color: string; width: number }> = {
     NzIconModule,
     NzSpinModule,
     NzCarouselModule,
+    NzDrawerModule,
+    NzAlertModule,
   ],
   templateUrl: './tenant-homepage.component.html',
   styleUrls: ['./tenant-homepage.component.scss'],
@@ -50,20 +65,65 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly route = inject(ActivatedRoute);
   private readonly tenantInfoService = inject(TenantInfoService);
   private readonly portalService = inject(PortalService);
+  private readonly courseService = inject(CourseService);
+  private readonly scroller = inject(ViewportScroller);
 
   readonly loading = signal(true);
   readonly tenantInfo = signal<TenantInfoDto | null>(null);
   readonly knowledgeGraph = signal<TenantKnowledgeGraphDto | null>(null);
   readonly portalData = signal<PortalHomeDataDto | null>(null);
 
-  // Display constants
+  // Course preview drawer state
+  readonly previewOpen = signal(false);
+  readonly previewCourse = signal<CourseBriefDto | null>(null);
+  readonly previewDetail = signal<CourseDetailDto | null>(null);
+  readonly previewLoading = signal(false);
+
+  // 课程封面渐变色板
   readonly courseColors = ['#1a5fe0', '#0ea5e9', '#0891b2', '#16a34a', '#7c3aed', '#d97706', '#dc2626', '#059669'];
   readonly courseEmojis = ['📖', '📊', '🎯', '💡', '📝', '🌐', '🎨', '🔬'];
+
+  // 顶部分区导航
+  readonly navCards: NavCard[] = [
+    {
+      key: 'intro',
+      title: '资源库简介',
+      desc: '建设背景 · 目标定位',
+      icon: '📘',
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      targetId: 'section-intro',
+    },
+    {
+      key: 'construction',
+      title: '专业建设',
+      desc: '培养方案 · 教学标准',
+      icon: '🏛️',
+      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      targetId: 'section-construction',
+    },
+    {
+      key: 'courses',
+      title: '学历课程',
+      desc: '精品课程 · 在线学习',
+      icon: '🎓',
+      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      targetId: 'section-courses',
+    },
+    {
+      key: 'graph',
+      title: '知识图谱',
+      desc: '专业 · 课程 · 关联',
+      icon: '🧠',
+      gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+      targetId: 'section-graph',
+    },
+  ];
 
   // Graph lifecycle
   private chartInstance: echarts.ECharts | null = null;
   private kgRendered = false;
   private resizeHandler: (() => void) | null = null;
+  private nodeMap = new Map<string, TenantGraphNodeDto>();
 
   ngOnInit(): void {
     const tenantId = this.route.snapshot.paramMap.get('id');
@@ -107,10 +167,59 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     this.tenantInfoService.getKnowledgeGraph(tenantId).subscribe({
       next: (kg) => {
         this.knowledgeGraph.set(kg);
+        this.nodeMap = new Map((kg.allNodes || []).map(n => [n.id, n]));
         setTimeout(() => this.renderGraphIfReady(), 200);
       },
       error: () => {},
     });
+  }
+
+  // ═══ Section navigation ═══
+
+  scrollToSection(targetId: string): void {
+    if (!targetId) return;
+    this.scroller.scrollToAnchor(targetId);
+    const el = document.getElementById(targetId);
+    if (el) {
+      const top = el.getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  }
+
+  // ═══ Course preview drawer ═══
+
+  openCoursePreview(course: CourseBriefDto): void {
+    if (!course?.id) return;
+    this.previewCourse.set(course);
+    this.previewDetail.set(null);
+    this.previewLoading.set(true);
+    this.previewOpen.set(true);
+    this.courseService.getDetail(course.id).subscribe({
+      next: (detail) => {
+        this.previewDetail.set(detail);
+        this.previewLoading.set(false);
+      },
+      error: () => this.previewLoading.set(false),
+    });
+  }
+
+  closeCoursePreview(): void {
+    this.previewOpen.set(false);
+    setTimeout(() => {
+      this.previewCourse.set(null);
+      this.previewDetail.set(null);
+    }, 250);
+  }
+
+  /** Flatten nested chapter tree for the drawer display. */
+  flattenChapters(chapters: ChapterDto[] | undefined, depth = 0): Array<ChapterDto & { depth: number }> {
+    if (!chapters) return [];
+    const out: Array<ChapterDto & { depth: number }> = [];
+    for (const ch of chapters) {
+      out.push({ ...ch, depth });
+      if (ch.children?.length) out.push(...this.flattenChapters(ch.children, depth + 1));
+    }
+    return out;
   }
 
   // ═══ Graph ═══
@@ -151,16 +260,18 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
         label: {
           show: true,
           position: 'inside',
-          fontSize: n.nodeType === 'tenant' ? 16 : n.nodeType === 'major' ? 13 : 10,
+          fontSize: n.nodeType === 'tenant' ? 14 : n.nodeType === 'major' ? 12 : 10,
           fontWeight: 700,
           color: style.labelColor,
           textShadowBlur: 3,
-          textShadowColor: 'rgba(0,0,0,0.55)',
+          textShadowColor: 'rgba(0,0,0,0.45)',
           formatter: labelLen > 12 ? (n.name || '').slice(0, 12) + '…' : n.name,
         },
         emphasis: {
-          label: { fontSize: n.nodeType === 'tenant' ? 18 : n.nodeType === 'major' ? 15 : 12 },
+          scale: true,
+          label: { fontSize: n.nodeType === 'tenant' ? 16 : n.nodeType === 'major' ? 14 : 12 },
         },
+        _node: n,
       };
     });
 
@@ -173,21 +284,20 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
         curveness: 0.18,
         opacity: 0.7,
       },
+      _rel: r,
     }));
 
     const option: any = {
       backgroundColor: 'transparent',
       tooltip: {
         trigger: 'item',
-        backgroundColor: 'rgba(255,255,255,0.96)',
+        backgroundColor: 'rgba(255,255,255,0.97)',
         borderColor: '#dde4ee',
+        borderWidth: 1,
+        padding: 0,
         textStyle: { color: '#1f2937', fontSize: 13 },
-        formatter: (p: any) => {
-          const d = p.data || {};
-          const m: Record<string, string> = { tenant: '📦 资源库', major: '📚 专业', course: '📖 课程' };
-          return `<strong style="font-size:14px">${d.name || ''}</strong><br/>
-                  <span style="color:#8a93a6;font-size:12px">${m[d.category] || '节点'}</span>`;
-        },
+        extraCssText: 'box-shadow: 0 12px 36px rgba(15,23,42,0.15); border-radius: 12px; overflow: hidden;',
+        formatter: (p: any) => this.graphTooltipHtml(p),
       },
       series: [{
         type: 'graph',
@@ -216,11 +326,78 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     window.addEventListener('resize', this.resizeHandler);
   }
 
+  private graphTooltipHtml(p: any): string {
+    if (p.dataType === 'edge') {
+      const rel = p.data?._rel;
+      const src = this.nodeMap.get(rel?.sourceId)?.name || rel?.sourceId || '';
+      const tgt = this.nodeMap.get(rel?.targetId)?.name || rel?.targetId || '';
+      const rt = rel?.relationType || 'contains';
+      const rtLabel: Record<string, string> = { contains: '包含', parallel: '并列', sequence: '先后' };
+      const rtColor: Record<string, string> = { contains: '#3498db', parallel: '#f39c12', sequence: '#e74c3c' };
+      return `
+        <div style="padding:14px 18px; min-width:200px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <span style="background:#f0f5ff; padding:3px 10px; border-radius:999px; font-size:12px; color:#2980b9;">${this.escapeHtml(src)}</span>
+            <span style="color:${rtColor[rt] || '#5b6573'}; font-weight:700;">→</span>
+            <span style="background:#f0fdf4; padding:3px 10px; border-radius:999px; font-size:12px; color:#16a34a;">${this.escapeHtml(tgt)}</span>
+          </div>
+          <div style="display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; color:#fff; background:${rtColor[rt] || '#5b6573'};">
+            ${rtLabel[rt] || rt}
+          </div>
+          ${rel?.label ? `<div style="margin-top:8px; font-size:12px; color:#5b6573;">${this.escapeHtml(rel.label)}</div>` : ''}
+        </div>`;
+    }
+    const n: TenantGraphNodeDto | undefined = p.data?._node;
+    if (!n) return '';
+    const m: Record<string, { label: string; bg: string; fg: string; icon: string }> = {
+      tenant: { label: '资源库', bg: 'rgba(231,76,60,0.1)',  fg: '#e74c3c', icon: '📦' },
+      major:  { label: '专业',   bg: 'rgba(41,128,185,0.1)', fg: '#2980b9', icon: '📚' },
+      course: { label: '课程',   bg: 'rgba(39,174,96,0.1)',  fg: '#16a34a', icon: '📖' },
+    };
+    const meta = m[n.nodeType || 'course'] || m.course;
+    const desc = n.description
+      ? `<div style="margin-top:8px; font-size:12px; line-height:1.6; color:#5b6573;">${this.escapeHtml(n.description)}</div>`
+      : '';
+    const children = n.childrenCount > 0
+      ? `<div style="display:inline-block; margin-top:10px; padding:3px 10px; border-radius:999px; font-size:11px; background:#eef5ff; color:#1e6ce8;">
+           子节点 ${n.childrenCount}
+         </div>`
+      : '';
+    return `
+      <div style="padding:14px 18px; min-width:240px; max-width:320px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+          <span style="font-size:22px;">${meta.icon}</span>
+          <div>
+            <div style="font-weight:700; font-size:14px; color:#1f2937;">${this.escapeHtml(n.name || '')}</div>
+            <div style="display:inline-block; padding:1px 8px; border-radius:4px; font-size:11px; background:${meta.bg}; color:${meta.fg}; margin-top:2px;">
+              ${meta.label}
+            </div>
+          </div>
+        </div>
+        ${desc}
+        ${children}
+      </div>`;
+  }
+
+  private escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ═══ Graph summary helpers ═══
+
   getCourseCount(kg: TenantKnowledgeGraphDto): number {
     return (kg.allNodes || []).filter(n => n.nodeType === 'course').length;
   }
 
   getMajorCount(kg: TenantKnowledgeGraphDto): number {
     return (kg.allNodes || []).filter(n => n.nodeType === 'major').length;
+  }
+
+  getRelationCount(kg: TenantKnowledgeGraphDto): number {
+    return (kg.relations || []).length;
   }
 }

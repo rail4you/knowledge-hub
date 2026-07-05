@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -33,6 +33,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private config = inject(ConfigStateService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private portal = inject(PortalService);
 
   readonly stats = signal<PublicHomeStatsDto | null>(null);
@@ -129,6 +130,14 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // 已登录的非学生用户（教师/学校管理员等）直接进入资源库管理后台，
+    // 不再停留在门户首页。与 HomeComponent 对学生角色的处理对称。
+    if (this.isLoggedIn && this.isTeacher) {
+      const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+      if (!returnUrl) this.router.navigate(['/resources']);
+      return;
+    }
+
     const cu = this.config.getDeep('currentUser') as Record<string, unknown> | undefined;
     if (typeof cu?.['userName'] === 'string') this.userName.set(cu['userName'] as string);
 

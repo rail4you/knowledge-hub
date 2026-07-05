@@ -36,7 +36,7 @@
     <div class="loading-wrapper"><nz-spin nzSize="large" nzTip="加载中…"></nz-spin></div>
   } @else {
 
-    <!-- ═══════ HERO — 轮播 ═══════ -->
+    <!-- ═══════ HERO ═══════ -->
     <section class="hero">
       @if (tenantInfo(); as info) {
         @if (info.coverImageList && info.coverImageList.length > 0) {
@@ -69,42 +69,24 @@
         </div>
       }
 
-      <!-- 用户入口 -->
-      <div class="user-entries">
-        <div class="entry-card">
-          <div class="entry-avatar student-avatar" aria-hidden="true">
-            <svg viewBox="0 0 48 48"><circle cx="24" cy="16" r="8" fill="#fff" opacity="0.9"/><ellipse cx="24" cy="40" rx="16" ry="12" fill="#fff" opacity="0.6"/></svg>
-          </div>
-          <h4>学生用户</h4>
-          <p>在线自学带练，提升专业能力和职业素养</p>
-        </div>
-        <div class="entry-card">
-          <div class="entry-avatar teacher-avatar" aria-hidden="true">
-            <svg viewBox="0 0 48 48"><circle cx="24" cy="16" r="8" fill="#fff" opacity="0.9"/><ellipse cx="24" cy="40" rx="16" ry="12" fill="#fff" opacity="0.6"/><rect x="18" y="21" width="12" height="4" rx="2" fill="#fff" opacity="0.3"/></svg>
-          </div>
-          <h4>教师用户</h4>
-          <p>整合教学资源，在线拓展教学项目课程</p>
-        </div>
-        <div class="entry-card">
-          <div class="entry-avatar social-avatar" aria-hidden="true">
-            <svg viewBox="0 0 48 48"><circle cx="24" cy="18" r="10" fill="#fff" opacity="0.9"/><ellipse cx="24" cy="42" rx="18" ry="10" fill="#fff" opacity="0.6"/></svg>
-          </div>
-          <h4>社会用户</h4>
-          <p>核心技能平台，全面知识拓展和定制需求</p>
-        </div>
-        <div class="entry-card">
-          <div class="entry-avatar enterprise-avatar" aria-hidden="true">
-            <svg viewBox="0 0 48 48"><rect x="12" y="8" width="24" height="28" rx="3" fill="#fff" opacity="0.9"/><rect x="18" y="18" width="5" height="8" rx="1" fill="rgba(30,108,232,0.3)"/><rect x="25" y="18" width="5" height="8" rx="1" fill="rgba(30,108,232,0.3)"/></svg>
-          </div>
-          <h4>企业用户</h4>
-          <p>前沿资讯，丰富资料库专业入门好帮手</p>
-        </div>
-      </div>
+      <!-- 分区导航 -->
+      <nav class="nav-cards" aria-label="页面分区导航">
+        @for (card of navCards; track card.key) {
+          <button type="button" class="nav-card" (click)="scrollToSection(card.targetId)">
+            <span class="nav-card__icon" [style.background]="card.gradient">{{ card.icon }}</span>
+            <span class="nav-card__body">
+              <span class="nav-card__title">{{ card.title }}</span>
+              <span class="nav-card__desc">{{ card.desc }}</span>
+            </span>
+            <span class="nav-card__arrow" aria-hidden="true">→</span>
+          </button>
+        }
+      </nav>
     </section>
 
     <!-- ═══════ 资源库简介 ═══════ -->
-    <section class="section intro-section">
-      <div class="intro-bg-decor" [style.background-image]="'url(assets/images/edu-bg_001.jpg)'"></div>
+    <section id="section-intro" class="section intro-section">
+      <div class="intro-bg-layer" [style.background-image]="'url(assets/images/edu-bg_001.jpg)'"></div>
       <div class="section-inner">
         <h2 class="section-heading">资源库简介</h2>
         <div class="intro-body">
@@ -130,23 +112,27 @@
     <!-- ═══════ 专业建设 ═══════ -->
     @if (tenantInfo(); as info) {
       @if (info.talentTrainingPlan || info.professionalTeachingStandards) {
-        <section class="section construction-section">
+        <section id="section-construction" class="section construction-section">
           <div class="section-inner">
             <h2 class="section-heading">专业建设</h2>
             <div class="construction-grid">
               @if (info.talentTrainingPlan) {
-                <div class="construct-card">
-                  <div class="construct-card__icon"><span nz-icon nzType="solution" nzTheme="outline"></span></div>
-                  <h4>人才培养方案</h4>
-                  <p>{{ info.talentTrainingPlan.length > 150 ? info.talentTrainingPlan.slice(0, 150) + '...' : info.talentTrainingPlan }}</p>
-                </div>
+                <article class="construct-card">
+                  <header class="construct-card__header">
+                    <span class="construct-card__icon"><span nz-icon nzType="solution" nzTheme="outline"></span></span>
+                    <h3>人才培养方案</h3>
+                  </header>
+                  <p>{{ info.talentTrainingPlan }}</p>
+                </article>
               }
               @if (info.professionalTeachingStandards) {
-                <div class="construct-card">
-                  <div class="construct-card__icon"><span nz-icon nzType="book" nzTheme="outline"></span></div>
-                  <h4>专业教学标准</h4>
-                  <p>{{ info.professionalTeachingStandards.length > 150 ? info.professionalTeachingStandards.slice(0, 150) + '...' : info.professionalTeachingStandards }}</p>
-                </div>
+                <article class="construct-card">
+                  <header class="construct-card__header">
+                    <span class="construct-card__icon"><span nz-icon nzType="book" nzTheme="outline"></span></span>
+                    <h3>专业教学标准</h3>
+                  </header>
+                  <p>{{ info.professionalTeachingStandards }}</p>
+                </article>
               }
             </div>
           </div>
@@ -162,11 +148,11 @@
             <h2 class="section-heading">特色项目</h2>
             <div class="project-grid">
               @for (p of info.specialProjectList; track p.title) {
-                <div class="project-card">
+                <article class="project-card">
                   <div class="project-card__index">{{ $index + 1 }}</div>
                   <h4>{{ p.title }}</h4>
                   @if (p.description) { <p>{{ p.description }}</p> }
-                </div>
+                </article>
               }
             </div>
           </div>
@@ -174,45 +160,61 @@
       }
     }
 
-    <!-- ═══════ 学历课程体系 ═══════ -->
+    <!-- ═══════ 学历课程体系 — 两列 + 点击预览 ═══════ -->
     @if (portalData(); as pd) {
       @if (pd.featuredCourses && pd.featuredCourses.length > 0) {
-        <section class="section course-section">
+        <section id="section-courses" class="section course-section">
           <div class="section-inner">
-            <h2 class="section-heading">学历课程体系</h2>
-            <div class="course-categories">
-              <span class="cat-tag active">专业基础课</span>
-              <span class="cat-tag">专业核心课</span>
-              <span class="cat-tag">专业拓展课</span>
-              <span class="cat-tag">公共基础课</span>
-            </div>
+            <header class="course-section__head">
+              <div class="course-section__title-wrap">
+                <h2 class="section-heading">学历课程体系</h2>
+                <p class="course-section__sub">点击卡片查看课程详情与章节大纲</p>
+              </div>
+              <div class="course-categories">
+                <span class="cat-tag active">全部</span>
+                <span class="cat-tag">专业基础课</span>
+                <span class="cat-tag">专业核心课</span>
+                <span class="cat-tag">专业拓展课</span>
+              </div>
+            </header>
+
             <div class="course-grid">
-              @for (c of pd.featuredCourses; track c.id) {
-                <div class="course-card">
-                  <div class="course-cover" [style.background]="'linear-gradient(135deg, ' + courseColors[$index % courseColors.length] + ' 0%, ' + courseColors[($index + 1) % courseColors.length] + ' 100%)'">
+              @for (c of pd.featuredCourses; track c.id; let i = $index) {
+                <article class="course-card" (click)="openCoursePreview(c)" tabindex="0"
+                         (keydown.enter)="openCoursePreview(c)" role="button"
+                         [attr.aria-label]="'预览课程：' + (c.title || '')">
+                  <div class="course-cover"
+                       [style.background]="'linear-gradient(135deg, ' + courseColors[i % courseColors.length] + ' 0%, ' + courseColors[(i + 1) % courseColors.length] + ' 100%)'">
                     @if (c.coverImageUrl) {
                       <img [src]="c.coverImageUrl" class="course-img" [alt]="c.title" />
                     } @else {
-                      <span class="course-emoji">{{ courseEmojis[$index % courseEmojis.length] }}</span>
+                      <span class="course-emoji">{{ courseEmojis[i % courseEmojis.length] }}</span>
                     }
+                    <div class="course-cover__hover">
+                      <span class="course-cover__preview-btn">
+                        <span nz-icon nzType="eye" nzTheme="outline"></span>
+                        <span>预览详情</span>
+                      </span>
+                    </div>
                   </div>
                   <div class="course-body">
                     <h4>{{ c.title }}</h4>
                     <div class="course-tags">
-                      @if (c.majorName) {
-                        <span class="course-tag major-tag">{{ c.majorName }}</span>
-                      }
-                      @if (c.teacherName) {
-                        <span class="course-tag teacher-tag">👨‍🏫 {{ c.teacherName }}</span>
-                      }
+                      @if (c.majorName) { <span class="course-tag major-tag">{{ c.majorName }}</span> }
+                      @if (c.teacherName) { <span class="course-tag teacher-tag">👨‍🏫 {{ c.teacherName }}</span> }
                     </div>
                     <div class="course-footer">
                       <span class="course-students">
-                        <span nz-icon nzType="user" nzTheme="outline"></span> {{ c.studentCount || 0 }} 学员
+                        <span nz-icon nzType="user" nzTheme="outline"></span>
+                        <span>{{ c.studentCount || 0 }} 学员</span>
+                      </span>
+                      <span class="course-cta">
+                        <span>查看</span>
+                        <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
                       </span>
                     </div>
                   </div>
-                </div>
+                </article>
               }
             </div>
           </div>
@@ -220,26 +222,154 @@
       }
     }
 
-    <!-- ═══════ 知识图谱 ═══════ -->
+    <!-- ═══════ 知识图谱 — 紧凑统计条 + 图例 ═══════ -->
     @if (knowledgeGraph(); as kg) {
-      <section class="section graph-section">
+      <section id="section-graph" class="section graph-section">
         <div class="section-inner">
           <h2 class="section-heading">知识图谱</h2>
-          <div class="graph-legend">
-            <div class="legend-item"><span class="legend-dot" style="background:#e74c3c"></span><span>资源库</span></div>
-            <div class="legend-item"><span class="legend-dot" style="background:#2980b9"></span><span>专业 ({{ getMajorCount(kg) }})</span></div>
-            <div class="legend-item"><span class="legend-dot" style="background:#27ae60"></span><span>课程 ({{ getCourseCount(kg) }})</span></div>
-            <div class="legend-divider"></div>
-            <div class="legend-item"><span class="legend-line" style="background:#3498db"></span><span>包含关系</span></div>
-            <div class="legend-item"><span class="legend-line" style="background:#f39c12"></span><span>并列关系</span></div>
-            <div class="legend-item"><span class="legend-line" style="background:#e74c3c"></span><span>先后关系</span></div>
+
+          <div class="graph-stats">
+            <div class="graph-stat">
+              <span class="graph-stat__num">{{ (kg.allNodes || []).length }}</span>
+              <span class="graph-stat__label">总节点</span>
+            </div>
+            <div class="graph-stat">
+              <span class="graph-stat__num">{{ getMajorCount(kg) }}</span>
+              <span class="graph-stat__label">专业</span>
+            </div>
+            <div class="graph-stat">
+              <span class="graph-stat__num">{{ getCourseCount(kg) }}</span>
+              <span class="graph-stat__label">课程</span>
+            </div>
+            <div class="graph-stat">
+              <span class="graph-stat__num">{{ getRelationCount(kg) }}</span>
+              <span class="graph-stat__label">关系</span>
+            </div>
+            <div class="graph-stat graph-stat--legend">
+              <span class="legend-group"><span class="legend-dot" style="background:#e74c3c"></span><span>资源库</span></span>
+              <span class="legend-group"><span class="legend-dot" style="background:#2980b9"></span><span>专业</span></span>
+              <span class="legend-group"><span class="legend-dot" style="background:#27ae60"></span><span>课程</span></span>
+            </div>
           </div>
+
           <div class="graph-chart" id="tenant-graph-chart"></div>
+          <p class="graph-hint">提示：拖动节点调整布局，滚轮缩放，悬停查看节点详情。</p>
         </div>
       </section>
     }
   }
 </div>
+
+<!-- ═══════════════════ 课程预览抽屉 ═══════════════════ -->
+<nz-drawer
+  [nzVisible]="previewOpen()"
+  [nzPlacement]="'right'"
+  [nzWidth]="520"
+  [nzTitle]="null"
+  [nzMask]="true"
+  [nzMaskClosable]="true"
+  (nzOnClose)="closeCoursePreview()"
+>
+  <ng-container *nzDrawerContent>
+    <div class="preview-drawer">
+      @if (previewCourse(); as c) {
+        <div class="preview-hero"
+             [style.background]="'linear-gradient(135deg, ' + courseColors[0] + ' 0%, ' + courseColors[2] + ' 100%)'">
+          <button type="button" class="preview-close" (click)="closeCoursePreview()" aria-label="关闭预览">
+            <span nz-icon nzType="close" nzTheme="outline"></span>
+          </button>
+          @if (c.coverImageUrl) {
+            <img [src]="c.coverImageUrl" class="preview-hero__img" [alt]="c.title" />
+          } @else {
+            <span class="preview-hero__emoji">📖</span>
+          }
+          <div class="preview-hero__overlay">
+            <div class="preview-tags">
+              @if (c.majorName) { <span class="preview-tag">{{ c.majorName }}</span> }
+              @if (c.teacherName) { <span class="preview-tag">👨‍🏫 {{ c.teacherName }}</span> }
+            </div>
+            <h2 class="preview-title">{{ c.title }}</h2>
+            <div class="preview-meta">
+              <span><span nz-icon nzType="user" nzTheme="outline"></span> {{ c.studentCount || 0 }} 学员</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-body">
+          @if (previewLoading()) {
+            <div class="preview-loading">
+              <nz-spin nzSize="default" nzTip="加载课程详情…"></nz-spin>
+            </div>
+          } @else if (previewDetail(); as d) {
+            <section class="preview-section">
+              <h3 class="preview-section__title">
+                <span class="preview-section__bar"></span>课程介绍
+              </h3>
+              @if (d.description) {
+                <p class="preview-desc">{{ d.description }}</p>
+              } @else {
+                <p class="preview-desc preview-desc--placeholder">
+                  本课程系统讲解核心概念、方法与实践，配合案例与项目演练，帮助学员构建完整的知识体系。
+                </p>
+              }
+              <div class="preview-stats">
+                <div class="preview-stat">
+                  <span class="preview-stat__num">{{ d.chapterCount || d.chapters?.length || 0 }}</span>
+                  <span class="preview-stat__label">章节</span>
+                </div>
+                @if (d.semesterHours) {
+                  <div class="preview-stat">
+                    <span class="preview-stat__num">{{ d.semesterHours }}</span>
+                    <span class="preview-stat__label">学时</span>
+                  </div>
+                }
+                @if (d.credits) {
+                  <div class="preview-stat">
+                    <span class="preview-stat__num">{{ d.credits }}</span>
+                    <span class="preview-stat__label">学分</span>
+                  </div>
+                }
+              </div>
+            </section>
+
+            <section class="preview-section">
+              <h3 class="preview-section__title">
+                <span class="preview-section__bar"></span>章节大纲
+                <span class="preview-section__count">{{ flattenChapters(d.chapters).length }} 节</span>
+              </h3>
+              @if (d.chapters && d.chapters.length > 0) {
+                <ul class="chapter-tree">
+                  @for (ch of flattenChapters(d.chapters); track ch.id) {
+                    <li class="chapter-node" [attr.data-depth]="ch.depth">
+                      <span class="chapter-node__indicator" aria-hidden="true">
+                        <span class="chapter-node__dot"></span>
+                      </span>
+                      <div class="chapter-node__content">
+                        <div class="chapter-node__title">{{ ch.title }}</div>
+                        @if (ch.description) {
+                          <div class="chapter-node__desc">{{ ch.description }}</div>
+                        }
+                      </div>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="preview-desc preview-desc--placeholder">章节信息暂未发布，请稍后查看。</p>
+              }
+            </section>
+          } @else {
+            <nz-alert
+              nzType="info"
+              nzMessage="无法加载课程详情"
+              nzDescription="请检查网络后重试，或返回浏览其他课程。"
+              nzShowIcon>
+            </nz-alert>
+          }
+        </div>
+      }
+    </div>
+  </ng-container>
+</nz-drawer>
 
 <!-- ═══════════════════ FOOTER ═══════════════════ -->
 <footer class="app-footer">

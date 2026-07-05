@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription, of } from 'rxjs';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -13,12 +14,14 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzGridModule } from 'ng-zorro-antd/grid';
+import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto, CreateUpdateCourseDto } from '../../proxy/courses/dtos/models';
 import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
+import { OssUploadService, OssUploadResultDto } from '../../shared/oss-upload.service';
 
 @Component({
   selector: 'app-course-list',
@@ -37,7 +40,8 @@ import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
     NzIconModule,
     NzModalModule,
     NzFormModule,
-    NzGridModule
+    NzGridModule,
+    NzUploadModule,
   ],
   templateUrl: './course-list.component.html',
   styleUrls: ['./course-list.component.scss'],
@@ -46,6 +50,7 @@ import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 export class CourseListComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly majorService = inject(MajorService);
+  private readonly ossUploadService = inject(OssUploadService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -60,6 +65,10 @@ export class CourseListComponent implements OnInit {
   isEdit = false;
   editId: string | null = null;
   saving = false;
+
+  // Cover upload state
+  coverUploading = false;
+  coverFileList: NzUploadFile[] = [];
 
   // Plain object - not a signal. ngModel mutates this directly,
   // which works reliably inside nz-modal with OnPush.
@@ -149,10 +158,69 @@ export class CourseListComponent implements OnInit {
     return colors[status ?? 0] || 'default';
   }
 
+  // ═══ Cover upload ═══
+
+  /**
+   * nz-upload 的 customRequest：完全由我们接管上传流程，
+   * 通过 OssUploadService 把文件 POST 到 /api/oss-upload/image，
+   * 成功后把返回的 OSS 公开 URL 写回表单的 coverImageUrl。
+   */
+  coverCustomRequest = (item: any): Subscription => {
+    const file: File | undefined = item.file;
+    if (!file) {
+      item.onError?.('未选择文件');
+      return of(null).subscribe();
+    }
+    if (!file.type.startsWith('image/')) {
+      this.message.error('只能上传图片文件');
+      item.onError?.('仅支持图片');
+      return of(null).subscribe();
+    }
+    if (file.size / 1024 / 1024 > 5) {
+      this.message.error('图片大小不能超过 5MB');
+      item.onError?.('文件过大');
+      return of(null).subscribe();
+    }
+
+    this.coverUploading = true;
+    return this.ossUploadService.uploadImage(file).subscribe({
+      next: (res: OssUploadResultDto) => {
+        this.formData.coverImageUrl = res.url;
+        this.message.success('封面上传成功');
+        this.coverUploading = false;
+        item.onSuccess?.(res, item.file);
+      },
+      error: () => {
+        this.coverUploading = false;
+        this.message.error('封面上传失败，请重试');
+        item.onError?.('上传失败');
+      },
+    });
+  };
+
+  /** 上传前预览：本地 blob URL 立即显示，OSS 返回后会被覆盖 */
+  coverBeforeUpload = (file: NzUploadFile): boolean => {
+    const raw = file as any;
+    if (raw.originFileObj && raw.originFileObj instanceof File) {
+      const blobUrl = URL.createObjectURL(raw.originFileObj);
+      this.formData.coverImageUrl = blobUrl;
+    }
+    return true;
+  };
+
+  /** 用户点击"移除"按钮：清空封面 */
+  onCoverRemove(): void {
+    this.formData.coverImageUrl = '';
+    this.coverFileList = [];
+  }
+
+  // ═══ Modal ═══
+
   openCreateModal() {
     this.isEdit = false;
     this.editId = null;
     this.formData = this.emptyForm();
+    this.coverFileList = [];
     this.isModalVisible = true;
   }
 
@@ -171,6 +239,7 @@ export class CourseListComponent implements OnInit {
       categoryId: undefined,
       status: course.status ?? CourseStatus.Draft
     };
+    this.coverFileList = [];
     this.isModalVisible = true;
   }
 

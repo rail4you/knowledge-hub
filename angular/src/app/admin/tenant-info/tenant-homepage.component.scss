@@ -6,6 +6,7 @@ $c-primary: #1e6ce8;
 $c-text: #1f2937;
 $c-muted: #5b6573;
 $c-light: #8a93a6;
+$c-faint: #cbd5e1;
 $c-border: #eaf0f7;
 $c-bg: #f4f7fb;
 $c-white: #fff;
@@ -136,8 +137,8 @@ $card-radius: 14px;
   }
 }
 
-// User entries
-.user-entries {
+// ── 分区导航 ──
+.nav-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   max-width: 1200px;
@@ -147,34 +148,92 @@ $card-radius: 14px;
   z-index: 2;
   gap: 18px;
 }
-.entry-card {
+.nav-card {
   background: #fff;
+  border: 1px solid rgba(234, 240, 247, 0.9);
   border-radius: $card-radius;
-  padding: 32px 24px 28px;
-  text-align: center;
-  box-shadow: 0 10px 36px rgba(15,23,42,0.09), 0 1px 3px rgba(15,23,42,0.04);
-  position: relative;
-}
-.entry-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 16px;
-  margin: 0 auto 16px;
+  padding: 24px 22px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: transform 0.3s;
-  svg { width: 36px; height: 36px; }
+  gap: 16px;
+  position: relative;
+  box-shadow: 0 10px 36px rgba(15,23,42,0.09), 0 1px 3px rgba(15,23,42,0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+
+  // 顶部高光条
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(30, 108, 232, 0.4), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+  }
+
+  &:hover, &:focus-visible {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 48px rgba(30, 108, 232, 0.15), 0 2px 6px rgba(15, 23, 42, 0.06);
+    border-color: rgba(30, 108, 232, 0.2);
+    outline: none;
+    &::before { transform: translateX(100%); }
+    .nav-card__icon { transform: scale(1.1) rotate(-6deg); }
+    .nav-card__arrow { transform: translateX(4px); opacity: 1; color: $c-primary; }
+  }
+
+  &__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+    transition: transform 0.3s;
+    span {
+      font-size: 28px;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+    }
+  }
+
+  &__body { flex: 1; min-width: 0; }
+  &__title {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    color: $c-text;
+    margin-bottom: 4px;
+    letter-spacing: 0.2px;
+  }
+  &__desc {
+    display: block;
+    font-size: 12px;
+    color: $c-light;
+    line-height: 1.5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  &__arrow {
+    font-size: 18px;
+    color: $c-light;
+    transition: all 0.3s;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
 }
-.student-avatar  { background: linear-gradient(135deg, #4facfe, #00f2fe); }
-.teacher-avatar  { background: linear-gradient(135deg, #43e97b, #38f9d7); }
-.social-avatar   { background: linear-gradient(135deg, #fa709a, #fee140); }
-.enterprise-avatar { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
-.entry-card h4 { font-size: 17px; font-weight: 700; color: $c-text; margin: 0 0 8px; }
-.entry-card p  { font-size: 13px; color: $c-light; margin: 0; line-height: 1.6; }
 
 // ═══════ SECTIONS ═══════
-.section { padding: 72px 0; }
+.section { padding: 72px 0; position: relative; }
 .section-inner { @include ds.student-container; }
 
 .section-heading {
@@ -186,6 +245,8 @@ $card-radius: 14px;
   color: $c-text;
   margin: 0 0 44px;
   letter-spacing: -0.3px;
+  position: relative;
+  z-index: 1;
   &::before {
     content: '';
     width: 6px;
@@ -195,23 +256,21 @@ $card-radius: 14px;
     flex-shrink: 0;
   }
 }
+.course-section__title-wrap .section-heading { margin-bottom: 0; }
 
 // ── Intro ──
 .intro-section {
   background: linear-gradient(135deg, #f8fafd 0%, #eef3fa 50%, #f5f7fc 100%);
   border-bottom: 1px solid $c-border;
-  position: relative;
   overflow: hidden;
+  position: relative;
 }
-.intro-bg-decor {
+.intro-bg-layer {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 60%;
-  height: 100%;
+  inset: 0;
   background-size: cover;
   background-position: center right;
-  opacity: 0.15;
+  opacity: 0.12;
   pointer-events: none;
   mask-image: linear-gradient(to left, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0) 90%);
   -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0) 90%);
@@ -250,32 +309,45 @@ $card-radius: 14px;
     box-shadow: 0 8px 24px rgba(30,108,232,0.08);
   }
 }
-.stat-num { display:block; font-size: 44px; font-weight: 800; color: $c-primary; margin-bottom: 6px; letter-spacing: -1px; line-height:1; }
-.stat-label { font-size: 14px; color: $c-light; font-weight: 500; }
+.stat-num {
+  display: block;
+  font-size: 44px;
+  font-weight: 800;
+  color: $c-primary;
+  margin-bottom: 6px;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.stat-label {
+  font-size: 14px;
+  color: $c-light;
+  font-weight: 500;
+}
 
 // ── Construction ──
 .construction-section {
   background: linear-gradient(180deg, #f8fafd 0%, #eef2ff 100%);
   border-top: 1px solid $c-border;
   border-bottom: 1px solid $c-border;
+  position: relative;
 }
 .construction-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 28px;
 }
 .construct-card {
   background: #fff;
   border: 1px solid $c-border;
   border-radius: $card-radius;
-  padding: 40px 34px;
+  padding: 36px 36px 32px;
   transition: all 0.25s;
   position: relative;
   overflow: hidden;
   &::before {
     content: '';
     position: absolute;
-    top:0; left:0;
+    top: 0; left: 0;
     width: 5px;
     height: 100%;
     background: $c-primary;
@@ -285,9 +357,37 @@ $card-radius: 14px;
     box-shadow: 0 12px 32px rgba(15,23,42,0.08);
     border-color: rgba(30,108,232,0.2);
   }
-  &__icon { font-size: 38px; color: $c-primary; margin-bottom: 16px; opacity: 0.85; }
-  h4 { font-size: 20px; font-weight: 700; color: $c-text; margin: 0 0 14px; }
-  p { font-size: 14px; color: $c-muted; line-height: 1.8; margin: 0; }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  &__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #eef5ff 0%, #e0edff 100%);
+    color: $c-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: $c-text;
+    margin: 0;
+  }
+  p {
+    font-size: 14px;
+    color: $c-muted;
+    line-height: 1.85;
+    margin: 0;
+  }
 }
 
 // ── Projects ──
@@ -312,22 +412,43 @@ $card-radius: 14px;
     transform: translateY(-2px);
   }
   &__index {
-    position:absolute; top:14px; right:18px;
-    font-size: 14px; font-weight: 800; color: rgba(30,108,232,0.15);
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    font-size: 14px;
+    font-weight: 800;
+    color: rgba(30,108,232,0.15);
   }
   h4 { font-size: 16px; font-weight: 700; color: $c-text; margin: 0 0 10px; }
   p { font-size: 13px; color: $c-light; line-height: 1.6; margin: 0; }
 }
 
-// ── Courses ──
+// ── Courses — 两列布局 + 点击预览 ──
 .course-section {
   background: linear-gradient(180deg, #f0f4ff 0%, #f8fafd 100%);
   border-top: 1px solid $c-border;
 }
+.course-section__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.course-section__title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.course-section__sub {
+  font-size: 13px;
+  color: $c-light;
+  margin: 0 0 0 18px;
+}
 .course-categories {
   display: flex;
   gap: 10px;
-  margin-bottom: 28px;
   flex-wrap: wrap;
 }
 .cat-tag {
@@ -340,40 +461,81 @@ $card-radius: 14px;
   color: $c-light;
   background: #fff;
   border: 1px solid $c-border;
-  cursor: default;
+  cursor: pointer;
   transition: all 0.2s;
-  &.active {
-    background: #eef5ff;
+  &:hover {
+    border-color: rgba(30,108,232,0.25);
     color: $c-primary;
-    border-color: rgba(30,108,232,0.2);
+  }
+  &.active {
+    background: linear-gradient(135deg, $c-primary, #00b7ff);
+    color: #fff;
+    border-color: transparent;
     font-weight: 600;
+    box-shadow: 0 4px 12px rgba(30, 108, 232, 0.25);
   }
 }
 .course-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
 }
 .course-card {
   background: #fff;
   border: 1px solid $c-border;
   border-radius: $card-radius;
   overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  user-select: none;
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 0 16px 40px rgba(15,23,42,0.1);
-    border-color: rgba(30,108,232,0.15);
+    box-shadow: 0 16px 44px rgba(30, 108, 232, 0.14);
+    border-color: rgba(30, 108, 232, 0.25);
     .course-img { transform: scale(1.06); }
+    .course-cover__hover { opacity: 1; }
+    .course-cta { color: $c-primary; span:last-child { transform: translateX(4px); } }
+  }
+  &:focus-visible {
+    outline: 2px solid rgba(30, 108, 232, 0.5);
+    outline-offset: 2px;
   }
 }
 .course-cover {
-  height: 160px;
+  width: 240px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
+  min-height: 200px;
+
+  &__hover {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0, 15, 40, 0.55), rgba(0, 40, 100, 0.4));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  &__preview-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.95);
+    color: $c-primary;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    span[nz-icon] { font-size: 16px; }
+  }
 }
 .course-img {
   width: 100%;
@@ -382,24 +544,33 @@ $card-radius: 14px;
   transition: transform 0.5s;
 }
 .course-emoji {
-  font-size: 52px;
+  font-size: 56px;
   filter: drop-shadow(0 2px 10px rgba(0,0,0,0.12));
 }
-.course-body { padding: 18px 16px 16px; }
-.course-body h4 {
-  font-size: 15px;
-  font-weight: 700;
-  color: $c-text;
-  margin: 0 0 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.course-body {
+  flex: 1;
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  h4 {
+    font-size: 17px;
+    font-weight: 700;
+    color: $c-text;
+    margin: 0 0 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.4;
+  }
 }
 .course-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: auto;
 }
 .course-tag {
   display: inline-flex;
@@ -423,8 +594,9 @@ $card-radius: 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 10px;
+  padding-top: 12px;
   border-top: 1px solid #f1f5f9;
+  margin-top: auto;
 }
 .course-students {
   display: inline-flex;
@@ -434,49 +606,77 @@ $card-radius: 14px;
   color: $c-light;
   nz-icon { font-size: 12px; }
 }
+.course-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: $c-muted;
+  transition: color 0.3s;
+  span[nz-icon] { font-size: 12px; transition: transform 0.3s; }
+}
 
-// ── Graph ──
+// ── Graph — 紧凑统计条 ──
 .graph-section {
   background: #fff;
   border-bottom: 1px solid $c-border;
 }
-.graph-legend {
+.graph-stats {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 20px;
+  gap: 0;
   margin-bottom: 24px;
-  padding: 14px 28px;
-  background: #f8fafd;
-  border-radius: 999px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #f8fafd 0%, #eef3fa 100%);
+  border: 1px solid $c-border;
+  border-radius: $card-radius;
   flex-wrap: wrap;
-  width: fit-content;
-  margin-left: auto;
-  margin-right: auto;
 }
-.legend-item {
+.graph-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 28px;
+  border-right: 1px solid $c-border;
+  &:first-child { padding-left: 4px; }
+  &:last-child { border-right: none; }
+
+  &__num {
+    font-size: 24px;
+    font-weight: 800;
+    color: $c-primary;
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  &__label {
+    font-size: 12px;
+    color: $c-light;
+    font-weight: 500;
+  }
+
+  &--legend {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    padding-right: 4px;
+    margin-left: auto;
+  }
+}
+.legend-group {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 6px;
+  font-size: 12.5px;
   color: $c-muted;
   font-weight: 500;
 }
 .legend-dot {
-  width: 12px; height: 12px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   display: inline-block;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-.legend-line {
-  width: 20px; height: 3px;
-  border-radius: 2px;
-  display: inline-block;
-}
-.legend-divider {
-  width: 1px; height: 16px;
-  background: ds.$student-border;
-  margin: 0 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
 .graph-chart {
   width: 100%;
@@ -485,6 +685,12 @@ $card-radius: 14px;
   border-radius: $card-radius;
   background: #fafcff;
   overflow: hidden;
+}
+.graph-hint {
+  text-align: center;
+  font-size: 12px;
+  color: $c-light;
+  margin: 14px 0 0;
 }
 
 // ═══════ FOOTER ═══════
@@ -517,13 +723,364 @@ $card-radius: 14px;
   font-size: 12px;
 }
 
+// ═══════ COURSE PREVIEW DRAWER ═══════
+:host ::ng-deep .ant-drawer-body { padding: 0 !important; background: #f8fafd; }
+
+.preview-drawer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f8fafd;
+}
+.preview-hero {
+  position: relative;
+  padding: 32px 28px 28px;
+  color: #fff;
+  overflow: hidden;
+
+  &__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.5;
+  }
+  &__emoji {
+    position: absolute;
+    right: 28px;
+    bottom: 18px;
+    font-size: 120px;
+    opacity: 0.18;
+    line-height: 1;
+  }
+  &__overlay {
+    position: relative;
+    z-index: 1;
+  }
+}
+.preview-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  &:hover {
+    background: rgba(255, 255, 255, 0.32);
+    transform: rotate(90deg);
+  }
+}
+.preview-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.preview-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.preview-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 14px;
+  letter-spacing: 0.2px;
+  line-height: 1.35;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+.preview-meta {
+  display: flex;
+  gap: 18px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    nz-icon { font-size: 14px; }
+  }
+}
+.preview-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px 40px;
+}
+.preview-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+.preview-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 18px;
+  border: 1px solid $c-border;
+
+  &__title {
+    font-size: 16px;
+    font-weight: 700;
+    color: $c-text;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  &__bar {
+    width: 4px;
+    height: 16px;
+    background: linear-gradient(135deg, $c-primary, #00b7ff);
+    border-radius: 2px;
+  }
+  &__count {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 500;
+    color: $c-light;
+    background: #f0f5ff;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+}
+.preview-desc {
+  font-size: 13px;
+  line-height: 1.85;
+  color: $c-muted;
+  margin: 0 0 16px;
+
+  &--placeholder {
+    color: $c-light;
+    font-style: italic;
+    background: #f8fafd;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border-left: 3px solid rgba(30, 108, 232, 0.2);
+  }
+}
+.preview-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  border-top: 1px dashed $c-border;
+  padding-top: 16px;
+}
+.preview-stat {
+  text-align: center;
+  &__num {
+    display: block;
+    font-size: 20px;
+    font-weight: 800;
+    color: $c-primary;
+    line-height: 1.1;
+  }
+  &__label {
+    display: block;
+    font-size: 11px;
+    color: $c-light;
+    margin-top: 4px;
+  }
+}
+
+// ── 章节大纲 — 层级树形（无序号，纯视觉层级） ──
+//
+// 用 flexbox 三栏布局：
+//   [indicator 24px][content 1fr]
+// indicator 列里有：贯穿上下的细线 + 圆点 + 水平短连线（指向 content）
+// 通过 :last-child 自动隐藏最后一项的下半段连线。
+.chapter-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.chapter-node {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 8px 0 8px calc(var(--depth-indent, 0px) + 0px);
+  --depth-indent: 0px;
+
+  &[data-depth="0"] { --depth-indent: 0px; }
+  &[data-depth="1"] { --depth-indent: 18px; }
+  &[data-depth="2"] { --depth-indent: 36px; }
+  &[data-depth="3"] { --depth-indent: 54px; }
+
+  &__indicator {
+    position: relative;
+    flex-shrink: 0;
+    width: 22px;
+    align-self: stretch;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 6px;
+
+    // 垂直贯穿线：从 indicator 顶部到底部
+    &::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 1.5px;
+      background: $c-border;
+      transform: translateX(-50%);
+    }
+
+    // 水平连接线：从圆点指向 content
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 14px;
+      width: 12px;
+      height: 1.5px;
+      background: $c-border;
+      transform: translateY(-50%);
+    }
+  }
+
+  // 最后一项：下半段连线隐藏
+  &:last-child .chapter-node__indicator::before {
+    bottom: calc(100% - 14px);
+  }
+
+  // 子层级用虚线连接表示更细的归属关系
+  &[data-depth="2"] .chapter-node__indicator::before,
+  &[data-depth="3"] .chapter-node__indicator::before {
+    background-image: linear-gradient(
+      to bottom,
+      $c-border 0,
+      $c-border 4px,
+      transparent 4px,
+      transparent 8px
+    );
+    background-size: 1.5px 8px;
+    background-repeat: repeat-y;
+    background-color: transparent;
+  }
+  &[data-depth="2"] .chapter-node__indicator::after,
+  &[data-depth="3"] .chapter-node__indicator::after {
+    background-image: linear-gradient(
+      to right,
+      $c-border 0,
+      $c-border 4px,
+      transparent 4px,
+      transparent 8px
+    );
+    background-size: 8px 1.5px;
+    background-repeat: repeat-x;
+    background-color: transparent;
+  }
+
+  // 节点圆点
+  &__dot {
+    position: relative;
+    z-index: 1;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid $c-primary;
+    box-shadow: 0 0 0 2px #fff;
+  }
+
+  // 各层级圆点样式
+  &[data-depth="0"] .chapter-node__dot {
+    background: $c-primary;
+    border-color: $c-primary;
+    width: 12px;
+    height: 12px;
+  }
+  &[data-depth="1"] .chapter-node__dot {
+    border-color: #00b7ff;
+  }
+  &[data-depth="2"] .chapter-node__dot {
+    border-color: $c-light;
+    border-style: dashed;
+    width: 8px;
+    height: 8px;
+  }
+  &[data-depth="3"] .chapter-node__dot {
+    border-color: $c-faint;
+    width: 7px;
+    height: 7px;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px 0 6px;
+  }
+  &__title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: $c-text;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  &__desc {
+    font-size: 12px;
+    color: $c-light;
+    line-height: 1.55;
+    word-break: break-word;
+  }
+}
+
+// 按层级差异化标题样式
+.chapter-node[data-depth="0"] .chapter-node__title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: $c-text;
+}
+.chapter-node[data-depth="1"] .chapter-node__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #344054;
+}
+.chapter-node[data-depth="2"] .chapter-node__title,
+.chapter-node[data-depth="3"] .chapter-node__title {
+  color: $c-muted;
+  font-weight: 500;
+  font-size: 13px;
+}
+
 // ═══════════════════ RESPONSIVE ═══════════════════
 @media (max-width: 1024px) {
   .hero-slide, .hero-fallback { height: 380px; }
   .hero-title { font-size: 32px; }
-  .user-entries { grid-template-columns: repeat(2,1fr); margin-top: -30px; }
+  .nav-cards { grid-template-columns: repeat(2,1fr); margin-top: -30px; }
   .intro-body { grid-template-columns: 1fr; gap: 36px; }
   .construction-grid { grid-template-columns: 1fr; }
+  .course-grid { grid-template-columns: 1fr; }
+  .graph-stat { padding: 0 20px; }
+}
+@media (max-width: 768px) {
+  .course-card { flex-direction: column; }
+  .course-cover { width: 100%; min-height: 160px; }
 }
 @media (max-width: 640px) {
   .brand-bar__inner { height: 58px; }
@@ -532,16 +1089,30 @@ $card-radius: 14px;
   .hero-slide, .hero-fallback { height: 340px; }
   .hero-title { font-size: 26px; }
   .hero-subtitle { font-size: 13px; }
-  .user-entries { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: -22px; padding:0 16px; }
-  .entry-card { padding: 22px 14px; }
-  .entry-avatar { width: 48px; height: 48px; }
+  .nav-cards { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: -22px; padding:0 16px; }
+  .nav-card { padding: 22px 14px; }
+  .nav-card__icon { width: 48px; height: 48px; border-radius: 12px; }
+  .nav-card__icon span { font-size: 24px; }
+  .nav-card__title { font-size: 14px; }
+  .nav-card__desc { font-size: 11px; }
   .section { padding: 44px 0; }
   .section-heading { font-size: 22px; margin-bottom: 28px; }
   .intro-stats { grid-template-columns: 1fr 1fr; }
-  .course-grid { grid-template-columns: repeat(2,1fr); }
-  .graph-legend { gap:10px; padding:10px 16px; font-size:12px; }
+  .stat-num { font-size: 32px; }
+  .construct-card { padding: 24px 20px; }
   .graph-chart { height: 400px; }
+  .graph-stats { padding: 12px 16px; gap: 12px; }
+  .graph-stat { padding: 0 12px; }
+  .graph-stat__num { font-size: 20px; }
+  .graph-stat--legend {
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed $c-border;
+  }
+  .preview-body { padding: 16px; }
+  .preview-stats { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 400px) {
-  .user-entries, .course-grid { grid-template-columns: 1fr; }
+  .nav-cards { grid-template-columns: 1fr; }
 }
