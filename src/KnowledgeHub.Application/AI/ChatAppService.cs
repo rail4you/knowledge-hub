@@ -15,9 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenAI;
 using Volo.Abp;
-using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
-using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Application.AI;
@@ -172,54 +170,40 @@ TOOL USE:
 
     public async Task<List<ResourceForChatDto>> GetResourcesWithPageIndexAsync()
     {
-        // 从 Meilisearch 已索引的 PageContent 中获取有内容的资源列表
-        List<Guid> indexedResourceIds;
-        using (DataFilter.Disable<IMultiTenant>())
-        {
-            var pcQuery = await _pageContentRepository.GetQueryableAsync();
-            indexedResourceIds = await AsyncExecuter.ToListAsync(
-                pcQuery.Select(pc => pc.ResourceId).Distinct());
-        }
+        // 从已索引的 PageContent 中获取当前租户已审核通过的资源列表
+        var pcQuery = await _pageContentRepository.GetQueryableAsync();
+        var indexedResourceIds = await AsyncExecuter.ToListAsync(
+            pcQuery.Select(pc => pc.ResourceId).Distinct());
 
         if (indexedResourceIds.Count == 0)
             return new List<ResourceForChatDto>();
 
-        List<Resource> resources;
-        using (DataFilter.Disable<IMultiTenant>())
-        {
-            resources = await _resourceRepository.GetListAsync(r => indexedResourceIds.Contains(r.Id));
-        }
-        var resourceMap = resources.ToDictionary(r => r.Id);
+        // 只返回当前租户下已审核通过的资源
+        // 排除 Draft / PendingReview / Rejected / Hidden
+        var approvedResources = await _resourceRepository.GetListAsync(r =>
+            indexedResourceIds.Contains(r.Id)
+            && (r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
+                || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved));
 
-        var result = new List<ResourceForChatDto>();
-        foreach (var resourceId in indexedResourceIds)
+        var result = approvedResources.Select(r =>
         {
-            if (!resourceMap.TryGetValue(resourceId, out var resource)) continue;
-
-            var format = resource.FileExtension;
+            var format = r.FileExtension;
             if (string.IsNullOrEmpty(format))
-            {
-                format = System.IO.Path.GetExtension(resource.OriginalFileName ?? "");
-            }
+                format = System.IO.Path.GetExtension(r.OriginalFileName ?? "");
             if (string.IsNullOrEmpty(format))
-            {
                 format = "unknown";
-            }
-            // 去掉前导点,显示为 "pptx" 而非 ".pptx"
             if (format.StartsWith("."))
-            {
                 format = format.Substring(1);
-            }
 
-            result.Add(new ResourceForChatDto
+            return new ResourceForChatDto
             {
-                Id = resource.Id,
-                Name = resource.Name,
-                FileExtension = resource.FileExtension,
+                Id = r.Id,
+                Name = r.Name,
+                FileExtension = r.FileExtension,
                 SourceFormat = format,
                 NodeCount = 0
-            });
-        }
+            };
+        }).ToList();
 
         return result;
     }
