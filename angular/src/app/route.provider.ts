@@ -215,6 +215,24 @@ function configureRoutes() {
       
     },
     {
+      path: '/learning/exercise-management',
+      name: '::Menu:ExerciseManagement',
+      iconClass: 'fas fa-tasks',
+      parentName: '::Menu:CourseManagement',
+      order: 8,
+      layout: eLayoutType.application,
+      
+    },
+    {
+      path: '/learning/chapter-exercise',
+      name: '::Menu:ChapterExercise',
+      iconClass: 'fas fa-list-check',
+      parentName: '::Menu:CourseManagement',
+      order: 9,
+      layout: eLayoutType.application,
+      
+    },
+    {
       path: '/learning/chapter-resource',
       name: '::Menu:ChapterResource',
       iconClass: 'fas fa-file-lines',
