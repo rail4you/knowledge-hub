@@ -247,12 +247,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
     return maxCount;
   });
 
-  /** 图谱画布最小高度：随同层节点数动态增长，确保节点不重叠 */
+  /** 图谱画布最小高度：按总节点数计算，确保 ECharts 树图完整渲染不被裁剪 */
   chartMinHeight = computed(() => {
-    const nodes = this.maxSiblingCount();
-    // 每个节点需要约 56px（symbolSize 28 + 标签高度 + 间距），保证不重叠
-    const neededHeight = nodes * 56;
-    return Math.max(800, Math.min(neededHeight, 5000)); // 上限 5000px
+    const total = this.countChapters(this.chapters);
+    // 每个节点约 56px（symbolSize 28 + 标签高度 + 间距）
+    const neededHeight = total * 56;
+    return Math.max(600, Math.min(neededHeight, 5000));
   });
 
   ngAfterViewInit() {
@@ -476,9 +476,9 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
           orient: 'LR',
           roam: true,
           nodeDraggable: false,
-          initialTreeDepth: 2,
+          initialTreeDepth: 1,
           expandAndCollapse: true,
-          initialExpandDepth: 2,
+          initialExpandDepth: 1,
           animationDuration: 600,
           animationDurationUpdate: 500,
           animationEasing: 'cubicOut',
