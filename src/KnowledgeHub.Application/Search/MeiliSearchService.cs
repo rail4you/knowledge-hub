@@ -134,6 +134,11 @@ public class MeiliSearchService : IMeiliSearchService
             documentIndices.Add(docIndex);
         }
 
+        // 设置 IndexingTaskId（在 insert 之前设置，避免 insert 后 update 触发 ConcurrencyStamp 冲突）
+        foreach (var di in documentIndices)
+        {
+            di.IndexingTaskId = 0;
+        }
         await _documentIndexRepository.InsertManyAsync(documentIndices);
 
         var meiliDocuments = pages.Select(p => new
@@ -161,12 +166,6 @@ public class MeiliSearchService : IMeiliSearchService
             new StringContent(json, Encoding.UTF8, "application/json"));
 
         var taskResult = await response.Content.ReadFromJsonAsync<MeiliTaskResponse>();
-        
-        for (int i = 0; i < documentIndices.Count; i++)
-        {
-            documentIndices[i].IndexingTaskId = taskResult?.TaskUid;
-        }
-        await _documentIndexRepository.UpdateManyAsync(documentIndices);
 
         return new IndexTaskResultDto
         {
