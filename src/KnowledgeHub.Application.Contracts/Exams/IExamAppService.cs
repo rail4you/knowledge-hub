@@ -39,5 +39,5 @@ public interface IExerciseAppService : ICrudAppService<
     /// <summary>
     /// 批量删除习题
     /// </summary>
-    Task DeleteBatchAsync(List<Guid> ids);
+    Task BatchRemoveAsync(List<Guid> ids);
 }

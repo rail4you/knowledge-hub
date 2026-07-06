@@ -401,9 +401,9 @@ export class ExerciseManagementComponent implements OnInit {
       nzOkDanger: true,
       nzCancelText: '取消',
       nzOnOk: () => {
-        this.restService.request<void, void>({
+        this.restService.request<{ ids: string[] }, void>({
           method: 'DELETE',
-          url: '/api/app/exercise/batch',
+          url: '/api/app/exercise/batch-remove',
           body: { ids },
         }, { apiName: 'KnowledgeHub' }).subscribe({
           next: () => {

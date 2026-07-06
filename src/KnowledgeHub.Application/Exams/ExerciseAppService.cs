@@ -283,7 +283,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         throw new NotImplementedException("AI grading requires AI service integration");
     }
 
-    public async Task DeleteBatchAsync(List<Guid> ids)
+    public async Task BatchRemoveAsync(List<Guid> ids)
     {
         if (ids == null || ids.Count == 0) return;
         await _exerciseRepository.DeleteAsync(e => ids.Contains(e.Id));
