@@ -208,6 +208,8 @@ interface ChapterDto {
 })
 export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() chapters: ChapterDto[] = [];
+  /** 课程名称（可选）：传入后作为图谱的根节点，将所有章节作为其子节点 */
+  @Input() courseName: string = '';
 
   private readonly chartContainer = viewChild<ElementRef>('chartContainer');
   private chart: echarts.ECharts | null = null;
@@ -244,6 +246,8 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
       nodes.forEach(n => n.children && walk(n.children));
     };
     walk(this.chapters || []);
+    // 如果有课程根节点，+1 计入
+    if (this.courseName) maxCount = Math.max(maxCount, 1);
     return maxCount;
   });
 
@@ -432,10 +436,38 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
     return total;
   }
 
+  /** 构建以课程名称为根的树图数据 */
+  private buildTreeWithRoot(chapters: ChapterDto[]): any[] {
+    if (!chapters || chapters.length === 0) return [{ name: '暂无章节', itemStyle: { color: '#94a3b8' } }];
+
+    const rootName = this.courseName || '课程章节';
+    const childNodes = [...chapters]
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+      .map(c => this.processChapter(c, 0));
+
+    const subCount = childNodes.length;
+    return [{
+      name: rootName,
+      meta: { kind: 'course', id: '', depth: 0, subChapterCount: subCount },
+      extData: {
+        kind: 'course', id: '', title: rootName,
+        subChapterCount: subCount, subChapters: chapters,
+      },
+      itemStyle: {
+        color: this.palette[0], borderColor: '#fff', borderWidth: 3,
+        shadowBlur: 18, shadowColor: this.hexToRgba(this.palette[0], 0.45), shadowOffsetY: 3,
+      },
+      label: { fontSize: 14, fontWeight: 700, color: '#1e6ce8' },
+      children: childNodes,
+    }];
+  }
+
   // ============= 更新图表 =============
   private updateChart() {
     if (!this.chart) return;
-    const treeData = this.buildTreeData(this.chapters, 0);
+    const treeData = this.courseName
+      ? this.buildTreeWithRoot(this.chapters)
+      : this.buildTreeData(this.chapters, 0);
     this.applyOption(treeData);
   }
 
@@ -556,7 +588,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
       return [{ name: '暂无章节', itemStyle: { color: '#94a3b8' } }];
     }
 
-    const processChapter = (chapter: ChapterDto, depth: number): any => {
+    return [...chapters]
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+      .map(c => this.processChapter(c, depth));
+  }
+
+  private processChapter(chapter: ChapterDto, depth: number): any {
       const subCount = (chapter.children || []).length;
       const isCollapsed = this.collapsedSet.has(chapter.id!);
       const isHighlighted = this.highlightedSet.has(chapter.id!);
@@ -596,17 +633,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
       if (chapter.children && chapter.children.length > 0) {
         const sortedChildren = [...chapter.children]
           .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-          .map(c => processChapter(c, depth + 1));
+          .map(c => this.processChapter(c, depth + 1));
         node.children = sortedChildren;
       }
 
       return node;
-    };
-
-    return [...chapters]
-      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-      .map(c => processChapter(c, depth));
-  }
+    }
 
   private hexToRgba(hex: string, alpha: number): string {
     if (!hex || hex[0] !== '#') return `rgba(148, 163, 184, ${alpha})`;

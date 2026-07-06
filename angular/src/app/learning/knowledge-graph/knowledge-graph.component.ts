@@ -70,7 +70,8 @@ interface CourseDetailDto {
         @if (courseDetail()) {
           <nz-tabset>
             <nz-tab nzTitle="章节树状图">
-              <app-chapter-tree-graph [chapters]="courseDetail()?.chapters || []" />
+              <app-chapter-tree-graph [chapters]="courseDetail()?.chapters || []"
+                [courseName]="courseDetail()?.title || ''" />
             </nz-tab>
             <nz-tab nzTitle="思维导图">
               <app-mind-map-graph [chapters]="courseDetail()?.chapters || []" />
