@@ -189,9 +189,7 @@ TOOL USE:
             var format = r.FileExtension;
             if (string.IsNullOrEmpty(format))
                 format = System.IO.Path.GetExtension(r.OriginalFileName ?? "");
-            if (string.IsNullOrEmpty(format))
-                format = "unknown";
-            if (format.StartsWith("."))
+            if (!string.IsNullOrEmpty(format) && format.StartsWith("."))
                 format = format.Substring(1);
 
             return new ResourceForChatDto

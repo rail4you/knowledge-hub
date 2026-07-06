@@ -22,6 +22,7 @@ export interface ResourceForChat {
   fileExtension?: string;
   sourceFormat?: string;
   nodeCount: number;
+  hasPageIndex?: boolean;
 }
 
 export interface LessonPlanGenerationInput {

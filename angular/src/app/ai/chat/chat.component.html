@@ -41,12 +41,14 @@
             <div class="resource-info">
               <div class="resource-name">{{ resource.name }}</div>
               <div class="resource-meta">
-                @if (resource.sourceFormat) {
+                @if (resource.sourceFormat && resource.sourceFormat !== 'unknown' && resource.sourceFormat !== 'doc' && resource.sourceFormat !== 'docx') {
                   <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
                 }
-                @if (resource.nodeCount > 0) {
-                <span class="node-count">{{ resource.nodeCount }} 节点</span>
-              }
+                @if (resource.hasPageIndex) {
+                  <span nz-icon nzType="check-circle" nzTheme="fill" style="color:#52c41a;font-size:12px" nz-tooltip nzTooltipTitle="支持文档问答"></span>
+                } @else {
+                  <span nz-icon nzType="exclamation-circle" nzTheme="outline" style="color:#faad14;font-size:12px" nz-tooltip nzTooltipTitle="尚未生成索引"></span>
+                }
               </div>
             </div>
           </div>
