@@ -57,7 +57,7 @@ echo ">>> [3/4] BUILDING HttpApi.Host ..."
 API_FOLDER="$SLN_FOLDER/src/$PROJECT_PREFIX.HttpApi.Host"
 cd "$API_FOLDER" || { echo "ERROR: Folder not found: $API_FOLDER"; exit 1; }
 dotnet publish -c Release
-docker build -f Dockerfile.local -t "$COMPANY_NAME/$APP_NAME-api:$VERSION" .
+docker build -f Dockerfile -t "$COMPANY_NAME/$APP_NAME-api:$VERSION" .
 echo "    ✓ $COMPANY_NAME/$APP_NAME-api:$VERSION"
 echo ""
 
