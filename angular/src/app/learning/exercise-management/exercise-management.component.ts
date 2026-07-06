@@ -401,10 +401,10 @@ export class ExerciseManagementComponent implements OnInit {
       nzOkDanger: true,
       nzCancelText: '取消',
       nzOnOk: () => {
-        this.restService.request<{ ids: string[] }, void>({
-          method: 'DELETE',
+        this.restService.request<string[], void>({
+          method: 'POST',
           url: '/api/app/exercise/batch-remove',
-          body: { ids },
+          body: ids,
         }, { apiName: 'KnowledgeHub' }).subscribe({
           next: () => {
             this.message.success(`成功删除 ${ids.length} 个习题`);
