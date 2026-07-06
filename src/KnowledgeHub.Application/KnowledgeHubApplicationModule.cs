@@ -31,11 +31,12 @@ public class KnowledgeHubApplicationModule : AbpModule
     {
         context.Services.AddSingleton<NpoiDocumentParserService>();
         context.Services.AddSingleton<OpenDataLoaderService>();
+        context.Services.AddSingleton<PdfTextExtractorService>();
         context.Services.AddSingleton<IDocumentExtractionService>(sp =>
         {
             var npoi = sp.GetRequiredService<NpoiDocumentParserService>();
-            var openData = sp.GetRequiredService<OpenDataLoaderService>();
-            return new CompositeDocumentExtractionService(npoi, openData);
+            var pdf = sp.GetRequiredService<PdfTextExtractorService>();
+            return new CompositeDocumentExtractionService(npoi, pdf);
         });
         context.Services.AddSingleton<Practicums.PracticumChatConnectionManager>();
         context.Services.AddTransient<TeachingAgents.TeachingAgentContextBuilder>();

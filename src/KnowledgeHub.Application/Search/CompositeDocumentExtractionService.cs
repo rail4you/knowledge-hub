@@ -7,20 +7,20 @@ namespace KnowledgeHub.Application.Search;
 
 /// <summary>
 /// 复合文档解析服务：按文件格式分派到对应的解析器
-/// NPOI 处理 docx/pptx/xlsx（失败或空结果时转 OpenDataLoader）
-/// OpenDataLoader 处理 pdf 等
+/// NPOI → docx/pptx/xlsx
+/// PdfTextExtractor → pdf
 /// </summary>
 public class CompositeDocumentExtractionService : IDocumentExtractionService
 {
     private readonly NpoiDocumentParserService _npoi;
-    private readonly OpenDataLoaderService _openDataLoader;
+    private readonly PdfTextExtractorService _pdfExtractor;
 
     public CompositeDocumentExtractionService(
         NpoiDocumentParserService npoi,
-        OpenDataLoaderService openDataLoader)
+        PdfTextExtractorService pdfExtractor)
     {
         _npoi = npoi;
-        _openDataLoader = openDataLoader;
+        _pdfExtractor = pdfExtractor;
     }
 
     public async Task<List<PageContentDto>> ExtractPagesAsync(Guid resourceId)
@@ -30,7 +30,12 @@ public class CompositeDocumentExtractionService : IDocumentExtractionService
         if (npoiResult.Count > 0)
             return npoiResult;
 
-        // 回退到 OpenDataLoader（pdf 等）
-        return await _openDataLoader.ExtractPagesAsync(resourceId);
+        // PDF 用 PdfPig
+        var pdfResult = await _pdfExtractor.ExtractPagesAsync(resourceId);
+        if (pdfResult.Count > 0)
+            return pdfResult;
+
+        // 最后尝试 OpenDataLoader（需要 Java 环境）
+        return pdfResult;
     }
 }
