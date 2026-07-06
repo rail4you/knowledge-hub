@@ -22,6 +22,7 @@ public class PageIndexService : IPageIndexService, ITransientDependency
 {
     private readonly IRepository<ResourcePageIndex, Guid> _pageIndexRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
+    private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly IRepository<ResourceVersion, Guid> _versionRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly IConfiguration _configuration;
@@ -36,6 +37,7 @@ public class PageIndexService : IPageIndexService, ITransientDependency
     public PageIndexService(
         IRepository<ResourcePageIndex, Guid> pageIndexRepository,
         IRepository<Resource, Guid> resourceRepository,
+        IRepository<PageContent, Guid> pageContentRepository,
         IRepository<ResourceVersion, Guid> versionRepository,
         IFileStorageService fileStorageService,
         IConfiguration configuration,
@@ -44,6 +46,7 @@ public class PageIndexService : IPageIndexService, ITransientDependency
     {
         _pageIndexRepository = pageIndexRepository;
         _resourceRepository = resourceRepository;
+        _pageContentRepository = pageContentRepository;
         _versionRepository = versionRepository;
         _fileStorageService = fileStorageService;
         _configuration = configuration;
@@ -157,14 +160,13 @@ public class PageIndexService : IPageIndexService, ITransientDependency
     public async Task<List<PageIndexSearchResultDto>> SearchPageIndexAsync(string query, int maxResults = 10)
     {
         var results = new List<PageIndexSearchResultDto>();
-
-        // 获取当前租户的 PageIndex
+        var queryLower = query.ToLowerInvariant();
         var tenantId = _currentTenant.Id;
+
+        // 1. 搜索 KhResourcePageIndices（结构化页面索引 JSON）
         var allPageIndices = tenantId.HasValue
             ? await _pageIndexRepository.GetListAsync(x => x.TenantId == tenantId)
             : await _pageIndexRepository.GetListAsync(x => x.TenantId == null);
-
-        var queryLower = query.ToLowerInvariant();
 
         foreach (var pageIndex in allPageIndices)
         {
@@ -188,6 +190,42 @@ public class PageIndexService : IPageIndexService, ITransientDependency
             }
 
             if (results.Count >= maxResults) break;
+        }
+
+        // 2. 回退搜索 KhPageContents（纯文本，适用于无 PageIndex 但有 PageContent 的资源）
+        if (results.Count < maxResults)
+        {
+            var indexedIds = new HashSet<Guid>(allPageIndices.Select(x => x.ResourceId));
+            var allPages = tenantId.HasValue
+                ? await _pageContentRepository.GetListAsync(x => x.TenantId == tenantId)
+                : await _pageContentRepository.GetListAsync(x => x.TenantId == null);
+
+            foreach (var page in allPages)
+            {
+                if (indexedIds.Contains(page.ResourceId)) continue;
+                if (string.IsNullOrEmpty(page.Content)) continue;
+
+                var contentLower = page.Content.ToLowerInvariant();
+                var idx = contentLower.IndexOf(queryLower, StringComparison.Ordinal);
+                if (idx < 0) continue;
+
+                var resource = await _resourceRepository.FindAsync(page.ResourceId);
+                var snippet = page.Content.Substring(
+                    Math.Max(0, idx - 50),
+                    Math.Min(150, page.Content.Length - Math.Max(0, idx - 50)));
+
+                results.Add(new PageIndexSearchResultDto
+                {
+                    ResourceId = page.ResourceId,
+                    ResourceName = resource?.Name,
+                    NodeTitle = $"第{page.PageNumber}页",
+                    NodeSummary = snippet,
+                    StartIndex = page.PageNumber,
+                    EndIndex = page.PageNumber
+                });
+
+                if (results.Count >= maxResults) break;
+            }
         }
 
         return results.Take(maxResults).ToList();
