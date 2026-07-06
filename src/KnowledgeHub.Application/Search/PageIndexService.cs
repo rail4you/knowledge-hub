@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
+using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
@@ -26,6 +27,7 @@ public class PageIndexService : IPageIndexService, ITransientDependency
     private readonly IRepository<ResourceVersion, Guid> _versionRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly IConfiguration _configuration;
+    private readonly IMeiliSearchService _meiliSearchService;
     private readonly ICurrentTenant _currentTenant;
     private readonly ILogger<PageIndexService> _logger;
 
@@ -41,6 +43,7 @@ public class PageIndexService : IPageIndexService, ITransientDependency
         IRepository<ResourceVersion, Guid> versionRepository,
         IFileStorageService fileStorageService,
         IConfiguration configuration,
+        IMeiliSearchService meiliSearchService,
         ICurrentTenant currentTenant,
         ILogger<PageIndexService> logger)
     {
@@ -50,6 +53,7 @@ public class PageIndexService : IPageIndexService, ITransientDependency
         _versionRepository = versionRepository;
         _fileStorageService = fileStorageService;
         _configuration = configuration;
+        _meiliSearchService = meiliSearchService;
         _currentTenant = currentTenant;
         _logger = logger;
     }
@@ -210,39 +214,39 @@ public class PageIndexService : IPageIndexService, ITransientDependency
             if (results.Count >= maxResults) break;
         }
 
-        // 2. 回退搜索 KhPageContents（纯文本，适用于无 PageIndex 但有 PageContent 的资源）
+        // 2. 回退：搜索 Meilisearch（支持全文搜索、模糊匹配）
         if (results.Count < maxResults)
         {
             var indexedIds = new HashSet<Guid>(allPageIndices.Select(x => x.ResourceId));
-            var allPages = tenantId.HasValue
-                ? await _pageContentRepository.GetListAsync(x => x.TenantId == tenantId)
-                : await _pageContentRepository.GetListAsync(x => x.TenantId == null);
-
-            foreach (var page in allPages)
+            try
             {
-                if (indexedIds.Contains(page.ResourceId)) continue;
-                if (string.IsNullOrEmpty(page.Content)) continue;
-
-                var contentLower = page.Content.ToLowerInvariant();
-                var idx = contentLower.IndexOf(queryLower, StringComparison.Ordinal);
-                if (idx < 0) continue;
-
-                var resource = await _resourceRepository.FindAsync(page.ResourceId);
-                var snippet = page.Content.Substring(
-                    Math.Max(0, idx - 50),
-                    Math.Min(150, page.Content.Length - Math.Max(0, idx - 50)));
-
-                results.Add(new PageIndexSearchResultDto
+                var searchResult = await _meiliSearchService.SearchAsync(new SearchQueryDto
                 {
-                    ResourceId = page.ResourceId,
-                    ResourceName = resource?.Name,
-                    NodeTitle = $"第{page.PageNumber}页",
-                    NodeSummary = snippet,
-                    StartIndex = page.PageNumber,
-                    EndIndex = page.PageNumber
+                    Query = query,
+                    MaxResultCount = maxResults - results.Count
                 });
 
-                if (results.Count >= maxResults) break;
+                foreach (var hit in searchResult.Items)
+                {
+                    var rid = Guid.TryParse(hit.ResourceId, out var parsedId) ? parsedId : Guid.Empty;
+                    if (rid == Guid.Empty || indexedIds.Contains(rid)) continue;
+
+                    results.Add(new PageIndexSearchResultDto
+                    {
+                        ResourceId = rid,
+                        ResourceName = hit.ResourceName,
+                        NodeTitle = $"第{hit.PageNumber}页",
+                        NodeSummary = hit.Content ?? hit.HighlightedContent ?? "",
+                        StartIndex = hit.PageNumber,
+                        EndIndex = hit.PageNumber
+                    });
+
+                    if (results.Count >= maxResults) break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Meilisearch fallback search failed");
             }
         }
 
