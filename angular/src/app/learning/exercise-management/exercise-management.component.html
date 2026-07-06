@@ -84,10 +84,10 @@
         <tbody>
           @for (exercise of filteredExercises(); track exercise.id) {
             <tr>
-              <td (click)="\$event.stopPropagation()">
+              <td (click)="$event.stopPropagation()">
                 <label nz-checkbox
                   [nzChecked]="checkedIds().has(exercise.id!)"
-                  (nzCheckedChange)="onRowChecked(exercise.id!, \$event)"
+                  (nzCheckedChange)="onRowChecked(exercise.id!, $event)"
                 ></label>
               </td>
               <td>{{ exercise.title }}</td>

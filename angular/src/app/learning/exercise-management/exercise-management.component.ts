@@ -12,6 +12,7 @@ import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -39,6 +40,7 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
     NzFormModule,
     NzInputNumberModule,
     NzTableModule,
+    NzCheckboxModule,
     NzSpinModule,
     NzRadioModule,
   ],
