@@ -29,6 +29,7 @@ public class MeiliSearchService : IMeiliSearchService
     private readonly IDocumentExtractionService _documentExtractionService;
     private readonly IEmbeddingService _embeddingService;
     private readonly IRepository<Resource, Guid> _resourceRepository;
+    private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
 
@@ -38,6 +39,7 @@ public class MeiliSearchService : IMeiliSearchService
         IDocumentExtractionService documentExtractionService,
         IEmbeddingService embeddingService,
         IRepository<Resource, Guid> resourceRepository,
+        IRepository<PageContent, Guid> pageContentRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
         HttpClient httpClient)
@@ -47,6 +49,7 @@ public class MeiliSearchService : IMeiliSearchService
         _documentExtractionService = documentExtractionService;
         _embeddingService = embeddingService;
         _resourceRepository = resourceRepository;
+        _pageContentRepository = pageContentRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         
@@ -140,6 +143,18 @@ public class MeiliSearchService : IMeiliSearchService
             di.IndexingTaskId = 0;
         }
         await _documentIndexRepository.InsertManyAsync(documentIndices);
+
+        // 同时写入 PageContent（用于 hasPageIndex 判断）
+        var pageContents = pages.Select(p => new PageContent
+        {
+            ResourceId = resourceId,
+            PageNumber = p.PageNumber,
+            Content = p.Content ?? string.Empty,
+            PageWidth = 595f,
+            PageHeight = 842f,
+            TenantId = tenantId
+        }).ToList();
+        await _pageContentRepository.InsertManyAsync(pageContents);
 
         var meiliDocuments = pages.Select(p => new
         {
