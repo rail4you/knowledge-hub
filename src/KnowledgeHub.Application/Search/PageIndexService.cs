@@ -144,11 +144,29 @@ public class PageIndexService : IPageIndexService, ITransientDependency
 
     public async Task<ResourcePageIndexDto?> GetPageIndexAsync(Guid resourceId)
     {
+        // 1. 优先返回结构化页面索引
         var pageIndexList = await _pageIndexRepository.GetListAsync(x => x.ResourceId == resourceId);
-        return pageIndexList
+        var existing = pageIndexList
             .OrderByDescending(x => x.CreatedAt)
             .Select(MapToDto)
             .FirstOrDefault();
+        if (existing != null) return existing;
+
+        // 2. 回退：从 KhPageContents 构建简易页面索引
+        var pages = await _pageContentRepository.GetListAsync(x => x.ResourceId == resourceId);
+        if (pages.Count == 0) return null;
+
+        var resource = await _resourceRepository.FindAsync(resourceId);
+        var structureJson = BuildSimplePageIndexJson(pages);
+
+        return new ResourcePageIndexDto
+        {
+            ResourceId = resourceId,
+            SourceFormat = resource?.FileExtension?.TrimStart('.') ?? "unknown",
+            NodeCount = pages.Count,
+            Model = "simple",
+            PageIndexJson = structureJson
+        };
     }
 
     public async Task<ResourcePageIndexDto?> GetPageIndexByVersionAsync(Guid resourceVersionId)
@@ -376,6 +394,27 @@ public class PageIndexService : IPageIndexService, ITransientDependency
         }
 
         return 0;
+    }
+
+    private static string BuildSimplePageIndexJson(List<PageContent> pages)
+    {
+        var structure = pages.OrderBy(p => p.PageNumber).Select(p => new
+        {
+            title = $"第{p.PageNumber}页",
+            node_id = p.Id.ToString(),
+            start_index = p.PageNumber,
+            end_index = p.PageNumber,
+            text = p.Content ?? string.Empty,
+            summary = (p.Content?.Length > 100 ? p.Content.Substring(0, 100) : p.Content) ?? string.Empty,
+            nodes = Array.Empty<object>()
+        }).ToList();
+
+        return JsonSerializer.Serialize(new
+        {
+            doc_name = (string?)null,
+            doc_description = (string?)null,
+            structure
+        });
     }
 
     private static ResourcePageIndexDto MapToDto(ResourcePageIndex entity)
