@@ -54,9 +54,8 @@ public class ChatAppService : KnowledgeHubAppService
     private const string DocumentChatInstructions = @"你是一个专业的文档问答助手。
 
 TOOL USE:
-- 先调用 get_document() 获取文档元数据（名称、页数等）。
-- 调用 get_document_structure() 查看文档完整目录结构，找到与用户问题相关的章节。
-- 调用 get_page_content(pages=""5-7"") 获取指定页码范围的内容。使用紧凑的页码范围，不要一次请求整个文档。
+- 使用 SearchPageIndex 搜索当前文档中的相关章节和内容。
+- 使用 GetDocumentStructure 查看文档的完整目录结构。
 - 工具调用过程只用于内部推理，不要把调用原因、调用步骤、工具名、检索过程输出给用户。
 
 回答要求：
@@ -108,25 +107,9 @@ TOOL USE:
 
         if (input.ResourceId.HasValue)
         {
-            // Document QA mode: check if resource has indexed content
-            var pcQuery = await _pageContentRepository.GetQueryableAsync();
-            var hasContent = await AsyncExecuter.AnyAsync(
-                pcQuery.Where(x => x.ResourceId == input.ResourceId.Value));
-
-            if (!hasContent)
-            {
-                await onChunk(new ChatMessageChunkDto
-                {
-                    Content = "该文档尚未生成页面索引，无法进行文档问答。请先为文档生成索引。",
-                    ThreadId = threadId,
-                    IsComplete = false
-                });
-                await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
-                return;
-            }
-
-            var docTools = new DocumentChatTools("{}", _logger);
-            tools = BuildDocumentTools(docTools);
+            // Document QA mode: use MeiliSearch tools to search document content
+            // 不再依赖 DocumentChatTools（旧的 pageIndexJson 方案）
+            tools = BuildTools();
             instructions = DocumentChatInstructions;
         }
         else
@@ -251,22 +234,4 @@ TOOL USE:
         };
     }
 
-    private List<AITool> BuildDocumentTools(DocumentChatTools docTools)
-    {
-        return new List<AITool>
-        {
-            AIFunctionFactory.Create(
-                docTools.GetDocument,
-                name: "get_document",
-                description: "获取当前文档的元数据：文档名称、描述、页数等。在回答文档相关问题前，先调用此工具确认文档状态。"),
-            AIFunctionFactory.Create(
-                docTools.GetDocumentStructure,
-                name: "get_document_structure",
-                description: "获取文档的完整目录结构树（不含正文内容）。用于查找与用户问题相关的章节和页码范围。"),
-            AIFunctionFactory.Create(
-                docTools.GetPageContent,
-                name: "get_page_content",
-                description: "获取指定页码范围的正文内容。使用紧凑范围如 '5-7'（第5到7页）、'3,8'（第3和8页）、'12'（第12页）。请先调用 get_document_structure 确定相关页码范围。"),
-        };
-    }
 }
