@@ -13,6 +13,7 @@ using NPOI.XSSF.UserModel;
 using NPOI.SS.UserModel;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Presentation;
+using Microsoft.EntityFrameworkCore;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
@@ -55,7 +56,8 @@ public class NpoiDocumentParserService : IDocumentExtractionService
             Resource? resource;
             using (_dataFilter.Disable<IMultiTenant>())
             {
-                resource = await _resourceRepository.FindAsync(resourceId);
+                var q = await _resourceRepository.GetQueryableAsync();
+                resource = await q.Where(x => x.Id == resourceId).AsNoTracking().FirstOrDefaultAsync();
             }
 
             if (resource == null)
