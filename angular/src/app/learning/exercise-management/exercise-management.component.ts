@@ -361,6 +361,62 @@ export class ExerciseManagementComponent implements OnInit {
     return colors[difficulty] ?? 'default';
   }
 
+  // Batch selection
+  checkedIds = signal<Set<string>>(new Set());
+
+  get isAllChecked(): boolean {
+    const filtered = this.filteredExercises();
+    return filtered.length > 0 && filtered.every(e => this.checkedIds().has(e.id!));
+  }
+
+  onAllChecked(checked: boolean) {
+    const ids = new Set<string>();
+    if (checked) {
+      this.filteredExercises().forEach(e => { if (e.id) ids.add(e.id); });
+    }
+    this.checkedIds.set(ids);
+  }
+
+  onRowChecked(id: string, checked: boolean) {
+    this.checkedIds.update(s => {
+      const newSet = new Set(s);
+      if (checked) newSet.add(id);
+      else newSet.delete(id);
+      return newSet;
+    });
+  }
+
+  deleteBatch() {
+    const ids = Array.from(this.checkedIds());
+    if (ids.length === 0) {
+      this.message.warning('请先选择要删除的习题');
+      return;
+    }
+    this.modal.confirm({
+      nzTitle: '批量删除',
+      nzContent: `确定要删除选中的 ${ids.length} 个习题吗？`,
+      nzOkText: '删除',
+      nzOkDanger: true,
+      nzCancelText: '取消',
+      nzOnOk: () => {
+        this.restService.request<void, void>({
+          method: 'DELETE',
+          url: '/api/app/exercise/batch',
+          body: { ids },
+        }, { apiName: 'KnowledgeHub' }).subscribe({
+          next: () => {
+            this.message.success(`成功删除 ${ids.length} 个习题`);
+            this.checkedIds.set(new Set());
+            this.loadExercises();
+          },
+          error: () => {
+            this.message.error('批量删除失败');
+          },
+        });
+      },
+    });
+  }
+
   // Import methods
   openImportModal() {
     const courseId = this.selectedCourseId();

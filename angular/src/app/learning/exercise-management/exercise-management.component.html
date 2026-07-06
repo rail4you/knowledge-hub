@@ -44,6 +44,12 @@
         <span nz-icon nzType="upload"></span>
         导入习题
       </button>
+      @if (checkedIds().size > 0) {
+        <button nz-button nzType="primary" nzDanger (click)="deleteBatch()" style="margin-left: 8px">
+          <span nz-icon nzType="delete"></span>
+          批量删除 ({{ checkedIds().size }})
+        </button>
+      }>
     </div>
   </nz-card>
 
@@ -63,6 +69,9 @@
       >
         <thead>
           <tr>
+            <th nzWidth="40px">
+              <label nz-checkbox [nzChecked]="isAllChecked" (nzCheckedChange)="onAllChecked($event)"></label>
+            </th>
             <th>标题</th>
             <th>题目内容</th>
             <th nzWidth="90px">题型</th>
@@ -75,6 +84,12 @@
         <tbody>
           @for (exercise of filteredExercises(); track exercise.id) {
             <tr>
+              <td (click)="\$event.stopPropagation()">
+                <label nz-checkbox
+                  [nzChecked]="checkedIds().has(exercise.id!)"
+                  (nzCheckedChange)="onRowChecked(exercise.id!, \$event)"
+                ></label>
+              </td>
               <td>{{ exercise.title }}</td>
               <td class="content-cell">{{ exercise.questionContent }}</td>
               <td>

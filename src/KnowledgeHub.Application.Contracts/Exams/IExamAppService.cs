@@ -35,4 +35,9 @@ public interface IExerciseAppService : ICrudAppService<
     /// 从 Excel 文件导入习题
     /// </summary>
     Task<ExerciseImportResultDto> ImportFromExcelAsync(Guid courseId, IFormFile file);
+
+    /// <summary>
+    /// 批量删除习题
+    /// </summary>
+    Task DeleteBatchAsync(List<Guid> ids);
 }

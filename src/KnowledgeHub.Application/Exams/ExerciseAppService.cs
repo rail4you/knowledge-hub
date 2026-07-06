@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using ClosedXML.Excel;
 using KnowledgeHub.Exams.Dtos;
 using KnowledgeHub.Exams.Enums;
+using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -282,6 +283,12 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         throw new NotImplementedException("AI grading requires AI service integration");
     }
 
+    public async Task DeleteBatchAsync(List<Guid> ids)
+    {
+        if (ids == null || ids.Count == 0) return;
+        await _exerciseRepository.DeleteAsync(e => ids.Contains(e.Id));
+    }
+
     public async Task<ExerciseImportResultDto> ImportFromExcelAsync(Guid courseId, IFormFile file)
     {
         var result = new ExerciseImportResultDto();
@@ -297,9 +304,9 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
             // P1-5 修复：按表头名称解析列，支持「选项在 4 个独立列」和「选项合并在一列」两种模板
             var headerMap = ResolveExerciseHeader(worksheet);
 
-            // 获取有数据的行（跳过说明/表头）
-            var dataStartRow = headerMap.DataStartRow;
-            var rows = worksheet.RowsUsed().Skip(dataStartRow).ToList();
+            // 获取有数据的行（跳过表头行，表头从 1 开始计数）
+            var skipCount = headerMap.DataStartRow;
+            var rows = worksheet.RowsUsed().Skip(skipCount).ToList();
             result.TotalRows = rows.Count;
 
             if (rows.Count == 0)
@@ -521,7 +528,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
             Answer = answerCol,
             OptionColumns = optionCols,
             OptionMergedColumn = mergedOptionsCol > 0 ? mergedOptionsCol : null,
-            DataStartRow = headerRow + 1
+            DataStartRow = headerRow
         };
     }
 
