@@ -12,6 +12,7 @@ using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Domain.Search.Enums;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Enums;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Data;
@@ -100,7 +101,8 @@ public class MeiliSearchService : IMeiliSearchService
         Resource? resource;
         using (_dataFilter.Disable<IMultiTenant>())
         {
-            resource = await _resourceRepository.FindAsync(resourceId);
+            var q = await _resourceRepository.GetQueryableAsync();
+            resource = await q.Where(x => x.Id == resourceId).AsNoTracking().FirstOrDefaultAsync();
         }
         if (resource == null) return new IndexTaskResultDto { TaskId = 0, DocumentIndexId = Guid.Empty, Status = "NotFound" };
         var pages = await _documentExtractionService.ExtractPagesAsync(resourceId);
