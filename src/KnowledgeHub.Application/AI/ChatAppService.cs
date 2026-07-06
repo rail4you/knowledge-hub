@@ -170,20 +170,19 @@ TOOL USE:
 
     public async Task<List<ResourceForChatDto>> GetResourcesWithPageIndexAsync()
     {
-        // 从已索引的 PageContent 中获取当前租户已审核通过的资源列表
+        // 1. 先查哪些资源有页面索引
         var pcQuery = await _pageContentRepository.GetQueryableAsync();
         var indexedResourceIds = await AsyncExecuter.ToListAsync(
             pcQuery.Select(pc => pc.ResourceId).Distinct());
+        var indexedSet = new HashSet<Guid>(indexedResourceIds);
 
-        if (indexedResourceIds.Count == 0)
-            return new List<ResourceForChatDto>();
-
-        // 只返回当前租户下已审核通过的资源
-        // 排除 Draft / PendingReview / Rejected / Hidden
+        // 2. 获取当前租户下所有审核通过的资源
         var approvedResources = await _resourceRepository.GetListAsync(r =>
-            indexedResourceIds.Contains(r.Id)
-            && (r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
-                || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved));
+            r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
+            || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved);
+
+        if (approvedResources.Count == 0)
+            return new List<ResourceForChatDto>();
 
         var result = approvedResources.Select(r =>
         {
@@ -201,7 +200,8 @@ TOOL USE:
                 Name = r.Name,
                 FileExtension = r.FileExtension,
                 SourceFormat = format,
-                NodeCount = 0
+                NodeCount = 0,
+                HasPageIndex = indexedSet.Contains(r.Id)
             };
         }).ToList();
 

@@ -19,6 +19,8 @@ public class ResourceForChatDto
     public string? FileExtension { get; set; }
     public string? SourceFormat { get; set; }
     public int NodeCount { get; set; }
+    /// <summary>是否已生成页面索引（支持文档问答）</summary>
+    public bool HasPageIndex { get; set; }
 }
 
 public class FileUrlDto
