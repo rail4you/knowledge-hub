@@ -94,7 +94,7 @@ COPY --from=ffmpeg /opt/ffmpeg/ffprobe /usr/local/bin/ffprobe
 RUN chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
 
 # Ensure runtime user (APP_UID, default 1000) owns /app and writable dirs
-RUN mkdir -p /app/uploads /tmp/opendataloader \
+RUN mkdir -p /app/uploads \
     && chown -R $APP_UID:$APP_UID /app
 
 USER $APP_UID

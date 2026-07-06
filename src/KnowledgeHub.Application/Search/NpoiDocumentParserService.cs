@@ -21,8 +21,7 @@ using Volo.Abp.MultiTenancy;
 namespace KnowledgeHub.Application.Search;
 
 /// <summary>
-/// 纯 .NET 文档解析服务，使用 NPOI 解析 Office 文档。
-/// 替代原先的 Java document-parser.jar 方案，消除 Java 依赖。
+/// 纯 .NET 文档解析服务，使用 NPOI 解析 Office 文档（docx/pptx/xlsx）。
 /// </summary>
 public class NpoiDocumentParserService : IDocumentExtractionService
 {

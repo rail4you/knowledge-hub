@@ -20,7 +20,6 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 {
     private readonly HttpClient _httpClient;
     private readonly IOptions<MeilisearchOptions> _options;
-    private readonly IRepository<ResourcePageIndex, Guid> _pageIndexRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<ResourceVersion, Guid> _versionRepository;
     private readonly ICurrentTenant _currentTenant;
@@ -28,14 +27,12 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
     public MeiliSearchAdminAppService(
         IOptions<MeilisearchOptions> options,
         HttpClient httpClient,
-        IRepository<ResourcePageIndex, Guid> pageIndexRepository,
         IRepository<Resource, Guid> resourceRepository,
         IRepository<ResourceVersion, Guid> versionRepository,
         ICurrentTenant currentTenant)
     {
         _options = options;
         _httpClient = httpClient;
-        _pageIndexRepository = pageIndexRepository;
         _resourceRepository = resourceRepository;
         _versionRepository = versionRepository;
         _currentTenant = currentTenant;
@@ -313,82 +310,6 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
         }
 
         return stats;
-    }
-
-    public async Task<List<PageIndexListItemDto>> GetPageIndexListAsync(Guid? tenantId = null)
-    {
-        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
-
-        // 如果当前用户已登录且属于某个租户，则强制使用该租户ID
-        var currentTenantId = _currentTenant.Id;
-        if (currentTenantId.HasValue)
-        {
-            tenantId = currentTenantId;
-        }
-
-        var pageIndexQuery = await _pageIndexRepository.GetQueryableAsync();
-        var resourceQuery = await _resourceRepository.GetQueryableAsync();
-        var versionQuery = await _versionRepository.GetQueryableAsync();
-
-        // 应用租户过滤
-        var queryable = pageIndexQuery.AsQueryable();
-        if (tenantId.HasValue)
-        {
-            queryable = queryable.Where(p => p.TenantId == tenantId);
-        }
-        else if (_currentTenant.Id == null)
-        {
-            // Host 用户且未指定租户，返回空列表（让用户先选择租户）
-            return new List<PageIndexListItemDto>();
-        }
-
-        var pageIndexes = queryable
-            .OrderByDescending(p => p.CreatedAt)
-            .ToList();
-
-        var resourceIds = pageIndexes.Select(p => p.ResourceId).Distinct().ToList();
-        var versionIds = pageIndexes.Select(p => p.ResourceVersionId).Distinct().ToList();
-
-        var resources = resourceQuery
-            .Where(r => resourceIds.Contains(r.Id))
-            .ToDictionary(r => r.Id, r => r.Name);
-
-        var versions = versionQuery
-            .Where(v => versionIds.Contains(v.Id))
-            .ToDictionary(v => v.Id, v => v.Version);
-
-        var result = pageIndexes.Select(p =>
-        {
-            string? docDescription = null;
-            if (!string.IsNullOrEmpty(p.PageIndexJson))
-            {
-                try
-                {
-                    using var doc = JsonDocument.Parse(p.PageIndexJson);
-                    if (doc.RootElement.TryGetProperty("doc_description", out var descProp))
-                    {
-                        docDescription = descProp.GetString();
-                    }
-                }
-                catch { }
-            }
-
-            return new PageIndexListItemDto
-            {
-                Id = p.Id,
-                ResourceName = resources.GetValueOrDefault(p.ResourceId) ?? "未知资源",
-                ResourceId = p.ResourceId,
-                VersionNumber = versions.GetValueOrDefault(p.ResourceVersionId, 0),
-                TenantId = p.TenantId,
-                SourceFormat = p.SourceFormat,
-                Model = p.Model,
-                NodeCount = p.NodeCount,
-                DocDescription = docDescription,
-                CreatedAt = p.CreatedAt,
-            };
-        }).ToList();
-
-        return result;
     }
 
     public async Task<List<MeiliIndexDto>> GetIndexesAsync()

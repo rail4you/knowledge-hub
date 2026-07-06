@@ -17,7 +17,6 @@ namespace KnowledgeHub.Application.Search;
 
 /// <summary>
 /// 使用 PdfPig 提取 PDF 文档文本内容。
-/// 替代已删除的 Java document-parser.jar。
 /// </summary>
 public class PdfTextExtractorService
 {

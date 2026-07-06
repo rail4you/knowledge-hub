@@ -30,7 +30,6 @@ public class KnowledgeHubApplicationModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         context.Services.AddSingleton<NpoiDocumentParserService>();
-        context.Services.AddSingleton<OpenDataLoaderService>();
         context.Services.AddSingleton<PdfTextExtractorService>();
         context.Services.AddSingleton<IDocumentExtractionService>(sp =>
         {

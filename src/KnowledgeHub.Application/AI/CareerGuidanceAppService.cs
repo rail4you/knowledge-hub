@@ -9,8 +9,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI.Dtos;
-using KnowledgeHub.Application.AI.Tools;
-using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.AI;
@@ -29,7 +27,6 @@ public class CareerGuidanceAppService : KnowledgeHubAppService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<CareerGuidanceAppService> _logger;
-    private readonly IRepository<ResourcePageIndex, Guid> _pageIndexRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -102,14 +99,12 @@ JSON 结构：
     public CareerGuidanceAppService(
         IConfiguration configuration,
         ILogger<CareerGuidanceAppService> logger,
-        IRepository<ResourcePageIndex, Guid> pageIndexRepository,
         IRepository<Resource, Guid> resourceRepository,
         IFileStorageService fileStorageService,
         IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
         _logger = logger;
-        _pageIndexRepository = pageIndexRepository;
         _resourceRepository = resourceRepository;
         _fileStorageService = fileStorageService;
         _httpClientFactory = httpClientFactory;
@@ -177,51 +172,17 @@ JSON 结构：
         }
         else if (input.ResourceId.HasValue)
         {
-            // 管理端：使用 Resource 文档
-            var resource = await _resourceRepository.GetAsync(input.ResourceId.Value);
-            var pageIndexList = await _pageIndexRepository.GetListAsync(x => x.ResourceId == input.ResourceId);
-            var latestPageIndex = pageIndexList.OrderByDescending(x => x.CreatedAt).FirstOrDefault();
-
-            if (latestPageIndex == null)
+            // TODO: PageIndex 已移除，管理端（Resource 文档）职业规划功能暂时下线。
+            // 后续用 MeiliSearch/页面内容重新实现。
+            _logger.LogWarning("CareerGuidance admin (Resource-based) feature is disabled. PageIndex has been removed; will be reimplemented.");
+            await onChunk(new ChatMessageChunkDto
             {
-                await onChunk(new ChatMessageChunkDto
-                {
-                    Content = JsonSerializer.Serialize(new { error = "该资源尚未生成页面索引，无法生成职业规划建议。" }),
-                    ThreadId = threadId,
-                    IsComplete = false
-                });
-                await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
-                return;
-            }
-
-            var docTools = new DocumentChatTools(latestPageIndex.PageIndexJson, _logger);
-
-            var docMeta = docTools.GetDocument();
-            var docStructure = docTools.GetDocumentStructure();
-
-            var maxPage = ExtractMaxPage(docMeta);
-            var contentRange = maxPage > 0 ? $"1-{Math.Min(maxPage, 30)}" : "";
-            var docContent = !string.IsNullOrEmpty(contentRange)
-                ? docTools.GetPageContent(contentRange)
-                : "";
-
-            var goalSection = !string.IsNullOrWhiteSpace(input.CareerGoal)
-                ? $"\n## 职业目标\n{input.CareerGoal}"
-                : "";
-
-            userPrompt = $@"请根据以下简历/个人文档内容，生成一份全面的职业规划建议报告。
-
-## 文档信息
-{docMeta}
-
-## 文档结构
-{docStructure}
-
-## 文档内容摘要
-{(docContent.Length > 8000 ? docContent[..8000] : docContent)}
-{goalSection}
-
-请生成职业规划建议JSON。";
+                Content = JsonSerializer.Serialize(new { error = "管理端职业规划功能暂时下线维护中，请使用学生端简历文本方式。" }),
+                ThreadId = threadId,
+                IsComplete = false
+            });
+            await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
+            return;
         }
         else
         {
@@ -291,20 +252,6 @@ JSON 结构：
         }) ?? throw new AbpException("无法解析职业规划JSON数据。");
 
         return CareerGuidanceDocxGenerator.Generate(careerGuidance);
-    }
-
-    private static int ExtractMaxPage(string docMetaJson)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(docMetaJson);
-            if (doc.RootElement.TryGetProperty("page_count", out var pc))
-            {
-                return pc.GetInt32();
-            }
-        }
-        catch { }
-        return 0;
     }
 
     /// <summary>

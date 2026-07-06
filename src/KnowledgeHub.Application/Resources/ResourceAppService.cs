@@ -49,7 +49,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IEditionConfigService EditionConfigService { get; }
     protected IMeiliSearchService MeiliSearchService { get; }
     protected IDocumentIndexRepository DocumentIndexRepository { get; }
-    protected IRepository<ResourcePageIndex, Guid> PageIndexRepository { get; }
     protected IRepository<Major, Guid> MajorRepository { get; }
     protected IRepository<IdentityUser, Guid> UserRepository { get; }
 
@@ -71,7 +70,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IEditionConfigService editionConfigService,
         IMeiliSearchService meiliSearchService,
         IDocumentIndexRepository documentIndexRepository,
-        IRepository<ResourcePageIndex, Guid> pageIndexRepository,
         IRepository<Major, Guid> majorRepository,
         IRepository<IdentityUser, Guid> userRepository)
     {
@@ -92,7 +90,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         EditionConfigService = editionConfigService;
         MeiliSearchService = meiliSearchService;
         DocumentIndexRepository = documentIndexRepository;
-        PageIndexRepository = pageIndexRepository;
         MajorRepository = majorRepository;
         UserRepository = userRepository;
     }
@@ -785,16 +782,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         try
         {
-            // KhResourcePageIndices 表已被迁移 RemoveResourcePageIndex 删除
-        // PageIndexRepository 查询该表会抛异常并污染事务，此处直接跳过
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to delete ResourcePageIndex for resource {ResourceId}", resourceId);
-        }
-
-        try
-        {
             var indexingJobs = await IndexingJobRepository.GetListAsync(x => x.ResourceId == resourceId);
             if (indexingJobs.Any())
             {
@@ -895,23 +882,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             Logger.LogError(ex, "Failed to delete MeiliSearch index data for resource {ResourceId}", resourceId);
         }
 
-        // 3. 删除该版本的 PageIndex 记录
-        try
-        {
-            var pageIndexList = await PageIndexRepository.GetListAsync(x =>
-                x.ResourceId == resourceId && x.ResourceVersionId == resourceVersionId);
-            if (pageIndexList.Any())
-            {
-                await PageIndexRepository.DeleteManyAsync(pageIndexList);
-                Logger.LogInformation("Deleted {Count} ResourcePageIndex records for version {ResourceVersionId}", pageIndexList.Count, resourceVersionId);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to delete ResourcePageIndex for version {ResourceVersionId}", resourceVersionId);
-        }
-
-        // 4. 删除该版本的索引任务记录
+        // 3. 删除该版本的索引任务记录
         try
         {
             var indexingJobs = await IndexingJobRepository.GetListAsync(x =>

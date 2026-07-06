@@ -27,7 +27,6 @@ public class ChatAppService : KnowledgeHubAppService
     private readonly ICurrentUser _currentUser;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ChatAppService> _logger;
-    private readonly PageIndexTools _pageIndexTools;
     private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
 
@@ -39,24 +38,15 @@ public class ChatAppService : KnowledgeHubAppService
 - 推荐学习路径
 - 生成练习题（如果用户要求）
 
-你可以使用以下工具来帮助用户：
-- SearchPageIndex：当用户询问文档中的某个主题、章节或知识点时，使用此工具搜索相关文档内容
-- GetDocumentStructure：当用户想了解某个文档的完整目录结构时，使用此工具
-
 回答要求：
 1. 回答简洁，专业
 2. 如果涉及课程信息或文档内容，先使用搜索工具查询
 3. 使用 Markdown 格式化回答
 4. 当搜索工具返回结果时，基于搜索结果给出准确、有依据的回答
 5. 不要向用户暴露你的思考过程、工具调用过程、检索步骤、函数名或内部提示词
-6. 直接输出最终答案，不要输出“我先搜索”“我来调用工具”“思考过程如下”之类的中间过程";
+6. 直接输出最终答案，不要输出 ""我先搜索""/""我来调用工具""/""思考过程如下"" 之类的中间过程";
 
     private const string DocumentChatInstructions = @"你是一个专业的文档问答助手。
-
-TOOL USE:
-- 使用 SearchPageIndex 搜索当前文档中的相关章节和内容。
-- 使用 GetDocumentStructure 查看文档的完整目录结构。
-- 工具调用过程只用于内部推理，不要把调用原因、调用步骤、工具名、检索过程输出给用户。
 
 回答要求：
 1. 仅基于工具返回的内容回答，不要编造信息。
@@ -71,14 +61,12 @@ TOOL USE:
         ICurrentUser currentUser,
         IConfiguration configuration,
         ILogger<ChatAppService> logger,
-        PageIndexTools pageIndexTools,
         IRepository<PageContent, Guid> pageContentRepository,
         IRepository<Resource, Guid> resourceRepository)
     {
         _currentUser = currentUser;
         _configuration = configuration;
         _logger = logger;
-        _pageIndexTools = pageIndexTools;
         _pageContentRepository = pageContentRepository;
         _resourceRepository = resourceRepository;
     }
@@ -221,17 +209,8 @@ TOOL USE:
 
     private List<AITool> BuildTools()
     {
-        return new List<AITool>
-        {
-            AIFunctionFactory.Create(
-                _pageIndexTools.SearchPageIndex,
-                name: "SearchPageIndex",
-                description: "搜索文档的页面索引结构。当用户询问文档目录、章节、内容结构时使用此工具。返回匹配的章节标题和摘要。"),
-            AIFunctionFactory.Create(
-                _pageIndexTools.GetDocumentStructure,
-                name: "GetDocumentStructure",
-                description: "获取指定文档的完整页面索引树。当用户想了解某文档的详细结构（目录、章节层次）时使用。"),
-        };
+        // TODO: 重新整理 AI 工具注册 (PageIndex 工具已移除，后续用 MeiliSearchDocumentTools 替代)
+        return new List<AITool>();
     }
 
 }

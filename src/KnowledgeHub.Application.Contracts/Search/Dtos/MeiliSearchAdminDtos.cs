@@ -92,17 +92,3 @@ public class MeiliDocumentPageDto
     public string? StartTime { get; set; }
     public string? EndTime { get; set; }
 }
-
-public class PageIndexListItemDto
-{
-    public Guid Id { get; set; }
-    public string ResourceName { get; set; } = string.Empty;
-    public Guid ResourceId { get; set; }
-    public int VersionNumber { get; set; }
-    public Guid? TenantId { get; set; }
-    public string? SourceFormat { get; set; }
-    public string? Model { get; set; }
-    public int NodeCount { get; set; }
-    public string? DocDescription { get; set; }
-    public DateTime CreatedAt { get; set; }
-}

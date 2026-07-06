@@ -28,7 +28,6 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
     private readonly IFileStorageService _fileStorageService;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly IMeiliSearchService _meiliSearchService;
-    private readonly IPageIndexService _pageIndexService;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly ILogger<DocumentIndexingBackgroundJob> _logger;
@@ -41,7 +40,6 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         IFileStorageService fileStorageService,
         IUnitOfWorkManager unitOfWorkManager,
         IMeiliSearchService meiliSearchService,
-        IPageIndexService pageIndexService,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
         ILogger<DocumentIndexingBackgroundJob> logger)
@@ -53,7 +51,6 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _fileStorageService = fileStorageService;
         _unitOfWorkManager = unitOfWorkManager;
         _meiliSearchService = meiliSearchService;
-        _pageIndexService = pageIndexService;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         _logger = logger;
@@ -165,26 +162,6 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
             _logger.LogWarning(meiliEx, "Meilisearch indexing failed for resource {ResourceId}", args.ResourceId);
             // 将 Job 标记为失败而不是静默完成，方便用户在索引任务页面看到问题
             throw new Exception($"Meilisearch 索引失败: {meiliEx.Message}", meiliEx);
-        }
-
-        // === PageIndex generation ===
-        try
-        {
-            var ext = resource.FileExtension?.ToLowerInvariant();
-            if (ext is ".pdf" or ".docx" or ".pptx" or ".xlsx")
-            {
-                await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Indexing, progress: 90);
-                if (args.ResourceVersionId.HasValue)
-                {
-                    await _pageIndexService.GeneratePageIndexAsync(args.ResourceVersionId.Value);
-                }
-                _logger.LogInformation("PageIndex generated for resource {ResourceId}", args.ResourceId);
-            }
-        }
-        catch (Exception piEx)
-        {
-            // Non-fatal: PageIndex failure should not affect the main indexing flow
-            _logger.LogWarning(piEx, "PageIndex generation failed for resource {ResourceId}", args.ResourceId);
         }
 
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Completed, progress: 100);

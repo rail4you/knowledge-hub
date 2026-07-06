@@ -32,10 +32,6 @@ public class CompositeDocumentExtractionService : IDocumentExtractionService
 
         // PDF 用 PdfPig
         var pdfResult = await _pdfExtractor.ExtractPagesAsync(resourceId);
-        if (pdfResult.Count > 0)
-            return pdfResult;
-
-        // 最后尝试 OpenDataLoader（需要 Java 环境）
         return pdfResult;
     }
 }

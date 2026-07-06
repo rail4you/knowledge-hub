@@ -762,49 +762,6 @@ namespace KnowledgeHub.Migrations
                     b.ToTable("KhResourceExposures", (string)null);
                 });
 
-            modelBuilder.Entity("KnowledgeHub.Domain.Search.ResourcePageIndex", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Model")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<int>("NodeCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PageIndexJson")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<Guid>("ResourceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ResourceVersionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("SourceFormat")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<Guid?>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("TenantId");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ResourceId");
-
-                    b.HasIndex("ResourceVersionId")
-                        .IsUnique();
-
-                    b.ToTable("KhResourcePageIndices", (string)null);
-                });
-
             modelBuilder.Entity("KnowledgeHub.Domain.Search.ResourceReview", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7772,25 +7729,6 @@ namespace KnowledgeHub.Migrations
                         .IsRequired();
 
                     b.Navigation("Resource");
-                });
-
-            modelBuilder.Entity("KnowledgeHub.Domain.Search.ResourcePageIndex", b =>
-                {
-                    b.HasOne("KnowledgeHub.Resources.Resource", "Resource")
-                        .WithMany()
-                        .HasForeignKey("ResourceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("KnowledgeHub.Resources.ResourceVersion", "ResourceVersion")
-                        .WithMany()
-                        .HasForeignKey("ResourceVersionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Resource");
-
-                    b.Navigation("ResourceVersion");
                 });
 
             modelBuilder.Entity("KnowledgeHub.Domain.Search.ResourceReview", b =>
