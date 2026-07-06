@@ -30,7 +30,13 @@ public class KnowledgeHubApplicationModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         context.Services.AddSingleton<NpoiDocumentParserService>();
-        context.Services.AddSingleton<IDocumentExtractionService>(sp => sp.GetRequiredService<NpoiDocumentParserService>());
+        context.Services.AddSingleton<OpenDataLoaderService>();
+        context.Services.AddSingleton<IDocumentExtractionService>(sp =>
+        {
+            var npoi = sp.GetRequiredService<NpoiDocumentParserService>();
+            var openData = sp.GetRequiredService<OpenDataLoaderService>();
+            return new CompositeDocumentExtractionService(npoi, openData);
+        });
         context.Services.AddSingleton<Practicums.PracticumChatConnectionManager>();
         context.Services.AddTransient<TeachingAgents.TeachingAgentContextBuilder>();
     }
