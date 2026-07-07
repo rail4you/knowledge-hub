@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using KnowledgeHub.Application.Search.LiteParse;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
@@ -600,6 +601,48 @@ public class MeiliSearchService : IMeiliSearchService
         var index = await _documentIndexRepository.GetAsync(documentIndexId);
         index.IndexStatus = IndexStatus.Pending;
         await _documentIndexRepository.UpdateAsync(index);
+    }
+
+    public async Task<List<HotWordDto>> GetHotWordsAsync(Guid resourceId, int count = 30)
+    {
+        try
+        {
+            // 从 MeiliSearch 拉取该资源的所有页面内容
+            var searchResult = await SearchAsync(new SearchQueryDto
+            {
+                Query = "",
+                ResourceId = resourceId,
+                MaxResultCount = 500,
+                SkipCount = 0,
+                Sorting = "pageNumber:asc"
+            });
+
+            if (searchResult.TotalCount == 0)
+            {
+                return [];
+            }
+
+            // 合并所有正文文本
+            var combinedText = string.Join("\n", searchResult.Items.Select(p => p.Content));
+
+            if (string.IsNullOrWhiteSpace(combinedText))
+            {
+                return [];
+            }
+
+            // 使用 ChineseTextTokenizer 提取高频词
+            var hotWords = ChineseTextTokenizer.ExtractHotWords(combinedText, count);
+
+            return hotWords.Select(hw => new HotWordDto
+            {
+                Word = hw.Word,
+                Frequency = hw.Frequency
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            return [];
+        }
     }
 }
 

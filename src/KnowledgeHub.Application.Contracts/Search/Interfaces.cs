@@ -20,6 +20,19 @@ public interface IMeiliSearchService : IApplicationService
     Task RetryFailedIndexingAsync(Guid documentIndexId);
     Task EnsureIndexExistsAsync();
     Task<IndexTaskResultDto> IndexDocumentFromPagesAsync(Guid resourceId, List<PageContentDto> pages);
+
+    /// <summary>
+    /// 获取文档的高频词汇（用于前端词云 / 热门词展示）。
+    /// </summary>
+    /// <param name="resourceId">资源 ID</param>
+    /// <param name="count">返回词数（默认 30）</param>
+    Task<List<HotWordDto>> GetHotWordsAsync(Guid resourceId, int count = 30);
+}
+
+public class HotWordDto
+{
+    public string Word { get; set; } = string.Empty;
+    public int Frequency { get; set; }
 }
 
 public interface IDocumentExtractionService : IApplicationService

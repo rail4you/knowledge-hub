@@ -14,4 +14,9 @@ public interface IMeiliSearchAdminAppService : IApplicationService
     Task<List<MeiliTaskDto>> GetRecentTasksAsync(int limit = 20);
     Task<List<MeiliDocumentGroupDto>> GetIndexDocumentsAsync(string indexUid, int limit = 200, Guid? tenantId = null);
     Task<List<MeiliIndexDto>> GetIndexesAsync();
+
+    /// <summary>
+    /// 获取文档的高频词汇（用于热门词 / 词云展示）。
+    /// </summary>
+    Task<List<HotWordDto>> GetHotWordsAsync(Guid resourceId, int count = 30);
 }

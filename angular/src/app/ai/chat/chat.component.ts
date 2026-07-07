@@ -14,6 +14,7 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzTreeModule, NzTreeNode, NzTreeNodeOptions } from 'ng-zorro-antd/tree';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzPopoverModule } from 'ng-zorro-antd/popover';
 import { Subject, takeUntil } from 'rxjs';
 import { marked } from 'marked';
 import { ChatService, ResourceForChat } from '../services/chat.service';
@@ -61,7 +62,8 @@ type CategoryTreeNode = NzTreeNodeOptions & {
     NzTagModule,
     NzDividerModule,
     NzTreeModule,
-    NzTooltipModule
+    NzTooltipModule,
+    NzPopoverModule
   ],
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.scss'],
@@ -91,7 +93,6 @@ export class ChatComponent implements OnInit, OnDestroy {
     { icon: '📝', label: '总结文档内容', text: '请帮我总结这份文档的主要内容' },
     { icon: '🔑', label: '提取关键点', text: '请提取这份文档的关键要点' },
     { icon: '❓', label: '文档讲了什么', text: '这份文档主要讲了什么？' },
-    { icon: '📋', label: '列出章节结构', text: '请列出这份文档的章节结构' }
   ];
   readonly generalSuggestions: SuggestionChip[] = [
     { icon: '💡', label: '你能做什么？', text: '你能做什么？请简单介绍一下你的功能。' },
@@ -101,6 +102,59 @@ export class ChatComponent implements OnInit, OnDestroy {
   currentSuggestions = computed<SuggestionChip[]>(() =>
     this.selectedResource() ? this.documentSuggestions : this.generalSuggestions
   );
+
+  /** 热门词 */
+  hotWords = signal<{ word: string; frequency: number }[]>([]);
+  isHotWordsLoading = signal(false);
+  showHotWordsPopover = signal(false);
+
+  /** 计算热门词字体大小（词云效果） */
+  hotWordFontSize(freq: number): string {
+    const words = this.hotWords();
+    if (words.length === 0) return '12px';
+    const maxFreq = Math.max(...words.map(w => w.frequency));
+    const minFreq = Math.min(...words.map(w => w.frequency));
+    const range = maxFreq - minFreq || 1;
+    const normalized = (freq - minFreq) / range; // 0..1
+    // 字体大小 14px ~ 28px
+    const size = 14 + normalized * 14;
+    return `${Math.round(size)}px`;
+  }
+
+  /** 加载当前选中文档的热门词 */
+  async loadHotWords(): Promise<void> {
+    const res = this.selectedResource();
+    if (!res) return;
+
+    this.isHotWordsLoading.set(true);
+    this.showHotWordsPopover.set(true);
+
+    try {
+      const response = await fetch(
+        `/api/app/meili-search-admin/hot-words?resourceId=${encodeURIComponent(res.id)}&count=30`,
+        { credentials: 'include' }
+      );
+      if (response.ok) {
+        const data: { word: string; frequency: number }[] = await response.json();
+        this.hotWords.set(data);
+      } else {
+        this.hotWords.set([]);
+      }
+    } catch {
+      this.hotWords.set([]);
+    } finally {
+      this.isHotWordsLoading.set(false);
+    }
+  }
+
+  /** 点击热门词后自动搜索 */
+  searchByHotWord(word: string): void {
+    const res = this.selectedResource();
+    if (!res) return;
+    // 直接在文档中搜索该词
+    this.inputMessage.set(`在文档中搜索关于"${word}"的内容`);
+    this.sendMessage();
+  }
 
   inputPlaceholder = computed(() =>
     this.selectedResource()
@@ -436,7 +490,6 @@ export class ChatComponent implements OnInit, OnDestroy {
       /^\[?(?:tool|reasoning|thinking)[_\s-]?(?:call|result|step)?\]?[:：]?/i,
       /^SearchPageIndex\b/i,
       /^get_document\b/i,
-      /^get_document_structure\b/i,
       /^get_page_content\b/i,
       /^tool[_\s-]?call/i,
       /^tool[_\s-]?result/i,

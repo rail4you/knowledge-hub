@@ -23,19 +23,22 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IRepository<ResourceVersion, Guid> _versionRepository;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IMeiliSearchService _meiliSearchService;
 
     public MeiliSearchAdminAppService(
         IOptions<MeilisearchOptions> options,
         HttpClient httpClient,
         IRepository<Resource, Guid> resourceRepository,
         IRepository<ResourceVersion, Guid> versionRepository,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        IMeiliSearchService meiliSearchService) // 注入热词服务
     {
         _options = options;
         _httpClient = httpClient;
         _resourceRepository = resourceRepository;
         _versionRepository = versionRepository;
         _currentTenant = currentTenant;
+        _meiliSearchService = meiliSearchService;
         _httpClient.BaseAddress = new Uri(_options.Value.Host);
         if (!string.IsNullOrEmpty(_options.Value.ApiKey))
         {
@@ -318,6 +321,11 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 
         var result = await GetAsync<MeiliIndexesRawDto>("/indexes");
         return result?.Results ?? new List<MeiliIndexDto>();
+    }
+
+    public async Task<List<HotWordDto>> GetHotWordsAsync(Guid resourceId, int count = 30)
+    {
+        return await _meiliSearchService.GetHotWordsAsync(resourceId, count);
     }
 }
 

@@ -131,6 +131,22 @@
               <span class="chip-label">{{ s.label }}</span>
             </button>
           }
+          @if (selectedResource()) {
+            <button
+              type="button"
+              class="chip chip-hotwords"
+              nz-popover
+              nzPopoverTitle="热门词"
+              [(nzPopoverVisible)]="showHotWordsPopover"
+              nzPopoverTrigger="click"
+              [nzPopoverContent]="hotWordsContent"
+              (click)="loadHotWords()"
+              [disabled]="isLoading()"
+            >
+              <span class="chip-icon">🔥</span>
+              <span class="chip-label">热门词</span>
+            </button>
+          }
         </div>
       }
 
@@ -147,6 +163,31 @@
             [disabled]="isLoading()"
           ></textarea>
         </nz-input-group>
+
+        <!-- 热门词弹窗内容 -->
+        <ng-template #hotWordsContent>
+          <div class="hot-words-cloud">
+            @if (isHotWordsLoading()) {
+              <nz-spin nzSimple nzSize="small"></nz-spin>
+            } @else if (hotWords().length === 0) {
+              <span class="hot-words-empty">暂无热门词</span>
+            } @else {
+              @for (w of hotWords(); track w.word) {
+                <button
+                  type="button"
+                  class="hot-word-tag"
+                  [style.font-size]="hotWordFontSize(w.frequency)"
+                  nz-tooltip
+                  [nzTooltipTitle]="'出现 ' + w.frequency + ' 次'"
+                  (click)="searchByHotWord(w.word); showHotWordsPopover.set(false)"
+                >
+                  {{ w.word }}
+                </button>
+              }
+            }
+          </div>
+        </ng-template>
+
         <ng-template #suffixTemplate>
           <button
             nz-button
