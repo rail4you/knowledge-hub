@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI.Dtos;
 using KnowledgeHub.Application.AI.Tools;
+using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
 using Microsoft.Extensions.AI;
@@ -29,6 +30,8 @@ public class ChatAppService : KnowledgeHubAppService
     private readonly ILogger<ChatAppService> _logger;
     private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
+    private readonly IResourceCategoryRepository _categoryRepository;
+    private readonly IMeiliSearchService _meiliSearchService;
 
     private const string DefaultInstructions = @"你是 KnowledgeHub 平台的智能教育助手。
 
@@ -62,13 +65,17 @@ public class ChatAppService : KnowledgeHubAppService
         IConfiguration configuration,
         ILogger<ChatAppService> logger,
         IRepository<PageContent, Guid> pageContentRepository,
-        IRepository<Resource, Guid> resourceRepository)
+        IRepository<Resource, Guid> resourceRepository,
+        IResourceCategoryRepository categoryRepository,
+        IMeiliSearchService meiliSearchService)
     {
         _currentUser = currentUser;
         _configuration = configuration;
         _logger = logger;
         _pageContentRepository = pageContentRepository;
         _resourceRepository = resourceRepository;
+        _categoryRepository = categoryRepository;
+        _meiliSearchService = meiliSearchService;
     }
 
     public async Task ChatStreamingAsync(ChatInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
@@ -95,15 +102,14 @@ public class ChatAppService : KnowledgeHubAppService
 
         if (input.ResourceId.HasValue)
         {
-            // Document QA mode: use MeiliSearch tools to search document content
-            // 不再依赖 DocumentChatTools（旧的 pageIndexJson 方案）
-            tools = BuildTools();
+            // Document QA mode: use MeiliSearch tools scoped to a single resource
+            tools = BuildTools(input.ResourceId);
             instructions = DocumentChatInstructions;
         }
         else
         {
-            // General chat mode
-            tools = BuildTools();
+            // General chat mode: MeiliSearch tools with global scope (no resourceId filter)
+            tools = BuildTools(null);
             instructions = DefaultInstructions;
         }
 
@@ -155,6 +161,10 @@ public class ChatAppService : KnowledgeHubAppService
         if (approvedResources.Count == 0)
             return new List<ResourceForChatDto>();
 
+        // 3. 批量获取所有分类，做 in-memory 查找（O(1) 命中）
+        var categoryLookup = (await _categoryRepository.GetListAsync())
+            .ToDictionary(c => c.Id, c => c.Name);
+
         var result = approvedResources.Select(r =>
         {
             var format = r.FileExtension;
@@ -163,6 +173,12 @@ public class ChatAppService : KnowledgeHubAppService
             if (!string.IsNullOrEmpty(format) && format.StartsWith("."))
                 format = format.Substring(1);
 
+            // 反查分类名称
+            var categoryName = r.CategoryId.HasValue
+                && categoryLookup.TryGetValue(r.CategoryId.Value, out var name)
+                    ? name
+                    : null;
+
             return new ResourceForChatDto
             {
                 Id = r.Id,
@@ -170,7 +186,9 @@ public class ChatAppService : KnowledgeHubAppService
                 FileExtension = r.FileExtension,
                 SourceFormat = format,
                 NodeCount = 0,
-                HasPageIndex = indexedSet.Contains(r.Id)
+                HasPageIndex = indexedSet.Contains(r.Id),
+                CategoryId = r.CategoryId,
+                CategoryName = categoryName
             };
         }).ToList();
 
@@ -207,10 +225,22 @@ public class ChatAppService : KnowledgeHubAppService
             .ToList();
     }
 
-    private List<AITool> BuildTools()
+    private List<AITool> BuildTools(Guid? resourceId)
     {
-        // TODO: 重新整理 AI 工具注册 (PageIndex 工具已移除，后续用 MeiliSearchDocumentTools 替代)
-        return new List<AITool>();
+        // MeiliSearch-backed document Q&A tools (RAG pattern).
+        // When resourceId is set, all searches are scoped to that document.
+        // Otherwise the tools perform cross-document search.
+        var docTools = resourceId.HasValue
+            ? new MeiliSearchDocumentTools(_meiliSearchService, _resourceRepository, resourceId.Value, _logger)
+            : new MeiliSearchDocumentTools(_meiliSearchService, _resourceRepository, _logger);
+
+        return new List<AITool>
+        {
+            AIFunctionFactory.Create(docTools.GetDocument),
+            AIFunctionFactory.Create(docTools.GetDocumentStructure),
+            AIFunctionFactory.Create(docTools.GetPageContent),
+            AIFunctionFactory.Create(docTools.SearchDocument),
+        };
     }
 
 }

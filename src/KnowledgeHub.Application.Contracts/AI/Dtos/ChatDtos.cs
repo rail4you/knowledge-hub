@@ -21,6 +21,10 @@ public class ResourceForChatDto
     public int NodeCount { get; set; }
     /// <summary>是否已生成页面索引（支持文档问答）</summary>
     public bool HasPageIndex { get; set; }
+    /// <summary>资源所属分类 ID（null 表示未分类）。</summary>
+    public Guid? CategoryId { get; set; }
+    /// <summary>资源所属分类名称（冗余字段，便于前端树状视图直接展示）。</summary>
+    public string? CategoryName { get; set; }
 }
 
 public class FileUrlDto

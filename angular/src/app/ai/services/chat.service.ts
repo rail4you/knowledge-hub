@@ -23,6 +23,8 @@ export interface ResourceForChat {
   sourceFormat?: string;
   nodeCount: number;
   hasPageIndex?: boolean;
+  categoryId?: string;
+  categoryName?: string;
 }
 
 export interface LessonPlanGenerationInput {

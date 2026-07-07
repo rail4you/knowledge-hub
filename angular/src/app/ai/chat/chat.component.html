@@ -1,9 +1,8 @@
 <div class="chat-layout">
-  <!-- Left sidebar: Resource list -->
+  <!-- Left sidebar: Resource tree by category -->
   <div class="resource-sidebar">
     <div class="sidebar-header">
       <h3>资源文档</h3>
-
     </div>
 
     <div class="sidebar-search">
@@ -22,37 +21,53 @@
     </div>
 
     <div class="resource-list">
-      @if (isResourcesLoading()) {
+      @if (isResourcesLoading() || isCategoriesLoading()) {
         <div class="loading-container">
           <nz-spin nzSimple></nz-spin>
         </div>
       } @else if (filteredResources().length === 0) {
         <nz-empty nzNotFoundContent="暂无文档资源"></nz-empty>
       } @else {
-        @for (resource of filteredResources(); track resource.id) {
-          <div
-            class="resource-item"
-            [class.selected]="selectedResource()?.id === resource.id"
-            (click)="selectResource(resource)"
-          >
-            <div class="resource-icon">
-              <span nz-icon nzType="file-text" nzTheme="outline"></span>
-            </div>
-            <div class="resource-info">
-              <div class="resource-name">{{ resource.name }}</div>
-              <div class="resource-meta">
-                @if (resource.sourceFormat && resource.sourceFormat !== 'unknown' && resource.sourceFormat !== 'doc' && resource.sourceFormat !== 'docx') {
-                  <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
-                }
-                @if (resource.hasPageIndex) {
-                  <span nz-icon nzType="check-circle" nzTheme="fill" style="color:#52c41a;font-size:12px" nz-tooltip nzTooltipTitle="支持文档问答"></span>
+        <nz-tree
+          [nzData]="categoryTreeNodes()"
+          nzBlockNode
+          [nzShowExpand]="true"
+          [nzShowIcon]="false"
+          (nzClick)="onTreeClick($event)"
+        >
+          <ng-template #nzTreeTemplate let-node>
+            @if (node.origin?.meta?.resource) {
+              <!-- 资源叶子节点：[文件图标] [文档名] [状态] — 与分类节点视觉明显区分 -->
+              <div
+                class="tree-resource"
+                [class.selected]="selectedResource()?.id === node.origin.meta.resource.id"
+                (click)="selectResource(node.origin.meta.resource); $event.stopPropagation()"
+              >
+                <span
+                  class="doc-icon"
+                  [attr.data-ext]="(node.origin.meta.resource.sourceFormat || '').toLowerCase()"
+                  [nzType]="getDocIcon(node.origin.meta.resource.sourceFormat)"
+                  nz-icon
+                  nzTheme="outline"
+                ></span>
+                <span class="tree-resource-name" [title]="node.origin.meta.resource.name">
+                  {{ node.origin.meta.resource.name }}
+                </span>
+                @if (node.origin.meta.resource.hasPageIndex) {
+                  <nz-tag nzColor="green" nzSize="small">已索引</nz-tag>
                 } @else {
-                  <span nz-icon nzType="exclamation-circle" nzTheme="outline" style="color:#faad14;font-size:12px" nz-tooltip nzTooltipTitle="尚未生成索引"></span>
+                  <nz-tag nzColor="orange" nzSize="small">未索引</nz-tag>
                 }
               </div>
-            </div>
-          </div>
-        }
+            } @else {
+              <!-- 分类节点：[黄色文件夹图标] [分类名] -->
+              <span class="tree-category-name">
+                <span nz-icon nzType="folder" nzTheme="fill" class="cat-icon"></span>
+                {{ node.title }}
+              </span>
+            }
+          </ng-template>
+        </nz-tree>
       }
     </div>
   </div>
@@ -69,7 +84,6 @@
           </nz-tag>
         }
       </div>
-
     </div>
 
     <div #messagesContainer class="messages-container">
@@ -100,32 +114,53 @@
       }
     </div>
 
-    <div class="input-container">
-      <nz-input-group [nzSuffix]="suffixTemplate" class="input-wrapper">
-        <textarea
-          nz-input
-          [value]="inputMessage()"
-          (input)="inputMessage.set($any($event.target).value)"
-          (keydown.enter)="onKeyPress($event)"
-          [placeholder]="inputPlaceholder()"
-          nzSize="large"
-          [nzAutosize]="{ minRows: 1, maxRows: 4 }"
-          [disabled]="isLoading()"
-        ></textarea>
-      </nz-input-group>
-      <ng-template #suffixTemplate>
-        <button
-          nz-button
-          nzType="primary"
-          nzShape="circle"
-          nz-icon
-          (click)="sendMessage()"
-          [disabled]="isLoading() || !inputMessage().trim()"
-          class="send-button"
-        >
-          <span nz-icon nzType="send"></span>
-        </button>
-      </ng-template>
+    <div class="input-area">
+      <!-- 一键提问提示按钮 -->
+      @if (currentSuggestions().length > 0) {
+        <div class="suggestion-chips">
+          @for (s of currentSuggestions(); track s.text) {
+            <button
+              type="button"
+              class="chip"
+              nz-tooltip
+              [nzTooltipTitle]="s.text"
+              (click)="onSuggestionClick(s.text)"
+              [disabled]="isLoading()"
+            >
+              <span class="chip-icon">{{ s.icon }}</span>
+              <span class="chip-label">{{ s.label }}</span>
+            </button>
+          }
+        </div>
+      }
+
+      <div class="input-container">
+        <nz-input-group [nzSuffix]="suffixTemplate" class="input-wrapper">
+          <textarea
+            nz-input
+            [value]="inputMessage()"
+            (input)="inputMessage.set($any($event.target).value)"
+            (keydown.enter)="onKeyPress($event)"
+            [placeholder]="inputPlaceholder()"
+            nzSize="large"
+            [nzAutosize]="{ minRows: 1, maxRows: 4 }"
+            [disabled]="isLoading()"
+          ></textarea>
+        </nz-input-group>
+        <ng-template #suffixTemplate>
+          <button
+            nz-button
+            nzType="primary"
+            nzShape="circle"
+            nz-icon
+            (click)="sendMessage()"
+            [disabled]="isLoading() || !inputMessage().trim()"
+            class="send-button"
+          >
+            <span nz-icon nzType="send"></span>
+          </button>
+        </ng-template>
+      </div>
     </div>
   </div>
 </div>

@@ -12,9 +12,13 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzListModule } from 'ng-zorro-antd/list';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzTreeModule, NzTreeNode, NzTreeNodeOptions } from 'ng-zorro-antd/tree';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { Subject, takeUntil } from 'rxjs';
 import { marked } from 'marked';
 import { ChatService, ResourceForChat } from '../services/chat.service';
+import { ResourceService } from '../../proxy/resources/resource.service';
+import type { ResourceCategoryDto } from '../../proxy/resources/models';
 
 interface ChatMessage {
   id: string;
@@ -22,6 +26,23 @@ interface ChatMessage {
   content: string;
   createdAt: Date;
 }
+
+interface SuggestionChip {
+  icon: string;
+  label: string;
+  text: string;
+}
+
+/**
+ * nz-tree 的数据节点类型：扩展官方 NzTreeNodeOptions，
+ * 添加自定义 meta 用于在模板中标识资源叶子。
+ * 注意：不能命名为 "origin"，因为 NzTreeNode.origin 已经指向 NzTreeNodeOptions。
+ */
+type CategoryTreeNode = NzTreeNodeOptions & {
+  meta?: {
+    resource?: ResourceForChat;
+  };
+};
 
 @Component({
   selector: 'app-chat',
@@ -38,7 +59,9 @@ interface ChatMessage {
     NzEmptyModule,
     NzListModule,
     NzTagModule,
-    NzDividerModule
+    NzDividerModule,
+    NzTreeModule,
+    NzTooltipModule
   ],
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.scss'],
@@ -46,6 +69,7 @@ interface ChatMessage {
 })
 export class ChatComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
+  private readonly resourceProxy = inject(ResourceService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly destroy$ = new Subject<void>();
 
@@ -56,9 +80,28 @@ export class ChatComponent implements OnInit, OnDestroy {
   isLoading = signal(false);
   threadId = signal<string>('');
   resources = signal<ResourceForChat[]>([]);
+  categories = signal<ResourceCategoryDto[]>([]);
   selectedResource = signal<ResourceForChat | null>(null);
   resourceSearchText = signal('');
   isResourcesLoading = signal(false);
+  isCategoriesLoading = signal(false);
+
+  // 提示按钮：分两组（文档模式 / 通用模式）
+  readonly documentSuggestions: SuggestionChip[] = [
+    { icon: '📝', label: '总结文档内容', text: '请帮我总结这份文档的主要内容' },
+    { icon: '🔑', label: '提取关键点', text: '请提取这份文档的关键要点' },
+    { icon: '❓', label: '文档讲了什么', text: '这份文档主要讲了什么？' },
+    { icon: '📋', label: '列出章节结构', text: '请列出这份文档的章节结构' }
+  ];
+  readonly generalSuggestions: SuggestionChip[] = [
+    { icon: '💡', label: '你能做什么？', text: '你能做什么？请简单介绍一下你的功能。' },
+    { icon: '🔍', label: '帮我搜文档', text: '帮我搜索知识库里的相关文档。' },
+    { icon: '📚', label: '推荐学习路径', text: '请为我推荐一个学习路径。' }
+  ];
+  currentSuggestions = computed<SuggestionChip[]>(() =>
+    this.selectedResource() ? this.documentSuggestions : this.generalSuggestions
+  );
+
   inputPlaceholder = computed(() =>
     this.selectedResource()
       ? `输入关于《${this.selectedResource()!.name}》的问题，按 Enter 发送...`
@@ -83,8 +126,104 @@ export class ChatComponent implements OnInit, OnDestroy {
     );
   });
 
+  /** 树状节点数据：分类 + 资源叶子 */
+  categoryTreeNodes = computed<NzTreeNodeOptions[]>(() => {
+    const cats = this.categories();
+    const res = this.filteredResources();
+
+    // 1. 按 CategoryId 分组资源
+    const byCategory = new Map<string, ResourceForChat[]>();
+    const noCategory: ResourceForChat[] = [];
+    for (const r of res) {
+      if (r.categoryId) {
+        const list = byCategory.get(r.categoryId) ?? [];
+        list.push(r);
+        byCategory.set(r.categoryId, list);
+      } else {
+        noCategory.push(r);
+      }
+    }
+
+    // 2. 递归构造 nz-tree 节点
+    const build = (nodes: ResourceCategoryDto[]): NzTreeNodeOptions[] =>
+      nodes.map(c => ({
+        title: c.name,
+        key: 'cat-' + c.id,
+        icon: 'folder',
+        expanded: true,
+        children: [
+          ...build(c.children ?? []),
+          ...(c.id ? (byCategory.get(c.id) ?? []) : []).map<NzTreeNodeOptions>(r => ({
+            title: r.name,
+            key: 'res-' + r.id,
+            icon: this.getDocIcon(r.sourceFormat),
+            isLeaf: true,
+            expanded: false,
+            meta: { resource: r }
+          }))
+        ]
+      }));
+
+    const roots = build(cats);
+
+    // 3. 末尾追加"未分类"
+    if (noCategory.length > 0) {
+      roots.push({
+        title: '未分类',
+        key: 'cat-uncategorized',
+        icon: 'inbox',
+        expanded: true,
+        children: noCategory.map<NzTreeNodeOptions>(r => ({
+          title: r.name,
+          key: 'res-' + r.id,
+          icon: this.getDocIcon(r.sourceFormat),
+          isLeaf: true,
+          expanded: false,
+          meta: { resource: r }
+        }))
+      });
+    }
+
+    return roots;
+  });
+
+  /** 根据扩展名返回对应的文件图标（与分类的 folder 图标明显区分） */
+  getDocIcon(ext: string | null | undefined): string {
+    const e = (ext ?? '').toLowerCase().replace(/^\./, '');
+    switch (e) {
+      case 'pdf': return 'file-pdf';
+      case 'doc':
+      case 'docx': return 'file-word';
+      case 'ppt':
+      case 'pptx': return 'file-ppt';
+      case 'xls':
+      case 'xlsx': return 'file-excel';
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+      case 'webp': return 'file-image';
+      case 'mp4':
+      case 'avi':
+      case 'mov':
+      case 'mkv': return 'video-camera';
+      case 'mp3':
+      case 'wav':
+      case 'flac': return 'audio';
+      case 'zip':
+      case 'rar':
+      case '7z': return 'file-zip';
+      case 'txt':
+      case 'md': return 'file-text';
+      // 兜底：用 file-text（已确认 ng-zorro 默认图标集中存在），
+      // 不使用 file-unknown 以免字体未加载导致空白
+      default: return 'file-text';
+    }
+  }
+
   ngOnInit() {
     this.loadResources();
+    this.loadCategories();
   }
 
   ngOnDestroy() {
@@ -108,6 +247,23 @@ export class ChatComponent implements OnInit, OnDestroy {
       });
   }
 
+  private loadCategories() {
+    this.isCategoriesLoading.set(true);
+    this.resourceProxy.getCategories()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.categories.set(data ?? []);
+          this.isCategoriesLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Failed to load categories:', err);
+          this.categories.set([]);
+          this.isCategoriesLoading.set(false);
+        }
+      });
+  }
+
   selectResource(resource: ResourceForChat) {
     const current = this.selectedResource();
     if (current?.id === resource.id) {
@@ -119,6 +275,30 @@ export class ChatComponent implements OnInit, OnDestroy {
       this.messages.set([]);
       this.threadId.set('');
     }
+  }
+
+  /**
+   * nz-tree 节点点击：分类无动作，仅资源叶子响应。
+   * 事件回调中 node 是 NzTreeNode 实例，node.origin 是 NzTreeNodeOptions。
+   * 自定义数据放在 meta 字段（避开 origin 命名冲突）。
+   */
+  onTreeClick(event: { node: NzTreeNode; event: MouseEvent }): void {
+    const origin = event.node?.origin as NzTreeNodeOptions | undefined;
+    if (!origin) return;
+    const customMeta = origin['meta'] as { resource?: ResourceForChat } | undefined;
+    const resource = customMeta?.resource;
+    if (resource) {
+      // 阻止事件冒泡（避免影响 nz-tree 的选中高亮逻辑）
+      event.event.stopPropagation();
+      this.selectResource(resource);
+    }
+  }
+
+  /** 点击提示按钮：自动填入并发送 */
+  onSuggestionClick(text: string): void {
+    if (this.isLoading()) return;
+    this.inputMessage.set(text);
+    this.sendMessage();
   }
 
   newChat() {

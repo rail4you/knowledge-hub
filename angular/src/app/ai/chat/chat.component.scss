@@ -1,17 +1,21 @@
 :host {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   height: 100%;
+  // LeptonX 父容器是 block 布局而非 flex，height:100% 解析为内容自然高度。
+  // 用 calc(100vh - 64px) 兜底（64px = LeptonX header 高度），让页面整体占满视口。
+  height: calc(100vh - 64px);
+  max-height: calc(100vh - 64px);
+  overflow: hidden;
 }
 
 .chat-layout {
+  flex: 1 1 auto;
+  min-height: 0;             // 关键：让 flex 子项能收缩
   display: flex;
   width: 100%;
-  min-height: 0;
-  flex: 1;
-  height: 100%;
   background: #fff;
   border-radius: 8px;
   overflow: hidden;
@@ -24,6 +28,7 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   border-right: 1px solid #f0f0f0;
   background: #fafafa;
 
@@ -47,7 +52,8 @@
   }
 
   .resource-list {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;             // 关键：flex 子项的滚动前提
     overflow-y: auto;
     padding: 8px;
 
@@ -68,14 +74,49 @@
   }
 }
 
-.resource-item {
+// nz-tree 自定义渲染样式（穿透到组件内）
+:host ::ng-deep .ant-tree {
+  background: transparent;
+
+  .ant-tree-node-content-wrapper {
+    width: calc(100% - 8px);
+    padding: 0 4px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+
+  // 仅叶子节点可点击；分类折叠分支背景透明
+  .ant-tree-node-selected {
+    background: transparent !important;
+  }
+}
+
+.tree-category-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  padding: 4px 0;
+
+  .anticon {
+    color: #faad14;
+    font-size: 13px;
+  }
+}
+
+// 资源叶子节点：紧凑布局 [文件图标] [文档名] [状态]
+.tree-resource {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.15s;
+  min-width: 0;
 
   &:hover {
     background: #e6f7ff;
@@ -86,45 +127,62 @@
     border: 1px solid #91d5ff;
   }
 
-  .resource-icon {
-    font-size: 20px;
-    color: #1890ff;
-    flex-shrink: 0;
-  }
-
-  .resource-info {
+  .tree-resource-name {
     flex: 1;
     min-width: 0;
-  }
-
-  .resource-name {
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 12.5px;
     color: #333;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
 
-  .resource-meta {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 4px;
+// 文档文件图标（按扩展名着色，与分类的黄色文件夹图标明显区分）
+.doc-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 14px;
+  flex-shrink: 0;
+  color: #5b6b7e;            // 兜底：深蓝灰色（未知/空扩展名也清晰可见）
 
-    .node-count {
-      font-size: 12px;
-      color: #999;
-    }
-  }
+  &[data-ext="pdf"]   { color: #e74c3c; }
+  &[data-ext="doc"],
+  &[data-ext="docx"]  { color: #2980b9; }
+  &[data-ext="ppt"],
+  &[data-ext="pptx"]  { color: #e67e22; }
+  &[data-ext="xls"],
+  &[data-ext="xlsx"]  { color: #27ae60; }
+  &[data-ext="mp4"],
+  &[data-ext="avi"],
+  &[data-ext="mov"],
+  &[data-ext="mkv"]   { color: #8e44ad; }
+  &[data-ext="jpg"],
+  &[data-ext="jpeg"],
+  &[data-ext="png"],
+  &[data-ext="gif"]   { color: #16a085; }
+  // 明确处理空扩展名（如 sourceFormat=""）的兜底
+  &[data-ext=""]      { color: #5b6b7e; }
+}
+
+// 分类文件夹图标（黄色 fill 样式，明显区别于文档图标）
+.cat-icon {
+  color: #faad14;
+  font-size: 14px;
+  margin-right: 2px;
 }
 
 // Right: Chat main area
 .chat-main {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: 0;                   // 让 flex 子项可以收缩到内容宽度以下
 }
 
 .chat-header {
@@ -133,11 +191,13 @@
   justify-content: space-between;
   padding: 12px 24px;
   border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
 
   .header-title {
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;
 
     h2 {
       margin: 0;
@@ -148,7 +208,8 @@
 }
 
 .messages-container {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px 24px;
   scroll-behavior: smooth;
@@ -294,12 +355,65 @@
   }
 }
 
+// 输入区（提示按钮 + 输入框）
+.input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 24px 16px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+
+// 一键提问 chip 提示按钮
+.suggestion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid #d9e1ec;
+    background: #fff;
+    color: #335;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1.2;
+
+    .chip-icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    &:hover:not(:disabled) {
+      background: #e6f7ff;
+      border-color: #91d5ff;
+      color: #1890ff;
+      transform: translateY(-1px);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
 .input-container {
   display: flex;
   gap: 12px;
   align-items: flex-end;
-  padding: 16px 24px;
-  border-top: 1px solid #f0f0f0;
 }
 
 .input-wrapper {
