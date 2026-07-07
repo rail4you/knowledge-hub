@@ -82,6 +82,10 @@ services:
       - Meilisearch__IndexName=documents
       - Meilisearch__EmbeddingDimension=1024
       - Meilisearch__EmbeddingApiKey=${EMBEDDING_API_KEY}
+      # LiteParse 文档解析服务（独立容器，仅内部网络）
+      - Liteparse__Host=http://liteparse:5707
+      - Liteparse__RequestTimeoutSeconds=${LITEPARSE_TIMEOUT:-300}
+      - Liteparse__Dpi=${LITEPARSE_DPI:-300}
       # Qwen API
       - Qwen__ApiKey=${QWEN_API_KEY}
       - Qwen__BaseUrl=${QWEN_BASE_URL}
@@ -123,6 +127,30 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    restart: unless-stopped
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # LiteParse — 文档解析服务（独立容器，外部项目提供镜像）
+  # 仅内部网络可达（5707），API 通过主机名 `liteparse` 访问
+  # 镜像路径：${LITEPARSE_IMAGE:-${REGISTRY}/knowledgehub-liteparse:${IMAGE_TAG}}
+  # 注意：上游镜像可能不提供 /health 端点，这里用 TCP 端口探测
+  # ----------------------------------------------------------
+  knowledgehub-liteparse:
+    image: ${LITEPARSE_IMAGE:-${REGISTRY}/knowledgehub-liteparse:${IMAGE_TAG}}
+    container_name: knowledgehub-liteparse
+    hostname: liteparse
+    platform: linux/amd64
+    expose:
+      - "5707"
+    healthcheck:
+      # 用 python3 探测 5707 端口连通性（上游镜像无 /health 端点）
+      test: ["CMD-SHELL", "python3 -c \"import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 5707)); s.close()\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
     networks:
       - abp-network

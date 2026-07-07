@@ -9,6 +9,7 @@
 #   ./deploy-to-remote.sh api        # 仅更新后端
 #   ./deploy-to-remote.sh migrator   # 仅更新迁移工具
 #   ./deploy-to-remote.sh sync       # 仅同步配置文件
+#   ./deploy-to-remote.sh liteparse  # 仅更新/重启 LiteParse 服务
 #
 # ============================================================
 
@@ -175,7 +176,7 @@ build_angular() {
     fi
 
     # 构建并推送镜像
-    build_and_push "angular" "angular/Dockerfile.prod" "$PROJECT_ROOT"
+    build_and_push "angular" "angular/Dockerfile" "$PROJECT_ROOT"
 }
 
 # ============================================================
@@ -183,7 +184,7 @@ build_angular() {
 # ============================================================
 build_api() {
     info "构建 API..."
-    build_and_push "api" "src/KnowledgeHub.HttpApi.Host/Dockerfile.prod" "$PROJECT_ROOT"
+    build_and_push "api" "src/KnowledgeHub.HttpApi.Host/Dockerfile" "$PROJECT_ROOT"
 }
 
 # ============================================================
@@ -191,7 +192,7 @@ build_api() {
 # ============================================================
 build_migrator() {
     info "构建 DbMigrator..."
-    build_and_push "db-migrator" "src/KnowledgeHub.DbMigrator/Dockerfile.prod" "$PROJECT_ROOT"
+    build_and_push "db-migrator" "src/KnowledgeHub.DbMigrator/Dockerfile" "$PROJECT_ROOT"
 }
 
 # ============================================================
@@ -271,6 +272,38 @@ EOF
 }
 
 # ============================================================
+# 验证 LiteParse 镜像（LiteParse 由外部项目构建推送，我们仅确认可达）
+# ============================================================
+verify_liteparse() {
+    info "验证 LiteParse 镜像..."
+
+    # 从 .env 解析 LITEPARSE_IMAGE；缺省回退到 ${REGISTRY}/knowledgehub-liteparse:${IMAGE_TAG}
+    local env_file="$SCRIPT_DIR/.env"
+    if [ ! -f "$env_file" ]; then
+        warn ".env 不存在，无法解析 LITEPARSE_IMAGE，跳过验证（compose 启动时会报错）"
+        return 0
+    fi
+
+    local liteparse_image
+    liteparse_image=$(grep -E '^LITEPARSE_IMAGE=' "$env_file" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    if [ -z "$liteparse_image" ]; then
+        local registry image_tag
+        registry=$(grep -E '^REGISTRY=' "$env_file" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+        image_tag=$(grep -E '^IMAGE_TAG=' "$env_file" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+        liteparse_image="${registry}/knowledgehub-liteparse:${image_tag:-latest}"
+    fi
+
+    info "检查 LiteParse 镜像: $liteparse_image"
+    if docker manifest inspect "$liteparse_image" &>/dev/null; then
+        ok "LiteParse 镜像可达: $liteparse_image"
+    else
+        warn "无法访问 LiteParse 镜像: $liteparse_image"
+        warn "  LiteParse 由外部项目构建推送，请确认镜像已就位"
+        warn "  部署仍会继续，但启动 LiteParse 容器时会失败"
+    fi
+}
+
+# ============================================================
 # 主命令
 # ============================================================
 cmd_all() {
@@ -279,6 +312,7 @@ cmd_all() {
     build_api
     build_angular
     sync_configs
+    verify_liteparse
     remote_deploy
     verify_deployment
 
@@ -326,6 +360,20 @@ cmd_sync() {
     ok "配置文件同步完成！"
 }
 
+cmd_liteparse() {
+    info "更新/重启 LiteParse 服务..."
+
+    verify_liteparse
+
+    ssh "$REMOTE_USER@$REMOTE_HOST" << 'EOF'
+cd ~/knowledgehub
+./deploy.sh pull knowledgehub-liteparse || true
+./deploy.sh restart knowledgehub-liteparse
+EOF
+
+    ok "LiteParse 更新完成！"
+}
+
 # ============================================================
 # 帮助
 # ============================================================
@@ -341,6 +389,7 @@ show_help() {
     echo "  api        仅更新后端"
     echo "  migrator   仅更新迁移工具并执行迁移"
     echo "  sync       仅同步配置文件"
+    echo "  liteparse  仅更新/重启 LiteParse 服务（镜像由外部项目推送）"
     echo ""
     echo "首次部署前请确保:"
     echo "  1. 已登录阿里云镜像仓库: docker login $REGISTRY"
@@ -358,6 +407,7 @@ case "${1:-}" in
     api)       cmd_api ;;
     migrator)  cmd_migrator ;;
     sync)      cmd_sync ;;
+    liteparse) cmd_liteparse ;;
     -h|--help) show_help ;;
     *)         show_help; exit 1 ;;
 esac

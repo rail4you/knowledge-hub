@@ -38,13 +38,16 @@
 │  API 容器 (dotnet :44354)                │
 │  不对外暴露端口，仅内部网络可达          │
 └──────┬──────────┬──────────┬────────────┘
-       │          │          │
-       ▼          ▼          ▼
-  PostgreSQL    Redis    Meilisearch
-  (:5432)       (:6379)  (:7700)
+       │          │          │      │
+       ▼          ▼          ▼      ▼
+  PostgreSQL   Redis    Meilisearch  LiteParse
+  (:5432)      (:6379)  (:7700)      (:5707)
 ```
 
-**关键设计**：API 不对外暴露端口，所有外部请求通过 Angular 容器内的 Nginx 反向代理转发。
+**关键设计**：
+- API 不对外暴露端口，所有外部请求通过 Angular 容器内的 Nginx 反向代理转发
+- LiteParse 是独立容器，承载 PDF / DOCX / PPTX 等文档解析，由 API 通过容器主机名 `liteparse:5707` 调用
+- LiteParse 镜像由外部项目（独立的 LiteParse 仓库）构建并推送到 `${LITEPARSE_IMAGE}`，本仓库不构建该镜像
 
 ---
 
@@ -92,9 +95,12 @@ ssh ubuntu@119.45.170.4
 
 | 镜像名 | Dockerfile | 说明 |
 |--------|-----------|------|
-| `knowledgehub-angular` | `angular/Dockerfile.prod` | Angular 前端 + Nginx |
-| `knowledgehub-api` | `src/KnowledgeHub.HttpApi.Host/Dockerfile.prod` | .NET API 服务 |
-| `knowledgehub-db-migrator` | `src/KnowledgeHub.DbMigrator/Dockerfile.prod` | 数据库迁移工具 |
+| `knowledgehub-angular` | `angular/Dockerfile` | Angular 前端 + Nginx |
+| `knowledgehub-api` | `src/KnowledgeHub.HttpApi.Host/Dockerfile` | .NET API 服务 |
+| `knowledgehub-db-migrator` | `src/KnowledgeHub.DbMigrator/Dockerfile` | 数据库迁移工具 |
+| `knowledgehub-liteparse` | 外部项目 | 文档解析服务（PDF / DOCX / PPTX） |
+
+> 本仓库负责构建前三个镜像；LiteParse 镜像由独立的 LiteParse 仓库构建并推送，地址由 `.env` 中 `LITEPARSE_IMAGE` 覆盖。
 
 完整镜像地址格式：`registry.cn-zhangjiakou.aliyuncs.com/myelixir/<镜像名>:latest`
 
@@ -179,6 +185,13 @@ STRING_ENCRYPTION_PASSPHRASE=<字符串加密密钥>
 # ============================================================
 REGISTRY=registry.cn-zhangjiakou.aliyuncs.com/myelixir
 IMAGE_TAG=latest
+
+# ============================================================
+# LiteParse 文档解析服务
+# ============================================================
+# LITEPARSE_IMAGE=   # 留空则使用 ${REGISTRY}/knowledgehub-liteparse:${IMAGE_TAG}
+LITEPARSE_TIMEOUT=300
+LITEPARSE_DPI=300
 ```
 
 ### 变量用途映射
@@ -194,10 +207,13 @@ IMAGE_TAG=latest
 | `STRING_ENCRYPTION_PASSPHRASE` | API、DbMigrator | ABP 字符串加密密钥 |
 | `REGISTRY` | docker-compose | 镜像仓库地址前缀 |
 | `IMAGE_TAG` | docker-compose | 镜像标签 |
+| `LITEPARSE_IMAGE` | docker-compose | LiteParse 镜像地址（留空时使用 `${REGISTRY}/knowledgehub-liteparse:${IMAGE_TAG}`） |
+| `LITEPARSE_TIMEOUT` | API | LiteParse `/parse` 请求超时（秒），默认 300 |
+| `LITEPARSE_DPI` | API | LiteParse OCR DPI，默认 300 |
 
 ### API 容器内部通信
 
-API 容器内部使用 `http://knowledgehub-api:44354` 进行容器间通信（`AuthServer__Authority`），不走外部 Nginx。浏览器端则通过 `PUBLIC_URL`（80 端口）访问。
+API 容器内部使用 `http://knowledgehub-api:44354` 进行容器间通信（`AuthServer__Authority`），不走外部 Nginx。浏览器端则通过 `PUBLIC_URL`（80 端口）访问。API 调用 LiteParse 文档解析时使用 `http://liteparse:5707`（容器主机名 + 内部端口）。
 
 ---
 
@@ -219,45 +235,49 @@ docker login registry.cn-zhangjiakou.aliyuncs.com
 #### 1. Angular 前端镜像
 
 ```bash
-# 在项目根目录执行
+# 在项目根目录执行（构建上下文必须是项目根，因为 Dockerfile 引用了 angular/nginx.conf）
 docker buildx build --platform linux/amd64 \
-  -f angular/Dockerfile.prod \
+  -f angular/Dockerfile \
   -t registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub-angular:latest \
   --push \
-  angular/
+  .
 ```
 
-构建上下文为 `angular/` 目录。Dockerfile.prod 会：
+构建上下文为项目根目录 `.`。Dockerfile 会：
 - 用 `node:20-alpine` 编译 Angular 项目
 - 用 `nginx:alpine` 托管静态文件
-- 内置默认的 `nginx.conf` 和 `dynamic-env.json`（运行时被挂载覆盖）
+- 复制 `angular/nginx.conf` 和 `angular/dynamic-env.json`（运行时被挂载覆盖）
 
 #### 2. API 后端镜像
 
 ```bash
 # 在项目根目录执行
 docker buildx build --platform linux/amd64 \
-  -f src/KnowledgeHub.HttpApi.Host/Dockerfile.prod \
+  -f src/KnowledgeHub.HttpApi.Host/Dockerfile \
   -t registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub-api:latest \
   --push \
   .
 ```
 
-构建上下文为项目根目录 `.`。Dockerfile.prod 会：
-- 安装 Java 17（用于 Apache POI 文档解析）
+构建上下文为项目根目录 `.`。Dockerfile 会：
 - 编译 .NET 项目
-- 复制 `utils/pdf-parser/document-parser.jar`
+- 安装静态 ffmpeg 供视频处理
+- 不再内置 libreoffice / Java 解析器（改由独立 LiteParse 容器提供文档解析）
 
 #### 3. DbMigrator 镜像
 
 ```bash
 # 在项目根目录执行
 docker buildx build --platform linux/amd64 \
-  -f src/KnowledgeHub.DbMigrator/Dockerfile.prod \
+  -f src/KnowledgeHub.DbMigrator/Dockerfile \
   -t registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub-db-migrator:latest \
   --push \
   .
 ```
+
+#### 4. LiteParse 镜像
+
+LiteParse 由独立的外部仓库构建并推送到 `${LITEPARSE_IMAGE}`。本仓库不构建该镜像——`deploy-to-remote.sh` 在 `cmd_all` 中调用 `verify_liteparse()` 仅校验镜像可达性。
 
 ### 一键构建全部
 
@@ -267,15 +287,15 @@ TAG=latest
 
 # Angular
 docker buildx build --platform linux/amd64 \
-  -f angular/Dockerfile.prod -t ${REGISTRY}/knowledgehub-angular:${TAG} --push angular/
+  -f angular/Dockerfile -t ${REGISTRY}/knowledgehub-angular:${TAG} --push .
 
 # API
 docker buildx build --platform linux/amd64 \
-  -f src/KnowledgeHub.HttpApi.Host/Dockerfile.prod -t ${REGISTRY}/knowledgehub-api:${TAG} --push .
+  -f src/KnowledgeHub.HttpApi.Host/Dockerfile -t ${REGISTRY}/knowledgehub-api:${TAG} --push .
 
 # DbMigrator
 docker buildx build --platform linux/amd64 \
-  -f src/KnowledgeHub.DbMigrator/Dockerfile.prod -t ${REGISTRY}/knowledgehub-db-migrator:${TAG} --push .
+  -f src/KnowledgeHub.DbMigrator/Dockerfile -t ${REGISTRY}/knowledgehub-db-migrator:${TAG} --push .
 ```
 
 ---
@@ -352,6 +372,7 @@ cd ~/knowledgehub
 |--------|------|
 | `knowledgehub-angular` | Angular 前端 |
 | `knowledgehub-api` | 后端 API |
+| `knowledgehub-liteparse` | 文档解析服务（外部项目提供镜像） |
 | `meilisearch` | 搜索引擎 |
 | `postgres` | 数据库 |
 | `redis` | 缓存 |
@@ -409,9 +430,9 @@ Angular 应用启动时通过 `/getEnvConfig` 获取运行时配置，包含：
 
 ```bash
 docker buildx build --platform linux/amd64 \
-  -f angular/Dockerfile.prod \
+  -f angular/Dockerfile \
   -t registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub-angular:latest \
-  --push angular/
+  --push .
 ```
 
 ### 2. Meilisearch 报版本不兼容
@@ -487,3 +508,32 @@ docker login registry.cn-zhangjiakou.aliyuncs.com
 # 手动拉取测试
 docker pull registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub-api:latest
 ```
+
+### 7. LiteParse 502 / timeout
+
+**症状**：
+- 上传 PDF / DOCX 等文档后，API 返回 502 或一直转圈
+- `./deploy.sh status` 报告 `LiteParse: 未就绪或不可达`
+- API 日志中 `Connection to http://liteparse:5707` 相关错误
+
+**排查步骤**：
+
+```bash
+# 1. 检查 LiteParse 容器是否运行
+docker ps | grep knowledgehub-liteparse
+
+# 2. 查看 LiteParse 日志
+./deploy.sh logs knowledgehub-liteparse
+
+# 3. 进入 API 容器测试连通性
+docker exec knowledgehub-api wget -q -O- http://liteparse:5707/health
+# 期望返回: {"status":"ok"} 或 200
+
+# 4. 单独重启 LiteParse
+./deploy.sh restart knowledgehub-liteparse
+```
+
+**常见原因**：
+- `LITEPARSE_IMAGE` 未在 `.env` 设置或镜像未推送到该地址 → `verify_liteparse` 在 `cmd_all` 中会先校验
+- LiteParse 启动慢（大模型 + OCR 数据加载） → 默认 `start_period: 30s` 不够时，调大 compose 中 `start_period`
+- API 调用 LiteParse 超时 → 调大 `.env` 中 `LITEPARSE_TIMEOUT`（默认 300s）

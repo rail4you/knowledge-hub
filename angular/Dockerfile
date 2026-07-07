@@ -1,15 +1,30 @@
-FROM node:20-alpine AS build
+# ============================================================
+# Dockerfile - Angular 管理端 + 首页 生产镜像
+# ============================================================
+FROM node:20-alpine AS angular-build
+
+WORKDIR /src/angular
+
+COPY . /src
+RUN npm ci --legacy-peer-deps
+RUN npm run build -- --configuration production
+
+# ----------------------------------------------------------
+# 生产镜像
+# ----------------------------------------------------------
+FROM nginx:alpine
 
 WORKDIR /app
-COPY package*.json /app/
 
-RUN yarn
-COPY . /app
+# Angular 作为站点根首页 + 管理端
+COPY --from=angular-build /src/angular/dist/KnowledgeHub/browser /usr/share/nginx/html
 
-RUN yarn build:prod
+# 复制 nginx 配置
+COPY angular/nginx.conf /etc/nginx/conf.d/default.conf
 
-FROM nginx:alpine
-COPY dynamic-env.json /usr/share/nginx/html
-COPY nginx.conf  /etc/nginx/conf.d/default.conf
+# 复制动态环境配置（运行时可覆盖）
+COPY angular/dynamic-env.json /usr/share/nginx/html/dynamic-env.json
 
-COPY --from=build /app/dist/KnowledgeHub/browser /usr/share/nginx/html
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

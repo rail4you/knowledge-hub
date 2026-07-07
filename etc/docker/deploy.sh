@@ -13,6 +13,10 @@
 #   ./deploy.sh pull            # 拉取最新镜像
 #   ./deploy.sh gen-env         # 生成 dynamic-env.json
 #
+# 服务名（restart / logs 接受任意服务名）:
+#   knowledgehub-angular  knowledgehub-api  knowledgehub-liteparse
+#   meilisearch  postgres  redis  db-migrator
+#
 # ============================================================
 
 set -e
@@ -150,6 +154,17 @@ cmd_status() {
     curl -sf "$PUBLIC_URL/health-status" && echo "API: 正常" || echo "API: 未就绪"
     echo ""
     curl -sf "$PUBLIC_URL/" > /dev/null && echo "前端: 正常" || echo "前端: 未就绪"
+    echo ""
+    # LiteParse 健康检查：通过 API 容器进入 abp-network 访问 liteparse 主机
+    if docker ps --format '{{.Names}}' | grep -q '^knowledgehub-api$'; then
+        if docker exec knowledgehub-api wget -q --spider http://liteparse:5707/health 2>/dev/null; then
+            echo "LiteParse: 正常"
+        else
+            echo "LiteParse: 未就绪或不可达"
+        fi
+    else
+        echo "LiteParse: 跳过（API 容器未运行）"
+    fi
 }
 
 cmd_pull() {
@@ -178,7 +193,7 @@ show_help() {
     echo "命令:"
     echo "  up              启动所有服务"
     echo "  down            停止所有服务"
-    echo "  restart [svc]   重启服务（可选: knowledgehub-api, knowledgehub-angular 等）"
+    echo "  restart [svc]   重启服务（可选: knowledgehub-api, knowledgehub-angular, knowledgehub-liteparse, meilisearch, postgres, redis 等）"
     echo "  migrate         执行数据库迁移"
     echo "  pull            拉取最新镜像"
     echo "  logs [svc]      查看日志（可选服务名）"
