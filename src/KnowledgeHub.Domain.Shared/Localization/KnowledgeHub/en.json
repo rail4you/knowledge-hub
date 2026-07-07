@@ -134,6 +134,7 @@
     "UseAsResumeHint": "When checked, this resource will appear in the AI career planning resume dropdown (requires approval first)",
     "Version": "Version",
     "UploadNewVersion": "Upload New Version",
+    "UploadNewVersionHint": "Drop a file to auto-submit and queue indexing",
     "VersionHistory": "Version History",
     "CurrentVersion": "Current Version",
     "UpdateContent": "Update Content",

@@ -503,14 +503,18 @@
                     <span nz-icon nzType="cloud-upload"></span>
                   </p>
                   <p class="ant-upload-text">{{ '::UploadNewVersion' | abpLocalization }}</p>
+                  <p class="ant-upload-hint">{{ '::UploadNewVersionHint' | abpLocalization }}</p>
                 </nz-upload>
                 <nz-progress *ngIf="isVersionUploading()" [nzPercent]="versionUploadProgress()" nzSize="small" nzStatus="active"></nz-progress>
-                <div *ngIf="versionUploadedFileInfo" class="uploaded-file-info">
+                <div *ngIf="versionUploadedFileInfo && !isVersionUploading()" class="uploaded-file-info">
                   <span>{{ versionUploadedFileInfo.originalFileName }} ({{ formatFileSize(versionUploadedFileInfo.fileSize!) }})</span>
                 </div>
-                <button nz-button nzType="primary" nzSize="small" [disabled]="!versionUploadedFileInfo" [nzLoading]="isVersionUploading()" (click)="uploadNewVersion()" style="margin-top: 8px;">
-                  {{ '::UploadNewVersion' | abpLocalization }}
-                </button>
+                <!--
+                  手动按钮已移除：分块上传成功后会自动调用 uploadNewVersion() 创建新版本
+                  并 enqueue 文档索引任务，用户无需任何额外点击。
+                  失败时 nz-message 会显示错误，文件保留 versionUploadedFileInfo，
+                  用户可再次拖拽文件重试。
+                -->
               </div>
             </nz-collapse-panel>
 

@@ -1162,6 +1162,10 @@ export class ResourceComponent implements OnInit {
       if (completeResult) {
         this.versionUploadedFileInfo = completeResult;
         this.message.success(this.l('UploadSuccess'));
+        // 分块上传成功后立即提交新版本（创建 ResourceVersion + enqueue 索引任务），
+        // 不再让用户手动点击按钮（避免之前"上传完以为完成"的陷阱）。
+        // 失败时调出错误 toast，用户可再次拖拽文件重试。
+        this.uploadNewVersion();
       }
     } catch (error) {
       this.message.error(this.l('UploadFailed'));
@@ -1176,6 +1180,8 @@ export class ResourceComponent implements OnInit {
     const res = this.selectedResource();
     if (!res.id) return;
 
+    // 复用 uploadVersion 的 loading signal，让 nz-progress 在整个提交阶段持续显示
+    this.isVersionUploading.set(true);
     this.resourceService.uploadVersion({
       resourceId: res.id,
       filePath: this.versionUploadedFileInfo.filePath,
@@ -1192,9 +1198,11 @@ export class ResourceComponent implements OnInit {
         this.resourceService.get(res.id).subscribe((updated) => {
           this.selectedResource.set(updated);
         });
+        this.isVersionUploading.set(false);
       },
       error: () => {
         this.message.error(this.l('UploadVersionFailed'));
+        this.isVersionUploading.set(false);
       }
     });
   }
