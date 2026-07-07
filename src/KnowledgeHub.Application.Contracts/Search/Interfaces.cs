@@ -6,7 +6,8 @@ using Volo.Abp.Application.Services;
 
 namespace KnowledgeHub.Application.Contracts.Search;
 
-public interface IMeiliSearchService : IApplicationService
+[Volo.Abp.RemoteService(false)]
+public interface IMeiliSearchService
 {
     Task<IndexTaskResultDto> IndexDocumentAsync(Guid resourceId);
     Task<IndexTaskResultDto> IndexAllPagesAsync(Guid resourceId);
