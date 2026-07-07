@@ -20,6 +20,7 @@ using KnowledgeHub.MultiTenancy;
 using KnowledgeHub.HealthChecks;
 using KnowledgeHub.Resources.FileStorage;
 using KnowledgeHub.Application.Search;
+using KnowledgeHub.Application.Search.LiteParse;
 using KnowledgeHub.Application.Contracts.Search;
 using Microsoft.OpenApi;
 using Volo.Abp;
@@ -186,7 +187,15 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         
         context.Services.Configure<MeilisearchOptions>(configuration.GetSection("Meilisearch"));
         context.Services.Configure<EmbeddingServiceOptions>(configuration.GetSection("EmbeddingService"));
-        
+        context.Services.Configure<LiteParseOptions>(configuration.GetSection("Liteparse"));
+
+        context.Services.AddHttpClient("LiteParse", (sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<LiteParseOptions>>();
+            client.BaseAddress = new Uri(options.Value.Host);
+            client.Timeout = TimeSpan.FromSeconds(options.Value.RequestTimeoutSeconds);
+        });
+
         context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>();
         context.Services.AddScoped<KnowledgeHub.Application.Search.MeiliSearchService>();
         context.Services.AddScoped<KnowledgeHub.Resources.ISearchService>(sp => 

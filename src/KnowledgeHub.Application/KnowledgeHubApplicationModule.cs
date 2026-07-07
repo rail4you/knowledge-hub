@@ -1,6 +1,7 @@
 using KnowledgeHub.Resources;
 using KnowledgeHub.EntityFrameworkCore;
 using KnowledgeHub.Application.Search;
+using KnowledgeHub.Application.Search.LiteParse;
 using KnowledgeHub.Application.Contracts.Search;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.SettingManagement;
@@ -29,14 +30,8 @@ public class KnowledgeHubApplicationModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
-        context.Services.AddSingleton<NpoiDocumentParserService>();
-        context.Services.AddSingleton<PdfTextExtractorService>();
-        context.Services.AddSingleton<IDocumentExtractionService>(sp =>
-        {
-            var npoi = sp.GetRequiredService<NpoiDocumentParserService>();
-            var pdf = sp.GetRequiredService<PdfTextExtractorService>();
-            return new CompositeDocumentExtractionService(npoi, pdf);
-        });
+        context.Services.AddSingleton<IDocumentExtractionService, LiteParseDocumentExtractionService>();
+        context.Services.AddSingleton<ILiteParseExtractionService, LiteParseDocumentExtractionService>();
         context.Services.AddSingleton<Practicums.PracticumChatConnectionManager>();
         context.Services.AddTransient<TeachingAgents.TeachingAgentContextBuilder>();
     }
