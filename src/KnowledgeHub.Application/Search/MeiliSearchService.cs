@@ -324,6 +324,11 @@ public class MeiliSearchService : IMeiliSearchService
         }
         // Host 用户不加 tenantId 过滤，可以搜索所有文档
 
+        if (query.ResourceId.HasValue)
+        {
+            filters.Add($"resourceId = \"{query.ResourceId}\"");
+        }
+
         var searchParams = new
         {
             q = query.Query,

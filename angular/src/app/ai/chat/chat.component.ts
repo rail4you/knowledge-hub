@@ -1,6 +1,7 @@
 import { Component, signal, inject, ViewChild, ElementRef, ChangeDetectionStrategy, OnDestroy, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { RestService } from '@abp/ng.core';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -72,6 +73,7 @@ type CategoryTreeNode = NzTreeNodeOptions & {
 export class ChatComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
   private readonly resourceProxy = inject(ResourceService);
+  private readonly restService = inject(RestService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly destroy$ = new Subject<void>();
 
@@ -122,29 +124,27 @@ export class ChatComponent implements OnInit, OnDestroy {
   }
 
   /** 加载当前选中文档的热门词 */
-  async loadHotWords(): Promise<void> {
+  loadHotWords(): void {
     const res = this.selectedResource();
     if (!res) return;
 
     this.isHotWordsLoading.set(true);
     this.showHotWordsPopover.set(true);
 
-    try {
-      const response = await fetch(
-        `/api/app/meili-search-admin/hot-words?resourceId=${encodeURIComponent(res.id)}&count=30`,
-        { credentials: 'include' }
-      );
-      if (response.ok) {
-        const data: { word: string; frequency: number }[] = await response.json();
-        this.hotWords.set(data);
-      } else {
+    this.restService.request<any, { word: string; frequency: number }[]>({
+      method: 'GET',
+      url: '/api/app/meili-search-admin/hot-words',
+      params: { resourceId: res.id, count: 30 }
+    }).subscribe({
+      next: (data) => {
+        this.hotWords.set(data ?? []);
+        this.isHotWordsLoading.set(false);
+      },
+      error: () => {
         this.hotWords.set([]);
+        this.isHotWordsLoading.set(false);
       }
-    } catch {
-      this.hotWords.set([]);
-    } finally {
-      this.isHotWordsLoading.set(false);
-    }
+    });
   }
 
   /** 点击热门词后自动搜索 */
