@@ -97,6 +97,15 @@ cmd_up() {
     info "创建必要目录..."
     mkdir -p "$SCRIPT_DIR/uploads" "$SCRIPT_DIR/meilisearch_data" "$SCRIPT_DIR/postgres_data"
 
+    # 确保 uploads/ 对 API 容器进程（UID 1654 = $APP_UID in Dockerfile）可写。
+    # 容器内进程的写入能力取决于宿主机 bind-mount 目录的所有者；
+    # 用 1654 chown 后 dotnet 进程可创建按日期分割的子目录。
+    # nogroup 不影响普通存储使用；这是 bind mount 的本质约束。
+    if [ -d "$SCRIPT_DIR/uploads" ]; then
+        chown -R 1654:1654 "$SCRIPT_DIR/uploads" 2>/dev/null || \
+            chmod -R 0777 "$SCRIPT_DIR/uploads"
+    fi
+
     info "拉取最新镜像..."
     compose pull 2>/dev/null || true
 
