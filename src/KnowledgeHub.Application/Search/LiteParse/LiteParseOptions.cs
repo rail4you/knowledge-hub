@@ -20,4 +20,11 @@ public class LiteParseOptions
     /// 透传给 liteparse 的 DPI 配置（影响 OCR 精度）。DOCX/PPTX/XLSX 不受影响。
     /// </summary>
     public int Dpi { get; set; } = 300;
+
+    /// <summary>
+    /// 是否启用 OCR。
+    /// 对于有嵌入文本的数字原生 PDF，设为 false 可跳过 OCR、大幅提升速度并避免 Tesseract 卡死。
+    /// 仅扫描件 PDF 需要 OCR（需设为 true）。
+    /// </summary>
+    public bool OcrEnabled { get; set; } = false;
 }

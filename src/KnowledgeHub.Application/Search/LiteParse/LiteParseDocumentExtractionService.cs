@@ -162,7 +162,7 @@ public class LiteParseDocumentExtractionService :
             GuessMimeType(Path.GetExtension(fullPath)));
         form.Add(fileContent, "file", Path.GetFileName(fullPath));
 
-        var configJson = $"{{\"dpi\":{_options.Value.Dpi}}}";
+        var configJson = $"{{\"dpi\":{_options.Value.Dpi},\"ocrEnabled\":{_options.Value.OcrEnabled.ToString().ToLowerInvariant()}}}";
         form.Add(new StringContent(configJson, Encoding.UTF8, "application/json"), "config");
 
         using var response = await http.PostAsync("/parse", form, ct);
