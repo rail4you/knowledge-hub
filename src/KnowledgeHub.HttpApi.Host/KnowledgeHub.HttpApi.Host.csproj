@@ -8,6 +8,12 @@
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
     <RootNamespace>KnowledgeHub</RootNamespace>
     <PreserveCompilationReferences>true</PreserveCompilationReferences>
+    <!--
+      Local development secrets live in .NET User Secrets store (~/.microsoft/usersecrets/<id>/secrets.json),
+      NOT in appsettings.json. Run ./scripts/setup-secrets.sh once after cloning to populate them.
+      Production deployments should inject via environment variables (Meilisearch__EmbeddingApiKey, Qwen__ApiKey, ...).
+    -->
+    <UserSecretsId>knowledgehub-httpapi-host-secrets</UserSecretsId>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'KnowledgeHub.HttpApi.Host' " />
