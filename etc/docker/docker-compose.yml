@@ -84,8 +84,8 @@ services:
       - Meilisearch__EmbeddingApiKey=${EMBEDDING_API_KEY}
       # LiteParse 文档解析服务（独立容器，仅内部网络）
       - Liteparse__Host=http://liteparse:5707
-      - Liteparse__RequestTimeoutSeconds=${LITEPARSE_TIMEOUT:-300}
-      - Liteparse__Dpi=${LITEPARSE_DPI:-300}
+      - Liteparse__RequestTimeoutSeconds=${LITEPARSE_TIMEOUT}
+      - Liteparse__Dpi=${LITEPARSE_DPI}
       # Qwen API
       - Qwen__ApiKey=${QWEN_API_KEY}
       - Qwen__BaseUrl=${QWEN_BASE_URL}
@@ -134,11 +134,12 @@ services:
   # ----------------------------------------------------------
   # LiteParse — 文档解析服务（独立容器，外部项目提供镜像）
   # 仅内部网络可达（5707），API 通过主机名 `liteparse` 访问
-  # 镜像路径：${LITEPARSE_IMAGE:-${REGISTRY}/knowledgehub-liteparse:${IMAGE_TAG}}
+  # 镜像路径：${LITEPARSE_IMAGE}
   # 注意：上游镜像可能不提供 /health 端点，这里用 TCP 端口探测
+  # 默认值在 deploy.sh 中自动注入到 .env，无需在 compose 文件里写
   # ----------------------------------------------------------
   knowledgehub-liteparse:
-    image: ${LITEPARSE_IMAGE:-${REGISTRY}/knowledgehub-liteparse:${IMAGE_TAG}}
+    image: ${LITEPARSE_IMAGE}
     container_name: knowledgehub-liteparse
     hostname: liteparse
     platform: linux/amd64

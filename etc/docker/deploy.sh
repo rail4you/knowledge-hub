@@ -53,6 +53,13 @@ load_env() {
     if [ -z "$PUBLIC_URL" ]; then
         err "缺少必要配置: PUBLIC_URL"
     fi
+
+    # 给 LiteParse 相关变量设默认值（compose 文件不再写 shell 默认值语法，
+    # 因为远端的 docker-compose v1 不支持 ${VAR:-default} 语法）
+    : "${LITEPARSE_IMAGE:=${REGISTRY:-registry.cn-zhangjiakou.aliyuncs.com/myelixir}/knowledgehub-liteparse:${IMAGE_TAG:-latest}}"
+    : "${LITEPARSE_TIMEOUT:=300}"
+    : "${LITEPARSE_DPI:=300}"
+    export LITEPARSE_IMAGE LITEPARSE_TIMEOUT LITEPARSE_DPI
 }
 
 # ============================================================
@@ -151,20 +158,23 @@ cmd_status() {
     compose ps
     echo ""
     echo "=== 健康检查 ==="
-    curl -sf "$PUBLIC_URL/health-status" && echo "API: 正常" || echo "API: 未就绪"
+    # 注：用 -k (--insecure) 是因为生产部署用的是自签名 localhost.crt；
+    # 上线正式证书后可去掉。返回 200 才算正常。
+    curl -skf "$PUBLIC_URL/health-status" > /dev/null && echo "API: 正常" || echo "API: 未就绪"
     echo ""
-    curl -sf "$PUBLIC_URL/" > /dev/null && echo "前端: 正常" || echo "前端: 未就绪"
+    curl -skf "$PUBLIC_URL/" > /dev/null && echo "前端: 正常" || echo "前端: 未就绪"
     echo ""
-    # LiteParse 健康检查：通过 API 容器进入 abp-network 访问 liteparse 主机
-    if docker ps --format '{{.Names}}' | grep -q '^knowledgehub-api$'; then
-        if docker exec knowledgehub-api wget -q --spider http://liteparse:5707/health 2>/dev/null; then
-            echo "LiteParse: 正常"
-        else
-            echo "LiteParse: 未就绪或不可达"
-        fi
-    else
-        echo "LiteParse: 跳过（API 容器未运行）"
-    fi
+    # LiteParse 健康检查：直接读容器 healthcheck 状态，避免在 API 容器里
+    # 调用 wget/curl/python（生产 API 镜像未装这些工具）
+    local liteparse_state
+    liteparse_state=$(docker inspect --format='{{.State.Health.Status}}' knowledgehub-liteparse 2>/dev/null || echo "absent")
+    case "$liteparse_state" in
+        healthy)        echo "LiteParse: 正常" ;;
+        starting)       echo "LiteParse: 启动中" ;;
+        unhealthy)      echo "LiteParse: 不健康" ;;
+        none|absent|"") echo "LiteParse: 跳过（容器未运行或无 healthcheck 配置）" ;;
+        *)              echo "LiteParse: 未知状态 ($liteparse_state)" ;;
+    esac
 }
 
 cmd_pull() {
