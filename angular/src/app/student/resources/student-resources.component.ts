@@ -159,7 +159,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     { label: '视频', value: ResourceType.Video, icon: 'video-camera' },
     { label: '音频', value: ResourceType.Audio, icon: 'sound' },
     { label: '图片', value: ResourceType.Image, icon: 'picture' },
-    { label: 'PPT', value: ResourceType.PPT, icon: 'file-ppt' },
   ];
 
   // 热门目录：从真实分类数据中取所有有效分类，按资源数量降序排列
