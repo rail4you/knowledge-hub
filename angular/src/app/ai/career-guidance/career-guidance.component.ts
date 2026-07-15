@@ -197,6 +197,11 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
         }
       }
       const parsed = JSON.parse(cleanJson);
+      // 后端错误信号：例如资源不存在、尚未提取页面内容等
+      if (parsed && typeof parsed === 'object' && parsed.error) {
+        this.messageService.error(parsed.error);
+        return;
+      }
       this.result.set(parsed);
     } catch {
       if (final) {

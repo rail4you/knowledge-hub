@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI.Dtos;
+using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.AI;
@@ -18,6 +19,7 @@ using NPOI.XWPF.UserModel;
 using OpenAI;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Application.AI;
 
@@ -28,8 +30,10 @@ public class CareerGuidanceAppService : KnowledgeHubAppService
     private readonly IConfiguration _configuration;
     private readonly ILogger<CareerGuidanceAppService> _logger;
     private readonly IRepository<Resource, Guid> _resourceRepository;
+    private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ICurrentTenant _currentTenant;
 
     private const string CareerGuidanceInstructions = @"你是一个专业的职业规划顾问。你需要根据提供的简历/个人文档内容，生成一份结构化的职业规划建议报告。
 
@@ -100,14 +104,18 @@ JSON 结构：
         IConfiguration configuration,
         ILogger<CareerGuidanceAppService> logger,
         IRepository<Resource, Guid> resourceRepository,
+        IRepository<PageContent, Guid> pageContentRepository,
         IFileStorageService fileStorageService,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        ICurrentTenant currentTenant)
     {
         _configuration = configuration;
         _logger = logger;
         _resourceRepository = resourceRepository;
+        _pageContentRepository = pageContentRepository;
         _fileStorageService = fileStorageService;
         _httpClientFactory = httpClientFactory;
+        _currentTenant = currentTenant;
     }
 
     public async Task GenerateStreamingAsync(CareerGuidanceGenerationInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
@@ -172,17 +180,69 @@ JSON 结构：
         }
         else if (input.ResourceId.HasValue)
         {
-            // TODO: PageIndex 已移除，管理端（Resource 文档）职业规划功能暂时下线。
-            // 后续用 MeiliSearch/页面内容重新实现。
-            _logger.LogWarning("CareerGuidance admin (Resource-based) feature is disabled. PageIndex has been removed; will be reimplemented.");
-            await onChunk(new ChatMessageChunkDto
+            // 管理端：从 Resource 的 PageContent 读取全文（与 DocumentSummaryService 同款思路）
+            Resource? resource;
+            using (DataFilter.Disable<IMultiTenant>())
             {
-                Content = JsonSerializer.Serialize(new { error = "管理端职业规划功能暂时下线维护中，请使用学生端简历文本方式。" }),
-                ThreadId = threadId,
-                IsComplete = false
-            });
-            await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
-            return;
+                resource = await _resourceRepository.FindAsync(input.ResourceId.Value);
+            }
+            if (resource == null)
+            {
+                await onChunk(new ChatMessageChunkDto
+                {
+                    Content = JsonSerializer.Serialize(new { error = $"未找到资源: {input.ResourceId}" }),
+                    ThreadId = threadId,
+                    IsComplete = false
+                });
+                await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
+                return;
+            }
+
+            // 切到资源的租户上下文，再读 PageContent（绕开 IMultiTenant 过滤）
+            List<PageContent> pages;
+            using (_currentTenant.Change(resource.TenantId))
+            {
+                using (DataFilter.Disable<IMultiTenant>())
+                {
+                    pages = await _pageContentRepository.GetListAsync(p => p.ResourceId == resource.Id);
+                }
+            }
+            pages = pages.OrderBy(p => p.PageNumber).ToList();
+
+            if (pages.Count == 0)
+            {
+                await onChunk(new ChatMessageChunkDto
+                {
+                    Content = JsonSerializer.Serialize(new { error = "该资源尚未提取页面内容（请先执行文档索引），无法生成职业规划。" }),
+                    ThreadId = threadId,
+                    IsComplete = false
+                });
+                await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
+                return;
+            }
+
+            // 采样：头 5 页 + 尾 5 页 + 中间均匀采 5 页（与 DocumentSummaryService 一致）
+            var sampled = PickPages(pages);
+            var fullText = string.Join("\n", sampled.Select(p => p.Content ?? string.Empty));
+            if (fullText.Length > 12000)
+            {
+                fullText = fullText[..12000];
+            }
+
+            var goalSection = !string.IsNullOrWhiteSpace(input.CareerGoal)
+                ? $"\n## 职业目标\n{input.CareerGoal}"
+                : "";
+
+            userPrompt = $@"请根据以下简历/个人文档内容，生成一份全面的职业规划建议报告。
+
+## 文档名称
+{resource.Name}
+
+## 文档内容（采样后）
+{fullText}
+{goalSection}
+
+请生成职业规划建议JSON。";
         }
         else
         {
@@ -341,5 +401,40 @@ JSON 结构：
             _logger.LogWarning(ex, "Failed to extract text from attachment: {Url}", attachmentUrl);
             return null;
         }
+    }
+
+    /// <summary>
+    /// 采样：头 5 页 + 尾 5 页 + 中间均匀采 5 页。
+    /// 当文档总页数 ≤ 15 时全部返回。
+    /// </summary>
+    private static List<PageContent> PickPages(List<PageContent> pages)
+    {
+        const int Head = 5, Tail = 5, Mid = 5;
+        if (pages.Count <= Head + Tail + Mid)
+        {
+            return pages.ToList();
+        }
+
+        var picked = new List<PageContent>(Head + Tail + Mid);
+        picked.AddRange(pages.Take(Head));
+        picked.AddRange(pages.TakeLast(Tail));
+
+        var midStart = Head;
+        var midEnd = pages.Count - Tail;
+        var midSpan = midEnd - midStart;
+        if (midSpan > 0)
+        {
+            var step = (double)midSpan / Mid;
+            for (int i = 0; i < Mid; i++)
+            {
+                var idx = midStart + (int)Math.Round(i * step);
+                if (idx < midEnd && !picked.Contains(pages[idx]))
+                {
+                    picked.Add(pages[idx]);
+                }
+            }
+        }
+
+        return picked.OrderBy(p => p.PageNumber).ToList();
     }
 }
