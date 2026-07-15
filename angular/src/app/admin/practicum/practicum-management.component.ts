@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
@@ -12,6 +13,7 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
@@ -38,7 +40,9 @@ import type { PracticumAgentConfigDto } from '../../practicum/practicum-chat.ser
     FormsModule,
     NzButtonModule,
     NzCardModule,
+    NzEmptyModule,
     NzInputModule,
+    NzInputNumberModule,
     NzModalModule,
     NzSelectModule,
     NzSwitchModule,
@@ -80,6 +84,39 @@ export class PracticumManagementComponent implements OnInit {
   coverFileList: NzUploadFile[] = [];
   /** 资料上传进度：key=material index, value=true 表示上传中。 */
   materialUploading: Record<number, boolean> = {};
+
+  // ===== 右侧抽屉（统一承载"查看 / 新增 / 编辑"任务与资料） =====
+  /** 抽屉中的资源类型：'task' | 'material' | null */
+  readonly drawerKind = signal<'task' | 'material' | null>(null);
+  /** 抽屉模式：'add' 新增 | 'edit' 编辑现有 */
+  readonly drawerMode = signal<'add' | 'edit'>('add');
+  /** 抽屉中编辑/查看的下标（新增时为 -1） */
+  readonly drawerIndex = signal(-1);
+  /** 抽屉是否可见 */
+  readonly drawerVisible = signal(false);
+  /** 保存中（抽屉底部"保存"按钮的 loading） */
+  readonly drawerSaving = signal(false);
+  /** 抽屉内文件上传中 */
+  readonly drawerUploading = signal(false);
+
+  /** 任务草稿 */
+  readonly taskDraft = signal<{
+    title: string;
+    description: string;
+    requirement: string;
+    scoreWeight: number;
+    sortOrder: number;
+    dueTimeInput: string;
+  } | null>(null);
+
+  /** 资料草稿 */
+  readonly materialDraft = signal<{
+    title: string;
+    description: string;
+    materialType: number;
+    resourceUrl: string;
+    sortOrder: number;
+  } | null>(null);
 
   /** Form for basic info, tasks, and materials (all in one DTO) */
   form: CreateUpdatePracticumProjectDto = this.freshForm();
@@ -243,42 +280,240 @@ export class PracticumManagementComponent implements OnInit {
     });
   }
 
-  // --- Tab 2 ------------------------------------------------
+  // --- Tab 1 / Tab 2：统一用右侧抽屉承载 ----
 
-  addTask(): void {
-    this.form.tasks.push({ title: '', description: '', requirement: '', dueTime: undefined, scoreWeight: 0, sortOrder: this.form.tasks.length + 1 });
+  /** 打开新增任务抽屉（直接是编辑态） */
+  openAddTaskDrawer(): void {
+    this.drawerKind.set('task');
+    this.drawerMode.set('add');
+    this.drawerIndex.set(-1);
+    this.taskDraft.set({
+      title: '',
+      description: '',
+      requirement: '',
+      scoreWeight: 0,
+      sortOrder: this.form.tasks.length + 1,
+      dueTimeInput: '',
+    });
+    this.drawerVisible.set(true);
+  }
+
+  /** 打开编辑任务抽屉 */
+  openEditTaskDrawer(i: number): void {
+    const src = this.form.tasks[i];
+    if (!src) return;
+    this.drawerKind.set('task');
+    this.drawerMode.set('edit');
+    this.drawerIndex.set(i);
+    this.taskDraft.set({
+      title: src.title ?? '',
+      description: src.description ?? '',
+      requirement: src.requirement ?? '',
+      scoreWeight: src.scoreWeight ?? 0,
+      sortOrder: src.sortOrder ?? (i + 1),
+      dueTimeInput: this.toDateTimeLocal(src.dueTime),
+    });
+    this.drawerVisible.set(true);
+  }
+
+  /** 打开新增资料抽屉 */
+  openAddMaterialDrawer(): void {
+    this.drawerKind.set('material');
+    this.drawerMode.set('add');
+    this.drawerIndex.set(-1);
+    this.materialDraft.set({
+      title: '',
+      description: '',
+      materialType: 0,
+      resourceUrl: '',
+      sortOrder: this.form.materials.length + 1,
+    });
+    this.drawerUploading.set(false);
+    this.drawerVisible.set(true);
+  }
+
+  /** 打开编辑资料抽屉 */
+  openEditMaterialDrawer(i: number): void {
+    const src = this.form.materials[i];
+    if (!src) return;
+    this.drawerKind.set('material');
+    this.drawerMode.set('edit');
+    this.drawerIndex.set(i);
+    this.materialDraft.set({
+      title: src.title ?? '',
+      description: src.description ?? '',
+      materialType: src.materialType ?? 0,
+      resourceUrl: src.resourceUrl ?? '',
+      sortOrder: src.sortOrder ?? (i + 1),
+    });
+    this.drawerUploading.set(false);
+    this.drawerVisible.set(true);
+  }
+
+  /** 关闭抽屉 */
+  closeDrawer(): void {
+    this.drawerVisible.set(false);
+    // 延迟清空，让关闭动画播完
+    setTimeout(() => {
+      this.drawerKind.set(null);
+      this.drawerIndex.set(-1);
+      this.taskDraft.set(null);
+      this.materialDraft.set(null);
+      this.drawerUploading.set(false);
+    }, 200);
+  }
+
+  /** 抽屉底部"保存"按钮：根据 kind 校验+写回 form.tasks / form.materials */
+  saveDrawer(): void {
+    const kind = this.drawerKind();
+    if (kind === 'task') {
+      this.saveTaskDraft();
+    } else if (kind === 'material') {
+      this.saveMaterialDraft();
+    }
+  }
+
+  /** 抽屉底部"删除"按钮 */
+  deleteFromDrawer(): void {
+    const i = this.drawerIndex();
+    const kind = this.drawerKind();
+    if (i < 0) return;
+    if (kind === 'task') this.removeTask(i);
+    else if (kind === 'material') this.removeMaterial(i);
+    this.closeDrawer();
+  }
+
+  // 兼容旧方法名（避免破坏 HTML 调用）
+  addTask(): void { this.openAddTaskDrawer(); }
+  addMaterial(): void { this.openAddMaterialDrawer(); }
+  openAddTask(): void { this.openAddTaskDrawer(); }
+  openAddMaterial(): void { this.openAddMaterialDrawer(); }
+  openEditTask(i: number): void { this.openEditTaskDrawer(i); }
+  openEditMaterial(i: number): void { this.openEditMaterialDrawer(i); }
+  openTaskDrawer(i: number): void { this.openEditTaskDrawer(i); }
+  openMaterialDrawer(i: number): void { this.openEditMaterialDrawer(i); }
+  editFromDrawer(): void { /* no-op: 抽屉本身就是编辑态 */ }
+
+  private saveTaskDraft(): void {
+    const draft = this.taskDraft();
+    if (!draft) return;
+
+    const title = (draft.title || '').trim();
+    if (!title) {
+      this.message.warning('请填写任务名称');
+      return;
+    }
+
+    const next = {
+      title,
+      description: (draft.description || '').trim(),
+      requirement: (draft.requirement || '').trim(),
+      scoreWeight: Number(draft.scoreWeight) || 0,
+      sortOrder: draft.sortOrder ?? 1,
+      dueTime: this.fromDateTimeLocal(draft.dueTimeInput),
+    };
+    if (this.drawerMode() === 'add') {
+      this.form.tasks.push(next);
+    } else {
+      const i = this.drawerIndex();
+      if (this.form.tasks[i]) this.form.tasks[i] = next;
+    }
+    this.form.tasks.forEach((t, idx) => t.sortOrder = idx + 1);
+    this.cdr.markForCheck();
+    this.closeDrawer();
+    this.message.success(this.drawerMode() === 'add' ? '已新增任务' : '已更新任务');
+  }
+
+  private saveMaterialDraft(): void {
+    const draft = this.materialDraft();
+    if (!draft) return;
+
+    const title = (draft.title || '').trim();
+    if (!title) {
+      this.message.warning('请填写资料名称');
+      return;
+    }
+    const isUrlType = draft.materialType === 3 || draft.materialType === 4;
+    const resourceUrl = (draft.resourceUrl || '').trim();
+    if (isUrlType && !resourceUrl) {
+      this.message.warning('请填写 URL');
+      return;
+    }
+    if (!isUrlType && !resourceUrl) {
+      this.message.warning('请上传资料文件');
+      return;
+    }
+
+    const next = {
+      title,
+      description: (draft.description || '').trim(),
+      materialType: draft.materialType,
+      resourceUrl,
+      sortOrder: draft.sortOrder ?? 1,
+    };
+    if (this.drawerMode() === 'add') {
+      this.form.materials.push(next);
+    } else {
+      const i = this.drawerIndex();
+      if (this.form.materials[i]) this.form.materials[i] = next;
+    }
+    this.form.materials.forEach((m, idx) => m.sortOrder = idx + 1);
+    this.cdr.markForCheck();
+    this.closeDrawer();
+    this.message.success(this.drawerMode() === 'add' ? '已新增资料' : '已更新资料');
+  }
+
+  /** ISO/字符串 → <input type="datetime-local"> 需要的 YYYY-MM-DDTHH:mm 格式 */
+  private toDateTimeLocal(value: string | Date | undefined | null): string {
+    if (!value) return '';
+    const d = typeof value === 'string' ? new Date(value) : value;
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  /** datetime-local 字符串 → ISO（UTC）字符串，方便后端 DateTime 解析 */
+  private fromDateTimeLocal(input: string | undefined | null): string | undefined {
+    if (!input) return undefined;
+    const d = new Date(input);
+    if (isNaN(d.getTime())) return undefined;
+    return d.toISOString();
   }
 
   removeTask(i: number): void {
     this.form.tasks.splice(i, 1);
     this.form.tasks.forEach((t, idx) => t.sortOrder = idx + 1);
-  }
-
-  saveTasks(): void {
-    if (!this.selectedProjectId) { return; }
-    this.practicumService.update(this.selectedProjectId, { ...this.form }).subscribe({
-      next: () => { this.message.success('任务已保存'); this.refreshDetail(); },
-      error: () => this.message.error('保存任务失败'),
-    });
-  }
-
-  // --- Tab 3 ------------------------------------------------
-
-  addMaterial(): void {
-    this.form.materials.push({ title: '', description: '', materialType: 0, resourceUrl: '', sortOrder: this.form.materials.length + 1 });
+    this.cdr.markForCheck();
   }
 
   removeMaterial(i: number): void {
     this.form.materials.splice(i, 1);
     this.form.materials.forEach((m, idx) => m.sortOrder = idx + 1);
+    this.cdr.markForCheck();
   }
 
-  saveMaterials(): void {
-    if (!this.selectedProjectId) { return; }
-    this.practicumService.update(this.selectedProjectId, { ...this.form }).subscribe({
-      next: () => { this.message.success('资料已保存'); this.refreshDetail(); },
-      error: () => this.message.error('保存资料失败'),
-    });
+  /** 资料类型显示名称 */
+  materialTypeLabel(t: number | undefined): string {
+    switch (t) {
+      case 0: return '指南';
+      case 1: return '案例';
+      case 2: return '模板';
+      case 3: return '链接';
+      case 4: return '仿真';
+      default: return '其他';
+    }
+  }
+
+  /** 资料类型 tag 颜色 */
+  materialTypeColor(t: number | undefined): string {
+    switch (t) {
+      case 0: return 'blue';
+      case 1: return 'purple';
+      case 2: return 'cyan';
+      case 3: return 'green';
+      case 4: return 'magenta';
+      default: return 'default';
+    }
   }
 
   // --- Tab 4 ------------------------------------------------
@@ -469,6 +704,57 @@ export class PracticumManagementComponent implements OnInit {
     if (m) m.resourceUrl = '';
     this.cdr.markForCheck();
     return true;
+  };
+
+  // ===== 抽屉内的资料上传（操作 materialDraft 而非 form.materials） =====
+
+  /**
+   * 抽屉内资料文件上传前的校验 + 触发 OSS 上传。
+   * 上传成功后将 OSS 返回的 URL 写回 materialDraft.resourceUrl。
+   */
+  beforeMaterialUploadInDrawer = (): ((file: NzUploadFile) => boolean) => {
+    return (file: NzUploadFile): boolean => {
+      const rawFile = file as any as File;
+      if (rawFile.size > 50 * 1024 * 1024) {
+        this.message.error('资料文件不能超过 50MB');
+        return false;
+      }
+      this.drawerUploading.set(true);
+      this.cdr.markForCheck();
+      this.ossUploadService.uploadFile(rawFile).subscribe({
+        next: (res) => {
+          const draft = this.materialDraft();
+          if (draft) {
+            this.materialDraft.set({
+              ...draft,
+              resourceUrl: res.url,
+              title: draft.title?.trim() ? draft.title : (res.originalFileName ?? draft.title),
+            });
+          }
+          this.drawerUploading.set(false);
+          this.message.success(`资料上传成功：${res.originalFileName}`);
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.drawerUploading.set(false);
+          this.message.error('资料上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+          this.cdr.markForCheck();
+        },
+      });
+      return false;
+    };
+  };
+
+  /** 抽屉内清除已上传的文件（仅清空 draft.resourceUrl，不删 OSS 对象）。 */
+  removeMaterialFileInDrawer = (): (() => boolean) => {
+    return (): boolean => {
+      const draft = this.materialDraft();
+      if (draft) {
+        this.materialDraft.set({ ...draft, resourceUrl: '' });
+      }
+      this.cdr.markForCheck();
+      return true;
+    };
   };
 
   // ─── Agent Config ───────────────────────────

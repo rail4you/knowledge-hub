@@ -244,21 +244,294 @@
   }
 }
 
-/* 资料文件上传：横向布局，"标签 + 上传按钮 + 已上传文件名" */
-.material-file-row {
+/* =================== 资料表格（Tab 2，只读 + 弹窗编辑） =================== */
+.materials-table-wrap {
+  margin-top: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.materials-table {
+  width: 100%;
+  background: #fff;
+
+  ::ng-deep .ant-table-thead > tr > th {
+    background: #fafafa;
+    font-weight: 600;
+    color: #333;
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+
+  ::ng-deep .ant-table-tbody > tr > td {
+    padding: 12px;
+    vertical-align: middle;
+  }
+
+  ::ng-deep .ant-table-tbody > tr:hover {
+    background: #f8fbff;
+  }
+
+  .cell-title {
+    font-weight: 600;
+    color: #1f1f1f;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cell-desc {
+    color: #666;
+    font-size: 13px;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cell-resource a {
+    color: #1677ff;
+    text-decoration: none;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover { color: #4096ff; text-decoration: underline; }
+  }
+
+  .muted {
+    color: #bbb;
+    font-size: 13px;
+  }
+
+  .cell-time {
+    color: #444;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .task-score {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #d97706;
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+.materials-empty {
+  padding: 32px 0;
+}
+
+.sub-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 12px;
+}
+
+.sub-count {
+  color: #666;
+  font-size: 13px;
+}
+
+/* =================== 表格行点击 =================== */
+::ng-deep .materials-table {
+  .row-clickable {
+    cursor: pointer;
+  }
+  .row-clickable td {
+    user-select: none;
+  }
+}
+
+/* =================== 详情抽屉（参考资源管理） =================== */
+::ng-deep .ant-drawer-body {
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+
+.drawer-title-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1;
+}
 
-  > span:first-child {
-    min-width: 70px;
-    color: #666;
-    font-size: 14px;
+.drawer-icon {
+  font-size: 22px;
+  color: #1677ff;
+}
+
+.drawer-title-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.drawer-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f1f1f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer-subtitle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.drawer-close-btn {
+  color: #999;
+
+  &:hover {
+    color: #333;
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.drawer-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  background: #fff;
+  /* nz-form-item 间距拉大（沿用原弹窗的样式） */
+  ::ng-deep .ant-form-item {
+    margin-bottom: 20px;
   }
 
-  ::ng-deep .ant-upload-list {
-    flex: 1 1 100%;
+  /* 上传控件上方距离 + 已上传列表上方间距 */
+  ::ng-deep .ant-upload {
     margin-top: 4px;
+  }
+  ::ng-deep .ant-upload-list {
+    margin-top: 10px;
+  }
+  ::ng-deep .ant-form-item-label > label::after {
+    margin-left: 6px;
+  }
+}
+
+.drawer-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+  flex-shrink: 0;
+
+  .footer-spacer {
+    flex: 1;
+  }
+}
+
+.detail-row {
+  margin-bottom: 16px;
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+}
+
+.detail-value {
+  font-size: 14px;
+  color: #1f1f1f;
+  word-break: break-word;
+
+  &.multiline {
+    white-space: pre-wrap;
+    line-height: 1.6;
+    background: #fafafa;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #f0f0f0;
+  }
+
+  a {
+    color: #1677ff;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &.hint {
+    color: #888;
+    font-style: italic;
+    font-size: 13px;
+  }
+}
+
+/* 资料编辑弹窗内的提示文字 */
+.hint {
+  display: block;
+  margin-top: 4px;
+  color: #888;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* 资料编辑弹窗：拉大 nz-form-item 间距 + 上传控件上方间距 */
+::ng-deep .ant-modal-body {
+  .ant-form-item {
+    margin-bottom: 20px;
+  }
+
+  // nz-upload 整体（包括触发按钮）距离上方更宽松
+  .ant-upload {
+    margin-top: 4px;
+  }
+
+  // 已上传文件列表距离触发按钮更宽
+  .ant-upload-list {
+    margin-top: 10px;
+  }
+
+  // 必填星号和标签之间稍微宽一点
+  .ant-form-item-label > label::after {
+    margin-left: 6px;
   }
 }
