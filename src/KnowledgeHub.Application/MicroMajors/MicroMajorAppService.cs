@@ -287,6 +287,21 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         await _microMajorEnrollmentRepository.UpdateAsync(enrollment, autoSave: true);
     }
 
+    [Authorize(KnowledgeHubPermissions.MicroMajors.ManageEnrollment)]
+    public async Task MarkAsCompletedAsync(Guid enrollmentId)
+    {
+        var enrollment = await _microMajorEnrollmentRepository.GetAsync(enrollmentId);
+        if (enrollment.Status != MicroMajorEnrollmentStatus.Enrolled &&
+            enrollment.Status != MicroMajorEnrollmentStatus.InProgress)
+        {
+            throw new UserFriendlyException("仅学习中的报名可以结业。");
+        }
+
+        enrollment.Status = MicroMajorEnrollmentStatus.Completed;
+        enrollment.CompletedAt = Clock.Now;
+        await _microMajorEnrollmentRepository.UpdateAsync(enrollment, autoSave: true);
+    }
+
     [Authorize(KnowledgeHubPermissions.MicroMajors.IssueCertificate)]
     public async Task<MicroMajorCertificateDto> IssueCertificateAsync(IssueCertificateInputDto input)
     {
@@ -298,12 +313,10 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             throw new UserFriendlyException("当前微专业未启用证书。");
         }
 
-        await RefreshEnrollmentProgressAsync(enrollment);
-        if (enrollment.Status != MicroMajorEnrollmentStatus.Completed &&
-            enrollment.Status != MicroMajorEnrollmentStatus.Certified)
-        {
-            throw new UserFriendlyException("该学生尚未满足发证条件。");
-        }
+        // 发证即代表认定完成，强制设为 100% 进度和已发证状态，无需校验实际学习进度
+        enrollment.Progress = 100;
+        enrollment.Status = MicroMajorEnrollmentStatus.Completed;
+        enrollment.CompletedAt ??= Clock.Now;
 
         var existing = await _microMajorCertificateRepository.FirstOrDefaultAsync(x => x.EnrollmentId == input.EnrollmentId);
         if (existing != null)
@@ -414,6 +427,11 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
     {
         // Pending 状态的报名尚未审批，不计算进度
         if (enrollment.Status == MicroMajorEnrollmentStatus.Pending)
+            return;
+
+        // 已手动结业或已发证的报名不再重新计算进度，保持管理员手动设置的状态
+        if (enrollment.Status == MicroMajorEnrollmentStatus.Completed ||
+            enrollment.Status == MicroMajorEnrollmentStatus.Certified)
             return;
 
         var microMajor = await _microMajorRepository.GetAsync(enrollment.MicroMajorId);
@@ -599,6 +617,11 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         var microMajorMap = microMajors.ToDictionary(x => x.Id, x => x.Title);
         var userMap = users.ToDictionary(x => x.Id, x => string.IsNullOrWhiteSpace(x.Name) ? x.UserName : x.Name);
 
+        // 批量查询已发证的 certificates，便于填充 CertificateImageUrl
+        var enrollmentIds = items.Select(x => x.Id).ToList();
+        var certificates = await _microMajorCertificateRepository.GetListAsync(x => enrollmentIds.Contains(x.EnrollmentId));
+        var certMap = certificates.ToDictionary(x => x.EnrollmentId, x => x.CertificateImageUrl);
+
         return items.Select(item => new MicroMajorEnrollmentDto
         {
             Id = item.Id,
@@ -611,6 +634,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             EnrolledAt = item.EnrolledAt,
             CompletedAt = item.CompletedAt,
             CertificateIssuedAt = item.CertificateIssuedAt,
+            CertificateImageUrl = certMap.GetValueOrDefault(item.Id),
             CreationTime = item.CreationTime,
             CreatorId = item.CreatorId,
             LastModificationTime = item.LastModificationTime,

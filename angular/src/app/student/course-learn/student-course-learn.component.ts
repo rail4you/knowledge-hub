@@ -182,8 +182,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         this.chapters.set(list);
         const flat = this.flattenChapters(list);
         this.flatChapters.set(flat);
-        // 默认只展开顶级章节（depth = 0），子章节折叠，避免长课程章节列表撑爆侧边栏
-        const expanded = new Set(flat.filter(c => c.depth === 0).map(c => c.id));
+        // 展开所有等级的章节，与课程目录一致
+        const expanded = new Set(flat.map(c => c.id));
         this.expandedNodes.set(expanded);
         // 选中目标章节
         if (preselectId && flat.find(c => c.id === preselectId)) {

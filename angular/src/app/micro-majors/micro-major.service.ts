@@ -95,6 +95,7 @@ export interface MicroMajorEnrollmentDto {
   enrolledAt: string;
   completedAt?: string;
   certificateIssuedAt?: string;
+  certificateImageUrl?: string;
 }
 
 export interface GetMicroMajorEnrollmentsInput {
@@ -115,6 +116,7 @@ export interface MicroMajorCertificateDto {
   studentName?: string;
   certificateNo: string;
   verifyCode: string;
+  certificateImageUrl?: string;
   status: MicroMajorCertificateStatus;
   issuedAt: string;
 }
@@ -230,6 +232,13 @@ export class MicroMajorService {
     return this.restService.request<any, void>({
       method: 'POST',
       url: `/api/app/micro-major/reject-enrollment/${enrollmentId}`,
+    }, { apiName: this.apiName });
+  }
+
+  markAsCompleted(enrollmentId: string): Observable<void> {
+    return this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/micro-major/mark-as-completed/${enrollmentId}`,
     }, { apiName: this.apiName });
   }
 }

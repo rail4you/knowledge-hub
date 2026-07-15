@@ -16,7 +16,7 @@
             </div>
             <nz-progress [nzPercent]="item.progress"></nz-progress>
             <div class="meta">
-              <span>状态：{{ item.status }}</span>
+              <span>状态：{{ getEnrollmentStatusLabel(item.status) }}</span>
               <span>报名时间：{{ item.enrolledAt | date:'yyyy-MM-dd' }}</span>
             </div>
           </nz-card>
@@ -29,6 +29,7 @@
     <nz-table [nzData]="certificates()" [nzFrontPagination]="false">
       <thead>
         <tr>
+          <th>证书</th>
           <th>微专业</th>
           <th>证书编号</th>
           <th>查询码</th>
@@ -38,6 +39,19 @@
       <tbody>
         @for (item of certificates(); track item.id) {
           <tr>
+            <td>
+              @if (item.certificateImageUrl) {
+                <img
+                  nz-image
+                  [nzSrc]="item.certificateImageUrl"
+                  width="80px"
+                  style="cursor:pointer;border-radius:4px;"
+                  alt="证书图片"
+                />
+              } @else {
+                <span style="color:#999;">暂无图片</span>
+              }
+            </td>
             <td>{{ item.microMajorTitle }}</td>
             <td>{{ item.certificateNo }}</td>
             <td>{{ item.verifyCode }}</td>

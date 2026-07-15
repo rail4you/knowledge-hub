@@ -36,6 +36,9 @@
       <button nz-button [nzType]="enrollmentFilter() === null ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(null)">全部</button>
       <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.Pending ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.Pending)">待审批</button>
       <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.Enrolled ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.Enrolled)">已通过</button>
+      <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.InProgress ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.InProgress)">学习中</button>
+      <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.Completed ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.Completed)">已结业</button>
+      <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.Certified ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.Certified)">已发证</button>
     </div>
     <nz-table [nzData]="enrollments()" [nzFrontPagination]="false">
       <thead>
@@ -61,11 +64,26 @@
                 <button nz-button nzType="primary" nzSize="small" (click)="approveEnrollment(item.id)">通过</button>
                 <button nz-button nzType="default" nzSize="small" nzDanger (click)="rejectEnrollment(item.id)">拒绝</button>
               }
+              @if (item.status === enrollmentStatuses.InProgress) {
+                <button nz-button nzType="primary" nzSize="small" (click)="markAsCompleted(item.id)">结业</button>
+              }
               @if (item.status === enrollmentStatuses.Completed) {
                 <button nz-button nzType="primary" nzSize="small" (click)="openIssueCertificateModal(item.id)">
                   <span nz-icon nzType="safety-certificate"></span>
                   发证
                 </button>
+              }
+              @if (item.status === enrollmentStatuses.Certified) {
+                <span style="color:#52c41a;font-weight:500;">
+                  <span nz-icon nzType="check-circle"></span>
+                  已发证 {{ item.certificateIssuedAt | date:'yyyy-MM-dd' }}
+                </span>
+                @if (item.certificateImageUrl) {
+                  <button nz-button nzType="link" nzSize="small" (click)="openCertificatePreview(item.certificateImageUrl!)">
+                    <span nz-icon nzType="eye"></span>
+                    查看证书
+                  </button>
+                }
               }
             </td>
           </tr>
@@ -152,26 +170,57 @@
     (nzOnCancel)="closeCertificateModal()"
   >
     <ng-container *nzModalContent>
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        <p>请上传该学生的证书图片（可选）。如不上传，系统将只生成电子证书记录。</p>
-        <nz-upload
-          nzListType="picture-card"
-          [nzMultiple]="false"
-          [nzMaxCount]="1"
-          [nzBeforeUpload]="beforeCertificateUpload"
-          [nzFileList]="certificateFileList"
-          [nzRemove]="removeCertificateImage"
-          [nzDisabled]="certificateImageUploading"
-          nzAccept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
-        >
-          @if (certificateFileList.length === 0) {
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100px;height:100px;border:1px dashed #d9d9d9;border-radius:8px;cursor:pointer;color:#999;font-size:14px;">
-              <span nz-icon nzType="plus"></span>
-              <div style="margin-top:8px">上传证书</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <p style="margin:0;color:#666;">上传证书图片（可选），不上传则只生成电子证书记录。</p>
+
+        @if (certificateImageUploading) {
+          <div style="padding:8px 0;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px;color:#666;">
+              <span>正在上传...</span>
+              <span>{{ certificateUploadProgress() }}%</span>
             </div>
-          }
-        </nz-upload>
+            <nz-progress [nzPercent]="certificateUploadProgress()" nzSize="small"></nz-progress>
+          </div>
+        } @else if (certificateImageUrl) {
+          <div style="position:relative;display:inline-block;">
+            <img [src]="certificateImageUrl" style="max-width:100%;max-height:200px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);display:block;" />
+            <button nz-button nzType="default" nzSize="small" style="position:absolute;top:8px;right:8px;" (click)="removeCertificateImage()">
+              <span nz-icon nzType="close"></span>
+            </button>
+          </div>
+          <button nz-button nzType="default" nzSize="small" (click)="certificateFileInput.click()">重新选择</button>
+        } @else {
+          <button nz-button nzType="dashed" (click)="certificateFileInput.click()">
+            <span nz-icon nzType="plus"></span>
+            选择证书图片
+          </button>
+        }
+
+        <input
+          #certificateFileInput
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+          style="display:none"
+          (change)="uploadCertificateImage($event.target.files[0]); $event.target.value = ''"
+        />
       </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- Certificate preview modal -->
+  <nz-modal
+    [(nzVisible)]="certificatePreviewVisible"
+    nzTitle="证书图片"
+    [nzWidth]="700"
+    [nzFooter]="null"
+    (nzOnCancel)="certificatePreviewVisible = false"
+  >
+    <ng-container *nzModalContent>
+      @if (certificatePreviewUrl) {
+        <div style="text-align:center;">
+          <img [src]="certificatePreviewUrl" style="max-width:100%;max-height:70vh;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.15);" />
+        </div>
+      }
     </ng-container>
   </nz-modal>
 </div>

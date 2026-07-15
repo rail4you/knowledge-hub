@@ -1,20 +1,24 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { HttpClient, HttpEventType, HttpRequest } from '@angular/common/http';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
-import { OssUploadService } from '../../shared/oss-upload.service';
+import { OssUploadService, OssUploadResultDto } from '../../shared/oss-upload.service';
 import {
   CreateUpdateMicroMajorDto,
+  MicroMajorCertificateDto,
   MicroMajorDto,
   MicroMajorEnrollmentDto,
   MicroMajorEnrollmentStatus,
@@ -31,8 +35,10 @@ import {
     FormsModule,
     NzButtonModule,
     NzCardModule,
+    NzIconModule,
     NzInputModule,
     NzModalModule,
+    NzProgressModule,
     NzSelectModule,
     NzSwitchModule,
     NzTableModule,
@@ -43,6 +49,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MicroMajorManagementComponent implements OnInit {
+  private readonly httpClient = inject(HttpClient);
   private readonly microMajorService = inject(MicroMajorService);
   private readonly courseService = inject(CourseService);
   private readonly ossUploadService = inject(OssUploadService);
@@ -70,7 +77,11 @@ export class MicroMajorManagementComponent implements OnInit {
   certificateIssueLoading = false;
   certificateImageUploading = false;
   certificateImageUrl = '';
-  certificateFileList: NzUploadFile[] = [];
+  readonly certificateUploadProgress = signal(0);
+
+  // Certificate preview modal
+  certificatePreviewVisible = false;
+  certificatePreviewUrl = '';
 
   ngOnInit(): void {
     this.loadCourses();
@@ -249,7 +260,7 @@ export class MicroMajorManagementComponent implements OnInit {
   openIssueCertificateModal(enrollmentId: string): void {
     this.certificateEnrollmentId = enrollmentId;
     this.certificateImageUrl = '';
-    this.certificateFileList = [];
+    this.certificateUploadProgress.set(0);
     this.certificateModalVisible = true;
   }
 
@@ -257,57 +268,74 @@ export class MicroMajorManagementComponent implements OnInit {
     this.certificateModalVisible = false;
     this.certificateEnrollmentId = '';
     this.certificateImageUrl = '';
-    this.certificateFileList = [];
+    this.certificateUploadProgress.set(0);
   }
 
-  beforeCertificateUpload = (rawFile: NzUploadFile): boolean => {
+  async uploadCertificateImage(file: File): Promise<void> {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
-    if (!allowedTypes.includes(rawFile.type!)) {
+    if (!allowedTypes.includes(file.type)) {
       this.message.error('仅支持上传 JPG、PNG、GIF、WebP、BMP 格式的图片');
-      return false;
+      return;
     }
-    if (rawFile.size! > 10 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       this.message.error('图片大小不能超过 10MB');
-      return false;
+      return;
     }
 
     this.certificateImageUploading = true;
-    this.ossUploadService.uploadImage(rawFile as unknown as File).subscribe({
-      next: (result) => {
-        this.certificateImageUploading = false;
-        this.certificateImageUrl = result.url;
-        this.certificateFileList = [{
-          uid: result.objectKey,
-          name: result.originalFileName,
-          status: 'done',
-          url: result.url,
-        }];
-        this.message.success('证书图片上传成功');
+    this.certificateUploadProgress.set(0);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const req = new HttpRequest('POST', '/api/oss-upload/image', formData, {
+      reportProgress: true,
+    });
+
+    this.httpClient.request(req).subscribe({
+      next: (event: any) => {
+        if (event.type === HttpEventType.UploadProgress) {
+          const progress = Math.round((100 * event.loaded) / (event.total || 1));
+          this.certificateUploadProgress.set(progress);
+        } else if (event.type === HttpEventType.Response) {
+          const result = event.body as OssUploadResultDto;
+          this.certificateImageUploading = false;
+          this.certificateUploadProgress.set(100);
+          this.certificateImageUrl = result.url;
+          this.message.success('证书图片上传成功');
+        }
       },
-      error: (err) => {
+      error: (err: any) => {
         this.certificateImageUploading = false;
-        this.certificateFileList = [];
+        this.certificateUploadProgress.set(0);
+
         this.message.error('上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
       },
     });
-    return false;
+  }
+
+  removeCertificateImage = (): void => {
+    this.certificateImageUrl = '';
+    this.certificateUploadProgress.set(0);
   };
 
-  removeCertificateImage = (): boolean => {
-    this.certificateImageUrl = '';
-    this.certificateFileList = [];
-    return true;
-  };
+  openCertificatePreview(url: string): void {
+    this.certificatePreviewUrl = url;
+    this.certificatePreviewVisible = true;
+  }
 
   confirmIssueCertificate(): void {
     if (!this.certificateEnrollmentId) return;
 
     this.certificateIssueLoading = true;
     this.microMajorService.issueCertificate(this.certificateEnrollmentId, this.certificateImageUrl || undefined).subscribe({
-      next: () => {
+      next: (cert) => {
         this.certificateIssueLoading = false;
         this.closeCertificateModal();
         this.message.success('证书已发放');
+
+        // 切到全部 tab 再 reload，确保已发证的学生可见
+        this.enrollmentFilter.set(null);
         this.reload();
       },
       error: (err) => {
@@ -334,6 +362,16 @@ export class MicroMajorManagementComponent implements OnInit {
         this.reload();
       },
       error: () => this.message.error('操作失败'),
+    });
+  }
+
+  markAsCompleted(enrollmentId: string): void {
+    this.microMajorService.markAsCompleted(enrollmentId).subscribe({
+      next: () => {
+        this.message.success('已结业');
+        this.reload();
+      },
+      error: (err) => this.message.error('结业失败: ' + (err?.error?.error?.message || err?.message || '未知错误')),
     });
   }
 

@@ -15,6 +15,7 @@ public class MicroMajorEnrollmentDto : FullAuditedEntityDto<Guid>
     public DateTime EnrolledAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime? CertificateIssuedAt { get; set; }
+    public string? CertificateImageUrl { get; set; }
 }
 
 public class GetMicroMajorEnrollmentsInput : PagedAndSortedResultRequestDto

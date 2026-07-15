@@ -89,6 +89,7 @@ import {
   ThunderboltOutline,
   RedoOutline,
   SaveOutline,
+  CheckCircleOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -176,6 +177,7 @@ const icons = [
   ThunderboltOutline,
   RedoOutline,
   SaveOutline,
+  CheckCircleOutline,
 ];
 
 export const appConfig: ApplicationConfig = {
