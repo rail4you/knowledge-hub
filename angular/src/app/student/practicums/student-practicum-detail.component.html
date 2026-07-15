@@ -157,8 +157,8 @@
     </div>
 
     <!-- Submit Modal -->
-    <nz-modal [nzVisible]="submitModalVisible()" (nzVisibleChange)="submitModalVisible.set($event)"
-      nzTitle="提交任务" [nzFooter]="null" nzWidth="500px">
+    <nz-modal [nzVisible]="submitModalVisible()" (nzVisibleChange)="submitModalVisible.set($event)" (nzOnCancel)="submitModalVisible.set(false)"
+      nzTitle="提交任务" [nzFooter]="null" nzWidth="500px" nzMaskClosable="true">
       <ng-container *nzModalContent>
         <div style="display:flex;flex-direction:column;gap:14px;">
           <p class="modal-desc">提交内容将发送给教师进行批阅</p>
