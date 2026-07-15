@@ -340,7 +340,11 @@ export class MicroMajorManagementComponent implements OnInit {
       },
       error: (err) => {
         this.certificateIssueLoading = false;
-        this.message.error('发证失败: ' + (err?.error?.error?.message || err?.message || '可能尚未满足完成条件'));
+        if (err?.status === 401) {
+          this.message.error('登录已过期，请刷新页面后重新登录');
+        } else {
+          this.message.error('发证失败: ' + (err?.error?.error?.message || err?.message || '可能尚未满足完成条件'));
+        }
       },
     });
   }

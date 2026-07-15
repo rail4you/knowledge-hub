@@ -303,6 +303,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.MicroMajors.IssueCertificate)]
+    [HttpPost]
     public async Task<MicroMajorCertificateDto> IssueCertificateAsync(IssueCertificateInputDto input)
     {
         var enrollment = await _microMajorEnrollmentRepository.GetAsync(input.EnrollmentId);
@@ -313,16 +314,26 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             throw new UserFriendlyException("当前微专业未启用证书。");
         }
 
+        // 先检查是否已有证书，防止 EF 追踪的实体修改被意外保存
+        var existing = await _microMajorCertificateRepository.FirstOrDefaultAsync(x => x.EnrollmentId == input.EnrollmentId);
+        if (existing != null)
+        {
+            // 如果已有证书但 enrollment 状态不是 Certified，修复它
+            if (enrollment.Status != MicroMajorEnrollmentStatus.Certified)
+            {
+                enrollment.Progress = 100;
+                enrollment.Status = MicroMajorEnrollmentStatus.Certified;
+                enrollment.CompletedAt ??= Clock.Now;
+                enrollment.CertificateIssuedAt = existing.IssuedAt;
+                await _microMajorEnrollmentRepository.UpdateAsync(enrollment, autoSave: true);
+            }
+            return (await MapCertificateDtosAsync(new List<MicroMajorCertificate> { existing }))[0];
+        }
+
         // 发证即代表认定完成，强制设为 100% 进度和已发证状态，无需校验实际学习进度
         enrollment.Progress = 100;
         enrollment.Status = MicroMajorEnrollmentStatus.Completed;
         enrollment.CompletedAt ??= Clock.Now;
-
-        var existing = await _microMajorCertificateRepository.FirstOrDefaultAsync(x => x.EnrollmentId == input.EnrollmentId);
-        if (existing != null)
-        {
-            return (await MapCertificateDtosAsync(new List<MicroMajorCertificate> { existing }))[0];
-        }
 
         var certificate = new MicroMajorCertificate(
             GuidGenerator.Create(),
