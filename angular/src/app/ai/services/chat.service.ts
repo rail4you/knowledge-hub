@@ -23,6 +23,7 @@ export interface ResourceForChat {
   sourceFormat?: string;
   nodeCount: number;
   hasPageIndex?: boolean;
+  hasSummary?: boolean;
   categoryId?: string;
   categoryName?: string;
 }
@@ -33,6 +34,7 @@ export interface LessonPlanGenerationInput {
   subject?: string;
   grade?: string;
   duration: number;
+  customPrompt?: string;
 }
 
 export interface CaseAnalysisGenerationInput {

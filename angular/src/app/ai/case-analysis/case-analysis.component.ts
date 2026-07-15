@@ -87,7 +87,8 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   isExporting = signal(false);
 
   canGenerate = computed(() => {
-    return !!this.selectedResourceId() && !this.isLoading();
+    const r = this.selectedResource();
+    return !!r && r.hasSummary === true && !this.isLoading();
   });
 
   ngOnInit() {
@@ -117,8 +118,8 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   generate() {
-    const resourceId = this.selectedResourceId();
-    if (!resourceId) return;
+    const resource = this.selectedResource();
+    if (!resource || !resource.hasSummary) return;
 
     this.isLoading.set(true);
     this.result.set(null);
@@ -127,7 +128,7 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
     let fullResponse = '';
 
     this.chatService.generateCaseAnalysis({
-      resourceId,
+      resourceId: resource.id,
       focusArea: this.focusArea() || undefined
     })
       .pipe(takeUntil(this.destroy$))

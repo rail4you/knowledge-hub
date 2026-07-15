@@ -10,6 +10,11 @@ public class LessonPlanGenerationInputDto
     public string? Subject { get; set; }
     public string? Grade { get; set; }
     public int Duration { get; set; } = 45;
+    /// <summary>
+    /// 教师附加要求 / 特殊说明（可选），例如：强调课程思政、双语教学、工程实践、学情约束等。
+    /// 非空时必须被教案严格遵循。
+    /// </summary>
+    public string? CustomPrompt { get; set; }
 }
 
 public class LessonPlanExportInputDto

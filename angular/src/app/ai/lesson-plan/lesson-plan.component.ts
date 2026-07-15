@@ -23,6 +23,7 @@ interface LessonPlanInput {
   subject: string;
   grade: string;
   duration: number;
+  customPrompt: string;
 }
 
 interface TeachingSection {
@@ -90,7 +91,8 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     topic: '',
     subject: '',
     grade: '',
-    duration: 45
+    duration: 45,
+    customPrompt: ''
   });
 
   result = signal<LessonPlanResult | null>(null);
@@ -100,7 +102,8 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
 
   canGenerate = computed(() => {
     const i = this.input();
-    return !!this.selectedResourceId() && i.topic.trim().length > 0 && !this.isLoading();
+    const r = this.selectedResource();
+    return !!r && r.hasSummary === true && i.topic.trim().length > 0 && !this.isLoading();
   });
 
   ngOnInit() {
@@ -145,10 +148,14 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.input.update(v => ({ ...v, duration: value }));
   }
 
+  updateCustomPrompt(value: string) {
+    this.input.update(v => ({ ...v, customPrompt: value }));
+  }
+
   generate() {
     const input = this.input();
-    const resourceId = this.selectedResourceId();
-    if (!resourceId || !input.topic.trim()) return;
+    const resource = this.selectedResource();
+    if (!resource || !resource.hasSummary || !input.topic.trim()) return;
 
     this.isLoading.set(true);
     this.result.set(null);
@@ -157,11 +164,12 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     let fullResponse = '';
 
     this.chatService.generateLessonPlan({
-      resourceId,
+      resourceId: resource.id,
       topic: input.topic,
       subject: input.subject || undefined,
       grade: input.grade || undefined,
-      duration: input.duration
+      duration: input.duration,
+      customPrompt: input.customPrompt?.trim() || undefined
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -231,7 +239,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
 
   reset() {
     this.selectedResourceId.set(null);
-    this.input.set({ topic: '', subject: '', grade: '', duration: 45 });
+    this.input.set({ topic: '', subject: '', grade: '', duration: 45, customPrompt: '' });
     this.result.set(null);
     this.rawJson.set('');
   }

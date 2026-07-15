@@ -187,6 +187,7 @@ public class ChatAppService : KnowledgeHubAppService
                 SourceFormat = format,
                 NodeCount = 0,
                 HasPageIndex = indexedSet.Contains(r.Id),
+                HasSummary = !string.IsNullOrWhiteSpace(r.Summary),
                 CategoryId = r.CategoryId,
                 CategoryName = categoryName
             };
@@ -220,7 +221,8 @@ public class ChatAppService : KnowledgeHubAppService
                 Name = r.Name,
                 FileExtension = r.FileExtension,
                 SourceFormat = null,
-                NodeCount = 0
+                NodeCount = 0,
+                HasSummary = !string.IsNullOrWhiteSpace(r.Summary)
             })
             .ToList();
     }

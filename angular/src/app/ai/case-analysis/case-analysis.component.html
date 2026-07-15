@@ -28,21 +28,21 @@
         [nzOptionHeightPx]="64"
       >
         @for (resource of resources(); track resource.id) {
-          <nz-option [nzValue]="resource.id" [nzLabel]="resource.name">
+          <nz-option [nzValue]="resource.id" [nzLabel]="resource.name" [nzDisabled]="!resource.hasSummary">
             <div class="resource-option">
               <span nz-icon nzType="file-text" nzTheme="outline" class="resource-icon"></span>
               <div class="resource-option-info">
                 <div class="resource-option-name">{{ resource.name }}</div>
-                @if (resource.sourceFormat || resource.nodeCount > 0) {
                 <div class="resource-option-meta">
+                  @if (resource.hasSummary) {
+                    <nz-tag nzColor="success" [nzSize]="'small'">已生成摘要</nz-tag>
+                  } @else {
+                    <nz-tag nzColor="default" [nzSize]="'small'">未生成摘要</nz-tag>
+                  }
                   @if (resource.sourceFormat) {
                     <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
                   }
-                  @if (resource.nodeCount > 0) {
-                    <span class="node-count">{{ resource.nodeCount }} 个索引节点</span>
-                  }
                 </div>
-                }
               </div>
             </div>
           </nz-option>
@@ -55,6 +55,12 @@
             <span nz-icon nzType="check-circle" nzTheme="outline"></span>
             已选择：{{ selectedResource()!.name }}
           </nz-tag>
+          @if (selectedResource()!.hasSummary) {
+            <nz-tag nzColor="success">已生成摘要</nz-tag>
+          } @else {
+            <nz-tag nzColor="default">未生成摘要</nz-tag>
+            <span class="warn-text">该资源尚未生成 AI 摘要，无法生成案例分析</span>
+          }
           @if (selectedResource()!.sourceFormat) {
             <nz-tag [nzColor]="'blue'">{{ selectedResource()!.sourceFormat }}</nz-tag>
           }
@@ -62,6 +68,12 @@
             <span class="meta-text">{{ selectedResource()!.nodeCount }} 个索引节点</span>
           }
         </div>
+        @if (!selectedResource()!.hasSummary) {
+          <div class="warn-banner">
+            <span nz-icon nzType="exclamation-circle" nzTheme="outline"></span>
+            请先为该资源生成摘要（资源详情页 → 重新生成摘要）
+          </div>
+        }
       }
     }
   </nz-card>
