@@ -123,6 +123,7 @@ export class FilePreviewComponent {
   }
 
   open(resourceId: string, resourceName: string, fileExtension: string, fileSize: number) {
+    console.log('[FilePreview] open() called, stack:', new Error().stack);
     this.resourceId.set(resourceId);
     this.resourceName.set(resourceName);
     this.fileExtension.set(fileExtension);
@@ -154,6 +155,7 @@ export class FilePreviewComponent {
   }
 
   close() {
+    console.log('[FilePreview] close() called, stack:', new Error().stack);
     this.visible.set(false);
     this.fileData.set(new ArrayBuffer(0));
     this.fileUrl.set('');

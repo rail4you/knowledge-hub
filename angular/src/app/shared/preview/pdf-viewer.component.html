@@ -1,4 +1,4 @@
-<div class="pdf-viewer" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
+<div class="pdf-viewer">
   <!-- Toolbar: zoom only -->
   <div class="viewer-toolbar">
     <div class="toolbar-left">
@@ -21,6 +21,25 @@
     </div>
   </div>
 
+  <!-- Pages container with click-blocking shield inside -->
+  <div class="pdf-pages-container" [class.loading]="isLoading()" (scroll)="onScroll()">
+    <!-- Transparent shield to block all clicks on PDF content -->
+    <div
+      class="pdf-click-shield"
+      (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+      (click)="$event.preventDefault(); $event.stopPropagation()"
+      (dblclick)="$event.preventDefault(); $event.stopPropagation()"
+      (contextmenu)="$event.preventDefault(); $event.stopPropagation()"
+    ></div>
+
+    @for (page of pages(); track page) {
+      <div class="pdf-page-wrapper" [style.width.px]="pageWidth()">
+        <canvas #pdfCanvas class="pdf-page-canvas"></canvas>
+        <div class="pdf-page-label">— {{ page }} —</div>
+      </div>
+    }
+  </div>
+
   <!-- Loading -->
   <div *ngIf="isLoading()" class="pdf-loading-overlay">
     <div class="pdf-loading-inner">
@@ -33,14 +52,4 @@
 
   <!-- Error -->
   <div *ngIf="error()" class="viewer-error">{{ error() }}</div>
-
-  <!-- Pages -->
-  <div class="pdf-pages-container" [class.loading]="isLoading()" (scroll)="onScroll()">
-    @for (page of pages(); track page) {
-      <div class="pdf-page-wrapper" [style.width.px]="pageWidth()">
-        <canvas #pdfCanvas class="pdf-page-canvas"></canvas>
-        <div class="pdf-page-label">— {{ page }} —</div>
-      </div>
-    }
-  </div>
 </div>

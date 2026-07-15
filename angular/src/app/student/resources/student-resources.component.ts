@@ -452,14 +452,9 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
         this.recommendedResources.set(result || []);
         this.recommendationsLoading.set(false);
       },
-      error: (err) => {
+      error: () => {
+        // 推荐是辅助功能，静默失败，不干扰主内容加载
         this.recommendationsLoading.set(false);
-        if (err.status === 401 || err.status === 403) {
-          this.authErrorService.setAuthError(
-            err.status,
-            err.error?.error?.message || err.error?.message || '您未获得授权！'
-          );
-        }
       }
     });
   }

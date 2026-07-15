@@ -7,7 +7,6 @@ import {
   viewChildren,
   ElementRef,
   signal,
-  effect,
   ChangeDetectionStrategy,
   AfterViewInit,
 } from '@angular/core';
@@ -42,23 +41,32 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   private isRendering = false;
   private renderQueue: number[] = [];
   private loaded = false;
+  private destroyed = false;
 
-  constructor() {
-    effect(() => {
-      const d = this.data();
-      if (d && d.byteLength > 0 && !this.loaded) {
-        this.loadPdf(d);
-      }
-    });
-  }
+  constructor() {}
 
   ngOnInit() {}
 
-  ngAfterViewInit() {}
+  ngAfterViewInit() {
+    const d = this.data();
+    console.log('[PdfViewer] ngAfterViewInit, byteLength:', d?.byteLength, 'loaded:', this.loaded);
+    if (d && d.byteLength > 0 && !this.loaded) {
+      console.log('[PdfViewer] scheduling loadPdf from ngAfterViewInit');
+      // 延迟到下一个事件循环，确保模板完全渲染后再加载
+      setTimeout(() => {
+        if (!this.destroyed) {
+          this.loadPdf(d);
+        }
+      }, 0);
+    }
+  }
 
   ngOnDestroy() {
+    console.log('[PdfViewer] ngOnDestroy called');
+    this.destroyed = true;
     this.pdfDoc = null;
     this.isRendering = false;
+    this.renderQueue = [];
   }
 
   private get containerEl(): HTMLElement | null {
@@ -66,7 +74,10 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async loadPdf(data: ArrayBuffer) {
+    if (this.destroyed) return;
+
     try {
+      console.log('[PdfViewer] loadPdf starting');
       this.isLoading.set(true);
       this.error.set('');
       this.renderedCount.set(0);
@@ -87,24 +98,31 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.pdfDoc = await loadingTask.promise;
       const total = this.pdfDoc.numPages;
 
+      console.log('[PdfViewer] PDF loaded, pages:', total);
       this.totalPages.set(total);
       this.pages.set(Array.from({ length: total }, (_, i) => i + 1));
 
       // Wait for Angular to render canvas elements
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      if (this.destroyed) return;
 
       this.renderQueue = Array.from({ length: total }, (_, i) => i + 1);
       this.loaded = true;
       await this.processRenderQueue();
     } catch (e: any) {
       console.error('PDF load error:', e);
-      this.error.set(e.message || 'Failed to load PDF');
-      this.isLoading.set(false);
-      this.loaded = true;
+      if (!this.destroyed) {
+        this.error.set(e.message || 'Failed to load PDF');
+        this.isLoading.set(false);
+        this.loaded = true;
+      }
     }
   }
 
   private async processRenderQueue() {
+    if (this.destroyed) return;
+
     if (this.isRendering || this.renderQueue.length === 0) {
       if (this.renderQueue.length === 0) {
         this.isLoading.set(false);
@@ -116,8 +134,11 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     const batch = this.renderQueue.splice(0, 2);
 
     for (const pageNum of batch) {
+      if (this.destroyed) return;
       await this.renderSinglePage(pageNum);
     }
+
+    if (this.destroyed) return;
 
     this.isRendering = false;
 
@@ -130,8 +151,9 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private getCanvas(pageNum: number): HTMLCanvasElement | null {
-    const idx = pageNum - 1;
     const refs = this.canvases();
+    if (this.destroyed || refs.length === 0) return null;
+    const idx = pageNum - 1;
     if (idx >= 0 && idx < refs.length) {
       return refs[idx].nativeElement;
     }
@@ -139,7 +161,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async renderSinglePage(pageNum: number) {
-    if (!this.pdfDoc) return;
+    if (!this.pdfDoc || this.destroyed) return;
 
     try {
       const page = await this.pdfDoc.getPage(pageNum);
@@ -152,14 +174,16 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
       await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise;
 
-      this.renderedCount.update((v) => v + 1);
+      if (!this.destroyed) {
+        this.renderedCount.update((v) => v + 1);
+      }
     } catch (e) {
       console.warn(`Render page ${pageNum} error:`, e);
     }
   }
 
   private async reRenderAll() {
-    if (!this.pdfDoc) return;
+    if (!this.pdfDoc || this.destroyed) return;
 
     this.isLoading.set(true);
     this.renderedCount.set(0);
@@ -197,6 +221,10 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getScalePercent(): number {
     return Math.round(this.scale() * 100);
+  }
+
+  pageWidth(): number | null {
+    return null;
   }
 
   onScroll() {

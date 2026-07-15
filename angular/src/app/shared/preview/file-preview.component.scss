@@ -230,6 +230,7 @@
     background: #525659;
     position: relative;
     min-height: 300px;
+    z-index: 0;
 
     &.loading {
       min-height: 500px;
@@ -241,6 +242,9 @@
       margin-bottom: 20px;
       border-radius: 2px;
       flex-shrink: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      pointer-events: none;
       .pdf-page-canvas {
         display: block;
         max-width: 100%;
@@ -256,11 +260,20 @@
         font-size: 11px;
         color: #999;
         user-select: none;
+        -webkit-user-select: none;
+        pointer-events: none;
       }
 
       &:last-child {
         margin-bottom: 0;
       }
+    }
+
+    .pdf-click-shield {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: transparent;
     }
   }
 
