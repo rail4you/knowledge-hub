@@ -1,17 +1,11 @@
-<div class="pdf-viewer">
-  <!-- Toolbar -->
+<div class="pdf-viewer" (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
+  <!-- Toolbar: zoom only -->
   <div class="viewer-toolbar">
-    <nz-space>
-      <button nz-button nzSize="small" (click)="prevPage()" [disabled]="currentPage() <= 1">
-        <span nz-icon nzType="left"></span>
-      </button>
-      <span class="page-info">{{ currentPage() }} / {{ totalPages() }}</span>
-      <button nz-button nzSize="small" (click)="nextPage()" [disabled]="currentPage() >= totalPages()">
-        <span nz-icon nzType="right"></span>
-      </button>
-    </nz-space>
-    <nz-space>
-      <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="scale() <= 0.5">
+    <div class="toolbar-left">
+      <span class="page-info" *ngIf="totalPages() > 0">{{ currentPage() }} / {{ totalPages() }} 页</span>
+    </div>
+    <div class="toolbar-right">
+      <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="scale() <= 0.25">
         <span nz-icon nzType="zoom-out"></span>
       </button>
       <span class="scale-info">{{ getScalePercent() }}%</span>
@@ -21,13 +15,32 @@
       <button nz-button nzSize="small" (click)="fitWidth()">
         <span nz-icon nzType="fullscreen"></span>
       </button>
-    </nz-space>
+      <span class="render-progress" *ngIf="renderedCount() > 0 && renderedCount() < totalPages()">
+        {{ renderedCount() }}/{{ totalPages() }}
+      </span>
+    </div>
   </div>
 
-  <!-- Canvas -->
-  <div class="pdf-canvas-container">
-    <nz-spin *ngIf="isLoading()" nzSimple class="viewer-spinner"></nz-spin>
-    <div *ngIf="error()" class="viewer-error">{{ error() }}</div>
-    <canvas #pdfCanvas class="pdf-canvas" [style.display]="(isLoading() || error()) ? 'none' : 'block'"></canvas>
+  <!-- Loading -->
+  <div *ngIf="isLoading()" class="pdf-loading-overlay">
+    <div class="pdf-loading-inner">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+      <p class="pdf-loading-text">
+        {{ renderedCount() > 0 ? '正在渲染 ' + renderedCount() + '/' + totalPages() : '正在加载 PDF…' }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error()" class="viewer-error">{{ error() }}</div>
+
+  <!-- Pages -->
+  <div class="pdf-pages-container" [class.loading]="isLoading()" (scroll)="onScroll()">
+    @for (page of pages(); track page) {
+      <div class="pdf-page-wrapper" [style.width.px]="pageWidth()">
+        <canvas #pdfCanvas class="pdf-page-canvas"></canvas>
+        <div class="pdf-page-label">— {{ page }} —</div>
+      </div>
+    }
   </div>
 </div>

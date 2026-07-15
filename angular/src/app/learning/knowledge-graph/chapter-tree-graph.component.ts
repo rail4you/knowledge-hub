@@ -218,6 +218,8 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
 
   selectedNode = signal<any | null>(null);
   zoomPercent = signal<number>(100);
+  /** 当前绝对缩放比例 — ECharts 的 graphRoam 不会回写到 series.zoom，需手动追踪 */
+  private currentAbsoluteZoom = 1;
 
   /** 折叠状态：记录被手动折叠的节点 id */
   private collapsedSet = new Set<string>();
@@ -293,7 +295,13 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
     this.chart = echarts.init(container, null, { renderer: 'canvas' });
     this.updateChart();
 
-    this.chart.on('graphRoam', () => this.updateZoomPercent());
+    this.chart.on('graphRoam', (params: any) => {
+      // 用户滚轮缩放时，params.zoom 是相对增量
+      if (params && typeof params.zoom === 'number') {
+        this.currentAbsoluteZoom *= params.zoom;
+      }
+      this.zoomPercent.set(Math.round(this.currentAbsoluteZoom * 100));
+    });
 
     this.chart.on('click', (params: any) => {
       if (params.dataType === 'node') {
@@ -320,8 +328,74 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
     const opt = this.chart.getOption() as any;
     const series = opt?.series?.[0];
     if (!series) return;
-    const scale = (series.zoom ?? 1) * 100;
-    this.zoomPercent.set(Math.round(scale));
+    // 优先使用 series.zoom（初始值）；若已通过 graphRoam 调整，则使用追踪值
+    let scale = series.zoom ?? 1;
+    if (Math.abs(scale - 1) < 0.001 && Math.abs(this.currentAbsoluteZoom - 1) > 0.001) {
+      scale = this.currentAbsoluteZoom;
+    }
+    this.zoomPercent.set(Math.round(scale * 100));
+  }
+
+  /**
+   * 根据节点总数计算合适的初始缩放比例。
+   * 目标：节点越多越缩小，确保所有节点文字标签不重叠、保持合理间距。
+   */
+  private computeFitZoom(nodeCount: number, depth: number): number {
+    // 综合考虑节点数量与树的深度（层级越多，水平方向越容易被压缩）
+    const complexity = nodeCount * Math.max(depth, 1);
+    if (complexity <= 60) return 1.0;       // 极少节点：默认 1.0
+    if (complexity <= 120) return 0.85;     // 简单图谱
+    if (complexity <= 250) return 0.7;      // 中等图谱
+    if (complexity <= 500) return 0.6;      // 较多节点
+    if (complexity <= 900) return 0.5;      // 大量节点
+    return 0.42;                             // 极复杂图谱
+  }
+
+  /** 计算树的最大深度（用于辅助缩放判断） */
+  private computeTreeDepth(): number {
+    let maxDepth = 1;
+    const walk = (nodes: ChapterDto[] | undefined, d: number) => {
+      if (!nodes) return;
+      nodes.forEach(n => {
+        maxDepth = Math.max(maxDepth, d + 1);
+        walk(n.children, d + 1);
+      });
+    };
+    walk(this.chapters, 1);
+    // 如果以课程名为根，再加 1
+    if (this.courseName) maxDepth += 1;
+    return maxDepth;
+  }
+
+  /**
+   * 初次渲染完成后，根据内容规模自动调整缩放，
+   * 确保节点文字标签之间不重叠、保持舒适距离。
+   */
+  private scheduleInitialFit() {
+    if (!this.chart) return;
+    // 等 ECharts 完成布局与动画
+    setTimeout(() => {
+      if (!this.chart) return;
+      const total = this.chapterCount();
+      const depth = this.computeTreeDepth();
+      const target = this.computeFitZoom(total, depth);
+      const current = this.currentAbsoluteZoom;
+      if (Math.abs(target - current) < 0.01) return;
+      const ratio = target / current;
+      try {
+        this.chart!.dispatchAction({
+          type: 'graphRoam',
+          zoom: ratio,
+          originX: this.chart!.getWidth() / 2,
+          originY: this.chart!.getHeight() / 2,
+        } as any);
+        // 直接更新追踪值，不依赖 series.zoom（graphRoam 不会回写）
+        this.currentAbsoluteZoom = target;
+        this.zoomPercent.set(Math.round(target * 100));
+      } catch (e) {
+        console.warn('[kg-fit] dispatch error', e);
+      }
+    }, 180);
   }
 
   // ============= 工具栏操作 =============
@@ -337,7 +411,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
 
   private dispatchZoom(zoomDelta: number) {
     if (!this.chart) return;
-    const current = this.zoomPercent() / 100;
+    const current = this.currentAbsoluteZoom;
     const next = Math.max(0.3, Math.min(2.5, current * zoomDelta));
     const ratio = next / current;
     this.chart.dispatchAction({
@@ -346,17 +420,21 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
       originX: this.chart.getWidth() / 2,
       originY: this.chart.getHeight() / 2,
     } as any);
-    this.updateZoomPercent();
+    this.currentAbsoluteZoom = next;
+    this.zoomPercent.set(Math.round(next * 100));
   }
 
   fitView() {
     if (!this.chart) return;
+    const current = this.currentAbsoluteZoom;
+    if (Math.abs(current - 1) < 0.01) return;
     this.chart.dispatchAction({
       type: 'graphRoam',
-      zoom: 1 / (this.zoomPercent() / 100),
+      zoom: 1 / current,
       originX: this.chart.getWidth() / 2,
       originY: this.chart.getHeight() / 2,
     } as any);
+    this.currentAbsoluteZoom = 1;
     this.zoomPercent.set(100);
   }
 
@@ -580,6 +658,10 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
       ],
     };
     this.chart.setOption(option, { notMerge: true });
+    // 仅在初次构建（无用户搜索词）时自动适配缩放，避免干扰搜索/展开后的视图
+    if (!this.searchTerm) {
+      this.scheduleInitialFit();
+    }
   }
 
   // ============= 构造树形数据 =============

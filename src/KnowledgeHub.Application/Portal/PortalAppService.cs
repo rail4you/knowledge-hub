@@ -265,7 +265,8 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     private async Task<PublicBrowseDto> BuildBrowseDataAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount)
     {
         var tenants = await _tenantRepository.GetListAsync();
-        var tenantNames = tenants.ToDictionary(t => t.Id, t => t.Name);
+        var tenantInfos = (await _tenantInfoRepository.GetListAsync()).ToDictionary(ti => ti.TenantId, ti => ti.Name);
+        var tenantNames = tenants.ToDictionary(t => t.Id, t => tenantInfos.GetValueOrDefault(t.Id, t.Name) ?? t.Name);
 
         // ── 课程 ──
         var courseQuery = await _courseRepository.GetQueryableAsync();
@@ -368,7 +369,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         var totalMicroMajorCount = mmsFiltered.LongCount();
 
         // ── 筛选选项 ──
-        var tenantOptions = tenants.Select(t => new PublicBrowseFilterOption { Id = t.Id, Name = t.Name }).ToList();
+        var tenantOptions = tenants.Select(t => new PublicBrowseFilterOption { Id = t.Id, Name = tenantInfos.GetValueOrDefault(t.Id, t.Name) ?? t.Name }).ToList();
         var majorQuery = await _majorRepository.GetQueryableAsync();
         var majorOptions = majorQuery.AsEnumerable()
             .Select(m => new PublicBrowseFilterOption { Id = m.Id, Name = m.Name }).ToList();
