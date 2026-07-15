@@ -218,8 +218,10 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
 
   selectedNode = signal<any | null>(null);
   zoomPercent = signal<number>(100);
-  /** 当前绝对缩放比例 — ECharts 的 graphRoam 不会回写到 series.zoom，需手动追踪 */
+  /** 当前绝对缩放比例 — 通过 treeRoam 事件的 delta 参数累乘得到 */
   private currentAbsoluteZoom = 1;
+  /** 首次适配是否已执行，避免后续 ngOnChanges 重新适配 */
+  private hasInitiallyFit = false;
 
   /** 折叠状态：记录被手动折叠的节点 id */
   private collapsedSet = new Set<string>();
@@ -295,12 +297,13 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
     this.chart = echarts.init(container, null, { renderer: 'canvas' });
     this.updateChart();
 
-    this.chart.on('graphRoam', (params: any) => {
-      // 用户滚轮缩放时，params.zoom 是相对增量
+    this.chart.on('treeRoam', (params: any) => {
+      // Tree 系列的 roam event 名是 'treeRoam'（不是 'graphRoam'）。
+      // params.zoom 是相对增量（ECharts RoamController 内部约定）。
       if (params && typeof params.zoom === 'number') {
         this.currentAbsoluteZoom *= params.zoom;
+        this.zoomPercent.set(Math.round(this.currentAbsoluteZoom * 100));
       }
-      this.zoomPercent.set(Math.round(this.currentAbsoluteZoom * 100));
     });
 
     this.chart.on('click', (params: any) => {
@@ -324,16 +327,8 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
   }
 
   private updateZoomPercent() {
-    if (!this.chart) return;
-    const opt = this.chart.getOption() as any;
-    const series = opt?.series?.[0];
-    if (!series) return;
-    // 优先使用 series.zoom（初始值）；若已通过 graphRoam 调整，则使用追踪值
-    let scale = series.zoom ?? 1;
-    if (Math.abs(scale - 1) < 0.001 && Math.abs(this.currentAbsoluteZoom - 1) > 0.001) {
-      scale = this.currentAbsoluteZoom;
-    }
-    this.zoomPercent.set(Math.round(scale * 100));
+    // 使用追踪值，初始为 1.0；通过 treeRoam 事件累乘 params.zoom（增量）更新
+    this.zoomPercent.set(Math.round(this.currentAbsoluteZoom * 100));
   }
 
   /**
@@ -370,9 +365,14 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
   /**
    * 初次渲染完成后，根据内容规模自动调整缩放，
    * 确保节点文字标签之间不重叠、保持舒适距离。
+   * 同一组件实例只执行一次。
+   *
+   * 注意：Tree 系列使用的是 'treeRoam' action（不是 'graphRoam'），
+   * 见 ECharts 源码 roamHelper.js: `var type = seriesModel.subType + 'Roam';`
    */
   private scheduleInitialFit() {
-    if (!this.chart) return;
+    if (!this.chart || this.hasInitiallyFit) return;
+    this.hasInitiallyFit = true;
     // 等 ECharts 完成布局与动画
     setTimeout(() => {
       if (!this.chart) return;
@@ -384,16 +384,14 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
       const ratio = target / current;
       try {
         this.chart!.dispatchAction({
-          type: 'graphRoam',
+          type: 'treeRoam',
           zoom: ratio,
           originX: this.chart!.getWidth() / 2,
           originY: this.chart!.getHeight() / 2,
         } as any);
-        // 直接更新追踪值，不依赖 series.zoom（graphRoam 不会回写）
-        this.currentAbsoluteZoom = target;
-        this.zoomPercent.set(Math.round(target * 100));
-      } catch (e) {
-        console.warn('[kg-fit] dispatch error', e);
+        // treeRoam 事件回调会乘以 ratio 并更新指示器
+      } catch {
+        // ignore
       }
     }, 180);
   }
@@ -415,13 +413,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
     const next = Math.max(0.3, Math.min(2.5, current * zoomDelta));
     const ratio = next / current;
     this.chart.dispatchAction({
-      type: 'graphRoam',
+      type: 'treeRoam',
       zoom: ratio,
       originX: this.chart.getWidth() / 2,
       originY: this.chart.getHeight() / 2,
     } as any);
-    this.currentAbsoluteZoom = next;
-    this.zoomPercent.set(Math.round(next * 100));
+    // treeRoam 事件回调会更新 currentAbsoluteZoom 和 zoomPercent
   }
 
   fitView() {
@@ -429,13 +426,11 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
     const current = this.currentAbsoluteZoom;
     if (Math.abs(current - 1) < 0.01) return;
     this.chart.dispatchAction({
-      type: 'graphRoam',
+      type: 'treeRoam',
       zoom: 1 / current,
       originX: this.chart.getWidth() / 2,
       originY: this.chart.getHeight() / 2,
     } as any);
-    this.currentAbsoluteZoom = 1;
-    this.zoomPercent.set(100);
   }
 
   expandAll() {
