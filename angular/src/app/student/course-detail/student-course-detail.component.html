@@ -136,7 +136,7 @@
                     ></circle>
                   </svg>
                   <div class="ring__center">
-                    <strong>{{ c.progress || 0 }}%</strong>
+                    <strong>{{ (c.progress || 0) | number:'1.2-2' }}%</strong>
                     <span>已学</span>
                   </div>
                 </div>
