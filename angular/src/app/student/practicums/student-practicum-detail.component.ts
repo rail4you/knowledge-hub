@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -10,7 +10,9 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { PracticumService } from '../../proxy/practicums/practicum.service';
+import { PracticumMaterialType } from '../../proxy/practicums/enums/practicum-material-type.enum';
 import type { PracticumProjectDetailDto, PracticumTaskDto, PracticumMaterialDto } from '../../proxy/practicums/dtos/models';
+import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
 
 @Component({
   selector: 'app-student-practicum-detail',
@@ -18,6 +20,7 @@ import type { PracticumProjectDetailDto, PracticumTaskDto, PracticumMaterialDto 
   imports: [
     CommonModule, DatePipe, DecimalPipe, FormsModule, RouterModule,
     NzButtonModule, NzIconModule, NzSpinModule, NzTabsModule, NzInputModule, NzModalModule,
+    SafeResourceUrlPipe,
   ],
   templateUrl: './student-practicum-detail.component.html',
   styleUrls: ['./student-practicum-detail.component.scss'],
@@ -31,12 +34,18 @@ export class StudentPracticumDetailComponent implements OnInit {
 
   readonly detail = signal<PracticumProjectDetailDto | null>(null);
   readonly loading = signal(true);
-  readonly activeTab = signal<'tasks' | 'materials'>('tasks');
+  readonly activeTab = signal<'tasks' | 'materials' | 'simulations'>('tasks');
   readonly submitting = signal(false);
   readonly submitModalVisible = signal(false);
   readonly selectedTaskId = signal<string | null>(null);
   readonly submissionContent = signal('');
   readonly submissionUrl = signal('');
+
+  /** 仿真实训材料（materialType === 4）。空列表时不显示 tab。 */
+  readonly simulations = computed<PracticumMaterialDto[]>(() => {
+    const materials = this.detail()?.materials ?? [];
+    return materials.filter(m => m.materialType === PracticumMaterialType.Simulation && !!m.resourceUrl);
+  });
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');

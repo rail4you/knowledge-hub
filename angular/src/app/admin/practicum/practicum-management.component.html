@@ -123,7 +123,36 @@
           <div class="nested-grid">
             <input nz-input [(ngModel)]="material.title" placeholder="资料名称" />
             <textarea nz-input [(ngModel)]="material.description" rows="2" placeholder="资料说明"></textarea>
-            <label class="material-file-row">
+            <label class="material-type-row">
+              <span>资料类型</span>
+              <nz-select [(ngModel)]="material.materialType" nzPlaceHolder="选择资料类型" style="width: 220px;">
+                <nz-option [nzValue]="0" nzLabel="指南（文档/课件）"></nz-option>
+                <nz-option [nzValue]="1" nzLabel="案例（视频/案例）"></nz-option>
+                <nz-option [nzValue]="2" nzLabel="模板（参考模板）"></nz-option>
+                <nz-option [nzValue]="3" nzLabel="链接（外部链接）"></nz-option>
+                <nz-option [nzValue]="4" nzLabel="仿真实训（Unity WebGL 等嵌入页面）"></nz-option>
+              </nz-select>
+            </label>
+
+            <!-- 仿真：URL 输入框 -->
+            <label class="material-url-row" *ngIf="material.materialType === 4">
+              <span>仿真页面 URL</span>
+              <input nz-input
+                [(ngModel)]="material.resourceUrl"
+                placeholder="例如 https://example.com/anatomyMice/?messageKey=..." />
+              <small class="hint">学生端会以 iframe 嵌入此 URL（需支持 X-Frame-Options/CSP）</small>
+            </label>
+
+            <!-- 链接：URL 输入框 -->
+            <label class="material-url-row" *ngIf="material.materialType === 3">
+              <span>链接地址</span>
+              <input nz-input
+                [(ngModel)]="material.resourceUrl"
+                placeholder="https://..." />
+            </label>
+
+            <!-- 文档/案例/模板：文件上传 -->
+            <label class="material-file-row" *ngIf="material.materialType !== 3 && material.materialType !== 4">
               <span>资料文件</span>
               <nz-upload
                 [nzMultiple]="false"

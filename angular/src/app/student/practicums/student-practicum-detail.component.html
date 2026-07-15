@@ -57,6 +57,12 @@
           <span nz-icon nzType="folder-open" nzTheme="outline"></span> 实训资料
           <span class="tab-count">{{ d.materials?.length || 0 }}</span>
         </button>
+        @if (simulations().length > 0) {
+          <button [class.active]="activeTab() === 'simulations'" (click)="activeTab.set('simulations')">
+            <span nz-icon nzType="experiment" nzTheme="outline"></span> 仿真实训
+            <span class="tab-count">{{ simulations().length }}</span>
+          </button>
+        }
         @if (d.isCurrentUserEnrolled) {
           <button class="tab-chat" (click)="openChat()">
             <span nz-icon nzType="message" nzTheme="outline"></span> 沟通
@@ -100,22 +106,53 @@
         } @else {
           <div class="materials-grid">
             @for (mat of d.materials; track mat.id) {
-              <div class="material-card" (click)="downloadMaterial(mat)">
-                <div class="material-card__icon">
-                  <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              @if (mat.materialType !== 4) {
+                <div class="material-card" (click)="downloadMaterial(mat)">
+                  <div class="material-card__icon">
+                    <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                  </div>
+                  <div class="material-card__body">
+                    <h4>{{ mat.title }}</h4>
+                    @if (mat.description) { <p>{{ mat.description }}</p> }
+                    <span class="material-type">{{ mat.materialType === 0 ? '文档' : mat.materialType === 1 ? '视频' : mat.materialType === 2 ? '链接' : mat.materialType === 3 ? '外部链接' : '其他' }}</span>
+                  </div>
+                  <div class="material-card__action">
+                    <span nz-icon nzType="download" nzTheme="outline"></span>
+                  </div>
                 </div>
-                <div class="material-card__body">
-                  <h4>{{ mat.title }}</h4>
-                  @if (mat.description) { <p>{{ mat.description }}</p> }
-                  <span class="material-type">{{ mat.materialType === 0 ? '文档' : mat.materialType === 1 ? '视频' : mat.materialType === 2 ? '链接' : '其他' }}</span>
-                </div>
-                <div class="material-card__action">
-                  <span nz-icon nzType="download" nzTheme="outline"></span>
-                </div>
-              </div>
+              }
             }
           </div>
         }
+      }
+
+      @if (activeTab() === 'simulations') {
+        <div class="simulations-list">
+          @for (sim of simulations(); track sim.id) {
+            <div class="simulation-card">
+              <div class="simulation-card__header">
+                <span nz-icon nzType="experiment" nzTheme="outline"></span>
+                <h4>{{ sim.title }}</h4>
+                @if (sim.description) { <p>{{ sim.description }}</p> }
+                <a [href]="sim.resourceUrl" target="_blank" rel="noopener noreferrer"
+                   class="simulation-card__open">
+                  <span nz-icon nzType="export" nzTheme="outline"></span> 新窗口打开
+                </a>
+              </div>
+              <div class="simulation-card__frame-wrap">
+                <iframe
+                  [src]="sim.resourceUrl | safeResourceUrl"
+                  [title]="sim.title"
+                  class="simulation-card__iframe"
+                  loading="lazy"
+                  allowfullscreen
+                  referrerpolicy="no-referrer-when-downgrade"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-presentation">
+                </iframe>
+              </div>
+            </div>
+          }
+        </div>
       }
     </div>
 
