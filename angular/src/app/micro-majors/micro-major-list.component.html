@@ -36,9 +36,13 @@
           </div>
           <div class="major-card__footer">
             <span>{{ item.industryField || '通用方向' }}</span>
-            <button nz-button nzType="primary" (click)="enroll(item, $event)">
-              {{ item.isCurrentUserEnrolled ? '已报名' : '立即报名' }}
-            </button>
+            @if (canEnroll()) {
+              <button nz-button nzType="primary" (click)="enroll(item, $event)">
+                {{ item.isCurrentUserEnrolled ? '已报名' : '立即报名' }}
+              </button>
+            } @else if (item.isCurrentUserEnrolled) {
+              <span class="enrolled-badge">已报名</span>
+            }
           </div>
         </nz-card>
       }

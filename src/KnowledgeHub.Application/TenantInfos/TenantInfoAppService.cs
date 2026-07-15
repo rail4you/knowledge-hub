@@ -149,18 +149,26 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
         var query = await _majorRepository.GetQueryableAsync();
         var tenantMajors = query.Where(x => x.TenantId == tenantId).ToList();
 
+        // 一次性加载该租户所有课程，按 MajorId 分组统计
+        var courseQuery = await _courseRepository.GetQueryableAsync();
+        var allCourses = courseQuery.Where(c => c.TenantId == tenantId && c.MajorId.HasValue).ToList();
+        var courseCountByMajor = allCourses
+            .GroupBy(c => c.MajorId!.Value)
+            .ToDictionary(g => g.Key, g => g.Count());
+
         var nodes = new List<TenantGraphNodeDto> { centerNode };
         var relations = new List<TenantGraphRelationDto>();
 
         foreach (var major in tenantMajors)
         {
+            courseCountByMajor.TryGetValue(major.Id, out var courseCount);
             var majorNode = new TenantGraphNodeDto
             {
                 Id = $"major_{major.Id}",
                 Name = major.Name,
                 NodeType = "major",
                 Description = major.Description,
-                ChildrenCount = await CountCoursesByMajorAsync(major.Id)
+                ChildrenCount = courseCount
             };
             nodes.Add(majorNode);
 
@@ -173,29 +181,25 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
             });
         }
 
-        var courseQuery = await _courseRepository.GetQueryableAsync();
-        foreach (var major in tenantMajors)
+        // 添加课程节点
+        foreach (var course in allCourses)
         {
-            var courses = courseQuery.Where(c => c.MajorId == major.Id).ToList();
-            foreach (var course in courses)
+            var courseNode = new TenantGraphNodeDto
             {
-                var courseNode = new TenantGraphNodeDto
-                {
-                    Id = $"course_{course.Id}",
-                    Name = course.Title,
-                    NodeType = "course",
-                    Description = course.Description
-                };
-                nodes.Add(courseNode);
+                Id = $"course_{course.Id}",
+                Name = course.Title,
+                NodeType = "course",
+                Description = course.Description
+            };
+            nodes.Add(courseNode);
 
-                relations.Add(new TenantGraphRelationDto
-                {
-                    SourceId = $"major_{major.Id}",
-                    TargetId = courseNode.Id,
-                    RelationType = "contains",
-                    Label = "包含"
-                });
-            }
+            relations.Add(new TenantGraphRelationDto
+            {
+                SourceId = $"major_{course.MajorId}",
+                TargetId = courseNode.Id,
+                RelationType = "contains",
+                Label = "包含"
+            });
         }
 
         return new TenantKnowledgeGraphDto
@@ -206,7 +210,8 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
                 Id = $"major_{x.Id}",
                 Name = x.Name,
                 NodeType = "major",
-                Description = x.Description
+                Description = x.Description,
+                ChildrenCount = courseCountByMajor.TryGetValue(x.Id, out var c) ? c : 0
             }).ToList(),
             AllNodes = nodes,
             Relations = relations
@@ -273,14 +278,3 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
     }
 
     private async Task<int> CountCoursesAsync(Guid tenantId)
-    {
-        var query = await _courseRepository.GetQueryableAsync();
-        return query.Count(c => c.TenantId == tenantId);
-    }
-
-    private async Task<int> CountCoursesByMajorAsync(Guid majorId)
-    {
-        var query = await _courseRepository.GetQueryableAsync();
-        return query.Count(c => c.MajorId == majorId);
-    }
-}

@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { ConfigStateService } from '@abp/ng.core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -9,6 +10,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { MicroMajorDto, MicroMajorService, MicroMajorStatus } from './micro-major.service';
+import { hasRole } from '../auth/current-user.utils';
 
 @Component({
   selector: 'app-micro-major-list',
@@ -31,6 +33,10 @@ export class MicroMajorListComponent implements OnInit {
   private readonly microMajorService = inject(MicroMajorService);
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
+  private readonly configState = inject(ConfigStateService);
+
+  /** 当前用户是否为 Student 角色（非管理员/教师），控制报名按钮显示 */
+  readonly canEnroll = computed(() => hasRole(this.configState, 'Student'));
 
   readonly loading = signal(false);
   readonly filter = signal('');
