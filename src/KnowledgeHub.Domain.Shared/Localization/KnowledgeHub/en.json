@@ -128,6 +128,7 @@
     "Status": "Status",
     "Category": "Category",
     "Keywords": "Keywords",
+    "Summary": "AI Summary",
     "CopyrightInfo": "Copyright Info",
     "IsDownloadable": "Downloadable",
     "UseAsResume": "Use as Resume",

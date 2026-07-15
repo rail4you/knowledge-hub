@@ -497,6 +497,29 @@
       line-height: 1.6;
       color: #555;
     }
+
+    .summary-text {
+      background: #f0f7ff;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #d6e4ff;
+      line-height: 1.6;
+      color: #1d39c4;
+      cursor: help;
+      display: inline-block;
+      max-width: 100%;
+      word-break: break-word;
+    }
+  }
+}
+
+// AI 摘要 tooltip：默认 ant-tooltip 太窄，这里放宽并允许换行
+::ng-deep .resource-summary-tooltip {
+  .ant-tooltip-inner {
+    max-width: 480px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: #1d39c4;
   }
 }
 

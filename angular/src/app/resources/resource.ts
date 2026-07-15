@@ -1109,6 +1109,17 @@ export class ResourceComponent implements OnInit {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
+  /**
+   * 截断 AI 摘要用于在列表/抽屉中预览。
+   * - 超过 maxLength 时保留前 maxLength 字符 + ……
+   * - 完整内容通过 nz-tooltip 悬停展示
+   */
+  truncateSummary(text?: string | null, maxLength = 80): string {
+    if (!text) return '';
+    const trimmed = text.trim();
+    return trimmed.length > maxLength ? trimmed.slice(0, maxLength) + '…' : trimmed;
+  }
+
   beforeUploadVersion(file: File): boolean {
     this.versionUploadedFileInfo = null;
     this.versionUploadProgress.set(0);

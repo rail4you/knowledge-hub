@@ -21,6 +21,8 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     public ResourceStatus Status { get; set; }
     public int CurrentVersion { get; set; }
     public string? Keywords { get; set; }
+    /// <summary>AI 生成的资源摘要（由 DocumentSummaryBackgroundJob 写入）。</summary>
+    public string? Summary { get; set; }
     public string? CopyrightInfo { get; set; }
     public bool IsDownloadable { get; set; }
     /// <summary>P1-13：是否作为简历使用。AI 职业规划下拉会列出当前用户已审核通过的简历资源。</summary>

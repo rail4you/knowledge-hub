@@ -151,6 +151,8 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   status?: ResourceStatus;
   currentVersion?: number;
   keywords?: string | null;
+  /** AI 生成的资源摘要（由 DocumentSummaryBackgroundJob 写入）。 */
+  summary?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
   isResume?: boolean;

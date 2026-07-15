@@ -467,6 +467,16 @@
                   <label>{{ '::Keywords' | abpLocalization }}</label>
                   <span>{{ selectedResource()!.keywords }}</span>
                 </div>
+                <div class="detail-row full" *ngIf="selectedResource()!.summary">
+                  <label>{{ '::Summary' | abpLocalization }}</label>
+                  <span class="summary-text"
+                    nz-tooltip
+                    [nzTooltipTitle]="selectedResource()!.summary!"
+                    nzTooltipPlacement="topLeft"
+                    nzTooltipOverlayClassName="resource-summary-tooltip">
+                    {{ truncateSummary(selectedResource()!.summary, 80) }}
+                  </span>
+                </div>
                 <div class="detail-row full" *ngIf="selectedResource()!.description">
                   <label>{{ '::Description' | abpLocalization }}</label>
                   <span class="description-text">{{ selectedResource()!.description }}</span>

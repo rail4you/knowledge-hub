@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using KnowledgeHub.Application.AI.Summary;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
@@ -28,6 +29,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
     private readonly IFileStorageService _fileStorageService;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly IMeiliSearchService _meiliSearchService;
+    private readonly IBackgroundJobManager _backgroundJobManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly ILogger<DocumentIndexingBackgroundJob> _logger;
@@ -40,6 +42,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         IFileStorageService fileStorageService,
         IUnitOfWorkManager unitOfWorkManager,
         IMeiliSearchService meiliSearchService,
+        IBackgroundJobManager backgroundJobManager,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
         ILogger<DocumentIndexingBackgroundJob> logger)
@@ -51,6 +54,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _fileStorageService = fileStorageService;
         _unitOfWorkManager = unitOfWorkManager;
         _meiliSearchService = meiliSearchService;
+        _backgroundJobManager = backgroundJobManager;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         _logger = logger;
@@ -162,6 +166,21 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
             _logger.LogWarning(meiliEx, "Meilisearch indexing failed for resource {ResourceId}", args.ResourceId);
             // 将 Job 标记为失败而不是静默完成，方便用户在索引任务页面看到问题
             throw new Exception($"Meilisearch 索引失败: {meiliEx.Message}", meiliEx);
+        }
+
+        // 异步入队 Summary 生成（fire-and-forget，失败不影响主流程）
+        try
+        {
+            await _backgroundJobManager.EnqueueAsync(new DocumentSummaryGenerationJobArgs
+            {
+                ResourceId = args.ResourceId,
+                TenantId = resource.TenantId
+            });
+            _logger.LogInformation("Enqueued summary generation job for resource {ResourceId}", args.ResourceId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to enqueue summary job for resource {ResourceId}", args.ResourceId);
         }
 
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Completed, progress: 100);
