@@ -1,31 +1,57 @@
 <div class="pdf-viewer">
   <!-- Toolbar -->
   <div class="viewer-toolbar">
-    <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="scale() <= 0.25">
-      <span nz-icon nzType="zoom-out"></span>
-    </button>
-    <span class="scale-info">{{ getScalePercent() }}%</span>
-    <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="scale() >= 3">
-      <span nz-icon nzType="zoom-in"></span>
-    </button>
-    <button nz-button nzSize="small" (click)="fitWidth()">
-      <span nz-icon nzType="fullscreen"></span>
-    </button>
-    <span class="toolbar-separator"></span>
-    <span class="page-info" *ngIf="totalPages() > 0">{{ currentPage() }} / {{ totalPages() }} 页</span>
+    <div class="toolbar-section toolbar-nav">
+      <button nz-button nzSize="small" nzType="text" (click)="goToPrev()" [disabled]="currentPage() <= 1">
+        <span nz-icon nzType="left"></span>上一页
+      </button>
+      <span class="page-info">{{ currentPage() }}<span class="page-total"> / {{ totalPages() }}</span></span>
+      <button nz-button nzSize="small" nzType="text" (click)="goToNext()" [disabled]="currentPage() >= totalPages()">
+        下一页<span nz-icon nzType="right"></span>
+      </button>
+    </div>
+
+    <div class="toolbar-spacer"></div>
+
+    <div class="toolbar-section toolbar-zoom">
+      <button nz-button nzSize="small" nzType="text" (click)="zoomOut()" [disabled]="scale() <= 0.25">
+        <span nz-icon nzType="zoom-out"></span>
+      </button>
+      <span class="scale-info" (click)="fitWidth()" title="点击重置">{{ getScalePercent() }}%</span>
+      <button nz-button nzSize="small" nzType="text" (click)="zoomIn()" [disabled]="scale() >= 3">
+        <span nz-icon nzType="zoom-in"></span>
+      </button>
+    </div>
   </div>
 
-  <!-- Pages container: canvas elements created imperatively to avoid Angular control-flow bug -->
-  <div #pdfContainer class="pdf-pages-container" [class.loading]="isLoading()" (scroll)="onScroll()">
+  <!-- Single page stage -->
+  <div #pdfContainer class="pdf-stage" [class.loading]="isLoading()">
     <div
       class="pdf-click-shield"
       (click)="onShieldClick($event)"
       (dblclick)="$event.stopPropagation()"
     ></div>
 
-    <!-- Imperative canvas host (no *ngFor / @for) -->
-    <div #pagesHost></div>
+    <div #pagesHost class="page-canvas-host"></div>
   </div>
+
+  <!-- Page strip (quick navigation) -->
+  @if (totalPages() > 1 && !isLoading()) {
+    <div class="page-strip">
+      @for (p of pageNumbers(); track p) {
+        <button
+          type="button"
+          class="page-dot"
+          [class.active]="p === currentPage()"
+          [class.rendered]="isPageRendered(p)"
+          [title]="'第 ' + p + ' 页' + (isPageRendered(p) ? '' : ' (加载中)')"
+          (click)="goToPage(p)"
+        >
+          {{ p }}
+        </button>
+      }
+    </div>
+  }
 
   <!-- Loading -->
   <div *ngIf="isLoading()" class="pdf-loading-overlay">

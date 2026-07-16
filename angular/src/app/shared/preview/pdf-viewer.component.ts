@@ -6,6 +6,7 @@ import {
   viewChild,
   ElementRef,
   signal,
+  computed,
   ChangeDetectionStrategy,
   AfterViewInit,
   NgZone,
@@ -24,7 +25,8 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
-  data = input.required<ArrayBuffer>();
+  data = input<ArrayBuffer>(new ArrayBuffer(0));
+  previewUrl = input<string>('');
   fileName = input('');
 
   currentPage = signal(1);
@@ -33,6 +35,15 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   isLoading = signal(true);
   error = signal('');
   renderedCount = signal(0);
+  /** 已渲染的页码集合（用于 page-strip 显示渲染状态） */
+  renderedPages = signal<Set<number>>(new Set());
+
+  /** page-strip 显示的页码列表 */
+  readonly pageNumbers = computed(() => {
+    const total = this.totalPages();
+    if (total === 0) return [] as number[];
+    return Array.from({ length: total }, (_, i) => i + 1);
+  });
 
   private readonly containerRef = viewChild<ElementRef<HTMLDivElement>>('pdfContainer');
   private readonly pagesHostRef = viewChild<ElementRef<HTMLDivElement>>('pagesHost');
@@ -40,114 +51,137 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly zone = inject(NgZone);
 
   private pdfDoc: any = null;
-  private canvases: HTMLCanvasElement[] = [];
-  private isRendering = false;
+  private pageItems: Map<number, { canvas: HTMLCanvasElement; wrapper: HTMLElement }> = new Map();
   private renderQueue: number[] = [];
   private loaded = false;
   private destroyed = false;
 
-  constructor() {}
+  constructor() {
+    // 键盘快捷键：← → 翻页
+    this.zone.runOutsideAngular(() => {
+      document.addEventListener('keydown', this.handleKeyDown);
+    });
+  }
 
   ngOnInit() {}
 
   ngAfterViewInit() {
+    const url = this.previewUrl();
     const d = this.data();
-    if (d && d.byteLength > 0 && !this.loaded) {
+
+    if (url && !this.loaded) {
       setTimeout(() => {
         if (!this.destroyed && !this.loaded) {
-          this.loadPdf(d);
+          this.loadPdfFromUrl(url);
+        }
+      }, 0);
+    } else if (d && d.byteLength > 0 && !this.loaded) {
+      setTimeout(() => {
+        if (!this.destroyed && !this.loaded) {
+          this.loadPdfFromBuffer(d);
         }
       }, 0);
     }
   }
 
   ngOnDestroy() {
+    document.removeEventListener('keydown', this.handleKeyDown);
     this.destroyed = true;
     this.pdfDoc = null;
-    this.isRendering = false;
     this.renderQueue = [];
-    this.canvases = [];
-  }
-
-  private get containerEl(): HTMLElement | null {
-    return this.containerRef()?.nativeElement ?? null;
+    this.pageItems.clear();
   }
 
   private get pagesHost(): HTMLElement | null {
     return this.pagesHostRef()?.nativeElement ?? null;
   }
 
-  /**
-   * 命令式创建所有 canvas 元素，完全绕开 Angular 的 @for/*ngFor 控制流，
-   * 避免 Angular 21 变更检测导致组件被销毁的 bug。
-   */
-  private createCanvasElements(totalPages: number) {
-    const host = this.pagesHost;
-    if (!host) return;
+  isPageRendered(page: number): boolean {
+    return this.renderedPages().has(page);
+  }
 
-    // 清理旧元素
-    host.innerHTML = '';
-    this.canvases = [];
+  /** 导航到指定页，如果未渲染则优先渲染 */
+  async goToPage(pageNum: number) {
+    if (pageNum < 1 || pageNum > this.totalPages() || pageNum === this.currentPage()) return;
+    this.currentPage.set(pageNum);
+    this.showPage(pageNum);
 
-    for (let i = 1; i <= totalPages; i++) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'pdf-page-wrapper';
-
-      const canvas = document.createElement('canvas');
-      canvas.className = 'pdf-page-canvas';
-
-      const label = document.createElement('div');
-      label.className = 'pdf-page-label';
-      label.textContent = `— ${i} —`;
-
-      wrapper.appendChild(canvas);
-      wrapper.appendChild(label);
-      host.appendChild(wrapper);
-
-      this.canvases.push(canvas);
+    // 如果该页未渲染，优先渲染
+    if (!this.isPageRendered(pageNum)) {
+      await this.renderPageWithPriority(pageNum);
     }
   }
 
-  private async loadPdf(data: ArrayBuffer) {
+  goToPrev() {
+    if (this.currentPage() > 1) {
+      this.goToPage(this.currentPage() - 1);
+    }
+  }
+
+  goToNext() {
+    if (this.currentPage() < this.totalPages()) {
+      this.goToPage(this.currentPage() + 1);
+    }
+  }
+
+  /** 切换当前显示的页面（隐藏其他） */
+  private showPage(pageNum: number) {
+    const host = this.pagesHost;
+    if (!host) return;
+
+    // 隐藏所有页面
+    for (const [p, item] of this.pageItems) {
+      item.wrapper.style.display = p === pageNum ? '' : 'none';
+    }
+  }
+
+  private async loadPdfFromUrl(url: string) {
     if (this.destroyed) return;
 
     try {
       this.isLoading.set(true);
       this.error.set('');
       this.renderedCount.set(0);
+      this.renderedPages.set(new Set());
       this.renderQueue = [];
-      this.isRendering = false;
       this.loaded = false;
 
       const pdfjsLib = await import('pdfjs-dist');
       pdfjsLib.GlobalWorkerOptions.workerSrc =
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
 
-      // 复制 ArrayBuffer，防止 pdf.js Web Worker 内部 transfer 导致原 buffer detached
-      const copy = data.slice(0);
       const loadingTask = pdfjsLib.getDocument({
-        data: new Uint8Array(copy),
+        url,
         cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/cmaps/',
         cMapPacked: true,
+        enableXfa: true,
       });
 
       this.pdfDoc = await loadingTask.promise;
       const total = this.pdfDoc.numPages;
-
       this.totalPages.set(total);
 
-      // 在 Angular zone 外创建 canvas 元素，避免触发变更检测
+      // 预创建所有页面的 canvas（命令式，绕开 Angular）
       this.zone.runOutsideAngular(() => {
-        this.createCanvasElements(total);
+        this.createAllCanvases(total);
       });
 
-      // 等待 DOM 更新
       await new Promise((resolve) => setTimeout(resolve, 50));
       if (this.destroyed) return;
 
-      this.renderQueue = Array.from({ length: total }, (_, i) => i + 1);
       this.loaded = true;
-      await this.processRenderQueue();
+
+      // 优先渲染第 1 页，完成后立即展示
+      await this.renderPageWithPriority(1);
+      this.showPage(1);
+      this.currentPage.set(1);
+      this.isLoading.set(false);
+
+      // 后台加载第 2 页及以后
+      if (total > 1) {
+        this.renderQueue = Array.from({ length: total - 1 }, (_, i) => i + 2);
+        this.backgroundRenderAll();
+      }
     } catch (e: any) {
       console.error('PDF load error:', e);
       if (!this.destroyed) {
@@ -158,56 +192,152 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  private async processRenderQueue() {
+  private async loadPdfFromBuffer(data: ArrayBuffer) {
     if (this.destroyed) return;
 
-    if (this.isRendering || this.renderQueue.length === 0) {
-      if (this.renderQueue.length === 0) {
-        this.isLoading.set(false);
-      }
-      return;
-    }
+    try {
+      this.isLoading.set(true);
+      this.error.set('');
+      this.renderedCount.set(0);
+      this.renderedPages.set(new Set());
+      this.renderQueue = [];
+      this.loaded = false;
 
-    this.isRendering = true;
-    const batch = this.renderQueue.splice(0, 2);
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
 
-    for (const pageNum of batch) {
+      const copy = data.slice(0);
+      const loadingTask = pdfjsLib.getDocument({
+        data: new Uint8Array(copy),
+        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/cmaps/',
+        cMapPacked: true,
+      });
+
+      this.pdfDoc = await loadingTask.promise;
+      const total = this.pdfDoc.numPages;
+      this.totalPages.set(total);
+
+      this.zone.runOutsideAngular(() => {
+        this.createAllCanvases(total);
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
       if (this.destroyed) return;
-      await this.renderSinglePage(pageNum);
-    }
 
-    if (this.destroyed) return;
+      this.loaded = true;
 
-    this.isRendering = false;
-
-    if (this.renderQueue.length > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      await this.processRenderQueue();
-    } else {
+      await this.renderPageWithPriority(1);
+      this.showPage(1);
+      this.currentPage.set(1);
       this.isLoading.set(false);
+
+      if (total > 1) {
+        this.renderQueue = Array.from({ length: total - 1 }, (_, i) => i + 2);
+        this.backgroundRenderAll();
+      }
+    } catch (e: any) {
+      console.error('PDF load error:', e);
+      if (!this.destroyed) {
+        this.error.set(e.message || 'Failed to load PDF');
+        this.isLoading.set(false);
+        this.loaded = true;
+      }
     }
   }
 
-  private async renderSinglePage(pageNum: number) {
+  /** 命令式创建所有页面的 canvas 元素，初始全部隐藏 */
+  private createAllCanvases(total: number) {
+    const host = this.pagesHost;
+    if (!host) return;
+
+    host.innerHTML = '';
+    this.pageItems.clear();
+
+    for (let i = 1; i <= total; i++) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'pdf-page-wrapper';
+      wrapper.style.display = 'none'; // 默认隐藏
+
+      const canvas = document.createElement('canvas');
+      canvas.className = 'pdf-page-canvas';
+
+      wrapper.appendChild(canvas);
+      host.appendChild(wrapper);
+
+      this.pageItems.set(i, { canvas, wrapper });
+    }
+  }
+
+  /** 优先渲染指定页面（高优先级，用于用户导航到的页） */
+  private async renderPageWithPriority(pageNum: number) {
     if (!this.pdfDoc || this.destroyed) return;
 
     try {
       const page = await this.pdfDoc.getPage(pageNum);
       const viewport = page.getViewport({ scale: this.scale() * 1.5 });
-      const canvas = this.canvases[pageNum - 1];
-      if (!canvas) return;
+      const item = this.pageItems.get(pageNum);
+      if (!item) return;
 
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
+      item.canvas.height = viewport.height;
+      item.canvas.width = viewport.width;
 
-      // 在 Angular zone 外执行 canvas 渲染，避免触发变更检测
       await this.zone.runOutsideAngular(() =>
-        page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise
+        page.render({ canvasContext: item.canvas.getContext('2d')!, viewport }).promise
       );
 
+      // 标记已渲染
+      this.renderedPages.update((s) => {
+        const next = new Set(s);
+        next.add(pageNum);
+        return next;
+      });
+      this.renderedCount.update((v) => v + 1);
+    } catch (e) {
+      console.warn(`Render page ${pageNum} error:`, e);
+    }
+  }
+
+  /** 后台逐页渲染（低优先级，使用 setTimeout 避免阻塞） */
+  private backgroundRenderAll() {
+    this.renderNextInBackground();
+  }
+
+  private renderNextInBackground() {
+    if (this.destroyed) return;
+    if (this.renderQueue.length === 0) return;
+
+    const pageNum = this.renderQueue.shift()!;
+    this.renderPageInBackground(pageNum).finally(() => {
       if (!this.destroyed) {
-        this.renderedCount.update((v) => v + 1);
+        // 每 16ms 渲染一页，保证 UI 流畅
+        setTimeout(() => this.renderNextInBackground(), 16);
       }
+    });
+  }
+
+  private async renderPageInBackground(pageNum: number) {
+    if (!this.pdfDoc || this.destroyed) return;
+
+    try {
+      const page = await this.pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: this.scale() * 1.5 });
+      const item = this.pageItems.get(pageNum);
+      if (!item) return;
+
+      item.canvas.height = viewport.height;
+      item.canvas.width = viewport.width;
+
+      await this.zone.runOutsideAngular(() =>
+        page.render({ canvasContext: item.canvas.getContext('2d')!, viewport }).promise
+      );
+
+      this.renderedPages.update((s) => {
+        const next = new Set(s);
+        next.add(pageNum);
+        return next;
+      });
+      this.renderedCount.update((v) => v + 1);
     } catch (e) {
       console.warn(`Render page ${pageNum} error:`, e);
     }
@@ -218,18 +348,19 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.isLoading.set(true);
     this.renderedCount.set(0);
-    this.renderQueue = [];
-    this.isRendering = false;
-
-    // 清空所有 canvas
-    for (const c of this.canvases) {
-      c.getContext('2d')?.clearRect(0, 0, c.width, c.height);
-    }
+    this.renderedPages.set(new Set());
 
     const total = this.totalPages();
-    this.renderQueue = Array.from({ length: total }, (_, i) => i + 1);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await this.processRenderQueue();
+
+    await this.renderPageWithPriority(1);
+    this.showPage(1);
+    this.currentPage.set(1);
+    this.isLoading.set(false);
+
+    if (total > 1) {
+      this.renderQueue = Array.from({ length: total - 1 }, (_, i) => i + 2);
+      this.backgroundRenderAll();
+    }
   }
 
   zoomIn() {
@@ -257,30 +388,15 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     event.stopPropagation();
   }
 
-  onScroll() {
-    const el = this.containerEl;
-    if (!el) return;
-
-    const wrappers = el.querySelectorAll('.pdf-page-wrapper');
-    const containerRect = el.getBoundingClientRect();
-    const midPoint = containerRect.top + containerRect.height / 3;
-
-    let closestPage = 1;
-    let closestDist = Infinity;
-
-    wrappers.forEach((w) => {
-      const rect = w.getBoundingClientRect();
-      const dist = Math.abs(rect.top + rect.height / 2 - midPoint);
-      if (dist < closestDist) {
-        closestDist = dist;
-        const label = w.querySelector('.pdf-page-label');
-        if (label) {
-          const match = label.textContent?.match(/(\d+)/);
-          if (match) closestPage = parseInt(match[1], 10);
-        }
-      }
-    });
-
-    this.currentPage.set(closestPage);
-  }
+  private handleKeyDown = (event: KeyboardEvent) => {
+    // 仅在 pdf viewer 可见且未加载时响应
+    if (this.destroyed || this.isLoading()) return;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      this.zone.run(() => this.goToPrev());
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      this.zone.run(() => this.goToNext());
+    }
+  };
 }

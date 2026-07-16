@@ -179,24 +179,19 @@ export class FilePreviewComponent {
 
     const type = this.fileType;
 
-    // Video and audio: use direct server endpoint without pre-download.
-    if (type === 'video' || type === 'audio') {
-      const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
+    // Video, audio, PDF, PPTX: use direct server endpoint with HTTP Range streaming.
+    if (type === 'video' || type === 'audio' || type === 'pdf' || type === 'pptx') {
+      const previewUrl = type === 'pptx'
+        ? `/api/resource-file/${this.resourceId()}/preview-pdf`
+        : `/api/resource-file/${this.resourceId()}/preview`;
       this.fileUrl.set(previewUrl);
       this.isLoading.set(false);
       return;
     }
 
-    // PPTX 文档：走后端 LibreOffice → PDF 转换端点。
-    // - 服务端首次转换可能耗时 5-60s（80MB PPTX 实测 ~9s），缓存命中毫秒级
-    // - 前端拿到 PDF ArrayBuffer 后复用 PdfViewerComponent 渲染
-    // - 大文件不再走前端解析，转码压力在服务端（无文件大小限制）
-    const usePdfEndpoint = type === 'pptx';
-    const previewUrl = usePdfEndpoint
-      ? `/api/resource-file/${this.resourceId()}/preview-pdf`
-      : `/api/resource-file/${this.resourceId()}/preview`;
+    // Word/Excel/Image/Text: 仍然通过 fetch 全量下载 ArrayBuffer
+    const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
 
-    // 所有要解析的文件（pdf / word / excel / pptx / image / text）都通过 fetch 拿到 ArrayBuffer。
     // 使用原生 fetch() 而非 Angular HttpClient：
     // - fetch() 自动携带同源 cookie（ABP OIDC 认证 cookie 通过代理转发）
     // - 参考 kg-edu-vite-antd FilePreview.tsx 的实现方式

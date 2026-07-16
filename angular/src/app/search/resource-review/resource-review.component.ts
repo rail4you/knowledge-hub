@@ -12,6 +12,7 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { LocalizationService } from '@abp/ng.core';
 import { ResourceReviewService, ResourceReviewDto, ResourceRatingSummaryDto, CreateResourceReviewInput, UpdateResourceReviewInput } from './resource-review.service';
 
 @Component({
@@ -32,6 +33,7 @@ export class ResourceReviewComponent implements OnInit {
 
   private readonly reviewService = inject(ResourceReviewService);
   private readonly message = inject(NzMessageService);
+  private readonly localization = inject(LocalizationService);
 
   summary = signal<ResourceRatingSummaryDto | null>(null);
   reviews = signal<ResourceReviewDto[]>([]);
@@ -75,7 +77,7 @@ export class ResourceReviewComponent implements OnInit {
 
   submitReview() {
     if (this.myRating < 1 || this.myRating > 5) {
-      this.message.warning('请选择评分（1-5星）');
+      this.message.warning(this.localization.instant('ResourceReview:InvalidRating'));
       return;
     }
 
@@ -89,14 +91,14 @@ export class ResourceReviewComponent implements OnInit {
       this.reviewService.update(this.editingReviewId, input).subscribe({
         next: () => {
           this.submitting.set(false);
-          this.message.success('评价更新成功');
+          this.message.success(this.localization.instant('ResourceReview:UpdateSuccess'));
           this.loadSummary();
           this.loadReviews();
           this.reviewChanged.emit();
         },
         error: () => {
           this.submitting.set(false);
-          this.message.error('更新失败');
+          this.message.error(this.localization.instant('ResourceReview:UpdateFailed'));
         }
       });
     } else {
@@ -108,14 +110,14 @@ export class ResourceReviewComponent implements OnInit {
       this.reviewService.create(input).subscribe({
         next: () => {
           this.submitting.set(false);
-          this.message.success('评价提交成功');
+          this.message.success(this.localization.instant('ResourceReview:SubmitSuccess'));
           this.loadSummary();
           this.loadReviews();
           this.reviewChanged.emit();
         },
         error: () => {
           this.submitting.set(false);
-          this.message.error('提交失败');
+          this.message.error(this.localization.instant('ResourceReview:SubmitFailed'));
         }
       });
     }
@@ -124,7 +126,7 @@ export class ResourceReviewComponent implements OnInit {
   deleteReview(id: string) {
     this.reviewService.delete(id).subscribe({
       next: () => {
-        this.message.success('评价已删除');
+        this.message.success(this.localization.instant('ResourceReview:DeleteSuccess'));
         this.editingReviewId = null;
         this.myRating = 0;
         this.myContent = '';
@@ -132,7 +134,7 @@ export class ResourceReviewComponent implements OnInit {
         this.loadReviews();
         this.reviewChanged.emit();
       },
-      error: () => this.message.error('删除失败')
+      error: () => this.message.error(this.localization.instant('ResourceReview:DeleteFailed'))
     });
   }
 
