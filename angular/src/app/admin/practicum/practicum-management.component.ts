@@ -365,24 +365,41 @@ export class PracticumManagementComponent implements OnInit {
     }, 200);
   }
 
-  /** 抽屉底部"保存"按钮：根据 kind 校验+写回 form.tasks / form.materials */
+  /** 抽屉底部"保存"按钮：校验 → 写回 form → 持久化到后端 */
   saveDrawer(): void {
     const kind = this.drawerKind();
     if (kind === 'task') {
-      this.saveTaskDraft();
+      if (!this.validateTaskDraft()) return;
+      this.applyTaskDraft();
     } else if (kind === 'material') {
-      this.saveMaterialDraft();
+      if (!this.validateMaterialDraft()) return;
+      this.applyMaterialDraft();
+    } else {
+      return;
+    }
+    // 编辑已有项目时直接持久化到后端；新建项目时仅保存到本地 form（由 saveModal 统一提交）
+    if (this.selectedProjectId) {
+      this.drawerSaving.set(true);
+      this.persistFormToBackend();
+    } else {
+      this.message.success(this.drawerMode() === 'add' ? '已添加' : '已更新');
+      this.closeDrawer();
     }
   }
 
-  /** 抽屉底部"删除"按钮 */
+  /** 抽屉底部"删除"按钮：仅已有项目时可用 */
   deleteFromDrawer(): void {
     const i = this.drawerIndex();
     const kind = this.drawerKind();
     if (i < 0) return;
+    if (!this.selectedProjectId) {
+      this.message.warning('请先保存项目基本信息后再删除');
+      return;
+    }
     if (kind === 'task') this.removeTask(i);
     else if (kind === 'material') this.removeMaterial(i);
-    this.closeDrawer();
+    this.drawerSaving.set(true);
+    this.persistFormToBackend('删除');
   }
 
   // 兼容旧方法名（避免破坏 HTML 调用）
@@ -396,18 +413,44 @@ export class PracticumManagementComponent implements OnInit {
   openMaterialDrawer(i: number): void { this.openEditMaterialDrawer(i); }
   editFromDrawer(): void { /* no-op: 抽屉本身就是编辑态 */ }
 
-  private saveTaskDraft(): void {
+  /** 校验任务草稿，返回是否合法 */
+  private validateTaskDraft(): boolean {
     const draft = this.taskDraft();
-    if (!draft) return;
+    if (!draft) return false;
+    if (!(draft.title || '').trim()) {
+      this.message.warning('请填写任务名称');
+      return false;
+    }
+    return true;
+  }
 
+  /** 校验资料草稿，返回是否合法 */
+  private validateMaterialDraft(): boolean {
+    const draft = this.materialDraft();
+    if (!draft) return false;
     const title = (draft.title || '').trim();
     if (!title) {
-      this.message.warning('请填写任务名称');
-      return;
+      this.message.warning('请填写资料名称');
+      return false;
     }
+    const isUrlType = draft.materialType === 3 || draft.materialType === 4;
+    const resourceUrl = (draft.resourceUrl || '').trim();
+    if (isUrlType && !resourceUrl) {
+      this.message.warning('请填写 URL');
+      return false;
+    }
+    if (!isUrlType && !resourceUrl) {
+      this.message.warning('请上传资料文件');
+      return false;
+    }
+    return true;
+  }
 
+  /** 将任务草稿写入 form.tasks（仅本地） */
+  private applyTaskDraft(): void {
+    const draft = this.taskDraft()!;
     const next = {
-      title,
+      title: (draft.title || '').trim(),
       description: (draft.description || '').trim(),
       requirement: (draft.requirement || '').trim(),
       scoreWeight: Number(draft.scoreWeight) || 0,
@@ -422,35 +465,16 @@ export class PracticumManagementComponent implements OnInit {
     }
     this.form.tasks.forEach((t, idx) => t.sortOrder = idx + 1);
     this.cdr.markForCheck();
-    this.closeDrawer();
-    this.message.success(this.drawerMode() === 'add' ? '已新增任务' : '已更新任务');
   }
 
-  private saveMaterialDraft(): void {
-    const draft = this.materialDraft();
-    if (!draft) return;
-
-    const title = (draft.title || '').trim();
-    if (!title) {
-      this.message.warning('请填写资料名称');
-      return;
-    }
-    const isUrlType = draft.materialType === 3 || draft.materialType === 4;
-    const resourceUrl = (draft.resourceUrl || '').trim();
-    if (isUrlType && !resourceUrl) {
-      this.message.warning('请填写 URL');
-      return;
-    }
-    if (!isUrlType && !resourceUrl) {
-      this.message.warning('请上传资料文件');
-      return;
-    }
-
+  /** 将资料草稿写入 form.materials（仅本地） */
+  private applyMaterialDraft(): void {
+    const draft = this.materialDraft()!;
     const next = {
-      title,
+      title: (draft.title || '').trim(),
       description: (draft.description || '').trim(),
       materialType: draft.materialType,
-      resourceUrl,
+      resourceUrl: (draft.resourceUrl || '').trim(),
       sortOrder: draft.sortOrder ?? 1,
     };
     if (this.drawerMode() === 'add') {
@@ -461,8 +485,35 @@ export class PracticumManagementComponent implements OnInit {
     }
     this.form.materials.forEach((m, idx) => m.sortOrder = idx + 1);
     this.cdr.markForCheck();
-    this.closeDrawer();
-    this.message.success(this.drawerMode() === 'add' ? '已新增资料' : '已更新资料');
+  }
+
+  /**
+   * 将当前 form（含 tasks / materials）持久化到后端。
+   * 成功后关闭抽屉、刷新 detail；失败时保留抽屉、显示错误。
+   */
+  private persistFormToBackend(customPrefix?: string): void {
+    const pid = this.selectedProjectId;
+    if (!pid) {
+      this.drawerSaving.set(false);
+      return;
+    }
+    const kind = this.drawerKind();
+    const mode = this.drawerMode();
+    const label = kind === 'task' ? '任务' : '资料';
+    const prefix = customPrefix || (mode === 'add' ? '新增' : '更新');
+
+    this.practicumService.update(pid, { ...this.form }).subscribe({
+      next: () => {
+        this.drawerSaving.set(false);
+        this.message.success(`${prefix}${label}已保存`);
+        this.closeDrawer();
+        this.refreshDetail();
+      },
+      error: (err) => {
+        this.drawerSaving.set(false);
+        this.message.error(`${prefix}${label}保存失败: ` + (err?.error?.error?.message || err?.message || '未知错误'));
+      },
+    });
   }
 
   /** ISO/字符串 → <input type="datetime-local"> 需要的 YYYY-MM-DDTHH:mm 格式 */
