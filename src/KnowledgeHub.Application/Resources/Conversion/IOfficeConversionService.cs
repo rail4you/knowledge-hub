@@ -34,7 +34,7 @@ public interface IOfficeConversionService
     void InvalidateCache(string resourceId);
 
     /// <summary>
-    /// 获取单页 PDF 的缓存路径（pdfseparate 拆分后的单个页面）。
+    /// 获取单页 PDF 的缓存路径（PdfSharp 拆分后的单个页面）。
     /// </summary>
     string GetPagePdfPath(string resourceId, int pageNumber);
 }

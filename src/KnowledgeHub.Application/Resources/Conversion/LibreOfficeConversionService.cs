@@ -8,6 +8,8 @@ using System.Xml.Linq;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PdfSharp.Pdf;
+using PdfSharp.Pdf.IO;
 using Volo.Abp.DependencyInjection;
 
 namespace KnowledgeHub.Resources.Conversion;
@@ -237,7 +239,7 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
             SaveCacheMeta(resourceId, sourcePath);
 
             // 拆分成单页 PDF，加速首页加载
-            SplitPdfToPages(resourceId, targetPdfPath);
+            await SplitPdfToPagesAsync(resourceId, targetPdfPath);
 
             _logger.LogInformation(
                 "[OfficeConversion] 转换成功: {ResourceId}, 耗时 {Elapsed}ms, 大小 {Size}",
@@ -345,63 +347,78 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
     }
 
     /// <summary>
-    /// 用 pdfseparate 将完整 PDF 拆分为单页 PDF，缓存到 {resourceId}/page{N}.pdf。
+    /// 用 PdfSharp 将完整 PDF 拆分为单页 PDF，缓存到 {resourceId}/page{N}.pdf。
     /// 每页仅 ~100-300KB，首页秒出。
     /// </summary>
-    private void SplitPdfToPages(string resourceId, string pdfPath)
+    private async Task SplitPdfToPagesAsync(string resourceId, string pdfPath)
     {
+        var pagesDir = Path.Combine(
+            _fileStorageService.RootPath,
+            _options.CacheDirectory,
+            resourceId);
+
+        // 检查是否已拆分
+        if (Directory.Exists(pagesDir) && Directory.GetFiles(pagesDir, "page*.pdf").Length > 0)
+        {
+            _logger.LogDebug("[OfficeConversion] 页面缓存已存在: {ResourceId}", resourceId);
+            return;
+        }
+
+        // 原子性：先写到 tmp 目录，全部成功后才 rename，避免中途失败留下半截 page*.pdf
+        // 被"目录已存在 + 有 page*.pdf"的跳过逻辑误判为完成
+        var tmpDir = pagesDir + ".tmp-" + Guid.NewGuid().ToString("N")[..8];
+
         try
         {
-            var pagesDir = Path.Combine(
-                _fileStorageService.RootPath,
-                _options.CacheDirectory,
-                resourceId);
-            var pagePattern = Path.Combine(pagesDir, "page%d.pdf");
-
-            // 检查是否已拆分
-            if (Directory.Exists(pagesDir) && Directory.GetFiles(pagesDir, "page*.pdf").Length > 0)
-            {
-                _logger.LogDebug("[OfficeConversion] 页面缓存已存在: {ResourceId}", resourceId);
-                return;
-            }
-
-            Directory.CreateDirectory(pagesDir);
-
-            using var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "pdfseparate",
-                    Arguments = $"-f 1 -l 9999 \"{pdfPath}\" \"{pagePattern}\"",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                },
-            };
+            Directory.CreateDirectory(tmpDir);
 
             var sw = Stopwatch.StartNew();
-            process.Start();
-            process.WaitForExit(TimeSpan.FromSeconds(30));
+            int pageCount;
+            using (var source = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Import))
+            {
+                if (source.PageCount == 0)
+                    throw new OfficeConversionException("PDF 无页面: " + pdfPath);
+
+                pageCount = source.PageCount;
+                for (var i = 0; i < pageCount; i++)
+                {
+                    using var target = new PdfDocument();
+                    target.Version = source.Version;
+                    target.AddPage(source.Pages[i]);
+                    target.Save(Path.Combine(tmpDir, $"page{i + 1}.pdf"));
+                }
+            }
             sw.Stop();
 
-            if (process.ExitCode != 0)
-            {
-                var stderr = process.StandardError.ReadToEnd();
-                _logger.LogWarning(
-                    "[OfficeConversion] pdfseparate 失败 (exit={Code}): {Stderr}",
-                    process.ExitCode, Truncate(stderr, 500));
-                return;
-            }
+            // 替换旧目录（如果存在）
+            if (Directory.Exists(pagesDir))
+                Directory.Delete(pagesDir, recursive: true);
+            Directory.Move(tmpDir, pagesDir);
 
-            var pageCount = Directory.GetFiles(pagesDir, "page*.pdf").Length;
+            // 边车文件：记录页数，供 /preview-pdf-info 端点 O(1) 查询，
+            // 避免前端轮询每页 + 后端重复打开 PDF
+            await File.WriteAllTextAsync(
+                Path.Combine(pagesDir, ".count"),
+                pageCount.ToString());
             _logger.LogInformation(
                 "[OfficeConversion] PDF 拆分为 {Count} 页: {ResourceId}, 耗时 {Elapsed}ms",
                 pageCount, resourceId, sw.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[OfficeConversion] PDF 拆分失败: {ResourceId}", resourceId);
+            // 失败时清理 tmpDir，抛异常让上层感知
+            try
+            {
+                if (Directory.Exists(tmpDir))
+                    Directory.Delete(tmpDir, recursive: true);
+            }
+            catch
+            {
+                // ignore cleanup errors
+            }
+
+            _logger.LogError(ex, "[OfficeConversion] PDF 拆分失败: {ResourceId}", resourceId);
+            throw new OfficeConversionException("PDF 拆分失败: " + ex.Message, ex);
         }
     }
 
