@@ -27,6 +27,11 @@ public interface IOfficeConversionService
     /// 检查是否已存在缓存的 PDF。
     /// </summary>
     bool HasCachedPdf(string resourceId);
+
+    /// <summary>
+    /// 清除缓存的 PDF（源文件更新后调用）。
+    /// </summary>
+    void InvalidateCache(string resourceId);
 }
 
 /// <summary>

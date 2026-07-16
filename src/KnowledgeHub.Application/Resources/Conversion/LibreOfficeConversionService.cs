@@ -1,8 +1,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -49,6 +51,28 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         return File.Exists(path);
     }
 
+    public void InvalidateCache(string resourceId)
+    {
+        var path = GetCachedPdfPath(resourceId);
+        var metaPath = GetCacheMetaPath(resourceId);
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+                _logger.LogInformation("[OfficeConversion] 缓存已清除: {Path}", path);
+            }
+            if (File.Exists(metaPath))
+            {
+                File.Delete(metaPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[OfficeConversion] 清除缓存失败: {Path}", path);
+        }
+    }
+
     public async Task<string> ConvertToPdfAsync(
         string resourceId,
         string sourcePath,
@@ -57,12 +81,18 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         if (!File.Exists(sourcePath))
             throw new OfficeConversionException($"源文件不存在: {sourcePath}");
 
-        // 1. 缓存命中直接返回
+        // 1. 检查缓存是否有效（对比源文件修改时间）
         var cachedPath = GetCachedPdfPath(resourceId);
-        if (File.Exists(cachedPath))
+        if (File.Exists(cachedPath) && IsCacheValid(resourceId, sourcePath))
         {
             _logger.LogDebug("[OfficeConversion] 缓存命中: {ResourceId} -> {Path}", resourceId, cachedPath);
             return cachedPath;
+        }
+
+        if (File.Exists(cachedPath))
+        {
+            _logger.LogInformation("[OfficeConversion] 缓存已过期（源文件已变化），重新转换: {ResourceId}", resourceId);
+            InvalidateCache(resourceId);
         }
 
         // 2. 同一资源的并发请求复用同一次 Task（避免双转换）
@@ -105,8 +135,8 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         // 准备临时工作目录
         var workDir = Path.Combine(Path.GetTempPath(), $"lo-{resourceId}-{Guid.NewGuid():N}");
         Directory.CreateDirectory(workDir);
-        // soffice 不接受中文/特殊字符文件名问题：复制到 workDir 使用 GUID 文件名
-        var sourceExt = Path.GetExtension(sourcePath);
+
+        var sourceExt = Path.GetExtension(sourcePath)?.ToLowerInvariant();
         var workSourcePath = Path.Combine(workDir, $"source{sourceExt}");
 
         var targetPdfPath = GetCachedPdfPath(resourceId);
@@ -114,7 +144,20 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
 
         try
         {
-            File.Copy(sourcePath, workSourcePath, overwrite: true);
+            // PPTX: 预处理，去掉隐藏幻灯片标记，确保 LibreOffice 导出全部幻灯片
+            var actualSourcePath = sourceExt == ".pptx" || sourceExt == ".ppt"
+                ? PreparePptxWithAllSlidesVisible(sourcePath, workDir)
+                : sourcePath;
+
+            if (actualSourcePath != sourcePath)
+            {
+                // 预处理后重命名为 source.pptx，确保 soffice 输出 source.pdf
+                File.Copy(actualSourcePath, workSourcePath, overwrite: true);
+            }
+            else
+            {
+                File.Copy(sourcePath, workSourcePath, overwrite: true);
+            }
 
             var args = $"--headless --norestore --nofirststartwizard --nologo --nolockcheck" +
                        $" --convert-to pdf --outdir \"{workDir}\" \"{workSourcePath}\"";
@@ -191,6 +234,7 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
             // 移动到缓存目录
             Directory.CreateDirectory(Path.GetDirectoryName(targetPdfPath)!);
             File.Copy(workTargetPath, targetPdfPath, overwrite: true);
+            SaveCacheMeta(resourceId, sourcePath);
 
             _logger.LogInformation(
                 "[OfficeConversion] 转换成功: {ResourceId}, 耗时 {Elapsed}ms, 大小 {Size}",
@@ -213,12 +257,139 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         }
     }
 
+    /// <summary>
+    /// PPTX 预处理：去掉所有隐藏幻灯片标记 (show="0")，
+    /// 确保 LibreOffice 导出全部幻灯片。返回处理后的文件路径。
+    /// </summary>
+    private string PreparePptxWithAllSlidesVisible(string sourcePath, string workDir)
+    {
+        var preppedPath = Path.Combine(workDir, "prepped.pptx");
+        try
+        {
+            using var sourceZip = ZipFile.OpenRead(sourcePath);
+            using var targetZip = ZipFile.Open(preppedPath, ZipArchiveMode.Create);
+
+            var hasHiddenSlides = false;
+
+            foreach (var entry in sourceZip.Entries)
+            {
+                if (entry.FullName.StartsWith("ppt/slides/slide") &&
+                    entry.FullName.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                {
+                    using var stream = entry.Open();
+                    var doc = XDocument.Load(stream);
+                    XNamespace p = "http://schemas.openxmlformats.org/presentationml/2006/main";
+                    var sld = doc.Root;
+                    if (sld != null)
+                    {
+                        var showAttr = sld.Attribute("show");
+                        if (showAttr != null && showAttr.Value == "0")
+                        {
+                            showAttr.Remove();
+                            hasHiddenSlides = true;
+                        }
+                    }
+
+                    var newEntry = targetZip.CreateEntry(entry.FullName, CompressionLevel.Optimal);
+                    using var newStream = newEntry.Open();
+                    doc.Save(newStream);
+                }
+                else
+                {
+                    // 直接复制其他条目
+                    var newEntry = targetZip.CreateEntry(entry.FullName, CompressionLevel.Optimal);
+                    using var sourceStream = entry.Open();
+                    using var targetStream = newEntry.Open();
+                    sourceStream.CopyTo(targetStream);
+                }
+            }
+
+            if (hasHiddenSlides)
+            {
+                _logger.LogInformation(
+                    "[OfficeConversion] 已移除 PPTX 隐藏幻灯片标记: {Source} -> {Prepped}",
+                    Path.GetFileName(sourcePath), preppedPath);
+                return preppedPath;
+            }
+
+            // 没有隐藏幻灯片，删除预处理文件，使用原始文件
+            try { File.Delete(preppedPath); } catch { /* ignore */ }
+            return sourcePath;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[OfficeConversion] PPTX 预处理失败，使用原始文件");
+            try { if (File.Exists(preppedPath)) File.Delete(preppedPath); } catch { /* ignore */ }
+            return sourcePath;
+        }
+    }
+
     private string GetCachedPdfPath(string resourceId)
     {
         return Path.Combine(
             _fileStorageService.RootPath,
             _options.CacheDirectory,
             $"{resourceId}.pdf");
+    }
+
+    private string GetCacheMetaPath(string resourceId)
+    {
+        return Path.Combine(
+            _fileStorageService.RootPath,
+            _options.CacheDirectory,
+            $"{resourceId}.meta");
+    }
+
+    /// <summary>
+    /// 通过源文件的 LastWriteTime + Length 对比来判断缓存是否有效。
+    /// 源文件被替换（re-upload / new version）时自动失效。
+    /// </summary>
+    private bool IsCacheValid(string resourceId, string sourcePath)
+    {
+        var metaPath = GetCacheMetaPath(resourceId);
+        if (!File.Exists(metaPath)) return false;
+
+        try
+        {
+            var metaJson = File.ReadAllText(metaPath);
+            var meta = System.Text.Json.JsonSerializer.Deserialize<CacheMeta>(metaJson);
+            if (meta == null) return false;
+
+            var sourceInfo = new FileInfo(sourcePath);
+            return meta.LastWriteTimeUtc == sourceInfo.LastWriteTimeUtc
+                && meta.Length == sourceInfo.Length;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void SaveCacheMeta(string resourceId, string sourcePath)
+    {
+        try
+        {
+            var sourceInfo = new FileInfo(sourcePath);
+            var meta = new CacheMeta
+            {
+                LastWriteTimeUtc = sourceInfo.LastWriteTimeUtc,
+                Length = sourceInfo.Length
+            };
+            var metaPath = GetCacheMetaPath(resourceId);
+            Directory.CreateDirectory(Path.GetDirectoryName(metaPath)!);
+            File.WriteAllText(metaPath,
+                System.Text.Json.JsonSerializer.Serialize(meta));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[OfficeConversion] 保存缓存元数据失败: {ResourceId}", resourceId);
+        }
+    }
+
+    private class CacheMeta
+    {
+        public DateTime LastWriteTimeUtc { get; set; }
+        public long Length { get; set; }
     }
 
     private static void TryKillProcess(Process process)

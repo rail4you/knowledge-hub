@@ -11,6 +11,7 @@ using KnowledgeHub.Edition;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.FileStorage;
+using KnowledgeHub.Resources.Conversion;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
@@ -51,6 +52,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IDocumentIndexRepository DocumentIndexRepository { get; }
     protected IRepository<Major, Guid> MajorRepository { get; }
     protected IRepository<IdentityUser, Guid> UserRepository { get; }
+    protected IOfficeConversionService OfficeConversionService { get; }
 
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
@@ -71,7 +73,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IMeiliSearchService meiliSearchService,
         IDocumentIndexRepository documentIndexRepository,
         IRepository<Major, Guid> majorRepository,
-        IRepository<IdentityUser, Guid> userRepository)
+        IRepository<IdentityUser, Guid> userRepository,
+        IOfficeConversionService officeConversionService)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -92,6 +95,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         DocumentIndexRepository = documentIndexRepository;
         MajorRepository = majorRepository;
         UserRepository = userRepository;
+        OfficeConversionService = officeConversionService;
     }
 
     [AllowAnonymous]
@@ -503,6 +507,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                 await CleanupVersionIndexDataAsync(oldVersion.Id);
             }
         }
+
+        // 清除 Office 转换缓存（源文件已更新，需重新转换）
+        OfficeConversionService.InvalidateCache(input.ResourceId.ToString());
 
         if (VideoIndexingBackgroundJob.IsVideoFile(resource.FileExtension))
         {

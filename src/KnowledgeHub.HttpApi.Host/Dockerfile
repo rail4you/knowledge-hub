@@ -4,6 +4,7 @@
 #   1) build      : sdk:10.0   -> dotnet publish
 #   2) ffmpeg     : alpine     -> download static ffmpeg (multi-arch)
 #   3) final      : aspnet:10.0 runtime (no Java/Python/Node)
+#   Includes LibreOffice headless for PPTX/DOCX/XLSX → PDF conversion.
 #
 # Local dev:  docker build -f src/KnowledgeHub.HttpApi.Host/Dockerfile -t knowledgehub-api:dev .
 # Production: docker buildx build --platform linux/amd64 -f src/KnowledgeHub.HttpApi.Host/Dockerfile -t ... .
@@ -63,18 +64,25 @@ RUN apk add --no-cache curl xz \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
-# Minimal system packages (no ffmpeg here — provided statically from stage 2).
+# Minimal system packages.
 # - locales: en_US.UTF-8
 # - tzdata:  Asia/Shanghai (set via ENV below)
+# - libreoffice-impress: PPTX → PDF conversion (headless)
+# - default-jre-headless: Java runtime required by LibreOffice for complex PPTX features
+# - fonts-noto-cjk: Chinese/Japanese/Korean font support for PDF rendering
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         locales \
         tzdata \
+        libreoffice-impress \
+        default-jre-headless \
+        fonts-noto-cjk \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen en_US.UTF-8 \
     && ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo "Asia/Shanghai" > /etc/timezone \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && soffice --version
 
 # Locale/timezone
 ENV LANG=en_US.UTF-8 \
