@@ -162,6 +162,18 @@ export class FilePreviewComponent {
     this.fileUrl.set('');
   }
 
+  /** 判断预览内容是否就绪 */
+  previewReady(): boolean {
+    if (this.isLoading() || this.loadError() || this.tooLarge() || this.unsupported()) return false;
+    const type = this.fileType;
+    // PDF: resourceId 模式（逐页加载），只要有 resourceId 就就绪
+    if (type === 'pdf') return !!this.resourceId();
+    // PPTX/Video/audio: fileUrl 模式
+    if (type === 'pptx' || type === 'video' || type === 'audio') return !!this.fileUrl();
+    // Other: ArrayBuffer 模式
+    return this.fileData().byteLength > 0;
+  }
+
   download() {
     if (!this.resourceId()) return;
     const url = `/api/resource-file/${this.resourceId()}/download`;
@@ -185,12 +197,17 @@ export class FilePreviewComponent {
       return;
     }
 
-    // PPTX: 触发后端转换（等待 LibreOffice + 拆分）
+    // PPTX: 后端 LibreOffice 转换，用全量 PDF（服务器已拆页，后续可切换）
+    if (type === 'pptx') {
+      const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
+      this.fileUrl.set(previewUrl);
+      this.isLoading.set(false);
+      return;
+    }
+
     // Video/audio: direct server stream
-    if (type === 'pptx' || type === 'video' || type === 'audio') {
-      const previewUrl = type === 'pptx'
-        ? `/api/resource-file/${this.resourceId()}/preview-pdf`
-        : `/api/resource-file/${this.resourceId()}/preview`;
+    if (type === 'video' || type === 'audio') {
+      const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
       this.fileUrl.set(previewUrl);
       this.isLoading.set(false);
       return;

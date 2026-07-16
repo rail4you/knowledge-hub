@@ -58,7 +58,7 @@
     <div class="pdf-loading-inner">
       <nz-spin nzSimple nzSize="large"></nz-spin>
       <p class="pdf-loading-text">
-        {{ renderedCount() > 0 ? '正在渲染 ' + renderedCount() + '/' + totalPages() : '正在加载 PDF…' }}
+        {{ renderedCount() > 0 ? '正在渲染 ' + renderedCount() + '/' + totalPages() : totalPages() > 0 ? '正在加载 PDF…' : '正在转换文档…' }}
       </p>
     </div>
   </div>

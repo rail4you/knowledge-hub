@@ -61,21 +61,21 @@
 
     <!-- File Content -->
     <div
-      *ngIf="!isLoading() && !loadError() && !tooLarge() && !unsupported() && (fileData().byteLength > 0 || fileUrl())"
+      *ngIf="previewReady()"
       class="preview-content"
       (mousedown)="$event.stopPropagation()"
       (click)="$event.stopPropagation()"
     >
       @if (fileType === 'pdf') {
-        <!-- PDF 逐页模式：直接从文件拆分，每页 ~200KB -->
+        <!-- PDF 逐页模式：每页 ~200KB 独立 PDF，首页秒出 -->
         <app-pdf-viewer [resourceId]="resourceId()" [fileName]="fileName"></app-pdf-viewer>
+      } @else if (fileType === 'pptx') {
+        <!-- PPTX 全量 PDF 模式（转换后服务器已拆页，后续可切逐页） -->
+        <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (fileType === 'word') {
         <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>
       } @else if (fileType === 'excel') {
         <app-excel-viewer [data]="fileData()" [fileName]="fileName"></app-excel-viewer>
-      } @else if (fileType === 'pptx') {
-        <!-- PPTX 全量转换模式：调用 /preview-pdf 触发 LibreOffice 转换 + 自动拆分 -->
-        <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (fileType === 'image') {
         <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="image"></app-media-viewer>
       } @else if (fileType === 'video') {

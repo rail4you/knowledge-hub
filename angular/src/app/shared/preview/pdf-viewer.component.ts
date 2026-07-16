@@ -283,15 +283,35 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.loaded = false;
       this.pageResourceId = rid;
 
-      // 快速探测总页数（HEAD 请求，最多 500 页）
+      // 轮询等待第 1 页就绪（PPTX 后端转换可能需要 20s+）
       let total = 0;
-      for (let p = 1; p <= 500; p++) {
-        const resp = await fetch(`/api/resource-file/${rid}/preview-pdf-page/${p}`, { method: 'HEAD' });
-        if (!resp.ok) break;
-        total = p;
+      let polls = 0;
+      while (total === 0 && polls < 120 && !this.destroyed) {
+        polls++;
+        for (let p = 1; p <= 500; p++) {
+          const resp = await fetch(`/api/resource-file/${rid}/preview-pdf-page/${p}`, { method: 'HEAD' });
+          if (!resp.ok) break;
+          total = p;
+        }
+        if (total === 0) {
+          // 还没转换完，等 1 秒再试
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+
+      if (total === 0) {
+        this.error.set('文档转换超时，请稍后重试');
+        this.isLoading.set(false);
+        this.loaded = true;
+        return;
       }
       this.totalPages.set(total);
       this.knownTotalPages = total;
+
+      // 更新 loading 文案提示用户等待转换
+      if (polls > 1) {
+        this.renderedCount.set(0); // triggers template re-eval for loading text update
+      }
 
       // 创建所有页面的 canvas 占位
       this.zone.runOutsideAngular(() => {
