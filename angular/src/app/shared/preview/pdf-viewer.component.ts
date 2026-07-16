@@ -283,15 +283,19 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.loaded = false;
       this.pageResourceId = rid;
 
-      // 轮询等待第 1 页就绪（PPTX 后端转换可能需要 20s+）
+      // 轮询 /preview-pdf-info 等待后端拆分完成（PPTX 后端转换可能需要 20s+）
+      // 一次请求 = 一个 ready 回答，避免 500 个 HEAD 探测
       let total = 0;
       let polls = 0;
       while (total === 0 && polls < 120 && !this.destroyed) {
         polls++;
-        for (let p = 1; p <= 500; p++) {
-          const resp = await fetch(`/api/resource-file/${rid}/preview-pdf-page/${p}`, { method: 'HEAD' });
-          if (!resp.ok) break;
-          total = p;
+        const resp = await fetch(`/api/resource-file/${rid}/preview-pdf-info`);
+        if (resp.ok) {
+          const info = await resp.json();
+          if (info?.ready && info.count > 0) {
+            total = info.count;
+            break;
+          }
         }
         if (total === 0) {
           // 还没转换完，等 1 秒再试

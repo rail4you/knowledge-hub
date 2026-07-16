@@ -182,7 +182,7 @@ public class ResourceFileController : AbpControllerBase
     }
 
     /// <summary>
-    /// 获取单页 PDF（pdfseparate 拆分后的缓存页面，每页仅 ~200KB）。
+    /// 获取单页 PDF（PdfSharp 拆分后的缓存页面，每页仅 ~200KB）。
     /// 前端首页秒出，后续按需加载。
     /// </summary>
     [HttpGet("{resourceId}/preview-pdf-page/{pageNumber:int}")]
@@ -196,6 +196,29 @@ public class ResourceFileController : AbpControllerBase
             return NotFound(new { message = $"页面 {pageNumber} 不存在或尚未转换" });
 
         return PhysicalFile(pagePath, "application/pdf", enableRangeProcessing: true);
+    }
+
+    /// <summary>
+    /// 查询 PDF 预览的就绪状态与总页数。
+    /// 拆分完成时由 SplitPdfToPages 写入 {resourceId}/.count 边车文件。
+    /// 前端轮询此端点直到 ready=true，避免对每页做 HEAD 探测。
+    /// </summary>
+    [HttpGet("{resourceId}/preview-pdf-info")]
+    [AllowAnonymous]
+    public virtual IActionResult PreviewPdfInfo(Guid resourceId)
+    {
+        var pagesDir = System.IO.Path.GetDirectoryName(
+            OfficeConversionService.GetPagePdfPath(resourceId.ToString(), 1))!;
+        var countFile = System.IO.Path.Combine(pagesDir, ".count");
+
+        if (!System.IO.File.Exists(countFile))
+            return Ok(new { ready = false, count = 0 });
+
+        var raw = System.IO.File.ReadAllText(countFile).Trim();
+        if (!int.TryParse(raw, out var count) || count <= 0)
+            return Ok(new { ready = false, count = 0 });
+
+        return Ok(new { ready = true, count });
     }
 
     /// <summary>
