@@ -81,9 +81,10 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         var dto = await MapProjectDetailDtoAsync(entity);
         // 未报名学生只能浏览项目介绍/任务数/资料数等元信息，
         // 不返回任务明细和资料下载链接，避免诱导后 403
-        // 对于有编辑权限的用户（管理员/教师），返回完整数据
-        var canEdit = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Practicum.Edit);
-        if (dto.IsCurrentUserEnrolled || canEdit)
+        // 对于有管理权限的用户（管理员/教师，包括仅拥有 Default 的租户管理员），返回完整数据
+        var canAdmin = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Practicum.Edit)
+                    || await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Practicum.Default);
+        if (dto.IsCurrentUserEnrolled || canAdmin)
         {
             dto.Tasks = await GetTaskDtosAsync(id);
             dto.Materials = await GetMaterialDtosAsync(id);

@@ -114,6 +114,8 @@ export interface CreateUpdatePracticumProjectDto {
   endTime?: string;
   maxScore: number;
   allowResubmission: boolean;
+  agentName?: string;
+  agentPrompt?: string;
   tasks: CreateUpdatePracticumTaskDto[];
   materials: CreateUpdatePracticumMaterialDto[];
 }

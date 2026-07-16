@@ -206,6 +206,14 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.News.Review);
         await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.News.Publish);
 
+        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Default);
+        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Create);
+        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Edit);
+        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Review);
+        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Score);
+        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Export);
+        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.ViewStatistics);
+
         // ── SchoolAdmin：院校管理员 ──
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.Create);
@@ -269,6 +277,14 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.MicroMajors.IssueCertificate);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.MicroMajors.ViewStatistics);
 
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.Create);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.Edit);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.Review);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.Score);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.Export);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.ViewStatistics);
+
         // ── Teacher：教师（修复：补齐缺失的 Courses.Delete） ──
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.Default);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.Create);
@@ -318,6 +334,14 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.MicroMajors.ManageEnrollment);
         await GrantAsync("Teacher", KnowledgeHubPermissions.MicroMajors.IssueCertificate);
 
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Practicum.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Practicum.Create);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Practicum.Edit);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Practicum.Review);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Practicum.Score);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Practicum.Export);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Practicum.ViewStatistics);
+
         // ── Student：学生（只读） ──
         await GrantAsync("Student", KnowledgeHubPermissions.Resources.Default);
         await GrantAsync("Student", KnowledgeHubPermissions.Resources.Download);
@@ -340,6 +364,8 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 
         await GrantAsync("Student", KnowledgeHubPermissions.News.Default);
         await GrantAsync("Student", KnowledgeHubPermissions.MicroMajors.Default);
+
+        await GrantAsync("Student", KnowledgeHubPermissions.Practicum.Default);
 
         // ── EnterpriseUser：企业用户 ──
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Resources.Default);

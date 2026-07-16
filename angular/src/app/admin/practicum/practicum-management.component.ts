@@ -143,7 +143,7 @@ export class PracticumManagementComponent implements OnInit {
     return { title: '', summary: '', description: '', coverImageUrl: '', courseId: undefined,
       major: '', className: '', status: PracticumProjectStatus.Draft,
       startTime: undefined, endTime: undefined, maxScore: 100, allowResubmission: true,
-      tasks: [], materials: [] };
+      agentName: '', agentPrompt: '', tasks: [], materials: [] };
   }
 
   /** 把后端 detail 填到 form + 设置 selectedCourseTitle（用于 Tab 0 显示课程名称）。 */
@@ -161,9 +161,11 @@ export class PracticumManagementComponent implements OnInit {
       endTime: detail.endTime,
       maxScore: detail.maxScore,
       allowResubmission: detail.allowResubmission,
+      agentName: detail.agentName || '',
+      agentPrompt: detail.agentPrompt || '',
       tasks: (detail.tasks || []).map((t: any) => ({
         title: t.title, description: t.description || '', requirement: t.requirement || '',
-        dueTime: t.dueTime, scoreWeight: t.scoreWeight, sortOrder: t.sortOrder,
+        dueTime: this.toDateTimeLocal(t.dueTime), scoreWeight: t.scoreWeight, sortOrder: t.sortOrder,
       })),
       materials: (detail.materials || []).map((m: any) => ({
         taskId: m.taskId, title: m.title, description: m.description || '',
@@ -174,6 +176,7 @@ export class PracticumManagementComponent implements OnInit {
     // 同步封面 / 资料上传组件的显示状态（如果后端已有 URL，回显成"已上传"卡片）
     this.syncCoverFileList();
     this.materialUploading = {};
+    this.cdr.markForCheck();
   }
 
   private emptyGuidance(): CreatePracticumGuidanceRecordDto {
@@ -222,7 +225,7 @@ export class PracticumManagementComponent implements OnInit {
   saveModal(): void {
     // P1-15：保存时同时提交任务（原先在 saveModal 里把 tasks/materials 强制清空，迫使用户"先保存基本信息，再到 Tab1 保存任务"——分两步走容易漏）。
     // 现在 modal 内的"基本信息 + 任务配置"是同一个表单，一次性提交。
-    const body: CreateUpdatePracticumProjectDto = { ...this.form };
+    const body: CreateUpdatePracticumProjectDto = this.prepareFormPayload();
     const obs = this.editingId
       ? this.practicumService.update(this.editingId, body)
       : this.practicumService.create(body);
@@ -446,7 +449,8 @@ export class PracticumManagementComponent implements OnInit {
     return true;
   }
 
-  /** 将任务草稿写入 form.tasks（仅本地） */
+  /** 将任务草稿写入 form.tasks（仅本地）。dueTime 存储为 datetime-local 字符串，
+   *  发送到后端前由 saveModal/persistFormToBackend 转为 ISO。 */
   private applyTaskDraft(): void {
     const draft = this.taskDraft()!;
     const next = {
@@ -455,7 +459,7 @@ export class PracticumManagementComponent implements OnInit {
       requirement: (draft.requirement || '').trim(),
       scoreWeight: Number(draft.scoreWeight) || 0,
       sortOrder: draft.sortOrder ?? 1,
-      dueTime: this.fromDateTimeLocal(draft.dueTimeInput),
+      dueTime: draft.dueTimeInput || undefined,
     };
     if (this.drawerMode() === 'add') {
       this.form.tasks.push(next);
@@ -502,7 +506,7 @@ export class PracticumManagementComponent implements OnInit {
     const label = kind === 'task' ? '任务' : '资料';
     const prefix = customPrefix || (mode === 'add' ? '新增' : '更新');
 
-    this.practicumService.update(pid, { ...this.form }).subscribe({
+    this.practicumService.update(pid, this.prepareFormPayload()).subscribe({
       next: () => {
         this.drawerSaving.set(false);
         this.message.success(`${prefix}${label}已保存`);
@@ -531,6 +535,16 @@ export class PracticumManagementComponent implements OnInit {
     const d = new Date(input);
     if (isNaN(d.getTime())) return undefined;
     return d.toISOString();
+  }
+
+  /** 将 form 中出现 datetime-local 格式的 dueTime 转为 ISO，返回可发送给 API 的副本。 */
+  private prepareFormPayload() {
+    const payload = { ...this.form };
+    payload.tasks = payload.tasks.map(t => ({
+      ...t,
+      dueTime: t.dueTime ? this.fromDateTimeLocal(t.dueTime) : undefined,
+    }));
+    return payload;
   }
 
   removeTask(i: number): void {
