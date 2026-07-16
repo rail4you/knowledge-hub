@@ -198,23 +198,34 @@ public class ChatAppService : KnowledgeHubAppService
 
     /// <summary>
     /// P1-13：获取当前用户"作为简历"使用的、已审核通过的资源。
-    /// 过滤条件：IsResume=true AND Status IN (SchoolApproved, LeagueApproved) AND CreatorId=当前用户。
-    /// 用于 AI 职业规划下拉（避免暴露其他人的资源，也不会把草稿/被拒的资源拉进来）。
+    /// 过滤条件：IsResume=true AND Status IN (SchoolApproved, LeagueApproved)。
+    /// CreatorId 过滤规则：
+    ///   - 管理员（admin / SchoolAdmin / LeagueAdmin）：可见当前租户全部简历资源。
+    ///   - 其他用户：仅可见自己创建的简历。
+    /// 用于 AI 职业规划下拉。
     /// IsResume 由用户在前端资料库列表的"设为简历/取消简历"按钮维护（P1-15）。
     /// </summary>
     public async Task<List<ResourceForChatDto>> GetResumesForUserAsync()
     {
         var currentUserId = _currentUser.GetId();
+        var isAdmin = _currentUser.IsInRole("admin")
+                      || _currentUser.IsInRole("SchoolAdmin")
+                      || _currentUser.IsInRole("LeagueAdmin");
 
-        var resources = await _resourceRepository.GetListAsync(r =>
+        var queryable = await _resourceRepository.GetQueryableAsync();
+        var query = queryable.Where(r =>
             r.IsResume
             && (r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
-                || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved)
-            && r.CreatorId == currentUserId);
+                || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved));
+
+        if (!isAdmin)
+        {
+            query = query.Where(r => r.CreatorId == currentUserId);
+        }
 
         // 按创建时间倒序，最近上传的简历排在前面
-        return resources
-            .OrderByDescending(r => r.CreationTime)
+        return (await AsyncExecuter.ToListAsync(
+                query.OrderByDescending(r => r.CreationTime)))
             .Select(r => new ResourceForChatDto
             {
                 Id = r.Id,

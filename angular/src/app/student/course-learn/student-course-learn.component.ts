@@ -526,7 +526,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     const ex = this.currentExercise();
     if (!ex) return '';
     if (ex.type === ExerciseType.MultiChoice) {
-      return Array.from(this.multiSelected()).sort().join('');
+      return Array.from(this.multiSelected()).sort().join(',');
     }
     return this.currentAnswer();
   }

@@ -108,7 +108,7 @@ export class CourseDetailComponent implements OnInit {
   }
   
   goBack() {
-    this.router.navigate([this.isStudentView() ? '/student/courses' : '/learning/my-courses']);
+    this.router.navigate([this.isStudentView() ? '/student/courses' : '/']);
   }
   
   startLearning() {
