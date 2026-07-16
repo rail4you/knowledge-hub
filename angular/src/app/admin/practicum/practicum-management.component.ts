@@ -14,6 +14,7 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
+import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
@@ -50,6 +51,7 @@ import type { PracticumAgentConfigDto } from '../../practicum/practicum-chat.ser
     NzTagModule,
     NzTooltipModule,
     NzIconModule,
+    NzDrawerModule,
     NzUploadModule,
   ],
   templateUrl: './practicum-management.component.html',
