@@ -377,19 +377,39 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             app.UseErrorPage();
         }
 
+        // 必须放在 UseRouting 之前：浏览器对 wss:// 默认用 HTTP/2 + CONNECT，
+        // 必须在路由匹配前拦截并升级 WebSocket，否则 endpoint routing 会返回 405
+        app.UseWebSockets(new WebSocketOptions
+        {
+            KeepAliveInterval = TimeSpan.FromSeconds(30)
+        });
+
+        // 映射 WebSocket 端点（在 UseRouting 之前，避免被路由系统当成未知方法返回 405）
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path == "/api/recruitment-live/ws" && context.WebSockets.IsWebSocketRequest)
+            {
+                var handler = context.RequestServices.GetRequiredService<RecruitmentLiveWebSocketHandler>();
+                var ws = await context.WebSockets.AcceptWebSocketAsync();
+                await handler.HandleAsync(ws, context);
+                return;
+            }
+            await next();
+        });
+
         app.UseRouting();
         app.UseMiddleware<GrantAllPoliciesMiddleware>();
         app.MapAbpStaticAssets();
         app.UseAbpStudioLink();
         app.UseAbpSecurityHeaders();
-        
+
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
                 Path.Combine(env.ContentRootPath, "uploads")),
             RequestPath = "/uploads"
         });
-        
+
         app.UseCors();
         app.UseAuthentication();
         app.UseAbpOpenIddictValidation();
@@ -411,26 +431,9 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             var configuration = context.ServiceProvider.GetRequiredService<IConfiguration>();
             options.OAuthClientId(configuration["AuthServer:SwaggerClientId"]);
         });
-        app.UseWebSockets(new WebSocketOptions
-        {
-            KeepAliveInterval = TimeSpan.FromSeconds(30)
-        });
 
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
         app.UseConfiguredEndpoints();
-
-        // 映射 WebSocket 端点
-        app.Use(async (context, next) =>
-        {
-            if (context.Request.Path == "/api/recruitment-live/ws" && context.WebSockets.IsWebSocketRequest)
-            {
-                var handler = context.RequestServices.GetRequiredService<RecruitmentLiveWebSocketHandler>();
-                var ws = await context.WebSockets.AcceptWebSocketAsync();
-                await handler.HandleAsync(ws, context);
-                return;
-            }
-            await next();
-        });
     }
 }
