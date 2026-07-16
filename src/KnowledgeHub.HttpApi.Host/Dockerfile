@@ -69,6 +69,7 @@ WORKDIR /app
 # - tzdata:  Asia/Shanghai (set via ENV below)
 # - libreoffice-impress: PPTX → PDF conversion (headless)
 # - default-jre-headless: Java runtime required by LibreOffice for complex PPTX features
+# - poppler-utils: pdfseparate to split PDF into single-page files for fast first-page loading
 # - fonts-noto-cjk: Chinese/Japanese/Korean font support for PDF rendering
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -76,6 +77,7 @@ RUN apt-get update \
         tzdata \
         libreoffice-impress \
         default-jre-headless \
+        poppler-utils \
         fonts-noto-cjk \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen en_US.UTF-8 \

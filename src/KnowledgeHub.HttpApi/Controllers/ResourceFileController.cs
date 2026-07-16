@@ -182,6 +182,23 @@ public class ResourceFileController : AbpControllerBase
     }
 
     /// <summary>
+    /// 获取单页 PDF（pdfseparate 拆分后的缓存页面，每页仅 ~200KB）。
+    /// 前端首页秒出，后续按需加载。
+    /// </summary>
+    [HttpGet("{resourceId}/preview-pdf-page/{pageNumber:int}")]
+    [AllowAnonymous]
+    public virtual IActionResult PreviewPdfPage(Guid resourceId, int pageNumber)
+    {
+        var pagePath = OfficeConversionService.GetPagePdfPath(
+            resourceId.ToString(), pageNumber);
+
+        if (!System.IO.File.Exists(pagePath))
+            return NotFound(new { message = $"页面 {pageNumber} 不存在或尚未转换" });
+
+        return PhysicalFile(pagePath, "application/pdf", enableRangeProcessing: true);
+    }
+
+    /// <summary>
     /// 获取 PPTX 幻灯片总数（按需加载，不下载整个文件）
     /// </summary>
     [HttpGet("{resourceId}/slides/count")]

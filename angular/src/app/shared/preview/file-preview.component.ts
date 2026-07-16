@@ -179,8 +179,15 @@ export class FilePreviewComponent {
 
     const type = this.fileType;
 
-    // Video, audio, PDF, PPTX: use direct server endpoint with HTTP Range streaming.
-    if (type === 'video' || type === 'audio' || type === 'pdf' || type === 'pptx') {
+    // PDF: per-page mode directly
+    if (type === 'pdf') {
+      this.isLoading.set(false);
+      return;
+    }
+
+    // PPTX: 触发后端转换（等待 LibreOffice + 拆分）
+    // Video/audio: direct server stream
+    if (type === 'pptx' || type === 'video' || type === 'audio') {
       const previewUrl = type === 'pptx'
         ? `/api/resource-file/${this.resourceId()}/preview-pdf`
         : `/api/resource-file/${this.resourceId()}/preview`;

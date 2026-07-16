@@ -236,6 +236,9 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
             File.Copy(workTargetPath, targetPdfPath, overwrite: true);
             SaveCacheMeta(resourceId, sourcePath);
 
+            // 拆分成单页 PDF，加速首页加载
+            SplitPdfToPages(resourceId, targetPdfPath);
+
             _logger.LogInformation(
                 "[OfficeConversion] 转换成功: {ResourceId}, 耗时 {Elapsed}ms, 大小 {Size}",
                 resourceId, sw.ElapsedMilliseconds, new FileInfo(targetPdfPath).Length);
@@ -330,6 +333,76 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
             _fileStorageService.RootPath,
             _options.CacheDirectory,
             $"{resourceId}.pdf");
+    }
+
+    public string GetPagePdfPath(string resourceId, int pageNumber)
+    {
+        return Path.Combine(
+            _fileStorageService.RootPath,
+            _options.CacheDirectory,
+            $"{resourceId}",
+            $"page{pageNumber}.pdf");
+    }
+
+    /// <summary>
+    /// 用 pdfseparate 将完整 PDF 拆分为单页 PDF，缓存到 {resourceId}/page{N}.pdf。
+    /// 每页仅 ~100-300KB，首页秒出。
+    /// </summary>
+    private void SplitPdfToPages(string resourceId, string pdfPath)
+    {
+        try
+        {
+            var pagesDir = Path.Combine(
+                _fileStorageService.RootPath,
+                _options.CacheDirectory,
+                resourceId);
+            var pagePattern = Path.Combine(pagesDir, "page%d.pdf");
+
+            // 检查是否已拆分
+            if (Directory.Exists(pagesDir) && Directory.GetFiles(pagesDir, "page*.pdf").Length > 0)
+            {
+                _logger.LogDebug("[OfficeConversion] 页面缓存已存在: {ResourceId}", resourceId);
+                return;
+            }
+
+            Directory.CreateDirectory(pagesDir);
+
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "pdfseparate",
+                    Arguments = $"-f 1 -l 9999 \"{pdfPath}\" \"{pagePattern}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                },
+            };
+
+            var sw = Stopwatch.StartNew();
+            process.Start();
+            process.WaitForExit(TimeSpan.FromSeconds(30));
+            sw.Stop();
+
+            if (process.ExitCode != 0)
+            {
+                var stderr = process.StandardError.ReadToEnd();
+                _logger.LogWarning(
+                    "[OfficeConversion] pdfseparate 失败 (exit={Code}): {Stderr}",
+                    process.ExitCode, Truncate(stderr, 500));
+                return;
+            }
+
+            var pageCount = Directory.GetFiles(pagesDir, "page*.pdf").Length;
+            _logger.LogInformation(
+                "[OfficeConversion] PDF 拆分为 {Count} 页: {ResourceId}, 耗时 {Elapsed}ms",
+                pageCount, resourceId, sw.ElapsedMilliseconds);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[OfficeConversion] PDF 拆分失败: {ResourceId}", resourceId);
+        }
     }
 
     private string GetCacheMetaPath(string resourceId)

@@ -25,8 +25,12 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
-  data = input<ArrayBuffer>(new ArrayBuffer(0));
+  /** Full PDF URL mode */
   previewUrl = input<string>('');
+  /** Per-page PDF mode: resource ID for /preview-pdf-page/{pageNum} */
+  resourceId = input<string>('');
+  /** ArrayBuffer mode (legacy) */
+  data = input<ArrayBuffer>(new ArrayBuffer(0));
   fileName = input('');
 
   currentPage = signal(1);
@@ -55,6 +59,10 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   private renderQueue: number[] = [];
   private loaded = false;
   private destroyed = false;
+  /** Per-page PDF mode: resource ID for page URLs */
+  private pageResourceId = '';
+  /** Total pages known in per-page mode */
+  private knownTotalPages = 0;
 
   constructor() {
     // 键盘快捷键：← → 翻页
@@ -66,10 +74,19 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit() {}
 
   ngAfterViewInit() {
+    const rid = this.resourceId();
     const url = this.previewUrl();
     const d = this.data();
 
-    if (url && !this.loaded) {
+    if (rid && !this.loaded) {
+      // Per-page PDF mode: 每页独立 PDF，首页秒出
+      setTimeout(() => {
+        if (!this.destroyed && !this.loaded) {
+          this.loadPdfPerPage(rid);
+        }
+      }, 0);
+    } else if (url && !this.loaded) {
+      // Full URL streaming mode
       setTimeout(() => {
         if (!this.destroyed && !this.loaded) {
           this.loadPdfFromUrl(url);
@@ -100,15 +117,22 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.renderedPages().has(page);
   }
 
-  /** 导航到指定页，如果未渲染则优先渲染 */
+  /** 导航到指定页，如果未渲染则优先从服务器加载 */
   async goToPage(pageNum: number) {
     if (pageNum < 1 || pageNum > this.totalPages() || pageNum === this.currentPage()) return;
     this.currentPage.set(pageNum);
     this.showPage(pageNum);
 
-    // 如果该页未渲染，优先渲染
+    // 如果该页未渲染，立即加载
     if (!this.isPageRendered(pageNum)) {
-      await this.renderPageWithPriority(pageNum);
+      if (this.pageResourceId) {
+        // Per-page mode: 从服务器加载单页 PDF
+        const url = `/api/resource-file/${this.pageResourceId}/preview-pdf-page/${pageNum}`;
+        await this.renderPerPagePdf(pageNum, url);
+      } else {
+        // Full PDF mode: 从已加载的 doc 渲染
+        await this.renderPageWithPriority(pageNum);
+      }
     }
   }
 
@@ -243,6 +267,116 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
         this.isLoading.set(false);
         this.loaded = true;
       }
+    }
+  }
+
+  /** 逐页加载模式：先获取总页数，然后按需加载每页的小 PDF */
+  private async loadPdfPerPage(rid: string) {
+    if (this.destroyed) return;
+
+    try {
+      this.isLoading.set(true);
+      this.error.set('');
+      this.renderedCount.set(0);
+      this.renderedPages.set(new Set());
+      this.renderQueue = [];
+      this.loaded = false;
+      this.pageResourceId = rid;
+
+      // 快速探测总页数（HEAD 请求，最多 500 页）
+      let total = 0;
+      for (let p = 1; p <= 500; p++) {
+        const resp = await fetch(`/api/resource-file/${rid}/preview-pdf-page/${p}`, { method: 'HEAD' });
+        if (!resp.ok) break;
+        total = p;
+      }
+      this.totalPages.set(total);
+      this.knownTotalPages = total;
+
+      // 创建所有页面的 canvas 占位
+      this.zone.runOutsideAngular(() => {
+        this.createAllCanvases(total);
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      if (this.destroyed) return;
+
+      this.loaded = true;
+
+      // 加载并渲染第 1 页，完成后立即显示
+      const page1Url = `/api/resource-file/${rid}/preview-pdf-page/1`;
+      await this.renderPerPagePdf(1, page1Url);
+      this.showPage(1);
+      this.currentPage.set(1);
+      this.isLoading.set(false);
+
+      // 后台预加载其余页面
+      if (total > 1) {
+        this.renderQueue = Array.from({ length: total - 1 }, (_, i) => i + 2);
+        this.preloadPerPageInBackground(rid);
+      }
+    } catch (e: any) {
+      console.error('PDF per-page load error:', e);
+      if (!this.destroyed) {
+        this.error.set(e.message || 'Failed to load PDF');
+        this.isLoading.set(false);
+        this.loaded = true;
+      }
+    }
+  }
+
+  /** 后台逐个预加载单页 PDF */
+  private preloadPerPageInBackground(rid: string) {
+    if (this.destroyed) return;
+    if (this.renderQueue.length === 0) return;
+
+    const pageNum = this.renderQueue.shift()!;
+    const url = `/api/resource-file/${rid}/preview-pdf-page/${pageNum}`;
+    this.renderPerPagePdf(pageNum, url).finally(() => {
+      if (!this.destroyed) {
+        setTimeout(() => this.preloadPerPageInBackground(rid), 100);
+      }
+    });
+  }
+
+  /** 渲染单页 PDF（每页是独立的 ~200KB PDF 文件） */
+  private async renderPerPagePdf(pageNum: number, url: string) {
+    if (this.destroyed) return;
+    if (this.isPageRendered(pageNum)) return;
+
+    try {
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+
+      const doc = await pdfjsLib.getDocument({
+        url,
+        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/cmaps/',
+        cMapPacked: true,
+      }).promise;
+
+      const page = await doc.getPage(1); // 每页 PDF 只有 1 页
+      const viewport = page.getViewport({ scale: this.scale() * 1.5 });
+      const item = this.pageItems.get(pageNum);
+      if (!item) { doc.destroy(); return; }
+
+      item.canvas.height = viewport.height;
+      item.canvas.width = viewport.width;
+
+      await this.zone.runOutsideAngular(() =>
+        page.render({ canvasContext: item.canvas.getContext('2d')!, viewport }).promise
+      );
+
+      doc.destroy();
+
+      this.renderedPages.update((s) => {
+        const next = new Set(s);
+        next.add(pageNum);
+        return next;
+      });
+      this.renderedCount.update((v) => v + 1);
+    } catch (e) {
+      console.warn(`Per-page render ${pageNum} error:`, e);
     }
   }
 

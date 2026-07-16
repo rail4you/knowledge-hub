@@ -32,6 +32,11 @@ public interface IOfficeConversionService
     /// 清除缓存的 PDF（源文件更新后调用）。
     /// </summary>
     void InvalidateCache(string resourceId);
+
+    /// <summary>
+    /// 获取单页 PDF 的缓存路径（pdfseparate 拆分后的单个页面）。
+    /// </summary>
+    string GetPagePdfPath(string resourceId, int pageNumber);
 }
 
 /// <summary>

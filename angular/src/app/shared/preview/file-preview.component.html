@@ -67,13 +67,14 @@
       (click)="$event.stopPropagation()"
     >
       @if (fileType === 'pdf') {
-        <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
+        <!-- PDF 逐页模式：直接从文件拆分，每页 ~200KB -->
+        <app-pdf-viewer [resourceId]="resourceId()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (fileType === 'word') {
         <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>
       } @else if (fileType === 'excel') {
         <app-excel-viewer [data]="fileData()" [fileName]="fileName"></app-excel-viewer>
       } @else if (fileType === 'pptx') {
-        <!-- 流式加载：pdf.js 通过 HTTP Range 按需拉取，首页秒出 -->
+        <!-- PPTX 全量转换模式：调用 /preview-pdf 触发 LibreOffice 转换 + 自动拆分 -->
         <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (fileType === 'image') {
         <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="image"></app-media-viewer>
