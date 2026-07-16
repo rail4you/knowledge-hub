@@ -66,12 +66,8 @@
       (mousedown)="$event.stopPropagation()"
       (click)="$event.stopPropagation()"
     >
-      @if (fileType === 'pdf') {
-        <!-- PDF 逐页模式：每页 ~200KB 独立 PDF，首页秒出 -->
+      @if (fileType === 'pdf' || fileType === 'pptx') {
         <app-pdf-viewer [resourceId]="resourceId()" [fileName]="fileName"></app-pdf-viewer>
-      } @else if (fileType === 'pptx') {
-        <!-- PPTX 全量 PDF 模式（转换后服务器已拆页，后续可切逐页） -->
-        <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (fileType === 'word') {
         <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>
       } @else if (fileType === 'excel') {

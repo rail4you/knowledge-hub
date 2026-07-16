@@ -166,10 +166,8 @@ export class FilePreviewComponent {
   previewReady(): boolean {
     if (this.isLoading() || this.loadError() || this.tooLarge() || this.unsupported()) return false;
     const type = this.fileType;
-    // PDF: resourceId 模式（逐页加载），只要有 resourceId 就就绪
-    if (type === 'pdf') return !!this.resourceId();
-    // PPTX/Video/audio: fileUrl 模式
-    if (type === 'pptx' || type === 'video' || type === 'audio') return !!this.fileUrl();
+    // PDF/PPTX: resourceId 模式（逐页加载）
+    if (type === 'pdf' || type === 'pptx') return !!this.resourceId();
     // Other: ArrayBuffer 模式
     return this.fileData().byteLength > 0;
   }
@@ -197,10 +195,11 @@ export class FilePreviewComponent {
       return;
     }
 
-    // PPTX: 后端 LibreOffice 转换，用全量 PDF（服务器已拆页，后续可切换）
+    // PPTX: 触发转换（fire-and-forget），然后用逐页模式加载已拆分的页面
     if (type === 'pptx') {
-      const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
-      this.fileUrl.set(previewUrl);
+      // 后台触发转换（确保页面已生成，如果缓存命中则毫秒返回）
+      fetch(`/api/resource-file/${this.resourceId()}/preview-pdf`)
+        .catch(() => {});
       this.isLoading.set(false);
       return;
     }
