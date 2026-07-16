@@ -71,7 +71,7 @@
           <app-excel-viewer [data]="fileData()" [fileName]="fileName"></app-excel-viewer>
         }
         @case ('pptx') {
-          <app-pptx-viewer [resourceId]="resourceId()" [fileName]="fileName"></app-pptx-viewer>
+          <app-pptx-canvas-viewer [data]="fileData()" [fileName]="fileName"></app-pptx-canvas-viewer>
         }
         @case ('image') {
           <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="image"></app-media-viewer>

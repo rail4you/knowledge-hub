@@ -178,9 +178,9 @@ export class FilePreviewComponent {
 
     const type = this.fileType;
 
-    // Video, audio, and pptx: use direct server endpoint without pre-download.
-    // PPTX viewer loads slides on-demand from /api/resource-file/{id}/slides/{n}
-    if (type === 'video' || type === 'audio' || type === 'pptx') {
+    // Video and audio: use direct server endpoint without pre-download.
+    // (pptx now also goes through ArrayBuffer fetch — pptxviewjs needs the full file.)
+    if (type === 'video' || type === 'audio') {
       const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
       this.fileUrl.set(previewUrl);
       this.isLoading.set(false);

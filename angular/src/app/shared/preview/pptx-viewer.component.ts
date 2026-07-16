@@ -12,6 +12,9 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 
+// @deprecated 已由 pptx-canvas-viewer 替代，保留作 fallback。如新组件出现严重 bug，
+// 可把 file-preview.component.html 中 @case ('pptx') 改回 <app-pptx-viewer> 即可回退。
+
 interface SlideText {
   text: string;
   fontSize: number;
