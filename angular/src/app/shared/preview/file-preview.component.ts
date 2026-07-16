@@ -9,7 +9,7 @@ import { LocalizationPipe } from '@abp/ng.core';
 import { PdfViewerComponent } from './pdf-viewer.component';
 import { WordViewerComponent } from './word-viewer.component';
 import { ExcelViewerComponent } from './excel-viewer.component';
-import { PptxViewerComponent } from './pptx-viewer.component';
+import { PptxCanvasViewerComponent } from './pptx-canvas-viewer.component';
 import { MediaViewerComponent } from './media-viewer.component';
 import { TextViewerComponent } from './text-viewer.component';
 
@@ -29,7 +29,7 @@ type FileType = 'pdf' | 'word' | 'excel' | 'pptx' | 'image' | 'video' | 'audio' 
     PdfViewerComponent,
     WordViewerComponent,
     ExcelViewerComponent,
-    PptxViewerComponent,
+    PptxCanvasViewerComponent,
     MediaViewerComponent,
     TextViewerComponent,
   ],

@@ -7,8 +7,8 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
  *
  * 注意：使用前应当校验 URL 来源，避免开放重定向 / XSS 风险。
  *
- * 自动升级：当页面通过 HTTPS 加载时，自动将 http:// 替换为 https://，
- * 避免浏览器因 Mixed Content 策略拦截 iframe 内容。
+ * 自动升级：当页面通过 HTTPS 加载且 URL 为 http:// 时，重写为后端 HTTP 代理路径
+ * （/api/proxy/http/{host}/{path}），避免浏览器 Mixed Content 策略拦截 iframe。
  */
 @Pipe({ name: 'safeResourceUrl', standalone: true })
 export class SafeResourceUrlPipe implements PipeTransform {
@@ -18,14 +18,34 @@ export class SafeResourceUrlPipe implements PipeTransform {
   transform(url: string | null | undefined): SafeResourceUrl | string {
     if (!url) return '';
     // 简单校验：只允许 http/https 协议
-    let trimmed = url.trim();
+    const trimmed = url.trim();
     if (!/^https?:\/\//i.test(trimmed)) {
       return '';
     }
-    // HTTPS 页面自动升级 HTTP → HTTPS，避免被浏览器 Mixed Content 拦截
+
+    // HTTPS 页面 + HTTP 资源 → 走后端代理，避免 Mixed Content 被拦截
     if (this.isHttps && trimmed.startsWith('http://')) {
-      trimmed = 'https://' + trimmed.substring(7);
+      const proxyUrl = this.buildProxyUrl(trimmed);
+      if (proxyUrl) {
+        return this.sanitizer.bypassSecurityTrustResourceUrl(proxyUrl);
+      }
     }
+
     return this.sanitizer.bypassSecurityTrustResourceUrl(trimmed);
+  }
+
+  /**
+   * 将 http://host:port/path?query → /api/proxy/http/host:port/path?query
+   * 返回 null 表示 URL 格式不支持代理。
+   */
+  private buildProxyUrl(httpUrl: string): string | null {
+    try {
+      const u = new URL(httpUrl);
+      const host = u.host; // hostname:port
+      const path = u.pathname + u.search + u.hash;
+      return `/api/proxy/http/${host}${path}`;
+    } catch {
+      return null;
+    }
   }
 }

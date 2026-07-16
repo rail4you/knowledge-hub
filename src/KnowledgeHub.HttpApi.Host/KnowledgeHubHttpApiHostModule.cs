@@ -210,6 +210,12 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
+        // HTTP 代理：用于 HTTPS 页面加载 HTTP 仿真资源（Unity WebGL 等）
+        context.Services.AddHttpClient("HttpProxy", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
+
         Configure<AbpBackgroundJobOptions>(options =>
         {
             options.IsJobExecutionEnabled = true;
