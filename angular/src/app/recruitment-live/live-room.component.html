@@ -1,143 +1,167 @@
 <!-- ===== 直播间 ===== -->
 <div class="live-room">
   <!-- Top bar -->
-  <div class="live-topbar">
-    <div class="live-info">
-      <div class="live-title" *ngIf="live">
-        <span *ngIf="myRole === 'teacher'">📋 面试官 · {{ live.teacherName }}</span>
-        <span *ngIf="myRole === 'student'">📋 候选人 · {{ live.studentName }}</span>
-      </div>
-      <div class="live-timer">{{ formattedTime() }}</div>
+  <header class="live-topbar">
+    <div class="topbar-left">
+      <span class="topbar-brand" *ngIf="live">
+        <span *ngIf="myRole === 'teacher'">面试官 · {{ live.teacherName }}</span>
+        <span *ngIf="myRole === 'student'">候选人 · {{ live.studentName }}</span>
+      </span>
     </div>
-    <div class="live-conn">
+    <div class="topbar-center">
       <span class="conn-dot" [class.active]="liveState() === 'connected'"></span>
-      <span>{{ connectionLabel() }}</span>
+      <span class="conn-label">{{ connectionLabel() }}</span>
+      <span class="live-timer" *ngIf="isCallActive()">{{ formattedTime() }}</span>
     </div>
-    <button nz-button nzType="default" nzSize="small" (click)="goBack()">退出</button>
-  </div>
+    <div class="topbar-right">
+      <button nz-button nzType="text" nzSize="small" class="btn-exit" (click)="goBack()">
+        <span nz-icon nzType="close" nzTheme="outline"></span>
+      </button>
+    </div>
+  </header>
 
-  <!-- Room code share area (waiting state) -->
-  <div class="share-area" *ngIf="liveState() === 'waiting' && myRole === 'teacher'">
-    <div class="share-card">
-      <div class="share-label">📎 邀请学生加入直播间</div>
-      <div class="room-code-display">{{ roomCode() }}</div>
-      <button nz-button nzType="primary" (click)="copyRoomCode()">
+  <!-- ────────── WAITING: 教师端 ────────── -->
+  <section class="waiting-hero" *ngIf="liveState() === 'waiting' && myRole === 'teacher'">
+    <div class="waiting-card">
+      <div class="waiting-icon">
+        <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+      </div>
+      <h2>邀请学生加入</h2>
+      <p class="waiting-sub">将以下房间码发送给学生，或让学生直接访问直播间链接</p>
+      <div class="room-code-box">
+        <span class="room-code">{{ roomCode() }}</span>
+      </div>
+      <button nz-button nzType="primary" nzSize="large" nzShape="round" (click)="copyRoomCode()">
         <span nz-icon nzType="copy" nzTheme="outline"></span>
         复制房间码
       </button>
-      <div class="waiting-badge">
+      <div class="waiting-hint">
         <span class="pulse"></span> {{ waitingText() }}
       </div>
     </div>
-  </div>
+  </section>
 
-  <div class="share-area" *ngIf="liveState() === 'waiting' && myRole === 'student'">
-    <div class="share-card">
-      <span class="pulse"></span> {{ waitingText() }}
+  <!-- ────────── WAITING: 学生端 ────────── -->
+  <section class="waiting-hero" *ngIf="liveState() === 'waiting' && myRole === 'student'">
+    <div class="waiting-card">
+      <div class="waiting-icon">
+        <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+      </div>
+      <h2>准备就绪</h2>
+      <p class="waiting-sub">摄像头和麦克风已就绪，等待面试官发起通话</p>
+      <div class="waiting-hint">
+        <span class="pulse"></span> {{ waitingText() }}
+      </div>
+    </div>
+  </section>
+
+  <!-- ────────── VIDEO AREA ────────── -->
+  <div class="video-stage" [class.hidden]="liveState() === 'waiting' && myRole === 'teacher'">
+    <!-- Remote (full) -->
+    <div class="video-remote">
+      <div class="video-placeholder" *ngIf="!remoteVideoActive()">
+        <div class="ph-avatar">👤</div>
+        <span>{{ liveState() === 'connected' ? '对方摄像头未开启' : '等待对方加入...' }}</span>
+      </div>
+      <video
+        *ngIf="remoteVideoActive()"
+        #remoteVideo
+        [srcObject]="remoteStream()"
+        autoplay playsinline
+      ></video>
+    </div>
+
+    <!-- Local (PiP) -->
+    <div class="video-local" *ngIf="localStreamActive()">
+      <video
+        #localVideo
+        [srcObject]="liveService.getLocalStream()"
+        autoplay playsinline muted
+      ></video>
     </div>
   </div>
 
-  <!-- Video area -->
-  <div class="video-area" [class.hidden]="liveState() === 'waiting' && myRole === 'teacher'">
-    <!-- Remote video (full screen) -->
-    <div class="video-placeholder" *ngIf="!remoteVideoActive()">
-      <div class="avatar-placeholder">👤</div>
-      <span>{{ liveState() === 'connected' ? '对方摄像头未开启' : '等待对方视频...' }}</span>
-    </div>
-    <video
-      *ngIf="remoteVideoActive()"
-      #remoteVideo
-      [srcObject]="remoteStream()"
-      autoplay
-      playsinline
-      class="remote-video"
-    ></video>
-
-    <!-- Local video (PiP) -->
-    <video
-      *ngIf="localStreamActive()"
-      #localVideo
-      [srcObject]="liveService.getLocalStream()"
-      autoplay
-      playsinline
-      muted
-      class="local-video-pip"
-    ></video>
-  </div>
-
-  <!-- Ended state -->
-  <div class="ended-area" *ngIf="liveState() === 'ended'">
+  <!-- ────────── ENDED ────────── -->
+  <section class="ended-hero" *ngIf="liveState() === 'ended'">
     <div class="ended-card">
-      <div class="ended-icon">📵</div>
+      <div class="ended-icon">
+        <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+      </div>
       <h3>通话已结束</h3>
-      <p>通话时长: {{ formattedTime() }}</p>
-      <button nz-button nzType="primary" (click)="goBack()">返回列表</button>
+      <p>通话时长 {{ formattedTime() }}</p>
+      <button nz-button nzType="primary" nzShape="round" (click)="goBack()">返回列表</button>
     </div>
-  </div>
+  </section>
 
-  <!-- Bottom controls -->
-  <div class="bottom-panel" *ngIf="liveState() !== 'idle' && liveState() !== 'ended'">
-    <!-- Chat area -->
-    <div class="chat-area" [class.open]="chatOpen()">
+  <!-- ────────── BOTTOM CONTROLS ────────── -->
+  <footer class="control-bar" *ngIf="liveState() !== 'idle' && liveState() !== 'ended'">
+    <!-- Chat panel -->
+    <div class="chat-panel" [class.open]="chatOpen()">
       <div class="chat-messages" #chatMessagesContainer>
         <div class="chat-msg" *ngFor="let msg of chatMessages()"
              [class.self]="msg.self" [class.other]="!msg.self">
-          <div class="chat-who">{{ msg.from === 'teacher' ? '面试官' : '候选人' }}</div>
-          <div class="chat-bubble">{{ msg.text }}</div>
+          <span class="chat-sender">{{ msg.from === 'teacher' ? '面试官' : '候选人' }}</span>
+          <span class="chat-text">{{ msg.text }}</span>
         </div>
       </div>
-      <div class="chat-input-row">
+      <div class="chat-send">
         <input
           nz-input
           [(ngModel)]="chatInput"
-          placeholder="发送消息..."
+          placeholder="输入消息..."
           maxlength="200"
           (keydown)="onChatKeydown($event)"
         />
-        <button nz-button nzType="primary" nzShape="circle" (click)="sendChatMessage()">
+        <button nz-button nzType="primary" nzShape="circle" nzSize="small" (click)="sendChatMessage()">
           <span nz-icon nzType="send" nzTheme="outline"></span>
         </button>
       </div>
     </div>
 
-    <!-- Controls -->
-    <div class="controls">
-      <button nz-button nzShape="circle" nzSize="large"
-              [nzType]="micEnabled() ? 'default' : 'primary'"
-              [nzDanger]="!micEnabled()"
-              nz-tooltip [nzTooltipTitle]="micEnabled() ? '关闭麦克风' : '开启麦克风'"
-              (click)="liveService.toggleMic()">
+    <!-- Control buttons -->
+    <div class="control-row">
+      <button
+        class="ctrl-btn"
+        [class.off]="!micEnabled()"
+        nz-tooltip [nzTooltipTitle]="micEnabled() ? '关闭麦克风' : '开启麦克风'"
+        (click)="liveService.toggleMic()"
+      >
         <span nz-icon [nzType]="micEnabled() ? 'audio' : 'audio-muted'" nzTheme="outline"></span>
       </button>
 
-      <button nz-button nzShape="circle" nzSize="large"
-              [nzType]="camEnabled() ? 'default' : 'primary'"
-              [nzDanger]="!camEnabled()"
-              nz-tooltip [nzTooltipTitle]="camEnabled() ? '关闭摄像头' : '开启摄像头'"
-              (click)="liveService.toggleCam()">
+      <button
+        class="ctrl-btn"
+        [class.off]="!camEnabled()"
+        nz-tooltip [nzTooltipTitle]="camEnabled() ? '关闭摄像头' : '开启摄像头'"
+        (click)="liveService.toggleCam()"
+      >
         <span nz-icon [nzType]="camEnabled() ? 'video-camera' : 'stop'" nzTheme="outline"></span>
       </button>
 
-      <button nz-button nzShape="circle" nzSize="large"
-              nzType="primary" nzDanger
-              nz-tooltip nzTooltipTitle="挂断"
-              (click)="hangUp()">
-        <span nz-icon nzType="phone" nzTheme="outline" style="transform: rotate(135deg)"></span>
+      <button
+        class="ctrl-btn ctrl-hangup"
+        nz-tooltip nzTooltipTitle="挂断"
+        (click)="hangUp()"
+      >
+        <span nz-icon nzType="phone" nzTheme="outline"></span>
       </button>
 
-      <button nz-button nzShape="circle" nzSize="large"
-              nzType="default"
-              nz-tooltip nzTooltipTitle="切换摄像头"
-              (click)="liveService.switchCamera()">
+      <button
+        class="ctrl-btn"
+        nz-tooltip nzTooltipTitle="切换摄像头"
+        (click)="liveService.switchCamera()"
+      >
         <span nz-icon nzType="swap" nzTheme="outline"></span>
       </button>
 
-      <button nz-button nzShape="circle" nzSize="large"
-              [nzType]="chatOpen() ? 'primary' : 'default'"
-              nz-tooltip nzTooltipTitle="聊天"
-              (click)="liveService.toggleChat()">
+      <button
+        class="ctrl-btn"
+        [class.active]="chatOpen()"
+        nz-tooltip nzTooltipTitle="聊天"
+        (click)="liveService.toggleChat()"
+      >
         <span nz-icon nzType="message" nzTheme="outline"></span>
       </button>
     </div>
-  </div>
+  </footer>
 </div>

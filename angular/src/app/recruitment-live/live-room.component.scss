@@ -1,321 +1,453 @@
+/* ================================================================
+   Live Room — Professional video-call layout
+   Inspired by Google Meet / Zoom Web
+   ================================================================ */
+
+// Tokens
+$bg: #0f1117;
+$bg-surface: #1a1d27;
+$bg-elevated: #222633;
+$border: #2a2e3c;
+$text-primary: #e8ecf1;
+$text-secondary: #8b90a0;
+$accent: #4f8cff;
+$danger: #ea4335;
+$success: #0f9d58;
+$warning: #f9ab00;
+
+// ── Host ──
 :host {
-  display: block;
-  height: 100%;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
+// ── Container ──
 .live-room {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: #0a0c10;
-  color: #e8eaf0;
+  flex: 1;
+  min-height: 0;
+  background: $bg;
+  color: $text-primary;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-/* Top bar */
+// ── TOP BAR ──────────────────────────────────────────────────────
 .live-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
-  background: rgba(10, 12, 16, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid #232838;
-  z-index: 20;
+  height: 44px;
+  padding: 0 16px;
   flex-shrink: 0;
+  border-bottom: 1px solid $border;
+  background: $bg;
+  gap: 12px;
 }
 
-.live-info {
+.topbar-left {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  min-width: 0;
 }
 
-.live-title {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.live-timer {
-  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+.topbar-brand {
   font-size: 13px;
-  color: #00e5a0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.live-conn {
+.topbar-center {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: #7a8099;
+  flex-shrink: 0;
 }
 
 .conn-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #4a5068;
+  background: $text-secondary;
+  flex-shrink: 0;
+  transition: background .3s, box-shadow .3s;
+  &.active {
+    background: $success;
+    box-shadow: 0 0 6px rgba($success, .5);
+  }
 }
 
-.conn-dot.active {
-  background: #00e5a0;
-  box-shadow: 0 0 6px #00e5a0;
+.conn-label {
+  font-size: 12px;
+  color: $text-secondary;
 }
 
-/* Share area (waiting state) */
-.share-area {
+.live-timer {
+  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+  color: $success;
+  margin-left: 6px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.btn-exit {
+  color: $text-secondary !important;
+  &:hover {
+    color: $text-primary !important;
+    background: rgba(255, 255, 255, .06) !important;
+  }
+}
+
+// ── WAITING HERO ─────────────────────────────────────────────────
+.waiting-hero {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
-  flex: 1;
 }
 
-.share-card {
-  background: #111318;
-  border: 1px solid #232838;
-  border-radius: 12px;
-  padding: 32px;
+.waiting-card {
   text-align: center;
   max-width: 400px;
-  width: 100%;
+  padding: 36px 32px;
+  background: $bg-surface;
+  border: 1px solid $border;
+  border-radius: 16px;
+
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
 }
 
-.share-label {
-  font-size: 14px;
-  color: #7a8099;
+.waiting-icon {
+  font-size: 36px;
+  color: $accent;
   margin-bottom: 12px;
+  .anticon { font-size: 36px; }
 }
 
-.room-code-display {
+.waiting-sub {
+  font-size: 13px;
+  color: $text-secondary;
+  margin: 0 0 20px;
+}
+
+.room-code-box {
+  background: $bg-elevated;
+  border: 1px dashed $border;
+  border-radius: 10px;
+  padding: 14px 24px;
+  margin-bottom: 16px;
+}
+
+.room-code {
   font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
-  font-size: 32px;
+  font-size: 26px;
   letter-spacing: 8px;
-  color: #00e5a0;
-  margin: 16px 0;
+  color: $accent;
   user-select: all;
 }
 
-.waiting-badge {
+.waiting-hint {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
-  color: #ffb800;
-  font-size: 14px;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: $warning;
 }
 
+// ── PULSE ──
 .pulse {
+  display: inline-block;
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #ffb800;
-  animation: pulse 1.4s infinite;
+  background: $warning;
+  animation: pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: .35; transform: scale(.75); }
 }
 
-/* Video area */
-.video-area {
+// ── VIDEO STAGE ──────────────────────────────────────────────────
+.video-stage {
   flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #000;
+  position: relative;
   min-height: 0;
+
+  &.hidden { display: none; }
 }
 
-.video-area.hidden {
-  display: none;
-}
-
-.remote-video {
+.video-remote {
   width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  background: #000;
-}
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-.local-video-pip {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  width: 140px;
-  height: 100px;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-  z-index: 10;
-  background: #000;
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 }
 
 .video-placeholder {
-  position: absolute;
-  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  color: #7a8099;
+  color: $text-secondary;
+  font-size: 13px;
 }
 
-.avatar-placeholder {
-  width: 80px;
-  height: 80px;
+.ph-avatar {
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: #181c24;
-  border: 2px solid #232838;
+  background: $bg-elevated;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
+  font-size: 30px;
 }
 
-/* Ended area */
-.ended-area {
+.video-local {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 160px;
+  height: 100px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, .15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, .5);
+  z-index: 5;
+  background: #000;
+  cursor: pointer;
+  transition: border-color .2s;
+
+  &:hover { border-color: rgba(255, 255, 255, .35); }
+
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// ── ENDED ────────────────────────────────────────────────────────
+.ended-hero {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
 }
 
 .ended-card {
   text-align: center;
   padding: 32px;
+
+  h3 { font-size: 18px; margin: 12px 0 4px; }
+  p { color: $text-secondary; font-size: 13px; margin: 0 0 20px; }
 }
 
 .ended-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
+  font-size: 40px;
+  color: $success;
+  .anticon { font-size: 40px; }
 }
 
-.ended-card h3 {
-  font-size: 20px;
-  margin-bottom: 8px;
-}
-
-.ended-card p {
-  color: #7a8099;
-  margin-bottom: 20px;
-}
-
-/* Bottom panel */
-.bottom-panel {
-  background: rgba(10, 12, 16, 0.98);
-  border-top: 1px solid #232838;
+// ── CONTROL BAR ──────────────────────────────────────────────────
+.control-bar {
   flex-shrink: 0;
+  background: $bg-surface;
+  border-top: 1px solid $border;
 }
 
-/* Chat area */
-.chat-area {
-  height: 0;
+// Chat panel (slides up)
+.chat-panel {
+  max-height: 0;
   overflow: hidden;
-  transition: height 0.3s ease;
-}
+  transition: max-height .25s ease;
 
-.chat-area.open {
-  height: 220px;
+  &.open { max-height: 200px; }
 }
 
 .chat-messages {
-  height: 160px;
+  height: 140px;
   overflow-y: auto;
-  padding: 12px 16px;
+  padding: 10px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .chat-msg {
   display: flex;
-  flex-direction: column;
+  gap: 6px;
   max-width: 75%;
-  gap: 2px;
-}
-
-.chat-msg.self {
-  align-self: flex-end;
-  align-items: flex-end;
-}
-
-.chat-msg.other {
-  align-self: flex-start;
-}
-
-.chat-bubble {
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.4;
+
+  &.self { align-self: flex-end; flex-direction: row-reverse; }
+  &.other { align-self: flex-start; }
 }
 
-.chat-msg.self .chat-bubble {
-  background: #00e5a0;
-  color: #000;
-  border-radius: 12px 12px 2px 12px;
-}
-
-.chat-msg.other .chat-bubble {
-  background: #181c24;
-  color: #e8eaf0;
-  border-radius: 12px 12px 12px 2px;
-  border: 1px solid #232838;
-}
-
-.chat-who {
+.chat-sender {
   font-size: 10px;
-  color: #4a5068;
-  padding: 0 4px;
+  color: $text-secondary;
+  white-space: nowrap;
 }
 
-.chat-input-row {
+.chat-text {
+  background: $bg-elevated;
+  border-radius: 8px;
+  padding: 5px 10px;
+  color: $text-primary;
+}
+
+.chat-msg.self .chat-text {
+  background: $accent;
+  color: #fff;
+}
+
+.chat-send {
   display: flex;
-  gap: 8px;
-  padding: 8px 12px 12px;
-  border-top: 1px solid #232838;
+  gap: 6px;
+  padding: 6px 12px 10px;
+  border-top: 1px solid $border;
+
+  input {
+    flex: 1;
+    background: $bg-elevated;
+    border: 1px solid $border;
+    border-radius: 20px;
+    color: $text-primary;
+    font-size: 13px;
+    padding: 5px 14px;
+    outline: none;
+    &::placeholder { color: $text-secondary; }
+    &:focus { border-color: $accent; }
+  }
 }
 
-.chat-input-row input {
-  flex: 1;
-  background: #181c24;
-  border: 1px solid #232838;
-  border-radius: 20px;
-  color: #e8eaf0;
-  font-size: 14px;
-  padding: 8px 14px;
-  outline: none;
-}
-
-.chat-input-row input:focus {
-  border-color: #00e5a0;
-}
-
-/* Controls */
-.controls {
+// Control buttons row
+.control-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 14px;
+  gap: 10px;
+  padding: 10px 16px;
 }
 
-@media (max-width: 480px) {
-  .local-video-pip {
+.ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: $bg-elevated;
+  color: $text-primary;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background .15s, color .15s, transform .1s;
+  outline: none;
+
+  &:hover {
+    background: lighten($bg-elevated, 6%);
+  }
+
+  &:active {
+    transform: scale(.94);
+  }
+
+  &.off {
+    background: $danger;
+    color: #fff;
+    &:hover { background: lighten($danger, 6%); }
+  }
+
+  &.active {
+    background: rgba($accent, .2);
+    color: $accent;
+  }
+}
+
+// Hangup — prominent red
+.ctrl-hangup {
+  background: $danger;
+  color: #fff;
+  width: 52px;
+  height: 52px;
+  font-size: 20px;
+
+  :host ::ng-deep .anticon {
+    transform: rotate(135deg);
+  }
+
+  &:hover {
+    background: lighten($danger, 6%);
+  }
+}
+
+// ── RESPONSIVE ───────────────────────────────────────────────────
+@media (max-width: 600px) {
+  .waiting-card {
+    padding: 24px 20px;
+  }
+
+  .room-code {
+    font-size: 20px;
+    letter-spacing: 5px;
+  }
+
+  .video-local {
     width: 100px;
-    height: 75px;
+    height: 70px;
     bottom: 12px;
     right: 12px;
   }
 
-  .controls {
-    gap: 10px;
-    padding: 10px;
+  .control-row {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .ctrl-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .ctrl-hangup {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
   }
 }

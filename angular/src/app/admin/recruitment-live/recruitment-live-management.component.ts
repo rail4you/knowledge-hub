@@ -36,6 +36,17 @@ import { RecruitmentLiveDto, RecruitmentLiveStatus, UserBriefDto } from '../../r
     NzDatePickerModule,
   ],
   templateUrl: './recruitment-live-management.component.html',
+  styles: [`
+    .action-btns {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .action-btns .ant-btn + .ant-tag {
+      margin-left: 0;
+    }
+  `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RecruitmentLiveManagementComponent implements OnInit {
@@ -204,14 +215,25 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   }
 
   canEnter(live: RecruitmentLiveDto): boolean {
-    return live.status === RecruitmentLiveStatus.Waiting || live.status === RecruitmentLiveStatus.Active;
+    // Waiting 或 Active 状态，且未过期
+    if (live.status !== RecruitmentLiveStatus.Waiting && live.status !== RecruitmentLiveStatus.Active)
+      return false;
+    return !this.isExpired(live);
   }
 
   canCancel(live: RecruitmentLiveDto): boolean {
-    return live.status === RecruitmentLiveStatus.Waiting;
+    return live.status === RecruitmentLiveStatus.Waiting || live.status === RecruitmentLiveStatus.Active;
   }
 
   canDelete(live: RecruitmentLiveDto): boolean {
-    return live.status === RecruitmentLiveStatus.Ended || live.status === RecruitmentLiveStatus.Cancelled;
+    return true; // 所有状态都可以手动删除
+  }
+
+  /** 检查直播是否已过期（计划时间已过且未开始） */
+  isExpired(live: RecruitmentLiveDto): boolean {
+    if (!live.scheduledAt) return false;
+    return new Date(live.scheduledAt) < new Date()
+      && live.status !== RecruitmentLiveStatus.Ended
+      && live.status !== RecruitmentLiveStatus.Cancelled;
   }
 }

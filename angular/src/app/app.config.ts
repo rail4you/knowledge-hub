@@ -90,6 +90,15 @@ import {
   RedoOutline,
   SaveOutline,
   CheckCircleOutline,
+  // 招聘直播 & 其他页面
+  AudioOutline,
+  AudioMutedOutline,
+  PhoneOutline,
+  StopOutline,
+  SwapOutline,
+  CopyOutline,
+  KeyOutline,
+  UserOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -178,6 +187,15 @@ const icons = [
   RedoOutline,
   SaveOutline,
   CheckCircleOutline,
+  // 招聘直播 & 其他页面
+  AudioOutline,
+  AudioMutedOutline,
+  PhoneOutline,
+  StopOutline,
+  SwapOutline,
+  CopyOutline,
+  KeyOutline,
+  UserOutline,
 ];
 
 export const appConfig: ApplicationConfig = {

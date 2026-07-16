@@ -98,7 +98,10 @@ public class RecruitmentLive : FullAuditedAggregateRoot<Guid>, IMultiTenant
     {
         if (Status == RecruitmentLiveStatus.Active)
         {
-            throw new BusinessException("RecruitmentLive:CannotCancel", "正在进行的直播不能取消，请先结束。");
+            // 进行中的直播直接结束+取消
+            Status = RecruitmentLiveStatus.Cancelled;
+            EndedAt = DateTime.UtcNow;
+            return;
         }
         if (Status == RecruitmentLiveStatus.Ended)
         {

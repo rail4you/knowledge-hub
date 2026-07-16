@@ -108,39 +108,64 @@ export class RecruitmentLiveService {
 
     this.liveState.set('waiting');
 
-    // 连接 WebSocket
-    await this.connectWebSocket(wsUrl, wsToken);
-
-    // 创建 PeerConnection
+    // *** 先创建 PeerConnection（避免 user-joined 到达时 this.pc 还是 null）***
     await this.createPeerConnection();
 
-    // 如果是教师端，等待学生加入后发 offer
-    // 如果是学生端，也创建好 pc 等待对方 offer
+    // 再连接 WebSocket（此时 PC 已就绪，user-joined 到达时可立即发 offer）
+    await this.connectWebSocket(wsUrl, wsToken);
+
+    // 连接成功后，如果 user-joined 在 WebSocket 连接期间已被处理，
+    // 教师端需要补发 offer（因为 createAndSendOffer 在 PC 未就绪时会被跳过）
     if (role === 'teacher') {
-      this.connectionLabel.set('等待学生加入...');
-    } else {
-      this.connectionLabel.set('等待教师发起连接...');
+      if (this.liveState() === 'signaling' || this.liveState() === 'connected') {
+        // user-joined 已收到但 offer 可能未发送，补发一次
+        await this.createAndSendOffer();
+      }
+    }
+
+    // 只在仍处于等待状态时设置标签（user-joined 可能已修改了标签）
+    if (this.liveState() === 'waiting') {
+      if (role === 'teacher') {
+        this.connectionLabel.set('等待学生加入...');
+      } else {
+        this.connectionLabel.set('等待教师发起连接...');
+      }
     }
   }
 
   private connectWebSocket(wsUrl: string, wsToken: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const url = `${wsUrl}?token=${encodeURIComponent(wsToken)}&liveId=${this.liveId}`;
+      console.log('[LiveWS] Connecting to:', url);
       this.ws = new WebSocket(url);
 
+      let opened = false;
+
       this.ws.onopen = () => {
+        opened = true;
+        console.log('[LiveWS] Connected successfully');
         resolve();
       };
 
-      this.ws.onerror = () => reject(new Error('无法连接信令服务器'));
+      this.ws.onerror = (e) => {
+        console.error('[LiveWS] Connection error:', e);
+        reject(new Error('无法连接信令服务器'));
+      };
 
-      this.ws.onclose = () => {
-        if (this.liveState() !== 'ended') {
+      this.ws.onclose = (e) => {
+        console.log('[LiveWS] Closed. code=', e.code, 'reason=', e.reason, 'wasClean=', e.wasClean);
+        if (!opened) {
+          // 连接从未成功打开（服务器拒绝或网络不通）
+          reject(new Error(`信令连接关闭 (code=${e.code}): ${e.reason || '未知原因'}`));
+        } else if (this.liveState() !== 'ended') {
           this.liveState.set('disconnected');
         }
       };
 
-      this.ws.onmessage = (event) => this.handleSignalMessage(event.data);
+      this.ws.onmessage = (event) => {
+        console.log('[LiveWS] Received:', event.data);
+        this.handleSignalMessage(event.data);
+      };
     });
   }
 
@@ -208,23 +233,39 @@ export class RecruitmentLiveService {
         break;
 
       case 'offer':
+        console.log('[LiveWS] Received offer, creating answer...');
         if (!this.pc) await this.createPeerConnection();
-        await this.pc!.setRemoteDescription(new RTCSessionDescription(msg.data));
-        const answer = await this.pc!.createAnswer();
-        await this.pc!.setLocalDescription(answer);
-        this.sendWs({ type: 'answer', data: answer });
-        this.liveState.set('signaling');
+        try {
+          await this.pc!.setRemoteDescription(new RTCSessionDescription(msg.data));
+          const answer = await this.pc!.createAnswer();
+          await this.pc!.setLocalDescription(answer);
+          this.sendWs({ type: 'answer', data: answer });
+          this.liveState.set('signaling');
+          console.log('[LiveWS] Answer sent');
+        } catch (e) {
+          console.error('[LiveWS] Failed to handle offer:', e);
+        }
         break;
 
       case 'answer':
+        console.log('[LiveWS] Received answer');
         if (this.pc) {
-          await this.pc.setRemoteDescription(new RTCSessionDescription(msg.data));
+          try {
+            await this.pc.setRemoteDescription(new RTCSessionDescription(msg.data));
+            console.log('[LiveWS] Remote description set from answer');
+          } catch (e) {
+            console.error('[LiveWS] Failed to set remote description from answer:', e);
+          }
         }
         break;
 
       case 'ice-candidate':
         if (this.pc && msg.data) {
-          try { await this.pc.addIceCandidate(new RTCIceCandidate(msg.data)); } catch {}
+          try {
+            await this.pc.addIceCandidate(new RTCIceCandidate(msg.data));
+          } catch (e) {
+            console.warn('[LiveWS] Failed to add ICE candidate:', e);
+          }
         }
         break;
 
@@ -254,16 +295,38 @@ export class RecruitmentLiveService {
     }
   }
 
+  private offerSent = false;
+
   private async createAndSendOffer() {
-    if (!this.pc) return;
-    const offer = await this.pc.createOffer();
-    await this.pc.setLocalDescription(offer);
-    this.sendWs({ type: 'offer', data: offer });
+    if (!this.pc) {
+      console.warn('[LiveWS] createAndSendOffer: PC not ready yet, will retry when ready');
+      return;
+    }
+    if (this.offerSent) return; // 避免重复发送
+    if (this.pc.signalingState !== 'stable') {
+      console.warn('[LiveWS] createAndSendOffer: signalingState is', this.pc.signalingState, ', skipping');
+      return;
+    }
+    this.offerSent = true;
+    console.log('[LiveWS] Creating offer...');
+    try {
+      const offer = await this.pc.createOffer();
+      await this.pc.setLocalDescription(offer);
+      this.sendWs({ type: 'offer', data: offer });
+      console.log('[LiveWS] Offer sent');
+    } catch (e) {
+      console.error('[LiveWS] Failed to create/send offer:', e);
+      this.offerSent = false;
+    }
   }
 
   private sendWs(obj: any) {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(obj));
+      const json = JSON.stringify(obj);
+      console.log('[LiveWS] Sending:', json);
+      this.ws.send(json);
+    } else {
+      console.warn('[LiveWS] Cannot send, WS state:', this.ws?.readyState, 'msg type:', obj.type);
     }
   }
 
@@ -325,6 +388,7 @@ export class RecruitmentLiveService {
     this.remoteStream.set(null);
     this.chatMessages.set([]);
     this.retryCount = 0;
+    this.offerSent = false;
   }
 
   private handleConnectionFailure() {

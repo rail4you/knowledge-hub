@@ -230,6 +230,13 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         {
             var entity = await _liveRepository.GetAsync(id);
 
+            // 检查是否已过期（设置了 ScheduledAt 且已过期的直播不允许进入）
+            if (entity.ScheduledAt.HasValue && entity.ScheduledAt.Value < DateTime.UtcNow
+                && entity.Status != RecruitmentLiveStatus.Ended && entity.Status != RecruitmentLiveStatus.Cancelled)
+            {
+                throw new UserFriendlyException("该直播已过期，无法进入。");
+            }
+
             var currentUserId = _currentUser.GetId();
             var dto = MapToDto(entity);
             dto.IsParticipant = entity.TeacherId == currentUserId || entity.StudentId == currentUserId;

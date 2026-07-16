@@ -13,7 +13,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Uow;
 using Volo.Abp.Users;
 
@@ -42,6 +44,22 @@ public class RecruitmentLiveWebSocketHandler
     }
 
     public async Task HandleAsync(System.Net.WebSockets.WebSocket ws, HttpContext httpContext)
+    {
+        _logger.LogInformation("=== WebSocket 连接请求: Path={Path}, RemoteIp={Ip} ===",
+            httpContext.Request.Path, httpContext.Connection.RemoteIpAddress);
+
+        try
+        {
+            await HandleAsyncInternal(ws, httpContext);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "HandleAsync 未处理异常");
+            await TryCloseWebSocket(ws, "服务器内部错误");
+        }
+    }
+
+    private async Task HandleAsyncInternal(System.Net.WebSockets.WebSocket ws, HttpContext httpContext)
     {
         // 1. 从 query string 提取参数
         var token = httpContext.Request.Query["token"].ToString();
@@ -79,7 +97,11 @@ public class RecruitmentLiveWebSocketHandler
         }
 
         // 3. 创建 scope 验证直播权限
+        // 注意：WebSocket 请求不走 HTTP 认证管线，没有租户上下文，
+        // 必须禁用多租户过滤器，否则 FindAsync 会被租户过滤掉导致返回 null
         using var scope = _serviceProvider.CreateScope();
+        var dataFilter = scope.ServiceProvider.GetRequiredService<IDataFilter>();
+        using var _ = dataFilter.Disable<IMultiTenant>();
         var liveRepo = scope.ServiceProvider.GetRequiredService<IRepository<RecruitmentLiveEntity, Guid>>();
 
         RecruitmentLiveEntity? live;
@@ -109,9 +131,13 @@ public class RecruitmentLiveWebSocketHandler
         var userIdStr = tokenUserId.ToString();
         if (live.TeacherId != tokenUserId && live.StudentId != tokenUserId)
         {
+            _logger.LogWarning("用户 {UserId} 不是直播 {LiveId} 的参与者 (teacherId={TeacherId}, studentId={StudentId})",
+                tokenUserId, liveId, live.TeacherId, live.StudentId);
             await SendErrorAndClose(ws, "您不是该直播的参与者");
             return;
         }
+        _logger.LogInformation("ws handler 校验通过: userId={UserId}, role={Role}, liveId={LiveId}",
+            tokenUserId, live.TeacherId == tokenUserId ? "teacher" : "student", liveId);
 
         var role = live.TeacherId == tokenUserId ? "teacher" : "student";
 
@@ -143,14 +169,21 @@ public class RecruitmentLiveWebSocketHandler
 
         // 通知双方：新加入的人需要知道对方是否已在房间，先加入的人需要知道新人加入了
         var other = room.GetOther(ws);
+        _logger.LogInformation("房间通知检查: role={Role}, otherWsState={OtherState}",
+            role, other?.State.ToString() ?? "null");
         if (other is { State: System.Net.WebSockets.WebSocketState.Open })
         {
             // 通知先加入的人："新成员 {role} 已加入"
+            _logger.LogInformation("→ 通知已有用户 user-joined (role={Role})", role);
             await SendJson(other, new { type = "user-joined", role });
             // 通知刚加入的人："房间里已有人，对方是 {otherRole}"
-            // room.GetOtherRole(ws) 需要返回另一方的角色
             var otherRole = role == "teacher" ? "student" : "teacher";
+            _logger.LogInformation("→ 通知新用户 user-joined (role={Role})", otherRole);
             await SendJson(ws, new { type = "user-joined", role = otherRole });
+        }
+        else
+        {
+            _logger.LogInformation("对方尚未连接，不发送 user-joined");
         }
 
         // 如果直播状态是 Waiting，更新为 Active
@@ -250,10 +283,15 @@ public class RecruitmentLiveWebSocketHandler
             case "offer":
             case "answer":
             case "ice-candidate":
+                _logger.LogInformation("转发 {Type} from {Role}", type, role);
                 if (other is { State: System.Net.WebSockets.WebSocketState.Open })
                 {
                     var data = json?.TryGetProperty("data", out var d) == true ? (object?)d : null;
                     await SendJson(other, new { type, data });
+                }
+                else
+                {
+                    _logger.LogWarning("无法转发 {Type}: 对方已断开", type);
                 }
                 break;
 
@@ -310,24 +348,10 @@ public class RecruitmentLiveWebSocketHandler
             room.StudentUserId = null;
         }
 
-        // 如果房间空了，更新直播状态
+        // 如果房间空了，清理房间缓存（不自动结束直播，允许反复进入退出）
         if (!room.HasAnyone)
         {
-            try
-            {
-                var live = await liveRepo.FindAsync(liveId);
-                if (live != null && live.Status == RecruitmentLiveStatus.Active)
-                {
-                    live.End();
-                    await liveRepo.UpdateAsync(live, autoSave: true);
-                    _logger.LogInformation("直播间 {LiveId} 双方都已离开，自动结束", liveId);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "自动结束直播 {LiveId} 失败", liveId);
-            }
-
+            _logger.LogInformation("直播间 {LiveId} 双方都已离开，清理房间缓存", liveId);
             Rooms.TryRemove(liveId.ToString(), out _);
         }
 
@@ -336,37 +360,42 @@ public class RecruitmentLiveWebSocketHandler
 
     // ── 工具方法 ──
 
-    private static async Task SendJson(System.Net.WebSockets.WebSocket ws, object obj)
+    private async Task SendJson(System.Net.WebSockets.WebSocket ws, object obj)
     {
-        if (ws.State != System.Net.WebSockets.WebSocketState.Open) return;
+        if (ws.State != System.Net.WebSockets.WebSocketState.Open)
+        {
+            _logger.LogWarning("SendJson: WebSocket not open, state={State}", ws.State);
+            return;
+        }
 
         try
         {
             var json = JsonSerializer.Serialize(obj, JsonOptions);
             var bytes = Encoding.UTF8.GetBytes(json);
+            _logger.LogDebug("SendJson: {Json}", json);
             await ws.SendAsync(
                 new ArraySegment<byte>(bytes),
                 WebSocketMessageType.Text,
                 true,
                 CancellationToken.None);
         }
-        catch
+        catch (Exception ex)
         {
-            // 发送失败忽略
+            _logger.LogError(ex, "SendJson: Failed to send");
         }
     }
 
-    private static async Task SendErrorAndClose(System.Net.WebSockets.WebSocket ws, string message)
+    private async Task SendErrorAndClose(System.Net.WebSockets.WebSocket ws, string message)
     {
+        _logger.LogWarning("SendErrorAndClose: {Message}", message);
         await SendJson(ws, new { type = "error", message });
         await TryCloseWebSocket(ws, message);
     }
 
-    private static async Task TryCloseWebSocket(System.Net.WebSockets.WebSocket ws, string? reason)
+    private async Task TryCloseWebSocket(System.Net.WebSockets.WebSocket ws, string? reason)
     {
         if (ws.State == System.Net.WebSockets.WebSocketState.Open)
         {
-            // 如果提供了原因，先发一条消息
             if (reason != null)
             {
                 try
@@ -383,9 +412,9 @@ public class RecruitmentLiveWebSocketHandler
                     reason ?? "关闭连接",
                     CancellationToken.None);
             }
-            catch
+            catch (Exception ex)
             {
-                // 忽略关闭失败
+                _logger.LogWarning(ex, "关闭 WebSocket 失败");
             }
         }
     }

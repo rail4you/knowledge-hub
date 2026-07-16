@@ -41,33 +41,37 @@
         <td>{{ live.scheduledAt ? (live.scheduledAt | date: 'yyyy-MM-dd HH:mm') : '-' }}</td>
         <td>{{ live.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
         <td>
-          <button
-            nz-button nzType="primary" nzSize="small"
-            *ngIf="canEnter(live)"
-            (click)="enterLive(live)"
-          >
-            <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-            进入
-          </button>
-          <button
-            nz-button nzSize="small" nzDanger nzType="default"
-            *ngIf="canCancel(live)"
-            nz-popconfirm
-            nzPopconfirmTitle="确定要取消该直播吗？"
-            (nzOnConfirm)="cancelLive(live)"
-          >
-            取消
-          </button>
-          <button
-            nz-button nzSize="small" nzDanger
-            *ngIf="canDelete(live)"
-            nz-popconfirm
-            nzPopconfirmTitle="确定要删除该直播吗？"
-            (nzOnConfirm)="deleteLive(live)"
-          >
-            删除
-          </button>
-          <span *ngIf="live.status === 1 && !canEnter(live)" style="color: #999">-</span>
+          <div class="action-btns">
+            <button
+              nz-button nzType="primary" nzSize="small" nzShape="round"
+              *ngIf="canEnter(live)"
+              (click)="enterLive(live)"
+            >
+              <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+              进入
+            </button>
+            <button
+              nz-button nzSize="small" nzShape="round"
+              *ngIf="canCancel(live)"
+              nz-popconfirm
+              nzPopconfirmTitle="确定要取消该直播吗？"
+              (nzOnConfirm)="cancelLive(live)"
+            >
+              <span nz-icon nzType="close-circle" nzTheme="outline"></span>
+              取消
+            </button>
+            <button
+              nz-button nzSize="small" nzShape="round" nzDanger
+              *ngIf="canDelete(live)"
+              nz-popconfirm
+              nzPopconfirmTitle="确定要删除该直播吗？删除后不可恢复。"
+              (nzOnConfirm)="deleteLive(live)"
+            >
+              <span nz-icon nzType="delete" nzTheme="outline"></span>
+              删除
+            </button>
+            <nz-tag *ngIf="isExpired(live) && live.status !== 2 && live.status !== 3" nzColor="error">已过期</nz-tag>
+          </div>
         </td>
       </tr>
     </tbody>
