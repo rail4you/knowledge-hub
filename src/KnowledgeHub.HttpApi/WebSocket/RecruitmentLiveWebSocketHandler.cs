@@ -141,11 +141,16 @@ public class RecruitmentLiveWebSocketHandler
 
         _logger.LogInformation("用户 {UserId}({Role}) 进入直播间 {LiveId}", userIdStr, role, liveId);
 
-        // 通知对方
+        // 通知双方：新加入的人需要知道对方是否已在房间，先加入的人需要知道新人加入了
         var other = room.GetOther(ws);
         if (other is { State: System.Net.WebSockets.WebSocketState.Open })
         {
+            // 通知先加入的人："新成员 {role} 已加入"
             await SendJson(other, new { type = "user-joined", role });
+            // 通知刚加入的人："房间里已有人，对方是 {otherRole}"
+            // room.GetOtherRole(ws) 需要返回另一方的角色
+            var otherRole = role == "teacher" ? "student" : "teacher";
+            await SendJson(ws, new { type = "user-joined", role = otherRole });
         }
 
         // 如果直播状态是 Waiting，更新为 Active
