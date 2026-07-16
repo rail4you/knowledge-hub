@@ -10,6 +10,7 @@ using KnowledgeHub.TenantInfos.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.TenantManagement;
@@ -23,17 +24,20 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
     private readonly ITenantRepository _tenantRepository;
     private readonly IMajorRepository _majorRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
+    private readonly IDataFilter _dataFilter;
 
     public TenantInfoAppService(
         ITenantInfoRepository tenantInfoRepository,
         ITenantRepository tenantRepository,
         IMajorRepository majorRepository,
-        IRepository<Course, Guid> courseRepository)
+        IRepository<Course, Guid> courseRepository,
+        IDataFilter dataFilter)
     {
         _tenantInfoRepository = tenantInfoRepository;
         _tenantRepository = tenantRepository;
         _majorRepository = majorRepository;
         _courseRepository = courseRepository;
+        _dataFilter = dataFilter;
     }
 
     [AllowAnonymous]
@@ -135,6 +139,8 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
     [AllowAnonymous]
     public async Task<TenantKnowledgeGraphDto> GetKnowledgeGraphAsync(Guid tenantId)
     {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
         var tenantInfo = await _tenantInfoRepository.FindByTenantIdAsync(tenantId);
         var tenantName = tenantInfo?.Name ?? "资源库";
 
@@ -216,6 +222,7 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
             AllNodes = nodes,
             Relations = relations
         };
+        } // end using _dataFilter.Disable<IMultiTenant>()
     }
 
     [AllowAnonymous]
@@ -278,3 +285,8 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
     }
 
     private async Task<int> CountCoursesAsync(Guid tenantId)
+    {
+        var query = await _courseRepository.GetQueryableAsync();
+        return query.Count(c => c.TenantId == tenantId);
+    }
+}
