@@ -5,6 +5,7 @@ import {
   ElementRef,
   viewChild,
   AfterViewInit,
+  AfterViewChecked,
   OnChanges,
   SimpleChanges,
   OnDestroy,
@@ -206,7 +207,7 @@ interface ChapterDto {
   styleUrls: ['./chapter-tree-graph.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDestroy {
+export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecked, OnChanges, OnDestroy {
   @Input() chapters: ChapterDto[] = [];
   /** 课程名称（可选）：传入后作为图谱的根节点，将所有章节作为其子节点 */
   @Input() courseName: string = '';
@@ -270,6 +271,24 @@ export class ChapterTreeGraphComponent implements AfterViewInit, OnChanges, OnDe
   ngOnChanges(changes: SimpleChanges) {
     if (changes['chapters'] && this.chart) {
       this.updateChart();
+    }
+  }
+
+  private chartInitAttempted = false;
+
+  /**
+   * 延迟初始化：ngAfterViewInit 时 chapters 可能还是空数组，
+   * 数据到达后 view child 尚未更新。在 AfterViewChecked 中检查
+   * 容器是否就绪，只会尝试一次。
+   */
+  ngAfterViewChecked() {
+    if (this.chartInitAttempted) return;
+    if (!this.chart && this.chapters?.length > 0) {
+      const container = this.chartContainer()?.nativeElement;
+      if (container) {
+        this.chartInitAttempted = true;
+        this.initChart();
+      }
     }
   }
 

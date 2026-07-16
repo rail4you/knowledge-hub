@@ -72,7 +72,9 @@
         <tr>
           <td>
             <strong>{{ item.title }}</strong>
-            <div class="muted">{{ item.location || '地点待定' }}</div>
+            @if (item.location) {
+              <div class="muted">{{ item.location }}</div>
+            }
           </td>
           <td>{{ item.companyName }}</td>
           <td>{{ getTypeLabel(item.jobType) }}</td>
@@ -83,7 +85,7 @@
           <td>{{ item.applicationCount }}</td>
           <td>{{ item.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
           <td class="actions">
-            <a nz-button nzType="link" [routerLink]="['/employment/jobs', item.id]">查看</a>
+            <a nz-button nzType="link" (click)="openView(item)">查看</a>
             <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
             @if (canReview(item, statuses.Published)) {
               <button nz-button nzType="link" (click)="review(item, statuses.Published)">通过</button>
@@ -256,5 +258,111 @@
         <input nz-input [(ngModel)]="form.contactEmail" name="contactEmail" placeholder="接收简历邮箱" />
       </label>
     </div>
+  </ng-container>
+</nz-modal>
+
+<nz-modal
+  [(nzVisible)]="viewModalVisible"
+  nzTitle="岗位详情"
+  nzWidth="780px"
+  (nzOnCancel)="viewModalVisible = false"
+  [nzFooter]="null"
+>
+  <ng-container *nzModalContent>
+    @if (viewItem(); as item) {
+      <div class="job-form job-form--view">
+        <label class="field">
+          <span class="label">企业名称</span>
+          <div class="value">{{ item.companyName }}</div>
+        </label>
+
+        <label class="field">
+          <span class="label">所属行业</span>
+          <div class="value">{{ item.industry || '-' }}</div>
+        </label>
+
+        <label class="field full">
+          <span class="label">岗位名称</span>
+          <div class="value">{{ item.title }}</div>
+        </label>
+
+        <label class="field full">
+          <span class="label">岗位摘要</span>
+          <div class="value">{{ item.summary || '-' }}</div>
+        </label>
+
+        <label class="field full">
+          <span class="label">岗位描述</span>
+          <div class="value value--pre">{{ item.description }}</div>
+        </label>
+
+        <div class="field">
+          <span class="label">岗位类型</span>
+          <div class="value">{{ getTypeLabel(item.jobType) }}</div>
+        </div>
+
+        <div class="field">
+          <span class="label">状态</span>
+          <div class="value">
+            <nz-tag [nzColor]="getStatusColor(item.status)">{{ getStatusLabel(item.status) }}</nz-tag>
+          </div>
+        </div>
+
+        <label class="field">
+          <span class="label">工作地区</span>
+          <div class="value">{{ item.location || '-' }}</div>
+        </label>
+
+        <label class="field">
+          <span class="label">详细地址</span>
+          <div class="value">{{ item.address || '-' }}</div>
+        </label>
+
+        <label class="field">
+          <span class="label">学历要求</span>
+          <div class="value">{{ item.educationRequirement || '-' }}</div>
+        </label>
+
+        <label class="field">
+          <span class="label">薪资范围</span>
+          <div class="value">{{ item.salaryRange || '薪资面议' }}</div>
+        </label>
+
+        <label class="field">
+          <span class="label">招聘人数</span>
+          <div class="value">{{ item.recruitmentCount }} 人</div>
+        </label>
+
+        <label class="field">
+          <span class="label">截止日期</span>
+          <div class="value">{{ (item.deadline | date: 'yyyy-MM-dd') || '-' }}</div>
+        </label>
+
+        <label class="field full">
+          <span class="label">技能标签</span>
+          <div class="value">{{ item.skillTags || '-' }}</div>
+        </label>
+
+        <label class="field full">
+          <span class="label">福利待遇</span>
+          <div class="value value--pre">{{ item.benefits || '-' }}</div>
+        </label>
+
+        <label class="field">
+          <span class="label">联系人</span>
+          <div class="value">{{ item.contactName || '-' }}</div>
+        </label>
+
+        <label class="field">
+          <span class="label">联系电话</span>
+          <div class="value">{{ item.contactPhone || '-' }}</div>
+        </label>
+
+        <label class="field full">
+          <span class="label">联系邮箱</span>
+          <div class="value">{{ item.contactEmail || '-' }}</div>
+        </label>
+      </div>
+    }
   </ng-container>
 </nz-modal>

@@ -87,11 +87,15 @@ export class EmploymentJobManagementComponent implements OnInit {
   pageIndex = 1;
   pageSize = 10;
 
-  // 模态框
+  // 编辑 / 新增模态框
   modalVisible = false;
   editingId: string | null = null;
   form: CreateUpdateJobPostingDto = this.createEmptyForm();
   formDeadline: Date | null = null;
+
+  // 查看模态框
+  viewModalVisible = false;
+  viewItem = signal<JobPostingDto | null>(null);
 
   ngOnInit(): void {
     this.reload();
@@ -183,6 +187,11 @@ export class EmploymentJobManagementComponent implements OnInit {
     this.form = this.createEmptyForm();
     this.formDeadline = null;
     this.modalVisible = true;
+  }
+
+  openView(item: JobPostingDto): void {
+    this.viewItem.set(item);
+    this.viewModalVisible = true;
   }
 
   openEdit(item: JobPostingDto): void {

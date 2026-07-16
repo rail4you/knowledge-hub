@@ -68,7 +68,7 @@ interface CourseDetailDto {
       
       <nz-spin [nzSpinning]="loading()">
         @if (courseDetail()) {
-          <nz-tabset>
+          <nz-tabs>
             <nz-tab nzTitle="章节树状图">
               <app-chapter-tree-graph [chapters]="courseDetail()?.chapters || []"
                 [courseName]="courseDetail()?.title || ''" />
@@ -79,7 +79,7 @@ interface CourseDetailDto {
             <nz-tab nzTitle="知识网络">
               <app-knowledge-network-graph [chapters]="courseDetail()?.chapters || []" />
             </nz-tab>
-          </nz-tabset>
+          </nz-tabs>
         } @else if (!loading()) {
           <div class="empty-state">
             <span nz-icon nzType="folder-open" nzTheme="outline" class="empty-icon"></span>

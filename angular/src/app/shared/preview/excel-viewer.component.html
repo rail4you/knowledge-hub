@@ -18,7 +18,7 @@
     </div>
 
     <!-- Sheet Tabs -->
-    <nz-tabset [nzSelectedIndex]="activeSheet()" (nzSelectedIndexChange)="onSheetChange($event)" nzSize="small" nzType="card">
+    <nz-tabs [nzSelectedIndex]="activeSheet()" (nzSelectedIndexChange)="onSheetChange($event)" nzSize="small" nzType="card">
       <nz-tab *ngFor="let sheet of sheets(); let i = index" [nzTitle]="sheet.name">
         <div class="table-container" [style.transform]="'scale(' + scale() + ')'" [style.transformOrigin]="'top left'">
           <table class="excel-table" *ngIf="currentSheet()">
@@ -43,6 +43,6 @@
           </table>
         </div>
       </nz-tab>
-    </nz-tabset>
+    </nz-tabs>
   </ng-container>
 </div>
