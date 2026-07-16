@@ -4,7 +4,8 @@
   (nzOnCancel)="close()"
   [nzWidth]="fileType === 'pptx' ? 1280 : 1000"
   [nzFooter]="previewFooter"
-  [nzStyle]="{ top: '20px' }"
+  [nzStyle]="modalStyle"
+  [nzMaskClosable]="false"
   nzWrapClassName="file-preview-modal"
 >
   <ng-container *nzModalContent>
@@ -59,41 +60,37 @@
     </div>
 
     <!-- File Content -->
-    <div *ngIf="!isLoading() && !loadError() && !tooLarge() && !unsupported() && (fileData().byteLength > 0 || fileUrl())" class="preview-content">
-      @switch (fileType) {
-        @case ('pdf') {
-          <app-pdf-viewer [data]="fileData()" [fileName]="fileName"></app-pdf-viewer>
-        }
-        @case ('word') {
-          <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>
-        }
-        @case ('excel') {
-          <app-excel-viewer [data]="fileData()" [fileName]="fileName"></app-excel-viewer>
-        }
-        @case ('pptx') {
-          <app-pptx-canvas-viewer [data]="fileData()" [fileName]="fileName"></app-pptx-canvas-viewer>
-        }
-        @case ('image') {
-          <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="image"></app-media-viewer>
-        }
-        @case ('video') {
-          <app-media-viewer [streamUrl]="fileUrl()" [fileName]="fileName" fileType="video"></app-media-viewer>
-        }
-        @case ('audio') {
-          <app-media-viewer [streamUrl]="fileUrl()" [fileName]="fileName" fileType="audio"></app-media-viewer>
-        }
-        @case ('text') {
-          <app-text-viewer [data]="fileData()" [fileName]="fileName"></app-text-viewer>
-        }
-        @default {
-          <div class="preview-unsupported">
-            <nz-result
-              nzStatus="warning"
-              [nzTitle]="('::PreviewNotSupported' | abpLocalization)"
-              [nzSubTitle]="fileName + ' (' + formatFileSize(fileSize()) + ')'"
-            ></nz-result>
-          </div>
-        }
+    <div
+      *ngIf="!isLoading() && !loadError() && !tooLarge() && !unsupported() && (fileData().byteLength > 0 || fileUrl())"
+      class="preview-content"
+      (mousedown)="$event.stopPropagation()"
+      (click)="$event.stopPropagation()"
+    >
+      @if (fileType === 'pdf') {
+        <app-pdf-viewer [data]="fileData()" [fileName]="fileName"></app-pdf-viewer>
+      } @else if (fileType === 'word') {
+        <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>
+      } @else if (fileType === 'excel') {
+        <app-excel-viewer [data]="fileData()" [fileName]="fileName"></app-excel-viewer>
+      } @else if (fileType === 'pptx') {
+        <!-- PPTX 走后端 LibreOffice → PDF 转换，前端用 pdfjs 渲染转换后的 PDF -->
+        <app-pdf-viewer [data]="fileData()" [fileName]="fileName"></app-pdf-viewer>
+      } @else if (fileType === 'image') {
+        <app-media-viewer [data]="fileData()" [fileName]="fileName" fileType="image"></app-media-viewer>
+      } @else if (fileType === 'video') {
+        <app-media-viewer [streamUrl]="fileUrl()" [fileName]="fileName" fileType="video"></app-media-viewer>
+      } @else if (fileType === 'audio') {
+        <app-media-viewer [streamUrl]="fileUrl()" [fileName]="fileName" fileType="audio"></app-media-viewer>
+      } @else if (fileType === 'text') {
+        <app-text-viewer [data]="fileData()" [fileName]="fileName"></app-text-viewer>
+      } @else {
+        <div class="preview-unsupported">
+          <nz-result
+            nzStatus="warning"
+            [nzTitle]="('::PreviewNotSupported' | abpLocalization)"
+            [nzSubTitle]="fileName + ' (' + formatFileSize(fileSize()) + ')'"
+          ></nz-result>
+        </div>
       }
     </div>
   </ng-container>

@@ -10,10 +10,13 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources;
+using KnowledgeHub.Resources.Conversion;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
@@ -36,17 +39,20 @@ public class ResourceFileController : AbpControllerBase
     protected IRepository<Resource, Guid> Repository { get; }
     protected IFileStorageService FileStorageService { get; }
     protected IDataFilter DataFilter { get; }
+    protected IOfficeConversionService OfficeConversionService { get; }
 
     public ResourceFileController(
         IResourceRepository resourceRepository,
         IRepository<Resource, Guid> repository,
         IFileStorageService fileStorageService,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IOfficeConversionService officeConversionService)
     {
         ResourceRepository = resourceRepository;
         Repository = repository;
         FileStorageService = fileStorageService;
         DataFilter = dataFilter;
+        OfficeConversionService = officeConversionService;
     }
 
     [HttpGet("{resourceId}/download")]
@@ -128,6 +134,51 @@ public class ResourceFileController : AbpControllerBase
 
         // PhysicalFile supports EnableRangeProcessing for chunked download
         return PhysicalFile(fullPath, contentType, enableRangeProcessing: true);
+    }
+
+    /// <summary>
+    /// Office 文档（PPTX/DOCX/XLSX）的 PDF 预览端点。
+    /// 后端通过 LibreOffice headless 转换为 PDF，缓存到 converted/{id}.pdf。
+    /// 前端用 pdfjs-dist 渲染返回的 PDF。
+    /// 首次转换可能耗时 5-60s（80MB PPTX 实测 ~9s），后续缓存命中毫秒级返回。
+    /// </summary>
+    [HttpGet("{resourceId}/preview-pdf")]
+    [AllowAnonymous]
+    public virtual async Task<IActionResult> PreviewPdf(Guid resourceId)
+    {
+        var fullPath = await GetResourceFullPathAsync(resourceId);
+        if (fullPath == null)
+            return NotFound(new { message = "资源文件不存在" });
+
+        var ext = Path.GetExtension(fullPath)?.ToLowerInvariant();
+        if (ext != ".pptx" && ext != ".docx" && ext != ".xlsx" && ext != ".ppt" && ext != ".doc" && ext != ".xls")
+            return BadRequest(new { message = "仅支持 Office 文档（PPTX/DOCX/XLSX）" });
+
+        try
+        {
+            var pdfPath = await OfficeConversionService.ConvertToPdfAsync(
+                resourceId.ToString(), fullPath);
+
+            // PhysicalFile 支持 Range 处理，pdfjs 需要
+            return PhysicalFile(pdfPath, "application/pdf", enableRangeProcessing: true);
+        }
+        catch (OfficeConversionException ex)
+        {
+            Logger.LogWarning(ex, "[PreviewPdf] 转换失败: {ResourceId}", resourceId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = "文档转换失败，请下载后查看",
+                detail = ex.Message,
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[PreviewPdf] 未知错误: {ResourceId}", resourceId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = "预览服务异常，请稍后重试",
+            });
+        }
     }
 
     /// <summary>

@@ -1,43 +1,30 @@
 <div class="pdf-viewer">
-  <!-- Toolbar: zoom only -->
+  <!-- Toolbar -->
   <div class="viewer-toolbar">
-    <div class="toolbar-left">
-      <span class="page-info" *ngIf="totalPages() > 0">{{ currentPage() }} / {{ totalPages() }} 页</span>
-    </div>
-    <div class="toolbar-right">
-      <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="scale() <= 0.25">
-        <span nz-icon nzType="zoom-out"></span>
-      </button>
-      <span class="scale-info">{{ getScalePercent() }}%</span>
-      <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="scale() >= 3">
-        <span nz-icon nzType="zoom-in"></span>
-      </button>
-      <button nz-button nzSize="small" (click)="fitWidth()">
-        <span nz-icon nzType="fullscreen"></span>
-      </button>
-      <span class="render-progress" *ngIf="renderedCount() > 0 && renderedCount() < totalPages()">
-        {{ renderedCount() }}/{{ totalPages() }}
-      </span>
-    </div>
+    <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="scale() <= 0.25">
+      <span nz-icon nzType="zoom-out"></span>
+    </button>
+    <span class="scale-info">{{ getScalePercent() }}%</span>
+    <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="scale() >= 3">
+      <span nz-icon nzType="zoom-in"></span>
+    </button>
+    <button nz-button nzSize="small" (click)="fitWidth()">
+      <span nz-icon nzType="fullscreen"></span>
+    </button>
+    <span class="toolbar-separator"></span>
+    <span class="page-info" *ngIf="totalPages() > 0">{{ currentPage() }} / {{ totalPages() }} 页</span>
   </div>
 
-  <!-- Pages container with click-blocking shield inside -->
-  <div class="pdf-pages-container" [class.loading]="isLoading()" (scroll)="onScroll()">
-    <!-- Transparent shield to block all clicks on PDF content -->
+  <!-- Pages container: canvas elements created imperatively to avoid Angular control-flow bug -->
+  <div #pdfContainer class="pdf-pages-container" [class.loading]="isLoading()" (scroll)="onScroll()">
     <div
       class="pdf-click-shield"
-      (mousedown)="$event.preventDefault(); $event.stopPropagation()"
-      (click)="$event.preventDefault(); $event.stopPropagation()"
-      (dblclick)="$event.preventDefault(); $event.stopPropagation()"
-      (contextmenu)="$event.preventDefault(); $event.stopPropagation()"
+      (click)="onShieldClick($event)"
+      (dblclick)="$event.stopPropagation()"
     ></div>
 
-    @for (page of pages(); track page) {
-      <div class="pdf-page-wrapper" [style.width.px]="pageWidth()">
-        <canvas #pdfCanvas class="pdf-page-canvas"></canvas>
-        <div class="pdf-page-label">— {{ page }} —</div>
-      </div>
-    }
+    <!-- Imperative canvas host (no *ngFor / @for) -->
+    <div #pagesHost></div>
   </div>
 
   <!-- Loading -->

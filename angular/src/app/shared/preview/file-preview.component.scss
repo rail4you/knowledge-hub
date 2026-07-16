@@ -112,23 +112,30 @@
 // ============================================
 .viewer-toolbar {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 8px 16px;
   background: #fafafa;
   border-bottom: 1px solid #f0f0f0;
   position: sticky;
   top: 0;
   z-index: 10;
 
-  .page-info,
   .scale-info,
-  .sheet-info,
-  .slide-info {
+  .page-info {
     font-size: 12px;
     color: #666;
-    min-width: 60px;
+    min-width: 48px;
     text-align: center;
+    user-select: none;
+  }
+
+  .toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background: #e8e8e8;
+    margin: 0 4px;
   }
 }
 
@@ -151,72 +158,15 @@
 .pdf-viewer {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 400px;
+  max-height: calc(90vh - 200px);
   position: relative;
-
-  .toolbar-left {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
 
   .toolbar-separator {
     width: 1px;
     height: 20px;
     background: #e8e8e8;
     margin: 0 4px;
-  }
-
-  .goto-page {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    color: #666;
-
-    .goto-label {
-      white-space: nowrap;
-    }
-
-    .goto-input {
-      width: 48px;
-      height: 24px;
-      text-align: center;
-      font-size: 12px;
-      border: 1px solid #d9d9d9;
-      border-radius: 4px;
-      padding: 0 4px;
-      outline: none;
-
-      &:focus {
-        border-color: #1890ff;
-        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-      }
-
-      /* Hide spinner */
-      &::-webkit-inner-spin-button,
-      &::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-      }
-      -moz-appearance: textfield;
-    }
-
-    .goto-suffix {
-      color: #999;
-    }
-  }
-
-  .render-progress {
-    font-size: 11px;
-    color: #1890ff;
-    margin-right: 8px;
   }
 
   .pdf-pages-container {
@@ -380,103 +330,6 @@
 
     tbody tr:hover {
       background: #e6f7ff;
-    }
-  }
-}
-
-// ============================================
-// PPTX Viewer
-// ============================================
-.pptx-viewer {
-  display: flex;
-  flex-direction: column;
-
-  .slide-container {
-    display: flex;
-    justify-content: center;
-    padding: 20px;
-    overflow: auto;
-    max-height: calc(90vh - 320px);
-  }
-
-  .slide-canvas {
-    width: 720px;
-    height: 540px;
-    background: #fff;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-    border-radius: 4px;
-    padding: 40px;
-    position: relative;
-    overflow: hidden;
-
-    .slide-text {
-      margin: 4px 0;
-      word-wrap: break-word;
-    }
-
-    .slide-image {
-      position: absolute;
-      object-fit: contain;
-    }
-
-    .slide-empty {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      color: #ccc;
-      font-size: 18px;
-    }
-  }
-
-  .slide-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
-    padding: 16px;
-    overflow: auto;
-    max-height: calc(90vh - 320px);
-
-    .slide-grid-item {
-      border: 2px solid #e8e8e8;
-      border-radius: 6px;
-      cursor: pointer;
-      overflow: hidden;
-      transition: border-color 0.2s;
-
-      &:hover {
-        border-color: #1890ff;
-      }
-
-      &.active {
-        border-color: #1890ff;
-        box-shadow: 0 0 0 1px #1890ff;
-      }
-
-      .slide-grid-content {
-        aspect-ratio: 4/3;
-        background: #fff;
-        padding: 8px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-
-        .slide-text-thumb {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          color: #333;
-        }
-      }
-
-      .slide-grid-number {
-        text-align: center;
-        font-size: 11px;
-        color: #999;
-        padding: 4px;
-        background: #fafafa;
-      }
     }
   }
 }
