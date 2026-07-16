@@ -250,8 +250,6 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         const string studentRoleName = "Student";
         var currentTenantId = CurrentTenant.Id;
 
-        // P1-6 修复：原实现只过滤 TenantId，完全没过滤 Student 角色，导致 admin/教师全部出现。
-        // 这里走 EF IQueryable + JOIN IdentityUserRoles + IdentityRoles，强制仅返回 Student。
         var query = await _userRepository.GetQueryableAsync();
         query = query.Where(u => u.TenantId == currentTenantId);
 
@@ -259,10 +257,22 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         var dbContext = await _userRepository.GetDbContextAsync();
         var userRoles = dbContext.Set<IdentityUserRole>();
         var roles = dbContext.Set<IdentityRole>();
+
+        // 先查当前租户的 Student 角色；如果租户没有，回退查 host 角色（host 角色可被租户用户共享）
         var studentRoleIds = await roles
-            .Where(r => r.Name == studentRoleName)
+            .Where(r => r.Name == studentRoleName && r.TenantId == currentTenantId)
             .Select(r => r.Id)
             .ToListAsync();
+
+        if (studentRoleIds.Count == 0)
+        {
+            // 尝试 host 级别的 Student 角色
+            studentRoleIds = await roles
+                .Where(r => r.Name == studentRoleName && r.TenantId == null)
+                .Select(r => r.Id)
+                .ToListAsync();
+        }
+
         if (studentRoleIds.Count == 0)
         {
             return [];

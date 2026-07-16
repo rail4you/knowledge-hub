@@ -28,6 +28,7 @@ export class StudentLayoutComponent implements OnInit {
 
   userName = signal('用户');
   userRoleLabel = signal('学生');
+  menuOpen = signal(false);
 
   ngOnInit() {
     const currentUser = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
@@ -86,6 +87,14 @@ export class StudentLayoutComponent implements OnInit {
   }
 
   login() { this.authService.navigateToLogin(); }
+
+  toggleMenu() {
+    this.menuOpen.update(v => !v);
+  }
+
+  closeMenu() {
+    this.menuOpen.set(false);
+  }
 
   /** 「就业服务」tab 是否应处于激活态 */
   isEmploymentActive(): boolean {

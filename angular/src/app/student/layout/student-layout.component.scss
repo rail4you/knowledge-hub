@@ -303,6 +303,13 @@
   user-select: none;
 }
 
+.dropdown-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+
 .tab-link__caret {
   font-size: 10px !important;
   margin-left: 2px;
@@ -394,6 +401,33 @@
 }
 
 /* ============ Responsive ============ */
+
+/* 移动端菜单按钮（默认隐藏） */
+.menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid ds.$student-border-soft;
+  background: #fff;
+  color: ds.$student-text;
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s;
+
+  &:hover {
+    background: ds.$student-surface-soft;
+  }
+}
+
+/* 蒙层 */
+.tab-overlay {
+  display: none;
+}
+
 @media (max-width: 960px) {
   .brand-bar__inner {
     height: 60px;
@@ -437,12 +471,185 @@
   }
 }
 
-@media (max-width: 600px) {
-  .brand {
-    gap: 10px;
+/* ── 手机端：菜单折叠下拉 ── */
+@media (max-width: 768px) {
+  .menu-toggle {
+    display: inline-flex;
+  }
+
+  .brand-bar__inner {
+    height: 48px;
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  .brand__logo {
+    width: 30px;
+    height: 30px;
   }
 
   .brand__title {
-    font-size: 18px;
+    font-size: 16px;
+  }
+
+  .brand-bar__back {
+    height: 30px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .brand-bar__user {
+    height: 34px;
+    padding: 4px 6px 4px 4px;
+
+    .user-avatar {
+      width: 24px;
+      height: 24px;
+      font-size: 11px;
+    }
+  }
+
+  .brand-bar__actions {
+    gap: 4px;
+  }
+
+  .brand-bar__back-text {
+    display: none;
+  }
+
+  /* Tab bar → 紧凑下拉 */
+  .tab-bar {
+    position: fixed;
+    top: 48px;
+    left: 0;
+    right: 0;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+    border-bottom: none;
+    box-shadow: none;
+    background: transparent;
+
+    &.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  .tab-bar__inner {
+    width: auto;
+    max-width: 260px;
+    margin-left: auto;
+    height: auto;
+    max-height: 60vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 0 0 0 12px;
+    border-bottom: 1px solid ds.$student-border-soft;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    padding: 4px 6px 10px;
+  }
+
+  .tab-bar__tabs {
+    flex-direction: column;
+    gap: 1px;
+    height: auto;
+    overflow-x: visible;
+  }
+
+  .tab-link {
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 100%;
+
+    &.active {
+      background: #eef4ff;
+      &::after { display: none; }
+    }
+
+    &:hover {
+      background: ds.$student-surface-soft;
+    }
+  }
+
+  .tab-link--dropdown {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    pointer-events: auto;
+
+    > .dropdown-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 44px;
+      padding: 0 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: ds.$student-text-muted;
+      cursor: pointer;
+      width: 100%;
+      background: none;
+      border: none;
+      text-align: left;
+      font-family: inherit;
+      transition: background .15s;
+
+      &:hover {
+        background: ds.$student-surface-soft;
+      }
+
+      .tab-link__caret {
+        font-size: 10px;
+        margin-left: auto;
+        opacity: .6;
+      }
+    }
+
+    .employment-menu {
+      display: block;
+      padding: 2px 0 4px 24px;
+
+      li[nz-menu-item] {
+        height: 38px;
+        padding: 0 12px !important;
+        font-size: 13px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+    }
+  }
+
+  /* Footer 精简 */
+  .app-footer {
+    padding: 14px 12px;
+    text-align: center;
+  }
+
+  .footer-links {
+    gap: 14px;
+    justify-content: center;
+    margin-bottom: 6px;
+
+    a { font-size: 11px; }
+  }
+
+  .footer-copyright {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .brand {
+    gap: 8px;
+  }
+
+  .brand__title {
+    font-size: 16px;
   }
 }

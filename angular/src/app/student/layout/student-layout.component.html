@@ -25,6 +25,11 @@
         </span>
       </a>
 
+      <!-- 移动端菜单按钮 -->
+      <button class="menu-toggle" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-label="导航菜单">
+        <span nz-icon [nzType]="menuOpen() ? 'close' : 'menu-fold'" nzTheme="outline"></span>
+      </button>
+
       <div class="brand-bar__actions">
         <a routerLink="/" class="brand-bar__back" title="返回主站">
           <span nz-icon nzType="home" nzTheme="outline"></span>
@@ -71,8 +76,8 @@
     </div>
   </header>
 
-  <!-- 第二部分：Tab 导航 -->
-  <nav class="tab-bar" aria-label="主导航">
+  <!-- 第二部分：Tab 导航（移动端可折叠） -->
+  <nav class="tab-bar" [class.open]="menuOpen()" aria-label="主导航">
     <div class="tab-bar__inner">
       <div class="tab-bar__tabs">
         <a routerLink="/student/micro-majors" routerLinkActive="active" class="tab-link">
@@ -111,12 +116,14 @@
           class="tab-link tab-link--dropdown"
           nz-dropdown
           [nzDropdownMenu]="employmentMenu"
-          nzTrigger="hover"
+          nzTrigger="click"
           [class.active]="isEmploymentActive()"
         >
-          <span nz-icon nzType="idcard" nzTheme="outline"></span>
-          <span>就业服务</span>
-          <span nz-icon nzType="down" class="tab-link__caret"></span>
+          <span class="dropdown-label">
+            <span nz-icon nzType="idcard" nzTheme="outline"></span>
+            <span>就业服务</span>
+            <span nz-icon nzType="down" class="tab-link__caret"></span>
+          </span>
         </div>
         <nz-dropdown-menu #employmentMenu="nzDropdownMenu">
           <ul nz-menu class="employment-menu">
@@ -138,12 +145,14 @@
           class="tab-link tab-link--dropdown"
           nz-dropdown
           [nzDropdownMenu]="aiMenu"
-          nzTrigger="hover"
+          nzTrigger="click"
           [class.active]="isAIActive()"
         >
-          <span nz-icon nzType="robot" nzTheme="outline"></span>
-          <span>AI 功能</span>
-          <span nz-icon nzType="down" class="tab-link__caret"></span>
+          <span class="dropdown-label">
+            <span nz-icon nzType="robot" nzTheme="outline"></span>
+            <span>AI 功能</span>
+            <span nz-icon nzType="down" class="tab-link__caret"></span>
+          </span>
         </div>
         <nz-dropdown-menu #aiMenu="nzDropdownMenu">
           <ul nz-menu class="employment-menu">
