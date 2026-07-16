@@ -2,15 +2,12 @@ import { Component, signal, inject, OnInit, ChangeDetectionStrategy } from '@ang
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterTreeGraphComponent } from './chapter-tree-graph.component';
-import { MindMapGraphComponent } from './mind-map-graph.component';
-import { KnowledgeNetworkGraphComponent } from './knowledge-network-graph.component';
 
 interface KnowledgeResourceDto {
   id: string;
@@ -45,13 +42,10 @@ interface CourseDetailDto {
   imports: [
     CommonModule,
     NzCardModule,
-    NzTabsModule,
     NzButtonModule,
     NzIconModule,
     NzSpinModule,
-    ChapterTreeGraphComponent,
-    MindMapGraphComponent,
-    KnowledgeNetworkGraphComponent
+    ChapterTreeGraphComponent
   ],
   template: `
     <nz-card [nzTitle]="cardTitle" [nzExtra]="extraTemplate">
@@ -68,18 +62,9 @@ interface CourseDetailDto {
       
       <nz-spin [nzSpinning]="loading()">
         @if (courseDetail()) {
-          <nz-tabs>
-            <nz-tab nzTitle="章节树状图">
-              <app-chapter-tree-graph [chapters]="courseDetail()?.chapters || []"
-                [courseName]="courseDetail()?.title || ''" />
-            </nz-tab>
-            <nz-tab nzTitle="思维导图">
-              <app-mind-map-graph [chapters]="courseDetail()?.chapters || []" />
-            </nz-tab>
-            <nz-tab nzTitle="知识网络">
-              <app-knowledge-network-graph [chapters]="courseDetail()?.chapters || []" />
-            </nz-tab>
-          </nz-tabs>
+          <app-chapter-tree-graph
+            [chapters]="courseDetail()?.chapters || []"
+            [courseName]="courseDetail()?.title || ''" />
         } @else if (!loading()) {
           <div class="empty-state">
             <span nz-icon nzType="folder-open" nzTheme="outline" class="empty-icon"></span>
@@ -101,13 +86,6 @@ interface CourseDetailDto {
     }
     :host ::ng-deep .ant-card-body {
       padding: 0;
-    }
-    :host ::ng-deep .ant-tabs-nav {
-      padding: 16px 24px 0;
-      margin-bottom: 0;
-    }
-    :host ::ng-deep .ant-tabs-content {
-      padding: 24px;
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
