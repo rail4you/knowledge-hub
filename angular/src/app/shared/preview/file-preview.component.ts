@@ -166,8 +166,8 @@ export class FilePreviewComponent {
   previewReady(): boolean {
     if (this.isLoading() || this.loadError() || this.tooLarge() || this.unsupported()) return false;
     const type = this.fileType;
-    // PDF/PPTX: resourceId 模式（逐页加载）
-    if (type === 'pdf' || type === 'pptx') return !!this.resourceId();
+    // PDF/PPTX: previewUrl 模式
+    if (type === 'pdf' || type === 'pptx') return !!this.fileUrl();
     // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
     if (type === 'video' || type === 'audio') return !!this.fileUrl();
     // Other: ArrayBuffer 模式
@@ -191,17 +191,18 @@ export class FilePreviewComponent {
 
     const type = this.fileType;
 
-    // PDF: per-page mode directly
+    // PDF: 使用完整 PDF URL（支持 Range 请求逐页加载）
     if (type === 'pdf') {
+      const previewUrl = `/api/resource-file/${this.resourceId()}/preview`;
+      this.fileUrl.set(previewUrl);
       this.isLoading.set(false);
       return;
     }
 
-    // PPTX: 触发转换（fire-and-forget），然后用逐页模式加载已拆分的页面
+    // PPTX: 使用完整 PDF（pdfjs 原生逐页加载，支持 Range 请求）
     if (type === 'pptx') {
-      // 后台触发转换（确保页面已生成，如果缓存命中则毫秒返回）
-      fetch(`/api/resource-file/${this.resourceId()}/preview-pdf`)
-        .catch(() => {});
+      const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
+      this.fileUrl.set(previewUrl);
       this.isLoading.set(false);
       return;
     }

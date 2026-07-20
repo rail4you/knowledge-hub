@@ -67,7 +67,7 @@
       (click)="$event.stopPropagation()"
     >
       @if (fileType === 'pdf' || fileType === 'pptx') {
-        <app-pdf-viewer [resourceId]="resourceId()" [fileName]="fileName"></app-pdf-viewer>
+        <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (fileType === 'word') {
         <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>
       } @else if (fileType === 'excel') {
