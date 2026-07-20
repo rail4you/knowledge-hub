@@ -168,6 +168,8 @@ export class FilePreviewComponent {
     const type = this.fileType;
     // PDF/PPTX: resourceId 模式（逐页加载）
     if (type === 'pdf' || type === 'pptx') return !!this.resourceId();
+    // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
+    if (type === 'video' || type === 'audio') return !!this.fileUrl();
     // Other: ArrayBuffer 模式
     return this.fileData().byteLength > 0;
   }
