@@ -68,6 +68,7 @@ WORKDIR /app
 # - locales: en_US.UTF-8
 # - tzdata:  Asia/Shanghai (set via ENV below)
 # - libreoffice-impress: PPTX → PDF conversion (headless)
+# - libreoffice-java-common: LibreOffice Java UNO bridge (required for PPTX conversion)
 # - default-jre-headless: Java runtime required by LibreOffice for complex PPTX features
 # - fonts-noto-cjk: Chinese/Japanese/Korean font support for PDF rendering
 RUN apt-get update \
@@ -75,6 +76,7 @@ RUN apt-get update \
         locales \
         tzdata \
         libreoffice-impress \
+        libreoffice-java-common \
         default-jre-headless \
         fonts-noto-cjk \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
@@ -88,6 +90,14 @@ RUN apt-get update \
 ENV LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
     TZ=Asia/Shanghai
+
+# JAVA_HOME: required by LibreOffice Java UNO bridge (javaldx)
+# Set to the auto-detected Debian JVM path; libreoffice-java-common uses this to register Java
+RUN java -version 2>&1 && \
+    JVM_DIR=$(dirname $(dirname $(readlink -f $(which java)))) 2>/dev/null || \
+    JVM_DIR="/usr/lib/jvm/java-21-openjdk-amd64"; \
+    echo "Detected JAVA_HOME=$JVM_DIR"
+ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 
 # Listen on 80 by default; compose may override with ASPNETCORE_URLS=http://+:44354
 ENV ASPNETCORE_URLS=http://+:80 \

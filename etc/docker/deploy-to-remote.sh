@@ -210,6 +210,11 @@ sync_configs() {
         .env.example \
         "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
 
+    # 同步 SSL 证书
+    ssh "$REMOTE_USER@$REMOTE_HOST" "mkdir -p $REMOTE_DIR/certs"
+    scp certs/localhost.crt certs/localhost.key \
+        "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/certs/"
+
     ok "配置文件同步完成"
 }
 

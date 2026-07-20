@@ -171,12 +171,11 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.loaded = false;
 
       const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.mjs';
 
       const loadingTask = pdfjsLib.getDocument({
         url,
-        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/cmaps/',
+        cMapUrl: 'assets/pdfjs/cmaps/',
         cMapPacked: true,
         enableXfa: true,
       });
@@ -228,13 +227,12 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.loaded = false;
 
       const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.mjs';
 
       const copy = data.slice(0);
       const loadingTask = pdfjsLib.getDocument({
         data: new Uint8Array(copy),
-        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/cmaps/',
+        cMapUrl: 'assets/pdfjs/cmaps/',
         cMapPacked: true,
       });
 
@@ -370,12 +368,11 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
     try {
       const pdfjsLib = await import('pdfjs-dist');
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.mjs';
 
       const doc = await pdfjsLib.getDocument({
         url,
-        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/cmaps/',
+        cMapUrl: 'assets/pdfjs/cmaps/',
         cMapPacked: true,
       }).promise;
 

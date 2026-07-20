@@ -258,29 +258,39 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         var userRoles = dbContext.Set<IdentityUserRole>();
         var roles = dbContext.Set<IdentityRole>();
 
-        // 先查当前租户的 Student 角色；如果租户没有，回退查 host 角色（host 角色可被租户用户共享）
-        var studentRoleIds = await roles
-            .Where(r => r.Name == studentRoleName && r.TenantId == currentTenantId)
-            .Select(r => r.Id)
-            .ToListAsync();
-
-        if (studentRoleIds.Count == 0)
+        // AbpRoles 和 AbpUserRoles 都受多租户过滤。当租户用户分配的
+        // 是 host 级别的 Student 角色时，AbpUserRoles.TenantId = NULL，
+        // 但多租户过滤器会加 WHERE TenantId = 当前租户 ID，导致不匹配。
+        // 需要临时禁用多租户过滤来查询角色和用户关联。
+        List<Guid> studentRoleIds;
+        List<Guid> studentUserIds;
+        using (DataFilter.Disable<IMultiTenant>())
         {
-            // 尝试 host 级别的 Student 角色
+            // 收集所有可用的 Student 角色：先查当前租户的，再添加 host 级别的。
+            // 租户可能有自己的 Student 角色但无人被分配，需要同时检查 host Student 角色。
             studentRoleIds = await roles
+                .Where(r => r.Name == studentRoleName && r.TenantId == currentTenantId)
+                .Select(r => r.Id)
+                .ToListAsync();
+
+            // 额外加上 host 级别的 Student 角色（host 角色可被租户用户共享）
+            var hostStudentRoleIds = await roles
                 .Where(r => r.Name == studentRoleName && r.TenantId == null)
                 .Select(r => r.Id)
                 .ToListAsync();
-        }
+            studentRoleIds.AddRange(hostStudentRoleIds);
 
-        if (studentRoleIds.Count == 0)
-        {
-            return [];
+            if (studentRoleIds.Count == 0)
+            {
+                return [];
+            }
+
+            // AbpUserRoles 也有多租户过滤，在同一 using 块内查询
+            studentUserIds = await userRoles
+                .Where(ur => studentRoleIds.Contains(ur.RoleId))
+                .Select(ur => ur.UserId)
+                .ToListAsync();
         }
-        var studentUserIds = await userRoles
-            .Where(ur => studentRoleIds.Contains(ur.RoleId))
-            .Select(ur => ur.UserId)
-            .ToListAsync();
         query = query.Where(u => studentUserIds.Contains(u.Id));
 
         if (!string.IsNullOrWhiteSpace(filter))
@@ -363,7 +373,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
     private string GenerateWsToken(Guid liveId, Guid userId, string role)
     {
-        var expirationSeconds = _configuration.GetValue<int>("RecruitmentLive:WsTokenExpirationSeconds", 30);
+        var expirationSeconds = _configuration.GetValue<int>("RecruitmentLive:WsTokenExpirationSeconds", 300);
         var expiresAt = DateTimeOffset.UtcNow.AddSeconds(expirationSeconds).ToUnixTimeSeconds();
         var payload = $"{liveId}|{userId}|{role}|{expiresAt}";
 

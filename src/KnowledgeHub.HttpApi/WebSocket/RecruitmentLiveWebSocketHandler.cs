@@ -18,6 +18,8 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Uow;
 using Volo.Abp.Users;
+using KnowledgeHub.Permissions;
+using Volo.Abp.Identity;
 
 namespace KnowledgeHub.LiveWs;
 
@@ -127,19 +129,32 @@ public class RecruitmentLiveWebSocketHandler
             return;
         }
 
-        // 验证用户是否是参与者
+        // 验证用户是否是参与者（或具有管理权限）
         var userIdStr = tokenUserId.ToString();
-        if (live.TeacherId != tokenUserId && live.StudentId != tokenUserId)
-        {
-            _logger.LogWarning("用户 {UserId} 不是直播 {LiveId} 的参与者 (teacherId={TeacherId}, studentId={StudentId})",
-                tokenUserId, liveId, live.TeacherId, live.StudentId);
-            await SendErrorAndClose(ws, "您不是该直播的参与者");
-            return;
-        }
-        _logger.LogInformation("ws handler 校验通过: userId={UserId}, role={Role}, liveId={LiveId}",
-            tokenUserId, live.TeacherId == tokenUserId ? "teacher" : "student", liveId);
+        var isParticipant = live.TeacherId == tokenUserId || live.StudentId == tokenUserId;
 
-        var role = live.TeacherId == tokenUserId ? "teacher" : "student";
+        if (!isParticipant)
+        {
+            // 非参与者：检查用户是否为管理员（拥有 Manage 权限的管理员可代管教师端）
+            var userMgr = scope.ServiceProvider.GetRequiredService<IdentityUserManager>();
+            var user = await userMgr.FindByIdAsync(userIdStr);
+            var isAdmin = user != null && await userMgr.IsInRoleAsync(user, "admin");
+
+            if (!isAdmin)
+            {
+                _logger.LogWarning("用户 {UserId} 不是直播 {LiveId} 的参与者 (teacherId={TeacherId}, studentId={StudentId})",
+                    tokenUserId, liveId, live.TeacherId, live.StudentId);
+                await SendErrorAndClose(ws, "您不是该直播的参与者");
+                return;
+            }
+
+            _logger.LogInformation("管理员 {UserId} 以教师身份代管直播 {LiveId}", tokenUserId, liveId);
+        }
+
+        _logger.LogInformation("ws handler 校验通过: userId={UserId}, role={Role}, liveId={LiveId}",
+            tokenUserId, live.TeacherId == tokenUserId || !isParticipant ? "teacher" : "student", liveId);
+
+        var role = (live.TeacherId == tokenUserId || !isParticipant) ? "teacher" : "student";
 
         // 4. 加入房间
         var roomKey = liveId.ToString();

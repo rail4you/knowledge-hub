@@ -83,6 +83,7 @@ if [ ! -f "$SCRIPT_DIR/certs/localhost.crt" ] || [ ! -f "$SCRIPT_DIR/certs/local
     mkdir -p "$SCRIPT_DIR/certs"
     openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 365 \
         -subj "/CN=localhost" \
+        -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
         -keyout "$SCRIPT_DIR/certs/localhost.key" \
         -out "$SCRIPT_DIR/certs/localhost.crt" 2>/dev/null
     ok "证书已生成"
