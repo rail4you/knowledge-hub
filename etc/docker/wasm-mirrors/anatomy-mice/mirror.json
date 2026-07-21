@@ -1,9 +1,0 @@
-{
-  "slug": "anatomy-mice",
-  "sourceUrl": "http://124.222.92.99:8003/anatomyMice/",
-  "entryPath": "index.html",
-  "status": "ready",
-  "title": "小鼠解剖仿真实验",
-  "description": "小鼠解剖虚拟仿真实验 - Unity WebGL",
-  "coopCoepRequired": true
-}

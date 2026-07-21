@@ -150,6 +150,7 @@ public class KnowledgeHubDbContext :
     public DbSet<PracticumProject> PracticumProjects { get; set; }
     public DbSet<PracticumTask> PracticumTasks { get; set; }
     public DbSet<PracticumMaterial> PracticumMaterials { get; set; }
+    public DbSet<PracticumSimulation> PracticumSimulations { get; set; }
     public DbSet<PracticumEnrollment> PracticumEnrollments { get; set; }
     public DbSet<PracticumSubmission> PracticumSubmissions { get; set; }
     public DbSet<PracticumGuidanceRecord> PracticumGuidanceRecords { get; set; }

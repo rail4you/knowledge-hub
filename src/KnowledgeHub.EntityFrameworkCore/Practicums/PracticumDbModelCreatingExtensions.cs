@@ -56,6 +56,26 @@ public static class PracticumDbModelCreatingExtensions
             b.HasIndex(x => x.TenantId);
         });
 
+        builder.Entity<PracticumSimulation>(b =>
+        {
+            b.ToTable("KnowledgeHubPracticumSimulations", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Name).IsRequired().HasMaxLength(256);
+            b.Property(x => x.Slug).IsRequired().HasMaxLength(128);
+            b.Property(x => x.EntryPath).IsRequired().HasMaxLength(512);
+            b.Property(x => x.Description).HasMaxLength(1000);
+            b.Property(x => x.CoverUrl).HasMaxLength(1000);
+
+            b.HasOne<PracticumProject>()
+                .WithMany()
+                .HasForeignKey(x => x.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(x => x.Slug).IsUnique();
+            b.HasIndex(x => x.ProjectId);
+            b.HasIndex(x => x.TenantId);
+        });
+
         builder.Entity<PracticumEnrollment>(b =>
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "PracticumEnrollments", KnowledgeHubConsts.DbSchema);
