@@ -181,6 +181,29 @@ log_info "==> 1) 下载入口 index.html"
 INDEX_URL="$BASE_URL/index.html"
 download "$INDEX_URL" "$STAGING_DIR/index.html"
 
+# 让浏览器复用磁盘缓存：去掉 Unity cacheBust 参数 (?v=5)
+# cacheBust 把每个 .unityweb 变成"唯一 URL"，导致浏览器每次访问都重新下载 114MB。
+# 我们保留 cacheBust 变量作为"版本切换开关"（运维同学改 cacheBust="v=6" 即可强制重新下载），
+# 但默认设为空，让 URL 形式稳定为 Build/x.loader.js / .data.unityweb 等。
+log_info "==> 1.1) 关闭 Unity cacheBust，避免 ?v=N 绕开浏览器磁盘缓存"
+python3 - "$STAGING_DIR/index.html" << 'PYEOF'
+import sys
+p = sys.argv[1]
+with open(p, encoding="utf-8") as f:
+    s = f.read()
+s = s.replace(
+    'var cacheBust = "v=5";',
+    '// cacheBust 留作版本切换开关；空值时 URL 不带 ?v=…，浏览器复用磁盘缓存。\n      var cacheBust = "";'
+)
+s = s.replace(
+    '?" + cacheBust',
+    '" + (cacheBust ? "?" + cacheBust : "")'
+)
+with open(p, "w", encoding="utf-8") as f:
+    f.write(s)
+print(f"  patched cacheBust in: {p}")
+PYEOF
+
 # ---------------------------------------------------------------------------
 # 2) *.loader.js
 # ---------------------------------------------------------------------------
@@ -193,6 +216,26 @@ fi
 LOADER_URL="$(absolute_url "$LOADER_REL")"
 LOADER_NAME="$(basename "$LOADER_REL")"
 download "$LOADER_URL" "$STAGING_DIR/Build/$LOADER_NAME"
+
+# 让 IndexedDB 也缓存 framework.js / .wasm：Unity 默认对非 dataUrl 资产用 no-store，
+# 禁用 IndexedDB 缓存，每次访问都要重新下载 80KB + 5.6MB。
+# 改成 must-revalidate 后，IndexedDB 缓存命中，浏览器磁盘缓存也生效（带 ETag 重协商）。
+log_info "==> 2.1) 把 loader.js cacheControl 改为 must-revalidate（启用 IndexedDB 缓存）"
+python3 - "$STAGING_DIR/Build/$LOADER_NAME" << 'PYEOF'
+import sys
+p = sys.argv[1]
+with open(p, encoding="utf-8") as f:
+    s = f.read()
+old = 'cacheControl:function(e){return e==c.dataUrl?"must-revalidate":"no-store"}'
+new = 'cacheControl:function(e){return "must-revalidate"}'
+if old not in s:
+    print(f"  WARN: cacheControl pattern not found in {p}（可能 Unity loader.js 模板已变，跳过）")
+else:
+    s = s.replace(old, new)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(s)
+    print(f"  patched loader.js cacheControl: {p}")
+PYEOF
 
 # ---------------------------------------------------------------------------
 # 3) *.data.unityweb / *.wasm.unityweb / *.framework.js.unityweb
