@@ -142,78 +142,79 @@ public class IndexingJobAppService : ...
 - **Username**: admin
 - **Password**: 1q2w3E*
 
-### WASM 镜像开发流程（仿真实训 materialType=4）
+### WASM 仿真实训上传流程（materialType=4 → PracticumSimulation）
 
-把外部 Unity WebGL 仿真实训资源镜像到 `etc/docker/wasm-mirrors/{slug}/`，通过 Nginx（生产）/ Kestrel（开发）静态托管，前端把 sourceUrl 改写到本地路径实现「秒开」。
+Unity WebGL 仿真实训以 ZIP 形式由教师/管理员在后台**上传入库**，后端解压到
+`etc/docker/wasm-mirrors/{slug}/`，通过 Nginx（生产）/ Kestrel（开发）静态托管，
+前端按 `slug` 直接 iframe `publicUrl`，不再依赖 sourceUrl 字符串匹配。
+
+**数据模型：** `PracticumSimulation`（Domain/Practicums/PracticumSimulation.cs），
+FK 关联 `PracticumProject`，字段含 `Slug / Name / Description / CoverUrl / EntryPath /
+Status / FileCount / TotalBytes / SortOrder / CoopCoepRequired`。
 
 **目录约定：**
 
 ```
-etc/docker/wasm-mirrors/{slug}/
-├── mirror.json         ← 元信息，必须存在且 status=ready 才生效
-├── index.html
-├── Build/
-├── StreamingAssets/    ← 递归镜像
-└── TemplateData/       ← 递归镜像
+etc/docker/wasm-mirrors/
+├── README.md / .gitignore / .gitkeep       ← 占位
+├── {slug}/                                 ← 后端上传解压目标（运行时填充）
+│   ├── index.html
+│   ├── Build/                              ← *.loader.js / *.unityweb
+│   ├── StreamingAssets/                    ← Unity StreamingAssets
+│   └── TemplateData/                       ← Unity 模板资源
 ```
 
-二进制不进 git；仅 `mirror.json` / `README.md` / `.gitkeep` / `.gitignore` 受 `.gitignore` 白名单保护。
+- `slug` 由后端按 `Name` slugify + 8 位 GUID 后缀生成，唯一索引；URL = `/wasm/{slug}/{entryPath}`。
+- 二进制不进 git；`.gitignore` 兜底白名单保留 `mirror.json / README.md / .gitkeep / .gitignore`（`mirror.json` 已弃用，仅为旧机器兼容保留占位）。
 
 **添加新仿真：**
 
 ```bash
-# 1. 下载脚本会下载 index.html、loader.js、*.unityweb、StreamingAssets、TemplateData，
-#    并写 mirror.json；staging → 原子 mv 到 {slug}/
-#    可选参数：[title] [cover-url] [description] → 写入 mirror.json 供前端展示
-bash scripts/fetch-wasm.sh http://外部源站/anatomyMice/ anatomy-mice "小鼠解剖" "https://cdn.example.com/c.png" "3D 交互式"
+# 1. 把 Unity WebGL 构建产物打成 zip（zip-slip 防护在后端解压时执行）
+bash scripts/pack-wasm.sh etc/docker/wasm-mirrors/anatomy-mice anatomy-mice.zip
 
-# 2. 重启 API 让 WasmMirrorAppService 扫描新的 mirror.json
-./dev.sh restart api
+# 2. 教师端：教务后台 → 实训管理 → 选目标 Project → 「仿真镜像」Tab → 上传 zip
+#    填写 Name / Description / CoverUrl，保存；后端校验 .unityweb 存在 → Status=Ready。
 
-# 3. 验证
-curl -sk https://localhost:44305/api/app/wasm-mirror/all | jq '.[] | {slug, title, cover, description, status}'
-curl -skI https://localhost:44305/wasm/anatomy-mice/index.html
+# 3. 验证（无需重启 API，记录立刻入库）
+curl -sk https://localhost:44305/api/app/practicum-simulation/list-by-project/{projectId} | jq
+curl -skI https://localhost:44305/wasm/{slug}/index.html
 ```
 
 **生产部署：**
 
 ```bash
 cd etc/docker
-bash ../../scripts/fetch-wasm.sh http://外部源站/anatomyMice/ anatomy-mice
-docker compose restart knowledgehub-angular
+bash ../../scripts/pack-wasm.sh wasm-mirrors/anatomy-mice anatomy-mice.zip
+# 通过生产教务后台同步骤上传；或直接 scp 拷贝 anatomy-mice/ 到宿主机，
+# 再用 nginx 镜像重建触发 build（已能 mount 等价目录即可）。
+docker compose restart knowledgehub-angular   # 让 nginx 重新读取静态目录（如新挂载）
 ```
 
 `nginx-proxy.conf` 已经 `location ^~ /wasm/` 优先匹配，二进制通过 `alias /usr/share/nginx/html/wasm/` 静态托管；COOP/COEP 头已开启（Unity 多线程 build 需要 SharedArrayBuffer）。
 
 **回退 / 禁用：**
 
-- 临时回退某个仿真：编辑 `{slug}/mirror.json` 的 `status` 为 `"missing"`（60s 缓存后生效）
-- 全局禁用：`appsettings.json` / Docker env 设 `WasmMirror__Enabled=false`；前端会回退到原 URL → `/api/proxy/http/...`
+- 删除某条仿真记录（教师端 → 删除按钮） → 后端级联清除 `wasm-mirrors/{slug}/` 目录。
+- 全局禁用：`appsettings.json` / Docker env 设 `WasmMirror__Enabled=false`；前端会回退到原 URL → `/api/proxy/http/...`（已迁移部分无 sourceUrl，直接走 `/api/proxy` 即可）。
 
-**镜像元信息 (`mirror.json`)：**
+**PracticumSimulation 状态机：**
 
-| 字段 | 必填 | 说明 |
-|------|------|------|
-| `slug` | ✅ | 目录名，全小写短横线 |
-| `sourceUrl` | ✅ | 外部源站 URL |
-| `entryPath` | ❌ | 入口 HTML，默认 `index.html` |
-| `status` | ✅ | `ready` / `missing` / `syncing` / `invalid` |
-| `mirroredAt` | ❌ | ISO 8601 时间戳 |
-| `coopCoepRequired` | ❌ | 默认 `true` |
-| `buildSha` / `files` / `totalBytes` / `fileCount` | ❌ | 由脚本自动写入 |
-| **`title`** | ❌ | 展示用标题；缺失时由后端用 slug 美化（`anatomy-mice` → `Anatomy Mice`） |
-| **`cover`** | ❌ | 封面图 URL；必须是 `http(s)`，不允许本地路径 |
-| **`description`** | ❌ | 描述文本 |
-
-> 三个 `**xxx**` 字段为可选，向后兼容；旧 manifest 自动 fallback 到 slug 美化标题。
+| Status | 值 | 触发条件 | 学生端可见 |
+|--------|----|----------|----------|
+| `Processing` | 0 | 预留；当前上传同步完成 | ❌（已用 0 表示未就绪） |
+| `Ready` | 1 | zip 解压成功，且至少含 1 个 `.unityweb`/`.wasm` | ✅（资源中心 + 实训详情均显示） |
+| `Invalid` | 2 | zip 解压成功但缺 `.unityweb`/`.wasm`，或 index.html 缺失 | ❌（教师端可见） |
 
 **两端入口：**
 
 | 入口 | 路径 | 角色 | 数据来源 |
 |------|------|------|----------|
-| 学生资源中心 | `/student/wasm-center` | 学生 | `GET /api/app/wasm-mirror/all`，**只展示 `status==='ready'`** |
-| 学生仿真全屏 | `/student/wasm-center/:slug` | 学生 | 同上，命中后 iframe `/wasm/{slug}/index.html` |
-| 教师镜像管理 | `/admin/wasm-mirrors` | 教师/管理员 | 同上，**展示所有状态**；提供「重新同步」按钮 → 复制 shell 命令到剪贴板 |
+| 学生资源中心 | `/student/wasm-center` | 学生 | `GET /api/app/practicum-simulation/all`，**只展示 `Status===Ready`** |
+| 学生仿真全屏 | `/student/wasm-center/:slug` | 学生 | 按 slug 命中 → iframe `/wasm/{slug}/{entryPath}`（`safeResourceUrl` 管道） |
+| 学生实训详情 → 仿真 Tab | `/student/practicums/:id` | 学生 | `GET /api/app/practicum-simulation/list-by-project/{projectId}` |
+| 教师/管理员镜像总览 | `/admin/wasm-mirrors` | 教师/管理员 | `GET /api/app/practicum-simulation/all`（全部状态；当前为只读总览） |
+| 教师/管理员 → 实训编辑 → 仿真 Tab | `/admin/practicum` | 教师/管理员 | ProjectId 维度 CRUD + 上传 |
 
 学生端 navbar 「实训」Tab 之后新增「仿真实训」入口（图标 `play-circle`）。
 教师端侧边栏在「搜索和租户管理」之后新增独立分组「WASM 镜像管理」（图标 `cube`）。
@@ -224,10 +225,11 @@ docker compose restart knowledgehub-angular
 |------|------|------|
 | iframe 加载 200 HTML 而非 .unityweb | Nginx `/wasm/` 缺失被 SPA 兜底 | 确认 `nginx-proxy.conf` 的 `location ^~ /wasm/` 存在 |
 | 浏览器 DevTools: `crossOriginIsolated === false` | COOP/COEP 缺失 | `curl -skI /wasm/{slug}/index.html` 应见两个 `Cross-Origin-*` 头 |
-| API 启动日志 `WasmMirror root not found` | 新机器没拉镜像 | 执行 `fetch-wasm.sh`，或忽略（仅影响仿真功能） |
-| `Map<sourceUrl, publicUrl>` 大小为 0 | 后端 mapping 端点被网关拦截 | `curl -sk https://localhost/api/abp/api-definition \| grep wasm-mirror` |
-| 学生 wasm-center 看不到某个镜像 | `mirror.json` 的 `status` 不是 `ready` | 改为 `"ready"` 后 60s 生效；或用教师管理页排查 |
-| 教师页表格 60s 才看到新镜像 | 后端 60s 缓存 | 等 60s 或手动点「刷新」 |
+| 学生看不到新建的镜像 | 后端 Status 不是 Ready（缺 `.unityweb`） | 用 `pack-wasm.sh` 重新打包并上传；或教师端删除重建 |
+| 教师页找不到 PracticumSimulation 控制器 | 后端没重启加载新 AppService | `./dev.sh restart api`，确认 `curl -sk https://localhost:44305/api/abp/api-definition \| jq -r '.modules.app.controllers\|keys[]'` 含 `PracticumSimulation` |
+| 上传大文件失败 | 分片未走完 | 前端日志看 `chunk-upload.service.complete()`；后端 `/api/app/chunk-upload/*` 命中 500MB 限制 |
+| zip-slip 解压失败 | zip 含 `..` 路径 | 后端会拒绝；重新打包确保根目录无 `../` |
+| 删除镜像后 `wasm-mirrors/{slug}` 残留 | 异常路径中断 | 后端日志；手工 `rm -rf` 后重启 API |
 
 ### 进程管理与代码修改
 
