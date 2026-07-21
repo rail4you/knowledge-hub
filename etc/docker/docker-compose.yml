@@ -46,6 +46,8 @@ services:
       - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
       - ./dynamic-env.json:/usr/share/nginx/html/dynamic-env.json:ro
       - ./certs:/etc/nginx/certs:ro
+      # 仿真实训 WASM 本地镜像（生产由 Nginx 直接读取此目录）
+      - ./wasm-mirrors:/usr/share/nginx/html/wasm:ro
     depends_on:
       - knowledgehub-api
     restart: unless-stopped
@@ -95,8 +97,11 @@ services:
       - StringEncryption__DefaultPassPhrase=${STRING_ENCRYPTION_PASSPHRASE}
       # 日志
       - Serilog__MinimumLevel__Default=Information
+      # 仿真实训 WASM 本地镜像（由 Kestrel 兜底读取；生产主要由 Nginx 直接静态托管）
+      - WasmMirror__RootPath=/app/wasm-mirrors
     volumes:
       - ./uploads:/app/uploads
+      - ./wasm-mirrors:/app/wasm-mirrors:ro
     depends_on:
       postgres:
         condition: service_healthy

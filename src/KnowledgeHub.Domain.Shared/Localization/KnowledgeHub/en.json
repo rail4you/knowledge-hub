@@ -459,6 +459,7 @@
     "Enum:SelfAssessment.2": "Partially Correct",
     "Enum:SelfAssessment.3": "Incorrect",
     "Menu:SearchAndTenantManagement": "Search & Tenant Management",
+    "Menu:PracticumMirrorManagement": "Practicum Mirror Management",
     "AbpUi::Logout": "Log Out"
   }
 }

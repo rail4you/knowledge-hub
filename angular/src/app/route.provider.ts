@@ -302,7 +302,7 @@ function configureRoutes() {
       name: '::Menu:Employment',
       iconClass: 'fas fa-briefcase',
       parentName: '::Menu:TrainingManagement',
-      order: 3,
+      order: 4,
       layout: eLayoutType.application,
       
     },
@@ -311,7 +311,7 @@ function configureRoutes() {
       name: '::Menu:MyGuidance',
       iconClass: 'fas fa-compass',
       parentName: '::Menu:TrainingManagement',
-      order: 4,
+      order: 5,
       layout: eLayoutType.application,
       
     },
@@ -320,7 +320,7 @@ function configureRoutes() {
       name: '::Menu:EmploymentJobManagement',
       iconClass: 'fas fa-clipboard-list',
       parentName: '::Menu:TrainingManagement',
-      order: 5,
+      order: 6,
       layout: eLayoutType.application,
       
     },
@@ -329,7 +329,7 @@ function configureRoutes() {
       name: '::Menu:EmploymentInterviewManagement',
       iconClass: 'fas fa-calendar-check',
       parentName: '::Menu:TrainingManagement',
-      order: 6,
+      order: 7,
       layout: eLayoutType.application,
       
     },
@@ -449,6 +449,14 @@ function configureRoutes() {
       iconClass: 'fas fa-building',
       parentName: '::Menu:SearchAndTenantManagement',
       order: 100,
+      layout: eLayoutType.application,
+    },
+    {
+      path: '/admin/wasm-mirrors',
+      name: '::Menu:PracticumMirrorManagement',
+      iconClass: 'fas fa-cube',
+      parentName: '::Menu:TrainingManagement',
+      order: 3,
       layout: eLayoutType.application,
     },
 

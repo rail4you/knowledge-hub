@@ -51,11 +51,13 @@ using Volo.Abp.UI.Navigation;
 using KnowledgeHub.Web;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Volo.Abp.BackgroundJobs;
 using KnowledgeHub.Json;
 using KnowledgeHub.TeachingAgents;
 using Volo.Abp.Json;
 using KnowledgeHub.LiveWs;
+using KnowledgeHub.Practicums.WasmMirrors;
 
 namespace KnowledgeHub;
 
@@ -188,6 +190,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.Configure<MeilisearchOptions>(configuration.GetSection("Meilisearch"));
         context.Services.Configure<EmbeddingServiceOptions>(configuration.GetSection("EmbeddingService"));
         context.Services.Configure<LiteParseOptions>(configuration.GetSection("Liteparse"));
+        context.Services.Configure<WasmMirrorOptions>(configuration.GetSection("WasmMirror"));
 
         context.Services.AddHttpClient("LiteParse", (sp, client) =>
         {
@@ -409,6 +412,53 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
                 Path.Combine(env.ContentRootPath, "uploads")),
             RequestPath = "/uploads"
         });
+
+        // 仿真实训 WASM 本地镜像：开发/容器场景下用 Kestrel 兜底托管。
+        // 生产场景主要由 etc/docker/nginx-proxy.conf 直接读取 /wasm/，此处仍保留以便诊断。
+        var wasmOptions = context.ServiceProvider
+            .GetRequiredService<IOptions<WasmMirrorOptions>>().Value;
+        if (wasmOptions.Enabled)
+        {
+            var resolvedRoot = Path.IsPathRooted(wasmOptions.RootPath)
+                ? wasmOptions.RootPath
+                : Path.GetFullPath(Path.Combine(env.ContentRootPath, wasmOptions.RootPath));
+
+            // 拒绝包含 ".." 的路径段
+            var segments = resolvedRoot.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (!segments.Any(s => s == "..") && Directory.Exists(resolvedRoot))
+            {
+                var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+                provider.Mappings[".wasm"] = "application/wasm";
+                provider.Mappings[".unityweb"] = "application/octet-stream";
+                provider.Mappings[".br"] = "application/octet-stream";
+                app.UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(resolvedRoot),
+                    RequestPath = wasmOptions.PublicBasePath,
+                    ContentTypeProvider = provider,
+                    ServeUnknownFileTypes = false,
+                    DefaultContentType = "application/octet-stream",
+                    OnPrepareResponse = ctx =>
+                    {
+                        ctx.Context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+                        ctx.Context.Response.Headers["Cross-Origin-Embedder-Policy"] = "require-corp";
+                        // 禁用 HTTP 缓存，确保浏览器获取最新镜像文件
+                        ctx.Context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+                        ctx.Context.Response.Headers["Pragma"] = "no-cache";
+                        ctx.Context.Response.Headers["Expires"] = "0";
+                    }
+                });
+            }
+            else
+            {
+                context.ServiceProvider
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("WasmMirror")
+                    .LogWarning(
+                        "WasmMirror root not found or unsafe path: {Path}; wasm static serving disabled.",
+                        resolvedRoot);
+            }
+        }
 
         app.UseCors();
         app.UseAuthentication();

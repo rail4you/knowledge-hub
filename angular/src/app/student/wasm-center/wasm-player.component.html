@@ -1,0 +1,63 @@
+<div class="wasm-player">
+  <div class="wasm-player__toolbar">
+    <a routerLink="/student/wasm-center" class="toolbar-btn toolbar-btn--back">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+      <span>返回列表</span>
+    </a>
+
+    <div class="toolbar-info">
+      @if (mirror(); as m) {
+        <span class="toolbar-info__title">{{ m.title || m.slug }}</span>
+        <nz-tag
+          class="toolbar-info__status"
+          [nzColor]="(m.status || '').toLowerCase() === 'ready' ? 'success' : 'warning'"
+        >
+          {{ m.status }}
+        </nz-tag>
+      } @else if (loading()) {
+        <span class="toolbar-info__title">加载中...</span>
+      } @else {
+        <span class="toolbar-info__title">未找到仿真：{{ slug() }}</span>
+      }
+    </div>
+
+    <div class="toolbar-actions">
+      <a
+        class="toolbar-btn"
+        [href]="openInNewTabUrl()"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="新窗口打开"
+      >
+        <span nz-icon nzType="export" nzTheme="outline"></span>
+        <span>新窗口</span>
+      </a>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="wasm-player__loading">
+      <nz-spin nzSimple nzSize="large"></nz-spin>
+      <p>加载仿真资源中...</p>
+    </div>
+  } @else if (!iframeSrc()) {
+    <div class="wasm-player__error">
+      <span nz-icon nzType="exclamation-circle" nzTheme="outline"></span>
+      <h3>无法启动仿真</h3>
+      <p>参数错误，请返回资源中心。</p>
+      <a routerLink="/student/wasm-center" class="error-link">返回列表</a>
+    </div>
+  } @else {
+    <div class="wasm-player__stage">
+      <iframe
+        [src]="iframeSrc() | safeResourceUrl"
+        [title]="mirror()?.title || slug()"
+        class="wasm-player__iframe"
+        allowfullscreen
+        allow="cross-origin-isolated"
+        referrerpolicy="no-referrer-when-downgrade"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-presentation allow-downloads"
+      ></iframe>
+    </div>
+  }
+</div>

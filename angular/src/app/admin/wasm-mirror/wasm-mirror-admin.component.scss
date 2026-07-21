@@ -1,0 +1,65 @@
+:host { display: block; padding: 24px; background: #f5f5f5; min-height: calc(100vh - 64px); }
+
+.wasm-mirror-admin { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+/* =================== Header =================== */
+.page-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap; background: #fff;
+  border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+.page-header__title { display: flex; align-items: center; gap: 16px;
+  h1 { margin: 0 0 4px; color: #1f2937; font-size: 22px; font-weight: 700; }
+  p { margin: 0; color: #6b7280; font-size: 13px; line-height: 1.6; }
+}
+.page-header__icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #1e6ce8 0%, #00b7ff 100%);
+  color: #fff; font-size: 24px; flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(30,108,232,.28);
+}
+.page-header__actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.last-refresh { color: #8a93a6; font-size: 12px; }
+
+/* =================== Loading / Empty =================== */
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 320px; background: #fff; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.04); color: #6b7280;
+  p { margin: 12px 0 0; }
+}
+.empty-state { padding: 32px 24px; text-align: center; color: #6b7280;
+  &__icon { font-size: 56px; color: #cbd5e1; display: block; margin-bottom: 12px; }
+  h3 { margin: 0 0 8px; color: #1f2937; font-size: 16px; font-weight: 600; }
+  p { margin: 0; font-size: 13px; line-height: 1.6; }
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: #1e6ce8; }
+}
+
+/* =================== Table =================== */
+.table-wrap { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+.cell-title { display: flex; align-items: center; gap: 4px;
+  &__hint { color: #8a93a6; cursor: help; font-size: 13px; }
+}
+.cell-url { max-width: 280px;
+  a { color: #1e6ce8; text-decoration: none; font-size: 12px;
+    display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+    &:hover { text-decoration: underline; }
+  }
+}
+.muted { color: #8a93a6; }
+
+/* =================== Sync Modal =================== */
+.modal-desc { margin: 0 0 16px; color: #4b5563; font-size: 13px; line-height: 1.6; }
+.cmd-box { position: relative;
+  &__textarea {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; line-height: 1.5;
+    background: #1f2937; color: #e5e7eb;
+    border: 1px solid #374151; border-radius: 8px;
+    padding: 12px 14px; resize: vertical;
+  }
+  &__copy { position: absolute; top: 8px; right: 8px; }
+}
+.modal-tip { margin-top: 12px; color: #6b7280; font-size: 12px; line-height: 1.5;
+  display: flex; align-items: flex-start; gap: 4px;
+  span[nz-icon] { color: #f59e0b; margin-top: 2px; flex-shrink: 0; }
+}

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Unity WebGL Player | MouseVirtualSimulationExperiment</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=1920 height=1080></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-webgl-logo"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">MouseVirtualSimulationExperiment</div>
+      </div>
+    </div>
+    <script>
+
+        /** ===新增获取网页参数接口方法开始===**/
+        /**
+         * 获取页面跳转参数
+         * @param name
+         * @returns {null|string}
+         * @constructor
+         */
+        // 本地镜像模式：硬编码 messageKey（无需 query string）
+        var messageKey = "MTkzMTY1MDE4MTgyOTI2MzM2MSwyLDM0MjIyMTE5ODIxMTA0NTAxMCzlrZnkv4rlvLosMTI0LjIyMi45Mi45OTo4MDAyLDIsMiwyLDE=";
+        var messageValue = messageKey;
+        console.log('本地镜像 messageValue:', messageValue);
+
+        // 拦截 Unity 内置遥测请求：返回空 200 响应而非 reject，
+        // 避免 Unity 错误处理将 fetch 失败视为致命错误导致主循环崩溃。
+        var __origFetch = window.fetch.bind(window);
+        window.fetch = function(url, opts) {
+          if (typeof url === 'string' && (
+            url.indexOf('cloud.unity.cn') >= 0 ||
+            url.indexOf('cloud.unity3d.com') >= 0 ||
+            url.indexOf('uca.cloud.unity3d.com') >= 0
+          )) {
+            return Promise.resolve(new Response(null, { status: 200, statusText: 'OK' }));
+          }
+          return __origFetch(url, opts);
+        };
+
+      var container = document.querySelector("#unity-container");
+      var canvas = document.querySelector("#unity-canvas");
+      var loadingBar = document.querySelector("#unity-loading-bar");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+      var warningBanner = document.querySelector("#unity-warning");
+
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
+
+      var buildUrl = "Build";
+      // cacheBust 用于绕过 UnityCache IndexedDB 的旧缓存（第一次下载不完整导致 memory access out of bounds）。
+      // 每次镜像更新时修改此值即可强制 Unity 重新下载构建文件。
+      var cacheBust = "v=5";
+      var loaderUrl = buildUrl + "/小鼠解剖实验.loader.js?" + cacheBust;
+      var config = {
+        dataUrl: buildUrl + "/小鼠解剖实验.data.unityweb?" + cacheBust,
+        frameworkUrl: buildUrl + "/小鼠解剖实验.framework.js.unityweb?" + cacheBust,
+        codeUrl: buildUrl + "/小鼠解剖实验.wasm.unityweb?" + cacheBust,
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "MouseVirtualSimulationExperiment",
+        productVersion: "0.1",
+        showBanner: unityShowBanner,
+      };
+
+      // By default Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      // config.matchWebGLToCanvasSize = false;
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
+
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        container.className = "unity-mobile";
+        canvas.className = "unity-mobile";
+
+        // To lower canvas resolution on mobile devices to gain some
+        // performance, uncomment the following line:
+        // config.devicePixelRatio = 1;
+
+        unityShowBanner('WebGL builds are not supported on mobile devices.');
+      } else {
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+
+          canvas.style.width = "1920px";
+          canvas.style.height = "1080px";
+
+          //canvas.style.width = "100%";
+          //canvas.style.height = "100%";
+      }
+
+      loadingBar.style.display = "block";
+
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          progressBarFull.style.width = 100 * progress + "%";
+        }).then((unityInstance) => {
+            sendTicketToUnity(unityInstance);
+          loadingBar.style.display = "none";
+          fullscreenButton.onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+        }).catch((message) => {
+          alert(message);
+        });
+      };
+        document.body.appendChild(script);
+
+        //传递信息
+        function sendTicketToUnity(unityInstance) {
+            console.log("传递用户信息 ");
+            if (messageValue) {
+                unityInstance.SendMessage('ScriptControl', 'ReceiveMessageFromNeb', messageValue);//是不是在这里调用？
+            }
+            else {
+                console.error("未找到 messageValue 参数");
+            }
+        }
+
+    </script>
+  </body>
+</html>

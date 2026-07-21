@@ -1,0 +1,87 @@
+@use '../styles/student-design' as ds;
+
+:host { flex: 1 1 auto; display: flex; flex-direction: column; background: ds.$student-bg; min-height: 0; }
+
+.wasm-player {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  // 减掉 navbar + 工具栏的高度（用 flex 内部消化）
+  height: calc(100vh - 110px);
+  min-height: 480px;
+}
+
+/* =================== Toolbar =================== */
+.wasm-player__toolbar {
+  display: flex; align-items: center; gap: 12px;
+  height: 56px; padding: 0 20px;
+  background: #fff;
+  border-bottom: 1px solid ds.$student-border-soft;
+  box-shadow: 0 1px 3px rgba(15,23,42,.04);
+  flex-shrink: 0;
+}
+.toolbar-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 14px; border-radius: ds.$student-radius;
+  background: ds.$student-surface-soft; color: ds.$student-text-muted;
+  font-size: 13px; font-weight: 600; text-decoration: none;
+  border: 1px solid ds.$student-border-soft;
+  transition: all .2s ease; cursor: pointer;
+  span[nz-icon] { font-size: 14px; }
+  &:hover { color: ds.$student-primary; background: #f0f6ff; border-color: rgba(ds.$student-primary,.3); }
+}
+.toolbar-btn--back { background: transparent; border-color: transparent; &:hover { background: #f0f6ff; border-color: rgba(ds.$student-primary,.2); } }
+
+.toolbar-info {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+  &__title {
+    color: ds.$student-text; font-size: 16px; font-weight: 700;
+    @include ds.line-clamp(1);
+  }
+  &__status { font-weight: 600; margin: 0; }
+}
+.toolbar-actions { display: flex; align-items: center; gap: 8px; }
+
+/* =================== Stage / Iframe =================== */
+.wasm-player__stage {
+  flex: 1 1 auto;
+  background: #0f172a;
+  position: relative;
+  overflow: hidden;
+}
+.wasm-player__iframe {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border: 0; display: block;
+  background: #0f172a;
+}
+
+/* =================== Loading / Error =================== */
+.wasm-player__loading,
+.wasm-player__error {
+  flex: 1 1 auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: #fff; color: ds.$student-text-muted; padding: 48px 24px;
+  text-align: center;
+  p { margin: 12px 0 0; }
+}
+.wasm-player__error {
+  span[nz-icon] { font-size: 56px; color: ds.$student-text-light; margin-bottom: 16px; }
+  h3 { margin: 0 0 8px; color: ds.$student-text; font-size: 18px; font-weight: 600; }
+  .error-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 40px; padding: 0 20px; border-radius: ds.$student-radius;
+    background: ds.$student-primary; color: #fff; font-size: 14px; font-weight: 600;
+    text-decoration: none; margin-top: 16px;
+    box-shadow: 0 4px 10px rgba(30,108,232,.25);
+  }
+}
+
+/* =================== Responsive =================== */
+@media (max-width: 768px) {
+  .wasm-player { height: calc(100vh - 90px); min-height: 360px; }
+  .wasm-player__toolbar { height: 48px; padding: 0 12px; gap: 8px; }
+  .toolbar-info__title { font-size: 14px; }
+  .toolbar-btn span:not([nz-icon]) { display: none; }
+  .toolbar-btn { padding: 0 10px; }
+}

@@ -134,20 +134,29 @@
 
       @if (activeTab() === 'simulations') {
         <div class="simulations-list">
+          @if (hasUnmirroredSimulation()) {
+            <div class="simulation-banner">
+              <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+              本地镜像未就绪或本次仿真未配置镜像，已自动回退到源站加载。
+              <a [href]="resolveMirror(simulations()[0].resourceUrl ?? '')" target="_blank" rel="noopener noreferrer">
+                点此使用源站
+              </a>
+            </div>
+          }
           @for (sim of simulations(); track sim.id) {
             <div class="simulation-card">
               <div class="simulation-card__header">
                 <span nz-icon nzType="experiment" nzTheme="outline"></span>
                 <h4>{{ sim.title }}</h4>
                 @if (sim.description) { <p>{{ sim.description }}</p> }
-                <a [href]="sim.resourceUrl" target="_blank" rel="noopener noreferrer"
+                <a [href]="resolveMirror(sim.resourceUrl ?? '')" target="_blank" rel="noopener noreferrer"
                    class="simulation-card__open">
                   <span nz-icon nzType="export" nzTheme="outline"></span> 新窗口打开
                 </a>
               </div>
               <div class="simulation-card__frame-wrap">
                 <iframe
-                  [src]="sim.resourceUrl | safeResourceUrl"
+                  [src]="(sim.resourceUrl | wasmMirrorUrl: wasmMirrorMap()) | safeResourceUrl"
                   [title]="sim.title"
                   class="simulation-card__iframe"
                   loading="lazy"

@@ -1,0 +1,75 @@
+<div class="wasm-center">
+  <div class="wasm-center__inner">
+    <header class="page-header">
+      <a routerLink="/student" class="back-link">← 返回</a>
+      <div class="page-header__title">
+        <span class="page-header__icon" aria-hidden="true">
+          <span nz-icon nzType="experiment" nzTheme="outline"></span>
+        </span>
+        <div>
+          <h1>仿真实训中心</h1>
+          <p>基于 Unity WebGL 的沉浸式仿真实训资源，本地化镜像秒开体验。</p>
+        </div>
+      </div>
+    </header>
+
+    @if (loading()) {
+      <div class="loading-state">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+        <p>加载中...</p>
+      </div>
+    } @else if (readyList().length === 0) {
+      <div class="empty-state">
+        <span nz-icon nzType="inbox" nzTheme="outline" class="empty-state__icon"></span>
+        <h3>暂无仿真实训镜像</h3>
+        <p>教师还未配置仿真实训资源，或所有资源都尚未就绪。请联系教师或管理员。</p>
+        <a routerLink="/student/practicums" class="empty-state__link">
+          <span nz-icon nzType="profile" nzTheme="outline"></span>
+          前往实训列表
+        </a>
+      </div>
+    } @else {
+      <div class="card-grid">
+        @for (item of readyList(); track trackBySlug($index, item)) {
+          <a
+            class="mirror-card"
+            [routerLink]="['/student/wasm-center', item.slug]"
+          >
+            <div class="mirror-card__cover">
+              @if (item.cover) {
+                <img [src]="item.cover" [alt]="item.title || item.slug" loading="lazy" />
+              } @else {
+                <div class="mirror-card__cover-fallback" aria-hidden="true">
+                  <span nz-icon nzType="experiment" nzTheme="outline"></span>
+                </div>
+              }
+              <nz-tag class="mirror-card__status" nzColor="success">已就绪</nz-tag>
+            </div>
+            <div class="mirror-card__body">
+              <h3 class="mirror-card__title">{{ item.title || item.slug }}</h3>
+              @if (item.description) {
+                <p class="mirror-card__desc">{{ item.description }}</p>
+              } @else {
+                <p class="mirror-card__desc mirror-card__desc--muted">暂无描述</p>
+              }
+              <div class="mirror-card__meta">
+                <span><span nz-icon nzType="file" nzTheme="outline"></span> {{ item.fileCount ?? 0 }} 个文件</span>
+                <span><span nz-icon nzType="hdd" nzTheme="outline"></span> {{ formatBytes(item.totalBytes) }}</span>
+                @if (item.mirroredAt) {
+                  <span><span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                    {{ item.mirroredAt | date:'yyyy-MM-dd' }}
+                  </span>
+                }
+              </div>
+            </div>
+            <div class="mirror-card__cta">
+              <span nz-icon nzType="play-circle" nzTheme="fill"></span>
+              <span>开始仿真</span>
+              <span nz-icon nzType="right" class="mirror-card__arrow"></span>
+            </div>
+          </a>
+        }
+      </div>
+    }
+  </div>
+</div>

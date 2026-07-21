@@ -1,0 +1,13 @@
+# 当前目录（wasm-mirrors）下，{slug}/ 中的二进制资源全部不进 git，
+# 但 mirror.json / README / .gitkeep / .gitignore 自身除外。
+#
+# 用法（被根目录 .gitignore 中 ! 规则覆盖）：
+
+# 兜底兜住一切未知后缀
+*
+!*/
+!mirror.json
+!index.html
+!README.md
+!.gitkeep
+!.gitignore

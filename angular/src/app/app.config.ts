@@ -99,6 +99,13 @@ import {
   CopyOutline,
   KeyOutline,
   UserOutline,
+  // WASM 仿真实训中心 & 播放页图标
+  ArrowLeftOutline,
+  ExportOutline,
+  ProfileOutline,
+  HddOutline,
+  ExclamationCircleOutline,
+  PlayCircleFill,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -196,6 +203,13 @@ const icons = [
   CopyOutline,
   KeyOutline,
   UserOutline,
+  // WASM 仿真实训中心 & 播放页
+  ArrowLeftOutline,
+  ExportOutline,
+  ProfileOutline,
+  HddOutline,
+  ExclamationCircleOutline,
+  PlayCircleFill,
 ];
 
 export const appConfig: ApplicationConfig = {

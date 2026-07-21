@@ -17,14 +17,14 @@ export class SafeResourceUrlPipe implements PipeTransform {
 
   transform(url: string | null | undefined): SafeResourceUrl | string {
     if (!url) return '';
-    // 简单校验：只允许 http/https 协议
     const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
+    // 允许 http/https 绝对路径，也允许 / 开头的相对路径（如本地 WASM 镜像 /wasm/xxx/index.html）
+    if (!/^(https?:\/\/|\/)/i.test(trimmed)) {
       return '';
     }
 
     // HTTPS 页面 + HTTP 资源 → 走后端代理，避免 Mixed Content 被拦截
-    if (this.isHttps && trimmed.startsWith('http://')) {
+    if (this.isHttps && /^http:\/\//i.test(trimmed)) {
       const proxyUrl = this.buildProxyUrl(trimmed);
       if (proxyUrl) {
         return this.sanitizer.bypassSecurityTrustResourceUrl(proxyUrl);
