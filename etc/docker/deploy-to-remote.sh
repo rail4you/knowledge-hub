@@ -10,6 +10,7 @@
 #   ./deploy-to-remote.sh migrator   # 仅更新迁移工具
 #   ./deploy-to-remote.sh sync       # 仅同步配置文件
 #   ./deploy-to-remote.sh liteparse  # 仅更新/重启 LiteParse 服务
+#   ./deploy-to-remote.sh wasm       # 仅同步 WASM 仿真实训镜像到远程
 #
 # ============================================================
 
@@ -196,6 +197,26 @@ build_migrator() {
 }
 
 # ============================================================
+# 同步 WASM 仿真实训镜像到远程服务器
+# ============================================================
+sync_wasm_mirrors() {
+    local src="$SCRIPT_DIR/wasm-mirrors"
+    local dst="$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/wasm-mirrors"
+
+    info "同步 WASM 镜像到远程服务器..."
+
+    if command -v rsync &>/dev/null; then
+        rsync -avz --progress "$src/" "$dst/"
+    else
+        # fallback: 先创建目录再 scp
+        ssh "$REMOTE_USER@$REMOTE_HOST" "mkdir -p $REMOTE_DIR/wasm-mirrors"
+        scp -r "$src/" "$dst/"
+    fi
+
+    ok "WASM 镜像同步完成"
+}
+
+# ============================================================
 # 同步配置文件到远程服务器
 # ============================================================
 sync_configs() {
@@ -317,6 +338,7 @@ cmd_all() {
     build_api
     build_angular
     sync_configs
+    sync_wasm_mirrors
     verify_liteparse
     remote_deploy
     verify_deployment
@@ -365,6 +387,13 @@ cmd_sync() {
     ok "配置文件同步完成！"
 }
 
+cmd_wasm() {
+    sync_wasm_mirrors
+    info "重启 Angular 容器以刷新 Nginx 静态文件..."
+    ssh "$REMOTE_USER@$REMOTE_HOST" "cd ~/knowledgehub && ./deploy.sh restart knowledgehub-angular"
+    ok "WASM 镜像同步完成！"
+}
+
 cmd_liteparse() {
     info "更新/重启 LiteParse 服务..."
 
@@ -394,7 +423,8 @@ show_help() {
     echo "  api        仅更新后端"
     echo "  migrator   仅更新迁移工具并执行迁移"
     echo "  sync       仅同步配置文件"
-    echo "  liteparse  仅更新/重启 LiteParse 服务（镜像由外部项目推送）"
+    echo "  liteparse  仅更新/重启 LiteParse 服务（镜像由外部项目推送）
+  wasm       仅同步 WASM 仿真实训镜像到远程"
     echo ""
     echo "首次部署前请确保:"
     echo "  1. 已登录阿里云镜像仓库: docker login $REGISTRY"
@@ -413,6 +443,7 @@ case "${1:-}" in
     migrator)  cmd_migrator ;;
     sync)      cmd_sync ;;
     liteparse) cmd_liteparse ;;
+    wasm)      cmd_wasm ;;
     -h|--help) show_help ;;
     *)         show_help; exit 1 ;;
 esac
