@@ -7,12 +7,12 @@
 
     <div class="toolbar-info">
       @if (mirror(); as m) {
-        <span class="toolbar-info__title">{{ m.title || m.slug }}</span>
+        <span class="toolbar-info__title">{{ m.name || m.slug }}</span>
         <nz-tag
           class="toolbar-info__status"
-          [nzColor]="(m.status || '').toLowerCase() === 'ready' ? 'success' : 'warning'"
+          [nzColor]="m.status === 1 ? 'success' : 'warning'"
         >
-          {{ m.status }}
+          {{ statusLabel(m.status) }}
         </nz-tag>
       } @else if (loading()) {
         <span class="toolbar-info__title">加载中...</span>
@@ -22,13 +22,7 @@
     </div>
 
     <div class="toolbar-actions">
-      <a
-        class="toolbar-btn"
-        [href]="openInNewTabUrl()"
-        target="_blank"
-        rel="noopener noreferrer"
-        title="新窗口打开"
-      >
+      <a class="toolbar-btn" [href]="openInNewTabUrl()" target="_blank" rel="noopener noreferrer" title="新窗口打开">
         <span nz-icon nzType="export" nzTheme="outline"></span>
         <span>新窗口</span>
       </a>
@@ -51,7 +45,7 @@
     <div class="wasm-player__stage">
       <iframe
         [src]="iframeSrc() | safeResourceUrl"
-        [title]="mirror()?.title || slug()"
+        [title]="mirror()?.name || slug()"
         class="wasm-player__iframe"
         allowfullscreen
         allow="cross-origin-isolated"

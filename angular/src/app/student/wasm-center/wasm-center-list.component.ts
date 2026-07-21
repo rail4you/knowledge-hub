@@ -6,18 +6,10 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { WasmMirrorService, type WasmMirrorInfoDto } from '../../shared/wasm-mirror.service';
+import { PracticumSimulationService } from '../../proxy/practicums/simulations/practicum-simulation.service';
+import { PracticumSimulationStatus } from '../../proxy/practicums/simulations/enums/practicum-simulation-status.enum';
+import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
 
-/**
- * 学生端「仿真实训中心」列表页。
- *
- * - 调用 GET /api/app/wasm-mirror/all 拉取所有镜像
- * - 仅展示 status === 'ready' 的镜像
- * - 卡片网格：封面图（无则 nz-icon 占位）+ 标题 + 描述 + 文件大小 + 状态徽章
- * - 点击卡片 → /student/wasm-center/:slug 走 wasm-player 全屏打开
- *
- * 学生侧不展示 missing/invalid 状态的镜像；遇到任何拉取失败给出友好提示。
- */
 @Component({
   selector: 'app-wasm-center-list',
   standalone: true,
@@ -36,16 +28,13 @@ import { WasmMirrorService, type WasmMirrorInfoDto } from '../../shared/wasm-mir
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class WasmCenterListComponent implements OnInit {
-  private readonly wasmMirrorService = inject(WasmMirrorService);
+  private readonly simulationService = inject(PracticumSimulationService);
   private readonly message = inject(NzMessageService);
 
-  /** 全部镜像（含 missing 等状态，仅诊断时用）。 */
-  readonly all = signal<WasmMirrorInfoDto[]>([]);
+  readonly all = signal<PracticumSimulationDto[]>([]);
   readonly loading = signal(true);
-
-  /** 学生端可见的列表：仅 ready。 */
-  readonly readyList = computed<WasmMirrorInfoDto[]>(() =>
-    this.all().filter(x => (x.status ?? '').toLowerCase() === 'ready'),
+  readonly readyList = computed<PracticumSimulationDto[]>(() =>
+    this.all().filter(x => x.status === PracticumSimulationStatus.Ready),
   );
 
   ngOnInit(): void {
@@ -54,20 +43,19 @@ export class WasmCenterListComponent implements OnInit {
 
   private load(): void {
     this.loading.set(true);
-    this.wasmMirrorService.getAll().subscribe({
+    this.simulationService.getAll().subscribe({
       next: list => {
         this.all.set(Array.isArray(list) ? list : []);
         this.loading.set(false);
       },
       error: err => {
-        console.error('[wasm-center] failed to load mirrors', err);
+        console.error('[wasm-center] failed to load simulations', err);
         this.message.error('加载仿真实训列表失败，请稍后重试');
         this.loading.set(false);
       },
     });
   }
 
-  /** 把字节数格式化为人类可读（KB/MB/GB）。 */
   formatBytes(bytes?: number | null): string {
     if (bytes == null || isNaN(bytes)) return '—';
     if (bytes < 1024) return `${bytes} B`;
@@ -76,7 +64,7 @@ export class WasmCenterListComponent implements OnInit {
     return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
   }
 
-  trackBySlug(_idx: number, item: WasmMirrorInfoDto): string {
-    return item.slug;
+  trackBySlug(_idx: number, item: PracticumSimulationDto): string {
+    return item.slug ?? item.id ?? '';
   }
 }

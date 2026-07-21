@@ -7,19 +7,10 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
-import { WasmMirrorService, type WasmMirrorInfoDto } from '../../shared/wasm-mirror.service';
+import { PracticumSimulationService } from '../../proxy/practicums/simulations/practicum-simulation.service';
+import { PracticumSimulationStatus } from '../../proxy/practicums/simulations/enums/practicum-simulation-status.enum';
+import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
 
-/**
- * 学生端「仿真实训中心」全屏 iframe 播放页。
- *
- * - 路由 /student/wasm-center/:slug
- * - 通过 slug 在镜像列表中查找对应项（拉取 /api/app/wasm-mirror/all）
- * - 顶部工具栏：返回 + 标题 + 状态徽章 + 新窗口打开
- * - 主区域：iframe 指向本地镜像 /wasm/{slug}/index.html
- *
- * 注意：本组件不依赖 wasm-mirror-url pipe，因为我们已经拿到了 slug，
- * 可以直接拼本地镜像的 publicUrl，不再做 sourceUrl → publicUrl 的 lookup。
- */
 @Component({
   selector: 'app-wasm-player',
   standalone: true,
@@ -40,23 +31,20 @@ import { WasmMirrorService, type WasmMirrorInfoDto } from '../../shared/wasm-mir
 })
 export class WasmPlayerComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly wasmMirrorService = inject(WasmMirrorService);
+  private readonly simulationService = inject(PracticumSimulationService);
   private readonly message = inject(NzMessageService);
 
-  /** 路由参数中的 slug。 */
-  readonly slug = signal<string>('');
-  /** 当前 slug 对应的镜像详情。找不到时为 null。 */
-  readonly mirror = signal<WasmMirrorInfoDto | null>(null);
+  readonly slug = signal('');
+  readonly mirror = signal<PracticumSimulationDto | null>(null);
   readonly loading = signal(true);
 
-  /** iframe 目标 URL：本地镜像 /wasm/{slug}/index.html。 */
   readonly iframeSrc = computed(() => {
+    const mirror = this.mirror();
+    if (mirror?.publicUrl) return mirror.publicUrl;
     const slug = this.slug();
-    if (!slug) return '';
-    return `/wasm/${slug}/index.html`;
+    return slug ? `/wasm/${encodeURIComponent(slug)}/index.html` : '';
   });
 
-  /** 新窗口打开时的完整 URL：拼接 window.location.origin。 */
   readonly openInNewTabUrl = computed(() => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     return `${origin}${this.iframeSrc()}`;
@@ -73,21 +61,25 @@ export class WasmPlayerComponent implements OnInit {
     this.load(slug);
   }
 
+  statusLabel(status?: PracticumSimulationStatus): string {
+    if (status === PracticumSimulationStatus.Ready) return '已就绪';
+    if (status === PracticumSimulationStatus.Processing) return '处理中';
+    if (status === PracticumSimulationStatus.Invalid) return '无效';
+    return '未知';
+  }
+
   private load(slug: string): void {
     this.loading.set(true);
-    this.wasmMirrorService.getAll().subscribe({
+    this.simulationService.getAll().subscribe({
       next: list => {
         const found = (list ?? []).find(x => x.slug === slug) ?? null;
         this.mirror.set(found);
         this.loading.set(false);
-        if (!found) {
-          this.message.warning(`未找到仿真镜像 "${slug}"`);
-        } else if ((found.status ?? '').toLowerCase() !== 'ready') {
-          this.message.warning(`镜像 "${slug}" 当前状态：${found.status}，可能无法加载`);
-        }
+        if (!found) this.message.warning(`未找到仿真镜像 "${slug}"`);
+        else if (found.status !== PracticumSimulationStatus.Ready) this.message.warning(`镜像 "${slug}" 当前不可用`);
       },
       error: err => {
-        console.error('[wasm-player] failed to load mirrors', err);
+        console.error('[wasm-player] failed to load simulations', err);
         this.message.error('加载仿真信息失败');
         this.loading.set(false);
       },

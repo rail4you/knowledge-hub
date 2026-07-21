@@ -134,38 +134,32 @@
 
       @if (activeTab() === 'simulations') {
         <div class="simulations-list">
-          @if (hasUnmirroredSimulation()) {
-            <div class="simulation-banner">
-              <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-              本地镜像未就绪或本次仿真未配置镜像，已自动回退到源站加载。
-              <a [href]="resolveMirror(simulations()[0].resourceUrl ?? '')" target="_blank" rel="noopener noreferrer">
-                点此使用源站
-              </a>
-            </div>
-          }
-          @for (sim of simulations(); track sim.id) {
-            <div class="simulation-card">
-              <div class="simulation-card__header">
-                <span nz-icon nzType="experiment" nzTheme="outline"></span>
-                <h4>{{ sim.title }}</h4>
-                @if (sim.description) { <p>{{ sim.description }}</p> }
-                <a [href]="resolveMirror(sim.resourceUrl ?? '')" target="_blank" rel="noopener noreferrer"
-                   class="simulation-card__open">
-                  <span nz-icon nzType="export" nzTheme="outline"></span> 新窗口打开
-                </a>
+          @if (!simulations().length) {
+            <div class="empty-small">暂无可用仿真镜像</div>
+          } @else {
+            @for (sim of simulations(); track sim.id) {
+              <div class="simulation-card">
+                <div class="simulation-card__header">
+                  <span nz-icon nzType="experiment" nzTheme="outline"></span>
+                  <h4>{{ sim.name }}</h4>
+                  @if (sim.description) { <p>{{ sim.description }}</p> }
+                  <a [href]="sim.publicUrl" target="_blank" rel="noopener noreferrer" class="simulation-card__open">
+                    <span nz-icon nzType="export" nzTheme="outline"></span> 新窗口打开
+                  </a>
+                </div>
+                <div class="simulation-card__frame-wrap">
+                  <iframe
+                    [src]="sim.publicUrl | safeResourceUrl"
+                    [title]="sim.name"
+                    class="simulation-card__iframe"
+                    loading="lazy"
+                    allowfullscreen
+                    referrerpolicy="no-referrer-when-downgrade"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-presentation">
+                  </iframe>
+                </div>
               </div>
-              <div class="simulation-card__frame-wrap">
-                <iframe
-                  [src]="(sim.resourceUrl | wasmMirrorUrl: wasmMirrorMap()) | safeResourceUrl"
-                  [title]="sim.title"
-                  class="simulation-card__iframe"
-                  loading="lazy"
-                  allowfullscreen
-                  referrerpolicy="no-referrer-when-downgrade"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-presentation">
-                </iframe>
-              </div>
-            </div>
+            }
           }
         </div>
       }

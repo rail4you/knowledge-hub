@@ -6,15 +6,12 @@
       </span>
       <div>
         <h1>仿真实训镜像管理</h1>
-        <p>管理本地 Unity WebGL 镜像。</p>
+        <p>查看和维护已关联实训项目的仿真镜像。</p>
       </div>
     </div>
-
     <div class="page-header__actions">
       @if (lastRefreshedAt()) {
-        <span class="last-refresh">
-          最后刷新：{{ lastRefreshedAt() | date:'HH:mm:ss' }}
-        </span>
+        <span class="last-refresh">最后刷新：{{ lastRefreshedAt() | date:'HH:mm:ss' }}</span>
       }
       <button nz-button nzType="primary" (click)="load()">
         <span nz-icon nzType="reload" nzTheme="outline"></span>
@@ -24,86 +21,49 @@
   </header>
 
   @if (loading() && items().length === 0) {
-    <div class="loading-state">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p>加载中...</p>
-    </div>
+    <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>
   } @else if (items().length === 0) {
-    <nz-empty
-      nzNotFoundContent="暂无镜像"
-      [nzNotFoundImage]="'simple'"
-    >
-      <ng-template nz-not-found-content>
-        <div class="empty-state">
-          <span nz-icon nzType="inbox" nzTheme="outline" class="empty-state__icon"></span>
-          <h3>暂无任何镜像</h3>
-          <p>运行 <code>bash scripts/fetch-wasm.sh &lt;source-url&gt; &lt;slug&gt;</code> 添加第一个镜像。</p>
-        </div>
-      </ng-template>
-    </nz-empty>
+    <nz-empty nzNotFoundContent="暂无仿真镜像"></nz-empty>
   } @else {
     <div class="table-wrap">
-      <nz-table
-        [nzData]="items()"
-        [nzShowPagination]="items().length > 10"
-        [nzPageSize]="10"
-        nzSize="middle"
-      >
+      <nz-table [nzData]="items()" [nzShowPagination]="items().length > 10" [nzPageSize]="10" nzSize="middle">
         <thead>
           <tr>
-            <th>slug</th>
-            <th>标题</th>
-            <th>sourceUrl</th>
+            <th>名称</th>
+            <th>Slug</th>
+            <th>实训项目</th>
             <th>状态</th>
             <th nzWidth="80px">文件数</th>
             <th nzWidth="100px">大小</th>
-            <th nzWidth="120px">同步时间</th>
-            <th nzWidth="120px">操作</th>
+            <th nzWidth="150px">创建时间</th>
+            <th nzWidth="150px">操作</th>
           </tr>
         </thead>
         <tbody>
-          @for (item of items(); track trackBySlug($index, item)) {
+          @for (item of items(); track trackById($index, item)) {
             <tr>
-              <td><code>{{ item.slug }}</code></td>
               <td>
                 <div class="cell-title">
-                  <span>{{ item.title || '—' }}</span>
+                  <span>{{ item.name || '—' }}</span>
                   @if (item.description) {
-                    <span
-                      nz-icon
-                      nzType="info-circle"
-                      nzTheme="outline"
-                      [nzTooltip]="item.description"
-                      class="cell-title__hint"
-                    ></span>
+                    <span nz-icon nzType="info-circle" nzTheme="outline" [nzTooltip]="item.description"></span>
                   }
                 </div>
               </td>
-              <td class="cell-url">
-                @if (item.sourceUrl) {
-                  <a [href]="item.sourceUrl" target="_blank" rel="noopener noreferrer" [nzTooltip]="item.sourceUrl">
-                    {{ item.sourceUrl }}
-                  </a>
-                } @else {
-                  <span class="muted">—</span>
-                }
-              </td>
-              <td>
-                <nz-tag [nzColor]="statusColor(item.status)">{{ item.status }}</nz-tag>
-              </td>
+              <td><code>{{ item.slug }}</code></td>
+              <td><code>{{ item.projectId }}</code></td>
+              <td><nz-tag [nzColor]="statusColor(item.status)">{{ statusLabel(item.status) }}</nz-tag></td>
               <td>{{ item.fileCount ?? 0 }}</td>
               <td>{{ formatBytes(item.totalBytes) }}</td>
+              <td>{{ item.creationTime ? (item.creationTime | date:'yyyy-MM-dd HH:mm') : '—' }}</td>
               <td>
-                @if (item.mirroredAt) {
-                  {{ item.mirroredAt | date:'yyyy-MM-dd HH:mm' }}
-                } @else {
-                  <span class="muted">—</span>
+                @if (item.publicUrl) {
+                  <a nz-button nzType="link" nzSize="small" [href]="item.publicUrl" target="_blank" rel="noopener noreferrer">
+                    <span nz-icon nzType="export"></span> 打开
+                  </a>
                 }
-              </td>
-              <td>
-                <button nz-button nzType="link" nzSize="small" (click)="openSyncModal(item)">
-                  <span nz-icon nzType="sync" nzTheme="outline"></span>
-                  重新同步
+                <button nz-button nzType="link" nzDanger nzSize="small" (click)="delete(item)">
+                  <span nz-icon nzType="delete"></span> 删除
                 </button>
               </td>
             </tr>
@@ -113,37 +73,3 @@
     </div>
   }
 </div>
-
-<!-- 「重新同步」Modal：展示 shell 命令，让管理员手动复制到终端执行 -->
-<nz-modal
-  [nzVisible]="syncModalVisible()"
-  (nzVisibleChange)="syncModalVisible.set($event)"
-  nzTitle="重新同步镜像"
-  [nzFooter]="null"
-  nzWidth="640px"
-  (nzOnCancel)="closeSyncModal()"
->
-  <ng-container *nzModalContent>
-    <p class="modal-desc">
-      把以下命令复制到项目根目录的终端中执行，完成后会覆盖现有镜像。
-      重启 API 后（约 5 秒）即可在表格中看到新状态。
-    </p>
-    <div class="cmd-box">
-      <textarea
-        nz-input
-        readonly
-        [ngModel]="syncCommand()"
-        rows="3"
-        class="cmd-box__textarea"
-      ></textarea>
-      <button nz-button nzType="primary" (click)="copyCommand()" class="cmd-box__copy">
-        <span nz-icon nzType="copy" nzTheme="outline"></span>
-        复制命令
-      </button>
-    </div>
-    <div class="modal-tip">
-      <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-      注意：脚本只在 Linux/macOS 终端中可用；Windows 请用 WSL 或 Git Bash。
-    </div>
-  </ng-container>
-</nz-modal>

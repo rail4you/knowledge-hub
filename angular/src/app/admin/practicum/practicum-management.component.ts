@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RestService } from '@abp/ng.core';
+import { firstValueFrom } from 'rxjs';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -17,6 +19,8 @@ import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { CourseService } from '../../proxy/courses/course.service';
+import { ChunkUploadService } from '../../proxy/controllers/chunk-upload.service';
+import type { CompleteUploadResultDto } from '../../proxy/resources/models';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { OssUploadService } from '../../shared/oss-upload.service';
 import {
@@ -30,6 +34,9 @@ import {
   PracticumSubmissionDto,
   PracticumSubmissionStatus,
 } from '../../practicum/practicum.service';
+import { PracticumSimulationService } from '../../proxy/practicums/simulations/practicum-simulation.service';
+import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
+import { PracticumSimulationStatus } from '../../proxy/practicums/simulations/enums/practicum-simulation-status.enum';
 import { PracticumChatService } from '../../practicum/practicum-chat.service';
 import type { PracticumAgentConfigDto } from '../../practicum/practicum-chat.service';
 
@@ -63,15 +70,31 @@ export class PracticumManagementComponent implements OnInit {
   private readonly pratChatService = inject(PracticumChatService);
   private readonly courseService = inject(CourseService);
   private readonly ossUploadService = inject(OssUploadService);
+  private readonly simulationService = inject(PracticumSimulationService);
+  private readonly chunkUploadService = inject(ChunkUploadService);
+  private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   readonly projects = signal<PracticumProjectDto[]>([]);
   readonly enrollments = signal<PracticumEnrollmentDto[]>([]);
   readonly submissions = signal<PracticumSubmissionDto[]>([]);
+  readonly simulations = signal<PracticumSimulationDto[]>([]);
   readonly courses = signal<CourseDto[]>([]);
   readonly statuses = PracticumProjectStatus;
   readonly submissionStatuses = PracticumSubmissionStatus;
+  readonly simulationStatuses = PracticumSimulationStatus;
+
+  simulationName = '';
+  simulationDescription = '';
+  simulationCoverUrl = '';
+  simulationSortOrder = 0;
+  simulationFile: File | null = null;
+  simulationFileName = '';
+  simulationUploading = false;
+  simulationSaving = false;
+  simulationUploadProgress = 0;
+  editingSimulationId: string | null = null;
 
   activeTab = 0;
   selectedProjectId: string | null = null;
@@ -201,6 +224,9 @@ export class PracticumManagementComponent implements OnInit {
 
   openCreate(): void {
     this.editingId = null;
+    this.selectedProjectId = null;
+    this.simulations.set([]);
+    this.resetSimulationForm();
     this.form = this.freshForm();
     this.modalVisible = true;
     this.cdr.markForCheck();
@@ -218,6 +244,7 @@ export class PracticumManagementComponent implements OnInit {
       this.activeTab = 1;
       this.modalVisible = false;
       this.loadEnrollmentsAndSubmissions(p.id);
+      this.loadSimulations(p.id);
       this.cdr.markForCheck();
     });
   }
@@ -242,6 +269,7 @@ export class PracticumManagementComponent implements OnInit {
           this.applyDetailToForm(detail);
           this.reload();
           this.loadEnrollmentsAndSubmissions(r.id);
+          this.loadSimulations(r.id);
           this.cdr.markForCheck();
         });
       },
@@ -278,11 +306,185 @@ export class PracticumManagementComponent implements OnInit {
         this.activeTab = 0;
         this.enrollments.set([]);
         this.submissions.set([]);
+        this.simulations.set([]);
+        this.resetSimulationForm();
         this.reload();
         this.cdr.markForCheck();
       },
       error: () => this.message.error('删除失败'),
     });
+  }
+
+  // --- 仿真镜像管理 -------------------------------------------
+
+  private loadSimulations(projectId: string): void {
+    this.simulationService.getListByProject(projectId).subscribe({
+      next: list => {
+        this.simulations.set(list || []);
+        this.cdr.markForCheck();
+      },
+      error: () => this.message.error('加载仿真镜像失败'),
+    });
+  }
+
+  private resetSimulationForm(): void {
+    this.editingSimulationId = null;
+    this.simulationName = '';
+    this.simulationDescription = '';
+    this.simulationCoverUrl = '';
+    this.simulationSortOrder = this.simulations().length;
+    this.simulationFile = null;
+    this.simulationFileName = '';
+    this.simulationUploading = false;
+    this.simulationSaving = false;
+    this.simulationUploadProgress = 0;
+  }
+
+  openAddSimulation(): void {
+    this.resetSimulationForm();
+    this.activeTab = 5;
+    this.cdr.markForCheck();
+  }
+
+  openEditSimulation(item: PracticumSimulationDto): void {
+    this.editingSimulationId = item.id ?? null;
+    this.simulationName = item.name ?? '';
+    this.simulationDescription = item.description ?? '';
+    this.simulationCoverUrl = item.coverUrl ?? '';
+    this.simulationSortOrder = item.sortOrder ?? 0;
+    this.simulationFile = null;
+    this.simulationFileName = '';
+    this.activeTab = 5;
+    this.cdr.markForCheck();
+  }
+
+  onSimulationFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      this.message.error('仿真构建必须是 ZIP 文件');
+      input.value = '';
+      return;
+    }
+    if (file.size > 500 * 1024 * 1024) {
+      this.message.error('ZIP 文件不能超过 500MB');
+      input.value = '';
+      return;
+    }
+    this.simulationFile = file;
+    this.simulationFileName = file.name;
+    this.cdr.markForCheck();
+  }
+
+  async saveSimulation(): Promise<void> {
+    const projectId = this.selectedProjectId;
+    if (!projectId || !this.simulationName.trim()) {
+      this.message.warning('请填写仿真名称');
+      return;
+    }
+    if (!this.editingSimulationId && !this.simulationFile) {
+      this.message.warning('请先选择仿真 ZIP 文件');
+      return;
+    }
+
+    this.simulationSaving = true;
+    try {
+      if (this.editingSimulationId) {
+        await firstValueFrom(this.simulationService.update(this.editingSimulationId, {
+          name: this.simulationName.trim(),
+          description: this.simulationDescription.trim() || undefined,
+          coverUrl: this.simulationCoverUrl.trim() || undefined,
+          sortOrder: Number(this.simulationSortOrder) || 0,
+        }));
+        this.message.success('仿真镜像信息已更新');
+      } else {
+        const upload = await this.uploadSimulationFile(this.simulationFile!);
+        if (!upload.filePath) throw new Error('上传完成但未返回文件路径');
+        await firstValueFrom(this.simulationService.create({
+          projectId,
+          name: this.simulationName.trim(),
+          description: this.simulationDescription.trim() || undefined,
+          coverUrl: this.simulationCoverUrl.trim() || undefined,
+          uploadedFilePath: upload.filePath,
+        }));
+        this.message.success('仿真镜像已上传并导入');
+      }
+      this.resetSimulationForm();
+      this.loadSimulations(projectId);
+    } catch (error: any) {
+      console.error('[practicum-management] simulation save failed', error);
+      this.message.error(error?.error?.error?.message || error?.message || '仿真镜像保存失败');
+    } finally {
+      this.simulationSaving = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  private async uploadSimulationFile(file: File): Promise<CompleteUploadResultDto> {
+    const chunkSize = 1024 * 1024;
+    this.simulationUploading = true;
+    this.simulationUploadProgress = 0;
+    try {
+      const initiated = await firstValueFrom(this.chunkUploadService.initiateUploadByInput({
+        fileName: file.name,
+        totalSize: file.size,
+        chunkSize,
+      }));
+      if (!initiated?.uploadId || !initiated.totalChunks) throw new Error('无法初始化分片上传');
+
+      for (let chunkNumber = 0; chunkNumber < initiated.totalChunks; chunkNumber++) {
+        const start = chunkNumber * chunkSize;
+        const chunk = file.slice(start, Math.min(start + chunkSize, file.size));
+        const formData = new FormData();
+        formData.append('file', chunk, file.name);
+        formData.append('uploadId', initiated.uploadId);
+        formData.append('fileName', file.name);
+        formData.append('chunkNumber', String(chunkNumber));
+        const uploaded = await firstValueFrom(this.restService.request<any, boolean>({
+          method: 'POST',
+          url: '/api/app/chunk-upload/upload',
+          body: formData,
+        }));
+        if (!uploaded) throw new Error(`第 ${chunkNumber + 1} 个分片上传失败`);
+        this.simulationUploadProgress = Math.round((chunkNumber + 1) / initiated.totalChunks * 100);
+        this.cdr.markForCheck();
+      }
+
+      return await firstValueFrom(this.chunkUploadService.completeUploadByInput({
+        uploadId: initiated.uploadId,
+        fileName: file.name,
+        totalChunks: initiated.totalChunks,
+      }));
+    } finally {
+      this.simulationUploading = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  deleteSimulation(item: PracticumSimulationDto): void {
+    if (!item.id || !window.confirm(`确定删除仿真镜像“${item.name || item.slug}”吗？`)) return;
+    this.simulationService.delete(item.id).subscribe({
+      next: () => {
+        this.message.success('仿真镜像已删除');
+        if (this.selectedProjectId) this.loadSimulations(this.selectedProjectId);
+      },
+      error: () => this.message.error('仿真镜像删除失败'),
+    });
+  }
+
+  simulationStatusLabel(status?: PracticumSimulationStatus): string {
+    if (status === PracticumSimulationStatus.Ready) return '已就绪';
+    if (status === PracticumSimulationStatus.Processing) return '处理中';
+    if (status === PracticumSimulationStatus.Invalid) return '无效';
+    return '未知';
+  }
+
+  simulationStatusColor(status?: PracticumSimulationStatus): string {
+    if (status === PracticumSimulationStatus.Ready) return 'success';
+    if (status === PracticumSimulationStatus.Invalid) return 'error';
+    if (status === PracticumSimulationStatus.Processing) return 'processing';
+    return 'warning';
   }
 
   // --- Tab 1 / Tab 2：统一用右侧抽屉承载 ----
@@ -436,7 +638,7 @@ export class PracticumManagementComponent implements OnInit {
       this.message.warning('请填写资料名称');
       return false;
     }
-    const isUrlType = draft.materialType === 3 || draft.materialType === 4;
+    const isUrlType = draft.materialType === 3;
     const resourceUrl = (draft.resourceUrl || '').trim();
     if (isUrlType && !resourceUrl) {
       this.message.warning('请填写 URL');
@@ -607,6 +809,7 @@ export class PracticumManagementComponent implements OnInit {
     this.practicumService.getDetail(pid).subscribe(detail => {
       this.applyDetailToForm(detail);
       this.reload();
+      this.loadSimulations(pid);
       this.cdr.markForCheck();
     });
   }
