@@ -142,6 +142,93 @@ public class IndexingJobAppService : ...
 - **Username**: admin
 - **Password**: 1q2w3E*
 
+### WASM 镜像开发流程（仿真实训 materialType=4）
+
+把外部 Unity WebGL 仿真实训资源镜像到 `etc/docker/wasm-mirrors/{slug}/`，通过 Nginx（生产）/ Kestrel（开发）静态托管，前端把 sourceUrl 改写到本地路径实现「秒开」。
+
+**目录约定：**
+
+```
+etc/docker/wasm-mirrors/{slug}/
+├── mirror.json         ← 元信息，必须存在且 status=ready 才生效
+├── index.html
+├── Build/
+├── StreamingAssets/    ← 递归镜像
+└── TemplateData/       ← 递归镜像
+```
+
+二进制不进 git；仅 `mirror.json` / `README.md` / `.gitkeep` / `.gitignore` 受 `.gitignore` 白名单保护。
+
+**添加新仿真：**
+
+```bash
+# 1. 下载脚本会下载 index.html、loader.js、*.unityweb、StreamingAssets、TemplateData，
+#    并写 mirror.json；staging → 原子 mv 到 {slug}/
+#    可选参数：[title] [cover-url] [description] → 写入 mirror.json 供前端展示
+bash scripts/fetch-wasm.sh http://外部源站/anatomyMice/ anatomy-mice "小鼠解剖" "https://cdn.example.com/c.png" "3D 交互式"
+
+# 2. 重启 API 让 WasmMirrorAppService 扫描新的 mirror.json
+./dev.sh restart api
+
+# 3. 验证
+curl -sk https://localhost:44305/api/app/wasm-mirror/all | jq '.[] | {slug, title, cover, description, status}'
+curl -skI https://localhost:44305/wasm/anatomy-mice/index.html
+```
+
+**生产部署：**
+
+```bash
+cd etc/docker
+bash ../../scripts/fetch-wasm.sh http://外部源站/anatomyMice/ anatomy-mice
+docker compose restart knowledgehub-angular
+```
+
+`nginx-proxy.conf` 已经 `location ^~ /wasm/` 优先匹配，二进制通过 `alias /usr/share/nginx/html/wasm/` 静态托管；COOP/COEP 头已开启（Unity 多线程 build 需要 SharedArrayBuffer）。
+
+**回退 / 禁用：**
+
+- 临时回退某个仿真：编辑 `{slug}/mirror.json` 的 `status` 为 `"missing"`（60s 缓存后生效）
+- 全局禁用：`appsettings.json` / Docker env 设 `WasmMirror__Enabled=false`；前端会回退到原 URL → `/api/proxy/http/...`
+
+**镜像元信息 (`mirror.json`)：**
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `slug` | ✅ | 目录名，全小写短横线 |
+| `sourceUrl` | ✅ | 外部源站 URL |
+| `entryPath` | ❌ | 入口 HTML，默认 `index.html` |
+| `status` | ✅ | `ready` / `missing` / `syncing` / `invalid` |
+| `mirroredAt` | ❌ | ISO 8601 时间戳 |
+| `coopCoepRequired` | ❌ | 默认 `true` |
+| `buildSha` / `files` / `totalBytes` / `fileCount` | ❌ | 由脚本自动写入 |
+| **`title`** | ❌ | 展示用标题；缺失时由后端用 slug 美化（`anatomy-mice` → `Anatomy Mice`） |
+| **`cover`** | ❌ | 封面图 URL；必须是 `http(s)`，不允许本地路径 |
+| **`description`** | ❌ | 描述文本 |
+
+> 三个 `**xxx**` 字段为可选，向后兼容；旧 manifest 自动 fallback 到 slug 美化标题。
+
+**两端入口：**
+
+| 入口 | 路径 | 角色 | 数据来源 |
+|------|------|------|----------|
+| 学生资源中心 | `/student/wasm-center` | 学生 | `GET /api/app/wasm-mirror/all`，**只展示 `status==='ready'`** |
+| 学生仿真全屏 | `/student/wasm-center/:slug` | 学生 | 同上，命中后 iframe `/wasm/{slug}/index.html` |
+| 教师镜像管理 | `/admin/wasm-mirrors` | 教师/管理员 | 同上，**展示所有状态**；提供「重新同步」按钮 → 复制 shell 命令到剪贴板 |
+
+学生端 navbar 「实训」Tab 之后新增「仿真实训」入口（图标 `play-circle`）。
+教师端侧边栏在「搜索和租户管理」之后新增独立分组「WASM 镜像管理」（图标 `cube`）。
+
+**常见排查：**
+
+| 现象 | 原因 | 修复 |
+|------|------|------|
+| iframe 加载 200 HTML 而非 .unityweb | Nginx `/wasm/` 缺失被 SPA 兜底 | 确认 `nginx-proxy.conf` 的 `location ^~ /wasm/` 存在 |
+| 浏览器 DevTools: `crossOriginIsolated === false` | COOP/COEP 缺失 | `curl -skI /wasm/{slug}/index.html` 应见两个 `Cross-Origin-*` 头 |
+| API 启动日志 `WasmMirror root not found` | 新机器没拉镜像 | 执行 `fetch-wasm.sh`，或忽略（仅影响仿真功能） |
+| `Map<sourceUrl, publicUrl>` 大小为 0 | 后端 mapping 端点被网关拦截 | `curl -sk https://localhost/api/abp/api-definition \| grep wasm-mirror` |
+| 学生 wasm-center 看不到某个镜像 | `mirror.json` 的 `status` 不是 `ready` | 改为 `"ready"` 后 60s 生效；或用教师管理页排查 |
+| 教师页表格 60s 才看到新镜像 | 后端 60s 缓存 | 等 60s 或手动点「刷新」 |
+
 ### 进程管理与代码修改
 
 **API 使用 `--no-hot-reload` 运行**：
