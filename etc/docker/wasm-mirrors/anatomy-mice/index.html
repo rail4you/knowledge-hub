@@ -88,12 +88,13 @@
       var buildUrl = "Build";
       // cacheBust 用于绕过 UnityCache IndexedDB 的旧缓存（第一次下载不完整导致 memory access out of bounds）。
       // 每次镜像更新时修改此值即可强制 Unity 重新下载构建文件。
-      var cacheBust = "v=5";
-      var loaderUrl = buildUrl + "/小鼠解剖实验.loader.js?" + cacheBust;
+      // cacheBust 留作版本切换开关；空值时 URL 不带 ?v=…，浏览器复用磁盘缓存。
+      var cacheBust = "";
+      var loaderUrl = buildUrl + "/小鼠解剖实验.loader.js" + (cacheBust ? "?" + cacheBust : "");
       var config = {
-        dataUrl: buildUrl + "/小鼠解剖实验.data.unityweb?" + cacheBust,
-        frameworkUrl: buildUrl + "/小鼠解剖实验.framework.js.unityweb?" + cacheBust,
-        codeUrl: buildUrl + "/小鼠解剖实验.wasm.unityweb?" + cacheBust,
+        dataUrl: buildUrl + "/小鼠解剖实验.data.unityweb" + (cacheBust ? "?" + cacheBust : ""),
+        frameworkUrl: buildUrl + "/小鼠解剖实验.framework.js.unityweb" + (cacheBust ? "?" + cacheBust : ""),
+        codeUrl: buildUrl + "/小鼠解剖实验.wasm.unityweb" + (cacheBust ? "?" + cacheBust : ""),
         streamingAssetsUrl: "StreamingAssets",
         companyName: "DefaultCompany",
         productName: "MouseVirtualSimulationExperiment",
