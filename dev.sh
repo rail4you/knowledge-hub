@@ -205,7 +205,8 @@ start_api() {
     fi
 
     log_info "Starting API (HttpApi.Host)..."
-    start_detached "api" "$pid_file" "cd \"$PROJECT_ROOT\" && exec env ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_Kestrel__Certificates__Default__Path=\"$HOME/.aspnet/https/aspnetapp.pfx\" ASPNETCORE_Kestrel__Certificates__Default__Password=\"devcert\" dotnet run --project src/KnowledgeHub.HttpApi.Host $DOTNET_RUN_FLAGS > \"$LOG_DIR/api.log\" 2>&1"
+    # 仿真实训 WASM 本地镜像：注入绝对路径，Kestrel 才能静态托管 etc/docker/wasm-mirrors
+    start_detached "api" "$pid_file" "cd \"$PROJECT_ROOT\" && exec env ASPNETCORE_ENVIRONMENT=Development WasmMirror__RootPath=\"$PROJECT_ROOT/etc/docker/wasm-mirrors\" ASPNETCORE_Kestrel__Certificates__Default__Path=\"$HOME/.aspnet/https/aspnetapp.pfx\" ASPNETCORE_Kestrel__Certificates__Default__Password=\"devcert\" dotnet run --project src/KnowledgeHub.HttpApi.Host $DOTNET_RUN_FLAGS > \"$LOG_DIR/api.log\" 2>&1"
 
     if wait_for_https "https://localhost:44305/health-status" "API" 90; then
         log_success "API started (PID: $(cat $pid_file))"
