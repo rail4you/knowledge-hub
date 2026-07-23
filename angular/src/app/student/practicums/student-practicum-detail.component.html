@@ -133,35 +133,42 @@
       }
 
       @if (activeTab() === 'simulations') {
-        <div class="simulations-list">
-          @if (!simulations().length) {
-            <div class="empty-small">暂无可用仿真镜像</div>
-          } @else {
+        @if (!simulations().length) {
+          <div class="empty-small">暂无可用仿真镜像</div>
+        } @else {
+          <div class="sim-card-grid">
             @for (sim of simulations(); track sim.id) {
-              <div class="simulation-card">
-                <div class="simulation-card__header">
-                  <span nz-icon nzType="experiment" nzTheme="outline"></span>
+              <a class="sim-card" [href]="sim.publicUrl" target="_blank" rel="noopener noreferrer">
+                <div class="sim-card__cover">
+                  @if (sim.coverUrl) {
+                    <img [src]="sim.coverUrl" [alt]="sim.name" loading="lazy" />
+                  } @else {
+                    <div class="sim-card__cover-fallback">
+                      <span nz-icon nzType="experiment" nzTheme="outline"></span>
+                    </div>
+                  }
+                  <nz-tag class="sim-card__status" nzColor="success">已就绪</nz-tag>
+                </div>
+                <div class="sim-card__body">
                   <h4>{{ sim.name }}</h4>
-                  @if (sim.description) { <p>{{ sim.description }}</p> }
-                  <a [href]="sim.publicUrl" target="_blank" rel="noopener noreferrer" class="simulation-card__open">
-                    <span nz-icon nzType="export" nzTheme="outline"></span> 新窗口打开
-                  </a>
+                  @if (sim.description) {
+                    <p>{{ sim.description }}</p>
+                  } @else {
+                    <p class="muted">暂无描述</p>
+                  }
+                  <div class="sim-card__meta">
+                    <span>{{ sim.fileCount ?? 0 }} 个文件</span>
+                    <span>{{ sim.totalBytes ? (sim.totalBytes / 1024 / 1024 | number:'1.1-1') + ' MB' : '—' }}</span>
+                  </div>
                 </div>
-                <div class="simulation-card__frame-wrap">
-                  <iframe
-                    [src]="sim.publicUrl | safeResourceUrl"
-                    [title]="sim.name"
-                    class="simulation-card__iframe"
-                    loading="lazy"
-                    allowfullscreen
-                    referrerpolicy="no-referrer-when-downgrade"
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-presentation">
-                  </iframe>
+                <div class="sim-card__cta">
+                  <span nz-icon nzType="play-circle" nzTheme="fill"></span>
+                  <span>开始仿真</span>
                 </div>
-              </div>
+              </a>
             }
-          }
-        </div>
+          </div>
+        }
       }
     </div>
 

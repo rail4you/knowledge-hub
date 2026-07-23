@@ -6,6 +6,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using KnowledgeHub.Practicums.Dtos;
 using Volo.Abp;
+using Volo.Abp.DependencyInjection;
 
 namespace KnowledgeHub.Practicums;
 
@@ -13,7 +14,7 @@ namespace KnowledgeHub.Practicums;
 /// Singleton manager that holds SSE channels per project.
 /// Each connected client gets a Channel<ChatMessageDto>. Broadcast writes to all channels.
 /// </summary>
-public class PracticumChatConnectionManager
+public class PracticumChatConnectionManager : ISingletonDependency
 {
     private const int MaxConnectionsPerProject = 20;
     private readonly ConcurrentDictionary<Guid, List<ChannelWriter<PracticumChatMessageDto>>> _rooms = new();

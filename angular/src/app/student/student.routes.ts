@@ -117,17 +117,7 @@ export const STUDENT_ROUTES: Routes = [
         loadComponent: () => import('../practicum/practicum-chat.component').then(m => m.PracticumChatComponent),
       },
       {
-        // 仿真实训中心：仅展示 status=ready 的镜像，点击进入 wasm-player 全屏打开。
-        // 路由独立于 /practicums/:id 的 materials，因为这里只展示已就绪的镜像，
-        // 不要求该资源被绑定到具体某个实训项目（管理员可统一管理所有镜像）。
-        path: 'wasm-center',
-        loadComponent: () => import('./wasm-center/wasm-center-list.component').then(m => m.WasmCenterListComponent),
-        data: {
-          name: '仿真实训',
-          icon: 'experiment'
-        }
-      },
-      {
+        // wasm-player 路由保留：可供实训详情页内的 iframe 或直接 URL 访问。
         path: 'wasm-center/:slug',
         loadComponent: () => import('./wasm-center/wasm-player.component').then(m => m.WasmPlayerComponent),
       },
