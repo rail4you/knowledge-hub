@@ -271,6 +271,11 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
           this.agentReplyTimeout = setTimeout(() => {
             this.isAgentReplying.set(false);
           }, 30000);
+          // 轮询兜底：SSE 广播若因代理缓冲或连接中断未送达，
+          // 3 秒后从 API 拉取最新消息补回。
+          setTimeout(() => {
+            this.pollLatestMessages();
+          }, 3000);
         }
         this.shouldScrollToBottom = true;
       },
@@ -411,6 +416,21 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
     if (senderId === this.currentUserId) return '我';
     const contact = this.contacts().find(c => c.id === senderId);
     return contact?.name || senderName || '未知';
+  }
+
+  /** SSE 广播兜底：拉取最新消息，将尚未在列表中的消息补入 */
+  private pollLatestMessages(): void {
+    this.chatService.getMessages(this.projectId, undefined, 10).subscribe({
+      next: latest => {
+        const existingIds = new Set(this.messages().map(m => m.id));
+        const newOnes = latest.filter(m => !existingIds.has(m.id) && m.isAgentReply);
+        if (newOnes.length > 0) {
+          this.messages.update(existing => [...existing, ...newOnes]);
+          this.isAgentReplying.set(false);
+          this.shouldScrollToBottom = true;
+        }
+      },
+    });
   }
 
   getContactColor(senderId: string | undefined, senderType: PracticumChatSenderType): string {
