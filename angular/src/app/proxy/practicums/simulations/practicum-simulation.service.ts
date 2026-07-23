@@ -25,13 +25,13 @@ export class PracticumSimulationService {
   getAll = (config?: Partial<Rest.Config>) =>
     this.restService.request<any, PracticumSimulationDto[]>({
       method: 'GET',
-      url: '/api/app/practicum-simulation/all',
+      url: '/api/app/practicum-simulation',
     }, { apiName: this.apiName, ...config });
 
   getListByProject = (projectId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PracticumSimulationDto[]>({
       method: 'GET',
-      url: `/api/app/practicum-simulation/list-by-project/${projectId}`,
+      url: `/api/app/practicum-simulation/by-project/${projectId}`,
     }, { apiName: this.apiName, ...config });
 
   update = (id: string, input: UpdatePracticumSimulationDto, config?: Partial<Rest.Config>) =>

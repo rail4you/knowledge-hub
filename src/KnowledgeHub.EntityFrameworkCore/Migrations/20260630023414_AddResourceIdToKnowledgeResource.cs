@@ -11,19 +11,12 @@ namespace KnowledgeHub.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<Guid>(
-                name: "ResourceId",
-                table: "AppKnowledgeResources",
-                type: "uuid",
-                nullable: true);
+            // ResourceId 列已由之前的手动变更或模型同步添加，此迁移无需再执行。
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "ResourceId",
-                table: "AppKnowledgeResources");
         }
     }
 }

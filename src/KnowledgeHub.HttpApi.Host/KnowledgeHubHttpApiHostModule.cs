@@ -430,13 +430,16 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
                 var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
                 provider.Mappings[".wasm"] = "application/wasm";
                 provider.Mappings[".unityweb"] = "application/octet-stream";
+                provider.Mappings[".data"] = "application/octet-stream";
                 provider.Mappings[".br"] = "application/octet-stream";
+                provider.Mappings[".mem"] = "application/octet-stream";
+                provider.Mappings[".symbols"] = "application/octet-stream";
                 app.UseStaticFiles(new StaticFileOptions
                 {
                     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(resolvedRoot),
                     RequestPath = wasmOptions.PublicBasePath,
                     ContentTypeProvider = provider,
-                    ServeUnknownFileTypes = false,
+                    ServeUnknownFileTypes = true,
                     DefaultContentType = "application/octet-stream",
                     OnPrepareResponse = ctx =>
                     {

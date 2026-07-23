@@ -85,41 +85,46 @@ export class PracticumManagementComponent implements OnInit {
   readonly submissionStatuses = PracticumSubmissionStatus;
   readonly simulationStatuses = PracticumSimulationStatus;
 
-  simulationName = '';
-  simulationDescription = '';
-  simulationCoverUrl = '';
-  simulationSortOrder = 0;
-  simulationFile: File | null = null;
-  simulationFileName = '';
-  simulationUploading = false;
-  simulationSaving = false;
-  simulationUploadProgress = 0;
-  editingSimulationId: string | null = null;
+  // ===== 仿真镜像弹窗 =====
+  readonly simulationModalVisible = signal(false);
+  readonly simulationModalDraft = signal<{
+    editingId: string | null;
+    name: string;
+    description: string;
+    coverUrl: string;
+    coverFileList: NzUploadFile[];
+    coverUploading: boolean;
+    file: File | null;
+    fileName: string;
+    uploading: boolean;
+    saving: boolean;
+    uploadProgress: number;
+  } | null>(null);
 
   activeTab = 0;
   selectedProjectId: string | null = null;
   modalVisible = false;
   editingId: string | null = null;
-  /** 基本信息 Tab 显示用：后端 detail 返回的关联课程名称（不是 ID）。 */
+  /** 基本信息 Tab 显示用:后端 detail 返回的关联课程名称(不是 ID)。 */
   selectedCourseTitle = '';
 
   // ===== OSS 上传状态 =====
-  /** 封面图片上传进度 + 已上传文件列表（picture-card 模式）。 */
+  /** 封面图片上传进度 + 已上传文件列表(picture-card 模式)。 */
   coverUploading = false;
   coverFileList: NzUploadFile[] = [];
-  /** 资料上传进度：key=material index, value=true 表示上传中。 */
+  /** 资料上传进度:key=material index, value=true 表示上传中。 */
   materialUploading: Record<number, boolean> = {};
 
-  // ===== 右侧抽屉（统一承载"查看 / 新增 / 编辑"任务与资料） =====
-  /** 抽屉中的资源类型：'task' | 'material' | null */
+  // ===== 右侧抽屉(统一承载"查看 / 新增 / 编辑"任务与资料) =====
+  /** 抽屉中的资源类型:'task' | 'material' | null */
   readonly drawerKind = signal<'task' | 'material' | null>(null);
-  /** 抽屉模式：'add' 新增 | 'edit' 编辑现有 */
+  /** 抽屉模式:'add' 新增 | 'edit' 编辑现有 */
   readonly drawerMode = signal<'add' | 'edit'>('add');
-  /** 抽屉中编辑/查看的下标（新增时为 -1） */
+  /** 抽屉中编辑/查看的下标(新增时为 -1) */
   readonly drawerIndex = signal(-1);
   /** 抽屉是否可见 */
   readonly drawerVisible = signal(false);
-  /** 保存中（抽屉底部"保存"按钮的 loading） */
+  /** 保存中(抽屉底部"保存"按钮的 loading) */
   readonly drawerSaving = signal(false);
   /** 抽屉内文件上传中 */
   readonly drawerUploading = signal(false);
@@ -169,7 +174,7 @@ export class PracticumManagementComponent implements OnInit {
       agentName: '', agentPrompt: '', tasks: [], materials: [] };
   }
 
-  /** 把后端 detail 填到 form + 设置 selectedCourseTitle（用于 Tab 0 显示课程名称）。 */
+  /** 把后端 detail 填到 form + 设置 selectedCourseTitle(用于 Tab 0 显示课程名称)。 */
   private applyDetailToForm(detail: any): void {
     this.form = {
       title: detail.title,
@@ -196,7 +201,7 @@ export class PracticumManagementComponent implements OnInit {
       })),
     };
     this.selectedCourseTitle = detail.courseTitle || '';
-    // 同步封面 / 资料上传组件的显示状态（如果后端已有 URL，回显成"已上传"卡片）
+    // 同步封面 / 资料上传组件的显示状态(如果后端已有 URL,回显成"已上传"卡片)
     this.syncCoverFileList();
     this.materialUploading = {};
     this.cdr.markForCheck();
@@ -226,7 +231,6 @@ export class PracticumManagementComponent implements OnInit {
     this.editingId = null;
     this.selectedProjectId = null;
     this.simulations.set([]);
-    this.resetSimulationForm();
     this.form = this.freshForm();
     this.modalVisible = true;
     this.cdr.markForCheck();
@@ -250,8 +254,8 @@ export class PracticumManagementComponent implements OnInit {
   }
 
   saveModal(): void {
-    // P1-15：保存时同时提交任务（原先在 saveModal 里把 tasks/materials 强制清空，迫使用户"先保存基本信息，再到 Tab1 保存任务"——分两步走容易漏）。
-    // 现在 modal 内的"基本信息 + 任务配置"是同一个表单，一次性提交。
+    // P1-15:保存时同时提交任务(原先在 saveModal 里把 tasks/materials 强制清空,迫使用户"先保存基本信息,再到 Tab1 保存任务"--分两步走容易漏)。
+    // 现在 modal 内的"基本信息 + 任务配置"是同一个表单,一次性提交。
     const body: CreateUpdatePracticumProjectDto = this.prepareFormPayload();
     const obs = this.editingId
       ? this.practicumService.update(this.editingId, body)
@@ -278,18 +282,18 @@ export class PracticumManagementComponent implements OnInit {
   }
 
   /**
-   * P1-15：保存按钮的启用条件——至少要有一条任务。
-   * 没任务时点保存没意义，禁用 + tooltip 提示用户先加任务。
+   * P1-15:保存按钮的启用条件--至少要有一条任务。
+   * 没任务时点保存没意义,禁用 + tooltip 提示用户先加任务。
    */
   get canSaveModal(): boolean {
     return Array.isArray(this.form?.tasks) && this.form.tasks.length > 0;
   }
 
   get saveModalTooltip(): string {
-    return this.canSaveModal ? '' : '请先添加至少一个任务（点击上方"添加任务"按钮）';
+    return this.canSaveModal ? '' : '请先添加至少一个任务(点击上方"添加任务"按钮)';
   }
 
-  /** 从基本信息 Tab 直接打开编辑 modal（不再走 openEdit → 切到任务 Tab 的路径）。 */
+  /** 从基本信息 Tab 直接打开编辑 modal(不再走 openEdit → 切到任务 Tab 的路径)。 */
   openEditFromTab0(): void {
     if (!this.selectedProjectId) return;
     this.editingId = this.selectedProjectId;
@@ -307,7 +311,6 @@ export class PracticumManagementComponent implements OnInit {
         this.enrollments.set([]);
         this.submissions.set([]);
         this.simulations.set([]);
-        this.resetSimulationForm();
         this.reload();
         this.cdr.markForCheck();
       },
@@ -327,169 +330,11 @@ export class PracticumManagementComponent implements OnInit {
     });
   }
 
-  private resetSimulationForm(): void {
-    this.editingSimulationId = null;
-    this.simulationName = '';
-    this.simulationDescription = '';
-    this.simulationCoverUrl = '';
-    this.simulationSortOrder = this.simulations().length;
-    this.simulationFile = null;
-    this.simulationFileName = '';
-    this.simulationUploading = false;
-    this.simulationSaving = false;
-    this.simulationUploadProgress = 0;
-  }
 
-  openAddSimulation(): void {
-    this.resetSimulationForm();
-    this.activeTab = 5;
-    this.cdr.markForCheck();
-  }
 
-  openEditSimulation(item: PracticumSimulationDto): void {
-    this.editingSimulationId = item.id ?? null;
-    this.simulationName = item.name ?? '';
-    this.simulationDescription = item.description ?? '';
-    this.simulationCoverUrl = item.coverUrl ?? '';
-    this.simulationSortOrder = item.sortOrder ?? 0;
-    this.simulationFile = null;
-    this.simulationFileName = '';
-    this.activeTab = 5;
-    this.cdr.markForCheck();
-  }
+  // --- Tab 1 / Tab 2:统一用右侧抽屉承载 ----
 
-  onSimulationFileChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.zip')) {
-      this.message.error('仿真构建必须是 ZIP 文件');
-      input.value = '';
-      return;
-    }
-    if (file.size > 500 * 1024 * 1024) {
-      this.message.error('ZIP 文件不能超过 500MB');
-      input.value = '';
-      return;
-    }
-    this.simulationFile = file;
-    this.simulationFileName = file.name;
-    this.cdr.markForCheck();
-  }
-
-  async saveSimulation(): Promise<void> {
-    const projectId = this.selectedProjectId;
-    if (!projectId || !this.simulationName.trim()) {
-      this.message.warning('请填写仿真名称');
-      return;
-    }
-    if (!this.editingSimulationId && !this.simulationFile) {
-      this.message.warning('请先选择仿真 ZIP 文件');
-      return;
-    }
-
-    this.simulationSaving = true;
-    try {
-      if (this.editingSimulationId) {
-        await firstValueFrom(this.simulationService.update(this.editingSimulationId, {
-          name: this.simulationName.trim(),
-          description: this.simulationDescription.trim() || undefined,
-          coverUrl: this.simulationCoverUrl.trim() || undefined,
-          sortOrder: Number(this.simulationSortOrder) || 0,
-        }));
-        this.message.success('仿真镜像信息已更新');
-      } else {
-        const upload = await this.uploadSimulationFile(this.simulationFile!);
-        if (!upload.filePath) throw new Error('上传完成但未返回文件路径');
-        await firstValueFrom(this.simulationService.create({
-          projectId,
-          name: this.simulationName.trim(),
-          description: this.simulationDescription.trim() || undefined,
-          coverUrl: this.simulationCoverUrl.trim() || undefined,
-          uploadedFilePath: upload.filePath,
-        }));
-        this.message.success('仿真镜像已上传并导入');
-      }
-      this.resetSimulationForm();
-      this.loadSimulations(projectId);
-    } catch (error: any) {
-      console.error('[practicum-management] simulation save failed', error);
-      this.message.error(error?.error?.error?.message || error?.message || '仿真镜像保存失败');
-    } finally {
-      this.simulationSaving = false;
-      this.cdr.markForCheck();
-    }
-  }
-
-  private async uploadSimulationFile(file: File): Promise<CompleteUploadResultDto> {
-    const chunkSize = 1024 * 1024;
-    this.simulationUploading = true;
-    this.simulationUploadProgress = 0;
-    try {
-      const initiated = await firstValueFrom(this.chunkUploadService.initiateUploadByInput({
-        fileName: file.name,
-        totalSize: file.size,
-        chunkSize,
-      }));
-      if (!initiated?.uploadId || !initiated.totalChunks) throw new Error('无法初始化分片上传');
-
-      for (let chunkNumber = 0; chunkNumber < initiated.totalChunks; chunkNumber++) {
-        const start = chunkNumber * chunkSize;
-        const chunk = file.slice(start, Math.min(start + chunkSize, file.size));
-        const formData = new FormData();
-        formData.append('file', chunk, file.name);
-        formData.append('uploadId', initiated.uploadId);
-        formData.append('fileName', file.name);
-        formData.append('chunkNumber', String(chunkNumber));
-        const uploaded = await firstValueFrom(this.restService.request<any, boolean>({
-          method: 'POST',
-          url: '/api/app/chunk-upload/upload',
-          body: formData,
-        }));
-        if (!uploaded) throw new Error(`第 ${chunkNumber + 1} 个分片上传失败`);
-        this.simulationUploadProgress = Math.round((chunkNumber + 1) / initiated.totalChunks * 100);
-        this.cdr.markForCheck();
-      }
-
-      return await firstValueFrom(this.chunkUploadService.completeUploadByInput({
-        uploadId: initiated.uploadId,
-        fileName: file.name,
-        totalChunks: initiated.totalChunks,
-      }));
-    } finally {
-      this.simulationUploading = false;
-      this.cdr.markForCheck();
-    }
-  }
-
-  deleteSimulation(item: PracticumSimulationDto): void {
-    if (!item.id || !window.confirm(`确定删除仿真镜像“${item.name || item.slug}”吗？`)) return;
-    this.simulationService.delete(item.id).subscribe({
-      next: () => {
-        this.message.success('仿真镜像已删除');
-        if (this.selectedProjectId) this.loadSimulations(this.selectedProjectId);
-      },
-      error: () => this.message.error('仿真镜像删除失败'),
-    });
-  }
-
-  simulationStatusLabel(status?: PracticumSimulationStatus): string {
-    if (status === PracticumSimulationStatus.Ready) return '已就绪';
-    if (status === PracticumSimulationStatus.Processing) return '处理中';
-    if (status === PracticumSimulationStatus.Invalid) return '无效';
-    return '未知';
-  }
-
-  simulationStatusColor(status?: PracticumSimulationStatus): string {
-    if (status === PracticumSimulationStatus.Ready) return 'success';
-    if (status === PracticumSimulationStatus.Invalid) return 'error';
-    if (status === PracticumSimulationStatus.Processing) return 'processing';
-    return 'warning';
-  }
-
-  // --- Tab 1 / Tab 2：统一用右侧抽屉承载 ----
-
-  /** 打开新增任务抽屉（直接是编辑态） */
+  /** 打开新增任务抽屉(直接是编辑态) */
   openAddTaskDrawer(): void {
     this.drawerKind.set('task');
     this.drawerMode.set('add');
@@ -560,7 +405,7 @@ export class PracticumManagementComponent implements OnInit {
   /** 关闭抽屉 */
   closeDrawer(): void {
     this.drawerVisible.set(false);
-    // 延迟清空，让关闭动画播完
+    // 延迟清空,让关闭动画播完
     setTimeout(() => {
       this.drawerKind.set(null);
       this.drawerIndex.set(-1);
@@ -570,7 +415,7 @@ export class PracticumManagementComponent implements OnInit {
     }, 200);
   }
 
-  /** 抽屉底部"保存"按钮：校验 → 写回 form → 持久化到后端 */
+  /** 抽屉底部"保存"按钮:校验 → 写回 form → 持久化到后端 */
   saveDrawer(): void {
     const kind = this.drawerKind();
     if (kind === 'task') {
@@ -582,7 +427,7 @@ export class PracticumManagementComponent implements OnInit {
     } else {
       return;
     }
-    // 编辑已有项目时直接持久化到后端；新建项目时仅保存到本地 form（由 saveModal 统一提交）
+    // 编辑已有项目时直接持久化到后端;新建项目时仅保存到本地 form(由 saveModal 统一提交)
     if (this.selectedProjectId) {
       this.drawerSaving.set(true);
       this.persistFormToBackend();
@@ -592,7 +437,7 @@ export class PracticumManagementComponent implements OnInit {
     }
   }
 
-  /** 抽屉底部"删除"按钮：仅已有项目时可用 */
+  /** 抽屉底部"删除"按钮:仅已有项目时可用 */
   deleteFromDrawer(): void {
     const i = this.drawerIndex();
     const kind = this.drawerKind();
@@ -607,7 +452,7 @@ export class PracticumManagementComponent implements OnInit {
     this.persistFormToBackend('删除');
   }
 
-  // 兼容旧方法名（避免破坏 HTML 调用）
+  // 兼容旧方法名(避免破坏 HTML 调用)
   addTask(): void { this.openAddTaskDrawer(); }
   addMaterial(): void { this.openAddMaterialDrawer(); }
   openAddTask(): void { this.openAddTaskDrawer(); }
@@ -618,7 +463,7 @@ export class PracticumManagementComponent implements OnInit {
   openMaterialDrawer(i: number): void { this.openEditMaterialDrawer(i); }
   editFromDrawer(): void { /* no-op: 抽屉本身就是编辑态 */ }
 
-  /** 校验任务草稿，返回是否合法 */
+  /** 校验任务草稿,返回是否合法 */
   private validateTaskDraft(): boolean {
     const draft = this.taskDraft();
     if (!draft) return false;
@@ -629,7 +474,7 @@ export class PracticumManagementComponent implements OnInit {
     return true;
   }
 
-  /** 校验资料草稿，返回是否合法 */
+  /** 校验资料草稿,返回是否合法 */
   private validateMaterialDraft(): boolean {
     const draft = this.materialDraft();
     if (!draft) return false;
@@ -651,7 +496,7 @@ export class PracticumManagementComponent implements OnInit {
     return true;
   }
 
-  /** 将任务草稿写入 form.tasks（仅本地）。dueTime 存储为 datetime-local 字符串，
+  /** 将任务草稿写入 form.tasks(仅本地)。dueTime 存储为 datetime-local 字符串,
    *  发送到后端前由 saveModal/persistFormToBackend 转为 ISO。 */
   private applyTaskDraft(): void {
     const draft = this.taskDraft()!;
@@ -673,7 +518,7 @@ export class PracticumManagementComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  /** 将资料草稿写入 form.materials（仅本地） */
+  /** 将资料草稿写入 form.materials(仅本地) */
   private applyMaterialDraft(): void {
     const draft = this.materialDraft()!;
     const next = {
@@ -694,8 +539,8 @@ export class PracticumManagementComponent implements OnInit {
   }
 
   /**
-   * 将当前 form（含 tasks / materials）持久化到后端。
-   * 成功后关闭抽屉、刷新 detail；失败时保留抽屉、显示错误。
+   * 将当前 form(含 tasks / materials)持久化到后端。
+   * 成功后关闭抽屉、刷新 detail;失败时保留抽屉、显示错误。
    */
   private persistFormToBackend(customPrefix?: string): void {
     const pid = this.selectedProjectId;
@@ -731,7 +576,7 @@ export class PracticumManagementComponent implements OnInit {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  /** datetime-local 字符串 → ISO（UTC）字符串，方便后端 DateTime 解析 */
+  /** datetime-local 字符串 → ISO(UTC)字符串,方便后端 DateTime 解析 */
   private fromDateTimeLocal(input: string | undefined | null): string | undefined {
     if (!input) return undefined;
     const d = new Date(input);
@@ -739,7 +584,7 @@ export class PracticumManagementComponent implements OnInit {
     return d.toISOString();
   }
 
-  /** 将 form 中出现 datetime-local 格式的 dueTime 转为 ISO，返回可发送给 API 的副本。 */
+  /** 将 form 中出现 datetime-local 格式的 dueTime 转为 ISO,返回可发送给 API 的副本。 */
   private prepareFormPayload() {
     const payload = { ...this.form };
     payload.tasks = payload.tasks.map(t => ({
@@ -787,6 +632,233 @@ export class PracticumManagementComponent implements OnInit {
 
   // --- Tab 4 ------------------------------------------------
 
+  // ===== 仿真镜像弹窗 =====
+
+  openAddSimulationModal(): void {
+    this.simulationModalDraft.set({
+      editingId: null,
+      name: '',
+      description: '',
+      coverUrl: '',
+      coverFileList: [],
+      coverUploading: false,
+      file: null,
+      fileName: '',
+      uploading: false,
+      saving: false,
+      uploadProgress: 0,
+    });
+    this.simulationModalVisible.set(true);
+  }
+
+  openEditSimulationModal(item: PracticumSimulationDto): void {
+    const coverFileList = item.coverUrl ? [{
+      uid: 'sim-cover-existing',
+      name: item.name || 'cover',
+      status: 'done' as const,
+      url: item.coverUrl,
+    }] : [];
+    this.simulationModalDraft.set({
+      editingId: item.id ?? null,
+      name: item.name ?? '',
+      description: item.description ?? '',
+      coverUrl: item.coverUrl ?? '',
+      coverFileList,
+      coverUploading: false,
+      file: null,
+      fileName: '',
+      uploading: false,
+      saving: false,
+      uploadProgress: 0,
+    });
+    this.simulationModalVisible.set(true);
+  }
+
+  closeSimulationModal(): void {
+    this.simulationModalVisible.set(false);
+  }
+
+  onSimulationFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      this.message.error('仿真构建必须是 ZIP 文件');
+      input.value = '';
+      return;
+    }
+    if (file.size > 500 * 1024 * 1024) {
+      this.message.error('ZIP 文件不能超过 500MB');
+      input.value = '';
+      return;
+    }
+    const draft = this.simulationModalDraft();
+    if (draft) {
+      this.simulationModalDraft.set({ ...draft, file, fileName: file.name });
+    }
+  }
+
+  beforeSimulationCoverUpload = (file: NzUploadFile): boolean => {
+    const rawFile = file as any as File;
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+    if (!allowed.includes(rawFile.type)) {
+      this.message.error('封面仅支持 JPG/PNG/GIF/WebP/BMP 格式');
+      return false;
+    }
+    if (rawFile.size > 10 * 1024 * 1024) {
+      this.message.error('封面大小不能超过 10MB');
+      return false;
+    }
+    const draft = this.simulationModalDraft();
+    if (!draft) return false;
+    this.simulationModalDraft.set({ ...draft, coverUploading: true });
+    this.ossUploadService.uploadImage(rawFile).subscribe({
+      next: (res) => {
+        const d = this.simulationModalDraft();
+        if (d) {
+          this.simulationModalDraft.set({
+            ...d,
+            coverUploading: false,
+            coverUrl: res.url,
+            coverFileList: [{
+              uid: res.objectKey,
+              name: res.originalFileName,
+              status: 'done',
+              url: res.url,
+            }],
+          });
+        }
+        this.message.success('封面上传成功');
+      },
+      error: (err) => {
+        const d = this.simulationModalDraft();
+        if (d) this.simulationModalDraft.set({ ...d, coverUploading: false, coverFileList: [] });
+        this.message.error('封面上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+      },
+    });
+    return false;
+  };
+
+  removeSimulationCover = (): boolean => {
+    const draft = this.simulationModalDraft();
+    if (draft) {
+      this.simulationModalDraft.set({ ...draft, coverUrl: '', coverFileList: [] });
+    }
+    return true;
+  };
+
+  async saveSimulationModal(): Promise<void> {
+    const draft = this.simulationModalDraft();
+    if (!draft) return;
+    const projectId = this.selectedProjectId;
+    if (!projectId || !draft.name.trim()) {
+      this.message.warning('请填写仿真名称');
+      return;
+    }
+    if (!draft.editingId && !draft.file) {
+      this.message.warning('请先选择仿真 ZIP 文件');
+      return;
+    }
+
+    this.simulationModalDraft.set({ ...draft, saving: true });
+    try {
+      if (draft.editingId) {
+        await firstValueFrom(this.simulationService.update(draft.editingId, {
+          name: draft.name.trim(),
+          description: draft.description.trim() || undefined,
+          coverUrl: draft.coverUrl.trim() || undefined,
+          sortOrder: 0,
+        }));
+        this.message.success('仿真镜像信息已更新');
+      } else {
+        const upload = await this.uploadSimulationFile(draft.file!);
+        if (!upload.filePath) throw new Error('上传完成但未返回文件路径');
+        await firstValueFrom(this.simulationService.create({
+          projectId,
+          name: draft.name.trim(),
+          description: draft.description.trim() || undefined,
+          coverUrl: draft.coverUrl.trim() || undefined,
+          uploadedFilePath: upload.filePath,
+        }));
+        this.message.success('仿真镜像已上传并导入');
+      }
+      this.simulationModalVisible.set(false);
+      this.loadSimulations(projectId);
+    } catch (error: any) {
+      console.error('[practicum-management] simulation save failed', error);
+      this.message.error(error?.error?.error?.message || error?.message || '仿真镜像保存失败');
+    } finally {
+      const d = this.simulationModalDraft();
+      if (d) this.simulationModalDraft.set({ ...d, saving: false });
+    }
+  }
+
+  private async uploadSimulationFile(file: File): Promise<CompleteUploadResultDto> {
+    const chunkSize = 1024 * 1024;
+    const draft = this.simulationModalDraft();
+    if (draft) this.simulationModalDraft.set({ ...draft, uploading: true, uploadProgress: 0 });
+    try {
+      const initiated = await firstValueFrom(this.chunkUploadService.initiateUploadByInput({
+        fileName: file.name,
+        totalSize: file.size,
+        chunkSize,
+      }));
+      if (!initiated?.uploadId || !initiated.totalChunks) throw new Error('无法初始化分片上传');
+
+      for (let chunkNumber = 0; chunkNumber < initiated.totalChunks; chunkNumber++) {
+        const start = chunkNumber * chunkSize;
+        const chunk = file.slice(start, Math.min(start + chunkSize, file.size));
+        const formData = new FormData();
+        formData.append('file', chunk, file.name);
+        formData.append('uploadId', initiated.uploadId);
+        formData.append('fileName', file.name);
+        formData.append('chunkNumber', String(chunkNumber));
+        const uploaded = await firstValueFrom(this.restService.request<any, boolean>({
+          method: 'POST',
+          url: '/api/app/chunk-upload/upload',
+          body: formData,
+        }));
+        if (!uploaded) throw new Error(`第 ${chunkNumber + 1} 个分片上传失败`);
+        const d = this.simulationModalDraft();
+        if (d) this.simulationModalDraft.set({ ...d, uploadProgress: Math.round((chunkNumber + 1) / initiated.totalChunks * 100) });
+      }
+
+      return await firstValueFrom(this.chunkUploadService.completeUploadByInput({
+        uploadId: initiated.uploadId,
+        fileName: file.name,
+        totalChunks: initiated.totalChunks,
+      }));
+    } finally {
+      const d = this.simulationModalDraft();
+      if (d) this.simulationModalDraft.set({ ...d, uploading: false });
+    }
+  }
+
+  deleteSimulation(item: PracticumSimulationDto): void {
+    if (!item.id || !window.confirm(`确定删除仿真镜像"${item.name || item.slug}"吗?`)) return;
+    this.simulationService.delete(item.id).subscribe({
+      next: () => {
+        this.message.success('仿真镜像已删除');
+        if (this.selectedProjectId) this.loadSimulations(this.selectedProjectId);
+      },
+      error: () => this.message.error('仿真镜像删除失败'),
+    });
+  }
+
+  simulationStatusLabel(status?: PracticumSimulationStatus): string {
+    if (status === PracticumSimulationStatus.Ready) return '已就绪';
+    if (status === PracticumSimulationStatus.Processing) return '处理中';
+    if (status === PracticumSimulationStatus.Invalid) return '无效';
+    return '未知';
+  }
+
+  simulationStatusColor(status?: PracticumSimulationStatus): string {
+    if (status === PracticumSimulationStatus.Ready) return 'success';
+    if (status === PracticumSimulationStatus.Invalid) return 'error';
+    if (status === PracticumSimulationStatus.Processing) return 'processing';
+    return 'warning';
+  }
+
   private loadEnrollmentsAndSubmissions(pid: string): void {
     this.practicumService.getEnrollmentList({ projectId: pid, skipCount: 0, maxResultCount: 200 })
       .subscribe(r => { this.enrollments.set(r.items || []); this.cdr.markForCheck(); });
@@ -799,9 +871,9 @@ export class PracticumManagementComponent implements OnInit {
   }
 
   /**
-   * 保存任务 / 资料后调用：拉最新 detail 刷新 form 内的 tasks / materials，
-   * 同时 reload 列表（让表格的 taskCount / materialCount 同步）。
-   * 不走 openEdit——openEdit 会切 activeTab、闪一下 modal、且不 reload。
+   * 保存任务 / 资料后调用:拉最新 detail 刷新 form 内的 tasks / materials,
+   * 同时 reload 列表(让表格的 taskCount / materialCount 同步)。
+   * 不走 openEdit--openEdit 会切 activeTab、闪一下 modal、且不 reload。
    */
   private refreshDetail(): void {
     const pid = this.selectedProjectId;
@@ -867,7 +939,7 @@ export class PracticumManagementComponent implements OnInit {
 
   // ===== OSS 上传 handlers =====
 
-  /** 用 form.coverImageUrl 同步 nz-upload 卡片（已存在的封面直接显示）。 */
+  /** 用 form.coverImageUrl 同步 nz-upload 卡片(已存在的封面直接显示)。 */
   private syncCoverFileList(): void {
     const url = this.form?.coverImageUrl;
     if (url) {
@@ -952,11 +1024,11 @@ export class PracticumManagementComponent implements OnInit {
         const m = this.form.materials[index];
         if (m) {
           m.resourceUrl = res.url;
-          // 没填标题时，用文件名兜底
+          // 没填标题时,用文件名兜底
           if (!m.title) m.title = res.originalFileName;
         }
         this.materialUploading = { ...this.materialUploading, [index]: false };
-        this.message.success(`资料上传成功：${res.originalFileName}`);
+        this.message.success(`资料上传成功:${res.originalFileName}`);
         this.cdr.markForCheck();
       },
       error: (err) => {
@@ -968,7 +1040,7 @@ export class PracticumManagementComponent implements OnInit {
     return false;
   };
 
-  /** 资料卡片清除已上传的文件（仅清空 resourceUrl，不删 OSS 对象）。 */
+  /** 资料卡片清除已上传的文件(仅清空 resourceUrl,不删 OSS 对象)。 */
   removeMaterialFile = (index: number) => (): boolean => {
     const m = this.form.materials[index];
     if (m) m.resourceUrl = '';
@@ -976,7 +1048,7 @@ export class PracticumManagementComponent implements OnInit {
     return true;
   };
 
-  // ===== 抽屉内的资料上传（操作 materialDraft 而非 form.materials） =====
+  // ===== 抽屉内的资料上传(操作 materialDraft 而非 form.materials) =====
 
   /**
    * 抽屉内资料文件上传前的校验 + 触发 OSS 上传。
@@ -1002,7 +1074,7 @@ export class PracticumManagementComponent implements OnInit {
             });
           }
           this.drawerUploading.set(false);
-          this.message.success(`资料上传成功：${res.originalFileName}`);
+          this.message.success(`资料上传成功:${res.originalFileName}`);
           this.cdr.markForCheck();
         },
         error: (err) => {
@@ -1015,7 +1087,7 @@ export class PracticumManagementComponent implements OnInit {
     };
   };
 
-  /** 抽屉内清除已上传的文件（仅清空 draft.resourceUrl，不删 OSS 对象）。 */
+  /** 抽屉内清除已上传的文件(仅清空 draft.resourceUrl,不删 OSS 对象)。 */
   removeMaterialFileInDrawer = (): (() => boolean) => {
     return (): boolean => {
       const draft = this.materialDraft();
