@@ -50,6 +50,9 @@ public interface IEmploymentAppService : IApplicationService
     Task<List<EmploymentStatisticsRowDto>> GetStatisticsAsync(EmploymentStatisticsInput input);
     Task<IRemoteStreamContent> ExportStatisticsAsync(EmploymentStatisticsInput input);
 
+    /// <summary>按学生展示投递明细，支持按天数过滤（7/30/null）</summary>
+    Task<List<StudentApplicationStatDto>> GetApplicationStatsAsync(EmploymentStatisticsInput input);
+
     /// <summary>获取可担任面试官的用户列表（教师/HR/管理员等）</summary>
     Task<List<InterviewerCandidateDto>> GetInterviewerCandidatesAsync();
 }

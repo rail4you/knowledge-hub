@@ -305,7 +305,15 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         {
             throw new UserFriendlyException($"资源不存在: {input.ResourceId}");
         }
-        
+
+        // T8: 视频文件不支持文档索引，跳过并给出明确提示
+        var videoExt = new[] { ".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".wmv" };
+        var ext = Path.GetExtension(resource.FilePath ?? "")?.ToLowerInvariant();
+        if (!string.IsNullOrEmpty(ext) && videoExt.Contains(ext))
+        {
+            throw new UserFriendlyException("视频文件需要 ASR 流水线，当前不支持文档索引。");
+        }
+
         var existingJob = await _jobRepository.FirstOrDefaultAsync(x => 
             x.ResourceId == input.ResourceId && 
             x.Status != IndexingJobStatus.Completed && 

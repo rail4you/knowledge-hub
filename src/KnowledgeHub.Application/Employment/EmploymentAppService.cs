@@ -1062,19 +1062,22 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
-            var outcomes = await _outcomeRepository.GetListAsync(x => x.IsPrimary);
+            // 查询学生投递的岗位申请（JobApplication），而非就业去向（EmploymentOutcome）
+            var applications = await _applicationRepository.GetListAsync();
+
             if (input.Status.HasValue)
             {
-                outcomes = outcomes.Where(x => x.Status == input.Status.Value).ToList();
+                var appStatus = (EmploymentApplicationStatus)(int)input.Status.Value;
+                applications = applications.Where(x => x.Status == appStatus).ToList();
             }
 
-            var studentIds = outcomes.Select(x => x.StudentId).Distinct().ToList();
+            var studentIds = applications.Select(x => x.StudentId).Distinct().ToList();
             var students = studentIds.Count == 0
                 ? []
                 : await _userRepository.GetListAsync(x => studentIds.Contains(x.Id));
 
             var studentMap = students.ToDictionary(x => x.Id, x => x);
-            var result = outcomes
+            var result = applications
                 .Where(x => studentMap.ContainsKey(x.StudentId))
                 .Select(x =>
                 {
@@ -1083,7 +1086,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                     {
                         Major = student.GetProperty<string>("Major") ?? "未填写",
                         Grade = student.GetProperty<string>("Grade") ?? "未填写",
-                        x.Status
+                        Status = (EmploymentOutcomeStatus)(int)x.Status
                     };
                 })
                 .Where(x => string.IsNullOrWhiteSpace(input.Major) || x.Major.Contains(input.Major!, StringComparison.OrdinalIgnoreCase))
@@ -1094,8 +1097,8 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                     Major = x.Key.Major,
                     Grade = x.Key.Grade,
                     Status = x.Key.Status,
-                    StudentCount = x.Count(),
-                    OutcomeCount = x.Count()
+                    StudentCount = x.Select(a => a.Status).Distinct().Count(), // 申请人数
+                    OutcomeCount = x.Count() // 申请次数
                 })
                 .OrderBy(x => x.Major)
                 .ThenBy(x => x.Grade)
@@ -1103,6 +1106,58 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                 .ToList();
 
             return result;
+        }
+    }
+
+    [Authorize(KnowledgeHubPermissions.Employment.ViewStatistics)]
+    public async Task<List<StudentApplicationStatDto>> GetApplicationStatsAsync(EmploymentStatisticsInput input)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _applicationRepository.GetQueryableAsync();
+
+            if (input.Days.HasValue)
+            {
+                var since = DateTime.UtcNow.AddDays(-input.Days.Value);
+                query = query.Where(x => x.AppliedAt >= since);
+            }
+
+            var applications = await AsyncExecuter.ToListAsync(
+                query.OrderByDescending(x => x.AppliedAt));
+
+            var studentIds = applications.Select(x => x.StudentId).Distinct().ToList();
+            var jobIds = applications.Select(x => x.JobPostingId).Distinct().ToList();
+
+            var students = studentIds.Count == 0
+                ? new List<IdentityUser>()
+                : await _userRepository.GetListAsync(x => studentIds.Contains(x.Id));
+            var studentMap = students.ToDictionary(x => x.Id, x => x);
+
+            var jobs = jobIds.Count == 0
+                ? new List<JobPosting>()
+                : await _jobPostingRepository.GetListAsync(x => jobIds.Contains(x.Id));
+            var jobMap = jobs.ToDictionary(x => x.Id, x => x);
+
+            return applications
+                .Where(x => studentMap.ContainsKey(x.StudentId))
+                .Select(x =>
+                {
+                    var student = studentMap[x.StudentId];
+                    var job = jobMap.GetValueOrDefault(x.JobPostingId);
+                    var displayName = !string.IsNullOrWhiteSpace(student.Name)
+                        ? student.Name.Trim()
+                        : student.UserName;
+                    return new StudentApplicationStatDto
+                    {
+                        StudentId = x.StudentId.ToString(),
+                        StudentName = displayName,
+                        JobTitle = job?.Title ?? "未知岗位",
+                        CompanyName = job?.CompanyName ?? "",
+                        Status = (int)x.Status,
+                        AppliedAt = x.AppliedAt
+                    };
+                })
+                .ToList();
         }
     }
 

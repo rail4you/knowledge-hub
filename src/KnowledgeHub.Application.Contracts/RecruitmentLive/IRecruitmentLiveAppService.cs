@@ -13,7 +13,7 @@ public interface IRecruitmentLiveAppService : IApplicationService
     /// <summary>获取教师创建的直播列表</summary>
     Task<PagedResultDto<RecruitmentLiveDto>> GetTeacherLivesAsync(PagedRecruitmentLiveRequestDto input);
     /// <summary>创建直播</summary>
-    Task<RecruitmentLiveDto> CreateLiveAsync(CreateRecruitmentLiveDto input);
+    Task<List<RecruitmentLiveDto>> CreateLiveAsync(CreateRecruitmentLiveDto input);
     /// <summary>编辑直播</summary>
     Task<RecruitmentLiveDto> UpdateLiveAsync(Guid id, UpdateRecruitmentLiveDto input);
     /// <summary>取消直播</summary>

@@ -868,10 +868,17 @@
   font-size: 12px;
   color: ds.$student-text-muted;
   margin-bottom: 4px;
+  gap: 8px;
 
   strong {
     color: ds.$student-primary;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    white-space: nowrap;
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 

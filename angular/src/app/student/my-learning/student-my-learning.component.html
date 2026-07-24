@@ -144,7 +144,7 @@
                   <div class="course-progress__bar">
                     <div class="progress-row">
                       <span>学习进度</span>
-                      <strong>{{ c.progress || 0 }}%</strong>
+                      <strong>{{ (c.progress || 0) | number:'1.0-2' }}%</strong>
                     </div>
                     <nz-progress
                       [nzPercent]="c.progress || 0"
@@ -267,7 +267,7 @@
                 <div class="recent-item__bar">
                   <div class="recent-item__fill" [style.width.%]="r.progress || 0"></div>
                 </div>
-                <span class="recent-item__progress">{{ r.progress || 0 }}%</span>
+                <span class="recent-item__progress">{{ (r.progress || 0) | number:'1.0-2' }}%</span>
               </li>
             }
           </ul>

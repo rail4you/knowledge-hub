@@ -95,7 +95,7 @@
               <td>
                 <nz-tag [nzColor]="getTypeColor(exercise.type!)">{{ getTypeName(exercise.type!) }}</nz-tag>
               </td>
-              <td>{{ exercise.answer }}</td>
+              <td>{{ formatAnswer(exercise) }}</td>
               <td>
                 <nz-tag [nzColor]="getDifficultyColor(exercise.difficulty!)">{{ getDifficultyName(exercise.difficulty!) }}</nz-tag>
               </td>

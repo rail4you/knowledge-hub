@@ -12,6 +12,9 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { RecruitmentLiveService } from '../../recruitment-live/recruitment-live.service';
 import { RecruitmentLiveDto, RecruitmentLiveStatus, UserBriefDto } from '../../recruitment-live/recruitment-live.models';
@@ -34,18 +37,17 @@ import { RecruitmentLiveDto, RecruitmentLiveStatus, UserBriefDto } from '../../r
     NzInputModule,
     NzSelectModule,
     NzDatePickerModule,
+    NzCheckboxModule,
+    NzEmptyModule,
+    NzSpinModule,
   ],
   templateUrl: './recruitment-live-management.component.html',
   styles: [`
-    .action-btns {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-    .action-btns .ant-btn + .ant-tag {
-      margin-left: 0;
-    }
+    .action-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .action-btns .ant-btn + .ant-tag { margin-left: 0; }
+    .student-table-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .student-table-toolbar input { width: 200px; }
+    .selected-hint { margin-bottom: 12px; font-size: 13px; color: #666; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -65,13 +67,13 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   // ── Create modal state ──
   createModalVisible = signal(false);
   students = signal<UserBriefDto[]>([]);
+  selectedStudentIds = signal<Set<string>>(new Set());
   studentLoading = signal(false);
   studentSearch = signal('');
 
   form = this.fb.group({
     title: ['', [Validators.required, Validators.maxLength(200)]],
     description: [''],
-    studentId: [null as string | null],
     scheduledAt: [null as Date | null],
   });
 
@@ -99,12 +101,8 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   }
 
   openCreateModal() {
-    this.form.reset({
-      title: '',
-      description: '',
-      studentId: null,
-      scheduledAt: null,
-    });
+    this.form.reset({ title: '', description: '', scheduledAt: null });
+    this.selectedStudentIds.set(new Set());
     this.studentSearch.set('');
     this.loadStudents();
     this.createModalVisible.set(true);
@@ -133,6 +131,33 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     this.loadStudents();
   }
 
+  toggleStudent(id: string) {
+    this.selectedStudentIds.update(s => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  selectAllStudents() {
+    const ids = new Set(this.students().map(s => s.id));
+    this.selectedStudentIds.set(ids);
+  }
+
+  deselectAllStudents() {
+    this.selectedStudentIds.set(new Set());
+  }
+
+  isSelected(id: string): boolean {
+    return this.selectedStudentIds().has(id);
+  }
+
+  isAllSelected(): boolean {
+    const list = this.students();
+    return list.length > 0 && list.every(s => this.selectedStudentIds().has(s.id));
+  }
+
   submit() {
     if (this.form.invalid) {
       Object.values(this.form.controls).forEach(c => {
@@ -143,15 +168,17 @@ export class RecruitmentLiveManagementComponent implements OnInit {
 
     this.loading.set(true);
     const val = this.form.value;
+    const ids = Array.from(this.selectedStudentIds());
     this.liveService.createLive({
       title: val.title!,
       description: val.description || undefined,
-      studentId: val.studentId || undefined,
+      studentIds: ids.length > 0 ? ids : undefined,
       scheduledAt: val.scheduledAt ? val.scheduledAt.toISOString() : undefined,
     }).subscribe({
-      next: (live) => {
+      next: (lives) => {
         this.loading.set(false);
-        this.message.success(`直播创建成功，房间码: ${live.roomCode}`);
+        const codes = lives.map(l => l.roomCode).join(', ');
+        this.message.success(`直播创建成功，共 ${lives.length} 个直播间，房间码: ${codes}`);
         this.closeCreateModal();
         this.loadLives();
       },
@@ -215,7 +242,6 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   }
 
   canEnter(live: RecruitmentLiveDto): boolean {
-    // Waiting 或 Active 状态，且未过期
     if (live.status !== RecruitmentLiveStatus.Waiting && live.status !== RecruitmentLiveStatus.Active)
       return false;
     return !this.isExpired(live);
@@ -226,10 +252,9 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   }
 
   canDelete(live: RecruitmentLiveDto): boolean {
-    return true; // 所有状态都可以手动删除
+    return true;
   }
 
-  /** 检查直播是否已过期（计划时间已过且未开始） */
   isExpired(live: RecruitmentLiveDto): boolean {
     if (!live.scheduledAt) return false;
     return new Date(live.scheduledAt) < new Date()

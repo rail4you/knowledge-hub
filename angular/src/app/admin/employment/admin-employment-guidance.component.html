@@ -1,0 +1,212 @@
+<div class="admin-guidance-page">
+  <div class="page-header">
+    <h2>就业指导记录</h2>
+    <p class="subtitle">查看本租户下所有学生生成的 AI 就业指导记录，按学生分组展示</p>
+  </div>
+
+  <!-- 搜索 -->
+  <div class="search-bar">
+    <input
+      nz-input
+      [ngModel]="searchText()"
+      (ngModelChange)="searchText.set($event)"
+      placeholder="搜索学生姓名或规划标题..."
+    />
+  </div>
+
+  <!-- 加载中 -->
+  @if (loading()) {
+    <nz-card>
+      <div class="loading-state">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+        <p>加载就业指导记录...</p>
+      </div>
+    </nz-card>
+  } @else if (groups().length === 0) {
+    <nz-card>
+      <nz-empty [nzNotFoundContent]="searchText() ? '未找到匹配的记录' : '暂无就业指导记录'"></nz-empty>
+    </nz-card>
+  } @else {
+    <!-- 学生分组列表 -->
+    @for (group of groups(); track group.studentId) {
+      <nz-card class="student-group-card">
+        <div
+          class="student-group-header"
+          (click)="toggleStudent(group.studentId)"
+        >
+          <div class="student-group-header__left">
+            <span
+              nz-icon
+              [nzType]="expandedStudentId() === group.studentId ? 'down' : 'right'"
+              nzTheme="outline"
+            ></span>
+            <span class="student-name">
+              <span nz-icon nzType="user" nzTheme="outline"></span>
+              {{ group.studentName }}
+            </span>
+            <nz-tag>{{ group.records.length }} 条记录</nz-tag>
+          </div>
+        </div>
+
+        @if (expandedStudentId() === group.studentId) {
+          <nz-divider style="margin: 0 0 12px;"></nz-divider>
+          <div class="student-records">
+            @for (record of group.records; track record.id) {
+              <div class="record-item" [class.record-item--expanded]="expandedRecordId() === record.id">
+                <div class="record-item__header" (click)="toggleRecord(record.id)">
+                  <div class="record-item__info">
+                    <span class="record-item__title">{{ record.title }}</span>
+                    <span class="record-item__date">{{ record.guidedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+                    @if (record.careerGoal) {
+                      <span class="record-item__goal">目标：{{ record.careerGoal }}</span>
+                    }
+                  </div>
+                  <div class="record-item__actions">
+                    @if (record.content) {
+                      <button nz-button nzSize="small" nzType="text" (click)="downloadDocx(record); $event.stopPropagation()">
+                        <span nz-icon nzType="download"></span>
+                      </button>
+                    }
+                    <span nz-icon [nzType]="expandedRecordId() === record.id ? 'up' : 'down'" nzTheme="outline"></span>
+                  </div>
+                </div>
+
+                @if (expandedRecordId() === record.id) {
+                  <div class="record-item__body">
+                    @if (record.parsed; as r) {
+                      <div class="result-content">
+                        <h3 class="plan-title">{{ r.title }}</h3>
+
+                        <!-- Assessment -->
+                        <div class="section-block">
+                          <h4 class="section-heading">个人能力评估</h4>
+                          <nz-descriptions nzBordered [nzColumn]="2" nzSize="small">
+                            <nz-descriptions-item nzTitle="职业匹配度" [nzSpan]="2">
+                              <nz-progress [nzPercent]="r.assessment.careerMatchScore"
+                                [nzStatus]="r.assessment.careerMatchScore >= 70 ? 'success' : 'normal'"></nz-progress>
+                            </nz-descriptions-item>
+                            <nz-descriptions-item nzTitle="综合评估" [nzSpan]="2">{{ r.assessment.summary }}</nz-descriptions-item>
+                            <nz-descriptions-item nzTitle="核心优势">
+                              @for (s of r.assessment.strengths; track s) {
+                                <nz-tag nzColor="green">{{ s }}</nz-tag>
+                              }
+                            </nz-descriptions-item>
+                            <nz-descriptions-item nzTitle="待提升领域">
+                              @for (a of r.assessment.areasForImprovement; track a) {
+                                <nz-tag nzColor="orange">{{ a }}</nz-tag>
+                              }
+                            </nz-descriptions-item>
+                          </nz-descriptions>
+                        </div>
+
+                        <!-- Edu & Work -->
+                        @if (r.assessment.educationBackground?.length || r.assessment.workExperience?.length) {
+                          <div class="section-block">
+                            @if (r.assessment.educationBackground?.length) {
+                              <h4 class="section-heading">教育背景</h4>
+                              <nz-table [nzData]="r.assessment.educationBackground!" nzSize="small" [nzBordered]="true">
+                                <thead>
+                                  <tr><th>时间</th><th>学校</th><th>专业</th><th>学历</th></tr>
+                                </thead>
+                                <tbody>
+                                  @for (edu of r.assessment.educationBackground; track edu.period + edu.school + edu.major) {
+                                    <tr><td>{{ edu.period }}</td><td>{{ edu.school }}</td><td>{{ edu.major }}</td><td>{{ edu.degree }}</td></tr>
+                                  }
+                                </tbody>
+                              </nz-table>
+                            }
+                            @if (r.assessment.workExperience?.length) {
+                              <h4 class="section-heading">工作/实习经历</h4>
+                              <nz-table [nzData]="r.assessment.workExperience!" nzSize="small" [nzBordered]="true">
+                                <thead>
+                                  <tr><th>时间</th><th>公司/单位</th><th>职位</th><th>工作内容</th></tr>
+                                </thead>
+                                <tbody>
+                                  @for (work of r.assessment.workExperience; track work.period + work.company + work.position) {
+                                    <tr><td>{{ work.period }}</td><td>{{ work.company }}</td><td>{{ work.position }}</td><td>{{ work.description }}</td></tr>
+                                  }
+                                </tbody>
+                              </nz-table>
+                            }
+                          </div>
+                        }
+
+                        <!-- Paths -->
+                        <div class="section-block">
+                          <h4 class="section-heading">推荐职业路径</h4>
+                          <nz-collapse>
+                            @for (path of r.recommendedPaths; track path.title) {
+                              <nz-collapse-panel [nzHeader]="path.title + ' (匹配度: ' + path.matchScore + '%)'">
+                                <p>{{ path.description }}</p>
+                                <nz-descriptions [nzColumn]="2" nzSize="small">
+                                  <nz-descriptions-item nzTitle="薪资范围">{{ path.salaryRange }}</nz-descriptions-item>
+                                  <nz-descriptions-item nzTitle="发展潜力">{{ path.growthPotential }}</nz-descriptions-item>
+                                  <nz-descriptions-item nzTitle="所需技能" [nzSpan]="2">
+                                    @for (skill of path.requiredSkills; track skill) {
+                                      <nz-tag>{{ skill }}</nz-tag>
+                                    }
+                                  </nz-descriptions-item>
+                                </nz-descriptions>
+                              </nz-collapse-panel>
+                            }
+                          </nz-collapse>
+                        </div>
+
+                        <!-- Skill Gaps -->
+                        <div class="section-block">
+                          <h4 class="section-heading">技能差距分析</h4>
+                          <nz-table [nzData]="r.skillGaps" nzSize="small">
+                            <thead>
+                              <tr><th>技能</th><th>当前水平</th><th>目标水平</th><th>优先级</th></tr>
+                            </thead>
+                            <tbody>
+                              @for (gap of r.skillGaps; track gap.skill) {
+                                <tr>
+                                  <td>{{ gap.skill }}</td><td>{{ gap.currentLevel }}</td>
+                                  <td>{{ gap.targetLevel }}</td>
+                                  <td><nz-tag [nzColor]="getPriorityColor(gap.priority)">{{ gap.priority }}</nz-tag></td>
+                                </tr>
+                              }
+                            </tbody>
+                          </nz-table>
+                        </div>
+
+                        <!-- Action Plan -->
+                        <div class="section-block">
+                          <h4 class="section-heading">行动计划</h4>
+                          <nz-timeline>
+                            @for (action of r.actionPlan; track action.id) {
+                              <nz-timeline-item [nzColor]="getPriorityColor(action.priority)">
+                                <h4>{{ action.title }}</h4>
+                                <p>{{ action.description }}</p>
+                                <small>时间线: {{ action.timeline }} | 优先级: {{ action.priority }}</small>
+                              </nz-timeline-item>
+                            }
+                          </nz-timeline>
+                        </div>
+
+                        <!-- Next Steps -->
+                        <div class="section-block">
+                          <h4 class="section-heading">下一步行动</h4>
+                          <ul class="item-list">
+                            @for (step of r.nextSteps; track step) {
+                              <li>{{ step }}</li>
+                            }
+                          </ul>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="saved-raw-content">
+                        <pre>{{ record.content }}</pre>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </nz-card>
+    }
+  }
+</div>

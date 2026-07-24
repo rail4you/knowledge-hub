@@ -31,7 +31,7 @@ export class RecruitmentLiveService {
     }, { apiName: this.apiName });
 
   createLive = (input: CreateRecruitmentLiveDto) =>
-    this.restService.request<any, RecruitmentLiveDto>({
+    this.restService.request<any, RecruitmentLiveDto[]>({
       method: 'POST', url: '/api/app/recruitment-live/live', body: input,
     }, { apiName: this.apiName });
 

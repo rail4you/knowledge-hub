@@ -23,18 +23,16 @@
   >
     <thead>
       <tr>
-        <th nzWidth="30%">标题</th>
-        <th nzWidth="15%">学生</th>
-        <th nzWidth="10%">状态</th>
-        <th nzWidth="15%">计划时间</th>
-        <th nzWidth="15%">创建时间</th>
-        <th nzWidth="15%">操作</th>
+        <th nzWidth="35%">标题</th>
+        <th nzWidth="12%">状态</th>
+        <th nzWidth="18%">计划时间</th>
+        <th nzWidth="18%">创建时间</th>
+        <th nzWidth="17%">操作</th>
       </tr>
     </thead>
     <tbody>
       <tr *ngFor="let live of lives()">
         <td>{{ live.title }}</td>
-        <td>{{ live.studentName || '未分配' }}</td>
         <td>
           <nz-tag [nzColor]="statusColor(live.status)">{{ statusText(live.status) }}</nz-tag>
         </td>
@@ -83,6 +81,7 @@
   [(nzVisible)]="createModalVisible"
   nzTitle="创建直播"
   [nzFooter]="createModalFooter"
+  [nzWidth]="640"
   (nzOnCancel)="closeCreateModal()"
 >
   <div *nzModalContent>
@@ -97,26 +96,7 @@
       <nz-form-item>
         <nz-form-label>描述</nz-form-label>
         <nz-form-control>
-          <textarea nz-input formControlName="description" placeholder="直播描述（可选）" rows="3" maxlength="1000"></textarea>
-        </nz-form-control>
-      </nz-form-item>
-
-      <nz-form-item>
-        <nz-form-label>分配学生</nz-form-label>
-        <nz-form-control>
-          <nz-select
-            formControlName="studentId"
-            nzAllowClear
-            nzPlaceHolder="搜索并选择学生（可选）"
-            [nzLoading]="studentLoading()"
-            nzShowSearch
-            nzServerSearch
-            (nzOnSearch)="onStudentSearch($event)"
-          >
-            <nz-option *ngFor="let s of students()" [nzValue]="s.id" [nzLabel]="s.name + ' (' + s.userName + ')'">
-              {{ s.name }}（{{ s.userName }}）
-            </nz-option>
-          </nz-select>
+          <textarea nz-input formControlName="description" placeholder="直播描述（可选）" rows="2" maxlength="1000"></textarea>
         </nz-form-control>
       </nz-form-item>
 
@@ -125,14 +105,58 @@
         <nz-form-control>
           <nz-date-picker
             formControlName="scheduledAt"
-            nzShowTime
-            nzShowNow
+            nzShowTime nzShowNow
             nzPlaceHolder="选择计划开始时间（可选）"
             style="width: 100%"
           ></nz-date-picker>
         </nz-form-control>
       </nz-form-item>
     </form>
+
+    <nz-divider></nz-divider>
+
+    <!-- 学生选择表格 -->
+    <div class="student-table-toolbar">
+      <input nz-input [(ngModel)]="studentSearch" (keyup.enter)="onStudentSearch($any($event).target.value)" placeholder="搜索学生姓名..." [ngModelOptions]="{standalone: true}" />
+      <button nz-button nzSize="small" (click)="loadStudents()">搜索</button>
+      <button nz-button nzSize="small" (click)="selectAllStudents()">全选</button>
+      <button nz-button nzSize="small" (click)="deselectAllStudents()">取消全选</button>
+    </div>
+
+    <div class="selected-hint">已选 <strong>{{ selectedStudentIds().size }}</strong> 个学生</div>
+
+    @if (studentLoading()) {
+      <div style="text-align:center; padding: 24px;"><nz-spin nzSimple></nz-spin></div>
+    } @else if (students().length === 0) {
+      <nz-empty nzNotFoundContent="没有可分配的学生"></nz-empty>
+    } @else {
+      <nz-table
+        [nzData]="students()"
+        [nzFrontPagination]="true"
+        nzSize="small"
+        [nzPageSize]="8"
+        [nzShowSizeChanger]="false"
+      >
+        <thead>
+          <tr>
+            <th nzWidth="40px">
+              <label nz-checkbox [nzChecked]="isAllSelected()" (nzCheckedChange)="$event ? selectAllStudents() : deselectAllStudents()"></label>
+            </th>
+            <th>姓名</th>
+            <th nzWidth="140px">用户名</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of students()" (click)="toggleStudent(s.id)" style="cursor:pointer;">
+            <td (click)="$event.stopPropagation()">
+              <label nz-checkbox [nzChecked]="isSelected(s.id)" (nzCheckedChange)="toggleStudent(s.id)"></label>
+            </td>
+            <td>{{ s.name }}</td>
+            <td>{{ s.userName }}</td>
+          </tr>
+        </tbody>
+      </nz-table>
+    }
   </div>
 
   <ng-template #createModalFooter>

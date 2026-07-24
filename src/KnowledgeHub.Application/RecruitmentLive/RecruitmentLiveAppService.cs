@@ -72,7 +72,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
     }
 
     [Authorize(KnowledgeHubPermissions.RecruitmentLive.Create)]
-    public async Task<RecruitmentLiveDto> CreateLiveAsync(CreateRecruitmentLiveDto input)
+    public async Task<List<RecruitmentLiveDto>> CreateLiveAsync(CreateRecruitmentLiveDto input)
     {
         if (string.IsNullOrWhiteSpace(input.Title))
         {
@@ -81,28 +81,49 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
         var currentUserId = _currentUser.GetId();
         var currentUser = await _userRepository.GetAsync(currentUserId);
-        var roomCode = await GenerateUniqueRoomCodeAsync();
 
-        var entity = new RecruitmentLiveEntity(
-            GuidGenerator.Create(),
-            input.Title.Trim(),
-            currentUserId,
-            currentUser.Name ?? currentUser.UserName ?? "未知",
-            roomCode)
+        var studentIds = input.StudentIds?.Distinct().ToList() ?? new List<Guid>();
+        // 至少需要一个参与者（教师自己），如果没有学生则创建空直播
+        if (studentIds.Count == 0)
         {
-            TenantId = CurrentTenant.Id,
-            Description = input.Description?.Trim(),
-            ScheduledAt = input.ScheduledAt?.ToUniversalTime(),
-        };
-
-        if (input.StudentId.HasValue)
-        {
-            var student = await _userRepository.GetAsync(input.StudentId.Value);
-            entity.AssignStudent(student.Id, student.Name ?? student.UserName ?? "未知");
+            var roomCode = await GenerateUniqueRoomCodeAsync();
+            var entity = new RecruitmentLiveEntity(
+                GuidGenerator.Create(),
+                input.Title.Trim(),
+                currentUserId,
+                currentUser.Name ?? currentUser.UserName ?? "未知",
+                roomCode)
+            {
+                TenantId = CurrentTenant.Id,
+                Description = input.Description?.Trim(),
+                ScheduledAt = input.ScheduledAt?.ToUniversalTime(),
+            };
+            await _liveRepository.InsertAsync(entity, autoSave: true);
+            return new List<RecruitmentLiveDto> { MapToDto(entity) };
         }
 
-        await _liveRepository.InsertAsync(entity, autoSave: true);
-        return MapToDto(entity);
+        // 每个学生创建一个独立的直播间
+        var results = new List<RecruitmentLiveDto>();
+        foreach (var studentId in studentIds)
+        {
+            var student = await _userRepository.GetAsync(studentId);
+            var roomCode = await GenerateUniqueRoomCodeAsync();
+            var entity = new RecruitmentLiveEntity(
+                GuidGenerator.Create(),
+                input.Title.Trim(),
+                currentUserId,
+                currentUser.Name ?? currentUser.UserName ?? "未知",
+                roomCode)
+            {
+                TenantId = CurrentTenant.Id,
+                Description = input.Description?.Trim(),
+                ScheduledAt = input.ScheduledAt?.ToUniversalTime(),
+            };
+            entity.AssignStudent(student.Id, student.Name ?? student.UserName ?? "未知");
+            await _liveRepository.InsertAsync(entity, autoSave: true);
+            results.Add(MapToDto(entity));
+        }
+        return results;
     }
 
     [Authorize(KnowledgeHubPermissions.RecruitmentLive.Create)]

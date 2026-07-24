@@ -492,45 +492,64 @@
   }
 }
 
-// 热门词云弹窗
+// 热门词列表弹窗 — 统一尺寸
 :host ::ng-deep .hot-words-cloud {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 6px;
   max-width: 320px;
-  min-width: 200px;
-  min-height: 50px;
-  align-items: center;
-  justify-content: center;
+  min-width: 180px;
+  min-height: 40px;
+  align-items: flex-start;
 }
 
 .hot-word-tag {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
-  border: 1px solid #d9e1ec;
-  border-radius: 12px;
-  background: #fff;
-  color: #335;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  background: #fafafa;
+  color: #333;
   cursor: pointer;
   transition: all 0.15s;
-  line-height: 1.3;
+  font-size: 13px;
+  line-height: 1.4;
   white-space: nowrap;
   font-family: inherit;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 140px;
+
+  &__text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__freq {
+    font-size: 11px;
+    color: #999;
+    background: #eee;
+    border-radius: 3px;
+    padding: 0 4px;
+    flex-shrink: 0;
+    min-width: 18px;
+    text-align: center;
+  }
 
   &:hover {
     background: #e6f7ff;
     border-color: #91d5ff;
     color: #1890ff;
-    transform: scale(1.05);
+
+    .hot-word-tag__freq {
+      background: #bae7ff;
+      color: #096dd9;
+    }
   }
 
   &:active {
-    transform: scale(0.95);
+    transform: scale(0.97);
   }
 }
 

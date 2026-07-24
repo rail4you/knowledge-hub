@@ -330,6 +330,8 @@ public class EmploymentStatisticsInput
     public string? Major { get; set; }
     public string? Grade { get; set; }
     public EmploymentOutcomeStatus? Status { get; set; }
+    /// <summary>最近 N 天的投递统计（7=近7天，30=近30天，null=全部）</summary>
+    public int? Days { get; set; }
 }
 
 public class EmploymentStatisticsRowDto
@@ -339,6 +341,19 @@ public class EmploymentStatisticsRowDto
     public EmploymentOutcomeStatus Status { get; set; }
     public int StudentCount { get; set; }
     public int OutcomeCount { get; set; }
+}
+
+/// <summary>
+/// 学生投递统计明细（按学生+岗位展开）
+/// </summary>
+public class StudentApplicationStatDto
+{
+    public string StudentId { get; set; } = string.Empty;
+    public string StudentName { get; set; } = string.Empty;
+    public string JobTitle { get; set; } = string.Empty;
+    public string CompanyName { get; set; } = string.Empty;
+    public int Status { get; set; }
+    public DateTime AppliedAt { get; set; }
 }
 
 /// <summary>

@@ -363,6 +363,23 @@ export class ExerciseManagementComponent implements OnInit {
     return colors[difficulty] ?? 'default';
   }
 
+  // T2: 多选题答案归一化为字母（历史脏数据可能存在数字索引如 0,1,4）
+  private static readonly ANSWER_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  formatAnswer(ex: ExerciseDto): string {
+    const raw = (ex.answer ?? '').trim();
+    if (!raw) return '';
+    const tokens = raw.split(',').map(s => s.trim()).filter(Boolean);
+    const letters = tokens.map(t => {
+      if (/^\d+$/.test(t)) {
+        const i = Number(t);
+        return ExerciseManagementComponent.ANSWER_LETTERS[i] ?? t;
+      }
+      return t.toUpperCase();
+    });
+    return Array.from(new Set(letters.filter(l => /^[A-Z]$/.test(l)))).join(',');
+  }
+
   // Batch selection
   checkedIds = signal<Set<string>>(new Set());
 

@@ -278,7 +278,7 @@
                   <div class="course-card__progress">
                     <div class="progress-label">
                       <span>学习进度</span>
-                      <strong>{{ getMyProgress(course.id!) }}%</strong>
+                      <strong>{{ getMyProgress(course.id!) | number:'1.0-2' }}%</strong>
                     </div>
                     <nz-progress
                       [nzPercent]="getMyProgress(course.id!)"

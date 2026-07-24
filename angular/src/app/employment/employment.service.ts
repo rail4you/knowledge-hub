@@ -366,6 +366,7 @@ export interface EmploymentStatisticsInput {
   major?: string;
   grade?: string;
   status?: EmploymentOutcomeStatus;
+  days?: number;
 }
 
 export interface EmploymentStatisticsRowDto {
@@ -374,6 +375,15 @@ export interface EmploymentStatisticsRowDto {
   status: EmploymentOutcomeStatus;
   studentCount: number;
   outcomeCount: number;
+}
+
+export interface StudentApplicationStatDto {
+  studentId: string;
+  studentName: string;
+  jobTitle: string;
+  companyName: string;
+  status: number;
+  appliedAt: string;
 }
 
 @Injectable({
@@ -602,6 +612,13 @@ export class EmploymentService {
     this.restService.request<any, EmploymentStatisticsRowDto[]>({
       method: 'GET',
       url: '/api/app/employment/statistics',
+      params: input,
+    }, { apiName: this.apiName });
+
+  getApplicationStats = (input: EmploymentStatisticsInput) =>
+    this.restService.request<any, StudentApplicationStatDto[]>({
+      method: 'GET',
+      url: '/api/app/employment/application-stats',
       params: input,
     }, { apiName: this.apiName });
 

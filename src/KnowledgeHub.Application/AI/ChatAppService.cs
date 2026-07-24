@@ -207,23 +207,14 @@ public class ChatAppService : KnowledgeHubAppService
     /// </summary>
     public async Task<List<ResourceForChatDto>> GetResumesForUserAsync()
     {
-        var currentUserId = _currentUser.GetId();
-        var isAdmin = _currentUser.IsInRole("admin")
-                      || _currentUser.IsInRole("SchoolAdmin")
-                      || _currentUser.IsInRole("LeagueAdmin");
-
         var queryable = await _resourceRepository.GetQueryableAsync();
         var query = queryable.Where(r =>
             r.IsResume
             && (r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
                 || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved));
 
-        if (!isAdmin)
-        {
-            query = query.Where(r => r.CreatorId == currentUserId);
-        }
-
-        // 按创建时间倒序，最近上传的简历排在前面
+        // T4: 教师/管理员均可看到当前租户内全部已审核通过的简历，不再限制 CreatorId
+        // （跨校协作场景下教师助理上传的简历也需要对管理员可见）
         return (await AsyncExecuter.ToListAsync(
                 query.OrderByDescending(r => r.CreationTime)))
             .Select(r => new ResourceForChatDto

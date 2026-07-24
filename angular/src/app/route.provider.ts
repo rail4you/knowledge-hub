@@ -298,15 +298,6 @@ function configureRoutes() {
       
     },
     {
-      path: '/employment/my-applications',
-      name: '::Menu:Employment',
-      iconClass: 'fas fa-briefcase',
-      parentName: '::Menu:TrainingManagement',
-      order: 4,
-      layout: eLayoutType.application,
-      
-    },
-    {
       path: '/employment/my-guidance',
       name: '::Menu:MyGuidance',
       iconClass: 'fas fa-compass',

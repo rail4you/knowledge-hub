@@ -1,33 +1,72 @@
-<nz-card nzTitle="就业统计" [nzExtra]="extraTpl">
-  <ng-template #extraTpl>
-    <div class="toolbar">
-      <input nz-input [(ngModel)]="major" placeholder="专业" />
-      <input nz-input [(ngModel)]="grade" placeholder="年级" />
-      <button nz-button (click)="reload()">查询</button>
-      <button nz-button nzType="primary" (click)="export()">导出</button>
+<div class="stats-page">
+  <!-- Summary Cards -->
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="summary-card__icon" style="background: #e6f7ff;">
+        <span nz-icon nzType="user" nzTheme="outline" style="color:#1890ff;"></span>
+      </div>
+      <div class="summary-card__body">
+        <div class="summary-card__value">{{ totalStudents() }}</div>
+        <div class="summary-card__label">投递学生数</div>
+      </div>
     </div>
-  </ng-template>
+    <div class="summary-card">
+      <div class="summary-card__icon" style="background: #f6ffed;">
+        <span nz-icon nzType="file-text" nzTheme="outline" style="color:#52c41a;"></span>
+      </div>
+      <div class="summary-card__body">
+        <div class="summary-card__value">{{ totalApplications() }}</div>
+        <div class="summary-card__label">投递次数</div>
+      </div>
+    </div>
+  </div>
 
-  <nz-table [nzData]="rows()" [nzFrontPagination]="false">
-    <thead>
-      <tr>
-        <th>专业</th>
-        <th>年级</th>
-        <th>状态</th>
-        <th>学生数</th>
-        <th>去向数</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (row of rows(); track row.major + row.grade + row.status) {
-        <tr>
-          <td>{{ row.major }}</td>
-          <td>{{ row.grade }}</td>
-          <td>{{ row.status }}</td>
-          <td>{{ row.studentCount }}</td>
-          <td>{{ row.outcomeCount }}</td>
-        </tr>
+  <!-- Time Filter + Export -->
+  <div class="toolbar">
+    <nz-radio-group [ngModel]="days()" (ngModelChange)="setDays($event)" nzSize="small">
+      <label nz-radio-button [nzValue]="7">近 7 天</label>
+      <label nz-radio-button [nzValue]="30">近 30 天</label>
+      <label nz-radio-button [nzValue]="null">全部</label>
+    </nz-radio-group>
+    <button nz-button nzType="primary" nzSize="small" (click)="export()">导出 Excel</button>
+  </div>
+
+  @if (loading()) {
+    <nz-card>
+      <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+    </nz-card>
+  } @else if (items().length === 0) {
+    <nz-card><nz-empty nzNotFoundContent="暂无投递数据"></nz-empty></nz-card>
+  } @else {
+    <!-- Student Group List -->
+    <div class="group-list">
+      @for (group of groups(); track group.studentId) {
+        <nz-card class="group-card">
+          <div class="group-header">
+            <span class="group-header__name">
+              <span nz-icon nzType="user" nzTheme="outline"></span>
+              {{ group.studentName }}
+            </span>
+            <nz-tag>{{ group.items.length }} 次投递</nz-tag>
+          </div>
+          <div class="group-items">
+            @for (item of group.items; track item.jobTitle + item.appliedAt) {
+              <div class="app-item">
+                <div class="app-item__left">
+                  <span class="app-item__job">{{ item.jobTitle }}</span>
+                  @if (item.companyName) {
+                    <span class="app-item__company">{{ item.companyName }}</span>
+                  }
+                </div>
+                <div class="app-item__right">
+                  <span class="app-item__time">{{ item.appliedAt | date:'MM-dd HH:mm' }}</span>
+                  <nz-tag [nzColor]="statusColor(item.status)">{{ statusLabel(item.status) }}</nz-tag>
+                </div>
+              </div>
+            }
+          </div>
+        </nz-card>
       }
-    </tbody>
-  </nz-table>
-</nz-card>
+    </div>
+  }
+</div>

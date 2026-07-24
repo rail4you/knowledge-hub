@@ -110,19 +110,6 @@ export class ChatComponent implements OnInit, OnDestroy {
   isHotWordsLoading = signal(false);
   showHotWordsPopover = signal(false);
 
-  /** 计算热门词字体大小（词云效果） */
-  hotWordFontSize(freq: number): string {
-    const words = this.hotWords();
-    if (words.length === 0) return '12px';
-    const maxFreq = Math.max(...words.map(w => w.frequency));
-    const minFreq = Math.min(...words.map(w => w.frequency));
-    const range = maxFreq - minFreq || 1;
-    const normalized = (freq - minFreq) / range; // 0..1
-    // 字体大小 14px ~ 28px
-    const size = 14 + normalized * 14;
-    return `${Math.round(size)}px`;
-  }
-
   /** 加载当前选中文档的热门词 */
   loadHotWords(): void {
     const res = this.selectedResource();
@@ -133,8 +120,8 @@ export class ChatComponent implements OnInit, OnDestroy {
 
     this.restService.request<any, { word: string; frequency: number }[]>({
       method: 'GET',
-      url: '/api/app/meili-search-admin/hot-words',
-      params: { resourceId: res.id, count: 30 }
+      url: `/api/app/meili-search-admin/hot-words/${res.id}`,
+      params: { count: 30 }
     }, { apiName: 'KnowledgeHub' }).subscribe({
       next: (data) => {
         this.hotWords.set(data ?? []);
@@ -150,7 +137,12 @@ export class ChatComponent implements OnInit, OnDestroy {
   /** 点击热门词后自动搜索 */
   searchByHotWord(word: string): void {
     const res = this.selectedResource();
-    if (!res) return;
+    if (!res) {
+      // T1: 没有选中资源时，给出热门词的原理说明，避免再走 AI 索引
+      this.inputMessage.set(`热门词的原理：当多名用户对同一关键词检索时，系统会按热度统计并向教师推荐热门检索词以便补充资源。`);
+      this.sendMessage();
+      return;
+    }
     // 直接在文档中搜索该词
     this.inputMessage.set(`在文档中搜索关于"${word}"的内容`);
     this.sendMessage();

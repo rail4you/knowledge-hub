@@ -176,12 +176,10 @@
                 <button
                   type="button"
                   class="hot-word-tag"
-                  [style.font-size]="hotWordFontSize(w.frequency)"
-                  nz-tooltip
-                  [nzTooltipTitle]="'出现 ' + w.frequency + ' 次'"
                   (click)="searchByHotWord(w.word); showHotWordsPopover.set(false)"
                 >
-                  {{ w.word }}
+                  <span class="hot-word-tag__text">{{ w.word }}</span>
+                  <span class="hot-word-tag__freq">{{ w.frequency }}</span>
                 </button>
               }
             }

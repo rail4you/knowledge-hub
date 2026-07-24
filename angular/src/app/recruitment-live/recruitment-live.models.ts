@@ -30,7 +30,7 @@ export interface RecruitmentLiveDto {
 export interface CreateRecruitmentLiveDto {
   title: string;
   description?: string;
-  studentId?: string;
+  studentIds?: string[];
   scheduledAt?: string;
 }
 

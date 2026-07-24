@@ -33,8 +33,8 @@ public class CreateRecruitmentLiveDto
     public string Title { get; set; } = string.Empty;
     /// <summary>直播描述</summary>
     public string? Description { get; set; }
-    /// <summary>分配到学生ID（可选）</summary>
-    public Guid? StudentId { get; set; }
+    /// <summary>分配到学生ID列表（可选，可多选）</summary>
+    public List<Guid>? StudentIds { get; set; }
     /// <summary>计划开始时间（可选）</summary>
     public DateTime? ScheduledAt { get; set; }
 }

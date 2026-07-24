@@ -1,0 +1,197 @@
+.admin-guidance-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.page-header {
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    margin: 4px 0 0;
+    color: #666;
+    font-size: 13px;
+  }
+}
+
+.search-bar {
+  margin-bottom: 16px;
+
+  input {
+    max-width: 360px;
+  }
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+// ========== Student group card ==========
+.student-group-card {
+  margin-bottom: 16px;
+  border-radius: 10px;
+}
+
+.student-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  cursor: pointer;
+  user-select: none;
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+}
+
+.student-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+
+  span[nz-icon] {
+    color: #1e6ce8;
+  }
+}
+
+// ========== Records ==========
+.student-records {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.record-item {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: #adb5bd;
+  }
+
+  &--expanded {
+    border-color: #1e6ce8;
+    box-shadow: 0 0 0 1px rgba(30, 108, 232, 0.12);
+  }
+}
+
+.record-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.record-item__info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.record-item__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+}
+
+.record-item__date {
+  font-size: 12px;
+  color: #999;
+}
+
+.record-item__goal {
+  font-size: 12px;
+  color: #1e6ce8;
+  background: #e8f0fe;
+  padding: 1px 8px;
+  border-radius: 10px;
+}
+
+.record-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.record-item__body {
+  padding: 12px 20px 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+// ========== Result content (reused from my-guidance) ==========
+.result-content {
+  padding-top: 4px;
+}
+
+.plan-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 14px;
+  color: #111;
+}
+
+.section-block {
+  margin-bottom: 22px;
+}
+
+.section-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.item-list {
+  margin: 0;
+  padding: 0 0 0 18px;
+
+  li {
+    margin-bottom: 3px;
+    font-size: 13px;
+    color: #444;
+  }
+}
+
+.saved-raw-content {
+  pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 12px;
+    color: #666;
+    margin: 0;
+    max-height: 400px;
+    overflow: auto;
+  }
+}

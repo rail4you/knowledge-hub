@@ -10,6 +10,12 @@
 }
 
 /* ============ 品牌栏 (Part 1) ============ */
+
+/* S5: 学生端隐藏 LeptonX 顶栏（避免与自定义品牌栏重叠） */
+:host ::ng-deep .lpx-topbar-host {
+  display: none;
+}
+
 .brand-bar {
   background: #fff;
   border-bottom: 1px solid ds.$student-border-soft;
