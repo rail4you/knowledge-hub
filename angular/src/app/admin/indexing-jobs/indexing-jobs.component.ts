@@ -197,6 +197,8 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
                         nz-button
                         nzType="link"
                         nzSize="small"
+                        nz-tooltip
+                        [nzTooltipTitle]="job.errorMessage || '重新索引该资源'"
                         (click)="retryJob(job.id)">
                         重新索引
                       </button>

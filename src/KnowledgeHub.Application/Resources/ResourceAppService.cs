@@ -365,6 +365,32 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
     private async Task EnqueueVideoIndexingJobAsync(Resource resource)
     {
+        // 视频分析服务限制 7MB，超限文件直接标记为跳过，避免创建失败任务
+        const long maxVideoBytes = 7 * 1024 * 1024;
+        if (!string.IsNullOrEmpty(resource.FilePath))
+        {
+            var fullPath = Path.Combine(FileStorageService.RootPath, resource.FilePath);
+            if (File.Exists(fullPath))
+            {
+                var fileInfo = new FileInfo(fullPath);
+                if (fileInfo.Length > maxVideoBytes)
+                {
+                    var skippedJob = new VideoIndexingJob
+                    {
+                        ResourceId = resource.Id,
+                        Status = VideoIndexingJobStatus.Completed,
+                        TenantId = CurrentTenant.Id,
+                        Progress = 100,
+                        ErrorMessage = $"视频文件过大（{fileInfo.Length / 1024.0 / 1024.0:F2} MB），超过 7MB 限制，跳过索引。建议压缩后重新上传。",
+                        CompletedAt = DateTime.UtcNow
+                    };
+                    await VideoIndexingJobRepository.InsertAsync(skippedJob);
+                    Logger.LogInformation("Skipped video indexing for {ResourceId}: file too large ({Size:F2} MB)", resource.Id, fileInfo.Length / 1024.0 / 1024.0);
+                    return;
+                }
+            }
+        }
+
         var indexingJob = new VideoIndexingJob
         {
             ResourceId = resource.Id,
