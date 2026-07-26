@@ -92,6 +92,12 @@ services:
       - Qwen__ApiKey=${QWEN_API_KEY}
       - Qwen__BaseUrl=${QWEN_BASE_URL}
       - Qwen__Model=${QWEN_MODEL}
+      # OSS 阿里云对象存储
+      - Oss__Endpoint=${OSS_ENDPOINT:-oss-cn-beijing.aliyuncs.com}
+      - Oss__AccessKeyId=${OSS_ACCESS_KEY_ID}
+      - Oss__AccessKeySecret=${OSS_ACCESS_KEY_SECRET}
+      - Oss__BucketName=${OSS_BUCKET_NAME:-kg-edu}
+      - Oss__UploadPath=${OSS_UPLOAD_PATH:-knowledgehub}
       # 安全
       - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
       - StringEncryption__DefaultPassPhrase=${STRING_ENCRYPTION_PASSPHRASE}
@@ -101,7 +107,7 @@ services:
       - WasmMirror__RootPath=/app/wasm-mirrors
     volumes:
       - ./uploads:/app/uploads
-      - ./wasm-mirrors:/app/wasm-mirrors:ro
+      - ./wasm-mirrors:/app/wasm-mirrors:rw
     depends_on:
       postgres:
         condition: service_healthy

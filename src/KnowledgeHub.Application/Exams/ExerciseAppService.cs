@@ -388,7 +388,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
                         }
                     }
 
-                    // 处理答案：选择题将数字转换为字母（1=A, 2=B, 3=C, 4=D）
+                    // 处理答案：选择题将数字转换为字母（1=A, 2=B, ..., 26=Z）
                     string processedAnswer = answer ?? string.Empty;
                     if (isChoiceType && !string.IsNullOrWhiteSpace(answer))
                     {
@@ -398,17 +398,10 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
                         foreach (var part in answerParts)
                         {
                             var trimmed = part.Trim();
-                            if (int.TryParse(trimmed, out var num))
+                            if (int.TryParse(trimmed, out var num) && num >= 1 && num <= 26)
                             {
-                                var letter = num switch
-                                {
-                                    1 => "A",
-                                    2 => "B",
-                                    3 => "C",
-                                    4 => "D",
-                                    _ => trimmed
-                                };
-                                letterAnswers.Add(letter);
+                                // 1→A, 2→B, ..., 26→Z
+                                letterAnswers.Add(((char)('A' + num - 1)).ToString());
                             }
                             else
                             {

@@ -373,7 +373,14 @@ export class ExerciseManagementComponent implements OnInit {
     const letters = tokens.map(t => {
       if (/^\d+$/.test(t)) {
         const i = Number(t);
-        return ExerciseManagementComponent.ANSWER_LETTERS[i] ?? t;
+        // 兼容两种索引格式：
+        // - 0-based: 0→A（前端 getAnswerString 不会产生数字，但早期代码可能）
+        // - 1-based: 1→A（Excel 导入时数字转字母的约定）
+        // 根据实际数字判断：0 必然是 0-based；1-26 优先按 1-based 处理
+        // 因为导入端已修复（1→A,...26→Z），此处仅兜底旧脏数据
+        if (i === 0) return 'A';
+        if (i >= 1 && i <= 26) return ExerciseManagementComponent.ANSWER_LETTERS[i - 1];
+        return t;
       }
       return t.toUpperCase();
     });

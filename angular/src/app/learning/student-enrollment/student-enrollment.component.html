@@ -106,7 +106,7 @@
               <td>{{ enrollment.enrolledAt | date:'yyyy-MM-dd HH:mm' }}</td>
               <td>
                 <nz-progress
-                  [nzPercent]="enrollment.progress || 0"
+                  [nzPercent]="+(enrollment.progress || 0).toFixed(2)"
                   nzSize="small"
                   [nzStatus]="(enrollment.progress || 0) >= 100 ? 'success' : 'active'"
                 ></nz-progress>

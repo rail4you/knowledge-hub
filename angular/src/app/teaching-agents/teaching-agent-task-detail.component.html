@@ -80,14 +80,12 @@
                       <span class="meta-chip">📅 {{ course.semester }}</span>
                     }
                     <span class="meta-chip">📖 {{ course.chapters.length }} 个章节</span>
-                    <span class="meta-chip">📌 {{ course.knowledgeResources.length }} 个知识点</span>
                   </div>
                   @if (course.chapters.length) {
                     <div class="chapter-list">
                       @for (chapter of course.chapters; track chapter.id) {
                         <div class="chapter-item">
                           <span class="chapter-title">{{ chapter.title }}</span>
-                          <span class="chapter-count">{{ chapter.knowledgeResources?.length || 0 }} 知识点</span>
                         </div>
                       }
                     </div>

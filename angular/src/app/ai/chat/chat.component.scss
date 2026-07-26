@@ -481,8 +481,22 @@
 
 // 热门词按钮（区别于普通 chip）
 .chip-hotwords {
-  &.loading {
-    animation: pulse 1s ease-in-out infinite;
+  .chip-arrow {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
+    transition: transform 0.2s;
+    margin-left: 2px;
+
+    &.expanded {
+      transform: rotate(180deg);
+    }
+  }
+
+  &.active {
+    background: #fff7e6;
+    border-color: #ffd591;
+    color: #fa8c16;
   }
 
   &:hover:not(:disabled) {
@@ -492,34 +506,75 @@
   }
 }
 
-// 热门词列表弹窗 — 统一尺寸
-:host ::ng-deep .hot-words-cloud {
+// 热门词 inline 面板
+.hot-words-panel {
+  background: #fffdf5;
+  border: 1px solid #ffe58f;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 4px 0;
+  animation: fadeIn 0.2s ease;
+
+  &__loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #999;
+    font-size: 13px;
+    padding: 8px 0;
+  }
+
+  &__empty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #999;
+    font-size: 13px;
+    padding: 8px 0;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  &__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #d48806;
+  }
+
+  &__count {
+    font-size: 12px;
+    color: #999;
+  }
+}
+
+// 热门词列表 — grid 网格布局
+.hot-words-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 6px;
-  max-width: 320px;
-  min-width: 180px;
-  min-height: 40px;
-  align-items: flex-start;
+  gap: 8px;
 }
 
 .hot-word-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border: 1px solid #e8e8e8;
-  border-radius: 4px;
-  background: #fafafa;
+  border-radius: 6px;
+  background: #fff;
   color: #333;
   cursor: pointer;
   transition: all 0.15s;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.5;
   white-space: nowrap;
   font-family: inherit;
-  max-width: 140px;
+  max-width: 200px;
 
   &__text {
     overflow: hidden;
@@ -529,11 +584,11 @@
   &__freq {
     font-size: 11px;
     color: #999;
-    background: #eee;
-    border-radius: 3px;
-    padding: 0 4px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    padding: 0 5px;
     flex-shrink: 0;
-    min-width: 18px;
+    min-width: 20px;
     text-align: center;
   }
 
@@ -551,16 +606,6 @@
   &:active {
     transform: scale(0.97);
   }
-}
-
-.hot-words-empty {
-  color: #999;
-  font-size: 13px;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
 }
 
 @keyframes typing {

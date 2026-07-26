@@ -15,7 +15,6 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzTreeModule, NzTreeNode, NzTreeNodeOptions } from 'ng-zorro-antd/tree';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import { NzPopoverModule } from 'ng-zorro-antd/popover';
 import { Subject, takeUntil } from 'rxjs';
 import { marked } from 'marked';
 import { ChatService, ResourceForChat } from '../services/chat.service';
@@ -63,8 +62,7 @@ type CategoryTreeNode = NzTreeNodeOptions & {
     NzTagModule,
     NzDividerModule,
     NzTreeModule,
-    NzTooltipModule,
-    NzPopoverModule
+    NzTooltipModule
   ],
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.scss'],
@@ -108,15 +106,21 @@ export class ChatComponent implements OnInit, OnDestroy {
   /** 热门词 */
   hotWords = signal<{ word: string; frequency: number }[]>([]);
   isHotWordsLoading = signal(false);
-  showHotWordsPopover = signal(false);
+  showHotWords = signal(false);
 
   /** 加载当前选中文档的热门词 */
   loadHotWords(): void {
     const res = this.selectedResource();
     if (!res) return;
 
+    if (this.showHotWords()) {
+      // 已展开则收起
+      this.showHotWords.set(false);
+      return;
+    }
+
     this.isHotWordsLoading.set(true);
-    this.showHotWordsPopover.set(true);
+    this.showHotWords.set(true);
 
     this.restService.request<any, { word: string; frequency: number }[]>({
       method: 'GET',
@@ -146,6 +150,7 @@ export class ChatComponent implements OnInit, OnDestroy {
     // 直接在文档中搜索该词
     this.inputMessage.set(`在文档中搜索关于"${word}"的内容`);
     this.sendMessage();
+    this.showHotWords.set(false);
   }
 
   inputPlaceholder = computed(() =>
