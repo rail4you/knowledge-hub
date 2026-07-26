@@ -223,6 +223,8 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   private currentAbsoluteZoom = 1;
   /** 首次适配是否已执行，避免后续 ngOnChanges 重新适配 */
   private hasInitiallyFit = false;
+  /** 当前非叶子节点标签位置：缩放小时从 'right' 改为 'bottom' 避免重叠 */
+  private nonLeafLabelPosition: 'right' | 'bottom' = 'right';
 
   /** 折叠状态：记录被手动折叠的节点 id */
   private collapsedSet = new Set<string>();
@@ -321,7 +323,18 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
       // params.zoom 是相对增量（ECharts RoamController 内部约定）。
       if (params && typeof params.zoom === 'number') {
         this.currentAbsoluteZoom *= params.zoom;
-        this.zoomPercent.set(Math.round(this.currentAbsoluteZoom * 100));
+        const pct = Math.round(this.currentAbsoluteZoom * 100);
+        this.zoomPercent.set(pct);
+
+        // 缩放比例 <= 40% 时非叶子节点标签改到下方，避免长标题重叠
+        const wantBottom = pct <= 40;
+        if (wantBottom !== (this.nonLeafLabelPosition === 'bottom')) {
+          this.nonLeafLabelPosition = wantBottom ? 'bottom' : 'right';
+          // 只更新 label 位置，不重建整张图
+          this.chart?.setOption({
+            series: [{ label: { position: this.nonLeafLabelPosition } }]
+          });
+        }
       }
     });
 
@@ -642,7 +655,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           // 文本
           label: {
             show: true,
-            position: 'right',
+            position: this.nonLeafLabelPosition,
             distance: 10,
             formatter: (params: any) => {
               const data = params.data as any;
