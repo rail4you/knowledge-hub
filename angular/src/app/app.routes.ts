@@ -329,28 +329,7 @@ export const APP_ROUTES: Routes = [
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
   },
-  {
-    // 仿真实训 WASM 镜像管理（教师/管理员端）。
-    // 走 KnowledgeHub.Practicum 权限（与 /admin/practicum/projects 一致，教师/管理员已默认有）。
-    path: 'admin/wasm-mirrors',
-    loadComponent: () => import('./admin/wasm-mirror/wasm-mirror-admin.component').then(c => c.WasmMirrorAdminComponent),
-    canActivate: [authGuard, nonStudentGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.Practicum',
-    },
-  },
-  {
-    // 父菜单 /wasm-management 的兜底 redirect：
-    // 父菜单 path 在 route.provider.ts 里声明但没有对应 Angular 路由，
-    // 点击父菜单时 Angular 找不到路由会 404。这里 redirect 到第一个子路由。
-    //
-    // ⚠️ Angular 不允许 `redirectTo` + `canActivate` 同时存在（redirect 在 guard 之前执行），
-    // 所以这里不放 guards；目标路由 /admin/wasm-mirrors 自己有 authGuard + nonStudentGuard + permissionGuard，
-    // 未登录/学生/无权限的用户会在目标路由被踢回。
-    path: 'wasm-management',
-    redirectTo: 'admin/wasm-mirrors',
-    pathMatch: 'full',
-  },
+  // 路由已移除：/admin/wasm-mirrors 及 /wasm-management 重定向
   {
     path: 'admin/news',
     loadComponent: () => import('./admin/news/news-management.component').then(c => c.NewsManagementComponent),

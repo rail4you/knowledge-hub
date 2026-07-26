@@ -13,6 +13,9 @@ using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
+using Volo.Abp.Domain.Repositories.EntityFrameworkCore;
+using Volo.Abp.EntityFrameworkCore;
+using Volo.Abp.Identity.EntityFrameworkCore;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
@@ -24,6 +27,8 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IRepository<IdentityRole, Guid> _roleRepository;
+    private readonly IDbContextProvider<IdentityDbContext> _identityDbContextProvider;
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly IRepository<Major, Guid> _majorRepository;
@@ -32,6 +37,8 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
         IRepository<StudentCourse, Guid> studentCourseRepository,
         IRepository<Course, Guid> courseRepository,
         IRepository<IdentityUser, Guid> userRepository,
+        IRepository<IdentityRole, Guid> roleRepository,
+        IDbContextProvider<IdentityDbContext> identityDbContextProvider,
         IdentityUserManager userManager,
         ICurrentTenant currentTenant,
         IRepository<Major, Guid> majorRepository)
@@ -39,6 +46,8 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
         _studentCourseRepository = studentCourseRepository;
         _courseRepository = courseRepository;
         _userRepository = userRepository;
+        _roleRepository = roleRepository;
+        _identityDbContextProvider = identityDbContextProvider;
         _userManager = userManager;
         _currentTenant = currentTenant;
         _majorRepository = majorRepository;
@@ -214,18 +223,26 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
             allStudents = await userQuery.OrderBy(u => u.UserName).ToListAsync();
         }
 
-        var studentsWithRole = new List<IdentityUser>();
-        foreach (var user in allStudents)
-        {
-            using (_currentTenant.Change(user.TenantId))
-            {
-                var roles = await _userManager.GetRolesAsync(user);
-                if (roles.Contains("Student"))
-                {
-                    studentsWithRole.Add(user);
-                }
-            }
-        }
+        // P1-21：避免用 _currentTenant.Change + _userManager.GetRolesAsync（
+        // 同一个 UOW 内 DbContext 已创建时租户切换不生效）。
+        // 改为直接用 _userRepository 获取角色关联数据。
+        var roleQuery = await _roleRepository.GetQueryableAsync();
+        var studentRoleIds = await roleQuery
+            .Where(r => r.Name == "Student")
+            .Select(r => r.Id)
+            .ToListAsync();
+
+        // IdentityUserRole 使用组合键 (UserId,RoleId,TenantId)，不能用标准 IRepository。
+        // 直接用 DbContext 查询 IdentityUserRole 表。
+        var dbContext = await _identityDbContextProvider.GetDbContextAsync();
+        var studentUserIds = await dbContext.Set<IdentityUserRole>()
+            .Where(ur => studentRoleIds.Contains(ur.RoleId))
+            .Select(ur => ur.UserId)
+            .ToListAsync();
+
+        var studentsWithRole = allStudents
+            .Where(u => studentUserIds.Contains(u.Id))
+            .ToList();
 
         // Filter by MajorId (stored as ExtraProperty)
         if (input.MajorId.HasValue)

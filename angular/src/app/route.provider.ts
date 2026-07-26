@@ -442,15 +442,6 @@ function configureRoutes() {
       order: 100,
       layout: eLayoutType.application,
     },
-    {
-      path: '/admin/wasm-mirrors',
-      name: '::Menu:PracticumMirrorManagement',
-      iconClass: 'fas fa-cube',
-      parentName: '::Menu:TrainingManagement',
-      order: 3,
-      layout: eLayoutType.application,
-    },
-
     // ══════════════════════════════════════════════════════════
     //  隐藏 / 特殊路由（不显示在侧边栏）
     // ══════════════════════════════════════════════════════════
