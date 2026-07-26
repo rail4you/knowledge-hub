@@ -265,12 +265,7 @@
                     <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
                     {{ course.chapterCount || 0 }} 章节
                   </span>
-                  @if (course.teacherName) {
-                    <span class="stat-pill" nz-tooltip [nzTooltipTitle]="'授课教师：' + course.teacherName">
-                      <span nz-icon nzType="user" nzTheme="outline"></span>
-                      {{ course.teacherName }}
-                    </span>
-                  }
+                  <!-- 教师信息已移除 -->
                 </div>
 
                 <!-- 进度条（仅已选课显示） -->

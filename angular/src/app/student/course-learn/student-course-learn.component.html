@@ -9,16 +9,16 @@
       <div class="learn-course-info">
         <h1 class="learn-course-title">{{ c.title }}</h1>
         <div class="learn-course-meta">
-          <span class="meta-pill">
-            <span nz-icon nzType="book" nzTheme="outline"></span>
-            {{ c.teacherName || '未指定' }}
-          </span>
           @if (c.major) {
             <span class="meta-pill">{{ c.major }}</span>
           }
           <span class="meta-pill progress-pill">
             <span nz-icon nzType="line-chart" nzTheme="outline"></span>
-            进度 {{ courseProgress() }}%
+            习题进度 {{ courseProgress() }}%
+          </span>
+          <span class="meta-pill mastered-pill">
+            <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+            已掌握章节 {{ masteredChapterCount() }}/{{ totalChapterExercises() }}
           </span>
         </div>
       </div>

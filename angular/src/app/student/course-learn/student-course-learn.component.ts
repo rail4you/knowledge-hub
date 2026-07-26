@@ -141,10 +141,31 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
   readonly completedCount = signal(0);
   readonly totalExercises = signal(0);
+  /** 按章节统计：每章的习题总数和已提交数 */
+  readonly chapterProgressMap = signal<Map<string, { total: number; completed: number }>>(new Map());
+
   readonly courseProgress = computed(() => {
     const total = this.totalExercises();
     if (total === 0) return 0;
     return Math.round((this.completedCount() / total) * 100);
+  });
+
+  /** 已掌握章节数：某章的所有习题都已提交 */
+  readonly masteredChapterCount = computed(() => {
+    let count = 0;
+    for (const v of this.chapterProgressMap().values()) {
+      if (v.total > 0 && v.completed >= v.total) count++;
+    }
+    return count;
+  });
+
+  /** 有习题的总章节数 */
+  readonly totalChapterExercises = computed(() => {
+    let count = 0;
+    for (const v of this.chapterProgressMap().values()) {
+      if (v.total > 0) count++;
+    }
+    return count;
   });
 
   ngOnInit() {
@@ -361,7 +382,15 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       next: (data: any) => {
         const list = (data?.items || data || []) as ExerciseDto[];
         this.totalExercises.set(list.length);
-        // 拉取课程下所有提交记录，统计已完成习题数
+
+        // 按章节分组统计习题总数
+        const chapterTotalMap = new Map<string, number>();
+        for (const ex of list) {
+          const chId = ex.chapterId;
+          if (chId) chapterTotalMap.set(chId, (chapterTotalMap.get(chId) || 0) + 1);
+        }
+
+        // 拉取课程下所有提交记录
         this.recordService.getRecordsByCourse({
           courseId,
           skipCount: 0,
@@ -373,6 +402,25 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
               records.filter(r => r.exerciseId).map(r => r.exerciseId!)
             );
             this.completedCount.set(completedIds.size);
+
+            // 按章节统计已提交习题数
+            const chapterCompletedMap = new Map<string, number>();
+            for (const ex of list) {
+              const chId = ex.chapterId;
+              if (chId && completedIds.has(ex.id!)) {
+                chapterCompletedMap.set(chId, (chapterCompletedMap.get(chId) || 0) + 1);
+              }
+            }
+
+            // 合并为章节进度 map
+            const progressMap = new Map<string, { total: number; completed: number }>();
+            for (const [chId, total] of chapterTotalMap) {
+              progressMap.set(chId, {
+                total,
+                completed: chapterCompletedMap.get(chId) || 0,
+              });
+            }
+            this.chapterProgressMap.set(progressMap);
           },
         });
       },
