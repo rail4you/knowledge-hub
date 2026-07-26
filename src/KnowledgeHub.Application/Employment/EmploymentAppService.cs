@@ -1161,27 +1161,41 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         }
     }
 
+    private static readonly Dictionary<int, string> _applicationStatusLabels = new()
+    {
+        { 0, "已投递" },
+        { 1, "已查看" },
+        { 2, "面试中" },
+        { 3, "已录取" },
+        { 4, "已拒绝" },
+        { 5, "已撤回" },
+        { 6, "面试完成" },
+    };
+
     [Authorize(KnowledgeHubPermissions.Employment.ExportReport)]
     public async Task<IRemoteStreamContent> ExportStatisticsAsync(EmploymentStatisticsInput input)
     {
-        var rows = await GetStatisticsAsync(input);
+        // 使用与 UI 一致的数据（逐条投递记录，非分组汇总）
+        var rows = await GetApplicationStatsAsync(input);
         using var workbook = new XLWorkbook();
-        var worksheet = workbook.Worksheets.Add("就业统计");
+        var worksheet = workbook.Worksheets.Add("投递明细");
 
-        worksheet.Cell(1, 1).Value = "专业";
-        worksheet.Cell(1, 2).Value = "年级";
-        worksheet.Cell(1, 3).Value = "去向状态";
-        worksheet.Cell(1, 4).Value = "学生数";
-        worksheet.Cell(1, 5).Value = "去向数";
+        worksheet.Cell(1, 1).Value = "学生姓名";
+        worksheet.Cell(1, 2).Value = "岗位名称";
+        worksheet.Cell(1, 3).Value = "公司名称";
+        worksheet.Cell(1, 4).Value = "状态";
+        worksheet.Cell(1, 5).Value = "投递时间";
 
         for (var i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
-            worksheet.Cell(i + 2, 1).Value = row.Major;
-            worksheet.Cell(i + 2, 2).Value = row.Grade;
-            worksheet.Cell(i + 2, 3).Value = row.Status.ToString();
-            worksheet.Cell(i + 2, 4).Value = row.StudentCount;
-            worksheet.Cell(i + 2, 5).Value = row.OutcomeCount;
+            worksheet.Cell(i + 2, 1).Value = row.StudentName;
+            worksheet.Cell(i + 2, 2).Value = row.JobTitle;
+            worksheet.Cell(i + 2, 3).Value = row.CompanyName;
+            worksheet.Cell(i + 2, 4).Value = _applicationStatusLabels.TryGetValue(row.Status, out var label)
+                ? label
+                : $"未知({row.Status})";
+            worksheet.Cell(i + 2, 5).Value = row.AppliedAt.ToString("yyyy-MM-dd HH:mm");
         }
 
         worksheet.Columns().AdjustToContents();
@@ -1189,7 +1203,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         var stream = new MemoryStream();
         workbook.SaveAs(stream);
         stream.Position = 0;
-        return new RemoteStreamContent(stream, $"就业统计_{Clock.Now:yyyyMMddHHmmss}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        return new RemoteStreamContent(stream, $"投递明细_{Clock.Now:yyyyMMddHHmmss}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     }
 
     private static IQueryable<JobPosting> ApplyJobFilters(
