@@ -6,6 +6,7 @@ using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Domain.Search.Enums;
+using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Linq;
@@ -23,6 +24,8 @@ public class SearchAnalyticsService : ISearchAnalyticsService
     private readonly ICurrentTenant _currentTenant;
     private readonly ICurrentUser _currentUser;
     private readonly IAsyncQueryableExecuter _asyncExecuter;
+    private readonly IMeiliSearchService _meiliSearchService;
+    private readonly ILogger<SearchAnalyticsService> _logger;
 
     public SearchAnalyticsService(
         IRepository<SearchQuery, Guid> searchQueryRepository,
@@ -31,7 +34,9 @@ public class SearchAnalyticsService : ISearchAnalyticsService
         IRepository<ResourceExposure, Guid> exposureRepository,
         ICurrentTenant currentTenant,
         ICurrentUser currentUser,
-        IAsyncQueryableExecuter asyncExecuter)
+        IAsyncQueryableExecuter asyncExecuter,
+        IMeiliSearchService meiliSearchService,
+        ILogger<SearchAnalyticsService> logger)
     {
         _searchQueryRepository = searchQueryRepository;
         _viewLogRepository = viewLogRepository;
@@ -40,6 +45,8 @@ public class SearchAnalyticsService : ISearchAnalyticsService
         _currentTenant = currentTenant;
         _currentUser = currentUser;
         _asyncExecuter = asyncExecuter;
+        _meiliSearchService = meiliSearchService;
+        _logger = logger;
     }
 
     public async Task LogSearchAsync(Guid userId, string query, int searchType, int resultCount, string? filters, string sourceType = "all")
@@ -140,7 +147,7 @@ public class SearchAnalyticsService : ISearchAnalyticsService
     {
         var queryable = await _searchQueryRepository.GetQueryableAsync();
 
-        return await _asyncExecuter.ToListAsync(
+        var popular = await _asyncExecuter.ToListAsync(
             queryable
                 .GroupBy(q => q.QueryText.ToLower())
                 .Select(g => new PopularSearchDto
@@ -149,7 +156,36 @@ public class SearchAnalyticsService : ISearchAnalyticsService
                     Count = g.Count()
                 })
                 .OrderByDescending(x => x.Count)
-                .Take(count));
+                .Take(count * 3)); // 多取一些，过滤后仍可能凑够 count
+
+        if (popular.Count == 0) return popular;
+
+        var result = new List<PopularSearchDto>();
+        foreach (var item in popular)
+        {
+            try
+            {
+                var searchResult = await _meiliSearchService.SearchAsync(new SearchQueryDto
+                {
+                    Query = item.Query,
+                    MaxResultCount = 1,
+                    SkipCount = 0
+                });
+
+                if (searchResult.TotalCount > 0)
+                {
+                    result.Add(item);
+                    if (result.Count >= count) break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to validate popular search term '{Query}' against MeiliSearch", item.Query);
+                // 验证失败的词跳过，不影响其它词
+            }
+        }
+
+        return result;
     }
 
     public async Task<List<TopResourceDto>> GetTopResourcesAsync(int count = 10)
