@@ -352,7 +352,7 @@
                           @if (hasViewedAnswer() && e.answer) {
                             <div class="answer-block">
                               <strong>参考答案：</strong>
-                              <p>{{ e.answer }}</p>
+                              <p>{{ displayAnswer(e.answer) }}</p>
                               @if (e.answerExplanation) {
                                 <p class="answer-explain">{{ e.answerExplanation }}</p>
                               }
@@ -452,7 +452,7 @@
                           }
                         </span>
                         @if (r.studentAnswer) {
-                          <span class="record-row__answer">我的答案：{{ r.studentAnswer }}</span>
+                          <span class="record-row__answer">我的答案：{{ displayAnswer(r.studentAnswer) }}</span>
                         }
                       </div>
                       <span

@@ -536,6 +536,23 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     return this.multiSelected().has(key);
   }
 
+  /** 将存储的答案转为字母显示（1→A, 2→B, ...），兼容已有字母格式 */
+  readonly letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  displayAnswer(raw: string | undefined | null): string {
+    if (!raw) return '';
+    const tokens = raw.split(',').map(s => s.trim()).filter(Boolean);
+    return tokens.map(t => {
+      if (/^\d+$/.test(t)) {
+        const i = Number(t);
+        if (i === 0) return 'A';
+        if (i >= 1 && i <= 26) return this.letters[i - 1];
+        return t;
+      }
+      return t.toUpperCase();
+    }).join(',');
+  }
+
   parseOptions(optionsStr?: string | null): OptionItem[] {
     if (!optionsStr) return [];
     try {
