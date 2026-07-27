@@ -145,10 +145,14 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   readonly chapterProgressMap = signal<Map<string, { total: number; completed: number }>>(new Map());
 
   readonly courseProgress = computed(() => {
-    const total = this.totalExercises();
+    const map = this.chapterProgressMap();
+    let total = 0, completed = 0;
+    for (const v of map.values()) {
+      total += v.total;
+      completed += v.completed;
+    }
     if (total === 0) return 0;
-    const pct = Math.round((this.completedCount() / total) * 100);
-    return Math.min(pct, 100);
+    return Math.min(Math.round((completed / total) * 100), 100);
   });
 
   /** 已掌握章节数：某章的所有习题都已提交 */
