@@ -581,7 +581,8 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
 
         if (input.CourseId.HasValue)
         {
-            await _courseRepository.GetAsync(input.CourseId.Value);
+            // 课程可能已被删除，不阻塞实训操作
+            await _courseRepository.FindAsync(input.CourseId.Value);
         }
     }
 
