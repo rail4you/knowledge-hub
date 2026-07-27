@@ -28,6 +28,24 @@ export interface ResourceForChat {
   categoryName?: string;
 }
 
+export interface ChatThread {
+  id: string;
+  title?: string;
+  resourceId?: string;
+  resourceName?: string;
+  messageCount: number;
+  lastMessage?: string;
+  createdAt: string;
+  messages: ChatThreadMessage[];
+}
+
+export interface ChatThreadMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
 export interface LessonPlanGenerationInput {
   resourceId: string;
   topic: string;
@@ -164,6 +182,64 @@ export class ChatService {
       });
 
       return () => {};
+    });
+  }
+
+  // ===== Thread Management =====
+
+  getThreads(): Observable<ChatThread[]> {
+    return new Observable<ChatThread[]>(observer => {
+      fetch(`${this.apiUrl}/threads`, {
+        credentials: 'include',
+      })
+        .then(async response => {
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+          this.ngZone.run(() => { observer.next(data); observer.complete(); });
+        })
+        .catch(err => { this.ngZone.run(() => observer.error(err)); });
+    });
+  }
+
+  getThread(threadId: string): Observable<ChatThread> {
+    return new Observable<ChatThread>(observer => {
+      fetch(`${this.apiUrl}/threads/${threadId}`, {
+        credentials: 'include',
+      })
+        .then(async response => {
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+          this.ngZone.run(() => { observer.next(data); observer.complete(); });
+        })
+        .catch(err => { this.ngZone.run(() => observer.error(err)); });
+    });
+  }
+
+  deleteThread(threadId: string): Observable<void> {
+    return new Observable<void>(observer => {
+      fetch(`${this.apiUrl}/threads/${threadId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+        .then(async response => {
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          this.ngZone.run(() => { observer.next(); observer.complete(); });
+        })
+        .catch(err => { this.ngZone.run(() => observer.error(err)); });
+    });
+  }
+
+  clearAllThreads(): Observable<void> {
+    return new Observable<void>(observer => {
+      fetch(`${this.apiUrl}/threads`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+        .then(async response => {
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          this.ngZone.run(() => { observer.next(); observer.complete(); });
+        })
+        .catch(err => { this.ngZone.run(() => observer.error(err)); });
     });
   }
 

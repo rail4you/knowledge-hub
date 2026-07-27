@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using KnowledgeHub.AI;
 using KnowledgeHub.Application.AI.Dtos;
 using KnowledgeHub.Application.AI.Tools;
 using KnowledgeHub.Application.Contracts.Search;
@@ -18,6 +19,8 @@ using OpenAI;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
+using MEAIChatMessage = Microsoft.Extensions.AI.ChatMessage;
+using KnowledgeHubChatMessage = KnowledgeHub.AI.ChatMessage;
 
 namespace KnowledgeHub.Application.AI;
 
@@ -32,6 +35,8 @@ public class ChatAppService : KnowledgeHubAppService
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IResourceCategoryRepository _categoryRepository;
     private readonly IMeiliSearchService _meiliSearchService;
+    private readonly IRepository<ChatThread, Guid> _threadRepository;
+    private readonly IRepository<KnowledgeHubChatMessage, Guid> _messageRepository;
 
     private const string DefaultInstructions = @"你是 KnowledgeHub 平台的智能教育助手。
 
@@ -67,7 +72,9 @@ public class ChatAppService : KnowledgeHubAppService
         IRepository<PageContent, Guid> pageContentRepository,
         IRepository<Resource, Guid> resourceRepository,
         IResourceCategoryRepository categoryRepository,
-        IMeiliSearchService meiliSearchService)
+        IMeiliSearchService meiliSearchService,
+        IRepository<ChatThread, Guid> threadRepository,
+        IRepository<KnowledgeHubChatMessage, Guid> messageRepository)
     {
         _currentUser = currentUser;
         _configuration = configuration;
@@ -76,13 +83,37 @@ public class ChatAppService : KnowledgeHubAppService
         _resourceRepository = resourceRepository;
         _categoryRepository = categoryRepository;
         _meiliSearchService = meiliSearchService;
+        _threadRepository = threadRepository;
+        _messageRepository = messageRepository;
     }
 
     public async Task ChatStreamingAsync(ChatInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
     {
-        var threadId = string.IsNullOrEmpty(input.ThreadId)
+        var userId = _currentUser.Id ?? throw new AbpException("User not logged in");
+        var threadIdStr = string.IsNullOrEmpty(input.ThreadId)
             ? Guid.NewGuid().ToString()
             : input.ThreadId;
+        var threadGuid = Guid.Parse(threadIdStr);
+
+        // Ensure thread exists
+        var thread = await _threadRepository.FindAsync(threadGuid);
+        if (thread == null)
+        {
+            var title = input.Message.Length > 50 ? input.Message[..50] + "…" : input.Message;
+            thread = new ChatThread(threadGuid, userId, title, input.ResourceId);
+            await _threadRepository.InsertAsync(thread);
+        }
+
+        // Save user message
+        var userMsg = new KnowledgeHubChatMessage(Guid.NewGuid(), threadGuid, "user", input.Message);
+        await _messageRepository.InsertAsync(userMsg);
+
+        // Update thread title if this is the first user message
+        if (thread.Messages.Count == 0)
+        {
+            var title = input.Message.Length > 50 ? input.Message[..50] + "…" : input.Message;
+            thread.SetTitle(title);
+        }
 
         var apiKey = _configuration["Qwen:ApiKey"]
             ?? throw new AbpException("Qwen:ApiKey is not configured");
@@ -102,13 +133,11 @@ public class ChatAppService : KnowledgeHubAppService
 
         if (input.ResourceId.HasValue)
         {
-            // Document QA mode: use MeiliSearch tools scoped to a single resource
             tools = BuildTools(input.ResourceId);
             instructions = DocumentChatInstructions;
         }
         else
         {
-            // General chat mode: MeiliSearch tools with global scope (no resourceId filter)
             tools = BuildTools(null);
             instructions = DefaultInstructions;
         }
@@ -119,28 +148,39 @@ public class ChatAppService : KnowledgeHubAppService
             Tools = tools,
         };
 
-        var messages = new List<ChatMessage>
+        var messages = new List<MEAIChatMessage>
         {
             new(ChatRole.User, input.Message)
         };
+
+        var fullResponse = new StringBuilder();
 
         await foreach (var update in chatClient.GetStreamingResponseAsync(messages, chatOptions, CancellationToken.None))
         {
             if (update.Text != null && update.Text.Length > 0)
             {
+                fullResponse.Append(update.Text);
                 await onChunk(new ChatMessageChunkDto
                 {
                     Content = update.Text,
-                    ThreadId = threadId,
+                    ThreadId = threadIdStr,
                     IsComplete = false
                 });
             }
         }
 
+        // Save assistant message
+        var assistantContent = fullResponse.ToString();
+        if (!string.IsNullOrWhiteSpace(assistantContent))
+        {
+            var assistantMsg = new KnowledgeHubChatMessage(Guid.NewGuid(), threadGuid, "assistant", assistantContent);
+            await _messageRepository.InsertAsync(assistantMsg);
+        }
+
         await onChunk(new ChatMessageChunkDto
         {
             Content = "",
-            ThreadId = threadId,
+            ThreadId = threadIdStr,
             IsComplete = true
         });
     }
@@ -227,6 +267,176 @@ public class ChatAppService : KnowledgeHubAppService
                 HasSummary = !string.IsNullOrWhiteSpace(r.Summary)
             })
             .ToList();
+    }
+
+    /// <summary>
+    /// 获取当前用户的聊天线程列表，按最后更新时间倒序。
+    /// </summary>
+    public async Task<List<ChatThreadDto>> GetMyThreadsAsync()
+    {
+        var userId = _currentUser.Id ?? throw new AbpException("User not logged in");
+
+        var threadQuery = await _threadRepository.GetQueryableAsync();
+        var messageQuery = await _messageRepository.GetQueryableAsync();
+
+        var threads = await AsyncExecuter.ToListAsync(
+            threadQuery
+                .Where(t => t.UserId == userId)
+                .OrderByDescending(t => t.LastModificationTime ?? t.CreationTime));
+
+        if (threads.Count == 0)
+            return new List<ChatThreadDto>();
+
+        // Collect resource IDs for name lookup
+        var resourceIds = threads
+            .Where(t => t.ResourceId.HasValue)
+            .Select(t => t.ResourceId!.Value)
+            .Distinct()
+            .ToList();
+
+        var resourceNames = new Dictionary<Guid, string>();
+        if (resourceIds.Count > 0)
+        {
+            var resourceQuery = await _resourceRepository.GetQueryableAsync();
+            var resources = await AsyncExecuter.ToListAsync(
+                resourceQuery.Where(r => resourceIds.Contains(r.Id)));
+            foreach (var r in resources)
+                resourceNames[r.Id] = r.Name;
+        }
+
+        var result = new List<ChatThreadDto>();
+        foreach (var t in threads)
+        {
+            var msgCount = await AsyncExecuter.CountAsync(
+                messageQuery.Where(m => m.ThreadId == t.Id));
+
+            // Get last message preview
+            var lastMsg = await AsyncExecuter.FirstOrDefaultAsync(
+                messageQuery
+                    .Where(m => m.ThreadId == t.Id)
+                    .OrderByDescending(m => m.CreationTime));
+
+            string? lastMsgPreview = null;
+            if (lastMsg != null)
+            {
+                var preview = lastMsg.Content.Length > 60 ? lastMsg.Content[..60] + "…" : lastMsg.Content;
+                lastMsgPreview = preview;
+            }
+
+            string? resourceName = null;
+            if (t.ResourceId.HasValue)
+                resourceNames.TryGetValue(t.ResourceId.Value, out resourceName);
+
+            result.Add(new ChatThreadDto
+            {
+                Id = t.Id.ToString(),
+                Title = t.Title,
+                ResourceId = t.ResourceId,
+                ResourceName = resourceName,
+                MessageCount = (int)msgCount,
+                LastMessage = lastMsgPreview,
+                CreatedAt = t.CreationTime,
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 获取线程的完整消息列表。
+    /// </summary>
+    public async Task<ChatThreadDto> GetThreadAsync(string threadId)
+    {
+        var userId = _currentUser.Id ?? throw new AbpException("User not logged in");
+        var threadGuid = Guid.Parse(threadId);
+
+        var thread = await _threadRepository.FindAsync(threadGuid);
+        if (thread == null || thread.UserId != userId)
+            throw new AbpException("Thread not found");
+
+        var messageQuery = await _messageRepository.GetQueryableAsync();
+        var messages = await AsyncExecuter.ToListAsync(
+            messageQuery
+                .Where(m => m.ThreadId == threadGuid)
+                .OrderBy(m => m.CreationTime));
+
+        string? resourceName = null;
+        if (thread.ResourceId.HasValue)
+        {
+            var resource = await _resourceRepository.FindAsync(thread.ResourceId.Value);
+            resourceName = resource?.Name;
+        }
+
+        return new ChatThreadDto
+        {
+            Id = thread.Id.ToString(),
+            Title = thread.Title,
+            ResourceId = thread.ResourceId,
+            ResourceName = resourceName,
+            MessageCount = messages.Count,
+            CreatedAt = thread.CreationTime,
+            Messages = messages.Select(m => new ChatMessageDto
+            {
+                Id = m.Id.ToString(),
+                Role = m.Role,
+                Content = m.Content,
+                CreatedAt = m.CreationTime,
+            }).ToList()
+        };
+    }
+
+    /// <summary>
+    /// 删除单个线程及其所有消息。
+    /// </summary>
+    public async Task DeleteThreadAsync(Guid threadId)
+    {
+        var userId = _currentUser.Id ?? throw new AbpException("User not logged in");
+        var thread = await _threadRepository.FindAsync(threadId);
+        if (thread == null || thread.UserId != userId)
+            throw new AbpException("Thread not found");
+
+        var messageQuery = await _messageRepository.GetQueryableAsync();
+        var messages = await AsyncExecuter.ToListAsync(
+            messageQuery.Where(m => m.ThreadId == threadId));
+
+        foreach (var msg in messages)
+            await _messageRepository.DeleteAsync(msg);
+
+        await _threadRepository.DeleteAsync(thread);
+    }
+
+    /// <summary>
+    /// 清空当前用户所有线程。
+    /// </summary>
+    public async Task ClearAllThreadsAsync()
+    {
+        var userId = _currentUser.Id ?? throw new AbpException("User not logged in");
+
+        var threadQuery = await _threadRepository.GetQueryableAsync();
+        var threads = await AsyncExecuter.ToListAsync(
+            threadQuery.Where(t => t.UserId == userId));
+
+        var threadIds = threads.Select(t => t.Id).ToHashSet();
+
+        var messageQuery = await _messageRepository.GetQueryableAsync();
+        var messages = await AsyncExecuter.ToListAsync(
+            messageQuery.Where(m => threadIds.Contains(m.ThreadId)));
+
+        foreach (var msg in messages)
+            await _messageRepository.DeleteAsync(msg);
+
+        foreach (var t in threads)
+            await _threadRepository.DeleteAsync(t);
+    }
+
+    public Task<ChatThreadDto> CreateThreadAsync()
+    {
+        throw new NotImplementedException("Use ChatStreamingAsync which auto-creates threads");
+    }
+
+    public Task SaveMessagesAsync(Guid threadId, string? title, Guid? resourceId, List<ChatMessageDto> messages)
+    {
+        throw new NotImplementedException("Messages are saved automatically during streaming");
     }
 
     private List<AITool> BuildTools(Guid? resourceId)

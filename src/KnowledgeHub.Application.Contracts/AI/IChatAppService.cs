@@ -18,4 +18,19 @@ public interface IChatAppService : IApplicationService
     /// 用于 AI 职业规划下拉（仅显示当前用户上传的简历资源）。
     /// </summary>
     Task<List<ResourceForChatDto>> GetResumesForUserAsync();
+
+    /// <summary>
+    /// 删除单个聊天线程及其所有消息。
+    /// </summary>
+    Task DeleteThreadAsync(Guid threadId);
+
+    /// <summary>
+    /// 清空当前用户所有聊天线程。
+    /// </summary>
+    Task ClearAllThreadsAsync();
+
+    /// <summary>
+    /// 保存聊天消息到线程（在流式完成后调用）。
+    /// </summary>
+    Task SaveMessagesAsync(Guid threadId, string? title, Guid? resourceId, List<ChatMessageDto> messages);
 }

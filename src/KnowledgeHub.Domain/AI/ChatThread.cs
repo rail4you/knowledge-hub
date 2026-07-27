@@ -12,6 +12,11 @@ public class ChatThread : FullAuditedEntity<Guid>, IMultiTenant
     public string? Title { get; set; }
     public string? SessionData { get; set; }
     
+    /// <summary>
+    /// 关联的资源 ID（文档问答场景），null 表示通用聊天。
+    /// </summary>
+    public Guid? ResourceId { get; set; }
+    
     public ICollection<ChatMessage> Messages { get; set; }
     
     public ChatThread()
@@ -19,9 +24,11 @@ public class ChatThread : FullAuditedEntity<Guid>, IMultiTenant
         Messages = new List<ChatMessage>();
     }
     
-    public ChatThread(Guid id, Guid userId) : base(id)
+    public ChatThread(Guid id, Guid userId, string? title = null, Guid? resourceId = null) : base(id)
     {
         UserId = userId;
+        Title = title;
+        ResourceId = resourceId;
         Messages = new List<ChatMessage>();
     }
     

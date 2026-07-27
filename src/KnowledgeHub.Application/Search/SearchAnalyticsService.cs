@@ -8,6 +8,7 @@ using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Domain.Search.Enums;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Linq;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
 
@@ -21,6 +22,7 @@ public class SearchAnalyticsService : ISearchAnalyticsService
     private readonly IRepository<ResourceExposure, Guid> _exposureRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly ICurrentUser _currentUser;
+    private readonly IAsyncQueryableExecuter _asyncExecuter;
 
     public SearchAnalyticsService(
         IRepository<SearchQuery, Guid> searchQueryRepository,
@@ -28,7 +30,8 @@ public class SearchAnalyticsService : ISearchAnalyticsService
         IRepository<SearchStatistics, Guid> statisticsRepository,
         IRepository<ResourceExposure, Guid> exposureRepository,
         ICurrentTenant currentTenant,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IAsyncQueryableExecuter asyncExecuter)
     {
         _searchQueryRepository = searchQueryRepository;
         _viewLogRepository = viewLogRepository;
@@ -36,6 +39,7 @@ public class SearchAnalyticsService : ISearchAnalyticsService
         _exposureRepository = exposureRepository;
         _currentTenant = currentTenant;
         _currentUser = currentUser;
+        _asyncExecuter = asyncExecuter;
     }
 
     public async Task LogSearchAsync(Guid userId, string query, int searchType, int resultCount, string? filters, string sourceType = "all")
@@ -134,18 +138,18 @@ public class SearchAnalyticsService : ISearchAnalyticsService
 
     public async Task<List<PopularSearchDto>> GetPopularSearchesAsync(int count = 10)
     {
-        var queries = await _searchQueryRepository.GetListAsync();
-        
-        return queries
-            .GroupBy(q => q.QueryText.ToLower())
-            .Select(g => new PopularSearchDto
-            {
-                Query = g.Key,
-                Count = g.Count()
-            })
-            .OrderByDescending(x => x.Count)
-            .Take(count)
-            .ToList();
+        var queryable = await _searchQueryRepository.GetQueryableAsync();
+
+        return await _asyncExecuter.ToListAsync(
+            queryable
+                .GroupBy(q => q.QueryText.ToLower())
+                .Select(g => new PopularSearchDto
+                {
+                    Query = g.Key,
+                    Count = g.Count()
+                })
+                .OrderByDescending(x => x.Count)
+                .Take(count));
     }
 
     public async Task<List<TopResourceDto>> GetTopResourcesAsync(int count = 10)

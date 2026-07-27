@@ -8,7 +8,7 @@
 
 .chat-layout {
   flex: 1 1 auto;
-  min-height: 0;             // 关键：让 flex 子项能收缩
+  min-height: 0;
   display: flex;
   width: 100%;
   background: #fff;
@@ -17,7 +17,219 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-// Left sidebar
+// ===== History Sidebar =====
+.history-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid #f0f0f0;
+  background: #fafafa;
+  transition: width 0.2s ease, opacity 0.2s ease;
+
+  &.collapsed {
+    width: 0;
+    overflow: hidden;
+    opacity: 0;
+    border-right: none;
+  }
+}
+
+.history-toggle {
+  width: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border: none;
+  border-right: 1px solid #f0f0f0;
+  cursor: pointer;
+  color: #999;
+  font-size: 14px;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: #e6f7ff;
+    color: #1890ff;
+  }
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+
+  h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 4px;
+  }
+}
+
+.thread-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 2px;
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 40px 16px;
+    color: #bbb;
+    font-size: 13px;
+
+    .anticon {
+      font-size: 28px;
+    }
+  }
+}
+
+.thread-group {
+  margin-bottom: 8px;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    .anticon {
+      font-size: 12px;
+    }
+  }
+}
+
+.thread-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  margin: 1px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+
+  &:hover {
+    background: #eef2fb;
+
+    .thread-item__delete {
+      opacity: 1;
+    }
+  }
+
+  &.active {
+    background: #e6f7ff;
+    border: 1px solid #91d5ff;
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #eef2fb;
+    color: #1890ff;
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.4;
+  }
+
+  &__resource {
+    font-size: 11px;
+    color: #1890ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  &__preview {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 3px;
+    line-height: 1.3;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #bbb;
+    margin-top: 4px;
+  }
+
+  &__delete {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    color: #999;
+
+    &:hover {
+      color: #ff4d4f;
+    }
+  }
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+// ===== Resource Sidebar =====
 .resource-sidebar {
   width: 280px;
   flex-shrink: 0;
@@ -48,7 +260,7 @@
 
   .resource-list {
     flex: 1 1 auto;
-    min-height: 0;             // 关键：flex 子项的滚动前提
+    min-height: 0;
     overflow-y: auto;
     padding: 8px;
 
@@ -69,7 +281,7 @@
   }
 }
 
-// nz-tree 自定义渲染样式（穿透到组件内）
+// nz-tree custom rendering
 :host ::ng-deep .ant-tree {
   background: transparent;
 
@@ -80,7 +292,6 @@
     transition: background 0.15s;
   }
 
-  // 仅叶子节点可点击；分类折叠分支背景透明
   .ant-tree-node-selected {
     background: transparent !important;
   }
@@ -101,7 +312,6 @@
   }
 }
 
-// 资源叶子节点：紧凑布局 [文件图标] [文档名] [状态]
 .tree-resource {
   display: flex;
   align-items: center;
@@ -133,7 +343,6 @@
   }
 }
 
-// 文档文件图标（按扩展名着色，与分类的黄色文件夹图标明显区分）
 .doc-icon {
   display: inline-flex;
   align-items: center;
@@ -142,7 +351,7 @@
   height: 16px;
   font-size: 14px;
   flex-shrink: 0;
-  color: #5b6b7e;            // 兜底：深蓝灰色（未知/空扩展名也清晰可见）
+  color: #5b6b7e;
 
   &[data-ext="pdf"]   { color: #e74c3c; }
   &[data-ext="doc"],
@@ -159,25 +368,23 @@
   &[data-ext="jpeg"],
   &[data-ext="png"],
   &[data-ext="gif"]   { color: #16a085; }
-  // 明确处理空扩展名（如 sourceFormat=""）的兜底
   &[data-ext=""]      { color: #5b6b7e; }
 }
 
-// 分类文件夹图标（黄色 fill 样式，明显区别于文档图标）
 .cat-icon {
   color: #faad14;
   font-size: 14px;
   margin-right: 2px;
 }
 
-// Right: Chat main area
+// ===== Chat main area =====
 .chat-main {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  width: 0;                   // 让 flex 子项可以收缩到内容宽度以下
+  width: 0;
 }
 
 .chat-header {
@@ -287,7 +494,6 @@
     color: #333;
   }
 
-  // Markdown rendered content
   :host ::ng-deep .markdown-body {
     h1, h2, h3, h4, h5, h6 {
       margin: 12px 0 8px;
@@ -350,7 +556,7 @@
   }
 }
 
-// 输入区（提示按钮 + 输入框）
+// Input area
 .input-area {
   display: flex;
   flex-direction: column;
@@ -361,7 +567,6 @@
   flex-shrink: 0;
 }
 
-// 一键提问 chip 提示按钮
 .suggestion-chips {
   display: flex;
   flex-wrap: wrap;
@@ -460,21 +665,12 @@
     border-radius: 50%;
     animation: typing 1.4s infinite ease-in-out both;
 
-    &:nth-child(1) {
-      animation-delay: -0.32s;
-    }
-
-    &:nth-child(2) {
-      animation-delay: -0.16s;
-    }
-
-    &:nth-child(3) {
-      animation-delay: 0s;
-    }
+    &:nth-child(1) { animation-delay: -0.32s; }
+    &:nth-child(2) { animation-delay: -0.16s; }
+    &:nth-child(3) { animation-delay: 0s; }
   }
 }
 
-// 热门词按钮（区别于普通 chip）
 .chip-hotwords {
   .chip-arrow {
     display: inline-flex;
@@ -501,7 +697,6 @@
   }
 }
 
-// 热门词 inline 面板
 .hot-words-panel {
   background: #fffdf5;
   border: 1px solid #ffe58f;
@@ -547,7 +742,6 @@
   }
 }
 
-// 热门词列表 — grid 网格布局
 .hot-words-list {
   display: flex;
   flex-wrap: wrap;

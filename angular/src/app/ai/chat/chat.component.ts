@@ -15,9 +15,11 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzTreeModule, NzTreeNode, NzTreeNodeOptions } from 'ng-zorro-antd/tree';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
 import { marked } from 'marked';
-import { ChatService, ResourceForChat } from '../services/chat.service';
+import { ChatService, ResourceForChat, ChatThread } from '../services/chat.service';
 import { ResourceService } from '../../proxy/resources/resource.service';
 import type { ResourceCategoryDto } from '../../proxy/resources/models';
 
@@ -34,11 +36,6 @@ interface SuggestionChip {
   text: string;
 }
 
-/**
- * nz-tree 的数据节点类型：扩展官方 NzTreeNodeOptions，
- * 添加自定义 meta 用于在模板中标识资源叶子。
- * 注意：不能命名为 "origin"，因为 NzTreeNode.origin 已经指向 NzTreeNodeOptions。
- */
 type CategoryTreeNode = NzTreeNodeOptions & {
   meta?: {
     resource?: ResourceForChat;
@@ -62,7 +59,8 @@ type CategoryTreeNode = NzTreeNodeOptions & {
     NzTagModule,
     NzDividerModule,
     NzTreeModule,
-    NzTooltipModule
+    NzTooltipModule,
+    NzPopconfirmModule,
   ],
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.scss'],
@@ -73,10 +71,12 @@ export class ChatComponent implements OnInit, OnDestroy {
   private readonly resourceProxy = inject(ResourceService);
   private readonly restService = inject(RestService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly message = inject(NzMessageService);
   private readonly destroy$ = new Subject<void>();
 
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
 
+  // Chat state
   messages = signal<ChatMessage[]>([]);
   inputMessage = signal('');
   isLoading = signal(false);
@@ -88,7 +88,18 @@ export class ChatComponent implements OnInit, OnDestroy {
   isResourcesLoading = signal(false);
   isCategoriesLoading = signal(false);
 
-  // 提示按钮：分两组（文档模式 / 通用模式）
+  // Thread history
+  threads = signal<ChatThread[]>([]);
+  isThreadsLoading = signal(false);
+  showHistory = signal(true);
+
+  /** Threads grouped by type */
+  generalThreads = computed(() =>
+    this.threads().filter(t => !t.resourceId));
+  documentThreads = computed(() =>
+    this.threads().filter(t => !!t.resourceId));
+
+  // Suggestions
   readonly documentSuggestions: SuggestionChip[] = [
     { icon: '📝', label: '总结文档内容', text: '请帮我总结这份文档的主要内容' },
     { icon: '🔑', label: '提取关键点', text: '请提取这份文档的关键要点' },
@@ -103,18 +114,16 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.selectedResource() ? this.documentSuggestions : this.generalSuggestions
   );
 
-  /** 热门词 */
+  // Hot words
   hotWords = signal<{ word: string; frequency: number }[]>([]);
   isHotWordsLoading = signal(false);
   showHotWords = signal(false);
 
-  /** 加载当前选中文档的热门词 */
   loadHotWords(): void {
     const res = this.selectedResource();
     if (!res) return;
 
     if (this.showHotWords()) {
-      // 已展开则收起
       this.showHotWords.set(false);
       return;
     }
@@ -138,16 +147,13 @@ export class ChatComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** 点击热门词后自动搜索 */
   searchByHotWord(word: string): void {
     const res = this.selectedResource();
     if (!res) {
-      // T1: 没有选中资源时，给出热门词的原理说明，避免再走 AI 索引
       this.inputMessage.set(`热门词的原理：当多名用户对同一关键词检索时，系统会按热度统计并向教师推荐热门检索词以便补充资源。`);
       this.sendMessage();
       return;
     }
-    // 直接在文档中搜索该词
     this.inputMessage.set(`在文档中搜索关于"${word}"的内容`);
     this.sendMessage();
     this.showHotWords.set(false);
@@ -177,12 +183,10 @@ export class ChatComponent implements OnInit, OnDestroy {
     );
   });
 
-  /** 树状节点数据：分类 + 资源叶子 */
   categoryTreeNodes = computed<NzTreeNodeOptions[]>(() => {
     const cats = this.categories();
     const res = this.filteredResources();
 
-    // 1. 按 CategoryId 分组资源
     const byCategory = new Map<string, ResourceForChat[]>();
     const noCategory: ResourceForChat[] = [];
     for (const r of res) {
@@ -195,7 +199,6 @@ export class ChatComponent implements OnInit, OnDestroy {
       }
     }
 
-    // 2. 递归构造 nz-tree 节点
     const build = (nodes: ResourceCategoryDto[]): NzTreeNodeOptions[] =>
       nodes.map(c => ({
         title: c.name,
@@ -217,7 +220,6 @@ export class ChatComponent implements OnInit, OnDestroy {
 
     const roots = build(cats);
 
-    // 3. 末尾追加"未分类"
     if (noCategory.length > 0) {
       roots.push({
         title: '未分类',
@@ -238,36 +240,18 @@ export class ChatComponent implements OnInit, OnDestroy {
     return roots;
   });
 
-  /** 根据扩展名返回对应的文件图标（与分类的 folder 图标明显区分） */
   getDocIcon(ext: string | null | undefined): string {
     const e = (ext ?? '').toLowerCase().replace(/^\./, '');
     switch (e) {
       case 'pdf': return 'file-pdf';
-      case 'doc':
-      case 'docx': return 'file-word';
-      case 'ppt':
-      case 'pptx': return 'file-ppt';
-      case 'xls':
-      case 'xlsx': return 'file-excel';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-      case 'webp': return 'file-image';
-      case 'mp4':
-      case 'avi':
-      case 'mov':
-      case 'mkv': return 'video-camera';
-      case 'mp3':
-      case 'wav':
-      case 'flac': return 'audio';
-      case 'zip':
-      case 'rar':
-      case '7z': return 'file-zip';
-      case 'txt':
-      case 'md': return 'file-text';
-      // 兜底：用 file-text（已确认 ng-zorro 默认图标集中存在），
-      // 不使用 file-unknown 以免字体未加载导致空白
+      case 'doc': case 'docx': return 'file-word';
+      case 'ppt': case 'pptx': return 'file-ppt';
+      case 'xls': case 'xlsx': return 'file-excel';
+      case 'jpg': case 'jpeg': case 'png': case 'gif': case 'webp': return 'file-image';
+      case 'mp4': case 'avi': case 'mov': case 'mkv': return 'video-camera';
+      case 'mp3': case 'wav': case 'flac': return 'audio';
+      case 'zip': case 'rar': case '7z': return 'file-zip';
+      case 'txt': case 'md': return 'file-text';
       default: return 'file-text';
     }
   }
@@ -275,6 +259,7 @@ export class ChatComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadResources();
     this.loadCategories();
+    this.loadThreads();
   }
 
   ngOnDestroy() {
@@ -315,37 +300,119 @@ export class ChatComponent implements OnInit, OnDestroy {
       });
   }
 
+  loadThreads() {
+    this.isThreadsLoading.set(true);
+    this.chatService.getThreads()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.threads.set(data);
+          this.isThreadsLoading.set(false);
+        },
+        error: (err) => {
+          console.error('Failed to load threads:', err);
+          this.isThreadsLoading.set(false);
+        }
+      });
+  }
+
+  selectThread(thread: ChatThread) {
+    if (this.isLoading()) return;
+
+    this.isLoading.set(true);
+    this.chatService.getThread(thread.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (detail) => {
+          // Map messages
+          const msgs: ChatMessage[] = (detail.messages ?? []).map(m => ({
+            id: m.id,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            createdAt: new Date(m.createdAt),
+          }));
+          this.messages.set(msgs);
+          this.threadId.set(thread.id);
+
+          // Restore resource selection
+          if (thread.resourceId) {
+            const res = this.resources().find(r => r.id === thread.resourceId);
+            this.selectedResource.set(res ?? null);
+          } else {
+            this.selectedResource.set(null);
+          }
+
+          this.isLoading.set(false);
+          this.scrollToBottom();
+        },
+        error: (err) => {
+          console.error('Failed to load thread:', err);
+          this.isLoading.set(false);
+          this.message.error('加载聊天记录失败');
+        }
+      });
+  }
+
+  deleteThread(threadId: string, event: Event) {
+    event.stopPropagation();
+    this.chatService.deleteThread(threadId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // If current thread deleted, reset chat
+          if (this.threadId() === threadId) {
+            this.newChat();
+          }
+          this.loadThreads();
+          this.message.success('已删除');
+        },
+        error: () => {
+          this.message.error('删除失败');
+        }
+      });
+  }
+
+  clearAllHistory() {
+    this.chatService.clearAllThreads()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.newChat();
+          this.threads.set([]);
+          this.message.success('已清空所有历史记录');
+        },
+        error: () => {
+          this.message.error('清空失败');
+        }
+      });
+  }
+
+  toggleHistory() {
+    this.showHistory.update(v => !v);
+  }
+
   selectResource(resource: ResourceForChat) {
     const current = this.selectedResource();
     if (current?.id === resource.id) {
-      // Deselect
       this.selectedResource.set(null);
     } else {
       this.selectedResource.set(resource);
-      // Clear chat when switching document
       this.messages.set([]);
       this.threadId.set('');
     }
   }
 
-  /**
-   * nz-tree 节点点击：分类无动作，仅资源叶子响应。
-   * 事件回调中 node 是 NzTreeNode 实例，node.origin 是 NzTreeNodeOptions。
-   * 自定义数据放在 meta 字段（避开 origin 命名冲突）。
-   */
   onTreeClick(event: { node: NzTreeNode; event: MouseEvent }): void {
     const origin = event.node?.origin as NzTreeNodeOptions | undefined;
     if (!origin) return;
     const customMeta = origin['meta'] as { resource?: ResourceForChat } | undefined;
     const resource = customMeta?.resource;
     if (resource) {
-      // 阻止事件冒泡（避免影响 nz-tree 的选中高亮逻辑）
       event.event.stopPropagation();
       this.selectResource(resource);
     }
   }
 
-  /** 点击提示按钮：自动填入并发送 */
   onSuggestionClick(text: string): void {
     if (this.isLoading()) return;
     this.inputMessage.set(text);
@@ -383,10 +450,11 @@ export class ChatComponent implements OnInit, OnDestroy {
     this.messages.update(msgs => [...msgs, assistantMessage]);
 
     const selectedRes = this.selectedResource();
+    const currentThreadId = this.threadId() || undefined;
 
     this.chatService.chat({
       message: content,
-      threadId: this.threadId() || undefined,
+      threadId: currentThreadId,
       resourceId: selectedRes?.id,
     })
       .pipe(takeUntil(this.destroy$))
@@ -419,6 +487,8 @@ export class ChatComponent implements OnInit, OnDestroy {
         },
         complete: () => {
           this.isLoading.set(false);
+          // Refresh thread list after chat completes
+          this.loadThreads();
         }
       });
   }
@@ -453,8 +523,6 @@ export class ChatComponent implements OnInit, OnDestroy {
     cleaned = cleaned.replace(/<thinking\b[^>]*>[\s\S]*?<\/thinking>/gi, '');
     cleaned = cleaned.replace(/<details\b[^>]*>\s*<summary\b[^>]*>\s*(?:思考|推理|工具|检索|thinking|reasoning|tool)[\s\S]*?<\/details>/gi, '');
     cleaned = cleaned.replace(/```(?:think|thinking|thought|reasoning|tool|tool_call|tool_result)[\s\S]*?```/gi, '');
-
-    // Hide unfinished reasoning/tool blocks while streaming.
     cleaned = cleaned.replace(/<think\b[^>]*>[\s\S]*$/gi, '');
     cleaned = cleaned.replace(/<thinking\b[^>]*>[\s\S]*$/gi, '');
     cleaned = cleaned.replace(/<details\b[^>]*>\s*<summary\b[^>]*>\s*(?:思考|推理|工具|检索|thinking|reasoning|tool)[\s\S]*$/gi, '');

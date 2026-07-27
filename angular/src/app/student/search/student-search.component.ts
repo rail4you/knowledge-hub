@@ -13,7 +13,7 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { SearchService, SearchResultDto, DocumentSearchResultDto, SearchQueryDto } from '../../search/search.service';
+import type { PopularSearchDto, DocumentSearchResultDto } from '../../proxy/application/contracts/search/dtos/models';
 
 @Component({
   selector: 'app-student-search',
@@ -37,7 +37,6 @@ import { SearchService, SearchResultDto, DocumentSearchResultDto, SearchQueryDto
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class StudentSearchComponent implements OnInit {
-  private readonly searchService = inject(SearchService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly message = inject(NzMessageService);
@@ -51,7 +50,10 @@ export class StudentSearchComponent implements OnInit {
   totalCount = signal(0);
   selectedFileExtension = signal('');
 
-  /** 已出现的文件扩展名（用作结果类型筛选） */
+  // Hot words
+  hotWords = signal<PopularSearchDto[]>([]);
+  isHotWordsLoading = signal(false);
+
   availableExtensions = computed(() => {
     const exts = new Set<string>();
     for (const r of this.results()) {
@@ -68,12 +70,32 @@ export class StudentSearchComponent implements OnInit {
   });
 
   ngOnInit() {
-    // 复用教师端约定：?q=xxx 直接发起一次搜索
+    this.loadHotWords();
+
     const q = this.route.snapshot.queryParamMap.get('q');
     if (q) {
       this.searchQuery = q;
       this.search();
     }
+  }
+
+  private loadHotWords() {
+    this.isHotWordsLoading.set(true);
+    fetch('/api/app/search/popular-searches?count=30', { credentials: 'include' })
+      .then(r => r.json())
+      .then(data => {
+        this.hotWords.set(data ?? []);
+        this.isHotWordsLoading.set(false);
+      })
+      .catch(() => {
+        this.hotWords.set([]);
+        this.isHotWordsLoading.set(false);
+      });
+  }
+
+  /** 点击热门词：填入搜索框但不触发搜索 */
+  onHotWordClick(word: string | undefined) {
+    if (word) this.searchQuery = word;
   }
 
   search() {
@@ -84,25 +106,33 @@ export class StudentSearchComponent implements OnInit {
     }
 
     this.loading.set(true);
-    const query: SearchQueryDto = {
-      query: q,
-      skipCount: (this.pageIndex - 1) * this.pageSize,
-      maxResultCount: this.pageSize,
-      sorting: 'relevance',
-      indexName: 'documents',
-    };
 
-    this.searchService.search(query).subscribe({
-      next: (result: SearchResultDto) => {
-        this.results.set(result.items);
-        this.totalCount.set(result.totalCount);
+    fetch('/api/app/search/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: q,
+        skipCount: (this.pageIndex - 1) * this.pageSize,
+        maxResultCount: this.pageSize,
+        sorting: 'relevance',
+        indexName: 'documents',
+      }),
+    })
+      .then(r => {
+        console.log('[search] status:', r.status);
+        return r.json();
+      })
+      .then(data => {
+        console.log('[search] data:', data, 'items:', data.items);
+        this.results.set(data.items ?? []);
+        this.totalCount.set(data.totalCount ?? 0);
         this.loading.set(false);
-      },
-      error: () => {
+      })
+      .catch(err => {
+        console.error('[search] error:', err);
         this.loading.set(false);
-        this.message.error('搜索失败，请稍后重试');
-      }
-    });
+        this.message.error('搜索失败');
+      });
   }
 
   onKeyEnter(event: KeyboardEvent) {
@@ -117,17 +147,18 @@ export class StudentSearchComponent implements OnInit {
     this.search();
   }
 
-  /**
-   * 点击结果：跳到学生端的资源详情页。
-   * 学生只看资源，资源审核、视频回放、统计等教师能力都不暴露在 UI 上。
-   */
   viewDocument(result: DocumentSearchResultDto) {
-    this.searchService.logView({
-      resourceId: result.resourceId,
-      pageNumber: result.pageNumber,
-      viewDurationSeconds: 0,
-      viewSource: 0
-    }).subscribe({ error: () => { /* ignore */ } });
+    fetch('/api/app/search/log-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        resourceId: result.resourceId ?? '',
+        pageNumber: result.pageNumber,
+        viewDurationSeconds: 0,
+        viewSource: 0
+      }),
+    }).catch(() => {});
 
     this.router.navigate(['/student/resources', result.resourceId], {
       queryParams: { page: result.pageNumber, from: 'search' }

@@ -204,4 +204,42 @@ public class AIController : AbpControllerBase
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             fileName);
     }
+
+    // ========== Thread Management ==========
+
+    /// <summary>
+    /// 获取当前用户的聊天线程列表（不含消息内容，仅摘要）。
+    /// </summary>
+    [HttpGet("threads")]
+    public async Task<List<ChatThreadDto>> GetThreads()
+    {
+        return await _chatAppService.GetMyThreadsAsync();
+    }
+
+    /// <summary>
+    /// 获取指定线程的完整消息列表。
+    /// </summary>
+    [HttpGet("threads/{threadId}")]
+    public async Task<ChatThreadDto> GetThread(string threadId)
+    {
+        return await _chatAppService.GetThreadAsync(threadId);
+    }
+
+    /// <summary>
+    /// 删除指定线程及其所有消息。
+    /// </summary>
+    [HttpDelete("threads/{threadId}")]
+    public async Task DeleteThread(string threadId)
+    {
+        await _chatAppService.DeleteThreadAsync(Guid.Parse(threadId));
+    }
+
+    /// <summary>
+    /// 清空当前用户所有线程。
+    /// </summary>
+    [HttpDelete("threads")]
+    public async Task ClearAllThreads()
+    {
+        await _chatAppService.ClearAllThreadsAsync();
+    }
 }

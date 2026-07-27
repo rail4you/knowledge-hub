@@ -38,6 +38,11 @@ public class FileUrlDto
 public class ChatThreadDto
 {
     public string Id { get; set; } = string.Empty;
+    public string? Title { get; set; }
+    public Guid? ResourceId { get; set; }
+    public string? ResourceName { get; set; }
+    public int MessageCount { get; set; }
+    public string? LastMessage { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<ChatMessageDto> Messages { get; set; } = new();
 }
