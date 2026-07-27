@@ -340,6 +340,22 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
     }
 
     [Authorize]
+    public async Task SaveChatMessageAsync(Guid liveId, string content)
+    {
+        var userId = _currentUser.GetId();
+        var live = await _liveRepository.GetAsync(liveId);
+        var role = live.TeacherId == userId ? "teacher" : "student";
+        if (string.IsNullOrWhiteSpace(content) || content.Length > 500) return;
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var msg = new RecruitmentLiveChatMessage(
+                GuidGenerator.Create(), liveId, role, userId, content.Trim());
+            await _chatMessageRepository.InsertAsync(msg);
+        }
+    }
+
+    [Authorize]
     public async Task<List<RecruitmentLiveChatMessageDto>> GetChatMessagesAsync(Guid liveId)
     {
         using (DataFilter.Disable<IMultiTenant>())

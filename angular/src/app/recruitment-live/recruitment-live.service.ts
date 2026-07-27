@@ -71,6 +71,13 @@ export class RecruitmentLiveService {
       method: 'GET', url: `/api/app/recruitment-live/chat-messages/${liveId}`,
     }, { apiName: this.apiName });
 
+  /** REST 兜底：直接调 API 持久化聊天消息 */
+  saveChatMessage = (liveId: string, content: string) =>
+    this.restService.request<any, void>({
+      method: 'POST', url: `/api/app/recruitment-live/save-chat-message/${liveId}`,
+      body: { content },
+    }, { apiName: this.apiName });
+
   // ── WebRTC State ──
 
   readonly liveState = signal<LiveState>('idle');
@@ -413,14 +420,20 @@ export class RecruitmentLiveService {
 
   sendChat(text: string) {
     if (!text.trim()) return;
-    // 乐观添加：立即显示在本地，不必等服务器回显
+    const msg = text.trim();
+    // 乐观添加：立即显示在本地
     this.chatMessages.update(msgs => [...msgs, {
-      text: text.trim(),
+      text: msg,
       from: this.myRole,
       self: true,
       time: Date.now(),
     }]);
-    this.sendWs({ type: 'chat', data: text.trim() });
+    // WebSocket 发送
+    this.sendWs({ type: 'chat', data: msg });
+    // REST 兜底持久化（确保消息保存，无论 WS 是否成功）
+    this.saveChatMessage(this.liveId, msg).subscribe({
+      error: () => console.warn('[Live] REST save failed, WS may deliver'),
+    });
   }
 
   hangUp() {
