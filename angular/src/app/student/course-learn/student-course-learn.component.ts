@@ -208,12 +208,13 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         this.chapters.set(list);
         const flat = this.flattenChapters(list);
         this.flatChapters.set(flat);
-        // 展开所有等级的章节，与课程目录一致
-        const expanded = new Set(flat.map(c => c.id));
+        // 只展开第一级章节（depth===0），与课程目录页一致
+        const expanded = new Set<string>();
+        flat.forEach(c => { if (c.depth === 0) expanded.add(c.id); });
         this.expandedNodes.set(expanded);
         // 选中目标章节
         if (preselectId && flat.find(c => c.id === preselectId)) {
-          this.selectChapter(preselectId);
+          this.selectChapter(preselectId, true);
         } else if (flat.length > 0) {
           this.selectChapter(flat[0].id);
         }
@@ -255,7 +256,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  selectChapter(id: string) {
+  selectChapter(id: string, expandParents = false) {
     if (this.currentChapterId() === id) return;
     this.recordChapterProgress(true);
     this.currentChapterId.set(id);
@@ -264,8 +265,11 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.activeTab.set('resources');
     this.loadChapterContent(id);
     this.loadChapterRecords(id);
-    // 选中子章节时，自动展开其所有父级（保证侧边栏可见）
-    this.expandAncestors(id);
+    // 仅在初始导航时展开所有父级（保证 URL 指定的章节可见）
+    // 用户手动点击时不展开，避免覆盖用户的折叠操作
+    if (expandParents) {
+      this.expandAncestors(id);
+    }
     // 同步 URL
     const course = this.course();
     if (course?.id) {
