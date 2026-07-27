@@ -93,9 +93,13 @@ export class StudentSearchComponent implements OnInit {
       });
   }
 
-  /** 点击热门词：填入搜索框但不触发搜索 */
+  /** 点击热门词：直接触发搜索 */
   onHotWordClick(word: string | undefined) {
-    if (word) this.searchQuery = word;
+    if (word) {
+      this.searchQuery = word;
+      this.pageIndex = 1;
+      this.search();
+    }
   }
 
   search() {
