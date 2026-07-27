@@ -263,7 +263,9 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
             var currentUserId = _currentUser.GetId();
             var dto = MapToDto(entity);
-            dto.IsParticipant = entity.TeacherId == currentUserId || entity.StudentId == currentUserId;
+            dto.IsParticipant = entity.TeacherId == currentUserId 
+                || entity.StudentId == currentUserId 
+                || await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.RecruitmentLive.Manage);
             return dto;
         }
     }

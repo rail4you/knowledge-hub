@@ -87,13 +87,17 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
         const currentUser = this.configState.getDeep('currentUser') as any;
         const userId = currentUser?.id;
 
-        // 权限校验
-        if (live.teacherId !== userId && live.studentId !== userId) {
-          this.message.error('您没有权限进入该直播间');
-          this.router.navigate(this.myRole === 'teacher'
-            ? ['/admin/recruitment-live']
-            : ['/student/recruitment-live']);
-          return;
+        // 权限校验：参与者本人或管理员均可进入
+        const isOwner = live.teacherId === userId || live.studentId === userId;
+        if (!isOwner) {
+          // 检查是否为管理员（通过 isParticipant 判断，API 在非参与者但管理员时设为 teacher）
+          if (!live.isParticipant) {
+            this.message.error('您没有权限进入该直播间');
+            this.router.navigate(this.myRole === 'teacher'
+              ? ['/admin/recruitment-live']
+              : ['/student/recruitment-live']);
+            return;
+          }
         }
 
         this.live = live;
