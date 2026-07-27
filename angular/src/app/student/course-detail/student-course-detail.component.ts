@@ -15,8 +15,12 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { LearningService } from '../../proxy/learning/learning.service';
+import { ExerciseService } from '../../proxy/exams/exercise.service';
+import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import type { CourseDetailDto, ChapterDto } from '../../proxy/courses/dtos/models';
+import type { ExerciseDto } from '../../proxy/exams/dtos/models';
 import type { LearningProgressDto, KnowledgeMasteryDto } from '../../proxy/learning/dtos/models';
+import type { StudentExerciseRecordDto } from '../../proxy/learning/dtos/models';
 import { ChapterTreeGraphComponent } from '../../learning/knowledge-graph/chapter-tree-graph.component';
 import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
 
@@ -67,6 +71,8 @@ export class StudentCourseDetailComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly chapterService = inject(ChapterService);
   private readonly learningService = inject(LearningService);
+  private readonly exerciseService = inject(ExerciseService);
+  private readonly recordService = inject(StudentExerciseRecordService);
   private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
 
@@ -81,6 +87,16 @@ export class StudentCourseDetailComponent implements OnInit {
 
   readonly progress = signal<LearningProgressDto | null>(null);
   readonly mastery = signal<KnowledgeMasteryDto[]>([]);
+
+  /** 按章节统计习题进度（与学习页面一致） */
+  readonly chapterProgressMap = signal<Map<string, { total: number; completed: number }>>(new Map());
+  readonly masteredChapterCount = computed(() => {
+    let count = 0;
+    for (const v of this.chapterProgressMap().values()) {
+      if (v.total > 0 && v.completed >= v.total) count++;
+    }
+    return count;
+  });
 
   readonly related = signal<RelatedCourse[]>([]);
 
@@ -98,6 +114,7 @@ export class StudentCourseDetailComponent implements OnInit {
     this.loadChapters(id);
     this.loadProgress(id);
     this.loadMastery(id);
+    this.loadExerciseProgress(id);
   }
 
   loadCourse(id: string) {
@@ -148,6 +165,49 @@ export class StudentCourseDetailComponent implements OnInit {
     this.learningService.getKnowledgeMastery(courseId).subscribe({
       next: data => this.mastery.set(data || []),
       error: () => this.mastery.set([]),
+    });
+  }
+
+  private loadExerciseProgress(courseId: string) {
+    if (!this.authService.isAuthenticated) return;
+    this.exerciseService.getByCourse(courseId).subscribe({
+      next: (data: any) => {
+        const list = (data?.items || data || []) as ExerciseDto[];
+        // 按章节统计习题总数
+        const chapterTotalMap = new Map<string, number>();
+        for (const ex of list) {
+          const chId = ex.chapterId;
+          if (chId) chapterTotalMap.set(chId, (chapterTotalMap.get(chId) || 0) + 1);
+        }
+
+        this.recordService.getRecordsByCourse({
+          courseId,
+          skipCount: 0,
+          maxResultCount: 10000,
+        } as any).subscribe({
+          next: (recordResult: any) => {
+            const records = (recordResult?.items || []) as StudentExerciseRecordDto[];
+            const completedIds = new Set<string>(
+              records.filter(r => r.exerciseId).map(r => r.exerciseId!)
+            );
+
+            // 按章节统计已提交數
+            const chapterCompletedMap = new Map<string, number>();
+            for (const ex of list) {
+              const chId = ex.chapterId;
+              if (chId && completedIds.has(ex.id!)) {
+                chapterCompletedMap.set(chId, (chapterCompletedMap.get(chId) || 0) + 1);
+              }
+            }
+
+            const progressMap = new Map<string, { total: number; completed: number }>();
+            for (const [chId, total] of chapterTotalMap) {
+              progressMap.set(chId, { total, completed: chapterCompletedMap.get(chId) || 0 });
+            }
+            this.chapterProgressMap.set(progressMap);
+          },
+        });
+      },
     });
   }
 
