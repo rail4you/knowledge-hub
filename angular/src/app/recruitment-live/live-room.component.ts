@@ -126,9 +126,10 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
           return;
         }
 
-        // 加载历史聊天消息
-        this.loadChatHistory();
-        this.joinLive();
+        // 先加载历史聊天消息，完成后再连接 WebSocket，避免历史消息覆盖实时消息
+        this.loadChatHistory(() => {
+          this.joinLive();
+        });
       },
       error: () => {
         this.message.error('直播不存在');
@@ -137,7 +138,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
     });
   }
 
-  private loadChatHistory() {
+  private loadChatHistory(afterLoad?: () => void) {
     this.liveService.getChatHistory(this.liveId).subscribe({
       next: (msgs) => {
         const chatMsgs = msgs.map(m => ({
@@ -152,9 +153,11 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
           this.liveService.chatOpen.set(true);
           this.scrollToBottom();
         }
+         afterLoad?.();
       },
       error: () => {
         console.warn('[LiveRoom] Failed to load chat history');
+        afterLoad?.();
       },
     });
   }

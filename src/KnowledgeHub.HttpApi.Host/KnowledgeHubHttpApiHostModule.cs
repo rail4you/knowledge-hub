@@ -373,15 +373,8 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             app.UseDeveloperExceptionPage();
         }
 
-        app.UseAbpRequestLocalization();
-
-        if (!env.IsDevelopment())
-        {
-            app.UseErrorPage();
-        }
-
-        // 必须放在 UseRouting 之前：浏览器对 wss:// 默认用 HTTP/2 + CONNECT，
-        // 必须在路由匹配前拦截并升级 WebSocket，否则 endpoint routing 会返回 405
+        // WebSocket 中间件必须放在最前面，
+        // 否则 UseAbpRequestLocalization 等中间件可能阻止 WebSocket 升级
         app.UseWebSockets(new WebSocketOptions
         {
             KeepAliveInterval = TimeSpan.FromSeconds(30)
@@ -399,6 +392,13 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             }
             await next();
         });
+
+        app.UseAbpRequestLocalization();
+
+        if (!env.IsDevelopment())
+        {
+            app.UseErrorPage();
+        }
 
         app.UseRouting();
         app.UseMiddleware<GrantAllPoliciesMiddleware>();

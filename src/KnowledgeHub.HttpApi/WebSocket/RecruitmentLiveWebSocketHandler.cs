@@ -16,7 +16,6 @@ using Microsoft.Extensions.Logging;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
-using Volo.Abp.Uow;
 using Volo.Abp.Users;
 using KnowledgeHub.Permissions;
 using Volo.Abp.Identity;
@@ -317,9 +316,7 @@ public class RecruitmentLiveWebSocketHandler
                 var text = json?.TryGetProperty("data", out var cd) == true ? cd.GetString() : null;
                 if (!string.IsNullOrWhiteSpace(text) && text.Length <= 500)
                 {
-                    // 持久化消息
-                    await SaveChatMessageAsync(liveId, role, userId, text);
-
+                    // 不在此处保存数据库 —— REST 端点负责唯一持久化，避免重复
                     if (other is { State: System.Net.WebSockets.WebSocketState.Open })
                     {
                         await SendJson(other, new { type = "chat", data = text, from = role });
@@ -485,25 +482,6 @@ public class RecruitmentLiveWebSocketHandler
         catch
         {
             return false;
-        }
-    }
-
-    private async Task SaveChatMessageAsync(Guid liveId, string role, Guid userId, string content)
-    {
-        try
-        {
-            using var scope = _serviceProvider.CreateScope();
-            var uowManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
-            using var uow = uowManager.Begin();
-            var repo = scope.ServiceProvider.GetRequiredService<IRepository<RecruitmentLiveChatMessage, Guid>>();
-            var msg = new RecruitmentLiveChatMessage(
-                Guid.NewGuid(), liveId, role, userId, content);
-            await repo.InsertAsync(msg);
-            await uow.CompleteAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "保存聊天消息失败");
         }
     }
 }

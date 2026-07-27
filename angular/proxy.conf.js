@@ -87,6 +87,14 @@ const proxyConfig = {
     changeOrigin: true,
     logLevel: 'warn',
   },
+  // 直播 WebSocket 代理：通过 Angular dev server (HTTP/1.1) 转发到后端，
+  // 避免浏览器直接连接 wss:// Kestrel 时 HTTP/2 导致 WebSocket 升级失败
+  '/api/recruitment-live/ws': {
+    target: 'wss://localhost:44305',
+    ws: true,
+    secure: false,
+    changeOrigin: true,
+  },
 };
 
 module.exports = proxyConfig;

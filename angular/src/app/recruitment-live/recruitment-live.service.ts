@@ -71,7 +71,7 @@ export class RecruitmentLiveService {
       method: 'GET', url: `/api/app/recruitment-live/chat-messages/${liveId}`,
     }, { apiName: this.apiName });
 
-  /** REST 兜底：直接调 API 持久化聊天消息 */
+  /** REST 持久化聊天消息（唯一持久化路径，WS 只转发不保存） */
   saveChatMessage = (liveId: string, content: string) =>
     this.restService.request<any, void>({
       method: 'POST', url: `/api/app/recruitment-live/save-chat-message/${liveId}`,
@@ -149,6 +149,11 @@ export class RecruitmentLiveService {
 
   private connectWebSocket(wsUrl: string, wsToken: string): Promise<void> {
     return new Promise((resolve, reject) => {
+      // 开发环境：通过 Angular dev server proxy (HTTP/1.1) 转发 WebSocket，
+      // 避免浏览器直接连接 wss:// Kestrel 时 HTTP/2 导致 WebSocket 升级失败
+      if (wsUrl.includes('localhost:44305')) {
+        wsUrl = wsUrl.replace('wss://localhost:44305', 'ws://localhost:4200');
+      }
       const url = `${wsUrl}?token=${encodeURIComponent(wsToken)}&liveId=${this.liveId}`;
       console.log('[LiveWS] Connecting to:', url);
       this.ws = new WebSocket(url);
@@ -179,7 +184,9 @@ export class RecruitmentLiveService {
 
       this.ws.onmessage = (event) => {
         console.log('[LiveWS] Received:', event.data);
-        this.handleSignalMessage(event.data);
+        // 捕获异步处理中的错误，防止影响后续消息
+        this.handleSignalMessage(event.data).catch(err =>
+          console.error('[LiveWS] handleSignalMessage error:', err));
       };
     });
   }
@@ -295,14 +302,22 @@ export class RecruitmentLiveService {
         break;
 
       case 'chat':
+        console.log('[LiveWS] Chat received. self?', !!msg.self, 'from:', msg.from, 'data:', msg.data);
         // 跳过服务端 echo（已通过乐观添加显示）
-        if (!!msg.self) break;
-        this.chatMessages.update(msgs => [...msgs, {
-          text: msg.data,
-          from: msg.from || '',
-          self: false,
-          time: Date.now(),
-        }]);
+        if (!!msg.self) {
+          console.log('[LiveWS] Skipping self-echo');
+          break;
+        }
+        this.chatMessages.update(msgs => {
+          const newMsgs = [...msgs, {
+            text: msg.data,
+            from: msg.from || '',
+            self: false,
+            time: Date.now(),
+          }];
+          console.log('[LiveWS] Chat messages updated, count:', newMsgs.length);
+          return newMsgs;
+        });
         // 收到对方消息时自动打开聊天面板
         if (!this.chatOpen()) {
           this.chatOpen.set(true);
@@ -428,11 +443,11 @@ export class RecruitmentLiveService {
       self: true,
       time: Date.now(),
     }]);
-    // WebSocket 发送
+    // WebSocket 发送（只负责实时转发，不持久化）
     this.sendWs({ type: 'chat', data: msg });
-    // REST 兜底持久化（确保消息保存，无论 WS 是否成功）
+    // REST 持久化（唯一持久化路径）
     this.saveChatMessage(this.liveId, msg).subscribe({
-      error: () => console.warn('[Live] REST save failed, WS may deliver'),
+      error: () => console.warn('[Live] REST save failed'),
     });
   }
 
