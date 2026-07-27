@@ -68,7 +68,7 @@ export class RecruitmentLiveService {
 
   getChatHistory = (liveId: string) =>
     this.restService.request<any, { senderRole: string; content: string; sentAt: string }[]>({
-      method: 'GET', url: `/api/app/recruitment-live/${liveId}/chat-messages`,
+      method: 'GET', url: `/api/app/recruitment-live/chat-messages/${liveId}`,
     }, { apiName: this.apiName });
 
   // ── WebRTC State ──
