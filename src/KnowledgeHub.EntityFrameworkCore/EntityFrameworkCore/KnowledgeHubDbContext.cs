@@ -182,6 +182,7 @@ public class KnowledgeHubDbContext :
 
     // RecruitmentLive entities
     public DbSet<global::KnowledgeHub.RecruitmentLive.RecruitmentLive> RecruitmentLives { get; set; }
+    public DbSet<RecruitmentLiveChatMessage> RecruitmentLiveChatMessages { get; set; }
 
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
