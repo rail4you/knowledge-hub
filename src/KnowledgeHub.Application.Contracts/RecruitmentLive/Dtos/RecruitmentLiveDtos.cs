@@ -79,3 +79,8 @@ public class RecruitmentLiveChatMessageDto
     public string Content { get; set; } = string.Empty;
     public DateTime SentAt { get; set; }
 }
+
+public class SaveChatMessageInputDto
+{
+    public string Content { get; set; } = string.Empty;
+}

@@ -35,7 +35,7 @@ public interface IRecruitmentLiveAppService : IApplicationService
     /// <summary>获取 ICE 服务器配置</summary>
     Task<List<IceServerDto>> GetIceServersAsync();
     /// <summary>保存聊天消息</summary>
-    Task SaveChatMessageAsync(Guid liveId, string content);
+    Task SaveChatMessageAsync(Guid liveId, SaveChatMessageInputDto input);
     /// <summary>获取直播聊天历史消息</summary>
     Task<List<RecruitmentLiveChatMessageDto>> GetChatMessagesAsync(Guid liveId);
 }
