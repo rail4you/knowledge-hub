@@ -155,7 +155,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     return Math.min(Math.round((completed / total) * 100), 100);
   });
 
-  /** 已掌握章节数：某章的所有习题都已提交 */
+  /** 已完成章节数：某章的所有习题都已提交 */
   readonly masteredChapterCount = computed(() => {
     let count = 0;
     for (const v of this.chapterProgressMap().values()) {
