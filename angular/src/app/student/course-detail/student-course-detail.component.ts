@@ -98,6 +98,18 @@ export class StudentCourseDetailComponent implements OnInit {
     return count;
   });
 
+  /** 习题完成进度（与学习页面 courseProgress 一致） */
+  readonly exerciseProgress = computed(() => {
+    const map = this.chapterProgressMap();
+    let total = 0, completed = 0;
+    for (const v of map.values()) {
+      total += v.total;
+      completed += v.completed;
+    }
+    if (total === 0) return 0;
+    return Math.round((completed / total) * 100);
+  });
+
   readonly related = signal<RelatedCourse[]>([]);
 
   /** 当前章节的所有资源（聚合自课程） */

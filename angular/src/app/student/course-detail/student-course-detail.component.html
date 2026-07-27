@@ -120,7 +120,7 @@
             <div class="progress-card">
               <div class="progress-card__title">
                 <span nz-icon nzType="line-chart" nzTheme="outline"></span>
-                <span>我的学习进度</span>
+                <span>习题进度</span>
               </div>
               <div class="progress-card__ring">
                 <div class="ring">
@@ -132,12 +132,12 @@
                       r="42"
                       class="ring__fg"
                       [attr.stroke-dasharray]="264"
-                      [attr.stroke-dashoffset]="264 - (264 * (c.progress || 0)) / 100"
+                      [attr.stroke-dashoffset]="264 - (264 * exerciseProgress()) / 100"
                     ></circle>
                   </svg>
                   <div class="ring__center">
-                    <strong>{{ (c.progress || 0) | number:'1.2-2' }}%</strong>
-                    <span>已学</span>
+                    <strong>{{ exerciseProgress() }}%</strong>
+                    <span>习题进度</span>
                   </div>
                 </div>
               </div>
