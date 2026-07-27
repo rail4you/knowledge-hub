@@ -225,20 +225,23 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
 
         // P1-21：避免用 _currentTenant.Change + _userManager.GetRolesAsync（
         // 同一个 UOW 内 DbContext 已创建时租户切换不生效）。
-        // 改为直接用 _userRepository 获取角色关联数据。
-        var roleQuery = await _roleRepository.GetQueryableAsync();
-        var studentRoleIds = await roleQuery
-            .Where(r => r.Name == "Student")
-            .Select(r => r.Id)
-            .ToListAsync();
+        // 改为直接用 _roleRepository 查询角色 + DbContext 查关联表。
+        List<Guid> studentRoleIds;
+        List<Guid> studentUserIds;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var roleQuery = await _roleRepository.GetQueryableAsync();
+            studentRoleIds = await roleQuery
+                .Where(r => r.Name == "Student")
+                .Select(r => r.Id)
+                .ToListAsync();
 
-        // IdentityUserRole 使用组合键 (UserId,RoleId,TenantId)，不能用标准 IRepository。
-        // 直接用 DbContext 查询 IdentityUserRole 表。
-        var dbContext = await _identityDbContextProvider.GetDbContextAsync();
-        var studentUserIds = await dbContext.Set<IdentityUserRole>()
-            .Where(ur => studentRoleIds.Contains(ur.RoleId))
-            .Select(ur => ur.UserId)
-            .ToListAsync();
+            var dbContext = await _identityDbContextProvider.GetDbContextAsync();
+            studentUserIds = await dbContext.Set<IdentityUserRole>()
+                .Where(ur => studentRoleIds.Contains(ur.RoleId))
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+        }
 
         var studentsWithRole = allStudents
             .Where(u => studentUserIds.Contains(u.Id))
