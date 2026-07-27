@@ -493,10 +493,13 @@ public class RecruitmentLiveWebSocketHandler
         try
         {
             using var scope = _serviceProvider.CreateScope();
+            var uowManager = scope.ServiceProvider.GetRequiredService<IUnitOfWorkManager>();
+            using var uow = uowManager.Begin();
             var repo = scope.ServiceProvider.GetRequiredService<IRepository<RecruitmentLiveChatMessage, Guid>>();
             var msg = new RecruitmentLiveChatMessage(
                 Guid.NewGuid(), liveId, role, userId, content);
-            await repo.InsertAsync(msg, autoSave: true);
+            await repo.InsertAsync(msg);
+            await uow.CompleteAsync();
         }
         catch (Exception ex)
         {
