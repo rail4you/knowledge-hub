@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, OnDestroy, ChangeDetectionStrategy, inject, signal, computed
+  Component, OnInit, OnDestroy, AfterViewChecked, ChangeDetectionStrategy, inject, signal, computed, ViewChild, ElementRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -31,7 +31,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
   styleUrls: ['./live-room.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LiveRoomComponent implements OnInit, OnDestroy {
+export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private liveService = inject(RecruitmentLiveService);
@@ -67,6 +67,24 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
   });
 
   readonly remoteVideoActive = computed(() => this.remoteStream() !== null);
+
+  @ViewChild('chatMessagesContainer', { static: false }) chatMessagesContainer!: ElementRef;
+  private previousMsgCount = 0;
+
+  ngAfterViewChecked() {
+    const count = this.chatMessages().length;
+    if (count > this.previousMsgCount) {
+      this.previousMsgCount = count;
+      this.scrollToBottom();
+    }
+  }
+
+  private scrollToBottom() {
+    setTimeout(() => {
+      const el = this.chatMessagesContainer?.nativeElement;
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 50);
+  }
 
   readonly waitingText = computed(() => {
     return this.myRole === 'teacher' ? '等待学生加入...' : '等待教师发起连接...';
@@ -129,9 +147,10 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
           time: new Date(m.sentAt).getTime(),
         }));
         this.liveService.chatMessages.set(chatMsgs);
-        // 有历史消息时自动打开聊天面板
+        // 有历史消息时自动打开聊天面板并滚动到底部
         if (chatMsgs.length > 0) {
           this.liveService.chatOpen.set(true);
+          this.scrollToBottom();
         }
       },
       error: () => {
@@ -177,6 +196,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
     if (!this.chatInput.trim()) return;
     this.liveService.sendChat(this.chatInput.trim());
     this.chatInput = '';
+    this.scrollToBottom();
   }
 
   onChatKeydown(event: KeyboardEvent) {

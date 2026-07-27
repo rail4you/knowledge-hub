@@ -108,7 +108,7 @@
       <div class="chat-messages" #chatMessagesContainer>
         <div class="chat-msg" *ngFor="let msg of chatMessages()"
              [class.self]="msg.self" [class.other]="!msg.self">
-          <span class="chat-sender">{{ msg.from === 'teacher' ? '面试官' : '候选人' }}</span>
+          <span class="chat-sender">{{ msg.from === 'teacher' ? live?.teacherName || '面试官' : live?.studentName || '候选人' }}</span>
           <span class="chat-text">{{ msg.text }}</span>
         </div>
       </div>
