@@ -287,13 +287,15 @@ export class RecruitmentLiveService {
         break;
 
       case 'chat':
+        // 跳过服务端 echo（已通过乐观添加显示）
+        if (!!msg.self) break;
         this.chatMessages.update(msgs => [...msgs, {
           text: msg.data,
           from: msg.from || '',
-          self: !!msg.self,
+          self: false,
           time: Date.now(),
         }]);
-        // 收到消息时自动打开聊天面板
+        // 收到对方消息时自动打开聊天面板
         if (!this.chatOpen()) {
           this.chatOpen.set(true);
         }

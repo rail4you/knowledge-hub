@@ -134,6 +134,9 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
           this.liveService.chatOpen.set(true);
         }
       },
+      error: () => {
+        console.warn('[LiveRoom] Failed to load chat history');
+      },
     });
   }
 
