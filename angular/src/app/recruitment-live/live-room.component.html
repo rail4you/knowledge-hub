@@ -24,7 +24,7 @@
   <section class="waiting-hero" *ngIf="liveState() === 'waiting' && myRole === 'teacher'">
     <div class="waiting-card">
       <div class="waiting-icon">
-        <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+        <span nz-icon nzType="message" nzTheme="outline"></span>
       </div>
       <h2>邀请学生加入</h2>
       <p class="waiting-sub">将以下房间码发送给学生，或让学生直接访问直播间链接</p>
@@ -35,6 +35,10 @@
         <span nz-icon nzType="copy" nzTheme="outline"></span>
         复制房间码
       </button>
+      <div class="caption-hint" *ngIf="!localStreamActive()">
+        <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+        未检测到摄像头/麦克风，将以文字模式进行沟通
+      </div>
       <div class="waiting-hint">
         <span class="pulse"></span> {{ waitingText() }}
       </div>
@@ -45,10 +49,14 @@
   <section class="waiting-hero" *ngIf="liveState() === 'waiting' && myRole === 'student'">
     <div class="waiting-card">
       <div class="waiting-icon">
-        <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+        <span nz-icon nzType="message" nzTheme="outline"></span>
       </div>
       <h2>准备就绪</h2>
-      <p class="waiting-sub">摄像头和麦克风已就绪，等待面试官发起通话</p>
+      <p class="waiting-sub">已连接信令服务器，等待对方发起通话</p>
+      <div class="caption-hint" *ngIf="!localStreamActive()">
+        <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+        未检测到摄像头/麦克风，将以文字模式进行沟通
+      </div>
       <div class="waiting-hint">
         <span class="pulse"></span> {{ waitingText() }}
       </div>

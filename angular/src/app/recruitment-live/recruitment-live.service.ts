@@ -91,39 +91,22 @@ export class RecruitmentLiveService {
     this.myRole = role;
     this.liveState.set('connecting');
 
-    // 获取本地媒体
-    try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        audio: true,
-      });
-    } catch (e: any) {
-      // 回退到基本约束
-      try {
-        this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      } catch (e2: any) {
-        throw new Error('无法访问摄像头/麦克风: ' + (e2.message || e2.name));
-      }
-    }
+    // 获取本地媒体（摄像头/麦克风），允许降级
+    this.localStream = await this.acquireMediaStream();
 
     this.liveState.set('waiting');
 
-    // *** 先创建 PeerConnection（避免 user-joined 到达时 this.pc 还是 null）***
+    // 先连接 WebSocket（聊天走 WebSocket，不受媒体影响）
+    // 再创建 PeerConnection（如果有媒体流则加音视频轨，否则纯 WebSocket 聊天）
+    await this.connectWebSocket(wsUrl, wsToken);
     await this.createPeerConnection();
 
-    // 再连接 WebSocket（此时 PC 已就绪，user-joined 到达时可立即发 offer）
-    await this.connectWebSocket(wsUrl, wsToken);
-
-    // 连接成功后，如果 user-joined 在 WebSocket 连接期间已被处理，
-    // 教师端需要补发 offer（因为 createAndSendOffer 在 PC 未就绪时会被跳过）
     if (role === 'teacher') {
       if (this.liveState() === 'signaling' || this.liveState() === 'connected') {
-        // user-joined 已收到但 offer 可能未发送，补发一次
         await this.createAndSendOffer();
       }
     }
 
-    // 只在仍处于等待状态时设置标签（user-joined 可能已修改了标签）
     if (this.liveState() === 'waiting') {
       if (role === 'teacher') {
         this.connectionLabel.set('等待学生加入...');
@@ -131,6 +114,25 @@ export class RecruitmentLiveService {
         this.connectionLabel.set('等待教师发起连接...');
       }
     }
+  }
+
+  /** 获取媒体流，逐级降级：video+audio → audio only → null（纯文字聊天） */
+  private async acquireMediaStream(): Promise<MediaStream | null> {
+    const constraints: MediaStreamConstraints[] = [
+      { video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: true },
+      { video: true, audio: true },
+      { audio: true },
+    ];
+    for (const c of constraints) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(c);
+      } catch {
+        // 尝试下一个降级方案
+      }
+    }
+    // 全部失败，返回 null（纯文字聊天模式）
+    console.warn('[Live] No camera/mic available, text-only mode');
+    return null;
   }
 
   private connectWebSocket(wsUrl: string, wsToken: string): Promise<void> {
@@ -173,7 +175,10 @@ export class RecruitmentLiveService {
     const iceServers = await this.getIceServersConfig();
     this.pc = new RTCPeerConnection({ iceServers });
 
-    this.localStream?.getTracks().forEach(track => this.pc!.addTrack(track, this.localStream!));
+    // 有本地流才加音视频轨；没有则纯 WebSocket 聊天
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => this.pc!.addTrack(track, this.localStream!));
+    }
 
     this.pc.onicecandidate = (e) => {
       if (e.candidate) {
@@ -199,8 +204,15 @@ export class RecruitmentLiveService {
           break;
         case 'disconnected':
         case 'failed':
-          this.connectionLabel.set('已断开');
-          this.handleConnectionFailure();
+          // 纯文字聊天模式不报错
+          if (!this.localStream) {
+            this.liveState.set('connected');
+            this.connectionLabel.set('文字聊天中');
+            this.startTimer();
+          } else {
+            this.connectionLabel.set('已断开');
+            this.handleConnectionFailure();
+          }
           break;
       }
     };
@@ -331,13 +343,15 @@ export class RecruitmentLiveService {
   }
 
   toggleMic() {
+    if (!this.localStream) return;
     this.micEnabled.update(v => !v);
-    this.localStream?.getAudioTracks().forEach(t => (t.enabled = this.micEnabled()));
+    this.localStream.getAudioTracks().forEach(t => (t.enabled = this.micEnabled()));
   }
 
   toggleCam() {
+    if (!this.localStream) return;
     this.camEnabled.update(v => !v);
-    this.localStream?.getVideoTracks().forEach(t => (t.enabled = this.camEnabled()));
+    this.localStream.getVideoTracks().forEach(t => (t.enabled = this.camEnabled()));
   }
 
   async switchCamera() {
