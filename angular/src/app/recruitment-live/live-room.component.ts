@@ -104,11 +104,31 @@ export class LiveRoomComponent implements OnInit, OnDestroy {
           return;
         }
 
+        // 加载历史聊天消息
+        this.loadChatHistory();
         this.joinLive();
       },
       error: () => {
         this.message.error('直播不存在');
         this.router.navigate(['/']);
+      },
+    });
+  }
+
+  private loadChatHistory() {
+    this.liveService.getChatHistory(this.liveId).subscribe({
+      next: (msgs) => {
+        const chatMsgs = msgs.map(m => ({
+          text: m.content,
+          from: m.senderRole,
+          self: m.senderRole === this.myRole,
+          time: new Date(m.sentAt).getTime(),
+        }));
+        this.liveService.chatMessages.set(chatMsgs);
+        // 有历史消息时自动打开聊天面板
+        if (chatMsgs.length > 0) {
+          this.liveService.chatOpen.set(true);
+        }
       },
     });
   }

@@ -25,6 +25,7 @@ namespace KnowledgeHub.RecruitmentLiveService;
 public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiveAppService
 {
     private readonly IRepository<RecruitmentLiveEntity, Guid> _liveRepository;
+    private readonly IRepository<RecruitmentLiveChatMessage, Guid> _chatMessageRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IConfiguration _configuration;
     private readonly ICurrentUser _currentUser;
@@ -32,11 +33,13 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
     public RecruitmentLiveAppService(
         IRepository<RecruitmentLiveEntity, Guid> liveRepository,
+        IRepository<RecruitmentLiveChatMessage, Guid> chatMessageRepository,
         IRepository<IdentityUser, Guid> userRepository,
         IConfiguration configuration,
         ICurrentUser currentUser)
     {
         _liveRepository = liveRepository;
+        _chatMessageRepository = chatMessageRepository;
         _userRepository = userRepository;
         _configuration = configuration;
         _currentUser = currentUser;
@@ -332,6 +335,25 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
                 Name = !string.IsNullOrWhiteSpace(u.Name) ? u.Name : (u.UserName ?? string.Empty)
             })
             .ToListAsync();
+    }
+
+    [Authorize]
+    public async Task<List<RecruitmentLiveChatMessageDto>> GetChatMessagesAsync(Guid liveId)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var msgs = await _chatMessageRepository.GetListAsync(
+                x => x.LiveId == liveId);
+            return msgs
+                .OrderBy(x => x.SentAt)
+                .Select(x => new RecruitmentLiveChatMessageDto
+                {
+                    SenderRole = x.SenderRole,
+                    Content = x.Content,
+                    SentAt = x.SentAt,
+                })
+                .ToList();
+        }
     }
 
     [AllowAnonymous]

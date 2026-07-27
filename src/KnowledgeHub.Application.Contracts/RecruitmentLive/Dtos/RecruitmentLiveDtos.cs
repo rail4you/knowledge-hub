@@ -72,3 +72,10 @@ public class WsTokenDto
     public string Token { get; set; } = string.Empty;
     public string WsUrl { get; set; } = string.Empty;
 }
+
+public class RecruitmentLiveChatMessageDto
+{
+    public string SenderRole { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public DateTime SentAt { get; set; }
+}

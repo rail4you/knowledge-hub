@@ -209,7 +209,7 @@ public class RecruitmentLiveWebSocketHandler
         }
 
         // 5. 消息循环
-        await MessageLoop(ws, room, role, liveId, liveRepo);
+        await MessageLoop(ws, room, role, liveId, liveRepo, tokenUserId);
     }
 
     private async Task MessageLoop(
@@ -217,7 +217,8 @@ public class RecruitmentLiveWebSocketHandler
         LiveRoom room,
         string role,
         Guid liveId,
-        IRepository<RecruitmentLiveEntity, Guid> liveRepo)
+        IRepository<RecruitmentLiveEntity, Guid> liveRepo,
+        Guid userId)
     {
         var buffer = new byte[MaxMessageSize];
         var lastPing = DateTime.UtcNow;
@@ -244,7 +245,7 @@ public class RecruitmentLiveWebSocketHandler
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
                     var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    await HandleMessage(ws, room, role, message);
+                    await HandleMessage(ws, room, role, message, liveId, userId);
                     lastPing = DateTime.UtcNow;
                 }
                 else if (result.MessageType == WebSocketMessageType.Binary)
@@ -270,7 +271,9 @@ public class RecruitmentLiveWebSocketHandler
         System.Net.WebSockets.WebSocket ws,
         LiveRoom room,
         string role,
-        string message)
+        string message,
+        Guid liveId,
+        Guid userId)
     {
         JsonElement? json = null;
         try
@@ -311,10 +314,13 @@ public class RecruitmentLiveWebSocketHandler
                 break;
 
             case "chat":
-                if (other is { State: System.Net.WebSockets.WebSocketState.Open })
+                var text = json?.TryGetProperty("data", out var cd) == true ? cd.GetString() : null;
+                if (!string.IsNullOrWhiteSpace(text) && text.Length <= 500)
                 {
-                    var text = json?.TryGetProperty("data", out var cd) == true ? cd.GetString() : null;
-                    if (!string.IsNullOrWhiteSpace(text) && text.Length <= 500)
+                    // 持久化消息
+                    await SaveChatMessageAsync(liveId, role, userId, text);
+
+                    if (other is { State: System.Net.WebSockets.WebSocketState.Open })
                     {
                         await SendJson(other, new { type = "chat", data = text, from = role });
                         await SendJson(ws, new { type = "chat", data = text, from = role, self = true });
@@ -479,6 +485,22 @@ public class RecruitmentLiveWebSocketHandler
         catch
         {
             return false;
+        }
+    }
+
+    private async Task SaveChatMessageAsync(Guid liveId, string role, Guid userId, string content)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IRepository<RecruitmentLiveChatMessage, Guid>>();
+            var msg = new RecruitmentLiveChatMessage(
+                Guid.NewGuid(), liveId, role, userId, content);
+            await repo.InsertAsync(msg, autoSave: true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "保存聊天消息失败");
         }
     }
 }

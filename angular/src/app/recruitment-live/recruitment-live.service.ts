@@ -66,6 +66,11 @@ export class RecruitmentLiveService {
       method: 'GET', url: '/api/app/recruitment-live/ice-servers',
     }, { apiName: this.apiName });
 
+  getChatHistory = (liveId: string) =>
+    this.restService.request<any, { senderRole: string; content: string; sentAt: string }[]>({
+      method: 'GET', url: `/api/app/recruitment-live/${liveId}/chat-messages`,
+    }, { apiName: this.apiName });
+
   // ── WebRTC State ──
 
   readonly liveState = signal<LiveState>('idle');

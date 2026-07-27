@@ -25,5 +25,18 @@ public static class RecruitmentLiveDbModelCreatingExtensions
             b.HasIndex(x => x.Status);
             b.HasIndex(x => x.TenantId);
         });
+
+        builder.Entity<global::KnowledgeHub.RecruitmentLive.RecruitmentLiveChatMessage>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "RecruitmentLiveChatMessages", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.SenderRole).IsRequired().HasMaxLength(20);
+            b.Property(x => x.Content).IsRequired().HasMaxLength(500);
+            b.Property(x => x.SentAt).IsRequired();
+
+            b.HasIndex(x => x.LiveId);
+            b.HasIndex(x => x.SentAt);
+        });
     }
 }
