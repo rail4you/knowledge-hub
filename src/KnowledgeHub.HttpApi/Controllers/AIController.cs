@@ -229,6 +229,7 @@ public class AIController : AbpControllerBase
     /// 删除指定线程及其所有消息。
     /// </summary>
     [HttpDelete("threads/{threadId}")]
+    [IgnoreAntiforgeryToken]
     public async Task DeleteThread(string threadId)
     {
         await _chatAppService.DeleteThreadAsync(Guid.Parse(threadId));
@@ -238,6 +239,7 @@ public class AIController : AbpControllerBase
     /// 清空当前用户所有线程。
     /// </summary>
     [HttpDelete("threads")]
+    [IgnoreAntiforgeryToken]
     public async Task ClearAllThreads()
     {
         await _chatAppService.ClearAllThreadsAsync();

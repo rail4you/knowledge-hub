@@ -93,6 +93,9 @@ export class ChatComponent implements OnInit, OnDestroy {
   isThreadsLoading = signal(false);
   showHistory = signal(true);
 
+  // Resource sidebar collapse
+  showResource = signal(true);
+
   /** Threads grouped by type */
   generalThreads = computed(() =>
     this.threads().filter(t => !t.resourceId));
@@ -389,6 +392,10 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   toggleHistory() {
     this.showHistory.update(v => !v);
+  }
+
+  toggleResource() {
+    this.showResource.update(v => !v);
   }
 
   selectResource(resource: ResourceForChat) {

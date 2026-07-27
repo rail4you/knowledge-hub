@@ -229,6 +229,33 @@
   padding: 40px 0;
 }
 
+// ===== Resource Sidebar Toggle =====
+.resource-toggle {
+  width: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border: none;
+  border-left: 1px solid #f0f0f0;
+  cursor: pointer;
+  color: #999;
+  font-size: 14px;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+
+  &.collapsed {
+    border-left-color: transparent;
+    border-right: 1px solid #f0f0f0;
+  }
+
+  &:hover {
+    background: #e6f7ff;
+    color: #1890ff;
+  }
+}
+
 // ===== Resource Sidebar =====
 .resource-sidebar {
   width: 280px;
@@ -236,8 +263,16 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-right: 1px solid #f0f0f0;
+  border-left: 1px solid #f0f0f0;
   background: #fafafa;
+  transition: width 0.2s ease, opacity 0.2s ease;
+
+  &.collapsed {
+    width: 0;
+    overflow: hidden;
+    opacity: 0;
+    border-left: none;
+  }
 
   .sidebar-header {
     display: flex;
@@ -385,6 +420,10 @@
   flex-direction: column;
   min-width: 0;
   width: 0;
+
+  &.expanded {
+    // No extra changes needed; flex naturally fills the space
+  }
 }
 
 .chat-header {

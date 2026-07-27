@@ -1,5 +1,5 @@
 <div class="chat-layout">
-  <!-- History sidebar -->
+  <!-- Left: History sidebar -->
   <div class="history-sidebar" [class.collapsed]="!showHistory()">
     <div class="sidebar-header">
       <h3>聊天记录</h3>
@@ -137,79 +137,8 @@
     <span nz-icon [nzType]="showHistory() ? 'menu-fold' : 'menu-unfold'" nzTheme="outline"></span>
   </button>
 
-  <!-- Resource sidebar (existing) -->
-  <div class="resource-sidebar">
-    <div class="sidebar-header">
-      <h3>资源文档</h3>
-    </div>
-
-    <div class="sidebar-search">
-      <nz-input-group [nzSuffix]="searchIcon">
-        <input
-          nz-input
-          type="text"
-          [value]="resourceSearchText()"
-          (input)="resourceSearchText.set($any($event.target).value)"
-          placeholder="搜索资源文档..."
-        />
-      </nz-input-group>
-      <ng-template #searchIcon>
-        <span nz-icon nzType="search"></span>
-      </ng-template>
-    </div>
-
-    <div class="resource-list">
-      @if (isResourcesLoading() || isCategoriesLoading()) {
-        <div class="loading-container">
-          <nz-spin nzSimple></nz-spin>
-        </div>
-      } @else if (filteredResources().length === 0) {
-        <nz-empty nzNotFoundContent="暂无文档资源"></nz-empty>
-      } @else {
-        <nz-tree
-          [nzData]="categoryTreeNodes()"
-          nzBlockNode
-          [nzShowExpand]="true"
-          [nzShowIcon]="false"
-          (nzClick)="onTreeClick($event)"
-        >
-          <ng-template #nzTreeTemplate let-node>
-            @if (node.origin?.meta?.resource) {
-              <div
-                class="tree-resource"
-                [class.selected]="selectedResource()?.id === node.origin.meta.resource.id"
-                (click)="selectResource(node.origin.meta.resource); $event.stopPropagation()"
-              >
-                <span
-                  class="doc-icon"
-                  [attr.data-ext]="(node.origin.meta.resource.sourceFormat || '').toLowerCase()"
-                  [nzType]="getDocIcon(node.origin.meta.resource.sourceFormat)"
-                  nz-icon
-                  nzTheme="outline"
-                ></span>
-                <span class="tree-resource-name" [title]="node.origin.meta.resource.name">
-                  {{ node.origin.meta.resource.name }}
-                </span>
-                @if (node.origin.meta.resource.hasPageIndex) {
-                  <nz-tag nzColor="green" nzSize="small">已索引</nz-tag>
-                } @else {
-                  <nz-tag nzColor="orange" nzSize="small">未索引</nz-tag>
-                }
-              </div>
-            } @else {
-              <span class="tree-category-name">
-                <span nz-icon nzType="folder" nzTheme="fill" class="cat-icon"></span>
-                {{ node.title }}
-              </span>
-            }
-          </ng-template>
-        </nz-tree>
-      }
-    </div>
-  </div>
-
-  <!-- Right: Chat area -->
-  <div class="chat-main">
+  <!-- Center: Chat area -->
+  <div class="chat-main" [class.expanded]="!showResource()">
     <div class="chat-header">
       <div class="header-title">
         <h2>文档问答助手</h2>
@@ -345,6 +274,94 @@
           </button>
         </ng-template>
       </div>
+    </div>
+  </div>
+
+  <!-- Resource sidebar toggle button -->
+  <button class="resource-toggle" (click)="toggleResource()" [class.collapsed]="!showResource()">
+    <span nz-icon [nzType]="showResource() ? 'menu-fold' : 'menu-unfold'" nzTheme="outline"></span>
+  </button>
+
+  <!-- Right: Resource sidebar -->
+  <div class="resource-sidebar" [class.collapsed]="!showResource()">
+    <div class="sidebar-header">
+      <h3>资源文档</h3>
+      <div class="sidebar-header__actions">
+        <button
+          nz-button
+          nzType="text"
+          nzSize="small"
+          nz-tooltip
+          nzTooltipTitle="隐藏资源面板"
+          (click)="toggleResource()"
+        >
+          <span nz-icon nzType="close" nzTheme="outline"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="sidebar-search">
+      <nz-input-group [nzSuffix]="searchIcon">
+        <input
+          nz-input
+          type="text"
+          [value]="resourceSearchText()"
+          (input)="resourceSearchText.set($any($event.target).value)"
+          placeholder="搜索资源文档..."
+        />
+      </nz-input-group>
+      <ng-template #searchIcon>
+        <span nz-icon nzType="search"></span>
+      </ng-template>
+    </div>
+
+    <div class="resource-list">
+      @if (isResourcesLoading() || isCategoriesLoading()) {
+        <div class="loading-container">
+          <nz-spin nzSimple></nz-spin>
+        </div>
+      } @else if (filteredResources().length === 0) {
+        <nz-empty nzNotFoundContent="暂无文档资源"></nz-empty>
+      } @else {
+        <nz-tree
+          [nzData]="categoryTreeNodes()"
+          nzBlockNode
+          [nzShowExpand]="true"
+          [nzShowIcon]="false"
+          (nzClick)="onTreeClick($event)"
+        >
+          <ng-template #nzTreeTemplate let-node>
+            @if (node.origin?.meta?.resource) {
+              <div
+                class="tree-resource"
+                [class.selected]="selectedResource()?.id === node.origin.meta.resource.id"
+                (click)="selectResource(node.origin.meta.resource); $event.stopPropagation()"
+              >
+                <span
+                  class="doc-icon"
+                  [attr.data-ext]="(node.origin.meta.resource.sourceFormat || '').toLowerCase()"
+                  [nzType]="getDocIcon(node.origin.meta.resource.sourceFormat)"
+                  nz-icon
+                  nzTheme="outline"
+                ></span>
+                <span class="tree-resource-name" [title]="node.origin.meta.resource.name">
+                  {{ node.origin.meta.resource.name }}
+                </span>
+                @if (node.origin.meta.resource.hasPageIndex) {
+                  <nz-tag nzColor="green" nzSize="small">已索引</nz-tag>
+                } @else {
+                  <nz-tag nzColor="orange" nzSize="small">未索引</nz-tag>
+                }
+              </div>
+            } @else {
+              <span class="tree-category-name">
+                <span nz-icon nzType="folder" nzTheme="fill" class="cat-icon"></span>
+                {{ node.title }}
+              </span>
+            }
+          </ng-template>
+        </nz-tree>
+      }
     </div>
   </div>
 </div>
