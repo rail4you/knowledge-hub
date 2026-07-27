@@ -140,8 +140,8 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
             EndTime = input.EndTime,
             MaxScore = Math.Clamp(input.MaxScore, 1, 1000),
             AllowResubmission = input.AllowResubmission,
-            AgentName = input.AgentName?.Trim(),
-            AgentPrompt = input.AgentPrompt?.Trim()
+            AgentName = string.IsNullOrWhiteSpace(input.AgentName) ? null : input.AgentName.Trim(),
+            AgentPrompt = string.IsNullOrWhiteSpace(input.AgentPrompt) ? null : input.AgentPrompt.Trim()
         };
 
         await _projectRepository.InsertAsync(entity, autoSave: true);
@@ -168,8 +168,8 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         entity.EndTime = input.EndTime;
         entity.MaxScore = Math.Clamp(input.MaxScore, 1, 1000);
         entity.AllowResubmission = input.AllowResubmission;
-        entity.AgentName = input.AgentName?.Trim();
-        entity.AgentPrompt = input.AgentPrompt?.Trim();
+        entity.AgentName = string.IsNullOrWhiteSpace(input.AgentName) ? null : input.AgentName.Trim();
+        entity.AgentPrompt = string.IsNullOrWhiteSpace(input.AgentPrompt) ? null : input.AgentPrompt.Trim();
 
         await _projectRepository.UpdateAsync(entity, autoSave: true);
         await ReplaceTasksAsync(id, input.Tasks);
@@ -1025,8 +1025,8 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
     public async Task UpdateAgentConfigAsync(Guid projectId, UpdatePracticumAgentConfigDto input)
     {
         var entity = await _projectRepository.GetAsync(projectId);
-        entity.AgentName = input.AgentName?.Trim();
-        entity.AgentPrompt = input.AgentPrompt?.Trim();
+        entity.AgentName = string.IsNullOrWhiteSpace(input.AgentName) ? null : input.AgentName.Trim();
+        entity.AgentPrompt = string.IsNullOrWhiteSpace(input.AgentPrompt) ? null : input.AgentPrompt.Trim();
         await _projectRepository.UpdateAsync(entity, autoSave: true);
     }
 }

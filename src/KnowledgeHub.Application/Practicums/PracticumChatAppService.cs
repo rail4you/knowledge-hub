@@ -108,7 +108,9 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
         await _connectionManager.BroadcastAsync(input.ProjectId, dto);
 
         // Check for @AgentName mention
-        var agentName = project.AgentName ?? "小智";
+        // 注意：用 IsNullOrWhiteSpace 而非 ?? — 数据库里可能存的是空字符串 ""（项目创建时未填 AgentName），
+        // ?? 对空字符串不生效，会导致 DetectAgentMention 直接返回 false、Task.Run 永不启动、AI 静默失效。
+        var agentName = string.IsNullOrWhiteSpace(project.AgentName) ? "小智" : project.AgentName;
         if (DetectAgentMention(input.Content, agentName))
         {
             // 关键修复 P1-25：后台 scope 缺少租户上下文，
