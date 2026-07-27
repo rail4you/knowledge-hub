@@ -151,6 +151,7 @@ export class RecruitmentLiveService {
       this.ws.onopen = () => {
         opened = true;
         console.log('[LiveWS] Connected successfully');
+        this.flushPendingMessages();
         resolve();
       };
 
@@ -319,6 +320,17 @@ export class RecruitmentLiveService {
   }
 
   private offerSent = false;
+  /** 待发送消息队列：WS 未就绪时暂存 */
+  private pendingMessages: any[] = [];
+
+  private flushPendingMessages() {
+    if (this.ws?.readyState !== WebSocket.OPEN) return;
+    for (const msg of this.pendingMessages) {
+      const json = JSON.stringify(msg);
+      this.ws.send(json);
+    }
+    this.pendingMessages = [];
+  }
 
   private async createAndSendOffer() {
     if (!this.pc) {
@@ -348,10 +360,18 @@ export class RecruitmentLiveService {
       const json = JSON.stringify(obj);
       console.log('[LiveWS] Sending:', json);
       this.ws.send(json);
+      // 发送成功后尝试刷新待发送队列
+      this.flushPendingMessages();
     } else {
-      console.warn('[LiveWS] Cannot send, WS state:', this.ws?.readyState, 'msg type:', obj.type);
+      console.warn('[LiveWS] Queuing message, WS state:', this.ws?.readyState, 'msg type:', obj.type);
+      this.pendingMessages.push(obj);
     }
   }
+
+  private wsUrl = '';
+  private wsToken = '';
+  private pendingLiveId = '';
+  private pendingRole: 'teacher' | 'student' = 'student';
 
   toggleMic() {
     if (!this.localStream) return;
