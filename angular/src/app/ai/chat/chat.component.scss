@@ -4,10 +4,7 @@
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
-  // LeptonX 父容器是 block 布局而非 flex，height:100% 解析为内容自然高度。
-  // 用 calc(100vh - 64px) 兜底（64px = LeptonX header 高度），让页面整体占满视口。
-  height: calc(100vh - 64px);
-  max-height: calc(100vh - 64px);
+  max-height: 100%;
   overflow: hidden;
 }
 
