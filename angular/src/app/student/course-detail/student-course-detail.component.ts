@@ -107,7 +107,7 @@ export class StudentCourseDetailComponent implements OnInit {
       completed += v.completed;
     }
     if (total === 0) return 0;
-    return Math.round((completed / total) * 100);
+    return Math.min(Math.round((completed / total) * 100), 100);
   });
 
   readonly related = signal<RelatedCourse[]>([]);

@@ -147,7 +147,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   readonly courseProgress = computed(() => {
     const total = this.totalExercises();
     if (total === 0) return 0;
-    return Math.round((this.completedCount() / total) * 100);
+    const pct = Math.round((this.completedCount() / total) * 100);
+    return Math.min(pct, 100);
   });
 
   /** 已掌握章节数：某章的所有习题都已提交 */

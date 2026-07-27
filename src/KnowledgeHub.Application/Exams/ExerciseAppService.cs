@@ -14,7 +14,10 @@ using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
+using Microsoft.EntityFrameworkCore;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Exams;
 
@@ -134,12 +137,16 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
 
     public async Task<List<ExerciseDto>> GetByCourseAsync(Guid courseId)
     {
-        var query = await _exerciseRepository.GetQueryableAsync();
-        var exercises = query
-            .Where(x => x.CourseId == courseId)
-            .OrderBy(x => x.Type)
-            .ThenBy(x => x.Difficulty)
-            .ToList();
+        List<Exercise> exercises;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _exerciseRepository.GetQueryableAsync();
+            exercises = await query
+                .Where(x => x.CourseId == courseId)
+                .OrderBy(x => x.Type)
+                .ThenBy(x => x.Difficulty)
+                .ToListAsync();
+        }
 
         // P2-4：包含「主章节匹配」或「章节关联表匹配」的题目
         var chapterMap = await GetChapterIdsBatchAsync(exercises.Select(e => e.Id).ToList());
