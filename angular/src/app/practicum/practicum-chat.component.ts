@@ -272,10 +272,8 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
             this.isAgentReplying.set(false);
           }, 30000);
           // 轮询兜底：SSE 广播若因代理缓冲或连接中断未送达，
-          // 3 秒后从 API 拉取最新消息补回。
-          setTimeout(() => {
-            this.pollLatestMessages();
-          }, 3000);
+          // 3 秒后开始从 API 拉取最新消息补回，持续到 30 秒超时。
+          this.startPollingForAgentReply();
         }
         this.shouldScrollToBottom = true;
       },
@@ -431,6 +429,22 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
         }
       },
     });
+  }
+
+  /** 轮询兜底：SSE 广播未送达时，反复拉取最新消息直到收到 AI 回复或超时 */
+  private startPollingForAgentReply(): void {
+    let attempts = 0;
+    const maxAttempts = 10;
+    const interval = 3000;
+
+    const doPoll = () => {
+      if (!this.isAgentReplying() || attempts >= maxAttempts) return;
+      attempts++;
+      this.pollLatestMessages();
+      setTimeout(doPoll, interval);
+    };
+
+    setTimeout(doPoll, 3000);
   }
 
   getContactColor(senderId: string | undefined, senderType: PracticumChatSenderType): string {

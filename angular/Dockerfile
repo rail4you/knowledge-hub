@@ -5,6 +5,17 @@ FROM node:20-alpine AS angular-build
 
 WORKDIR /src/angular
 
+# Use npmmirror.com for faster downloads in China
+RUN npm config set registry https://registry.npmmirror.com
+
+# Pass proxy from docker build --build-arg (optional, for npm install)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ENV HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    NO_PROXY=${NO_PROXY}
+
 COPY . /src
 RUN npm ci --legacy-peer-deps
 RUN npm run build -- --configuration production

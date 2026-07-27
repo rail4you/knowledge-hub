@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Practicums.Dtos;
 using KnowledgeHub.Practicums.Enums;
@@ -65,20 +66,25 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
         var userId = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
         var project = await _projectRepository.GetAsync(input.ProjectId);
 
-        // Check access: teacher who has edit permission, or enrolled student
-        var canEdit = await AuthorizationService.IsGrantedAsync("KnowledgeHub.Practicum.Edit");
-        if (!canEdit)
+        // Determine sender type: project creator (teacher) or enrolled student.
+        // Do NOT use global permission "KnowledgeHub.Practicum.Edit" — a user may have
+        // admin/teacher permissions but be enrolled as a student in this specific project.
+        //
+        // Priority: enrolled student > project creator > global edit permission.
+        var enrollment = await _enrollmentRepository.FirstOrDefaultAsync(
+            x => x.ProjectId == input.ProjectId && x.StudentId == userId);
+        var isEnrolled = enrollment != null && enrollment.Status != PracticumEnrollmentStatus.Cancelled;
+
+        var isTeacher = project.CreatorId == userId
+            || (!isEnrolled && await AuthorizationService.IsGrantedAsync("KnowledgeHub.Practicum.Edit"));
+
+        if (!isTeacher && !isEnrolled)
         {
-            var enrollment = await _enrollmentRepository.FirstOrDefaultAsync(
-                x => x.ProjectId == input.ProjectId && x.StudentId == userId);
-            if (enrollment == null || enrollment.Status == PracticumEnrollmentStatus.Cancelled)
-            {
-                throw new AbpAuthorizationException("请先报名该实训项目。");
-            }
+            throw new AbpAuthorizationException("请先报名该实训项目。");
         }
 
-        var senderName = await GetSenderNameAsync(userId, canEdit);
-        var senderType = canEdit ? PracticumChatSenderType.Teacher : PracticumChatSenderType.Student;
+        var senderType = isTeacher ? PracticumChatSenderType.Teacher : PracticumChatSenderType.Student;
+        var senderName = await GetSenderNameAsync(userId, isTeacher);
 
         // Save user message
         var message = new PracticumChatMessage(
@@ -105,8 +111,14 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
         var agentName = project.AgentName ?? "小智";
         if (DetectAgentMention(input.Content, agentName))
         {
-            // Fire-and-forget AI response (we don't wait for it to return in the POST)
-            // Background AI response using a fresh scope (scoped services are disposed after the HTTP request)
+            // 关键修复 P1-25：后台 scope 缺少租户上下文，
+            // projectRepo.GetAsync(projectId) 会被多租户过滤器
+            // 过滤掉（WHERE TenantId = NULL），导致 EntityNotFoundException。
+            // 改为在外部 scope 中捕获所需数据，后台 scope 只做保存操作。
+            var projectTitle = project.Title;
+            var projectDescription = project.Description;
+            var projectAgentPrompt = project.AgentPrompt;
+            var projectTenantId = project.TenantId;
             var projectId = project.Id;
             var userContent = input.Content;
             var scopeFactory = _scopeFactory;
@@ -118,13 +130,12 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
             {
                 try
                 {
+                    var replyContent = await GenerateAgentReplyContentAsync(
+                        agentName, projectTitle, projectDescription, projectAgentPrompt, userContent, config);
+
                     using var scope = scopeFactory.CreateScope();
                     var messageRepo = scope.ServiceProvider.GetRequiredService<IRepository<PracticumChatMessage, Guid>>();
-                    var projectRepo = scope.ServiceProvider.GetRequiredService<IRepository<PracticumProject, Guid>>();
                     var guidGenerator = scope.ServiceProvider.GetRequiredService<IGuidGenerator>();
-
-                    var project = await projectRepo.GetAsync(projectId);
-                    var replyContent = await GenerateAgentReplyContentAsync(project, userContent, agentName, config);
 
                     var replyMessage = new PracticumChatMessage(
                         guidGenerator.Create(),
@@ -135,7 +146,7 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
                         replyContent,
                         PracticumChatMessageType.Text)
                     {
-                        TenantId = project.TenantId,
+                        TenantId = projectTenantId,
                         IsAgentReply = true
                     };
 
@@ -145,7 +156,7 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "AI agent reply failed for project {ProjectId}", projectId);
+                    logger.LogError(ex, "AI agent reply failed for project {ProjectId}: {ErrorMessage}", projectId, ex.Message);
                     try
                     {
                         using var errorScope = scopeFactory.CreateScope();
@@ -160,13 +171,17 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
                             "智能体暂时无法回复，请稍后再试。",
                             PracticumChatMessageType.Text)
                         {
+                            TenantId = projectTenantId,
                             IsAgentReply = true
                         };
                         await errorMsgRepo.InsertAsync(errorMessage, autoSave: true);
                         var errorDto = MapToDto(errorMessage);
                         await connectionManager.BroadcastAsync(projectId, errorDto);
                     }
-                    catch { /* best-effort error notification */ }
+                    catch (Exception innerEx)
+                    {
+                        logger.LogWarning(innerEx, "Failed to broadcast AI fallback error for project {ProjectId}", projectId);
+                    }
                 }
             });
         }
@@ -178,16 +193,18 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
     {
         var userId = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
 
-        // Check access
-        var canEdit = await AuthorizationService.IsGrantedAsync("KnowledgeHub.Practicum.Edit");
-        if (!canEdit)
+        // Check access (same logic as SendAsync: enrolled student or project creator)
+        var enrollment = await _enrollmentRepository.FirstOrDefaultAsync(
+            x => x.ProjectId == input.ProjectId && x.StudentId == userId);
+        var isEnrolled = enrollment != null && enrollment.Status != PracticumEnrollmentStatus.Cancelled;
+
+        var project = await _projectRepository.GetAsync(input.ProjectId);
+        var isTeacher = project.CreatorId == userId
+            || (!isEnrolled && await AuthorizationService.IsGrantedAsync("KnowledgeHub.Practicum.Edit"));
+
+        if (!isTeacher && !isEnrolled)
         {
-            var enrollment = await _enrollmentRepository.FirstOrDefaultAsync(
-                x => x.ProjectId == input.ProjectId && x.StudentId == userId);
-            if (enrollment == null || enrollment.Status == PracticumEnrollmentStatus.Cancelled)
-            {
-                throw new AbpAuthorizationException("请先报名该实训项目。");
-            }
+            throw new AbpAuthorizationException("请先报名该实训项目。");
         }
 
         var query = await _messageRepository.GetQueryableAsync();
@@ -211,9 +228,10 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
     // ─── AI Agent ────────────────────────────────────
 
     private static async Task<string> GenerateAgentReplyContentAsync(
-        PracticumProject project, string userMessage, string agentName, IConfiguration config)
+        string agentName, string projectTitle, string? projectDescription,
+        string? projectAgentPrompt, string userMessage, IConfiguration config)
     {
-        var systemPrompt = BuildAgentSystemPrompt(project, agentName);
+        var systemPrompt = BuildAgentSystemPrompt(agentName, projectTitle, projectDescription, projectAgentPrompt);
 
         var apiKey = config["Qwen:ApiKey"]
             ?? throw new AbpException("Qwen:ApiKey is not configured");
@@ -241,7 +259,8 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
             Temperature = 0.7f
         };
 
-        var response = await chatClient.GetResponseAsync(messages, options);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var response = await chatClient.GetResponseAsync(messages, options, cts.Token);
         var replyContent = response.Text.Trim();
 
         if (string.IsNullOrWhiteSpace(replyContent))
@@ -252,25 +271,26 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
         return replyContent;
     }
 
-    private static string BuildAgentSystemPrompt(PracticumProject project, string agentName)
+    private static string BuildAgentSystemPrompt(
+        string agentName, string projectTitle, string? projectDescription, string? projectAgentPrompt)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"你是实训项目《{project.Title}》的智能助手「{agentName}」。");
+        sb.AppendLine($"你是实训项目《{projectTitle}》的智能助手「{agentName}」。");
         sb.AppendLine("你的职责是帮助学生理解实训内容、解答技术问题。");
         sb.AppendLine();
 
-        if (!string.IsNullOrWhiteSpace(project.Description))
+        if (!string.IsNullOrWhiteSpace(projectDescription))
         {
             sb.AppendLine($"## 实训项目描述");
-            sb.AppendLine(project.Description);
+            sb.AppendLine(projectDescription);
             sb.AppendLine();
         }
 
         // Append custom teacher prompt
-        if (!string.IsNullOrWhiteSpace(project.AgentPrompt))
+        if (!string.IsNullOrWhiteSpace(projectAgentPrompt))
         {
             sb.AppendLine("## 教师附加提示");
-            sb.AppendLine(project.AgentPrompt);
+            sb.AppendLine(projectAgentPrompt);
             sb.AppendLine();
         }
 

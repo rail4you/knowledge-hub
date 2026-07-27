@@ -59,6 +59,17 @@ public class AIController : AbpControllerBase
     public async Task Chat([FromBody] ChatInputDto input)
     {
         var httpContext = HttpContext;
+
+        // 在设置 SSE 响应头之前先验证用户登录状态和关键配置，
+        // 避免 ChatStreamingAsync 在 StartAsync() 之后同步抛出异常，
+        // 导致 ABP 异常拦截器无法正确协商响应格式而返回 406。
+        if (!CurrentUser.IsAuthenticated)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await httpContext.Response.WriteAsJsonAsync(new { error = "User not logged in" });
+            return;
+        }
+
         httpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
 
         httpContext.Response.ContentType = "text/event-stream";
@@ -68,12 +79,36 @@ public class AIController : AbpControllerBase
 
         await httpContext.Response.StartAsync();
 
-        await _chatAppService.ChatStreamingAsync(input, async chunk =>
+        try
         {
-            var json = JsonSerializer.Serialize(chunk, JsonOptions);
-            await httpContext.Response.WriteAsync($"data: {json}\n\n");
-            await httpContext.Response.Body.FlushAsync();
-        });
+            await _chatAppService.ChatStreamingAsync(input, async chunk =>
+            {
+                var json = JsonSerializer.Serialize(chunk, JsonOptions);
+                await httpContext.Response.WriteAsync($"data: {json}\n\n");
+                await httpContext.Response.Body.FlushAsync();
+            });
+        }
+        catch (Exception ex)
+        {
+            // 流式响应已启动，无法更改 HTTP 状态码，
+            // 向客户端发送 SSE 错误事件以正常结束连接
+            try
+            {
+                var errorJson = JsonSerializer.Serialize(new
+                {
+                    content = $"抱歉，发生了错误：{ex.Message}",
+                    threadId = "",
+                    isComplete = true,
+                    isError = true
+                }, JsonOptions);
+                await httpContext.Response.WriteAsync($"data: {errorJson}\n\n");
+                await httpContext.Response.Body.FlushAsync();
+            }
+            catch
+            {
+                // 忽略写入错误事件时的异常
+            }
+        }
     }
 
     [HttpPost("test-stream")]
@@ -108,6 +143,14 @@ public class AIController : AbpControllerBase
     public async Task GenerateLessonPlan([FromBody] LessonPlanGenerationInputDto input)
     {
         var httpContext = HttpContext;
+
+        if (!CurrentUser.IsAuthenticated)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await httpContext.Response.WriteAsJsonAsync(new { error = "User not logged in" });
+            return;
+        }
+
         httpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
 
         httpContext.Response.ContentType = "text/event-stream";
@@ -142,6 +185,14 @@ public class AIController : AbpControllerBase
     public async Task GenerateCaseAnalysis([FromBody] CaseAnalysisGenerationInputDto input)
     {
         var httpContext = HttpContext;
+
+        if (!CurrentUser.IsAuthenticated)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await httpContext.Response.WriteAsJsonAsync(new { error = "User not logged in" });
+            return;
+        }
+
         httpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
 
         httpContext.Response.ContentType = "text/event-stream";
@@ -176,6 +227,14 @@ public class AIController : AbpControllerBase
     public async Task GenerateCareerGuidance([FromBody] CareerGuidanceGenerationInputDto input)
     {
         var httpContext = HttpContext;
+
+        if (!CurrentUser.IsAuthenticated)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await httpContext.Response.WriteAsJsonAsync(new { error = "User not logged in" });
+            return;
+        }
+
         httpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
 
         httpContext.Response.ContentType = "text/event-stream";

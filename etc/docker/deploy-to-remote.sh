@@ -135,13 +135,11 @@ build_and_push() {
     local build_start=$(date +%s)
 
     cd "$context"
-    docker buildx build \
+
+    docker build \
         --platform linux/amd64 \
         -f "$dockerfile" \
         -t "$image_name" \
-        --cache-from type=registry,ref=$REGISTRY/knowledgehub-$component:latest \
-        --cache-to type=inline \
-        --load \
         .
 
     local build_end=$(date +%s)
@@ -333,7 +331,6 @@ verify_liteparse() {
 # 主命令
 # ============================================================
 cmd_all() {
-    check_buildx
     build_migrator
     build_api
     build_angular
@@ -350,7 +347,6 @@ cmd_all() {
 }
 
 cmd_angular() {
-    check_buildx
     build_angular
     remote_deploy "knowledgehub-angular"
 
@@ -359,7 +355,6 @@ cmd_angular() {
 }
 
 cmd_api() {
-    check_buildx
     build_api
     remote_deploy "knowledgehub-api"
 
@@ -368,7 +363,6 @@ cmd_api() {
 }
 
 cmd_migrator() {
-    check_buildx
     build_migrator
 
     info "执行数据库迁移..."

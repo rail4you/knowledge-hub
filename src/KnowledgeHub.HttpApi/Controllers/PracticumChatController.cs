@@ -43,6 +43,7 @@ public class PracticumChatController : AbpControllerBase
     /// SSE stream endpoint. Client connects and receives new messages in real time.
     /// </summary>
     [HttpGet("stream/{projectId:guid}")]
+    [AllowAnonymous]
     [IgnoreAntiforgeryToken]
     public async Task Stream(Guid projectId)
     {

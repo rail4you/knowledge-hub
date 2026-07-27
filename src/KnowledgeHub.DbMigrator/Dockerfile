@@ -4,8 +4,18 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# 替换 NuGet.Config：移除本地源（Docker 内不存在 /Users/... 路径），仅保留 nuget.org
-COPY NuGet.Config .
+# Pass proxy from docker build --build-arg (optional, used when building behind corporate proxy)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ENV HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    NO_PROXY=${NO_PROXY} \
+    http_proxy=${HTTP_PROXY} \
+    https_proxy=${HTTPS_PROXY} \
+    no_proxy=${NO_PROXY}
+
+# 替换 NuGet.Config
 
 # 只复制 .csproj 文件，确保 restore 层可缓存
 COPY src/KnowledgeHub.DbMigrator/*.csproj src/KnowledgeHub.DbMigrator/
@@ -19,12 +29,12 @@ COPY src/KnowledgeHub.HttpApi.Client/*.csproj src/KnowledgeHub.HttpApi.Client/
 COPY src/KnowledgeHub.AI.Api/*.csproj src/KnowledgeHub.AI.Api/
 COPY common.props .
 
-# 还原依赖
-RUN dotnet restore src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj
+# 还原依赖（NUGET_HTTP_TIMEOUT 防止慢网络超时）
+RUN NUGET_HTTP_TIMEOUT=300 dotnet restore src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj
 
 # 复制全部源码并发布
 COPY . .
-RUN dotnet publish src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj \
+RUN NUGET_HTTP_TIMEOUT=300 dotnet publish src/KnowledgeHub.DbMigrator/KnowledgeHub.DbMigrator.csproj \
     -c Release -o /app/publish --no-restore
 
 # ----------------------------------------------------------

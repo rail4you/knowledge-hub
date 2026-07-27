@@ -2,12 +2,12 @@
 # KnowledgeHub HttpApi.Host - Unified Dockerfile
 # Multi-stage build:
 #   1) build      : sdk:10.0   -> dotnet publish
-#   2) ffmpeg     : alpine     -> download static ffmpeg (multi-arch)
-#   3) final      : aspnet:10.0 runtime (no Java/Python/Node)
-#   Includes LibreOffice headless for PPTX/DOCX/XLSX → PDF conversion.
+#   2) final      : aspnet:10.0 runtime (no Java/Python/Node)
+#   Includes LibreOffice headless for PPTX/DOCX/XLSX → PDF conversion,
+#   and ffmpeg (installed via apt).
 #
 # Local dev:  docker build -f src/KnowledgeHub.HttpApi.Host/Dockerfile -t knowledgehub-api:dev .
-# Production: docker buildx build --platform linux/amd64 -f src/KnowledgeHub.HttpApi.Host/Dockerfile -t ... .
+# Production: docker build --platform linux/amd64 -f src/KnowledgeHub.HttpApi.Host/Dockerfile -t ... .
 # ============================================================
 
 # ----------------------------------------------------------
@@ -15,6 +15,14 @@
 # ----------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
+
+# Pass proxy from docker build --build-arg (optional, used when building behind corporate proxy)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ENV HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    NO_PROXY=${NO_PROXY}
 
 # 1) NuGet config + MSBuild shared props (so restore is reproducible)
 COPY NuGet.Config common.props ./
@@ -31,35 +39,16 @@ COPY src/KnowledgeHub.HttpApi.Client/*.csproj        src/KnowledgeHub.HttpApi.Cl
 COPY src/KnowledgeHub.AI.Api/*.csproj                src/KnowledgeHub.AI.Api/
 
 # 3) Restore (cached layer unless csproj/NuGet.Config/common.props change)
-RUN dotnet restore src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj
+#    NUGET_HTTP_TIMEOUT prevents timeout on slow connections (default 100s → 300s)
+RUN NUGET_HTTP_TIMEOUT=300 dotnet restore src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj
 
 # 4) Copy the rest of the source and publish
 COPY . .
-RUN dotnet publish src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj \
+RUN NUGET_HTTP_TIMEOUT=300 dotnet publish src/KnowledgeHub.HttpApi.Host/KnowledgeHub.HttpApi.Host.csproj \
         -c Release -o /app/publish --no-restore
 
 # ----------------------------------------------------------
-# Stage 2: ffmpeg (static binary, multi-arch)
-#   Uses johnvansickle.com static ffmpeg build (~19MB compressed).
-#   arm64 (dev on Apple Silicon) / amd64 (production).
-#   Includes libx264 — the only codec the app actually needs.
-# ----------------------------------------------------------
-FROM alpine:3.20 AS ffmpeg
-ARG TARGETARCH
-RUN apk add --no-cache curl xz \
-    && case "${TARGETARCH}" in \
-         amd64)  FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" ;; \
-         arm64)  FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-arm64-static.tar.xz" ;; \
-         *) echo "Unsupported TARGETARCH: ${TARGETARCH}" && exit 1 ;; \
-       esac \
-    && curl -fsSL "${FFMPEG_URL}" -o /tmp/ffmpeg.tar.xz \
-    && mkdir -p /opt/ffmpeg \
-    && tar -xJf /tmp/ffmpeg.tar.xz -C /opt/ffmpeg --strip-components=1 \
-    && rm /tmp/ffmpeg.tar.xz \
-    && /opt/ffmpeg/ffmpeg -version | head -1
-
-# ----------------------------------------------------------
-# Stage 3: runtime
+# Stage 2: runtime
 # ----------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
@@ -67,14 +56,18 @@ WORKDIR /app
 # Minimal system packages.
 # - locales: en_US.UTF-8
 # - tzdata:  Asia/Shanghai (set via ENV below)
+# - ffmpeg: video processing (installed via apt)
 # - libreoffice-impress: PPTX → PDF conversion (headless)
 # - libreoffice-java-common: LibreOffice Java UNO bridge (required for PPTX conversion)
 # - default-jre-headless: Java runtime required by LibreOffice for complex PPTX features
 # - fonts-noto-cjk: Chinese/Japanese/Korean font support for PDF rendering
-RUN apt-get update \
+# Force fresh apt-get (avoid BuildKit cached network errors)
+ARG CACHE_BUST=0
+RUN echo "cache_bust=$CACHE_BUST" && apt-get update \
     && apt-get install -y --no-install-recommends \
         locales \
         tzdata \
+        ffmpeg \
         libreoffice-impress \
         libreoffice-java-common \
         default-jre-headless \
@@ -105,11 +98,6 @@ ENV ASPNETCORE_URLS=http://+:80 \
 
 # Copy the published app from the build stage
 COPY --from=build /app/publish .
-
-# Copy static ffmpeg + ffprobe binaries into /usr/local/bin (already on PATH)
-COPY --from=ffmpeg /opt/ffmpeg/ffmpeg  /usr/local/bin/ffmpeg
-COPY --from=ffmpeg /opt/ffmpeg/ffprobe /usr/local/bin/ffprobe
-RUN chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
 
 # Ensure runtime user (APP_UID, default 1000) owns /app and writable dirs
 RUN mkdir -p /app/uploads \
