@@ -382,6 +382,13 @@ export class RecruitmentLiveService {
 
   sendChat(text: string) {
     if (!text.trim()) return;
+    // 乐观添加：立即显示在本地，不必等服务器回显
+    this.chatMessages.update(msgs => [...msgs, {
+      text: text.trim(),
+      from: this.myRole,
+      self: true,
+      time: Date.now(),
+    }]);
     this.sendWs({ type: 'chat', data: text.trim() });
   }
 
