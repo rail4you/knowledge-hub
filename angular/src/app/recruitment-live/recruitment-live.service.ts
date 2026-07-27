@@ -96,10 +96,10 @@ export class RecruitmentLiveService {
 
     this.liveState.set('waiting');
 
-    // 先连接 WebSocket（聊天走 WebSocket，不受媒体影响）
-    // 再创建 PeerConnection（如果有媒体流则加音视频轨，否则纯 WebSocket 聊天）
-    await this.connectWebSocket(wsUrl, wsToken);
+    // 先创建 PeerConnection（避免 user-joined 到达时 this.pc 还是 null）
     await this.createPeerConnection();
+    // 再连接 WebSocket（聊天走 WebSocket，不受媒体影响）
+    await this.connectWebSocket(wsUrl, wsToken);
 
     if (role === 'teacher') {
       if (this.liveState() === 'signaling' || this.liveState() === 'connected') {
@@ -288,6 +288,10 @@ export class RecruitmentLiveService {
           self: !!msg.self,
           time: Date.now(),
         }]);
+        // 收到消息时自动打开聊天面板
+        if (!this.chatOpen()) {
+          this.chatOpen.set(true);
+        }
         break;
 
       case 'user-left':
