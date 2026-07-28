@@ -353,8 +353,11 @@
                             <div class="answer-block">
                               <strong>参考答案：</strong>
                               <p>{{ displayAnswer(e.answer) }}</p>
-                              @if (e.answerExplanation) {
-                                <p class="answer-explain">{{ e.answerExplanation }}</p>
+                              @if (e.questionAnalysis) {
+                                <div class="analysis-section">
+                                  <strong>题目解析：</strong>
+                                  <p class="answer-explain">{{ e.questionAnalysis }}</p>
+                                </div>
                               }
                             </div>
                           } @else if (!hasViewedAnswer()) {

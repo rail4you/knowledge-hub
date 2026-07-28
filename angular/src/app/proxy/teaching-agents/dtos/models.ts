@@ -212,7 +212,7 @@ export interface TeachingAgentExerciseContextDto {
   difficulty?: number;
   score?: number;
   chapterId?: string | null;
-  answerExplanation?: string | null;
+  questionAnalysis?: string | null;
 }
 
 export interface TeachingAgentKnowledgeResourceDto {

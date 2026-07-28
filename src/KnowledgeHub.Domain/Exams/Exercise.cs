@@ -17,6 +17,7 @@ public class Exercise : FullAuditedEntity<Guid>, IMultiTenant
     public string? Options { get; set; }
     public string Answer { get; set; } = string.Empty;
     public string? AnswerExplanation { get; set; }
+    public string? QuestionAnalysis { get; set; }
     public int Difficulty { get; set; } = 1;
     public int Score { get; set; } = 1;
     public bool IsAiGenerated { get; set; }

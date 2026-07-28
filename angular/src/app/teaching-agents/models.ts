@@ -146,7 +146,7 @@ export interface TeachingAgentExerciseContext {
   difficulty: number;
   score: number;
   chapterId?: string;
-  answerExplanation?: string;
+  questionAnalysis?: string;
 }
 
 export interface TaskTargetSnapshot {

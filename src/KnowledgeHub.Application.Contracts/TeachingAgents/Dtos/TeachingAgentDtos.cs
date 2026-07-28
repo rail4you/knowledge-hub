@@ -177,7 +177,7 @@ public class TeachingAgentExerciseContextDto
     public int Difficulty { get; set; }
     public int Score { get; set; }
     public Guid? ChapterId { get; set; }
-    public string? AnswerExplanation { get; set; }
+    public string? QuestionAnalysis { get; set; }
 }
 
 public class TaskTargetSnapshotDto

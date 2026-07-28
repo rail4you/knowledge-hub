@@ -1,5 +1,5 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, SlicePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocalizationPipe } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -20,7 +20,7 @@ import { CourseService } from '../../proxy/courses/course.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import { RestService } from '@abp/ng.core';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
-import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto } from '../../proxy/exams/dtos/models';
+import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto, AiAnalyzeExerciseInput, AiAnalyzeExerciseResultDto } from '../../proxy/exams/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 
 @Component({
@@ -43,6 +43,7 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
     NzCheckboxModule,
     NzSpinModule,
     NzRadioModule,
+    SlicePipe,
   ],
   templateUrl: './exercise-management.component.html',
   styleUrls: ['./exercise-management.component.scss'],
@@ -74,6 +75,9 @@ export class ExerciseManagementComponent implements OnInit {
   importing = false;
   selectedImportFile: File | null = null;
 
+  // AI analysis state
+  aiAnalyzing = signal(false);
+
   // Options for choice questions - dynamic array approach
   readonly letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   options = signal<string[]>(['', '', '', '']);
@@ -99,7 +103,7 @@ export class ExerciseManagementComponent implements OnInit {
       type: ExerciseType.SingleChoice,
       options: null,
       answer: '',
-      answerExplanation: '',
+      questionAnalysis: '',
       difficulty: 2,
       score: 5,
     };
@@ -159,7 +163,7 @@ export class ExerciseManagementComponent implements OnInit {
       type: exercise.type,
       options: exercise.options,
       answer: exercise.answer,
-      answerExplanation: exercise.answerExplanation,
+      questionAnalysis: exercise.questionAnalysis ?? '',
       difficulty: exercise.difficulty,
       score: exercise.score,
     };
@@ -369,15 +373,17 @@ export class ExerciseManagementComponent implements OnInit {
   formatAnswer(ex: ExerciseDto): string {
     const raw = (ex.answer ?? '').trim();
     if (!raw) return '';
+
+    // 填空题和问答题：直接显示文本（截取前 10 个字符）
+    if (ex.type === ExerciseType.FillBlank || ex.type === ExerciseType.ShortAnswer) {
+      return raw.length > 10 ? raw.substring(0, 10) + '...' : raw;
+    }
+
+    // 选择题：归一化为字母格式
     const tokens = raw.split(',').map(s => s.trim()).filter(Boolean);
     const letters = tokens.map(t => {
       if (/^\d+$/.test(t)) {
         const i = Number(t);
-        // 兼容两种索引格式：
-        // - 0-based: 0→A（前端 getAnswerString 不会产生数字，但早期代码可能）
-        // - 1-based: 1→A（Excel 导入时数字转字母的约定）
-        // 根据实际数字判断：0 必然是 0-based；1-26 优先按 1-based 处理
-        // 因为导入端已修复（1→A,...26→Z），此处仅兜底旧脏数据
         if (i === 0) return 'A';
         if (i >= 1 && i <= 26) return ExerciseManagementComponent.ANSWER_LETTERS[i - 1];
         return t;
@@ -409,6 +415,44 @@ export class ExerciseManagementComponent implements OnInit {
       if (checked) newSet.add(id);
       else newSet.delete(id);
       return newSet;
+    });
+  }
+
+  aiAnalyzeExercises() {
+    const ids = Array.from(this.checkedIds());
+    if (ids.length === 0) {
+      this.message.warning('请先选择要 AI 分析的习题');
+      return;
+    }
+
+    this.modal.confirm({
+      nzTitle: 'AI 分析习题',
+      nzContent: `确定要对选中的 ${ids.length} 个习题进行 AI 分析吗？` +
+        '\nAI 将自动填充题目解析。如果题目没有答案，也会自动生成答案。',
+      nzOkText: '开始分析',
+      nzCancelText: '取消',
+      nzOnOk: () => {
+        this.aiAnalyzing.set(true);
+        this.exerciseService.aiAnalyze({ exerciseIds: ids }).subscribe({
+          next: (result: AiAnalyzeExerciseResultDto) => {
+            this.aiAnalyzing.set(false);
+            if (result.updatedCount && result.updatedCount > 0) {
+              this.message.success(`AI 分析完成，成功更新 ${result.updatedCount}/${result.totalCount} 个习题`);
+              if (result.errors && result.errors.length > 0) {
+                this.message.warning(result.errors.slice(0, 3).join('；'));
+              }
+              this.checkedIds.set(new Set());
+              this.loadExercises();
+            } else {
+              this.message.info('AI 分析完成，无需更新');
+            }
+          },
+          error: () => {
+            this.aiAnalyzing.set(false);
+            this.message.error('AI 分析失败');
+          },
+        });
+      },
     });
   }
 

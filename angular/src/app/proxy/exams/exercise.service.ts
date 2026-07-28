@@ -1,4 +1,4 @@
-import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto, GenerateExerciseInput, GradeEssayInput, GradingResultDto } from './dtos/models';
+import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto, GenerateExerciseInput, GradeEssayInput, GradingResultDto, AiAnalyzeExerciseInput, AiAnalyzeExerciseResultDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -93,6 +93,14 @@ export class ExerciseService {
     this.restService.request<any, ExerciseDto>({
       method: 'PUT',
       url: `/api/app/exercise/${id}`,
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+
+  aiAnalyze = (input: AiAnalyzeExerciseInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, AiAnalyzeExerciseResultDto>({
+      method: 'POST',
+      url: '/api/app/exercise/ai-analyze',
       body: input,
     },
     { apiName: this.apiName,...config });

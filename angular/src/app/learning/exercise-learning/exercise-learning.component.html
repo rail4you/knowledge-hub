@@ -177,8 +177,8 @@
                 @if (hasViewedAnswer()) {
                   <nz-card nzSize="small" nzTitle="参考答案" style="margin-top: 16px;">
                     <p class="answer-text">{{ exercise.answer }}</p>
-                    @if (exercise.answerExplanation) {
-                      <nz-alert nzType="info" [nzMessage]="exercise.answerExplanation" nzShowIcon style="margin-top: 8px;"></nz-alert>
+                    @if (exercise.questionAnalysis) {
+                      <nz-alert nzType="info" [nzMessage]="exercise.questionAnalysis" nzShowIcon style="margin-top: 8px;"></nz-alert>
                     }
                   </nz-card>
 

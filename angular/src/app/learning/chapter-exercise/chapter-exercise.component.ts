@@ -187,7 +187,7 @@ export class ChapterExerciseComponent implements OnInit {
       type: exercise.type,
       options: exercise.options,
       answer: exercise.answer,
-      answerExplanation: exercise.answerExplanation,
+      questionAnalysis: exercise.questionAnalysis,
       difficulty: exercise.difficulty,
       score: exercise.score,
     };
@@ -219,7 +219,7 @@ export class ChapterExerciseComponent implements OnInit {
       type: exercise.type,
       options: exercise.options,
       answer: exercise.answer,
-      answerExplanation: exercise.answerExplanation,
+      questionAnalysis: exercise.questionAnalysis,
       difficulty: exercise.difficulty,
       score: exercise.score,
     };

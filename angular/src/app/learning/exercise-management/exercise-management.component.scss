@@ -94,3 +94,18 @@
     cursor: pointer;
   }
 }
+
+.analysis-cell {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  cursor: help;
+  font-size: 13px;
+  color: #666;
+  max-width: 180px;
+}
+
+.no-analysis {
+  color: #d9d9d9;
+}

@@ -40,4 +40,9 @@ public interface IExerciseAppService : ICrudAppService<
     /// 批量删除习题
     /// </summary>
     Task BatchRemoveAsync(List<Guid> ids);
+
+    /// <summary>
+    /// AI 分析习题，生成题目解析和答案
+    /// </summary>
+    Task<AiAnalyzeExerciseResultDto> AiAnalyzeAsync(AiAnalyzeExerciseInput input);
 }

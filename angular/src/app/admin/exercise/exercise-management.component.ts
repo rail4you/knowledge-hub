@@ -164,12 +164,7 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
             </nz-form-control>
           </nz-form-item>
 
-          <nz-form-item>
-            <nz-form-label [nzSpan]="4">答案解析</nz-form-label>
-            <nz-form-control [nzSpan]="18">
-              <textarea nz-input [(ngModel)]="formData.answerExplanation" placeholder="答案解析（可选）" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
-            </nz-form-control>
-          </nz-form-item>
+
 
           <nz-form-item>
             <nz-form-label [nzSpan]="4">难度</nz-form-label>
@@ -396,7 +391,6 @@ export class ExerciseManagementComponent implements OnInit {
       questionContent: exercise.questionContent,
       type: exercise.type,
       answer: exercise.answer,
-      answerExplanation: exercise.answerExplanation,
       difficulty: exercise.difficulty,
       score: exercise.score
     };

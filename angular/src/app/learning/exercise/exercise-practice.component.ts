@@ -74,8 +74,8 @@ interface OptionItem {
                   {{ item.isCorrect ? '正确' : '错误' }}
                 </nz-tag>
               </p>
-              @if (item.exercise.answerExplanation) {
-                <nz-alert nzType="info" [nzMessage]="item.exercise.answerExplanation" nzShowIcon></nz-alert>
+              @if (item.exercise.questionAnalysis) {
+                <nz-alert nzType="info" [nzMessage]="item.exercise.questionAnalysis" nzShowIcon></nz-alert>
               }
             </nz-card>
           }
@@ -143,7 +143,9 @@ interface OptionItem {
             }
             
             @if (showExplanation()) {
-              <nz-alert nzType="info" [nzMessage]="currentExercise()!.answerExplanation || ''" nzShowIcon class="explanation"></nz-alert>
+              @if (currentExercise()!.questionAnalysis) {
+                <nz-alert nzType="info" [nzMessage]="currentExercise()!.questionAnalysis" nzShowIcon class="explanation"></nz-alert>
+              }
             }
           </div>
         }

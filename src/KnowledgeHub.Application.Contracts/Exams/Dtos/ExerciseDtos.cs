@@ -16,7 +16,7 @@ public class ExerciseDto : FullAuditedEntityDto<Guid>
     public ExerciseType Type { get; set; }
     public string? Options { get; set; }
     public string Answer { get; set; } = string.Empty;
-    public string? AnswerExplanation { get; set; }
+    public string? QuestionAnalysis { get; set; }
     public int Difficulty { get; set; }
     public int Score { get; set; }
     public bool IsAiGenerated { get; set; }
@@ -33,7 +33,7 @@ public class CreateUpdateExerciseDto
     public ExerciseType Type { get; set; } = ExerciseType.SingleChoice;
     public string? Options { get; set; }
     public string Answer { get; set; } = string.Empty;
-    public string? AnswerExplanation { get; set; }
+    public string? QuestionAnalysis { get; set; }
     public int Difficulty { get; set; } = 1;
     public int Score { get; set; } = 1;
 }
@@ -71,5 +71,17 @@ public class ExerciseImportResultDto
     public int TotalRows { get; set; }
     public int SuccessCount { get; set; }
     public int FailCount { get; set; }
+    public List<string> Errors { get; set; } = new();
+}
+
+public class AiAnalyzeExerciseInput
+{
+    public List<Guid> ExerciseIds { get; set; } = new();
+}
+
+public class AiAnalyzeExerciseResultDto
+{
+    public int UpdatedCount { get; set; }
+    public int TotalCount { get; set; }
     public List<string> Errors { get; set; } = new();
 }

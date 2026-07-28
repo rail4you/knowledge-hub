@@ -137,9 +137,9 @@ interface OptionItem {
       }
       
       <nz-form-item>
-        <nz-form-label [nzSpan]="4">答案解析</nz-form-label>
+        <nz-form-label [nzSpan]="4">题目解析</nz-form-label>
         <nz-form-control [nzSpan]="18">
-          <textarea nz-input [(ngModel)]="formData.answerExplanation" placeholder="答案解析（可选）" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
+          <textarea nz-input [(ngModel)]="formData.questionAnalysis" placeholder="题目分析、解题思路、易错点等（可选）" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
         </nz-form-control>
       </nz-form-item>
       
@@ -215,7 +215,7 @@ export class ExerciseFormComponent {
         type: this.exercise.type,
         options: this.exercise.options,
         answer: this.exercise.answer,
-        answerExplanation: this.exercise.answerExplanation,
+        questionAnalysis: this.exercise.questionAnalysis,
         difficulty: this.exercise.difficulty,
         score: this.exercise.score
       };

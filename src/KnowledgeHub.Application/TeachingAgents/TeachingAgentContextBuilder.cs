@@ -116,7 +116,7 @@ public class TeachingAgentContextBuilder : ITransientDependency
                 Difficulty = x.Difficulty,
                 Score = x.Score,
                 ChapterId = x.ChapterId,
-                AnswerExplanation = x.AnswerExplanation
+                QuestionAnalysis = x.QuestionAnalysis
             }).ToList()
         };
     }

@@ -11,7 +11,7 @@ export interface CreateUpdateExerciseDto {
   type?: ExerciseType;
   options?: string | null;
   answer?: string;
-  answerExplanation?: string | null;
+  questionAnalysis?: string | null;
   difficulty?: number;
   score?: number;
 }
@@ -26,7 +26,7 @@ export interface ExerciseDto extends FullAuditedEntityDto<string> {
   type?: ExerciseType;
   options?: string | null;
   answer?: string;
-  answerExplanation?: string | null;
+  questionAnalysis?: string | null;
   difficulty?: number;
   score?: number;
   isAiGenerated?: boolean;
@@ -59,4 +59,14 @@ export interface GradingResultDto {
   score?: number;
   feedback?: string | null;
   isCorrect?: boolean;
+}
+
+export interface AiAnalyzeExerciseInput {
+  exerciseIds?: string[];
+}
+
+export interface AiAnalyzeExerciseResultDto {
+  updatedCount?: number;
+  totalCount?: number;
+  errors?: string[];
 }
