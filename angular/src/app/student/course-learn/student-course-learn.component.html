@@ -39,43 +39,16 @@
             课程章节
             <span class="sidebar-card__count">{{ flatChapters().length }}</span>
           </h3>
-          @if (flatChapters().length === 0) {
+          @if (chapters().length === 0) {
             <div class="sidebar-empty">
               <span nz-icon nzType="inbox" nzTheme="outline"></span>
               <p>暂无章节</p>
             </div>
           } @else {
             <div class="chapter-tree">
-              @for (c of flatChapters(); track trackChapter($index, c)) {
-                @if (c.depth === 0 || (c.parentId && expandedNodes().has(c.parentId))) {
-                  <button
-                    class="chapter-item"
-                    [class.is-active]="currentChapterId() === c.id"
-                    [class.is-parent]="hasChildren(c.id)"
-                    [style.padding-left.px]="c.depth * 14 + 12"
-                    (click)="onChapterItemClick(c)"
-                  >
-                    @if (hasChildren(c.id)) {
-                      <span
-                        class="chapter-item__caret"
-                        nz-icon
-                        [nzType]="expandedNodes().has(c.id) ? 'caret-down' : 'caret-right'"
-                        nzTheme="outline"
-                        (click)="toggleChapter($event, c.id)"
-                      ></span>
-                    } @else {
-                      <span class="chapter-item__caret chapter-item__caret--placeholder"></span>
-                    }
-                    <span class="chapter-item__icon" nz-icon
-                      [nzType]="c.depth === 0 ? 'folder' : 'file-text'"
-                      nzTheme="outline"></span>
-                    <span class="chapter-item__title">{{ c.title }}</span>
-                    @if (currentChapterId() === c.id) {
-                      <span class="chapter-item__pulse"></span>
-                    }
-                  </button>
-                }
-              }
+              <ng-container
+                *ngTemplateOutlet="chapterNode; context: { $implicit: chapters(), depth: 0 }"
+              ></ng-container>
             </div>
           }
         </div>
@@ -487,3 +460,46 @@
     </div>
   }
 </div>
+
+<!-- 递归章节树：与课程详情页 (student-course-detail) 的实现保持一致，
+     直接消费后端返回的嵌套 children，支持任意层级；
+     子节点只在其父节点展开时渲染，因此折叠祖先会连同所有后代一起隐藏。 -->
+<ng-template #chapterNode let-nodes let-depth="depth">
+  @for (node of nodes; track node.id) {
+    <div class="chapter-node">
+      <button
+        class="chapter-item"
+        [class.is-active]="currentChapterId() === node.id"
+        [class.is-parent]="node.children && node.children.length > 0"
+        [style.padding-left.px]="depth * 16 + 12"
+        (click)="onChapterItemClick(node)"
+      >
+        @if (node.children && node.children.length > 0) {
+          <span
+            class="chapter-item__caret"
+            nz-icon
+            [nzType]="expandedNodes().has(node.id) ? 'caret-down' : 'caret-right'"
+            nzTheme="outline"
+            (click)="toggleChapter($event, node.id)"
+          ></span>
+        } @else {
+          <span class="chapter-item__caret chapter-item__caret--placeholder"></span>
+        }
+        <span class="chapter-item__icon" nz-icon
+          [nzType]="node.children && node.children.length > 0 ? 'folder' : 'file-text'"
+          nzTheme="outline"></span>
+        <span class="chapter-item__title">{{ node.title }}</span>
+        @if (currentChapterId() === node.id) {
+          <span class="chapter-item__pulse"></span>
+        }
+      </button>
+      @if (node.children && node.children.length > 0 && expandedNodes().has(node.id)) {
+        <div class="chapter-node__children">
+          <ng-container
+            *ngTemplateOutlet="chapterNode; context: { $implicit: node.children, depth: depth + 1 }"
+          ></ng-container>
+        </div>
+      }
+    </div>
+  }
+</ng-template>

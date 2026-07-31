@@ -278,14 +278,15 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.recordChapterProgress();
   }
 
-  /** 判断某章节是否拥有子章节（用于显示折叠箭头） */
-  hasChildren(id: string): boolean {
-    return this.flatChapters().some(c => c.parentId === id);
-  }
-
-  /** 章节项点击：有子节点的父级，单独点击 caret 切换折叠；行内点击仍可选中 */
-  onChapterItemClick(c: FlatChapter): void {
-    this.selectChapter(c.id);
+  /** 章节项点击：选中该章节；若是父级则顺便展开，避免下级目录“看不见” */
+  onChapterItemClick(node: ChapterDto): void {
+    if (!node.id) return;
+    if (node.children?.length && !this.expandedNodes().has(node.id)) {
+      const set = new Set(this.expandedNodes());
+      set.add(node.id);
+      this.expandedNodes.set(set);
+    }
+    this.selectChapter(node.id);
   }
 
   /** 切换折叠状态 */
@@ -729,7 +730,6 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     return labels[t || 0] || '未知';
   }
 
-  trackChapter = (_: number, c: FlatChapter) => c.id;
   trackResource = (_: number, r: KnowledgeResourceDto) => r.id;
   trackExercise = (_: number, e: ExerciseDto) => e.id;
   trackRecord = (_: number, r: StudentExerciseRecordDto) => r.id;

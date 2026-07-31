@@ -2,7 +2,7 @@
   [nzVisible]="visible()"
   [nzTitle]="resourceName() || ('::Preview' | abpLocalization)"
   (nzOnCancel)="close()"
-  [nzWidth]="fileType === 'pptx' ? 1280 : 1000"
+  [nzWidth]="(fileType === 'pptx' || fileType === 'ppt') ? 1280 : 1000"
   [nzFooter]="previewFooter"
   [nzStyle]="modalStyle"
   [nzMaskClosable]="false"
@@ -66,7 +66,7 @@
       (mousedown)="$event.stopPropagation()"
       (click)="$event.stopPropagation()"
     >
-      @if (fileType === 'pdf' || fileType === 'pptx') {
+      @if (fileType === 'pdf' || fileType === 'pptx' || fileType === 'ppt') {
         <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (fileType === 'word') {
         <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>

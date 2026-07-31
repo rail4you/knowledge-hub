@@ -23,6 +23,11 @@ public interface IPortalAppService : IApplicationService
     /// 获取首页公共统计数据（公开访问）
     /// </summary>
     Task<PublicHomeStatsDto> GetPublicHomeStatsAsync();
+
+    /// <summary>
+    /// 获取下载量最高的资源（跨所有租户），用于首页"资源排行"展示
+    /// </summary>
+    Task<List<MaterialBriefDto>> GetTopResourcesByDownloadAsync(int count = 10);
 }
 
 public class PortalHomeDataDto

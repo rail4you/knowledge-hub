@@ -41,6 +41,8 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
   readonly browseData = signal<PublicBrowseDto | null>(null);
   readonly userName = signal('');
+  /** 资源排行榜：下载量最高的资源（跨所有租户） */
+  readonly topResources = signal<MaterialBriefDto[]>([]);
 
   // Browse filters
   readonly activeTab = signal<'courses' | 'resources' | 'microMajors'>('courses');
@@ -147,6 +149,9 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
       const id = ts?.[0]?.id;
       if (id) this.portal.getHomeData(id).subscribe(d => this.homeData.set(d));
     });
+
+    // 资源排行榜：跨所有租户取下载量最高的资源
+    this.portal.getTopResourcesByDownload(8).subscribe(d => this.topResources.set(d || []));
 
     this.loadBrowseData();
     this.startHeroAutoplay();

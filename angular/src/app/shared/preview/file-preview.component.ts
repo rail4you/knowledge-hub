@@ -12,7 +12,7 @@ import { ExcelViewerComponent } from './excel-viewer.component';
 import { MediaViewerComponent } from './media-viewer.component';
 import { TextViewerComponent } from './text-viewer.component';
 
-type FileType = 'pdf' | 'word' | 'excel' | 'pptx' | 'image' | 'video' | 'audio' | 'text' | 'unsupported';
+type FileType = 'pdf' | 'word' | 'excel' | 'pptx' | 'ppt' | 'image' | 'video' | 'audio' | 'text' | 'unsupported';
 
 @Component({
   selector: 'app-file-preview',
@@ -71,9 +71,9 @@ export class FilePreviewComponent {
 
   private static readonly EXTENSION_MAP: Record<string, FileType> = {
     pdf: 'pdf',
-    docx: 'word', dotx: 'word',
+    docx: 'word', dotx: 'word', doc: 'word',
     xls: 'excel', xlsx: 'excel', csv: 'excel',
-    pptx: 'pptx', potx: 'pptx',
+    pptx: 'pptx', potx: 'pptx', ppt: 'ppt',  // .ppt = legacy PowerPoint, converted to PDF preview
     jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', bmp: 'image', webp: 'image', svg: 'image',
     mp4: 'video', webm: 'video', avi: 'video', mov: 'video',
     mp3: 'audio', wav: 'audio', ogg: 'audio', flac: 'audio',
@@ -96,6 +96,7 @@ export class FilePreviewComponent {
     if (nameExt) {
       return FilePreviewComponent.EXTENSION_MAP[nameExt] || 'unsupported';
     }
+    // 当 fileExtension 为空时，尝试从 Content-Type 检测（兜底）
     return 'unsupported';
   }
 
@@ -138,6 +139,11 @@ export class FilePreviewComponent {
     this.visible.set(true);
 
     // 先看是否"类型不支持"——直接降级，避免无谓的请求。
+    // 但如果 fileExtension 为空，尝试从 Content-Type 检测（处理数据库扩展名为空的旧资源）
+    if (this.fileType === 'unsupported' && !this.fileExtension()) {
+      this.detectContentTypeAndOpen(resourceId);
+      return;
+    }
     if (this.fileType === 'unsupported') {
       this.unsupported.set(true);
       this.isLoading.set(false);
@@ -155,6 +161,62 @@ export class FilePreviewComponent {
     this.loadFile();
   }
 
+  /**
+   * 当 fileExtension 为空时，通过 HEAD 请求探测 Content-Type 来推断文件类型。
+   * 这样即使数据库中 fileExtension 为 null，也能正确预览旧资源（如总复习.ppt）。
+   */
+  private detectContentTypeAndOpen(resourceId: string) {
+    this.isLoading.set(true);
+    fetch(`/api/resource-file/${resourceId}/preview`, { method: 'HEAD' })
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const ct = response.headers.get('Content-Type') || '';
+        const ext = this.contentTypeToExtension(ct);
+        if (!ext) {
+          this.unsupported.set(true);
+          this.isLoading.set(false);
+          return;
+        }
+        this.fileExtension.set(ext);
+        this.unsupported.set(false);
+        this.isLoading.set(false);
+        if (this.fileType === 'unsupported') {
+          this.unsupported.set(true);
+          return;
+        }
+        const limit = FilePreviewComponent.PREVIEW_SIZE_LIMIT[this.fileType];
+        if (limit && this.fileSize() > limit) {
+          this.tooLarge.set(true);
+          this.isLoading.set(false);
+          return;
+        }
+        this.loadFile();
+      })
+      .catch(() => {
+        this.unsupported.set(true);
+        this.isLoading.set(false);
+      });
+  }
+
+  private contentTypeToExtension(ct: string): string {
+    const map: Record<string, string> = {
+      'application/pdf': 'pdf',
+      'application/msword': 'doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+      'application/vnd.ms-excel': 'xls',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+      'application/vnd.ms-powerpoint': 'ppt',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+      'video/mp4': 'mp4',
+      'audio/mpeg': 'mp3',
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'text/plain': 'txt',
+    };
+    const base = ct.split(';')[0].trim().toLowerCase();
+    return map[base] || '';
+  }
+
   close() {
     console.log('[FilePreview] close() called, stack:', new Error().stack);
     this.visible.set(false);
@@ -166,8 +228,8 @@ export class FilePreviewComponent {
   previewReady(): boolean {
     if (this.isLoading() || this.loadError() || this.tooLarge() || this.unsupported()) return false;
     const type = this.fileType;
-    // PDF/PPTX: previewUrl 模式
-    if (type === 'pdf' || type === 'pptx') return !!this.fileUrl();
+    // PDF/PPTX/PPT: previewUrl 模式（均通过后端 PDF 转换）
+    if (type === 'pdf' || type === 'pptx' || type === 'ppt') return !!this.fileUrl();
     // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
     if (type === 'video' || type === 'audio') return !!this.fileUrl();
     // Other: ArrayBuffer 模式
@@ -199,8 +261,9 @@ export class FilePreviewComponent {
       return;
     }
 
-    // PPTX: 使用完整 PDF（pdfjs 原生逐页加载，支持 Range 请求）
-    if (type === 'pptx') {
+    // PPTX/PPT: 使用完整 PDF（pdfjs 原生逐页加载，支持 Range 请求）
+    // .ppt = 旧版 PowerPoint（Composite Document），LibreOffice 支持转换
+    if (type === 'pptx' || type === 'ppt') {
       const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
       this.fileUrl.set(previewUrl);
       this.isLoading.set(false);

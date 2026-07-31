@@ -324,7 +324,7 @@
   }
 
   <!-- ===== 资源排行榜 ===== -->
-  @if (homeData()?.latestMaterials?.length) {
+  @if (topResources().length) {
     <section class="section">
       <div class="section__inner">
         <div class="section__head">
@@ -338,7 +338,7 @@
           <a routerLink="/student/resources" class="link-arrow">更多 →</a>
         </div>
         <div class="rank-grid">
-          @for (m of rankedMaterials(); track m.id; let i = $index) {
+          @for (m of topResources(); track m.id; let i = $index) {
             <div class="rank-card" [class.rank-card--clickable]="canPreview(m)" [class.rank-card--top3]="i < 3" (click)="canPreview(m) && previewMaterial(m)">
               <span class="rank-card__num">{{ i + 1 }}</span>
               <div class="rank-card__icon">

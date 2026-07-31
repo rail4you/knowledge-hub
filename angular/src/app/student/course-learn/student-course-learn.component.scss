@@ -170,6 +170,21 @@
   overflow-y: auto;
 }
 
+/* 递归树节点容器：每一层都是「行 + 子级容器」 */
+.chapter-node {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  &__children {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+}
+
 .chapter-item {
   position: relative;
   display: flex;

@@ -249,6 +249,33 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     }
 
     /// <summary>
+    /// 获取下载量最高的资源（跨所有租户），用于首页"资源排行"展示
+    /// </summary>
+    [AllowAnonymous]
+    public async Task<List<MaterialBriefDto>> GetTopResourcesByDownloadAsync(int count = 10)
+    {
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var resourceQuery = await _resourceRepository.GetQueryableAsync();
+            var topResources = resourceQuery
+                .Where(x => x.Status >= ResourceStatus.SchoolApproved)
+                .OrderByDescending(x => x.DownloadCount)
+                .Take(count)
+                .Select(x => new MaterialBriefDto
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    FileExtension = x.FileExtension,
+                    DownloadCount = x.DownloadCount,
+                    FileSize = x.FileSize ?? 0,
+                    OriginalFileName = x.OriginalFileName
+                })
+                .ToList();
+            return topResources;
+        }
+    }
+
+    /// <summary>
     /// 公开浏览数据：所有租户的课程/资源/微专业，游客可见，支持筛选
     /// </summary>
     [AllowAnonymous]

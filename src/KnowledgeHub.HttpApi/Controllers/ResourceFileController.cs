@@ -83,12 +83,18 @@ public class ResourceFileController : AbpControllerBase
             return NotFound(new { message = "资源文件不存在" });
         }
 
-        var stream = await FileStorageService.GetAsync(filePath);
-        var fileName = resource.OriginalFileName ?? resource.Name ?? "download";
-
-        var contentType = GetContentType(fileName);
-
-        return File(stream, contentType, fileName);
+        try
+        {
+            var stream = await FileStorageService.GetAsync(filePath);
+            var fileName = resource.OriginalFileName ?? resource.Name ?? "download";
+            var contentType = GetContentType(fileName);
+            return File(stream, contentType, fileName);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[Download] Failed to get file stream: {FilePath} for resource {ResourceId}", filePath, resourceId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "文件读取失败，请稍后重试" });
+        }
     }
 
     [HttpGet("{resourceId}/preview")]
@@ -131,6 +137,14 @@ public class ResourceFileController : AbpControllerBase
         var fullPath = System.IO.Path.Combine(FileStorageService.RootPath, filePath);
         var fileName = resource.OriginalFileName ?? resource.Name ?? "preview";
         var contentType = GetContentType(fileName);
+
+        // PhysicalFile throws FileNotFoundException if the file doesn't exist, resulting in 500.
+        // Check existence first to return a proper 404 instead.
+        if (!System.IO.File.Exists(fullPath))
+        {
+            Logger.LogWarning("[Preview] File not found: {FullPath} for resource {ResourceId}", fullPath, resourceId);
+            return NotFound(new { message = "资源文件不存在，可能已被删除或路径变更" });
+        }
 
         // PhysicalFile supports EnableRangeProcessing for chunked download
         return PhysicalFile(fullPath, contentType, enableRangeProcessing: true);

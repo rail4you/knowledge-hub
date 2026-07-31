@@ -1,4 +1,4 @@
-import type { PortalHomeDataDto, PublicHomeStatsDto, TenantResourceSummaryDto, PublicBrowseDto } from './models';
+import type { MaterialBriefDto, PortalHomeDataDto, PublicHomeStatsDto, TenantResourceSummaryDto, PublicBrowseDto } from './models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -38,6 +38,14 @@ export class PortalService {
       method: 'GET',
       url: '/api/app/portal/public-browse',
       params,
+    },
+    { apiName: this.apiName,...config });
+
+  getTopResourcesByDownload = (count: number = 10, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MaterialBriefDto[]>({
+      method: 'GET',
+      url: '/api/app/portal/top-resources-by-download',
+      params: { count },
     },
     { apiName: this.apiName,...config });
 }
