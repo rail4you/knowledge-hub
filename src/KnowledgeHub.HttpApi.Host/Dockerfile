@@ -58,10 +58,13 @@ WORKDIR /app
 # - tzdata:  Asia/Shanghai (set via ENV below)
 # - ffmpeg: video processing (installed via apt)
 # - libreoffice-impress: PPTX → PDF conversion (headless)
-# - libreoffice-java-common: LibreOffice Java UNO bridge (required for PPTX conversion)
-# - default-jre-headless: Java runtime required by LibreOffice for complex PPTX features
-# - fonts-noto-cjk: Chinese/Japanese/Korean font support for PDF rendering
+# - fonts-wqy-microhei + fonts-wqy-zenhei: 中文 PDF 渲染（≈ 10 MB，
+#   替代原 fonts-noto-cjk 的 200 MB；覆盖常用中文字符，缺字回退到系统字体）
 # Force fresh apt-get (avoid BuildKit cached network errors)
+# 注：已移除 libreoffice-java-common + default-jre-headless（≈ 300-400 MB）
+#   转换走 soffice --headless --convert-to pdf CLI 路径，不走 UNO bridge，
+#   不需要 Java 运行时。如后续 PPTX 含复杂动画/宏 / 需 UNO 编程，再加回来。
+# 注：已移除 fonts-noto-cjk（≈ 200 MB），用 fonts-wqy-microhei/zenhei 替代。
 ARG CACHE_BUST=0
 RUN echo "cache_bust=$CACHE_BUST" && apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -69,28 +72,20 @@ RUN echo "cache_bust=$CACHE_BUST" && apt-get update \
         tzdata \
         ffmpeg \
         libreoffice-impress \
-        libreoffice-java-common \
-        default-jre-headless \
-        fonts-noto-cjk \
+        fonts-wqy-microhei \
+        fonts-wqy-zenhei \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen en_US.UTF-8 \
     && ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo "Asia/Shanghai" > /etc/timezone \
     && rm -rf /var/lib/apt/lists/* \
-    && soffice --version
+    && soffice --version \
+    && fc-list :lang=zh | head -3
 
 # Locale/timezone
 ENV LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
     TZ=Asia/Shanghai
-
-# JAVA_HOME: required by LibreOffice Java UNO bridge (javaldx)
-# Set to the auto-detected Debian JVM path; libreoffice-java-common uses this to register Java
-RUN java -version 2>&1 && \
-    JVM_DIR=$(dirname $(dirname $(readlink -f $(which java)))) 2>/dev/null || \
-    JVM_DIR="/usr/lib/jvm/java-21-openjdk-amd64"; \
-    echo "Detected JAVA_HOME=$JVM_DIR"
-ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 
 # Listen on 80 by default; compose may override with ASPNETCORE_URLS=http://+:44354
 ENV ASPNETCORE_URLS=http://+:80 \

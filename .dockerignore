@@ -41,3 +41,45 @@ docker-deploy.tar.gz
 **/uploads_data
 etc/docker/meilisearch_data
 etc/docker/certs
+
+# 仿真实训 Unity WebGL 二进制（运行时由 bind mount 提供，不进 build context）
+# etc/docker/wasm-mirrors/ 包含 .data.unityweb / .wasm.unityweb / .zip / 兔子失血性休克源文件 等
+# 体积约 1.2 GB，远程 docker build 不要传
+etc/docker/wasm-mirrors/
+etc/docker/postgres_data/
+
+# Agent runtime 调试产物（≈ 218 MB）
+agent-runtime/
+
+# 仓库根一次性调试文件
+data.ms
+Unity_v2022.3.17f1c1.alf
+eng.traineddata
+教学智能体模块用户手册.docx
+
+# 仓库根冗余截图（不进 git 但会被 build context 捕获）
+dumps/
+/icve-fullpage.png
+/icve-page.png
+/portal-home.png
+/portal-home-full.png
+/portal-home-fullpage.png
+/portal-home-logged-in.png
+/student-courses.png
+/student-courses-after.png
+/docs/screenshots/
+
+# 编辑器配置 / AI agent 运行时配置（不影响构建）
+.claude/
+.cursor/
+.design-plan/
+.opencode.json
+.superset/
+.idea/
+*.code-workspace
+
+# 单元测试源码（不影响 runtime 镜像构建）
+test/
+
+# graphify 缓存输出
+src/graphify-out/
