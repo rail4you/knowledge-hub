@@ -95,7 +95,7 @@ cmd_up() {
     generate_dynamic_env
 
     info "创建必要目录..."
-    mkdir -p "$SCRIPT_DIR/uploads" "$SCRIPT_DIR/meilisearch_data" "$SCRIPT_DIR/postgres_data"
+    mkdir -p "$SCRIPT_DIR/uploads" "$SCRIPT_DIR/meilisearch_data" "$SCRIPT_DIR/postgres_data" "$SCRIPT_DIR/wasm-mirrors"
 
     # 确保 uploads/ 对 API 容器进程（UID 1654 = $APP_UID in Dockerfile）可写。
     # 容器内进程的写入能力取决于宿主机 bind-mount 目录的所有者；
@@ -104,6 +104,13 @@ cmd_up() {
     if [ -d "$SCRIPT_DIR/uploads" ]; then
         chown -R 1654:1654 "$SCRIPT_DIR/uploads" 2>/dev/null || \
             chmod -R 0777 "$SCRIPT_DIR/uploads"
+    fi
+
+    # 确保 wasm-mirrors/ 对 API 容器进程（uid 1654）以及宿主机 ubuntu 用户都可写。
+    # 多用户共享目录必须 sticky bit（1777）：防止互相误删/误覆盖对方的镜像目录。
+    # 见 PR / issue: 创真路仿真上传返回 500 的根因。
+    if [ -d "$SCRIPT_DIR/wasm-mirrors" ]; then
+        chmod 1777 "$SCRIPT_DIR/wasm-mirrors"
     fi
 
     info "拉取最新镜像..."
