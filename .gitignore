@@ -149,3 +149,11 @@ etc/docker/meilisearch_data/
 etc/docker/uploads/             # 用户上传文件 + 转换缓存
 etc/docker/.env                # 生产环境 secrets
 etc/docker/certs/              # 自签名证书（生产用真证书）
+
+# Unity 编辑器在仓库根误生成的缓存/临时文件（真正的 Unity 项目在 etc/docker/wasm-mirrors/）
+/Library/
+/Temp/
+/ProjectSettings/
+
+# graphify 工具缓存输出（文档转知识图谱的中间产物，可重新生成）
+src/graphify-out/
