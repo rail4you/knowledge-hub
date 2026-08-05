@@ -21,21 +21,21 @@
       <section class="main-column">
         <nz-card nzTitle="基础信息">
           <div class="field-grid">
-            <label class="field">
+            <div class="field">
               <span>名称</span>
               <input nz-input [ngModel]="form().name" (ngModelChange)="setField('name', $event)" />
-            </label>
+            </div>
 
-            <label class="field">
+            <div class="field">
               <span>可见范围</span>
               <nz-select [ngModel]="form().visibility" (ngModelChange)="setField('visibility', $event)">
                 <nz-option [nzValue]="0" nzLabel="仅自己可见"></nz-option>
                 <nz-option [nzValue]="1" nzLabel="校内共享"></nz-option>
                 <nz-option [nzValue]="2" nzLabel="全局公开"></nz-option>
               </nz-select>
-            </label>
+            </div>
 
-	            <label class="field full-width">
+	            <div class="field full-width">
 	              <span>说明</span>
 	              <textarea
 	                nz-input
@@ -44,7 +44,7 @@
                 (ngModelChange)="setField('description', $event)"
 	                placeholder="描述这个智能体适合什么教学场景"
 	              ></textarea>
-	            </label>
+	            </div>
 
 	            <div class="runtime-note full-width">
 	              <div>
@@ -54,7 +54,7 @@
 	              <p>教学智能体与其他 AI 功能共用同一套 Qwen Key，模型固定为 qwen-plus，不再单独配置模型。</p>
 	            </div>
 
-	            <label class="field">
+	            <div class="field">
 	              <span>Temperature</span>
 	              <nz-input-number
                 [ngModel]="form().temperature"
@@ -63,7 +63,7 @@
                 [nzMax]="1"
                 [nzStep]="0.1"
               ></nz-input-number>
-            </label>
+            </div>
           </div>
         </nz-card>
 
@@ -79,7 +79,7 @@
 
         <nz-card nzTitle="欢迎语与版本备注">
           <div class="field-grid">
-            <label class="field full-width">
+            <div class="field full-width">
               <span>欢迎语</span>
               <textarea
                 nz-input
@@ -88,8 +88,8 @@
                 (ngModelChange)="setField('welcomeMessage', $event)"
                 placeholder="学生进入任务页时看到的首条引导"
               ></textarea>
-            </label>
-            <label class="field full-width">
+            </div>
+            <div class="field full-width">
               <span>版本备注</span>
               <textarea
                 nz-input
@@ -98,7 +98,7 @@
                 (ngModelChange)="publishNote.set($event)"
                 placeholder="记录本次发布或草稿修改重点"
               ></textarea>
-            </label>
+            </div>
           </div>
         </nz-card>
       </section>

@@ -118,12 +118,12 @@
   >
     <ng-container *nzModalContent>
       <div class="modal-form">
-        <label class="field">
+        <div class="field">
           <span>任务标题 <em>*</em></span>
           <input nz-input [ngModel]="form().title" (ngModelChange)="setFormField('title', $event)" placeholder="例：第三章课后讨论辅导" />
-        </label>
+        </div>
 
-        <label class="field">
+        <div class="field">
           <span>智能体版本 <em>*</em></span>
           <nz-select
             [ngModel]="form().teachingAgentVersionId"
@@ -137,9 +137,9 @@
               ></nz-option>
             }
           </nz-select>
-        </label>
+        </div>
 
-        <label class="field">
+        <div class="field">
           <span>课堂说明</span>
           <textarea
             nz-input
@@ -148,9 +148,9 @@
             (ngModelChange)="setFormField('description', $event)"
             placeholder="告诉学生这次课堂任务为什么做、做到什么程度"
           ></textarea>
-        </label>
+        </div>
 
-        <label class="field">
+        <div class="field">
           <span>任务提示词 <em>*</em></span>
           <textarea
             nz-input
@@ -159,29 +159,29 @@
             (ngModelChange)="setFormField('taskPrompt', $event)"
             placeholder="例如：先概括课程重点，再结合资源给出 3 个课堂讨论问题"
           ></textarea>
-        </label>
+        </div>
 
         <div class="field-row">
-          <label class="field">
+          <div class="field">
             <span>任务对象 <em>*</em></span>
             <nz-select [ngModel]="form().targetType" (ngModelChange)="setFormField('targetType', $event); setFormField('targetId', null)">
               <nz-option [nzValue]="0" nzLabel="课程"></nz-option>
               <nz-option [nzValue]="1" nzLabel="资源"></nz-option>
               <nz-option [nzValue]="2" nzLabel="习题集"></nz-option>
             </nz-select>
-          </label>
+          </div>
 
-          <label class="field">
+          <div class="field">
             <span>具体对象 <em>*</em></span>
             <nz-select [ngModel]="form().targetId" (ngModelChange)="setFormField('targetId', $event)">
               @for (target of targetOptions(); track target.id) {
                 <nz-option [nzValue]="target.id" [nzLabel]="target.label"></nz-option>
               }
             </nz-select>
-          </label>
+          </div>
         </div>
 
-        <label class="field">
+        <div class="field">
           <span>
             学生范围 <em>*</em>
             <span class="student-counter">
@@ -215,9 +215,9 @@
               }
             </div>
           }
-        </label>
+        </div>
 
-        <label class="field">
+        <div class="field">
           <span>截止时间</span>
           <nz-date-picker
             style="width: 100%"
@@ -225,7 +225,7 @@
             (ngModelChange)="setFormField('dueTime', $event)"
             [nzShowTime]="true"
           ></nz-date-picker>
-        </label>
+        </div>
       </div>
     </ng-container>
   </nz-modal>
