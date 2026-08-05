@@ -33,6 +33,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
     private readonly IRepository<Resources.Resource, Guid> _resourceRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IdentityUserManager _userManager;
     private readonly ICurrentUser _currentUser;
     private readonly ICurrentTenant _currentTenant;
 
@@ -46,6 +47,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         IRepository<StudentCourse, Guid> studentCourseRepository,
         IRepository<IdentityUser, Guid> userRepository,
         IRepository<Resources.Resource, Guid> resourceRepository,
+        IdentityUserManager userManager,
         ICurrentUser currentUser,
         ICurrentTenant currentTenant)
     {
@@ -58,6 +60,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         _studentCourseRepository = studentCourseRepository;
         _userRepository = userRepository;
         _resourceRepository = resourceRepository;
+        _userManager = userManager;
         _currentUser = currentUser;
         _currentTenant = currentTenant;
     }
@@ -227,6 +230,14 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
     public async Task EnrollAsync(Guid microMajorId)
     {
         var studentId = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
+
+        // 仅学生角色可以报名微专业（教师/管理员等不可报名）
+        var user = await _userRepository.GetAsync(studentId);
+        if (!await _userManager.IsInRoleAsync(user, "Student"))
+        {
+            throw new UserFriendlyException("仅学生用户可报名微专业。");
+        }
+
         var entity = await _microMajorRepository.GetAsync(microMajorId);
         if (entity.Status != MicroMajorStatus.Published)
         {

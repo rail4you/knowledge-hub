@@ -23,8 +23,8 @@
           @if (detail.currentUserProgress !== undefined && detail.currentUserProgress !== null) {
             <nz-progress [nzPercent]="detail.currentUserProgress"></nz-progress>
           }
-          <button nz-button nzType="primary" (click)="enroll()">
-            {{ detail.isCurrentUserEnrolled ? '已报名' : '立即报名' }}
+          <button nz-button nzType="primary" (click)="enroll()" [disabled]="!canEnroll()">
+            {{ detail.isCurrentUserEnrolled ? '已报名' : (canEnroll() ? '立即报名' : '仅学生可报名') }}
           </button>
         </div>
       </div>
