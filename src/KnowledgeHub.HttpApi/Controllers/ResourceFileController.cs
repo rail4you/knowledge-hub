@@ -61,11 +61,14 @@ public class ResourceFileController : AbpControllerBase
     {
         var resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
 
-        // Only allow downloading approved resources
-        if (resource.Status != ResourceStatus.SchoolApproved &&
-            resource.Status != ResourceStatus.LeagueApproved)
+        // 仅允许下载审核通过的资源，或资源创建者本人（上传者随时可下载自己的待审核文件）。
+        // 拒绝时返回 JSON 403，避免浏览器把 AccessDenied HTML 页面保存成下载文件（"4KB 错误文件"）。
+        var isApproved = resource.Status == ResourceStatus.SchoolApproved ||
+                         resource.Status == ResourceStatus.LeagueApproved;
+        var isCreator = CurrentUser.Id.HasValue && CurrentUser.Id.Value == resource.CreatorId;
+        if (!isApproved && !isCreator)
         {
-            return Forbid();
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "资源未审核通过，暂不可下载" });
         }
 
         resource.DownloadCount++;
@@ -107,13 +110,12 @@ public class ResourceFileController : AbpControllerBase
             resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
         }
 
-        // Allow preview if resource is approved, OR if current user is the creator
-        // (so uploaders can preview their own content before submitting for review)
+        // 审核通过的资源公开预览；待审核资源允许任意登录用户预览（教师/管理员可在审核前查看内容）。
+        // 未登录用户预览待审核资源返回 403。
         var isApproved = resource.Status == ResourceStatus.SchoolApproved ||
                          resource.Status == ResourceStatus.LeagueApproved;
-        var isCreator = CurrentUser.Id.HasValue && CurrentUser.Id.Value == resource.CreatorId;
         
-        if (!isApproved && !isCreator)
+        if (!isApproved && !CurrentUser.IsAuthenticated)
         {
             return Forbid();
         }
@@ -720,11 +722,11 @@ public class ResourceFileController : AbpControllerBase
             resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
         }
 
-        // 与 Preview 方法保持一致的权限检查
+        // 与 Preview 方法保持一致的权限检查：
+        // 审核通过的资源公开预览；待审核资源仅登录用户可预览（教师/管理员审核前查看）。
         var isApproved = resource.Status == ResourceStatus.SchoolApproved ||
                          resource.Status == ResourceStatus.LeagueApproved;
-        var isCreator = CurrentUser.Id.HasValue && CurrentUser.Id.Value == resource.CreatorId;
-        if (!isApproved && !isCreator)
+        if (!isApproved && !CurrentUser.IsAuthenticated)
             return null;
 
         var filePath = resource.FilePath;

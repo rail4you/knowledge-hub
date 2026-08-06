@@ -82,7 +82,17 @@ export class PptxViewerComponent implements OnDestroy {
     try {
       // Step 1: Get slide count
       const countResp = await fetch(`/api/resource-file/${resourceId}/slides/count`);
-      if (!countResp.ok) throw new Error('无法获取幻灯片数量');
+      if (!countResp.ok) {
+        // 透出后端错误信息（如 403 "资源未审核通过" / 404），避免笼统的"无法获取幻灯片数量"
+        let msg = '无法获取幻灯片数量';
+        try {
+          const body = await countResp.json();
+          if (body?.message) msg = body.message;
+        } catch {
+          // 非 JSON 响应，保持默认提示
+        }
+        throw new Error(msg);
+      }
       const { count } = await countResp.json() as { count: number };
 
       if (token !== this.renderToken) return;

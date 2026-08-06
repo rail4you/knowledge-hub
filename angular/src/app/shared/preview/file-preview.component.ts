@@ -250,13 +250,41 @@ export class FilePreviewComponent {
     }
   }
 
-  download() {
+  /**
+   * 下载原始文件。
+   * 用 fetch 校验响应：后端对未审核/无权限资源返回 JSON 403，
+   * 直接 <a href> 会跟随 302 到 AccessDenied 页面，把 HTML 保存成 "4KB 错误文件"。
+   * 仅当响应确实是文件内容时才触发浏览器下载。
+   */
+  async download() {
     if (!this.resourceId()) return;
     const url = `/api/resource-file/${this.resourceId()}/download`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = this.fileName;
-    a.click();
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        let msg = `下载失败（${resp.status}）`;
+        try {
+          const body = await resp.json();
+          if (body?.message) msg = body.message;
+        } catch {
+          // 非 JSON 响应（如重定向后的 HTML），保持默认提示
+        }
+        this.loadError.set(msg);
+        return;
+      }
+
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      const objectUrl = URL.createObjectURL(blob);
+      a.href = objectUrl;
+      a.download = this.fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch {
+      this.loadError.set('下载失败，请稍后重试');
+    }
   }
 
   private loadFile() {
