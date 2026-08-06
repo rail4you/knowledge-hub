@@ -7,6 +7,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { LocalizationPipe } from '@abp/ng.core';
 import { PdfViewerComponent } from './pdf-viewer.component';
+import { PptxViewerComponent } from './pptx-viewer.component';
 import { WordViewerComponent } from './word-viewer.component';
 import { ExcelViewerComponent } from './excel-viewer.component';
 import { MediaViewerComponent } from './media-viewer.component';
@@ -26,6 +27,7 @@ type FileType = 'pdf' | 'word' | 'excel' | 'pptx' | 'ppt' | 'image' | 'video' | 
     NzResultModule,
     LocalizationPipe,
     PdfViewerComponent,
+    PptxViewerComponent,
     WordViewerComponent,
     ExcelViewerComponent,
     MediaViewerComponent,
@@ -49,6 +51,8 @@ export class FilePreviewComponent {
   fileUrl = signal('');
   isLoading = signal(false);
   loadError = signal('');
+  /** PPTX PDF 转换失败时降级到幻灯片预览（截断/损坏的 PPTX，soffice 无法转换） */
+  pptxFallback = signal(false);
   /** P0-1 轻量版：文件过大时不走在线预览（避免前端解析卡死 / 内存爆掉），降级为"提示 + 下载"页。 */
   tooLarge = signal(false);
   /** P0-1 轻量版：文件类型不受支持时也走降级页（不强行预览）。 */
@@ -133,6 +137,7 @@ export class FilePreviewComponent {
     this.loadError.set('');
     this.fileData.set(new ArrayBuffer(0));
     this.fileUrl.set('');
+    this.pptxFallback.set(false);
     // P0-1 轻量版：打开前先判断大小 / 类型。
     this.tooLarge.set(false);
     this.unsupported.set(false);
@@ -228,12 +233,21 @@ export class FilePreviewComponent {
   previewReady(): boolean {
     if (this.isLoading() || this.loadError() || this.tooLarge() || this.unsupported()) return false;
     const type = this.fileType;
-    // PDF/PPTX/PPT: previewUrl 模式（均通过后端 PDF 转换）
-    if (type === 'pdf' || type === 'pptx' || type === 'ppt') return !!this.fileUrl();
+    // PDF/PPT: previewUrl 模式（均通过后端 PDF 转换）
+    if (type === 'pdf' || type === 'ppt') return !!this.fileUrl();
+    // PPTX: PDF 转换失败时可降级到幻灯片预览（无需 fileUrl）
+    if (type === 'pptx') return !!this.fileUrl() || this.pptxFallback();
     // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
     if (type === 'video' || type === 'audio') return !!this.fileUrl();
     // Other: ArrayBuffer 模式
     return this.fileData().byteLength > 0;
+  }
+
+  /** PDF 预览加载失败（如截断 PPTX 无法用 LibreOffice 转换）时，降级到服务端幻灯片提取预览 */
+  onPdfPreviewFailed() {
+    if (this.fileType === 'pptx') {
+      this.pptxFallback.set(true);
+    }
   }
 
   download() {

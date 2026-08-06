@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -57,6 +59,12 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
     {
         var path = GetCachedPdfPath(resourceId);
         var metaPath = GetCacheMetaPath(resourceId);
+        var repairedPath = GetRepairedPptxPath(resourceId);
+        var repairMetaPath = GetRepairMetaPath(resourceId);
+        var pagesDir = Path.Combine(
+            _fileStorageService.RootPath,
+            _options.CacheDirectory,
+            resourceId);
         try
         {
             if (File.Exists(path))
@@ -67,6 +75,19 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
             if (File.Exists(metaPath))
             {
                 File.Delete(metaPath);
+            }
+            if (File.Exists(repairedPath))
+            {
+                File.Delete(repairedPath);
+                _logger.LogInformation("[OfficeConversion] 修复缓存已清除: {Path}", repairedPath);
+            }
+            if (File.Exists(repairMetaPath))
+            {
+                File.Delete(repairMetaPath);
+            }
+            if (Directory.Exists(pagesDir))
+            {
+                Directory.Delete(pagesDir, recursive: true);
             }
         }
         catch (Exception ex)
@@ -83,9 +104,17 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         if (!File.Exists(sourcePath))
             throw new OfficeConversionException($"源文件不存在: {sourcePath}");
 
+        // 截断/损坏的 PPTX（缺少 ZIP 中央目录）LibreOffice 无法加载。
+        // 先重建 ZIP 中央目录修复，使转换可以正常进行（保持原始版式）。
+        var effectiveSource = sourcePath;
+        if (IsPptxFile(sourcePath) && !IsValidZip(sourcePath))
+        {
+            effectiveSource = await GetOrCreateRepairedAsync(resourceId, sourcePath, cancellationToken);
+        }
+
         // 1. 检查缓存是否有效（对比源文件修改时间）
         var cachedPath = GetCachedPdfPath(resourceId);
-        if (File.Exists(cachedPath) && IsCacheValid(resourceId, sourcePath))
+        if (File.Exists(cachedPath) && IsCacheValid(GetCacheMetaPath(resourceId), effectiveSource))
         {
             _logger.LogDebug("[OfficeConversion] 缓存命中: {ResourceId} -> {Path}", resourceId, cachedPath);
             return cachedPath;
@@ -100,7 +129,7 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         // 2. 同一资源的并发请求复用同一次 Task（避免双转换）
         var lazy = _inflight.GetOrAdd(
             resourceId,
-            id => new Lazy<Task<string>>(() => DoConvertAsync(id, sourcePath, cancellationToken)));
+            id => new Lazy<Task<string>>(() => DoConvertAsync(id, effectiveSource, cancellationToken)));
 
         try
         {
@@ -205,7 +234,7 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
             }
             catch (OperationCanceledException)
             {
-                TryKillProcess(process);
+                TryKillProcess(process, workDir);
                 if (timeoutCts.IsCancellationRequested)
                     throw new OfficeConversionException(
                         $"Office 转换超时（{_options.ConversionTimeoutSeconds}s），文件可能过大或包含复杂内容");
@@ -227,6 +256,9 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
 
             if (!File.Exists(workTargetPath))
             {
+                // 启动器可能先于 worker 退出（输出未生成），此时 soffice.bin 可能仍在后台运行，
+                // 兜底清扫避免遗留孤儿进程。
+                TryKillProcess(process, workDir);
                 _logger.LogError(
                     "[OfficeConversion] 输出文件不存在: {Path}, stderr: {Stderr}, stdout: {Stdout}",
                     workTargetPath, stderr, stdout);
@@ -236,7 +268,7 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
             // 移动到缓存目录
             Directory.CreateDirectory(Path.GetDirectoryName(targetPdfPath)!);
             File.Copy(workTargetPath, targetPdfPath, overwrite: true);
-            SaveCacheMeta(resourceId, sourcePath);
+            SaveCacheMeta(GetCacheMetaPath(resourceId), sourcePath);
 
             // 拆分成单页 PDF，加速首页加载
             await SplitPdfToPagesAsync(resourceId, targetPdfPath);
@@ -337,6 +369,358 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
             $"{resourceId}.pdf");
     }
 
+    private string GetRepairedPptxPath(string resourceId)
+    {
+        return Path.Combine(
+            _fileStorageService.RootPath,
+            _options.CacheDirectory,
+            $"{resourceId}.repaired.pptx");
+    }
+
+    private string GetRepairMetaPath(string resourceId)
+    {
+        return Path.Combine(
+            _fileStorageService.RootPath,
+            _options.CacheDirectory,
+            $"{resourceId}.repaired.meta");
+    }
+
+    /// <summary>
+    /// 判断是否为 .pptx（仅 PPTX 是 ZIP 容器，可被本地文件头扫描修复）。
+    /// 旧版 .ppt 为 OLE/CFB 二进制，走 LibreOffice 原生转换，不做 ZIP 修复。
+    /// </summary>
+    private static bool IsPptxFile(string path) =>
+        string.Equals(Path.GetExtension(path), ".pptx", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 判断文件是否为可读取的标准 ZIP（存在有效中央目录）。
+    /// 截断/损坏的 PPTX 缺少中央目录，ZipFile.OpenRead 会抛异常。
+    /// </summary>
+    private static bool IsValidZip(string path)
+    {
+        try
+        {
+            using var archive = ZipFile.OpenRead(path);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 截断/损坏 PPTX（缺少 ZIP 中央目录，LibreOffice 无法加载）的修复入口。
+    /// 修复结果缓存在 converted/{resourceId}.repaired.pptx，源文件变化时自动失效。
+    /// </summary>
+    private async Task<string> GetOrCreateRepairedAsync(
+        string resourceId,
+        string sourcePath,
+        CancellationToken cancellationToken)
+    {
+        var repairedPath = GetRepairedPptxPath(resourceId);
+        var repairMetaPath = GetRepairMetaPath(resourceId);
+
+        if (File.Exists(repairedPath) && IsCacheValid(repairMetaPath, sourcePath))
+        {
+            _logger.LogDebug("[OfficeConversion] 修复缓存命中: {ResourceId} -> {Path}", resourceId, repairedPath);
+            return repairedPath;
+        }
+
+        var tmpPath = repairedPath + ".tmp-" + Guid.NewGuid().ToString("N")[..8];
+        Directory.CreateDirectory(Path.GetDirectoryName(repairedPath)!);
+
+        try
+        {
+            await Task.Run(() => RepairPptx(sourcePath, tmpPath), cancellationToken);
+
+            File.Move(tmpPath, repairedPath, overwrite: true);
+            SaveCacheMeta(repairMetaPath, sourcePath);
+
+            _logger.LogInformation(
+                "[OfficeConversion] 截断 PPTX 已修复: {ResourceId} -> {Path}",
+                resourceId, repairedPath);
+            return repairedPath;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            try { if (File.Exists(tmpPath)) File.Delete(tmpPath); } catch { /* ignore */ }
+            throw new OfficeConversionException($"PPTX 文件损坏且无法修复: {ex.Message}", ex);
+        }
+    }
+
+    private sealed record RepairEntry(
+        long Offset, string Name, ushort Method,
+        int DataStart, int DataSize, bool Complete);
+
+    /// <summary>
+    /// 扫描本地文件头重建截断 PPTX 的 ZIP 结构：
+    /// - flags=0 时本地头的压缩大小是权威的（本类损坏文件均无 data descriptor）
+    /// - 带 data descriptor 的条目通过查找下一条 PK 签名定位
+    /// - 数据越过文件末尾的条目（截断尾部）标记为不完整
+    /// </summary>
+    private static List<RepairEntry> ScanRepairEntries(byte[] bytes)
+    {
+        var entries = new List<RepairEntry>();
+        var length = bytes.Length;
+        var pos = 0;
+
+        while (pos < length - 4)
+        {
+            if (bytes[pos] != 0x50 || bytes[pos + 1] != 0x4B ||
+                bytes[pos + 2] != 0x03 || bytes[pos + 3] != 0x04)
+            {
+                pos++;
+                continue;
+            }
+
+            if (pos + 30 > length) break;
+
+            var method = (ushort)(bytes[pos + 8] | (bytes[pos + 9] << 8));
+            var flags = (ushort)(bytes[pos + 6] | (bytes[pos + 7] << 8));
+            var fileNameLen = bytes[pos + 26] | (bytes[pos + 27] << 8);
+            var extraLen = bytes[pos + 28] | (bytes[pos + 29] << 8);
+            var headerSize = 30 + fileNameLen + extraLen;
+
+            if (pos + headerSize > length) break;
+
+            string name;
+            try
+            {
+                name = Encoding.UTF8.GetString(bytes, pos + 30, fileNameLen);
+            }
+            catch
+            {
+                pos++;
+                continue;
+            }
+
+            var dataStart = pos + headerSize;
+            var dataSize = bytes[pos + 18] | (bytes[pos + 19] << 8) |
+                           (bytes[pos + 20] << 16) | (bytes[pos + 21] << 24);
+
+            // 使用 data descriptor 的条目（flags bit3）：本地头中压缩大小为 0，
+            // 需扫描下一条签名定位真实边界
+            if ((flags & 8) != 0)
+            {
+                var next = FindNextPkSignature(bytes, length, dataStart);
+                dataSize = next >= 0 ? next - dataStart : length - dataStart;
+            }
+
+            var complete = dataStart + dataSize <= length;
+            entries.Add(new RepairEntry(pos, name, method, dataStart, dataSize, complete));
+
+            pos = complete ? dataStart + dataSize : length;
+        }
+
+        return entries;
+    }
+
+    private static int FindNextPkSignature(byte[] buffer, int length, int start)
+    {
+        for (var i = start; i < length - 4; i++)
+        {
+            if (buffer[i] == 0x50 && buffer[i + 1] == 0x4B &&
+                buffer[i + 2] == 0x03 && buffer[i + 3] == 0x04)
+                return i;
+            if (buffer[i] == 0x50 && buffer[i + 1] == 0x4B &&
+                buffer[i + 2] == 0x01 && buffer[i + 3] == 0x02)
+                return i; // 也停在中止目录签名前
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// 重建 ZIP：校验每个条目解压，损坏的媒体替换为透明占位 PNG（保留引用关系，
+    /// LibreOffice 渲染空白图），截断的尾部条目丢弃，写出有效中央目录。
+    /// 有效条目按字节保真保留原始压缩数据。
+    /// </summary>
+    private void RepairPptx(string sourcePath, string outPath)
+    {
+        var bytes = File.ReadAllBytes(sourcePath);
+        var entries = ScanRepairEntries(bytes);
+
+        var centralEntries = new List<(byte[] Name, ushort Method, uint Crc, int CompressedSize, int UncompressedSize, long Offset)>();
+        var dropped = 0;
+        var placeholder = 0;
+
+        using var fs = new FileStream(outPath, FileMode.Create);
+        using var w = new BinaryWriter(fs);
+        long offset = 0;
+
+        foreach (var e in entries)
+        {
+            var nameBytes = Encoding.UTF8.GetBytes(e.Name);
+
+            if (!e.Complete)
+            {
+                dropped++;
+                continue;
+            }
+
+            byte[] data;
+            ushort method;
+            uint crc;
+            var uncompressedSize = 0;
+
+            if (e.Method == 0)
+            {
+                data = bytes.AsSpan(e.DataStart, e.DataSize).ToArray();
+                method = 0;
+                crc = Crc32(data);
+                uncompressedSize = data.Length;
+            }
+            else if (e.Method == 8)
+            {
+                try
+                {
+                    var raw = Inflate(bytes, e.DataStart, e.DataSize);
+                    data = bytes.AsSpan(e.DataStart, e.DataSize).ToArray(); // 字节保真保留压缩数据
+                    method = 8;
+                    crc = Crc32(raw);
+                    uncompressedSize = raw.Length;
+                }
+                catch
+                {
+                    // 损坏的 deflate 数据：替换为透明占位 PNG
+                    data = TransparentPng;
+                    method = 0;
+                    crc = Crc32(data);
+                    uncompressedSize = data.Length;
+                    placeholder++;
+                }
+            }
+            else
+            {
+                // 不支持的压缩方法：占位
+                data = TransparentPng;
+                method = 0;
+                crc = Crc32(data);
+                uncompressedSize = data.Length;
+                placeholder++;
+            }
+
+            WriteLocalHeader(w, method, crc, data.Length, uncompressedSize, nameBytes);
+            w.Write(data);
+            centralEntries.Add((nameBytes, method, crc, data.Length, uncompressedSize, offset));
+            offset += 30 + nameBytes.Length + data.Length;
+        }
+
+        var cdStart = fs.Position;
+        foreach (var ce in centralEntries)
+        {
+            w.Write(BuildCentralEntry(ce.Method, ce.Crc, ce.CompressedSize, ce.UncompressedSize, ce.Name, ce.Offset));
+        }
+        var cdSize = fs.Position - cdStart;
+
+        // EOCD
+        w.Write(0x06054b50);
+        w.Write((ushort)0);   // disk number
+        w.Write((ushort)0);   // disk with central dir
+        w.Write((ushort)centralEntries.Count);
+        w.Write((ushort)centralEntries.Count);
+        w.Write((uint)cdSize);
+        w.Write((uint)cdStart);
+        w.Write((ushort)0);   // comment length
+        w.Flush();
+
+        if (dropped > 0 || placeholder > 0)
+        {
+            _logger.LogInformation(
+                "[OfficeConversion] PPTX 修复完成: 总条目 {Total}, 占位替换 {Placeholder}, 丢弃 {Dropped}",
+                entries.Count, placeholder, dropped);
+        }
+    }
+
+    private static void WriteLocalHeader(
+        BinaryWriter w, ushort method, uint crc,
+        int compressedSize, int uncompressedSize, byte[] nameBytes)
+    {
+        w.Write(0x04034b50);
+        w.Write((ushort)20);        // version needed
+        w.Write((ushort)0);         // flags
+        w.Write(method);
+        w.Write((ushort)0);         // mod time
+        w.Write((ushort)0);         // mod date
+        w.Write(crc);
+        w.Write(compressedSize);
+        w.Write(uncompressedSize);
+        w.Write((ushort)nameBytes.Length);
+        w.Write((ushort)0);         // extra field length
+        w.Write(nameBytes);
+    }
+
+    private static byte[] BuildCentralEntry(
+        ushort method, uint crc,
+        int compressedSize, int uncompressedSize, byte[] nameBytes, long offset)
+    {
+        using var ms = new MemoryStream(64);
+        using var w = new BinaryWriter(ms);
+        w.Write(0x02014b50);
+        w.Write((ushort)20);        // version made by
+        w.Write((ushort)20);        // version needed
+        w.Write((ushort)0);         // flags
+        w.Write(method);
+        w.Write((ushort)0);         // mod time
+        w.Write((ushort)0);         // mod date
+        w.Write(crc);
+        w.Write(compressedSize);
+        w.Write(uncompressedSize);
+        w.Write((ushort)nameBytes.Length);
+        w.Write((ushort)0);         // extra field length
+        w.Write((ushort)0);         // file comment length
+        w.Write((ushort)0);         // disk number start
+        w.Write((ushort)0);         // internal file attributes
+        w.Write(0U);                // external file attributes
+        w.Write((uint)offset);
+        w.Write(nameBytes);
+        w.Flush();
+        return ms.ToArray();
+    }
+
+    private static byte[] Inflate(byte[] src, int offset, int count)
+    {
+        using var input = new MemoryStream(src, offset, count, writable: false);
+        using var output = new MemoryStream(count * 2 + 64);
+        using (var deflate = new DeflateStream(input, CompressionMode.Decompress))
+        {
+            deflate.CopyTo(output);
+        }
+        return output.ToArray();
+    }
+
+    /// <summary>1x1 透明 PNG，用于替换损坏的图片条目（保持 ZIP 内引用一致）。</summary>
+    private static readonly byte[] TransparentPng = Convert.FromHexString(
+        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489" +
+        "0000000d49444154789c6360000002000100ffdf00bf0000000049454e44ae426082");
+
+    private static readonly uint[] Crc32Table = BuildCrc32Table();
+
+    private static uint[] BuildCrc32Table()
+    {
+        var table = new uint[256];
+        for (uint i = 0; i < 256; i++)
+        {
+            var c = i;
+            for (var k = 0; k < 8; k++)
+            {
+                c = (c & 1) != 0 ? 0xEDB88320U ^ (c >> 1) : c >> 1;
+            }
+            table[i] = c;
+        }
+        return table;
+    }
+
+    private static uint Crc32(byte[] data)
+    {
+        var crc = 0xFFFFFFFFU;
+        foreach (var b in data)
+        {
+            crc = Crc32Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
+        }
+        return crc ^ 0xFFFFFFFFU;
+    }
+
     public string GetPagePdfPath(string resourceId, int pageNumber)
     {
         return Path.Combine(
@@ -434,9 +818,8 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
     /// 通过源文件的 LastWriteTime + Length 对比来判断缓存是否有效。
     /// 源文件被替换（re-upload / new version）时自动失效。
     /// </summary>
-    private bool IsCacheValid(string resourceId, string sourcePath)
+    private bool IsCacheValid(string metaPath, string sourcePath)
     {
-        var metaPath = GetCacheMetaPath(resourceId);
         if (!File.Exists(metaPath)) return false;
 
         try
@@ -455,7 +838,7 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         }
     }
 
-    private void SaveCacheMeta(string resourceId, string sourcePath)
+    private void SaveCacheMeta(string metaPath, string sourcePath)
     {
         try
         {
@@ -465,14 +848,13 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
                 LastWriteTimeUtc = sourceInfo.LastWriteTimeUtc,
                 Length = sourceInfo.Length
             };
-            var metaPath = GetCacheMetaPath(resourceId);
             Directory.CreateDirectory(Path.GetDirectoryName(metaPath)!);
             File.WriteAllText(metaPath,
                 System.Text.Json.JsonSerializer.Serialize(meta));
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[OfficeConversion] 保存缓存元数据失败: {ResourceId}", resourceId);
+            _logger.LogWarning(ex, "[OfficeConversion] 保存缓存元数据失败: {Path}", metaPath);
         }
     }
 
@@ -482,12 +864,35 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         public long Length { get; set; }
     }
 
-    private static void TryKillProcess(Process process)
+    private static void TryKillProcess(Process process, string workDir)
     {
         try
         {
             if (!process.HasExited)
                 process.Kill(entireProcessTree: true);
+        }
+        catch
+        {
+            // ignore
+        }
+
+        // 兜底清扫：`soffice` 脚本经 oosplash 启动 soffice.bin，超时 kill 时
+        // oosplash 先被杀死，soffice.bin 会被 reparent 到 PID 1 变成孤儿继续跑 100% CPU。
+        // 用 pkill 按工作目录匹配命令行，把仍存活的 soffice 进程一并杀掉。
+        try
+        {
+            using var pkill = new Process
+            {
+                StartInfo = new ProcessStartInfo("pkill", $"-9 -f \"{workDir}\"")
+                {
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                },
+            };
+            if (pkill.Start())
+                pkill.WaitForExit(5000);
         }
         catch
         {

@@ -3,10 +3,10 @@ import {
   OnInit,
   OnDestroy,
   input,
+  output,
   viewChild,
   ElementRef,
   signal,
-  computed,
   ChangeDetectionStrategy,
   AfterViewInit,
   NgZone,
@@ -32,6 +32,8 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   /** ArrayBuffer mode (legacy) */
   data = input<ArrayBuffer>(new ArrayBuffer(0));
   fileName = input('');
+  /** 加载失败时触发（如 PPTX 转换失败，调用方可降级到幻灯片预览） */
+  loadFailed = output<void>();
 
   currentPage = signal(1);
   totalPages = signal(0);
@@ -39,15 +41,10 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   isLoading = signal(true);
   error = signal('');
   renderedCount = signal(0);
-  /** 已渲染的页码集合（用于 page-strip 显示渲染状态） */
+  /** 已渲染的页码集合 */
   renderedPages = signal<Set<number>>(new Set());
-
-  /** page-strip 显示的页码列表 */
-  readonly pageNumbers = computed(() => {
-    const total = this.totalPages();
-    if (total === 0) return [] as number[];
-    return Array.from({ length: total }, (_, i) => i + 1);
-  });
+  /** 当前是否处于"适应页面"缩放模式（整页在容器内完整可见） */
+  fitActive = signal(false);
 
   private readonly containerRef = viewChild<ElementRef<HTMLDivElement>>('pdfContainer');
   private readonly pagesHostRef = viewChild<ElementRef<HTMLDivElement>>('pagesHost');
@@ -121,6 +118,13 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   async goToPage(pageNum: number) {
     if (pageNum < 1 || pageNum > this.totalPages() || pageNum === this.currentPage()) return;
     this.currentPage.set(pageNum);
+
+    // 适应页面模式下，切换到新页时按新页尺寸重新适配
+    if (this.fitActive()) {
+      await this.fitToPage(pageNum);
+      return;
+    }
+
     this.showPage(pageNum);
 
     // 如果该页未渲染，立即加载
@@ -194,6 +198,13 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.loaded = true;
 
+      // 首次加载自动"适应页面"：整页在容器内完整可见
+      const fitScale = await this.computeFitScale(1);
+      if (fitScale != null && !this.destroyed) {
+        this.scale.set(fitScale);
+        this.fitActive.set(true);
+      }
+
       // 优先渲染第 1 页，完成后立即展示
       await this.renderPageWithPriority(1);
       this.showPage(1);
@@ -207,6 +218,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     } catch (e: any) {
       console.error('PDF load error:', e);
+      this.loadFailed.emit();
       if (!this.destroyed) {
         this.error.set(e.message || 'Failed to load PDF');
         this.isLoading.set(false);
@@ -260,6 +272,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     } catch (e: any) {
       console.error('PDF load error:', e);
+      this.loadFailed.emit();
       if (!this.destroyed) {
         this.error.set(e.message || 'Failed to load PDF');
         this.isLoading.set(false);
@@ -339,6 +352,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     } catch (e: any) {
       console.error('PDF per-page load error:', e);
+      this.loadFailed.emit();
       if (!this.destroyed) {
         this.error.set(e.message || 'Failed to load PDF');
         this.isLoading.set(false);
@@ -377,7 +391,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       }).promise;
 
       const page = await doc.getPage(1); // 每页 PDF 只有 1 页
-      const viewport = page.getViewport({ scale: this.scale() * 1.5 });
+      const viewport = page.getViewport({ scale: this.scale() });
       const item = this.pageItems.get(pageNum);
       if (!item) { doc.destroy(); return; }
 
@@ -430,7 +444,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
     try {
       const page = await this.pdfDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: this.scale() * 1.5 });
+      const viewport = page.getViewport({ scale: this.scale() });
       const item = this.pageItems.get(pageNum);
       if (!item) return;
 
@@ -476,7 +490,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
     try {
       const page = await this.pdfDoc.getPage(pageNum);
-      const viewport = page.getViewport({ scale: this.scale() * 1.5 });
+      const viewport = page.getViewport({ scale: this.scale() });
       const item = this.pageItems.get(pageNum);
       if (!item) return;
 
@@ -506,33 +520,104 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.renderedPages.set(new Set());
 
     const total = this.totalPages();
+    const current = this.currentPage();
 
-    await this.renderPageWithPriority(1);
-    this.showPage(1);
-    this.currentPage.set(1);
+    // 保持当前页优先渲染并展示，其余页后台重渲
+    await this.renderPageWithPriority(current);
+    this.showPage(current);
+    this.currentPage.set(current);
     this.isLoading.set(false);
 
     if (total > 1) {
-      this.renderQueue = Array.from({ length: total - 1 }, (_, i) => i + 2);
+      this.renderQueue = Array.from({ length: total }, (_, i) => i + 1).filter((p) => p !== current);
       this.backgroundRenderAll();
     }
   }
 
   zoomIn() {
     if (this.scale() >= 3) return;
+    this.fitActive.set(false);
     this.scale.update((v) => Math.min(3, v + 0.25));
     this.reRenderAll();
   }
 
   zoomOut() {
     if (this.scale() <= 0.25) return;
+    this.fitActive.set(false);
     this.scale.update((v) => Math.max(0.25, v - 0.25));
     this.reRenderAll();
   }
 
-  fitWidth() {
+  resetZoom() {
+    this.fitActive.set(false);
     this.scale.set(1);
     this.reRenderAll();
+  }
+
+  /**
+   * 适应页面：将当前页缩放到容器内完整可见（同时满足宽度与高度）。
+   * 作为模式保持，翻页时按新页尺寸重新适配。
+   */
+  async fitToPage(pageNum?: number) {
+    if (this.isLoading() || this.destroyed) return;
+    const target = pageNum ?? this.currentPage();
+    const s = await this.computeFitScale(target);
+    if (s == null) return;
+
+    this.scale.set(s);
+    this.fitActive.set(true);
+    this.currentPage.set(target);
+
+    // 以新缩放渲染当前页（其余页留待后台/翻页时重渲）
+    await this.renderPageWithPriority(target);
+    this.showPage(target);
+  }
+
+  /** 计算让第 pageNum 页在容器内完整可见的缩放比例（同时约束宽与高） */
+  private async computeFitScale(pageNum: number): Promise<number | null> {
+    const container = this.containerRef()?.nativeElement;
+    if (!container || this.destroyed) return null;
+
+    let width = 0;
+    let height = 0;
+
+    if (this.pdfDoc) {
+      try {
+        const page = await this.pdfDoc.getPage(pageNum);
+        const vp = page.getViewport({ scale: 1 });
+        width = vp.width;
+        height = vp.height;
+      } catch {
+        return null;
+      }
+    } else if (this.pageResourceId) {
+      try {
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.mjs';
+        const doc = await pdfjsLib.getDocument({
+          url: `/api/resource-file/${this.pageResourceId}/preview-pdf-page/${pageNum}`,
+        }).promise;
+        const page = await doc.getPage(1);
+        const vp = page.getViewport({ scale: 1 });
+        width = vp.width;
+        height = vp.height;
+        doc.destroy();
+      } catch {
+        return null;
+      }
+    } else {
+      return null;
+    }
+
+    if (width <= 0 || height <= 0) return null;
+
+    // 上下留白各 24px，左右留白各 24px
+    const availH = container.clientHeight - 48;
+    const availW = container.clientWidth - 48;
+    if (availH <= 0 || availW <= 0) return null;
+
+    const s = Math.min(availH / height, availW / width);
+    return Math.max(0.25, Math.min(3, s));
   }
 
   getScalePercent(): number {

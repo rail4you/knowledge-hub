@@ -1,31 +1,74 @@
 <div class="pdf-viewer">
-  <!-- Toolbar -->
+  <!-- Toolbar: 翻页 + 缩放 一行展示 -->
   <div class="viewer-toolbar">
     <div class="toolbar-section toolbar-nav">
-      <button nz-button nzSize="small" nzType="text" (click)="goToPrev()" [disabled]="currentPage() <= 1">
-        <span nz-icon nzType="left"></span>上一页
+      <button
+        nz-button
+        nzSize="small"
+        nzType="text"
+        class="toolbar-btn nav-btn"
+        (click)="goToPrev()"
+        [disabled]="currentPage() <= 1"
+        title="上一页（←）"
+      >
+        <span nz-icon nzType="left"></span>
       </button>
-      <span class="page-info">{{ currentPage() }}<span class="page-total"> / {{ totalPages() }}</span></span>
-      <button nz-button nzSize="small" nzType="text" (click)="goToNext()" [disabled]="currentPage() >= totalPages()">
-        下一页<span nz-icon nzType="right"></span>
+      <span class="page-info">{{ currentPage() }}<span class="page-total"> / {{ totalPages() || 0 }}</span></span>
+      <button
+        nz-button
+        nzSize="small"
+        nzType="text"
+        class="toolbar-btn nav-btn"
+        (click)="goToNext()"
+        [disabled]="currentPage() >= totalPages()"
+        title="下一页（→）"
+      >
+        <span nz-icon nzType="right"></span>
       </button>
     </div>
 
     <div class="toolbar-spacer"></div>
 
     <div class="toolbar-section toolbar-zoom">
-      <button nz-button nzSize="small" nzType="text" (click)="zoomOut()" [disabled]="scale() <= 0.25">
+      <button
+        nz-button
+        nzSize="small"
+        nzType="text"
+        class="toolbar-btn zoom-btn"
+        (click)="zoomOut()"
+        [disabled]="scale() <= 0.25"
+        title="缩小"
+      >
         <span nz-icon nzType="zoom-out"></span>
       </button>
-      <span class="scale-info" (click)="fitWidth()" title="点击重置">{{ getScalePercent() }}%</span>
-      <button nz-button nzSize="small" nzType="text" (click)="zoomIn()" [disabled]="scale() >= 3">
+      <button
+        nz-button
+        nzSize="small"
+        nzType="text"
+        class="toolbar-btn zoom-btn"
+        [class.active]="fitActive()"
+        (click)="fitToPage()"
+        title="适应页面（整页在窗口内完整显示）"
+      >
+        <span nz-icon nzType="fullscreen"></span>
+      </button>
+      <span class="scale-info" (click)="resetZoom()" title="点击恢复 100%">{{ getScalePercent() }}%</span>
+      <button
+        nz-button
+        nzSize="small"
+        nzType="text"
+        class="toolbar-btn zoom-btn"
+        (click)="zoomIn()"
+        [disabled]="scale() >= 3"
+        title="放大"
+      >
         <span nz-icon nzType="zoom-in"></span>
       </button>
     </div>
   </div>
 
   <!-- Single page stage -->
-  <div #pdfContainer class="pdf-stage" [class.loading]="isLoading()">
+  <div #pdfContainer class="pdf-stage" [class.loading]="isLoading()" [class.fit]="fitActive()">
     <div
       class="pdf-click-shield"
       (click)="onShieldClick($event)"
@@ -35,34 +78,20 @@
     <div #pagesHost class="page-canvas-host"></div>
   </div>
 
-  <!-- Page strip (quick navigation) -->
-  @if (totalPages() > 1 && !isLoading()) {
-    <div class="page-strip">
-      @for (p of pageNumbers(); track p) {
-        <button
-          type="button"
-          class="page-dot"
-          [class.active]="p === currentPage()"
-          [class.rendered]="isPageRendered(p)"
-          [title]="'第 ' + p + ' 页' + (isPageRendered(p) ? '' : ' (加载中)')"
-          (click)="goToPage(p)"
-        >
-          {{ p }}
-        </button>
-      }
+  <!-- Loading -->
+  @if (isLoading()) {
+    <div class="pdf-loading-overlay">
+      <div class="pdf-loading-inner">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+        <p class="pdf-loading-text">
+          {{ renderedCount() > 0 ? '正在渲染 ' + renderedCount() + '/' + totalPages() : totalPages() > 0 ? '正在加载 PDF…' : '正在转换文档…' }}
+        </p>
+      </div>
     </div>
   }
 
-  <!-- Loading -->
-  <div *ngIf="isLoading()" class="pdf-loading-overlay">
-    <div class="pdf-loading-inner">
-      <nz-spin nzSimple nzSize="large"></nz-spin>
-      <p class="pdf-loading-text">
-        {{ renderedCount() > 0 ? '正在渲染 ' + renderedCount() + '/' + totalPages() : totalPages() > 0 ? '正在加载 PDF…' : '正在转换文档…' }}
-      </p>
-    </div>
-  </div>
-
   <!-- Error -->
-  <div *ngIf="error()" class="viewer-error">{{ error() }}</div>
+  @if (error()) {
+    <div class="viewer-error">{{ error() }}</div>
+  }
 </div>

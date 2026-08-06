@@ -66,7 +66,19 @@
       (mousedown)="$event.stopPropagation()"
       (click)="$event.stopPropagation()"
     >
-      @if (fileType === 'pdf' || fileType === 'pptx' || fileType === 'ppt') {
+      @if (fileType === 'pdf') {
+        <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
+      } @else if (fileType === 'pptx') {
+        @if (pptxFallback()) {
+          <app-pptx-viewer [resourceId]="resourceId()" [fileName]="fileName"></app-pptx-viewer>
+        } @else {
+          <app-pdf-viewer
+            [previewUrl]="fileUrl()"
+            [fileName]="fileName"
+            (loadFailed)="onPdfPreviewFailed()"
+          ></app-pdf-viewer>
+        }
+      } @else if (fileType === 'ppt') {
         <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (fileType === 'word') {
         <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>

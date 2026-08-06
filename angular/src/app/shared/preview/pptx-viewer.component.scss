@@ -1,0 +1,108 @@
+.pptx-viewer {
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+  background: linear-gradient(135deg, #1a365d 0%, #2563eb 50%, #3b82f6 100%);
+}
+
+.viewer-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: 24px;
+
+  &.loading {
+    color: #999;
+    font-size: 14px;
+  }
+}
+
+.viewer-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #ff4d4f;
+  font-size: 14px;
+}
+
+.viewer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.viewer-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  font-size: 13px;
+  color: #666;
+}
+
+.slide-stage {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 24px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.08) 0%, transparent 60%),
+    linear-gradient(180deg, #1e3a5f 0%, #1a365d 100%);
+  transition: transform 0.2s ease;
+}
+
+.slide-card {
+  width: 720px;
+  min-height: 405px;
+  background: #fff;
+  border: none;
+  border-radius: 8px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.25),
+    0 1px 4px rgba(0, 0, 0, 0.1);
+  padding: 40px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.slide-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  gap: 12px;
+  color: #999;
+  font-size: 13px;
+}
+
+.slide-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.slide-text {
+  margin: 0;
+  line-height: 1.4;
+  word-break: break-word;
+}

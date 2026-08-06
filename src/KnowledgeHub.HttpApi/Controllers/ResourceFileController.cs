@@ -170,6 +170,8 @@ public class ResourceFileController : AbpControllerBase
 
         try
         {
+            // 截断/损坏的 PPTX 在 LibreOfficeConversionService 内部先重建 ZIP 中央目录修复，
+            // 再走 soffice 转 PDF（保持原始版式）。无法修复时抛 OfficeConversionException。
             var pdfPath = await OfficeConversionService.ConvertToPdfAsync(
                 resourceId.ToString(), fullPath);
 
