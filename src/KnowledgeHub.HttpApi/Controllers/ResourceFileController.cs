@@ -59,7 +59,13 @@ public class ResourceFileController : AbpControllerBase
     [Authorize(KnowledgeHubPermissions.Resources.Download)]
     public virtual async Task<IActionResult> Download(Guid resourceId)
     {
-        var resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
+        // 与 Preview 一致：禁用多租户过滤器加载资源，
+        // 否则跨租户/宿主上下文会抛 EntityNotFoundException（500）。
+        Resource resource;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
+        }
 
         // 仅允许下载审核通过的资源，或资源创建者本人（上传者随时可下载自己的待审核文件）。
         // 拒绝时返回 JSON 403，避免浏览器把 AccessDenied HTML 页面保存成下载文件（"4KB 错误文件"）。
