@@ -1,5 +1,5 @@
 using System;
-using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -53,6 +53,48 @@ public class ResourceFileController : AbpControllerBase
         FileStorageService = fileStorageService;
         DataFilter = dataFilter;
         OfficeConversionService = officeConversionService;
+    }
+
+    /// <summary>
+    /// 截断/损坏的 PPTX（缺 ZIP 中央目录）无法用 ZipFile 定位条目，只能扫描本地文件头。
+    /// 每次扫描都要读完整源文件（可能几十 MB）。这里按 (Length, LastWriteTimeUtc)
+    /// 缓存扫描结果，供 slides/media 复用，避免每个幻灯片请求都重新读一遍源文件。
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, ZipScanCacheEntry> ZipScanCache = new();
+
+    private sealed class ZipScanCacheEntry
+    {
+        public required long Length { get; init; }
+        public required DateTime LastWriteTimeUtc { get; init; }
+        public required IReadOnlyDictionary<string, (long offset, int headerSize, int compressSize, ushort method, ushort flags)> Entries { get; init; }
+    }
+
+    private static IReadOnlyDictionary<string, (long offset, int headerSize, int compressSize, ushort method, ushort flags)> GetCachedZipEntries(string fullPath)
+    {
+        var info = new FileInfo(fullPath);
+        if (ZipScanCache.TryGetValue(fullPath, out var cached) &&
+            cached.Length == info.Length &&
+            cached.LastWriteTimeUtc == info.LastWriteTimeUtc)
+        {
+            return cached.Entries;
+        }
+
+        using var fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var entries = ScanZipLocalHeaders(fs);
+        ZipScanCache[fullPath] = new ZipScanCacheEntry
+        {
+            Length = info.Length,
+            LastWriteTimeUtc = info.LastWriteTimeUtc,
+            Entries = entries,
+        };
+
+        // 简单防膨胀：超过阈值整体清空（单条目仅几十 KB）
+        if (ZipScanCache.Count > 500)
+        {
+            ZipScanCache.Clear();
+        }
+
+        return entries;
     }
 
     [HttpGet("{resourceId}/download")]
@@ -295,65 +337,10 @@ public class ResourceFileController : AbpControllerBase
 
     private static int ScanLocalFileHeaders(string fullPath)
     {
-        var count = 0;
-        using var fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var buffer = ArrayPool<byte>.Shared.Rent(65536);
-        try
-        {
-            var slidePattern = new Regex(@"^ppt/slides/slide\d+\.xml$", RegexOptions.Compiled);
-            long fileLen = fs.Length;
-            long pos = 0;
-
-            while (pos < fileLen - 4)
-            {
-                // Read chunk and scan for PK\x03\x04 signatures
-                fs.Position = pos;
-                int read = fs.Read(buffer, 0, buffer.Length);
-                if (read < 4) break;
-
-                int localPos = 0;
-                while (localPos < read - 4)
-                {
-                    if (buffer[localPos] == 0x50 && buffer[localPos + 1] == 0x4B &&
-                        buffer[localPos + 2] == 0x03 && buffer[localPos + 3] == 0x04)
-                    {
-                        // Parse local file header
-                        int remaining = read - localPos;
-                        if (remaining < 30) break;
-
-                        int fileNameLen = buffer[localPos + 26] | (buffer[localPos + 27] << 8);
-                        int extraLen = buffer[localPos + 28] | (buffer[localPos + 29] << 8);
-                        int headerSize = 30 + fileNameLen + extraLen;
-
-                        if (localPos + headerSize > read) break;
-
-                        string fileName = Encoding.UTF8.GetString(
-                            buffer, localPos + 30, fileNameLen);
-
-                        if (slidePattern.IsMatch(fileName))
-                            count++;
-
-                        // Get compressed size
-                        int compressSize = buffer[localPos + 18] | (buffer[localPos + 19] << 8) |
-                                           (buffer[localPos + 20] << 16) | (buffer[localPos + 21] << 24);
-
-                        localPos += headerSize + compressSize;
-                    }
-                    else
-                    {
-                        localPos++;
-                    }
-                }
-
-                pos += localPos;
-            }
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(buffer);
-        }
-
-        return count;
+        // 复用缓存的本地头扫描结果（首次扫描后不再重读整个文件）
+        var entries = GetCachedZipEntries(fullPath);
+        var slidePattern = new Regex(@"^ppt/slides/slide\d+\.xml$", RegexOptions.Compiled);
+        return entries.Keys.Count(name => slidePattern.IsMatch(name));
     }
 
     /// <summary>
@@ -411,12 +398,13 @@ public class ResourceFileController : AbpControllerBase
         var slideName = $"ppt/slides/slide{slideNumber}.xml";
         var relsName = $"ppt/slides/_rels/slide{slideNumber}.xml.rels";
 
-        using var fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        var entries = ScanZipLocalHeaders(fs);
+        // 复用缓存的本地头扫描结果，避免每个幻灯片都重读整个源文件
+        var entries = GetCachedZipEntries(fullPath);
 
         if (!entries.TryGetValue(slideName, out var slideEntryInfo))
             throw new InvalidOperationException($"幻灯片 {slideNumber} 不存在");
 
+        using var fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
         byte[] slideData = ExtractEntryData(fs, slideEntryInfo);
         using var slideMs = new MemoryStream(slideData);
         var doc = XDocument.Load(slideMs);
@@ -645,11 +633,12 @@ public class ResourceFileController : AbpControllerBase
     {
         try
         {
-            using var fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var entries = ScanZipLocalHeaders(fs);
+            // 复用缓存的本地头扫描结果，避免每次取图都重读整个源文件
+            var entries = GetCachedZipEntries(fullPath);
             if (!entries.TryGetValue(mediaPath, out var entryInfo))
                 return null;
 
+            using var fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             return ExtractEntryData(fs, entryInfo);
         }
         catch
@@ -658,7 +647,7 @@ public class ResourceFileController : AbpControllerBase
         }
     }
 
-    private Dictionary<string, (long offset, int headerSize, int compressSize, ushort method, ushort flags)> ScanZipLocalHeaders(FileStream fs)
+    private static Dictionary<string, (long offset, int headerSize, int compressSize, ushort method, ushort flags)> ScanZipLocalHeaders(FileStream fs)
     {
         var entries = new Dictionary<string, (long offset, int headerSize, int compressSize, ushort method, ushort flags)>();
         var buf = new byte[30];

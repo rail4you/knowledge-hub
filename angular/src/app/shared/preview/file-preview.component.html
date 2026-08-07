@@ -69,7 +69,7 @@
       @if (fileType === 'pdf') {
         <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (fileType === 'pptx') {
-        @if (pptxFallback()) {
+        @if (slideViewerMode()) {
           <app-pptx-viewer [resourceId]="resourceId()" [fileName]="fileName"></app-pptx-viewer>
         } @else {
           <app-pdf-viewer

@@ -51,8 +51,9 @@ export class FilePreviewComponent {
   fileUrl = signal('');
   isLoading = signal(false);
   loadError = signal('');
-  /** PPTX PDF 转换失败时降级到幻灯片预览（截断/损坏的 PPTX，soffice 无法转换） */
-  pptxFallback = signal(false);
+  /** PPTX 使用服务端幻灯片片段提取预览（slides/count + slides/{n} + media），
+   *  不经过 soffice 转 PDF，首屏与翻页都秒开。 */
+  slideViewerMode = signal(false);
   /** P0-1 轻量版：文件过大时不走在线预览（避免前端解析卡死 / 内存爆掉），降级为"提示 + 下载"页。 */
   tooLarge = signal(false);
   /** P0-1 轻量版：文件类型不受支持时也走降级页（不强行预览）。 */
@@ -137,7 +138,7 @@ export class FilePreviewComponent {
     this.loadError.set('');
     this.fileData.set(new ArrayBuffer(0));
     this.fileUrl.set('');
-    this.pptxFallback.set(false);
+    this.slideViewerMode.set(false);
     // P0-1 轻量版：打开前先判断大小 / 类型。
     this.tooLarge.set(false);
     this.unsupported.set(false);
@@ -235,18 +236,18 @@ export class FilePreviewComponent {
     const type = this.fileType;
     // PDF/PPT: previewUrl 模式（均通过后端 PDF 转换）
     if (type === 'pdf' || type === 'ppt') return !!this.fileUrl();
-    // PPTX: PDF 转换失败时可降级到幻灯片预览（无需 fileUrl）
-    if (type === 'pptx') return !!this.fileUrl() || this.pptxFallback();
+    // PPTX: 直接使用服务端幻灯片片段提取（无需 fileUrl）
+    if (type === 'pptx') return this.slideViewerMode();
     // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
     if (type === 'video' || type === 'audio') return !!this.fileUrl();
     // Other: ArrayBuffer 模式
     return this.fileData().byteLength > 0;
   }
 
-  /** PDF 预览加载失败（如截断 PPTX 无法用 LibreOffice 转换）时，降级到服务端幻灯片提取预览 */
+  /** PDF 预览加载失败（如 .ppt 转换失败）时，降级到服务端幻灯片提取预览 */
   onPdfPreviewFailed() {
     if (this.fileType === 'pptx') {
-      this.pptxFallback.set(true);
+      this.slideViewerMode.set(true);
     }
   }
 
@@ -303,9 +304,16 @@ export class FilePreviewComponent {
       return;
     }
 
-    // PPTX/PPT: 使用完整 PDF（pdfjs 原生逐页加载，支持 Range 请求）
-    // .ppt = 旧版 PowerPoint（Composite Document），LibreOffice 支持转换
-    if (type === 'pptx' || type === 'ppt') {
+    // PPTX: 直接使用服务端幻灯片片段提取（slides/count + slides/{n} + media），
+    // 不再先触发 soffice 转 PDF。片段每次从同一份 pptx 读取（后端已做本地头扫描缓存），
+    // 首屏与翻页都很快。.ppt = 旧版 PowerPoint（Composite Document，非 ZIP），
+    // 无法做片段提取，仍走 LibreOffice 转 PDF。
+    if (type === 'pptx') {
+      this.slideViewerMode.set(true);
+      this.isLoading.set(false);
+      return;
+    }
+    if (type === 'ppt') {
       const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
       this.fileUrl.set(previewUrl);
       this.isLoading.set(false);
