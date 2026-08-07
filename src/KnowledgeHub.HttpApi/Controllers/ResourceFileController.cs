@@ -685,6 +685,18 @@ public class ResourceFileController : AbpControllerBase
         {
             var data = TryReadMediaViaZip(fullPath, mediaPath)
                        ?? ReadMediaViaLocalHeaders(fullPath, mediaPath);
+
+            // 截断 PPTX 的部分尾部媒体在源文件中不完整，回退到 ZIP 修复缓存读取
+            if (data == null)
+            {
+                var repairedPath = OfficeConversionService.GetRepairedPptxPath(resourceId.ToString());
+                if (repairedPath != fullPath && System.IO.File.Exists(repairedPath))
+                {
+                    data = TryReadMediaViaZip(repairedPath, mediaPath)
+                           ?? ReadMediaViaLocalHeaders(repairedPath, mediaPath);
+                }
+            }
+
             if (data == null)
                 return NotFound(new { message = "媒体文件不存在" });
 

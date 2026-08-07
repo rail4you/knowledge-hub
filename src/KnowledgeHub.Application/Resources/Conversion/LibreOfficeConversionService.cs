@@ -369,14 +369,6 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
             $"{resourceId}.pdf");
     }
 
-    private string GetRepairedPptxPath(string resourceId)
-    {
-        return Path.Combine(
-            _fileStorageService.RootPath,
-            _options.CacheDirectory,
-            $"{resourceId}.repaired.pptx");
-    }
-
     private string GetRepairMetaPath(string resourceId)
     {
         return Path.Combine(
@@ -728,6 +720,14 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
             _options.CacheDirectory,
             $"{resourceId}",
             $"page{pageNumber}.pdf");
+    }
+
+    public string GetRepairedPptxPath(string resourceId)
+    {
+        return Path.Combine(
+            _fileStorageService.RootPath,
+            _options.CacheDirectory,
+            $"{resourceId}.repaired.pptx");
     }
 
     /// <summary>

@@ -37,6 +37,12 @@ public interface IOfficeConversionService
     /// 获取单页 PDF 的缓存路径（PdfSharp 拆分后的单个页面）。
     /// </summary>
     string GetPagePdfPath(string resourceId, int pageNumber);
+
+    /// <summary>
+    /// 截断/损坏 PPTX 的 ZIP 修复缓存路径（{CacheDirectory}/{resourceId}.repaired.pptx）。
+    /// 可能不存在；用于 PPTX 幻灯片提取时作为缺失/损坏条目的回退源。
+    /// </summary>
+    string GetRepairedPptxPath(string resourceId);
 }
 
 /// <summary>
