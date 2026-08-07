@@ -1,4 +1,4 @@
-<div class="pptx-viewer">
+<div class="pptx-viewer" #stage>
   @if (isLoading()) {
     <div class="viewer-stage loading">正在加载 PPTX…</div>
   } @else if (error()) {
@@ -22,39 +22,48 @@
         <button nz-button nzSize="small" (click)="resetZoom()">
           {{ zoomLabel() }}
         </button>
-        <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="zoom() >= 2">
+        <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="zoom() >= 3">
           <span nz-icon nzType="zoom-in"></span>
         </button>
       </div>
     </div>
 
-    <div class="slide-stage" [style.transform]="'scale(' + zoom() + ')'" [style.transformOrigin]="'top center'">
+    <div class="slide-scroll">
       @if (currentSlide(); as slide) {
-        <div class="slide-card">
+        <div class="slide-card" [style]="cardStyle()">
           @if (!slide.loaded) {
             <div class="slide-loading">
               <nz-spin nzSimple></nz-spin>
               <span>加载中…</span>
             </div>
+          } @else if (slide.shapes.length === 0 && !slide.error) {
+            <div class="slide-empty">（此幻灯片无提取内容）</div>
           } @else {
-            @for (img of slide.images; track $index) {
-              <img class="slide-image" [src]="img" [alt]="'幻灯片图片'" (error)="$event.target.style.display='none'" />
-            }
-            @for (t of slide.texts; track $index) {
-              <p
-                class="slide-text"
-                [style.fontSize.px]="t.fontSize"
-                [style.fontWeight]="t.bold ? 'bold' : 'normal'"
-                [style.color]="t.color"
-              >{{ t.text }}</p>
-            }
-            @if (slide.texts.length === 0 && !slide.error) {
-              <p class="slide-text" style="color: #999; font-style: italic;">
-                （此幻灯片无可提取的文字内容）
-              </p>
+            @for (shape of slide.shapes; track $index) {
+              <div class="shape" [style]="shapeStyle(shape)">
+                @if (shape.image) {
+                  <img
+                    class="shape-image"
+                    [src]="imageUrl(shape.image)"
+                    [alt]="'幻灯片图片'"
+                    (error)="$event.target.style.display = 'none'"
+                  />
+                }
+                @if (shape.texts.length > 0) {
+                  <div
+                    class="shape-text"
+                    [style.textAlign]="textAlign(shape.align)"
+                    [style.justifyContent]="anchorAlign(shape.anchor)"
+                  >
+                    @for (t of shape.texts; track $index) {
+                      <div class="shape-text-line" [style]="textStyle(t)">{{ t.text }}</div>
+                    }
+                  </div>
+                }
+              </div>
             }
             @if (slide.error) {
-              <p class="slide-text" style="color: #ff4d4f;">{{ slide.error }}</p>
+              <div class="slide-empty" style="color: #ff4d4f;">{{ slide.error }}</div>
             }
           }
         </div>

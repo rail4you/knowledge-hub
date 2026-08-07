@@ -233,8 +233,10 @@ export class FilePreviewComponent {
   previewReady(): boolean {
     if (this.isLoading() || this.loadError() || this.tooLarge() || this.unsupported()) return false;
     const type = this.fileType;
-    // PDF/PPT/PPTX: previewUrl 模式（均通过后端 PDF 转换，完整加载）
-    if (type === 'pdf' || type === 'ppt' || type === 'pptx') return !!this.fileUrl();
+    // PDF/PPT: previewUrl 模式（均通过后端 PDF 转换）
+    if (type === 'pdf' || type === 'ppt') return !!this.fileUrl();
+    // PPTX: 直接使用服务端幻灯片片段提取（按坐标还原版式，不跑 soffice）
+    if (type === 'pptx') return this.slideViewerMode();
     // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
     if (type === 'video' || type === 'audio') return !!this.fileUrl();
     // Other: ArrayBuffer 模式
@@ -301,10 +303,15 @@ export class FilePreviewComponent {
       return;
     }
 
-    // PPTX/PPT: 使用完整 PDF（pdfjs 原生逐页加载，支持 Range 请求），保持原始版式。
-    // 转换结果服务端缓存，源文件未变化时直接复用缓存 PDF。
-    // .ppt = 旧版 PowerPoint（Composite Document），LibreOffice 支持转换。
-    if (type === 'pptx' || type === 'ppt') {
+    // PPTX: 直接使用服务端幻灯片片段提取（slides/count + slides/{n} + media），
+    // 按坐标还原版式，不依赖 soffice 进程。.ppt（旧版二进制）无法做片段提取，
+    // 仍走 LibreOffice 转 PDF。
+    if (type === 'pptx') {
+      this.slideViewerMode.set(true);
+      this.isLoading.set(false);
+      return;
+    }
+    if (type === 'ppt') {
       const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
       this.fileUrl.set(previewUrl);
       this.isLoading.set(false);

@@ -32,6 +32,28 @@ public class SlideTextDto
     public string Color { get; set; } = "#333333";
 }
 
+/// <summary>幻灯片中的单个形状（文本框 / 图片），坐标为 EMU（914400 EMU = 1 英寸）。</summary>
+public class SlideShapeDto
+{
+    public double X { get; set; }
+    public double Y { get; set; }
+    public double W { get; set; }
+    public double H { get; set; }
+    public string? Align { get; set; }
+    public string? Anchor { get; set; }
+    public List<SlideTextDto> Texts { get; set; } = new();
+    public string? Image { get; set; }
+}
+
+/// <summary>整张幻灯片：尺寸 + 形状列表，前端按坐标渲染，无需 soffice。</summary>
+public class SlideDataDto
+{
+    public int SlideNumber { get; set; }
+    public double Width { get; set; }
+    public double Height { get; set; }
+    public List<SlideShapeDto> Shapes { get; set; } = new();
+}
+
 [Route("api/resource-file")]
 public class ResourceFileController : AbpControllerBase
 {
@@ -383,8 +405,19 @@ public class ResourceFileController : AbpControllerBase
             if (slideEntry == null)
                 return false;
 
+            XDocument? relsDoc = null;
+            var relsEntry = archive.GetEntry($"ppt/slides/_rels/slide{slideNumber}.xml.rels");
+            if (relsEntry != null)
+            {
+                using var relsStream = relsEntry.Open();
+                relsDoc = XDocument.Load(relsStream);
+            }
+
+            var (width, height) = ReadSlideSize(archive);
+
             using var stream = slideEntry.Open();
-            result = ParseSlideXml(stream, archive, slideNumber, fullPath => archive.GetEntry(fullPath) != null);
+            var doc = XDocument.Load(stream);
+            result = ParseSlide(doc, relsDoc, slideNumber, width, height, fullPath => archive.GetEntry(fullPath) != null);
             return true;
         }
         catch
@@ -409,19 +442,17 @@ public class ResourceFileController : AbpControllerBase
         using var slideMs = new MemoryStream(slideData);
         var doc = XDocument.Load(slideMs);
 
-        byte[]? relsData = null;
+        XDocument? relsDoc = null;
         if (entries.TryGetValue(relsName, out var relsEntryInfo))
         {
-            relsData = ExtractEntryData(fs, relsEntryInfo);
+            var relsData = ExtractEntryData(fs, relsEntryInfo);
+            using var relsMs = new MemoryStream(relsData);
+            relsDoc = XDocument.Load(relsMs);
         }
 
-        var aNs = XNamespace.Get("http://schemas.openxmlformats.org/drawingml/2006/main");
-        var rNs = XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+        var (width, height) = ReadSlideSize(entries, fs);
 
-        var texts = ExtractTexts(doc, aNs);
-        var images = ExtractImages(doc, aNs, rNs, relsData, slideNumber, entries);
-
-        return new { slideNumber, texts, images };
+        return ParseSlide(doc, relsDoc, slideNumber, width, height, name => entries.ContainsKey(name));
     }
 
     private static byte[] ExtractEntryData(FileStream fs, (long offset, int headerSize, int compressSize, ushort method, ushort flags) entry)
@@ -469,10 +500,103 @@ public class ResourceFileController : AbpControllerBase
         return -1;
     }
 
-    private static List<SlideTextDto> ExtractTexts(XDocument doc, XNamespace aNs)
+    /// <summary>
+    /// 从 slide XML 中提取带位置的形状（文本框 / 图片），供前端按坐标还原版式。
+    /// 不依赖 LibreOffice/soffice。
+    /// </summary>
+    private static SlideDataDto ParseSlide(
+        XDocument doc,
+        XDocument? relsDoc,
+        int slideNumber,
+        double slideWidth,
+        double slideHeight,
+        Func<string, bool> entryExists)
+    {
+        var aNs = XNamespace.Get("http://schemas.openxmlformats.org/drawingml/2006/main");
+        var rNs = XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+        var pNs = XNamespace.Get("http://schemas.openxmlformats.org/presentationml/2006/main");
+
+        // rels: rId -> 解析后的媒体路径
+        var relMap = new Dictionary<string, string>();
+        if (relsDoc != null)
+        {
+            var relNs = XNamespace.Get("http://schemas.openxmlformats.org/package/2006/relationships");
+            foreach (var rel in relsDoc.Descendants(relNs + "Relationship"))
+            {
+                var id = rel.Attribute("Id")?.Value;
+                var target = rel.Attribute("Target")?.Value;
+                if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(target))
+                    relMap[id] = ResolveRelativePath("ppt/slides", target);
+            }
+        }
+
+        var shapes = new List<SlideShapeDto>();
+
+        // 文本框 / 形状：p:sp
+        foreach (var sp in doc.Descendants(pNs + "sp"))
+        {
+            var shape = new SlideShapeDto();
+            ParseXfrm(sp.Element(pNs + "xfrm"), aNs, shape);
+            shape.Texts = ExtractShapeTexts(sp, aNs);
+
+            var pPr = sp.Descendants(aNs + "pPr").FirstOrDefault();
+            shape.Align = pPr?.Attribute("algn")?.Value;
+            var bodyPr = sp.Element(pNs + "txBody")?.Element(aNs + "bodyPr");
+            shape.Anchor = bodyPr?.Attribute("anchor")?.Value;
+
+            if (shape.W <= 0 || shape.H <= 0)
+            {
+                // 无尺寸的形状：有文字则给一行默认高度，纯装饰则跳过
+                if (shape.Texts.Count == 0) continue;
+                shape.W = slideWidth;
+                shape.H = 60 * 12700;
+            }
+            shapes.Add(shape);
+        }
+
+        // 图片：p:pic
+        foreach (var pic in doc.Descendants(pNs + "pic"))
+        {
+            var shape = new SlideShapeDto();
+            ParseXfrm(pic.Element(pNs + "xfrm"), aNs, shape);
+
+            var blip = pic.Descendants(aNs + "blip").FirstOrDefault();
+            var embed = blip?.Attribute(rNs + "embed")?.Value;
+            if (embed != null && relMap.TryGetValue(embed, out var target) && entryExists(target))
+                shape.Image = target;
+
+            if (shape.Image != null && (shape.W > 0 || shape.H > 0))
+                shapes.Add(shape);
+        }
+
+        return new SlideDataDto
+        {
+            SlideNumber = slideNumber,
+            Width = slideWidth,
+            Height = slideHeight,
+            Shapes = shapes,
+        };
+    }
+
+    private static void ParseXfrm(XElement? xfrm, XNamespace aNs, SlideShapeDto shape)
+    {
+        if (xfrm == null) return;
+        var off = xfrm.Element(aNs + "off");
+        var ext = xfrm.Element(aNs + "ext");
+        double.TryParse(off?.Attribute("x")?.Value, out var x);
+        double.TryParse(off?.Attribute("y")?.Value, out var y);
+        double.TryParse(ext?.Attribute("cx")?.Value, out var w);
+        double.TryParse(ext?.Attribute("cy")?.Value, out var h);
+        shape.X = x;
+        shape.Y = y;
+        shape.W = w;
+        shape.H = h;
+    }
+
+    private static List<SlideTextDto> ExtractShapeTexts(XElement shapeEl, XNamespace aNs)
     {
         var texts = new List<SlideTextDto>();
-        foreach (var tEl in doc.Descendants(aNs + "t"))
+        foreach (var tEl in shapeEl.Descendants(aNs + "t"))
         {
             var text = tEl.Value;
             if (string.IsNullOrWhiteSpace(text)) continue;
@@ -505,78 +629,41 @@ public class ResourceFileController : AbpControllerBase
         return texts;
     }
 
-    private static List<string> ExtractImages(XDocument doc, XNamespace aNs, XNamespace rNs, byte[]? relsData, int slideNumber, IReadOnlyDictionary<string, (long offset, int headerSize, int compressSize, ushort method, ushort flags)> entries)
+    /// <summary>读取幻灯片尺寸（EMU），缺失时默认 16:9。</summary>
+    private static (double width, double height) ParseSlideSize(XDocument? presDoc)
     {
-        var embedIds = new HashSet<string>();
-        foreach (var blip in doc.Descendants(aNs + "blip"))
-        {
-            var embed = blip.Attribute(rNs + "embed");
-            if (embed != null && !string.IsNullOrEmpty(embed.Value))
-                embedIds.Add(embed.Value);
-        }
+        const double defaultW = 12192000;
+        const double defaultH = 6858000;
+        if (presDoc == null) return (defaultW, defaultH);
 
-        var images = new List<string>();
-        if (embedIds.Count > 0 && relsData != null)
-        {
-            using var relsMs = new MemoryStream(relsData);
-            var relsDoc = XDocument.Load(relsMs);
-            var relNs = XNamespace.Get("http://schemas.openxmlformats.org/package/2006/relationships");
-            foreach (var rel in relsDoc.Descendants(relNs + "Relationship"))
-            {
-                var id = rel.Attribute("Id")?.Value;
-                var target = rel.Attribute("Target")?.Value;
-                if (id != null && target != null && embedIds.Contains(id))
-                {
-                    var resolved = ResolveRelativePath("ppt/slides", target);
-                    if (entries.ContainsKey(resolved))
-                        images.Add(resolved);
-                }
-            }
-        }
-        return images;
+        var pNs = XNamespace.Get("http://schemas.openxmlformats.org/presentationml/2006/main");
+        var sldSz = presDoc.Descendants(pNs + "sldSz").FirstOrDefault();
+        if (sldSz == null) return (defaultW, defaultH);
+
+        if (!double.TryParse(sldSz.Attribute("cx")?.Value, out var w) || w <= 0) w = defaultW;
+        if (!double.TryParse(sldSz.Attribute("cy")?.Value, out var h) || h <= 0) h = defaultH;
+        return (w, h);
     }
 
-    private object ParseSlideXml(Stream stream, ZipArchive archive, int slideNumber, Func<string, bool> entryExists)
+    private static (double width, double height) ReadSlideSize(ZipArchive archive)
     {
-        var doc = XDocument.Load(stream);
-        var aNs = XNamespace.Get("http://schemas.openxmlformats.org/drawingml/2006/main");
-        var rNs = XNamespace.Get("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+        var entry = archive.GetEntry("ppt/presentation.xml");
+        if (entry == null) return (12192000, 6858000);
+        using var stream = entry.Open();
+        return ParseSlideSize(XDocument.Load(stream));
+    }
 
-        var texts = ExtractTexts(doc, aNs);
-
-        // For zip-archive mode, read rels separately
-        var embedIds = new HashSet<string>();
-        foreach (var blip in doc.Descendants(aNs + "blip"))
+    private static (double width, double height) ReadSlideSize(
+        IReadOnlyDictionary<string, (long offset, int headerSize, int compressSize, ushort method, ushort flags)> entries,
+        FileStream fs)
+    {
+        if (entries.TryGetValue("ppt/presentation.xml", out var info))
         {
-            var embed = blip.Attribute(rNs + "embed");
-            if (embed != null && !string.IsNullOrEmpty(embed.Value))
-                embedIds.Add(embed.Value);
+            var data = ExtractEntryData(fs, info);
+            using var ms = new MemoryStream(data);
+            return ParseSlideSize(XDocument.Load(ms));
         }
-
-        var images = new List<string>();
-        if (embedIds.Count > 0)
-        {
-            var relsEntry = archive.GetEntry($"ppt/slides/_rels/slide{slideNumber}.xml.rels");
-            if (relsEntry != null)
-            {
-                using var relsStream = relsEntry.Open();
-                var relsDoc = XDocument.Load(relsStream);
-                var relNs = XNamespace.Get("http://schemas.openxmlformats.org/package/2006/relationships");
-                foreach (var rel in relsDoc.Descendants(relNs + "Relationship"))
-                {
-                    var id = rel.Attribute("Id")?.Value;
-                    var target = rel.Attribute("Target")?.Value;
-                    if (id != null && target != null && embedIds.Contains(id))
-                    {
-                        var resolved = ResolveRelativePath("ppt/slides", target);
-                        if (entryExists(resolved))
-                            images.Add(resolved);
-                    }
-                }
-            }
-        }
-
-        return new { slideNumber, texts, images };
+        return (12192000, 6858000);
     }
 
     /// <summary>
