@@ -681,6 +681,10 @@ public class ResourceFileController : AbpControllerBase
         if (ext != ".pptx")
             return BadRequest(new { message = "仅支持 PPTX 文件" });
 
+        // 兼容前端 encodeURIComponent 编码整个路径的情况（%2F 不会被路由解码回分隔符）
+        if (mediaPath.Contains("%2F", StringComparison.OrdinalIgnoreCase))
+            mediaPath = mediaPath.Replace("%2F", "/", StringComparison.OrdinalIgnoreCase);
+
         try
         {
             var data = TryReadMediaViaZip(fullPath, mediaPath)

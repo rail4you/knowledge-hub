@@ -169,7 +169,9 @@ export class PptxViewerComponent implements OnDestroy, AfterViewInit {
   }
 
   imageUrl(mediaPath: string): string {
-    return `/api/resource-file/${this.resourceId()}/media/${encodeURIComponent(mediaPath)}`;
+    // 逐段编码，保留 / 分隔符，避免 %2F 导致后端 {*mediaPath} 无法匹配条目
+    const encoded = mediaPath.split('/').map(encodeURIComponent).join('/');
+    return `/api/resource-file/${this.resourceId()}/media/${encoded}`;
   }
 
   private async loadFromServer(resourceId: string) {
