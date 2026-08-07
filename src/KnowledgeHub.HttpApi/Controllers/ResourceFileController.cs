@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using KnowledgeHub.Permissions;
@@ -274,24 +275,58 @@ public class ResourceFileController : AbpControllerBase
     /// 查询 PDF 预览的就绪状态与总页数。
     /// 拆分完成时由 SplitPdfToPages 写入 {resourceId}/.count 边车文件。
     /// 前端轮询此端点直到 ready=true，避免对每页做 HEAD 探测。
+    /// 未就绪时在后台触发一次转换（_inflight 去重 + 30s 冷却，避免重复转换），
+    /// 使逐页预览（/preview-pdf-page/{n}）无需先请求完整 PDF，直接复用转换缓存。
     /// </summary>
     [HttpGet("{resourceId}/preview-pdf-info")]
     [AllowAnonymous]
-    public virtual IActionResult PreviewPdfInfo(Guid resourceId)
+    public virtual async Task<IActionResult> PreviewPdfInfo(Guid resourceId)
     {
-        var pagesDir = System.IO.Path.GetDirectoryName(
+        var pagesDir = Path.GetDirectoryName(
             OfficeConversionService.GetPagePdfPath(resourceId.ToString(), 1))!;
-        var countFile = System.IO.Path.Combine(pagesDir, ".count");
+        var countFile = Path.Combine(pagesDir, ".count");
 
-        if (!System.IO.File.Exists(countFile))
-            return Ok(new { ready = false, count = 0 });
+        if (System.IO.File.Exists(countFile))
+        {
+            var raw = System.IO.File.ReadAllText(countFile).Trim();
+            if (int.TryParse(raw, out var count) && count > 0)
+                return Ok(new { ready = true, count });
+        }
 
-        var raw = System.IO.File.ReadAllText(countFile).Trim();
-        if (!int.TryParse(raw, out var count) || count <= 0)
-            return Ok(new { ready = false, count = 0 });
+        // 尚未转换/拆分：后台触发一次转换，返回未就绪让前端继续轮询。
+        var fullPath = await GetResourceFullPathAsync(resourceId);
+        if (fullPath != null)
+        {
+            var ext = Path.GetExtension(fullPath)?.ToLowerInvariant();
+            if (ext is ".pptx" or ".ppt" or ".docx" or ".doc" or ".xlsx" or ".xls")
+            {
+                var rid = resourceId.ToString();
+                var now = DateTime.UtcNow;
+                var last = ConversionTriggerCooldown.GetOrAdd(rid, _ => DateTime.MinValue);
+                if (now - last > TimeSpan.FromSeconds(30))
+                {
+                    ConversionTriggerCooldown[rid] = now;
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await OfficeConversionService.ConvertToPdfAsync(
+                                rid, fullPath, CancellationToken.None);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogWarning(ex, "[PreviewPdfInfo] 后台转换失败: {ResourceId}", rid);
+                        }
+                    });
+                }
+            }
+        }
 
-        return Ok(new { ready = true, count });
+        return Ok(new { ready = false, count = 0 });
     }
+
+    /// <summary>后台转换触发冷却记录（防止转换失败时前端轮询反复触发 soffice）。</summary>
+    private static readonly ConcurrentDictionary<string, DateTime> ConversionTriggerCooldown = new();
 
     /// <summary>
     /// 获取 PPTX 幻灯片总数（按需加载，不下载整个文件）

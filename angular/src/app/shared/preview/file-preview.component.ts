@@ -51,8 +51,7 @@ export class FilePreviewComponent {
   fileUrl = signal('');
   isLoading = signal(false);
   loadError = signal('');
-  /** PPTX 使用服务端幻灯片片段提取预览（slides/count + slides/{n} + media），
-   *  不经过 soffice 转 PDF，首屏与翻页都秒开。 */
+  /** PPTX PDF 转换失败时降级到幻灯片片段提取预览（异常文件 soffice 无法转换） */
   slideViewerMode = signal(false);
   /** P0-1 轻量版：文件过大时不走在线预览（避免前端解析卡死 / 内存爆掉），降级为"提示 + 下载"页。 */
   tooLarge = signal(false);
@@ -236,8 +235,9 @@ export class FilePreviewComponent {
     const type = this.fileType;
     // PDF/PPT: previewUrl 模式（均通过后端 PDF 转换）
     if (type === 'pdf' || type === 'ppt') return !!this.fileUrl();
-    // PPTX: 直接使用服务端幻灯片片段提取（无需 fileUrl）
-    if (type === 'pptx') return this.slideViewerMode();
+    // PPTX: PDF 逐页模式（[resourceId]）由 pdf-viewer 自行管理加载；
+    // 转换失败降级到幻灯片提取时同样直接展示。
+    if (type === 'pptx') return true;
     // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
     if (type === 'video' || type === 'audio') return !!this.fileUrl();
     // Other: ArrayBuffer 模式
@@ -304,12 +304,11 @@ export class FilePreviewComponent {
       return;
     }
 
-    // PPTX: 直接使用服务端幻灯片片段提取（slides/count + slides/{n} + media），
-    // 不再先触发 soffice 转 PDF。片段每次从同一份 pptx 读取（后端已做本地头扫描缓存），
-    // 首屏与翻页都很快。.ppt = 旧版 PowerPoint（Composite Document，非 ZIP），
-    // 无法做片段提取，仍走 LibreOffice 转 PDF。
+    // PPTX: 使用 PDF 预览（保持原始版式）。pdf-viewer 走逐页模式（[resourceId]），
+    // 复用拆分后的单页 PDF 缓存（首次由 /preview-pdf-info 后台触发转换），
+    // 首屏/翻页都快；转换失败时 pdf-viewer 触发 loadFailed 降级到幻灯片提取。
+    // .ppt = 旧版 PowerPoint（Composite Document，非 ZIP），走完整 PDF。
     if (type === 'pptx') {
-      this.slideViewerMode.set(true);
       this.isLoading.set(false);
       return;
     }

@@ -73,7 +73,7 @@
           <app-pptx-viewer [resourceId]="resourceId()" [fileName]="fileName"></app-pptx-viewer>
         } @else {
           <app-pdf-viewer
-            [previewUrl]="fileUrl()"
+            [resourceId]="resourceId()"
             [fileName]="fileName"
             (loadFailed)="onPdfPreviewFailed()"
           ></app-pdf-viewer>
