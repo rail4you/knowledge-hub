@@ -532,11 +532,11 @@ public class ResourceFileController : AbpControllerBase
 
         var shapes = new List<SlideShapeDto>();
 
-        // 文本框 / 形状：p:sp
+        // 文本框 / 形状：p:sp（xfrm 嵌套在 p:spPr 下，用 Descendants 查找）
         foreach (var sp in doc.Descendants(pNs + "sp"))
         {
             var shape = new SlideShapeDto();
-            ParseXfrm(sp.Element(pNs + "xfrm"), aNs, shape);
+            ParseXfrm(sp.Descendants(aNs + "xfrm").FirstOrDefault(), aNs, shape);
             shape.Texts = ExtractShapeTexts(sp, aNs);
 
             var pPr = sp.Descendants(aNs + "pPr").FirstOrDefault();
@@ -554,11 +554,11 @@ public class ResourceFileController : AbpControllerBase
             shapes.Add(shape);
         }
 
-        // 图片：p:pic
+        // 图片：p:pic（xfrm 嵌套在 p:spPr 下）
         foreach (var pic in doc.Descendants(pNs + "pic"))
         {
             var shape = new SlideShapeDto();
-            ParseXfrm(pic.Element(pNs + "xfrm"), aNs, shape);
+            ParseXfrm(pic.Descendants(aNs + "xfrm").FirstOrDefault(), aNs, shape);
 
             var blip = pic.Descendants(aNs + "blip").FirstOrDefault();
             var embed = blip?.Attribute(rNs + "embed")?.Value;
