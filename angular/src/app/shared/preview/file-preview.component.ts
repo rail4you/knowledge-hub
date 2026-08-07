@@ -233,11 +233,8 @@ export class FilePreviewComponent {
   previewReady(): boolean {
     if (this.isLoading() || this.loadError() || this.tooLarge() || this.unsupported()) return false;
     const type = this.fileType;
-    // PDF/PPT: previewUrl 模式（均通过后端 PDF 转换）
-    if (type === 'pdf' || type === 'ppt') return !!this.fileUrl();
-    // PPTX: PDF 逐页模式（[resourceId]）由 pdf-viewer 自行管理加载；
-    // 转换失败降级到幻灯片提取时同样直接展示。
-    if (type === 'pptx') return true;
+    // PDF/PPT/PPTX: previewUrl 模式（均通过后端 PDF 转换，完整加载）
+    if (type === 'pdf' || type === 'ppt' || type === 'pptx') return !!this.fileUrl();
     // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
     if (type === 'video' || type === 'audio') return !!this.fileUrl();
     // Other: ArrayBuffer 模式
@@ -304,15 +301,10 @@ export class FilePreviewComponent {
       return;
     }
 
-    // PPTX: 使用 PDF 预览（保持原始版式）。pdf-viewer 走逐页模式（[resourceId]），
-    // 复用拆分后的单页 PDF 缓存（首次由 /preview-pdf-info 后台触发转换），
-    // 首屏/翻页都快；转换失败时 pdf-viewer 触发 loadFailed 降级到幻灯片提取。
-    // .ppt = 旧版 PowerPoint（Composite Document，非 ZIP），走完整 PDF。
-    if (type === 'pptx') {
-      this.isLoading.set(false);
-      return;
-    }
-    if (type === 'ppt') {
+    // PPTX/PPT: 使用完整 PDF（pdfjs 原生逐页加载，支持 Range 请求），保持原始版式。
+    // 转换结果服务端缓存，源文件未变化时直接复用缓存 PDF。
+    // .ppt = 旧版 PowerPoint（Composite Document），LibreOffice 支持转换。
+    if (type === 'pptx' || type === 'ppt') {
       const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
       this.fileUrl.set(previewUrl);
       this.isLoading.set(false);
