@@ -94,10 +94,16 @@ public class ResourceFileController : AbpControllerBase
 
         try
         {
-            var stream = await FileStorageService.GetAsync(filePath);
+            // PhysicalFile 直接从磁盘流式输出（不把整个文件读入内存），
+            // 并支持 Range（断点续传）。服务器内存有限，大文件（如 200MB PPTX）
+            // 用 File(stream) 会整文件载入 MemoryStream，极易内存溢出。
+            var fullPath = Path.Combine(FileStorageService.RootPath, filePath);
+            if (!System.IO.File.Exists(fullPath))
+                return NotFound(new { message = "资源文件不存在" });
+
             var fileName = resource.OriginalFileName ?? resource.Name ?? "download";
             var contentType = GetContentType(fileName);
-            return File(stream, contentType, fileName);
+            return PhysicalFile(fullPath, contentType, fileName, enableRangeProcessing: true);
         }
         catch (Exception ex)
         {
