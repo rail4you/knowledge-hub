@@ -231,8 +231,6 @@
     "Summary": "AI 摘要",
     "CopyrightInfo": "版权信息",
     "IsDownloadable": "是否可下载",
-    "UseAsResume": "作为简历",
-    "UseAsResumeHint": "勾选后，本资源会出现在 AI 职业规划的简历下拉中（需先审核通过）",
     "Version": "版本",
     "UploadNewVersion": "上传新版本",
     "UploadNewVersionHint": "拖入新版本文件即可自动提交并生成索引任务",

@@ -462,28 +462,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         return dto;
     }
 
-    /// <summary>
-    /// P1-15：切换"作为简历"标记。
-    /// 权限：Resources.Default（学生即可调用）+ 仅资源创建者可修改自己资源的 IsResume。
-    /// 目的：让学生能在资料库列表的"设为简历/取消简历"按钮维护自己的简历资源，
-    ///       而不必走 Resources.Edit 完整编辑流程（也不需要带走 Name/CategoryId 等其他字段）。
-    /// </summary>
-    [Authorize(KnowledgeHubPermissions.Resources.Default)]
-    public virtual async Task SetResumeAsync(Guid id, SetResumeInput input)
-    {
-        var resource = await Repository.GetAsync(id);
-
-        // 仅资源创建者本人可切换 IsResume；管理员/教师通过原 Update 走完整编辑流程。
-        var currentUserId = CurrentUser.Id ?? throw new UserFriendlyException("请先登录");
-        if (resource.CreatorId != currentUserId)
-        {
-            throw new UserFriendlyException("只有资源创建者可以切换简历标记");
-        }
-
-        resource.IsResume = input.IsResume;
-        await Repository.UpdateAsync(resource);
-    }
-
     [Authorize(KnowledgeHubPermissions.Resources.Delete)]
     public virtual async Task DeleteAsync(Guid id)
     {

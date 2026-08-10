@@ -237,39 +237,6 @@ public class ChatAppService : KnowledgeHubAppService
     }
 
     /// <summary>
-    /// P1-13：获取当前用户"作为简历"使用的、已审核通过的资源。
-    /// 过滤条件：IsResume=true AND Status IN (SchoolApproved, LeagueApproved)。
-    /// CreatorId 过滤规则：
-    ///   - 管理员（admin / SchoolAdmin / LeagueAdmin）：可见当前租户全部简历资源。
-    ///   - 其他用户：仅可见自己创建的简历。
-    /// 用于 AI 职业规划下拉。
-    /// IsResume 由用户在前端资料库列表的"设为简历/取消简历"按钮维护（P1-15）。
-    /// </summary>
-    public async Task<List<ResourceForChatDto>> GetResumesForUserAsync()
-    {
-        var queryable = await _resourceRepository.GetQueryableAsync();
-        var query = queryable.Where(r =>
-            r.IsResume
-            && (r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.SchoolApproved
-                || r.Status == KnowledgeHub.Resources.Enums.ResourceStatus.LeagueApproved));
-
-        // T4: 教师/管理员均可看到当前租户内全部已审核通过的简历，不再限制 CreatorId
-        // （跨校协作场景下教师助理上传的简历也需要对管理员可见）
-        return (await AsyncExecuter.ToListAsync(
-                query.OrderByDescending(r => r.CreationTime)))
-            .Select(r => new ResourceForChatDto
-            {
-                Id = r.Id,
-                Name = r.Name,
-                FileExtension = r.FileExtension,
-                SourceFormat = null,
-                NodeCount = 0,
-                HasSummary = !string.IsNullOrWhiteSpace(r.Summary)
-            })
-            .ToList();
-    }
-
-    /// <summary>
     /// 获取当前用户的聊天线程列表，按最后更新时间倒序。
     /// </summary>
     public async Task<List<ChatThreadDto>> GetMyThreadsAsync()

@@ -1,43 +1,43 @@
 <div class="career-guidance-container">
   <div class="page-header">
     <h2>职业规划指导</h2>
-    <p class="subtitle">基于资源库简历文档，AI 智能生成个性化职业发展规划建议</p>
+    <p class="subtitle">基于你的简历，AI 智能生成个性化职业发展规划建议</p>
   </div>
 
-  <!-- Step 1: Select resource -->
+  <!-- Step 1: Select resume -->
   <nz-card class="step-card">
     <div class="step-title">
       <span class="step-number">1</span>
-      <span>选择简历资源</span>
+      <span>选择简历</span>
     </div>
 
     @if (resourcesLoading()) {
       <div class="loading-container">
-        <nz-spin nzSimple nzTip="加载资源列表..."></nz-spin>
+        <nz-spin nzSimple nzTip="加载简历列表..."></nz-spin>
       </div>
-    } @else if (resources().length === 0) {
-      <nz-empty nzNotFoundContent="暂无可用资源，请先上传并索引简历文档"></nz-empty>
+    } @else if (resumes().length === 0) {
+      <nz-empty nzNotFoundContent="暂无简历，请先在「我的简历」创建"></nz-empty>
     } @else {
       <nz-select
         class="resource-select"
         [ngModel]="selectedResourceId()"
         (ngModelChange)="selectedResourceId.set($event)"
-        nzPlaceHolder="请选择一个简历资源"
+        nzPlaceHolder="请选择一份简历"
         nzAllowClear
         nzShowSearch
         [nzOptionHeightPx]="64"
       >
-        @for (resource of resources(); track resource.id) {
-          <nz-option [nzValue]="resource.id" [nzLabel]="resource.name">
+        @for (resume of resumes(); track resume.id) {
+          <nz-option [nzValue]="resume.id" [nzLabel]="resume.title">
             <div class="resource-option">
-              <span nz-icon nzType="file-text" nzTheme="outline" class="resource-icon"></span>
+              <span nz-icon nzType="idcard" nzTheme="outline" class="resource-icon"></span>
               <div class="resource-option-info">
-                <div class="resource-option-name">{{ resource.name }}</div>
+                <div class="resource-option-name">{{ resume.title }}</div>
                 <div class="resource-option-meta">
-                  @if (resource.sourceFormat) {
-                    <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
+                  @if (resume.major) {
+                    <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resume.major }}</nz-tag>
                   }
-                  <span class="node-count">{{ resource.nodeCount }} 个索引节点</span>
+                  <span class="node-count">{{ resume.fullName || '未填写姓名' }}</span>
                 </div>
               </div>
             </div>
@@ -49,12 +49,12 @@
         <div class="selected-resource-info">
           <nz-tag [nzColor]="'green'">
             <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-            已选择：{{ selectedResource()!.name }}
+            已选择：{{ selectedResource()!.title }}
           </nz-tag>
-          @if (selectedResource()!.sourceFormat) {
-            <nz-tag [nzColor]="'blue'">{{ selectedResource()!.sourceFormat }}</nz-tag>
+          @if (selectedResource()!.major) {
+            <nz-tag [nzColor]="'blue'">{{ selectedResource()!.major }}</nz-tag>
           }
-          <span class="meta-text">{{ selectedResource()!.nodeCount }} 个索引节点</span>
+          <span class="meta-text">版本 v{{ selectedResource()!.versionNo }}</span>
         </div>
       }
     }

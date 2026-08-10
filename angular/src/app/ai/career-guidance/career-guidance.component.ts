@@ -18,8 +18,8 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
-import { ChatService, ResourceForChat } from '../services/chat.service';
-import { EmploymentService } from '../../employment/employment.service';
+import { ChatService } from '../services/chat.service';
+import { EmploymentService, StudentResumeDto } from '../../employment/employment.service';
 
 interface CareerGuidanceResult {
   title: string;
@@ -97,14 +97,14 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   private readonly messageService = inject(NzMessageService);
   private readonly destroy$ = new Subject<void>();
 
-  resources = signal<ResourceForChat[]>([]);
+  resumes = signal<StudentResumeDto[]>([]);
   resourcesLoading = signal(false);
   selectedResourceId = signal<string | null>(null);
 
   selectedResource = computed(() => {
     const id = this.selectedResourceId();
     if (!id) return null;
-    return this.resources().find(r => r.id === id) ?? null;
+    return this.resumes().find(r => r.id === id) ?? null;
   });
 
   careerGoal = signal('');
@@ -131,26 +131,47 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
 
   private loadResources() {
     this.resourcesLoading.set(true);
-    // P1-13：职业规划下拉只列"当前用户的简历资源"。
-    // 旧逻辑调用 getResources() 会返回全平台已建索引的资源（命中 0 → 用户看不到任何可选项）。
-    this.chatService.getResumes()
+    // 职业规划下拉列出当前用户的就业简历（StudentResume），简历由"我的简历"页面统一维护。
+    this.employmentService.getMyResumeList()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
-          this.resources.set(data);
+          this.resumes.set(data || []);
           this.resourcesLoading.set(false);
         },
         error: (err) => {
           console.error('Failed to load resumes:', err);
           this.resourcesLoading.set(false);
-          this.messageService.error('加载简历资源失败');
+          this.messageService.error('加载简历列表失败');
         }
       });
   }
 
+  /** 将 StudentResumeDto 构建为 AI 提示用的文本 */
+  private buildResumeContent(r: StudentResumeDto): string {
+    const parts: string[] = [];
+    if (r.fullName) parts.push(`姓名：${r.fullName}`);
+    if (r.schoolName) parts.push(`学校：${r.schoolName}`);
+    if (r.major) parts.push(`专业：${r.major}`);
+    if (r.grade) parts.push(`年级：${r.grade}`);
+    if (r.summary) parts.push(`个人总结：${r.summary}`);
+    if (r.skills) parts.push(`技能：${r.skills}`);
+    if (r.educationExperience) parts.push(`教育经历：${r.educationExperience}`);
+    if (r.internshipExperience) parts.push(`实习经历：${r.internshipExperience}`);
+    if (r.projectExperience) parts.push(`项目经历：${r.projectExperience}`);
+    if (r.certificateText) parts.push(`证书：${r.certificateText}`);
+    return parts.join('\n');
+  }
+
   generate() {
-    const resourceId = this.selectedResourceId();
-    if (!resourceId) return;
+    const resume = this.selectedResource();
+    if (!resume) return;
+
+    const resumeContent = this.buildResumeContent(resume);
+    if (!resumeContent.trim()) {
+      this.messageService.warning('简历内容为空，请先在「我的简历」完善简历信息');
+      return;
+    }
 
     this.isLoading.set(true);
     this.result.set(null);
@@ -160,8 +181,10 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
     let fullResponse = '';
 
     this.chatService.generateCareerGuidance({
-      resourceId,
-      careerGoal: this.careerGoal() || undefined
+      resumeContent,
+      resumeTitle: resume.title,
+      careerGoal: this.careerGoal() || undefined,
+      attachmentUrl: resume.attachmentUrl || undefined,
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({

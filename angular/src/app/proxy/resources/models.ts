@@ -45,7 +45,6 @@ export interface CreateUpdateResourceDto {
   keywords?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
-  isResume?: boolean;
   organizationId?: string | null;
   filePath?: string | null;
   fileSize?: number | null;
@@ -155,7 +154,6 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   summary?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
-  isResume?: boolean;
   collectionCount?: number;
   downloadCount?: number;
   viewCount?: number;
@@ -194,10 +192,6 @@ export interface ResourceVersionDto extends EntityDto<string> {
   creationTime?: string;
   creatorId?: string;
   creatorName?: string | null;
-}
-
-export interface SetResumeInput {
-  isResume?: boolean;
 }
 
 export interface UploadChunkDto {
