@@ -196,8 +196,16 @@ export class SearchService {
     return this.restService.request({ method: 'POST', url: '/api/app/search/log-view', body: input }, { apiName: 'Search' });
   }
 
-  getMySearchHistory(skipCount = 0, maxResultCount = 20): Observable<SearchHistoryDto[]> {
+  getMySearchHistory(skipCount = 0, maxResultCount = 20): Observable<PagedResultDto<SearchHistoryDto>> {
     return this.restService.request({ method: 'GET', url: '/api/app/search/my-search-history', params: { skipCount, maxResultCount } }, { apiName: 'Default' });
+  }
+
+  deleteMySearchHistory(id: string): Observable<void> {
+    return this.restService.request({ method: 'DELETE', url: `/api/app/search/${id}/my-search-history` }, { apiName: 'Default' });
+  }
+
+  clearMySearchHistory(): Observable<void> {
+    return this.restService.request({ method: 'POST', url: '/api/app/search/clear-my-search-history' }, { apiName: 'Default' });
   }
 
   getSearchStats(startDate?: string, endDate?: string): Observable<SearchStatsDto> {

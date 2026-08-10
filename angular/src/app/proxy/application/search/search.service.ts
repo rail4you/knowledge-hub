@@ -1,5 +1,6 @@
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
+import type { PagedResultDto } from '@abp/ng.core';
 import type { HybridSearchQueryDto, IndexDocumentDto, IndexStatusDto, IndexTaskResultDto, LogViewDto, PopularSearchDto, SearchHistoryDto, SearchQueryDto, SearchResultDto, SearchStatsDto, TopResourceDto } from '../contracts/search/dtos/models';
 
 @Injectable({
@@ -36,10 +37,26 @@ export class SearchService {
   
 
   getMySearchHistory = (skipCount?: number, maxResultCount: number = 20, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, SearchHistoryDto[]>({
+    this.restService.request<any, PagedResultDto<SearchHistoryDto>>({
       method: 'GET',
       url: '/api/app/search/my-search-history',
       params: { skipCount, maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  deleteMySearchHistory = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/search/${id}/my-search-history`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  clearMySearchHistory = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: '/api/app/search/clear-my-search-history',
     },
     { apiName: this.apiName,...config });
   

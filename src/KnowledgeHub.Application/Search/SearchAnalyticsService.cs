@@ -8,6 +8,7 @@ using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Domain.Search.Enums;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Linq;
 using Volo.Abp.MultiTenancy;
@@ -208,13 +209,20 @@ public class SearchAnalyticsService : ISearchAnalyticsService
             .ToList();
     }
 
-    public async Task<List<SearchHistoryDto>> GetUserSearchHistoryAsync(Guid userId, int skipCount = 0, int maxResultCount = 20)
+    public async Task<PagedResultDto<SearchHistoryDto>> GetUserSearchHistoryAsync(Guid userId, int skipCount = 0, int maxResultCount = 20)
     {
         var queries = await _searchQueryRepository.GetListAsync();
-        
-        return queries
+
+        var userQueries = queries
             .Where(q => q.UserId == userId)
+            .GroupBy(q => q.QueryText.Trim().ToLower())
+            .Select(g => g.OrderByDescending(q => q.CreationTime).First())
             .OrderByDescending(q => q.CreationTime)
+            .ToList();
+
+        var totalCount = userQueries.Count;
+
+        var items = userQueries
             .Skip(skipCount)
             .Take(maxResultCount)
             .Select(q => new SearchHistoryDto
@@ -225,6 +233,31 @@ public class SearchAnalyticsService : ISearchAnalyticsService
                 ResultCount = q.ResultCount
             })
             .ToList();
+
+        return new PagedResultDto<SearchHistoryDto>(totalCount, items);
+    }
+
+    public async Task DeleteSearchHistoryAsync(Guid userId, Guid id)
+    {
+        var item = await _searchQueryRepository.FirstOrDefaultAsync(q => q.Id == id && q.UserId == userId);
+        if (item == null) return;
+
+        var normalized = item.QueryText.Trim().ToLower();
+        var duplicates = await _searchQueryRepository.GetListAsync(
+            q => q.UserId == userId && q.QueryText.Trim().ToLower() == normalized);
+        if (duplicates.Any())
+        {
+            await _searchQueryRepository.DeleteManyAsync(duplicates);
+        }
+    }
+
+    public async Task ClearUserSearchHistoryAsync(Guid userId)
+    {
+        var items = await _searchQueryRepository.GetListAsync(q => q.UserId == userId);
+        if (items.Any())
+        {
+            await _searchQueryRepository.DeleteManyAsync(items);
+        }
     }
 
     private async Task UpdateDailyStatisticsAsync(int resultCount, string query)

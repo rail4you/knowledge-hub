@@ -7,6 +7,7 @@ using KnowledgeHub.Application.Contracts.Search.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Application.Search;
@@ -107,17 +108,29 @@ public class SearchAppService : KnowledgeHubAppService, ISearchAppService
         await _analyticsService.LogResourceViewAsync(input);
     }
 
-    public async Task<List<SearchHistoryDto>> GetMySearchHistoryAsync(int skipCount = 0, int maxResultCount = 20)
+    public async Task<PagedResultDto<SearchHistoryDto>> GetMySearchHistoryAsync(int skipCount = 0, int maxResultCount = 20)
     {
         if (!_currentUser.Id.HasValue)
         {
-            return new List<SearchHistoryDto>();
+            return new PagedResultDto<SearchHistoryDto>(0, new List<SearchHistoryDto>());
         }
         
         return await _analyticsService.GetUserSearchHistoryAsync(
             _currentUser.Id.Value, 
             skipCount, 
             maxResultCount);
+    }
+
+    public async Task DeleteMySearchHistoryAsync(Guid id)
+    {
+        if (!_currentUser.Id.HasValue) return;
+        await _analyticsService.DeleteSearchHistoryAsync(_currentUser.Id.Value, id);
+    }
+
+    public async Task ClearMySearchHistoryAsync()
+    {
+        if (!_currentUser.Id.HasValue) return;
+        await _analyticsService.ClearUserSearchHistoryAsync(_currentUser.Id.Value);
     }
 
     public async Task<SearchStatsDto> GetSearchStatsAsync(DateTime? startDate = null, DateTime? endDate = null)

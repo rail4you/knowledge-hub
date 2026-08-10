@@ -8,6 +8,8 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Router } from '@angular/router';
 import { SearchService, SearchHistoryDto } from '../search.service';
@@ -25,10 +27,32 @@ import { SearchService, SearchHistoryDto } from '../search.service';
     NzPaginationModule,
     NzEmptyModule,
     NzButtonModule,
+    NzPopconfirmModule,
+    NzDividerModule,
   ],
   template: `
     <div class="search-history-container">
-      <nz-card nzTitle="搜索历史">
+      <nz-card
+        nzTitle="搜索历史"
+        [nzExtra]="historyToolbar"
+      >
+        <ng-template #historyToolbar>
+          @if (history().length > 0) {
+            <button
+              nz-button
+              nzSize="small"
+              nzType="default"
+              nzDanger
+              nz-popconfirm
+              nzPopconfirmTitle="确认清空全部搜索历史？"
+              nzOkText="清空"
+              nzCancelText="取消"
+              (nzOnConfirm)="clearHistory()"
+            >
+              清空全部
+            </button>
+          }
+        </ng-template>
         <nz-spin [nzSpinning]="loading()">
           @if (history().length === 0 && !loading()) {
             <nz-empty nzNotFoundContent="暂无搜索历史"></nz-empty>
@@ -66,6 +90,15 @@ import { SearchService, SearchHistoryDto } from '../search.service';
                     <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
                     <td>
                       <a (click)="reSearch(item.queryText)">重新搜索</a>
+                      <nz-divider nzType="vertical"></nz-divider>
+                      <a
+                        nz-popconfirm
+                        nzPopconfirmTitle="确认删除这条搜索记录？"
+                        nzOkText="删除"
+                        nzCancelText="取消"
+                        (nzOnConfirm)="deleteHistoryItem(item.id)"
+                        class="delete-link"
+                      >删除</a>
                     </td>
                   </tr>
                 }
@@ -93,6 +126,14 @@ import { SearchService, SearchHistoryDto } from '../search.service';
     .query-text {
       font-weight: 500;
       color: #333;
+    }
+
+    .delete-link {
+      color: #ff4d4f;
+    }
+
+    .delete-link:hover {
+      color: #ff7875;
     }
 
     .pagination-wrapper {
@@ -125,8 +166,8 @@ export class SearchHistoryComponent implements OnInit {
 
     this.searchService.getMySearchHistory(skipCount, this.pageSize).subscribe({
       next: (data) => {
-        this.history.set(data);
-        this.totalCount.set(data.length);
+        this.history.set(data.items);
+        this.totalCount.set(data.totalCount);
         this.loading.set(false);
       },
       error: () => {
@@ -139,6 +180,31 @@ export class SearchHistoryComponent implements OnInit {
   onPageChange(index: number) {
     this.pageIndex = index;
     this.loadHistory();
+  }
+
+  deleteHistoryItem(id: string) {
+    this.searchService.deleteMySearchHistory(id).subscribe({
+      next: () => {
+        this.message.success('删除成功');
+        this.loadHistory();
+      },
+      error: () => {
+        this.message.error('删除失败');
+      },
+    });
+  }
+
+  clearHistory() {
+    this.searchService.clearMySearchHistory().subscribe({
+      next: () => {
+        this.message.success('搜索历史已清空');
+        this.pageIndex = 1;
+        this.loadHistory();
+      },
+      error: () => {
+        this.message.error('清空失败');
+      },
+    });
   }
 
   reSearch(queryText: string) {

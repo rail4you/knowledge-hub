@@ -1,5 +1,6 @@
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
+import type { PagedResultDto } from '@abp/ng.core';
 import type { LogViewDto, PopularSearchDto, SearchHistoryDto, SearchStatsDto, TopResourceDto } from '../contracts/search/dtos/models';
 
 @Injectable({
@@ -38,7 +39,7 @@ export class SearchAnalyticsService {
   
 
   getUserSearchHistory = (userId: string, skipCount?: number, maxResultCount: number = 20, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, SearchHistoryDto[]>({
+    this.restService.request<any, PagedResultDto<SearchHistoryDto>>({
       method: 'GET',
       url: `/api/app/search-analytics/user-search-history/${userId}`,
       params: { skipCount, maxResultCount },
