@@ -28,7 +28,9 @@
         </div>
       </div>
       <div class="detail-header__action">
-        @if (d.isCurrentUserEnrolled) {
+        @if (d.isExpired) {
+          <span class="expired-badge"><span nz-icon nzType="stop" nzTheme="fill"></span> 实训已结束</span>
+        } @else if (d.isCurrentUserEnrolled) {
           <span class="enrolled-badge"><span nz-icon nzType="check-circle" nzTheme="fill"></span> 已报名</span>
         } @else {
           <button class="enroll-btn" (click)="enroll()">
@@ -38,6 +40,14 @@
       </div>
     </div>
 
+    <!-- Expired notice -->
+    @if (d.isExpired) {
+      <div class="expired-banner">
+        <span nz-icon nzType="stop" nzTheme="filled"></span>
+        该实训项目已结束，仅可查看项目介绍，不再参与任务、资料与实训沟通。
+      </div>
+    }
+
     <!-- Description -->
     @if (d.description) {
       <div class="detail-desc">
@@ -46,8 +56,9 @@
       </div>
     }
 
-    <!-- Tabs -->
-    <div class="detail-tabs">
+    <!-- Tabs (hidden when project expired: only basic info viewable) -->
+    @if (!d.isExpired) {
+      <div class="detail-tabs">
       <nav class="tab-nav">
         <button [class.active]="activeTab() === 'tasks'" (click)="activeTab.set('tasks')">
           <span nz-icon nzType="profile" nzTheme="outline"></span> 实训任务
@@ -171,6 +182,7 @@
         }
       }
     </div>
+    }
 
     <!-- Submit Modal -->
     <nz-modal [nzVisible]="submitModalVisible()" (nzVisibleChange)="submitModalVisible.set($event)" (nzOnCancel)="submitModalVisible.set(false)"

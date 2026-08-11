@@ -40,6 +40,7 @@ public class PracticumProjectDto : FullAuditedEntityDto<Guid>
     public PracticumProjectStatus Status { get; set; }
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
+    public bool IsExpired { get; set; }
     public decimal MaxScore { get; set; }
     public bool AllowResubmission { get; set; }
     public int TaskCount { get; set; }

@@ -25,6 +25,9 @@
             <nz-tag [nzColor]="item.status === statuses.Published ? 'green' : item.status === statuses.Archived ? 'default' : 'orange'">
               {{ statusLabel(item.status) }}
             </nz-tag>
+            @if (item.isExpired) {
+              <nz-tag nzColor="red">已结束</nz-tag>
+            }
           </td>
           <td>{{ item.taskCount }}</td>
           <td>{{ item.materialCount }}</td>

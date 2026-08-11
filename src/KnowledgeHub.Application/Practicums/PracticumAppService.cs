@@ -84,6 +84,11 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         // 对于有管理权限的用户（管理员/教师，包括仅拥有 Default 的租户管理员），返回完整数据
         var canAdmin = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Practicum.Edit)
                     || await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Practicum.Default);
+        // 已过期的项目：学生只能查看基础信息，不能查看任务明细和资料
+        if (dto.IsExpired && !canAdmin)
+        {
+            return dto;
+        }
         if (dto.IsCurrentUserEnrolled || canAdmin)
         {
             dto.Tasks = await GetTaskDtosAsync(id);
@@ -208,6 +213,10 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         {
             throw new UserFriendlyException("当前实训项目未发布。");
         }
+        if (entity.EndTime.HasValue && DateTime.UtcNow > entity.EndTime.Value)
+        {
+            throw new UserFriendlyException("该实训项目已结束，无法报名。");
+        }
 
         var existing = await _enrollmentRepository.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.StudentId == studentId);
         if (existing != null && existing.Status != PracticumEnrollmentStatus.Cancelled)
@@ -283,6 +292,11 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
             ?? throw new UserFriendlyException("未找到实训任务。");
         var enrollment = await _enrollmentRepository.FirstOrDefaultAsync(x => x.ProjectId == input.ProjectId && x.StudentId == studentId)
             ?? throw new UserFriendlyException("请先参与该实训项目。");
+
+        if (project.EndTime.HasValue && DateTime.UtcNow > project.EndTime.Value)
+        {
+            throw new UserFriendlyException("该实训项目已结束，无法提交成果。");
+        }
 
         if (!project.AllowResubmission)
         {
@@ -824,6 +838,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         target.Status = source.Status;
         target.StartTime = source.StartTime;
         target.EndTime = source.EndTime;
+        target.IsExpired = source.EndTime.HasValue && DateTime.UtcNow > source.EndTime.Value;
         target.MaxScore = source.MaxScore;
         target.AllowResubmission = source.AllowResubmission;
         target.AgentName = source.AgentName;

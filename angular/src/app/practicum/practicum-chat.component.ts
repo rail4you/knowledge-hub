@@ -75,6 +75,8 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
   uploadingFile = signal(false);
   selectedContactId = signal<string>('all');
   showSidebar = signal(true);
+  /** 项目已过期且当前用户为学生：禁止发送消息 */
+  isProjectLocked = signal(false);
 
   private destroy$ = new Subject<void>();
   private sseSubscription: Subscription | null = null;
@@ -138,6 +140,8 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
     this.practicumService.getDetail(this.projectId).subscribe({
       next: detail => {
         this.projectDetail = detail;
+        // 已过期的项目：学生不能再参与沟通（教师仍可发送）
+        this.isProjectLocked.set(!!detail.isExpired && !this.isTeacherRoute());
         this.loadHistory();
       },
       error: () => this.message.error('加载实训项目详情失败'),
@@ -247,7 +251,7 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
 
   sendMessage(): void {
     const content = this.inputContent().trim();
-    if (!content || this.isLoading()) return;
+    if (!content || this.isLoading() || this.isProjectLocked()) return;
 
     this.inputContent.set('');
     this.isLoading.set(true);

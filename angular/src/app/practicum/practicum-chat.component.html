@@ -246,6 +246,12 @@
       </div>
 
       <!-- ─── Input Area ─── -->
+      @if (isProjectLocked()) {
+        <div class="chat-locked-banner">
+          <span nz-icon nzType="lock" nzTheme="filled"></span>
+          实训项目已结束，仅教师可继续发送消息。
+        </div>
+      }
       <div class="chat-input-area">
         <div class="chat-input-row">
           <input #fileInput type="file" style="display:none" (change)="onFileSelected($event)" />
@@ -256,8 +262,8 @@
                       [ngModel]="inputContent()"
                       (ngModelChange)="inputContent.set($event)"
                       (keydown)="onKeyPress($event)"
-                      [placeholder]="'输入消息...'"
-                      [disabled]="isLoading()"
+                      [placeholder]="isProjectLocked() ? '实训已结束，无法发送消息' : '输入消息...'"
+                      [disabled]="isLoading() || isProjectLocked()"
                       rows="1"
                       (input)="autoResize($event)">
             </textarea>
@@ -267,7 +273,7 @@
             <button class="input-action-btn"
                     nz-tooltip nzTooltipTitle="发送文件（最大25MB）"
                     (click)="triggerFileUpload()"
-                    [disabled]="uploadingFile()">
+                    [disabled]="uploadingFile() || isProjectLocked()">
               @if (uploadingFile()) {
                 <nz-spin nzSize="small"></nz-spin>
               } @else {
@@ -276,14 +282,15 @@
             </button>
             <button class="input-action-btn mention-btn"
                     nz-tooltip [nzTooltipTitle]="'@' + agentName() + ' 召唤智能助手'"
-                    (click)="insertAgentMention()">
+                    (click)="insertAgentMention()"
+                    [disabled]="isProjectLocked()">
               <span nz-icon nzType="robot" nzTheme="outline"></span>
               <span class="mention-label">@{{ agentName() }}</span>
             </button>
             <button nz-button nzType="primary"
                     class="send-btn"
                     (click)="sendMessage()"
-                    [disabled]="!inputContent().trim() || isLoading()">
+                    [disabled]="isProjectLocked() || !inputContent().trim() || isLoading()">
               @if (isLoading()) {
                 <nz-spin nzSize="small"></nz-spin>
               } @else {

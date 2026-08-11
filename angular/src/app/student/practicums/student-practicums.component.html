@@ -37,6 +37,7 @@
               <span nz-icon nzType="experiment" nzTheme="outline"></span>
             </div>
             @if (item.major) { <span class="cover-badge">{{ item.major }}</span> }
+            @if (item.isExpired) { <span class="cover-badge cover-badge--expired">已结束</span> }
           </div>
           <div class="px-card__body">
             <h3 class="px-card__title">{{ item.title }}</h3>
@@ -55,7 +56,11 @@
             }
           </div>
           <div class="px-card__actions">
-            @if (item.isCurrentUserEnrolled) {
+            @if (item.isExpired) {
+              <button class="action-btn action-btn--view" (click)="openDetail(item)">
+                <span nz-icon nzType="eye" nzTheme="outline"></span> 查看详情
+              </button>
+            } @else if (item.isCurrentUserEnrolled) {
               <button class="action-btn action-btn--view" (click)="openDetail(item)">
                 <span nz-icon nzType="eye" nzTheme="outline"></span> 查看详情
               </button>

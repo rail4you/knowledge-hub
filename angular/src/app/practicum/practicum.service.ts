@@ -68,6 +68,7 @@ export interface PracticumProjectDto {
   status: PracticumProjectStatus;
   startTime?: string;
   endTime?: string;
+  isExpired: boolean;
   maxScore: number;
   allowResubmission: boolean;
   taskCount: number;

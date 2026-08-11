@@ -83,6 +83,13 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
             throw new AbpAuthorizationException("请先报名该实训项目。");
         }
 
+        // 已过期的项目：学生不能再参与实训沟通，教师仍可发送
+        var isExpired = project.EndTime.HasValue && DateTime.UtcNow > project.EndTime.Value;
+        if (isExpired && !isTeacher)
+        {
+            throw new UserFriendlyException("该实训项目已结束，无法发送消息。");
+        }
+
         var senderType = isTeacher ? PracticumChatSenderType.Teacher : PracticumChatSenderType.Student;
         var senderName = await GetSenderNameAsync(userId, isTeacher);
 
@@ -207,6 +214,13 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
         if (!isTeacher && !isEnrolled)
         {
             throw new AbpAuthorizationException("请先报名该实训项目。");
+        }
+
+        // 已过期的项目：学生不能再参与实训沟通，教师仍可查看
+        var isExpired = project.EndTime.HasValue && DateTime.UtcNow > project.EndTime.Value;
+        if (isExpired && !isTeacher)
+        {
+            throw new AbpAuthorizationException("该实训项目已结束，无法查看沟通记录。");
         }
 
         var query = await _messageRepository.GetQueryableAsync();

@@ -22,6 +22,10 @@
 .detail-header__action { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .enroll-btn { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 24px; border: 0; border-radius: ds.$student-radius; background: #0284c7; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px rgba(2,132,199,.28); transition: all .2s ease; &:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(2,132,199,.36); } }
 .enrolled-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #eff6ff; color: #2563eb; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
+.expired-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #fef2f2; color: #dc2626; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
+
+/* =================== Expired banner =================== */
+.expired-banner { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 14px 18px; border-radius: ds.$student-radius; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 14px; span[nz-icon] { font-size: 18px; } }
 
 /* =================== Description =================== */
 .detail-desc { background: #fff; border-radius: ds.$student-radius-lg; padding: 20px 24px; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft; h2 { margin: 0 0 12px; display: flex; align-items: center; gap: 8px; color: ds.$student-text; font-size: 16px; font-weight: 700; } p { margin: 0; color: ds.$student-text-muted; font-size: 14px; line-height: 1.8; white-space: pre-wrap; } }

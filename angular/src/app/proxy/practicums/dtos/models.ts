@@ -149,6 +149,7 @@ export interface PracticumProjectDto extends FullAuditedEntityDto<string> {
   status?: PracticumProjectStatus;
   startTime?: string | null;
   endTime?: string | null;
+  isExpired?: boolean;
   maxScore?: number;
   allowResubmission?: boolean;
   taskCount?: number;
