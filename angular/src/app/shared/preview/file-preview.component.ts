@@ -46,6 +46,7 @@ export class FilePreviewComponent {
   resourceName = signal('');
   fileExtension = signal('');
   fileSize = signal(0);
+  isDownloadable = signal(true);
 
   fileData = signal<ArrayBuffer>(new ArrayBuffer(0));
   fileUrl = signal('');
@@ -128,12 +129,13 @@ export class FilePreviewComponent {
     return name + '.' + ext;
   }
 
-  open(resourceId: string, resourceName: string, fileExtension: string, fileSize: number) {
+  open(resourceId: string, resourceName: string, fileExtension: string, fileSize: number, isDownloadable = true) {
     console.log('[FilePreview] open() called, stack:', new Error().stack);
     this.resourceId.set(resourceId);
     this.resourceName.set(resourceName);
     this.fileExtension.set(fileExtension);
     this.fileSize.set(fileSize);
+    this.isDownloadable.set(isDownloadable);
     this.loadError.set('');
     this.fileData.set(new ArrayBuffer(0));
     this.fileUrl.set('');
@@ -258,6 +260,10 @@ export class FilePreviewComponent {
    */
   async download() {
     if (!this.resourceId()) return;
+    if (!this.isDownloadable()) {
+      this.loadError.set('该资源不允许下载，仅支持在线预览');
+      return;
+    }
     const url = `/api/resource-file/${this.resourceId()}/download`;
     try {
       const resp = await fetch(url);

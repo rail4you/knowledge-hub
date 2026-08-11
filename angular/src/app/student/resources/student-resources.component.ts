@@ -367,7 +367,8 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
       resource.id,
       resource.originalFileName || resource.name || '未命名',
       ext || '',
-      resource.fileSize || 0
+      resource.fileSize || 0,
+      resource.isDownloadable !== false
     );
 
     // 本地乐观更新 viewCount
@@ -379,6 +380,10 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   downloadResource(event: Event, resource: ResourceDto) {
     event.stopPropagation();
     if (!resource?.id) return;
+    if (!resource.isDownloadable) {
+      this.message.warning('该资源不允许下载，仅支持在线预览');
+      return;
+    }
     const url = `/api/resource-file/${resource.id}/download`;
     const a = document.createElement('a');
     a.href = url;

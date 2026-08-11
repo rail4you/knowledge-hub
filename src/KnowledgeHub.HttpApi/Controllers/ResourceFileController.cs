@@ -141,6 +141,12 @@ public class ResourceFileController : AbpControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { message = "资源未审核通过，暂不可下载" });
         }
 
+        // 资源设置了「不允许下载」时，一律禁止下载（仅支持在线预览）
+        if (!resource.IsDownloadable)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "该资源不允许下载，仅支持在线预览" });
+        }
+
         resource.DownloadCount++;
         await Repository.UpdateAsync(resource);
 

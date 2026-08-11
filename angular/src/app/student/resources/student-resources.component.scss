@@ -1304,6 +1304,19 @@
     background: #eef2ff;
     color: #4338ca;
   }
+
+  &.is-disabled,
+  &:disabled {
+    background: #f1f2f4;
+    color: #b3b8bf;
+    cursor: not-allowed;
+    pointer-events: auto;
+
+    &:hover {
+      background: #f1f2f4;
+      color: #b3b8bf;
+    }
+  }
 }
 
 .pagination-wrapper {

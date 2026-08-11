@@ -135,13 +135,18 @@ export class StudentResourceDetailComponent implements OnInit {
       r.id,
       r.originalFileName || r.name || '未命名',
       ext || '',
-      r.fileSize || 0
+      r.fileSize || 0,
+      r.isDownloadable !== false
     );
   }
 
   download() {
     const r = this.resource();
     if (!r?.id) return;
+    if (!r.isDownloadable) {
+      this.message.warning('该资源不允许下载，仅支持在线预览');
+      return;
+    }
     const url = `/api/resource-file/${r.id}/download`;
     const a = document.createElement('a');
     a.href = url;

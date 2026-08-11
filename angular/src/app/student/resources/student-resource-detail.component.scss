@@ -337,6 +337,22 @@
     transform: translateY(-1px);
   }
 
+  &--disabled,
+  &:disabled {
+    background: #f1f2f4;
+    border-color: #e4e7eb;
+    color: #b3b8bf;
+    cursor: not-allowed;
+    transform: none;
+
+    &:hover {
+      border-color: #e4e7eb;
+      color: #b3b8bf;
+      background: #f1f2f4;
+      transform: none;
+    }
+  }
+
   &--primary {
     background: #1e6ce8;
     border-color: transparent;

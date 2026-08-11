@@ -129,7 +129,10 @@
               <span nz-icon nzType="eye" nzTheme="outline"></span>
               <span>预览</span>
             </button>
-            <button class="action-btn action-btn--download" (click)="downloadResource($event, resource)">
+            <button class="action-btn action-btn--download"
+              [disabled]="!resource.isDownloadable"
+              [class.is-disabled]="!resource.isDownloadable"
+              (click)="downloadResource($event, resource)">
               <span nz-icon nzType="download" nzTheme="outline"></span>
               <span>下载</span>
             </button>

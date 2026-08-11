@@ -87,9 +87,13 @@
                 <span nz-icon nzType="eye" nzTheme="outline"></span>
                 <span>在线预览</span>
               </button>
-              <button class="action-pill" (click)="download()">
+              <button class="action-pill"
+                [disabled]="!res.isDownloadable"
+                [class.action-pill--disabled]="!res.isDownloadable"
+                [title]="res.isDownloadable ? '' : '该资源不允许下载，仅支持在线预览'"
+                (click)="download()">
                 <span nz-icon nzType="download" nzTheme="outline"></span>
-                <span>下载资源</span>
+                <span>{{ res.isDownloadable ? '下载资源' : '不允许下载' }}</span>
               </button>
               <button
                 class="action-pill"

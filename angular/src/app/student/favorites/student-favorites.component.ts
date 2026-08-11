@@ -121,13 +121,18 @@ export class StudentFavoritesComponent implements OnInit {
       resource.id,
       resource.originalFileName || resource.name || '未命名',
       ext || '',
-      resource.fileSize || 0
+      resource.fileSize || 0,
+      resource.isDownloadable !== false
     );
   }
 
   downloadResource(event: Event, resource: ResourceDto) {
     event.stopPropagation();
     if (!resource?.id) return;
+    if (!resource.isDownloadable) {
+      this.message.warning('该资源不允许下载，仅支持在线预览');
+      return;
+    }
     const url = `/api/resource-file/${resource.id}/download`;
     const a = document.createElement('a');
     a.href = url;

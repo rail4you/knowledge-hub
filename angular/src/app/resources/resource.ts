@@ -820,7 +820,8 @@ export class ResourceComponent implements OnInit {
       res.id,
       res.originalFileName || res.name,
       ext || '',
-      res.fileSize || 0
+      res.fileSize || 0,
+      res.isDownloadable !== false
     );
   }
 
