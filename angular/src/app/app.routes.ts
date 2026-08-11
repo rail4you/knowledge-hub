@@ -445,6 +445,10 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./learning/chapter-exercise/chapter-exercise.component').then(c => c.ChapterExerciseComponent),
       },
       {
+        path: 'course-resource',
+        loadComponent: () => import('./learning/course-resource/course-resource.component').then(c => c.CourseResourceComponent),
+      },
+      {
         path: 'chapter-resource',
         loadComponent: () => import('./learning/chapter-resource/chapter-resource.component').then(c => c.ChapterResourceComponent),
       },

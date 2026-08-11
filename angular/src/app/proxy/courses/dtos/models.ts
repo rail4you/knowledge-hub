@@ -1,6 +1,7 @@
 import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { CourseStatus } from '../enums/course-status.enum';
 import type { StudentCourseStatus } from '../../learning/enums/student-course-status.enum';
+import type { ResourceType } from '../../resources/enums/resource-type.enum';
 
 export interface BatchEnrollDto {
   studentIds?: string[];
@@ -86,6 +87,30 @@ export interface CourseFilterDto {
 export interface CreateStudentCourseDto {
   studentId?: string;
   courseId?: string;
+}
+
+export interface CourseResourceDto extends EntityDto<string> {
+  courseId?: string;
+  resourceId?: string;
+  displayName?: string | null;
+  sortOrder?: number;
+  creationTime?: string;
+  resourceName?: string | null;
+  description?: string | null;
+  filePath?: string | null;
+  keywords?: string | null;
+  originalFileName?: string | null;
+  fileExtension?: string | null;
+  fileSize?: number | null;
+  resourceType?: ResourceType;
+  isDownloadable?: boolean;
+}
+
+export interface CreateCourseResourceDto {
+  courseId: string;
+  resourceId: string;
+  displayName?: string | null;
+  sortOrder?: number;
 }
 
 export interface CreateUpdateChapterDto {

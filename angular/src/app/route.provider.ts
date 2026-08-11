@@ -233,11 +233,20 @@ function configureRoutes() {
       
     },
     {
+      path: '/learning/course-resource',
+      name: '::Menu:CourseResource',
+      iconClass: 'fas fa-folder-open',
+      parentName: '::Menu:CourseManagement',
+      order: 10,
+      layout: eLayoutType.application,
+      
+    },
+    {
       path: '/learning/chapter-resource',
       name: '::Menu:ChapterResource',
       iconClass: 'fas fa-file-lines',
       parentName: '::Menu:CourseManagement',
-      order: 10,
+      order: 11,
       layout: eLayoutType.application,
       
     },
@@ -254,7 +263,7 @@ function configureRoutes() {
       name: '::Menu:LearningProgress',
       iconClass: 'fas fa-chart-line',
       parentName: '::Menu:CourseManagement',
-      order: 11,
+      order: 12,
       layout: eLayoutType.application,
       
     },
@@ -263,7 +272,7 @@ function configureRoutes() {
       name: '::Menu:LearningStatistics',
       iconClass: 'fas fa-chart-bar',
       parentName: '::Menu:CourseManagement',
-      order: 12,
+      order: 13,
       layout: eLayoutType.application,
       
     },

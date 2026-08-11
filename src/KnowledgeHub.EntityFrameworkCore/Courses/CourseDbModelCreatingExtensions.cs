@@ -79,5 +79,17 @@ public static class CourseDbModelCreatingExtensions
             b.HasIndex(x => x.ResourceId);
             b.HasIndex(x => new { x.ChapterId, x.ResourceId }).IsUnique();
         });
+
+        builder.Entity<CourseResource>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "CourseResources", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.DisplayName).HasMaxLength(256);
+
+            b.HasIndex(x => x.CourseId);
+            b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => new { x.CourseId, x.ResourceId }).IsUnique();
+        });
     }
 }

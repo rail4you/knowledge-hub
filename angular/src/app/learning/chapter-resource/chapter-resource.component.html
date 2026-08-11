@@ -1,7 +1,7 @@
 <div class="chapter-resource-container">
   <div class="page-header">
     <h1>{{ '::Menu:ChapterResource' | abpLocalization }}</h1>
-    <p class="page-hint">从资源库（已联盟审核通过）选择资源关联到章节</p>
+    <p class="page-hint">从课程资源池（先在「课程资源」页为课程挑选资源）选择资源关联到章节</p>
   </div>
 
   <!-- Course selector -->
@@ -26,11 +26,18 @@
     <div class="content-layout">
       <!-- Left: Chapter tree (30%) -->
       <nz-card class="tree-panel" nzTitle="章节列表">
+        <div class="tree-filter">
+          <label nz-checkbox [ngModel]="onlyWithResources()" (ngModelChange)="onOnlyWithResourcesChange($event)">
+            只显示有关联资源的章节
+          </label>
+        </div>
         @if (chapters().length === 0) {
           <nz-empty nzNotFoundContent="暂无章节"></nz-empty>
+        } @else if (visibleChapters().length === 0) {
+          <nz-empty nzNotFoundContent="没有有关联资源的章节"></nz-empty>
         } @else {
           <div class="tree-view">
-            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: chapters(), depth: 0 }"></ng-container>
+            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: visibleChapters(), depth: 0 }"></ng-container>
           </div>
         }
       </nz-card>
@@ -71,50 +78,77 @@
             </div>
           }
 
-          <!-- Add from resource library -->
+          <!-- Add from course resource pool -->
           <div class="add-section">
             <div class="add-section-header">
-              <h4>从资源库中添加（已审核通过）</h4>
-              <input
-                nz-input
-                [ngModel]="searchText()"
-                (ngModelChange)="searchText.set($event)"
-                placeholder="搜索资源..."
-                style="width: 200px"
-              />
+              <h4>从课程资源池中添加</h4>
+              <div class="selection-actions">
+                <input
+                  nz-input
+                  [ngModel]="searchText()"
+                  (ngModelChange)="searchText.set($event)"
+                  placeholder="搜索资源..."
+                  style="width: 200px"
+                />
+                <button
+                  nz-button
+                  nzType="primary"
+                  [disabled]="selectedCount() === 0"
+                  (click)="linkSelected()"
+                >
+                  <span nz-icon nzType="plus"></span>
+                  添加选中 ({{ selectedCount() }})
+                </button>
+              </div>
             </div>
             @if (libraryLoading()) {
               <div class="loading-container">
                 <nz-spin nzSimple nzSize="small"></nz-spin>
               </div>
             } @else if (availableResources().length === 0) {
-              <nz-empty nzNotFoundContent="没有可添加的资源（资源库中所有已审核资源都已在当前章节）"></nz-empty>
+              <nz-empty nzNotFoundContent="没有可添加的资源（课程资源池中的资源都已关联到当前章节，或课程尚未关联任何资源）"></nz-empty>
             } @else {
-              <div class="available-resources">
-                @for (resource of availableResources(); track resource.id) {
-                  <div class="resource-item available">
-                    <div class="resource-item-left">
-                      <div class="resource-item-title">
-                        {{ resource.name }}
+              <nz-table [nzData]="availableResources()" [nzFrontPagination]="false" nzSize="small">
+                <thead>
+                  <tr>
+                    <th
+                      [nzShowCheckbox]="true"
+                      [nzChecked]="isAllChecked()"
+                      [nzIndeterminate]="isIndeterminate()"
+                      (nzCheckedChange)="onAllChecked($event)"
+                    ></th>
+                    <th>资源名称</th>
+                    <th>类型</th>
+                    <th>说明</th>
+                    <th class="col-actions">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (resource of availableResources(); track resource.id) {
+                    <tr [class.row-selected]="isSelected(resource.id)">
+                      <td
+                        [nzShowCheckbox]="true"
+                        [nzChecked]="isSelected(resource.id)"
+                        (nzCheckedChange)="onItemChecked(resource.id, $event)"
+                      ></td>
+                      <td>{{ resource.resourceName ?? resource.originalFileName ?? '未命名资源' }}</td>
+                      <td>
                         <nz-tag [nzColor]="getResourceTypeColor(resource.resourceType)">
                           {{ getResourceTypeLabel(resource.resourceType) }}
                         </nz-tag>
-                        @if (resource.fileExtension) {
-                          <span class="ext-badge">.{{ resource.fileExtension }}</span>
-                        }
-                      </div>
-                      @if (resource.description) {
-                        <div class="resource-item-content">{{ resource.description }}</div>
-                      } @else if (resource.categoryName) {
-                        <div class="resource-item-content">分类：{{ resource.categoryName }}</div>
-                      }
-                    </div>
-                    <button nz-button nzType="primary" nzSize="small" (click)="linkResource(resource)">
-                      添加到章节
-                    </button>
-                  </div>
-                }
-              </div>
+                      </td>
+                      <td class="desc-cell">
+                        {{ resource.description || '-' }}
+                      </td>
+                      <td class="col-actions">
+                        <button nz-button nzType="link" nzSize="small" (click)="linkResource(resource)">
+                          添加
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </nz-table>
             }
           </div>
         } @else {
