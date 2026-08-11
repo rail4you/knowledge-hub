@@ -52,7 +52,19 @@
       >
         <span nz-icon nzType="fullscreen"></span>
       </button>
-      <span class="scale-info" (click)="resetZoom()" title="点击恢复 100%">{{ getScalePercent() }}%</span>
+      <button
+        nz-button
+        nzSize="small"
+        nzType="text"
+        nz-dropdown
+        class="toolbar-btn scale-btn"
+        [nzDropdownMenu]="scaleMenu"
+        nzTrigger="click"
+        title="选择缩放比例"
+      >
+        {{ getScalePercent() }}%
+        <span nz-icon nzType="down" class="scale-caret"></span>
+      </button>
       <button
         nz-button
         nzSize="small"
@@ -67,8 +79,22 @@
     </div>
   </div>
 
+  <!-- 缩放比例下拉 -->
+  <nz-dropdown-menu #scaleMenu="nzDropdownMenu">
+    <ul nz-menu class="scale-menu">
+      <li nz-menu-item [class.scale-active]="fitActive()" (click)="applyScalePreset('fit')">适应页面</li>
+      <li nz-menu-divider></li>
+      <li nz-menu-item [class.scale-active]="!fitActive() && scale() === 0.5" (click)="applyScalePreset(0.5)">50%</li>
+      <li nz-menu-item [class.scale-active]="!fitActive() && scale() === 0.75" (click)="applyScalePreset(0.75)">75%</li>
+      <li nz-menu-item [class.scale-active]="!fitActive() && scale() === 1" (click)="applyScalePreset(1)">100%</li>
+      <li nz-menu-item [class.scale-active]="!fitActive() && scale() === 1.25" (click)="applyScalePreset(1.25)">125%</li>
+      <li nz-menu-item [class.scale-active]="!fitActive() && scale() === 1.5" (click)="applyScalePreset(1.5)">150%</li>
+      <li nz-menu-item [class.scale-active]="!fitActive() && scale() === 2" (click)="applyScalePreset(2)">200%</li>
+    </ul>
+  </nz-dropdown-menu>
+
   <!-- Single page stage -->
-  <div #pdfContainer class="pdf-stage" [class.loading]="isLoading()" [class.fit]="fitActive()">
+  <div #pdfContainer class="pdf-stage" [class.loading]="isLoading()" [class.fit]="fitActive()" [class.center-y]="centerVertically()">
     <div
       class="pdf-click-shield"
       (click)="onShieldClick($event)"

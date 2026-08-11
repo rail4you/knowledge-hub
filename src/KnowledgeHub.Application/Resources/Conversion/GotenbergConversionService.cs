@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,14 +19,17 @@ using Volo.Abp.DependencyInjection;
 namespace KnowledgeHub.Resources.Conversion;
 
 /// <summary>
-/// 使用 LibreOffice headless 模式将 Office 文档转为 PDF。
+/// 使用 Gotenberg（HTTP 服务，内部基于 LibreOffice headless）将 Office 文档转为 PDF。
 /// 转换结果缓存到 FileStorage/converted/{resourceId}.pdf，避免重复转换。
 /// </summary>
-public class LibreOfficeConversionService : IOfficeConversionService, ITransientDependency
+public class GotenbergConversionService : IOfficeConversionService, ITransientDependency
 {
+    public const string GotenbergHttpClientName = "Gotenberg";
+
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IFileStorageService _fileStorageService;
     private readonly OfficeConversionOptions _options;
-    private readonly ILogger<LibreOfficeConversionService> _logger;
+    private readonly ILogger<GotenbergConversionService> _logger;
 
     /// <summary>
     /// 并发限流：防止多用户同时转换打爆 CPU。
@@ -38,11 +43,13 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
     /// </summary>
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Lazy<Task<string>>> _inflight = new();
 
-    public LibreOfficeConversionService(
+    public GotenbergConversionService(
+        IHttpClientFactory httpClientFactory,
         IFileStorageService fileStorageService,
         IOptions<OfficeConversionOptions> options,
-        ILogger<LibreOfficeConversionService> logger)
+        ILogger<GotenbergConversionService> logger)
     {
+        _httpClientFactory = httpClientFactory;
         _fileStorageService = fileStorageService;
         _options = options.Value;
         _logger = logger;
@@ -150,7 +157,7 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         await _concurrencyLimiter.WaitAsync(cancellationToken);
         try
         {
-            return await RunSofficeAsync(resourceId, sourcePath, cancellationToken);
+            return await ConvertViaGotenbergAsync(resourceId, sourcePath, cancellationToken);
         }
         finally
         {
@@ -158,20 +165,19 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         }
     }
 
-    private async Task<string> RunSofficeAsync(
+    private async Task<string> ConvertViaGotenbergAsync(
         string resourceId,
         string sourcePath,
         CancellationToken cancellationToken)
     {
         // 准备临时工作目录
-        var workDir = Path.Combine(Path.GetTempPath(), $"lo-{resourceId}-{Guid.NewGuid():N}");
+        var workDir = Path.Combine(Path.GetTempPath(), $"gotenberg-{resourceId}-{Guid.NewGuid():N}");
         Directory.CreateDirectory(workDir);
 
         var sourceExt = Path.GetExtension(sourcePath)?.ToLowerInvariant();
         var workSourcePath = Path.Combine(workDir, $"source{sourceExt}");
 
         var targetPdfPath = GetCachedPdfPath(resourceId);
-        var workTargetPath = Path.Combine(workDir, "source.pdf");
 
         try
         {
@@ -180,102 +186,76 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
                 ? PreparePptxWithAllSlidesVisible(sourcePath, workDir)
                 : sourcePath;
 
-            if (actualSourcePath != sourcePath)
-            {
-                // 预处理后重命名为 source.pptx，确保 soffice 输出 source.pdf
-                File.Copy(actualSourcePath, workSourcePath, overwrite: true);
-            }
-            else
-            {
-                File.Copy(sourcePath, workSourcePath, overwrite: true);
-            }
-
-            var args = $"--headless --norestore --nofirststartwizard --nologo --nolockcheck" +
-                       $" --convert-to pdf --outdir \"{workDir}\" \"{workSourcePath}\"";
-
-            _logger.LogInformation(
-                "[OfficeConversion] 开始转换: {ResourceId}, cmd: {Cmd} {Args}",
-                resourceId, _options.SofficePath, args);
-
-            using var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = _options.SofficePath,
-                    Arguments = args,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WorkingDirectory = workDir,
-                },
-            };
-
-            // 设置环境变量避免 LibreOffice 写锁冲突
-            process.StartInfo.EnvironmentVariables["HOME"] = workDir;
+            File.Copy(actualSourcePath, workSourcePath, overwrite: true);
 
             var sw = Stopwatch.StartNew();
-            if (!process.Start())
-                throw new OfficeConversionException("无法启动 soffice 进程");
 
-            // 异步读取输出，防止 stdout/stderr 缓冲区满导致进程阻塞
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
-
-            // 等待进程退出或超时
-            using var timeoutCts = new CancellationTokenSource(
-                TimeSpan.FromSeconds(_options.ConversionTimeoutSeconds));
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken, timeoutCts.Token);
-
-            try
+            // 通过 Gotenberg 的 LibreOffice 端点转换。
+            // 字段名 "files"，扩展名决定解析格式，必须保留源文件扩展名。
+            var http = _httpClientFactory.CreateClient(GotenbergHttpClientName);
+            using var form = new MultipartFormDataContent();
+            await using (var fs = new FileStream(workSourcePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                await process.WaitForExitAsync(linkedCts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                TryKillProcess(process, workDir);
-                if (timeoutCts.IsCancellationRequested)
+                var fileContent = new StreamContent(fs);
+                fileContent.Headers.ContentType = new MediaTypeHeaderValue(GetMimeType(sourceExt));
+                form.Add(fileContent, "files", Path.GetFileName(workSourcePath));
+
+                _logger.LogInformation(
+                    "[OfficeConversion] 开始转换: {ResourceId}, source: {Source}, gotenberg: {BaseUrl}",
+                    resourceId, workSourcePath, _options.BaseUrl);
+
+                using var timeoutCts = new CancellationTokenSource(
+                    TimeSpan.FromSeconds(_options.ConversionTimeoutSeconds));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken, timeoutCts.Token);
+
+                byte[] pdfBytes;
+                try
+                {
+                    using var response = await http.PostAsync(
+                        "/forms/libreoffice/convert", form, linkedCts.Token);
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var error = await response.Content.ReadAsStringAsync(linkedCts.Token);
+                        _logger.LogError(
+                            "[OfficeConversion] Gotenberg 转换失败: {Status} - {Error}",
+                            (int)response.StatusCode, Truncate(error, 500));
+                        throw new OfficeConversionException(
+                            $"Gotenberg 文档转换失败（{(int)response.StatusCode}）: {Truncate(error, 500)}");
+                    }
+
+                    pdfBytes = await response.Content.ReadAsByteArrayAsync(linkedCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        throw;
                     throw new OfficeConversionException(
                         $"Office 转换超时（{_options.ConversionTimeoutSeconds}s），文件可能过大或包含复杂内容");
-                throw;
+                }
+
+                sw.Stop();
+
+                if (pdfBytes.Length == 0)
+                {
+                    throw new OfficeConversionException("Gotenberg 转换完成但未生成 PDF 内容");
+                }
+
+                // 原子写入缓存 PDF：先写临时文件再 rename，避免半截文件被缓存命中逻辑读到
+                Directory.CreateDirectory(Path.GetDirectoryName(targetPdfPath)!);
+                var tmpPath = targetPdfPath + ".tmp-" + Guid.NewGuid().ToString("N")[..8];
+                await File.WriteAllBytesAsync(tmpPath, pdfBytes, cancellationToken);
+                File.Move(tmpPath, targetPdfPath, overwrite: true);
+                SaveCacheMeta(GetCacheMetaPath(resourceId), sourcePath);
+
+                _logger.LogInformation(
+                    "[OfficeConversion] 转换成功: {ResourceId}, 耗时 {Elapsed}ms, 大小 {Size}",
+                    resourceId, sw.ElapsedMilliseconds, pdfBytes.Length);
             }
-
-            sw.Stop();
-            var stderr = await stderrTask;
-            var stdout = await stdoutTask;
-
-            if (process.ExitCode != 0)
-            {
-                _logger.LogError(
-                    "[OfficeConversion] soffice 退出码非零: {Code}, stderr: {Stderr}",
-                    process.ExitCode, stderr);
-                throw new OfficeConversionException(
-                    $"soffice 转换失败（exit={process.ExitCode}）: {Truncate(stderr, 500)}");
-            }
-
-            if (!File.Exists(workTargetPath))
-            {
-                // 启动器可能先于 worker 退出（输出未生成），此时 soffice.bin 可能仍在后台运行，
-                // 兜底清扫避免遗留孤儿进程。
-                TryKillProcess(process, workDir);
-                _logger.LogError(
-                    "[OfficeConversion] 输出文件不存在: {Path}, stderr: {Stderr}, stdout: {Stdout}",
-                    workTargetPath, stderr, stdout);
-                throw new OfficeConversionException("soffice 转换完成但未生成 PDF 文件");
-            }
-
-            // 移动到缓存目录
-            Directory.CreateDirectory(Path.GetDirectoryName(targetPdfPath)!);
-            File.Copy(workTargetPath, targetPdfPath, overwrite: true);
-            SaveCacheMeta(GetCacheMetaPath(resourceId), sourcePath);
 
             // 拆分成单页 PDF，加速首页加载
             await SplitPdfToPagesAsync(resourceId, targetPdfPath);
-
-            _logger.LogInformation(
-                "[OfficeConversion] 转换成功: {ResourceId}, 耗时 {Elapsed}ms, 大小 {Size}",
-                resourceId, sw.ElapsedMilliseconds, new FileInfo(targetPdfPath).Length);
 
             return targetPdfPath;
         }
@@ -379,7 +359,7 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
 
     /// <summary>
     /// 判断是否为 .pptx（仅 PPTX 是 ZIP 容器，可被本地文件头扫描修复）。
-    /// 旧版 .ppt 为 OLE/CFB 二进制，走 LibreOffice 原生转换，不做 ZIP 修复。
+    /// 旧版 .ppt 为 OLE/CFB 二进制，走 Gotenberg 原生转换，不做 ZIP 修复。
     /// </summary>
     private static bool IsPptxFile(string path) =>
         string.Equals(Path.GetExtension(path), ".pptx", StringComparison.OrdinalIgnoreCase);
@@ -517,7 +497,7 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
                 return i;
             if (buffer[i] == 0x50 && buffer[i + 1] == 0x4B &&
                 buffer[i + 2] == 0x01 && buffer[i + 3] == 0x02)
-                return i; // 也停在中止目录签名前
+                return i; // 也停在中央目录签名前
         }
         return -1;
     }
@@ -864,40 +844,19 @@ public class LibreOfficeConversionService : IOfficeConversionService, ITransient
         public long Length { get; set; }
     }
 
-    private static void TryKillProcess(Process process, string workDir)
+    private static string GetMimeType(string? extension)
     {
-        try
+        return extension?.ToLowerInvariant() switch
         {
-            if (!process.HasExited)
-                process.Kill(entireProcessTree: true);
-        }
-        catch
-        {
-            // ignore
-        }
-
-        // 兜底清扫：`soffice` 脚本经 oosplash 启动 soffice.bin，超时 kill 时
-        // oosplash 先被杀死，soffice.bin 会被 reparent 到 PID 1 变成孤儿继续跑 100% CPU。
-        // 用 pkill 按工作目录匹配命令行，把仍存活的 soffice 进程一并杀掉。
-        try
-        {
-            using var pkill = new Process
-            {
-                StartInfo = new ProcessStartInfo("pkill", $"-9 -f \"{workDir}\"")
-                {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                },
-            };
-            if (pkill.Start())
-                pkill.WaitForExit(5000);
-        }
-        catch
-        {
-            // ignore
-        }
+            ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            ".ppt" => "application/vnd.ms-powerpoint",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".doc" => "application/msword",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".xls" => "application/vnd.ms-excel",
+            ".pdf" => "application/pdf",
+            _ => "application/octet-stream"
+        };
     }
 
     private static string Truncate(string s, int max) =>

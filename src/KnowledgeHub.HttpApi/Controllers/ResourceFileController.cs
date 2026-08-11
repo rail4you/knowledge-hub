@@ -45,7 +45,7 @@ public class SlideShapeDto
     public string? Image { get; set; }
 }
 
-/// <summary>整张幻灯片：尺寸 + 形状列表，前端按坐标渲染，无需 soffice。</summary>
+/// <summary>整张幻灯片：尺寸 + 形状列表，前端按坐标渲染，无需外部转换。</summary>
 public class SlideDataDto
 {
     public int SlideNumber { get; set; }
@@ -230,7 +230,7 @@ public class ResourceFileController : AbpControllerBase
 
     /// <summary>
     /// Office 文档（PPTX/DOCX/XLSX）的 PDF 预览端点。
-    /// 后端通过 LibreOffice headless 转换为 PDF，缓存到 converted/{id}.pdf。
+    /// 后端通过 Gotenberg（内部基于 LibreOffice headless）转换为 PDF，缓存到 converted/{id}.pdf。
     /// 前端用 pdfjs-dist 渲染返回的 PDF。
     /// 首次转换可能耗时 5-60s（80MB PPTX 实测 ~9s），后续缓存命中毫秒级返回。
     /// </summary>
@@ -248,8 +248,8 @@ public class ResourceFileController : AbpControllerBase
 
         try
         {
-            // 截断/损坏的 PPTX 在 LibreOfficeConversionService 内部先重建 ZIP 中央目录修复，
-            // 再走 soffice 转 PDF（保持原始版式）。无法修复时抛 OfficeConversionException。
+            // 截断/损坏的 PPTX 在 GotenbergConversionService 内部先重建 ZIP 中央目录修复，
+            // 再交给 Gotenberg 转 PDF（保持原始版式）。无法修复时抛 OfficeConversionException。
             var pdfPath = await OfficeConversionService.ConvertToPdfAsync(
                 resourceId.ToString(), fullPath);
 
@@ -295,24 +295,54 @@ public class ResourceFileController : AbpControllerBase
     /// <summary>
     /// 查询 PDF 预览的就绪状态与总页数。
     /// 拆分完成时由 SplitPdfToPages 写入 {resourceId}/.count 边车文件。
-    /// 前端轮询此端点直到 ready=true，避免对每页做 HEAD 探测。
+    /// 尚未转换时触发一次后台转换（内部有缓存 + 同资源并发去重），前端轮询直到 ready=true。
     /// </summary>
     [HttpGet("{resourceId}/preview-pdf-info")]
     [AllowAnonymous]
-    public virtual IActionResult PreviewPdfInfo(Guid resourceId)
+    public virtual async Task<IActionResult> PreviewPdfInfo(Guid resourceId)
     {
         var pagesDir = Path.GetDirectoryName(
             OfficeConversionService.GetPagePdfPath(resourceId.ToString(), 1))!;
         var countFile = Path.Combine(pagesDir, ".count");
 
-        if (!System.IO.File.Exists(countFile))
-            return Ok(new { ready = false, count = 0 });
+        if (System.IO.File.Exists(countFile))
+        {
+            var raw = System.IO.File.ReadAllText(countFile).Trim();
+            if (int.TryParse(raw, out var count) && count > 0)
+                return Ok(new { ready = true, count });
+        }
 
-        var raw = System.IO.File.ReadAllText(countFile).Trim();
-        if (!int.TryParse(raw, out var count) || count <= 0)
-            return Ok(new { ready = false, count = 0 });
+        // 尚未转换/拆分：触发一次转换，前端轮询本端点等待就绪。
+        // ConvertToPdfAsync 内部先查缓存、再按 resourceId 去重，重复触发不会重复转换。
+        try
+        {
+            var fullPath = await GetResourceFullPathAsync(resourceId);
+            if (fullPath == null)
+                return NotFound(new { message = "资源文件不存在" });
 
-        return Ok(new { ready = true, count });
+            var ext = Path.GetExtension(fullPath)?.ToLowerInvariant();
+            if (ext != ".pptx" && ext != ".docx" && ext != ".xlsx" && ext != ".ppt" && ext != ".doc" && ext != ".xls")
+                return BadRequest(new { message = "仅支持 Office 文档（PPTX/DOCX/XLSX）" });
+
+            var rid = resourceId.ToString();
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await OfficeConversionService.ConvertToPdfAsync(rid, fullPath);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "[PreviewPdfInfo] 后台转换失败: {ResourceId}", rid);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "[PreviewPdfInfo] 触发转换失败: {ResourceId}", resourceId);
+        }
+
+        return Ok(new { ready = false, count = 0 });
     }
 
     /// <summary>
@@ -502,7 +532,7 @@ public class ResourceFileController : AbpControllerBase
 
     /// <summary>
     /// 从 slide XML 中提取带位置的形状（文本框 / 图片），供前端按坐标还原版式。
-    /// 不依赖 LibreOffice/soffice。
+    /// 直接解析 PPTX 内部 XML，不依赖外部转换服务。
     /// </summary>
     private static SlideDataDto ParseSlide(
         XDocument doc,

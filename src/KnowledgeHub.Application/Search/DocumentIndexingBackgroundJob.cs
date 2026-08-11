@@ -117,9 +117,14 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
 
         if (pages.Count == 0)
         {
+            // 提取不到任何页面通常是解析失败（文件损坏/格式不支持/解析服务不可达）。
+            // 标为 Failed 而非 Completed，否则管理员在索引任务页会误以为已成功，
+            // 但资源实际处于"未索引"状态。
             _logger.LogWarning("No pages extracted for resource {ResourceId} ({FileExtension}). The format may not be supported by the parser.",
                 args.ResourceId, resource.FileExtension);
-            await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Completed, progress: 100, totalPages: 0);
+            await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Failed,
+                progress: 100,
+                errorMessage: "文档解析未提取到任何页面（文件损坏、格式不支持或解析服务不可达），请检查后重试");
             return;
         }
 

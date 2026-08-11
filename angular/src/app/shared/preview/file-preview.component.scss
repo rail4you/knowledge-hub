@@ -25,6 +25,11 @@
   min-height: 400px;
   max-height: calc(90vh - 200px);
   overflow: auto;
+
+  // PDF 类预览：内部阅读器自带滚动，外层不重复滚动，避免双重滚动条和底部空白
+  &.pdf-preview {
+    overflow: hidden;
+  }
 }
 
 // P0-1 轻量版：文件过大 / 类型不支持时的"降级"页样式。
@@ -113,10 +118,10 @@
 .viewer-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 10px;
+  padding: 8px 14px;
   background: #fff;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #ececec;
   flex-shrink: 0;
   flex-wrap: nowrap;
   user-select: none;
@@ -126,6 +131,16 @@
     display: flex;
     align-items: center;
     gap: 2px;
+  }
+
+  .toolbar-nav {
+    &::after {
+      content: '';
+      width: 1px;
+      height: 18px;
+      background: #e8e8e8;
+      margin-left: 10px;
+    }
   }
 
   .toolbar-spacer {
@@ -162,6 +177,27 @@
     }
   }
 
+  .scale-btn {
+    width: auto;
+    min-width: 64px;
+    padding: 0 8px;
+    margin: 0 2px;
+    font-size: 13px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    border-radius: 6px;
+
+    .scale-caret {
+      font-size: 10px;
+      margin-left: 4px;
+      color: #bfbfbf;
+    }
+
+    &:hover:not([disabled]) .scale-caret {
+      color: #1890ff;
+    }
+  }
+
   .page-info {
     font-size: 13px;
     font-weight: 500;
@@ -176,22 +212,14 @@
       font-weight: 400;
     }
   }
+}
 
-  .scale-info {
-    font-size: 12px;
-    color: #595959;
-    min-width: 44px;
-    text-align: center;
-    cursor: pointer;
-    padding: 3px 6px;
-    border-radius: 6px;
-    transition: background 0.15s;
-    font-variant-numeric: tabular-nums;
+.scale-menu {
+  min-width: 140px;
 
-    &:hover {
-      background: #f5f5f5;
-      color: #1890ff;
-    }
+  .scale-active {
+    font-weight: 600;
+    color: #1890ff;
   }
 }
 
@@ -214,21 +242,30 @@
 .pdf-viewer {
   display: flex;
   flex-direction: column;
-  min-height: 400px;
-  max-height: calc(90vh - 200px);
+  height: calc(90vh - 200px);
+  min-height: 420px;
   position: relative;
+  overflow: hidden;
 
   .pdf-stage {
     flex: 1;
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 24px;
-    background: #525659;
+    padding: 12px 8px;
+    background: #505359;
     position: relative;
     min-height: 300px;
     overflow: auto;
     z-index: 0;
+
+    // 深色滚动条，与阅读器风格一致
+    scrollbar-width: thin;
+    scrollbar-color: #6c6f75 transparent;
+    &::-webkit-scrollbar { width: 10px; height: 10px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: #6c6f75; border-radius: 5px; }
+    &::-webkit-scrollbar-thumb:hover { background: #83868c; }
 
     &.loading {
       min-height: 500px;
@@ -239,13 +276,18 @@
       align-items: center;
     }
 
+    // 默认"占满宽度"模式下，页面高度放得下时垂直居中
+    &.center-y {
+      align-items: center;
+    }
+
     .page-canvas-host {
       display: inline-block;
     }
 
     .pdf-page-wrapper {
       background: #fff;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 1px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28), 0 12px 40px rgba(0, 0, 0, 0.32);
       border-radius: 4px;
       flex-shrink: 0;
       user-select: none;
@@ -257,6 +299,7 @@
         pointer-events: none;
         -webkit-user-select: none;
         user-select: none;
+        border-radius: 4px;
       }
     }
 
@@ -271,7 +314,7 @@
   .pdf-loading-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(82, 86, 89, 0.85);
+    background: rgba(80, 83, 89, 0.88);
     display: flex;
     align-items: center;
     justify-content: center;

@@ -1,0 +1,35 @@
+# ============================================================
+# Dockerfile.gotenberg - Gotenberg 自定义镜像（中文 PDF 渲染）
+# ============================================================
+# 官方 gotenberg/gotenberg:8 镜像默认不含 CJK 字体，中文 PPTX/DOCX 转
+# PDF 会渲染成方框。此镜像额外安装常用中文字体。
+#
+# 构建（开发）:
+#   docker build -f etc/docker/Dockerfile.gotenberg -t knowledgehub-gotenberg:dev etc/docker
+#
+# 构建并推送（生产，需登录阿里云仓库）:
+#   docker build --platform linux/amd64 \
+#     -f etc/docker/Dockerfile.gotenberg \
+#     -t registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub-gotenberg:latest \
+#     etc/docker
+#   docker push registry.cn-zhangjiakou.aliyuncs.com/myelixir/knowledgehub-gotenberg:latest
+#
+# 也可直接使用官方镜像（无中文字体）:
+#   gotenberg/gotenberg:8
+# ============================================================
+
+FROM gotenberg/gotenberg:8
+
+USER root
+
+# fonts-noto-cjk: 完整 CJK 字体（≈ 200MB，覆盖几乎所有中文/日文/韩文）
+# fonts-wqy-microhei + fonts-wqy-zenhei: 文泉驿（轻量补充，黑体/正黑）
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        fonts-noto-cjk \
+        fonts-wqy-zenhei \
+        fonts-wqy-microhei && \
+    fc-cache -f -v > /dev/null 2>&1 && \
+    rm -rf /var/lib/apt/lists/*
+
+USER gotenberg

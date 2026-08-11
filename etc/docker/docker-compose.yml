@@ -88,6 +88,8 @@ services:
       - Liteparse__Host=http://liteparse:5707
       - Liteparse__RequestTimeoutSeconds=${LITEPARSE_TIMEOUT}
       - Liteparse__Dpi=${LITEPARSE_DPI}
+      # Gotenberg 文档转 PDF（预览转换，仅内部网络）
+      - OfficeConversion__BaseUrl=http://gotenberg:3000
       # Qwen API
       - Qwen__ApiKey=${QWEN_API_KEY}
       - Qwen__BaseUrl=${QWEN_BASE_URL}
@@ -154,8 +156,9 @@ services:
     container_name: knowledgehub-liteparse
     hostname: liteparse
     platform: linux/amd64
-    expose:
-      - "5707"
+    ports:
+      # 仅绑定宿主机回环地址：供本机 dev API（LiteParseOptions 默认 http://localhost:15000）访问
+      - "127.0.0.1:15000:5707"
     healthcheck:
       # 用 python3 探测 5707 端口连通性（上游镜像无 /health 端点）
       test: ["CMD-SHELL", "python3 -c \"import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 5707)); s.close()\" || exit 1"]
@@ -163,6 +166,28 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    restart: unless-stopped
+    networks:
+      - abp-network
+
+  # ----------------------------------------------------------
+  # Gotenberg — Office 文档转 PDF（预览转换服务）
+  # 仅内部网络可达（3000），API 通过主机名 `gotenberg` 访问
+  # 镜像路径：${GOTENBERG_IMAGE}，默认 ${REGISTRY}/knowledgehub-gotenberg:${IMAGE_TAG}
+  #   （自定义镜像含中文字体，构建见 etc/docker/Dockerfile.gotenberg；
+  #     可覆盖为官方 gotenberg/gotenberg:8，但中文会渲染成方框）
+  # ----------------------------------------------------------
+  knowledgehub-gotenberg:
+    image: ${GOTENBERG_IMAGE}
+    container_name: knowledgehub-gotenberg
+    hostname: gotenberg
+    platform: linux/amd64
+    environment:
+      # LibreOffice 处理 N 个文件后重启进程，避免内存泄漏累积
+      - LIBREOFFICE_RESTART_AFTER=50
+    ports:
+      # 仅绑定宿主机回环地址：供 deploy.sh 健康检查探测 /health，不对外暴露
+      - "127.0.0.1:3000:3000"
     restart: unless-stopped
     networks:
       - abp-network

@@ -235,8 +235,8 @@ export class FilePreviewComponent {
     const type = this.fileType;
     // PDF/PPT: previewUrl 模式（均通过后端 PDF 转换）
     if (type === 'pdf' || type === 'ppt') return !!this.fileUrl();
-    // PPTX: 直接使用服务端幻灯片片段提取（按坐标还原版式，不跑 soffice）
-    if (type === 'pptx') return this.slideViewerMode();
+    // PPTX: 走 Gotenberg PDF 逐页预览（resourceId 模式），转换失败降级坐标提取
+    if (type === 'pptx') return true;
     // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
     if (type === 'video' || type === 'audio') return !!this.fileUrl();
     // Other: ArrayBuffer 模式
@@ -303,11 +303,11 @@ export class FilePreviewComponent {
       return;
     }
 
-    // PPTX: 直接使用服务端幻灯片片段提取（slides/count + slides/{n} + media），
-    // 按坐标还原版式，不依赖 soffice 进程。.ppt（旧版二进制）无法做片段提取，
-    // 仍走 LibreOffice 转 PDF。
+    // PPTX: 走 Gotenberg PDF 预览（preview-pdf 逐页模式）。
+    // 首次打开时 pdf-viewer 轮询 /preview-pdf-info 触发后端转换并拆分单页，
+    // 首页秒出、按需加载后续页。转换失败时降级到坐标提取（onPdfPreviewFailed）。
+    // .ppt（旧版二进制）无法做片段提取，同样走 Gotenberg 转 PDF。
     if (type === 'pptx') {
-      this.slideViewerMode.set(true);
       this.isLoading.set(false);
       return;
     }

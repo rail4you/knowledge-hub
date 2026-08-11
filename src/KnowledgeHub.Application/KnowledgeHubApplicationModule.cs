@@ -41,6 +41,6 @@ public class KnowledgeHubApplicationModule : AbpModule
         context.Services.AddSingleton<ILiteParseExtractionService, LiteParseDocumentExtractionService>();
         context.Services.AddSingleton<Practicums.PracticumChatConnectionManager>();
         context.Services.AddTransient<TeachingAgents.TeachingAgentContextBuilder>();
-        context.Services.AddTransient<IOfficeConversionService, LibreOfficeConversionService>();
+        context.Services.AddTransient<IOfficeConversionService, GotenbergConversionService>();
     }
 }

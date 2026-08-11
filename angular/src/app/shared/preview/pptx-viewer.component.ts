@@ -92,6 +92,16 @@ export class PptxViewerComponent implements OnDestroy, AfterViewInit {
         void this.loadFromServer(id);
       }
     });
+
+    // 当前页变化（翻页/跳转）时，确保当前页及其邻近页已加载。
+    // 修复：原实现只在打开时预加载前几页，翻到更后面的幻灯片永远不触发加载。
+    effect(() => {
+      const idx = this.currentIndex();
+      const total = this.slideCount();
+      if (idx < 0 || total === 0) return;
+      const token = this.renderToken;
+      this.preloadNearbySlides(idx, token);
+    });
   }
 
   ngAfterViewInit() {
@@ -210,8 +220,7 @@ export class PptxViewerComponent implements OnDestroy, AfterViewInit {
       // Step 2: Load slide 1 immediately
       await this.loadSlide(resourceId, 1, token);
 
-      // Step 3: Preload nearby slides in background
-      this.preloadNearbySlides(0);
+      // Step 3: 邻近页由 currentIndex effect 自动加载（含翻页后按需加载）
     } catch (err: unknown) {
       if (token === this.renderToken) {
         this.error.set(err instanceof Error ? err.message : '加载失败');
@@ -257,19 +266,19 @@ export class PptxViewerComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  private preloadNearbySlides(currentIdx: number) {
+  private preloadNearbySlides(currentIdx: number, token: number) {
     const total = this.slideCount();
     const toLoad: number[] = [];
 
-    for (let i = 1; i <= 3; i++) {
-      const next = currentIdx + i;
-      if (next < total) toLoad.push(next + 1); // slide numbers are 1-based
+    // 当前页优先（i=0 起），再加载后 3 页
+    for (let i = 0; i <= 3; i++) {
+      const idx = currentIdx + i;
+      if (idx >= 0 && idx < total) toLoad.push(idx + 1); // slide numbers are 1-based
     }
     const prev = currentIdx - 1;
     if (prev >= 0) toLoad.push(prev + 1);
 
     const rid = this.resourceId();
-    const token = this.renderToken;
     for (const sn of toLoad) {
       void this.loadSlide(rid, sn, token);
     }

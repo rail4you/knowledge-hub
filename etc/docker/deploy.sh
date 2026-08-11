@@ -54,12 +54,13 @@ load_env() {
         err "缺少必要配置: PUBLIC_URL"
     fi
 
-    # 给 LiteParse 相关变量设默认值（compose 文件不再写 shell 默认值语法，
+    # 给 LiteParse / Gotenberg 相关变量设默认值（compose 文件不再写 shell 默认值语法，
     # 因为远端的 docker-compose v1 不支持 ${VAR:-default} 语法）
     : "${LITEPARSE_IMAGE:=${REGISTRY:-registry.cn-zhangjiakou.aliyuncs.com/myelixir}/knowledgehub-liteparse:${IMAGE_TAG:-latest}}"
     : "${LITEPARSE_TIMEOUT:=300}"
     : "${LITEPARSE_DPI:=300}"
-    export LITEPARSE_IMAGE LITEPARSE_TIMEOUT LITEPARSE_DPI
+    : "${GOTENBERG_IMAGE:=${REGISTRY:-registry.cn-zhangjiakou.aliyuncs.com/myelixir}/knowledgehub-gotenberg:${IMAGE_TAG:-latest}}"
+    export LITEPARSE_IMAGE LITEPARSE_TIMEOUT LITEPARSE_DPI GOTENBERG_IMAGE
 }
 
 # ============================================================
@@ -191,6 +192,18 @@ cmd_status() {
         none|absent|"") echo "LiteParse: 跳过（容器未运行或无 healthcheck 配置）" ;;
         *)              echo "LiteParse: 未知状态 ($liteparse_state)" ;;
     esac
+
+    # Gotenberg 健康检查：Gotenberg 官方镜像无 curl/wget/python，容器内不加
+    # healthcheck；这里用宿主机 curl 直连容器暴露端口探测 /health
+    if docker ps --format '{{.Names}}' | grep -q '^knowledgehub-gotenberg$'; then
+        if curl -sf "http://127.0.0.1:3000/health" > /dev/null 2>&1; then
+            echo "Gotenberg: 正常"
+        else
+            echo "Gotenberg: 运行中但 /health 未就绪"
+        fi
+    else
+        echo "Gotenberg: 未运行"
+    fi
 }
 
 cmd_pull() {
@@ -219,7 +232,7 @@ show_help() {
     echo "命令:"
     echo "  up              启动所有服务"
     echo "  down            停止所有服务"
-    echo "  restart [svc]   重启服务（可选: knowledgehub-api, knowledgehub-angular, knowledgehub-liteparse, meilisearch, postgres, redis 等）"
+    echo "  restart [svc]   重启服务（可选: knowledgehub-api, knowledgehub-angular, knowledgehub-liteparse, knowledgehub-gotenberg, meilisearch, postgres, redis 等）"
     echo "  migrate         执行数据库迁移"
     echo "  pull            拉取最新镜像"
     echo "  logs [svc]      查看日志（可选服务名）"

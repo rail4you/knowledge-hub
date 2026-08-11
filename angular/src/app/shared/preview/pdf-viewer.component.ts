@@ -1,27 +1,16 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  input,
-  output,
-  viewChild,
-  ElementRef,
-  signal,
-  ChangeDetectionStrategy,
-  AfterViewInit,
-  NgZone,
-  inject,
-} from '@angular/core';
+import { Component, OnInit, OnDestroy, input, output, viewChild, ElementRef, signal, ChangeDetectionStrategy, AfterViewInit, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 
 @Component({
   selector: 'app-pdf-viewer',
   standalone: true,
-  imports: [CommonModule, NzButtonModule, NzIconModule, NzSpinModule],
+  imports: [CommonModule, NzButtonModule, NzIconModule, NzSpinModule, NzDropDownModule],
   templateUrl: './pdf-viewer.component.html',
+  styleUrls: ['./pdf-viewer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -45,6 +34,8 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   renderedPages = signal<Set<number>>(new Set());
   /** 当前是否处于"适应页面"缩放模式（整页在容器内完整可见） */
   fitActive = signal(false);
+  /** 默认"占满宽度"模式下，页面高度放得下时垂直居中 */
+  centerVertically = signal(false);
 
   private readonly containerRef = viewChild<ElementRef<HTMLDivElement>>('pdfContainer');
   private readonly pagesHostRef = viewChild<ElementRef<HTMLDivElement>>('pagesHost');
@@ -198,12 +189,8 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.loaded = true;
 
-      // 首次加载自动"适应页面"：整页在容器内完整可见
-      const fitScale = await this.computeFitScale(1);
-      if (fitScale != null && !this.destroyed) {
-        this.scale.set(fitScale);
-        this.fitActive.set(true);
-      }
+      // 默认占满舞台宽度（超高纵向滚动 / 放得下垂直居中），消除大面积留白
+      await this.applyDefaultFit(1);
 
       // 优先渲染第 1 页，完成后立即展示
       await this.renderPageWithPriority(1);
@@ -260,6 +247,9 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.destroyed) return;
 
       this.loaded = true;
+
+      // 默认占满舞台宽度
+      await this.applyDefaultFit(1);
 
       await this.renderPageWithPriority(1);
       this.showPage(1);
@@ -338,7 +328,11 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.loaded = true;
 
-      // 加载并渲染第 1 页，完成后立即显示
+      // 先计算默认"占满舞台宽度"比例，再一次性渲染第 1 页。
+      // 不能先渲染再改比例：renderPerPagePdf 有 isPageRendered 守卫，二次渲染会被拦下，
+      // 导致页面一直停留在 scale=1，四周大面积留白。
+      await this.applyDefaultFit(1);
+
       const page1Url = `/api/resource-file/${rid}/preview-pdf-page/1`;
       await this.renderPerPagePdf(1, page1Url);
       this.showPage(1);
@@ -367,6 +361,10 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.renderQueue.length === 0) return;
 
     const pageNum = this.renderQueue.shift()!;
+    if (this.isPageRendered(pageNum)) {
+      setTimeout(() => this.preloadPerPageInBackground(rid), 100);
+      return;
+    }
     const url = `/api/resource-file/${rid}/preview-pdf-page/${pageNum}`;
     this.renderPerPagePdf(pageNum, url).finally(() => {
       if (!this.destroyed) {
@@ -375,10 +373,11 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  /** 渲染单页 PDF（每页是独立的 ~200KB PDF 文件） */
+  /** 渲染单页 PDF（每页是独立的 ~200KB PDF 文件）。
+   *  注意：不在这里拦截"已渲染"状态，缩放/适应页面需要按新比例重渲当前页；
+   *  是否跳过由调用方（预加载 / goToPage）判断。 */
   private async renderPerPagePdf(pageNum: number, url: string) {
     if (this.destroyed) return;
-    if (this.isPageRendered(pageNum)) return;
 
     try {
       const pdfjsLib = await import('pdfjs-dist');
@@ -513,7 +512,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async reRenderAll() {
-    if (!this.pdfDoc || this.destroyed) return;
+    if (this.destroyed) return;
 
     this.isLoading.set(true);
     this.renderedCount.set(0);
@@ -523,35 +522,64 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     const current = this.currentPage();
 
     // 保持当前页优先渲染并展示，其余页后台重渲
-    await this.renderPageWithPriority(current);
+    await this.renderPageAtCurrentScale(current);
     this.showPage(current);
     this.currentPage.set(current);
     this.isLoading.set(false);
 
     if (total > 1) {
       this.renderQueue = Array.from({ length: total }, (_, i) => i + 1).filter((p) => p !== current);
-      this.backgroundRenderAll();
+      if (this.pageResourceId) {
+        this.preloadPerPageInBackground(this.pageResourceId);
+      } else {
+        this.backgroundRenderAll();
+      }
+    }
+  }
+
+  /** 按当前缩放渲染指定页（兼容整份 PDF 与逐页 PDF 两种模式） */
+  private async renderPageAtCurrentScale(pageNum: number) {
+    if (this.pageResourceId) {
+      const url = `/api/resource-file/${this.pageResourceId}/preview-pdf-page/${pageNum}`;
+      await this.renderPerPagePdf(pageNum, url);
+    } else {
+      await this.renderPageWithPriority(pageNum);
     }
   }
 
   zoomIn() {
     if (this.scale() >= 3) return;
     this.fitActive.set(false);
+    this.centerVertically.set(false);
     this.scale.update((v) => Math.min(3, v + 0.25));
-    this.reRenderAll();
+    void this.reRenderAll();
   }
 
   zoomOut() {
     if (this.scale() <= 0.25) return;
     this.fitActive.set(false);
+    this.centerVertically.set(false);
     this.scale.update((v) => Math.max(0.25, v - 0.25));
-    this.reRenderAll();
+    void this.reRenderAll();
   }
 
   resetZoom() {
     this.fitActive.set(false);
+    this.centerVertically.set(false);
     this.scale.set(1);
-    this.reRenderAll();
+    void this.reRenderAll();
+  }
+
+  /** 缩放预设（下拉菜单）：'fit' = 适应页面，数字 = 固定比例 */
+  applyScalePreset(v: number | 'fit') {
+    if (v === 'fit') {
+      void this.fitToPage();
+    } else {
+      this.fitActive.set(false);
+      this.centerVertically.set(false);
+      this.scale.set(v);
+      void this.reRenderAll();
+    }
   }
 
   /**
@@ -566,31 +594,31 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.scale.set(s);
     this.fitActive.set(true);
+    this.centerVertically.set(true);
     this.currentPage.set(target);
 
+    // 清空已渲染标记：其余页翻到时会按新比例重渲
+    this.renderedPages.set(new Set());
+    this.renderedCount.set(0);
+
     // 以新缩放渲染当前页（其余页留待后台/翻页时重渲）
-    await this.renderPageWithPriority(target);
+    await this.renderPageAtCurrentScale(target);
     this.showPage(target);
   }
 
-  /** 计算让第 pageNum 页在容器内完整可见的缩放比例（同时约束宽与高） */
-  private async computeFitScale(pageNum: number): Promise<number | null> {
-    const container = this.containerRef()?.nativeElement;
-    if (!container || this.destroyed) return null;
-
-    let width = 0;
-    let height = 0;
-
+  /** 取第 pageNum 页的原始尺寸（pt），兼容整份 PDF 与逐页 PDF 两种模式 */
+  private async getPageDimensions(pageNum: number): Promise<{ width: number; height: number } | null> {
     if (this.pdfDoc) {
       try {
         const page = await this.pdfDoc.getPage(pageNum);
         const vp = page.getViewport({ scale: 1 });
-        width = vp.width;
-        height = vp.height;
+        return { width: vp.width, height: vp.height };
       } catch {
         return null;
       }
-    } else if (this.pageResourceId) {
+    }
+
+    if (this.pageResourceId) {
       try {
         const pdfjsLib = await import('pdfjs-dist');
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdfjs/pdf.worker.min.mjs';
@@ -599,25 +627,67 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
         }).promise;
         const page = await doc.getPage(1);
         const vp = page.getViewport({ scale: 1 });
-        width = vp.width;
-        height = vp.height;
         doc.destroy();
+        return { width: vp.width, height: vp.height };
       } catch {
         return null;
       }
-    } else {
-      return null;
     }
 
-    if (width <= 0 || height <= 0) return null;
+    return null;
+  }
 
-    // 上下留白各 24px，左右留白各 24px
-    const availH = container.clientHeight - 48;
-    const availW = container.clientWidth - 48;
+  /** 计算让第 pageNum 页在容器内完整可见的缩放比例（同时约束宽与高） */
+  private async computeFitScale(pageNum: number): Promise<number | null> {
+    const container = this.containerRef()?.nativeElement;
+    if (!container || this.destroyed) return null;
+
+    const dims = await this.getPageDimensions(pageNum);
+    if (dims == null) return null;
+
+    // 舞台内边距：水平 8px、垂直 12px
+    const availH = container.clientHeight - 24;
+    const availW = container.clientWidth - 16;
     if (availH <= 0 || availW <= 0) return null;
 
-    const s = Math.min(availH / height, availW / width);
+    const s = Math.min(availH / dims.height, availW / dims.width);
     return Math.max(0.25, Math.min(3, s));
+  }
+
+  /** 计算占满舞台宽度的缩放比例（超高时纵向滚动） */
+  private async computeFitWidthScale(pageNum: number): Promise<number | null> {
+    const container = this.containerRef()?.nativeElement;
+    if (!container || this.destroyed) return null;
+
+    const dims = await this.getPageDimensions(pageNum);
+    if (dims == null || dims.width <= 0) return null;
+
+    const availW = container.clientWidth - 16; // 水平留白 8px × 2
+    if (availW <= 0) return null;
+
+    return Math.max(0.25, Math.min(3, availW / dims.width));
+  }
+
+  /**
+   * 默认适配：占满舞台宽度（左右仅小边距，无大片空白）。
+   * 页面高度放得下时垂直居中，放不下则顶部对齐 + 纵向滚动。
+   */
+  private async applyDefaultFit(pageNum: number): Promise<boolean> {
+    const container = this.containerRef()?.nativeElement;
+    if (!container || this.destroyed) return false;
+
+    const s = await this.computeFitWidthScale(pageNum);
+    if (s == null) return false;
+
+    const dims = await this.getPageDimensions(pageNum);
+
+    this.scale.set(s);
+    this.fitActive.set(false);
+
+    const fittedHeight = dims ? dims.height * s : Infinity;
+    this.centerVertically.set(fittedHeight <= container.clientHeight - 24);
+
+    return true;
   }
 
   getScalePercent(): number {

@@ -1,0 +1,212 @@
+// ============================================
+// PDF Viewer — 工具栏 + 阅读器舞台
+// （样式必须在本组件作用域内，file-preview 的样式因
+//   ViewEncapsulation 隔离无法作用到本组件内部元素）
+// ============================================
+
+.viewer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #fff;
+  border-bottom: 1px solid #ececec;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+
+  .toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .toolbar-nav {
+    &::after {
+      content: '';
+      width: 1px;
+      height: 18px;
+      background: #e8e8e8;
+      margin-left: 10px;
+    }
+  }
+
+  .toolbar-spacer {
+    flex: 1;
+  }
+
+  // 统一圆形图标按钮
+  .toolbar-btn {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: #595959;
+    font-size: 14px;
+    transition: all 0.15s;
+
+    &:hover:not([disabled]) {
+      color: #1890ff;
+      background: #f0f7ff;
+    }
+
+    &[disabled] {
+      color: #d9d9d9;
+    }
+
+    &.active {
+      color: #1890ff;
+      background: #e6f7ff;
+      border: 1px solid #91caff;
+    }
+  }
+
+  .scale-btn {
+    width: auto;
+    min-width: 64px;
+    padding: 0 8px;
+    margin: 0 2px;
+    font-size: 13px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    border-radius: 6px;
+
+    .scale-caret {
+      font-size: 10px;
+      margin-left: 4px;
+      color: #bfbfbf;
+    }
+
+    &:hover:not([disabled]) .scale-caret {
+      color: #1890ff;
+    }
+  }
+
+  .page-info {
+    font-size: 13px;
+    font-weight: 500;
+    color: #262626;
+    min-width: 52px;
+    text-align: center;
+    line-height: 30px;
+    font-variant-numeric: tabular-nums;
+
+    .page-total {
+      color: #bfbfbf;
+      font-weight: 400;
+    }
+  }
+}
+
+.scale-menu {
+  min-width: 140px;
+
+  .scale-active {
+    font-weight: 600;
+    color: #1890ff;
+  }
+}
+
+.viewer-error {
+  padding: 20px;
+  text-align: center;
+  color: #ff4d4f;
+}
+
+.pdf-viewer {
+  display: flex;
+  flex-direction: column;
+  height: calc(90vh - 200px);
+  min-height: 420px;
+  position: relative;
+  overflow: hidden;
+
+  .pdf-stage {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 12px 8px;
+    background: #505359;
+    position: relative;
+    min-height: 300px;
+    overflow: auto;
+    z-index: 0;
+
+    // 深色滚动条，与阅读器风格一致
+    scrollbar-width: thin;
+    scrollbar-color: #6c6f75 transparent;
+    &::-webkit-scrollbar { width: 10px; height: 10px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: #6c6f75; border-radius: 5px; }
+    &::-webkit-scrollbar-thumb:hover { background: #83868c; }
+
+    &.loading {
+      min-height: 500px;
+    }
+
+    // 适应页面模式下垂直居中
+    &.fit {
+      align-items: center;
+    }
+
+    // 默认"占满宽度"模式下，页面高度放得下时垂直居中
+    &.center-y {
+      align-items: center;
+    }
+
+    .page-canvas-host {
+      display: inline-block;
+    }
+
+    .pdf-page-wrapper {
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28), 0 12px 40px rgba(0, 0, 0, 0.32);
+      border-radius: 4px;
+      flex-shrink: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      pointer-events: none;
+
+      .pdf-page-canvas {
+        display: block;
+        pointer-events: none;
+        -webkit-user-select: none;
+        user-select: none;
+        border-radius: 4px;
+      }
+    }
+
+    .pdf-click-shield {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: transparent;
+    }
+  }
+
+  .pdf-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(80, 83, 89, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+
+    .pdf-loading-inner {
+      text-align: center;
+
+      .pdf-loading-text {
+        margin-top: 12px;
+        font-size: 13px;
+        color: #e8e8e8;
+      }
+    }
+  }
+}

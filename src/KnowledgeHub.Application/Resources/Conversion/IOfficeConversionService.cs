@@ -5,7 +5,7 @@ namespace KnowledgeHub.Resources.Conversion;
 
 /// <summary>
 /// Office 文档预览转换服务：将 PPTX/DOCX/XLSX 转为 PDF，供前端 pdfjs 渲染。
-/// 实现通常为 LibreOffice headless 模式。
+/// 实现通常为 Gotenberg（内部基于 LibreOffice headless）。
 /// </summary>
 public interface IOfficeConversionService
 {

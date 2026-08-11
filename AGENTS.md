@@ -219,10 +219,10 @@ public class IndexingJobAppService : ...
 
 ## Environments
 
-| Environment | Script | Database | API | Angular | Meilisearch |
-|-------------|--------|----------|-----|---------|-------------|
-| Development | `./dev.sh` | localhost:5433 (local PostgreSQL) | https://localhost:44305 | http://localhost:4200 | http://localhost:7700 |
-| Production | `./etc/docker/run-docker.sh` | postgres:5432 (Docker container) | https://localhost:44354 | http://localhost:4200 | - |
+| Environment | Script | Database | API | Angular | Meilisearch | Gotenberg |
+|-------------|--------|----------|-----|---------|-------------|-----------|
+| Development | `./dev.sh` | localhost:5433 (local PostgreSQL) | https://localhost:44305 | http://localhost:4200 | http://localhost:7700 | http://localhost:3000 (Docker) |
+| Production | `./etc/docker/deploy-to-remote.sh` | postgres:5432 (Docker container) | https://localhost:44354 | http://localhost:4200 | - | Docker 内网 http://gotenberg:3000 |
 
 ---
 
@@ -233,10 +233,11 @@ public class IndexingJobAppService : ...
 ### Commands
 
 ```bash
-./dev.sh start              # Start API + Angular + Meilisearch
+./dev.sh start              # Start API + Angular + Meilisearch + Gotenberg
 ./dev.sh start api          # Start only API
 ./dev.sh start angular      # Start only Angular
 ./dev.sh start meilisearch  # Start only Meilisearch
+./dev.sh start gotenberg    # Start only Gotenberg (Docker, Office 预览转 PDF)
 ./dev.sh stop               # Stop all services
 ./dev.sh stop meilisearch   # Stop only Meilisearch
 ./dev.sh restart            # Restart all services
@@ -244,9 +245,11 @@ public class IndexingJobAppService : ...
 ./dev.sh log api            # View API logs (last 100 lines)
 ./dev.sh log angular        # View Angular logs (last 100 lines)
 ./dev.sh log meilisearch    # View Meilisearch logs (last 100 lines)
+./dev.sh log gotenberg      # View Gotenberg logs (docker logs)
 ./dev.sh tail api           # Tail API logs in real-time
 ./dev.sh tail angular       # Tail Angular logs in real-time
 ./dev.sh tail meilisearch   # Tail Meilisearch logs in real-time
+./dev.sh tail gotenberg     # Tail Gotenberg logs (docker logs -f)
 ./dev.sh migrate            # Run database migration (使用 DbMigrator)
 ```
 
@@ -283,6 +286,7 @@ PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d KnowledgeHub -c "\d
 - **Swagger**: https://localhost:44305/swagger
 - **Angular**: http://localhost:4200
 - **Meilisearch**: http://localhost:7700
+- **Gotenberg**: http://localhost:3000
 - **Database**: localhost:5433 (PostgreSQL)
 
 ### Default Credentials

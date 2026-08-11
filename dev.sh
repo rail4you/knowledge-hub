@@ -81,6 +81,7 @@ service_ports() {
         angular) echo "4200" ;;
         meilisearch) echo "7700" ;;
         ai) echo "5001" ;;
+        gotenberg) echo "3000" ;;
     esac
 }
 
@@ -315,6 +316,66 @@ start_ai() {
     fi
 }
 
+# Gotenberg（Docker 容器）是否在运行
+is_gotenberg_running() {
+    [ -n "$(docker ps -q -f name=^/knowledgehub-gotenberg$ 2>/dev/null)" ]
+}
+
+start_gotenberg() {
+    require_command docker
+    require_command curl
+    require_command lsof
+
+    if is_gotenberg_running; then
+        log_warn "Gotenberg is already running (container: knowledgehub-gotenberg)"
+        return
+    fi
+
+    # Ensure port 3000 is free
+    if ! wait_for_port_free 3000; then
+        log_warn "Port 3000 still occupied, force cleaning..."
+        lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+        sleep 1
+    fi
+
+    log_info "Starting Gotenberg (Docker)..."
+    docker rm -f knowledgehub-gotenberg >/dev/null 2>&1 || true
+
+    # 优先使用本地构建的中文字体镜像（etc/docker/Dockerfile.gotenberg），
+    # 否则回退到官方镜像（中文会渲染成方框）
+    local image="gotenberg/gotenberg:8"
+    if docker image inspect knowledgehub-gotenberg:dev >/dev/null 2>&1; then
+        image="knowledgehub-gotenberg:dev"
+    else
+        log_warn "未找到 knowledgehub-gotenberg:dev（中文预览镜像），使用官方 gotenberg/gotenberg:8"
+        log_warn "构建中文字体镜像: docker build -f etc/docker/Dockerfile.gotenberg -t knowledgehub-gotenberg:dev etc/docker"
+    fi
+
+    # 容器 ID 写入 pid 文件，stop/status 用容器名探测
+    docker run -d --name knowledgehub-gotenberg -p 3000:3000 "$image" > "$PID_DIR/gotenberg.pid"
+
+    if wait_for_http "http://localhost:3000/health" "Gotenberg" 90; then
+        log_success "Gotenberg started (image: $image)"
+        log_info "Gotenberg URL: http://localhost:3000"
+    else
+        log_error "Gotenberg failed to start. Check logs: $0 log gotenberg"
+        stop_gotenberg
+        exit 1
+    fi
+}
+
+stop_gotenberg() {
+    if is_gotenberg_running; then
+        log_info "Stopping Gotenberg (container: knowledgehub-gotenberg)..."
+        docker rm -f knowledgehub-gotenberg >/dev/null 2>&1 || true
+        log_success "Gotenberg stopped"
+    else
+        log_warn "Gotenberg is not running"
+        docker rm -f knowledgehub-gotenberg >/dev/null 2>&1 || true
+    fi
+    rm -f "$PID_DIR/gotenberg.pid"
+}
+
 stop_service() {
     local name="$1"
     local pid_file="$PID_DIR/${name}.pid"
@@ -358,6 +419,7 @@ stop_all() {
     stop_service "angular"
     stop_service "meilisearch"
     stop_service "ai"
+    stop_gotenberg
     log_success "All services stopped"
 }
 
@@ -366,6 +428,7 @@ show_status() {
     local angular_health="Down"
     local meilisearch_health="Down"
     local ai_health="Down"
+    local gotenberg_health="Down"
 
     if command -v curl >/dev/null 2>&1 && curl --max-time 2 -skf -o /dev/null "https://localhost:44305/health-status" 2>/dev/null; then
         api_health="Healthy"
@@ -378,6 +441,9 @@ show_status() {
     fi
     if command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:5001 -sTCP:LISTEN >/dev/null 2>&1; then
         ai_health="Listening"
+    fi
+    if command -v curl >/dev/null 2>&1 && curl --max-time 2 -sf -o /dev/null "http://localhost:3000/health" 2>/dev/null; then
+        gotenberg_health="Healthy"
     fi
 
     echo ""
@@ -415,6 +481,13 @@ show_status() {
         printf "%-15s %-10s %-10s %-10s\n" "" "" "" "http://localhost:5001"
     else
         printf "%-15s ${RED}%-10s${NC} %-10s %-10s\n" "AI API" "Stopped" "$ai_health" "-"
+    fi
+
+    if is_gotenberg_running; then
+        printf "%-15s ${GREEN}%-10s${NC} %-10s %-10s\n" "Gotenberg" "Running" "$gotenberg_health" "3000"
+        printf "%-15s %-10s %-10s %-10s\n" "" "" "" "http://localhost:3000"
+    else
+        printf "%-15s ${RED}%-10s${NC} %-10s %-10s\n" "Gotenberg" "Stopped" "$gotenberg_health" "-"
     fi
     
     echo ""
@@ -461,9 +534,16 @@ show_log() {
                 log_error "No log file found. Is AI API running?"
             fi
             ;;
+        gotenberg)
+            if is_gotenberg_running; then
+                docker logs --tail 100 knowledgehub-gotenberg
+            else
+                log_error "Gotenberg is not running. Start it first."
+            fi
+            ;;
         *)
             log_error "Unknown service: $service"
-            echo "Usage: $0 log [api|angular|meilisearch|ai]"
+            echo "Usage: $0 log [api|angular|meilisearch|ai|gotenberg]"
             exit 1
             ;;
     esac
@@ -530,6 +610,13 @@ tail_logs() {
                 log_error "No log file found. Start AI API first."
             fi
             ;;
+        gotenberg)
+            if is_gotenberg_running; then
+                docker logs -f --tail 100 knowledgehub-gotenberg
+            else
+                log_error "Gotenberg is not running. Start it first."
+            fi
+            ;;
         all|"")
             log_info "Tailing all logs (Ctrl+C to stop)..."
             tail -f "$LOG_DIR"/*.log 2>/dev/null || log_error "No log files found"
@@ -549,9 +636,9 @@ show_help() {
     echo "Usage: $0 <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  start [api|angular|meilisearch|ai]     Start services (default: all)"
-    echo "  stop [api|angular|meilisearch|ai]      Stop services (default: all)"
-    echo "  restart [api|angular|meilisearch|ai]   Restart services (default: all)"
+    echo "  start [api|angular|meilisearch|ai|gotenberg]   Start services (default: all)"
+    echo "  stop [api|angular|meilisearch|ai|gotenberg]    Stop services (default: all)"
+    echo "  restart [api|angular|meilisearch|ai|gotenberg] Restart services (default: all)"
     echo "  status                           Show service status"
     echo "  log <service>                    Show last 100 lines of log"
     echo "  tail [service]                   Tail logs in real-time"
@@ -562,6 +649,7 @@ show_help() {
     echo "  $0 start               Start all services"
     echo "  $0 start api           Start only API"
     echo "  $0 start meilisearch   Start only Meilisearch"
+    echo "  $0 start gotenberg     Start only Gotenberg"
     echo "  $0 stop                Stop all services"
     echo "  $0 log api             Show API logs"
     echo "  $0 tail angular        Tail Angular logs"
@@ -572,6 +660,7 @@ show_help() {
     echo "  Angular:     http://localhost:4200"
     echo "  Meilisearch: http://localhost:7700"
     echo "  AI API:      http://localhost:5001"
+    echo "  Gotenberg:   http://localhost:3000 (Docker，Office 预览转 PDF)"
     echo "  DB:          localhost:5433 (PostgreSQL)"
     echo ""
 }
@@ -592,8 +681,12 @@ case "${1:-help}" in
             ai)
                 start_ai
                 ;;
+            gotenberg)
+                start_gotenberg
+                ;;
             all)
                 start_meilisearch
+                start_gotenberg
                 start_api
                 start_angular
                 start_ai
@@ -618,6 +711,9 @@ case "${1:-help}" in
                 ;;
             ai)
                 stop_service "ai"
+                ;;
+            gotenberg)
+                stop_gotenberg
                 ;;
             all)
                 stop_all
@@ -651,10 +747,16 @@ case "${1:-help}" in
                 ensure_dirs
                 start_ai
                 ;;
+            gotenberg)
+                stop_gotenberg
+                ensure_dirs
+                start_gotenberg
+                ;;
             all)
                 stop_all
                 ensure_dirs
                 start_meilisearch
+                start_gotenberg
                 start_api
                 start_angular
                 start_ai

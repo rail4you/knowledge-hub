@@ -3,8 +3,8 @@
 # Multi-stage build:
 #   1) build      : sdk:10.0   -> dotnet publish
 #   2) final      : aspnet:10.0 runtime (no Java/Python/Node)
-#   Includes LibreOffice headless for PPTX/DOCX/XLSX → PDF conversion,
-#   and ffmpeg (installed via apt).
+#   Office 文档预览转换由独立的 Gotenberg 容器负责（不再内置 LibreOffice），
+#   本镜像仅保留 ffmpeg（视频处理，installed via apt）。
 #
 # Local dev:  docker build -f src/KnowledgeHub.HttpApi.Host/Dockerfile -t knowledgehub-api:dev .
 # Production: docker build --platform linux/amd64 -f src/KnowledgeHub.HttpApi.Host/Dockerfile -t ... .
@@ -57,30 +57,20 @@ WORKDIR /app
 # - locales: en_US.UTF-8
 # - tzdata:  Asia/Shanghai (set via ENV below)
 # - ffmpeg: video processing (installed via apt)
-# - libreoffice-impress: PPTX → PDF conversion (headless)
-# - fonts-wqy-microhei + fonts-wqy-zenhei: 中文 PDF 渲染（≈ 10 MB，
-#   替代原 fonts-noto-cjk 的 200 MB；覆盖常用中文字符，缺字回退到系统字体）
+# 注：已移除 libreoffice / 中文字体（PPTX/DOCX/XLSX → PDF 由 Gotenberg 容器转换，
+#   中文字体在 Gotenberg 自定义镜像中提供）。
 # Force fresh apt-get (avoid BuildKit cached network errors)
-# 注：已移除 libreoffice-java-common + default-jre-headless（≈ 300-400 MB）
-#   转换走 soffice --headless --convert-to pdf CLI 路径，不走 UNO bridge，
-#   不需要 Java 运行时。如后续 PPTX 含复杂动画/宏 / 需 UNO 编程，再加回来。
-# 注：已移除 fonts-noto-cjk（≈ 200 MB），用 fonts-wqy-microhei/zenhei 替代。
 ARG CACHE_BUST=0
 RUN echo "cache_bust=$CACHE_BUST" && apt-get update \
     && apt-get install -y --no-install-recommends \
         locales \
         tzdata \
         ffmpeg \
-        libreoffice-impress \
-        fonts-wqy-microhei \
-        fonts-wqy-zenhei \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen en_US.UTF-8 \
     && ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && echo "Asia/Shanghai" > /etc/timezone \
-    && rm -rf /var/lib/apt/lists/* \
-    && soffice --version \
-    && fc-list :lang=zh | head -3
+    && rm -rf /var/lib/apt/lists/*
 
 # Locale/timezone
 ENV LANG=en_US.UTF-8 \

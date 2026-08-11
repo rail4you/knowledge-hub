@@ -10,6 +10,7 @@
 #   ./deploy-to-remote.sh migrator   # 仅更新迁移工具
 #   ./deploy-to-remote.sh sync       # 仅同步配置文件
 #   ./deploy-to-remote.sh liteparse  # 仅更新/重启 LiteParse 服务
+#   ./deploy-to-remote.sh gotenberg  # 构建并推送 Gotenberg 镜像（含中文字体）
 #   ./deploy-to-remote.sh wasm       # 仅同步 WASM 仿真实训镜像到远程
 #
 # ============================================================
@@ -195,6 +196,14 @@ build_migrator() {
 }
 
 # ============================================================
+# 构建 Gotenberg（含中文字体，Office 预览转 PDF）
+# ============================================================
+build_gotenberg() {
+    info "构建 Gotenberg 镜像（含中文字体）..."
+    build_and_push "gotenberg" "Dockerfile.gotenberg" "$SCRIPT_DIR"
+}
+
+# ============================================================
 # 同步 WASM 仿真实训镜像到远程服务器
 # ============================================================
 sync_wasm_mirrors() {
@@ -334,6 +343,7 @@ cmd_all() {
     build_migrator
     build_api
     build_angular
+    build_gotenberg
     sync_configs
     sync_wasm_mirrors
     verify_liteparse
@@ -402,6 +412,20 @@ EOF
     ok "LiteParse 更新完成！"
 }
 
+cmd_gotenberg() {
+    info "构建并推送 Gotenberg 镜像（含中文字体）..."
+
+    build_gotenberg
+
+    ssh "$REMOTE_USER@$REMOTE_HOST" << 'EOF'
+cd ~/knowledgehub
+./deploy.sh pull knowledgehub-gotenberg || true
+./deploy.sh restart knowledgehub-gotenberg
+EOF
+
+    ok "Gotenberg 更新完成！"
+}
+
 # ============================================================
 # 帮助
 # ============================================================
@@ -417,7 +441,8 @@ show_help() {
     echo "  api        仅更新后端"
     echo "  migrator   仅更新迁移工具并执行迁移"
     echo "  sync       仅同步配置文件"
-    echo "  liteparse  仅更新/重启 LiteParse 服务（镜像由外部项目推送）
+    echo "  liteparse  仅更新/重启 LiteParse 服务（镜像由外部项目推送）"
+    echo "  gotenberg  仅构建并推送 Gotenberg 镜像（含中文字体）
   wasm       仅同步 WASM 仿真实训镜像到远程"
     echo ""
     echo "首次部署前请确保:"
@@ -437,6 +462,7 @@ case "${1:-}" in
     migrator)  cmd_migrator ;;
     sync)      cmd_sync ;;
     liteparse) cmd_liteparse ;;
+    gotenberg) cmd_gotenberg ;;
     wasm)      cmd_wasm ;;
     -h|--help) show_help ;;
     *)         show_help; exit 1 ;;

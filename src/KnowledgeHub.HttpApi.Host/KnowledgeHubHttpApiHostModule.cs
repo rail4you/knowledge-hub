@@ -19,6 +19,7 @@ using KnowledgeHub.EntityFrameworkCore;
 using KnowledgeHub.MultiTenancy;
 using KnowledgeHub.HealthChecks;
 using KnowledgeHub.Resources.FileStorage;
+using KnowledgeHub.Resources.Conversion;
 using KnowledgeHub.Application.Search;
 using KnowledgeHub.Application.Search.LiteParse;
 using KnowledgeHub.Application.Contracts.Search;
@@ -197,6 +198,13 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             var options = sp.GetRequiredService<IOptions<LiteParseOptions>>();
             client.BaseAddress = new Uri(options.Value.Host);
             client.Timeout = TimeSpan.FromSeconds(options.Value.RequestTimeoutSeconds);
+        });
+
+        context.Services.AddHttpClient(GotenbergConversionService.GotenbergHttpClientName, (sp, client) =>
+        {
+            var options = sp.GetRequiredService<IOptions<OfficeConversionOptions>>();
+            client.BaseAddress = new Uri(options.Value.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(options.Value.ConversionTimeoutSeconds);
         });
 
         context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>();

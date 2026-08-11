@@ -63,6 +63,7 @@
     <div
       *ngIf="previewReady()"
       class="preview-content"
+      [class.pdf-preview]="fileType === 'pdf' || fileType === 'ppt' || fileType === 'pptx'"
       (mousedown)="$event.stopPropagation()"
       (click)="$event.stopPropagation()"
     >
@@ -73,7 +74,7 @@
           <app-pptx-viewer [resourceId]="resourceId()" [fileName]="fileName"></app-pptx-viewer>
         } @else {
           <app-pdf-viewer
-            [previewUrl]="fileUrl()"
+            [resourceId]="resourceId()"
             [fileName]="fileName"
             (loadFailed)="onPdfPreviewFailed()"
           ></app-pdf-viewer>
