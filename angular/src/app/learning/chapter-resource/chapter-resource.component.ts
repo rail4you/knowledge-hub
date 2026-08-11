@@ -380,26 +380,6 @@ export class ChapterResourceComponent implements OnInit {
     });
   }
 
-  getImportanceLabel(level: string | undefined): string {
-    const map: Record<string, string> = {
-      core: '核心',
-      important: '重要',
-      normal: '一般',
-      extended: '拓展',
-    };
-    return map[level ?? 'normal'] ?? '一般';
-  }
-
-  getImportanceColor(level: string | undefined): string {
-    const map: Record<string, string> = {
-      core: 'red',
-      important: 'orange',
-      normal: 'blue',
-      extended: 'default',
-    };
-    return map[level ?? 'normal'] ?? 'default';
-  }
-
   getResourceTypeLabel(type: ResourceType | undefined): string {
     if (type === undefined || type === null) return '';
     const map: Record<number, string> = {
