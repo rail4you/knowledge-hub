@@ -19,6 +19,42 @@
         <div class="summary-card__label">投递次数</div>
       </div>
     </div>
+    <div class="summary-card">
+      <div class="summary-card__icon" style="background: #ecfdf5;">
+        <span nz-icon nzType="compass" nzTheme="outline" style="color:#10b981;"></span>
+      </div>
+      <div class="summary-card__body">
+        <div class="summary-card__value">{{ outcomeTotal() }}</div>
+        <div class="summary-card__label">就业去向总数</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card__icon" style="background: #f0f9ff;">
+        <span nz-icon nzType="bank" nzTheme="outline" style="color:#0891b2;"></span>
+      </div>
+      <div class="summary-card__body">
+        <div class="summary-card__value">{{ outcomeEmployed() }}</div>
+        <div class="summary-card__label">已就业</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card__icon" style="background: #fdf6ec;">
+        <span nz-icon nzType="file-done" nzTheme="outline" style="color:#d97706;"></span>
+      </div>
+      <div class="summary-card__body">
+        <div class="summary-card__value">{{ outcomeSigned() }}</div>
+        <div class="summary-card__label">已签约</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card__icon" style="background: #faf5ff;">
+        <span nz-icon nzType="rise" nzTheme="outline" style="color:#7c3aed;"></span>
+      </div>
+      <div class="summary-card__body">
+        <div class="summary-card__value">{{ outcomeRate() }}%</div>
+        <div class="summary-card__label">就业率（签约+就业）</div>
+      </div>
+    </div>
   </div>
 
   <!-- Time Filter + Export -->
@@ -31,6 +67,58 @@
     <button nz-button nzType="primary" nzSize="small" (click)="export()">导出 Excel</button>
   </div>
 
+  <!-- =================== 图表 =================== -->
+  <div class="chart-row">
+    <nz-card nzTitle="就业去向状态分布" nzSize="small" class="chart-card">
+      <div class="chart-box" #outcomeChart></div>
+    </nz-card>
+    <nz-card nzTitle="投递状态分布" nzSize="small" class="chart-card">
+      <div class="chart-box" #applicationChart></div>
+    </nz-card>
+  </div>
+
+  <!-- =================== 就业去向 =================== -->
+  <nz-card nzTitle="就业去向" nzSize="small">
+    @if (outcomeLoading()) {
+      <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+    } @else if (outcomes().length === 0) {
+      <nz-empty nzNotFoundContent="暂无就业去向记录"></nz-empty>
+    } @else {
+      <nz-table [nzData]="outcomes()" [nzFrontPagination]="false" nzSize="small">
+        <thead>
+          <tr>
+            <th>学生</th>
+            <th>单位 / 岗位</th>
+            <th>状态</th>
+            <th>方式 / 地点 / 薪资</th>
+            <th>入职时间</th>
+            <th>主要</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of outcomes(); track o.id) {
+            <tr>
+              <td>{{ o.studentName || '-' }}</td>
+              <td>
+                <div class="oc-job">{{ o.employerName }}</div>
+                <div class="oc-sub">{{ o.jobTitle || '未填写岗位' }}</div>
+              </td>
+              <td><nz-tag [nzColor]="outcomeStatusColor(o.status)">{{ outcomeStatusLabel(o.status) }}</nz-tag></td>
+              <td class="oc-info">
+                {{ o.employmentType || '-' }}
+                @if (o.region) { · {{ o.region }} }
+                @if (o.salaryRange) { · {{ o.salaryRange }} }
+              </td>
+              <td>{{ o.startDate ? (o.startDate | date:'yyyy-MM-dd') : '-' }}</td>
+              <td>@if (o.isPrimary) { <span nz-icon nzType="star" nzTheme="fill" style="color:#f59e0b;"></span> } @else { <span class="oc-sub">—</span> }</td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    }
+  </nz-card>
+
+  <!-- =================== 投递明细 =================== -->
   @if (loading()) {
     <nz-card>
       <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin></div>

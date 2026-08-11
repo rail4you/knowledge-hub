@@ -147,10 +147,10 @@
         <label>备注</label>
         <textarea nz-input rows="3" [(ngModel)]="form.remark" placeholder="补充说明（选填）"></textarea>
       </div>
-    </div>
-    <div class="modal-actions">
-      <button nz-button (click)="closeModal()">取消</button>
-      <button nz-button nzType="primary" [nzLoading]="saving()" (click)="save()">保存</button>
+      <div class="modal-actions">
+        <button nz-button (click)="closeModal()">取消</button>
+        <button nz-button nzType="primary" [nzLoading]="saving()" (click)="save()">保存</button>
+      </div>
     </div>
   </nz-modal>
 

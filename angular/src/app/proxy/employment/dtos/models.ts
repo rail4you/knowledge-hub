@@ -136,6 +136,11 @@ export interface EmploymentOutcomeDto extends FullAuditedEntityDto<string> {
   isPrimary?: boolean;
 }
 
+export interface EmploymentOutcomeStudentDto {
+  id?: string;
+  name?: string;
+}
+
 export interface EmploymentStatisticsInput {
   major?: string | null;
   grade?: string | null;

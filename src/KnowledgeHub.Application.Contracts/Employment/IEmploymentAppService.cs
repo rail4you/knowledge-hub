@@ -48,6 +48,7 @@ public interface IEmploymentAppService : IApplicationService
     Task<EmploymentOutcomeDto> SaveOutcomeAsync(CreateUpdateEmploymentOutcomeDto input);
     Task DeleteOutcomeAsync(Guid id);
     Task<PagedResultDto<EmploymentOutcomeDto>> GetOutcomeListAsync(GetEmploymentOutcomeListInput input);
+    Task<List<EmploymentOutcomeStudentDto>> GetOutcomeStudentsAsync();
     Task<List<EmploymentStatisticsRowDto>> GetStatisticsAsync(EmploymentStatisticsInput input);
     Task<IRemoteStreamContent> ExportStatisticsAsync(EmploymentStatisticsInput input);
 

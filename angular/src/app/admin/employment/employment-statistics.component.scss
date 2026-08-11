@@ -114,6 +114,41 @@
   font-weight: 600;
 }
 
+// ===== Charts =====
+.chart-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.chart-card {
+  border-radius: 10px;
+}
+
+.chart-box {
+  width: 100%;
+  height: 300px;
+}
+
+// ===== Outcome table =====
+.oc-job {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+}
+
+.oc-sub {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.oc-info {
+  font-size: 13px;
+  color: #555;
+}
+
 // ===== Loading =====
 .loading-state {
   text-align: center;

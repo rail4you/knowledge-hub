@@ -267,6 +267,14 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/employment/outcomes',
+    loadComponent: () => import('./admin/employment/employment-outcome-management.component').then(c => c.EmploymentOutcomeManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Employment.ManageOutcome',
+    },
+  },
+  {
     path: 'admin/recruitment-live',
     loadComponent: () => import('./admin/recruitment-live/recruitment-live-management.component').then(c => c.RecruitmentLiveManagementComponent),
     canActivate: [authGuard, permissionGuard],

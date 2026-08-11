@@ -324,6 +324,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  grid-column: 1 / -1;
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid ds.$student-border-soft;

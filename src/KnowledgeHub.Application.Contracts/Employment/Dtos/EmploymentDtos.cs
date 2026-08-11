@@ -348,6 +348,15 @@ public class GetEmploymentOutcomeListInput : PagedAndSortedResultRequestDto
     public bool? OnlyPrimary { get; set; }
 }
 
+/// <summary>
+/// 教师端就业去向管理：可选学生简要信息。
+/// </summary>
+public class EmploymentOutcomeStudentDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
 public class EmploymentStatisticsInput
 {
     public string? Major { get; set; }

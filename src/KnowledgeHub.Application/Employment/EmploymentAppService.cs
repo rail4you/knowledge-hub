@@ -1014,6 +1014,58 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     }
 
     /// <summary>
+    /// 教师端就业去向管理：获取当前租户内拥有"Student"角色的学生列表（供新增/筛选去向使用）。
+    /// 拥有 ManageOutcome 权限即可访问，不依赖 Users.Default。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Employment.ManageOutcome)]
+    public async Task<List<EmploymentOutcomeStudentDto>> GetOutcomeStudentsAsync()
+    {
+        var currentTenantId = CurrentTenant.Id;
+        var dbContext = await _userRepository.GetDbContextAsync();
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var roles = dbContext.Set<IdentityRole>();
+            var studentRoleIds = await roles
+                .Where(r => r.Name == "Student")
+                .Select(r => r.Id)
+                .ToListAsync();
+
+            if (studentRoleIds.Count == 0)
+            {
+                return new List<EmploymentOutcomeStudentDto>();
+            }
+
+            var userRoles = dbContext.Set<IdentityUserRole>();
+            var studentUserIds = await userRoles
+                .Where(ur => studentRoleIds.Contains(ur.RoleId))
+                .Select(ur => ur.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            if (studentUserIds.Count == 0)
+            {
+                return new List<EmploymentOutcomeStudentDto>();
+            }
+
+            var query = await _userRepository.GetQueryableAsync();
+            var users = await query
+                .Where(u => studentUserIds.Contains(u.Id))
+                .Where(u => !currentTenantId.HasValue || u.TenantId == currentTenantId.Value)
+                .OrderBy(u => u.Name)
+                .ThenBy(u => u.UserName)
+                .Take(1000)
+                .ToListAsync();
+
+            return users.Select(u => new EmploymentOutcomeStudentDto
+            {
+                Id = u.Id,
+                Name = GetUserDisplayName(u)
+            }).ToList();
+        }
+    }
+
+    /// <summary>
     /// 获取当前租户下可担任面试官的用户列表（教师/HR/管理员等）。
     /// 拥有 ScheduleInterview 权限即可访问，不依赖 Users.Default。
     /// </summary>
@@ -1283,7 +1335,11 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     {
         // 使用与 UI 一致的数据（逐条投递记录，非分组汇总）
         var rows = await GetApplicationStatsAsync(input);
+        var outcomes = await GetOutcomeRowsForExportAsync();
+
         using var workbook = new XLWorkbook();
+
+        // ===== Sheet 1: 投递明细 =====
         var worksheet = workbook.Worksheets.Add("投递明细");
 
         worksheet.Cell(1, 1).Value = "学生姓名";
@@ -1291,6 +1347,10 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         worksheet.Cell(1, 3).Value = "公司名称";
         worksheet.Cell(1, 4).Value = "状态";
         worksheet.Cell(1, 5).Value = "投递时间";
+
+        var headerRange = worksheet.Range(1, 1, 1, 5);
+        headerRange.Style.Font.Bold = true;
+        headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
 
         for (var i = 0; i < rows.Count; i++)
         {
@@ -1306,10 +1366,72 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
 
         worksheet.Columns().AdjustToContents();
 
+        // ===== Sheet 2: 就业去向 =====
+        var outcomeSheet = workbook.Worksheets.Add("就业去向");
+
+        outcomeSheet.Cell(1, 1).Value = "学生姓名";
+        outcomeSheet.Cell(1, 2).Value = "去向单位";
+        outcomeSheet.Cell(1, 3).Value = "岗位名称";
+        outcomeSheet.Cell(1, 4).Value = "去向状态";
+        outcomeSheet.Cell(1, 5).Value = "就业方式";
+        outcomeSheet.Cell(1, 6).Value = "工作地点";
+        outcomeSheet.Cell(1, 7).Value = "薪资范围";
+        outcomeSheet.Cell(1, 8).Value = "入职时间";
+        outcomeSheet.Cell(1, 9).Value = "确认时间";
+        outcomeSheet.Cell(1, 10).Value = "是否主要";
+        outcomeSheet.Cell(1, 11).Value = "备注";
+
+        var outcomeHeader = outcomeSheet.Range(1, 1, 1, 11);
+        outcomeHeader.Style.Font.Bold = true;
+        outcomeHeader.Style.Fill.BackgroundColor = XLColor.LightGray;
+
+        for (var i = 0; i < outcomes.Count; i++)
+        {
+            var o = outcomes[i];
+            outcomeSheet.Cell(i + 2, 1).Value = o.StudentName;
+            outcomeSheet.Cell(i + 2, 2).Value = o.EmployerName;
+            outcomeSheet.Cell(i + 2, 3).Value = o.JobTitle;
+            outcomeSheet.Cell(i + 2, 4).Value = GetOutcomeStatusLabel(o.Status);
+            outcomeSheet.Cell(i + 2, 5).Value = o.EmploymentType;
+            outcomeSheet.Cell(i + 2, 6).Value = o.Region;
+            outcomeSheet.Cell(i + 2, 7).Value = o.SalaryRange;
+            outcomeSheet.Cell(i + 2, 8).Value = o.StartDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+            outcomeSheet.Cell(i + 2, 9).Value = o.ConfirmedAt.ToString("yyyy-MM-dd");
+            outcomeSheet.Cell(i + 2, 10).Value = o.IsPrimary ? "是" : "否";
+            outcomeSheet.Cell(i + 2, 11).Value = o.Remark;
+        }
+
+        outcomeSheet.Columns().AdjustToContents();
+
         var stream = new MemoryStream();
         workbook.SaveAs(stream);
         stream.Position = 0;
-        return new RemoteStreamContent(stream, $"投递明细_{Clock.Now:yyyyMMddHHmmss}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        return new RemoteStreamContent(stream, $"投递与去向统计_{Clock.Now:yyyyMMddHHmmss}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    private async Task<List<EmploymentOutcomeDto>> GetOutcomeRowsForExportAsync()
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var outcomes = await _outcomeRepository.GetListAsync();
+            return await MapOutcomeDtosAsync(outcomes
+                .OrderByDescending(x => x.ConfirmedAt)
+                .ToList());
+        }
+    }
+
+    private static string GetOutcomeStatusLabel(EmploymentOutcomeStatus status)
+    {
+        return status switch
+        {
+            EmploymentOutcomeStatus.Intention => "就业意向",
+            EmploymentOutcomeStatus.Signed => "已签约",
+            EmploymentOutcomeStatus.Employed => "已就业",
+            EmploymentOutcomeStatus.FurtherStudy => "升学",
+            EmploymentOutcomeStatus.Entrepreneurship => "创业",
+            EmploymentOutcomeStatus.Unemployed => "待就业",
+            _ => $"未知({(int)status})"
+        };
     }
 
     private static IQueryable<JobPosting> ApplyJobFilters(

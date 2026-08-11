@@ -1,0 +1,249 @@
+<nz-card nzTitle="就业去向管理" [nzExtra]="extraTpl">
+  <ng-template #extraTpl>
+    <div class="toolbar">
+      <button nz-button nzType="primary" (click)="openCreate()">
+        <span nz-icon nzType="plus"></span>
+        新增去向
+      </button>
+    </div>
+  </ng-template>
+
+  <div class="filter-bar">
+    <input
+      nz-input
+      [(ngModel)]="keyword"
+      placeholder="搜索学生 / 单位 / 岗位"
+      (keyup.enter)="search()"
+    />
+    <nz-select
+      [(ngModel)]="studentFilter"
+      nzAllowClear
+      nzPlaceHolder="选择学生"
+      (ngModelChange)="onFilterChange()"
+    >
+      @for (s of students(); track s.id) {
+        <nz-option [nzValue]="s.id" [nzLabel]="s.name"></nz-option>
+      }
+    </nz-select>
+    <nz-select
+      [(ngModel)]="statusFilter"
+      nzAllowClear
+      nzPlaceHolder="去向状态"
+      (ngModelChange)="onFilterChange()"
+    >
+      <nz-option [nzValue]="statuses.Intention" nzLabel="就业意向"></nz-option>
+      <nz-option [nzValue]="statuses.Signed" nzLabel="已签约"></nz-option>
+      <nz-option [nzValue]="statuses.Employed" nzLabel="已就业"></nz-option>
+      <nz-option [nzValue]="statuses.FurtherStudy" nzLabel="升学"></nz-option>
+      <nz-option [nzValue]="statuses.Entrepreneurship" nzLabel="创业"></nz-option>
+      <nz-option [nzValue]="statuses.Unemployed" nzLabel="待就业"></nz-option>
+    </nz-select>
+    <button nz-button nzType="primary" (click)="search()">搜索</button>
+    <button nz-button (click)="resetFilter()">重置</button>
+  </div>
+
+  <nz-table
+    #outcomeTable
+    [nzData]="filteredItems()"
+    [nzFrontPagination]="false"
+    [nzLoading]="loading()"
+    [nzTotal]="totalCount()"
+    [nzPageSize]="pageSize"
+    [nzPageIndex]="pageIndex"
+    [nzShowSizeChanger]="true"
+    [nzPageSizeOptions]="[10, 20, 50, 100]"
+    (nzPageIndexChange)="onPageIndexChange($event)"
+    (nzPageSizeChange)="onPageSizeChange($event)"
+  >
+    <thead>
+      <tr>
+        <th>学生</th>
+        <th>单位 / 岗位</th>
+        <th>状态</th>
+        <th>方式 / 地点 / 薪资</th>
+        <th>入职 / 确认时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of filteredItems(); track item.id) {
+        <tr>
+          <td>
+            <div class="student-cell">
+              <div>
+                <div class="student-name">{{ item.studentName || '-' }}</div>
+                <div class="muted">ID: {{ item.studentId.substring(0, 8) }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="job-title">{{ item.employerName }}</div>
+            <div class="muted">{{ item.jobTitle || '未填写岗位' }}</div>
+            @if (item.applicationId) {
+              <nz-tag nzColor="cyan" class="mt-tag">来自投递</nz-tag>
+            }
+          </td>
+          <td>
+            <nz-tag [nzColor]="statusColor(item.status)">{{ statusLabel(item.status) }}</nz-tag>
+            @if (item.isPrimary) {
+              <div class="primary-tag">
+                <span nz-icon nzType="star" nzTheme="fill"></span> 主要去向
+              </div>
+            }
+          </td>
+          <td>
+            <div class="info-cell">
+              {{ item.employmentType || '-' }}
+              @if (item.region) { · {{ item.region }} }
+              @if (item.salaryRange) { · {{ item.salaryRange }} }
+            </div>
+            @if (item.remark) {
+              <div class="muted" [title]="item.remark">{{ item.remark }}</div>
+            }
+          </td>
+          <td>
+            <div>{{ item.startDate ? (item.startDate | date:'yyyy-MM-dd') : '未填写' }} 入职</div>
+            <div class="muted">确认 {{ item.confirmedAt | date:'yyyy-MM-dd' }}</div>
+          </td>
+          <td>
+            <div class="actions">
+              <button nz-button nzSize="small" nzType="link" (click)="openEdit(item)">编辑</button>
+              @if (!item.isPrimary) {
+                <button nz-button nzSize="small" nzType="link" (click)="setPrimary(item)">设为主要</button>
+              }
+              <button
+                nz-button
+                nzSize="small"
+                nzType="link"
+                nzDanger
+                nz-popconfirm
+                nzPopconfirmTitle="确认删除该就业去向？"
+                nzPopconfirmDescription="删除后无法恢复"
+                (nzOnConfirm)="delete(item)"
+              >删除</button>
+            </div>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
+</nz-card>
+
+<!-- =================== 新增 / 编辑弹窗 =================== -->
+<nz-modal
+  [(nzVisible)]="modalVisible"
+  [nzTitle]="editingId ? '编辑就业去向' : '新增就业去向'"
+  nzWidth="580px"
+  [nzFooter]="null"
+  (nzOnCancel)="closeModal()"
+>
+  <div class="job-form" *nzModalContent>
+    <div class="field full">
+      <label class="label">学生 <em>*</em></label>
+      <div class="student-row">
+        <nz-select
+          [(ngModel)]="form.studentId"
+          nzPlaceHolder="选择学生"
+          [nzDisabled]="!!editingId"
+          style="flex: 1;"
+        >
+          @for (s of students(); track s.id) {
+            <nz-option [nzValue]="s.id" [nzLabel]="s.name"></nz-option>
+          }
+        </nz-select>
+        @if (!editingId) {
+          <button nz-button (click)="openImport()">
+            <span nz-icon nzType="swap"></span>
+            从已录用投递导入
+          </button>
+        }
+      </div>
+    </div>
+    <div class="field full">
+      <label class="label">去向单位 <em>*</em></label>
+      <input nz-input [(ngModel)]="form.employerName" placeholder="如：杭州某科技有限公司" />
+    </div>
+    <div class="field full">
+      <label class="label">岗位名称 <em>*</em></label>
+      <input nz-input [(ngModel)]="form.jobTitle" placeholder="如：Java 开发工程师" />
+    </div>
+    <div class="field">
+      <label class="label">去向状态</label>
+      <nz-select [(ngModel)]="form.status" nzFullWidth>
+        <nz-option [nzValue]="statuses.Intention" nzLabel="就业意向"></nz-option>
+        <nz-option [nzValue]="statuses.Signed" nzLabel="已签约"></nz-option>
+        <nz-option [nzValue]="statuses.Employed" nzLabel="已就业"></nz-option>
+        <nz-option [nzValue]="statuses.FurtherStudy" nzLabel="升学"></nz-option>
+        <nz-option [nzValue]="statuses.Entrepreneurship" nzLabel="创业"></nz-option>
+        <nz-option [nzValue]="statuses.Unemployed" nzLabel="待就业"></nz-option>
+      </nz-select>
+    </div>
+    <div class="field">
+      <label class="label">就业方式</label>
+      <nz-select [(ngModel)]="form.employmentType" nzFullWidth [nzAllowClear]="true">
+        <nz-option nzValue="校园招聘" nzLabel="校园招聘"></nz-option>
+        <nz-option nzValue="社会招聘" nzLabel="社会招聘"></nz-option>
+        <nz-option nzValue="实习转正" nzLabel="实习转正"></nz-option>
+        <nz-option nzValue="内推" nzLabel="内推"></nz-option>
+      </nz-select>
+    </div>
+    <div class="field">
+      <label class="label">工作地点</label>
+      <input nz-input [(ngModel)]="form.region" placeholder="如：杭州" />
+    </div>
+    <div class="field">
+      <label class="label">薪资范围</label>
+      <input nz-input [(ngModel)]="form.salaryRange" placeholder="如：8-12K" />
+    </div>
+    <div class="field">
+      <label class="label">入职时间</label>
+      <input nz-input type="date" [(ngModel)]="form.startDate" />
+    </div>
+    <div class="field">
+      <label class="label">是否为主要去向</label>
+      <nz-switch [(ngModel)]="form.isPrimary"></nz-switch>
+    </div>
+    <div class="field full">
+      <label class="label">备注</label>
+      <textarea nz-input rows="3" [(ngModel)]="form.remark" placeholder="补充说明（选填）"></textarea>
+    </div>
+    <div class="actions modal-actions">
+      <button nz-button (click)="closeModal()">取消</button>
+      <button nz-button nzType="primary" [nzLoading]="saving()" (click)="save()">保存</button>
+    </div>
+  </div>
+</nz-modal>
+
+<!-- =================== 从已录用投递导入弹窗 =================== -->
+<nz-modal
+  [(nzVisible)]="importVisible"
+  nzTitle="从已录用投递导入"
+  nzWidth="620px"
+  [nzFooter]="null"
+  (nzOnCancel)="importVisible = false"
+>
+  <ng-container *nzModalContent>
+    @if (importLoading()) {
+      <div class="import-loading">
+        <nz-spin nzSimple></nz-spin>
+        <p>加载已录用投递...</p>
+      </div>
+    } @else if (!offeredApps().length) {
+      <nz-empty nzNotFoundContent="该学生暂无已录用的投递记录"></nz-empty>
+    } @else {
+      <p class="import-hint">选择一份已录用的投递，将自动带入企业名称与岗位。</p>
+      <div class="app-list">
+        @for (app of offeredApps(); track app.id) {
+          <div class="app-item" (click)="importApplication(app)">
+            <span nz-icon nzType="trophy" nzTheme="fill" class="app-item__icon"></span>
+            <div class="app-item__body">
+              <div class="app-item__company">{{ app.companyName || '未知企业' }}</div>
+              <div class="muted">{{ app.jobTitle || '未知岗位' }}</div>
+            </div>
+            <span class="app-item__go">转为去向 <span nz-icon nzType="swap"></span></span>
+          </div>
+        }
+      </div>
+    }
+  </ng-container>
+</nz-modal>

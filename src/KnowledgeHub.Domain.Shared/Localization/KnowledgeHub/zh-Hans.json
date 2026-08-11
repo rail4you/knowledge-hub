@@ -584,6 +584,7 @@
     "Menu:EmploymentInterviewManagement": "面试管理",
     "Menu:EmploymentStatistics": "就业统计",
     "Menu:EmploymentApplicationManagement": "投递管理",
+    "Menu:EmploymentOutcomeManagement": "就业去向管理",
     "Menu:RecruitmentLive": "招聘直播",
     "Menu:RecruitmentLiveManagement": "我的直播",
     "RecruitmentLive:Title": "直播标题",

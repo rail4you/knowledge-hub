@@ -375,6 +375,11 @@ export interface GetEmploymentOutcomeListInput {
   maxResultCount: number;
 }
 
+export interface EmploymentOutcomeStudentDto {
+  id: string;
+  name: string;
+}
+
 export interface EmploymentStatisticsInput {
   major?: string;
   grade?: string;
@@ -637,7 +642,13 @@ export class EmploymentService {
   deleteOutcome = (id: string) =>
     this.restService.request<any, void>({
       method: 'DELETE',
-      url: `/api/app/employment/outcome/${id}`,
+      url: `/api/app/employment/${id}/outcome`,
+    }, { apiName: this.apiName });
+
+  getOutcomeStudents = () =>
+    this.restService.request<any, EmploymentOutcomeStudentDto[]>({
+      method: 'GET',
+      url: '/api/app/employment/outcome-students',
     }, { apiName: this.apiName });
 
   getStatistics = (input: EmploymentStatisticsInput) =>

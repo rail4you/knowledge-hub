@@ -343,11 +343,20 @@ function configureRoutes() {
       
     },
     {
+      path: '/admin/employment/outcomes',
+      name: '::Menu:EmploymentOutcomeManagement',
+      iconClass: 'fas fa-briefcase',
+      parentName: '::Menu:TrainingManagement',
+      order: 9,
+      layout: eLayoutType.application,
+      
+    },
+    {
       path: '/admin/recruitment-live',
       name: '::Menu:RecruitmentLive',
       iconClass: 'fas fa-video',
       parentName: '::Menu:TrainingManagement',
-      order: 9,
+      order: 10,
       layout: eLayoutType.application,
       
     },

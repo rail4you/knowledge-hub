@@ -1,4 +1,4 @@
-import type { CreateEmploymentGuidanceRecordDto, CreateJobApplicationDto, CreateMyAIGuidanceRecordDto, CreateUpdateEmploymentOutcomeDto, CreateUpdateInterviewScheduleDto, CreateUpdateJobPostingDto, CreateUpdateStudentResumeDto, EmployerProfileDto, EmploymentGuidanceRecordDto, EmploymentOutcomeDto, EmploymentStatisticsInput, EmploymentStatisticsRowDto, GetEmploymentGuidanceRecordsInput, GetEmploymentOutcomeListInput, GetInterviewSchedulesInput, GetJobApplicationsInput, GetManageJobsInput, InterviewScheduleDto, JobApplicationDto, JobPostingDto, PagedJobPostingRequestDto, RecordInterviewResultDto, ReviewJobPostingDto, StudentResumeDto, UpdateEmployerProfileDto, UpdateJobApplicationStatusDto } from './dtos/models';
+import type { CreateEmploymentGuidanceRecordDto, CreateJobApplicationDto, CreateMyAIGuidanceRecordDto, CreateUpdateEmploymentOutcomeDto, CreateUpdateInterviewScheduleDto, CreateUpdateJobPostingDto, CreateUpdateStudentResumeDto, EmployerProfileDto, EmploymentGuidanceRecordDto, EmploymentOutcomeDto, EmploymentOutcomeStudentDto, EmploymentStatisticsInput, EmploymentStatisticsRowDto, GetEmploymentGuidanceRecordsInput, GetEmploymentOutcomeListInput, GetInterviewSchedulesInput, GetJobApplicationsInput, GetManageJobsInput, InterviewScheduleDto, JobApplicationDto, JobPostingDto, PagedJobPostingRequestDto, RecordInterviewResultDto, ReviewJobPostingDto, StudentResumeDto, UpdateEmployerProfileDto, UpdateJobApplicationStatusDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -177,10 +177,18 @@ export class EmploymentService {
     { apiName: this.apiName,...config });
   
 
+  getOutcomeStudents = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, EmploymentOutcomeStudentDto[]>({
+      method: 'GET',
+      url: '/api/app/employment/outcome-students',
+    },
+    { apiName: this.apiName,...config });
+  
+
   deleteOutcome = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'DELETE',
-      url: `/api/app/employment/outcome/${id}`,
+      url: `/api/app/employment/${id}/outcome`,
     },
     { apiName: this.apiName,...config });
   
