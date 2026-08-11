@@ -1,156 +1,326 @@
 @if (project(); as project) {
   <div class="double-high-detail-page">
+    <div class="page-toolbar">
+      <a routerLink="/assessment/double-high/projects" class="back-link">
+        <span nz-icon nzType="arrow-left" nzTheme="outline"></span> 返回项目列表
+      </a>
+    </div>
     <nz-card class="hero-card">
       <div class="hero-grid">
         <div>
           <h1>{{ project.title }}</h1>
           <p>{{ project.description || '暂无项目说明' }}</p>
+        </div>
+      </div>
+    </nz-card>
+
+    <nz-tabs [nzSelectedIndex]="activeTab()" (nzSelectedIndexChange)="activeTab.set($event)" class="detail-tabs">
+      <!-- Tab 0: 项目概述 -->
+      <nz-tab nzTitle="项目概述">
+        <div class="dashboard-grid">
+          <nz-card>
+            <div class="metric">
+              <strong>{{ project.dashboard.totalIndicators }}</strong>
+              <span>指标总数</span>
+            </div>
+          </nz-card>
+          <nz-card>
+            <div class="metric">
+              <strong>{{ project.dashboard.collectedIndicators }}</strong>
+              <span>已填报指标</span>
+            </div>
+          </nz-card>
+          <nz-card>
+            <div class="metric">
+              <strong>{{ project.dashboard.evidenceCount }}</strong>
+              <span>佐证材料</span>
+            </div>
+          </nz-card>
+          <nz-card>
+            <div class="metric">
+              <strong>{{ project.dashboard.completionRate }}%</strong>
+              <span>完成率</span>
+            </div>
+          </nz-card>
+        </div>
+
+        <nz-card nzTitle="项目信息">
           <nz-descriptions [nzColumn]="2" nzBordered>
             <nz-descriptions-item nzTitle="批次编码">{{ project.batchCode }}</nz-descriptions-item>
             <nz-descriptions-item nzTitle="状态">{{ getStatusLabel(project.status) }}</nz-descriptions-item>
             <nz-descriptions-item nzTitle="开始时间">{{ project.startTime || '未设置' }}</nz-descriptions-item>
             <nz-descriptions-item nzTitle="结束时间">{{ project.endTime || '未设置' }}</nz-descriptions-item>
           </nz-descriptions>
-        </div>
-        <div class="hero-actions">
-          <button nz-button nzType="primary" (click)="collect()">自动采集</button>
-          <button nz-button (click)="exportReport()">导出报表</button>
-        </div>
-      </div>
-    </nz-card>
+        </nz-card>
+      </nz-tab>
 
-    <div class="dashboard-grid">
-      <nz-card>
-        <div class="metric">
-          <strong>{{ project.dashboard.totalIndicators }}</strong>
-          <span>指标总数</span>
+      <!-- Tab 1: 指标数据 -->
+      <nz-tab nzTitle="指标数据">
+        <div class="tab-toolbar">
+          <span>已配置 {{ project.indicators.length }} 个指标</span>
+          <button nz-button nzType="primary" (click)="openCreateIndicator()">
+            <span nz-icon nzType="plus" nzTheme="outline"></span> 新建指标
+          </button>
         </div>
-      </nz-card>
-      <nz-card>
-        <div class="metric">
-          <strong>{{ project.dashboard.collectedIndicators }}</strong>
-          <span>已采集指标</span>
-        </div>
-      </nz-card>
-      <nz-card>
-        <div class="metric">
-          <strong>{{ project.dashboard.evidenceCount }}</strong>
-          <span>佐证材料</span>
-        </div>
-      </nz-card>
-      <nz-card>
-        <div class="metric">
-          <strong>{{ project.dashboard.completionRate }}%</strong>
-          <span>完成率</span>
-        </div>
-      </nz-card>
-    </div>
-
-    <nz-card nzTitle="指标数据">
-      <nz-table [nzData]="project.indicators" [nzFrontPagination]="false">
-        <thead>
-          <tr>
-            <th>分类</th>
-            <th>编码</th>
-            <th>名称</th>
-            <th>来源</th>
-            <th>目标值</th>
-            <th>最新值</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of project.indicators; track item.id) {
+        <nz-table [nzData]="project.indicators" [nzFrontPagination]="false">
+          <thead>
             <tr>
-              <td>{{ item.categoryName }}</td>
-              <td>{{ item.indicatorCode }}</td>
-              <td>
-                <div class="indicator-name">{{ item.name }}</div>
-                <small>{{ item.description || '-' }}</small>
-              </td>
-              <td>{{ getSourceLabel(item.dataSourceType) }}</td>
-              <td>{{ item.targetValue ?? '-' }} {{ item.unit || '' }}</td>
-              <td>{{ item.latestValue?.value ?? '-' }} {{ item.unit || '' }}</td>
-              <td class="action-cell">
-                @if (item.dataSourceType === dataSources.Manual) {
-                  <div class="manual-box">
-                    <input nz-input type="number" [(ngModel)]="manualValues[item.id]" placeholder="手工值" />
-                    <input nz-input [(ngModel)]="manualNotes[item.id]" placeholder="备注" />
-                    <button nz-button nzType="link" (click)="saveManualValue(item)">保存</button>
-                  </div>
-                }
-                <button nz-button nzType="link" (click)="openEvidence(item)">添加佐证</button>
-              </td>
+              <th>分类</th>
+              <th>编码</th>
+              <th>名称</th>
+              <th>来源</th>
+              <th>目标值</th>
+              <th>最新值</th>
+              <th>备注</th>
+              <th>操作</th>
             </tr>
-          }
-        </tbody>
-      </nz-table>
-    </nz-card>
+          </thead>
+          <tbody>
+            @for (item of project.indicators; track item.id) {
+              <tr>
+                <td>{{ item.categoryName }}</td>
+                <td>{{ item.indicatorCode }}</td>
+                <td>
+                  <div class="indicator-name">{{ item.name }}</div>
+                  <small>{{ item.description || '-' }}</small>
+                </td>
+                <td>
+                  <nz-tag>{{ getSourceLabel(item.dataSourceType) }}</nz-tag>
+                </td>
+                <td>{{ item.targetValue ?? '-' }} {{ item.unit || '' }}</td>
+                <td>
+                  <strong>{{ item.latestValue?.value ?? '-' }} {{ item.unit || '' }}</strong>
+                </td>
+                <td>
+                  <span class="muted">{{ item.latestValue?.note || '-' }}</span>
+                </td>
+                <td>
+                  <button nz-button nzType="link" (click)="openEditIndicator(item)">编辑</button>
+                  <button nz-button nzType="link" nzDanger (click)="deleteIndicator(item.id)">删除</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      </nz-tab>
 
-    <nz-card nzTitle="佐证材料">
-      <nz-table [nzData]="project.evidences" [nzFrontPagination]="false" nzSize="small">
-        <thead>
-          <tr>
-            <th>指标</th>
-            <th>标题</th>
-            <th>类型</th>
-            <th>链接/资源</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of project.evidences; track item.id) {
+      <!-- Tab 2: 佐证材料 -->
+      <nz-tab nzTitle="佐证材料">
+        <div class="tab-toolbar">
+          <span>共 {{ project.evidences.length }} 条佐证材料</span>
+          <button nz-button nzType="primary" (click)="openEvidence()">
+            <span nz-icon nzType="plus" nzTheme="outline"></span> 新建佐证材料
+          </button>
+        </div>
+        <nz-table [nzData]="project.evidences" [nzFrontPagination]="false" nzSize="small">
+          <thead>
             <tr>
-              <td>{{ item.indicatorName }}</td>
-              <td>{{ item.title }}</td>
-              <td>{{ item.evidenceType }}</td>
-              <td>{{ item.resourceName || item.attachmentUrl || item.externalLink || '-' }}</td>
-              <td><button nz-button nzType="link" nzDanger (click)="deleteEvidence(item.id)">删除</button></td>
+              <th>指标</th>
+              <th>标题</th>
+              <th>类型</th>
+              <th>链接/资源</th>
+              <th>操作</th>
             </tr>
-          }
-        </tbody>
-      </nz-table>
-    </nz-card>
+          </thead>
+          <tbody>
+            @for (item of project.evidences; track item.id) {
+              <tr>
+                <td>{{ item.indicatorName }}</td>
+                <td>
+                  <div class="evidence-title">{{ item.title }}</div>
+                  @if (item.description) { <small>{{ item.description }}</small> }
+                </td>
+                <td><nz-tag>{{ getEvidenceTypeLabel(item.evidenceType) }}</nz-tag></td>
+                <td>
+                  @if (item.externalLink) {
+                    <a [href]="item.externalLink" target="_blank" rel="noreferrer">{{ item.externalLink }}</a>
+                  } @else if (item.attachmentUrl) {
+                    <a [href]="item.attachmentUrl" target="_blank" rel="noreferrer">{{ item.attachmentUrl }}</a>
+                  } @else {
+                    <span>{{ item.resourceName || getResourceName(item.resourceId) }}</span>
+                  }
+                </td>
+                <td>
+                  <button nz-button nzType="link" (click)="openEditEvidence(item)">编辑</button>
+                  <button nz-button nzType="link" nzDanger (click)="deleteEvidence(item.id)">删除</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      </nz-tab>
 
-    <nz-card nzTitle="最近导出记录">
-      <nz-table [nzData]="project.recentReports" [nzFrontPagination]="false" nzSize="small">
-        <thead>
-          <tr>
-            <th>报表名称</th>
-            <th>生成时间</th>
-            <th>生成人</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of project.recentReports; track item.id) {
+      <!-- Tab 3: 导出信息 -->
+      <nz-tab nzTitle="导出信息">
+        <div class="tab-toolbar">
+          <span>报表导出记录</span>
+          <button nz-button nzType="primary" (click)="exportReport()">
+            <span nz-icon nzType="file-excel" nzTheme="outline"></span> 导出报表
+          </button>
+        </div>
+        <nz-table [nzData]="project.recentReports" [nzFrontPagination]="false" nzSize="small">
+          <thead>
             <tr>
-              <td>{{ item.reportName }}</td>
-              <td>{{ item.generatedAt }}</td>
-              <td>{{ item.generatedByName || '-' }}</td>
+              <th>报表名称</th>
+              <th>生成时间</th>
+              <th>生成人</th>
+              <th>操作</th>
             </tr>
-          }
-        </tbody>
-      </nz-table>
-    </nz-card>
+          </thead>
+          <tbody>
+            @for (item of project.recentReports; track item.id) {
+              <tr>
+                <td>{{ item.reportName }}</td>
+                <td>{{ item.generatedAt }}</td>
+                <td>{{ item.generatedByName || '-' }}</td>
+                <td>
+                  <button nz-button nzType="link" (click)="downloadReport(item)">
+                    <span nz-icon nzType="download" nzTheme="outline"></span> 下载
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+      </nz-tab>
+    </nz-tabs>
 
-    <nz-modal [(nzVisible)]="evidenceVisible" nzTitle="新增佐证材料" [nzFooter]="null" (nzOnCancel)="evidenceVisible = false">
-      <div class="evidence-form">
-        <input nz-input [(ngModel)]="evidenceForm.title" placeholder="标题" />
-        <textarea nz-input rows="3" [(ngModel)]="evidenceForm.description" placeholder="说明"></textarea>
-        <nz-select [(ngModel)]="evidenceForm.evidenceType">
-          <nz-option [nzValue]="evidenceTypes.ResourceLink" nzLabel="资源链接"></nz-option>
-          <nz-option [nzValue]="evidenceTypes.AttachmentLink" nzLabel="附件链接"></nz-option>
-          <nz-option [nzValue]="evidenceTypes.ExternalLink" nzLabel="外部链接"></nz-option>
+    <!-- 新建/编辑指标 Modal -->
+    <nz-modal
+      [(nzVisible)]="indicatorVisible"
+      [nzTitle]="editingIndicatorId ? '编辑指标' : '新建指标'"
+      [nzFooter]="null"
+      (nzOnCancel)="indicatorVisible = false">
+      <ng-container *nzModalContent>
+        <div class="indicator-form">
+        <label>分类</label>
+        <input nz-input [(ngModel)]="indicatorForm.categoryName" placeholder="如 产教融合 / 教学成果" />
+
+        <label>指标编码</label>
+        <input nz-input [(ngModel)]="indicatorForm.indicatorCode" placeholder="指标编码，如 I-001" />
+
+        <label>指标名称</label>
+        <input nz-input [(ngModel)]="indicatorForm.name" placeholder="指标名称" />
+
+        <label>指标说明</label>
+        <textarea nz-input rows="3" [(ngModel)]="indicatorForm.description" placeholder="指标说明"></textarea>
+
+        <label>单位</label>
+        <input nz-input [(ngModel)]="indicatorForm.unit" placeholder="如 项 / 门 / %" />
+
+        <label>数据来源</label>
+        <nz-select [(ngModel)]="indicatorForm.dataSourceType" style="width: 100%">
+          <nz-option [nzValue]="dataSources.Manual" nzLabel="手工填报"></nz-option>
+          <nz-option [nzValue]="dataSources.ResourceCount" nzLabel="资源数量"></nz-option>
+          <nz-option [nzValue]="dataSources.CourseCount" nzLabel="课程数量"></nz-option>
+          <nz-option [nzValue]="dataSources.MicroMajorCount" nzLabel="微专业数量"></nz-option>
+          <nz-option [nzValue]="dataSources.PracticumProjectCount" nzLabel="实训项目数量"></nz-option>
+          <nz-option [nzValue]="dataSources.NewsArticleCount" nzLabel="资讯数量"></nz-option>
+          <nz-option [nzValue]="dataSources.MicroMajorEnrollmentCount" nzLabel="微专业报名量"></nz-option>
+          <nz-option [nzValue]="dataSources.PracticumEnrollmentCount" nzLabel="实训参与量"></nz-option>
         </nz-select>
-        <input nz-input [(ngModel)]="evidenceForm.resourceId" placeholder="资源 ID，可选" />
-        <input nz-input [(ngModel)]="evidenceForm.attachmentUrl" placeholder="附件链接 URL" />
-        <input nz-input [(ngModel)]="evidenceForm.externalLink" placeholder="外部链接 URL" />
-        <input nz-input type="number" [(ngModel)]="evidenceForm.sortOrder" placeholder="排序" />
-      </div>
-      <div class="modal-actions">
-        <button nz-button (click)="evidenceVisible = false">取消</button>
-        <button nz-button nzType="primary" (click)="saveEvidence()">保存</button>
-      </div>
+
+        <label>目标值</label>
+        <input nz-input type="number" [(ngModel)]="indicatorForm.targetValue" placeholder="目标值，可为空" />
+
+        <label>最新值</label>
+        <input nz-input type="number" [(ngModel)]="latestValueDraft" placeholder="手工填报最新值，可为空" />
+
+        <label>最新值备注</label>
+        <input nz-input [(ngModel)]="latestNoteDraft" placeholder="备注，可为空" />
+        </div>
+        <div class="modal-actions">
+          <button nz-button (click)="indicatorVisible = false">取消</button>
+          <button nz-button nzType="primary" (click)="saveIndicator()">保存</button>
+        </div>
+      </ng-container>
+    </nz-modal>
+
+    <!-- 新建/编辑佐证材料 Modal -->
+    <nz-modal
+      [(nzVisible)]="evidenceVisible"
+      [nzTitle]="editingEvidenceId ? '编辑佐证材料' : '新增佐证材料'"
+      [nzFooter]="null"
+      (nzOnCancel)="evidenceVisible = false">
+      <ng-container *nzModalContent>
+        <div class="evidence-form">
+          <label>关联指标</label>
+          <nz-select [(ngModel)]="evidenceForm.indicatorId" style="width: 100%">
+            @for (indicator of project.indicators; track indicator.id) {
+              <nz-option [nzValue]="indicator.id" [nzLabel]="indicator.name"></nz-option>
+            }
+          </nz-select>
+
+          <label>标题</label>
+          <input nz-input [(ngModel)]="evidenceForm.title" placeholder="标题" />
+
+          <label>说明</label>
+          <textarea nz-input rows="3" [(ngModel)]="evidenceForm.description" placeholder="说明"></textarea>
+
+          <label>类型</label>
+          <nz-radio-group [(ngModel)]="evidenceForm.evidenceType" (ngModelChange)="onEvidenceTypeChange()">
+            <label nz-radio [nzValue]="evidenceTypes.ResourceLink">资源链接</label>
+            <label nz-radio [nzValue]="evidenceTypes.AttachmentLink">附件链接</label>
+            <label nz-radio [nzValue]="evidenceTypes.ExternalLink">外部链接</label>
+          </nz-radio-group>
+
+          <!-- 资源链接：从租户资源中选择 -->
+          @if (evidenceForm.evidenceType === evidenceTypes.ResourceLink) {
+            <div class="type-field">
+              <label>选择资源</label>
+              <nz-select
+                [(ngModel)]="evidenceForm.resourceId"
+                style="width: 100%"
+                nzShowSearch
+                [nzLoading]="resourceLoading()"
+                nzPlaceHolder="搜索并选择租户内的资源">
+                @for (resource of resourceOptions(); track resource.id) {
+                  <nz-option
+                    [nzValue]="resource.id"
+                    [nzLabel]="resource.name + (resource.categoryName ? '（' + resource.categoryName + '）' : '')">
+                  </nz-option>
+                }
+              </nz-select>
+            </div>
+          }
+
+          <!-- 附件链接：上传文件返回 OSS 地址 -->
+          @if (evidenceForm.evidenceType === evidenceTypes.AttachmentLink) {
+            <div class="type-field">
+              <label>上传附件</label>
+              <nz-upload
+                [nzBeforeUpload]="beforeEvidenceUpload"
+                [nzFileList]="evidenceFileList"
+                [nzRemove]="removeEvidenceAttachment"
+                [nzDisabled]="evidenceUploading()"
+                [nzShowUploadList]="true">
+                <button nz-button [nzLoading]="evidenceUploading()">
+                  <span nz-icon nzType="upload"></span>
+                  {{ evidenceUploading() ? '上传中...' : '选择文件上传' }}
+                </button>
+              </nz-upload>
+              @if (evidenceForm.attachmentUrl) {
+                <div class="upload-result">
+                  <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+                  <span class="upload-result__url">{{ evidenceForm.attachmentUrl }}</span>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- 外部链接：填写外部 URL -->
+          @if (evidenceForm.evidenceType === evidenceTypes.ExternalLink) {
+            <div class="type-field">
+              <label>外部链接 URL</label>
+              <input nz-input [(ngModel)]="evidenceForm.externalLink" placeholder="https://example.com/..." />
+            </div>
+          }
+        </div>
+        <div class="modal-actions">
+          <button nz-button (click)="evidenceVisible = false">取消</button>
+          <button nz-button nzType="primary" (click)="saveEvidence()">保存</button>
+        </div>
+      </ng-container>
     </nz-modal>
   </div>
 }

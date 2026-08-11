@@ -192,6 +192,105 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         await _projectRepository.DeleteAsync(id);
     }
 
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageIndicator)]
+    public async Task<DoubleHighIndicatorDto> AddIndicatorAsync(Guid projectId, CreateUpdateDoubleHighIndicatorDto input)
+    {
+        var project = await GetProjectEntityAsync(projectId);
+
+        var categoryName = (input.CategoryName ?? string.Empty).Trim();
+        var code = (input.IndicatorCode ?? string.Empty).Trim();
+        var name = (input.Name ?? string.Empty).Trim();
+        if (code.Length == 0 || name.Length == 0 || categoryName.Length == 0)
+        {
+            throw new UserFriendlyException("指标缺少必填字段：分类、编码、名称均不能为空。");
+        }
+
+        var existing = await _indicatorRepository.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.IndicatorCode == code);
+        if (existing != null)
+        {
+            throw new UserFriendlyException($"指标编码 {code} 已存在。");
+        }
+
+        var maxSortOrder = (await _indicatorRepository.GetListAsync(x => x.ProjectId == projectId))
+            .DefaultIfEmpty()
+            .Max(x => x?.SortOrder ?? 0);
+
+        var entity = new DoubleHighIndicator(
+            GuidGenerator.Create(),
+            projectId,
+            code,
+            name)
+        {
+            TenantId = CurrentTenant.Id,
+            ParentId = input.ParentId,
+            CategoryName = categoryName,
+            Description = input.Description?.Trim(),
+            Unit = input.Unit?.Trim(),
+            DataSourceType = input.DataSourceType,
+            TargetValue = input.TargetValue,
+            Weight = input.Weight == 0 ? 1 : input.Weight,
+            SortOrder = input.SortOrder > 0 ? input.SortOrder : maxSortOrder + 1
+        };
+
+        await _indicatorRepository.InsertAsync(entity, autoSave: true);
+        return await MapIndicatorDtoAsync(entity);
+    }
+
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageIndicator)]
+    public async Task<DoubleHighIndicatorDto> UpdateIndicatorAsync(Guid id, CreateUpdateDoubleHighIndicatorDto input)
+    {
+        var entity = await _indicatorRepository.GetAsync(id);
+
+        var categoryName = (input.CategoryName ?? string.Empty).Trim();
+        var code = (input.IndicatorCode ?? string.Empty).Trim();
+        var name = (input.Name ?? string.Empty).Trim();
+        if (code.Length == 0 || name.Length == 0 || categoryName.Length == 0)
+        {
+            throw new UserFriendlyException("指标缺少必填字段：分类、编码、名称均不能为空。");
+        }
+
+        var existing = await _indicatorRepository.FirstOrDefaultAsync(
+            x => x.ProjectId == entity.ProjectId && x.IndicatorCode == code && x.Id != id);
+        if (existing != null)
+        {
+            throw new UserFriendlyException($"指标编码 {code} 已存在。");
+        }
+
+        entity.ParentId = input.ParentId;
+        entity.CategoryName = categoryName;
+        entity.IndicatorCode = code;
+        entity.Name = name;
+        entity.Description = input.Description?.Trim();
+        entity.Unit = input.Unit?.Trim();
+        entity.DataSourceType = input.DataSourceType;
+        entity.TargetValue = input.TargetValue;
+        entity.Weight = input.Weight == 0 ? 1 : input.Weight;
+        entity.SortOrder = input.SortOrder > 0 ? input.SortOrder : entity.SortOrder;
+
+        await _indicatorRepository.UpdateAsync(entity, autoSave: true);
+        return await MapIndicatorDtoAsync(entity);
+    }
+
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageIndicator)]
+    public async Task DeleteIndicatorAsync(Guid id)
+    {
+        var indicator = await _indicatorRepository.GetAsync(id);
+
+        var values = await _valueRepository.GetListAsync(x => x.IndicatorId == id);
+        foreach (var value in values)
+        {
+            await _valueRepository.DeleteAsync(value);
+        }
+
+        var evidences = await _evidenceRepository.GetListAsync(x => x.IndicatorId == id);
+        foreach (var evidence in evidences)
+        {
+            await _evidenceRepository.DeleteAsync(evidence);
+        }
+
+        await _indicatorRepository.DeleteAsync(indicator, autoSave: true);
+    }
+
     [Authorize(KnowledgeHubPermissions.DoubleHigh.CollectData)]
     public async Task<DoubleHighDashboardDto> CollectProjectAsync(Guid projectId)
     {
@@ -275,6 +374,38 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageIndicator)]
+    public async Task<DoubleHighEvidenceDto> UpdateEvidenceAsync(Guid id, CreateDoubleHighEvidenceDto input)
+    {
+        if (string.IsNullOrWhiteSpace(input.Title))
+        {
+            throw new UserFriendlyException("佐证材料标题不能为空。");
+        }
+
+        var entity = await _evidenceRepository.GetAsync(id);
+
+        if (input.EvidenceType == DoubleHighEvidenceType.ResourceLink && !input.ResourceId.HasValue)
+        {
+            throw new UserFriendlyException("资源型佐证材料必须绑定资源。");
+        }
+
+        if (input.ResourceId.HasValue)
+        {
+            await _resourceRepository.GetAsync(input.ResourceId.Value);
+        }
+
+        entity.Title = input.Title.Trim();
+        entity.Description = input.Description?.Trim();
+        entity.EvidenceType = input.EvidenceType;
+        entity.ResourceId = input.ResourceId;
+        entity.AttachmentUrl = input.AttachmentUrl?.Trim();
+        entity.ExternalLink = input.ExternalLink?.Trim();
+        entity.SortOrder = input.SortOrder;
+
+        await _evidenceRepository.UpdateAsync(entity, autoSave: true);
+        return await MapEvidenceDtoAsync(entity);
+    }
+
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageIndicator)]
     public async Task DeleteEvidenceAsync(Guid id)
     {
         await _evidenceRepository.DeleteAsync(id);
@@ -318,6 +449,36 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
 
     [Authorize(KnowledgeHubPermissions.DoubleHigh.ExportReport)]
     public async Task<IRemoteStreamContent> ExportReportAsync(Guid projectId)
+    {
+        var (stream, reportName) = await BuildReportStreamAsync(projectId);
+
+        var report = new DoubleHighReport(GuidGenerator.Create(), projectId, reportName)
+        {
+            TenantId = CurrentTenant.Id,
+            GeneratedById = CurrentUser.Id,
+            SummaryJson = JsonSerializer.Serialize((await GetDetailAsync(projectId)).Dashboard)
+        };
+        await _reportRepository.InsertAsync(report, autoSave: true);
+
+        return new RemoteStreamContent(
+            stream,
+            reportName,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.ExportReport)]
+    public async Task<IRemoteStreamContent> DownloadReportAsync(Guid reportId)
+    {
+        var report = await _reportRepository.GetAsync(reportId);
+        var (stream, reportName) = await BuildReportStreamAsync(report.ProjectId);
+
+        return new RemoteStreamContent(
+            stream,
+            report.ReportName,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    private async Task<(MemoryStream Stream, string ReportName)> BuildReportStreamAsync(Guid projectId)
     {
         var detail = await GetDetailAsync(projectId);
         using var workbook = new XLWorkbook();
@@ -390,21 +551,10 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         evidenceSheet.Columns().AdjustToContents();
 
         var reportName = $"双高评估报表_{detail.BatchCode}_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
-        var report = new DoubleHighReport(GuidGenerator.Create(), projectId, reportName)
-        {
-            TenantId = CurrentTenant.Id,
-            GeneratedById = CurrentUser.Id,
-            SummaryJson = JsonSerializer.Serialize(detail.Dashboard)
-        };
-        await _reportRepository.InsertAsync(report, autoSave: true);
-
         var stream = new MemoryStream();
         workbook.SaveAs(stream);
         stream.Seek(0, SeekOrigin.Begin);
-        return new RemoteStreamContent(
-            stream,
-            reportName,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        return (stream, reportName);
     }
 
     private IQueryable<DoubleHighProject> ApplyProjectFilters(
@@ -750,6 +900,29 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             Note = entity.Note,
             SourceType = entity.SourceType,
             CollectedAt = entity.CollectedAt
+        };
+    }
+
+    private async Task<DoubleHighIndicatorDto> MapIndicatorDtoAsync(DoubleHighIndicator entity)
+    {
+        var latestValues = await GetLatestValueMapAsync(new List<Guid> { entity.Id });
+        return new DoubleHighIndicatorDto
+        {
+            Id = entity.Id,
+            ProjectId = entity.ProjectId,
+            ParentId = entity.ParentId,
+            CategoryName = entity.CategoryName,
+            IndicatorCode = entity.IndicatorCode,
+            Name = entity.Name,
+            Description = entity.Description,
+            Unit = entity.Unit,
+            DataSourceType = entity.DataSourceType,
+            TargetValue = entity.TargetValue,
+            Weight = entity.Weight,
+            SortOrder = entity.SortOrder,
+            LatestValue = latestValues.TryGetValue(entity.Id, out var latestValue)
+                ? MapValueSnapshot(latestValue)
+                : null
         };
     }
 

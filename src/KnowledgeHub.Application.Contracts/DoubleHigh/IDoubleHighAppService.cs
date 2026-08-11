@@ -16,9 +16,14 @@ public interface IDoubleHighAppService : IApplicationService
     Task<DoubleHighProjectDto> UpdateAsync(Guid id, CreateUpdateDoubleHighProjectDto input);
     Task DeleteAsync(Guid id);
     Task<DoubleHighDashboardDto> CollectProjectAsync(Guid projectId);
+    Task<DoubleHighIndicatorDto> AddIndicatorAsync(Guid projectId, CreateUpdateDoubleHighIndicatorDto input);
+    Task<DoubleHighIndicatorDto> UpdateIndicatorAsync(Guid id, CreateUpdateDoubleHighIndicatorDto input);
+    Task DeleteIndicatorAsync(Guid id);
     Task<DoubleHighIndicatorValueSnapshotDto> SaveManualValueAsync(SaveDoubleHighIndicatorValueDto input);
     Task<DoubleHighEvidenceDto> AddEvidenceAsync(CreateDoubleHighEvidenceDto input);
+    Task<DoubleHighEvidenceDto> UpdateEvidenceAsync(Guid id, CreateDoubleHighEvidenceDto input);
     Task DeleteEvidenceAsync(Guid id);
     Task<PagedResultDto<DoubleHighReportDto>> GetReportListAsync(GetDoubleHighReportsInput input);
     Task<IRemoteStreamContent> ExportReportAsync(Guid projectId);
+    Task<IRemoteStreamContent> DownloadReportAsync(Guid reportId);
 }

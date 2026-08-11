@@ -29,7 +29,7 @@
       <div class="detail-hero__action">
         @if (project.isCurrentUserEnrolled) {
           <span class="enrolled-badge"><span nz-icon nzType="check-circle" nzTheme="fill"></span> 已加入</span>
-        } @else {
+        } @else if (canEnroll()) {
           <button class="enroll-btn" (click)="enroll()">
             <span nz-icon nzType="user-add" nzTheme="outline"></span> 加入实训
           </button>

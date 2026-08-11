@@ -208,6 +208,7 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.DoubleHigh',
+      layout: eLayoutType.application,
     },
   },
   {

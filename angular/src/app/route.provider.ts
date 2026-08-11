@@ -391,11 +391,20 @@ function configureRoutes() {
       
     },
     {
+      path: '/admin/assessment/double-high',
+      name: '::Menu:DoubleHighManagement',
+      iconClass: 'fas fa-sliders-h',
+      parentName: '::Menu:InfoManagement',
+      order: 3,
+      layout: eLayoutType.application,
+      
+    },
+    {
       path: '/assessment/double-high/projects',
       name: '::Menu:DoubleHighProjects',
       iconClass: 'fas fa-layer-group',
       parentName: '::Menu:InfoManagement',
-      order: 3,
+      order: 4,
       layout: eLayoutType.application,
       
     },
@@ -403,15 +412,6 @@ function configureRoutes() {
       path: '/assessment/double-high/report-center',
       name: '::Menu:DoubleHighReportCenter',
       iconClass: 'fas fa-file-export',
-      parentName: '::Menu:InfoManagement',
-      order: 4,
-      layout: eLayoutType.application,
-      
-    },
-    {
-      path: '/admin/assessment/double-high',
-      name: '::Menu:DoubleHighManagement',
-      iconClass: 'fas fa-sliders-h',
       parentName: '::Menu:InfoManagement',
       order: 5,
       layout: eLayoutType.application,

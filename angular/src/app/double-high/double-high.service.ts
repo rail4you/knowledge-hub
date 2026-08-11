@@ -223,6 +223,26 @@ export class DoubleHighService {
       url: `/api/app/double-high/collect-project/${projectId}`,
     }, { apiName: this.apiName });
 
+  addIndicator = (projectId: string, input: CreateUpdateDoubleHighIndicatorDto) =>
+    this.restService.request<any, DoubleHighIndicatorDto>({
+      method: 'POST',
+      url: `/api/app/double-high/indicator/${projectId}`,
+      body: input,
+    }, { apiName: this.apiName });
+
+  updateIndicator = (id: string, input: CreateUpdateDoubleHighIndicatorDto) =>
+    this.restService.request<any, DoubleHighIndicatorDto>({
+      method: 'PUT',
+      url: `/api/app/double-high/${id}/indicator`,
+      body: input,
+    }, { apiName: this.apiName });
+
+  deleteIndicator = (id: string) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/double-high/${id}/indicator`,
+    }, { apiName: this.apiName });
+
   saveManualValue = (input: SaveDoubleHighIndicatorValueDto) =>
     this.restService.request<any, DoubleHighIndicatorValueSnapshotDto>({
       method: 'POST',
@@ -234,6 +254,13 @@ export class DoubleHighService {
     this.restService.request<any, DoubleHighEvidenceDto>({
       method: 'POST',
       url: '/api/app/double-high/evidence',
+      body: input,
+    }, { apiName: this.apiName });
+
+  updateEvidence = (id: string, input: CreateDoubleHighEvidenceDto) =>
+    this.restService.request<any, DoubleHighEvidenceDto>({
+      method: 'PUT',
+      url: `/api/app/double-high/${id}/evidence`,
       body: input,
     }, { apiName: this.apiName });
 
@@ -255,5 +282,12 @@ export class DoubleHighService {
       method: 'POST',
       responseType: 'blob',
       url: `/api/app/double-high/export-report/${projectId}`,
+    }, { apiName: this.apiName, ...config });
+
+  downloadReport = (reportId: string, config?: Partial<Rest.Config>): Observable<Blob> =>
+    this.restService.request<any, Blob>({
+      method: 'POST',
+      responseType: 'blob',
+      url: `/api/app/double-high/download-report/${reportId}`,
     }, { apiName: this.apiName, ...config });
 }

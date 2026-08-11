@@ -38,6 +38,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IdentityUserManager _userManager;
     private readonly ICurrentUser _currentUser;
     private readonly ICurrentTenant _currentTenant;
 
@@ -52,6 +53,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         IRepository<Course, Guid> courseRepository,
         IRepository<StudentCourse, Guid> studentCourseRepository,
         IRepository<IdentityUser, Guid> userRepository,
+        IdentityUserManager userManager,
         ICurrentUser currentUser,
         ICurrentTenant currentTenant)
     {
@@ -65,6 +67,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         _courseRepository = courseRepository;
         _studentCourseRepository = studentCourseRepository;
         _userRepository = userRepository;
+        _userManager = userManager;
         _currentUser = currentUser;
         _currentTenant = currentTenant;
     }
@@ -208,6 +211,14 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
     public async Task EnrollAsync(Guid projectId)
     {
         var studentId = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
+
+        // 仅学生角色可以加入实训（教师/管理员等不可加入）
+        var user = await _userRepository.GetAsync(studentId);
+        if (!await _userManager.IsInRoleAsync(user, "Student"))
+        {
+            throw new UserFriendlyException("仅学生用户可加入实训。");
+        }
+
         var entity = await _projectRepository.GetAsync(projectId);
         if (entity.Status != PracticumProjectStatus.Published)
         {

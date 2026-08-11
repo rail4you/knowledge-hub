@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, OnInit, OnDestroy, inject, signal,
+  ChangeDetectionStrategy, Component, OnInit, OnDestroy, computed, inject, signal,
   ViewChild, ElementRef
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -20,6 +20,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { ConfigStateService } from '@abp/ng.core';
 import { Subject, takeUntil, Subscription } from 'rxjs';
+import { hasRole } from '../auth/current-user.utils';
 import {
   CreatePracticumSubmissionDto,
   PracticumGuidanceRecordDto,
@@ -75,6 +76,9 @@ export class PracticumDetailComponent implements OnInit, OnDestroy {
   readonly submissions = signal<PracticumSubmissionDto[]>([]);
   readonly guidances = signal<PracticumGuidanceRecordDto[]>([]);
   readonly submissionStatuses = PracticumSubmissionStatus;
+
+  /** 当前用户是否为 Student 角色，控制"加入实训"按钮显示 */
+  readonly canEnroll = computed(() => hasRole(this.configState, 'Student'));
 
   private enrollmentId: string | null = null;
   forms: Record<string, SubmissionForm> = {};
