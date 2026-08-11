@@ -100,7 +100,14 @@ import {
   CopyOutline,
   KeyOutline,
   UserOutline,
-  // WASM 仿真实训中心 & 播放页图标
+  // 微专业证书 & 学生端导航
+  SafetyCertificateOutline,
+  SafetyCertificateFill,
+  UnorderedListOutline,
+  // 租户主页
+  SolutionOutline,
+  ArrowRightOutline,
+  // WASM 仿真实训中心 & 播放页
   ArrowLeftOutline,
   ExportOutline,
   ProfileOutline,
@@ -205,6 +212,13 @@ const icons = [
   CopyOutline,
   KeyOutline,
   UserOutline,
+  // 微专业证书 & 学生端导航
+  SafetyCertificateOutline,
+  SafetyCertificateFill,
+  UnorderedListOutline,
+  // 租户主页
+  SolutionOutline,
+  ArrowRightOutline,
   // WASM 仿真实训中心 & 播放页
   ArrowLeftOutline,
   ExportOutline,

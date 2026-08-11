@@ -14,6 +14,7 @@ public interface IMicroMajorAppService : IApplicationService
     Task<PagedResultDto<MicroMajorDto>> GetListAsync(PagedMicroMajorRequestDto input);
     Task<PagedResultDto<MicroMajorDto>> GetPublishedAsync(PagedMicroMajorRequestDto input);
     Task<List<MicroMajorEnrollmentDto>> GetMyEnrollmentsAsync();
+    Task<List<MyMicroMajorDto>> GetMyMicroMajorsAsync();
     Task<List<MicroMajorCertificateDto>> GetMyCertificatesAsync();
     Task<List<MicroMajorResourceDto>> GetResourcesAsync(Guid microMajorId);
     Task<PagedResultDto<MicroMajorEnrollmentDto>> GetEnrollmentListAsync(GetMicroMajorEnrollmentsInput input);

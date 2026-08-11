@@ -169,7 +169,8 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                 CoverImageUrl = c.CoverImageUrl,
                 TeacherName = teacherName,
                 MajorName = majorName,
-                StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0)
+                StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0),
+                Difficulty = c.Difficulty
             });
         }
 

@@ -110,6 +110,7 @@ public class CourseBriefDto
     public string? TeacherName { get; set; }
     public string? MajorName { get; set; }
     public int StudentCount { get; set; }
+    public int Difficulty { get; set; }
 }
 
 public class MaterialBriefDto

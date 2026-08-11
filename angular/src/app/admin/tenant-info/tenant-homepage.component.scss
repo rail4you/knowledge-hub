@@ -458,6 +458,7 @@ $card-radius: 14px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
+  font-family: inherit;
   color: $c-light;
   background: #fff;
   border: 1px solid $c-border;
@@ -474,6 +475,15 @@ $card-radius: 14px;
     font-weight: 600;
     box-shadow: 0 4px 12px rgba(30, 108, 232, 0.25);
   }
+}
+.course-empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: $c-light;
+  font-size: 14px;
+  background: #fff;
+  border: 1px dashed $c-border;
+  border-radius: 14px;
 }
 .course-grid {
   display: grid;

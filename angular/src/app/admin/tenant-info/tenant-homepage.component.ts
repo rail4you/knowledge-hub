@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, OnInit, inject, signal, AfterViewInit, OnDestroy,
+  ChangeDetectionStrategy, Component, OnInit, inject, signal, computed, AfterViewInit, OnDestroy,
 } from '@angular/core';
 import { CommonModule, ViewportScroller } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
@@ -82,6 +82,30 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   // 课程封面渐变色板
   readonly courseColors = ['#1a5fe0', '#0ea5e9', '#0891b2', '#16a34a', '#7c3aed', '#d97706', '#dc2626', '#059669'];
   readonly courseEmojis = ['📖', '📊', '🎯', '💡', '📝', '🌐', '🎨', '🔬'];
+
+  // 学历课程体系 —— 难度分类筛选（对应课程 Difficulty 属性）
+  readonly difficultyOptions = [
+    { value: 1, label: '入门' },
+    { value: 2, label: '初级' },
+    { value: 3, label: '中级' },
+    { value: 4, label: '高级' },
+    { value: 5, label: '专家' },
+  ];
+  readonly difficultyFilter = signal(0);
+  readonly filteredCourses = computed<CourseBriefDto[]>(() => {
+    const courses = this.portalData()?.featuredCourses || [];
+    const diff = this.difficultyFilter();
+    return diff === 0 ? courses : courses.filter(c => (c.difficulty ?? 1) === diff);
+  });
+
+  getDifficultyCount(diff: number): number {
+    const courses = this.portalData()?.featuredCourses || [];
+    return diff === 0 ? courses.length : courses.filter(c => (c.difficulty ?? 1) === diff).length;
+  }
+
+  setDifficultyFilter(diff: number): void {
+    this.difficultyFilter.set(diff);
+  }
 
   // 顶部分区导航
   readonly navCards: NavCard[] = [

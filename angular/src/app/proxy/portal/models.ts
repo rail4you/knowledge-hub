@@ -6,6 +6,7 @@ export interface CourseBriefDto {
   teacherName?: string | null;
   majorName?: string | null;
   studentCount?: number;
+  difficulty?: number;
 }
 
 export interface MaterialBriefDto {

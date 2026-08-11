@@ -171,15 +171,24 @@
                 <p class="course-section__sub">点击卡片查看课程详情与章节大纲</p>
               </div>
               <div class="course-categories">
-                <span class="cat-tag active">全部</span>
-                <span class="cat-tag">专业基础课</span>
-                <span class="cat-tag">专业核心课</span>
-                <span class="cat-tag">专业拓展课</span>
+                <button type="button" class="cat-tag" [class.active]="difficultyFilter() === 0"
+                        (click)="setDifficultyFilter(0)">
+                  全部 ({{ getDifficultyCount(0) }})
+                </button>
+                @for (opt of difficultyOptions; track opt.value) {
+                  <button type="button" class="cat-tag" [class.active]="difficultyFilter() === opt.value"
+                          (click)="setDifficultyFilter(opt.value)">
+                    {{ opt.label }} ({{ getDifficultyCount(opt.value) }})
+                  </button>
+                }
               </div>
             </header>
 
-            <div class="course-grid">
-              @for (c of pd.featuredCourses; track c.id; let i = $index) {
+            @if (filteredCourses().length === 0) {
+              <div class="course-empty">该难度暂无课程</div>
+            } @else {
+              <div class="course-grid">
+                @for (c of filteredCourses(); track c.id; let i = $index) {
                 <article class="course-card" (click)="openCoursePreview(c)" tabindex="0"
                          (keydown.enter)="openCoursePreview(c)" role="button"
                          [attr.aria-label]="'预览课程：' + (c.title || '')">
@@ -215,8 +224,9 @@
                     </div>
                   </div>
                 </article>
-              }
-            </div>
+                }
+              </div>
+            }
           </div>
         </section>
       }

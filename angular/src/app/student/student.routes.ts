@@ -101,6 +101,14 @@ export const STUDENT_ROUTES: Routes = [
         loadComponent: () => import('./micro-majors/student-micro-major-detail.component').then(m => m.StudentMicroMajorDetailComponent),
       },
       {
+        path: 'my-micro-majors',
+        loadComponent: () => import('./micro-majors/student-my-micro-majors.component').then(m => m.StudentMyMicroMajorsComponent),
+        data: {
+          name: '我的微专业',
+          icon: 'audit'
+        }
+      },
+      {
         path: 'practicums',
         loadComponent: () => import('./practicums/student-practicums.component').then(m => m.StudentPracticumsComponent),
         data: {

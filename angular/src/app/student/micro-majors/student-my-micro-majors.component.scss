@@ -1,0 +1,286 @@
+@use '../styles/student-design' as ds;
+
+:host { flex: 1 1 auto; display: flex; flex-direction: column; background: ds.$student-bg; }
+
+.mymm-page {
+  box-sizing: border-box; flex: 1 1 auto; width: 100%;
+  @include ds.student-container; padding-top: 24px; padding-bottom: 48px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+
+/* =================== HERO =================== */
+.page-hero {
+  position: relative; border-radius: ds.$student-radius-xl; overflow: hidden;
+  background: #1e6ce8; color: #fff;
+  box-shadow: 0 20px 40px rgba(5, 150, 105, 0.18);
+  &::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(circle at 20% 30%, rgba(255,255,255,.14) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(255,255,255,.08) 0%, transparent 50%);
+  }
+}
+.page-hero__inner {
+  position: relative; display: flex; align-items: center; justify-content: space-between;
+  gap: 24px; padding: 28px 36px 22px; z-index: 1;
+}
+.page-hero__body { min-width: 0; }
+.page-hero__label {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
+  border-radius: 999px; background: rgba(255,255,255,.2); backdrop-filter: blur(8px);
+  font-size: 11px; font-weight: 600; letter-spacing: 2px; margin-bottom: 10px;
+}
+.page-hero__title {
+  @include ds.section-heading(28px); color: #fff; margin: 0 0 8px; letter-spacing: -.4px;
+  &::before { background: #fff; }
+}
+.page-hero__bar { display: none; }
+.page-hero__desc { margin: 0; color: rgba(255,255,255,.82); font-size: 14px; line-height: 1.6; }
+.page-hero__stats { position: relative; display: flex; align-items: center; padding: 0 36px 18px; z-index: 1; }
+
+.stat-chip {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 14px;
+  border-radius: 999px; background: rgba(255,255,255,.18); backdrop-filter: blur(6px);
+  color: rgba(255,255,255,.9); font-size: 13px;
+  strong { color: #fff; font-size: 16px; font-weight: 700; margin: 0 2px; }
+  &__dot { width: 7px; height: 7px; border-radius: 50%; background: #93c5fd; box-shadow: 0 0 6px rgba(147,197,253,.6); }
+}
+
+/* =================== 列表 =================== */
+.mymm-list { display: flex; flex-direction: column; gap: 20px; }
+
+.mymm-card {
+  border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius-lg;
+  background: #fff; overflow: hidden; cursor: pointer; outline: none;
+  transition: all .25s ease; box-shadow: 0 1px 2px rgba(15,23,42,.03);
+  &:hover, &:focus-visible {
+    border-color: rgba(ds.$student-primary, .4);
+    box-shadow: 0 16px 32px rgba(15,23,42,.08);
+    transform: translateY(-2px);
+    .cover-icon { transform: scale(1.06) rotate(-2deg); }
+  }
+}
+
+/* ---------- 头部：封面 + 信息 ---------- */
+.mymm-card__head { display: flex; }
+.mymm-card__cover {
+  position: relative; flex: 0 0 180px; min-height: 168px; display: flex;
+  align-items: center; justify-content: center; color: #fff; overflow: hidden;
+}
+.cover-decor { position: absolute; inset: 0; pointer-events: none; }
+.decor-line {
+  position: absolute; background: rgba(255,255,255,.18); border-radius: 2px;
+  &--1 { width: 60px; height: 3px; top: 18px; right: 24px; transform: rotate(-12deg); }
+  &--2 { width: 30px; height: 3px; top: 32px; right: 60px; transform: rotate(-12deg); background: rgba(255,255,255,.32); }
+}
+.decor-circle {
+  position: absolute; width: 50px; height: 50px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.18); bottom: 18px; left: 24px;
+}
+.cover-icon {
+  width: 56px; height: 56px; border-radius: 14px; background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.32); display: flex; align-items: center;
+  justify-content: center; backdrop-filter: blur(6px); transition: transform .3s ease;
+  span[nz-icon] { font-size: 26px; color: #fff; }
+}
+.cover-badge {
+  position: absolute; top: 12px; left: 12px; height: 24px; padding: 0 10px;
+  border-radius: 999px; background: rgba(0,0,0,.22); backdrop-filter: blur(6px);
+  color: #fff; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center;
+}
+
+.mymm-card__body { flex: 1; min-width: 0; padding: 16px 20px 14px; display: flex; flex-direction: column; gap: 8px; }
+.mymm-card__top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.cert-tag {
+  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px;
+  border-radius: 999px; font-size: 11px; font-weight: 600;
+  background: #eff6ff; color: #2563eb;
+}
+
+.status-tag {
+  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px;
+  border-radius: 999px; font-size: 11px; font-weight: 600;
+  span[nz-icon] { font-size: 12px; }
+  &--pending { background: #fef3c7; color: #d97706; }
+  &--cancelled { background: #f1f5f9; color: ds.$student-text-light; }
+  &--ok { background: #d1fae5; color: #059669; }
+  &--active { background: #dbeafe; color: #1d4ed8; }
+  &--done { background: #dcfce7; color: #16a34a; }
+}
+
+.mymm-card__title {
+  margin: 0; color: ds.$student-text; font-size: 18px; font-weight: 700;
+  line-height: 1.45; letter-spacing: -.2px; @include ds.line-clamp(1);
+}
+.mymm-card__desc {
+  margin: 0; color: ds.$student-text-muted; font-size: 13px; line-height: 1.6;
+  @include ds.line-clamp(2);
+}
+.mymm-card__stats { display: flex; align-items: center; gap: 16px; color: ds.$student-text-light; font-size: 12px; flex-wrap: wrap; }
+.mymm-stat { display: inline-flex; align-items: center; gap: 4px; span[nz-icon] { font-size: 12px; } }
+
+.mymm-card__progress { padding: 4px 0 2px; }
+.progress-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: ds.$student-text-muted; margin-bottom: 2px;
+  strong { color: ds.$student-text; font-size: 13px; }
+}
+
+.mymm-card__timeline {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  font-size: 12px; color: ds.$student-text-light;
+  .tl-item { display: inline-flex; align-items: center; gap: 4px; span[nz-icon] { font-size: 12px; } }
+  .tl-item--cert { color: #b45309; }
+}
+
+/* ---------- 课程（保留原有） ---------- */
+.mymm-card__courses {
+  border-top: 1px dashed ds.$student-border-soft; padding: 14px 20px 4px;
+  cursor: default;
+}
+.courses-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  &__title {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 14px; font-weight: 600; color: ds.$student-text;
+    span[nz-icon] { color: ds.$student-primary; }
+  }
+  &__count {
+    font-size: 12px; color: ds.$student-text-light; background: ds.$student-surface-soft;
+    padding: 2px 8px; border-radius: 999px;
+  }
+}
+.courses-scroll {
+  display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin;
+  &::-webkit-scrollbar { height: 6px; }
+  &::-webkit-scrollbar-thumb { background: ds.$student-border; border-radius: 3px; }
+}
+.courses-empty { color: ds.$student-text-light; font-size: 13px; padding: 4px 0 10px; }
+.course-chip {
+  display: flex; align-items: center; gap: 10px; flex: 0 0 auto; min-width: 240px; max-width: 320px;
+  padding: 10px 12px; border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius;
+  background: ds.$student-surface-soft; cursor: pointer; text-align: left;
+  font-family: inherit; transition: all .2s ease;
+  &:hover { border-color: rgba(ds.$student-primary,.4); background: #fff; box-shadow: 0 6px 14px rgba(15,23,42,.06); }
+  &__icon {
+    width: 34px; height: 34px; border-radius: 8px; background: #e8f0fe; color: ds.$student-primary;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  &__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  &__name {
+    font-size: 13px; font-weight: 600; color: ds.$student-text; @include ds.line-clamp(1);
+  }
+  &__meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: ds.$student-text-light; }
+  &__arrow { color: ds.$student-border; font-size: 11px; margin-left: auto; flex-shrink: 0; }
+  &:hover &__arrow { color: ds.$student-primary; }
+}
+.core-dot { color: #b45309; }
+
+/* ---------- 操作 ---------- */
+.mymm-card__actions { padding: 12px 20px 16px; }
+.action-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 38px; padding: 0 18px; border: 0; border-radius: ds.$student-radius;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s ease;
+  span[nz-icon] { font-size: 15px; }
+  &--view {
+    background: ds.$student-surface-soft; color: ds.$student-text;
+    border: 1px solid ds.$student-border-soft;
+    &:hover { background: #e8f0fe; color: ds.$student-primary; border-color: rgba(ds.$student-primary,.35); }
+  }
+}
+
+/* ---------- 结业证书（页面内直接渲染） ---------- */
+.mymm-card__cert {
+  margin-top: 4px; padding: 12px 14px; border-radius: ds.$student-radius-lg;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fde68a; cursor: default;
+}
+.cert-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 10px;
+  &__badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 14px; font-weight: 700; color: #92400e;
+    span[nz-icon] { color: #d97706; font-size: 16px; }
+  }
+  &__actions { display: inline-flex; align-items: center; gap: 8px; }
+}
+.cert-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  height: 30px; padding: 0 12px; border-radius: ds.$student-radius;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s ease;
+  span[nz-icon] { font-size: 13px; }
+  &--view { background: #d97706; color: #fff; border: 1px solid #d97706;
+    box-shadow: 0 4px 10px rgba(217,119,6,.25);
+    &:hover { background: #b45309; border-color: #b45309; } }
+  &--download { background: #fff; color: #92400e; border: 1px solid #fcd34d;
+    &:hover { background: #fef3c7; border-color: #f59e0b; } }
+}
+.cert-preview {
+  position: relative; border-radius: ds.$student-radius; overflow: hidden;
+  cursor: zoom-in; background: #fff; border: 1px solid #fde68a;
+  img { display: block; width: 100%; height: 150px; object-fit: cover; }
+  &__mask {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    gap: 6px; background: rgba(15,23,42,.35); color: #fff; font-size: 13px;
+    font-weight: 600; opacity: 0; transition: opacity .2s ease; backdrop-filter: blur(2px);
+    span[nz-icon] { font-size: 18px; }
+  }
+  &:hover &__mask { opacity: 1; }
+}
+
+/* ---------- 证书查看弹窗 ---------- */
+.cert-viewer {
+  display: flex; flex-direction: column; gap: 14px; padding: 4px 0;
+  &__img {
+    text-align: center; background: ds.$student-surface-soft; border-radius: ds.$student-radius-lg;
+    padding: 16px; border: 1px solid ds.$student-border-soft;
+    img {
+      max-width: 100%; max-height: 62vh; object-fit: contain;
+      border-radius: ds.$student-radius; box-shadow: 0 4px 20px rgba(15,23,42,.12);
+    }
+  }
+  &__meta {
+    display: flex; align-items: center; gap: 10px; font-size: 14px;
+    .meta-label {
+      flex: 0 0 72px; color: ds.$student-text-light; font-size: 13px;
+    }
+    .meta-value { color: ds.$student-text; font-weight: 600; }
+  }
+  &__actions {
+    display: flex; justify-content: center; padding-top: 6px;
+  }
+}
+
+/* =================== States =================== */
+.loading-state, .empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 360px; background: #fff; border-radius: ds.$student-radius-lg;
+  border: 1px solid ds.$student-border-soft; box-shadow: ds.$student-shadow-soft;
+  color: ds.$student-text-muted;
+  p { margin: 12px 0 0; font-size: 14px; }
+}
+.empty-state { gap: 8px;
+  &__art { width: 88px; height: 88px; border-radius: 50%; background: ds.$student-surface-soft; display: inline-flex; align-items: center; justify-content: center; color: ds.$student-border; font-size: 38px; box-shadow: 0 4px 14px rgba(15,23,42,.06); }
+  h3 { margin: 16px 0 4px; color: ds.$student-text; font-size: 18px; }
+  .goto-btn {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; height: 38px;
+    padding: 0 20px; border: 0; border-radius: ds.$student-radius; background: #1e6ce8;
+    color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s ease;
+    &:hover { background: ds.$student-primary-dark; }
+  }
+}
+
+@media (max-width: 768px) {
+  .mymm-page { padding-top: 16px; padding-bottom: 32px; }
+  .page-hero__inner { padding: 24px 22px 18px; }
+  .page-hero__stats { padding: 0 22px 18px; }
+  .page-hero__title { font-size: 22px; }
+  .mymm-card__head { flex-direction: column; }
+  .mymm-card__cover { flex: 0 0 auto; height: 120px; min-height: 0; }
+  .mymm-card__body { padding: 14px 16px; }
+  .mymm-card__courses { padding: 12px 16px 2px; }
+  .mymm-card__actions { padding: 10px 16px 14px; }
+  .course-chip { max-width: none; width: 260px; }
+}

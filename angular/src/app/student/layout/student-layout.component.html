@@ -76,112 +76,89 @@
     </div>
   </header>
 
-  <!-- 第二部分：Tab 导航（移动端可折叠） -->
+  <!-- 第二部分：Tab 导航（移动端可折叠；桌面溢出时折叠进「更多」） -->
   <nav class="tab-bar" [class.open]="menuOpen()" aria-label="主导航">
     <div class="tab-bar__inner">
-      <div class="tab-bar__tabs">
-        <a routerLink="/student/micro-majors" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="trophy" nzTheme="outline"></span>
-          <span>微专业</span>
-        </a>
-        <a routerLink="/student/courses" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="read" nzTheme="outline"></span>
-          <span>课程中心</span>
-        </a>
-        <a routerLink="/student/resources" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="database" nzTheme="outline"></span>
-          <span>资源库</span>
-        </a>
-        <a routerLink="/student/news" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="file-text" nzTheme="outline"></span>
-          <span>资讯中心</span>
-        </a>
-        <a routerLink="/student/my-learning" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="line-chart" nzTheme="outline"></span>
-          <span>我的学习</span>
-        </a>
-        <a routerLink="/student/favorites" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="star" nzTheme="outline"></span>
-          <span>我的收藏</span>
-        </a>
-        <a routerLink="/student/agent-tasks" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="robot" nzTheme="outline"></span>
-          <span>课堂任务</span>
-        </a>
-        <a routerLink="/student/practicums" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="experiment" nzTheme="outline"></span>
-          <span>实训</span>
-        </a>
-        <a routerLink="/student/practicums/my" routerLinkActive="active" class="tab-link">
-          <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
-          <span>我的实训</span>
-        </a>
-        <div
-          class="tab-link tab-link--dropdown"
-          nz-dropdown
-          [nzDropdownMenu]="employmentMenu"
-          nzTrigger="click"
-          [class.active]="isEmploymentActive()"
-        >
-          <span class="dropdown-label">
-            <span nz-icon nzType="idcard" nzTheme="outline"></span>
-            <span>就业服务</span>
-            <span nz-icon nzType="down" class="tab-link__caret"></span>
-          </span>
-        </div>
-        <nz-dropdown-menu #employmentMenu="nzDropdownMenu">
-          <ul nz-menu class="employment-menu">
-            <li nz-menu-item routerLink="/student/recruitment-live">
-              <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-              <span>招聘直播</span>
-            </li>
-            <li nz-menu-item routerLink="/student/employment/jobs">
-              <span nz-icon nzType="idcard" nzTheme="outline"></span>
-              <span>就业大厅</span>
-            </li>
-            <li nz-menu-item routerLink="/student/employment/my-resumes">
-              <span nz-icon nzType="file-text" nzTheme="outline"></span>
-              <span>我的简历</span>
-            </li>
-            <li nz-menu-item routerLink="/student/employment/my-applications">
-              <span nz-icon nzType="paper-plane" nzTheme="outline"></span>
-              <span>我的投递</span>
-            </li>
-            <li nz-menu-item routerLink="/student/employment/my-outcomes">
-              <span nz-icon nzType="compass" nzTheme="outline"></span>
-              <span>我的就业去向</span>
-            </li>
-            <li nz-menu-item routerLink="/student/employment/guidance">
-              <span nz-icon nzType="message" nzTheme="outline"></span>
-              <span>就业指导</span>
-            </li>
-          </ul>
-        </nz-dropdown-menu>
-        <div
-          class="tab-link tab-link--dropdown"
-          nz-dropdown
-          [nzDropdownMenu]="aiMenu"
-          nzTrigger="click"
-          [class.active]="isAIActive()"
-        >
-          <span class="dropdown-label">
-            <span nz-icon nzType="robot" nzTheme="outline"></span>
-            <span>AI 功能</span>
-            <span nz-icon nzType="down" class="tab-link__caret"></span>
-          </span>
-        </div>
-        <nz-dropdown-menu #aiMenu="nzDropdownMenu">
-          <ul nz-menu class="employment-menu">
-            <li nz-menu-item routerLink="/student/ai/chat">
-              <span nz-icon nzType="robot" nzTheme="outline"></span>
-              <span>AI 助手</span>
-            </li>
-            <li nz-menu-item routerLink="/student/search">
-              <span nz-icon nzType="search" nzTheme="outline"></span>
-              <span>智能搜索</span>
-            </li>
-          </ul>
-        </nz-dropdown-menu>
+      <div class="tab-bar__tabs" #tabTabs>
+        @for (item of visibleItems(); track item.key) {
+          @if (item.children && item.children.length) {
+            <div
+              class="tab-link tab-link--dropdown"
+              [attr.data-nav-key]="item.key"
+              nz-dropdown
+              [nzDropdownMenu]="itemMenu"
+              nzTrigger="click"
+              [class.active]="isActive(item)"
+            >
+              <span class="dropdown-label">
+                <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
+                <span>{{ item.label }}</span>
+                <span nz-icon nzType="down" class="tab-link__caret"></span>
+              </span>
+            </div>
+            <nz-dropdown-menu #itemMenu="nzDropdownMenu">
+              <ul nz-menu class="employment-menu">
+                @for (child of item.children; track child.key) {
+                  <li nz-menu-item [routerLink]="child.route">
+                    <span nz-icon [nzType]="child.icon" nzTheme="outline"></span>
+                    <span>{{ child.label }}</span>
+                  </li>
+                }
+              </ul>
+            </nz-dropdown-menu>
+          } @else {
+            <a
+              class="tab-link"
+              [attr.data-nav-key]="item.key"
+              [routerLink]="item.route"
+              routerLinkActive="active"
+            >
+              <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
+              <span>{{ item.label }}</span>
+            </a>
+          }
+        }
+
+        @if (overflowItems().length) {
+          <div
+            class="tab-link tab-link--more"
+            data-nav-more
+            nz-dropdown
+            [nzDropdownMenu]="moreMenu"
+            nzTrigger="click"
+            [class.active]="moreActive()"
+          >
+            <span class="dropdown-label">
+              <span nz-icon nzType="appstore" nzTheme="outline"></span>
+              <span>更多</span>
+              <span nz-icon nzType="down" class="tab-link__caret"></span>
+            </span>
+          </div>
+          <nz-dropdown-menu #moreMenu="nzDropdownMenu">
+            <ul nz-menu class="more-menu">
+              @for (item of overflowItems(); track item.key) {
+                @if (item.children && item.children.length) {
+                  <li nz-menu-item-group>
+                    <span nz-menu-item-group-title>{{ item.label }}</span>
+                    <ul>
+                      @for (child of item.children; track child.key) {
+                        <li nz-menu-item [routerLink]="child.route">
+                          <span nz-icon [nzType]="child.icon" nzTheme="outline"></span>
+                          <span>{{ child.label }}</span>
+                        </li>
+                      }
+                    </ul>
+                  </li>
+                } @else {
+                  <li nz-menu-item [routerLink]="item.route">
+                    <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
+                    <span>{{ item.label }}</span>
+                  </li>
+                }
+              }
+            </ul>
+          </nz-dropdown-menu>
+        }
       </div>
     </div>
   </nav>

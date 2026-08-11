@@ -57,6 +57,17 @@ export interface MicroMajorDetailDto extends MicroMajorDto {
   courses: MicroMajorCourseDto[];
 }
 
+export interface MyMicroMajorDto extends MicroMajorDto {
+  enrollmentId: string;
+  enrollmentStatus: MicroMajorEnrollmentStatus;
+  progress: number;
+  enrolledAt: string;
+  completedAt?: string;
+  certificateIssuedAt?: string;
+  certificateImageUrl?: string;
+  courses: MicroMajorCourseDto[];
+}
+
 export interface CreateUpdateMicroMajorCourseDto {
   courseId: string;
   sortOrder: number;
@@ -192,6 +203,13 @@ export class MicroMajorService {
     return this.restService.request<any, MicroMajorEnrollmentDto[]>({
       method: 'GET',
       url: '/api/app/micro-major/my-enrollments',
+    }, { apiName: this.apiName });
+  }
+
+  getMyMicroMajors(): Observable<MyMicroMajorDto[]> {
+    return this.restService.request<any, MyMicroMajorDto[]>({
+      method: 'GET',
+      url: '/api/app/micro-major/my-micro-majors',
     }, { apiName: this.apiName });
   }
 

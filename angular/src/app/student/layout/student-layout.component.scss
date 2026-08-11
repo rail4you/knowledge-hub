@@ -243,7 +243,11 @@
 }
 
 .tab-bar__inner {
-  @include ds.student-container;
+  box-sizing: border-box;
+  width: min(100%, 1400px);
+  margin: 0 auto;
+  padding-left: 12px;
+  padding-right: 12px;
   height: 56px;
   display: flex;
   align-items: center;
@@ -271,11 +275,12 @@
   align-items: center;
   gap: 8px;
   height: 100%;
-  padding: 0 22px;
+  padding: 0 18px;
   color: ds.$student-text-muted;
   text-decoration: none;
   font-size: 15px;
   font-weight: 500;
+  white-space: nowrap;
   transition: color 0.2s ease;
 
   span[nz-icon] {
@@ -293,8 +298,8 @@
     &::after {
       content: '';
       position: absolute;
-      left: 22px;
-      right: 22px;
+      left: 18px;
+      right: 18px;
       bottom: 0;
       height: 3px;
       border-radius: 3px 3px 0 0;
@@ -329,14 +334,16 @@
   opacity: 1;
 }
 
-// 就业服务下拉菜单
-.employment-menu {
+// 就业服务下拉菜单 & 「更多」折叠菜单
+.employment-menu,
+.more-menu {
   min-width: 180px;
   padding: 6px;
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
 
-  li[nz-menu-item] {
+  li[nz-menu-item],
+  li[nz-menu-item-group] > ul > li[nz-menu-item] {
     display: flex;
     align-items: center;
     gap: 18px;
@@ -358,6 +365,44 @@
         color: ds.$student-primary;
       }
     }
+  }
+}
+
+.more-menu {
+  max-height: 70vh;
+  overflow-y: auto;
+
+  [nz-menu-item-group-title] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: ds.$student-text-light;
+  }
+}
+
+// 「更多」折叠入口
+.tab-link--more {
+  color: ds.$student-text-muted;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: #1e6ce8;
+    opacity: 0;
+  }
+
+  &.active {
+    color: ds.$student-primary;
+    font-weight: 600;
+    &::after { opacity: 1; }
   }
 }
 

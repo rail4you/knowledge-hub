@@ -133,6 +133,55 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         return await MapEnrollmentDtosAsync(items.OrderByDescending(x => x.EnrolledAt).ToList());
     }
 
+    public async Task<List<MyMicroMajorDto>> GetMyMicroMajorsAsync()
+    {
+        var studentId = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
+        var enrollments = await _microMajorEnrollmentRepository.GetListAsync(x => x.StudentId == studentId);
+
+        foreach (var item in enrollments)
+        {
+            await RefreshEnrollmentProgressAsync(item);
+        }
+
+        var ordered = enrollments.OrderByDescending(x => x.EnrolledAt).ToList();
+        if (ordered.Count == 0)
+        {
+            return new List<MyMicroMajorDto>();
+        }
+
+        var microMajorIds = ordered.Select(x => x.MicroMajorId).Distinct().ToList();
+        var microMajors = await _microMajorRepository.GetListAsync(x => microMajorIds.Contains(x.Id));
+        var baseDtoMap = (await MapToDtosAsync(microMajors)).ToDictionary(x => x.Id);
+
+        var certificates = await _microMajorCertificateRepository.GetListAsync(x => x.StudentId == studentId);
+        var certMap = certificates.ToDictionary(x => x.EnrollmentId);
+
+        var result = new List<MyMicroMajorDto>();
+        foreach (var enrollment in ordered)
+        {
+            var dto = new MyMicroMajorDto
+            {
+                EnrollmentId = enrollment.Id,
+                EnrollmentStatus = enrollment.Status,
+                Progress = enrollment.Progress,
+                EnrolledAt = enrollment.EnrolledAt,
+                CompletedAt = enrollment.CompletedAt,
+                CertificateIssuedAt = enrollment.CertificateIssuedAt,
+                CertificateImageUrl = certMap.TryGetValue(enrollment.Id, out var c) ? c.CertificateImageUrl : null,
+                Courses = await GetCourseDtosAsync(enrollment.MicroMajorId)
+            };
+
+            if (baseDtoMap.TryGetValue(enrollment.MicroMajorId, out var baseDto))
+            {
+                CopyDto(baseDto, dto);
+            }
+
+            result.Add(dto);
+        }
+
+        return result;
+    }
+
     public async Task<List<MicroMajorCertificateDto>> GetMyCertificatesAsync()
     {
         var studentId = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
@@ -710,7 +759,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         }).ToList();
     }
 
-    private static void CopyDto(MicroMajorDto source, MicroMajorDetailDto target)
+    private static void CopyDto(MicroMajorDto source, MicroMajorDto target)
     {
         target.Id = source.Id;
         target.Title = source.Title;
