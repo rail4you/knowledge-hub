@@ -134,4 +134,10 @@ export class StudentMyMicroMajorsComponent implements OnInit {
     for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
     return palettes[Math.abs(hash) % palettes.length];
   }
+
+  /** 学习进度保留 2 位小数 */
+  roundProgress(value: number | null | undefined): number {
+    if (value == null || isNaN(value)) return 0;
+    return Math.round(value * 100) / 100;
+  }
 }

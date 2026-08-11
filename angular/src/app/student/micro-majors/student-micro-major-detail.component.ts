@@ -62,6 +62,12 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     });
   }
 
+  /** 学习进度保留 2 位小数 */
+  roundProgress(value: number | null | undefined): number {
+    if (value == null || isNaN(value)) return 0;
+    return Math.round(value * 100) / 100;
+  }
+
   coverGradient(course: MicroMajorCourseDto): string {
     const palettes = [
       '#2563eb',

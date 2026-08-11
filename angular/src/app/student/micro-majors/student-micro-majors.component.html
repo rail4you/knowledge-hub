@@ -87,7 +87,7 @@
             @if (item.currentUserProgress != null) {
               <div class="mm-card__progress">
                 <nz-progress
-                  [nzPercent]="item.currentUserProgress || 0"
+                  [nzPercent]="roundProgress(item.currentUserProgress)"
                   nzSize="small"
                   nzStrokeColor="#1e6ce8"
                 ></nz-progress>

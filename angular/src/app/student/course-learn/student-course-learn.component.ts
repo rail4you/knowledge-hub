@@ -192,6 +192,11 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.courseService.getDetail(id).subscribe({
       next: result => {
         this.course.set(result);
+        // 若选中章节时课程尚未就绪导致记录被跳过，此处补加载
+        const currentChapterId = this.currentChapterId();
+        if (currentChapterId && !this.recordsLoading()) {
+          this.loadChapterRecords(currentChapterId);
+        }
         this.recordChapterProgress();
       },
       error: () => {
@@ -367,9 +372,11 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   }
 
   loadChapterRecords(chapterId: string) {
-    this.recordsLoading.set(true);
     const course = this.course();
+    // 课程详情未就绪时直接跳过，避免 recordsLoading 卡在 true 导致永久等待图标；
+    // 课程就绪后会由 loadCourse 补加载记录。
     if (!course?.id) return;
+    this.recordsLoading.set(true);
     this.recordService.getRecordsByChapter({
       courseId: course.id,
       chapterId,

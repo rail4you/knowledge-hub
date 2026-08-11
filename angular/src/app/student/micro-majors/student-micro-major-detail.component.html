@@ -38,7 +38,7 @@
             @if (d.currentUserProgress != null) {
               <div class="enroll-progress">
                 <span class="enroll-progress__label">学习进度</span>
-                <nz-progress [nzPercent]="d.currentUserProgress || 0" nzStrokeColor="#1e6ce8"></nz-progress>
+                <nz-progress [nzPercent]="roundProgress(d.currentUserProgress)" nzStrokeColor="#1e6ce8"></nz-progress>
               </div>
             }
             <span class="enrolled-badge">

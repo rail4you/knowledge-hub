@@ -234,11 +234,47 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
         }
 
         var maxCount = Math.Clamp(input.MaxResultCount, 1, 50);
-        return (await AsyncExecuter.ToListAsync(
+        var dtos = (await AsyncExecuter.ToListAsync(
                 q.OrderByDescending(x => x.CreationTime).Take(maxCount)))
             .OrderBy(x => x.CreationTime)
             .Select(MapToDto)
             .ToList();
+
+        // 消息存储的是发送时的名称快照，历史消息可能存的是工号/旧姓名，
+        // 统一用用户当前真实姓名覆盖，保证左侧聊天列表显示真实名字。
+        await ApplyRealSenderNamesAsync(dtos);
+        return dtos;
+    }
+
+    private async Task ApplyRealSenderNamesAsync(List<PracticumChatMessageDto> dtos)
+    {
+        var senderIds = dtos
+            .Where(m => m.SenderType != PracticumChatSenderType.AIAgent && m.SenderId.HasValue)
+            .Select(m => m.SenderId!.Value)
+            .Distinct()
+            .ToList();
+        if (senderIds.Count == 0)
+        {
+            return;
+        }
+
+        var users = await _userRepository.GetListAsync(x => senderIds.Contains(x.Id));
+        var userMap = users.ToDictionary(
+            x => x.Id,
+            x => string.IsNullOrWhiteSpace(x.Name) ? x.UserName ?? string.Empty : x.Name);
+
+        foreach (var dto in dtos)
+        {
+            if (dto.SenderType == PracticumChatSenderType.AIAgent || !dto.SenderId.HasValue)
+            {
+                continue;
+            }
+            if (userMap.TryGetValue(dto.SenderId.Value, out var realName) &&
+                !string.IsNullOrWhiteSpace(realName))
+            {
+                dto.SenderName = realName;
+            }
+        }
     }
 
     // ─── AI Agent ────────────────────────────────────

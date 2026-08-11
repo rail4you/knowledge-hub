@@ -99,12 +99,12 @@
               <div class="mymm-card__progress">
                 <div class="progress-head">
                   <span>学习进度</span>
-                  <strong>{{ item.progress || 0 }}%</strong>
+                  <strong>{{ roundProgress(item.progress) }}%</strong>
                 </div>
                 <nz-progress
-                  [nzPercent]="item.progress || 0"
+                  [nzPercent]="roundProgress(item.progress)"
                   nzSize="small"
-                  [nzStrokeColor]="item.progress >= 100 ? '#10b981' : '#1e6ce8'"
+                  [nzStrokeColor]="roundProgress(item.progress) >= 100 ? '#10b981' : '#1e6ce8'"
                 ></nz-progress>
               </div>
 
