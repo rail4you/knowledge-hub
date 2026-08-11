@@ -55,4 +55,14 @@ public interface IEmploymentAppService : IApplicationService
 
     /// <summary>获取可担任面试官的用户列表（教师/HR/管理员等）</summary>
     Task<List<InterviewerCandidateDto>> GetInterviewerCandidatesAsync();
+
+    /// <summary>
+    /// AI 职业规划管理页：获取租户内投递过简历的学生及其投递用过的简历。
+    /// </summary>
+    Task<List<CareerGuidanceStudentDto>> GetCareerGuidanceStudentsAsync();
+
+    /// <summary>
+    /// AI 职业规划管理页：为指定学生保存 AI 生成的职业规划记录（管理端）。
+    /// </summary>
+    Task<EmploymentGuidanceRecordDto> CreateStudentCareerGuidanceRecordAsync(CreateStudentCareerGuidanceRecordDto input);
 }

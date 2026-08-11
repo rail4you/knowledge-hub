@@ -284,6 +284,29 @@ public class GetEmploymentGuidanceRecordsInput : PagedAndSortedResultRequestDto
     public Guid? ApplicationId { get; set; }
 }
 
+/// <summary>
+/// AI 职业规划管理页：按学生组织的条目。
+/// StudentId = 投递过简历的学生；Resumes = 该学生投递时用过的简历。
+/// </summary>
+public class CareerGuidanceStudentDto
+{
+    public Guid StudentId { get; set; }
+    public string StudentName { get; set; } = string.Empty;
+    public List<StudentResumeDto> Resumes { get; set; } = new();
+}
+
+/// <summary>
+/// AI 职业规划管理页：为某学生生成新规划并保存为其记录。
+/// 管理端（教师/管理员）调用，StudentId 由调用方指定。
+/// </summary>
+public class CreateStudentCareerGuidanceRecordDto
+{
+    public Guid StudentId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public string? CareerGoal { get; set; }
+}
+
 public class EmploymentOutcomeDto : FullAuditedEntityDto<Guid>
 {
     public Guid StudentId { get; set; }

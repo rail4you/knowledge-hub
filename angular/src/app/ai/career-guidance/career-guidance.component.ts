@@ -19,7 +19,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
 import { ChatService } from '../services/chat.service';
-import { EmploymentService, StudentResumeDto } from '../../employment/employment.service';
+import { EmploymentService, StudentResumeDto, EmploymentGuidanceRecordDto, CareerGuidanceStudentDto } from '../../employment/employment.service';
 
 interface CareerGuidanceResult {
   title: string;
@@ -65,6 +65,15 @@ interface CareerGuidanceResult {
   nextSteps: string[];
 }
 
+interface ParsedRecord {
+  id: string;
+  title: string;
+  careerGoal?: string;
+  guidedAt: string;
+  content: string;
+  parsed: CareerGuidanceResult | null;
+}
+
 @Component({
   selector: 'app-career-guidance',
   standalone: true,
@@ -97,16 +106,40 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   private readonly messageService = inject(NzMessageService);
   private readonly destroy$ = new Subject<void>();
 
-  resumes = signal<StudentResumeDto[]>([]);
-  resourcesLoading = signal(false);
-  selectedResourceId = signal<string | null>(null);
+  // ============= 学生列表 =============
+  readonly students = signal<CareerGuidanceStudentDto[]>([]);
+  readonly studentsLoading = signal(false);
+  readonly searchText = signal('');
+  readonly selectedStudentId = signal<string | null>(null);
 
-  selectedResource = computed(() => {
-    const id = this.selectedResourceId();
+  readonly filteredStudents = computed(() => {
+    const kw = this.searchText().trim().toLowerCase();
+    const all = this.students();
+    if (!kw) return all;
+    return all.filter(s => s.studentName.toLowerCase().includes(kw));
+  });
+
+  readonly selectedStudent = computed(() => {
+    const id = this.selectedStudentId();
+    if (!id) return null;
+    return this.students().find(s => s.studentId === id) ?? null;
+  });
+
+  // ============= 简历选择 =============
+  resumes = signal<StudentResumeDto[]>([]);
+  selectedResumeId = signal<string | null>(null);
+  selectedResume = computed(() => {
+    const id = this.selectedResumeId();
     if (!id) return null;
     return this.resumes().find(r => r.id === id) ?? null;
   });
 
+  // ============= 历史规划 =============
+  readonly historyRecords = signal<ParsedRecord[]>([]);
+  readonly historyLoading = signal(false);
+  readonly expandedRecordId = signal<string | null>(null);
+
+  // ============= 生成区 =============
   careerGoal = signal('');
   result = signal<CareerGuidanceResult | null>(null);
   rawJson = signal('');
@@ -117,11 +150,11 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   savedRecordId = signal<string | null>(null);
 
   canGenerate = computed(() => {
-    return !!this.selectedResourceId() && !this.isLoading();
+    return !!this.selectedStudentId() && !!this.selectedResumeId() && !this.isLoading();
   });
 
   ngOnInit() {
-    this.loadResources();
+    this.loadStudents();
   }
 
   ngOnDestroy() {
@@ -129,22 +162,61 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  private loadResources() {
-    this.resourcesLoading.set(true);
-    // 职业规划下拉列出当前用户的就业简历（StudentResume），简历由"我的简历"页面统一维护。
-    this.employmentService.getMyResumeList()
+  loadStudents() {
+    this.studentsLoading.set(true);
+    this.employmentService.getCareerGuidanceStudents()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
-          this.resumes.set(data || []);
-          this.resourcesLoading.set(false);
+          this.students.set(data || []);
+          this.studentsLoading.set(false);
         },
-        error: (err) => {
-          console.error('Failed to load resumes:', err);
-          this.resourcesLoading.set(false);
-          this.messageService.error('加载简历列表失败');
+        error: () => {
+          this.studentsLoading.set(false);
+          this.messageService.error('加载学生列表失败');
         }
       });
+  }
+
+  selectStudent(studentId: string) {
+    this.selectedStudentId.set(studentId);
+    this.selectedResumeId.set(null);
+    this.resumes.set(this.selectedStudent()?.resumes || []);
+    this.resetResult();
+    this.loadHistory(studentId);
+  }
+
+  loadHistory(studentId: string) {
+    this.historyLoading.set(true);
+    this.historyRecords.set([]);
+    this.employmentService.getGuidanceRecordList({
+      studentId,
+      skipCount: 0,
+      maxResultCount: 100,
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: result => {
+          const records: ParsedRecord[] = (result.items || []).map(r => ({
+            id: r.id!,
+            title: r.title || '未命名规划',
+            careerGoal: r.careerGoal,
+            guidedAt: r.guidedAt!,
+            content: r.content || '',
+            parsed: this.tryParseAiResult(r.content),
+          }));
+          this.historyRecords.set(records);
+          this.historyLoading.set(false);
+        },
+        error: () => {
+          this.historyLoading.set(false);
+          this.messageService.error('加载历史规划失败');
+        },
+      });
+  }
+
+  toggleRecord(recordId: string): void {
+    this.expandedRecordId.set(this.expandedRecordId() === recordId ? null : recordId);
   }
 
   /** 将 StudentResumeDto 构建为 AI 提示用的文本 */
@@ -164,19 +236,18 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   }
 
   generate() {
-    const resume = this.selectedResource();
-    if (!resume) return;
+    const student = this.selectedStudent();
+    const resume = this.selectedResume();
+    if (!student || !resume) return;
 
     const resumeContent = this.buildResumeContent(resume);
     if (!resumeContent.trim()) {
-      this.messageService.warning('简历内容为空，请先在「我的简历」完善简历信息');
+      this.messageService.warning('该简历内容为空，无法生成');
       return;
     }
 
     this.isLoading.set(true);
-    this.result.set(null);
-    this.rawJson.set('');
-    this.savedRecordId.set(null);
+    this.resetResult();
 
     let fullResponse = '';
 
@@ -220,7 +291,6 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
         }
       }
       const parsed = JSON.parse(cleanJson);
-      // 后端错误信号：例如资源不存在、尚未提取页面内容等
       if (parsed && typeof parsed === 'object' && parsed.error) {
         this.messageService.error(parsed.error);
         return;
@@ -258,31 +328,37 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   }
 
   reset() {
-    this.selectedResourceId.set(null);
+    this.resetResult();
+  }
+
+  resetResult() {
+    this.selectedResumeId.set(null);
     this.careerGoal.set('');
     this.result.set(null);
     this.rawJson.set('');
     this.savedRecordId.set(null);
+    this.expandedRecordId.set(null);
   }
 
   /**
-   * 把当前 AI 生成结果持久化到「我的就业指导」。
+   * 把当前 AI 生成结果保存为所选学生的职业规划记录（管理端）。
    * - Content 存 raw JSON，前端展示时可解析还原结构化数据。
-   * - Title 取自结果 title 或 careerGoal 兜底。
-   * - StudentId/SourceType/TeacherId 由后端自动填。
+   * - StudentId 由所选学生决定，SourceType=AI，TeacherId=null。
    */
-  saveToMyGuidance() {
+  saveToStudentGuidance() {
     if (this.isSaving() || this.savedRecordId()) return;
+    const student = this.selectedStudent();
     const r = this.result();
     const rawJson = this.rawJson();
-    if (!r || !rawJson) {
+    if (!student || !r || !rawJson) {
       this.messageService.warning('请先生成职业规划');
       return;
     }
     this.isSaving.set(true);
     const title = (r.title || this.careerGoal() || 'AI 职业规划').trim();
     this.employmentService
-      .createMyAIGuidanceRecord({
+      .createStudentCareerGuidanceRecord({
+        studentId: student.studentId,
         title,
         content: rawJson,
         careerGoal: this.careerGoal() || undefined,
@@ -292,7 +368,8 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
         next: (saved) => {
           this.isSaving.set(false);
           this.savedRecordId.set(saved.id);
-          this.messageService.success('已保存到我的就业指导');
+          this.messageService.success('已保存到该学生的就业指导');
+          this.loadHistory(student.studentId);
         },
         error: (err) => {
           this.isSaving.set(false);
@@ -306,12 +383,48 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
       });
   }
 
+  downloadHistoryDocx(record: ParsedRecord): void {
+    if (!record.content) return;
+    this.chatService.exportCareerGuidanceDocx(record.content)
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${record.title}_${new Date().toISOString().slice(0, 10)}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.messageService.success('职业规划报告已下载');
+      })
+      .catch(() => this.messageService.error('导出失败，请重试'));
+  }
+
   getPriorityColor(priority: string): string {
     switch (priority) {
       case '高': return 'red';
       case '中': return 'orange';
       case '低': return 'green';
       default: return 'default';
+    }
+  }
+
+  private tryParseAiResult(content: string | undefined): CareerGuidanceResult | null {
+    if (!content) return null;
+    const trimmed = content.trim();
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('```')) return null;
+    let json = trimmed;
+    if (json.startsWith('```')) {
+      const nl = json.indexOf('\n');
+      if (nl >= 0) json = json.substring(nl + 1);
+      if (json.endsWith('```')) json = json.substring(0, json.length - 3).trimEnd();
+    }
+    try {
+      const parsed = JSON.parse(json);
+      if (parsed?.assessment) return parsed as CareerGuidanceResult;
+      return null;
+    } catch {
+      return null;
     }
   }
 }

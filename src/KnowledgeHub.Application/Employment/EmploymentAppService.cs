@@ -1172,6 +1172,98 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         { 6, "面试完成" },
     };
 
+    /// <summary>
+    /// AI 职业规划管理页：获取租户内投递过简历的学生及其投递用过的简历。
+    /// 通过 JobApplication 反查 StudentId 与 ResumeId，保证只返回真实投递过的简历。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Employment.ManageGuidance)]
+    public async Task<List<CareerGuidanceStudentDto>> GetCareerGuidanceStudentsAsync()
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var applications = await _applicationRepository.GetListAsync();
+
+            if (applications.Count == 0)
+            {
+                return new List<CareerGuidanceStudentDto>();
+            }
+
+            var studentIds = applications.Select(x => x.StudentId).Distinct().ToList();
+            var resumeIds = applications.Select(x => x.ResumeId).Distinct().ToList();
+
+            var students = studentIds.Count == 0
+                ? new List<IdentityUser>()
+                : await _userRepository.GetListAsync(x => studentIds.Contains(x.Id));
+            var studentMap = students.ToDictionary(x => x.Id, x => x);
+
+            var resumes = resumeIds.Count == 0
+                ? new List<StudentResume>()
+                : await _resumeRepository.GetListAsync(x => resumeIds.Contains(x.Id));
+            var resumeMap = resumes.ToDictionary(x => x.Id, x => x);
+
+            return studentIds
+                .Where(studentMap.ContainsKey)
+                .Select(studentId =>
+                {
+                    var student = studentMap[studentId];
+                    var usedResumeIds = applications
+                        .Where(a => a.StudentId == studentId)
+                        .Select(a => a.ResumeId)
+                        .Distinct()
+                        .ToList();
+                    return new CareerGuidanceStudentDto
+                    {
+                        StudentId = studentId,
+                        StudentName = GetUserDisplayName(student),
+                        Resumes = usedResumeIds
+                            .Where(resumeMap.ContainsKey)
+                            .Select(resumeId => MapResumeDto(resumeMap[resumeId]))
+                            .ToList()
+                    };
+                })
+                .OrderBy(x => x.StudentName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+    }
+
+    /// <summary>
+    /// AI 职业规划管理页：为指定学生保存 AI 生成的职业规划记录（管理端，SourceType=AI）。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Employment.ManageGuidance)]
+    public async Task<EmploymentGuidanceRecordDto> CreateStudentCareerGuidanceRecordAsync(CreateStudentCareerGuidanceRecordDto input)
+    {
+        if (string.IsNullOrWhiteSpace(input.Title) || string.IsNullOrWhiteSpace(input.Content))
+        {
+            throw new UserFriendlyException("指导标题和内容不能为空。");
+        }
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var student = await _userRepository.FindAsync(input.StudentId);
+            if (student == null)
+            {
+                throw new UserFriendlyException($"不存在学生: {input.StudentId}");
+            }
+        }
+
+        var entity = new EmploymentGuidanceRecord(
+            GuidGenerator.Create(),
+            input.StudentId,
+            teacherId: null,
+            input.Title.Trim(),
+            input.Content)
+        {
+            TenantId = CurrentTenant.Id,
+            ApplicationId = null,
+            SourceType = EmploymentGuidanceSourceType.AI,
+            CareerGoal = input.CareerGoal?.Trim(),
+            GuidedAt = Clock.Now
+        };
+
+        await _guidanceRepository.InsertAsync(entity, autoSave: true);
+        return await MapGuidanceDtoAsync(entity);
+    }
+
     [Authorize(KnowledgeHubPermissions.Employment.ExportReport)]
     public async Task<IRemoteStreamContent> ExportStatisticsAsync(EmploymentStatisticsInput input)
     {

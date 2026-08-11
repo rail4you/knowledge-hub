@@ -319,6 +319,19 @@ export interface GetEmploymentGuidanceRecordsInput {
   maxResultCount: number;
 }
 
+export interface CareerGuidanceStudentDto {
+  studentId: string;
+  studentName: string;
+  resumes: StudentResumeDto[];
+}
+
+export interface CreateStudentCareerGuidanceRecordDto {
+  studentId: string;
+  title: string;
+  content: string;
+  careerGoal?: string;
+}
+
 export interface EmploymentOutcomeDto {
   id: string;
   studentId: string;
@@ -586,6 +599,19 @@ export class EmploymentService {
       method: 'GET',
       url: '/api/app/employment/guidance-record-list',
       params: input,
+    }, { apiName: this.apiName });
+
+  getCareerGuidanceStudents = () =>
+    this.restService.request<any, CareerGuidanceStudentDto[]>({
+      method: 'GET',
+      url: '/api/app/employment/career-guidance-students',
+    }, { apiName: this.apiName });
+
+  createStudentCareerGuidanceRecord = (input: CreateStudentCareerGuidanceRecordDto) =>
+    this.restService.request<any, EmploymentGuidanceRecordDto>({
+      method: 'POST',
+      url: '/api/app/employment/student-career-guidance-record',
+      body: input,
     }, { apiName: this.apiName });
 
   deleteMyGuidanceRecord = (id: string) =>
