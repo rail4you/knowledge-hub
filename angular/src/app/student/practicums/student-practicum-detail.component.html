@@ -56,6 +56,30 @@
       </div>
     }
 
+    <!-- My progress & score (enrolled students only) -->
+    @if (enrollment(); as en) {
+      <div class="detail-progress">
+        <div class="detail-progress__head">
+          <h2><span nz-icon nzType="line-chart" nzTheme="outline"></span> 我的进度与成绩</h2>
+          @if (hasScore(en)) {
+            <span class="detail-progress__score">成绩：<strong>{{ en.finalScore }}</strong><small> / 100</small></span>
+          } @else {
+            <span class="detail-progress__score detail-progress__score--pending">成绩：未评分</span>
+          }
+        </div>
+        <div class="detail-progress__row">
+          <nz-progress [nzPercent]="+en.progress" [nzShowInfo]="true"></nz-progress>
+        </div>
+        @if (en.finalComment) {
+          <p class="detail-progress__comment"><span nz-icon nzType="message" nzTheme="outline"></span> 教师评价：{{ en.finalComment }}</p>
+        }
+        <div class="detail-progress__meta">
+          <span>状态：{{ en.status === 0 ? '已参与' : en.status === 1 ? '进行中' : en.status === 2 ? '待评阅' : en.status === 3 ? '已评阅' : en.status === 4 ? '已完成' : '已取消' }}</span>
+          @if (en.lastSubmittedAt) { <span>最后提交 {{ en.lastSubmittedAt | date:'yyyy-MM-dd HH:mm' }}</span> }
+        </div>
+      </div>
+    }
+
     <!-- Tabs (hidden when project expired: only basic info viewable) -->
     @if (!d.isExpired) {
       <div class="detail-tabs">
@@ -72,6 +96,12 @@
           <button [class.active]="activeTab() === 'simulations'" (click)="activeTab.set('simulations')">
             <span nz-icon nzType="experiment" nzTheme="outline"></span> 仿真实训
             <span class="tab-count">{{ simulations().length }}</span>
+          </button>
+        }
+        @if (enrollment(); as en) {
+          <button [class.active]="activeTab() === 'guidance'" (click)="activeTab.set('guidance')">
+            <span nz-icon nzType="message" nzTheme="outline"></span> 指导记录
+            <span class="tab-count">{{ guidanceItems().length }}</span>
           </button>
         }
         @if (d.isCurrentUserEnrolled) {
@@ -177,6 +207,29 @@
                   <span>开始仿真</span>
                 </div>
               </a>
+            }
+          </div>
+        }
+      }
+
+      @if (activeTab() === 'guidance') {
+        @if (guidanceLoading()) {
+          <div class="empty-small"><nz-spin nzSimple></nz-spin><p style="margin-top:8px;">加载中...</p></div>
+        } @else if (!guidanceItems().length) {
+          <nz-empty nzNotFoundContent="暂无指导记录"></nz-empty>
+        } @else {
+          <div class="guidance-list">
+            @for (g of guidanceItems(); track g.id) {
+              <div class="guidance-item">
+                <div class="guidance-item__head">
+                  <strong>{{ g.teacherName || '教师' }}</strong>
+                  <span>{{ g.guidedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+                </div>
+                @if (g.taskTitle) {
+                  <div class="guidance-item__task"><span nz-icon nzType="profile" nzTheme="outline"></span> 任务：{{ g.taskTitle }}</div>
+                }
+                <div class="guidance-item__content">{{ g.content }}</div>
+              </div>
             }
           </div>
         }

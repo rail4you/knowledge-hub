@@ -1,0 +1,141 @@
+<div class="px-my-practicums">
+  <div class="page-header">
+    <h1>我的实训</h1>
+    <p>查看你参与的实训项目，跟踪进度与成绩，并查阅教师指导记录。</p>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>
+  } @else if (!items().length) {
+    <div class="empty-state">
+      <nz-empty nzNotFoundContent="暂无参与的实训项目">
+        <div class="empty-actions">
+          <button nz-button nzType="primary" routerLink="/student/practicums">
+            <span nz-icon nzType="experiment" nzTheme="outline"></span>
+            去实训中心看看
+          </button>
+        </div>
+      </nz-empty>
+    </div>
+  } @else {
+    <div class="enroll-list">
+      @for (item of items(); track item.id) {
+        <div class="enroll-card">
+          <div class="enroll-card__body" (click)="openDetail(item)">
+            <div class="enroll-card__title">
+              <h3>{{ item.projectTitle || '实训项目' }}</h3>
+              <nz-tag [nzColor]="getStatusColor(item.status)">{{ getStatusLabel(item.status) }}</nz-tag>
+            </div>
+            <div class="enroll-card__meta">
+              <span>报名时间 {{ item.enrolledAt | date:'yyyy-MM-dd' }}</span>
+              @if (item.lastSubmittedAt) { <span>最后提交 {{ item.lastSubmittedAt | date:'yyyy-MM-dd HH:mm' }}</span> }
+              @if (item.completedAt) { <span>完成时间 {{ item.completedAt | date:'yyyy-MM-dd' }}</span> }
+            </div>
+            <div class="enroll-card__progress">
+              <span class="progress-label">进度</span>
+              <nz-progress [nzPercent]="+item.progress" [nzSize]="'small'"></nz-progress>
+              <span class="progress-value">{{ item.progress }}%</span>
+            </div>
+            <div class="enroll-card__score">
+              <span class="score-label">最终成绩</span>
+              @if (hasScore(item)) {
+                <span class="score-value">{{ item.finalScore }}<span class="score-max"> / 100</span></span>
+              } @else {
+                <span class="score-value score-value--pending">未评分</span>
+              }
+              @if (item.finalComment) {
+                <span class="score-comment">{{ item.finalComment }}</span>
+              }
+            </div>
+          </div>
+          <div class="enroll-card__actions">
+            <button nz-button (click)="openDetail(item)">
+              <span nz-icon nzType="profile" nzTheme="outline"></span> 查看项目
+            </button>
+            <button nz-button (click)="openGuidance(item)">
+              <span nz-icon nzType="message" nzTheme="outline"></span> 指导记录
+            </button>
+            <button nz-button (click)="openTimeline(item)">
+              <span nz-icon nzType="history" nzTheme="outline"></span> 过程追溯
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- 指导记录弹窗 -->
+  <nz-modal
+    [nzVisible]="guidanceVisible()"
+    (nzVisibleChange)="guidanceVisible.set($event)"
+    [nzTitle]="guidanceTitle"
+    [nzFooter]="null"
+    nzWidth="640"
+    nzMaskClosable="true"
+  >
+    <ng-container *nzModalContent>
+      @if (guidanceLoading()) {
+        <div class="modal-loading"><nz-spin nzSimple></nz-spin></div>
+      } @else if (!guidanceItems().length) {
+        <nz-empty nzNotFoundContent="暂无指导记录"></nz-empty>
+      } @else {
+        <div class="guidance-list">
+          @for (g of guidanceItems(); track g.id) {
+            <div class="guidance-item">
+              <div class="guidance-item__head">
+                <strong>{{ g.teacherName || '教师' }}</strong>
+                <span>{{ g.guidedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+              </div>
+              @if (g.taskTitle) {
+                <div class="guidance-item__task"><span nz-icon nzType="profile" nzTheme="outline"></span> 任务：{{ g.taskTitle }}</div>
+              }
+              <div class="guidance-item__content">{{ g.content }}</div>
+            </div>
+          }
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
+
+  <!-- 过程追溯弹窗 -->
+  <nz-modal
+    [nzVisible]="timelineVisible()"
+    (nzVisibleChange)="timelineVisible.set($event)"
+    [nzTitle]="timelineTitle"
+    [nzFooter]="null"
+    nzWidth="760"
+    nzMaskClosable="true"
+  >
+    <ng-container *nzModalContent>
+      @if (timelineLoading()) {
+        <div class="modal-loading"><nz-spin nzSimple></nz-spin></div>
+      } @else if (!timelineItems().length) {
+        <nz-empty nzNotFoundContent="暂无过程记录"></nz-empty>
+      } @else {
+        <div class="timeline-list">
+          @for (item of timelineItems(); track item.time + item.title) {
+            <div class="timeline-item">
+              <div class="timeline-item__time">{{ item.time | date:'MM-dd HH:mm' }}</div>
+              <div class="timeline-item__body">
+                <div class="timeline-item__title">
+                  <nz-tag [nzColor]="timelineTypeColor(item.type)" nzSize="small">{{ timelineTypeLabel(item.type) }}</nz-tag>
+                  <strong>{{ item.title }}</strong>
+                </div>
+                @if (item.content) { <div class="timeline-item__content">{{ item.content }}</div> }
+                <div class="timeline-item__meta">
+                  @if (item.operatorName) { <span>{{ item.operatorName }}</span> }
+                  @if (hasMetadata(item, 'Score')) {
+                    <span class="meta-score">得分 {{ item.metadata?.['Score'] }}</span>
+                  }
+                  @if (item.metadata?.['GradeLevel']) {
+                    <span>等级 {{ item.metadata?.['GradeLevel'] }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
+</div>

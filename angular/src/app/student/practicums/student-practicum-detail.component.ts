@@ -8,11 +8,13 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzProgressModule } from 'ng-zorro-antd/progress';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { forkJoin } from 'rxjs';
 import { PracticumService } from '../../proxy/practicums/practicum.service';
 import { PracticumSimulationService } from '../../proxy/practicums/simulations/practicum-simulation.service';
-import type { PracticumProjectDetailDto, PracticumMaterialDto } from '../../proxy/practicums/dtos/models';
+import type { PracticumProjectDetailDto, PracticumMaterialDto, PracticumGuidanceRecordDto, PracticumEnrollmentDto } from '../../proxy/practicums/dtos/models';
 import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
 import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
 
@@ -21,7 +23,7 @@ import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
   standalone: true,
   imports: [
     CommonModule, DatePipe, DecimalPipe, FormsModule, RouterModule,
-    NzButtonModule, NzIconModule, NzSpinModule, NzTabsModule, NzInputModule, NzModalModule,
+    NzButtonModule, NzIconModule, NzSpinModule, NzTabsModule, NzInputModule, NzModalModule, NzProgressModule, NzEmptyModule,
     SafeResourceUrlPipe,
   ],
   templateUrl: './student-practicum-detail.component.html',
@@ -38,12 +40,16 @@ export class StudentPracticumDetailComponent implements OnInit {
   readonly detail = signal<PracticumProjectDetailDto | null>(null);
   readonly simulations = signal<PracticumSimulationDto[]>([]);
   readonly loading = signal(true);
-  readonly activeTab = signal<'tasks' | 'materials' | 'simulations'>('tasks');
+  readonly activeTab = signal<'tasks' | 'materials' | 'simulations' | 'guidance'>('tasks');
   readonly submitting = signal(false);
   readonly submitModalVisible = signal(false);
   readonly selectedTaskId = signal<string | null>(null);
   readonly submissionContent = signal('');
   readonly submissionUrl = signal('');
+
+  readonly enrollment = signal<PracticumEnrollmentDto | null>(null);
+  readonly guidanceItems = signal<PracticumGuidanceRecordDto[]>([]);
+  readonly guidanceLoading = signal(false);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -64,12 +70,44 @@ export class StudentPracticumDetailComponent implements OnInit {
         });
         this.simulations.set(simulations ?? []);
         this.loading.set(false);
+        this.loadMyProgress(id);
       },
       error: () => {
         this.loading.set(false);
         this.message.error('加载实训详情失败');
       },
     });
+  }
+
+  loadMyProgress(projectId: string): void {
+    const enrollmentId = this.detail()?.currentUserEnrollmentId;
+    this.practicumService.getMyEnrollments().subscribe({
+      next: list => {
+        const mine = (list || []).find(e => e.projectId === projectId && (enrollmentId ? e.id === enrollmentId : true));
+        this.enrollment.set(mine ?? null);
+        if (mine?.id) {
+          this.loadGuidance(mine.id);
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  loadGuidance(enrollmentId: string): void {
+    this.guidanceLoading.set(true);
+    this.practicumService.getGuidanceList(enrollmentId).subscribe({
+      next: list => {
+        this.guidanceItems.set(list || []);
+        this.guidanceLoading.set(false);
+      },
+      error: () => {
+        this.guidanceLoading.set(false);
+      },
+    });
+  }
+
+  hasScore(en: PracticumEnrollmentDto): boolean {
+    return en.finalScore != null;
   }
 
   enroll(): void {
@@ -109,6 +147,9 @@ export class StudentPracticumDetailComponent implements OnInit {
         this.submitting.set(false);
         this.submitModalVisible.set(false);
         this.message.success('提交成功');
+        if (this.detail()?.currentUserEnrollmentId) {
+          this.loadMyProgress(this.detail()!.id);
+        }
       },
       error: () => { this.submitting.set(false); this.message.error('提交失败'); },
     });

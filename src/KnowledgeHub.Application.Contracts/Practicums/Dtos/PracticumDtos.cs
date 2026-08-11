@@ -47,6 +47,7 @@ public class PracticumProjectDto : FullAuditedEntityDto<Guid>
     public int MaterialCount { get; set; }
     public int EnrollmentCount { get; set; }
     public bool IsCurrentUserEnrolled { get; set; }
+    public Guid? CurrentUserEnrollmentId { get; set; }
     public decimal? CurrentUserProgress { get; set; }
     public string? AgentName { get; set; }
     public string? AgentPrompt { get; set; }

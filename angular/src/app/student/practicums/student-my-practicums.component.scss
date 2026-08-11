@@ -1,0 +1,54 @@
+@use '../styles/student-design' as ds;
+
+:host { flex: 1 1 auto; display: flex; flex-direction: column; background: ds.$student-bg; }
+
+.px-my-practicums {
+  box-sizing: border-box; flex: 1 1 auto; width: 100%;
+  @include ds.student-container; padding-top: 24px; padding-bottom: 48px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.page-header {
+  h1 { margin: 0 0 6px; color: ds.$student-text; font-size: 24px; font-weight: 700; }
+  p { margin: 0; color: ds.$student-text-muted; font-size: 14px; }
+}
+
+.loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; background: #fff; border-radius: ds.$student-radius-lg; box-shadow: ds.$student-shadow-soft; color: ds.$student-text-muted; p { margin: 12px 0 0; } }
+
+.empty-state { display: flex; align-items: center; justify-content: center; min-height: 320px; background: #fff; border-radius: ds.$student-radius-lg; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft; }
+.empty-actions { margin-top: 12px; }
+
+.enroll-list { display: flex; flex-direction: column; gap: 14px; }
+
+.enroll-card { display: flex; gap: 16px; padding: 20px 22px; background: #fff; border-radius: ds.$student-radius-lg; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft; transition: all .2s ease; &:hover { border-color: rgba(ds.$student-primary, .3); box-shadow: 0 6px 18px rgba(15,23,42,.06); } }
+
+.enroll-card__body { flex: 1; min-width: 0; cursor: pointer; }
+.enroll-card__title { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; h3 { margin: 0; color: ds.$student-text; font-size: 17px; font-weight: 700; } }
+.enroll-card__meta { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 14px; color: ds.$student-text-light; font-size: 12px; }
+.enroll-card__progress { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; .progress-label { color: ds.$student-text-muted; font-size: 13px; font-weight: 500; flex-shrink: 0; } .progress-value { color: ds.$student-primary; font-size: 13px; font-weight: 600; flex-shrink: 0; } .ant-progress { flex: 1; margin: 0; } }
+.enroll-card__score { display: flex; align-items: baseline; gap: 10px; .score-label { color: ds.$student-text-muted; font-size: 13px; font-weight: 500; flex-shrink: 0; } .score-value { color: ds.$student-primary; font-size: 22px; font-weight: 700; .score-max { font-size: 13px; font-weight: 500; color: ds.$student-text-light; } &.score-value--pending { color: ds.$student-text-light; font-size: 15px; font-weight: 500; } } .score-comment { color: ds.$student-text-muted; font-size: 13px; @include ds.line-clamp(1); } }
+
+.enroll-card__actions { display: flex; flex-direction: column; justify-content: center; gap: 8px; flex-shrink: 0; }
+
+.guidance-list { display: flex; flex-direction: column; gap: 14px; max-height: 60vh; overflow: auto; padding-right: 4px; }
+.guidance-item { padding: 14px 16px; border-radius: ds.$student-radius; border: 1px solid ds.$student-border-soft; background: ds.$student-surface-soft; }
+.guidance-item__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; strong { color: ds.$student-text; font-size: 14px; } span { color: ds.$student-text-light; font-size: 12px; } }
+.guidance-item__task { display: inline-flex; align-items: center; gap: 4px; margin-bottom: 8px; color: ds.$student-primary; font-size: 12px; }
+.guidance-item__content { color: ds.$student-text; font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
+
+.timeline-list { display: grid; gap: 2px; max-height: 60vh; overflow: auto; padding-right: 4px; }
+.timeline-item { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid ds.$student-border-soft; &:last-child { border-bottom: 0; } }
+.timeline-item__time { color: ds.$student-text-light; font-size: 12px; padding-top: 4px; }
+.timeline-item__body { display: flex; flex-direction: column; gap: 4px; }
+.timeline-item__title { display: flex; align-items: center; gap: 8px; strong { color: ds.$student-text; font-size: 14px; } }
+.timeline-item__content { color: ds.$student-text-muted; font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+.timeline-item__meta { display: flex; flex-wrap: wrap; gap: 12px; color: ds.$student-text-light; font-size: 12px; .meta-score { color: #d97706; font-weight: 600; } }
+
+.modal-loading { display: flex; align-items: center; justify-content: center; padding: 40px 0; }
+
+@media (max-width: 768px) {
+  .px-my-practicums { padding-top: 16px; padding-bottom: 32px; }
+  .enroll-card { flex-direction: column; }
+  .enroll-card__actions { flex-direction: row; flex-wrap: wrap; }
+  .timeline-item { grid-template-columns: 1fr; }
+}

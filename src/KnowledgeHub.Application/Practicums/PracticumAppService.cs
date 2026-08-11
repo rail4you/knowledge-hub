@@ -775,6 +775,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         {
             var enrollment = await _enrollmentRepository.FirstOrDefaultAsync(x => x.ProjectId == entity.Id && x.StudentId == _currentUser.Id.Value);
             dto.IsCurrentUserEnrolled = enrollment != null && enrollment.Status != PracticumEnrollmentStatus.Cancelled;
+            dto.CurrentUserEnrollmentId = enrollment != null && enrollment.Status != PracticumEnrollmentStatus.Cancelled ? enrollment.Id : null;
             dto.CurrentUserProgress = enrollment?.Progress;
         }
 
@@ -815,6 +816,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
             MaterialCount = source.MaterialCount,
             EnrollmentCount = source.EnrollmentCount,
             IsCurrentUserEnrolled = source.IsCurrentUserEnrolled,
+            CurrentUserEnrollmentId = source.CurrentUserEnrollmentId,
             CurrentUserProgress = source.CurrentUserProgress,
             AgentName = source.AgentName,
             AgentPrompt = source.AgentPrompt,

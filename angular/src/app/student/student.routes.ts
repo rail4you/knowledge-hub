@@ -109,6 +109,14 @@ export const STUDENT_ROUTES: Routes = [
         }
       },
       {
+        path: 'practicums/my',
+        loadComponent: () => import('./practicums/student-my-practicums.component').then(m => m.StudentMyPracticumsComponent),
+        data: {
+          name: '我的实训',
+          icon: 'unordered-list'
+        }
+      },
+      {
         path: 'practicums/:id',
         loadComponent: () => import('./practicums/student-practicum-detail.component').then(m => m.StudentPracticumDetailComponent),
       },

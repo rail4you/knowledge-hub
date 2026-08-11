@@ -156,6 +156,7 @@ export interface PracticumProjectDto extends FullAuditedEntityDto<string> {
   materialCount?: number;
   enrollmentCount?: number;
   isCurrentUserEnrolled?: boolean;
+  currentUserEnrollmentId?: string | null;
   currentUserProgress?: number | null;
 }
 
