@@ -177,6 +177,14 @@ export class EmploymentService {
     { apiName: this.apiName,...config });
   
 
+  deleteOutcome = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/employment/outcome/${id}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   getPublishedJobList = (input: PagedJobPostingRequestDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<JobPostingDto>>({
       method: 'GET',

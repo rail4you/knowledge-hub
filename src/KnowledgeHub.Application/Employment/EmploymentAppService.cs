@@ -999,6 +999,20 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         }
     }
 
+    [Authorize(KnowledgeHubPermissions.Employment.Default)]
+    public async Task DeleteOutcomeAsync(Guid id)
+    {
+        var currentUserId = CurrentUser.Id;
+        var canManageOutcome = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Employment.ManageOutcome);
+        var entity = await _outcomeRepository.GetAsync(id);
+        if (!canManageOutcome && (!currentUserId.HasValue || entity.StudentId != currentUserId.Value))
+        {
+            throw new AbpAuthorizationException();
+        }
+
+        await _outcomeRepository.DeleteAsync(entity, autoSave: true);
+    }
+
     /// <summary>
     /// 获取当前租户下可担任面试官的用户列表（教师/HR/管理员等）。
     /// 拥有 ScheduleInterview 权限即可访问，不依赖 Users.Default。

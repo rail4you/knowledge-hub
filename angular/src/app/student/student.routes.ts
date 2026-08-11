@@ -158,6 +158,10 @@ export const STUDENT_ROUTES: Routes = [
             loadComponent: () => import('./employment/student-my-applications.component').then(m => m.StudentMyApplicationsComponent),
           },
           {
+            path: 'my-outcomes',
+            loadComponent: () => import('./employment/student-my-outcomes.component').then(m => m.StudentMyOutcomesComponent),
+          },
+          {
             // 关键修复 P1-19：教师端 `/employment/my-guidance`（就业指导）已存在，
             // 学生端一直没有入口。原 routes 把 guidance 漏掉了，导致学生顶栏即使加了 Tab 也会 404。
             // 这里直接复用 my-guidance.component（不区分角色），数据由 EmploymentService.GetMyGuidance

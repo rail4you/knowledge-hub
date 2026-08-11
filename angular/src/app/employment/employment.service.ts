@@ -634,6 +634,12 @@ export class EmploymentService {
       params: input,
     }, { apiName: this.apiName });
 
+  deleteOutcome = (id: string) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/employment/outcome/${id}`,
+    }, { apiName: this.apiName });
+
   getStatistics = (input: EmploymentStatisticsInput) =>
     this.restService.request<any, EmploymentStatisticsRowDto[]>({
       method: 'GET',

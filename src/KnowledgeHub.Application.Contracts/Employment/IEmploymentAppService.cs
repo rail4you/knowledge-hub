@@ -46,6 +46,7 @@ public interface IEmploymentAppService : IApplicationService
     Task DeleteMyGuidanceRecordAsync(Guid id);
 
     Task<EmploymentOutcomeDto> SaveOutcomeAsync(CreateUpdateEmploymentOutcomeDto input);
+    Task DeleteOutcomeAsync(Guid id);
     Task<PagedResultDto<EmploymentOutcomeDto>> GetOutcomeListAsync(GetEmploymentOutcomeListInput input);
     Task<List<EmploymentStatisticsRowDto>> GetStatisticsAsync(EmploymentStatisticsInput input);
     Task<IRemoteStreamContent> ExportStatisticsAsync(EmploymentStatisticsInput input);
