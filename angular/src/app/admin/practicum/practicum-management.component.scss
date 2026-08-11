@@ -535,3 +535,13 @@
     margin-left: 6px;
   }
 }
+
+/* 任务 / 资料编辑弹窗：上传控件与已上传列表的间距 */
+.editor-upload {
+  ::ng-deep .ant-upload {
+    margin-top: 4px;
+  }
+  ::ng-deep .ant-upload-list {
+    margin-top: 10px;
+  }
+}

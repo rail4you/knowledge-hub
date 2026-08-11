@@ -289,133 +289,65 @@
     </div>
   </nz-card>
 
-  <!-- ===== 右侧抽屉：统一承载"新增/编辑"任务与资料 ===== -->
-  <nz-drawer
+  <!-- ===== 任务 / 资料编辑弹窗（普通表单） ===== -->
+  <nz-modal
     [nzVisible]="drawerVisible()"
-    [nzTitle]="null"
-    nzPlacement="right"
-    [nzWidth]="520"
-    (nzOnClose)="closeDrawer()"
-    [nzClosable]="false"
-    nzBodyStyle="padding: 0;">
-    <ng-container *nzDrawerContent>
-      <!-- 抽屉 header -->
-      <div class="drawer-header" [class.is-task]="drawerKind() === 'task'"
-           [class.is-material]="drawerKind() === 'material'">
-        <div class="drawer-title-row">
-          <span *ngIf="drawerKind() === 'task'" nz-icon nzType="profile" nzTheme="outline" class="drawer-icon"></span>
-          <span *ngIf="drawerKind() === 'material'" nz-icon nzType="folder-open" nzTheme="outline" class="drawer-icon"></span>
-          <div class="drawer-title-info">
-            <h4 class="drawer-title">
-              {{ drawerMode() === 'add'
-                  ? (drawerKind() === 'task' ? '新增任务' : '新增资料')
-                  : (drawerKind() === 'task' ? '编辑任务' : '编辑资料') }}
-            </h4>
-            <span class="drawer-subtitle">
-              <nz-tag *ngIf="drawerKind() === 'material' && materialDraft() as m"
-                [nzColor]="materialTypeColor(m.materialType)">{{ materialTypeLabel(m.materialType) }}</nz-tag>
-            </span>
-          </div>
-        </div>
-        <button nz-button nzType="text" nzSize="small" (click)="closeDrawer()" class="drawer-close-btn">
-          <span nz-icon nzType="close"></span>
-        </button>
-      </div>
-
-      <!-- 抽屉 body：可编辑表单 -->
-      <div class="drawer-body">
+    [nzTitle]="drawerMode() === 'add'
+        ? (drawerKind() === 'task' ? '新增任务' : '新增资料')
+        : (drawerKind() === 'task' ? '编辑任务' : '编辑资料')"
+    nzWidth="560"
+    [nzFooter]="taskEditorFooter"
+    (nzOnCancel)="closeDrawer()"
+    (nzVisibleChange)="drawerVisible.set($event)">
+    <div *nzModalContent>
+      <div class="form-grid">
 
         <!-- 任务表单 -->
         <ng-container *ngIf="drawerKind() === 'task' && taskDraft() as draft">
-          <nz-form-item>
-            <nz-form-label [nzRequired]="true">任务名称</nz-form-label>
-            <nz-form-control>
-              <input nz-input [(ngModel)]="draft.title" placeholder="例如：完成实验报告" />
-            </nz-form-control>
-          </nz-form-item>
+          <label>任务名称 <span class="required-hint">*</span></label>
+          <input nz-input [(ngModel)]="draft.title" placeholder="例如：完成实验报告" />
 
-          <nz-form-item>
-            <nz-form-label>任务描述</nz-form-label>
-            <nz-form-control>
-              <textarea nz-input [(ngModel)]="draft.description"
-                [nzAutosize]="{ minRows: 2, maxRows: 4 }"
-                placeholder="简要说明任务内容"></textarea>
-            </nz-form-control>
-          </nz-form-item>
+          <label>任务描述</label>
+          <textarea nz-input [(ngModel)]="draft.description" rows="3" placeholder="简要说明任务内容"></textarea>
 
-          <nz-form-item>
-            <nz-form-label>任务要求</nz-form-label>
-            <nz-form-control>
-              <textarea nz-input [(ngModel)]="draft.requirement"
-                [nzAutosize]="{ minRows: 2, maxRows: 4 }"
-                placeholder="学生需满足的具体要求"></textarea>
-            </nz-form-control>
-          </nz-form-item>
+          <label>任务要求</label>
+          <textarea nz-input [(ngModel)]="draft.requirement" rows="3" placeholder="学生需满足的具体要求"></textarea>
 
-          <div nz-row [nzGutter]="12">
-            <div nz-col nzSpan="12">
-              <nz-form-item>
-                <nz-form-label>分值</nz-form-label>
-                <nz-form-control>
-                  <nz-input-number [(ngModel)]="draft.scoreWeight"
-                    [nzMin]="0" [nzMax]="100" [nzStep]="1"
-                    style="width: 100%;"></nz-input-number>
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-            <div nz-col nzSpan="12">
-              <nz-form-item>
-                <nz-form-label>截止时间</nz-form-label>
-                <nz-form-control>
-                  <input nz-input type="datetime-local"
-                    [ngModel]="draft.dueTimeInput"
-                    (ngModelChange)="draft.dueTimeInput = $event" />
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-          </div>
+          <label>分值</label>
+          <nz-input-number [(ngModel)]="draft.scoreWeight"
+            [nzMin]="0" [nzMax]="100" [nzStep]="1"
+            style="width: 100%;"></nz-input-number>
+
+          <label>截止时间</label>
+          <input nz-input type="datetime-local"
+            [ngModel]="draft.dueTimeInput"
+            (ngModelChange)="draft.dueTimeInput = $event" />
         </ng-container>
 
         <!-- 资料表单 -->
         <ng-container *ngIf="drawerKind() === 'material' && materialDraft() as draft">
-          <nz-form-item>
-            <nz-form-label [nzRequired]="true">资料名称</nz-form-label>
-            <nz-form-control>
-              <input nz-input [(ngModel)]="draft.title" placeholder="例如：实验操作手册" />
-            </nz-form-control>
-          </nz-form-item>
+          <label>资料名称 <span class="required-hint">*</span></label>
+          <input nz-input [(ngModel)]="draft.title" placeholder="例如：实验操作手册" />
 
-          <nz-form-item>
-            <nz-form-label>资料说明</nz-form-label>
-            <nz-form-control>
-              <textarea nz-input [(ngModel)]="draft.description"
-                [nzAutosize]="{ minRows: 2, maxRows: 4 }"
-                placeholder="简要说明这份资料的用途或内容"></textarea>
-            </nz-form-control>
-          </nz-form-item>
+          <label>资料说明</label>
+          <textarea nz-input [(ngModel)]="draft.description" rows="3" placeholder="简要说明这份资料的用途或内容"></textarea>
 
-          <nz-form-item>
-            <nz-form-label [nzRequired]="true">资料类型</nz-form-label>
-            <nz-form-control>
-              <nz-select [(ngModel)]="draft.materialType" style="width: 100%;">
-                <nz-option [nzValue]="0" nzLabel="指南（文档/课件）"></nz-option>
-                <nz-option [nzValue]="1" nzLabel="案例（视频/案例）"></nz-option>
-                <nz-option [nzValue]="2" nzLabel="模板（参考模板）"></nz-option>
-                <nz-option [nzValue]="3" nzLabel="链接（外部链接）"></nz-option>
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
+          <label>资料类型 <span class="required-hint">*</span></label>
+          <nz-select [(ngModel)]="draft.materialType" style="width: 100%;">
+            <nz-option [nzValue]="0" nzLabel="指南（文档/课件）"></nz-option>
+            <nz-option [nzValue]="1" nzLabel="案例（视频/案例）"></nz-option>
+            <nz-option [nzValue]="2" nzLabel="模板（参考模板）"></nz-option>
+            <nz-option [nzValue]="3" nzLabel="链接（外部链接）"></nz-option>
+          </nz-select>
 
-          <nz-form-item *ngIf="draft.materialType === 3">
-            <nz-form-label [nzRequired]="true">链接地址</nz-form-label>
-            <nz-form-control>
-              <input nz-input [(ngModel)]="draft.resourceUrl" placeholder="https://..." />
-            </nz-form-control>
-          </nz-form-item>
+          <ng-container *ngIf="draft.materialType === 3">
+            <label>链接地址 <span class="required-hint">*</span></label>
+            <input nz-input [(ngModel)]="draft.resourceUrl" placeholder="https://..." />
+          </ng-container>
 
-          <nz-form-item *ngIf="draft.materialType !== 3">
-            <nz-form-label [nzRequired]="true">资料文件</nz-form-label>
-            <nz-form-control>
+          <ng-container *ngIf="draft.materialType !== 3">
+            <label>资料文件 <span class="required-hint">*</span></label>
+            <div class="editor-upload">
               <nz-upload
                 [nzMultiple]="false"
                 [nzMaxCount]="1"
@@ -434,26 +366,24 @@
                   {{ draft.resourceUrl ? '替换文件' : '点击上传' }}
                 </button>
               </nz-upload>
-            </nz-form-control>
-          </nz-form-item>
+            </div>
+          </ng-container>
         </ng-container>
-      </div>
 
-      <!-- 抽屉 footer：底部操作按钮 -->
-      <div class="drawer-footer">
-        <button nz-button nzDanger *ngIf="drawerMode() === 'edit'"
-          (click)="deleteFromDrawer()">
-          <span nz-icon nzType="delete"></span> 删除
-        </button>
-        <div class="footer-spacer"></div>
-        <button nz-button (click)="closeDrawer()">取消</button>
-        <button nz-button nzType="primary" [nzLoading]="drawerSaving()"
-          (click)="saveDrawer()">
-          {{ drawerMode() === 'add' ? '新增' : '保存' }}
-        </button>
       </div>
-    </ng-container>
-  </nz-drawer>
+    </div>
+    <ng-template #taskEditorFooter>
+      <button nz-button nzDanger *ngIf="drawerMode() === 'edit'"
+        (click)="deleteFromDrawer()">
+        <span nz-icon nzType="delete"></span> 删除
+      </button>
+      <button nz-button (click)="closeDrawer()">取消</button>
+      <button nz-button nzType="primary" [nzLoading]="drawerSaving()"
+        (click)="saveDrawer()">
+        {{ drawerMode() === 'add' ? '新增' : '保存' }}
+      </button>
+    </ng-template>
+  </nz-modal>
 
 <!-- Create / Edit modal -->
 <nz-modal [(nzVisible)]="modalVisible"
