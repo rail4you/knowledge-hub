@@ -453,8 +453,23 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     {
         var resource = await Repository.GetAsync(id);
 
+        // 编辑元数据时表单不携带文件字段，ObjectMapper 全量映射会把文件信息覆盖为 null，
+        // 导致 FilePath 被清空、预览按钮被禁用。先暂存，input 无文件信息时保留原文件。
+        var existingFilePath = resource.FilePath;
+        var existingFileSize = resource.FileSize;
+        var existingFileExtension = resource.FileExtension;
+        var existingOriginalFileName = resource.OriginalFileName;
+
         ObjectMapper.Map(input, resource);
         resource.MajorId = input.MajorId;
+
+        if (string.IsNullOrEmpty(input.FilePath))
+        {
+            resource.FilePath = existingFilePath;
+            resource.FileSize = existingFileSize;
+            resource.FileExtension = existingFileExtension;
+            resource.OriginalFileName = existingOriginalFileName;
+        }
 
         await Repository.UpdateAsync(resource);
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);

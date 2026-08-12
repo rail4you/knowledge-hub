@@ -111,7 +111,9 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   }
 
   canPreview(m: MaterialBriefDto | PublicResourceDto): boolean {
-    return !!(m.id && (m.fileExtension || m.originalFileName && m.originalFileName.includes('.')));
+    // 有扩展名或原文件名，或文件大小 > 0（说明确实有文件）即可预览。
+    // 早期 bug 曾把 FileExtension/OriginalFileName 清空，仅靠 fileSize 也能兜底。
+    return !!(m.id && (m.fileExtension || (m.originalFileName && m.originalFileName.includes('.')) || m.fileSize > 0));
   }
 
   readonly browseCourses = () => this.browseData()?.courses || [];
