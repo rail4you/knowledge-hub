@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
+using Volo.Abp.Authorization;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.PermissionManagement;
@@ -23,6 +25,7 @@ namespace KnowledgeHub.HttpApi.Controllers;
 [Area("app")]
 [RemoteService(Name = "KnowledgeHub")]
 [Route("api/knowledge-hub/admin/permissions")]
+[Authorize("AbpIdentity.Roles.ManagePermissions")]
 public class PermissionAdminController : AbpController
 {
     private readonly IRolePermissionSeeder _seeder;
@@ -59,12 +62,25 @@ public class PermissionAdminController : AbpController
     }
 
     /// <summary>
+    /// 跨租户维护端点仅允许宿主(全局)上下文的用户调用。
+    /// </summary>
+    private void EnsureHostContext()
+    {
+        if (CurrentUser.TenantId.HasValue)
+        {
+            throw new AbpAuthorizationException("该操作仅允许宿主管理员执行。");
+        }
+    }
+
+    /// <summary>
     /// 手动重种子所有租户的权限（含建角色）。无需重启服务。
     /// POST /api/knowledge-hub/admin/permissions/reseed
     /// </summary>
     [HttpPost("reseed")]
     public async Task<ReseedResultDto> ReseedAllAsync([FromBody] ReseedRequestDto? input)
     {
+        EnsureHostContext();
+
         var result = new ReseedResultDto();
         var tenants = await _tenantRepository.GetListAsync(includeDetails: false);
         result.Tenants = new List<TenantReseedResultDto>();
@@ -108,6 +124,8 @@ public class PermissionAdminController : AbpController
     [HttpPost("assign-role")]
     public async Task<AssignRoleResultDto> AssignRoleAsync([FromBody] AssignRoleRequestDto input)
     {
+        EnsureHostContext();
+
         var result = new AssignRoleResultDto { TenantId = input.TenantId, UserName = input.UserName, RoleName = input.RoleName };
 
         using (_currentTenant.Change(input.TenantId))
@@ -149,6 +167,8 @@ public class PermissionAdminController : AbpController
     [HttpGet("tenants")]
     public async Task<List<TenantInfoDto>> ListTenantsAsync()
     {
+        EnsureHostContext();
+
         var tenants = await _tenantRepository.GetListAsync(includeDetails: false);
         return tenants.Select(t => new TenantInfoDto
         {
@@ -218,6 +238,8 @@ public class PermissionAdminController : AbpController
     [HttpGet("diagnose")]
     public async Task<UserPermissionDiagnosticDto> DiagnoseAsync(Guid tenantId, string userName)
     {
+        EnsureHostContext();
+
         var dto = new UserPermissionDiagnosticDto
         {
             TenantId = tenantId,

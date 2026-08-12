@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
@@ -11,6 +12,7 @@ using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Application.Identity;
 
+[Authorize]
 public class TenantRoleAppService : KnowledgeHubAppService, ITenantRoleAppService
 {
     private readonly IIdentityRoleRepository _roleRepository;
@@ -89,6 +91,7 @@ public class TenantRoleAppService : KnowledgeHubAppService, ITenantRoleAppServic
         }
     }
 
+    [Authorize("AbpIdentity.Roles.ManagePermissions")]
     public async Task<TenantRoleDto> CreateAsync(CreateTenantRoleDto input)
     {
         using (_currentTenant.Change(input.TenantId))
@@ -118,6 +121,7 @@ public class TenantRoleAppService : KnowledgeHubAppService, ITenantRoleAppServic
         }
     }
 
+    [Authorize("AbpIdentity.Roles.ManagePermissions")]
     public async Task<TenantRoleDto> UpdateAsync(Guid id, UpdateTenantRoleDto input)
     {
         using (DataFilter.Disable<IMultiTenant>())
@@ -150,6 +154,7 @@ public class TenantRoleAppService : KnowledgeHubAppService, ITenantRoleAppServic
         }
     }
 
+    [Authorize("AbpIdentity.Roles.ManagePermissions")]
     public async Task DeleteAsync(Guid id)
     {
         using (DataFilter.Disable<IMultiTenant>())

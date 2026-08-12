@@ -4,6 +4,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI;
 using KnowledgeHub.Application.AI.Dtos;
+using KnowledgeHub.Permissions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +19,7 @@ namespace KnowledgeHub.Controllers;
 [Area("learning")]
 [Route("api/learning/ai")]
 [DisableAuditing]
+[Authorize]
 public class AIController : AbpControllerBase
 {
     private readonly ChatAppService _chatAppService;
@@ -130,6 +133,7 @@ public class AIController : AbpControllerBase
     }
 
     [HttpPost("generate-lesson-plan")]
+    [Authorize(KnowledgeHubPermissions.AI.LessonPlan)]
     [IgnoreAntiforgeryToken]
     public async Task GenerateLessonPlan([FromBody] LessonPlanGenerationInputDto input)
     {
@@ -160,6 +164,7 @@ public class AIController : AbpControllerBase
     }
 
     [HttpPost("export-lesson-plan-docx")]
+    [Authorize(KnowledgeHubPermissions.AI.LessonPlan)]
     [IgnoreAntiforgeryToken]
     public IActionResult ExportLessonPlanDocx([FromBody] LessonPlanExportInputDto input)
     {
@@ -172,6 +177,7 @@ public class AIController : AbpControllerBase
     }
 
     [HttpPost("generate-case-analysis")]
+    [Authorize(KnowledgeHubPermissions.AI.CaseAnalysis)]
     [IgnoreAntiforgeryToken]
     public async Task GenerateCaseAnalysis([FromBody] CaseAnalysisGenerationInputDto input)
     {
@@ -202,6 +208,7 @@ public class AIController : AbpControllerBase
     }
 
     [HttpPost("export-case-analysis-docx")]
+    [Authorize(KnowledgeHubPermissions.AI.CaseAnalysis)]
     [IgnoreAntiforgeryToken]
     public IActionResult ExportCaseAnalysisDocx([FromBody] CaseAnalysisExportInputDto input)
     {
@@ -214,6 +221,7 @@ public class AIController : AbpControllerBase
     }
 
     [HttpPost("generate-career-guidance")]
+    [Authorize(KnowledgeHubPermissions.AI.CareerGuidance)]
     [IgnoreAntiforgeryToken]
     public async Task GenerateCareerGuidance([FromBody] CareerGuidanceGenerationInputDto input)
     {
@@ -244,6 +252,7 @@ public class AIController : AbpControllerBase
     }
 
     [HttpPost("export-career-guidance-docx")]
+    [Authorize(KnowledgeHubPermissions.AI.CareerGuidance)]
     [IgnoreAntiforgeryToken]
     public IActionResult ExportCareerGuidanceDocx([FromBody] CareerGuidanceExportInputDto input)
     {

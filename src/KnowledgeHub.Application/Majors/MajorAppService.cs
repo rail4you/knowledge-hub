@@ -64,7 +64,7 @@ public class MajorAppService : KnowledgeHubAppService, IMajorAppService
             .ToList();
     }
 
-    [Authorize]
+    [Authorize(KnowledgeHubPermissions.Majors.Create)]
     public async Task<MajorDto> CreateAsync(CreateUpdateMajorDto input)
     {
         await EnsureUniqueAsync(input.Name, input.Code, null);
@@ -83,7 +83,7 @@ public class MajorAppService : KnowledgeHubAppService, IMajorAppService
         return MapToDto(entity);
     }
 
-    [Authorize]
+    [Authorize(KnowledgeHubPermissions.Majors.Edit)]
     public async Task<MajorDto> UpdateAsync(Guid id, CreateUpdateMajorDto input)
     {
         var entity = await _majorRepository.GetAsync(id);
@@ -98,7 +98,7 @@ public class MajorAppService : KnowledgeHubAppService, IMajorAppService
         return MapToDto(entity);
     }
 
-    [Authorize]
+    [Authorize(KnowledgeHubPermissions.Majors.Delete)]
     public async Task DeleteAsync(Guid id)
     {
         await _majorRepository.DeleteAsync(id);

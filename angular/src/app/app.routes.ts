@@ -110,17 +110,17 @@ export const APP_ROUTES: Routes = [
   {
     path: 'admin/meilisearch',
     loadComponent: () => import('./admin/meilisearch/meilisearch-dashboard.component').then(c => c.MeiliSearchDashboardComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.Search.ViewStatistics',
+      requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
     },
   },
   {
     path: 'admin/search-statistics',
     loadComponent: () => import('./admin/search-statistics/search-statistics.component').then(c => c.SearchStatisticsComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.Search.ViewStatistics',
+      requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
     },
   },
   {
@@ -187,7 +187,10 @@ export const APP_ROUTES: Routes = [
   {
     path: 'admin/tenant-info',
     loadComponent: () => import('./admin/tenant-info/tenant-info-management.component').then(c => c.TenantInfoManagementComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.TenantInfo.Edit',
+    },
   },
   {
     path: 'tenant/:id',
@@ -230,9 +233,9 @@ export const APP_ROUTES: Routes = [
   {
     path: 'employment/my-guidance',
     loadComponent: () => import('./admin/employment/admin-employment-guidance.component').then(c => c.AdminEmploymentGuidanceComponent),
-    canActivate: [authGuard, permissionGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.Employment',
+      requiredPolicy: 'KnowledgeHub.Employment.ManageGuidance',
     },
   },
   {
@@ -368,22 +371,31 @@ export const APP_ROUTES: Routes = [
   {
     path: 'ai/lesson-plan',
     loadComponent: () => import('./ai/lesson-plan/lesson-plan.component').then(c => c.LessonPlanComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.AI.LessonPlan',
+    },
   },
   {
     path: 'ai/case-analysis',
     loadComponent: () => import('./ai/case-analysis/case-analysis.component').then(c => c.CaseAnalysisComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.AI.CaseAnalysis',
+    },
   },
   {
     path: 'ai/career-guidance',
     loadComponent: () => import('./ai/career-guidance/career-guidance.component').then(c => c.CareerGuidanceComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.AI.CareerGuidance',
+    },
   },
   {
     path: 'ai/model-management',
     loadComponent: () => import('./ai/model-management/model-management.component').then(c => c.ModelManagementComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, nonStudentGuard],
   },
   {
     path: 'teaching/agents',

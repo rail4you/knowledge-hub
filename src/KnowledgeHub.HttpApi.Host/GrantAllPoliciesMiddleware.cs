@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +10,10 @@ namespace KnowledgeHub;
 
 public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
 {
+    /// <summary>非学生业务角色：只要兼任其中之一，就不按"纯学生"处理。</summary>
+    private static readonly string[] NonStudentRoles =
+        { "Teacher", "SchoolAdmin", "LeagueAdmin", "EnterpriseUser", "admin" };
+
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         // 拦截 application-configuration 响应
@@ -36,9 +42,13 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     newPolicies[p.Name] = true;
                 }
 
-                // 注入完整的 KnowledgeHub 权限列表
-                var allPerms = new[]
+                // 学生角色：不注入任何额外权限，返回数据库中的真实权限，
+                // 使其无法在页面/菜单上看到后台管理功能。
+                if (!IsStudentOnlyUser(context.User))
                 {
+                    // 注入完整的 KnowledgeHub 权限列表
+                    var allPerms = new[]
+                    {
                     "KnowledgeHub.Resources", "KnowledgeHub.Resources.Create", "KnowledgeHub.Resources.Edit", "KnowledgeHub.Resources.Delete", "KnowledgeHub.Resources.Download",
                     "KnowledgeHub.Resources.SchoolAudit", "KnowledgeHub.Resources.LeagueAudit", "KnowledgeHub.Resources.ManageCategory",
                     "KnowledgeHub.Resources.RequestDelete", "KnowledgeHub.Resources.PhysicalDelete", "KnowledgeHub.Resources.ViewStatistics", "KnowledgeHub.Resources.ViewRecommendation",
@@ -77,6 +87,7 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                 {
                     newPolicies.Remove(tp);
                 }
+                }
 
                 // 重建 JSON
                 var ms = new System.IO.MemoryStream();
@@ -95,6 +106,16 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
         newBody.Position = 0;
         await newBody.CopyToAsync(originalBody);
         context.Response.Body = originalBody;
+    }
+
+    private static bool IsStudentOnlyUser(ClaimsPrincipal user)
+    {
+        if (!user.IsInRole("Student"))
+        {
+            return false;
+        }
+
+        return !NonStudentRoles.Any(user.IsInRole);
     }
 
     private static void WriteJsonWithInjectedPolicies(JsonElement root, Dictionary<string, object> newPolicies, Utf8JsonWriter writer)

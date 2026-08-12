@@ -49,7 +49,7 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 
     public async Task<MeiliDashboardDto> GetDashboardAsync(Guid? tenantId = null)
     {
-        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ManageIndex);
 
         // 如果当前用户已登录且属于某个租户，则强制使用该租户ID
         var currentTenantId = _currentTenant.Id;
@@ -101,7 +101,7 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 
     public async Task<MeiliIndexStatsDto> GetIndexStatsAsync(string indexUid)
     {
-        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ManageIndex);
 
         var result = await GetAsync<MeiliIndexStatsDto>($"/indexes/{indexUid}/stats");
         return result ?? new MeiliIndexStatsDto();
@@ -109,14 +109,14 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 
     public async Task<Dictionary<string, MeiliEmbedderDto>> GetEmbeddersAsync(string indexUid)
     {
-        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ManageIndex);
 
         return await GetEmbeddersInternalAsync(indexUid);
     }
 
     public async Task<List<MeiliTaskDto>> GetRecentTasksAsync(int limit = 20)
     {
-        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ManageIndex);
 
         var result = await GetAsync<MeiliTasksRawDto>($"/tasks?limit={limit}");
         return result?.Results ?? new List<MeiliTaskDto>();
@@ -124,7 +124,7 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 
     public async Task<List<MeiliDocumentGroupDto>> GetIndexDocumentsAsync(string indexUid, int limit = 200, Guid? tenantId = null)
     {
-        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ManageIndex);
 
         // 如果当前用户已登录且属于某个租户，则强制使用该租户ID
         var currentTenantId = _currentTenant.Id;
@@ -317,7 +317,7 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 
     public async Task<List<MeiliIndexDto>> GetIndexesAsync()
     {
-        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ViewStatistics);
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ManageIndex);
 
         var result = await GetAsync<MeiliIndexesRawDto>("/indexes");
         return result?.Results ?? new List<MeiliIndexDto>();

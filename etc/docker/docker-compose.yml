@@ -103,6 +103,8 @@ services:
       # 安全
       - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
       - StringEncryption__DefaultPassPhrase=${STRING_ENCRYPTION_PASSPHRASE}
+      # 账号：禁用用户自助注册（登录页隐藏"注册新用户"提示/按钮）
+      - Settings__Abp.Account.IsSelfRegistrationEnabled=false
       # 日志
       - Serilog__MinimumLevel__Default=Information
       # 仿真实训 WASM 本地镜像（由 Kestrel 兜底读取；生产主要由 Nginx 直接静态托管）

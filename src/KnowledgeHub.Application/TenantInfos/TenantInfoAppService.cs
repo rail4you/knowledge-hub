@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
 using KnowledgeHub.Majors;
+using KnowledgeHub.Permissions;
 using KnowledgeHub.TenantInfos.Dtos;
 using KnowledgeHub.TenantInfos.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -81,7 +82,7 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
         return MapToDto(tenantInfo, majorCount, courseCount);
     }
 
-    [Authorize]
+    [Authorize(KnowledgeHubPermissions.TenantInfo.Edit)]
     public async Task<TenantInfoDto> SaveCurrentAsync(CreateUpdateTenantInfoDto input)
     {
         var tenantId = CurrentTenant.Id;
@@ -97,7 +98,7 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
         return await SaveTenantInfoInternalAsync(tenantId.Value, input);
     }
 
-    [Authorize]
+    [Authorize(KnowledgeHubPermissions.TenantInfo.Edit)]
     public async Task<TenantInfoDto> SaveByTenantIdAsync(Guid tenantId, CreateUpdateTenantInfoDto input)
     {
         return await SaveTenantInfoInternalAsync(tenantId, input);

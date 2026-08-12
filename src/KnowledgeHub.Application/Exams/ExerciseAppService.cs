@@ -29,7 +29,7 @@ using OpenAI;
 
 namespace KnowledgeHub.Exams;
 
-[AllowAnonymous]
+[Authorize]
 [IgnoreAntiforgeryToken]
 public class ExerciseAppService : ApplicationService, IExerciseAppService
 {
@@ -79,6 +79,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         );
     }
 
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task<ExerciseDto> CreateAsync(CreateUpdateExerciseDto input)
     {
         var exercise = new Exercise(
@@ -110,6 +111,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         return MapToDto(exercise, allChapterIds);
     }
 
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task<ExerciseDto> UpdateAsync(Guid id, CreateUpdateExerciseDto input)
     {
         var exercise = await _exerciseRepository.GetAsync(id);
@@ -134,6 +136,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         return MapToDto(exercise, allChapterIds);
     }
 
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task DeleteAsync(Guid id)
     {
         // P3-8：禁用多租户过滤器以匹配 GetByCourseAsync 的查询范围
@@ -309,6 +312,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         throw new NotImplementedException("AI grading requires AI service integration");
     }
 
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task<AiAnalyzeExerciseResultDto> AiAnalyzeAsync(AiAnalyzeExerciseInput input)
     {
         var result = new AiAnalyzeExerciseResultDto();
@@ -487,6 +491,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         public string QuestionAnalysis { get; set; } = string.Empty;
     }
 
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task BatchRemoveAsync(List<Guid> ids)
     {
         if (ids == null || ids.Count == 0) return;
@@ -497,6 +502,7 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         }
     }
 
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task<ExerciseImportResultDto> ImportFromExcelAsync(Guid courseId, IFormFile file)
     {
         var result = new ExerciseImportResultDto();

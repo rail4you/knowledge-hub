@@ -25,7 +25,7 @@ public class SearchStatisticsAppService : KnowledgeHubAppService, ISearchStatist
         _currentTenant = currentTenant;
     }
 
-    [Authorize(KnowledgeHubPermissions.Search.ViewStatistics)]
+    [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
     public async Task<SearchDashboardDto> GetDashboardAsync(SearchStatsQueryDto input)
     {
         var startDate = input.StartDate ?? DateTime.Now.AddDays(-30);

@@ -94,7 +94,7 @@ function configureRoutes() {
       parentName: '::Menu:AIManagement',
       order: 2,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.TeachingAgents.Manage',
     },
     {
       path: '/teaching/agent-tasks',
@@ -103,7 +103,7 @@ function configureRoutes() {
       parentName: '::Menu:AIManagement',
       order: 3,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.TeachingAgents.Assign',
     },
     // AI 子功能（教案、案例分析、职业规划）也放在此组
     {
@@ -113,7 +113,7 @@ function configureRoutes() {
       parentName: '::Menu:AIManagement',
       order: 4,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.AI.LessonPlan',
     },
     {
       path: '/ai/case-analysis',
@@ -122,7 +122,7 @@ function configureRoutes() {
       parentName: '::Menu:AIManagement',
       order: 5,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.AI.CaseAnalysis',
     },
     {
       path: '/ai/career-guidance',
@@ -131,7 +131,7 @@ function configureRoutes() {
       parentName: '::Menu:AIManagement',
       order: 6,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.AI.CareerGuidance',
     },
     {
       path: '/ai/model-management',
@@ -140,7 +140,7 @@ function configureRoutes() {
       parentName: '::Menu:AIManagement',
       order: 7,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.AI.LessonPlan',
     },
 
     // ══════════════════════════════════════════════════════════
@@ -161,6 +161,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 1,
       layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.TenantInfo.Edit',
     },
     {
       path: '/micro-majors',
@@ -177,7 +178,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 3,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.MicroMajors.Create',
     },
     {
       path: '/admin/majors',
@@ -186,6 +187,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 4,
       layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Majors.Create',
     },
     {
       path: '/learning/course-list',
@@ -203,7 +205,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 6,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Courses.ManageEnrollment',
     },
     {
       path: '/learning/chapter-management',
@@ -212,7 +214,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 7,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
     {
       path: '/learning/exercise-management',
@@ -221,7 +223,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 8,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
     {
       path: '/learning/chapter-exercise',
@@ -230,7 +232,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 9,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
     {
       path: '/learning/course-resource',
@@ -239,7 +241,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 10,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
     {
       path: '/learning/chapter-resource',
@@ -248,7 +250,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 11,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
     {
       path: '/learning/knowledge-graph/:courseId',
@@ -265,7 +267,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 12,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Courses.Edit',
     },
     {
       path: '/learning/learning-statistics',
@@ -274,7 +276,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 13,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Learning.ViewStatistics',
     },
 
     // ══════════════════════════════════════════════════════════
@@ -304,7 +306,7 @@ function configureRoutes() {
       parentName: '::Menu:TrainingManagement',
       order: 2,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Practicum.Create',
     },
     {
       path: '/employment/my-guidance',
@@ -313,7 +315,7 @@ function configureRoutes() {
       parentName: '::Menu:TrainingManagement',
       order: 5,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Employment.ManageGuidance',
     },
     {
       path: '/admin/employment/jobs',
@@ -322,7 +324,7 @@ function configureRoutes() {
       parentName: '::Menu:TrainingManagement',
       order: 6,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Employment.PublishJob',
     },
     {
       path: '/admin/employment/interviews',
@@ -331,7 +333,7 @@ function configureRoutes() {
       parentName: '::Menu:TrainingManagement',
       order: 7,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Employment.ScheduleInterview',
     },
     {
       path: '/admin/employment/statistics',
@@ -340,7 +342,7 @@ function configureRoutes() {
       parentName: '::Menu:TrainingManagement',
       order: 8,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Employment.ViewStatistics',
     },
     {
       path: '/admin/employment/outcomes',
@@ -349,7 +351,7 @@ function configureRoutes() {
       parentName: '::Menu:TrainingManagement',
       order: 9,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Employment.ManageOutcome',
     },
     {
       path: '/admin/recruitment-live',
@@ -358,7 +360,7 @@ function configureRoutes() {
       parentName: '::Menu:TrainingManagement',
       order: 10,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
     },
 
     // ══════════════════════════════════════════════════════════
@@ -388,7 +390,7 @@ function configureRoutes() {
       parentName: '::Menu:InfoManagement',
       order: 2,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.News.Create',
     },
     {
       path: '/admin/assessment/double-high',
@@ -397,7 +399,7 @@ function configureRoutes() {
       parentName: '::Menu:InfoManagement',
       order: 3,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.DoubleHigh.ManageProject',
     },
     {
       path: '/assessment/double-high/projects',
@@ -434,7 +436,7 @@ function configureRoutes() {
       iconClass: 'fas fa-tasks',
       parentName: '::Menu:SearchAndTenantManagement',
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
     },
     {
       path: '/admin/meilisearch',
@@ -442,7 +444,7 @@ function configureRoutes() {
       iconClass: 'fas fa-tachometer-alt',
       parentName: '::Menu:SearchAndTenantManagement',
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
     },
     {
       path: '/admin/search-statistics',
@@ -450,7 +452,7 @@ function configureRoutes() {
       iconClass: 'fas fa-chart-bar',
       parentName: '::Menu:SearchAndTenantManagement',
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
     },
     {
       path: '/admin/tenant-info',
@@ -459,6 +461,7 @@ function configureRoutes() {
       parentName: '::Menu:SearchAndTenantManagement',
       order: 100,
       layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.TenantInfo.Edit',
     },
     // ══════════════════════════════════════════════════════════
     //  隐藏 / 特殊路由（不显示在侧边栏）

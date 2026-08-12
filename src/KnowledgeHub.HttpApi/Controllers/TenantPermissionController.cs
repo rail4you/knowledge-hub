@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using KnowledgeHub.Permissions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
@@ -11,6 +12,7 @@ namespace KnowledgeHub.HttpApi.Controllers;
 [Area("app")]
 [RemoteService(Name = "KnowledgeHub")]
 [Route("api/knowledge-hub/permissions")]
+[Authorize("AbpIdentity.Roles.ManagePermissions")]
 public class TenantPermissionController : AbpController
 {
     private readonly ITenantPermissionService _tenantPermissionService;

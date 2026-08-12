@@ -214,6 +214,21 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Export);
         await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.ViewStatistics);
 
+        // 租户级管理员可管理本租户的角色与用户（身份模块权限）
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Roles");
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Roles.Create");
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Roles.Update");
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Roles.Delete");
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Roles.ManagePermissions");
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Users");
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Users.Create");
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Users.Update");
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Users.Delete");
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Users.ManagePermissions");
+        await GrantAsync("LeagueAdmin", "AbpIdentity.Users.Update.ManageRoles");
+        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.TenantInfo.Default);
+        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
+
         // ── SchoolAdmin：院校管理员 ──
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.Create);
@@ -284,6 +299,21 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.Score);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.Export);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.ViewStatistics);
+
+        // 租户级管理员可管理本租户的角色与用户（身份模块权限）
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Roles");
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Roles.Create");
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Roles.Update");
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Roles.Delete");
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Roles.ManagePermissions");
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Users");
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Create");
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Update");
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Delete");
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Users.ManagePermissions");
+        await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Update.ManageRoles");
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
 
         // ── Teacher：教师（修复：补齐缺失的 Courses.Delete） ──
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.Default);
@@ -445,6 +475,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Majors.Create);
         await GrantAsync("admin", KnowledgeHubPermissions.Majors.Edit);
         await GrantAsync("admin", KnowledgeHubPermissions.Majors.Delete);
+
+        await GrantAsync("admin", KnowledgeHubPermissions.TenantInfo.Default);
+        await GrantAsync("admin", KnowledgeHubPermissions.TenantInfo.Edit);
 
         await GrantAsync("admin", KnowledgeHubPermissions.DoubleHigh.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.DoubleHigh.ManageProject);

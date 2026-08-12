@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
+using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp;
@@ -21,6 +23,7 @@ using Volo.Abp.MultiTenancy;
 namespace KnowledgeHub.Application.Search;
 
 [IgnoreAntiforgeryToken]
+[Authorize]
 public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppService
 {
     private readonly IRepository<DocumentIndexingJob, Guid> _jobRepository;
@@ -292,6 +295,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         return null;
     }
 
+    [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
     public async Task<IndexingJobDto> CreateAsync(CreateIndexingJobInput input)
     {
         Resource? resource;
@@ -363,6 +367,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         };
     }
 
+    [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
     public async Task<string> TestExecuteJobAsync(Guid id)
     {
         var job = await _jobRepository.GetAsync(id);
@@ -389,6 +394,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         return $"Successfully extracted {parseResult.Count} pages";
     }
 
+    [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
     public async Task RetryAsync(Guid id)
     {
         // Try document job first
@@ -466,6 +472,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         throw new EntityNotFoundException(typeof(DocumentIndexingJob), id);
     }
 
+    [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
     public async Task CancelAsync(Guid id)
     {
         // Try document job first
@@ -501,6 +508,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         throw new EntityNotFoundException(typeof(DocumentIndexingJob), id);
     }
 
+    [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
     public async Task RetryAllFailedAsync()
     {
         var failedDocJobs = await _jobRepository.GetListAsync(x => x.Status == IndexingJobStatus.Failed);
@@ -516,6 +524,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         }
     }
 
+    [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
     public async Task<TestParseResultDto> TestParseAsync(Guid resourceId)
     {
         Resource? resource;
@@ -562,6 +571,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         }
     }
 
+    [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
     public async Task TriggerAsync(Guid id)
     {
         var job = await _jobRepository.GetAsync(id);
