@@ -1,4 +1,4 @@
-<div class="chat-page">
+<div class="chat-page" [class.chat-page--embedded]="embedded">
   <div class="chat-layout" [class.sidebar-collapsed]="!showSidebar()">
 
     <!-- ─── Left Sidebar ─── -->
@@ -58,7 +58,7 @@
 
       <!-- Top Navigation Bar -->
       <div class="chat-topbar">
-        <button class="topbar-back" (click)="goBack()">
+        <button class="topbar-back" (click)="goBack()" *ngIf="!embedded">
           <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
           <span>返回实训</span>
         </button>

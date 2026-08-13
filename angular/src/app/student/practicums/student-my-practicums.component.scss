@@ -20,6 +20,56 @@
 
 .enroll-list { display: flex; flex-direction: column; gap: 14px; }
 
+/* =================== 统计汇总 =================== */
+.stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  background: #fff;
+  border-radius: ds.$student-radius-lg;
+  border: 1px solid ds.$student-border-soft;
+  box-shadow: ds.$student-shadow-soft;
+
+  .stat-label { color: ds.$student-text-muted; font-size: 13px; }
+  .stat-value { color: #0284c7; font-size: 26px; font-weight: 700; line-height: 1; }
+}
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.chart-card {
+  background: #fff;
+  border-radius: ds.$student-radius-lg;
+  border: 1px solid ds.$student-border-soft;
+  box-shadow: ds.$student-shadow-soft;
+  padding: 16px 18px;
+
+  .chart-title { margin: 0 0 8px; color: ds.$student-text; font-size: 14px; font-weight: 600; }
+  .chart-box { width: 100%; height: 260px; }
+}
+
+@media (max-width: 768px) {
+  .charts-row { grid-template-columns: 1fr; }
+  .stats-cards { grid-template-columns: repeat(2, 1fr); }
+}
+
+
 .enroll-card { display: flex; gap: 16px; padding: 20px 22px; background: #fff; border-radius: ds.$student-radius-lg; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft; transition: all .2s ease; &:hover { border-color: rgba(ds.$student-primary, .3); box-shadow: 0 6px 18px rgba(15,23,42,.06); } }
 
 .enroll-card__body { flex: 1; min-width: 0; cursor: pointer; }

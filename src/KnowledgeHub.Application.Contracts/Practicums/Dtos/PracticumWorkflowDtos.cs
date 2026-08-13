@@ -88,6 +88,12 @@ public class CreatePracticumGuidanceRecordDto
     public bool IsVisibleToStudent { get; set; } = true;
 }
 
+public class UpdatePracticumGuidanceRecordDto
+{
+    public string Content { get; set; } = string.Empty;
+    public bool IsVisibleToStudent { get; set; } = true;
+}
+
 public class PracticumAssessmentDto : FullAuditedEntityDto<Guid>
 {
     public Guid ProjectId { get; set; }

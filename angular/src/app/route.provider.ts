@@ -291,24 +291,6 @@ function configureRoutes() {
       
     },
     {
-      path: '/practicum/projects',
-      name: '::Menu:PracticumGroup',
-      iconClass: 'fas fa-chalkboard-teacher',
-      parentName: '::Menu:TrainingManagement',
-      order: 1,
-      layout: eLayoutType.application,
-      
-    },
-    {
-      path: '/admin/practicum/projects',
-      name: '::Menu:PracticumManagement',
-      iconClass: 'fas fa-tasks',
-      parentName: '::Menu:TrainingManagement',
-      order: 2,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Practicum.Create',
-    },
-    {
       path: '/employment/my-guidance',
       name: '::Menu:MyGuidance',
       iconClass: 'fas fa-compass',
@@ -316,6 +298,53 @@ function configureRoutes() {
       order: 5,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Employment.ManageGuidance',
+    },
+
+    // ══════════════════════════════════════════════════════════
+    //  实训（独立栏目）：实训管理 / 实训任务 / 仿真实训 / 智能体聊天
+    // ══════════════════════════════════════════════════════════
+    {
+      path: '/practicum',
+      name: '::Menu:PracticumGroup',
+      iconClass: 'fas fa-chalkboard-teacher',
+      order: 6,
+      layout: eLayoutType.application,
+    },
+    {
+      path: '/admin/practicum/projects',
+      name: '::Menu:PracticumManagement',
+      iconClass: 'fas fa-tasks',
+      parentName: '::Menu:PracticumGroup',
+      order: 1,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Practicum.Create',
+    },
+    {
+      path: '/admin/practicum/tasks',
+      name: '::Menu:PracticumTasks',
+      iconClass: 'fas fa-list-check',
+      parentName: '::Menu:PracticumGroup',
+      order: 2,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Practicum',
+    },
+    {
+      path: '/admin/practicum/simulations',
+      name: '::Menu:PracticumSimulation',
+      iconClass: 'fas fa-cubes',
+      parentName: '::Menu:PracticumGroup',
+      order: 3,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Practicum',
+    },
+    {
+      path: '/admin/practicum/chat',
+      name: '::Menu:PracticumAgentChat',
+      iconClass: 'fas fa-comments',
+      parentName: '::Menu:PracticumGroup',
+      order: 4,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Practicum',
     },
     {
       path: '/admin/employment/jobs',

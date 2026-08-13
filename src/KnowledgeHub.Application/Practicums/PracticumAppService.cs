@@ -396,6 +396,21 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         return await MapGuidanceDtoAsync(entity);
     }
 
+    [Authorize(KnowledgeHubPermissions.Practicum.Review)]
+    public async Task<PracticumGuidanceRecordDto> UpdateGuidanceAsync(Guid id, UpdatePracticumGuidanceRecordDto input)
+    {
+        if (string.IsNullOrWhiteSpace(input.Content))
+        {
+            throw new UserFriendlyException("指导内容不能为空。");
+        }
+
+        var entity = await _guidanceRepository.GetAsync(id);
+        entity.Content = input.Content.Trim();
+        entity.IsVisibleToStudent = input.IsVisibleToStudent;
+        await _guidanceRepository.UpdateAsync(entity, autoSave: true);
+        return await MapGuidanceDtoAsync(entity);
+    }
+
     [Authorize(KnowledgeHubPermissions.Practicum.Default)]
     public async Task<List<PracticumGuidanceRecordDto>> GetGuidanceListAsync(Guid enrollmentId)
     {
@@ -610,11 +625,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
             throw new UserFriendlyException("实训项目名称不能为空。");
         }
 
-        if (input.Tasks.Count == 0)
-        {
-            throw new UserFriendlyException("至少需要配置一个实训任务。");
-        }
-
+        // 任务在"实训任务"页面单独维护，创建/编辑基础信息时允许暂不配置任务。
         if (input.CourseId.HasValue)
         {
             // 课程可能已被删除，不阻塞实训操作
@@ -832,6 +843,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
             Status = source.Status,
             StartTime = source.StartTime,
             EndTime = source.EndTime,
+            IsExpired = source.IsExpired,
             MaxScore = source.MaxScore,
             AllowResubmission = source.AllowResubmission,
             TaskCount = source.TaskCount,

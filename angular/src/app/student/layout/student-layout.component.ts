@@ -49,8 +49,16 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     { key: 'my-learning', label: '我的学习', icon: 'line-chart', route: '/student/my-learning' },
     { key: 'favorites', label: '我的收藏', icon: 'star', route: '/student/favorites' },
     { key: 'agent-tasks', label: '课堂任务', icon: 'robot', route: '/student/agent-tasks' },
-    { key: 'practicums', label: '实训', icon: 'experiment', route: '/student/practicums' },
-    { key: 'my-practicums', label: '我的实训', icon: 'unordered-list', route: '/student/practicums/my' },
+    {
+      key: 'practicums',
+      label: '实训',
+      icon: 'experiment',
+      activePrefixes: ['/student/practicums'],
+      children: [
+        { key: 'practicum-projects', label: '实训项目', icon: 'experiment', route: '/student/practicums' },
+        { key: 'my-practicums', label: '我的实训', icon: 'unordered-list', route: '/student/practicums/my' },
+      ],
+    },
     {
       key: 'employment',
       label: '就业服务',

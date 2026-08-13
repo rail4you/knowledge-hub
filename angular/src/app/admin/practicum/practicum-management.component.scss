@@ -770,3 +770,83 @@
   word-break: break-word;
   color: #4b5563;
 }
+
+/* 内联表单：资料嵌入列表 */
+.material-inline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.material-inline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+
+  &__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2563eb;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+
+    .cell-title {
+      font-weight: 600;
+      color: #1f1f1f;
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__desc {
+    color: #6b7280;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #1677ff;
+    font-size: 12px;
+    text-decoration: none;
+    word-break: break-all;
+
+    &:hover { color: #4096ff; text-decoration: underline; }
+  }
+
+  &__actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+  }
+}
+
+.form-actions {
+  padding-top: 8px;
+  border-top: 1px dashed #f0f0f0;
+}

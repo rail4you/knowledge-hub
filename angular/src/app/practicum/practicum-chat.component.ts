@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, OnDestroy, inject, signal, computed,
+  Component, OnInit, OnDestroy, inject, signal, computed, Input,
   ViewChild, ElementRef, AfterViewChecked, ChangeDetectionStrategy, HostListener
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -61,7 +61,10 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef;
 
-  projectId = '';
+  /** 内嵌到页面时传入的项目 ID；为空则从路由参数读取。 */
+  @Input() projectId = '';
+  /** 内嵌到其他页面时置 true（隐藏"返回实训"按钮、改用适配内嵌的高度）。 */
+  @Input() embedded = false;
   projectDetail: PracticumProjectDetailDto | null = null;
   agentConfig: PracticumAgentConfigDto = {};
 
@@ -107,7 +110,7 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
   });
 
   ngOnInit(): void {
-    this.projectId = this.route.snapshot.paramMap.get('id') || '';
+    this.projectId = this.projectId || this.route.snapshot.paramMap.get('id') || '';
     if (!this.projectId) {
       this.router.navigate(['/']);
       return;

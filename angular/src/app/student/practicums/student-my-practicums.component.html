@@ -18,6 +18,25 @@
       </nz-empty>
     </div>
   } @else {
+    <!-- 统计汇总 -->
+    <div class="stats-section">
+      <div class="stats-cards">
+        <div class="stat-card"><span class="stat-label">参与实训</span><strong class="stat-value">{{ summary().total }}</strong></div>
+        <div class="stat-card"><span class="stat-label">已完成</span><strong class="stat-value">{{ summary().completed }}</strong></div>
+        <div class="stat-card"><span class="stat-label">平均进度</span><strong class="stat-value">{{ summary().avgProgress }}%</strong></div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <h4 class="chart-title">实训状态分布</h4>
+          <div #pieChartEl class="chart-box"></div>
+        </div>
+        <div class="chart-card">
+          <h4 class="chart-title">各实训项目进度</h4>
+          <div #lineChartEl class="chart-box"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="enroll-list">
       @for (item of items(); track item.id) {
         <div class="enroll-card">

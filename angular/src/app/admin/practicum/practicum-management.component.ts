@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RestService } from '@abp/ng.core';
-import { firstValueFrom, forkJoin, Observable, map, catchError, of } from 'rxjs';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -11,60 +9,28 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { CourseService } from '../../proxy/courses/course.service';
-import { ChunkUploadService } from '../../proxy/controllers/chunk-upload.service';
-import type { CompleteUploadResultDto } from '../../proxy/resources/models';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { OssUploadService } from '../../shared/oss-upload.service';
 import {
-  CreatePracticumAssessmentDto,
-  CreatePracticumGuidanceRecordDto,
   CreateUpdatePracticumProjectDto,
-  PracticumEnrollmentDto,
-  PracticumEnrollmentStatus,
-  PracticumGuidanceRecordDto,
   PracticumProjectDto,
   PracticumProjectStatus,
   PracticumService,
-  PracticumSubmissionDto,
-  PracticumSubmissionStatus,
 } from '../../practicum/practicum.service';
-import { PracticumSimulationService } from '../../proxy/practicums/simulations/practicum-simulation.service';
-import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
-import { PracticumSimulationStatus } from '../../proxy/practicums/simulations/enums/practicum-simulation-status.enum';
-import { PracticumChatService } from '../../practicum/practicum-chat.service';
-import type { PracticumAgentConfigDto } from '../../practicum/practicum-chat.service';
-import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
 
 @Component({
   selector: 'app-practicum-management',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-    NzButtonModule,
-    NzCardModule,
-    NzEmptyModule,
-    NzInputModule,
-    NzInputNumberModule,
-    NzModalModule,
-    NzSelectModule,
-    NzSwitchModule,
-    NzTableModule,
-    NzTagModule,
-    NzTooltipModule,
-    NzIconModule,
-    NzInputNumberModule,
-    NzSpinModule,
-    NzUploadModule,
-    SafeResourceUrlPipe,
+    CommonModule, FormsModule,
+    NzButtonModule, NzCardModule, NzEmptyModule, NzInputModule, NzModalModule, NzSelectModule,
+    NzSwitchModule, NzTableModule, NzTagModule, NzTooltipModule, NzIconModule, NzUploadModule,
   ],
   templateUrl: './practicum-management.component.html',
   styleUrls: ['./practicum-management.component.scss'],
@@ -72,79 +38,34 @@ import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
 })
 export class PracticumManagementComponent implements OnInit {
   private readonly practicumService = inject(PracticumService);
-  private readonly pratChatService = inject(PracticumChatService);
   private readonly courseService = inject(CourseService);
   private readonly ossUploadService = inject(OssUploadService);
-  private readonly simulationService = inject(PracticumSimulationService);
-  private readonly chunkUploadService = inject(ChunkUploadService);
-  private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   readonly projects = signal<PracticumProjectDto[]>([]);
-  readonly enrollments = signal<PracticumEnrollmentDto[]>([]);
-  readonly submissions = signal<PracticumSubmissionDto[]>([]);
-  readonly simulations = signal<PracticumSimulationDto[]>([]);
   readonly courses = signal<CourseDto[]>([]);
   readonly statuses = PracticumProjectStatus;
-  readonly submissionStatuses = PracticumSubmissionStatus;
-  readonly simulationStatuses = PracticumSimulationStatus;
 
-  // ===== 仿真镜像弹窗 =====
-  readonly simulationModalVisible = signal(false);
-  readonly simulationModalDraft = signal<{
-    editingId: string | null;
-    name: string;
-    description: string;
-    coverUrl: string;
-    coverFileList: NzUploadFile[];
-    coverUploading: boolean;
-    file: File | null;
-    fileName: string;
-    uploading: boolean;
-    saving: boolean;
-    uploadProgress: number;
-  } | null>(null);
-
-  activeTab = 0;
   selectedProjectId: string | null = null;
-  modalVisible = false;
+  /** 是否显示内联编辑表单（新建或选中项目后显示）。 */
+  formVisible = false;
   editingId: string | null = null;
-  /** 基本信息 Tab 显示用:后端 detail 返回的关联课程名称(不是 ID)。 */
+  /** 编辑表单显示用:后端 detail 返回的关联课程名称(不是 ID)。 */
   selectedCourseTitle = '';
 
   // ===== OSS 上传状态 =====
-  /** 封面图片上传进度 + 已上传文件列表(picture-card 模式)。 */
   coverUploading = false;
   coverFileList: NzUploadFile[] = [];
-  /** 资料上传进度:key=material index, value=true 表示上传中。 */
   materialUploading: Record<number, boolean> = {};
 
-  // ===== 右侧抽屉(统一承载"查看 / 新增 / 编辑"任务与资料) =====
-  /** 抽屉中的资源类型:'task' | 'material' | null */
-  readonly drawerKind = signal<'task' | 'material' | null>(null);
-  /** 抽屉模式:'add' 新增 | 'edit' 编辑现有 */
+  // ===== 资料抽屉(统一承载"查看 / 新增 / 编辑"资料) =====
   readonly drawerMode = signal<'add' | 'edit'>('add');
-  /** 抽屉中编辑/查看的下标(新增时为 -1) */
   readonly drawerIndex = signal(-1);
-  /** 抽屉是否可见 */
   readonly drawerVisible = signal(false);
-  /** 保存中(抽屉底部"保存"按钮的 loading) */
   readonly drawerSaving = signal(false);
-  /** 抽屉内文件上传中 */
   readonly drawerUploading = signal(false);
 
-  /** 任务草稿 */
-  readonly taskDraft = signal<{
-    title: string;
-    description: string;
-    requirement: string;
-    scoreWeight: number;
-    sortOrder: number;
-    dueTimeInput: string;
-  } | null>(null);
-
-  /** 资料草稿 */
   readonly materialDraft = signal<{
     title: string;
     description: string;
@@ -153,37 +74,8 @@ export class PracticumManagementComponent implements OnInit {
     sortOrder: number;
   } | null>(null);
 
-  /** Form for basic info, tasks, and materials (all in one DTO) */
+  /** 基本信息 + 资料（同一 DTO，保存时一并提交）。 */
   form: CreateUpdatePracticumProjectDto = this.freshForm();
-
-  guidanceModalVisible = false;
-  guidanceSaving = false;
-  scoreVisible = false;
-  viewVisible = false;
-  scoreTarget: PracticumSubmissionDto | null = null;
-  /** 评分对象的学生/任务标题（评分弹窗标题用）。 */
-  scoreTitle = '实训评分';
-  /** 评分弹窗对应的报名记录 ID（saveScore 提交用）。 */
-  scoreEnrollmentId = '';
-  /** 评分弹窗当前任务允许的最高分（取任务分值 scoreWeight，无任务时用项目满分）。 */
-  scoreMax = 100;
-  viewTarget: PracticumSubmissionDto | null = null;
-  /** 提交详情弹窗中展示的附件 URL 列表（openView 时预计算，避免模板重复解析）。 */
-  viewAttachments: string[] = [];
-  /** 附件预览弹窗 */
-  previewVisible = false;
-  previewUrl = '';
-  previewType: 'image' | 'pdf' | 'other' = 'other';
-  /** 指导 Tab：每个学生的指导记录（原始数据） */
-  readonly studentGuidance = signal<{ enrollment: PracticumEnrollmentDto; records: PracticumGuidanceRecordDto[] }[]>([]);
-  readonly guidanceTabLoading = signal(false);
-  /** 指导 Tab：平铺后的指导记录表格行（每条记录一行） */
-  readonly guidanceRows = signal<{ studentName: string; status: PracticumEnrollmentStatus; record: PracticumGuidanceRecordDto }[]>([]);
-  /** 评分 Tab：参与名单与提交合并后的表格行 */
-  readonly scoreRows = signal<{ enrollment: PracticumEnrollmentDto; submissions: PracticumSubmissionDto[] }[]>([]);
-  guidanceForm: CreatePracticumGuidanceRecordDto = this.emptyGuidance();
-  scoreForm: CreatePracticumAssessmentDto = this.emptyScore();
-  agentConfigForm: PracticumAgentConfigDto = {};
 
   ngOnInit(): void {
     this.loadCourses();
@@ -197,10 +89,10 @@ export class PracticumManagementComponent implements OnInit {
     return { title: '', summary: '', description: '', coverImageUrl: '', courseId: undefined,
       major: '', className: '', status: PracticumProjectStatus.Draft,
       startTime: undefined, endTime: undefined, maxScore: 100, allowResubmission: true,
-      agentName: '', agentPrompt: '', tasks: [], materials: [] };
+      tasks: [], materials: [] };
   }
 
-  /** 把后端 detail 填到 form + 设置 selectedCourseTitle(用于 Tab 0 显示课程名称)。 */
+  /** 把后端 detail 填到 form + 设置 selectedCourseTitle。 */
   private applyDetailToForm(detail: any): void {
     this.form = {
       title: detail.title,
@@ -211,34 +103,20 @@ export class PracticumManagementComponent implements OnInit {
       major: detail.major || '',
       className: detail.className || '',
       status: detail.status,
-      startTime: detail.startTime,
-      endTime: detail.endTime,
+      startTime: this.toDateTimeLocal(detail.startTime),
+      endTime: this.toDateTimeLocal(detail.endTime),
       maxScore: detail.maxScore,
       allowResubmission: detail.allowResubmission,
-      agentName: detail.agentName || '',
-      agentPrompt: detail.agentPrompt || '',
-      tasks: (detail.tasks || []).map((t: any) => ({
-        title: t.title, description: t.description || '', requirement: t.requirement || '',
-        dueTime: this.toDateTimeLocal(t.dueTime), scoreWeight: t.scoreWeight, sortOrder: t.sortOrder,
-      })),
+      tasks: detail.tasks || [],
       materials: (detail.materials || []).map((m: any) => ({
         taskId: m.taskId, title: m.title, description: m.description || '',
         materialType: m.materialType, resourceUrl: m.resourceUrl, sortOrder: m.sortOrder,
       })),
     };
     this.selectedCourseTitle = detail.courseTitle || '';
-    // 同步封面 / 资料上传组件的显示状态(如果后端已有 URL,回显成"已上传"卡片)
     this.syncCoverFileList();
     this.materialUploading = {};
     this.cdr.markForCheck();
-  }
-
-  private emptyGuidance(): CreatePracticumGuidanceRecordDto {
-    return { enrollmentId: '', taskId: undefined, content: '', isVisibleToStudent: true };
-  }
-
-  private emptyScore(): CreatePracticumAssessmentDto {
-    return { submissionId: undefined, score: 0, comment: '' };
   }
 
   private loadCourses(): void {
@@ -251,38 +129,35 @@ export class PracticumManagementComponent implements OnInit {
       .subscribe(r => { this.projects.set(r.items || []); this.cdr.markForCheck(); });
   }
 
-  // --- Modal create / edit -------------------------------------
+  // ─── 新建 / 编辑（内联表单） ───────────────────
 
   openCreate(): void {
     this.editingId = null;
     this.selectedProjectId = null;
-    this.simulations.set([]);
     this.form = this.freshForm();
-    this.modalVisible = true;
+    this.formVisible = true;
     this.cdr.markForCheck();
   }
 
   openEdit(p: PracticumProjectDto): void {
     this.editingId = p.id;
+    this.selectedProjectId = p.id;
     this.form = this.freshForm();
-    this.modalVisible = true;
+    this.formVisible = true;
     this.cdr.markForCheck();
 
     this.practicumService.getDetail(p.id).subscribe(detail => {
       this.applyDetailToForm(detail);
-      this.selectedProjectId = p.id;
-      this.activeTab = 1;
-      this.modalVisible = false;
-      this.loadEnrollmentsAndSubmissions(p.id);
-      this.loadSimulations(p.id);
       this.cdr.markForCheck();
     });
   }
 
-  saveModal(): void {
-    // P1-15:保存时同时提交任务(原先在 saveModal 里把 tasks/materials 强制清空,迫使用户"先保存基本信息,再到 Tab1 保存任务"--分两步走容易漏)。
-    // 现在 modal 内的"基本信息 + 任务配置"是同一个表单,一次性提交。
-    const body: CreateUpdatePracticumProjectDto = this.prepareFormPayload();
+  saveForm(): void {
+    if (this.form.startTime && this.form.endTime && this.form.startTime > this.form.endTime) {
+      this.message.error('开始时间不能晚于结束时间');
+      return;
+    }
+    const body = this.prepareFormPayload();
     const obs = this.editingId
       ? this.practicumService.update(this.editingId, body)
       : this.practicumService.create(body);
@@ -290,16 +165,13 @@ export class PracticumManagementComponent implements OnInit {
     obs.subscribe({
       next: r => {
         this.message.success('实训项目已保存');
-        this.modalVisible = false;
         this.selectedProjectId = r.id;
-        this.activeTab = 1;
+        this.editingId = r.id;
+        this.formVisible = true;
         this.cdr.markForCheck();
-        // Reload detail so tabs have tasks/materials data
         this.practicumService.getDetail(r.id).subscribe(detail => {
           this.applyDetailToForm(detail);
           this.reload();
-          this.loadEnrollmentsAndSubmissions(r.id);
-          this.loadSimulations(r.id);
           this.cdr.markForCheck();
         });
       },
@@ -307,36 +179,14 @@ export class PracticumManagementComponent implements OnInit {
     });
   }
 
-  /**
-   * P1-15:保存按钮的启用条件--至少要有一条任务。
-   * 没任务时点保存没意义,禁用 + tooltip 提示用户先加任务。
-   */
-  get canSaveModal(): boolean {
-    return Array.isArray(this.form?.tasks) && this.form.tasks.length > 0;
-  }
-
-  get saveModalTooltip(): string {
-    return this.canSaveModal ? '' : '请先添加至少一个任务(点击上方"添加任务"按钮)';
-  }
-
-  /** 从基本信息 Tab 直接打开编辑 modal(不再走 openEdit → 切到任务 Tab 的路径)。 */
-  openEditFromTab0(): void {
-    if (!this.selectedProjectId) return;
-    this.editingId = this.selectedProjectId;
-    this.modalVisible = true;
-    this.cdr.markForCheck();
-  }
-
   deleteProject(id: string): void {
     this.practicumService.delete(id).subscribe({
       next: () => {
         this.message.success('实训项目已删除');
         this.selectedProjectId = null;
+        this.editingId = null;
+        this.formVisible = false;
         this.form = this.freshForm();
-        this.activeTab = 0;
-        this.enrollments.set([]);
-        this.submissions.set([]);
-        this.simulations.set([]);
         this.reload();
         this.cdr.markForCheck();
       },
@@ -344,168 +194,68 @@ export class PracticumManagementComponent implements OnInit {
     });
   }
 
-  // --- 仿真镜像管理 -------------------------------------------
+  // ─── 资料抽屉 ─────────────────────────────────────
 
-  private loadSimulations(projectId: string): void {
-    this.simulationService.getListByProject(projectId).subscribe({
-      next: list => {
-        this.simulations.set(list || []);
-        this.cdr.markForCheck();
-      },
-      error: () => this.message.error('加载仿真镜像失败'),
-    });
-  }
-
-
-
-  // --- Tab 1 / Tab 2:统一用右侧抽屉承载 ----
-
-  /** 打开新增任务抽屉(直接是编辑态) */
-  openAddTaskDrawer(): void {
-    this.drawerKind.set('task');
-    this.drawerMode.set('add');
-    this.drawerIndex.set(-1);
-    this.taskDraft.set({
-      title: '',
-      description: '',
-      requirement: '',
-      scoreWeight: 0,
-      sortOrder: this.form.tasks.length + 1,
-      dueTimeInput: '',
-    });
-    this.drawerVisible.set(true);
-  }
-
-  /** 打开编辑任务抽屉 */
-  openEditTaskDrawer(i: number): void {
-    const src = this.form.tasks[i];
-    if (!src) return;
-    this.drawerKind.set('task');
-    this.drawerMode.set('edit');
-    this.drawerIndex.set(i);
-    this.taskDraft.set({
-      title: src.title ?? '',
-      description: src.description ?? '',
-      requirement: src.requirement ?? '',
-      scoreWeight: src.scoreWeight ?? 0,
-      sortOrder: src.sortOrder ?? (i + 1),
-      dueTimeInput: this.toDateTimeLocal(src.dueTime),
-    });
-    this.drawerVisible.set(true);
-  }
-
-  /** 打开新增资料抽屉 */
   openAddMaterialDrawer(): void {
-    this.drawerKind.set('material');
     this.drawerMode.set('add');
     this.drawerIndex.set(-1);
     this.materialDraft.set({
-      title: '',
-      description: '',
-      materialType: 0,
-      resourceUrl: '',
+      title: '', description: '', materialType: 0, resourceUrl: '',
       sortOrder: this.form.materials.length + 1,
     });
     this.drawerUploading.set(false);
     this.drawerVisible.set(true);
   }
 
-  /** 打开编辑资料抽屉 */
   openEditMaterialDrawer(i: number): void {
     const src = this.form.materials[i];
     if (!src) return;
-    this.drawerKind.set('material');
     this.drawerMode.set('edit');
     this.drawerIndex.set(i);
     this.materialDraft.set({
-      title: src.title ?? '',
-      description: src.description ?? '',
-      materialType: src.materialType ?? 0,
-      resourceUrl: src.resourceUrl ?? '',
+      title: src.title ?? '', description: src.description ?? '',
+      materialType: src.materialType ?? 0, resourceUrl: src.resourceUrl ?? '',
       sortOrder: src.sortOrder ?? (i + 1),
     });
     this.drawerUploading.set(false);
     this.drawerVisible.set(true);
   }
 
-  /** 关闭抽屉 */
   closeDrawer(): void {
     this.drawerVisible.set(false);
-    // 延迟清空,让关闭动画播完
     setTimeout(() => {
-      this.drawerKind.set(null);
       this.drawerIndex.set(-1);
-      this.taskDraft.set(null);
       this.materialDraft.set(null);
       this.drawerUploading.set(false);
     }, 200);
   }
 
-  /** 抽屉底部"保存"按钮:校验 → 写回 form → 持久化到后端 */
   saveDrawer(): void {
-    const kind = this.drawerKind();
-    if (kind === 'task') {
-      if (!this.validateTaskDraft()) return;
-      this.applyTaskDraft();
-    } else if (kind === 'material') {
-      if (!this.validateMaterialDraft()) return;
-      this.applyMaterialDraft();
-    } else {
-      return;
-    }
-    // 编辑已有项目时直接持久化到后端;新建项目时仅保存到本地 form(由 saveModal 统一提交)
-    if (this.selectedProjectId) {
-      this.drawerSaving.set(true);
-      this.persistFormToBackend();
-    } else {
-      this.message.success(this.drawerMode() === 'add' ? '已添加' : '已更新');
-      this.closeDrawer();
-    }
+    if (!this.validateMaterialDraft()) return;
+    this.applyMaterialDraft();
+    // 内联表单模式：资料先写入本地表单，由页面"保存"按钮统一提交
+    this.message.success(this.drawerMode() === 'add' ? '已添加，点击"保存"生效' : '已更新，点击"保存"生效');
+    this.closeDrawer();
   }
 
-  /** 抽屉底部"删除"按钮:仅已有项目时可用 */
   deleteFromDrawer(): void {
     const i = this.drawerIndex();
-    const kind = this.drawerKind();
     if (i < 0) return;
-    if (!this.selectedProjectId) {
-      this.message.warning('请先保存项目基本信息后再删除');
-      return;
-    }
-    if (kind === 'task') this.removeTask(i);
-    else if (kind === 'material') this.removeMaterial(i);
-    this.drawerSaving.set(true);
-    this.persistFormToBackend('删除');
+    this.removeMaterial(i);
+    this.message.success('已删除，点击"保存"生效');
+    this.closeDrawer();
   }
 
-  // 兼容旧方法名(避免破坏 HTML 调用)
-  addTask(): void { this.openAddTaskDrawer(); }
   addMaterial(): void { this.openAddMaterialDrawer(); }
-  openAddTask(): void { this.openAddTaskDrawer(); }
   openAddMaterial(): void { this.openAddMaterialDrawer(); }
-  openEditTask(i: number): void { this.openEditTaskDrawer(i); }
   openEditMaterial(i: number): void { this.openEditMaterialDrawer(i); }
-  openTaskDrawer(i: number): void { this.openEditTaskDrawer(i); }
   openMaterialDrawer(i: number): void { this.openEditMaterialDrawer(i); }
   editFromDrawer(): void { /* no-op: 抽屉本身就是编辑态 */ }
 
-  /** 校验任务草稿,返回是否合法 */
-  private validateTaskDraft(): boolean {
-    const draft = this.taskDraft();
-    if (!draft) return false;
-    if (!(draft.title || '').trim()) {
-      this.message.warning('请填写任务名称');
-      return false;
-    }
-    return true;
-  }
-
-  /** 校验资料草稿,返回是否合法 */
   private validateMaterialDraft(): boolean {
     const draft = this.materialDraft();
     if (!draft) return false;
-    const title = (draft.title || '').trim();
-    if (!title) {
+    if (!(draft.title || '').trim()) {
       this.message.warning('请填写资料名称');
       return false;
     }
@@ -522,29 +272,6 @@ export class PracticumManagementComponent implements OnInit {
     return true;
   }
 
-  /** 将任务草稿写入 form.tasks(仅本地)。dueTime 存储为 datetime-local 字符串,
-   *  发送到后端前由 saveModal/persistFormToBackend 转为 ISO。 */
-  private applyTaskDraft(): void {
-    const draft = this.taskDraft()!;
-    const next = {
-      title: (draft.title || '').trim(),
-      description: (draft.description || '').trim(),
-      requirement: (draft.requirement || '').trim(),
-      scoreWeight: Number(draft.scoreWeight) || 0,
-      sortOrder: draft.sortOrder ?? 1,
-      dueTime: draft.dueTimeInput || undefined,
-    };
-    if (this.drawerMode() === 'add') {
-      this.form.tasks.push(next);
-    } else {
-      const i = this.drawerIndex();
-      if (this.form.tasks[i]) this.form.tasks[i] = next;
-    }
-    this.form.tasks.forEach((t, idx) => t.sortOrder = idx + 1);
-    this.cdr.markForCheck();
-  }
-
-  /** 将资料草稿写入 form.materials(仅本地) */
   private applyMaterialDraft(): void {
     const draft = this.materialDraft()!;
     const next = {
@@ -564,36 +291,6 @@ export class PracticumManagementComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  /**
-   * 将当前 form(含 tasks / materials)持久化到后端。
-   * 成功后关闭抽屉、刷新 detail;失败时保留抽屉、显示错误。
-   */
-  private persistFormToBackend(customPrefix?: string): void {
-    const pid = this.selectedProjectId;
-    if (!pid) {
-      this.drawerSaving.set(false);
-      return;
-    }
-    const kind = this.drawerKind();
-    const mode = this.drawerMode();
-    const label = kind === 'task' ? '任务' : '资料';
-    const prefix = customPrefix || (mode === 'add' ? '新增' : '更新');
-
-    this.practicumService.update(pid, this.prepareFormPayload()).subscribe({
-      next: () => {
-        this.drawerSaving.set(false);
-        this.message.success(`${prefix}${label}已保存`);
-        this.closeDrawer();
-        this.refreshDetail();
-      },
-      error: (err) => {
-        this.drawerSaving.set(false);
-        this.message.error(`${prefix}${label}保存失败: ` + (err?.error?.error?.message || err?.message || '未知错误'));
-      },
-    });
-  }
-
-  /** ISO/字符串 → <input type="datetime-local"> 需要的 YYYY-MM-DDTHH:mm 格式 */
   private toDateTimeLocal(value: string | Date | undefined | null): string {
     if (!value) return '';
     const d = typeof value === 'string' ? new Date(value) : value;
@@ -602,7 +299,6 @@ export class PracticumManagementComponent implements OnInit {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  /** datetime-local 字符串 → ISO(UTC)字符串,方便后端 DateTime 解析 */
   private fromDateTimeLocal(input: string | undefined | null): string | undefined {
     if (!input) return undefined;
     const d = new Date(input);
@@ -610,20 +306,16 @@ export class PracticumManagementComponent implements OnInit {
     return d.toISOString();
   }
 
-  /** 将 form 中出现 datetime-local 格式的 dueTime 转为 ISO,返回可发送给 API 的副本。 */
   private prepareFormPayload() {
     const payload = { ...this.form };
-    payload.tasks = payload.tasks.map(t => ({
+    payload.tasks = (payload.tasks || []).map(t => ({
       ...t,
       dueTime: t.dueTime ? this.fromDateTimeLocal(t.dueTime) : undefined,
     }));
+    // datetime-local 输入 → 后端 ISO(UTC)
+    payload.startTime = this.fromDateTimeLocal(this.form.startTime);
+    payload.endTime = this.fromDateTimeLocal(this.form.endTime);
     return payload;
-  }
-
-  removeTask(i: number): void {
-    this.form.tasks.splice(i, 1);
-    this.form.tasks.forEach((t, idx) => t.sortOrder = idx + 1);
-    this.cdr.markForCheck();
   }
 
   removeMaterial(i: number): void {
@@ -632,7 +324,6 @@ export class PracticumManagementComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  /** 资料类型显示名称 */
   materialTypeLabel(t: number | undefined): string {
     switch (t) {
       case 0: return '指南';
@@ -644,7 +335,6 @@ export class PracticumManagementComponent implements OnInit {
     }
   }
 
-  /** 资料类型 tag 颜色 */
   materialTypeColor(t: number | undefined): string {
     switch (t) {
       case 0: return 'blue';
@@ -656,484 +346,12 @@ export class PracticumManagementComponent implements OnInit {
     }
   }
 
-  // --- Tab 4 ------------------------------------------------
-
-  // ===== 仿真镜像弹窗 =====
-
-  openAddSimulationModal(): void {
-    this.simulationModalDraft.set({
-      editingId: null,
-      name: '',
-      description: '',
-      coverUrl: '',
-      coverFileList: [],
-      coverUploading: false,
-      file: null,
-      fileName: '',
-      uploading: false,
-      saving: false,
-      uploadProgress: 0,
-    });
-    this.simulationModalVisible.set(true);
-  }
-
-  openEditSimulationModal(item: PracticumSimulationDto): void {
-    const coverFileList = item.coverUrl ? [{
-      uid: 'sim-cover-existing',
-      name: item.name || 'cover',
-      status: 'done' as const,
-      url: item.coverUrl,
-    }] : [];
-    this.simulationModalDraft.set({
-      editingId: item.id ?? null,
-      name: item.name ?? '',
-      description: item.description ?? '',
-      coverUrl: item.coverUrl ?? '',
-      coverFileList,
-      coverUploading: false,
-      file: null,
-      fileName: '',
-      uploading: false,
-      saving: false,
-      uploadProgress: 0,
-    });
-    this.simulationModalVisible.set(true);
-  }
-
-  closeSimulationModal(): void {
-    this.simulationModalVisible.set(false);
-  }
-
-  onSimulationFileChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith('.zip')) {
-      this.message.error('仿真构建必须是 ZIP 文件');
-      input.value = '';
-      return;
-    }
-    if (file.size > 500 * 1024 * 1024) {
-      this.message.error('ZIP 文件不能超过 500MB');
-      input.value = '';
-      return;
-    }
-    const draft = this.simulationModalDraft();
-    if (draft) {
-      this.simulationModalDraft.set({ ...draft, file, fileName: file.name });
-    }
-  }
-
-  beforeSimulationCoverUpload = (file: NzUploadFile): boolean => {
-    const rawFile = file as any as File;
-    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
-    if (!allowed.includes(rawFile.type)) {
-      this.message.error('封面仅支持 JPG/PNG/GIF/WebP/BMP 格式');
-      return false;
-    }
-    if (rawFile.size > 10 * 1024 * 1024) {
-      this.message.error('封面大小不能超过 10MB');
-      return false;
-    }
-    const draft = this.simulationModalDraft();
-    if (!draft) return false;
-    this.simulationModalDraft.set({ ...draft, coverUploading: true });
-    this.ossUploadService.uploadImage(rawFile).subscribe({
-      next: (res) => {
-        const d = this.simulationModalDraft();
-        if (d) {
-          this.simulationModalDraft.set({
-            ...d,
-            coverUploading: false,
-            coverUrl: res.url,
-            coverFileList: [{
-              uid: res.objectKey,
-              name: res.originalFileName,
-              status: 'done',
-              url: res.url,
-            }],
-          });
-        }
-        this.message.success('封面上传成功');
-      },
-      error: (err) => {
-        const d = this.simulationModalDraft();
-        if (d) this.simulationModalDraft.set({ ...d, coverUploading: false, coverFileList: [] });
-        this.message.error('封面上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
-      },
-    });
-    return false;
-  };
-
-  removeSimulationCover = (): boolean => {
-    const draft = this.simulationModalDraft();
-    if (draft) {
-      this.simulationModalDraft.set({ ...draft, coverUrl: '', coverFileList: [] });
-    }
-    return true;
-  };
-
-  async saveSimulationModal(): Promise<void> {
-    const draft = this.simulationModalDraft();
-    if (!draft) return;
-    const projectId = this.selectedProjectId;
-    if (!projectId || !draft.name.trim()) {
-      this.message.warning('请填写仿真名称');
-      return;
-    }
-    if (!draft.editingId && !draft.file) {
-      this.message.warning('请先选择仿真 ZIP 文件');
-      return;
-    }
-
-    this.simulationModalDraft.set({ ...draft, saving: true });
-    try {
-      if (draft.editingId) {
-        await firstValueFrom(this.simulationService.update(draft.editingId, {
-          name: draft.name.trim(),
-          description: draft.description.trim() || undefined,
-          coverUrl: draft.coverUrl.trim() || undefined,
-          sortOrder: 0,
-        }));
-        this.message.success('仿真镜像信息已更新');
-      } else {
-        const upload = await this.uploadSimulationFile(draft.file!);
-        if (!upload.filePath) throw new Error('上传完成但未返回文件路径');
-        await firstValueFrom(this.simulationService.create({
-          projectId,
-          name: draft.name.trim(),
-          description: draft.description.trim() || undefined,
-          coverUrl: draft.coverUrl.trim() || undefined,
-          uploadedFilePath: upload.filePath,
-        }));
-        this.message.success('仿真镜像已上传并导入');
-      }
-      this.simulationModalVisible.set(false);
-      this.loadSimulations(projectId);
-    } catch (error: any) {
-      console.error('[practicum-management] simulation save failed', error);
-      this.message.error(error?.error?.error?.message || error?.message || '仿真镜像保存失败');
-    } finally {
-      const d = this.simulationModalDraft();
-      if (d) this.simulationModalDraft.set({ ...d, saving: false });
-    }
-  }
-
-  private async uploadSimulationFile(file: File): Promise<CompleteUploadResultDto> {
-    const chunkSize = 1024 * 1024;
-    const draft = this.simulationModalDraft();
-    if (draft) this.simulationModalDraft.set({ ...draft, uploading: true, uploadProgress: 0 });
-    try {
-      const initiated = await firstValueFrom(this.chunkUploadService.initiateUploadByInput({
-        fileName: file.name,
-        totalSize: file.size,
-        chunkSize,
-      }));
-      if (!initiated?.uploadId || !initiated.totalChunks) throw new Error('无法初始化分片上传');
-
-      for (let chunkNumber = 0; chunkNumber < initiated.totalChunks; chunkNumber++) {
-        const start = chunkNumber * chunkSize;
-        const chunk = file.slice(start, Math.min(start + chunkSize, file.size));
-        const formData = new FormData();
-        formData.append('file', chunk, file.name);
-        formData.append('uploadId', initiated.uploadId);
-        formData.append('fileName', file.name);
-        formData.append('chunkNumber', String(chunkNumber));
-        const uploaded = await firstValueFrom(this.restService.request<any, boolean>({
-          method: 'POST',
-          url: '/api/app/chunk-upload/upload',
-          body: formData,
-        }));
-        if (!uploaded) throw new Error(`第 ${chunkNumber + 1} 个分片上传失败`);
-        const d = this.simulationModalDraft();
-        if (d) this.simulationModalDraft.set({ ...d, uploadProgress: Math.round((chunkNumber + 1) / initiated.totalChunks * 100) });
-      }
-
-      return await firstValueFrom(this.chunkUploadService.completeUploadByInput({
-        uploadId: initiated.uploadId,
-        fileName: file.name,
-        totalChunks: initiated.totalChunks,
-      }));
-    } finally {
-      const d = this.simulationModalDraft();
-      if (d) this.simulationModalDraft.set({ ...d, uploading: false });
-    }
-  }
-
-  deleteSimulation(item: PracticumSimulationDto): void {
-    if (!item.id || !window.confirm(`确定删除仿真镜像"${item.name || item.slug}"吗?`)) return;
-    this.simulationService.delete(item.id).subscribe({
-      next: () => {
-        this.message.success('仿真镜像已删除');
-        if (this.selectedProjectId) this.loadSimulations(this.selectedProjectId);
-      },
-      error: () => this.message.error('仿真镜像删除失败'),
-    });
-  }
-
-  simulationStatusLabel(status?: PracticumSimulationStatus): string {
-    if (status === PracticumSimulationStatus.Ready) return '已就绪';
-    if (status === PracticumSimulationStatus.Processing) return '处理中';
-    if (status === PracticumSimulationStatus.Invalid) return '无效';
-    return '未知';
-  }
-
-  simulationStatusColor(status?: PracticumSimulationStatus): string {
-    if (status === PracticumSimulationStatus.Ready) return 'success';
-    if (status === PracticumSimulationStatus.Invalid) return 'error';
-    if (status === PracticumSimulationStatus.Processing) return 'processing';
-    return 'warning';
-  }
-
-  private loadEnrollmentsAndSubmissions(pid: string): void {
-    this.practicumService.getEnrollmentList({ projectId: pid, skipCount: 0, maxResultCount: 200 })
-      .subscribe(r => { this.enrollments.set(r.items || []); this.buildScoreRows(); this.cdr.markForCheck(); });
-    this.practicumService.getSubmissionList({ projectId: pid, skipCount: 0, maxResultCount: 200 })
-      .subscribe(r => { this.submissions.set(r.items || []); this.buildScoreRows(); this.cdr.markForCheck(); });
-    this.loadStudentGuidance(pid);
-    this.pratChatService.getAgentConfig(pid).subscribe({
-      next: c => { this.agentConfigForm = c; this.cdr.markForCheck(); },
-      error: () => {},
-    });
-  }
-
-  /** 把参与名单和提交记录合并成一张表格（每行一个学生）。 */
-  private buildScoreRows(): void {
-    const ens = this.enrollments();
-    const subs = this.submissions();
-    if (!ens.length) {
-      this.scoreRows.set([]);
-      return;
-    }
-    const rows = ens.map(enrollment => ({
-      enrollment,
-      submissions: subs
-        .filter(s => s.enrollmentId === enrollment.id)
-        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()),
-    }));
-    this.scoreRows.set(rows);
-  }
-
-  /** 取某学生最近一次提交。 */
-  private latestSubmissionOf(enrollmentId: string): PracticumSubmissionDto | undefined {
-    return this.scoreRows().find(r => r.enrollment.id === enrollmentId)?.submissions?.[0];
-  }
-
-  /**
-   * 保存任务 / 资料后调用:拉最新 detail 刷新 form 内的 tasks / materials,
-   * 同时 reload 列表(让表格的 taskCount / materialCount 同步)。
-   * 不走 openEdit--openEdit 会切 activeTab、闪一下 modal、且不 reload。
-   */
-  private refreshDetail(): void {
-    const pid = this.selectedProjectId;
-    if (!pid) return;
-    this.practicumService.getDetail(pid).subscribe(detail => {
-      this.applyDetailToForm(detail);
-      this.reload();
-      this.loadSimulations(pid);
-      this.cdr.markForCheck();
-    });
-  }
-
-  openAddGuidance(): void {
-    this.openGuidanceForStudent();
-  }
-
-  openGuidanceForStudent(enrollment?: PracticumEnrollmentDto): void {
-    this.guidanceForm = { enrollmentId: enrollment?.id || '', taskId: undefined, content: '', isVisibleToStudent: true };
-    this.guidanceModalVisible = true;
-  }
-
-  saveGuidance(): void {
-    if (!this.guidanceForm.enrollmentId) {
-      this.message.warning('请选择学生');
-      return;
-    }
-    if (!(this.guidanceForm.content || '').trim()) {
-      this.message.warning('请填写指导意见');
-      return;
-    }
-    const enrollmentId = this.guidanceForm.enrollmentId;
-    this.guidanceSaving = true;
-    this.practicumService.addGuidance(this.guidanceForm).subscribe({
-      next: () => {
-        this.guidanceSaving = false;
-        this.guidanceModalVisible = false;
-        this.message.success('指导记录已保存');
-        if (enrollmentId) {
-          const entry = this.studentGuidance().find(x => x.enrollment.id === enrollmentId);
-          if (entry) this.loadGuidanceForEnrollment(entry.enrollment).subscribe();
-        }
-      },
-      error: () => { this.guidanceSaving = false; this.message.error('指导记录保存失败'); },
-    });
-  }
-
-  /** 把提交附件的多行 URL 拆成 URL 列表。 */
-  submissionAttachments(s: PracticumSubmissionDto | null): string[] {
-    if (!s?.attachmentUrls) return [];
-    return s.attachmentUrls
-      .split('\n')
-      .map(u => u.trim())
-      .filter(u => !!u);
-  }
-
-  openView(item: PracticumSubmissionDto): void {
-    this.viewTarget = item;
-    this.viewAttachments = this.submissionAttachments(item);
-    this.viewVisible = true;
-  }
-
-  openPreview(url: string): void {
-    this.previewUrl = url;
-    this.previewType = this.attachmentKind(url);
-    this.previewVisible = true;
-  }
-
-  private attachmentKind(url: string): 'image' | 'pdf' | 'other' {
-    try {
-      const ext = (new URL(url).pathname.split('.').pop() || '').toLowerCase();
-      if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) return 'image';
-      if (ext === 'pdf') return 'pdf';
-    } catch {
-      /* ignore invalid url */
-    }
-    return 'other';
-  }
-
-  /** 指导 Tab：拉取参与名单并为每个学生加载指导记录。 */
-  private loadStudentGuidance(pid: string): void {
-    this.guidanceTabLoading.set(true);
-    this.practicumService.getEnrollmentList({ projectId: pid, skipCount: 0, maxResultCount: 200 }).subscribe({
-      next: r => {
-        const enrollments = r.items || [];
-        if (!enrollments.length) {
-          this.studentGuidance.set([]);
-          this.rebuildGuidanceRows();
-          this.guidanceTabLoading.set(false);
-          return;
-        }
-        this.studentGuidance.set(enrollments.map(e => ({ enrollment: e, records: [] })));
-        forkJoin(enrollments.map(e => this.loadGuidanceForEnrollment(e))).subscribe({
-          next: () => this.guidanceTabLoading.set(false),
-          error: () => this.guidanceTabLoading.set(false),
-        });
-      },
-      error: () => this.guidanceTabLoading.set(false),
-    });
-  }
-
-  private loadGuidanceForEnrollment(enrollment: PracticumEnrollmentDto): Observable<void> {
-    return this.practicumService.getGuidanceList(enrollment.id).pipe(
-      map(records => {
-        const current = this.studentGuidance();
-        const idx = current.findIndex(x => x.enrollment.id === enrollment.id);
-        const next = [...current];
-        if (idx >= 0) {
-          next[idx] = { enrollment, records: records || [] };
-        } else {
-          next.push({ enrollment, records: records || [] });
-        }
-        this.studentGuidance.set(next);
-        this.rebuildGuidanceRows();
-        this.cdr.markForCheck();
-      }),
-      catchError(() => {
-        const current = this.studentGuidance();
-        const idx = current.findIndex(x => x.enrollment.id === enrollment.id);
-        const next = [...current];
-        if (idx >= 0) next[idx] = { enrollment, records: [] };
-        this.studentGuidance.set(next);
-        this.rebuildGuidanceRows();
-        this.cdr.markForCheck();
-        return of(undefined);
-      }),
-    );
-  }
-
-  /** 把每个学生的指导记录平铺成表格行（每条记录一行，包含学生名）。 */
-  private rebuildGuidanceRows(): void {
-    const rows: { studentName: string; status: PracticumEnrollmentStatus; record: PracticumGuidanceRecordDto }[] = [];
-    for (const entry of this.studentGuidance()) {
-      for (const record of entry.records) {
-        rows.push({
-          studentName: entry.enrollment.studentName || '学生',
-          status: entry.enrollment.status,
-          record,
-        });
-      }
-    }
-    this.guidanceRows.set(rows);
-  }
-
-  openScore(item: PracticumSubmissionDto): void {
-    this.scoreTarget = item;
-    this.scoreEnrollmentId = item.enrollmentId;
-    const taskMax = this.form.tasks?.find(t => t.title === item.taskTitle)?.scoreWeight;
-    this.scoreMax = taskMax && taskMax > 0 ? taskMax : (this.form.maxScore || 100);
-    this.scoreForm = { submissionId: item.id, score: Math.min(item.score || 0, this.scoreMax), comment: item.teacherFeedback || '' };
-    this.scoreTitle = `实训评分 - ${item.studentName} / ${item.taskTitle}`;
-    this.scoreVisible = true;
-  }
-
-  openScoreForEnrollment(enrollment: PracticumEnrollmentDto): void {
-    const sub = this.latestSubmissionOf(enrollment.id);
-    if (sub) {
-      this.openScore(sub);
-      return;
-    }
-    this.scoreTarget = null;
-    this.scoreEnrollmentId = enrollment.id;
-    this.scoreMax = this.form.maxScore || 100;
-    this.scoreForm = { submissionId: undefined, score: 0, comment: '' };
-    this.scoreTitle = `实训评分 - ${enrollment.studentName || '学生'}`;
-    this.scoreVisible = true;
-  }
-
-  saveScore(): void {
-    if (!this.scoreEnrollmentId) { return; }
-    this.practicumService.scoreEnrollment(this.scoreEnrollmentId, this.scoreForm).subscribe({
-      next: () => {
-        this.scoreVisible = false;
-        this.message.success('评分已保存');
-        if (this.selectedProjectId) { this.loadEnrollmentsAndSubmissions(this.selectedProjectId); }
-      },
-      error: () => this.message.error('评分失败'),
-    });
-  }
-
-  openViewForEnrollment(enrollment: PracticumEnrollmentDto): void {
-    const sub = this.latestSubmissionOf(enrollment.id);
-    if (sub) this.openView(sub);
-  }
-
-  exportScores(): void {
-    this.practicumService.exportAssessments(this.selectedProjectId || undefined).subscribe({
-      next: blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url;
-        a.download = `实训成绩_${new Date().toISOString().slice(0, 10)}.xlsx`;
-        a.click(); window.URL.revokeObjectURL(url);
-      },
-      error: () => this.message.error('导出失败'),
-    });
-  }
-
   statusLabel(s: PracticumProjectStatus): string {
     return ({ [PracticumProjectStatus.Draft]: '草稿', [PracticumProjectStatus.Published]: '已发布', [PracticumProjectStatus.Archived]: '已归档' } as Record<number, string>)[s] || '未知';
   }
 
-  enrollmentLabel(s: PracticumEnrollmentStatus | undefined): string {
-    return ({ [PracticumEnrollmentStatus.Enrolled]: '已参与', [PracticumEnrollmentStatus.InProgress]: '进行中', [PracticumEnrollmentStatus.Submitted]: '待评阅', [PracticumEnrollmentStatus.Reviewed]: '已评阅', [PracticumEnrollmentStatus.Completed]: '已完成', [PracticumEnrollmentStatus.Cancelled]: '已取消' } as Record<number, string>)[s ?? -1] || '未知';
-  }
-
-  submissionLabel(s: PracticumSubmissionStatus): string {
-    return ({ [PracticumSubmissionStatus.Submitted]: '已提交', [PracticumSubmissionStatus.Returned]: '已退回', [PracticumSubmissionStatus.Reviewed]: '已评阅' } as Record<number, string>)[s] || '未知';
-  }
-
   // ===== OSS 上传 handlers =====
 
-  /** 用 form.coverImageUrl 同步 nz-upload 卡片(已存在的封面直接显示)。 */
   private syncCoverFileList(): void {
     const url = this.form?.coverImageUrl;
     if (url) {
@@ -1158,7 +376,6 @@ export class PracticumManagementComponent implements OnInit {
     }
   }
 
-  /** 封面上传前的校验 + 触发 OSS 上传。返回 false 阻止 nz-upload 默认行为。 */
   beforeCoverUpload = (file: NzUploadFile): boolean => {
     const rawFile = file as any as File;
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
@@ -1175,19 +392,14 @@ export class PracticumManagementComponent implements OnInit {
       next: (res) => {
         this.coverUploading = false;
         this.form.coverImageUrl = res.url;
-        this.coverFileList = [{
-          uid: res.objectKey,
-          name: res.originalFileName,
-          status: 'done',
-          url: res.url,
-        }];
+        this.coverFileList = [{ uid: res.objectKey, name: res.originalFileName, status: 'done', url: res.url }];
         this.message.success('封面上传成功');
         this.cdr.markForCheck();
       },
-      error: (err) => {
+      error: () => {
         this.coverUploading = false;
         this.coverFileList = [];
-        this.message.error('封面上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+        this.message.error('封面上传失败');
         this.cdr.markForCheck();
       },
     });
@@ -1201,10 +413,6 @@ export class PracticumManagementComponent implements OnInit {
     return true;
   };
 
-  /**
-   * 资料文件上传前的校验 + 触发 OSS 上传。
-   * 上传成功后将 OSS 返回的 URL 写回对应 material.resourceUrl。
-   */
   beforeMaterialUpload = (index: number) => (file: NzUploadFile): boolean => {
     const rawFile = file as any as File;
     if (rawFile.size > 50 * 1024 * 1024) {
@@ -1218,23 +426,21 @@ export class PracticumManagementComponent implements OnInit {
         const m = this.form.materials[index];
         if (m) {
           m.resourceUrl = res.url;
-          // 没填标题时,用文件名兜底
           if (!m.title) m.title = res.originalFileName;
         }
         this.materialUploading = { ...this.materialUploading, [index]: false };
         this.message.success(`资料上传成功:${res.originalFileName}`);
         this.cdr.markForCheck();
       },
-      error: (err) => {
+      error: () => {
         this.materialUploading = { ...this.materialUploading, [index]: false };
-        this.message.error('资料上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+        this.message.error('资料上传失败');
         this.cdr.markForCheck();
       },
     });
     return false;
   };
 
-  /** 资料卡片清除已上传的文件(仅清空 resourceUrl,不删 OSS 对象)。 */
   removeMaterialFile = (index: number) => (): boolean => {
     const m = this.form.materials[index];
     if (m) m.resourceUrl = '';
@@ -1242,12 +448,6 @@ export class PracticumManagementComponent implements OnInit {
     return true;
   };
 
-  // ===== 抽屉内的资料上传(操作 materialDraft 而非 form.materials) =====
-
-  /**
-   * 抽屉内资料文件上传前的校验 + 触发 OSS 上传。
-   * 上传成功后将 OSS 返回的 URL 写回 materialDraft.resourceUrl。
-   */
   beforeMaterialUploadInDrawer = (): ((file: NzUploadFile) => boolean) => {
     return (file: NzUploadFile): boolean => {
       const rawFile = file as any as File;
@@ -1271,9 +471,9 @@ export class PracticumManagementComponent implements OnInit {
           this.message.success(`资料上传成功:${res.originalFileName}`);
           this.cdr.markForCheck();
         },
-        error: (err) => {
+        error: () => {
           this.drawerUploading.set(false);
-          this.message.error('资料上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+          this.message.error('资料上传失败');
           this.cdr.markForCheck();
         },
       });
@@ -1281,28 +481,12 @@ export class PracticumManagementComponent implements OnInit {
     };
   };
 
-  /** 抽屉内清除已上传的文件(仅清空 draft.resourceUrl,不删 OSS 对象)。 */
   removeMaterialFileInDrawer = (): (() => boolean) => {
     return (): boolean => {
       const draft = this.materialDraft();
-      if (draft) {
-        this.materialDraft.set({ ...draft, resourceUrl: '' });
-      }
+      if (draft) this.materialDraft.set({ ...draft, resourceUrl: '' });
       this.cdr.markForCheck();
       return true;
     };
   };
-
-  // ─── Agent Config ───────────────────────────
-
-  saveAgentConfig(): void {
-    if (!this.selectedProjectId) return;
-    this.pratChatService.updateAgentConfig(this.selectedProjectId, {
-      agentName: this.agentConfigForm.agentName,
-      agentPrompt: this.agentConfigForm.agentPrompt,
-    }).subscribe({
-      next: () => { this.message.success('智能体配置已保存'); },
-      error: () => { this.message.error('保存智能体配置失败'); },
-    });
-  }
 }

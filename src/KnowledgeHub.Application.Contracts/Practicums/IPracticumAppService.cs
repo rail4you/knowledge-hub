@@ -23,6 +23,7 @@ public interface IPracticumAppService : IApplicationService
     Task<PracticumSubmissionDto> CreateSubmissionAsync(CreatePracticumSubmissionDto input);
     Task<PagedResultDto<PracticumSubmissionDto>> GetSubmissionListAsync(GetPracticumSubmissionsInput input);
     Task<PracticumGuidanceRecordDto> AddGuidanceAsync(CreatePracticumGuidanceRecordDto input);
+    Task<PracticumGuidanceRecordDto> UpdateGuidanceAsync(Guid id, UpdatePracticumGuidanceRecordDto input);
     Task<List<PracticumGuidanceRecordDto>> GetGuidanceListAsync(Guid enrollmentId);
     Task<PracticumAssessmentDto> ScoreEnrollmentAsync(Guid enrollmentId, CreatePracticumAssessmentDto input);
     Task<List<PracticumTimelineItemDto>> GetTimelineAsync(Guid enrollmentId);

@@ -341,6 +341,33 @@ export const APP_ROUTES: Routes = [
       requiredPolicy: 'KnowledgeHub.Practicum',
     },
   },
+  {
+    // 实训任务：在已有实训上管理任务，并基于任务进行指导与评分。
+    path: 'admin/practicum/tasks',
+    loadComponent: () => import('./admin/practicum/practicum-tasks.component').then(c => c.PracticumTasksComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Practicum',
+    },
+  },
+  {
+    // 仿真实训：基于实训的仿真镜像管理。
+    path: 'admin/practicum/simulations',
+    loadComponent: () => import('./admin/practicum/practicum-simulations.component').then(c => c.PracticumSimulationsComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Practicum',
+    },
+  },
+  {
+    // 实训智能体聊天：实训沟通 + 智能体配置。
+    path: 'admin/practicum/chat',
+    loadComponent: () => import('./admin/practicum/practicum-agent-chat.component').then(c => c.PracticumAgentChatComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Practicum',
+    },
+  },
   // 路由已移除：/admin/wasm-mirrors 及 /wasm-management 重定向
   {
     path: 'admin/news',

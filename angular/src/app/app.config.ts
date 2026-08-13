@@ -114,6 +114,8 @@ import {
   HddOutline,
   ExclamationCircleOutline,
   PlayCircleFill,
+  LinkOutline,
+  UserAddOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -226,6 +228,8 @@ const icons = [
   HddOutline,
   ExclamationCircleOutline,
   PlayCircleFill,
+  LinkOutline,
+  UserAddOutline,
 ];
 
 export const appConfig: ApplicationConfig = {

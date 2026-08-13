@@ -215,6 +215,11 @@ export interface CreatePracticumGuidanceRecordDto {
   isVisibleToStudent: boolean;
 }
 
+export interface UpdatePracticumGuidanceRecordDto {
+  content: string;
+  isVisibleToStudent: boolean;
+}
+
 export interface PracticumAssessmentDto {
   id: string;
   projectId: string;
@@ -336,6 +341,13 @@ export class PracticumService {
     this.restService.request<any, PracticumGuidanceRecordDto>({
       method: 'POST',
       url: '/api/app/practicum/guidance',
+      body: input,
+    }, { apiName: this.apiName });
+
+  updateGuidance = (id: string, input: UpdatePracticumGuidanceRecordDto) =>
+    this.restService.request<any, PracticumGuidanceRecordDto>({
+      method: 'PUT',
+      url: `/api/app/practicum/${id}/guidance`,
       body: input,
     }, { apiName: this.apiName });
 

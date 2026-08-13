@@ -1,0 +1,101 @@
+<div class="page">
+  <nz-card>
+    <div class="project-selector">
+      <label class="selector-label">选择实训项目</label>
+      <nz-select [ngModel]="selectedProjectId" (ngModelChange)="onProjectChange($event)" nzPlaceHolder="请选择实训项目" style="width: 360px;">
+        <nz-option *ngFor="let p of projects()" [nzValue]="p.id" [nzLabel]="p.title"></nz-option>
+      </nz-select>
+      <span class="selector-hint" *ngIf="selectedProjectTitle">当前：{{ selectedProjectTitle }}</span>
+    </div>
+  </nz-card>
+
+  <nz-card *ngIf="selectedProjectId">
+    <div class="section-header">
+      <div>
+        <h3>仿真镜像</h3>
+        <span class="hint">上传 Unity WebGL ZIP，并将镜像直接关联到当前实训项目。</span>
+      </div>
+      <button nz-button nzType="primary" (click)="openAddSimulationModal()">
+        <span nz-icon nzType="plus"></span> 新增镜像
+      </button>
+    </div>
+
+    <nz-table *ngIf="simulations().length" [nzData]="simulations()" [nzShowPagination]="false" nzSize="small">
+      <thead>
+        <tr><th>名称</th><th>Slug</th><th>状态</th><th>文件数</th><th>大小</th><th>操作</th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let sim of simulations()">
+          <td>{{ sim.name }}</td>
+          <td><code>{{ sim.slug }}</code></td>
+          <td><nz-tag [nzColor]="simulationStatusColor(sim.status)">{{ simulationStatusLabel(sim.status) }}</nz-tag></td>
+          <td>{{ sim.fileCount ?? 0 }}</td>
+          <td>{{ sim.totalBytes ? (sim.totalBytes / 1024 / 1024 | number:'1.1-1') + ' MB' : '0 B' }}</td>
+          <td>
+            <a *ngIf="sim.publicUrl" nz-button nzType="link" nzSize="small" [href]="sim.publicUrl" target="_blank" rel="noopener noreferrer">打开</a>
+            <button nz-button nzType="link" nzSize="small" (click)="openEditSimulationModal(sim)">编辑</button>
+            <button nz-button nzType="link" nzDanger nzSize="small" (click)="deleteSimulation(sim)">删除</button>
+          </td>
+        </tr>
+      </tbody>
+    </nz-table>
+    <nz-empty *ngIf="!simulations().length" nzNotFoundContent="当前实训还没有仿真镜像"></nz-empty>
+  </nz-card>
+
+  <!-- 仿真镜像弹窗 -->
+  <nz-modal
+    [nzVisible]="simulationModalVisible()"
+    [nzTitle]="(simulationModalDraft()?.editingId ? '编辑镜像信息' : '上传新镜像')"
+    nzWidth="560"
+    (nzOnCancel)="closeSimulationModal()"
+    (nzVisibleChange)="simulationModalVisible.set($event)"
+    [nzFooter]="simulationModalFooter">
+    <div *nzModalContent>
+      <ng-container *ngIf="simulationModalDraft() as draft">
+        <div class="form-grid">
+          <label>镜像名称</label>
+          <input nz-input [(ngModel)]="draft.name" placeholder="例如：小鼠解剖仿真实验" />
+
+          <label>描述</label>
+          <textarea nz-input rows="3" [(ngModel)]="draft.description" placeholder="仿真实训内容说明（可选）"></textarea>
+
+          <label>封面图片</label>
+          <div class="cover-upload-group">
+            <nz-upload
+              nzListType="picture-card"
+              [nzMultiple]="false"
+              [nzMaxCount]="1"
+              [nzBeforeUpload]="beforeSimulationCoverUpload"
+              [nzFileList]="draft.coverFileList"
+              [nzRemove]="removeSimulationCover"
+              [nzDisabled]="draft.coverUploading"
+              nzAccept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+            >
+              @if (draft.coverFileList.length === 0) {
+                <div class="cover-upload-trigger">
+                  <span nz-icon nzType="plus"></span>
+                  <div style="margin-top: 8px">上传封面</div>
+                </div>
+              }
+            </nz-upload>
+          </div>
+
+          <ng-container *ngIf="!draft.editingId">
+            <label>仿真 ZIP</label>
+            <div>
+              <input type="file" accept=".zip,application/zip" (change)="onSimulationFileChange($event)" />
+              <div class="hint" *ngIf="draft.fileName">已选择：{{ draft.fileName }}</div>
+              <div class="hint" *ngIf="draft.uploading">上传进度：{{ draft.uploadProgress }}%</div>
+            </div>
+          </ng-container>
+        </div>
+      </ng-container>
+    </div>
+    <ng-template #simulationModalFooter>
+      <button nz-button (click)="closeSimulationModal()">取消</button>
+      <button nz-button nzType="primary" [nzLoading]="!!(simulationModalDraft()?.saving || simulationModalDraft()?.uploading)" (click)="saveSimulationModal()">
+        {{ simulationModalDraft()?.editingId ? '保存信息' : '上传并导入' }}
+      </button>
+    </ng-template>
+  </nz-modal>
+</div>
