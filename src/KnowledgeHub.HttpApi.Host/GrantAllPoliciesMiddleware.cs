@@ -14,6 +14,14 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
     private static readonly string[] NonStudentRoles =
         { "Teacher", "SchoolAdmin", "LeagueAdmin", "EnterpriseUser", "admin" };
 
+    /// <summary>
+    /// 非联盟审核员角色：只要兼任其中之一，就不按"纯联盟审核员"处理。
+    /// 纯联盟审核员（只有 LeagueAdmin 角色）不再注入全量权限，
+    /// 只依赖数据库真实授权，保证其在界面只看到资源审核。
+    /// </summary>
+    private static readonly string[] NonLeagueOnlyRoles =
+        { "Teacher", "SchoolAdmin", "EnterpriseUser", "admin" };
+
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         // 拦截 application-configuration 响应
@@ -44,13 +52,17 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
 
                 // 学生角色：不注入任何额外权限，返回数据库中的真实权限，
                 // 使其无法在页面/菜单上看到后台管理功能。
-                if (!IsStudentOnlyUser(context.User))
+                // 纯联盟审核员（只有 LeagueAdmin 角色）：同样不注入额外权限，只依赖数据库授权，
+                // 使其在界面只看到资源审核，避免越权看到院校审核（SchoolAudit）和其它后台管理。
+                if (!IsStudentOnlyUser(context.User) && !IsLeagueOnlyUser(context.User))
                 {
                     // 注入完整的 KnowledgeHub 权限列表
+                    // 注意：SchoolAudit/LeagueAudit 两级审核权限不在此注入，全部依赖数据库授权，
+                    // 确保院校审核员与联盟审核员彼此不可越权。
                     var allPerms = new[]
                     {
                     "KnowledgeHub.Resources", "KnowledgeHub.Resources.Create", "KnowledgeHub.Resources.Edit", "KnowledgeHub.Resources.Delete", "KnowledgeHub.Resources.Download",
-                    "KnowledgeHub.Resources.SchoolAudit", "KnowledgeHub.Resources.LeagueAudit", "KnowledgeHub.Resources.ManageCategory",
+                    "KnowledgeHub.Resources.ManageCategory",
                     "KnowledgeHub.Resources.RequestDelete", "KnowledgeHub.Resources.PhysicalDelete", "KnowledgeHub.Resources.ViewStatistics", "KnowledgeHub.Resources.ViewRecommendation",
                     "KnowledgeHub.Search", "KnowledgeHub.Search.ManageIndex", "KnowledgeHub.Search.ViewStatistics", "KnowledgeHub.Search.ReviewResource",
                     "KnowledgeHub.Courses", "KnowledgeHub.Courses.Create", "KnowledgeHub.Courses.Edit", "KnowledgeHub.Courses.Delete", "KnowledgeHub.Courses.Enroll", "KnowledgeHub.Courses.ManageEnrollment",
@@ -116,6 +128,16 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
         }
 
         return !NonStudentRoles.Any(user.IsInRole);
+    }
+
+    private static bool IsLeagueOnlyUser(ClaimsPrincipal user)
+    {
+        if (!user.IsInRole("LeagueAdmin"))
+        {
+            return false;
+        }
+
+        return !NonLeagueOnlyRoles.Any(user.IsInRole);
     }
 
     private static void WriteJsonWithInjectedPolicies(JsonElement root, Dictionary<string, object> newPolicies, Utf8JsonWriter writer)

@@ -27,7 +27,9 @@ using AuditStatus = KnowledgeHub.Resources.Enums.AuditStatus;
 
 namespace KnowledgeHub.Application.Alliance;
 
-[Authorize(KnowledgeHubPermissions.Alliance.Default)]
+// 注意：不在类级别加 [Authorize(Alliance.Default)]，
+// 否则联盟审核员（只有 Resources.LeagueAudit）会因缺少 Alliance.Default 被 403。
+// 各方法按需标注授权。
 public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
 {
     protected IRepository<AllianceEntity, Guid> AllianceRepository { get; }
@@ -53,12 +55,14 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         CurrentTenant = currentTenant;
     }
 
+    [Authorize(KnowledgeHubPermissions.Alliance.Default)]
     public virtual async Task<AllianceDto> GetAsync(Guid id)
     {
         var alliance = await AllianceRepository.GetAsync(id);
         return ObjectMapper.Map<AllianceEntity, AllianceDto>(alliance);
     }
 
+    [Authorize(KnowledgeHubPermissions.Alliance.Default)]
     public virtual async Task<PagedResultDto<AllianceDto>> GetListAsync(PagedAndSortedResultRequestDto input)
     {
         var query = await AllianceRepository.GetQueryableAsync();
@@ -146,6 +150,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         await MemberRepository.DeleteAsync(memberId);
     }
 
+    [Authorize(KnowledgeHubPermissions.Alliance.Default)]
     public virtual async Task<PagedResultDto<AllianceMemberDto>> GetMembersAsync(AllianceMemberQueryDto input)
     {
         List<AllianceMemberEntity> members;
@@ -184,7 +189,13 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         var currentTenantId = CurrentTenant.Id ?? Guid.Empty;
         var membership = await MemberRepository.GetByTenantIdAsync(currentTenantId);
 
-        var resource = await ResourceRepository.GetAsync(input.ResourceId);
+        // 联盟审核员（host 全局 league-admin）跨租户审核：关闭多租户过滤器加载目标资源。
+        ResourceEntity resource;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resource = await ResourceRepository.GetAsync(input.ResourceId);
+        }
+
         if (resource.Status != ResourceStatus.SchoolApproved)
         {
             throw new UserFriendlyException("只有学校已批准的资源才能进行联盟审核");
@@ -210,12 +221,18 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         if (input.Status == AuditStatus.Approved)
         {
             resource.Status = ResourceStatus.LeagueApproved;
-            await ResourceRepository.UpdateAsync(resource);
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                await ResourceRepository.UpdateAsync(resource);
+            }
         }
         else if (input.Status == AuditStatus.Rejected)
         {
             resource.Status = ResourceStatus.Rejected;
-            await ResourceRepository.UpdateAsync(resource);
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                await ResourceRepository.UpdateAsync(resource);
+            }
         }
 
         var dto = ObjectMapper.Map<AllianceAuditEntity, AllianceAuditDto>(audit);
@@ -223,6 +240,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         return dto;
     }
 
+    [Authorize(KnowledgeHubPermissions.Resources.LeagueAudit)]
     public virtual async Task<PagedResultDto<PendingAllianceAuditDto>> GetPendingAuditsAsync(Guid allianceId, PagedResultRequestDto input)
     {
         var currentTenantId = CurrentTenant.Id ?? Guid.Empty;
@@ -232,12 +250,16 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
             return new PagedResultDto<PendingAllianceAuditDto>(0, new List<PendingAllianceAuditDto>());
         }
 
-        var resourceQuery = await ResourceRepository.GetQueryableAsync();
-        var pendingResources = resourceQuery
-            .Where(r => r.Status == ResourceStatus.SchoolApproved)
-            .Where(r => r.TenantId != currentTenantId)
-            .OrderByDescending(r => r.CreationTime)
-            .ToList();
+        List<ResourceEntity> pendingResources;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var resourceQuery = await ResourceRepository.GetQueryableAsync();
+            pendingResources = resourceQuery
+                .Where(r => r.Status == ResourceStatus.SchoolApproved)
+                .Where(r => r.TenantId != currentTenantId)
+                .OrderByDescending(r => r.CreationTime)
+                .ToList();
+        }
 
         var memberTenants = await MemberRepository.GetByAllianceIdAsync(allianceId);
         var memberTenantIds = memberTenants.Select(m => m.MemberTenantId).ToHashSet();
@@ -265,6 +287,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         return new PagedResultDto<PendingAllianceAuditDto>(dtos.Count, dtos);
     }
 
+    [Authorize(KnowledgeHubPermissions.Resources.LeagueAudit)]
     public virtual async Task<List<AllianceAuditDto>> GetResourceAuditsAsync(Guid resourceId)
     {
         var audits = await AuditRepository.GetByResourceIdAsync(resourceId);
@@ -280,16 +303,19 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         return dtos;
     }
 
+    [Authorize(KnowledgeHubPermissions.Alliance.Default)]
     public virtual async Task<bool> IsAllianceEnabledAsync()
     {
         return await EditionConfigService.IsAllianceEnabledAsync();
     }
 
+    [Authorize(KnowledgeHubPermissions.Alliance.Default)]
     public virtual async Task<bool> IsTenantInAllianceAsync(Guid tenantId)
     {
         return await MemberRepository.IsMemberOfAnyAllianceAsync(tenantId);
     }
 
+    [Authorize(KnowledgeHubPermissions.Alliance.Default)]
     public virtual async Task<AllianceMemberDto> GetTenantAllianceMembershipAsync(Guid tenantId)
     {
         var member = await MemberRepository.GetByTenantIdAsync(tenantId);

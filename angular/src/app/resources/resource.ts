@@ -1,4 +1,4 @@
-import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest, EnvironmentService} from '@abp/ng.core';
+import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest, EnvironmentService, PermissionService} from '@abp/ng.core';
 import {Component, OnInit, inject, signal, ViewChild} from '@angular/core';
 import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto} from '../proxy/resources';
 import {MajorService} from '../proxy/majors/major.service';
@@ -174,6 +174,12 @@ export class ResourceComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly environmentService = inject(EnvironmentService);
   private readonly recommendationService = inject(RecommendationService);
+  private readonly permissionService = inject(PermissionService);
+
+  // 两级审核的角色区分：院校审核员（SchoolAudit）只做第一级；
+  // 纯联盟审核员（只有 LeagueAudit，无 SchoolAudit）只做第二级，页面只保留审核 Tab。
+  isLeagueAuditor = false;
+  hasSchoolAudit = false;
 
   
   private readonly resourceTypeNames: Record<string, Record<number, string>> = {
@@ -191,11 +197,23 @@ export class ResourceComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.hasSchoolAudit = this.permissionService.getGrantedPolicy('KnowledgeHub.Resources.SchoolAudit');
+    const hasLeagueAudit = this.permissionService.getGrantedPolicy('KnowledgeHub.Resources.LeagueAudit');
+    this.isLeagueAuditor = hasLeagueAudit && !this.hasSchoolAudit;
+
     this.buildForm();
     this.loadCategories();
     this.majorService.getLookupList().subscribe({
       next: (list) => this.majors.set(list || []),
     });
+
+    // 纯联盟审核员：页面只做联盟审核，默认定位到审核 Tab
+    if (this.isLeagueAuditor) {
+      this.selectedTabIndex = 2;
+      this.loadPendingAudits();
+      return;
+    }
+
     this.loadResources();
   }
 

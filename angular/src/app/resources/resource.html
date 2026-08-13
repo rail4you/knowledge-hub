@@ -6,6 +6,7 @@
         class="tab-nav-item"
         [class.active]="selectedTabIndex === 0"
         (click)="onTabChange(0)"
+        *ngIf="!isLeagueAuditor"
       >
         <span nz-icon nzType="file-text" class="tab-icon"></span>
         <span>{{ '::Resources' | abpLocalization }}</span>
@@ -14,6 +15,7 @@
         class="tab-nav-item"
         [class.active]="selectedTabIndex === 1"
         (click)="onTabChange(1)"
+        *ngIf="!isLeagueAuditor"
       >
         <span nz-icon nzType="folder" class="tab-icon"></span>
         <span>{{ '::Categories' | abpLocalization }}</span>
@@ -22,7 +24,7 @@
         class="tab-nav-item"
         [class.active]="selectedTabIndex === 2"
         (click)="onTabChange(2)"
-        *abpPermission="'KnowledgeHub.Resources.SchoolAudit'"
+        *abpPermission="'KnowledgeHub.Resources.SchoolAudit || KnowledgeHub.Resources.LeagueAudit'"
       >
         <span nz-icon nzType="audit" class="tab-icon"></span>
         <span>{{ '::PendingAudit' | abpLocalization }}</span>

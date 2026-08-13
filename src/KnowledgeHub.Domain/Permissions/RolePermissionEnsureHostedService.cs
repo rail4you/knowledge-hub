@@ -77,6 +77,8 @@ public class RolePermissionEnsureHostedService : IHostedService, ITransientDepen
         {
             // 在 host 上下文跑一次：admin 等全局角色在此处被自愈
             await _seeder.EnsureRolesAndPermissionsForAllTenantsAsync();
+            // 确保标准账户存在（league-admin / 123456），必须经接口代理以启用 [UnitOfWork]
+            await _seeder.EnsureStandardAccountsAsync();
         }
         catch (Exception ex)
         {

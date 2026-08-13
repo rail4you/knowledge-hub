@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Identity;
@@ -35,6 +37,9 @@ public interface IRolePermissionSeeder
 
     /// <summary>仅 host 上下文（admin 等全局角色）</summary>
     Task EnsureRolesAndPermissionsForHostAsync();
+
+    /// <summary>确保标准账户存在（league-admin 等）</summary>
+    Task EnsureStandardAccountsAsync();
 }
 
 public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
@@ -43,24 +48,52 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
     private static readonly string[] HostRoles = { "admin" };
     private static readonly string[] TenantRoles = { "LeagueAdmin", "SchoolAdmin", "Teacher", "Student", "EnterpriseUser" };
 
+    /// <summary>
+    /// LeagueAdmin 是"联盟审核员"角色：两级审核的第二级，跨租户审核院校已通过的资源。
+    /// 除资源浏览/预览/联盟审核外不授予任何管理权限，避免越权做院校审核或后台管理。
+    /// </summary>
+    private static readonly HashSet<string> LeagueAdminPermissions = new()
+    {
+        KnowledgeHubPermissions.Resources.Default,
+        KnowledgeHubPermissions.Resources.LeagueAudit,
+        KnowledgeHubPermissions.Resources.Download,
+        KnowledgeHubPermissions.Resources.ViewRecommendation,
+    };
+
+    /// <summary>
+    /// 联盟独有权限：SchoolAdmin（院校管理员）不得拥有，避免院校审核员越权做联盟审核/物理删除/直播管理。
+    /// </summary>
+    private static readonly string[] SchoolAdminForbiddenPermissions =
+    {
+        KnowledgeHubPermissions.Resources.LeagueAudit,
+        KnowledgeHubPermissions.Resources.PhysicalDelete,
+        KnowledgeHubPermissions.RecruitmentLive.Manage,
+    };
+
     private readonly IPermissionManager _permissionManager;
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IIdentityRoleRepository _roleRepository;
     private readonly IdentityRoleManager _identityRoleManager;
+    private readonly IdentityUserManager _identityUserManager;
+    private readonly ILogger<RolePermissionSeeder> _logger;
 
     public RolePermissionSeeder(
         IPermissionManager permissionManager,
         ITenantRepository tenantRepository,
         ICurrentTenant currentTenant,
         IIdentityRoleRepository roleRepository,
-        IdentityRoleManager identityRoleManager)
+        IdentityRoleManager identityRoleManager,
+        IdentityUserManager identityUserManager,
+        ILogger<RolePermissionSeeder> logger)
     {
         _permissionManager = permissionManager;
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
         _roleRepository = roleRepository;
         _identityRoleManager = identityRoleManager;
+        _identityUserManager = identityUserManager;
+        _logger = logger;
     }
 
     public async Task EnsureRolesAndPermissionsForAllTenantsAsync()
@@ -140,94 +173,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
     /// </summary>
     private async Task GrantAllRolePermissionsAsync()
     {
-        // ── LeagueAdmin：联盟管理员（全平台管理权） ──
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.Create);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.Edit);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.Delete);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.Download);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.SchoolAudit);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.LeagueAudit);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.ManageCategory);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.PhysicalDelete);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.ViewStatistics);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Resources.ViewRecommendation);
-
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Search.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Search.ManageIndex);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Search.ViewStatistics);
-
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.AI.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.AI.Chat);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.AI.LessonPlan);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.AI.CaseAnalysis);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.AI.CareerGuidance);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.TeachingAgents.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.TeachingAgents.Manage);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.TeachingAgents.Assign);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.TeachingAgents.Execute);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.TeachingAgents.Review);
-
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Courses.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Courses.Create);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Courses.Edit);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Courses.Delete);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Courses.Enroll);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Courses.ManageEnrollment);
-
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.PublishJob);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ReviewJob);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ManageResume);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ScheduleInterview);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ManageGuidance);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ManageOutcome);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ViewStatistics);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ExportReport);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ManageApplication);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Employment.ViewMyApplication);
-
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.RecruitmentLive.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.RecruitmentLive.Create);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.RecruitmentLive.Manage);
-
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Create);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Edit);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.Delete);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.ManageEnrollment);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.IssueCertificate);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.MicroMajors.ViewStatistics);
-
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.News.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.News.Create);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.News.Edit);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.News.Delete);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.News.Review);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.News.Publish);
-
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Create);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Edit);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Review);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Score);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.Export);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.Practicum.ViewStatistics);
-
-        // 租户级管理员可管理本租户的角色与用户（身份模块权限）
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Roles");
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Roles.Create");
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Roles.Update");
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Roles.Delete");
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Roles.ManagePermissions");
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Users");
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Users.Create");
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Users.Update");
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Users.Delete");
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Users.ManagePermissions");
-        await GrantAsync("LeagueAdmin", "AbpIdentity.Users.Update.ManageRoles");
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.TenantInfo.Default);
-        await GrantAsync("LeagueAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
+        // ── LeagueAdmin：联盟审核员（两级审核的第二级，只负责联盟审核） ──
+        // 之前误把 LeagueAdmin 配成了"全平台管理权"，导致联盟审核员也能做院校审核（SchoolAudit）。
+        // 重新处理为：仅资源浏览 + 联盟审核。旧的宽泛授权通过 SyncLeagueAdminPermissionsAsync 收回。
+        await SyncLeagueAdminPermissionsAsync();
 
         // ── SchoolAdmin：院校管理员 ──
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.Default);
@@ -314,6 +263,13 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Update.ManageRoles");
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
+
+        // 收回历史遗留的"联盟独有"权限（LeagueAudit / PhysicalDelete / RecruitmentLive.Manage）
+        // 院校管理员只做第一级院校审核，不能做第二级联盟审核。
+        foreach (var forbidden in SchoolAdminForbiddenPermissions)
+        {
+            await RevokeAsync("SchoolAdmin", forbidden);
+        }
 
         // ── Teacher：教师（修复：补齐缺失的 Courses.Delete） ──
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.Default);
@@ -415,12 +371,14 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.RecruitmentLive.Default);
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.RecruitmentLive.Create);
 
-        // ── admin：host 管理员 ──
+        // ── admin：host 管理员（两级审核都可做） ──
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.Create);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.Edit);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.Delete);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.Download);
+        await GrantAsync("admin", KnowledgeHubPermissions.Resources.SchoolAudit);
+        await GrantAsync("admin", KnowledgeHubPermissions.Resources.LeagueAudit);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.ManageCategory);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.ViewStatistics);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.ViewRecommendation);
@@ -503,6 +461,119 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
     }
 
     /// <summary>
+    /// LeagueAdmin 采用"权威式"授权：先收回旧的宽泛权限，再授予审核所需的最小权限集。
+    /// 因为历史数据里 LeagueAdmin 被授予过全平台权限（含 SchoolAudit），单纯 SetAsync(true)
+    /// 是只增不减的，必须显式 SetAsync(false) 收回，才能真正做到"联盟审核员只负责联盟审核"。
+    /// </summary>
+    private async Task SyncLeagueAdminPermissionsAsync()
+    {
+        try
+        {
+            var all = await _permissionManager.GetAllAsync("R", "LeagueAdmin");
+            foreach (var p in all)
+            {
+                // 只收回"已授权"且不在目标集合内的权限，避免对未授权的权限做无谓写入
+                if (p.Providers != null && p.Providers.Count > 0 && !LeagueAdminPermissions.Contains(p.Name))
+                {
+                    try
+                    {
+                        await _permissionManager.SetAsync(p.Name, "R", "LeagueAdmin", false);
+                    }
+                    catch (Exception)
+                    {
+                        // 单条收回失败不阻断整体
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[RolePermissionSeeder] LeagueAdmin 权限收紧失败，继续。");
+        }
+
+        foreach (var permissionName in LeagueAdminPermissions)
+        {
+            await GrantAsync("LeagueAdmin", permissionName);
+        }
+    }
+
+    /// <summary>
+    /// 确保标准账户存在：
+    /// - league-admin / 123456（host 全局，LeagueAdmin 角色，跨租户联盟审核）
+    /// 注意：必须通过接口代理调用（如 HostedService），内部 this.xxx 调用不会触发
+    /// [UnitOfWork] 拦截器，IdentityUserManager 内部需要 DbContext 会报错。
+    /// </summary>
+    [UnitOfWork]
+    public virtual async Task EnsureStandardAccountsAsync()
+    {
+        using (_currentTenant.Change(null))
+        {
+            await EnsureUserWithRoleAsync(
+                userName: "league-admin",
+                password: "123456",
+                roleName: "LeagueAdmin",
+                displayName: "联盟审核员");
+        }
+    }
+
+    private async Task EnsureUserWithRoleAsync(string userName, string password, string roleName, string displayName)
+    {
+        try
+        {
+            var existing = await _identityUserManager.FindByNameAsync(userName);
+            if (existing != null)
+            {
+                if (!await _identityUserManager.IsInRoleAsync(existing, roleName))
+                {
+                    var role = await _roleRepository.FindByNormalizedNameAsync(roleName.ToUpperInvariant());
+                    if (role != null)
+                    {
+                        await _identityUserManager.AddToRoleAsync(existing, roleName);
+                    }
+                }
+                return;
+            }
+
+            var user = new IdentityUser(Guid.NewGuid(), userName, $"{userName}@default.com")
+            {
+                Name = displayName
+            };
+
+            var createResult = await _identityUserManager.CreateAsync(user, password);
+            if (!createResult.Succeeded)
+            {
+                _logger.LogWarning(
+                    "[RolePermissionSeeder] 创建标准账户 {UserName} 失败: {Errors}",
+                    userName,
+                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
+                return;
+            }
+
+            var roleExists = await _roleRepository.FindByNormalizedNameAsync(roleName.ToUpperInvariant());
+            if (roleExists != null)
+            {
+                var addRoleResult = await _identityUserManager.AddToRoleAsync(user, roleName);
+                if (!addRoleResult.Succeeded)
+                {
+                    _logger.LogWarning(
+                        "[RolePermissionSeeder] 为标准账户 {UserName} 分配角色 {RoleName} 失败: {Errors}",
+                        userName,
+                        roleName,
+                        string.Join(", ", addRoleResult.Errors.Select(e => e.Description)));
+                }
+            }
+            else
+            {
+                _logger.LogWarning("[RolePermissionSeeder] 角色 {RoleName} 不存在，无法分配给 {UserName}。", roleName, userName);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[RolePermissionSeeder] 确保标准账户 {UserName} 失败。", userName);
+        }
+    }
+
+    /// <summary>
     /// 通过 IPermissionManager 写入授权。
     /// `SetAsync(..., true)` 等价于"确保已授权"，重复调用幂等。
     /// 角色不存在时 `SetAsync` 内部会抛异常，被外层 try/catch 吞掉。
@@ -517,6 +588,21 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         {
             // 角色在该租户不存在等情况 — 静默跳过。
             // 不向调用方抛异常，保证种子流程不被单个失败打断。
+        }
+    }
+
+    /// <summary>
+    /// 收回某个角色上的指定权限（用于收紧历史遗留的越权授权）。
+    /// </summary>
+    private async Task RevokeAsync(string roleName, string permissionName)
+    {
+        try
+        {
+            await _permissionManager.SetAsync(permissionName, "R", roleName, false);
+        }
+        catch (Exception)
+        {
+            // 角色不存在等情况 — 静默跳过。
         }
     }
 }

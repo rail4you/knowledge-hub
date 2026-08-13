@@ -87,6 +87,16 @@ public class PermissionAdminController : AbpController
 
         _logger.LogInformation("[PermissionAdmin] 手动触发权限重种子，租户数={Count}", tenants.Count);
 
+        try
+        {
+            // host 全局：确保标准账户存在（league-admin / 123456）
+            await _seeder.EnsureStandardAccountsAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[PermissionAdmin] host 标准账户自愈失败。");
+        }
+
         foreach (var tenant in tenants)
         {
             try

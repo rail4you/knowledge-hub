@@ -30,6 +30,9 @@ function configureRoutes() {
       iconClass: 'fas fa-folder-open',
       order: 2,
       layout: eLayoutType.application,
+      // 分组要求 Resources 权限：联盟审核员（Resources 权限已授予）能看到此分组。
+      // 组内其它菜单（我的收藏/搜索/搜索历史）要求 Search 权限，联盟审核员无此权限，故只显示"资源"（审核）。
+      requiredPolicy: 'KnowledgeHub.Resources',
     },
     {
       path: '/resources',
@@ -38,7 +41,7 @@ function configureRoutes() {
       parentName: '::Menu:ResourceManagement',
       order: 1,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Resources',
     },
     {
       path: '/favorites',
@@ -47,7 +50,7 @@ function configureRoutes() {
       parentName: '::Menu:ResourceManagement',
       order: 2,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Search',
     },
     {
       path: '/search',
@@ -56,7 +59,7 @@ function configureRoutes() {
       parentName: '::Menu:ResourceManagement',
       order: 3,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Search',
     },
     {
       path: '/my/search-history',
@@ -65,7 +68,7 @@ function configureRoutes() {
       parentName: '::Menu:ResourceManagement',
       order: 4,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Search',
     },
 
     // ══════════════════════════════════════════════════════════
@@ -77,6 +80,7 @@ function configureRoutes() {
       iconClass: 'fas fa-robot',
       order: 3,
       layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.AI',
     },
     {
       path: '/ai/chat',
@@ -85,7 +89,7 @@ function configureRoutes() {
       parentName: '::Menu:AIManagement',
       order: 1,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.AI',
     },
     {
       path: '/teaching/agents',
@@ -152,7 +156,7 @@ function configureRoutes() {
       iconClass: 'fas fa-graduation-cap',
       order: 4,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Courses',
     },
     {
       path: '/admin/tenant-info',
@@ -170,6 +174,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 2,
       layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.MicroMajors',
     },
     {
       path: '/admin/micro-majors',
@@ -196,7 +201,7 @@ function configureRoutes() {
       parentName: '::Menu:CourseManagement',
       order: 5,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Courses',
     },
     {
       path: '/learning/student-enrollment',
@@ -288,7 +293,7 @@ function configureRoutes() {
       iconClass: 'fas fa-briefcase',
       order: 5,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.Employment',
     },
     {
       path: '/employment/my-guidance',
@@ -309,6 +314,7 @@ function configureRoutes() {
       iconClass: 'fas fa-chalkboard-teacher',
       order: 6,
       layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Practicum',
     },
     {
       path: '/admin/practicum/projects',
@@ -401,7 +407,7 @@ function configureRoutes() {
       iconClass: 'fas fa-newspaper',
       order: 6,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.News',
     },
     {
       path: '/news',
@@ -410,7 +416,7 @@ function configureRoutes() {
       parentName: '::Menu:InfoManagement',
       order: 1,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.News',
     },
     {
       path: '/admin/news',
@@ -437,7 +443,7 @@ function configureRoutes() {
       parentName: '::Menu:InfoManagement',
       order: 4,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.DoubleHigh',
     },
     {
       path: '/assessment/double-high/report-center',
@@ -446,7 +452,7 @@ function configureRoutes() {
       parentName: '::Menu:InfoManagement',
       order: 5,
       layout: eLayoutType.application,
-      
+      requiredPolicy: 'KnowledgeHub.DoubleHigh',
     },
 
     // ══════════════════════════════════════════════════════════
@@ -458,6 +464,7 @@ function configureRoutes() {
       iconClass: 'fas fa-search',
       order: 7,
       layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Search',
     },
     {
       path: '/admin/indexing-jobs',
