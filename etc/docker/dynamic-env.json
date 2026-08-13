@@ -1,13 +1,13 @@
 {
   "production": true,
   "application": {
-    "baseUrl": "https://119.45.170.4/admin",
+    "baseUrl": "https://119.45.170.4",
     "name": "易课通知识库系统",
     "maxFileSizeBytes": 524288000
   },
   "oAuthConfig": {
     "issuer": "https://119.45.170.4/",
-    "redirectUri": "https://119.45.170.4/admin",
+    "redirectUri": "https://119.45.170.4",
     "postLogoutRedirectUri": "https://119.45.170.4",
     "clientId": "KnowledgeHub_App",
     "responseType": "code",
