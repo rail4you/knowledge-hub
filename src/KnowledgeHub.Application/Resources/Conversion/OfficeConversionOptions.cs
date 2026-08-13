@@ -53,6 +53,53 @@ public class OfficeConversionOptions
     public int JpegQuality { get; set; } = 75;
 
     /// <summary>
+    /// PPTX 媒体预压缩开关。源文件超过 <see cref="PptxPreprocessThresholdBytes"/> 且
+    /// 媒体（GIF/PNG/JPEG）超过 <see cref="PptxMediaCompressThresholdBytes"/> 时，
+    /// 用 ffmpeg 先把大图压小再交给 LibreOffice，显著降低转换峰值内存与耗时。
+    /// 预压缩产物缓存到 converted/{resourceId}.light.pptx。
+    /// </summary>
+    public bool EnablePptxPreprocess { get; set; } = true;
+
+    /// <summary>
+    /// 触发 PPTX 媒体预压缩的源文件大小阈值（字节）。默认 30MB。
+    /// 超大 PPTX 必然是大图/动画 GIF 撑起来的，预处理收益最大。
+    /// </summary>
+    public long PptxPreprocessThresholdBytes { get; set; } = 30 * 1024 * 1024;
+
+    /// <summary>
+    /// 单张媒体（GIF/PNG/JPEG）超过该大小（字节）才压缩。默认 500KB。
+    /// </summary>
+    public long PptxMediaCompressThresholdBytes { get; set; } = 512 * 1024;
+
+    /// <summary>
+    /// 预压缩后图片最长边像素。预览是静态 PDF，清晰度要求不高，默认 900px。
+    /// 0 = 不缩放（仅转格式/抽帧）。
+    /// </summary>
+    public int PptxMaxImageDimension { get; set; } = 900;
+
+    /// <summary>
+    /// 预压缩时 JPEG 导出质量（1-31，ffmpeg -q:v，越小越清晰）。默认 4。
+    /// </summary>
+    public int PptxJpegQuality { get; set; } = 4;
+
+    /// <summary>
+    /// ffmpeg 可执行文件路径。开发机与 API 容器镜像均内置 ffmpeg，默认直接用命令名。
+    /// </summary>
+    public string FfmpegPath { get; set; } = "ffmpeg";
+
+    /// <summary>
+    /// 单个媒体 ffmpeg 处理超时（秒）。默认 60s。
+    /// </summary>
+    public int FfmpegTimeoutSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// 预压缩时是否剥离嵌入字体（PPTX 嵌入的 OTF/TTF 可达数 MB~数十 MB，
+    /// 剥离后由 LibreOffice 用 Noto CJK 兜底渲染，预览精度足够）。
+    /// 默认 true（收益大，本地实测文本渲染正常）。
+    /// </summary>
+    public bool StripEmbeddedFonts { get; set; } = true;
+
+    /// <summary>
     /// 缓存目录（相对于 IFileStorageService.RootPath）。
     /// 缓存文件: {RootPath}/{CacheDirectory}/{resourceId}.pdf
     /// </summary>

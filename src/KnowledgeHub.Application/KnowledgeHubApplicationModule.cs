@@ -46,5 +46,7 @@ public class KnowledgeHubApplicationModule : AbpModule
         context.Services.AddSingleton<IOfficeConversionService, GotenbergConversionService>();
         // 动态并发管理器（每类服务一个可在线调整的闸门）
         context.Services.AddSingleton<ConversionConcurrencyManager>();
+        // PPTX 大媒体预压缩（GIF/大图 ffmpeg 压小后再喂 LibreOffice）
+        context.Services.AddSingleton<PptxImagePreprocessor>();
     }
 }

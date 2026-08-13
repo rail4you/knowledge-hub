@@ -17,6 +17,7 @@ export const environment = {
   application: {
     baseUrl,
     name: '易课通资源库系统',
+    maxFileSizeBytes: 500 * 1024 * 1024,
   },
   oAuthConfig,
   apis: {

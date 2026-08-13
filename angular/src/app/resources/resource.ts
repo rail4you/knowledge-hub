@@ -1,4 +1,4 @@
-import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest} from '@abp/ng.core';
+import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest, EnvironmentService} from '@abp/ng.core';
 import {Component, OnInit, inject, signal, ViewChild} from '@angular/core';
 import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto} from '../proxy/resources';
 import {MajorService} from '../proxy/majors/major.service';
@@ -172,6 +172,7 @@ export class ResourceComponent implements OnInit {
   private readonly confirmation = inject(ConfirmationService);
   private readonly localization = inject(LocalizationService);
   private readonly message = inject(NzMessageService);
+  private readonly environmentService = inject(EnvironmentService);
   private readonly recommendationService = inject(RecommendationService);
 
   
@@ -967,9 +968,11 @@ export class ResourceComponent implements OnInit {
     }
   }
 
-  // 上传文件大小上限（100MB），与后端 Kestrel 配置保持一致。
-  // 超大文件在线 PDF 预览会长期占满服务器，故上传环节即限制。
-  readonly MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
+  // 上传文件大小上限（默认 500MB，与后端 App:MaxFileSizeBytes 保持一致）。
+  // 通过 dynamic-env.json 的 application.maxFileSizeBytes 覆盖（生产可配置）。
+  readonly MAX_FILE_SIZE_BYTES =
+    this.environmentService.getEnvironment()?.application?.maxFileSizeBytes ||
+    500 * 1024 * 1024;
 
   beforeUploadFile = (file: any): boolean => {
     const fileName = file.name || '';
@@ -978,7 +981,7 @@ export class ResourceComponent implements OnInit {
       return false;
     }
     if (file.size && file.size > this.MAX_FILE_SIZE_BYTES) {
-      this.message.error(`文件大小超过 100MB 上限（当前 ${this.formatFileSize(file.size)}），请压缩后重试。`);
+      this.message.error(`文件大小超过 ${Math.round(this.MAX_FILE_SIZE_BYTES / 1024 / 1024)}MB 上限（当前 ${this.formatFileSize(file.size)}），请压缩后重试。`);
       return false;
     }
     // Extract native File object from NzUploadFile

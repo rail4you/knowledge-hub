@@ -3,11 +3,12 @@ namespace KnowledgeHub.Common;
 public static class AppFileUploadConsts
 {
     /// <summary>
-    /// 上传文件大小上限（100MB）。
-    /// 超大文件（如 200MB PPTX）上传后在线 PDF 预览会长期占满服务器 CPU/内存，
-    /// 故上传环节即限制，避免超大数据进入系统。
+    /// 上传文件大小上限默认值（500MB）。
+    /// 实际限制由配置 App:MaxFileSizeBytes 决定（默认 500MB），
+    /// 运行期可通过 App__MaxFileSizeBytes 环境变量覆盖。
+    /// 超大 PPTX 上传后由 PptxImagePreprocessor 预压缩，不再需要 100MB 硬限制。
     /// </summary>
-    public const long MaxFileSize = 100 * 1024 * 1024;
+    public const long MaxFileSize = 500L * 1024 * 1024;
 
     public const int ChunkSize = 2 * 1024 * 1024;
 

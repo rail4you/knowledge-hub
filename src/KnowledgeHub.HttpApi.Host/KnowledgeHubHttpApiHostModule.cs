@@ -195,6 +195,8 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.Configure<EmbeddingServiceOptions>(configuration.GetSection("EmbeddingService"));
         context.Services.Configure<LiteParseOptions>(configuration.GetSection("Liteparse"));
         context.Services.Configure<WasmMirrorOptions>(configuration.GetSection("WasmMirror"));
+        // 上传大小限制：App:MaxFileSizeBytes（默认 500MB，env: App__MaxFileSizeBytes）
+        context.Services.Configure<KnowledgeHub.Common.AppUploadOptions>(configuration.GetSection("App"));
 
         context.Services.AddHttpClient("LiteParse", (sp, client) =>
         {

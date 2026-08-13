@@ -29,6 +29,7 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
     private readonly IFileStorageService _fileStorageService;
     private readonly OfficeConversionOptions _options;
     private readonly ConversionConcurrencyManager _concurrencyManager;
+    private readonly PptxImagePreprocessor _pptxPreprocessor;
     private readonly ILogger<GotenbergConversionService> _logger;
 
     /// <summary>
@@ -42,12 +43,14 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
         IFileStorageService fileStorageService,
         IOptions<OfficeConversionOptions> options,
         ConversionConcurrencyManager concurrencyManager,
+        PptxImagePreprocessor pptxPreprocessor,
         ILogger<GotenbergConversionService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _fileStorageService = fileStorageService;
         _options = options.Value;
         _concurrencyManager = concurrencyManager;
+        _pptxPreprocessor = pptxPreprocessor;
         _logger = logger;
     }
 
@@ -80,6 +83,15 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
             var repairedPath = GetRepairedPptxPath(resourceId);
             if (!File.Exists(repairedPath)) return false;
             effectiveSource = repairedPath;
+        }
+
+        // 大 PPTX：PDF 缓存以预压缩 light 文件为准。
+        // 若 light 文件缺失/失效，说明需要重新预压缩+转换，缓存视为无效。
+        if (_pptxPreprocessor.ShouldPreprocess(effectiveSource))
+        {
+            if (!_pptxPreprocessor.HasValidLight(resourceId, effectiveSource))
+                return false;
+            effectiveSource = _pptxPreprocessor.GetLightPptxPath(resourceId);
         }
 
         var cachedPath = GetCachedPdfPath(resourceId);
@@ -117,6 +129,20 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
             {
                 File.Delete(repairMetaPath);
             }
+            var lightPath = _pptxPreprocessor.GetLightPptxPath(resourceId);
+            if (File.Exists(lightPath))
+            {
+                File.Delete(lightPath);
+                _logger.LogInformation("[OfficeConversion] 预压缩缓存已清除: {Path}", lightPath);
+            }
+            var lightMetaPath = Path.Combine(
+                _fileStorageService.RootPath,
+                _options.CacheDirectory,
+                $"{resourceId}.light.meta");
+            if (File.Exists(lightMetaPath))
+            {
+                File.Delete(lightMetaPath);
+            }
             if (Directory.Exists(pagesDir))
             {
                 Directory.Delete(pagesDir, recursive: true);
@@ -143,6 +169,21 @@ public class GotenbergConversionService : IOfficeConversionService, ISingletonDe
         if (IsPptxFile(sourcePath) && !IsValidZip(sourcePath))
         {
             effectiveSource = await GetOrCreateRepairedAsync(resourceId, sourcePath, cancellationToken);
+        }
+
+        // 大 PPTX（>30MB）媒体预压缩：GIF/大图先用 ffmpeg 压小，再交给 LibreOffice，
+        // 大幅降低转换峰值内存与耗时。light 文件缓存命中后直接复用。
+        // 生成失败回退原始文件，不影响功能。
+        if (_pptxPreprocessor.ShouldPreprocess(effectiveSource))
+        {
+            var light = await _pptxPreprocessor.GetOrCreateLightAsync(resourceId, effectiveSource, cancellationToken);
+            if (light != null)
+            {
+                effectiveSource = light;
+                _logger.LogInformation(
+                    "[OfficeConversion] 使用预压缩 PPTX: {ResourceId} -> {Light}",
+                    resourceId, light);
+            }
         }
 
         // 1. 检查缓存是否有效（对比源文件修改时间）

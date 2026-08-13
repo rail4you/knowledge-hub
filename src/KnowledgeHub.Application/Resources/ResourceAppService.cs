@@ -10,6 +10,7 @@ using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Edition;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Resources.Enums;
+using Microsoft.Extensions.Options;
 using KnowledgeHub.Resources.FileStorage;
 using KnowledgeHub.Resources.Conversion;
 using Microsoft.AspNetCore.Authorization;
@@ -53,6 +54,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IRepository<Major, Guid> MajorRepository { get; }
     protected IRepository<IdentityUser, Guid> UserRepository { get; }
     protected IOfficeConversionService OfficeConversionService { get; }
+    protected IOptions<AppUploadOptions> UploadOptions { get; }
 
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
@@ -74,7 +76,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IDocumentIndexRepository documentIndexRepository,
         IRepository<Major, Guid> majorRepository,
         IRepository<IdentityUser, Guid> userRepository,
-        IOfficeConversionService officeConversionService)
+        IOfficeConversionService officeConversionService,
+        IOptions<AppUploadOptions> uploadOptions)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -96,6 +99,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         MajorRepository = majorRepository;
         UserRepository = userRepository;
         OfficeConversionService = officeConversionService;
+        UploadOptions = uploadOptions;
     }
 
     [AllowAnonymous]
@@ -1111,10 +1115,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
     public virtual async Task<InitiateUploadResultDto> InitiateUploadAsync(InitiateUploadDto input)
     {
-        // 上传大小限制：超过 100MB 直接拒绝（超大文件在线预览转换会打爆服务器）
-        if (input.TotalSize > KnowledgeHub.Common.AppFileUploadConsts.MaxFileSize)
+        // 上传大小限制：超过配置上限（App:MaxFileSizeBytes，默认 500MB）直接拒绝
+        var maxSize = UploadOptions.Value.MaxFileSizeBytes;
+        if (input.TotalSize > maxSize)
         {
-            throw new UserFriendlyException($"文件大小超过 {KnowledgeHub.Common.AppFileUploadConsts.MaxFileSize / (1024 * 1024)}MB 上限，请压缩后重试");
+            throw new UserFriendlyException($"文件大小超过 {maxSize / (1024 * 1024)}MB 上限，请压缩后重试");
         }
 
         var uploadId = Guid.NewGuid().ToString("N");

@@ -72,6 +72,8 @@ services:
       - App__AngularUrl=${PUBLIC_URL}
       - App__CorsOrigins=${PUBLIC_URL}
       - App__RedirectAllowedUrls=${PUBLIC_URL}
+      # 上传文件大小上限（字节，默认 500MB）。超大 PPTX 由 PptxImagePreprocessor 预压缩。
+      - App__MaxFileSizeBytes=${UPLOAD_MAX_FILE_SIZE_BYTES:-524288000}
       # AuthServer（外部可访问地址，用于 token 验证）
       - AuthServer__Authority=${PUBLIC_URL}/
       - AuthServer__RequireHttpsMetadata=false
@@ -92,12 +94,21 @@ services:
       - OfficeConversion__BaseUrl=http://gotenberg:3000
       # 转换并发：默认每类服务 1（严格串行），可在运行期通过 API 调整
       - OfficeConversion__MaxConcurrentConversions=1
-      # 在线预览最大源文件大小（100MB），超大文件直接提示下载，不做转换
-      - OfficeConversion__MaxPreviewFileSizeBytes=104857600
+      # 在线预览最大源文件大小（500MB）：超大 PPTX 会先经 ffmpeg 预压缩成 light 文件
+      # 再转换，故可放开到 500MB。真正的防爆由 EnablePptxPreprocess 承担。
+      - OfficeConversion__MaxPreviewFileSizeBytes=524288000
       # 大文件（>30MB）转换时降采样图片到 150DPI + JPEG 75，减小 PDF 体积与处理负担
       - OfficeConversion__ReduceImageResolutionThresholdBytes=31457280
       - OfficeConversion__MaxImageResolutionDpi=150
       - OfficeConversion__JpegQuality=75
+      # PPTX 大媒体预压缩：>30MB 的 PPTX 先用 ffmpeg 把 GIF/大图压小（→light.pptx）
+      # 再喂给 LibreOffice，显著降低峰值内存（实测 203MB→4.7MB，峰值 5GB→0.7GB）
+      - OfficeConversion__EnablePptxPreprocess=true
+      - OfficeConversion__PptxPreprocessThresholdBytes=31457280
+      - OfficeConversion__PptxMediaCompressThresholdBytes=524288
+      - OfficeConversion__PptxMaxImageDimension=900
+      - OfficeConversion__PptxJpegQuality=4
+      - OfficeConversion__StripEmbeddedFonts=true
       # 后台预热周期（分钟）：0 = 关闭
       - OfficeConversion__ReprocessPeriodMinutes=5
       - OfficeConversion__ReprocessBatchSize=5

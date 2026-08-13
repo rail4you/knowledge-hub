@@ -42,6 +42,7 @@ public class LiteParseDocumentExtractionService :
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IFileStorageService _fileStorageService;
     private readonly IDataFilter _dataFilter;
+    private readonly Resources.Conversion.PptxImagePreprocessor _pptxPreprocessor;
     private readonly ILogger<LiteParseDocumentExtractionService> _logger;
 
     public LiteParseDocumentExtractionService(
@@ -50,6 +51,7 @@ public class LiteParseDocumentExtractionService :
         IRepository<Resource, Guid> resourceRepository,
         IFileStorageService fileStorageService,
         IDataFilter dataFilter,
+        Resources.Conversion.PptxImagePreprocessor pptxPreprocessor,
         ILogger<LiteParseDocumentExtractionService> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -57,6 +59,7 @@ public class LiteParseDocumentExtractionService :
         _resourceRepository = resourceRepository;
         _fileStorageService = fileStorageService;
         _dataFilter = dataFilter;
+        _pptxPreprocessor = pptxPreprocessor;
         _logger = logger;
     }
 
@@ -105,12 +108,28 @@ public class LiteParseDocumentExtractionService :
                 return result;
             }
 
-            var fileBytes = await File.ReadAllBytesAsync(fullPath);
+            // 大 PPTX 媒体预压缩：文本索引也优先用 light 文件，避免 liteparse 解析 200MB 原文件
+            // 导致内存打爆/超时。light 生成失败时回退原文件。
+            var parsePath = fullPath;
+            if (_pptxPreprocessor.ShouldPreprocess(fullPath))
+            {
+                var light = await _pptxPreprocessor.GetOrCreateLightAsync(
+                    resourceId.ToString(), fullPath);
+                if (light != null)
+                {
+                    parsePath = light;
+                    _logger.LogInformation(
+                        "LiteParse: using preprocessed PPTX {ResourceId} -> {Light}",
+                        resourceId, light);
+                }
+            }
+
+            // 流式发送：不把整文件读进内存（200MB PPTX 直接 ReadAllBytes 会打爆内存）
             _logger.LogInformation(
                 "LiteParse: parsing {Extension} {File} ({Size} bytes)",
-                resource.FileExtension, fullPath, fileBytes.Length);
+                resource.FileExtension, parsePath, new FileInfo(parsePath).Length);
 
-            var liteParseResponse = await CallLiteParseAsync(fileBytes, fullPath);
+            var liteParseResponse = await CallLiteParseAsync(parsePath);
 
             if (liteParseResponse?.Pages == null || liteParseResponse.Pages.Count == 0)
             {
@@ -152,15 +171,19 @@ public class LiteParseDocumentExtractionService :
         return result;
     }
 
-    private async Task<LiteParseResponseDto?> CallLiteParseAsync(byte[] fileBytes, string fullPath, CancellationToken ct = default)
+    private async Task<LiteParseResponseDto?> CallLiteParseAsync(string filePath, CancellationToken ct = default)
     {
         var http = _httpClientFactory.CreateClient(HttpClientName);
 
         using var form = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent(fileBytes);
+        // 流式上传：避免把大文件整体载入内存
+        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        await using var _ = fileStream;
+        var fileContent = new StreamContent(fileStream);
         fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
-            GuessMimeType(Path.GetExtension(fullPath)));
-        form.Add(fileContent, "file", Path.GetFileName(fullPath));
+            GuessMimeType(Path.GetExtension(filePath)));
+        form.Add(fileContent, "file", Path.GetFileName(filePath));
 
         var configJson = $"{{\"dpi\":{_options.Value.Dpi},\"ocrEnabled\":{_options.Value.OcrEnabled.ToString().ToLowerInvariant()}}}";
         form.Add(new StringContent(configJson, Encoding.UTF8, "application/json"), "config");

@@ -2,7 +2,8 @@
   "production": true,
   "application": {
     "baseUrl": "${PUBLIC_URL}",
-    "name": "易课通知识库系统"
+    "name": "易课通知识库系统",
+    "maxFileSizeBytes": "${UPLOAD_MAX_FILE_SIZE_BYTES:-524288000}"
   },
   "oAuthConfig": {
     "issuer": "${PUBLIC_URL}/",

@@ -7,6 +7,7 @@ using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
 
@@ -17,20 +18,25 @@ namespace KnowledgeHub.Controllers;
 public class ChunkUploadController : AbpControllerBase
 {
     private readonly IFileStorageService _fileStorageService;
+    private readonly IOptions<AppUploadOptions> _uploadOptions;
 
-    public ChunkUploadController(IFileStorageService fileStorageService)
+    public ChunkUploadController(
+        IFileStorageService fileStorageService,
+        IOptions<AppUploadOptions> uploadOptions)
     {
         _fileStorageService = fileStorageService;
+        _uploadOptions = uploadOptions;
     }
 
     [HttpPost]
     [Route("api/app/chunk-upload/initiate")]
     public Task<InitiateUploadResultDto> InitiateUpload([FromBody] InitiateUploadDto input)
     {
-        // 上传大小限制：超过 100MB 直接拒绝，避免超大文件进入系统。
-        if (input.TotalSize > AppFileUploadConsts.MaxFileSize)
+        // 上传大小限制：超过配置上限（默认 500MB）直接拒绝。
+        var maxSize = _uploadOptions.Value.MaxFileSizeBytes;
+        if (input.TotalSize > maxSize)
         {
-            throw new UserFriendlyException($"文件大小超过 {AppFileUploadConsts.MaxFileSize / (1024 * 1024)}MB 上限，请压缩后重试");
+            throw new UserFriendlyException($"文件大小超过 {maxSize / (1024 * 1024)}MB 上限，请压缩后重试");
         }
 
         var uploadId = Guid.NewGuid().ToString();

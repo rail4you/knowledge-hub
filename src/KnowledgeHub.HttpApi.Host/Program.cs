@@ -25,16 +25,16 @@ public class Program
             Log.Information("Starting KnowledgeHub.HttpApi.Host.");
             var builder = WebApplication.CreateBuilder(args);
 
-            // 放宽上传文件大小限制（修复 25MB 资源上传太小的 bug）
-            // Kestrel 默认 MaxRequestBodySize = 30MB，无法上传教学视频/大型 PPT 等
-            // 上限 100MB：超大文件在线预览转换会打爆服务器，上传环节即限制
+            // 上传文件大小限制（env: App__MaxFileSizeBytes，默认 500MB）。
+            // 超大 PPTX 上传后由 PptxImagePreprocessor 预压缩，故放开到 500MB。
+            var uploadOptions = KnowledgeHub.Common.AppUploadOptions.FromConfiguration(builder.Configuration);
             builder.WebHost.ConfigureKestrel((context, options) =>
             {
-                options.Limits.MaxRequestBodySize = 100L * 1024 * 1024; // 100MB
+                options.Limits.MaxRequestBodySize = uploadOptions.MaxFileSizeBytes;
             });
             builder.Services.Configure<FormOptions>(options =>
             {
-                options.MultipartBodyLengthLimit = 100L * 1024 * 1024; // 100MB
+                options.MultipartBodyLengthLimit = uploadOptions.MaxFileSizeBytes;
                 options.ValueLengthLimit = int.MaxValue;
                 options.MultipartHeadersLengthLimit = int.MaxValue;
             });
