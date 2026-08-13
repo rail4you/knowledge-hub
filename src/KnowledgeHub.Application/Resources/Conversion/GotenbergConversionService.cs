@@ -12,8 +12,6 @@ using System.Xml.Linq;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using PdfSharp.Pdf;
-using PdfSharp.Pdf.IO;
 using Volo.Abp.DependencyInjection;
 
 namespace KnowledgeHub.Resources.Conversion;
@@ -21,21 +19,17 @@ namespace KnowledgeHub.Resources.Conversion;
 /// <summary>
 /// 使用 Gotenberg（HTTP 服务，内部基于 LibreOffice headless）将 Office 文档转为 PDF。
 /// 转换结果缓存到 FileStorage/converted/{resourceId}.pdf，避免重复转换。
+/// 队列调度由 Hangfire 负责；并发限流由 ConversionConcurrencyManager 按服务分组控制。
 /// </summary>
-public class GotenbergConversionService : IOfficeConversionService, ITransientDependency
+public class GotenbergConversionService : IOfficeConversionService, ISingletonDependency
 {
     public const string GotenbergHttpClientName = "Gotenberg";
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IFileStorageService _fileStorageService;
     private readonly OfficeConversionOptions _options;
+    private readonly ConversionConcurrencyManager _concurrencyManager;
     private readonly ILogger<GotenbergConversionService> _logger;
-
-    /// <summary>
-    /// 并发限流：防止多用户同时转换打爆 CPU。
-    /// 超出最大并发数时排队等待。
-    /// </summary>
-    private readonly SemaphoreSlim _concurrencyLimiter;
 
     /// <summary>
     /// 同一 resourceId 的并发请求复用同一次转换。
@@ -47,19 +41,50 @@ public class GotenbergConversionService : IOfficeConversionService, ITransientDe
         IHttpClientFactory httpClientFactory,
         IFileStorageService fileStorageService,
         IOptions<OfficeConversionOptions> options,
+        ConversionConcurrencyManager concurrencyManager,
         ILogger<GotenbergConversionService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _fileStorageService = fileStorageService;
         _options = options.Value;
+        _concurrencyManager = concurrencyManager;
         _logger = logger;
-        _concurrencyLimiter = new SemaphoreSlim(_options.MaxConcurrentConversions);
+    }
+
+    /// <summary>
+    /// 该资源是否已有转换任务在排队/执行中（Hangfire job 已 enqueue 或正在转换）。
+    /// </summary>
+    public bool IsInFlight(string resourceId)
+    {
+        return _inflight.ContainsKey(resourceId);
     }
 
     public bool HasCachedPdf(string resourceId)
     {
         var path = GetCachedPdfPath(resourceId);
         return File.Exists(path);
+    }
+
+    /// <summary>
+    /// 完整 PDF 缓存是否对应当前源文件（存在且 meta 有效）。
+    /// 用于 /preview-pdf-info 判断是否已就绪，避免依赖逐页拆分产物。
+    /// 截断 PPTX 的缓存 meta 记录的是"修复后文件"的有效信息，需与 ConvertToPdfAsync 一致。
+    /// </summary>
+    public bool HasValidCachedPdf(string resourceId, string sourcePath)
+    {
+        if (!File.Exists(sourcePath)) return false;
+
+        var effectiveSource = sourcePath;
+        if (IsPptxFile(sourcePath) && !IsValidZip(sourcePath))
+        {
+            var repairedPath = GetRepairedPptxPath(resourceId);
+            if (!File.Exists(repairedPath)) return false;
+            effectiveSource = repairedPath;
+        }
+
+        var cachedPath = GetCachedPdfPath(resourceId);
+        if (!File.Exists(cachedPath)) return false;
+        return IsCacheValid(GetCacheMetaPath(resourceId), effectiveSource);
     }
 
     public void InvalidateCache(string resourceId)
@@ -106,6 +131,7 @@ public class GotenbergConversionService : IOfficeConversionService, ITransientDe
     public async Task<string> ConvertToPdfAsync(
         string resourceId,
         string sourcePath,
+        string serviceName = "preview",
         CancellationToken cancellationToken = default)
     {
         if (!File.Exists(sourcePath))
@@ -133,10 +159,16 @@ public class GotenbergConversionService : IOfficeConversionService, ITransientDe
             InvalidateCache(resourceId);
         }
 
-        // 2. 同一资源的并发请求复用同一次 Task（避免双转换）
+        // 2. 同一资源的并发请求复用同一次 Task（避免双转换）。
+        // 注意：共享任务使用 CancellationToken.None，而非第一个调用方的 token——
+        // 否则某个浏览器标签页断开连接会连带取消所有等待该资源的预览。
+        // 转换自身仍有内部超时（ConversionTimeoutSeconds）兜底。
+        // 降采样阈值基于原始源文件大小判断（修复/预处理可能缩小文件导致漏判）。
+        var useDownsampling = _options.MaxImageResolutionDpi > 0 &&
+                              new FileInfo(sourcePath).Length > _options.ReduceImageResolutionThresholdBytes;
         var lazy = _inflight.GetOrAdd(
             resourceId,
-            id => new Lazy<Task<string>>(() => DoConvertAsync(id, effectiveSource, cancellationToken)));
+            id => new Lazy<Task<string>>(() => DoConvertAsync(id, effectiveSource, serviceName, useDownsampling, CancellationToken.None)));
 
         try
         {
@@ -152,22 +184,20 @@ public class GotenbergConversionService : IOfficeConversionService, ITransientDe
     private async Task<string> DoConvertAsync(
         string resourceId,
         string sourcePath,
+        string serviceName,
+        bool useDownsampling,
         CancellationToken cancellationToken)
     {
-        await _concurrencyLimiter.WaitAsync(cancellationToken);
-        try
-        {
-            return await ConvertViaGotenbergAsync(resourceId, sourcePath, cancellationToken);
-        }
-        finally
-        {
-            _concurrencyLimiter.Release();
-        }
+        // 并发闸门：按服务分组限制同时转换数（默认 preview=1，reprocess=1，可 API 调）。
+        // 队列（排队）由 Hangfire 承担，这里只做严格并发控制。
+        using var gate = await _concurrencyManager.GetGate(serviceName).AcquireAsync(cancellationToken);
+        return await ConvertViaGotenbergAsync(resourceId, sourcePath, useDownsampling, cancellationToken);
     }
 
     private async Task<string> ConvertViaGotenbergAsync(
         string resourceId,
         string sourcePath,
+        bool useDownsampling,
         CancellationToken cancellationToken)
     {
         // 准备临时工作目录
@@ -200,6 +230,22 @@ public class GotenbergConversionService : IOfficeConversionService, ITransientDe
                 fileContent.Headers.ContentType = new MediaTypeHeaderValue(GetMimeType(sourceExt));
                 form.Add(fileContent, "files", Path.GetFileName(workSourcePath));
 
+                // 大文件降采样：超过阈值的文档在转换时把嵌入图片降到 maxImageResolution DPI，
+                // 显著减小输出 PDF 体积与 LibreOffice 处理内存/CPU，降低服务器压力。
+                // 仅对 office 文档生效；在线预览清晰度在 150 DPI 下足够。
+                if (useDownsampling)
+                {
+                    form.Add(new StringContent("true"), "reduceImageResolution");
+                    form.Add(new StringContent(_options.MaxImageResolutionDpi.ToString()), "maxImageResolution");
+                    if (_options.JpegQuality > 0)
+                    {
+                        form.Add(new StringContent(_options.JpegQuality.ToString()), "quality");
+                    }
+                    _logger.LogInformation(
+                        "[OfficeConversion] 大文件启用图片降采样: {ResourceId}, 源大小 {Size} -> {Dpi}DPI",
+                        resourceId, fs.Length, _options.MaxImageResolutionDpi);
+                }
+
                 _logger.LogInformation(
                     "[OfficeConversion] 开始转换: {ResourceId}, source: {Source}, gotenberg: {BaseUrl}",
                     resourceId, workSourcePath, _options.BaseUrl);
@@ -209,7 +255,6 @@ public class GotenbergConversionService : IOfficeConversionService, ITransientDe
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
                     cancellationToken, timeoutCts.Token);
 
-                byte[] pdfBytes;
                 try
                 {
                     using var response = await http.PostAsync(
@@ -225,7 +270,31 @@ public class GotenbergConversionService : IOfficeConversionService, ITransientDe
                             $"Gotenberg 文档转换失败（{(int)response.StatusCode}）: {Truncate(error, 500)}");
                     }
 
-                    pdfBytes = await response.Content.ReadAsByteArrayAsync(linkedCts.Token);
+                    // 流式下载 PDF 直接写盘，避免整份 PDF 载入内存（大文件可省几十~几百 MB）。
+                    // 原子写入：先写临时文件再 rename，避免半截文件被缓存命中逻辑读到。
+                    Directory.CreateDirectory(Path.GetDirectoryName(targetPdfPath)!);
+                    var tmpPath = targetPdfPath + ".tmp-" + Guid.NewGuid().ToString("N")[..8];
+                    long pdfLength;
+                    await using (var fsOut = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                    {
+                        await response.Content.CopyToAsync(fsOut, linkedCts.Token);
+                        pdfLength = fsOut.Length;
+                    }
+
+                    sw.Stop();
+
+                    if (pdfLength == 0)
+                    {
+                        try { File.Delete(tmpPath); } catch { /* ignore */ }
+                        throw new OfficeConversionException("Gotenberg 转换完成但未生成 PDF 内容");
+                    }
+
+                    File.Move(tmpPath, targetPdfPath, overwrite: true);
+                    SaveCacheMeta(GetCacheMetaPath(resourceId), sourcePath);
+
+                    _logger.LogInformation(
+                        "[OfficeConversion] 转换成功: {ResourceId}, 耗时 {Elapsed}ms, 大小 {Size}",
+                        resourceId, sw.ElapsedMilliseconds, pdfLength);
                 }
                 catch (OperationCanceledException)
                 {
@@ -234,28 +303,7 @@ public class GotenbergConversionService : IOfficeConversionService, ITransientDe
                     throw new OfficeConversionException(
                         $"Office 转换超时（{_options.ConversionTimeoutSeconds}s），文件可能过大或包含复杂内容");
                 }
-
-                sw.Stop();
-
-                if (pdfBytes.Length == 0)
-                {
-                    throw new OfficeConversionException("Gotenberg 转换完成但未生成 PDF 内容");
-                }
-
-                // 原子写入缓存 PDF：先写临时文件再 rename，避免半截文件被缓存命中逻辑读到
-                Directory.CreateDirectory(Path.GetDirectoryName(targetPdfPath)!);
-                var tmpPath = targetPdfPath + ".tmp-" + Guid.NewGuid().ToString("N")[..8];
-                await File.WriteAllBytesAsync(tmpPath, pdfBytes, cancellationToken);
-                File.Move(tmpPath, targetPdfPath, overwrite: true);
-                SaveCacheMeta(GetCacheMetaPath(resourceId), sourcePath);
-
-                _logger.LogInformation(
-                    "[OfficeConversion] 转换成功: {ResourceId}, 耗时 {Elapsed}ms, 大小 {Size}",
-                    resourceId, sw.ElapsedMilliseconds, pdfBytes.Length);
             }
-
-            // 拆分成单页 PDF，加速首页加载
-            await SplitPdfToPagesAsync(resourceId, targetPdfPath);
 
             return targetPdfPath;
         }
@@ -708,82 +756,6 @@ public class GotenbergConversionService : IOfficeConversionService, ITransientDe
             _fileStorageService.RootPath,
             _options.CacheDirectory,
             $"{resourceId}.repaired.pptx");
-    }
-
-    /// <summary>
-    /// 用 PdfSharp 将完整 PDF 拆分为单页 PDF，缓存到 {resourceId}/page{N}.pdf。
-    /// 每页仅 ~100-300KB，首页秒出。
-    /// </summary>
-    private async Task SplitPdfToPagesAsync(string resourceId, string pdfPath)
-    {
-        var pagesDir = Path.Combine(
-            _fileStorageService.RootPath,
-            _options.CacheDirectory,
-            resourceId);
-
-        // 检查是否已拆分
-        if (Directory.Exists(pagesDir) && Directory.GetFiles(pagesDir, "page*.pdf").Length > 0)
-        {
-            _logger.LogDebug("[OfficeConversion] 页面缓存已存在: {ResourceId}", resourceId);
-            return;
-        }
-
-        // 原子性：先写到 tmp 目录，全部成功后才 rename，避免中途失败留下半截 page*.pdf
-        // 被"目录已存在 + 有 page*.pdf"的跳过逻辑误判为完成
-        var tmpDir = pagesDir + ".tmp-" + Guid.NewGuid().ToString("N")[..8];
-
-        try
-        {
-            Directory.CreateDirectory(tmpDir);
-
-            var sw = Stopwatch.StartNew();
-            int pageCount;
-            using (var source = PdfReader.Open(pdfPath, PdfDocumentOpenMode.Import))
-            {
-                if (source.PageCount == 0)
-                    throw new OfficeConversionException("PDF 无页面: " + pdfPath);
-
-                pageCount = source.PageCount;
-                for (var i = 0; i < pageCount; i++)
-                {
-                    using var target = new PdfDocument();
-                    target.Version = source.Version;
-                    target.AddPage(source.Pages[i]);
-                    target.Save(Path.Combine(tmpDir, $"page{i + 1}.pdf"));
-                }
-            }
-            sw.Stop();
-
-            // 替换旧目录（如果存在）
-            if (Directory.Exists(pagesDir))
-                Directory.Delete(pagesDir, recursive: true);
-            Directory.Move(tmpDir, pagesDir);
-
-            // 边车文件：记录页数，供 /preview-pdf-info 端点 O(1) 查询，
-            // 避免前端轮询每页 + 后端重复打开 PDF
-            await File.WriteAllTextAsync(
-                Path.Combine(pagesDir, ".count"),
-                pageCount.ToString());
-            _logger.LogInformation(
-                "[OfficeConversion] PDF 拆分为 {Count} 页: {ResourceId}, 耗时 {Elapsed}ms",
-                pageCount, resourceId, sw.ElapsedMilliseconds);
-        }
-        catch (Exception ex)
-        {
-            // 失败时清理 tmpDir，抛异常让上层感知
-            try
-            {
-                if (Directory.Exists(tmpDir))
-                    Directory.Delete(tmpDir, recursive: true);
-            }
-            catch
-            {
-                // ignore cleanup errors
-            }
-
-            _logger.LogError(ex, "[OfficeConversion] PDF 拆分失败: {ResourceId}", resourceId);
-            throw new OfficeConversionException("PDF 拆分失败: " + ex.Message, ex);
-        }
     }
 
     private string GetCacheMetaPath(string resourceId)

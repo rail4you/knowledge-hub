@@ -967,8 +967,9 @@ export class ResourceComponent implements OnInit {
     }
   }
 
-  // 上传文件大小上限（500MB），与后端 Kestrel 配置保持一致
-  readonly MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
+  // 上传文件大小上限（100MB），与后端 Kestrel 配置保持一致。
+  // 超大文件在线 PDF 预览会长期占满服务器，故上传环节即限制。
+  readonly MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 
   beforeUploadFile = (file: any): boolean => {
     const fileName = file.name || '';
@@ -977,7 +978,7 @@ export class ResourceComponent implements OnInit {
       return false;
     }
     if (file.size && file.size > this.MAX_FILE_SIZE_BYTES) {
-      this.message.error(`文件大小超过 500MB 上限（当前 ${this.formatFileSize(file.size)}），请压缩后重试。`);
+      this.message.error(`文件大小超过 100MB 上限（当前 ${this.formatFileSize(file.size)}），请压缩后重试。`);
       return false;
     }
     // Extract native File object from NzUploadFile

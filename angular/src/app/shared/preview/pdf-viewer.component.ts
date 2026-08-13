@@ -271,7 +271,10 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  /** 逐页加载模式：先获取总页数，然后按需加载每页的小 PDF */
+  /** 逐页模式 → 就绪后加载整份 PDF（pdfjs Range 请求，仅下载所需字节）。
+   *  说明：不再使用 PdfSharp 逐页拆分文件——拆分会让每页复制共享字体/图片，
+   *  40 页 PPTX 可膨胀到 ~160MB（而整份 PDF 仅 ~11MB），导致预览极慢。
+   *  这里先轮询 /preview-pdf-info 触发后台转换，就绪后加载整份 PDF。 */
   private async loadPdfPerPage(rid: string) {
     if (this.destroyed) return;
 
@@ -282,68 +285,49 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.renderedPages.set(new Set());
       this.renderQueue = [];
       this.loaded = false;
-      this.pageResourceId = rid;
+      this.pageResourceId = '';
 
-      // 轮询 /preview-pdf-info 等待后端拆分完成（PPTX 后端转换可能需要 20s+）
-      // 一次请求 = 一个 ready 回答，避免 500 个 HEAD 探测
-      let total = 0;
+      // 轮询 /preview-pdf-info 等待后端转换完成（PPTX 后端转换可能需要 20s+；
+      // 串行队列下大文件排队时可能更久，最多等 10 分钟）
+      let ready = false;
+      let tooLarge = false;
       let polls = 0;
-      while (total === 0 && polls < 120 && !this.destroyed) {
+      while (!ready && !tooLarge && polls < 600 && !this.destroyed) {
         polls++;
         const resp = await fetch(`/api/resource-file/${rid}/preview-pdf-info`);
         if (resp.ok) {
           const info = await resp.json();
-          if (info?.ready && info.count > 0) {
-            total = info.count;
+          if (info?.ready) {
+            ready = true;
+            break;
+          }
+          if (info?.tooLarge) {
+            tooLarge = true;
             break;
           }
         }
-        if (total === 0) {
+        if (!ready && !tooLarge) {
           // 还没转换完，等 1 秒再试
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
 
-      if (total === 0) {
+      if (tooLarge) {
+        this.error.set('文件过大，暂不支持在线预览，请下载后查看');
+        this.isLoading.set(false);
+        this.loaded = true;
+        return;
+      }
+
+      if (!ready) {
         this.error.set('文档转换超时，请稍后重试');
         this.isLoading.set(false);
         this.loaded = true;
         return;
       }
-      this.totalPages.set(total);
-      this.knownTotalPages = total;
 
-      // 更新 loading 文案提示用户等待转换
-      if (polls > 1) {
-        this.renderedCount.set(0); // triggers template re-eval for loading text update
-      }
-
-      // 创建所有页面的 canvas 占位
-      this.zone.runOutsideAngular(() => {
-        this.createAllCanvases(total);
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      if (this.destroyed) return;
-
-      this.loaded = true;
-
-      // 先计算默认"占满舞台宽度"比例，再一次性渲染第 1 页。
-      // 不能先渲染再改比例：renderPerPagePdf 有 isPageRendered 守卫，二次渲染会被拦下，
-      // 导致页面一直停留在 scale=1，四周大面积留白。
-      await this.applyDefaultFit(1);
-
-      const page1Url = `/api/resource-file/${rid}/preview-pdf-page/1`;
-      await this.renderPerPagePdf(1, page1Url);
-      this.showPage(1);
-      this.currentPage.set(1);
-      this.isLoading.set(false);
-
-      // 后台预加载其余页面
-      if (total > 1) {
-        this.renderQueue = Array.from({ length: total - 1 }, (_, i) => i + 2);
-        this.preloadPerPageInBackground(rid);
-      }
+      // 转换完成：加载整份 PDF（物理文件支持 Range，pdfjs 按需取页，首页秒出）
+      await this.loadPdfFromUrl(`/api/resource-file/${rid}/preview-pdf`);
     } catch (e: any) {
       console.error('PDF per-page load error:', e);
       this.loadFailed.emit();

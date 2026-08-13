@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using KnowledgeHub.Common;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
 using KnowledgeHub.Permissions;
@@ -24,23 +25,29 @@ public class ChunkUploadController : AbpControllerBase
 
     [HttpPost]
     [Route("api/app/chunk-upload/initiate")]
-    public async Task<InitiateUploadResultDto> InitiateUpload([FromBody] InitiateUploadDto input)
+    public Task<InitiateUploadResultDto> InitiateUpload([FromBody] InitiateUploadDto input)
     {
+        // 上传大小限制：超过 100MB 直接拒绝，避免超大文件进入系统。
+        if (input.TotalSize > AppFileUploadConsts.MaxFileSize)
+        {
+            throw new UserFriendlyException($"文件大小超过 {AppFileUploadConsts.MaxFileSize / (1024 * 1024)}MB 上限，请压缩后重试");
+        }
+
         var uploadId = Guid.NewGuid().ToString();
         var totalChunks = (int)Math.Ceiling((double)input.TotalSize / input.ChunkSize);
 
-        return new InitiateUploadResultDto
+        return Task.FromResult(new InitiateUploadResultDto
         {
             UploadId = uploadId,
             ChunkSize = input.ChunkSize,
             TotalChunks = totalChunks
-        };
+        });
     }
 
     [HttpPost]
     [Route("api/app/chunk-upload/upload")]
     [DisableRequestSizeLimit]
-    [RequestFormLimits(MultipartBodyLengthLimit = 524288000)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 104857600)]
     public async Task<bool> UploadChunk(IFormFile file, [FromForm] string uploadId, [FromForm] string fileName, [FromForm] int chunkNumber)
     {
         if (file == null || file.Length == 0)

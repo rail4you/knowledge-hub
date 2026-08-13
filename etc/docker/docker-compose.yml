@@ -90,6 +90,19 @@ services:
       - Liteparse__Dpi=${LITEPARSE_DPI}
       # Gotenberg 文档转 PDF（预览转换，仅内部网络）
       - OfficeConversion__BaseUrl=http://gotenberg:3000
+      # 转换并发：默认每类服务 1（严格串行），可在运行期通过 API 调整
+      - OfficeConversion__MaxConcurrentConversions=1
+      # 在线预览最大源文件大小（100MB），超大文件直接提示下载，不做转换
+      - OfficeConversion__MaxPreviewFileSizeBytes=104857600
+      # 大文件（>30MB）转换时降采样图片到 150DPI + JPEG 75，减小 PDF 体积与处理负担
+      - OfficeConversion__ReduceImageResolutionThresholdBytes=31457280
+      - OfficeConversion__MaxImageResolutionDpi=150
+      - OfficeConversion__JpegQuality=75
+      # 后台预热周期（分钟）：0 = 关闭
+      - OfficeConversion__ReprocessPeriodMinutes=5
+      - OfficeConversion__ReprocessBatchSize=5
+      # Hangfire Dashboard：默认关闭公网访问（仅回环）
+      - Hangfire__DashboardAllowPublic=false
       # Qwen API
       - Qwen__ApiKey=${QWEN_API_KEY}
       - Qwen__BaseUrl=${QWEN_BASE_URL}
@@ -187,6 +200,9 @@ services:
     environment:
       # LibreOffice 处理 N 个文件后重启进程，避免内存泄漏累积
       - LIBREOFFICE_RESTART_AFTER=50
+      # 单个请求超时：默认 30s，大 PPTX（含大量图片/复杂版式）LibreOffice 转换可能超过 30s，
+      # 超时会返回 503 "The request exceeded the time limit"。调高到 300s。
+      - API_TIMEOUT=300s
     ports:
       # 仅绑定宿主机回环地址：供 deploy.sh 健康检查探测 /health，不对外暴露
       - "127.0.0.1:3000:3000"

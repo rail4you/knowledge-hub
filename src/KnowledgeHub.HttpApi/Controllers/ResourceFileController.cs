@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
@@ -62,19 +63,25 @@ public class ResourceFileController : AbpControllerBase
     protected IFileStorageService FileStorageService { get; }
     protected IDataFilter DataFilter { get; }
     protected IOfficeConversionService OfficeConversionService { get; }
+    protected IConversionTaskQueue ConversionTaskQueue { get; }
+    protected IOptions<OfficeConversionOptions> ConversionOptions { get; }
 
     public ResourceFileController(
         IResourceRepository resourceRepository,
         IRepository<Resource, Guid> repository,
         IFileStorageService fileStorageService,
         IDataFilter dataFilter,
-        IOfficeConversionService officeConversionService)
+        IOfficeConversionService officeConversionService,
+        IConversionTaskQueue conversionTaskQueue,
+        IOptions<OfficeConversionOptions> conversionOptions)
     {
         ResourceRepository = resourceRepository;
         Repository = repository;
         FileStorageService = fileStorageService;
         DataFilter = dataFilter;
         OfficeConversionService = officeConversionService;
+        ConversionTaskQueue = conversionTaskQueue;
+        ConversionOptions = conversionOptions;
     }
 
     /// <summary>
@@ -252,6 +259,14 @@ public class ResourceFileController : AbpControllerBase
         if (ext != ".pptx" && ext != ".docx" && ext != ".xlsx" && ext != ".ppt" && ext != ".doc" && ext != ".xls")
             return BadRequest(new { message = "仅支持 Office 文档（PPTX/DOCX/XLSX）" });
 
+        // 超大文件保护：不做转换，直接提示下载（避免 LibreOffice 长期占满服务器）。
+        var fileSize = new FileInfo(fullPath).Length;
+        if (fileSize > ConversionOptions.Value.MaxPreviewFileSizeBytes)
+            return StatusCode(StatusCodes.Status413PayloadTooLarge, new
+            {
+                message = "文件过大，暂不支持在线预览，请下载后查看",
+            });
+
         try
         {
             // 截断/损坏的 PPTX 在 GotenbergConversionService 内部先重建 ZIP 中央目录修复，
@@ -299,27 +314,14 @@ public class ResourceFileController : AbpControllerBase
     }
 
     /// <summary>
-    /// 查询 PDF 预览的就绪状态与总页数。
-    /// 拆分完成时由 SplitPdfToPages 写入 {resourceId}/.count 边车文件。
+    /// 查询 PDF 预览的就绪状态。
+    /// 完整 PDF 缓存存在且 meta 有效时 ready=true（前端随后加载 /preview-pdf 整份 PDF）。
     /// 尚未转换时触发一次后台转换（内部有缓存 + 同资源并发去重），前端轮询直到 ready=true。
     /// </summary>
     [HttpGet("{resourceId}/preview-pdf-info")]
     [AllowAnonymous]
     public virtual async Task<IActionResult> PreviewPdfInfo(Guid resourceId)
     {
-        var pagesDir = Path.GetDirectoryName(
-            OfficeConversionService.GetPagePdfPath(resourceId.ToString(), 1))!;
-        var countFile = Path.Combine(pagesDir, ".count");
-
-        if (System.IO.File.Exists(countFile))
-        {
-            var raw = System.IO.File.ReadAllText(countFile).Trim();
-            if (int.TryParse(raw, out var count) && count > 0)
-                return Ok(new { ready = true, count });
-        }
-
-        // 尚未转换/拆分：触发一次转换，前端轮询本端点等待就绪。
-        // ConvertToPdfAsync 内部先查缓存、再按 resourceId 去重，重复触发不会重复转换。
         try
         {
             var fullPath = await GetResourceFullPathAsync(resourceId);
@@ -330,18 +332,19 @@ public class ResourceFileController : AbpControllerBase
             if (ext != ".pptx" && ext != ".docx" && ext != ".xlsx" && ext != ".ppt" && ext != ".doc" && ext != ".xls")
                 return BadRequest(new { message = "仅支持 Office 文档（PPTX/DOCX/XLSX）" });
 
+            // 超大文件保护：不做转换，前端轮询会一直不 ready → 前端超时提示。
+            // 但更友好的是直接告知过大。前端已按 100MB 阈值降级为"下载查看"。
+            var fileSize = new FileInfo(fullPath).Length;
+            if (fileSize > ConversionOptions.Value.MaxPreviewFileSizeBytes)
+                return Ok(new { ready = false, count = 0, tooLarge = true });
+
             var rid = resourceId.ToString();
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await OfficeConversionService.ConvertToPdfAsync(rid, fullPath);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning(ex, "[PreviewPdfInfo] 后台转换失败: {ResourceId}", rid);
-                }
-            });
+            if (OfficeConversionService.HasValidCachedPdf(rid, fullPath))
+                return Ok(new { ready = true, count = 0 });
+
+            // 尚未转换：入队 Hangfire 转换任务（队列内部按 resourceId 去重，不会重复转换），
+            // 前端轮询本端点等待就绪。ConvertToPdfAsync 内部另有 in-flight 去重兜底。
+            await ConversionTaskQueue.EnqueueAsync(rid, fullPath);
         }
         catch (Exception ex)
         {

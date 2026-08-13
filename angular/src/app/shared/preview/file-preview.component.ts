@@ -60,13 +60,16 @@ export class FilePreviewComponent {
   unsupported = signal(false);
 
   // 在线预览大小上限：超过此大小提示用户下载。
-  // pptx 不设上限（服务端按需提取单张幻灯片）
+  // pptx 100MB：超大 PPTX 转 PDF 会长期占满服务器 CPU（LibreOffice 单核近 100%），
+  // 即使串行队列也会拖慢服务器，故设上限直接降级为"下载后本地查看"。
   private static readonly PREVIEW_SIZE_LIMIT: Partial<Record<FileType, number>> = {
     text: 2 * 1024 * 1024,         // 2 MB
     pdf: 25 * 1024 * 1024,         // 25 MB
     word: 25 * 1024 * 1024,        // 25 MB
     excel: 20 * 1024 * 1024,       // 20 MB
     image: 50 * 1024 * 1024,       // 50 MB
+    pptx: 100 * 1024 * 1024,       // 100 MB
+    ppt: 100 * 1024 * 1024,        // 100 MB（旧版二进制同样受转换资源限制）
   };
 
   // 使用原生 fetch() 而非 Angular HttpClient/RestService，

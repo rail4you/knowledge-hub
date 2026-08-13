@@ -104,6 +104,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var resource = await ResourceRepository.GetWithDetailsAsync(id);
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
         EnsureFileMetadata(dto);
+        EnsureFileMetadataFromCurrentVersion(resource, dto);
         dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
         return dto;
     }
@@ -130,6 +131,28 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         }
     }
 
+    /// <summary>
+    /// 单个资源（GetWithDetailsAsync 已加载 Versions）时：资源级 FilePath 为空则回退到当前版本。
+    /// </summary>
+    private void EnsureFileMetadataFromCurrentVersion(Resource resource, ResourceDto dto)
+    {
+        if (!string.IsNullOrEmpty(dto.FilePath)) return;
+
+        var currentVersion = resource.Versions?.FirstOrDefault(x => x.IsCurrentVersion);
+        if (currentVersion == null || string.IsNullOrEmpty(currentVersion.FilePath)) return;
+
+        dto.FilePath = currentVersion.FilePath;
+        dto.FileSize = currentVersion.FileSize ?? 0;
+        if (string.IsNullOrEmpty(dto.FileExtension))
+        {
+            dto.FileExtension = System.IO.Path.GetExtension(currentVersion.FilePath)?.TrimStart('.');
+        }
+        if (string.IsNullOrEmpty(dto.OriginalFileName))
+        {
+            dto.OriginalFileName = System.IO.Path.GetFileName(currentVersion.FilePath);
+        }
+    }
+
     [AllowAnonymous]
     public virtual async Task<PagedResultDto<ResourceDto>> GetListAsync(PagedAndSortedResultRequestDto input)
     {
@@ -143,6 +166,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
         EnsureFileMetadata(dtos);
+        await EnsureFileMetadataFromCurrentVersionAsync(resources, dtos);
         await FillCreatorNamesAsync(dtos);
         return new PagedResultDto<ResourceDto>(
             totalCount,
@@ -156,6 +180,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var resource = await ResourceRepository.GetWithDetailsAsync(id);
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
         EnsureFileMetadata(dto);
+        EnsureFileMetadataFromCurrentVersion(resource, dto);
         return dto;
     }
 
@@ -211,6 +236,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var resources = await AsyncExecuter.ToListAsync(query);
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
         EnsureFileMetadata(dtos);
+        await EnsureFileMetadataFromCurrentVersionAsync(resources, dtos);
         await FillMajorNamesAsync(dtos);
         await FillCreatorNamesAsync(dtos);
 
@@ -252,6 +278,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
         EnsureFileMetadata(dtos);
+        await EnsureFileMetadataFromCurrentVersionAsync(resources, dtos);
         await FillCreatorNamesAsync(dtos);
         return new PagedResultDto<ResourceDto>(
             count,
@@ -284,6 +311,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         var dtos2 = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(orderedResources);
         EnsureFileMetadata(dtos2);
+        await EnsureFileMetadataFromCurrentVersionAsync(orderedResources, dtos2);
         return new PagedResultDto<ResourceDto>(
             totalCount,
             dtos2
@@ -345,6 +373,50 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         foreach (var dto in dtos)
         {
             EnsureFileMetadata(dto);
+        }
+    }
+
+    /// <summary>
+    /// 资源级 FilePath 为空（旧数据 / 版本管理场景）时，从当前版本的 FilePath 回填 DTO
+    /// 的文件元数据（FilePath / FileSize / FileExtension / OriginalFileName）。
+    /// 与 Preview / PreviewPdf 等端点内部的"版本回退"逻辑保持一致，
+    /// 否则前端因 dto.filePath 为空而禁用预览按钮，但文件其实存在于当前版本。
+    /// </summary>
+    private async Task EnsureFileMetadataFromCurrentVersionAsync(
+        List<Resource> resources,
+        List<ResourceDto> dtos)
+    {
+        if (resources.Count == 0 || dtos.Count == 0) return;
+
+        var dtoById = dtos.ToDictionary(d => d.Id);
+        var missing = resources
+            .Where(r => string.IsNullOrEmpty(r.FilePath) && dtoById.ContainsKey(r.Id))
+            .Select(r => r.Id)
+            .ToList();
+
+        if (missing.Count == 0) return;
+
+        var versions = await (await VersionRepository.GetQueryableAsync())
+            .Where(v => missing.Contains(v.ResourceId) && v.IsCurrentVersion)
+            .ToListAsync();
+
+        var versionByResource = versions.ToDictionary(v => v.ResourceId);
+        foreach (var resourceId in missing)
+        {
+            if (!versionByResource.TryGetValue(resourceId, out var version)) continue;
+            if (string.IsNullOrEmpty(version.FilePath)) continue;
+
+            var dto = dtoById[resourceId];
+            dto.FilePath = version.FilePath;
+            dto.FileSize = version.FileSize ?? 0;
+            if (string.IsNullOrEmpty(dto.FileExtension))
+            {
+                dto.FileExtension = Path.GetExtension(version.FilePath)?.TrimStart('.');
+            }
+            if (string.IsNullOrEmpty(dto.OriginalFileName))
+            {
+                dto.OriginalFileName = Path.GetFileName(version.FilePath);
+            }
         }
     }
 
@@ -1039,6 +1111,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
     public virtual async Task<InitiateUploadResultDto> InitiateUploadAsync(InitiateUploadDto input)
     {
+        // 上传大小限制：超过 100MB 直接拒绝（超大文件在线预览转换会打爆服务器）
+        if (input.TotalSize > KnowledgeHub.Common.AppFileUploadConsts.MaxFileSize)
+        {
+            throw new UserFriendlyException($"文件大小超过 {KnowledgeHub.Common.AppFileUploadConsts.MaxFileSize / (1024 * 1024)}MB 上限，请压缩后重试");
+        }
+
         var uploadId = Guid.NewGuid().ToString("N");
         var totalChunks = (int)Math.Ceiling((double)input.TotalSize / input.ChunkSize);
         
@@ -1146,6 +1224,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var resources = await AsyncExecuter.ToListAsync(query);
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
         EnsureFileMetadata(dtos);
+        await EnsureFileMetadataFromCurrentVersionAsync(resources, dtos);
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
 
@@ -1372,6 +1451,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var items = await AsyncExecuter.ToListAsync(query);
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(items);
         EnsureFileMetadata(dtos);
+        await EnsureFileMetadataFromCurrentVersionAsync(items, dtos);
         await FillMajorNamesAsync(dtos);
 
         return new PagedResultDto<ResourceDto>(totalCount, dtos);

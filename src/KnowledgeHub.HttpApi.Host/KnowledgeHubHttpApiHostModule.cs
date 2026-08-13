@@ -54,6 +54,9 @@ using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.BackgroundJobs;
+using Hangfire;
+using Hangfire.Dashboard;
+using KnowledgeHub.HangfireJobs;
 using KnowledgeHub.Json;
 using KnowledgeHub.TeachingAgents;
 using Volo.Abp.Json;
@@ -206,6 +209,23 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             client.BaseAddress = new Uri(options.Value.BaseUrl);
             client.Timeout = TimeSpan.FromSeconds(options.Value.ConversionTimeoutSeconds);
         });
+
+        // ── Hangfire 转换队列（内存存储，不持久化，重启清空）──
+        context.Services.AddHangfire(config =>
+        {
+            config.SetDataCompatibilityLevel(Hangfire.CompatibilityLevel.Version_180);
+            config.UseSimpleAssemblyNameTypeSerializer();
+            config.UseRecommendedSerializerSettings();
+            config.UseInMemoryStorage();
+        });
+        context.Services.AddHangfireServer(options =>
+        {
+            // worker 数：转换真正并发由 ConversionConcurrencyManager 按服务分组控制，
+            // 这里给一个合理上限（如 2 * CPU）防止排队任务堆积在后台。
+            options.WorkerCount = Math.Max(1, Environment.ProcessorCount * 2);
+            options.Queues = new[] { "default", "conversion" };
+        });
+        context.Services.AddSingleton<IConversionTaskQueue, HangfireConversionTaskQueue>();
 
         context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>();
         context.Services.AddScoped<KnowledgeHub.Application.Search.MeiliSearchService>();
@@ -495,6 +515,34 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
 
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
+
+        // ── Hangfire Dashboard + RecurringJob ──
+        // Dashboard 路径 /hangfire。生产环境请通过 nginx/IP 白名单限制访问。
+        app.UseHangfireDashboard("/hangfire", new DashboardOptions
+        {
+            Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
+        });
+        RegisterOfficeConversionRecurringJobs(context);
+
         app.UseConfiguredEndpoints();
+    }
+
+    /// <summary>
+    /// 注册 Office 转换预热 RecurringJob（每 ReprocessPeriodMinutes 分钟跑一轮）。
+    /// </summary>
+    private void RegisterOfficeConversionRecurringJobs(ApplicationInitializationContext context)
+    {
+        var options = context.ServiceProvider
+            .GetRequiredService<IOptions<OfficeConversionOptions>>().Value;
+        if (options.ReprocessPeriodMinutes <= 0)
+        {
+            return;
+        }
+
+        RecurringJob.AddOrUpdate<OfficeConversionReprocessJob>(
+            "office-conversion-reprocess",
+            job => job.RunAsync(),
+            Cron.MinuteInterval(Math.Max(1, options.ReprocessPeriodMinutes)),
+            new RecurringJobOptions { QueueName = "conversion" });
     }
 }

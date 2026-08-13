@@ -5,6 +5,7 @@ using KnowledgeHub.Application.Search.LiteParse;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Resources.Conversion;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.SettingManagement;
 using Volo.Abp.Account;
@@ -12,7 +13,6 @@ using Volo.Abp.Identity;
 using Volo.Abp.Mapperly;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Modularity;
-using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.TenantManagement;
 
 namespace KnowledgeHub;
@@ -41,6 +41,10 @@ public class KnowledgeHubApplicationModule : AbpModule
         context.Services.AddSingleton<ILiteParseExtractionService, LiteParseDocumentExtractionService>();
         context.Services.AddSingleton<Practicums.PracticumChatConnectionManager>();
         context.Services.AddTransient<TeachingAgents.TeachingAgentContextBuilder>();
-        context.Services.AddTransient<IOfficeConversionService, GotenbergConversionService>();
+        // 必须 Singleton：转换服务内部的并发闸门 + in-flight 去重要全局共享，
+        // 若为 Transient 则每个请求各持有一份状态，并发限制形同虚设，会打爆服务器。
+        context.Services.AddSingleton<IOfficeConversionService, GotenbergConversionService>();
+        // 动态并发管理器（每类服务一个可在线调整的闸门）
+        context.Services.AddSingleton<ConversionConcurrencyManager>();
     }
 }
