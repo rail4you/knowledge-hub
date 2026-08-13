@@ -47,9 +47,10 @@
       <button class="tab-btn" [class.active]="activeTab === 0" (click)="activeTab = 0">基本信息</button>
       <button class="tab-btn" [class.active]="activeTab === 1" (click)="activeTab = 1">关联任务</button>
       <button class="tab-btn" [class.active]="activeTab === 2" (click)="activeTab = 2">关联资料</button>
-      <button class="tab-btn" [class.active]="activeTab === 3" (click)="activeTab = 3">参与与评分</button>
-      <button class="tab-btn" [class.active]="activeTab === 4" (click)="activeTab = 4">智能体配置</button>
-      <button class="tab-btn" [class.active]="activeTab === 5" (click)="activeTab = 5">仿真镜像</button>
+      <button class="tab-btn" [class.active]="activeTab === 3" (click)="activeTab = 3">评分</button>
+      <button class="tab-btn" [class.active]="activeTab === 4" (click)="activeTab = 4">指导</button>
+      <button class="tab-btn" [class.active]="activeTab === 5" (click)="activeTab = 5">智能体配置</button>
+      <button class="tab-btn" [class.active]="activeTab === 6" (click)="activeTab = 6">仿真镜像</button>
     </div>
 
     <div class="tab-content">
@@ -189,51 +190,92 @@
         </div>
       </div>
 
-      <!-- Tab 3: 参与与评分 -->
+      <!-- Tab 3: 评分（参与名单 + 提交合并表格） -->
       <div *ngIf="activeTab === 3">
         <div class="section-header">
-          <h3>参与名单</h3>
+          <h3>参与与评分</h3>
           <button nz-button (click)="exportScores()">导出成绩</button>
         </div>
-        <nz-table [nzData]="enrollments()" [nzFrontPagination]="false" nzSize="small">
-          <thead><tr><th>学生</th><th>状态</th><th>进度</th><th>得分</th></tr></thead>
-          <tbody>
-            <tr *ngFor="let e of enrollments()">
-              <td>{{ e.studentName }}</td>
-              <td>{{ e.status }}</td>
-              <td>{{ e.progress }}%</td>
-              <td>{{ e.finalScore ?? '-' }}</td>
+        <nz-table [nzData]="scoreRows()" [nzFrontPagination]="false" nzSize="small">
+          <thead>
+            <tr>
+              <th>学生</th>
+              <th>状态</th>
+              <th>进度</th>
+              <th>提交任务</th>
+              <th>最近提交</th>
+              <th>分数</th>
+              <th>操作</th>
             </tr>
-          </tbody>
-        </nz-table>
-
-        <div class="section-header" style="margin-top:24px;">
-          <h3>提交与评分</h3>
-        </div>
-        <nz-table [nzData]="submissions()" [nzFrontPagination]="false" nzSize="small">
-          <thead><tr><th>学生</th><th>任务</th><th>版本</th><th>状态</th><th>分数</th><th>操作</th></tr></thead>
+          </thead>
           <tbody>
-            <tr *ngFor="let s of submissions()">
-              <td>{{ s.studentName }}</td>
-              <td>{{ s.taskTitle }}</td>
-              <td>V{{ s.versionNo }}</td>
+            <tr *ngFor="let row of scoreRows()">
+              <td>{{ row.enrollment.studentName || '学生' }}</td>
+              <td>{{ enrollmentLabel(row.enrollment.status) }}</td>
+              <td>{{ row.enrollment.progress }}%</td>
               <td>
-                <nz-tag [nzColor]="s.status === submissionStatuses.Reviewed ? 'green' : s.status === submissionStatuses.Returned ? 'red' : 'blue'">
-                  {{ submissionLabel(s.status) }}
-                </nz-tag>
+                <ng-container *ngIf="row.submissions.length; else noSub">
+                  <span *ngFor="let s of row.submissions; let last = last">
+                    {{ s.taskTitle }}<ng-container *ngIf="!last">、</ng-container>
+                  </span>
+                </ng-container>
+                <ng-template #noSub><span class="muted">未提交</span></ng-template>
               </td>
-              <td>{{ s.score ?? '-' }}</td>
               <td>
-                <button nz-button nzType="link" (click)="openGuidance(s)">指导</button>
-                <button nz-button nzType="link" (click)="openScore(s)">评分</button>
+                <ng-container *ngIf="row.submissions[0] as latest">
+                  {{ latest.submittedAt | date:'MM-dd HH:mm' }}
+                </ng-container>
+                <span class="muted" *ngIf="!row.submissions.length">—</span>
+              </td>
+              <td>{{ row.enrollment.finalScore ?? '-' }}</td>
+              <td>
+                <button nz-button nzType="link" (click)="openViewForEnrollment(row.enrollment)" [disabled]="!row.submissions.length">查看</button>
+                <button nz-button nzType="link" (click)="openScoreForEnrollment(row.enrollment)">评分</button>
               </td>
             </tr>
           </tbody>
         </nz-table>
       </div>
 
-      <!-- Tab 4: 智能体配置 -->
+      <!-- Tab 4: 指导（平铺的指导记录表格） -->
       <div *ngIf="activeTab === 4">
+        <div class="section-header">
+          <div>
+            <h3>学生指导记录</h3>
+            <span class="hint">查看每个学生的指导情况，点击"添加指导"选择学生填写意见</span>
+          </div>
+          <button nz-button nzType="primary" (click)="openAddGuidance()">
+            <span nz-icon nzType="plus"></span> 添加指导
+          </button>
+        </div>
+        <div *ngIf="guidanceTabLoading()" class="guidance-tab-loading"><nz-spin nzSimple></nz-spin></div>
+        <nz-empty *ngIf="!guidanceTabLoading() && !guidanceRows().length" nzNotFoundContent="暂无指导记录"></nz-empty>
+        <nz-table *ngIf="!guidanceTabLoading() && guidanceRows().length" [nzData]="guidanceRows()" [nzShowPagination]="false" nzSize="small">
+          <thead>
+            <tr>
+              <th>学生</th>
+              <th>状态</th>
+              <th>教师</th>
+              <th>指导时间</th>
+              <th>指导内容</th>
+              <th>可见</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of guidanceRows()">
+              <td>{{ row.studentName }}</td>
+              <td>{{ enrollmentLabel(row.status) }}</td>
+              <td>{{ row.record.teacherName || '教师' }}</td>
+              <td>{{ row.record.guidedAt | date:'yyyy-MM-dd HH:mm' }}</td>
+              <td class="guidance-cell-content">{{ row.record.content }}</td>
+              <td>{{ row.record.isVisibleToStudent ? '学生可见' : '仅教师可见' }}</td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </div>
+
+      <!-- Tab 5: 智能体配置 -->
+      <div *ngIf="activeTab === 5">
         <div class="section-header">
           <h3>实训智能体配置</h3>
           <span class="hint">学生可在聊天室中 @@ 智能体名称进行提问</span>
@@ -253,8 +295,8 @@
         </div>
       </div>
 
-      <!-- Tab 5: 仿真镜像 -->
-      <div *ngIf="activeTab === 5">
+      <!-- Tab 6: 仿真镜像 -->
+      <div *ngIf="activeTab === 6">
         <div class="section-header">
           <div>
             <h3>仿真镜像</h3>
@@ -502,33 +544,102 @@
 </nz-modal>
 
 <!-- Guidance modal -->
-<nz-modal [(nzVisible)]="guidanceVisible" nzTitle="新增指导记录" [nzFooter]="null" (nzOnCancel)="guidanceVisible = false">
+<nz-modal [(nzVisible)]="guidanceModalVisible" nzTitle="添加指导" [nzFooter]="null" (nzOnCancel)="guidanceModalVisible = false" [nzWidth]="520">
   <div *nzModalContent>
-    <textarea nz-input [(ngModel)]="guidanceForm.content" rows="5" placeholder="填写指导意见"></textarea>
-    <label class="switch-row" style="margin-top:12px;">
-      学生可见 <nz-switch [(ngModel)]="guidanceForm.isVisibleToStudent"></nz-switch>
-    </label>
+    <div class="form-grid guidance-form-grid">
+      <label>学生</label>
+      <nz-select [(ngModel)]="guidanceForm.enrollmentId" nzPlaceHolder="请选择学生" style="width: 100%;">
+        <nz-option *ngFor="let entry of studentGuidance()" [nzValue]="entry.enrollment.id" [nzLabel]="entry.enrollment.studentName || '学生'"></nz-option>
+      </nz-select>
+      <label>指导意见</label>
+      <textarea nz-input [(ngModel)]="guidanceForm.content" rows="5" placeholder="填写指导意见"></textarea>
+      <label>学生可见</label>
+      <nz-switch [(ngModel)]="guidanceForm.isVisibleToStudent"></nz-switch>
+    </div>
     <div class="actions-bar">
-      <button nz-button (click)="guidanceVisible = false">取消</button>
-      <button nz-button nzType="primary" (click)="saveGuidance()">保存</button>
+      <button nz-button (click)="guidanceModalVisible = false">取消</button>
+      <button nz-button nzType="primary" [nzLoading]="guidanceSaving" (click)="saveGuidance()">保存</button>
     </div>
   </div>
 </nz-modal>
 
 <!-- Score modal -->
-<nz-modal [(nzVisible)]="scoreVisible" nzTitle="实训评分" [nzFooter]="null" (nzOnCancel)="scoreVisible = false">
+<nz-modal [(nzVisible)]="scoreVisible" [nzTitle]="scoreTitle" [nzFooter]="null" (nzOnCancel)="scoreVisible = false" [nzWidth]="520">
   <div *nzModalContent>
     <div class="nested-grid">
-      <input nz-input type="number" [(ngModel)]="scoreForm.score" placeholder="得分" />
-      <input nz-input [(ngModel)]="scoreForm.gradeLevel" placeholder="等级，如 A / B / 优秀" />
-      <textarea nz-input [(ngModel)]="scoreForm.comment" rows="4" placeholder="评分意见"></textarea>
-      <textarea nz-input [(ngModel)]="scoreForm.rubricJson" rows="3" placeholder="评分规则 JSON，可选"></textarea>
+      <label>分数（最高 {{ scoreMax }} 分）</label>
+      <nz-input-number [(ngModel)]="scoreForm.score" [nzMin]="0" [nzMax]="scoreMax" [nzStep]="1" style="width:100%;"></nz-input-number>
+      <label>评分建议</label>
+      <textarea nz-input [(ngModel)]="scoreForm.comment" rows="4" placeholder="填写评分建议"></textarea>
     </div>
     <div class="actions-bar">
       <button nz-button (click)="scoreVisible = false">取消</button>
       <button nz-button nzType="primary" (click)="saveScore()">保存评分</button>
     </div>
   </div>
+</nz-modal>
+
+<!-- View submission modal -->
+<nz-modal [(nzVisible)]="viewVisible" nzTitle="提交详情" [nzFooter]="null" (nzOnCancel)="viewVisible = false" [nzWidth]="520">
+  <ng-container *nzModalContent>
+    <div class="view-submission" *ngIf="viewTarget as s">
+      <div class="view-submission__meta">
+        <span><strong>学生：</strong>{{ s.studentName }}</span>
+        <span><strong>任务：</strong>{{ s.taskTitle }}</span>
+        <span><strong>版本：</strong>V{{ s.versionNo }}</span>
+        <span><strong>提交时间：</strong>{{ s.submittedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+      </div>
+      <div class="view-submission__block">
+        <label class="view-submission__label">提交内容</label>
+        <div class="view-submission__content">{{ s.content || '（无）' }}</div>
+      </div>
+      <div class="view-submission__block" *ngIf="s.linkUrl">
+        <label class="view-submission__label">参考链接</label>
+        <a [href]="s.linkUrl" target="_blank" rel="noopener noreferrer">
+          <span nz-icon nzType="link" nzTheme="outline"></span> {{ s.linkUrl }}
+        </a>
+      </div>
+      <div class="view-submission__block" *ngIf="viewAttachments.length">
+        <label class="view-submission__label">附件（{{ viewAttachments.length }}）</label>
+        <ul class="view-submission__files">
+          <li *ngFor="let url of viewAttachments; let i = index">
+            <div class="view-submission__file">
+              <span class="view-submission__file-label">附件 {{ i + 1 }}</span>
+              <span class="view-submission__file-actions">
+                <a nz-button nzType="link" nzSize="small" (click)="openPreview(url)">
+                  <span nz-icon nzType="eye" nzTheme="outline"></span> 预览
+                </a>
+                <a nz-button nzType="link" nzSize="small" [href]="url" target="_blank" rel="noopener noreferrer">
+                  <span nz-icon nzType="download" nzTheme="outline"></span> 下载
+                </a>
+              </span>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div class="view-submission__block" *ngIf="s.teacherFeedback">
+        <label class="view-submission__label">教师反馈</label>
+        <div class="view-submission__content">{{ s.teacherFeedback }}</div>
+      </div>
+    </div>
+  </ng-container>
+</nz-modal>
+
+<!-- Attachment preview modal -->
+<nz-modal [(nzVisible)]="previewVisible" nzTitle="附件预览" [nzFooter]="null" (nzOnCancel)="previewVisible = false" [nzWidth]="800">
+  <ng-container *nzModalContent>
+    <div class="attach-preview">
+      <img *ngIf="previewType === 'image'" [src]="previewUrl" alt="附件预览" />
+      <iframe *ngIf="previewType === 'pdf'" [src]="previewUrl | safeResourceUrl" width="100%" height="600" style="border:0;"></iframe>
+      <div *ngIf="previewType === 'other'" class="attach-preview__unsupported">
+        <span nz-icon nzType="file-unknown" nzTheme="outline"></span>
+        <p>该类型暂不支持在线预览，请下载后查看</p>
+        <a nz-button nzType="primary" [href]="previewUrl" target="_blank" rel="noopener noreferrer">
+          <span nz-icon nzType="download" nzTheme="outline"></span> 下载附件
+        </a>
+      </div>
+    </div>
+  </ng-container>
 </nz-modal>
 
 <!-- 仿真镜像弹窗 -->

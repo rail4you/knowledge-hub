@@ -68,6 +68,7 @@
   <nz-modal
     [nzVisible]="guidanceVisible()"
     (nzVisibleChange)="guidanceVisible.set($event)"
+    (nzOnCancel)="guidanceVisible.set(false)"
     [nzTitle]="guidanceTitle"
     [nzFooter]="null"
     nzWidth="640"
@@ -101,6 +102,7 @@
   <nz-modal
     [nzVisible]="timelineVisible()"
     (nzVisibleChange)="timelineVisible.set($event)"
+    (nzOnCancel)="timelineVisible.set(false)"
     [nzTitle]="timelineTitle"
     [nzFooter]="null"
     nzWidth="760"

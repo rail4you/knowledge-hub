@@ -244,6 +244,33 @@
         <div style="display:flex;flex-direction:column;gap:14px;">
           <p class="modal-desc">提交内容将发送给教师进行批阅</p>
           <textarea nz-input rows="5" [ngModel]="submissionContent()" (ngModelChange)="submissionContent.set($event)" placeholder="描述你的完成内容或答案..."></textarea>
+          <div class="submit-attach">
+            <label class="submit-attach__label">上传文档（可选）</label>
+            <nz-upload
+              [nzMultiple]="true"
+              [nzBeforeUpload]="beforeAttachmentUpload"
+              [nzDisabled]="attachmentUploading()"
+              nzAccept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.7z,.txt,.md,.jpg,.jpeg,.png"
+            >
+              <button nz-button [nzLoading]="attachmentUploading()">
+                <span nz-icon nzType="upload"></span> 选择文件
+              </button>
+            </nz-upload>
+            @if (attachmentFiles().length) {
+              <ul class="submit-attach__list">
+                @for (f of attachmentFiles(); track f.url; let i = $index) {
+                  <li>
+                    <a [href]="f.url" target="_blank" rel="noopener noreferrer">
+                      <span nz-icon nzType="file-text" nzTheme="outline"></span> {{ f.name }}
+                    </a>
+                    <button nz-button nzType="text" nzDanger (click)="removeAttachment(i)" aria-label="移除附件">
+                      <span nz-icon nzType="close"></span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
           <input nz-input [ngModel]="submissionUrl()" (ngModelChange)="submissionUrl.set($event)" placeholder="参考链接（可选）" />
           <div style="display:flex; justify-content:flex-end; gap:8px;">
             <button nz-button (click)="submitModalVisible.set(false)">取消</button>

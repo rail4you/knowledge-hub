@@ -545,3 +545,228 @@
     margin-top: 10px;
   }
 }
+
+/* 提交详情弹窗 */
+.view-submission {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #f7f9fc;
+    font-size: 13px;
+    color: #555;
+    strong { color: #333; }
+  }
+
+  &__block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+  }
+
+  &__content {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #333;
+    white-space: pre-wrap;
+    max-height: 240px;
+    overflow: auto;
+  }
+
+  &__files {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    li {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+    }
+  }
+
+  &__file {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    &-label {
+      flex-shrink: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    &-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+}
+
+/* 附件预览弹窗 */
+.attach-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+
+  img {
+    max-width: 100%;
+    max-height: 65vh;
+    display: block;
+    margin: 0 auto;
+  }
+
+  &__unsupported {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 0;
+    color: #9ca3af;
+
+    span[nz-icon] { font-size: 48px; }
+    p { margin: 0; font-size: 14px; color: #6b7280; }
+  }
+}
+
+/* 指导 Tab：每个学生的指导记录 */
+.guidance-tab-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.guidance-student-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guidance-student {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f3f5;
+
+    .guidance-student__name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    button {
+      margin-left: auto;
+    }
+  }
+
+  &__records {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+}
+
+.guidance-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #eef1f4;
+  background: #f8fafc;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+
+    strong { font-size: 13px; color: #333; }
+    span { font-size: 12px; color: #9ca3af; margin-left: auto; }
+  }
+
+  &__task {
+    font-size: 12px;
+    color: #1e6ce8;
+    margin-bottom: 4px;
+  }
+
+  &__content {
+    font-size: 13px;
+    color: #4b5563;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  &--empty {
+    color: #9ca3af;
+    text-align: center;
+    padding: 18px 0;
+    background: #fafbfc;
+    border-style: dashed;
+  }
+}
+
+/* 指导表格展开行 */
+.guidance-expand-cell {
+  padding: 12px 16px;
+  background: #fafbfc;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 添加指导弹窗：学生下拉 + 表单 */
+.guidance-form-grid {
+  align-items: start;
+}
+
+/* 指导记录详情弹窗 */
+.guidance-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 55vh;
+  overflow: auto;
+}
+
+/* 指导内容单元格：保留换行，避免表格被撑破 */
+.guidance-cell-content {
+  max-width: 420px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #4b5563;
+}

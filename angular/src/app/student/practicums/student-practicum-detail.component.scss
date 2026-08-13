@@ -80,6 +80,17 @@
 .empty-small { text-align: center; padding: 40px 0; color: ds.$student-text-light; font-size: 14px; }
 .modal-desc { margin: 0 0 4px; color: ds.$student-text-muted; font-size: 14px; }
 
+/* =================== Submit attachment =================== */
+.submit-attach {
+  display: flex; flex-direction: column; gap: 8px;
+  &__label { color: ds.$student-text-muted; font-size: 13px; font-weight: 500; }
+  &__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px;
+    li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border-radius: ds.$student-radius; border: 1px solid ds.$student-border-soft; background: ds.$student-surface-soft;
+      a { display: inline-flex; align-items: center; gap: 6px; color: ds.$student-primary; font-size: 13px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; span[nz-icon] { flex-shrink: 0; } }
+    }
+  }
+}
+
 /* =================== Simulation Cards (wasm-center 风格卡片) =================== */
 .sim-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 

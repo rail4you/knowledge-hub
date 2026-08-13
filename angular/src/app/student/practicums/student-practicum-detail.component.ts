@@ -10,6 +10,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { forkJoin } from 'rxjs';
 import { PracticumService } from '../../proxy/practicums/practicum.service';
@@ -17,13 +18,14 @@ import { PracticumSimulationService } from '../../proxy/practicums/simulations/p
 import type { PracticumProjectDetailDto, PracticumMaterialDto, PracticumGuidanceRecordDto, PracticumEnrollmentDto } from '../../proxy/practicums/dtos/models';
 import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
 import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
+import { OssUploadService } from '../../shared/oss-upload.service';
 
 @Component({
   selector: 'app-student-practicum-detail',
   standalone: true,
   imports: [
     CommonModule, DatePipe, DecimalPipe, FormsModule, RouterModule,
-    NzButtonModule, NzIconModule, NzSpinModule, NzTabsModule, NzInputModule, NzModalModule, NzProgressModule, NzEmptyModule,
+    NzButtonModule, NzIconModule, NzSpinModule, NzTabsModule, NzInputModule, NzModalModule, NzProgressModule, NzEmptyModule, NzUploadModule,
     SafeResourceUrlPipe,
   ],
   templateUrl: './student-practicum-detail.component.html',
@@ -35,6 +37,7 @@ export class StudentPracticumDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly practicumService = inject(PracticumService);
   private readonly simulationService = inject(PracticumSimulationService);
+  private readonly ossUploadService = inject(OssUploadService);
   private readonly message = inject(NzMessageService);
 
   readonly detail = signal<PracticumProjectDetailDto | null>(null);
@@ -46,6 +49,8 @@ export class StudentPracticumDetailComponent implements OnInit {
   readonly selectedTaskId = signal<string | null>(null);
   readonly submissionContent = signal('');
   readonly submissionUrl = signal('');
+  readonly attachmentUploading = signal(false);
+  readonly attachmentFiles = signal<{ name: string; url: string }[]>([]);
 
   readonly enrollment = signal<PracticumEnrollmentDto | null>(null);
   readonly guidanceItems = signal<PracticumGuidanceRecordDto[]>([]);
@@ -126,7 +131,35 @@ export class StudentPracticumDetailComponent implements OnInit {
     this.selectedTaskId.set(taskId || null);
     this.submissionContent.set('');
     this.submissionUrl.set('');
+    this.attachmentFiles.set([]);
+    this.attachmentUploading.set(false);
     this.submitModalVisible.set(true);
+  }
+
+  /** 附件上传前的校验 + 触发 OSS 上传，返回 false 阻止 nz-upload 默认行为。 */
+  beforeAttachmentUpload = (file: NzUploadFile): boolean => {
+    const rawFile = file as any as File;
+    if (rawFile.size > 50 * 1024 * 1024) {
+      this.message.error('附件不能超过 50MB');
+      return false;
+    }
+    this.attachmentUploading.set(true);
+    this.ossUploadService.uploadFile(rawFile).subscribe({
+      next: res => {
+        this.attachmentFiles.update(list => [...list, { name: res.originalFileName, url: res.url }]);
+        this.attachmentUploading.set(false);
+        this.message.success(`附件上传成功：${res.originalFileName}`);
+      },
+      error: () => {
+        this.attachmentUploading.set(false);
+        this.message.error('附件上传失败');
+      },
+    });
+    return false;
+  };
+
+  removeAttachment(index: number): void {
+    this.attachmentFiles.update(list => list.filter((_, i) => i !== index));
   }
 
   submitWork(): void {
@@ -138,9 +171,11 @@ export class StudentPracticumDetailComponent implements OnInit {
       return;
     }
     this.submitting.set(true);
+    const attachmentUrls = this.attachmentFiles().map(f => f.url).join('\n');
     this.practicumService.createSubmission({
       projectId, taskId,
       content,
+      attachmentUrls: attachmentUrls || undefined,
       linkUrl: this.submissionUrl().trim() || undefined,
     }).subscribe({
       next: () => {
@@ -153,6 +188,16 @@ export class StudentPracticumDetailComponent implements OnInit {
       },
       error: () => { this.submitting.set(false); this.message.error('提交失败'); },
     });
+  }
+
+  fileNameFromUrl(url: string): string {
+    try {
+      const u = new URL(url);
+      const last = u.pathname.split('/').pop() || '附件';
+      return decodeURIComponent(last);
+    } catch {
+      return '附件';
+    }
   }
 
   downloadMaterial(material: PracticumMaterialDto): void {

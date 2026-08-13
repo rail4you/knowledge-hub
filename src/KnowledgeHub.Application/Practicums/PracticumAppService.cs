@@ -421,12 +421,23 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
         var teacherId = _currentUser.Id ?? throw new UserFriendlyException("请先登录。");
         var enrollment = await _enrollmentRepository.GetAsync(enrollmentId);
         var project = await _projectRepository.GetAsync(enrollment.ProjectId);
-        var score = Math.Clamp(input.Score, 0, project.MaxScore);
 
+        // 实际评分上限：提交关联了任务时不超过该任务的分值(ScoreWeight)，否则不超过项目满分。
+        var maxScore = project.MaxScore;
         PracticumSubmission? submission = null;
         if (input.SubmissionId.HasValue)
         {
             submission = await _submissionRepository.GetAsync(input.SubmissionId.Value);
+            var task = await _taskRepository.FirstOrDefaultAsync(x => x.Id == submission.TaskId);
+            if (task != null && task.ScoreWeight > 0)
+            {
+                maxScore = task.ScoreWeight;
+            }
+        }
+        var score = Math.Clamp(input.Score, 0, maxScore);
+
+        if (submission != null)
+        {
             submission.Status = PracticumSubmissionStatus.Reviewed;
             submission.TeacherFeedback = input.Comment?.Trim();
             submission.ReviewedAt = DateTime.UtcNow;
