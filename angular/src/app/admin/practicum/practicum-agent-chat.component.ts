@@ -7,6 +7,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { PracticumService, PracticumProjectDto } from '../../practicum/practicum.service';
 import { PracticumChatService, PracticumAgentConfigDto } from '../../practicum/practicum-chat.service';
 import { PracticumChatComponent } from '../../practicum/practicum-chat.component';
@@ -16,7 +17,7 @@ import { PracticumChatComponent } from '../../practicum/practicum-chat.component
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    NzButtonModule, NzCardModule, NzInputModule, NzSelectModule, NzIconModule,
+    NzButtonModule, NzCardModule, NzInputModule, NzSelectModule, NzIconModule, NzTabsModule,
     PracticumChatComponent,
   ],
   templateUrl: './practicum-agent-chat.component.html',
@@ -34,6 +35,7 @@ export class PracticumAgentChatComponent implements OnInit {
   selectedProjectTitle = '';
   agentConfigForm: PracticumAgentConfigDto = {};
   agentSaving = false;
+  activeTabIndex = 0;
 
   ngOnInit(): void {
     this.loadProjects();

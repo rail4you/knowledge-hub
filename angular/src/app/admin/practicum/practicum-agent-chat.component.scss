@@ -38,6 +38,16 @@
   align-items: start;
 }
 
+.config-tab {
+  padding: 8px 0 4px;
+}
+
+.chat-tab {
+  ::ng-deep .chat-page.chat-page--embedded {
+    height: 560px;
+  }
+}
+
 .chat-card {
   ::ng-deep .ant-card-body {
     padding: 0;

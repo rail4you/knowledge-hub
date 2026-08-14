@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, OnDestroy, inject, signal, computed, Input,
+  Component, OnInit, OnDestroy, OnChanges, SimpleChanges, inject, signal, computed, Input,
   ViewChild, ElementRef, AfterViewChecked, ChangeDetectionStrategy, HostListener
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -49,7 +49,7 @@ export interface ChatContact {
   styleUrls: ['./practicum-chat.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewChecked {
+export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, AfterViewChecked {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly chatService = inject(PracticumChatService);
@@ -83,6 +83,7 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
 
   private destroy$ = new Subject<void>();
   private sseSubscription: Subscription | null = null;
+  private sseConnectSubscription: Subscription | null = null;
   private shouldScrollToBottom = true;
   currentUserId = '';
   private oldestMessageId: string | null = null;
@@ -124,6 +125,43 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
     this.connectSse();
   }
 
+  /** 内嵌页面切换项目时，重新加载当前项目的全部状态。 */
+  ngOnChanges(changes: SimpleChanges): void {
+    const change = changes['projectId'];
+    if (!change || change.firstChange) return;
+
+    this.chatService.disconnect(change.previousValue);
+    if (this.sseConnectSubscription) {
+      this.sseConnectSubscription.unsubscribe();
+      this.sseConnectSubscription = null;
+    }
+    this.projectId = this.projectId || '';
+    if (this.projectId) {
+      this.reloadForProject();
+    }
+  }
+
+  private reloadForProject(): void {
+    this.messages.set([]);
+    this.inputContent.set('');
+    this.projectDetail = null;
+    this.agentConfig = {};
+    this.selectedContactId.set('all');
+    this.isProjectLocked.set(false);
+    this.isAgentReplying.set(false);
+    this.hasMoreHistory.set(true);
+    this.loadingHistory.set(false);
+    this.oldestMessageId = null;
+    this.shouldScrollToBottom = true;
+    if (this.agentReplyTimeout) {
+      clearTimeout(this.agentReplyTimeout);
+      this.agentReplyTimeout = null;
+    }
+    this.loadProject();
+    this.loadAgentConfig();
+    this.connectSse();
+  }
+
   ngAfterViewChecked(): void {
     if (this.shouldScrollToBottom) {
       this.scrollToBottom();
@@ -133,6 +171,10 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.sseConnectSubscription) {
+      this.sseConnectSubscription.unsubscribe();
+      this.sseConnectSubscription = null;
+    }
     this.chatService.disconnect(this.projectId);
     if (this.agentReplyTimeout) clearTimeout(this.agentReplyTimeout);
   }
@@ -211,8 +253,16 @@ export class PracticumChatComponent implements OnInit, OnDestroy, AfterViewCheck
   // ─── SSE Connection ──────────────────────────────
 
   private connectSse(): void {
+    if (this.sseConnectSubscription) {
+      this.sseConnectSubscription.unsubscribe();
+      this.sseConnectSubscription = null;
+    }
+    if (this.sseSubscription) {
+      this.sseSubscription.unsubscribe();
+      this.sseSubscription = null;
+    }
     this.isConnecting.set(true);
-    this.chatService.connect(this.projectId).subscribe({
+    this.sseConnectSubscription = this.chatService.connect(this.projectId).subscribe({
       next: () => {
         this.isConnecting.set(false);
         this.sseSubscription = this.chatService.messages$
