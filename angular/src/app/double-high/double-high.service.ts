@@ -267,7 +267,7 @@ export class DoubleHighService {
   deleteEvidence = (id: string) =>
     this.restService.request<any, void>({
       method: 'DELETE',
-      url: `/api/app/double-high/evidence/${id}`,
+      url: `/api/app/double-high/${id}/evidence`,
     }, { apiName: this.apiName });
 
   getReportList = (input: GetDoubleHighReportsInput) =>

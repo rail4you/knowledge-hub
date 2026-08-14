@@ -318,10 +318,9 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
     public async Task<DoubleHighIndicatorValueSnapshotDto> SaveManualValueAsync(SaveDoubleHighIndicatorValueDto input)
     {
         var indicator = await _indicatorRepository.GetAsync(input.IndicatorId);
-        if (indicator.DataSourceType != DoubleHighDataSourceType.Manual)
-        {
-            throw new UserFriendlyException("当前指标为自动采集项，不能手工填报。");
-        }
+
+        // 自动采集指标也允许手工覆盖最新值：用户在指标编辑里填写的"最新值"应即时生效，
+        // 直到下一次 CollectProjectAsync 重新自动采集。故不再拒绝非手工来源指标。
 
         var entity = new DoubleHighIndicatorValue(GuidGenerator.Create(), indicator.ProjectId, indicator.Id, input.Value)
         {

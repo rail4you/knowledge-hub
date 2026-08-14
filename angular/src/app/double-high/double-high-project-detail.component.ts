@@ -180,10 +180,9 @@ export class DoubleHighProjectDetailComponent implements OnInit {
           this.load(project.id);
         };
 
-        // 编辑时若填写了最新值，则一并手工填报（仅手工来源指标允许）
+        // 编辑时若填写了最新值，则一并手工填报（自动采集指标也允许手工覆盖，作为最新值）
         if (
           this.editingIndicatorId &&
-          this.indicatorForm.dataSourceType === DoubleHighDataSourceType.Manual &&
           this.latestValueDraft !== null &&
           this.latestValueDraft !== undefined
         ) {
