@@ -1,32 +1,27 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, CanMatchFn, Router } from '@angular/router';
 import { ConfigStateService } from '@abp/ng.core';
-import { hasAnyRole, hasRole } from './current-user.utils';
+import { hasAnyRole } from './current-user.utils';
 
 /**
  * 仅允许"非学生"角色（Teacher / SchoolAdmin / LeagueAdmin / EnterpriseUser / admin）通过。
  *
  * 设计：
- * - 兼容多角色用户：如果用户同时具备 Student + Teacher 角色，按 Teacher 处理（放行）；
- * - 命中学生 → 重定向到学生门户 `/student`，避免回到首页又被其他路由踢回来；
+ * - 安全（fail-closed）：只有明确具备某个非学生管理角色才放行进入后台；
+ * - 没有任何管理角色（包括学生、或角色声明缺失/未分配的无角色账号）一律重定向到学生门户 `/student`，
+ *   避免无角色/学生账号被错误地当成管理员进入后台；
  * - 未登录的情况由前置的 `authGuard` 处理，本守卫只关心角色。
  */
-const isStudentOnly = (configState: ConfigStateService): boolean => {
-  if (!hasRole(configState, 'Student')) {
-    return false;
-  }
-  // 多角色：只要还兼任其他业务角色，就放行
-  return !hasAnyRole(configState, ['Teacher', 'SchoolAdmin', 'LeagueAdmin', 'EnterpriseUser', 'admin']);
-};
+const ADMIN_ROLES = ['Teacher', 'SchoolAdmin', 'LeagueAdmin', 'EnterpriseUser', 'admin'];
 
 export const nonStudentGuard: CanActivateFn = () => {
   const configState = inject(ConfigStateService);
   const router = inject(Router);
 
-  if (isStudentOnly(configState)) {
-    return router.createUrlTree(['/student']);
+  if (hasAnyRole(configState, ADMIN_ROLES)) {
+    return true;
   }
-  return true;
+  return router.createUrlTree(['/student']);
 };
 
 /**
@@ -35,5 +30,5 @@ export const nonStudentGuard: CanActivateFn = () => {
  */
 export const nonStudentMatchGuard: CanMatchFn = () => {
   const configState = inject(ConfigStateService);
-  return !isStudentOnly(configState);
+  return hasAnyRole(configState, ADMIN_ROLES);
 };

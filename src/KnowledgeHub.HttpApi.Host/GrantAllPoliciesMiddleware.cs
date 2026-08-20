@@ -54,7 +54,11 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                 // 使其无法在页面/菜单上看到后台管理功能。
                 // 纯联盟审核员（只有 LeagueAdmin 角色）：同样不注入额外权限，只依赖数据库授权，
                 // 使其在界面只看到资源审核，避免越权看到院校审核（SchoolAudit）和其它后台管理。
-                if (!IsStudentOnlyUser(context.User) && !IsLeagueOnlyUser(context.User))
+                // 安全（fail-closed）：只有明确具备某个"非学生管理角色"的用户才注入全量后台权限。
+                // 没有任何角色（含学生但角色声明缺失/未分配）的用户一律不注入，只保留数据库真实授权，
+                // 避免无角色账号被错误地当成全量管理员。
+                var hasAdminRole = NonStudentRoles.Any(context.User.IsInRole);
+                if (hasAdminRole && !IsLeagueOnlyUser(context.User))
                 {
                     // 注入完整的 KnowledgeHub 权限列表
                     // 注意：SchoolAudit/LeagueAudit 两级审核权限不在此注入，全部依赖数据库授权，
@@ -118,16 +122,6 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
         newBody.Position = 0;
         await newBody.CopyToAsync(originalBody);
         context.Response.Body = originalBody;
-    }
-
-    private static bool IsStudentOnlyUser(ClaimsPrincipal user)
-    {
-        if (!user.IsInRole("Student"))
-        {
-            return false;
-        }
-
-        return !NonStudentRoles.Any(user.IsInRole);
     }
 
     private static bool IsLeagueOnlyUser(ClaimsPrincipal user)
