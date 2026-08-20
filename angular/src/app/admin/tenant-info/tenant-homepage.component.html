@@ -189,11 +189,16 @@
             } @else {
               <div class="course-grid">
                 @for (c of filteredCourses(); track c.id; let i = $index) {
-                <article class="course-card" (click)="openCoursePreview(c)" tabindex="0"
-                         (keydown.enter)="openCoursePreview(c)" role="button"
-                         [attr.aria-label]="'预览课程：' + (c.title || '')">
+                <article class="course-card" (click)="handleCourseClick(c)" tabindex="0"
+                         (keydown.enter)="handleCourseClick(c)" role="button"
+                         [attr.aria-label]="(isEnrolled(c.id) ? '进入课程：' : '预览课程：') + (c.title || '')">
                   <div class="course-cover"
                        [style.background]="'linear-gradient(135deg, ' + courseColors[i % courseColors.length] + ' 0%, ' + courseColors[(i + 1) % courseColors.length] + ' 100%)'">
+                    @if (isEnrolled(c.id)) {
+                      <span class="course-enrolled-badge">
+                        <span nz-icon nzType="check-circle" nzTheme="fill"></span>已选课
+                      </span>
+                    }
                     @if (c.coverImageUrl) {
                       <img [src]="c.coverImageUrl" class="course-img" [alt]="c.title" />
                     } @else {
@@ -201,8 +206,13 @@
                     }
                     <div class="course-cover__hover">
                       <span class="course-cover__preview-btn">
-                        <span nz-icon nzType="eye" nzTheme="outline"></span>
-                        <span>预览详情</span>
+                        @if (isEnrolled(c.id)) {
+                          <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+                          <span>进入课程</span>
+                        } @else {
+                          <span nz-icon nzType="eye" nzTheme="outline"></span>
+                          <span>预览详情</span>
+                        }
                       </span>
                     </div>
                   </div>
@@ -217,8 +227,12 @@
                         <span nz-icon nzType="user" nzTheme="outline"></span>
                         <span>{{ c.studentCount || 0 }} 学员</span>
                       </span>
-                      <span class="course-cta">
-                        <span>查看</span>
+                      <span class="course-cta" [class.enrolled]="isEnrolled(c.id)">
+                        @if (isEnrolled(c.id)) {
+                          <span>查看</span>
+                        } @else {
+                          <span>预览课程</span>
+                        }
                         <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
                       </span>
                     </div>

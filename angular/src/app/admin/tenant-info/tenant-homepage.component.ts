@@ -2,12 +2,14 @@ import {
   ChangeDetectionStrategy, Component, OnInit, inject, signal, computed, AfterViewInit, OnDestroy,
 } from '@angular/core';
 import { CommonModule, ViewportScroller } from '@angular/common';
-import { RouterModule, ActivatedRoute } from '@angular/router';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzCarouselModule } from 'ng-zorro-antd/carousel';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { AuthService } from '@abp/ng.core';
+import { LearningService } from '../../proxy/learning/learning.service';
 import { TenantInfoService } from '../../proxy/tenant-infos/tenant-info.service';
 import { PortalService } from '../../proxy/portal/portal.service';
 import { CourseService } from '../../proxy/courses/course.service';
@@ -63,12 +65,18 @@ interface NavCard {
 })
 export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
   private readonly tenantInfoService = inject(TenantInfoService);
   private readonly portalService = inject(PortalService);
   private readonly courseService = inject(CourseService);
+  private readonly learningService = inject(LearningService);
   private readonly scroller = inject(ViewportScroller);
 
   readonly loading = signal(true);
+
+  /** 当前登录学生已选课程 id 集合（选过的课程显示徽章、点击直接跳转详情页） */
+  readonly enrolledCourseIds = signal<Set<string>>(new Set());
   readonly tenantInfo = signal<TenantInfoDto | null>(null);
   readonly knowledgeGraph = signal<TenantKnowledgeGraphDto | null>(null);
   readonly portalData = signal<PortalHomeDataDto | null>(null);
@@ -156,6 +164,7 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     } else {
       this.loading.set(false);
     }
+    this.loadEnrolledCourses();
   }
 
   ngAfterViewInit(): void {
@@ -211,6 +220,39 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   // ═══ Course preview drawer ═══
+
+  /** 已选课 → 直接跳转学生课程详情页；未选课 → 打开右侧预览抽屉 */
+  handleCourseClick(course: CourseBriefDto): void {
+    if (!course?.id) return;
+    if (this.isEnrolled(course.id)) {
+      this.previewOpen.set(false);
+      this.router.navigate(['/student/courses', course.id]);
+      return;
+    }
+    this.openCoursePreview(course);
+  }
+
+  /** 当前学生是否已选这门课 */
+  isEnrolled(courseId: string | undefined): boolean {
+    if (!courseId) return false;
+    return this.enrolledCourseIds().has(courseId);
+  }
+
+  /** 拉取当前登录学生的已选课程列表，用于徽章展示与点击跳转判断 */
+  private loadEnrolledCourses(): void {
+    if (!this.authService.isAuthenticated) return;
+    this.learningService.getMyCourses().subscribe({
+      next: (list) => {
+        const ids = (list || [])
+          .map(m => m.courseId)
+          .filter((id): id is string => !!id);
+        this.enrolledCourseIds.set(new Set(ids));
+      },
+      error: () => {
+        // 静默失败：未登录或获取失败时，所有课程按未选课处理
+      },
+    });
+  }
 
   openCoursePreview(course: CourseBriefDto): void {
     if (!course?.id) return;

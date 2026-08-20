@@ -557,6 +557,25 @@ $card-radius: 14px;
   font-size: 56px;
   filter: drop-shadow(0 2px 10px rgba(0,0,0,0.12));
 }
+.course-enrolled-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
+  backdrop-filter: blur(4px);
+  span[nz-icon] { font-size: 12px; }
+}
 .course-body {
   flex: 1;
   padding: 22px 22px 18px;
@@ -625,6 +644,7 @@ $card-radius: 14px;
   color: $c-muted;
   transition: color 0.3s;
   span[nz-icon] { font-size: 12px; transition: transform 0.3s; }
+  &.enrolled { color: #16a34a; }
 }
 
 // ── Graph — 紧凑统计条 ──
