@@ -357,6 +357,39 @@ public class EmploymentOutcomeStudentDto
     public string Name { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// 就业去向批量导入：xlsx 文件内容以 Base64 传输（避免 ABP byte[] 绑定问题）。
+/// </summary>
+public class ImportEmploymentOutcomesInput
+{
+    /// <summary>xlsx 文件内容的 Base64 编码</summary>
+    public string FileBase64 { get; set; } = string.Empty;
+
+    /// <summary>原始文件名（仅用于提示，可选）</summary>
+    public string? FileName { get; set; }
+}
+
+/// <summary>
+/// 就业去向批量导入结果。
+/// </summary>
+public class EmploymentOutcomeImportResultDto
+{
+    public int TotalCount { get; set; }
+    public int SuccessCount { get; set; }
+    public int FailCount { get; set; }
+    public List<EmploymentOutcomeImportFailItemDto> FailItems { get; set; } = new List<EmploymentOutcomeImportFailItemDto>();
+}
+
+/// <summary>
+/// 就业去向批量导入失败明细（按 Excel 行号）。
+/// </summary>
+public class EmploymentOutcomeImportFailItemDto
+{
+    public int RowNumber { get; set; }
+    public string? StudentName { get; set; }
+    public string Reason { get; set; } = string.Empty;
+}
+
 public class EmploymentStatisticsInput
 {
     public string? Major { get; set; }

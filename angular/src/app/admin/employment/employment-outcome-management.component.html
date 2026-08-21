@@ -1,9 +1,17 @@
 <nz-card nzTitle="就业去向管理" [nzExtra]="extraTpl">
   <ng-template #extraTpl>
     <div class="toolbar">
+      <button nz-button (click)="downloadTemplate()">
+        <span nz-icon nzType="download"></span>
+        下载模板
+      </button>
       <button nz-button nzType="primary" (click)="openCreate()">
         <span nz-icon nzType="plus"></span>
         新增去向
+      </button>
+      <button nz-button nzType="primary" nzGhost (click)="openXlsxImport()">
+        <span nz-icon nzType="upload"></span>
+        导入 Excel
       </button>
     </div>
   </ng-template>
@@ -245,5 +253,90 @@
         }
       </div>
     }
+  </ng-container>
+</nz-modal>
+
+<!-- =================== xlsx 批量导入弹窗 =================== -->
+<nz-modal
+  [(nzVisible)]="xlsxImportVisible"
+  nzTitle="导入就业去向（xlsx）"
+  nzWidth="640px"
+  [nzFooter]="null"
+  (nzOnCancel)="xlsxImportVisible = false"
+>
+  <ng-container *nzModalContent>
+    <div class="xlsx-import">
+      <div class="xlsx-import__hint">
+        <span nz-icon nzType="info-circle" nzTheme="fill"></span>
+        请先下载模板并按模板填写，再上传导入。
+        <a (click)="downloadTemplate()">点击下载模板</a>
+      </div>
+
+      <nz-upload
+        [nzBeforeUpload]="beforeXlsxImportUpload"
+        [nzFileList]="importFileList"
+        accept=".xlsx"
+        [nzShowUploadList]="{ showPreviewIcon: false, showRemoveIcon: true }"
+      >
+        <button nz-button>
+          <span nz-icon nzType="file-excel"></span>
+          选择 xlsx 文件
+        </button>
+      </nz-upload>
+
+      <div class="xlsx-import__actions">
+        <button nz-button (click)="xlsxImportVisible = false">取消</button>
+        <button
+          nz-button
+          nzType="primary"
+          [nzLoading]="importing"
+          [nzDisabled]="!importFileList.length"
+          (click)="importXlsx()"
+        >
+          <span nz-icon nzType="upload"></span>
+          开始导入
+        </button>
+      </div>
+
+      @if (importResult) {
+        <div class="xlsx-import__result">
+          <div
+            class="xlsx-import__summary"
+            [class.is-error]="(importResult.failCount ?? 0) > 0"
+          >
+            <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+            导入完成：共 {{ importResult.totalCount ?? 0 }} 条，成功
+            {{ importResult.successCount ?? 0 }} 条，失败 {{ importResult.failCount ?? 0 }} 条
+          </div>
+
+          @if ((importResult.failItems ?? []).length > 0) {
+            <nz-table
+              #failTable
+              [nzData]="importResult.failItems || []"
+              [nzFrontPagination]="false"
+              [nzShowPagination]="false"
+              nzSize="small"
+            >
+              <thead>
+                <tr>
+                  <th style="width: 80px">行号</th>
+                  <th style="width: 130px">学生</th>
+                  <th>失败原因</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of importResult.failItems || []; track $index) {
+                  <tr>
+                    <td>{{ item.rowNumber }}</td>
+                    <td>{{ item.studentName || '-' }}</td>
+                    <td class="xlsx-import__reason">{{ item.reason }}</td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          }
+        </div>
+      }
+    </div>
   </ng-container>
 </nz-modal>

@@ -13,10 +13,12 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import {
   CreateUpdateEmploymentOutcomeDto,
   EmploymentApplicationStatus,
   EmploymentOutcomeDto,
+  EmploymentOutcomeImportResultDto,
   EmploymentOutcomeStatus,
   EmploymentOutcomeStudentDto,
   EmploymentService,
@@ -41,6 +43,7 @@ import {
     NzSwitchModule,
     NzTableModule,
     NzTagModule,
+    NzUploadModule,
   ],
   templateUrl: './employment-outcome-management.component.html',
   styleUrls: ['./employment-outcome-management.component.scss'],
@@ -75,6 +78,12 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
   importVisible = false;
   importLoading = false;
   offeredApps = signal<JobApplicationDto[]>([]);
+
+  // xlsx 批量导入
+  xlsxImportVisible = false;
+  importing = false;
+  importFileList: NzUploadFile[] = [];
+  importResult: EmploymentOutcomeImportResultDto | null = null;
 
   ngOnInit(): void {
     this.loadStudents();
@@ -220,6 +229,87 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
     this.form.jobTitle = app.jobTitle || this.form.jobTitle;
     this.form.status = EmploymentOutcomeStatus.Employed;
     this.importVisible = false;
+  }
+
+  // ===== xlsx 批量导入 =====
+  openXlsxImport(): void {
+    this.xlsxImportVisible = true;
+    this.importFileList = [];
+    this.importResult = null;
+  }
+
+  beforeXlsxImportUpload = (file: NzUploadFile): boolean => {
+    const name = (file.name || '').toLowerCase();
+    if (!name.endsWith('.xlsx')) {
+      this.message.warning('仅支持 .xlsx 文件');
+      return false;
+    }
+    this.importFileList = [file];
+    return false;
+  };
+
+  downloadTemplate(): void {
+    this.employmentService.getOutcomeImportTemplate().subscribe({
+      next: blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `就业去向导入模板_${this.todayStr()}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: err => this.message.error(this.extractErrorMessage(err, '模板下载失败')),
+    });
+  }
+
+  importXlsx(): void {
+    const file = this.importFileList[0];
+    if (!file) {
+      this.message.warning('请先选择要导入的 xlsx 文件');
+      return;
+    }
+
+    this.importing = true;
+    this.importResult = null;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(',')[1] || '';
+      this.employmentService
+        .importOutcomes({ fileBase64: base64, fileName: file.name })
+        .subscribe({
+          next: result => {
+            this.importing = false;
+            this.importResult = result;
+            const ok = result.successCount ?? 0;
+            const fail = result.failCount ?? 0;
+            if (fail > 0) {
+              this.message.warning(`导入完成：成功 ${ok} 条，失败 ${fail} 条，详见下方明细`);
+            } else {
+              this.message.success(`导入完成：成功 ${ok} 条`);
+            }
+            this.reload();
+          },
+          error: err => {
+            this.importing = false;
+            this.importResult = null;
+            this.message.error(this.extractErrorMessage(err, '导入失败'));
+          },
+        });
+    };
+    reader.onerror = () => {
+      this.importing = false;
+      this.message.error('读取文件失败，请重试');
+    };
+    reader.readAsDataURL(file as any);
+  }
+
+  private todayStr(): string {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
   }
 
   // ===== 保存 =====

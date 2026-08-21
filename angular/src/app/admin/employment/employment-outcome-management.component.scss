@@ -171,3 +171,73 @@
     flex-shrink: 0;
   }
 }
+
+/* ===== xlsx 批量导入 ===== */
+.xlsx-import {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.xlsx-import__hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #f0f7ff;
+  border: 1px solid #cfe3ff;
+  border-radius: 8px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 13px;
+
+  .anticon {
+    color: #1677ff;
+  }
+
+  a {
+    color: #0e7490;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+
+.xlsx-import__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.xlsx-import__result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #e8e8e8;
+}
+
+.xlsx-import__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  color: #389e0d;
+  font-weight: 600;
+
+  .anticon {
+    font-size: 15px;
+  }
+
+  &.is-error {
+    background: #fff2f0;
+    border-color: #ffa39e;
+    color: #cf1322;
+  }
+}
+
+.xlsx-import__reason {
+  color: #cf1322;
+  font-size: 12px;
+}

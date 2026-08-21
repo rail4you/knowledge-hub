@@ -6,6 +6,16 @@ import type { FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/
 import type { EmploymentInterviewResult } from '../enums/employment-interview-result.enum';
 import type { EmploymentApplicationStatus } from '../enums/employment-application-status.enum';
 
+export interface CareerGuidanceStudentDto {
+  studentId?: string;
+  studentName?: string;
+  resumes?: StudentResumeDto[];
+}
+
+export interface CompleteInterviewDto {
+  completionMessage?: string;
+}
+
 export interface CreateEmploymentGuidanceRecordDto {
   studentId?: string;
   applicationId?: string | null;
@@ -22,6 +32,13 @@ export interface CreateJobApplicationDto {
 }
 
 export interface CreateMyAIGuidanceRecordDto {
+  title?: string;
+  content?: string;
+  careerGoal?: string | null;
+}
+
+export interface CreateStudentCareerGuidanceRecordDto {
+  studentId?: string;
   title?: string;
   content?: string;
   careerGoal?: string | null;
@@ -45,6 +62,7 @@ export interface CreateUpdateEmploymentOutcomeDto {
 
 export interface CreateUpdateInterviewScheduleDto {
   applicationId?: string;
+  interviewerId?: string | null;
   interviewerName?: string;
   interviewerPhone?: string | null;
   scheduledAt?: string;
@@ -136,6 +154,19 @@ export interface EmploymentOutcomeDto extends FullAuditedEntityDto<string> {
   isPrimary?: boolean;
 }
 
+export interface EmploymentOutcomeImportFailItemDto {
+  rowNumber?: number;
+  studentName?: string | null;
+  reason?: string;
+}
+
+export interface EmploymentOutcomeImportResultDto {
+  totalCount?: number;
+  successCount?: number;
+  failCount?: number;
+  failItems?: EmploymentOutcomeImportFailItemDto[];
+}
+
 export interface EmploymentOutcomeStudentDto {
   id?: string;
   name?: string;
@@ -145,6 +176,7 @@ export interface EmploymentStatisticsInput {
   major?: string | null;
   grade?: string | null;
   status?: EmploymentOutcomeStatus | null;
+  days?: number | null;
 }
 
 export interface EmploymentStatisticsRowDto {
@@ -183,6 +215,11 @@ export interface GetManageJobsInput extends PagedJobPostingRequestDto {
   status?: EmploymentJobStatus | null;
 }
 
+export interface ImportEmploymentOutcomesInput {
+  fileBase64?: string;
+  fileName?: string | null;
+}
+
 export interface InterviewScheduleDto extends FullAuditedEntityDto<string> {
   applicationId?: string;
   jobPostingId?: string;
@@ -190,6 +227,7 @@ export interface InterviewScheduleDto extends FullAuditedEntityDto<string> {
   studentId?: string;
   studentName?: string | null;
   employerUserId?: string | null;
+  interviewerId?: string | null;
   interviewerName?: string;
   interviewerPhone?: string | null;
   scheduledAt?: string;
@@ -200,6 +238,13 @@ export interface InterviewScheduleDto extends FullAuditedEntityDto<string> {
   summary?: string | null;
   resultComment?: string | null;
   resultRecordedAt?: string | null;
+  completionMessage?: string | null;
+  completedAt?: string | null;
+}
+
+export interface InterviewerCandidateDto {
+  id?: string;
+  name?: string;
 }
 
 export interface JobApplicationDto extends FullAuditedEntityDto<string> {
@@ -243,6 +288,7 @@ export interface JobPostingDto extends FullAuditedEntityDto<string> {
   viewCount?: number;
   applicationCount?: number;
   hasApplied?: boolean;
+  applicationStatus?: EmploymentApplicationStatus | null;
 }
 
 export interface PagedJobPostingRequestDto extends PagedAndSortedResultRequestDto {
@@ -260,6 +306,15 @@ export interface RecordInterviewResultDto {
 export interface ReviewJobPostingDto {
   status?: EmploymentJobStatus;
   reviewComment?: string | null;
+}
+
+export interface StudentApplicationStatDto {
+  studentId?: string;
+  studentName?: string;
+  jobTitle?: string;
+  companyName?: string;
+  status?: number;
+  appliedAt?: string;
 }
 
 export interface StudentResumeDto extends FullAuditedEntityDto<string> {

@@ -1,4 +1,4 @@
-import type { CreateEmploymentGuidanceRecordDto, CreateJobApplicationDto, CreateMyAIGuidanceRecordDto, CreateUpdateEmploymentOutcomeDto, CreateUpdateInterviewScheduleDto, CreateUpdateJobPostingDto, CreateUpdateStudentResumeDto, EmployerProfileDto, EmploymentGuidanceRecordDto, EmploymentOutcomeDto, EmploymentOutcomeStudentDto, EmploymentStatisticsInput, EmploymentStatisticsRowDto, GetEmploymentGuidanceRecordsInput, GetEmploymentOutcomeListInput, GetInterviewSchedulesInput, GetJobApplicationsInput, GetManageJobsInput, InterviewScheduleDto, JobApplicationDto, JobPostingDto, PagedJobPostingRequestDto, RecordInterviewResultDto, ReviewJobPostingDto, StudentResumeDto, UpdateEmployerProfileDto, UpdateJobApplicationStatusDto } from './dtos/models';
+import type { CareerGuidanceStudentDto, CompleteInterviewDto, CreateEmploymentGuidanceRecordDto, CreateJobApplicationDto, CreateMyAIGuidanceRecordDto, CreateStudentCareerGuidanceRecordDto, CreateUpdateEmploymentOutcomeDto, CreateUpdateInterviewScheduleDto, CreateUpdateJobPostingDto, CreateUpdateStudentResumeDto, EmployerProfileDto, EmploymentGuidanceRecordDto, EmploymentOutcomeDto, EmploymentOutcomeImportResultDto, EmploymentOutcomeStudentDto, EmploymentStatisticsInput, EmploymentStatisticsRowDto, GetEmploymentGuidanceRecordsInput, GetEmploymentOutcomeListInput, GetInterviewSchedulesInput, GetJobApplicationsInput, GetManageJobsInput, ImportEmploymentOutcomesInput, InterviewScheduleDto, InterviewerCandidateDto, JobApplicationDto, JobPostingDto, PagedJobPostingRequestDto, RecordInterviewResultDto, ReviewJobPostingDto, StudentApplicationStatDto, StudentResumeDto, UpdateEmployerProfileDto, UpdateJobApplicationStatusDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -9,6 +9,15 @@ import { Injectable, inject } from '@angular/core';
 export class EmploymentService {
   private restService = inject(RestService);
   apiName = 'KnowledgeHub';
+  
+
+  completeInterview = (id: string, input: CompleteInterviewDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, InterviewScheduleDto>({
+      method: 'POST',
+      url: `/api/app/employment/${id}/complete-interview`,
+      body: input,
+    },
+    { apiName: this.apiName,...config });
   
 
   createApplication = (input: CreateJobApplicationDto, config?: Partial<Rest.Config>) =>
@@ -56,6 +65,23 @@ export class EmploymentService {
     { apiName: this.apiName,...config });
   
 
+  createStudentCareerGuidanceRecord = (input: CreateStudentCareerGuidanceRecordDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, EmploymentGuidanceRecordDto>({
+      method: 'POST',
+      url: '/api/app/employment/student-career-guidance-record',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  deleteInterview = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/employment/${id}/interview`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   deleteJob = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'DELETE',
@@ -68,6 +94,14 @@ export class EmploymentService {
     this.restService.request<any, void>({
       method: 'DELETE',
       url: `/api/app/employment/${id}/my-guidance-record`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  deleteOutcome = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/employment/${id}/outcome`,
     },
     { apiName: this.apiName,...config });
   
@@ -90,6 +124,23 @@ export class EmploymentService {
     { apiName: this.apiName,...config });
   
 
+  getApplicationStats = (input: EmploymentStatisticsInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, StudentApplicationStatDto[]>({
+      method: 'GET',
+      url: '/api/app/employment/application-stats',
+      params: { major: input.major, grade: input.grade, status: input.status, days: input.days },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getCareerGuidanceStudents = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, CareerGuidanceStudentDto[]>({
+      method: 'GET',
+      url: '/api/app/employment/career-guidance-students',
+    },
+    { apiName: this.apiName,...config });
+  
+
   getGuidanceRecordList = (input: GetEmploymentGuidanceRecordsInput, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<EmploymentGuidanceRecordDto>>({
       method: 'GET',
@@ -104,6 +155,14 @@ export class EmploymentService {
       method: 'GET',
       url: '/api/app/employment/interview-list',
       params: { jobPostingId: input.jobPostingId, studentId: input.studentId, applicationId: input.applicationId, result: input.result, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getInterviewerCandidates = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, InterviewerCandidateDto[]>({
+      method: 'GET',
+      url: '/api/app/employment/interviewer-candidates',
     },
     { apiName: this.apiName,...config });
   
@@ -168,6 +227,15 @@ export class EmploymentService {
     { apiName: this.apiName,...config });
   
 
+  getOutcomeImportTemplate = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, Blob>({
+      method: 'GET',
+      responseType: 'blob',
+      url: '/api/app/employment/outcome-import-template',
+    },
+    { apiName: this.apiName,...config });
+  
+
   getOutcomeList = (input: GetEmploymentOutcomeListInput, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<EmploymentOutcomeDto>>({
       method: 'GET',
@@ -185,14 +253,6 @@ export class EmploymentService {
     { apiName: this.apiName,...config });
   
 
-  deleteOutcome = (id: string, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, void>({
-      method: 'DELETE',
-      url: `/api/app/employment/${id}/outcome`,
-    },
-    { apiName: this.apiName,...config });
-  
-
   getPublishedJobList = (input: PagedJobPostingRequestDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<JobPostingDto>>({
       method: 'GET',
@@ -206,7 +266,16 @@ export class EmploymentService {
     this.restService.request<any, EmploymentStatisticsRowDto[]>({
       method: 'GET',
       url: '/api/app/employment/statistics',
-      params: { major: input.major, grade: input.grade, status: input.status },
+      params: { major: input.major, grade: input.grade, status: input.status, days: input.days },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  importOutcomes = (input: ImportEmploymentOutcomesInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, EmploymentOutcomeImportResultDto>({
+      method: 'POST',
+      url: '/api/app/employment/import-outcomes',
+      body: input,
     },
     { apiName: this.apiName,...config });
   

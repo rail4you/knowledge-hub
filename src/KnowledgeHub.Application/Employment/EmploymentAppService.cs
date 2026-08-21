@@ -952,6 +952,433 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         return await MapOutcomeDtoAsync(entity);
     }
 
+    // ==================== 就业去向批量导入（xlsx） ====================
+
+    private static readonly string[] OutcomeImportTemplateHeaders =
+    {
+        "学生姓名", "去向单位", "岗位名称", "去向状态", "就业方式", "工作地点", "薪资范围", "入职时间", "是否主要", "备注"
+    };
+
+    private static readonly Dictionary<string, EmploymentOutcomeStatus> OutcomeStatusLabelMap = new()
+    {
+        { "就业意向", EmploymentOutcomeStatus.Intention },
+        { "已签约", EmploymentOutcomeStatus.Signed },
+        { "已就业", EmploymentOutcomeStatus.Employed },
+        { "升学", EmploymentOutcomeStatus.FurtherStudy },
+        { "创业", EmploymentOutcomeStatus.Entrepreneurship },
+        { "待就业", EmploymentOutcomeStatus.Unemployed }
+    };
+
+    [Authorize(KnowledgeHubPermissions.Employment.ManageOutcome)]
+    public async Task<EmploymentOutcomeImportResultDto> ImportOutcomesAsync(ImportEmploymentOutcomesInput input)
+    {
+        var result = new EmploymentOutcomeImportResultDto();
+
+        if (string.IsNullOrWhiteSpace(input.FileBase64))
+        {
+            throw new UserFriendlyException("请选择要导入的 Excel 文件。");
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(input.FileBase64);
+        }
+        catch
+        {
+            throw new UserFriendlyException("文件内容不是有效的 xlsx，请使用下载的模板填写后再导入。");
+        }
+
+        var studentMap = await BuildOutcomeImportStudentMapAsync();
+
+        // 与页面列表保持一致：跨租户处理去重的主要去向（页面 GetOutcomeListAsync 也禁用了租户过滤）
+        List<EmploymentOutcome> primaryOfStudent;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            primaryOfStudent = await _outcomeRepository.GetListAsync(x => x.IsPrimary);
+        }
+
+        var primaryByStudent = primaryOfStudent
+            .GroupBy(x => x.StudentId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var clearedStudents = new HashSet<Guid>();
+
+        using var stream = new MemoryStream(bytes);
+        using var workbook = new XLWorkbook(stream);
+
+        var worksheet = workbook.Worksheet(1);
+        if (worksheet == null)
+        {
+            throw new UserFriendlyException("Excel 文件中没有工作表。");
+        }
+
+        var headerRowNumber = ValidateOutcomeImportHeader(worksheet);
+        var rows = worksheet.RangeUsed()?.RowsUsed().Skip(headerRowNumber);
+        if (rows == null)
+        {
+            return result;
+        }
+
+        var rowNumber = headerRowNumber + 1;
+        foreach (var row in rows)
+        {
+            if (row.IsEmpty())
+            {
+                rowNumber++;
+                continue;
+            }
+
+            try
+            {
+                var studentName = row.Cell(1).GetString().Trim();
+                var employerName = row.Cell(2).GetString().Trim();
+                var jobTitle = row.Cell(3).GetString().Trim();
+                var statusText = row.Cell(4).GetString().Trim();
+
+                if (string.IsNullOrWhiteSpace(studentName))
+                {
+                    throw new UserFriendlyException("学生姓名不能为空");
+                }
+                if (string.IsNullOrWhiteSpace(employerName))
+                {
+                    throw new UserFriendlyException("去向单位不能为空");
+                }
+                if (string.IsNullOrWhiteSpace(jobTitle))
+                {
+                    throw new UserFriendlyException("岗位名称不能为空");
+                }
+
+                if (!studentMap.TryGetValue(NormalizeImportName(studentName), out var student))
+                {
+                    result.FailCount++;
+                    result.FailItems.Add(new EmploymentOutcomeImportFailItemDto
+                    {
+                        RowNumber = rowNumber,
+                        StudentName = studentName,
+                        Reason = $"未找到学生「{studentName}」"
+                    });
+                    rowNumber++;
+                    continue;
+                }
+
+                var status = ParseOutcomeImportStatus(statusText);
+                if (!status.HasValue)
+                {
+                    result.FailCount++;
+                    result.FailItems.Add(new EmploymentOutcomeImportFailItemDto
+                    {
+                        RowNumber = rowNumber,
+                        StudentName = studentName,
+                        Reason = $"去向状态「{statusText}」无效，应为：就业意向/已签约/已就业/升学/创业/待就业"
+                    });
+                    rowNumber++;
+                    continue;
+                }
+
+                var isPrimary = ParseIsPrimaryText(row.Cell(9).GetString().Trim());
+
+                var entity = new EmploymentOutcome(GuidGenerator.Create(), student.Id, employerName, jobTitle)
+                {
+                    TenantId = CurrentTenant.Id,
+                    Status = status.Value,
+                    EmploymentType = GetNullableCell(row.Cell(5)),
+                    Region = GetNullableCell(row.Cell(6)),
+                    SalaryRange = GetNullableCell(row.Cell(7)),
+                    StartDate = ParseImportDate(row.Cell(8)),
+                    ConfirmedAt = Clock.Now,
+                    Remark = GetNullableCell(row.Cell(10)),
+                    IsPrimary = isPrimary
+                };
+
+                if (isPrimary && !clearedStudents.Contains(student.Id))
+                {
+                    if (primaryByStudent.TryGetValue(student.Id, out var existing))
+                    {
+                        foreach (var item in existing)
+                        {
+                            item.IsPrimary = false;
+                            await _outcomeRepository.UpdateAsync(item);
+                        }
+                    }
+                    clearedStudents.Add(student.Id);
+                }
+
+                await _outcomeRepository.InsertAsync(entity, autoSave: true);
+                result.SuccessCount++;
+            }
+            catch (Exception ex)
+            {
+                result.FailCount++;
+                result.FailItems.Add(new EmploymentOutcomeImportFailItemDto
+                {
+                    RowNumber = rowNumber,
+                    Reason = ex.Message
+                });
+            }
+
+            rowNumber++;
+        }
+
+        result.TotalCount = result.SuccessCount + result.FailCount;
+        return result;
+    }
+
+    [Authorize(KnowledgeHubPermissions.Employment.ManageOutcome)]
+    public Task<IRemoteStreamContent> GetOutcomeImportTemplateAsync()
+    {
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("就业去向导入模板");
+
+        // 第 1 行：标题
+        worksheet.Cell(1, 1).Value = "就业去向批量导入模板";
+        worksheet.Range(1, 1, 1, OutcomeImportTemplateHeaders.Length).Merge();
+        worksheet.Cell(1, 1).Style.Font.Bold = true;
+        worksheet.Cell(1, 1).Style.Font.FontSize = 14;
+        worksheet.Cell(1, 1).Style.Fill.BackgroundColor = XLColor.FromArgb(30, 108, 232);
+        worksheet.Cell(1, 1).Style.Font.FontColor = XLColor.White;
+        worksheet.Cell(1, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+        // 第 2 行：说明
+        worksheet.Cell(2, 1).Value =
+            "学生姓名须与系统内学生一致（可用登录账号）；去向状态可填：就业意向/已签约/已就业/升学/创业/待就业；" +
+            "入职时间格式如 2025-07-01；是否主要填：是/否。导入前请删除示例行。";
+        worksheet.Range(2, 1, 2, OutcomeImportTemplateHeaders.Length).Merge();
+        worksheet.Cell(2, 1).Style.Font.Italic = true;
+        worksheet.Cell(2, 1).Style.Font.FontColor = XLColor.Gray;
+        worksheet.Cell(2, 1).Style.Alignment.WrapText = true;
+        worksheet.Row(2).Height = 34;
+
+        // 第 3 行：表头
+        for (var i = 0; i < OutcomeImportTemplateHeaders.Length; i++)
+        {
+            var cell = worksheet.Cell(3, i + 1);
+            cell.Value = OutcomeImportTemplateHeaders[i];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(232, 244, 255);
+            cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        }
+
+        // 第 4 行：示例
+        worksheet.Cell(4, 1).Value = "张梦倩";
+        worksheet.Cell(4, 2).Value = "杭州云启科技有限公司";
+        worksheet.Cell(4, 3).Value = "Java 开发工程师";
+        worksheet.Cell(4, 4).Value = "已就业";
+        worksheet.Cell(4, 5).Value = "校园招聘";
+        worksheet.Cell(4, 6).Value = "杭州";
+        worksheet.Cell(4, 7).Value = "8-12K";
+        worksheet.Cell(4, 8).Value = "2025-07-01";
+        worksheet.Cell(4, 9).Value = "是";
+        worksheet.Cell(4, 10).Value = "示例行，导入前请删除";
+        for (var i = 1; i <= OutcomeImportTemplateHeaders.Length; i++)
+        {
+            worksheet.Cell(4, i).Style.Font.FontColor = XLColor.Gray;
+            worksheet.Cell(4, i).Style.Font.Italic = true;
+        }
+
+        worksheet.Columns().AdjustToContents();
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+        return Task.FromResult<IRemoteStreamContent>(
+            new RemoteStreamContent(
+                stream,
+                $"就业去向导入模板_{Clock.Now:yyyyMMdd}.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+    }
+
+    /// <summary>
+    /// 校验表头并返回表头所在行号（数据从 headerRow + 1 开始）。默认模板表头在第 3 行，也兼容表头在第 1 行的旧格式。
+    /// </summary>
+    private static int ValidateOutcomeImportHeader(IXLWorksheet worksheet)
+    {
+        for (var row = 1; row <= 3; row++)
+        {
+            if (worksheet.Cell(row, 1).GetString().Trim() != OutcomeImportTemplateHeaders[0])
+            {
+                continue;
+            }
+
+            var matched = true;
+            for (var i = 1; i < OutcomeImportTemplateHeaders.Length; i++)
+            {
+                if (worksheet.Cell(row, i + 1).GetString().Trim() != OutcomeImportTemplateHeaders[i])
+                {
+                    matched = false;
+                    break;
+                }
+            }
+
+            if (!matched)
+            {
+                throw new UserFriendlyException("Excel 表头与模板不一致，请下载最新模板后重新填写。");
+            }
+
+            return row;
+        }
+
+        throw new UserFriendlyException("未找到模板表头，请下载就业去向导入模板后填写导入。");
+    }
+
+    /// <summary>
+    /// 构建「导入时识别学生」的映射：当前租户内拥有 Student 角色的用户。
+    /// 匹配键覆盖：显示名（含前缀简短名）、显示名、登录账号，全部大小写不敏感。
+    /// </summary>
+    private async Task<Dictionary<string, IdentityUser>> BuildOutcomeImportStudentMapAsync()
+    {
+        var map = new Dictionary<string, IdentityUser>(StringComparer.OrdinalIgnoreCase);
+        var currentTenantId = CurrentTenant.Id;
+        var dbContext = await _userRepository.GetDbContextAsync();
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var studentRoleIds = await dbContext.Set<IdentityRole>()
+                .Where(r => r.Name == "Student")
+                .Select(r => r.Id)
+                .ToListAsync();
+
+            if (studentRoleIds.Count == 0)
+            {
+                return map;
+            }
+
+            var studentUserIds = await dbContext.Set<IdentityUserRole>()
+                .Where(ur => studentRoleIds.Contains(ur.RoleId))
+                .Select(ur => ur.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            if (studentUserIds.Count == 0)
+            {
+                return map;
+            }
+
+            var query = await _userRepository.GetQueryableAsync();
+            var users = await query
+                .Where(u => studentUserIds.Contains(u.Id))
+                .Where(u => !currentTenantId.HasValue || u.TenantId == currentTenantId.Value)
+                .Take(1000)
+                .ToListAsync();
+
+            foreach (var user in users)
+            {
+                var displayName = GetUserDisplayName(user);
+                map.TryAdd(NormalizeImportName(displayName), user);
+                if (!string.IsNullOrWhiteSpace(user.UserName))
+                {
+                    map.TryAdd(NormalizeImportName(user.UserName), user);
+                }
+            }
+
+            // 前缀匹配：如模板填「张梦倩」而显示名为「张梦倩 zmq」时，仍可唯一命中
+            var groups = users
+                .Select(u => new { User = u, Name = GetUserDisplayName(u) })
+                .Select(x => new
+                {
+                    x.User,
+                    Name = x.Name,
+                    ShortKey = x.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()
+                })
+                .Where(x => !string.IsNullOrWhiteSpace(x.ShortKey))
+                .GroupBy(x => NormalizeImportName(x.ShortKey!));
+
+            foreach (var group in groups)
+            {
+                if (group.Count() == 1)
+                {
+                    map.TryAdd(group.Key, group.First().User);
+                }
+            }
+        }
+
+        return map;
+    }
+
+    private static string NormalizeImportName(string name)
+    {
+        return (name ?? string.Empty).Trim().ToLowerInvariant();
+    }
+
+    private static string? GetNullableCell(IXLCell cell)
+    {
+        var value = cell.GetString().Trim();
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    /// <summary>解析去向状态：支持中文标签、数字（0-5）、空（默认就业意向）</summary>
+    private static EmploymentOutcomeStatus? ParseOutcomeImportStatus(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return EmploymentOutcomeStatus.Intention;
+        }
+
+        if (OutcomeStatusLabelMap.TryGetValue(text.Trim(), out var status))
+        {
+            return status;
+        }
+
+        if (int.TryParse(text.Trim(), out var code)
+            && Enum.IsDefined(typeof(EmploymentOutcomeStatus), code))
+        {
+            return (EmploymentOutcomeStatus)code;
+        }
+
+        return null;
+    }
+
+    /// <summary>解析「是否主要」：是/否、true/false、1/0，空默认否</summary>
+    private static bool ParseIsPrimaryText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var normalized = text.Trim().ToLowerInvariant();
+        return normalized is "是" or "y" or "yes" or "true" or "1";
+    }
+
+    /// <summary>解析入职时间：支持 Excel 日期、yyyy-MM-dd、yyyy/M/d、yyyy年M月d日等多种格式</summary>
+    private static DateTime? ParseImportDate(IXLCell cell)
+    {
+        if (cell.IsEmpty())
+        {
+            return null;
+        }
+
+        if (cell.DataType == XLDataType.DateTime || cell.DataType == XLDataType.Number)
+        {
+            try
+            {
+                return cell.GetDateTime();
+            }
+            catch
+            {
+                // fallthrough to text parsing
+            }
+        }
+
+        var text = cell.GetString().Trim();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        if (DateTime.TryParse(text, out var parsed))
+        {
+            return parsed;
+        }
+
+        if (DateTime.TryParseExact(text, new[] { "yyyy-MM-dd", "yyyy/M/d", "yyyy年M月d日", "yyyy.MM.dd" },
+                System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out parsed))
+        {
+            return parsed;
+        }
+
+        return null;
+    }
+
     [Authorize(KnowledgeHubPermissions.Employment.Default)]
     public async Task<PagedResultDto<EmploymentOutcomeDto>> GetOutcomeListAsync(GetEmploymentOutcomeListInput input)
     {

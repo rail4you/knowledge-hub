@@ -49,6 +49,12 @@ public interface IEmploymentAppService : IApplicationService
     Task DeleteOutcomeAsync(Guid id);
     Task<PagedResultDto<EmploymentOutcomeDto>> GetOutcomeListAsync(GetEmploymentOutcomeListInput input);
     Task<List<EmploymentOutcomeStudentDto>> GetOutcomeStudentsAsync();
+
+    /// <summary>批量导入就业去向（xlsx，Base64 传输）</summary>
+    Task<EmploymentOutcomeImportResultDto> ImportOutcomesAsync(ImportEmploymentOutcomesInput input);
+
+    /// <summary>下载就业去向导入模板（xlsx）</summary>
+    Task<IRemoteStreamContent> GetOutcomeImportTemplateAsync();
     Task<List<EmploymentStatisticsRowDto>> GetStatisticsAsync(EmploymentStatisticsInput input);
     Task<IRemoteStreamContent> ExportStatisticsAsync(EmploymentStatisticsInput input);
 
