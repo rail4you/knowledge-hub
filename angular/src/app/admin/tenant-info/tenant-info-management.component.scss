@@ -1,5 +1,5 @@
 .page-container {
-  max-width: 960px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
 }
@@ -14,19 +14,85 @@
 .page-desc {
   font-size: 13px;
   color: #8a93a6;
-  margin: 0 0 24px;
+  margin: 0 0 16px;
+}
+
+.concept-alert {
+  margin-bottom: 20px;
+  border-radius: 8px;
+}
+
+.panel-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
 .mgmt-card {
-  margin-bottom: 16px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  margin-bottom: 0;
+}
+
+// 弹窗内：当前编辑租户标识
+.edit-tenant-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.edit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+// ── 租户表格 ──
+.tenant-row {
+  cursor: pointer;
+
+  &.active {
+    td {
+      background-color: #eaf1ff !important;
+    }
+  }
+
+  &:hover td {
+    background-color: #f6f8fb;
+  }
+}
+
+.tenant-strong {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.tenant-sub {
+  font-size: 12px;
+  color: #9aa3b2;
+  margin-top: 2px;
+}
+
+.tenant-num {
+  color: #6b7280;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+// ── 编辑面板 ──
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 18px 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f2f5;
 }
 
 .field-hint {
   font-size: 12px;
   color: #8a93a6;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
 }
 
 .info-grid {
@@ -56,7 +122,7 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .cover-item {
@@ -110,46 +176,6 @@
   align-items: center;
 }
 
-.save-bar {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0 0;
-}
-
-// Stats
-.stats-row {
-  display: flex;
-  gap: 32px;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1e6ce8;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: #666;
-  margin-top: 4px;
-}
-
-// Graph
-.graph-info p {
-  margin-bottom: 8px;
-}
-
-.major-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 12px;
-}
-
 // Special projects
 .special-projects {
   display: flex;
@@ -163,13 +189,13 @@
   align-items: center;
 }
 
-// Major course list
-.major-course-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.add-project {
+  width: 100%;
 }
 
-.major-course-card {
-  border-left: 3px solid #1e6ce8;
+// save
+.save-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 20px 0 4px;
 }

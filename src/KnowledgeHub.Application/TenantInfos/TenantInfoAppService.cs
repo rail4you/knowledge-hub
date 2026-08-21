@@ -41,6 +41,40 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
         _dataFilter = dataFilter;
     }
 
+    [Authorize(KnowledgeHubPermissions.TenantInfo.Default)]
+    public async Task<List<TenantInfoListItemDto>> GetListAsync()
+    {
+        var tenants = await _tenantRepository.GetListAsync();
+        var result = new List<TenantInfoListItemDto>();
+
+        // 关闭多租户过滤，让全局管理员在 host 上下文也能统查所有租户的关联数据
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            foreach (var tenant in tenants.OrderBy(t => t.CreationTime))
+            {
+                var info = await _tenantInfoRepository.FindByTenantIdAsync(tenant.Id);
+                var majorCount = await CountMajorsAsync(tenant.Id);
+                var courseCount = await CountCoursesAsync(tenant.Id);
+
+                result.Add(new TenantInfoListItemDto
+                {
+                    TenantId = tenant.Id,
+                    TenantName = tenant.Name,
+                    HasInfo = info != null,
+                    Type = info?.Type ?? TenantType.Professional,
+                    Name = info?.Name ?? tenant.Name,
+                    Description = info?.Description,
+                    CoverImageCount = CountJsonItems(info?.CoverImages),
+                    SpecialProjectCount = CountJsonItems(info?.SpecialProjects),
+                    MajorCount = majorCount,
+                    CourseCount = courseCount,
+                });
+            }
+        }
+
+        return result;
+    }
+
     [AllowAnonymous]
     public async Task<TenantInfoDto> GetCurrentAsync()
     {
@@ -289,5 +323,19 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
     {
         var query = await _courseRepository.GetQueryableAsync();
         return query.Count(c => c.TenantId == tenantId);
+    }
+
+    private static int CountJsonItems(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return 0;
+        try
+        {
+            var list = JsonSerializer.Deserialize<List<object>>(json);
+            return list?.Count ?? 0;
+        }
+        catch
+        {
+            return 0;
+        }
     }
 }

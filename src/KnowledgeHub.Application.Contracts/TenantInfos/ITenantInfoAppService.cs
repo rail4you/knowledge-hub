@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using KnowledgeHub.TenantInfos.Dtos;
 using Volo.Abp.Application.Services;
@@ -7,6 +8,9 @@ namespace KnowledgeHub.TenantInfos;
 
 public interface ITenantInfoAppService : IApplicationService
 {
+    /// <summary>获取所有租户及其关联的展示信息（host 全局管理员使用）</summary>
+    Task<List<TenantInfoListItemDto>> GetListAsync();
+
     /// <summary>获取当前租户的信息</summary>
     Task<TenantInfoDto> GetCurrentAsync();
 

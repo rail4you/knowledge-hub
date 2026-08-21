@@ -6,6 +6,40 @@ using Volo.Abp.Application.Dtos;
 
 namespace KnowledgeHub.TenantInfos.Dtos;
 
+/// <summary>租户信息列表项 —— 强调「每个租户关联一条展示信息」，用于全局管理员管理所有租户的展示数据</summary>
+public class TenantInfoListItemDto
+{
+    /// <summary>关联的 ABP 租户 Id</summary>
+    public Guid TenantId { get; set; }
+
+    /// <summary>租户名称（ABP Tenant.Name，登录标识）</summary>
+    public string TenantName { get; set; } = string.Empty;
+
+    /// <summary>该租户是否已配置关联信息</summary>
+    public bool HasInfo { get; set; }
+
+    /// <summary>租户类型：专业/项目</summary>
+    public TenantType Type { get; set; }
+
+    /// <summary>展示名称（即该租户资源库的显示名称）</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>展示描述</summary>
+    public string? Description { get; set; }
+
+    /// <summary>封面图数量</summary>
+    public int CoverImageCount { get; set; }
+
+    /// <summary>特色项目数量</summary>
+    public int SpecialProjectCount { get; set; }
+
+    /// <summary>该租户下的专业数</summary>
+    public int MajorCount { get; set; }
+
+    /// <summary>该租户下的课程数</summary>
+    public int CourseCount { get; set; }
+}
+
 public class TenantInfoDto : FullAuditedEntityDto<Guid>
 {
     public Guid TenantId { get; set; }
