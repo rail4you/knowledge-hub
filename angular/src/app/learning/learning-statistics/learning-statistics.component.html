@@ -111,7 +111,6 @@
             <th>完成数/总题数</th>
             <th>完成率</th>
             <th>正确率</th>
-            <th>总用时</th>
             <th>最后活跃</th>
           </tr>
         </thead>
@@ -130,7 +129,6 @@
                   {{ item.correctRate ?? 0 }}%
                 </nz-tag>
               </td>
-              <td>{{ formatTimeSpent(item.totalTimeSpent) }}</td>
               <td>{{ item.lastActiveTime | date:'yyyy-MM-dd HH:mm' }}</td>
             </tr>
           }

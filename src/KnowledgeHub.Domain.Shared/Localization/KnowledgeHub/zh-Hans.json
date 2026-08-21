@@ -385,7 +385,7 @@
     "Menu:ResourceManagement": "资源管理",
     "Menu:AIManagement": "AI 管理",
     "Menu:CourseManagement": "专业和课程管理",
-    "Menu:TrainingManagement": "实训和就业管理",
+    "Menu:TrainingManagement": "就业管理",
     "Menu:InfoManagement": "资讯和双高信息管理",
     "Menu:IdentityRoles": "角色管理",
     "AbpIdentity::NewUser": "新建用户",
