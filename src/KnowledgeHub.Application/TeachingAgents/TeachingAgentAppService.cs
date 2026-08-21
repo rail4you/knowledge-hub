@@ -143,11 +143,11 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
     public async Task<PagedResultDto<TeachingAgentDto>> GetListAsync(PagedTeachingAgentRequestDto input)
     {
         var query = await _teachingAgentRepository.GetQueryableAsync();
-        if (!await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.TeachingAgents.Review))
-        {
-            var currentUserId = CurrentUser.GetId();
-            query = query.Where(x => x.OwnerUserId == currentUserId);
-        }
+
+        // 工作台"我的智能体"只展示自己创建的，以及全局公开的智能体；
+        // 即使拥有 Review/Manage 权限，也不展示他人创建的（除非公开）。
+        var currentUserId = CurrentUser.GetId();
+        query = query.Where(x => x.OwnerUserId == currentUserId || x.Visibility == TeachingAgentVisibility.Public);
 
         query = query
             .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x =>
