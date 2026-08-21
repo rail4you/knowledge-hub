@@ -1,5 +1,11 @@
 <div class="mm-detail">
-  <a routerLink="/student/micro-majors" class="back-link">← 返回微专业列表</a>
+  @if (fromHome()) {
+    <a routerLink="/" [queryParams]="{ tab: 'microMajors' }" class="back-link">← 返回首页</a>
+  } @else if (fromMyMicroMajors()) {
+    <a routerLink="/student/my-micro-majors" class="back-link">← 返回我的微专业</a>
+  } @else {
+    <a routerLink="/student/micro-majors" class="back-link">← 返回微专业列表</a>
+  }
 
   @if (loading()) {
     <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>

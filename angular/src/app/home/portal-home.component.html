@@ -236,6 +236,7 @@
             <a
               class="mm-card"
               [routerLink]="['/student/micro-majors', m.id]"
+              [queryParams]="{ from: 'home' }"
               [style.--mm-color]="['#1a5fe0','#0ea5e9','#0891b2','#16a34a'][i % 4]"
             >
               <div class="mm-card__cover">
@@ -360,7 +361,7 @@
   }
 
   <!-- ═══════ 公开浏览：课程/资源/微专业 (游客可见) ═══════ -->
-  <section class="section browse-section">
+  <section id="browse" class="section browse-section">
     <div class="browse-bg-decor"></div>
     <div class="section__inner">
       <div class="section__head">
@@ -486,7 +487,7 @@
       @if (activeTab() === 'microMajors') {
         <div class="mm-grid">
           @for (m of browseMicroMajors(); track m.id; let i = $index) {
-            <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [style.--mm-color]="['#1a5fe0','#0ea5e9','#0891b2','#16a34a'][i % 4]">
+            <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home' }" [style.--mm-color]="['#1a5fe0','#0ea5e9','#0891b2','#16a34a'][i % 4]">
               <div class="mm-card__cover">
                 @if (m.coverImageUrl) {
                   <img [src]="m.coverImageUrl" [alt]="m.title" loading="lazy" />

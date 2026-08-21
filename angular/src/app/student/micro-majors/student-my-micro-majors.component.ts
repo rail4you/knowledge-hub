@@ -120,7 +120,8 @@ export class StudentMyMicroMajorsComponent implements OnInit {
 
   openDetail(item: MyMicroMajorDto): void {
     if (!item.id) return;
-    this.router.navigate(['/student/micro-majors', item.id]);
+    // 携带 from=my-micro-majors，详情页的“返回”会回到我的微专业（原路返回）
+    this.router.navigate(['/student/micro-majors', item.id], { queryParams: { from: 'my-micro-majors' } });
   }
 
   goCourse(course: MicroMajorCourseDto): void {

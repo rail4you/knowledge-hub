@@ -145,6 +145,13 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     const cu = this.config.getDeep('currentUser') as Record<string, unknown> | undefined;
     if (typeof cu?.['userName'] === 'string') this.userName.set(cu['userName'] as string);
 
+    // 从微专业详情页“返回首页”时携带 tab=microMajors，回到“全部资源”的微专业选择部分
+    const browseTab = this.route.snapshot.queryParamMap.get('tab');
+    if (browseTab === 'courses' || browseTab === 'resources' || browseTab === 'microMajors') {
+      this.activeTab.set(browseTab);
+      this.scrollToBrowse();
+    }
+
     this.portal.getPublicHomeStats().subscribe(d => this.stats.set(d));
     this.portal.getPublicTenantList().subscribe(ts => {
       this.tenants.set(ts || []);
@@ -200,6 +207,17 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   private startHeroAutoplay() { this.heroTimer = setInterval(() => this.heroIndex.update(i => (i + 1) % this.heroSlides.length), 5500); }
   private stopHeroAutoplay() { if (this.heroTimer) { clearInterval(this.heroTimer); this.heroTimer = null; } }
   private restartHeroAutoplay() { this.stopHeroAutoplay(); this.startHeroAutoplay(); }
+
+  /**
+   * 滚动到“全部资源”区域（微专业详情页返回首页时定位到微专业选择部分）。
+   * 由于上方各 section 的卡片是异步加载的（高度会变化），平滑滚动执行两次以修正位置。
+   */
+  private scrollToBrowse(): void {
+    const el = () => document.getElementById('browse');
+    const jump = () => el()?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(jump, 60);
+    window.setTimeout(jump, 500);
+  }
 
   login() { this.authService.navigateToLogin(); }
   logout() { this.authService.logout().subscribe(); }

@@ -31,7 +31,16 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   readonly loading = signal(true);
   readonly activeTab = signal<'courses' | 'resources'>('courses');
 
+  /** 从首页“全部资源/微专业”进入时，返回首页对应位置（原路返回） */
+  readonly fromHome = signal(false);
+  /** 从“我的微专业”进入时，返回我的微专业 */
+  readonly fromMyMicroMajors = signal(false);
+
   ngOnInit(): void {
+    const from = this.route.snapshot.queryParamMap.get('from');
+    this.fromHome.set(from === 'home');
+    this.fromMyMicroMajors.set(from === 'my-micro-majors');
+
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
     this.loadDetail(id);

@@ -112,21 +112,46 @@ export class StudentCourseDetailComponent implements OnInit {
 
   readonly related = signal<RelatedCourse[]>([]);
 
+  /** 从“相关课程”进入时的来源课程 id；存在时返回按钮显示“返回相关课程” */
+  readonly backToCourse = signal<string | null>(null);
+
   /** 当前章节的所有资源（聚合自课程） */
   readonly resources = signal<ResourceItem[]>([]);
 
   ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (!id) {
-      this.router.navigate(['/student/courses']);
-      return;
-    }
+    // 订阅路由参数：从“相关课程”点击跳转到其他课程时，URL 参数变化但组件会被复用，
+    // 只靠 snapshot 的 ngOnInit 不会再次执行，必须监听 paramMap 才能重新加载目标课程。
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id');
+      if (!id) {
+        this.router.navigate(['/student/courses']);
+        return;
+      }
 
-    this.loadCourse(id);
-    this.loadChapters(id);
-    this.loadProgress(id);
-    this.loadMastery(id);
-    this.loadExerciseProgress(id);
+      // 从 URL（相关课程跳转 / 回退 / 刷新）恢复来源课程与 Tab 状态
+      const qp = this.route.snapshot.queryParamMap;
+      const fromCourse = qp.get('fromCourse');
+      const urlTab = qp.get('tab') as TabKey | null;
+      const validTabs: TabKey[] = ['chapters', 'graph', 'progress', 'related'];
+
+      // 切换课程时重置状态，避免旧课程内容残留
+      this.course.set(null);
+      this.chapters.set([]);
+      this.related.set([]);
+      this.resources.set([]);
+      this.progress.set(null);
+      this.mastery.set([]);
+      this.chapterProgressMap.set(new Map());
+      this.expandedNodes.set(new Set());
+      this.backToCourse.set(fromCourse || null);
+      this.activeTab.set(validTabs.includes(urlTab!) ? urlTab! : 'chapters');
+
+      this.loadCourse(id);
+      this.loadChapters(id);
+      this.loadProgress(id);
+      this.loadMastery(id);
+      this.loadExerciseProgress(id);
+    });
   }
 
   loadCourse(id: string) {
@@ -287,11 +312,18 @@ export class StudentCourseDetailComponent implements OnInit {
   }
 
   goBack() {
+    // 从“相关课程”进入：回退浏览器历史到上一课程，保留其 Tab 与返回链；否则返回课程中心列表
+    if (this.backToCourse() && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
     this.router.navigate(['/student/courses']);
   }
 
   setTab(tab: TabKey) {
     this.activeTab.set(tab);
+    // 把 Tab 状态写入 URL（replaceUrl 不增加历史记录），返回上一课程时可恢复原 Tab
+    this.router.navigate([], { queryParams: { tab }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   enrollCourse() {
@@ -329,7 +361,11 @@ export class StudentCourseDetailComponent implements OnInit {
   }
 
   openRelated(id: string) {
-    this.router.navigate(['/student/courses', id]);
+    const c = this.course();
+    // 携带来源课程 id，详情页可据此显示“返回相关课程”链接
+    const queryParams: Record<string, string> = {};
+    if (c?.id) queryParams['fromCourse'] = c.id;
+    this.router.navigate(['/student/courses', id], { queryParams });
   }
 
   /** 计算章节数（含子章节） */
