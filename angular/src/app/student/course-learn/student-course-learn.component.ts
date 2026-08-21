@@ -279,7 +279,11 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     // 同步 URL
     const course = this.course();
     if (course?.id) {
-      this.router.navigate(['/student/courses', course.id, 'learn', id], { replaceUrl: true });
+      // 保留 fromMicroMajor 等来源参数，各章节之间切换时返回链不中断
+      this.router.navigate(['/student/courses', course.id, 'learn', id], {
+        replaceUrl: true,
+        queryParamsHandling: 'preserve',
+      });
     }
     this.recordChapterProgress();
   }
@@ -702,7 +706,8 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   goBack() {
     const course = this.course();
     if (course?.id) {
-      this.router.navigate(['/student/courses', course.id]);
+      // 保留 fromMicroMajor 等来源参数，回到课程详情后“返回”仍能回到来源页
+      this.router.navigate(['/student/courses', course.id], { queryParamsHandling: 'preserve' });
     } else {
       this.router.navigate(['/student/courses']);
     }

@@ -36,12 +36,19 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   /** 从“我的微专业”进入时，返回我的微专业 */
   readonly fromMyMicroMajors = signal(false);
 
+  /** 当前微专业 id，随课程链接透传给课程详情页，实现“返回微专业” */
+  readonly microMajorId = signal<string | null>(null);
+  /** 原始 from 参数（home / my-micro-majors），随课程链接透传，返回时还原本页 URL */
+  readonly fromSource = signal<string | null>(null);
+
   ngOnInit(): void {
     const from = this.route.snapshot.queryParamMap.get('from');
     this.fromHome.set(from === 'home');
     this.fromMyMicroMajors.set(from === 'my-micro-majors');
+    this.fromSource.set(from || null);
 
     const id = this.route.snapshot.paramMap.get('id');
+    this.microMajorId.set(id || null);
     if (!id) return;
     this.loadDetail(id);
     this.loadResources(id);

@@ -124,8 +124,11 @@ export class StudentMyMicroMajorsComponent implements OnInit {
     this.router.navigate(['/student/micro-majors', item.id], { queryParams: { from: 'my-micro-majors' } });
   }
 
-  goCourse(course: MicroMajorCourseDto): void {
-    this.router.navigate(['/student/courses', course.courseId]);
+  goCourse(course: MicroMajorCourseDto, item: MyMicroMajorDto): void {
+    // 从“我的微专业”列表直达课程：携带微专业上下文，课程详情页的“返回”会回到本列表
+    const queryParams: Record<string, string> = { from: 'my-micro-majors-list' };
+    if (item?.id) queryParams['fromMicroMajor'] = item.id;
+    this.router.navigate(['/student/courses', course.courseId], { queryParams });
   }
 
   coverGradient(item: MyMicroMajorDto): string {

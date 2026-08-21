@@ -115,6 +115,19 @@ export class StudentCourseDetailComponent implements OnInit {
   /** 从“相关课程”进入时的来源课程 id；存在时返回按钮显示“返回相关课程” */
   readonly backToCourse = signal<string | null>(null);
 
+  /** 从微专业课程列表进入时的微专业 id；存在时返回按钮显示“返回微专业”并回到该页 */
+  readonly backToMicroMajor = signal<string | null>(null);
+  /** 微专业页透传的原始 from 参数（home / my-micro-majors / my-micro-majors-list），用于还原本页 URL */
+  readonly microMajorFrom = signal<string | null>(null);
+
+  /** 返回按钮文案：微专业上下文 > 相关课程上下文 > 默认课程中心 */
+  readonly backLabel = computed(() => {
+    if (this.backToMicroMajor()) {
+      return this.microMajorFrom() === 'my-micro-majors-list' ? '返回我的微专业' : '返回微专业';
+    }
+    return this.backToCourse() ? '返回相关课程' : '返回课程中心';
+  });
+
   /** 当前章节的所有资源（聚合自课程） */
   readonly resources = signal<ResourceItem[]>([]);
 
@@ -144,6 +157,9 @@ export class StudentCourseDetailComponent implements OnInit {
       this.chapterProgressMap.set(new Map());
       this.expandedNodes.set(new Set());
       this.backToCourse.set(fromCourse || null);
+      // 微专业上下文：从微专业课程进入时，返回按钮回到微专业页（保留 from 参数还原原 URL）
+      this.backToMicroMajor.set(qp.get('fromMicroMajor') || null);
+      this.microMajorFrom.set(qp.get('from') || null);
       this.activeTab.set(validTabs.includes(urlTab!) ? urlTab! : 'chapters');
 
       this.loadCourse(id);
@@ -312,6 +328,20 @@ export class StudentCourseDetailComponent implements OnInit {
   }
 
   goBack() {
+    // 从微专业课程进入：直接返回之前的微专业页面（原 URL 含 from 参数时一并还原）
+    const mmId = this.backToMicroMajor();
+    if (mmId) {
+      const from = this.microMajorFrom();
+      if (from === 'my-micro-majors-list') {
+        // 从“我的微专业”列表的课程直达进入，返回列表页
+        this.router.navigate(['/student/my-micro-majors']);
+        return;
+      }
+      const queryParams: Record<string, string> = {};
+      if (from) queryParams['from'] = from;
+      this.router.navigate(['/student/micro-majors', mmId], { queryParams });
+      return;
+    }
     // 从“相关课程”进入：回退浏览器历史到上一课程，保留其 Tab 与返回链；否则返回课程中心列表
     if (this.backToCourse() && window.history.length > 1) {
       window.history.back();
@@ -347,13 +377,14 @@ export class StudentCourseDetailComponent implements OnInit {
   startLearning() {
     const c = this.course();
     if (!c?.id) return;
-    this.router.navigate(['/student/courses', c.id, 'learn']);
+    // 保留 fromMicroMajor 等来源参数，学习页返回课程详情时仍能回到来源微专业
+    this.router.navigate(['/student/courses', c.id, 'learn'], { queryParamsHandling: 'preserve' });
   }
 
   startExercise() {
     const c = this.course();
     if (!c?.id) return;
-    this.router.navigate(['/student/courses', c.id, 'learn']);
+    this.router.navigate(['/student/courses', c.id, 'learn'], { queryParamsHandling: 'preserve' });
   }
 
   viewKnowledgeGraph() {

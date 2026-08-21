@@ -177,7 +177,7 @@
                 @for (course of item.courses; track course.courseId) {
                   <button
                     class="course-chip"
-                    (click)="goCourse(course); $event.stopPropagation()"
+                    (click)="goCourse(course, item); $event.stopPropagation()"
                     title="进入课程学习"
                   >
                     <span class="course-chip__icon">

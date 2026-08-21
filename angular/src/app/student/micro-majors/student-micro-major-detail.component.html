@@ -86,7 +86,8 @@
         } @else {
           <div class="courses-grid">
             @for (course of d.courses; track course.courseId) {
-              <article class="course-card" [routerLink]="['/student/courses', course.courseId]">
+              <article class="course-card" [routerLink]="['/student/courses', course.courseId]"
+  [queryParams]="{ fromMicroMajor: microMajorId() || undefined, from: fromSource() || undefined }">
                 <div class="course-card__cover" [style.background]="coverGradient(course)">
                   <div class="cover-decor" aria-hidden="true">
                     <span class="decor-line decor-line--1"></span>

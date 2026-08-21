@@ -3,7 +3,7 @@
   <div class="detail-breadcrumb">
     <button class="back-btn" (click)="goBack()">
       <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
-      <span>{{ backToCourse() ? '返回相关课程' : '返回课程中心' }}</span>
+      <span>{{ backLabel() }}</span>
     </button>
     <nav class="breadcrumb" aria-label="breadcrumb">
       <a routerLink="/student">首页</a>
