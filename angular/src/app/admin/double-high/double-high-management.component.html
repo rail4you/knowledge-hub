@@ -89,6 +89,18 @@
               <nz-option [nzValue]="dataSources.PracticumEnrollmentCount" nzLabel="实训参与量"></nz-option>
             </nz-select>
             <input nz-input type="number" [(ngModel)]="indicator.targetValue" placeholder="目标值" />
+            <label class="weight-label" title="指标权重，默认 1，范围 1 ~ 10" >
+              权重
+              <nz-input-number
+                [(ngModel)]="indicator.weight"
+                [nzMin]="1"
+                [nzMax]="10"
+                [nzStep]="1"
+                [nzPrecision]="0"
+                nzPlaceHolder="1"
+                style="width: 110px"
+              />
+            </label>
             <button nz-button nzDanger (click)="removeIndicator($index)">删除指标</button>
           </div>
         }

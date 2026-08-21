@@ -34,3 +34,15 @@
   background: #f8fafc;
   border-radius: 12px;
 }
+
+.weight-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #333;
+}
+
+.weight-label nz-input-number {
+  width: 110px;
+}

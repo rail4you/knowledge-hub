@@ -406,6 +406,19 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     return labels[status] || '未知';
   }
 
+  formatLocalDate(value?: string): string {
+    if (!value) {
+      return '';
+    }
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return value;
+    }
+    // 使用本地时间显示，格式：2026-07-01 17:00
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
   getSourceLabel(type: DoubleHighDataSourceType): string {
     const labels: Record<number, string> = {
       [DoubleHighDataSourceType.Manual]: '手工填报',

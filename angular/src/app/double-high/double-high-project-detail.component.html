@@ -48,8 +48,8 @@
           <nz-descriptions [nzColumn]="2" nzBordered>
             <nz-descriptions-item nzTitle="批次编码">{{ project.batchCode }}</nz-descriptions-item>
             <nz-descriptions-item nzTitle="状态">{{ getStatusLabel(project.status) }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="开始时间">{{ project.startTime || '未设置' }}</nz-descriptions-item>
-            <nz-descriptions-item nzTitle="结束时间">{{ project.endTime || '未设置' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="开始时间">{{ formatLocalDate(project.startTime) || '未设置' }}</nz-descriptions-item>
+            <nz-descriptions-item nzTitle="结束时间">{{ formatLocalDate(project.endTime) || '未设置' }}</nz-descriptions-item>
           </nz-descriptions>
         </nz-card>
       </nz-tab>
@@ -171,7 +171,7 @@
             @for (item of project.recentReports; track item.id) {
               <tr>
                 <td>{{ item.reportName }}</td>
-                <td>{{ item.generatedAt }}</td>
+                <td>{{ formatLocalDate(item.generatedAt) }}</td>
                 <td>{{ item.generatedByName || '-' }}</td>
                 <td>
                   <button nz-button nzType="link" (click)="downloadReport(item)">
