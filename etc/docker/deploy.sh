@@ -103,8 +103,12 @@ cmd_up() {
     # 用 1654 chown 后 dotnet 进程可创建按日期分割的子目录。
     # nogroup 不影响普通存储使用；这是 bind mount 的本质约束。
     if [ -d "$SCRIPT_DIR/uploads" ]; then
-        chown -R 1654:1654 "$SCRIPT_DIR/uploads" 2>/dev/null || \
-            chmod -R 0777 "$SCRIPT_DIR/uploads"
+        # 注意：不要用 `cmd1 || cmd2` 的形式做 chown→chmod 回退。
+        # 本脚本顶部有 `set -e`，当 chown 因文件属于容器 root 而失败、
+        # 且 chmod 也失败时，chmod 是 `||` 链的最后一条命令，会触发 set -e
+        # 提前退出，导致容器在 down 之后从未被 up 起来（生产事故）。
+        chown -R 1654:1654 "$SCRIPT_DIR/uploads" 2>/dev/null || true
+        chmod -R 0777 "$SCRIPT_DIR/uploads" 2>/dev/null || true
     fi
 
     # 确保 wasm-mirrors/ 对 API 容器进程（uid 1654）以及宿主机 ubuntu 用户都可写。
