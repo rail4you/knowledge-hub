@@ -1,10 +1,12 @@
 <div class="career-guidance-container">
   <div class="page-header">
     <h2>职业规划指导</h2>
-    <p class="subtitle">按学生组织，查看投递过简历的学生的简历与历史职业规划，并可为学生生成新规划</p>
+    <p class="subtitle">选择学生并基于简历生成就业指导，或查看本租户所有学生的就业指导历史记录</p>
   </div>
 
-  <div class="cg-layout">
+  <nz-tabs (nzSelectedIndexChange)="onTabChange($event)">
+    <nz-tab nzTitle="生成就业指导">
+      <div class="cg-layout">
     <!-- 左侧：学生列表 -->
     <nz-card class="student-list-card">
       <div class="card-title-row">
@@ -47,7 +49,7 @@
     <div class="student-detail">
       @if (!selectedStudent()) {
         <nz-card class="placeholder-card">
-          <nz-empty nzNotFoundContent="请选择左侧学生查看简历与历史规划"></nz-empty>
+          <nz-empty nzNotFoundContent="请选择左侧学生查看简历与历史就业指导"></nz-empty>
         </nz-card>
       } @else {
         <!-- 简历选择 -->
@@ -94,14 +96,14 @@
         <nz-card class="step-card">
           <div class="step-title">
             <span class="step-number">2</span>
-            <span>历史职业规划</span>
+            <span>历史就业指导</span>
           </div>
           @if (historyLoading()) {
             <div class="loading-container">
               <nz-spin nzSimple></nz-spin>
             </div>
           } @else if (historyRecords().length === 0) {
-            <nz-empty nzNotFoundContent="该学生暂无历史职业规划"></nz-empty>
+            <nz-empty nzNotFoundContent="该学生暂无历史就业指导"></nz-empty>
           } @else {
             <nz-collapse [nzAccordion]="false">
               @for (record of historyRecords(); track record.id) {
@@ -191,11 +193,11 @@
           }
         </nz-card>
 
-        <!-- 生成新规划 -->
+        <!-- 生成就业指导 -->
         <nz-card class="step-card">
           <div class="step-title">
             <span class="step-number">3</span>
-            <span>生成新规划</span>
+            <span>生成就业指导</span>
           </div>
 
           <div class="goal-section">
@@ -214,7 +216,7 @@
           <div class="action-bar">
             <button nz-button nzType="primary" nzSize="large" (click)="generate()" [disabled]="!canGenerate()" [nzLoading]="isLoading()">
               <span nz-icon nzType="thunderbolt"></span>
-              生成职业规划
+              生成就业指导
             </button>
             <button nz-button nzSize="large" (click)="reset()" [disabled]="isLoading()">
               重置
@@ -225,7 +227,7 @@
           @if (isLoading() && !result()) {
             <div class="generating-container">
               <nz-spin nzSimple nzSize="large"></nz-spin>
-              <p class="generating-text">正在基于简历内容生成职业规划建议，请稍候...</p>
+              <p class="generating-text">正在基于简历内容生成就业指导建议，请稍候...</p>
               <p class="generating-hint">AI 正在分析该学生的技能、经历与职业方向</p>
             </div>
           }
@@ -401,5 +403,115 @@
         </nz-card>
       }
     </div>
-  </div>
+      </div>
+    </nz-tab>
+
+    <nz-tab nzTitle="就业指导历史记录">
+      <nz-card class="step-card">
+        <div class="step-title">
+          <span class="step-number history-icon">
+            <span nz-icon nzType="history" nzTheme="outline"></span>
+          </span>
+          <span>就业指导历史记录</span>
+          @if (allRecords().length) {
+            <nz-tag>{{ allRecords().length }} 条</nz-tag>
+          }
+        </div>
+
+        @if (allRecordsLoading()) {
+          <div class="loading-container">
+            <nz-spin nzSimple></nz-spin>
+          </div>
+        } @else if (allRecords().length === 0) {
+          <nz-empty nzNotFoundContent="本租户暂无就业指导历史记录"></nz-empty>
+        } @else {
+          <nz-collapse [nzAccordion]="false">
+            @for (record of allRecords(); track record.id) {
+              <nz-collapse-panel
+                [nzHeader]="(record.studentName || '未知学生') + ' · ' + record.title + ' · ' + (record.guidedAt | date:'yyyy-MM-dd HH:mm')"
+                [nzActive]="expandedAllRecordId() === record.id"
+                (nzActiveChange)="expandedAllRecordId() === record.id ? null : toggleAllRecord(record.id)"
+              >
+                <div class="history-record-actions">
+                  <button nz-button nzSize="small" nzType="default" (click)="downloadHistoryDocx(record)">
+                    <span nz-icon nzType="download"></span>
+                    下载 DOCX
+                  </button>
+                </div>
+                @if (record.parsed; as r) {
+                  <div class="result-content compact">
+                    <h3 class="plan-title">{{ r.title }}</h3>
+                    <div class="section-block">
+                      <h4 class="section-heading">个人能力评估</h4>
+                      <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
+                        <nz-descriptions-item nzTitle="职业匹配度">
+                          <nz-progress [nzPercent]="r.assessment.careerMatchScore" [nzStatus]="r.assessment.careerMatchScore >= 70 ? 'success' : 'normal'"></nz-progress>
+                        </nz-descriptions-item>
+                        <nz-descriptions-item nzTitle="综合评估">{{ r.assessment.summary }}</nz-descriptions-item>
+                        <nz-descriptions-item nzTitle="核心优势">
+                          @for (s of r.assessment.strengths; track s) {
+                            <nz-tag nzColor="green">{{ s }}</nz-tag>
+                          }
+                        </nz-descriptions-item>
+                        <nz-descriptions-item nzTitle="待提升领域">
+                          @for (a of r.assessment.areasForImprovement; track a) {
+                            <nz-tag nzColor="orange">{{ a }}</nz-tag>
+                          }
+                        </nz-descriptions-item>
+                      </nz-descriptions>
+                    </div>
+
+                    @if (r.recommendedPaths?.length) {
+                      <div class="section-block">
+                        <h4 class="section-heading">推荐职业路径</h4>
+                        @for (path of r.recommendedPaths; track path.title) {
+                          <div class="path-item">
+                            <strong>{{ path.title }}（匹配度 {{ path.matchScore }}%）</strong>
+                            <p>{{ path.description }}</p>
+                            <div>
+                              @for (skill of path.requiredSkills; track skill) {
+                                <nz-tag>{{ skill }}</nz-tag>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+
+                    @if (r.actionPlan?.length) {
+                      <div class="section-block">
+                        <h4 class="section-heading">行动计划</h4>
+                        <nz-timeline>
+                          @for (action of r.actionPlan; track action.id) {
+                            <nz-timeline-item [nzColor]="getPriorityColor(action.priority)">
+                              <h4>{{ action.title }}</h4>
+                              <p>{{ action.description }}</p>
+                              <small>时间线: {{ action.timeline }} | 优先级: {{ action.priority }}</small>
+                            </nz-timeline-item>
+                          }
+                        </nz-timeline>
+                      </div>
+                    }
+
+                    @if (r.nextSteps?.length) {
+                      <div class="section-block">
+                        <h4 class="section-heading">下一步行动</h4>
+                        <ul class="item-list">
+                          @for (step of r.nextSteps; track step) {
+                            <li>{{ step }}</li>
+                          }
+                        </ul>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="raw-content">{{ record.content }}</p>
+                }
+              </nz-collapse-panel>
+            }
+          </nz-collapse>
+        }
+      </nz-card>
+    </nz-tab>
+  </nz-tabs>
 </div>
