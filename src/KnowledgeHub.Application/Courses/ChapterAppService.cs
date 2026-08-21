@@ -23,15 +23,18 @@ public class ChapterAppService : ApplicationService, IChapterAppService
     private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly IRepository<KnowledgeResource, Guid> _knowledgeResourceRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
+    private readonly IRepository<ResourceVersion, Guid> _resourceVersionRepository;
 
     public ChapterAppService(
         IRepository<Chapter, Guid> chapterRepository,
         IRepository<KnowledgeResource, Guid> knowledgeResourceRepository,
-        IRepository<Resource, Guid> resourceRepository)
+        IRepository<Resource, Guid> resourceRepository,
+        IRepository<ResourceVersion, Guid> resourceVersionRepository)
     {
         _chapterRepository = chapterRepository;
         _knowledgeResourceRepository = knowledgeResourceRepository;
         _resourceRepository = resourceRepository;
+        _resourceVersionRepository = resourceVersionRepository;
     }
 
     public async Task<ChapterDto> GetAsync(Guid id)
@@ -181,6 +184,32 @@ public class ChapterAppService : ApplicationService, IChapterAppService
             fileInfoMap = files.ToDictionary(
                 f => f.Id,
                 f => (f.OriginalFileName, f.FileExtension, f.FileSize as long?));
+
+            // 资源级文件元数据为空（旧数据 / 版本管理场景）时，从当前版本的 FilePath 回填
+            // FileExtension / OriginalFileName / FileSize。
+            // 与 ResourceAppService.EnsureFileMetadataFromCurrentVersionAsync 保持一致，
+            // 否则课程学习页拿不到扩展名/大小，前端预览回退的 HEAD 探测又因
+            // /api/resource-file/{id}/preview 不支持 HEAD 而直接失败（405）。
+            var missingMetadata = files
+                .Where(f => string.IsNullOrEmpty(f.FileExtension))
+                .Select(f => f.Id)
+                .ToList();
+            if (missingMetadata.Count > 0)
+            {
+                var versions = (await _resourceVersionRepository.GetQueryableAsync())
+                    .Where(v => missingMetadata.Contains(v.ResourceId) && v.IsCurrentVersion)
+                    .ToList();
+                foreach (var version in versions)
+                {
+                    if (string.IsNullOrEmpty(version.FilePath)) continue;
+                    var info = fileInfoMap.TryGetValue(version.ResourceId, out var existing)
+                        ? existing : (null, null, null);
+                    fileInfoMap[version.ResourceId] = (
+                        info.fileName ?? Path.GetFileName(version.FilePath),
+                        info.extension ?? Path.GetExtension(version.FilePath)?.TrimStart('.'),
+                        info.size ?? version.FileSize);
+                }
+            }
         }
 
         var resourcesByChapter = allResources

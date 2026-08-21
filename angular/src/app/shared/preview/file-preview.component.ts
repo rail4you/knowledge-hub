@@ -172,22 +172,29 @@ export class FilePreviewComponent {
   }
 
   /**
-   * 当 fileExtension 为空时，通过 HEAD 请求探测 Content-Type 来推断文件类型。
-   * 这样即使数据库中 fileExtension 为 null，也能正确预览旧资源（如总复习.ppt）。
+   * 当 fileExtension 为空时，先通过资源详情 API 回填文件元数据（旧资源/版本管理场景下
+   * 扩展名与大小存在 VERSIONS 表中，详情接口会自动回填），再按类型走正式预览。
+   * 原实现探测 HEAD /preview 的 Content-Type —— 但 ABP 全站不接受 HEAD（405），
+   * 探测永远失败，导致无扩展名资源一律无法预览（如课程学习页的旧视频资源）。
    */
   private detectContentTypeAndOpen(resourceId: string) {
     this.isLoading.set(true);
-    fetch(`/api/resource-file/${resourceId}/preview`, { method: 'HEAD' })
-      .then((response) => {
+    fetch(`/api/app/resource/${resourceId}`)
+      .then(async (response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const ct = response.headers.get('Content-Type') || '';
-        const ext = this.contentTypeToExtension(ct);
+        const dto = await response.json();
+        let ext = (dto?.fileExtension || '').replace('.', '').toLowerCase();
+        const dtoName = dto?.originalFileName || dto?.name || '';
+        if (!ext) ext = this.extractExtension(dtoName);
         if (!ext) {
+          // 详情接口也拿不到扩展名：按不支持处理，避免无谓请求
           this.unsupported.set(true);
           this.isLoading.set(false);
           return;
         }
         this.fileExtension.set(ext);
+        if (dtoName) this.resourceName.set(dtoName);
+        if (dto?.fileSize) this.fileSize.set(dto.fileSize);
         this.unsupported.set(false);
         this.isLoading.set(false);
         if (this.fileType === 'unsupported') {
@@ -206,25 +213,6 @@ export class FilePreviewComponent {
         this.unsupported.set(true);
         this.isLoading.set(false);
       });
-  }
-
-  private contentTypeToExtension(ct: string): string {
-    const map: Record<string, string> = {
-      'application/pdf': 'pdf',
-      'application/msword': 'doc',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-      'application/vnd.ms-excel': 'xls',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
-      'application/vnd.ms-powerpoint': 'ppt',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
-      'video/mp4': 'mp4',
-      'audio/mpeg': 'mp3',
-      'image/jpeg': 'jpg',
-      'image/png': 'png',
-      'text/plain': 'txt',
-    };
-    const base = ct.split(';')[0].trim().toLowerCase();
-    return map[base] || '';
   }
 
   close() {
