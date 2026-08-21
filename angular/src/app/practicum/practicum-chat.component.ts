@@ -66,7 +66,7 @@ export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, Aft
   /** 内嵌到其他页面时置 true（隐藏"返回实训"按钮、改用适配内嵌的高度）。 */
   @Input() embedded = false;
   projectDetail: PracticumProjectDetailDto | null = null;
-  agentConfig: PracticumAgentConfigDto = {};
+  agentConfig = signal<PracticumAgentConfigDto>({});
 
   messages = signal<PracticumChatMessageDto[]>([]);
   inputContent = signal('');
@@ -91,7 +91,7 @@ export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, Aft
   readonly senderTypes = PracticumChatSenderType;
   readonly messageTypes = PracticumChatMessageType;
 
-  agentName = computed(() => this.agentConfig.agentName || '小智');
+  agentName = computed(() => this.agentConfig().agentName || '小智');
   agentReplyTimeout: any = null;
 
   /** Filtered messages based on selected contact */
@@ -145,7 +145,7 @@ export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, Aft
     this.messages.set([]);
     this.inputContent.set('');
     this.projectDetail = null;
-    this.agentConfig = {};
+    this.agentConfig.set({});
     this.selectedContactId.set('all');
     this.isProjectLocked.set(false);
     this.isAgentReplying.set(false);
@@ -195,7 +195,7 @@ export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, Aft
 
   private loadAgentConfig(): void {
     this.chatService.getAgentConfig(this.projectId).subscribe({
-      next: config => { this.agentConfig = config; },
+      next: config => { this.agentConfig.set(config); },
       error: () => {},
     });
   }
