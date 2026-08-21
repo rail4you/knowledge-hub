@@ -29,6 +29,7 @@ import type { StudentExerciseRecordDto } from '../../proxy/learning/dtos/models'
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { SelfAssessment } from '../../proxy/learning/enums/self-assessment.enum';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
+import { buildDownloadFileName } from '../../shared/download/download-file.util';
 
 type TabKey = 'resources' | 'exercises' | 'submissions';
 
@@ -488,7 +489,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = r.name || 'download';
+        a.download = buildDownloadFileName(r.originalFileName, r.name, r.fileExtension) || 'download';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

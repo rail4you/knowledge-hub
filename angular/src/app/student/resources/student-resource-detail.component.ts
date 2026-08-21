@@ -12,6 +12,7 @@ import { ResourceService } from '../../proxy/resources/resource.service';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import type { ResourceDto } from '../../proxy/resources/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
+import { buildDownloadFileName } from '../../shared/download/download-file.util';
 import { ResourceReviewComponent } from '../../search/resource-review/resource-review.component';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
@@ -150,7 +151,8 @@ export class StudentResourceDetailComponent implements OnInit {
     const url = `/api/resource-file/${r.id}/download`;
     const a = document.createElement('a');
     a.href = url;
-    a.download = r.originalFileName || r.name || 'download';
+    const downloadName = buildDownloadFileName(r.originalFileName, r.name, r.fileExtension);
+    if (downloadName) a.download = downloadName;
     a.click();
     this.message.success('下载已开始');
   }

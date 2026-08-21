@@ -114,7 +114,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     }
 
     /// <summary>
-    /// 确保单个 DTO 的 FileExtension 正确：去前导点，为空则从 FilePath 推导。
+    /// 确保单个 DTO 的 FileMetadata 正确：
+    /// - FileExtension 去前导点，为空则从 FilePath 推导；
+    /// - OriginalFileName 为空则回退到磁盘真实文件名（保证下载文件名始终带扩展名，
+    ///   否则前端把"医疗"这类无扩展名的资源名当下载文件名，保存的文件无法打开）。
     /// </summary>
     private void EnsureFileMetadata(ResourceDto dto)
     {
@@ -131,6 +134,16 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             if (!string.IsNullOrEmpty(ext))
             {
                 dto.FileExtension = ext.TrimStart('.');
+            }
+        }
+
+        // OriginalFileName 为空时，从磁盘真实文件名回退（该文件名一定带扩展名）
+        if (string.IsNullOrEmpty(dto.OriginalFileName) && !string.IsNullOrEmpty(dto.FilePath))
+        {
+            var fileName = System.IO.Path.GetFileName(dto.FilePath);
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                dto.OriginalFileName = fileName;
             }
         }
     }

@@ -13,6 +13,7 @@ import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { StudentResourceCollectionService } from '../resource-collection.service';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
+import { buildDownloadFileName } from '../../shared/download/download-file.util';
 
 @Component({
   selector: 'app-student-favorites',
@@ -136,7 +137,8 @@ export class StudentFavoritesComponent implements OnInit {
     const url = `/api/resource-file/${resource.id}/download`;
     const a = document.createElement('a');
     a.href = url;
-    a.download = resource.originalFileName || resource.name || 'download';
+    const downloadName = buildDownloadFileName(resource.originalFileName, resource.name, resource.fileExtension);
+    if (downloadName) a.download = downloadName;
     a.click();
     this.message.success('下载已开始');
   }

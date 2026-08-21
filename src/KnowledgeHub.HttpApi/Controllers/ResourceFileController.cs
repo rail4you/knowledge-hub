@@ -178,7 +178,19 @@ public class ResourceFileController : AbpControllerBase
             if (!System.IO.File.Exists(fullPath))
                 return NotFound(new { message = "资源文件不存在" });
 
-            var fileName = resource.OriginalFileName ?? resource.Name ?? "download";
+            // 下载文件名必须带扩展名：OriginalFileName 缺失时回退到磁盘文件的真实名称
+            // （老数据里有的 OriginalFileName 为空，直接用资源名"医疗"当下载文件名会
+            // 导致保存下来的文件没有扩展名、双击打不开——"格式可能有问题"）。
+            var fileName = resource.OriginalFileName;
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = Path.GetFileName(fullPath);
+            }
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = resource.Name ?? "download";
+            }
+
             var contentType = GetContentType(fileName);
             return PhysicalFile(fullPath, contentType, fileName, enableRangeProcessing: true);
         }

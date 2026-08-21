@@ -40,6 +40,7 @@ import {NzMessageService} from 'ng-zorro-antd/message';
 import {FilePreviewComponent} from '../shared/preview/file-preview.component';
 import {ResourceReviewComponent} from '../search/resource-review/resource-review.component';
 import {RecommendationService, type ResourceStatisticsDto} from '../search/recommendation/recommendation.service';
+import {buildDownloadFileName} from '../shared/download/download-file.util';
 
 @Component({
   selector: 'app-resource',
@@ -819,7 +820,10 @@ export class ResourceComponent implements OnInit {
     const url = `/api/resource-file/${res.id}/download`;
     const a = document.createElement('a');
     a.href = url;
-    a.download = res.originalFileName || 'download';
+    // 只在前端能拼出带扩展名的文件名时才覆盖下载名，否则交给服务器 Content-Disposition
+    // （避免旧数据 originalFileName 为空时把文件存成无扩展名导致打不开）。
+    const downloadName = buildDownloadFileName(res.originalFileName, res.name, res.fileExtension);
+    if (downloadName) a.download = downloadName;
     a.click();
   }
 

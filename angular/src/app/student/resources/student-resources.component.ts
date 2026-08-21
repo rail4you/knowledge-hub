@@ -18,6 +18,7 @@ import { PortalService } from '../../proxy/portal/portal.service';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
+import { buildDownloadFileName } from '../../shared/download/download-file.util';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
 import { AuthErrorService } from '../../core/auth/auth-error.service';
@@ -387,7 +388,8 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     const url = `/api/resource-file/${resource.id}/download`;
     const a = document.createElement('a');
     a.href = url;
-    a.download = resource.originalFileName || resource.name || 'download';
+    const downloadName = buildDownloadFileName(resource.originalFileName, resource.name, resource.fileExtension);
+    if (downloadName) a.download = downloadName;
     a.click();
     this.message.success('下载已开始');
   }
