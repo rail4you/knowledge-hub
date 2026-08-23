@@ -7,7 +7,9 @@ using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Identity;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.Uow;
 
@@ -304,13 +306,42 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
             user.ExtraProperties["Remark"] = dto.Remark;
 
         var roleName = GetRoleNameByRoleType(dto.RoleType);
-        var role = await _identityRoleRepository.FindByNormalizedNameAsync(roleName.ToUpperInvariant());
+        var role = await ResolveRoleForUserAsync(roleName, user.TenantId);
         if (role != null)
         {
             user.AddRole(role.Id);
         }
 
         await _identityUserRepository.UpdateAsync(user);
+    }
+
+    /// <summary>
+    /// 为导入用户解析角色：优先取与用户同租户（TenantId）的角色；
+    /// 只有宿主用户才允许分配到宿主级角色。
+    /// 目的：避免历史 bug —— 租户用户被分配到宿主级同名角色
+    /// （Student/Teacher/SchoolAdmin…），运行时角色解析为空导致行为异常。
+    /// </summary>
+    private async Task<IdentityRole?> ResolveRoleForUserAsync(string roleName, Guid? userTenantId)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var roles = await _identityRoleRepository.GetListAsync(includeDetails: false);
+            var normalizedName = roleName.ToUpperInvariant();
+            var candidates = roles
+                .Where(r => r.NormalizedName == normalizedName)
+                .ToList();
+
+            // 优先同租户角色；宿主用户回退到宿主级角色；租户用户找不到租户角色时返回 null（不误配宿主角色）
+            var sameTenantRole = candidates.FirstOrDefault(r => r.TenantId == userTenantId);
+            if (sameTenantRole != null)
+            {
+                return sameTenantRole;
+            }
+
+            return userTenantId == null
+                ? candidates.FirstOrDefault(r => r.TenantId == null)
+                : null;
+        }
     }
 
     private string GetRoleNameByRoleType(UserRoleType roleType)

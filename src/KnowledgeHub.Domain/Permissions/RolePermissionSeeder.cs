@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Identity;
@@ -74,8 +75,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IIdentityRoleRepository _roleRepository;
+    private readonly IIdentityUserRepository _userRepository;
     private readonly IdentityRoleManager _identityRoleManager;
     private readonly IdentityUserManager _identityUserManager;
+    private readonly IDataFilter _dataFilter;
     private readonly ILogger<RolePermissionSeeder> _logger;
 
     public RolePermissionSeeder(
@@ -83,16 +86,20 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         ITenantRepository tenantRepository,
         ICurrentTenant currentTenant,
         IIdentityRoleRepository roleRepository,
+        IIdentityUserRepository userRepository,
         IdentityRoleManager identityRoleManager,
         IdentityUserManager identityUserManager,
+        IDataFilter dataFilter,
         ILogger<RolePermissionSeeder> logger)
     {
         _permissionManager = permissionManager;
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
         _roleRepository = roleRepository;
+        _userRepository = userRepository;
         _identityRoleManager = identityRoleManager;
         _identityUserManager = identityUserManager;
+        _dataFilter = dataFilter;
         _logger = logger;
     }
 
@@ -129,6 +136,86 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
                 await EnsureRoleExistsAsync(roleName);
             }
             await GrantAllRolePermissionsAsync();
+
+            // 自愈：租户用户被误分配到宿主级同名标准角色时，改指到本租户角色。
+            // （历史 bug 产物：宿主级 Student/Teacher/SchoolAdmin 等角色堆积，
+            //   租户用户被分配到宿主级角色后在运行时解析不到角色，
+            //   前端把学生当成教师/把教师当成普通用户，行为不一致。）
+            await RepairHostScopeRoleAssignmentsAsync(tenantId);
+        }
+    }
+
+    /// <summary>
+    /// 找出本租户下被分配到「宿主级标准角色」的用户，并把关联改指到其租户级同名角色。
+    /// 原因：宿主级同名角色堆积（历史种子 bug）导致某些写路径把宿主角色分配给了租户用户，
+    /// ABP 多租户过滤下这类关联在运行时不可见（角色解析为空）。
+    ///
+    /// 幂等：已修复的关联（租户级角色）不会被再次命中。
+    /// </summary>
+    private async Task RepairHostScopeRoleAssignmentsAsync(Guid tenantId)
+    {
+        List<IdentityUser> users;
+        Dictionary<Guid, IdentityRole> hostRoles;
+        Dictionary<string, IdentityRole> tenantRoles;
+
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            var allRoles = await _roleRepository.GetListAsync(includeDetails: false);
+            hostRoles = allRoles
+                .Where(r => r.TenantId == null && TenantRoles.Contains(r.Name))
+                .GroupBy(r => r.Id)
+                .Select(g => g.First())
+                .ToDictionary(r => r.Id);
+            tenantRoles = allRoles
+                .Where(r => r.TenantId == tenantId && TenantRoles.Contains(r.Name))
+                .GroupBy(r => r.Name)
+                .Select(g => g.First())
+                .ToDictionary(r => r.Name);
+
+            if (hostRoles.Count == 0)
+            {
+                return;
+            }
+
+            users = await _userRepository.GetListAsync(includeDetails: true);
+        }
+
+        var changed = false;
+        foreach (var user in users.Where(u => u.TenantId == tenantId))
+        {
+            var links = user.Roles?.ToList() ?? new List<IdentityUserRole>();
+            foreach (var link in links)
+            {
+                if (!hostRoles.TryGetValue(link.RoleId, out var hostRole))
+                {
+                    continue;
+                }
+
+                if (!tenantRoles.TryGetValue(hostRole.Name, out var tenantRole))
+                {
+                    continue;
+                }
+
+                var alreadyLinked = links.Any(l => l.RoleId == tenantRole.Id);
+                user.RemoveRole(hostRole.Id);
+                if (!alreadyLinked)
+                {
+                    user.AddRole(tenantRole.Id);
+                }
+
+                changed = true;
+                _logger.LogWarning(
+                    "[RolePermissionSeeder] 自愈：租户用户 {UserName}({TenantId}) 的宿主级角色 {RoleName} 已改指到租户级角色 {TenantRoleId}",
+                    user.UserName,
+                    user.TenantId,
+                    hostRole.Name,
+                    tenantRole.Id);
+            }
+        }
+
+        if (changed)
+        {
+            await _userRepository.UpdateManyAsync(users.Where(u => u.TenantId == tenantId));
         }
     }
 
