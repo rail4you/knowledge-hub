@@ -72,6 +72,14 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/account-validity',
+    loadComponent: () => import('./admin/account-validity/account-validity.component').then(c => c.AccountValidityComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Users',
+    },
+  },
+  {
     path: 'resources',
     loadComponent: () => import('./resources/resource').then(c => c.ResourceComponent),
     canActivate: [authGuard, nonStudentGuard],

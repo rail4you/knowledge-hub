@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using KnowledgeHub.Localization;
 using KnowledgeHub.MultiTenancy;
 using KnowledgeHub.Permissions;
+using KnowledgeHub.Accounts;
 using System;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
@@ -49,6 +50,9 @@ public class KnowledgeHubDomainModule : AbpModule
         // 启动期自动为所有租户重新种子角色权限，
         // 避免老租户因为数据种子只跑过一次而长期缺失权限。
         context.Services.AddHostedService<RolePermissionEnsureHostedService>();
+
+        // 账号有效期自动熔断后台任务：周期性扫描到期账号并收回编辑/管理权限
+        context.Services.AddHostedService<AccountValidityCheckHostedService>();
 
 
 

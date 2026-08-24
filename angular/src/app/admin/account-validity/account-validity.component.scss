@@ -1,0 +1,31 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #999;
+}
+
+.modal-users {
+  margin: 16px 0;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.modal-users .muted {
+  color: #999;
+  font-size: 13px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

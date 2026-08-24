@@ -545,6 +545,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Create);
         await GrantAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Manage);
+
+        // 用户管理：仅 host「admin」全局管理员授予。用于账号有效期管理等全局运营功能入口。
+        // 注意：不得授予租户级 SchoolAdmin，以保证多校协同-有效期配置仅全局管理员可见。
+        await GrantAsync("admin", KnowledgeHubPermissions.Users.Default);
     }
 
     /// <summary>

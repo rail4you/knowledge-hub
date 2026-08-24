@@ -500,6 +500,25 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.TenantInfo.Edit',
     },
     // ══════════════════════════════════════════════════════════
+    //  多校协同管理（全局管理员专属）
+    // ══════════════════════════════════════════════════════════
+    {
+      path: '/multi-school-admin',
+      name: '::Menu:MultiSchool',
+      iconClass: 'fas fa-school',
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Users',
+    },
+    {
+      path: '/admin/account-validity',
+      name: '::Menu:AccountValidity',
+      iconClass: 'fas fa-hourglass-half',
+      parentName: '::Menu:MultiSchool',
+      order: 10,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Users',
+    },
+    // ══════════════════════════════════════════════════════════
     //  隐藏 / 特殊路由（不显示在侧边栏）
     // ══════════════════════════════════════════════════════════
     {

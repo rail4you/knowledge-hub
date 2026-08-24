@@ -19,6 +19,8 @@ using KnowledgeHub.Domain.Search;
 using KnowledgeHub.EntityFrameworkCore.AI;
 using KnowledgeHub.EntityFrameworkCore.Majors;
 using KnowledgeHub.EntityFrameworkCore.TenantInfos;
+using KnowledgeHub.EntityFrameworkCore.Accounts;
+using KnowledgeHub.Accounts;
 using KnowledgeHub.Exams;
 using KnowledgeHub.Alliance;
 using KnowledgeHub.News;
@@ -185,6 +187,9 @@ public class KnowledgeHubDbContext :
     public DbSet<global::KnowledgeHub.RecruitmentLive.RecruitmentLive> RecruitmentLives { get; set; }
     public DbSet<RecruitmentLiveChatMessage> RecruitmentLiveChatMessages { get; set; }
 
+    // Account validity (multi-school account lifecycle) entities
+    public DbSet<AccountValidity> AccountValidities { get; set; }
+
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
     {
@@ -225,5 +230,6 @@ public class KnowledgeHubDbContext :
         builder.ConfigureRecruitmentLive();
         builder.ConfigureTeachingAgents();
         builder.ConfigureTenantInfo();
+        builder.ConfigureAccountValidity();
     }
 }

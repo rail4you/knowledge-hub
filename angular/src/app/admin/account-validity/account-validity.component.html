@@ -1,0 +1,157 @@
+<nz-page-header>
+  <nz-page-header-title>{{ '::AccountValidity:Title' | abpLocalization }}</nz-page-header-title>
+  <nz-page-header-subtitle>{{ '::AccountValidity:Subtitle' | abpLocalization }}</nz-page-header-subtitle>
+  <nz-page-header-extra>
+    <button nz-button nzType="primary" (click)="openSetBatch()">
+      <span nz-icon nzType="schedule"></span>
+      {{ '::AccountValidity:BatchSet' | abpLocalization }}
+    </button>
+  </nz-page-header-extra>
+</nz-page-header>
+
+<nz-alert
+  *ngIf="!isHost"
+  nzType="warning"
+  nzShowIcon
+  [nzMessage]="'::AccountValidity:HostOnly' | abpLocalization"
+  style="margin-bottom: 16px;"
+></nz-alert>
+
+<nz-card *ngIf="isHost" [nzBordered]="false" style="min-height: 60vh;">
+  <!-- 筛选区 -->
+  <div class="filters">
+    <input
+      nz-input
+      [(ngModel)]="filter"
+      (keyup.enter)="search()"
+      [placeholder]="'::AccountValidity:FilterPlaceholder' | abpLocalization"
+      style="width: 200px;"
+    />
+    <nz-select [(ngModel)]="tenantId" (ngModelChange)="onTenantFilterChange()" nzAllowClear nzPlaceHolder="院校" style="width: 180px;">
+      <nz-option *ngFor="let t of tenants" [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
+    </nz-select>
+    <nz-select [(ngModel)]="roleName" (ngModelChange)="onRoleFilterChange()" nzAllowClear nzPlaceHolder="角色" style="width: 150px;">
+      <nz-option nzValue="SchoolAdmin" nzLabel="院校管理员"></nz-option>
+      <nz-option nzValue="Teacher" nzLabel="教师"></nz-option>
+    </nz-select>
+    <nz-select [(ngModel)]="status" (ngModelChange)="onStatusFilterChange()" nzAllowClear nzPlaceHolder="状态" style="width: 140px;">
+      <nz-option nzValue="0" nzLabel="正常"></nz-option>
+      <nz-option nzValue="1" nzLabel="已到期"></nz-option>
+    </nz-select>
+    <label nz-checkbox [(ngModel)]="expiringSoon" (ngModelChange)="onExpiringSoonChange()">
+      即将到期/已到期
+    </label>
+    <button nz-button nzType="primary" nzGhost (click)="search()">
+      <span nz-icon nzType="search"></span>查询
+    </button>
+    <button nz-button (click)="resetFilters()">重置</button>
+  </div>
+
+  <nz-table
+    #table
+    [nzData]="items"
+    [nzFrontPagination]="false"
+    [nzShowPagination]="true"
+    [nzTotal]="totalCount"
+    [nzPageIndex]="pageIndex"
+    [nzPageSize]="pageSize"
+    [nzLoading]="loading()"
+    (nzPageIndexChange)="onPageIndexChange($event)"
+    (nzPageSizeChange)="onPageSizeChange($event)"
+    nzShowSizeChanger
+    [nzPageSizeOptions]="[10, 20, 50]"
+  >
+    <thead>
+      <tr>
+        <th nzWidth="40px">
+          <label nz-checkbox [ngModel]="allChecked" [nzIndeterminate]="someChecked" (ngModelChange)="onAllChecked($event)"></label>
+        </th>
+        <th>姓名</th>
+        <th>用户名</th>
+        <th>所属院校</th>
+        <th>角色</th>
+        <th>有效期至</th>
+        <th>状态</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let item of items">
+        <td>
+          <label nz-checkbox [ngModel]="isChecked(item.id)" (ngModelChange)="onCheckChange(item.id, $event)"></label>
+        </td>
+        <td>
+          {{ item.displayName || item.userName }}
+          <nz-tag *ngIf="!item.userIsActive" nzColor="default">停用</nz-tag>
+        </td>
+        <td>{{ item.userName }}</td>
+        <td>{{ item.tenantName || 'Host' }}</td>
+        <td>
+          <nz-tag>{{ getRoleDisplay(item.roleName) }}</nz-tag>
+        </td>
+        <td>{{ formatValidUntil(item) }}</td>
+        <td>
+          <nz-tag [nzColor]="getStatusMeta(item).color">{{ getStatusMeta(item).text }}</nz-tag>
+        </td>
+        <td>
+          <button nz-button nzType="link" nzSize="small" (click)="openSetSingle(item)">
+            <span nz-icon nzType="edit"></span>{{ '::AccountValidity:SetValidity' | abpLocalization }}
+          </button>
+          <button *ngIf="item.isExpired" nz-button nzType="link" nzSize="small" (click)="renew(item)">
+            <span nz-icon nzType="redo"></span>{{ '::AccountValidity:Renew' | abpLocalization }}
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </nz-table>
+</nz-card>
+
+<nz-modal
+  [(nzVisible)]="isModalOpen"
+  [nzTitle]="modalTitle"
+  (nzOnCancel)="closeModal()"
+  [nzFooter]="null"
+  nzWidth="520px"
+>
+  <ng-container *nzModalContent>
+    <form nz-form>
+      <nz-form-item>
+        <nz-form-label>设置方式</nz-form-label>
+        <nz-form-control>
+          <nz-radio-group [(ngModel)]="mode" name="mode" (ngModelChange)="onModeChange()">
+            <label nz-radio nzValue="fixed">固定截止日期</label>
+            <label nz-radio nzValue="days">有效天数</label>
+            <label nz-radio nzValue="permanent">永久有效</label>
+          </nz-radio-group>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item *ngIf="mode === 'fixed'">
+        <nz-form-label>到期日期</nz-form-label>
+        <nz-form-control>
+          <nz-date-picker [(ngModel)]="validUntil" name="validUntil" style="width: 100%;"></nz-date-picker>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item *ngIf="mode === 'days'">
+        <nz-form-label>有效天数</nz-form-label>
+        <nz-form-control>
+          <nz-input-number [(ngModel)]="days" name="days" [nzMin]="1" [nzMax]="3650" style="width: 100%;"></nz-input-number>
+          <div class="hint">{{ '::AccountValidity:DaysHint' | abpLocalization }}</div>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-alert *ngIf="mode === 'permanent'" nzType="info" nzShowIcon [nzMessage]="'::AccountValidity:PermanentHint' | abpLocalization"></nz-alert>
+
+      <div class="modal-users">
+        <nz-tag *ngFor="let u of modalUsers">{{ u.displayName || u.userName }}</nz-tag>
+        <span *ngIf="isBatch && modalUsers.length > 5" class="muted">等 {{ modalUsers.length }} 人</span>
+      </div>
+
+      <div class="modal-actions">
+        <button nz-button (click)="closeModal()">取消</button>
+        <button nz-button nzType="primary" [nzLoading]="saving()" (click)="save()">保存</button>
+      </div>
+    </form>
+  </ng-container>
+</nz-modal>
