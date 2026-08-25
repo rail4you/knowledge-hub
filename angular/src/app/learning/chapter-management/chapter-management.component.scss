@@ -145,11 +145,26 @@
           }
         }
 
-        .node-title {
+        .node-main {
           flex: 1;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+
+          .node-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .node-desc {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 12px;
+            color: #999;
+          }
         }
 
         .node-actions {
@@ -182,6 +197,18 @@
 
       span {
         font-size: 14px;
+      }
+
+      .detail-desc {
+        display: block;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #333;
+        line-height: 1.6;
+        background: #fafafa;
+        border: 1px solid #f0f0f0;
+        border-radius: 4px;
+        padding: 8px 12px;
       }
     }
 

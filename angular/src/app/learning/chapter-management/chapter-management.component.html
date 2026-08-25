@@ -65,7 +65,7 @@
             @if (chapter.description) {
               <div class="detail-field">
                 <label>描述：</label>
-                <span>{{ chapter.description }}</span>
+                <span class="detail-desc">{{ chapter.description }}</span>
               </div>
             }
             <div class="detail-actions">
@@ -114,7 +114,12 @@
           } @else {
             <span class="toggle-icon placeholder"></span>
           }
-          <span class="node-title">{{ node.title }}</span>
+          <span class="node-main">
+            <span class="node-title">{{ node.title }}</span>
+            @if (node.description) {
+              <span class="node-desc">{{ node.description }}</span>
+            }
+          </span>
           <span class="node-actions">
             <button nz-button nzType="text" nzSize="small" (click)="openCreateChildModal(node); $event.stopPropagation()"
               title="添加子章节">
