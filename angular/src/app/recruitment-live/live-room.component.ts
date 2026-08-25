@@ -52,7 +52,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   readonly remoteStream = this.liveService.remoteStream;
   readonly connectionLabel = this.liveService.connectionLabel;
 
-  readonly localStreamActive = computed(() => this.liveService.getLocalStream() !== null);
+  readonly localStreamActive = computed(() => this.liveService.localStreamReady());
   readonly isCallActive = computed(() =>
     this.liveState() === 'connected' || this.liveState() === 'signaling' || this.liveState() === 'disconnected'
   );

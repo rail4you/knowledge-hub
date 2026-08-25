@@ -64,7 +64,9 @@
   </section>
 
   <!-- ────────── VIDEO AREA ────────── -->
-  <div class="video-stage" [class.hidden]="liveState() === 'waiting' && myRole === 'teacher'">
+  <!-- 教师端等待时如果已开启摄像头，也展示视频区（含本地预览），让教师确认摄像头已工作；
+       无摄像头时仍只显示邀请卡片 -->
+  <div class="video-stage" [class.hidden]="liveState() === 'waiting' && myRole === 'teacher' && !localStreamActive()">
     <!-- Remote (full) -->
     <div class="video-remote">
       <div class="video-placeholder" *ngIf="!remoteVideoActive()">

@@ -81,6 +81,7 @@ export class RecruitmentLiveService {
   // ── WebRTC State ──
 
   readonly liveState = signal<LiveState>('idle');
+  readonly localStreamReady = signal(false);
   readonly micEnabled = signal(true);
   readonly camEnabled = signal(true);
   readonly chatOpen = signal(false);
@@ -105,6 +106,7 @@ export class RecruitmentLiveService {
 
     // 获取本地媒体（摄像头/麦克风），允许降级
     this.localStream = await this.acquireMediaStream();
+    this.localStreamReady.set(this.localStream !== null);
 
     this.liveState.set('waiting');
 
@@ -128,11 +130,12 @@ export class RecruitmentLiveService {
     }
   }
 
-  /** 获取媒体流，逐级降级：video+audio → audio only → null（纯文字聊天） */
+  /** 获取媒体流，逐级降级：video+audio → video only → audio only → null（纯文字聊天） */
   private async acquireMediaStream(): Promise<MediaStream | null> {
     const constraints: MediaStreamConstraints[] = [
       { video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: true },
-      { video: true, audio: true },
+      // 麦克风被拒但摄像头可用时，降级为只有视频
+      { video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: false },
       { audio: true },
     ];
     for (const c of constraints) {
@@ -216,6 +219,7 @@ export class RecruitmentLiveService {
         case 'connected':
           this.liveState.set('connected');
           this.connectionLabel.set('已连接');
+          this.retryCount = 0;
           this.startTimer();
           break;
         case 'connecting':
@@ -266,7 +270,15 @@ export class RecruitmentLiveService {
 
       case 'offer':
         console.log('[LiveWS] Received offer, creating answer...');
-        if (!this.pc) await this.createPeerConnection();
+        // 若之前的 PC 已失败/关闭，先重建再应答，避免 setRemoteDescription 抛错导致死局
+        if (!this.pc || this.pc.connectionState === 'failed' || this.pc.connectionState === 'closed') {
+          this.offerSent = false;
+          if (this.pc) {
+            try { this.pc.close(); } catch {}
+            this.pc = null;
+          }
+          await this.createPeerConnection();
+        }
         try {
           await this.pc!.setRemoteDescription(new RTCSessionDescription(msg.data));
           const answer = await this.pc!.createAnswer();
@@ -465,6 +477,7 @@ export class RecruitmentLiveService {
       this.localStream.getTracks().forEach(t => t.stop());
       this.localStream = null;
     }
+    this.localStreamReady.set(false);
     this.remoteStream.set(null);
     this.chatMessages.set([]);
     this.retryCount = 0;
@@ -477,13 +490,32 @@ export class RecruitmentLiveService {
     if (this.retryCount <= 2) {
       this.connectionLabel.set(`连接失败，正在重试(${this.retryCount}/2)...`);
       setTimeout(() => {
-        if (this.pc?.iceConnectionState === 'failed') {
-          if (this.myRole === 'teacher') this.createAndSendOffer();
+        // 仅当连接真的未建立时才重试（避免协商过程中误触发）
+        if (!this.pc
+          || this.pc.connectionState === 'failed'
+          || this.pc.connectionState === 'disconnected'
+          || this.pc.connectionState === 'closed') {
+          this.retryPeerConnection();
         }
       }, 2000);
     } else {
       this.liveState.set('disconnected');
       this.connectionLabel.set('连接失败，请挂断后重试');
+    }
+  }
+
+  /** 重建 PeerConnection 并重新协商：重置 offerSent、重建 PC、教师侧重新发起 offer */
+  private async retryPeerConnection() {
+    this.offerSent = false;
+    if (this.pc) {
+      try { this.pc.close(); } catch {}
+      this.pc = null;
+    }
+    this.remoteStream.set(null);
+    this.connectionLabel.set('重新连接中...');
+    await this.createPeerConnection();
+    if (this.myRole === 'teacher') {
+      await this.createAndSendOffer();
     }
   }
 
