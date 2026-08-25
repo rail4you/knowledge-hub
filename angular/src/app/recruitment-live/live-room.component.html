@@ -20,93 +20,47 @@
     </div>
   </header>
 
-  <!-- ────────── WAITING: 教师端 ────────── -->
-  <section class="waiting-hero" *ngIf="liveState() === 'waiting' && myRole === 'teacher'">
-    <div class="waiting-card">
-      <div class="waiting-icon">
-        <span nz-icon nzType="message" nzTheme="outline"></span>
+  <!-- ────────── LIVE BODY: 视频区 + 侧边聊天面板 ────────── -->
+  <div class="live-body" *ngIf="liveState() !== 'ended'">
+    <!-- VIDEO STAGE（始终占满主区域） -->
+    <div class="video-stage">
+      <!-- Remote (full) -->
+      <div class="video-remote">
+        <div class="video-placeholder" *ngIf="!remoteVideoActive()">
+          <div class="ph-avatar">👤</div>
+          <span>{{ placeholderText() }}</span>
+        </div>
+        <video
+          *ngIf="remoteVideoActive()"
+          #remoteVideo
+          [srcObject]="remoteStream()"
+          autoplay playsinline
+        ></video>
       </div>
-      <h2>邀请学生加入</h2>
-      <p class="waiting-sub">将以下房间码发送给学生，或让学生直接访问直播间链接</p>
-      <div class="room-code-box">
-        <span class="room-code">{{ roomCode() }}</span>
+
+      <!-- ── WAITING 状态（无需房间码/邀请卡片，学生通过链接直接进入即可连通）── -->
+      <div class="invite-overlay" *ngIf="liveState() === 'waiting'">
+        <div class="waiting-status">
+          <span class="pulse"></span>
+          <span>{{ waitingText() }}</span>
+          <span class="caption-hint" *ngIf="!localStreamActive()">
+            （未检测到摄像头/麦克风，将以文字模式进行沟通）
+          </span>
+        </div>
       </div>
-      <button nz-button nzType="primary" nzSize="large" nzShape="round" (click)="copyRoomCode()">
-        <span nz-icon nzType="copy" nzTheme="outline"></span>
-        复制房间码
-      </button>
-      <div class="caption-hint" *ngIf="!localStreamActive()">
-        <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-        未检测到摄像头/麦克风，将以文字模式进行沟通
-      </div>
-      <div class="waiting-hint">
-        <span class="pulse"></span> {{ waitingText() }}
+
+      <!-- Local (PiP) -->
+      <div class="video-local" *ngIf="localStreamActive()">
+        <video
+          #localVideo
+          [srcObject]="liveService.getLocalStream()"
+          autoplay playsinline muted
+        ></video>
       </div>
     </div>
-  </section>
 
-  <!-- ────────── WAITING: 学生端 ────────── -->
-  <section class="waiting-hero" *ngIf="liveState() === 'waiting' && myRole === 'student'">
-    <div class="waiting-card">
-      <div class="waiting-icon">
-        <span nz-icon nzType="message" nzTheme="outline"></span>
-      </div>
-      <h2>准备就绪</h2>
-      <p class="waiting-sub">已连接信令服务器，等待对方发起通话</p>
-      <div class="caption-hint" *ngIf="!localStreamActive()">
-        <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-        未检测到摄像头/麦克风，将以文字模式进行沟通
-      </div>
-      <div class="waiting-hint">
-        <span class="pulse"></span> {{ waitingText() }}
-      </div>
-    </div>
-  </section>
-
-  <!-- ────────── VIDEO AREA ────────── -->
-  <!-- 教师端等待时如果已开启摄像头，也展示视频区（含本地预览），让教师确认摄像头已工作；
-       无摄像头时仍只显示邀请卡片 -->
-  <div class="video-stage" [class.hidden]="liveState() === 'waiting' && myRole === 'teacher' && !localStreamActive()">
-    <!-- Remote (full) -->
-    <div class="video-remote">
-      <div class="video-placeholder" *ngIf="!remoteVideoActive()">
-        <div class="ph-avatar">👤</div>
-        <span>{{ liveState() === 'connected' ? '对方摄像头未开启' : '等待对方加入...' }}</span>
-      </div>
-      <video
-        *ngIf="remoteVideoActive()"
-        #remoteVideo
-        [srcObject]="remoteStream()"
-        autoplay playsinline
-      ></video>
-    </div>
-
-    <!-- Local (PiP) -->
-    <div class="video-local" *ngIf="localStreamActive()">
-      <video
-        #localVideo
-        [srcObject]="liveService.getLocalStream()"
-        autoplay playsinline muted
-      ></video>
-    </div>
-  </div>
-
-  <!-- ────────── ENDED ────────── -->
-  <section class="ended-hero" *ngIf="liveState() === 'ended'">
-    <div class="ended-card">
-      <div class="ended-icon">
-        <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-      </div>
-      <h3>通话已结束</h3>
-      <p>通话时长 {{ formattedTime() }}</p>
-      <button nz-button nzType="primary" nzShape="round" (click)="goBack()">返回列表</button>
-    </div>
-  </section>
-
-  <!-- ────────── BOTTOM CONTROLS ────────── -->
-  <footer class="control-bar" *ngIf="liveState() !== 'idle' && liveState() !== 'ended'">
-    <!-- Chat panel -->
-    <div class="chat-panel" [class.open]="chatOpen()">
+    <!-- ── CHAT SIDEBAR（侧边聊天面板） ── -->
+    <aside class="chat-sidebar" *ngIf="chatOpen()">
       <div class="chat-messages" #chatMessagesContainer>
         <div class="chat-msg" *ngFor="let msg of chatMessages()"
              [class.self]="msg.self" [class.other]="!msg.self">
@@ -126,8 +80,23 @@
           <span nz-icon nzType="send" nzTheme="outline"></span>
         </button>
       </div>
-    </div>
+    </aside>
+  </div>
 
+  <!-- ────────── ENDED ────────── -->
+  <section class="ended-hero" *ngIf="liveState() === 'ended'">
+    <div class="ended-card">
+      <div class="ended-icon">
+        <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+      </div>
+      <h3>通话已结束</h3>
+      <p>通话时长 {{ formattedTime() }}</p>
+      <button nz-button nzType="primary" nzShape="round" (click)="goBack()">返回列表</button>
+    </div>
+  </section>
+
+  <!-- ────────── BOTTOM CONTROLS ────────── -->
+  <footer class="control-bar" *ngIf="liveState() !== 'idle' && liveState() !== 'ended'">
     <!-- Control buttons -->
     <div class="control-row">
       <button
@@ -150,10 +119,21 @@
 
       <button
         class="ctrl-btn ctrl-hangup"
-        nz-tooltip nzTooltipTitle="挂断"
-        (click)="hangUp()"
+        nz-tooltip nzTooltipTitle="退出直播"
+        (click)="goBack()"
       >
         <span nz-icon nzType="phone" nzTheme="outline"></span>
+      </button>
+
+      <!-- 教师端手动结束直播（学生端不显示） -->
+      <button
+        class="ctrl-btn ctrl-end"
+        *ngIf="myRole === 'teacher'"
+        nz-tooltip nzTooltipTitle="结束直播（仅教师）"
+        (click)="stopLive()"
+      >
+        <span nz-icon nzType="poweroff" nzTheme="outline"></span>
+        <span class="ctrl-end__label">结束直播</span>
       </button>
 
       <button

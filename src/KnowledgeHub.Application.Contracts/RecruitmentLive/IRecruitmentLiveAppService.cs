@@ -18,6 +18,8 @@ public interface IRecruitmentLiveAppService : IApplicationService
     Task<RecruitmentLiveDto> UpdateLiveAsync(Guid id, UpdateRecruitmentLiveDto input);
     /// <summary>取消直播</summary>
     Task CancelLiveAsync(Guid id);
+    /// <summary>结束直播（仅教师/管理员；进行中→已结束，等待中→已取消，幂等）</summary>
+    Task EndLiveAsync(Guid id);
     /// <summary>删除直播</summary>
     Task DeleteLiveAsync(Guid id);
     /// <summary>获取进入直播间的 WebSocket 令牌（一次性，30秒过期）</summary>

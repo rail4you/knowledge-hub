@@ -45,6 +45,12 @@ export class RecruitmentLiveService {
       method: 'POST', url: `/api/app/recruitment-live/${id}/cancel-live`,
     }, { apiName: this.apiName });
 
+  /** 结束直播（仅教师端“结束直播”按钮调用；进行中→已结束，等待中→已取消） */
+  endLive = (id: string) =>
+    this.restService.request<any, void>({
+      method: 'POST', url: `/api/app/recruitment-live/${id}/end-live`,
+    }, { apiName: this.apiName });
+
   deleteLive = (id: string) =>
     this.restService.request<any, void>({
       method: 'DELETE', url: `/api/app/recruitment-live/${id}/live`,
@@ -482,6 +488,9 @@ export class RecruitmentLiveService {
     this.chatMessages.set([]);
     this.retryCount = 0;
     this.offerSent = false;
+    // 关键：清空待发送队列，避免上一次会话的挂起消息（如 hang-up）
+    // 在下一次 connect() 打开 WebSocket 后被 flush 到新直播间，导致对方被误挂断
+    this.pendingMessages = [];
   }
 
   private handleConnectionFailure() {

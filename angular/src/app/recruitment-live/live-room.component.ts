@@ -90,7 +90,12 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
     return this.myRole === 'teacher' ? '等待学生加入...' : '等待教师发起连接...';
   });
 
-  readonly roomCode = computed(() => this.live?.roomCode || '');
+  /** 远程区占位文案：每次变更检测重新求值（避免 computed 缓存普通字段的旧值） */
+  placeholderText(): string {
+    if (this.liveState() === 'connected') return '对方摄像头未开启';
+    if (this.liveState() === 'ended') return '通话已结束';
+    return this.myRole === 'teacher' ? '等待学生加入...' : '等待教师发起连接...';
+  }
 
   ngOnInit() {
     this.liveId = this.route.snapshot.paramMap.get('id') || '';
@@ -176,23 +181,21 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
     });
   }
 
-  hangUp() {
-    this.liveService.hangUp();
-    this.message.info('已挂断');
-  }
-
   goBack() {
+    // 返回直播列表（仅断开连接，不结束直播；直播未结束可随时再进入）
     this.liveService.disconnect();
     this.router.navigate(this.myRole === 'teacher'
       ? ['/admin/recruitment-live']
       : ['/student/recruitment-live']);
   }
 
-  copyRoomCode() {
-    navigator.clipboard.writeText(this.live?.roomCode || '').then(
-      () => this.message.success('房间码已复制'),
-      () => this.message.error('复制失败')
-    );
+  /** 教师端手动结束直播：结束直播 + 通知对方挂断 + 返回列表 */
+  stopLive() {
+    this.liveService.hangUp();
+    this.liveService.endLive(this.liveId).subscribe({
+      error: () => console.warn('[LiveRoom] endLive failed'),
+    });
+    this.router.navigate(['/admin/recruitment-live']);
   }
 
   sendChatMessage() {

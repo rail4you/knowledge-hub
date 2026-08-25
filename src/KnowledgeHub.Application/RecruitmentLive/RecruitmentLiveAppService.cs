@@ -166,6 +166,40 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         await _liveRepository.UpdateAsync(entity, autoSave: true);
     }
 
+    /// <summary>
+    /// 结束直播（仅教师/管理员可调用，学生退出不结束直播）。
+    /// 进行中→已结束，等待中→已取消，已结束/已取消幂等返回。
+    /// </summary>
+    [Authorize]
+    public async Task EndLiveAsync(Guid id)
+    {
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var entity = await _liveRepository.GetAsync(id);
+            var currentUserId = _currentUser.GetId();
+
+            // 只有教师（或管理员）可以结束直播；学生退出不结束直播
+            var isTeacherOrAdmin = entity.TeacherId == currentUserId
+                || await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.RecruitmentLive.Manage);
+            if (!isTeacherOrAdmin)
+            {
+                throw new UserFriendlyException("只有教师可以结束直播。");
+            }
+
+            if (entity.Status == RecruitmentLiveStatus.Active)
+            {
+                entity.End(); // Active → Ended
+            }
+            else if (entity.Status == RecruitmentLiveStatus.Waiting)
+            {
+                entity.Cancel(); // Waiting → Cancelled
+            }
+            // 已结束/已取消：幂等，不重复修改
+
+            await _liveRepository.UpdateAsync(entity, autoSave: true);
+        }
+    }
+
     [Authorize(KnowledgeHubPermissions.RecruitmentLive.Create)]
     public async Task DeleteLiveAsync(Guid id)
     {
