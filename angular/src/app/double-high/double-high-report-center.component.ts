@@ -37,6 +37,19 @@ export class DoubleHighReportCenterComponent implements OnInit {
     }).subscribe(result => this.projects.set(result.items || []));
   }
 
+  formatLocalDate(value?: string): string {
+    if (!value) {
+      return '';
+    }
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return value;
+    }
+    // 使用本地时间显示，格式：2026-07-01 17:00
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
   export(projectId: string): void {
     this.doubleHighService.exportReport(projectId).subscribe({
       next: blob => {

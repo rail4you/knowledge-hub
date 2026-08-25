@@ -38,7 +38,7 @@
             <td>{{ item.projectTitle }}</td>
             <td>{{ item.reportName }}</td>
             <td>{{ item.generatedByName || '-' }}</td>
-            <td>{{ item.generatedAt }}</td>
+            <td>{{ formatLocalDate(item.generatedAt) }}</td>
           </tr>
         }
       </tbody>

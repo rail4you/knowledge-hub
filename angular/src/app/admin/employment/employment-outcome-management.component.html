@@ -271,6 +271,7 @@
         请先下载模板并按模板填写，再上传导入。
         <a (click)="downloadTemplate()">点击下载模板</a>
       </div>
+      <div class="xlsx-import__note">「是否主要」= 是否为主要就业去向；若填「是」，导入时该学生此前的主要去向将被自动取消，每人仅保留一条主要去向。</div>
 
       <nz-upload
         [nzBeforeUpload]="beforeXlsxImportUpload"

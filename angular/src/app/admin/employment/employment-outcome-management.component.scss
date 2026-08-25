@@ -201,6 +201,17 @@
   }
 }
 
+.xlsx-import__note {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 6px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .xlsx-import__actions {
   display: flex;
   justify-content: flex-end;
