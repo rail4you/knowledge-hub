@@ -6,10 +6,14 @@ using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Domain.Search.Enums;
+using KnowledgeHub.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.Linq;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
@@ -27,6 +31,8 @@ public class SearchAnalyticsService : ISearchAnalyticsService
     private readonly IAsyncQueryableExecuter _asyncExecuter;
     private readonly IMeiliSearchService _meiliSearchService;
     private readonly ILogger<SearchAnalyticsService> _logger;
+    private readonly KnowledgeHubDbContext _dbContext;
+    private readonly IDataFilter<IMultiTenant> _dataFilter;
 
     public SearchAnalyticsService(
         IRepository<SearchQuery, Guid> searchQueryRepository,
@@ -37,7 +43,9 @@ public class SearchAnalyticsService : ISearchAnalyticsService
         ICurrentUser currentUser,
         IAsyncQueryableExecuter asyncExecuter,
         IMeiliSearchService meiliSearchService,
-        ILogger<SearchAnalyticsService> logger)
+        ILogger<SearchAnalyticsService> logger,
+        KnowledgeHubDbContext dbContext,
+        IDataFilter<IMultiTenant> dataFilter)
     {
         _searchQueryRepository = searchQueryRepository;
         _viewLogRepository = viewLogRepository;
@@ -48,6 +56,8 @@ public class SearchAnalyticsService : ISearchAnalyticsService
         _asyncExecuter = asyncExecuter;
         _meiliSearchService = meiliSearchService;
         _logger = logger;
+        _dbContext = dbContext;
+        _dataFilter = dataFilter;
     }
 
     public async Task LogSearchAsync(Guid userId, string query, int searchType, int resultCount, string? filters, string sourceType = "all")
@@ -146,10 +156,26 @@ public class SearchAnalyticsService : ISearchAnalyticsService
 
     public async Task<List<PopularSearchDto>> GetPopularSearchesAsync(int count = 10)
     {
+        // 热门词只面向「当前租户内的学生」产生的搜索记录：
+        // 1) 无租户上下文（如 Host 场景）时直接返回空；
+        // 2) 只统计当前租户内拥有 Student 角色（含 host 级 Student 角色）的用户。
+        var tenantId = _currentTenant.Id;
+        if (tenantId == null)
+        {
+            return new List<PopularSearchDto>();
+        }
+
+        var studentUserIds = await GetTenantStudentUserIdsAsync(tenantId.Value);
+        if (studentUserIds.Count == 0)
+        {
+            return new List<PopularSearchDto>();
+        }
+
         var queryable = await _searchQueryRepository.GetQueryableAsync();
 
         var popular = await _asyncExecuter.ToListAsync(
             queryable
+                .Where(q => q.TenantId == tenantId && studentUserIds.Contains(q.UserId))
                 .GroupBy(q => q.QueryText.ToLower())
                 .Select(g => new PopularSearchDto
                 {
@@ -187,6 +213,43 @@ public class SearchAnalyticsService : ISearchAnalyticsService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// 收集当前租户内拥有 Student 角色（含 host 级 Student 角色）的用户 ID。
+    /// 与 RecruitmentLiveAppService.GetTenantStudentsAsync 保持一致：
+    /// AbpRoles / AbpUserRoles 受多租户过滤，而租户用户可能分配的是 host 级
+    /// Student 角色（AbpUserRoles.TenantId = NULL），因此需要临时禁用多租户过滤。
+    /// </summary>
+    private async Task<List<Guid>> GetTenantStudentUserIdsAsync(Guid tenantId)
+    {
+        const string studentRoleName = "Student";
+
+        using (_dataFilter.Disable())
+        {
+            // 租户自己的 Student 角色 + host 级 Student 角色（可被租户用户共享）
+            var studentRoleIds = await _dbContext.Set<IdentityRole>()
+                .Where(r => r.Name == studentRoleName && r.TenantId == tenantId)
+                .Select(r => r.Id)
+                .ToListAsync();
+
+            var hostStudentRoleIds = await _dbContext.Set<IdentityRole>()
+                .Where(r => r.Name == studentRoleName && r.TenantId == null)
+                .Select(r => r.Id)
+                .ToListAsync();
+            studentRoleIds.AddRange(hostStudentRoleIds);
+
+            if (studentRoleIds.Count == 0)
+            {
+                return new List<Guid>();
+            }
+
+            return await _dbContext.Set<IdentityUserRole>()
+                .Where(ur => studentRoleIds.Contains(ur.RoleId))
+                .Select(ur => ur.UserId)
+                .Distinct()
+                .ToListAsync();
+        }
     }
 
     public async Task<List<TopResourceDto>> GetTopResourcesAsync(int count = 10)
