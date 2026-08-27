@@ -65,6 +65,21 @@ export class StudentRecruitmentLiveComponent implements OnInit {
   }
 
   canEnter(live: RecruitmentLiveDto): boolean {
-    return live.status === RecruitmentLiveStatus.Waiting || live.status === RecruitmentLiveStatus.Active;
+    // 仅在时间范围内（未到计划结束时间）可进入，避免已过期直播仍可进入
+    if (live.status !== RecruitmentLiveStatus.Waiting && live.status !== RecruitmentLiveStatus.Active)
+      return false;
+    if (live.scheduledEndAt && new Date(live.scheduledEndAt) < new Date()) return false;
+    return true;
+  }
+
+  /** 格式化计划时间范围，如“2026-08-01 09:00 ~ 12:00” */
+  scheduleText(live: RecruitmentLiveDto): string {
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    if (!live.scheduledAt) return '';
+    const start = new Date(live.scheduledAt);
+    const s = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())} ${pad(start.getHours())}:${pad(start.getMinutes())}`;
+    if (!live.scheduledEndAt) return s;
+    const end = new Date(live.scheduledEndAt);
+    return `${s} ~ ${pad(end.getHours())}:${pad(end.getMinutes())}`;
   }
 }

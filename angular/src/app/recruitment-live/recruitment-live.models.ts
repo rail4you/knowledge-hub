@@ -19,6 +19,7 @@ export interface RecruitmentLiveDto {
   status: RecruitmentLiveStatus;
   statusText: string;
   scheduledAt?: string;
+  scheduledEndAt?: string;
   startedAt?: string;
   endedAt?: string;
   durationSeconds: number;
@@ -32,6 +33,7 @@ export interface CreateRecruitmentLiveDto {
   description?: string;
   studentIds?: string[];
   scheduledAt?: string;
+  scheduledEndAt?: string;
 }
 
 export interface UpdateRecruitmentLiveDto {
@@ -39,6 +41,7 @@ export interface UpdateRecruitmentLiveDto {
   description?: string;
   studentId?: string;
   scheduledAt?: string;
+  scheduledEndAt?: string;
 }
 
 export interface UserBriefDto {

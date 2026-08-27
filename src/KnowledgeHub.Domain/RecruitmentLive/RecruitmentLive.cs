@@ -36,6 +36,9 @@ public class RecruitmentLive : FullAuditedAggregateRoot<Guid>, IMultiTenant
     /// <summary>计划开始时间</summary>
     public DateTime? ScheduledAt { get; set; }
 
+    /// <summary>计划结束时间（可选）。在此时间之前（时间范围内）直播不会过期。</summary>
+    public DateTime? ScheduledEndAt { get; set; }
+
     /// <summary>实际开始时间</summary>
     public DateTime? StartedAt { get; set; }
 

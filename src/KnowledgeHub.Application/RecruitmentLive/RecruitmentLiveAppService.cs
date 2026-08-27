@@ -82,6 +82,8 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             throw new UserFriendlyException("直播标题不能为空。");
         }
 
+        ValidateScheduleRange(input.ScheduledAt, input.ScheduledEndAt);
+
         var currentUserId = _currentUser.GetId();
         var currentUser = await _userRepository.GetAsync(currentUserId);
 
@@ -100,6 +102,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
                 TenantId = CurrentTenant.Id,
                 Description = input.Description?.Trim(),
                 ScheduledAt = input.ScheduledAt?.ToUniversalTime(),
+                ScheduledEndAt = input.ScheduledEndAt?.ToUniversalTime(),
             };
             await _liveRepository.InsertAsync(entity, autoSave: true);
             return new List<RecruitmentLiveDto> { MapToDto(entity) };
@@ -121,6 +124,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
                 TenantId = CurrentTenant.Id,
                 Description = input.Description?.Trim(),
                 ScheduledAt = input.ScheduledAt?.ToUniversalTime(),
+                ScheduledEndAt = input.ScheduledEndAt?.ToUniversalTime(),
             };
             entity.AssignStudent(student.Id, student.Name ?? student.UserName ?? "未知");
             await _liveRepository.InsertAsync(entity, autoSave: true);
@@ -137,6 +141,8 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             throw new UserFriendlyException("直播标题不能为空。");
         }
 
+        ValidateScheduleRange(input.ScheduledAt, input.ScheduledEndAt);
+
         var entity = await GetOwnedLiveAsync(id);
 
         if (entity.Status == RecruitmentLiveStatus.Active)
@@ -147,6 +153,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         entity.Title = input.Title.Trim();
         entity.Description = input.Description?.Trim();
         entity.ScheduledAt = input.ScheduledAt?.ToUniversalTime();
+        entity.ScheduledEndAt = input.ScheduledEndAt?.ToUniversalTime();
 
         if (input.StudentId.HasValue && input.StudentId.Value != entity.StudentId)
         {
@@ -288,8 +295,9 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         {
             var entity = await _liveRepository.GetAsync(id);
 
-            // 检查是否已过期（设置了 ScheduledAt 且已过期的直播不允许进入）
-            if (entity.ScheduledAt.HasValue && entity.ScheduledAt.Value < DateTime.UtcNow
+            // 检查是否已过期（设置了计划结束时间且已过计划结束时间的直播不允许进入；
+            // 未设置计划结束时间或尚未到计划结束时间（时间范围内）的直播不会过期）
+            if (entity.ScheduledEndAt.HasValue && entity.ScheduledEndAt.Value < DateTime.UtcNow
                 && entity.Status != RecruitmentLiveStatus.Ended && entity.Status != RecruitmentLiveStatus.Cancelled)
             {
                 throw new UserFriendlyException("该直播已过期，无法进入。");
@@ -456,6 +464,14 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
     // ── 私有方法 ──
 
+    private static void ValidateScheduleRange(DateTime? start, DateTime? end)
+    {
+        if (start.HasValue && end.HasValue && end.Value < start.Value)
+        {
+            throw new UserFriendlyException("计划结束时间不能早于计划开始时间。");
+        }
+    }
+
     private async Task<RecruitmentLiveEntity> GetOwnedLiveAsync(Guid id)
     {
         var entity = await _liveRepository.GetAsync(id);
@@ -543,6 +559,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             Status = entity.Status,
             StatusText = GetStatusText(entity.Status),
             ScheduledAt = entity.ScheduledAt,
+            ScheduledEndAt = entity.ScheduledEndAt,
             StartedAt = entity.StartedAt,
             EndedAt = entity.EndedAt,
             DurationSeconds = entity.GetDurationSeconds(),

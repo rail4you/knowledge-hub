@@ -19,6 +19,7 @@ public class RecruitmentLiveDto : FullAuditedEntityDto<Guid>
     public RecruitmentLiveStatus Status { get; set; }
     public string StatusText { get; set; } = string.Empty;
     public DateTime? ScheduledAt { get; set; }
+    public DateTime? ScheduledEndAt { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }
     public double DurationSeconds { get; set; }
@@ -37,6 +38,8 @@ public class CreateRecruitmentLiveDto
     public List<Guid>? StudentIds { get; set; }
     /// <summary>计划开始时间（可选）</summary>
     public DateTime? ScheduledAt { get; set; }
+    /// <summary>计划结束时间（可选）。时间范围内进行的直播不会过期。</summary>
+    public DateTime? ScheduledEndAt { get; set; }
 }
 
 public class UpdateRecruitmentLiveDto
@@ -45,6 +48,7 @@ public class UpdateRecruitmentLiveDto
     public string? Description { get; set; }
     public Guid? StudentId { get; set; }
     public DateTime? ScheduledAt { get; set; }
+    public DateTime? ScheduledEndAt { get; set; }
 }
 
 public class UserBriefDto

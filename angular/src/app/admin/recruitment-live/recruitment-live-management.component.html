@@ -25,7 +25,7 @@
       <tr>
         <th nzWidth="35%">标题</th>
         <th nzWidth="12%">状态</th>
-        <th nzWidth="18%">计划时间</th>
+        <th nzWidth="18%">计划时间范围</th>
         <th nzWidth="18%">创建时间</th>
         <th nzWidth="17%">操作</th>
       </tr>
@@ -36,7 +36,7 @@
         <td>
           <nz-tag [nzColor]="statusColor(live.status)">{{ statusText(live.status) }}</nz-tag>
         </td>
-        <td>{{ live.scheduledAt ? (live.scheduledAt | date: 'yyyy-MM-dd HH:mm') : '-' }}</td>
+        <td>{{ scheduleText(live) }}</td>
         <td>{{ live.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
         <td>
           <div class="action-btns">
@@ -101,7 +101,7 @@
       </nz-form-item>
 
       <nz-form-item>
-        <nz-form-label>计划时间</nz-form-label>
+        <nz-form-label>计划开始时间</nz-form-label>
         <nz-form-control>
           <nz-date-picker
             formControlName="scheduledAt"
@@ -109,6 +109,27 @@
             nzPlaceHolder="选择计划开始时间（可选）"
             style="width: 100%"
           ></nz-date-picker>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>计划结束时间</nz-form-label>
+        <nz-form-control [nzErrorTip]="'结束时间不能早于开始时间'">
+          <nz-date-picker
+            formControlName="scheduledEndAt"
+            nzShowTime nzShowNow
+            nzPlaceHolder="选择计划结束时间（可选）· 在此前有效，不会过期"
+            style="width: 100%"
+          ></nz-date-picker>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item>
+        <nz-form-label>说明</nz-form-label>
+        <nz-form-control>
+          <span style="color:#999;font-size:12px;">
+            设置时间范围后，在计划结束时间之前的直播均可正常进入，不会过期；未设置结束时间则永久有效。
+          </span>
         </nz-form-control>
       </nz-form-item>
     </form>

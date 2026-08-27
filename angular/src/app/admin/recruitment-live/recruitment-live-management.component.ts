@@ -75,6 +75,7 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     title: ['', [Validators.required, Validators.maxLength(200)]],
     description: [''],
     scheduledAt: [null as Date | null],
+    scheduledEndAt: [null as Date | null],
   });
 
   ngOnInit() {
@@ -101,7 +102,7 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   }
 
   openCreateModal() {
-    this.form.reset({ title: '', description: '', scheduledAt: null });
+    this.form.reset({ title: '', description: '', scheduledAt: null, scheduledEndAt: null });
     this.selectedStudentIds.set(new Set());
     this.studentSearch.set('');
     this.loadStudents();
@@ -169,11 +170,20 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     this.loading.set(true);
     const val = this.form.value;
     const ids = Array.from(this.selectedStudentIds());
+
+    // 计划时间范围校验：结束时间不能早于开始时间
+    if (val.scheduledAt && val.scheduledEndAt && val.scheduledEndAt < val.scheduledAt) {
+      this.loading.set(false);
+      this.message.error('计划结束时间不能早于计划开始时间');
+      return;
+    }
+
     this.liveService.createLive({
       title: val.title!,
       description: val.description || undefined,
       studentIds: ids.length > 0 ? ids : undefined,
       scheduledAt: val.scheduledAt ? val.scheduledAt.toISOString() : undefined,
+      scheduledEndAt: val.scheduledEndAt ? val.scheduledEndAt.toISOString() : undefined,
     }).subscribe({
       next: (lives) => {
         this.loading.set(false);
@@ -256,9 +266,39 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   }
 
   isExpired(live: RecruitmentLiveDto): boolean {
-    if (!live.scheduledAt) return false;
-    return new Date(live.scheduledAt) < new Date()
+    // 以计划结束时间为过期边界：未设置结束时间或在结束时间之前（时间范围内）都不会过期
+    if (!live.scheduledEndAt) return false;
+    return new Date(live.scheduledEndAt) < new Date()
       && live.status !== RecruitmentLiveStatus.Ended
       && live.status !== RecruitmentLiveStatus.Cancelled;
+  }
+
+
+
+  /** 格式化计划时间范围，如“2026-08-01 09:00 ~ 2026-08-01 12:00”或“~ 12:00”（同一天仅结束显示时分） */
+  scheduleText(live: RecruitmentLiveDto): string {
+    if (!live.scheduledAt) return '-';
+    const start = new Date(live.scheduledAt);
+    const s = `${this.fmt(start)}`;
+    if (!live.scheduledEndAt) {
+      return s;
+    }
+    const end = new Date(live.scheduledEndAt);
+    // 跨天则结束也显示完整日期，同一天只显示时分
+    const sameDay = start.getFullYear() === end.getFullYear()
+      && start.getMonth() === end.getMonth()
+      && start.getDate() === end.getDate();
+    const e = sameDay
+      ? `${this.pad(end.getHours())}:${this.pad(end.getMinutes())}`
+      : this.fmt(end);
+    return `${s} ~ ${e}`;
+  }
+
+  private fmt(d: Date): string {
+    return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())} ${this.pad(d.getHours())}:${this.pad(d.getMinutes())}`;
+  }
+
+  private pad(n: number): string {
+    return n < 10 ? `0${n}` : `${n}`;
   }
 }

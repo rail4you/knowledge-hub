@@ -62,7 +62,7 @@
             @if (live.scheduledAt) {
               <div class="live-card__time">
                 <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                {{ live.scheduledAt | date: 'yyyy-MM-dd HH:mm' }}
+                {{ scheduleText(live) }}
               </div>
             }
           </div>
