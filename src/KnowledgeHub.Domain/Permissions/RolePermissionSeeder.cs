@@ -348,8 +348,11 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Delete");
         await GrantAsync("SchoolAdmin", "AbpIdentity.Users.ManagePermissions");
         await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Update.ManageRoles");
-        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Default);
-        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
+
+        // 租户信息管理：仅 host「admin」全局管理员使用。SchoolAdmin 绝不授予，
+        // 且显式收回历史遗留授权，防止租户级 SchoolAdmin 看到/修改其它租户的信息。
+        await RevokeAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Default);
+        await RevokeAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
 
         // 收回历史遗留的"联盟独有"权限（LeagueAudit / PhysicalDelete / RecruitmentLive.Manage）
         // 院校管理员只做第一级院校审核，不能做第二级联盟审核。
@@ -521,8 +524,18 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Majors.Edit);
         await GrantAsync("admin", KnowledgeHubPermissions.Majors.Delete);
 
-        await GrantAsync("admin", KnowledgeHubPermissions.TenantInfo.Default);
-        await GrantAsync("admin", KnowledgeHubPermissions.TenantInfo.Edit);
+        // 租户信息管理：仅 host「admin」全局管理员可用（GetListAsync / SaveByTenantIdAsync 均要求宿主上下文）。
+        // 租户上下文绝不授予，且显式收回历史遗留授权，防止租户级 admin 看到/修改其它租户的信息。
+        if (_currentTenant.Id == null)
+        {
+            await GrantAsync("admin", KnowledgeHubPermissions.TenantInfo.Default);
+            await GrantAsync("admin", KnowledgeHubPermissions.TenantInfo.Edit);
+        }
+        else
+        {
+            await RevokeAsync("admin", KnowledgeHubPermissions.TenantInfo.Default);
+            await RevokeAsync("admin", KnowledgeHubPermissions.TenantInfo.Edit);
+        }
 
         await GrantAsync("admin", KnowledgeHubPermissions.DoubleHigh.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.DoubleHigh.ManageProject);

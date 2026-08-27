@@ -11,6 +11,7 @@ using KnowledgeHub.TenantInfos.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
+using Volo.Abp.Authorization;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
@@ -44,6 +45,13 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
     [Authorize(KnowledgeHubPermissions.TenantInfo.Default)]
     public async Task<List<TenantInfoListItemDto>> GetListAsync()
     {
+        // 仅 host 全局管理员可统查所有租户；租户级管理员（如租户 admin/SchoolAdmin）
+        // 即使持有该权限也不能查看其它租户的信息。
+        if (CurrentTenant.Id != null)
+        {
+            throw new AbpAuthorizationException("仅全局管理员可查看所有租户信息。");
+        }
+
         var tenants = await _tenantRepository.GetListAsync();
         var result = new List<TenantInfoListItemDto>();
 
@@ -135,6 +143,12 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
     [Authorize(KnowledgeHubPermissions.TenantInfo.Edit)]
     public async Task<TenantInfoDto> SaveByTenantIdAsync(Guid tenantId, CreateUpdateTenantInfoDto input)
     {
+        // 仅 host 全局管理员可修改指定租户的信息；
+        // 租户级管理员只能通过 SaveCurrentAsync 修改自己所在租户的信息。
+        if (CurrentTenant.Id != null)
+        {
+            throw new AbpAuthorizationException("仅全局管理员可修改租户信息。");
+        }
         return await SaveTenantInfoInternalAsync(tenantId, input);
     }
 
