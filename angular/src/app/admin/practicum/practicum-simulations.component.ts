@@ -45,6 +45,9 @@ export class PracticumSimulationsComponent implements OnInit {
 
   readonly simulationStatuses = PracticumSimulationStatus;
 
+  /** 打包说明的展开状态：默认折叠，只显示标题与概述 */
+  readonly noteExpanded = signal(false);
+
   readonly projects = signal<PracticumProjectDto[]>([]);
   selectedProjectId = '';
   selectedProjectTitle = '';

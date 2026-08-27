@@ -24,6 +24,109 @@
   .hint { font-size: 12px; color: #999; margin-top: 4px; }
 }
 
+.simulation-note {
+  display: flex;
+  gap: 12px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  background: #f6f9ff;
+  border: 1px solid #dcecfb;
+  border-radius: 8px;
+
+  &__icon {
+    color: #1a5fe0;
+    font-size: 20px;
+    line-height: 22px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: #4a5260;
+    line-height: 1.7;
+  }
+
+  &__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #26303d;
+    margin-bottom: 6px;
+  }
+
+  &__lead {
+    margin: 0 0 8px;
+  }
+
+  &__toggle {
+    padding: 0;
+    height: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 4px;
+  }
+
+  &__toggle-icon {
+    display: inline-flex;
+    margin-left: 4px;
+    font-size: 12px;
+    transition: transform 0.2s ease;
+    &.is-open {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__steps {
+    animation: simulation-note-reveal 0.2s ease-out;
+  }
+
+  &__subtitle {
+    font-size: 13px;
+    font-weight: 600;
+    color: #26303d;
+    margin-bottom: 6px;
+  }
+
+  &__list {
+    margin: 0 0 12px;
+    padding-left: 18px;
+
+    li {
+      margin-bottom: 6px;
+      &:last-child { margin-bottom: 0; }
+    }
+  }
+
+  code {
+    background: #eef1f6;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 12px;
+    color: #1a5fe0;
+  }
+
+  &__tip {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    background: #fffbe6;
+    border: 1px solid #ffe58f;
+    border-radius: 6px;
+    color: #8a6d00;
+    font-size: 12.5px;
+    line-height: 1.6;
+
+    .anticon {
+      color: #faad14;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+  }
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 120px 1fr;
@@ -60,6 +163,17 @@
   color: #888;
   font-size: 12px;
   line-height: 1.4;
+}
+
+@keyframes simulation-note-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .simulation-note__steps {
+    animation: none;
+  }
 }
 
 @media (max-width: 720px) {

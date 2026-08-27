@@ -20,6 +20,38 @@
       </button>
     </div>
 
+    <div class="simulation-note">
+      <span class="simulation-note__icon" nz-icon nzType="exclamation-circle" theme="outline"></span>
+      <div class="simulation-note__body">
+        <div class="simulation-note__title">需要上传什么样的压缩包？</div>
+        <p class="simulation-note__lead">
+          只支持由 <strong>Unity 导出</strong>的 <strong>WebGL 构建产物</strong>压缩而成的 ZIP，压缩包内必须包含 WebGL 运行文件（<code>.wasm</code> / <code>.unityweb</code>）和入口页面 <code>index.html</code>，否则导入后状态会显示为“无效”。
+        </p>
+        <button class="simulation-note__toggle" nz-button nzType="link" nzSize="small" (click)="noteExpanded.set(!noteExpanded())">
+          {{ noteExpanded() ? '收起打包步骤' : '查看 Unity 打包步骤' }}
+          <span class="simulation-note__toggle-icon" [class.is-open]="noteExpanded()" nz-icon nzType="caret-down"></span>
+        </button>
+
+        @if (noteExpanded()) {
+          <div class="simulation-note__steps">
+            <div class="simulation-note__subtitle">Unity 打包成 WebGL 压缩包的具体步骤</div>
+            <ol class="simulation-note__list">
+              <li>在 Unity 中打开或创建仿真项目，选择菜单 <strong>文件 → 生成设置</strong>，在左侧平台列表选择 <strong>WebGL</strong>。若列表里没有 WebGL，需先在 Unity Hub 中为当前编辑器版本安装 <strong>WebGL 生成支持模块</strong>，安装完成后重启 Unity。</li>
+              <li>点击 <strong>播放器设置</strong> 可调整分辨率、压缩格式等参数，一般保持默认即可。建议将压缩格式设为 <strong>Gzip</strong> 或 <strong>Brotli</strong>（会生成 <code>.unityweb</code> 文件，兼容性更好）。</li>
+              <li>点击 <strong>生成</strong>（或“生成并运行”），选择一个空的输出文件夹，等待构建完成。首次构建耗时较长，属正常现象。</li>
+              <li>构建完成后，输出文件夹内会生成 <code>index.html</code>、<code>Build/</code> 目录（内含 <code>.wasm</code>、<code>.data</code>、<code>.framework.js</code>、<code>.loader.js</code> 等）和 <code>TemplateData/</code> 目录，这一整套即为 WebGL 构建产物。</li>
+              <li>进入该输出文件夹，<strong>全选全部内容</strong>后右键压缩为 ZIP。Windows：发送到 → 压缩(zipped)文件夹；macOS：压缩“N 个项目”。建议不要把外层文件夹一起压缩，保持 <code>index.html</code> 位于压缩包根目录。</li>
+              <li>回到本页面点击“新增镜像”，填写名称、上传封面（可选），选择刚生成的 ZIP 上传并导入。系统会自动定位 <code>index.html</code> 并检测 WebGL 文件，识别成功的镜像状态为“已就绪”。</li>
+            </ol>
+            <div class="simulation-note__tip">
+              <span nz-icon nzType="exclamation-circle" theme="outline"></span>
+              压缩包内必须包含一个 <code>index.html</code> 及 WebGL 运行文件（<code>.wasm</code> / <code>.unityweb</code>）。缺少这些文件时，镜像导入后状态会显示为“无效”，无法打开运行，请按上述步骤重新打包后再上传。
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
     <nz-table *ngIf="simulations().length" [nzData]="simulations()" [nzShowPagination]="false" nzSize="small">
       <thead>
         <tr><th>名称</th><th>Slug</th><th>状态</th><th>文件数</th><th>大小</th><th>操作</th></tr>
