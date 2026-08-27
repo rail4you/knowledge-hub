@@ -7,9 +7,9 @@
 
 .hero {
   padding: 28px;
-  border-radius: 20px;
-  background: linear-gradient(120deg, #fff5eb 0%, #f0f7ff 100%);
-  border: 1px solid #f0e2d6;
+  border-radius: 12px;
+  background: #f0f7ff;
+  border: 1px solid #dcecfb;
 }
 
 .hero h1 {
@@ -19,7 +19,7 @@
 
 .hero p {
   margin: 0;
-  color: #666;
+  color: #5c6570;
 }
 
 .filters {
@@ -41,46 +41,86 @@
 }
 
 .article-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   cursor: pointer;
+
+  ::ng-deep .ant-card-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 }
 
 .article-card__cover {
-  margin: -24px -24px 16px -24px;
+  position: relative;
+  margin: -24px -24px 16px;
+  aspect-ratio: 16 / 9;
   border-radius: 8px 8px 0 0;
   overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f2f4f7;
 
   img {
+    position: absolute;
+    inset: 0;
     width: 100%;
-    height: 160px;
+    height: 100%;
     object-fit: cover;
   }
 }
 
-.article-card__meta,
-.article-card__footer {
+.article-card__cover-icon {
+  color: #b4bac4;
+}
+
+.article-card__meta {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .article-card h3 {
   margin: 14px 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  min-height: 48px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: rgba(0, 0, 0, 0.88);
 }
 
 .article-card p {
   margin: 0 0 16px;
-  color: #666;
+  font-size: 14px;
   line-height: 1.6;
-  min-height: 72px;
+  min-height: 44.8px;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  color: #5c6570;
 }
 
 .article-card__footer {
-  color: #888;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #f0f2f5;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  color: #8a919c;
   font-size: 12px;
 }
 
