@@ -133,10 +133,16 @@ export class ChatComponent implements OnInit, OnDestroy {
 
     this.isHotWordsLoading.set(true);
     this.showHotWords.set(true);
+    this.fetchHotWordsFor(res.id);
+  }
 
+  /** 拉取指定文档的热门词（不改变展开状态）。 */
+  private fetchHotWordsFor(resourceId: string): void {
+    this.hotWords.set([]);
+    this.isHotWordsLoading.set(true);
     this.restService.request<any, { word: string; frequency: number }[]>({
       method: 'GET',
-      url: `/api/app/meili-search-admin/hot-words/${res.id}`,
+      url: `/api/app/meili-search-admin/hot-words/${resourceId}`,
       params: { count: 30 }
     }, { apiName: 'KnowledgeHub' }).subscribe({
       next: (data) => {
@@ -406,6 +412,12 @@ export class ChatComponent implements OnInit, OnDestroy {
       this.selectedResource.set(resource);
       this.messages.set([]);
       this.threadId.set('');
+      // 切换文档：热门词保持展开状态，但数据随新文档一起切换
+      if (this.showHotWords()) {
+        this.fetchHotWordsFor(resource.id);
+      } else {
+        this.hotWords.set([]);
+      }
     }
   }
 
