@@ -304,7 +304,8 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             {
                 TenantId = project.TenantId,
                 SourceType = DoubleHighValueSourceType.Automatic,
-                Note = $"AutoCollected:{indicator.DataSourceType}"
+                // 自动采集来源可通过 SourceType 区分，不再写入调试备注，避免垃圾数据泄漏到用户“备注”列
+                Note = null
             };
             await _valueRepository.InsertAsync(entity);
         }
