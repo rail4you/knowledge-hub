@@ -955,12 +955,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     // ==================== 就业去向批量导入（xlsx） ====================
 
     // 就业去向导入模板表头（10 列）。
-    // 其中第 9 列「是否主要」含义：填「是」表示把这一行设为该学生的主要就业去向。
+    // 其中第 9 列「是否为主要就业去向」含义：填「是」表示把这一行设为该学生的主要就业去向。
     // 若该学生在此之前已存在主要去向，导入时会自动将其取消勾选（设为非主要），
     // 保证同一学生最多只有一条主要去向（每人一个「默认/首要」去向的规则）。
     private static readonly string[] OutcomeImportTemplateHeaders =
     {
-        "学生姓名", "去向单位", "岗位名称", "去向状态", "就业方式", "工作地点", "薪资范围", "入职时间", "是否主要", "备注"
+        "学生姓名", "去向单位", "岗位名称", "去向状态", "招聘方式", "工作地点", "薪资范围", "入职时间", "是否为主要就业去向", "备注"
     };
 
     private static readonly Dictionary<string, EmploymentOutcomeStatus> OutcomeStatusLabelMap = new()
@@ -1079,7 +1079,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                     continue;
                 }
 
-                // 第 9 列「是否主要」：填「是」则把当前导入行设为该学生的主要就业去向。
+                // 第 9 列「是否为主要就业去向」：填「是」则把当前导入行设为该学生的主要就业去向。
                 // 同一学生最多一条主要去向——下方逻辑会先取消该学生此前已有的主要去向。
                 var isPrimary = ParseIsPrimaryText(row.Cell(9).GetString().Trim());
 
@@ -1149,8 +1149,8 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         // 第 2 行：说明
         worksheet.Cell(2, 1).Value =
             "学生姓名须与系统内学生一致（可用登录账号）；去向状态可填：就业意向/已签约/已就业/升学/创业/待就业；" +
-            "入职时间格式如 2025-07-01；是否主要填：是/否。导入前请删除示例行。\n" +
-            "「是否主要」= 是否为主要就业去向：填「是」会覆盖该学生此前的唯一主要去向（旧的自动取消）。";
+            "入职时间格式如 2025-07-01；是否为主要就业去向填：是/否。导入前请删除示例行。\n" +
+            "「是否为主要就业去向」：填「是」会覆盖该学生此前的唯一主要去向（旧的自动取消）。";
         worksheet.Range(2, 1, 2, OutcomeImportTemplateHeaders.Length).Merge();
         worksheet.Cell(2, 1).Style.Font.Italic = true;
         worksheet.Cell(2, 1).Style.Font.FontColor = XLColor.Gray;
@@ -1336,7 +1336,7 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         return null;
     }
 
-    /// <summary>解析「是否主要」：是/否、true/false、1/0，空默认否</summary>
+    /// <summary>解析「是否为主要就业去向」：是/否、true/false、1/0，空默认否</summary>
     private static bool ParseIsPrimaryText(string text)
     {
         if (string.IsNullOrWhiteSpace(text))

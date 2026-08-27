@@ -28,7 +28,7 @@
           <strong>{{ summary().assignmentCount }}</strong>
           <span>分发人数</span>
         </article>
-        <article>
+        <article class="summary-needs-help" [class.has-alerts]="summary().needsHelpCount > 0">
           <strong>{{ summary().needsHelpCount }}</strong>
           <span>待介入</span>
         </article>
@@ -67,8 +67,8 @@
                   </td>
                   <td>
                     <div class="progress-cell">
-                      <span>提交 {{ task.completedCount }}</span>
-                      <span>待介入 {{ task.needsHelpCount }}</span>
+                      <span class="progress-submitted">提交 {{ task.completedCount }}</span>
+                      <span class="progress-needs-help" [class.has-alerts]="task.needsHelpCount > 0">待介入 {{ task.needsHelpCount }}</span>
                     </div>
                   </td>
                   <td>{{ formatDate(task.dueTime) }}</td>
