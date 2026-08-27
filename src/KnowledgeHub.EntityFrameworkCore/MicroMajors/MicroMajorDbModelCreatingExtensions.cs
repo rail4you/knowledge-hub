@@ -55,10 +55,23 @@ public static class MicroMajorDbModelCreatingExtensions
             b.Property(x => x.CertificateNo).IsRequired().HasMaxLength(64);
             b.Property(x => x.VerifyCode).IsRequired().HasMaxLength(32);
 
-            b.HasIndex(x => x.EnrollmentId).IsUnique();
-            b.HasIndex(x => x.CertificateNo).IsUnique();
+            // 唯一索引仅在未删除记录上生效：撤销(软删)后允许重新发证
+            b.HasIndex(x => x.EnrollmentId).IsUnique().HasFilter("\"IsDeleted\" = false");
+            b.HasIndex(x => x.CertificateNo).IsUnique().HasFilter("\"IsDeleted\" = false");
             b.HasIndex(x => x.VerifyCode);
             b.HasIndex(x => x.StudentId);
+            b.HasIndex(x => x.TenantId);
+        });
+
+        builder.Entity<MicroMajorCertificateTemplate>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "MicroMajorCertificateTemplates", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Name).IsRequired().HasMaxLength(128);
+            b.Property(x => x.ImageUrl).IsRequired().HasMaxLength(512);
+
+            b.HasIndex(x => x.MicroMajorId);
             b.HasIndex(x => x.TenantId);
         });
 

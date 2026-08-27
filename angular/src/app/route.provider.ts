@@ -295,16 +295,6 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Employment',
     },
-    {
-      path: '/employment/my-guidance',
-      name: '::Menu:MyGuidance',
-      iconClass: 'fas fa-compass',
-      parentName: '::Menu:TrainingManagement',
-      order: 5,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Employment.ManageGuidance',
-    },
-
     // ══════════════════════════════════════════════════════════
     //  实训（独立栏目）：实训管理 / 实训任务 / 仿真实训 / 智能体聊天
     // ══════════════════════════════════════════════════════════

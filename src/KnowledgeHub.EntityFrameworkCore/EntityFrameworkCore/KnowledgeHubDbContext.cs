@@ -141,6 +141,7 @@ public class KnowledgeHubDbContext :
     public DbSet<MicroMajorCourse> MicroMajorCourses { get; set; }
     public DbSet<MicroMajorEnrollment> MicroMajorEnrollments { get; set; }
     public DbSet<MicroMajorCertificate> MicroMajorCertificates { get; set; }
+    public DbSet<MicroMajorCertificateTemplate> MicroMajorCertificateTemplates { get; set; }
     public DbSet<MicroMajorResource> MicroMajorResources { get; set; }
 
     // Major entities

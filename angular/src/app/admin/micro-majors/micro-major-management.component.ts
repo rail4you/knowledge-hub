@@ -18,7 +18,9 @@ import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { OssUploadService, OssUploadResultDto } from '../../shared/oss-upload.service';
 import {
   CreateUpdateMicroMajorDto,
+  CreateUpdateMicroMajorCertificateTemplateDto,
   MicroMajorCertificateDto,
+  MicroMajorCertificateTemplateDto,
   MicroMajorDto,
   MicroMajorEnrollmentDto,
   MicroMajorEnrollmentStatus,
@@ -71,13 +73,22 @@ export class MicroMajorManagementComponent implements OnInit {
   coverUploading = false;
   coverFileList: NzUploadFile[] = [];
 
+  // Certificate template management modal
+  templateModalVisible = false;
+  templateMicroMajorId = '';
+  templateMicroMajorTitle = '';
+  readonly certificateTemplates = signal<MicroMajorCertificateTemplateDto[]>([]);
+  templateName = '';
+  templateImageUploading = false;
+  templateImageUrl = '';
+  readonly templateUploadProgress = signal(0);
+
   // Certificate issue modal
   certificateModalVisible = false;
   certificateEnrollmentId = '';
   certificateIssueLoading = false;
-  certificateImageUploading = false;
-  certificateImageUrl = '';
-  readonly certificateUploadProgress = signal(0);
+  readonly issueTemplates = signal<MicroMajorCertificateTemplateDto[]>([]);
+  selectedCertificateTemplateId = '';
 
   // Certificate preview modal
   certificatePreviewVisible = false;
@@ -257,21 +268,33 @@ export class MicroMajorManagementComponent implements OnInit {
     });
   }
 
-  openIssueCertificateModal(enrollmentId: string): void {
-    this.certificateEnrollmentId = enrollmentId;
-    this.certificateImageUrl = '';
-    this.certificateUploadProgress.set(0);
-    this.certificateModalVisible = true;
+  // ==================== 证书模板管理（微专业维度） ====================
+  openTemplateModal(item: MicroMajorDto): void {
+    this.templateMicroMajorId = item.id;
+    this.templateMicroMajorTitle = item.title;
+    this.templateName = '';
+    this.templateImageUrl = '';
+    this.templateUploadProgress.set(0);
+    this.certificateTemplates.set([]);
+    this.loadCertificateTemplates(item.id);
+    this.templateModalVisible = true;
   }
 
-  closeCertificateModal(): void {
-    this.certificateModalVisible = false;
-    this.certificateEnrollmentId = '';
-    this.certificateImageUrl = '';
-    this.certificateUploadProgress.set(0);
+  closeTemplateModal(): void {
+    this.templateModalVisible = false;
+    this.templateMicroMajorId = '';
+    this.templateImageUrl = '';
+    this.templateUploadProgress.set(0);
   }
 
-  async uploadCertificateImage(file: File): Promise<void> {
+  loadCertificateTemplates(microMajorId: string): void {
+    this.microMajorService.getCertificateTemplates(microMajorId).subscribe({
+      next: result => this.certificateTemplates.set(result || []),
+      error: () => this.message.error('证书模板加载失败'),
+    });
+  }
+
+  async uploadTemplateImage(file: File): Promise<void> {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
     if (!allowedTypes.includes(file.type)) {
       this.message.error('仅支持上传 JPG、PNG、GIF、WebP、BMP 格式的图片');
@@ -282,8 +305,8 @@ export class MicroMajorManagementComponent implements OnInit {
       return;
     }
 
-    this.certificateImageUploading = true;
-    this.certificateUploadProgress.set(0);
+    this.templateImageUploading = true;
+    this.templateUploadProgress.set(0);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -296,28 +319,102 @@ export class MicroMajorManagementComponent implements OnInit {
       next: (event: any) => {
         if (event.type === HttpEventType.UploadProgress) {
           const progress = Math.round((100 * event.loaded) / (event.total || 1));
-          this.certificateUploadProgress.set(progress);
+          this.templateUploadProgress.set(progress);
         } else if (event.type === HttpEventType.Response) {
           const result = event.body as OssUploadResultDto;
-          this.certificateImageUploading = false;
-          this.certificateUploadProgress.set(100);
-          this.certificateImageUrl = result.url;
+          this.templateImageUploading = false;
+          this.templateUploadProgress.set(100);
+          this.templateImageUrl = result.url;
           this.message.success('证书图片上传成功');
         }
       },
       error: (err: any) => {
-        this.certificateImageUploading = false;
-        this.certificateUploadProgress.set(0);
-
+        this.templateImageUploading = false;
+        this.templateUploadProgress.set(0);
         this.message.error('上传失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
       },
     });
   }
 
-  removeCertificateImage = (): void => {
-    this.certificateImageUrl = '';
-    this.certificateUploadProgress.set(0);
+  removeTemplateImage = (): void => {
+    this.templateImageUrl = '';
+    this.templateUploadProgress.set(0);
   };
+
+  addCertificateTemplate(): void {
+    if (!this.templateMicroMajorId) return;
+    if (!this.templateName.trim()) {
+      this.message.warning('请输入证书模板名称');
+      return;
+    }
+    if (!this.templateImageUrl) {
+      this.message.warning('请先上传证书图片');
+      return;
+    }
+
+    const input: CreateUpdateMicroMajorCertificateTemplateDto = {
+      microMajorId: this.templateMicroMajorId,
+      name: this.templateName.trim(),
+      imageUrl: this.templateImageUrl,
+      sortOrder: 0,
+    };
+
+    this.microMajorService.createCertificateTemplate(input).subscribe({
+      next: () => {
+        this.message.success('证书模板已保存');
+        this.templateName = '';
+        this.templateImageUrl = '';
+        this.templateUploadProgress.set(0);
+        this.loadCertificateTemplates(this.templateMicroMajorId);
+      },
+      error: (err) => this.message.error('保存失败: ' + (err?.error?.error?.message || err?.message || '未知错误')),
+    });
+  }
+
+  deleteCertificateTemplate(template: MicroMajorCertificateTemplateDto): void {
+    this.microMajorService.deleteCertificateTemplate(template.id).subscribe({
+      next: () => {
+        this.message.success('证书模板已删除');
+        this.loadCertificateTemplates(this.templateMicroMajorId);
+      },
+      error: () => this.message.error('删除失败'),
+    });
+  }
+
+  // ==================== 发证（选择微专业下的证书模板） ====================
+  openIssueCertificateModal(item: MicroMajorEnrollmentDto): void {
+    this.certificateEnrollmentId = item.id;
+    this.selectedCertificateTemplateId = '';
+    this.issueTemplates.set([]);
+    // 预加载该微专业的证书模板，发证时直接选择
+    this.microMajorService.getCertificateTemplates(item.microMajorId).subscribe({
+      next: result => {
+        this.issueTemplates.set(result || []);
+        // 默认选中第一个模板
+        if ((result?.length ?? 0) > 0) {
+          this.selectedCertificateTemplateId = result[0].id;
+        }
+      },
+      error: () => this.message.error('证书模板加载失败'),
+    });
+    this.certificateModalVisible = true;
+  }
+
+  closeCertificateModal(): void {
+    this.certificateModalVisible = false;
+    this.certificateEnrollmentId = '';
+    this.selectedCertificateTemplateId = '';
+  }
+
+  get selectedTemplatePreviewUrl(): string {
+    const tpl = this.issueTemplates().find(x => x.id === this.selectedCertificateTemplateId);
+    return tpl?.imageUrl || '';
+  }
+
+  openTemplateImagePreview(url: string): void {
+    this.certificatePreviewUrl = url;
+    this.certificatePreviewVisible = true;
+  }
 
   openCertificatePreview(url: string): void {
     this.certificatePreviewUrl = url;
@@ -328,7 +425,7 @@ export class MicroMajorManagementComponent implements OnInit {
     if (!this.certificateEnrollmentId) return;
 
     this.certificateIssueLoading = true;
-    this.microMajorService.issueCertificate(this.certificateEnrollmentId, this.certificateImageUrl || undefined).subscribe({
+    this.microMajorService.issueCertificate(this.certificateEnrollmentId, this.selectedCertificateTemplateId).subscribe({
       next: (cert) => {
         this.certificateIssueLoading = false;
         this.closeCertificateModal();

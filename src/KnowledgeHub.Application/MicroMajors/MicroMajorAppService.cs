@@ -28,6 +28,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
     private readonly IRepository<MicroMajorCourse, Guid> _microMajorCourseRepository;
     private readonly IRepository<MicroMajorEnrollment, Guid> _microMajorEnrollmentRepository;
     private readonly IRepository<MicroMajorCertificate, Guid> _microMajorCertificateRepository;
+    private readonly IRepository<MicroMajorCertificateTemplate, Guid> _microMajorCertificateTemplateRepository;
     private readonly IRepository<MicroMajorResource, Guid> _microMajorResourceRepository;
     private readonly IRepository<Course, Guid> _courseRepository;
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
@@ -42,6 +43,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         IRepository<MicroMajorCourse, Guid> microMajorCourseRepository,
         IRepository<MicroMajorEnrollment, Guid> microMajorEnrollmentRepository,
         IRepository<MicroMajorCertificate, Guid> microMajorCertificateRepository,
+        IRepository<MicroMajorCertificateTemplate, Guid> microMajorCertificateTemplateRepository,
         IRepository<MicroMajorResource, Guid> microMajorResourceRepository,
         IRepository<Course, Guid> courseRepository,
         IRepository<StudentCourse, Guid> studentCourseRepository,
@@ -55,6 +57,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         _microMajorCourseRepository = microMajorCourseRepository;
         _microMajorEnrollmentRepository = microMajorEnrollmentRepository;
         _microMajorCertificateRepository = microMajorCertificateRepository;
+        _microMajorCertificateTemplateRepository = microMajorCertificateTemplateRepository;
         _microMajorResourceRepository = microMajorResourceRepository;
         _courseRepository = courseRepository;
         _studentCourseRepository = studentCourseRepository;
@@ -272,6 +275,13 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             await _microMajorCourseRepository.DeleteAsync(link);
         }
 
+        // 删除该微专业的证书模板
+        var templates = await _microMajorCertificateTemplateRepository.GetListAsync(x => x.MicroMajorId == id);
+        foreach (var template in templates)
+        {
+            await _microMajorCertificateTemplateRepository.DeleteAsync(template);
+        }
+
         await _microMajorRepository.DeleteAsync(id);
     }
 
@@ -390,6 +400,19 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             return (await MapCertificateDtosAsync(new List<MicroMajorCertificate> { existing }))[0];
         }
 
+        // 发证必须附带证书图片：从所选证书模板解析；无模板则拒绝
+        if (!input.CertificateTemplateId.HasValue)
+        {
+            throw new UserFriendlyException("发证必须附带证书图片，请先在微专业的「证书模板」中上传证书。");
+        }
+
+        var template = await _microMajorCertificateTemplateRepository.GetAsync(input.CertificateTemplateId.Value);
+        if (template.MicroMajorId != enrollment.MicroMajorId)
+        {
+            throw new UserFriendlyException("所选证书模板不属于该微专业。");
+        }
+        var certificateImageUrl = template.ImageUrl;
+
         // 发证即代表认定完成，强制设为 100% 进度和已发证状态，无需校验实际学习进度
         enrollment.Progress = 100;
         enrollment.Status = MicroMajorEnrollmentStatus.Completed;
@@ -404,7 +427,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             GuidGenerator.Create().ToString("N")[..10].ToUpperInvariant())
         {
             TenantId = enrollment.TenantId,
-            CertificateImageUrl = input.CertificateImageUrl?.Trim()
+            CertificateImageUrl = certificateImageUrl
         };
 
         await _microMajorCertificateRepository.InsertAsync(certificate, autoSave: true);
@@ -413,6 +436,95 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         await _microMajorEnrollmentRepository.UpdateAsync(enrollment, autoSave: true);
 
         return (await MapCertificateDtosAsync(new List<MicroMajorCertificate> { certificate }))[0];
+    }
+
+    [Authorize(KnowledgeHubPermissions.MicroMajors.Edit)]
+    public async Task<List<MicroMajorCertificateTemplateDto>> GetCertificateTemplatesAsync(Guid microMajorId)
+    {
+        var items = await _microMajorCertificateTemplateRepository.GetListAsync(x => x.MicroMajorId == microMajorId);
+        return items
+            .OrderBy(x => x.SortOrder)
+            .ThenByDescending(x => x.CreationTime)
+            .Select(x => new MicroMajorCertificateTemplateDto
+            {
+                Id = x.Id,
+                MicroMajorId = x.MicroMajorId,
+                Name = x.Name,
+                ImageUrl = x.ImageUrl,
+                SortOrder = x.SortOrder,
+                CreationTime = x.CreationTime,
+                CreatorId = x.CreatorId,
+                LastModificationTime = x.LastModificationTime,
+                LastModifierId = x.LastModifierId,
+                IsDeleted = x.IsDeleted,
+                DeleterId = x.DeleterId,
+                DeletionTime = x.DeletionTime
+            })
+            .ToList();
+    }
+
+    [Authorize(KnowledgeHubPermissions.MicroMajors.Edit)]
+    public async Task<MicroMajorCertificateTemplateDto> CreateCertificateTemplateAsync(CreateUpdateMicroMajorCertificateTemplateDto input)
+    {
+        if (string.IsNullOrWhiteSpace(input.Name))
+        {
+            throw new UserFriendlyException("证书模板名称不能为空。");
+        }
+        if (string.IsNullOrWhiteSpace(input.ImageUrl))
+        {
+            throw new UserFriendlyException("请先上传证书图片。");
+        }
+
+        var microMajor = await _microMajorRepository.GetAsync(input.MicroMajorId);
+        var count = await _microMajorCertificateTemplateRepository.CountAsync(x => x.MicroMajorId == input.MicroMajorId);
+        var template = new MicroMajorCertificateTemplate(
+            GuidGenerator.Create(),
+            microMajor.Id,
+            input.Name.Trim(),
+            input.ImageUrl.Trim())
+        {
+            TenantId = CurrentTenant.Id,
+            SortOrder = input.SortOrder == 0 ? count + 1 : input.SortOrder
+        };
+
+        // 上传证书模板即代表要启用证书，避免发证时提示「未启用证书」
+        if (!microMajor.IsCertificateEnabled)
+        {
+            microMajor.IsCertificateEnabled = true;
+        }
+
+        await _microMajorCertificateTemplateRepository.InsertAsync(template, autoSave: true);
+        return (await GetCertificateTemplatesAsync(template.MicroMajorId)).First(x => x.Id == template.Id);
+    }
+
+    [Authorize(KnowledgeHubPermissions.MicroMajors.Edit)]
+    public async Task<MicroMajorCertificateTemplateDto> UpdateCertificateTemplateAsync(Guid id, CreateUpdateMicroMajorCertificateTemplateDto input)
+    {
+        var template = await _microMajorCertificateTemplateRepository.GetAsync(id);
+        if (string.IsNullOrWhiteSpace(input.Name))
+        {
+            throw new UserFriendlyException("证书模板名称不能为空。");
+        }
+        if (string.IsNullOrWhiteSpace(input.ImageUrl))
+        {
+            throw new UserFriendlyException("请先上传证书图片。");
+        }
+
+        template.Name = input.Name.Trim();
+        template.ImageUrl = input.ImageUrl.Trim();
+        if (input.SortOrder > 0)
+        {
+            template.SortOrder = input.SortOrder;
+        }
+
+        await _microMajorCertificateTemplateRepository.UpdateAsync(template, autoSave: true);
+        return (await GetCertificateTemplatesAsync(template.MicroMajorId)).First(x => x.Id == template.Id);
+    }
+
+    [Authorize(KnowledgeHubPermissions.MicroMajors.Edit)]
+    public async Task DeleteCertificateTemplateAsync(Guid id)
+    {
+        await _microMajorCertificateTemplateRepository.DeleteAsync(id);
     }
 
     private async Task EnsureCoursesValidAsync(List<CreateUpdateMicroMajorCourseDto> courses)

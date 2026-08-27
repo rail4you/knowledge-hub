@@ -23,6 +23,10 @@
             <td>{{ item.enrollmentCount }}</td>
             <td class="actions">
               <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
+              <button nz-button nzType="link" (click)="openTemplateModal(item)">
+                <span nz-icon nzType="safety-certificate"></span>
+                证书模板
+              </button>
               <button nz-button nzType="link" nzDanger (click)="delete(item.id)">删除</button>
             </td>
           </tr>
@@ -56,7 +60,7 @@
           <tr>
             <td>{{ item.microMajorTitle }}</td>
             <td>{{ item.studentName }}</td>
-            <td>{{ item.progress }}%</td>
+            <td>{{ item.progress | number:'1.2-2' }}%</td>
             <td>{{ getEnrollmentStatusLabel(item.status) }}</td>
             <td>{{ item.enrolledAt | date:'yyyy-MM-dd' }}</td>
             <td class="actions">
@@ -68,7 +72,7 @@
                 <button nz-button nzType="primary" nzSize="small" (click)="markAsCompleted(item.id)">结业</button>
               }
               @if (item.status === enrollmentStatuses.Completed) {
-                <button nz-button nzType="primary" nzSize="small" (click)="openIssueCertificateModal(item.id)">
+                <button nz-button nzType="primary" nzSize="small" (click)="openIssueCertificateModal(item)">
                   <span nz-icon nzType="safety-certificate"></span>
                   发证
                 </button>
@@ -157,52 +161,125 @@
     </ng-container>
   </nz-modal>
 
-  <!-- Certificate issue modal -->
+  <!-- Certificate issue modal（直接选择该微专业下的证书模板，无需每次上传） -->
   <nz-modal
     [(nzVisible)]="certificateModalVisible"
     nzTitle="发放证书"
     [nzWidth]="520"
     [nzOkText]="'确认发放'"
     [nzOkLoading]="certificateIssueLoading"
-    [nzOkDisabled]="certificateImageUploading"
+    [nzOkDisabled]="issueTemplates().length === 0 || !selectedCertificateTemplateId"
     [nzCancelText]="'取消'"
     (nzOnOk)="confirmIssueCertificate()"
     (nzOnCancel)="closeCertificateModal()"
   >
     <ng-container *nzModalContent>
-      <div style="display:flex;flex-direction:column;gap:12px;">
-        <p style="margin:0;color:#666;">上传证书图片（可选），不上传则只生成电子证书记录。</p>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <p style="margin:0;color:#666;">发证必须附带证书图片，请选择该微专业下已上传的证书模板。</p>
 
-        @if (certificateImageUploading) {
-          <div style="padding:8px 0;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px;color:#666;">
-              <span>正在上传...</span>
-              <span>{{ certificateUploadProgress() }}%</span>
+        @if (issueTemplates().length > 0) {
+          <div>
+            <label style="display:block;margin-bottom:6px;font-weight:500;">证书模板</label>
+            <nz-select [(ngModel)]="selectedCertificateTemplateId" nzPlaceHolder="请选择证书模板" style="width:100%;">
+              @for (tpl of issueTemplates(); track tpl.id) {
+                <nz-option [nzValue]="tpl.id" [nzLabel]="tpl.name"></nz-option>
+              }
+            </nz-select>
+          </div>
+
+          @if (selectedTemplatePreviewUrl) {
+            <div style="text-align:center;">
+              <img [src]="selectedTemplatePreviewUrl" style="max-width:100%;max-height:220px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);" />
             </div>
-            <nz-progress [nzPercent]="certificateUploadProgress()" nzSize="small"></nz-progress>
-          </div>
-        } @else if (certificateImageUrl) {
-          <div style="position:relative;display:inline-block;">
-            <img [src]="certificateImageUrl" style="max-width:100%;max-height:200px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);display:block;" />
-            <button nz-button nzType="default" nzSize="small" style="position:absolute;top:8px;right:8px;" (click)="removeCertificateImage()">
-              <span nz-icon nzType="close"></span>
-            </button>
-          </div>
-          <button nz-button nzType="default" nzSize="small" (click)="certificateFileInput.click()">重新选择</button>
+          }
         } @else {
-          <button nz-button nzType="dashed" (click)="certificateFileInput.click()">
-            <span nz-icon nzType="plus"></span>
-            选择证书图片
-          </button>
+          <nz-empty nzNotFoundContent="该微专业还没有证书模板，请先在该微专业的「证书模板」中上传证书图片，再回来发证"></nz-empty>
+        }
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- Certificate template management modal -->
+  <nz-modal
+    [(nzVisible)]="templateModalVisible"
+    [nzTitle]="'证书模板 - ' + templateMicroMajorTitle"
+    [nzWidth]="640"
+    [nzFooter]="null"
+    (nzOnCancel)="closeTemplateModal()"
+  >
+    <ng-container *nzModalContent>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <p style="margin:0;color:#666;">预先上传证书图片并关联到该微专业，发证时直接选择对应模板。</p>
+
+        <!-- 已有模板列表 -->
+        @if (certificateTemplates().length > 0) {
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            @for (tpl of certificateTemplates(); track tpl.id) {
+              <div style="display:flex;align-items:center;gap:12px;padding:8px;border:1px solid #f0f0f0;border-radius:8px;">
+                <img [src]="tpl.imageUrl" style="width:64px;height:46px;object-fit:cover;border-radius:4px;background:#f5f5f5;" />
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:500;">{{ tpl.name }}</div>
+                  <div style="font-size:12px;color:#999;">上传于 {{ tpl.creationTime | date:'yyyy-MM-dd' }}</div>
+                </div>
+                <button nz-button nzType="default" nzSize="small" (click)="openTemplateImagePreview(tpl.imageUrl)">
+                  <span nz-icon nzType="eye"></span>
+                </button>
+                <button
+                  nz-button nzType="default" nzSize="small" nzDanger
+                  nz-popconfirm nzPopconfirmTitle="确定删除该证书模板？"
+                  (nzOnConfirm)="deleteCertificateTemplate(tpl)"
+                >
+                  <span nz-icon nzType="delete"></span>
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <nz-empty nzNotFoundContent="该微专业还没有证书模板"></nz-empty>
         }
 
-        <input
-          #certificateFileInput
-          type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
-          style="display:none"
-          (change)="uploadCertificateImage($event.target.files[0]); $event.target.value = ''"
-        />
+        <!-- 新增证书模板 -->
+        <div style="border-top:1px dashed #e8e8e8;padding-top:16px;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-weight:500;">新增证书模板</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="white-space:nowrap;">模板名称</span>
+            <input nz-input [(ngModel)]="templateName" placeholder="如：结业证书" style="max-width:240px;" />
+          </div>
+
+          @if (templateImageUploading) {
+            <div style="padding:8px 0;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px;color:#666;">
+                <span>正在上传...</span>
+                <span>{{ templateUploadProgress() }}%</span>
+              </div>
+              <nz-progress [nzPercent]="templateUploadProgress()" nzSize="small"></nz-progress>
+            </div>
+          } @else if (templateImageUrl) {
+            <div style="position:relative;display:inline-block;align-self:flex-start;">
+              <img [src]="templateImageUrl" style="max-width:100%;max-height:180px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);display:block;" />
+              <button nz-button nzType="default" nzSize="small" style="position:absolute;top:8px;right:8px;" (click)="removeTemplateImage()">
+                <span nz-icon nzType="close"></span>
+              </button>
+            </div>
+          } @else {
+            <button nz-button nzType="dashed" (click)="templateFileInput.click()" style="align-self:flex-start;">
+              <span nz-icon nzType="plus"></span>
+              上传证书图片
+            </button>
+          }
+
+          <input
+            #templateFileInput
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+            style="display:none"
+            (change)="uploadTemplateImage($event.target.files[0]); $event.target.value = ''"
+          />
+
+          <div>
+            <button nz-button nzType="primary" [disabled]="templateImageUploading" (click)="addCertificateTemplate()">保存模板</button>
+          </div>
+        </div>
       </div>
     </ng-container>
   </nz-modal>

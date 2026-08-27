@@ -132,6 +132,22 @@ export interface MicroMajorCertificateDto {
   issuedAt: string;
 }
 
+export interface MicroMajorCertificateTemplateDto {
+  id: string;
+  microMajorId: string;
+  name: string;
+  imageUrl: string;
+  sortOrder: number;
+  creationTime?: string;
+}
+
+export interface CreateUpdateMicroMajorCertificateTemplateDto {
+  microMajorId: string;
+  name: string;
+  imageUrl: string;
+  sortOrder: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -228,14 +244,44 @@ export class MicroMajorService {
     }, { apiName: this.apiName });
   }
 
-  issueCertificate(enrollmentId: string, certificateImageUrl?: string): Observable<MicroMajorCertificateDto> {
+  issueCertificate(enrollmentId: string, certificateTemplateId: string): Observable<MicroMajorCertificateDto> {
     return this.restService.request<any, MicroMajorCertificateDto>({
       method: 'POST',
       url: `/api/app/micro-major/issue-certificate`,
       body: {
         enrollmentId,
-        certificateImageUrl: certificateImageUrl || null,
+        certificateTemplateId,
       },
+    }, { apiName: this.apiName });
+  }
+
+  getCertificateTemplates(microMajorId: string): Observable<MicroMajorCertificateTemplateDto[]> {
+    return this.restService.request<any, MicroMajorCertificateTemplateDto[]>({
+      method: 'GET',
+      url: `/api/app/micro-major/certificate-templates/${microMajorId}`,
+    }, { apiName: this.apiName });
+  }
+
+  createCertificateTemplate(input: CreateUpdateMicroMajorCertificateTemplateDto): Observable<MicroMajorCertificateTemplateDto> {
+    return this.restService.request<any, MicroMajorCertificateTemplateDto>({
+      method: 'POST',
+      url: '/api/app/micro-major/certificate-template',
+      body: input,
+    }, { apiName: this.apiName });
+  }
+
+  updateCertificateTemplate(id: string, input: CreateUpdateMicroMajorCertificateTemplateDto): Observable<MicroMajorCertificateTemplateDto> {
+    return this.restService.request<any, MicroMajorCertificateTemplateDto>({
+      method: 'PUT',
+      url: `/api/app/micro-major/${id}/certificate-template`,
+      body: input,
+    }, { apiName: this.apiName });
+  }
+
+  deleteCertificateTemplate(id: string): Observable<void> {
+    return this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/micro-major/${id}/certificate-template`,
     }, { apiName: this.apiName });
   }
 
