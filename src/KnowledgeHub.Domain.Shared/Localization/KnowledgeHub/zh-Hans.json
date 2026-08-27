@@ -93,6 +93,7 @@
     "Permission:Users.Edit": "编辑用户",
     "Permission:Users.Delete": "删除用户",
     "Permission:Users.Import": "导入用户",
+    "Permission:AccountValidity": "账号有效期管理（全局管理员）",
     "Permission:Search": "搜索管理",
     "Permission:Search.ManageIndex": "管理索引",
     "Permission:Search.ViewStatistics": "查看统计",

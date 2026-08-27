@@ -72,11 +72,18 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 多校协同父菜单（LeptonX 对带子项的父菜单仍渲染 routerLink，点击会导航到此处）
+    // 补一条重定向路由，避免全局管理员点击“多校协同”菜单项时 404。
+    path: 'multi-school-admin',
+    redirectTo: 'admin/account-validity',
+    pathMatch: 'full',
+  },
+  {
     path: 'admin/account-validity',
     loadComponent: () => import('./admin/account-validity/account-validity.component').then(c => c.AccountValidityComponent),
     canActivate: [authGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.Users',
+      requiredPolicy: 'KnowledgeHub.AccountValidity',
     },
   },
   {

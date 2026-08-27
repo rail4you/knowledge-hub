@@ -167,4 +167,15 @@ public static class KnowledgeHubPermissions
         public const string Default = GroupName + ".TenantInfo";
         public const string Edit = Default + ".Edit";
     }
+
+    /// <summary>
+    /// 账号有效期（多校协同）：仅 host「admin」全局管理员可被授予。
+    /// 用于多校协同菜单 / 账号有效期配置页的可见性，以及 AccountValidityAppService 的后端鉴权。
+    /// 注意：不要复用 KnowledgeHub.Users —— 它是租户用户管理权限（TenantUserAppService 依赖），
+    /// 租户级 SchoolAdmin 也持有；复用会导致租户管理员看到"多校协同"菜单。
+    /// </summary>
+    public static class AccountValidity
+    {
+        public const string Default = GroupName + ".AccountValidity";
+    }
 }

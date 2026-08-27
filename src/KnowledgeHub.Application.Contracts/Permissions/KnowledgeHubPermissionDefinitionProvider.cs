@@ -147,6 +147,9 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         // TenantInfo permissions
         var tenantInfoPermission = myGroup.AddPermission(KnowledgeHubPermissions.TenantInfo.Default, L("Permission:TenantInfo"));
         tenantInfoPermission.AddChild(KnowledgeHubPermissions.TenantInfo.Edit, L("Permission:TenantInfo.Edit"));
+
+        // AccountValidity permissions (账号有效期/多校协同 — 仅 host 全局管理员)
+        myGroup.AddPermission(KnowledgeHubPermissions.AccountValidity.Default, L("Permission:AccountValidity"));
     }
 
     private static LocalizableString L(string name)

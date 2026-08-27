@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -21,7 +22,7 @@ namespace KnowledgeHub.Accounts;
 /// 仅「全局管理员（host）」可调用：跨院校为租户管理员/教师账号配置有效期、
 /// 到期自动熔断编辑/管理权限、续期恢复权限。
 /// </summary>
-[Authorize]
+[Authorize(KnowledgeHubPermissions.AccountValidity.Default)]
 public class AccountValidityAppService : KnowledgeHubAppService, IAccountValidityAppService
 {
     private const int ExpiringDays = 7;

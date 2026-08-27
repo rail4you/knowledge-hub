@@ -58,6 +58,7 @@
     "Permission:Users.Edit": "Editing the users",
     "Permission:Users.Delete": "Deleting the users",
     "Permission:Users.Import": "Import users",
+    "Permission:AccountValidity": "Account validity management (Global admin)",
     "Permission:Search": "Search Management",
     "Permission:Search.ManageIndex": "Manage Index",
     "Permission:Search.ViewStatistics": "View Statistics",

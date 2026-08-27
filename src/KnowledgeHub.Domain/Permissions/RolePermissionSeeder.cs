@@ -546,9 +546,20 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Create);
         await GrantAsync("admin", KnowledgeHubPermissions.RecruitmentLive.Manage);
 
-        // 用户管理：仅 host「admin」全局管理员授予。用于账号有效期管理等全局运营功能入口。
-        // 注意：不得授予租户级 SchoolAdmin，以保证多校协同-有效期配置仅全局管理员可见。
+        // 用户管理：host「admin」全局管理员（UserAppService / 用户导入等依赖）。
+        // 注意：KnowledgeHub.Users 不能作为"多校协同-有效期配置"的入口权限 ——
+        // 它是租户用户管理权限（TenantUserAppService 依赖），租户级 SchoolAdmin 也持有，
+        // 若复用会导致租户管理员看到"多校协同"菜单。入口控制改用独立权限 AccountValidity。
         await GrantAsync("admin", KnowledgeHubPermissions.Users.Default);
+
+        // 账号有效期（多校协同）：仅 host「admin」全局管理员，且仅在宿主上下文写入，
+        // 保证多校协同菜单与账号有效期配置仅全局管理员可见/可用。
+        // 租户上下文绝不授予；GrantAllPoliciesMiddleware 的注入列表也不包含该权限，
+        // 因此租户级 SchoolAdmin/admin 即使拿到 KnowledgeHub.Users 也看不到该菜单。
+        if (_currentTenant.Id == null)
+        {
+            await GrantAsync("admin", KnowledgeHubPermissions.AccountValidity.Default);
+        }
     }
 
     /// <summary>

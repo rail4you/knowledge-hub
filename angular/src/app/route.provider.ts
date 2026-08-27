@@ -491,13 +491,16 @@ function configureRoutes() {
     },
     // ══════════════════════════════════════════════════════════
     //  多校协同管理（全局管理员专属）
+    //  ⚠ 入口权限必须用 KnowledgeHub.AccountValidity（仅 host admin 被授予），
+    //  不能复用 KnowledgeHub.Users —— 租户 SchoolAdmin 也持有该权限（租户用户管理），
+    //  且 GrantAllPoliciesMiddleware 会把它注入给所有管理角色，导致租户管理员看到此菜单。
     // ══════════════════════════════════════════════════════════
     {
       path: '/multi-school-admin',
       name: '::Menu:MultiSchool',
       iconClass: 'fas fa-school',
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Users',
+      requiredPolicy: 'KnowledgeHub.AccountValidity',
     },
     {
       path: '/admin/account-validity',
@@ -506,7 +509,7 @@ function configureRoutes() {
       parentName: '::Menu:MultiSchool',
       order: 10,
       layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Users',
+      requiredPolicy: 'KnowledgeHub.AccountValidity',
     },
     // ══════════════════════════════════════════════════════════
     //  隐藏 / 特殊路由（不显示在侧边栏）
