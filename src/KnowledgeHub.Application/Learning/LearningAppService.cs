@@ -99,16 +99,6 @@ public class LearningAppService : ApplicationService, ILearningAppService
                 return (decimal)(exCount + pCount);
             })
             .ToList();
-        
-        dashboard.KnowledgeDimensions = new List<KnowledgeDimensionDto>
-        {
-            new() { Name = "基础知识" },
-            new() { Name = "应用能力" },
-            new() { Name = "创新能力" },
-            new() { Name = "分析能力" },
-            new() { Name = "综合能力" }
-        };
-        dashboard.MasteryValues = new List<decimal> { 60, 50, 40, 70, 55 };
 
         // 课程名 lookup：用最近学习列表涉及的 5 门课程做一次批量查询，
         // 比 GetMyCoursesAsync 里的 N+1 循环（每门课一次 FindAsync）更高效。

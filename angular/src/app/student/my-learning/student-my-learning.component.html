@@ -175,29 +175,6 @@
 
     <!-- 侧栏 -->
     <aside class="content-aside">
-      <!-- 知识掌握度 -->
-      <div class="aside-card">
-        <h3 class="aside-card__title">
-          <span nz-icon nzType="bulb" nzTheme="outline"></span>
-          知识掌握度
-        </h3>
-
-        @if (knowledgeStats().length === 0) {
-          <div class="aside-empty">
-            <span nz-icon nzType="bulb" nzTheme="outline" class="aside-empty__icon"></span>
-            <p>完成更多习题后将自动生成掌握度报告</p>
-          </div>
-        } @else {
-          <div class="mastery-radar-wrap">
-            <app-mastery-radar [data]="radarData()" [showValues]="true"></app-mastery-radar>
-            <div class="mastery-radar-summary">
-              <span class="mastery-radar-summary__num">{{ radarAverage() }}</span>
-              <span class="mastery-radar-summary__label">综合掌握度</span>
-            </div>
-          </div>
-        }
-      </div>
-
       <!-- 最近学习 -->
       @if (recentLearnings().length > 0) {
         <div class="aside-card">
@@ -229,33 +206,17 @@
           本月目标
         </h3>
         <ul class="goal-list">
-          <li class="goal-item">
-            <div class="goal-item__head">
-              <span>完成 3 门课程</span>
-              <span class="goal-item__count">2 / 3</span>
-            </div>
-            <div class="goal-item__bar">
-              <span class="goal-item__fill" [style.width.%]="66"></span>
-            </div>
-          </li>
-          <li class="goal-item">
-            <div class="goal-item__head">
-              <span>累计学习 30 小时</span>
-              <span class="goal-item__count">18 / 30</span>
-            </div>
-            <div class="goal-item__bar">
-              <span class="goal-item__fill" [style.width.%]="60"></span>
-            </div>
-          </li>
-          <li class="goal-item">
-            <div class="goal-item__head">
-              <span>完成 200 道习题</span>
-              <span class="goal-item__count">156 / 200</span>
-            </div>
-            <div class="goal-item__bar">
-              <span class="goal-item__fill" [style.width.%]="78"></span>
-            </div>
-          </li>
+          @for (g of monthlyGoals(); track g.label) {
+            <li class="goal-item">
+              <div class="goal-item__head">
+                <span>{{ g.label }}</span>
+                <span class="goal-item__count">{{ g.current }} / {{ g.target }}</span>
+              </div>
+              <div class="goal-item__bar">
+                <span class="goal-item__fill" [style.width.%]="g.percent"></span>
+              </div>
+            </li>
+          }
         </ul>
       </div>
     </aside>

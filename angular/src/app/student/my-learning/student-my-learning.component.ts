@@ -32,6 +32,13 @@ interface StatItem {
   hint?: string;
 }
 
+interface GoalItem {
+  label: string;
+  current: number;
+  target: number;
+  percent: number;
+}
+
 interface ExerciseRecordItem {
   id: string;
   courseName: string;
@@ -116,31 +123,27 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
     return this.dashboard()?.recentLearning || [];
   });
 
-  /** 掌握度（基于 knowledgeDimensions + masteryValues） */
-  readonly knowledgeStats = computed(() => {
+  /** 本月目标：目标值固定，完成值取真实学习统计 */
+  readonly monthlyGoals = computed<GoalItem[]>(() => {
     const dash = this.dashboard();
-    if (!dash?.knowledgeDimensions?.length) return [];
-    return dash.knowledgeDimensions.slice(0, 6).map((d, i) => ({
-      name: d.name || '维度' + (i + 1),
-      max: d.maxValue || 100,
-      value: dash.masteryValues?.[i] ?? 0,
-    }));
-  });
-
-  /** 掌握度雷达图数据 */
-  readonly radarData = computed<RadarAxis[]>(() =>
-    this.knowledgeStats().map(s => ({
-      name: s.name,
-      value: s.value,
-      max: s.max,
-    }))
-  );
-
-  /** 掌握度平均值 */
-  readonly radarAverage = computed<number>(() => {
-    const stats = this.knowledgeStats();
-    if (stats.length === 0) return 0;
-    return Math.round(stats.reduce((s, k) => s + k.value, 0) / stats.length);
+    const completedCourses = dash?.completedCourses || 0;
+    const totalExercises = dash?.totalExerciseRecords || 0;
+    const courseTarget = 3;
+    const exerciseTarget = 200;
+    return [
+      {
+        label: `完成 ${courseTarget} 门课程`,
+        current: completedCourses,
+        target: courseTarget,
+        percent: Math.min(100, Math.round((completedCourses / courseTarget) * 100)),
+      },
+      {
+        label: `完成 ${exerciseTarget} 道习题`,
+        current: totalExercises,
+        target: exerciseTarget,
+        percent: Math.min(100, Math.round((totalExercises / exerciseTarget) * 100)),
+      },
+    ];
   });
 
   ngOnInit() {
