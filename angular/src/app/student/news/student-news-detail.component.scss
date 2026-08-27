@@ -106,137 +106,30 @@
   overflow: hidden;
 }
 
-.article-card__cover {
-  position: relative;
-  min-height: 280px;
+/* ---- 页眉（文章头） ---- */
+.article-card__header {
+  padding: 30px 48px 6px;
+}
+
+.article-card__kicker {
   display: flex;
-  align-items: flex-end;
-  color: #fff;
-  overflow: hidden;
-  padding: 30px 36px;
-}
-
-.article-card__cover-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.article-card__pattern {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.pattern-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-
-  &--1 {
-    width: 240px;
-    height: 240px;
-    top: -80px;
-    right: -60px;
-  }
-
-  &--2 {
-    width: 160px;
-    height: 160px;
-    bottom: -60px;
-    left: 25%;
-    background: rgba(255, 255, 255, 0.14);
-  }
-
-  &--3 {
-    width: 100px;
-    height: 100px;
-    top: 35%;
-    left: 45%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.06);
-  }
-}
-
-.pattern-line {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 2px;
-
-  &--1 {
-    width: 80px;
-    height: 3px;
-    top: 24px;
-    right: 60px;
-    transform: rotate(-12deg);
-  }
-
-  &--2 {
-    width: 40px;
-    height: 3px;
-    top: 38px;
-    right: 100px;
-    transform: rotate(-12deg);
-    background: rgba(255, 255, 255, 0.32);
-  }
-}
-
-.article-card__overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  pointer-events: none;
-}
-
-.article-card__badges {
-  position: absolute;
-  top: 20px;
-  left: 24px;
-  right: 24px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  z-index: 2;
-}
-
-.badge {
-  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  backdrop-filter: blur(8px);
-  color: #fff;
-
-  span[nz-icon] {
-    font-size: 12px;
-  }
-
-  &--top {
-    background: #059669;
-    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.32);
-  }
-
-  &--hot {
-    background: rgba(255, 255, 255, 0.95);
-    color: #ef4444;
-  }
-
-  &--category {
-    background: rgba(0, 0, 0, 0.4);
-    color: #fff;
-  }
+  gap: 7px;
+  margin-bottom: 14px;
+  font-size: 13px;
 }
 
-.article-card__title-wrap {
-  position: relative;
-  z-index: 1;
-  width: 100%;
+.article-card__category {
+  color: ds.$student-primary;
+  font-weight: 600;
+}
+
+.article-card__kicker-sep {
+  color: ds.$student-border;
+}
+
+.article-card__date {
+  color: ds.$student-text-light;
 }
 
 .article-card__title {
@@ -244,159 +137,99 @@
   font-size: 30px;
   font-weight: 700;
   line-height: 1.35;
-  letter-spacing: -0.4px;
-  color: #fff;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  letter-spacing: -0.01em;
+  color: ds.$student-text;
+  text-wrap: balance;
 }
 
-/* ============ 文章信息 ============ */
-.article-card__info {
-  padding: 24px 30px 20px;
-  border-bottom: 1px dashed ds.$student-border-soft;
-}
-
-.article-meta {
+/* 作者 / 统计行（次要信息） */
+.article-byline {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
   flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid ds.$student-border-soft;
+  color: ds.$student-text-muted;
+  font-size: 13px;
 }
 
-.article-author {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.author-avatar {
-  width: 44px;
-  height: 44px;
+.article-byline__avatar {
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 700;
   flex-shrink: 0;
-  letter-spacing: -0.5px;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
 }
 
-.author-detail {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.3;
-  min-width: 0;
-}
-
-.author-name {
+.article-byline__name {
   color: ds.$student-text;
-  font-size: 14px;
   font-weight: 600;
 }
 
-.author-date {
-  color: ds.$student-text-light;
-  font-size: 12px;
-  margin-top: 2px;
+.article-byline__sep {
+  color: ds.$student-border;
 }
 
-.article-stats {
+.article-byline__meta {
+  color: ds.$student-text-light;
+}
+
+.article-byline__flag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 4px;
+  background: #eaf0f7;
+  color: #1e6ce8;
+  font-size: 11px;
+  font-weight: 600;
+
+  &--hot {
+    background: #fff0f0;
+    color: #ff4d4f;
+  }
+}
+
+/* 标签（次要，内联隐藏处理） */
+.article-byline__tags {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px 16px;
+  gap: 5px;
+  margin-left: 4px;
 }
 
-.stat-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: ds.$student-text-muted;
-  font-size: 13px;
-
-  span[nz-icon] {
-    font-size: 13px;
-  }
-}
-
-.article-summary {
-  margin-top: 18px;
-  padding: 14px 18px;
-  border-radius: ds.$student-radius;
-  background: #f0f6ff;
-  border-left: 3px solid ds.$student-primary;
-
-  &__label {
-    display: inline-block;
-    color: ds.$student-primary;
-    font-size: 12px;
-    font-weight: 700;
-    margin-bottom: 6px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    background: #fff;
-  }
-
-  p {
-    margin: 0;
-    color: ds.$student-text;
-    font-size: 14px;
-    line-height: 1.75;
-  }
-}
-
-.article-tags {
-  margin-top: 16px;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-
-  &__label {
-    color: ds.$student-text-light;
-    font-size: 13px;
-    flex-shrink: 0;
-    padding-top: 4px;
-  }
-
-  &__list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-}
-
-.article-tag {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 4px;
-  background: #f0f6ff;
-  color: ds.$student-primary;
+.article-byline__tag {
+  color: ds.$student-text-light;
   font-size: 12px;
   font-weight: 500;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: ds.$student-primary;
-    color: #fff;
-  }
 }
 
-/* ============ 文章正文 ============ */
+/* ============ 文章正文（主体） ============ */
 .article-body {
-  padding: 28px 30px 20px;
+  padding: 26px 48px 12px;
+}
+
+.article-lead {
+  margin: 0 0 20px;
+  color: ds.$student-text-muted;
+  font-size: 16px;
+  line-height: 2;
 }
 
 .article-paragraph {
-  margin: 0 0 16px;
-  color: ds.$student-text;
+  margin: 0 0 18px;
+  color: #2b3440;
   font-size: 16px;
-  line-height: 1.9;
+  line-height: 2;
   letter-spacing: 0.2px;
 
   &:last-child {
@@ -411,20 +244,22 @@
   }
 }
 
+/* ============ 文章页脚 ============ */
+.article-card__footer {
+  padding: 0 48px 32px;
+}
+
 .article-copyright {
-  margin: 0 30px 24px;
-  padding: 12px 16px;
-  border-radius: ds.$student-radius;
-  background: #fff7e6;
-  border: 1px solid #ffe7ba;
-  color: #ad6800;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid ds.$student-border-soft;
+  color: ds.$student-text-light;
   font-size: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 
   span[nz-icon] {
-    color: #d46b08;
     font-size: 13px;
   }
 }
@@ -434,9 +269,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 20px 30px 28px;
+  margin-top: 24px;
+  padding-top: 24px;
   border-top: 1px dashed ds.$student-border-soft;
-  margin: 0 30px;
 }
 
 .action-pill {
@@ -1134,25 +969,20 @@
     padding-right: 16px;
   }
 
-  .article-card__cover {
-    min-height: 220px;
-    padding: 24px 20px;
+  .article-card__header {
+    padding: 22px 20px 4px;
   }
 
   .article-card__title {
-    font-size: 22px;
+    font-size: 24px;
   }
 
-  .article-card__info,
+  .article-card__footer {
+    padding: 0 20px 24px;
+  }
+
   .article-body {
-    padding-left: 20px;
-    padding-right: 20px;
-  }
-
-  .article-copyright,
-  .article-actions {
-    margin-left: 20px;
-    margin-right: 20px;
+    padding: 22px 20px 8px;
   }
 
   .article-actions {
@@ -1162,11 +992,6 @@
     .action-pill {
       justify-content: center;
     }
-  }
-
-  .article-meta {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   .comment-form {

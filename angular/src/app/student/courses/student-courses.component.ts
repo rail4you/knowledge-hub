@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -15,15 +15,7 @@ import { LearningService } from '../../proxy/learning/learning.service';
 import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 import type { CourseDto, StudentCourseDto } from '../../proxy/courses/dtos/models';
 import type { LearningDashboardDto } from '../../proxy/learning/dtos/models';
-
-interface HeroSlide {
-  title: string;
-  subtitle: string;
-  description: string;
-  tag: string;
-  icon: string;
-  color: string;
-}
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 interface StatItem {
   label: string;
@@ -67,12 +59,13 @@ interface HotCourse {
     NzProgressModule,
     NzEmptyModule,
     NzTooltipModule,
+    StudentHeroComponent,
   ],
   templateUrl: './student-courses.component.html',
   styleUrls: ['./student-courses.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class StudentCoursesComponent implements OnInit, OnDestroy {
+export class StudentCoursesComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly learningService = inject(LearningService);
   private readonly authService = inject(AuthService);
@@ -90,9 +83,6 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   readonly selectedMajor = signal<string | null>(null);
   readonly selectedDifficulty = signal<number | null>(null);
   readonly selectedStatus = signal<string | null>('enrolled');
-
-  readonly activeHeroSlide = signal(0);
-  private heroTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly CourseStatus = CourseStatus;
 
@@ -116,33 +106,6 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     { label: '学习中', value: 0, suffix: '门', icon: 'play-circle', color: '#06b6d4' },
     { label: '已完成', value: 0, suffix: '门', icon: 'check-circle', color: '#10b981' },
     { label: '学习进度', value: 0, suffix: '%', icon: 'rise', color: '#0c4cb8' },
-  ]);
-
-  readonly heroSlides = signal<HeroSlide[]>([
-    {
-      title: '课程中心',
-      subtitle: 'COURSE CENTER',
-      description: '汇聚专业精品课程，章节清晰、资源丰富、习题完备，构建从知识获取到技能掌握的完整学习路径。',
-      tag: '课程简介',
-      icon: 'read',
-      color: '#1e6ce8',
-    },
-    {
-      title: '知识图谱 · 体系化学习',
-      subtitle: 'KNOWLEDGE GRAPH',
-      description: '基于专业知识点关系构建认知图谱，可视化呈现章节与资源脉络，让学习更系统、更高效。',
-      tag: '知识图谱',
-      icon: 'apartment',
-      color: '#0c4cb8',
-    },
-    {
-      title: '在线练习 · 巩固提升',
-      subtitle: 'ONLINE EXERCISES',
-      description: '每章配备精选习题与详细解析，自主评估掌握情况，让学习效果可量化、可追溯。',
-      tag: '在线练习',
-      icon: 'form',
-      color: '#059669',
-    },
   ]);
 
   readonly majors = signal<MajorChip[]>([
@@ -176,30 +139,6 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     this.loadCourses();
     this.loadMyCourses();
     this.loadDashboard();
-    this.startHeroAutoPlay();
-  }
-
-  ngOnDestroy(): void {
-    this.stopHeroAutoPlay();
-  }
-
-  startHeroAutoPlay() {
-    this.stopHeroAutoPlay();
-    this.heroTimer = setInterval(() => {
-      this.activeHeroSlide.set((this.activeHeroSlide() + 1) % this.heroSlides().length);
-    }, 6000);
-  }
-
-  stopHeroAutoPlay() {
-    if (this.heroTimer) {
-      clearInterval(this.heroTimer);
-      this.heroTimer = null;
-    }
-  }
-
-  selectHeroSlide(index: number) {
-    this.activeHeroSlide.set(index);
-    this.startHeroAutoPlay();
   }
 
   loadCourses(): void {

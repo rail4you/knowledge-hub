@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -8,8 +8,15 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { MicroMajorService, MicroMajorEnrollmentStatus } from '../../micro-majors/micro-major.service';
-import type { MyMicroMajorDto, MicroMajorCourseDto } from '../../micro-majors/micro-major.service';
+import {
+  MicroMajorService,
+  MicroMajorEnrollmentStatus,
+} from '../../micro-majors/micro-major.service';
+import type {
+  MyMicroMajorDto,
+  MicroMajorCourseDto,
+} from '../../micro-majors/micro-major.service';
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
   selector: 'app-student-my-micro-majors',
@@ -17,6 +24,7 @@ import type { MyMicroMajorDto, MicroMajorCourseDto } from '../../micro-majors/mi
   imports: [
     CommonModule, DatePipe, DecimalPipe, RouterModule,
     NzIconModule, NzSpinModule, NzProgressModule, NzEmptyModule, NzModalModule, NzButtonModule,
+    StudentHeroComponent,
   ],
   templateUrl: './student-my-micro-majors.component.html',
   styleUrls: ['./student-my-micro-majors.component.scss'],
@@ -30,6 +38,22 @@ export class StudentMyMicroMajorsComponent implements OnInit {
   readonly items = signal<MyMicroMajorDto[]>([]);
   readonly loading = signal(true);
   readonly EnrollmentStatus = MicroMajorEnrollmentStatus;
+
+  /** 卡片内“课程”折叠状态（key = enrollmentId） */
+  readonly expandedCourseIds = signal<Set<string>>(new Set());
+
+  /** 头部数据总览 */
+  readonly heroStats = computed(() => {
+    const items = this.items();
+    const countOf = (s: MicroMajorEnrollmentStatus) =>
+      items.filter(i => i.enrollmentStatus === s).length;
+    return [
+      { label: '已报名', value: items.length, suffix: '个', icon: 'appstore', color: '#1e6ce8' },
+      { label: '学习中', value: countOf(MicroMajorEnrollmentStatus.InProgress), suffix: '个', icon: 'play-circle', color: '#06b6d4' },
+      { label: '已完成', value: countOf(MicroMajorEnrollmentStatus.Completed), suffix: '个', icon: 'check-circle', color: '#10b981' },
+      { label: '已获证书', value: countOf(MicroMajorEnrollmentStatus.Certified), suffix: '个', icon: 'safety-certificate', color: '#f59e0b' },
+    ];
+  });
 
   readonly certificateVisible = signal(false);
   readonly activeCertificate = signal<MyMicroMajorDto | null>(null);
@@ -60,6 +84,22 @@ export class StudentMyMicroMajorsComponent implements OnInit {
   closeCertificate(): void {
     this.certificateVisible.set(false);
     this.activeCertificate.set(null);
+  }
+
+  toggleCourses(enrollmentId: string): void {
+    this.expandedCourseIds.update(set => {
+      const next = new Set(set);
+      if (next.has(enrollmentId)) {
+        next.delete(enrollmentId);
+      } else {
+        next.add(enrollmentId);
+      }
+      return next;
+    });
+  }
+
+  isCoursesExpanded(enrollmentId: string): boolean {
+    return this.expandedCourseIds().has(enrollmentId);
   }
 
   downloadCertificate(item?: MyMicroMajorDto): void {

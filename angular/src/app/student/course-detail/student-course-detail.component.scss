@@ -604,12 +604,20 @@
     flex-shrink: 0;
   }
 
+  &__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
   &__title {
     color: ds.$student-text;
     font-size: 14px;
     font-weight: 500;
-    flex: 1;
     min-width: 0;
+    line-height: 1.5;
   }
 
   &__count {
@@ -631,16 +639,14 @@
   }
 
   &__desc {
-    display: inline-flex;
-    align-items: center;
     color: ds.$student-text-light;
     font-size: 12px;
+    line-height: 1.6;
     cursor: help;
-    flex-shrink: 0;
-
-    span[nz-icon] {
-      font-size: 13px;
-    }
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__children {

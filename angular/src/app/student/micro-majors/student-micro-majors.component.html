@@ -1,23 +1,10 @@
 <div class="mm-page">
   <!-- =================== HERO =================== -->
-  <section class="page-hero">
-    <div class="page-hero__inner">
-      <div class="page-hero__body">
-        <span class="page-hero__label">MICRO MAJOR</span>
-        <h1 class="page-hero__title">
-          <span class="page-hero__bar"></span>
-          微专业
-        </h1>
-        <p class="page-hero__desc">精选行业前沿课程体系，完成学习可获得微专业证书</p>
-      </div>
-    </div>
-    <div class="page-hero__stats">
-      <span class="stat-chip">
-        <span class="stat-chip__dot"></span>
-        共 <strong>{{ totalCount() | number }}</strong> 个微专业
-      </span>
-    </div>
-  </section>
+  <app-student-hero
+    title="微专业"
+    description="精选行业前沿课程体系，完成学习可获得微专业证书"
+    [stats]="heroStats()"
+  ></app-student-hero>
 
   <!-- =================== 列表 =================== -->
   @if (loading()) {

@@ -1,62 +1,10 @@
 <div class="my-learning-page">
-  <!-- =================== 数据总览 Hero =================== -->
-  <section class="hero" aria-label="学习数据总览">
-    <div class="hero__bg" aria-hidden="true">
-      <span class="hero__shape hero__shape--1"></span>
-      <span class="hero__shape hero__shape--2"></span>
-      <span class="hero__shape hero__shape--3"></span>
-    </div>
-
-    <div class="hero__inner">
-      <div class="hero__welcome">
-        <span class="welcome-tag">
-          <span nz-icon nzType="line-chart" nzTheme="outline"></span>
-          我的学习
-        </span>
-        <h1 class="welcome-title">学习数据 · 一目了然</h1>
-        <p class="welcome-desc">
-          记录每一次学习足迹，掌握学习节奏与进步轨迹。从章节学习到习题训练，从知识掌握到学习曲线，让成长可视化。
-        </p>
-
-        <div class="welcome-actions">
-          <button class="hero-btn hero-btn--primary" (click)="goCourses()">
-            <span nz-icon nzType="plus" nzTheme="outline"></span>
-            <span>继续学习</span>
-          </button>
-          <button class="hero-btn" routerLink="/student/courses">
-            <span nz-icon nzType="appstore" nzTheme="outline"></span>
-            <span>浏览课程</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="hero__stats">
-        <div class="stats-card">
-          <h3 class="stats-card__title">
-            <span class="stats-card__bar"></span>
-            学习概览
-            <span class="stats-card__hint">实时同步</span>
-          </h3>
-          <div class="stats-grid">
-            @for (s of stats(); track s.label) {
-              <div class="stat-cell">
-                <div class="stat-cell__icon" [style.background]="s.color">
-                  <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
-                </div>
-                <div class="stat-cell__body">
-                  <div class="stat-cell__value">
-                    <strong>{{ s.value | number }}</strong>
-                    <span class="stat-cell__suffix">{{ s.suffix }}</span>
-                  </div>
-                  <div class="stat-cell__label">{{ s.label }}</div>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- =================== 学习数据 Hero =================== -->
+  <app-student-hero
+    title="我的学习"
+    description="记录每一次学习足迹，掌握学习节奏与进步轨迹。从章节学习到习题训练，从知识掌握到学习曲线，让成长可视化。"
+    [stats]="stats()"
+  ></app-student-hero>
 
   <!-- =================== 学习曲线 =================== -->
   <section class="curve-card">

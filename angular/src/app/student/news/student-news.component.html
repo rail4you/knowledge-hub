@@ -1,81 +1,10 @@
 <div class="news-page">
   <!-- =================== HERO 区域 =================== -->
-  <section class="hero" aria-label="资讯中心简介">
-    <div class="hero__bg" aria-hidden="true">
-      <span class="hero__shape hero__shape--1"></span>
-      <span class="hero__shape hero__shape--2"></span>
-      <span class="hero__shape hero__shape--3"></span>
-      <span class="hero__shape hero__shape--4"></span>
-    </div>
-
-    <div class="hero__inner">
-      <div class="hero__carousel">
-        <div class="carousel-stage">
-          @for (slide of heroSlides(); track $index; let i = $index) {
-            <article
-              class="carousel-slide"
-              [class.is-active]="activeHeroSlide() === i"
-              [style.background]="slide.color"
-            >
-              <div class="slide-tag">
-                <span nz-icon [nzType]="slide.icon" nzTheme="outline"></span>
-                {{ slide.tag }}
-              </div>
-              <h2 class="slide-title">{{ slide.title }}</h2>
-              <p class="slide-subtitle">{{ slide.subtitle }}</p>
-              <p class="slide-desc">{{ slide.description }}</p>
-              <div class="slide-deco" aria-hidden="true">
-                <span class="deco-ring"></span>
-                <span class="deco-ring deco-ring--alt"></span>
-                <span class="deco-dot"></span>
-              </div>
-            </article>
-          }
-        </div>
-
-        <div class="carousel-dots" role="tablist">
-          @for (slide of heroSlides(); track $index; let i = $index) {
-            <button
-              class="carousel-dot"
-              [class.is-active]="activeHeroSlide() === i"
-              (click)="selectHeroSlide(i)"
-              role="tab"
-              [attr.aria-selected]="activeHeroSlide() === i"
-            >
-              <span class="dot-index">0{{ i + 1 }}</span>
-              <span class="dot-line"></span>
-            </button>
-          }
-        </div>
-      </div>
-
-      <div class="hero__stats">
-        <div class="stats-card">
-          <h3 class="stats-card__title">
-            <span class="stats-card__bar"></span>
-            数据总览
-            <span class="stats-card__hint">实时更新</span>
-          </h3>
-          <div class="stats-grid">
-            @for (s of stats(); track s.label) {
-              <div class="stat-cell">
-                <div class="stat-cell__icon" [style.background]="s.color">
-                  <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
-                </div>
-                <div class="stat-cell__body">
-                  <div class="stat-cell__value">
-                    <strong>{{ s.value | number }}</strong>
-                    <span class="stat-cell__suffix">{{ s.suffix }}</span>
-                  </div>
-                  <div class="stat-cell__label">{{ s.label }}</div>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <app-student-hero
+    title="资讯中心"
+    description="汇集行业动态、政策解读、教学资讯与企业新闻，让你随时掌握最新前沿信息。"
+    [stats]="stats()"
+  ></app-student-hero>
 
   <!-- =================== 搜索 + 分类筛选 =================== -->
   <section class="quick-bar" aria-label="资讯筛选">
@@ -159,12 +88,7 @@
                     (error)="onCoverError($event)"
                     [class.is-hidden]="!hasCover(article)"
                   />
-                  <div class="featured-card__pattern" aria-hidden="true">
-                    <span class="featured-pattern-circle featured-pattern-circle--1"></span>
-                    <span class="featured-pattern-circle featured-pattern-circle--2"></span>
-                    <span class="featured-pattern-circle featured-pattern-circle--3"></span>
-                  </div>
-                  <div class="featured-card__overlay" aria-hidden="true"></div>
+                  <div class="featured-card__scrim" aria-hidden="true"></div>
 
                   <div class="featured-card__content">
                     <div class="featured-card__top">
@@ -180,23 +104,31 @@
                       }
                     </div>
 
-                    <h3 class="featured-card__title">{{ article.title }}</h3>
-                    @if (article.summary) {
-                      <p class="featured-card__summary">{{ article.summary }}</p>
-                    }
+                    <div class="featured-card__body">
+                      <h3 class="featured-card__title">{{ article.title }}</h3>
+                      @if (article.summary) {
+                        <p class="featured-card__summary">{{ article.summary }}</p>
+                      }
+                    </div>
 
-                    <div class="featured-card__meta">
-                      <span class="meta-item">
-                        <span nz-icon nzType="user" nzTheme="outline"></span>
-                        {{ article.authorName || '系统发布' }}
-                      </span>
-                      <span class="meta-item">
-                        <span nz-icon nzType="calendar" nzTheme="outline"></span>
-                        {{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd' }}
-                      </span>
-                      <span class="meta-item">
-                        <span nz-icon nzType="eye" nzTheme="outline"></span>
-                        {{ article.viewCount || 0 }} 阅读
+                    <div class="featured-card__footer">
+                      <div class="featured-card__meta">
+                        <span class="meta-item">
+                          <span nz-icon nzType="user" nzTheme="outline"></span>
+                          {{ article.authorName || '系统发布' }}
+                        </span>
+                        <span class="meta-item">
+                          <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                          {{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd' }}
+                        </span>
+                        <span class="meta-item">
+                          <span nz-icon nzType="eye" nzTheme="outline"></span>
+                          {{ article.viewCount || 0 }} 阅读
+                        </span>
+                      </div>
+                      <span class="featured-card__read">
+                        阅读全文
+                        <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
                       </span>
                     </div>
                   </div>

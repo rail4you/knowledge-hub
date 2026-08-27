@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,16 +6,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NewsArticleDto, NewsCategoryDto, NewsService } from '../../news/news.service';
-
-interface HeroSlide {
-  title: string;
-  subtitle: string;
-  description: string;
-  tag: string;
-  icon: string;
-  gradient?: string;
-  color?: string;
-}
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 interface StatItem {
   label: string;
@@ -42,6 +33,7 @@ interface CategoryChip {
     FormsModule,
     NzIconModule,
     NzSpinModule,
+    StudentHeroComponent,
   ],
   templateUrl: './student-news.component.html',
   styleUrls: ['./student-news.component.scss'],
@@ -58,50 +50,20 @@ export class StudentNewsComponent implements OnInit {
   readonly categories = signal<NewsCategoryDto[]>([]);
   readonly filter = signal('');
   readonly categoryId = signal<string | null>(null);
-  readonly activeHeroSlide = signal(0);
-  private heroTimer: ReturnType<typeof setInterval> | null = null;
 
   // 数据统计（从实际数据计算）
   readonly stats = computed<StatItem[]>(() => {
     const all = this.articles();
     const hot = this.hotArticles();
     const totalViews = all.reduce((sum, a) => sum + (a.viewCount || 0), 0);
-    const viewsText = totalViews >= 10000
-      ? (totalViews / 10000).toFixed(1) + '万'
-      : totalViews.toString();
+    const totalLikes = all.reduce((sum, a) => sum + (a.likeCount || 0), 0);
     return [
       { label: '资讯总数', value: all.length, suffix: '篇', icon: 'file-text', color: '#1e6ce8' },
       { label: '热门资讯', value: hot.length, suffix: '篇', icon: 'fire', color: '#f59e0b' },
       { label: '总阅读量', value: totalViews, suffix: totalViews >= 10000 ? '万次' : '次', icon: 'eye', color: '#10b981' },
+      { label: '总点赞量', value: totalLikes, suffix: totalLikes >= 10000 ? '万次' : '次', icon: 'like', color: '#06b6d4' },
     ];
   });
-
-  readonly heroSlides = signal<HeroSlide[]>([
-    {
-      title: '资讯中心',
-      subtitle: 'NEWS CENTER',
-      description: '汇集行业动态、政策解读、教学资讯与企业新闻，让你随时掌握最新前沿信息。',
-      tag: '资讯简介',
-      icon: 'bulb',
-      color: '#1e6ce8',
-    },
-    {
-      title: '行业动态',
-      subtitle: 'INDUSTRY NEWS',
-      description: '紧跟职业教育发展最新动态，解读国家政策、院校改革、产业升级等热门话题。',
-      tag: '行业动态',
-      icon: 'rise',
-      color: '#0c4cb8',
-    },
-    {
-      title: '教学资讯',
-      subtitle: 'TEACHING HIGHLIGHTS',
-      description: '分享优秀教学案例、课程建设经验与教师成长故事，启发教学创新灵感。',
-      tag: '教学资讯',
-      icon: 'read',
-      color: '#2563eb',
-    },
-  ]);
 
   // 分类筛选 chips
   readonly categoryChips = signal<CategoryChip[]>([
@@ -131,30 +93,6 @@ export class StudentNewsComponent implements OnInit {
     this.loadCategories();
     this.loadArticles();
     this.loadHotArticles();
-    this.startHeroAutoPlay();
-  }
-
-  ngOnDestroy(): void {
-    this.stopHeroAutoPlay();
-  }
-
-  startHeroAutoPlay() {
-    this.stopHeroAutoPlay();
-    this.heroTimer = setInterval(() => {
-      this.activeHeroSlide.set((this.activeHeroSlide() + 1) % this.heroSlides().length);
-    }, 6000);
-  }
-
-  stopHeroAutoPlay() {
-    if (this.heroTimer) {
-      clearInterval(this.heroTimer);
-      this.heroTimer = null;
-    }
-  }
-
-  selectHeroSlide(index: number) {
-    this.activeHeroSlide.set(index);
-    this.startHeroAutoPlay();
   }
 
   loadCategories(): void {

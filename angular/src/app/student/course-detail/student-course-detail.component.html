@@ -520,17 +520,17 @@
             nzTheme="outline"
           ></span>
         </span>
-        <span class="tree-node__title">{{ node.title }}</span>
-        @if (node.description) {
-          <span
-            class="tree-node__desc"
-            nz-tooltip
-            [nzTooltipTitle]="node.description"
-            nzTooltipPlacement="top"
-          >
-            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-          </span>
-        }
+        <div class="tree-node__text">
+          <span class="tree-node__title">{{ node.title }}</span>
+          @if (node.description) {
+            <span
+              class="tree-node__desc"
+              nz-tooltip
+              [nzTooltipTitle]="node.description"
+              nzTooltipPlacement="top"
+            >{{ node.description }}</span>
+          }
+        </div>
       </div>
       @if (node.children && node.children.length > 0 && isExpanded(node.id!)) {
         <div class="tree-node__children">

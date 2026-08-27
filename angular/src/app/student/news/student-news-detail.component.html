@@ -24,99 +24,48 @@
       <div class="detail-main">
         <!-- 资讯文章卡 -->
         <article class="article-card">
-          <!-- 封面区域 -->
-          <div class="article-card__cover" [style.background]="coverGradient(article)">
-            @if (hasCover(article)) {
-              <img class="article-card__cover-img" [src]="article.coverImageUrl" [alt]="article.title" />
-            } @else {
-              <div class="article-card__pattern" aria-hidden="true">
-                <span class="pattern-circle pattern-circle--1"></span>
-                <span class="pattern-circle pattern-circle--2"></span>
-                <span class="pattern-circle pattern-circle--3"></span>
-                <span class="pattern-line pattern-line--1"></span>
-                <span class="pattern-line pattern-line--2"></span>
-              </div>
-            }
-            <div class="article-card__overlay" aria-hidden="true"></div>
+          <header class="article-card__header">
+            <div class="article-card__kicker">
+              @if (article.categoryName) {
+                <span class="article-card__category">{{ article.categoryName }}</span>
+                <span class="article-card__kicker-sep">·</span>
+              }
+              <span class="article-card__date">
+                {{ article.publishedAt || article.creationTime | date:'yyyy年MM月dd日' }}
+              </span>
+            </div>
 
-            <div class="article-card__badges">
+            <h1 class="article-card__title">{{ article.title }}</h1>
+
+            <div class="article-byline">
+              <span class="article-byline__avatar" [style.background]="authorGradient(article.authorName)">
+                {{ authorInitial(article.authorName) }}
+              </span>
+              <span class="article-byline__name">{{ article.authorName || '系统发布' }}</span>
+              <span class="article-byline__sep">·</span>
+              <span class="article-byline__meta">
+                {{ article.viewCount | number }} 阅读 · {{ article.likeCount | number }} 点赞 · {{ article.commentCount | number }} 评论
+              </span>
               @if (article.isTop) {
-                <span class="badge badge--top">
-                  <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
-                  置顶
-                </span>
+                <span class="article-byline__flag">置顶</span>
               }
               @if (article.isHot) {
-                <span class="badge badge--hot">
-                  <span nz-icon nzType="fire" nzTheme="fill"></span>
-                  热门
-                </span>
+                <span class="article-byline__flag article-byline__flag--hot">热门</span>
               }
-              @if (article.categoryName) {
-                <span class="badge badge--category">
-                  <span nz-icon nzType="folder" nzTheme="outline"></span>
-                  {{ article.categoryName }}
-                </span>
-              }
-            </div>
-
-            <div class="article-card__title-wrap">
-              <h1 class="article-card__title">{{ article.title }}</h1>
-            </div>
-          </div>
-
-          <!-- 文章信息 -->
-          <div class="article-card__info">
-            <div class="article-meta">
-              <div class="article-author">
-                <span class="author-avatar" [style.background]="authorGradient(article.authorName)">
-                  {{ authorInitial(article.authorName) }}
-                </span>
-                <div class="author-detail">
-                  <span class="author-name">{{ article.authorName || '系统发布' }}</span>
-                  <span class="author-date">
-                    发布于 {{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd HH:mm' }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="article-stats">
-                <span class="stat-item">
-                  <span nz-icon nzType="eye" nzTheme="outline"></span>
-                  {{ article.viewCount | number }} 阅读
-                </span>
-                <span class="stat-item">
-                  <span nz-icon nzType="like" nzTheme="outline"></span>
-                  {{ article.likeCount | number }} 点赞
-                </span>
-                <span class="stat-item">
-                  <span nz-icon nzType="message" nzTheme="outline"></span>
-                  {{ article.commentCount | number }} 评论
-                </span>
-              </div>
-            </div>
-
-            @if (article.summary) {
-              <div class="article-summary">
-                <span class="article-summary__label">摘要</span>
-                <p>{{ article.summary }}</p>
-              </div>
-            }
-
-            @if (parseTags(article.tags).length > 0) {
-              <div class="article-tags">
-                <span class="article-tags__label">标签</span>
-                <div class="article-tags__list">
+              @if (parseTags(article.tags).length > 0) {
+                <span class="article-byline__tags">
                   @for (tag of parseTags(article.tags); track tag) {
-                    <span class="article-tag">#{{ tag }}</span>
+                    <span class="article-byline__tag">#{{ tag }}</span>
                   }
-                </div>
-              </div>
-            }
-          </div>
+                </span>
+              }
+            </div>
+          </header>
 
-          <!-- 文章正文 -->
           <div class="article-body">
+            @if (article.summary) {
+              <p class="article-lead">{{ article.summary }}</p>
+            }
             @if (getContentParagraphs(article.content).length > 0) {
               @for (paragraph of getContentParagraphs(article.content); track $index) {
                 <p class="article-paragraph">{{ paragraph }}</p>
@@ -126,34 +75,34 @@
             }
           </div>
 
-          <!-- 版权信息 -->
-          <div class="article-copyright">
-            <span nz-icon nzType="copyright" nzTheme="outline"></span>
-            <span>本文为本站原创内容，版权归原作者及本站所有，未经授权请勿转载。</span>
-          </div>
+          <footer class="article-card__footer">
+            <div class="article-actions">
+              <button
+                class="action-pill"
+                [class.action-pill--active]="article.userHasLiked"
+                (click)="likeArticle()"
+                [disabled]="article.userHasLiked"
+              >
+                <span nz-icon nzType="like" [nzTheme]="article.userHasLiked ? 'fill' : 'outline'"></span>
+                <span>{{ article.userHasLiked ? '已点赞' : '点赞' }}</span>
+                <span class="action-pill__count">{{ article.likeCount || 0 }}</span>
+              </button>
+              <button class="action-pill" (click)="copyLink()">
+                <span nz-icon [nzType]="copyLinkSuccess() ? 'check' : 'link'" nzTheme="outline"></span>
+                <span>{{ copyLinkSuccess() ? '已复制' : '分享链接' }}</span>
+              </button>
+              <button type="button" class="action-pill" (click)="focusComment()">
+                <span nz-icon nzType="message" nzTheme="outline"></span>
+                <span>写评论</span>
+                <span class="action-pill__count">{{ article.commentCount || 0 }}</span>
+              </button>
+            </div>
 
-          <!-- 操作栏 -->
-          <div class="article-actions">
-            <button
-              class="action-pill"
-              [class.action-pill--active]="article.userHasLiked"
-              (click)="likeArticle()"
-              [disabled]="article.userHasLiked"
-            >
-              <span nz-icon nzType="like" [nzTheme]="article.userHasLiked ? 'fill' : 'outline'"></span>
-              <span>{{ article.userHasLiked ? '已点赞' : '点赞' }}</span>
-              <span class="action-pill__count">{{ article.likeCount || 0 }}</span>
-            </button>
-            <button class="action-pill" (click)="copyLink()">
-              <span nz-icon [nzType]="copyLinkSuccess() ? 'check' : 'link'" nzTheme="outline"></span>
-              <span>{{ copyLinkSuccess() ? '已复制' : '分享链接' }}</span>
-            </button>
-            <button type="button" class="action-pill" (click)="focusComment()">
-              <span nz-icon nzType="message" nzTheme="outline"></span>
-              <span>写评论</span>
-              <span class="action-pill__count">{{ article.commentCount || 0 }}</span>
-            </button>
-          </div>
+            <div class="article-copyright">
+              <span nz-icon nzType="copyright" nzTheme="outline"></span>
+              <span>本文为本站原创内容，版权归原作者及本站所有，未经授权请勿转载。</span>
+            </div>
+          </footer>
         </article>
 
         <!-- 评论区 -->

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -9,6 +9,7 @@ import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { MicroMajorService, MicroMajorEnrollmentStatus } from '../../micro-majors/micro-major.service';
 import type { MicroMajorDto, MicroMajorEnrollmentDto } from '../../micro-majors/micro-major.service';
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
   selector: 'app-student-micro-majors',
@@ -16,6 +17,7 @@ import type { MicroMajorDto, MicroMajorEnrollmentDto } from '../../micro-majors/
   imports: [
     CommonModule, DatePipe, DecimalPipe, RouterModule,
     NzButtonModule, NzIconModule, NzSpinModule, NzPaginationModule, NzProgressModule,
+    StudentHeroComponent,
   ],
   templateUrl: './student-micro-majors.component.html',
   styleUrls: ['./student-micro-majors.component.scss'],
@@ -33,6 +35,18 @@ export class StudentMicroMajorsComponent implements OnInit {
   readonly pageIndex = signal(1);
   readonly pageSize = signal(12);
   readonly EnrollmentStatus = MicroMajorEnrollmentStatus;
+
+  /** 头部数据总览 */
+  readonly heroStats = computed(() => {
+    const map = this.enrollmentStatusMap();
+    const values = Object.values(map);
+    return [
+      { label: '全部微专业', value: this.totalCount(), suffix: '个', icon: 'appstore', color: '#1e6ce8' },
+      { label: '已报名', value: values.length, suffix: '个', icon: 'check-circle', color: '#10b981' },
+      { label: '学习中', value: values.filter(s => s === MicroMajorEnrollmentStatus.InProgress).length, suffix: '个', icon: 'play-circle', color: '#06b6d4' },
+      { label: '已完成', value: values.filter(s => s === MicroMajorEnrollmentStatus.Completed).length, suffix: '个', icon: 'safety-certificate', color: '#f59e0b' },
+    ];
+  });
 
   ngOnInit(): void {
     this.loadItems();

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -22,16 +22,7 @@ import { buildDownloadFileName } from '../../shared/download/download-file.util'
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
 import { AuthErrorService } from '../../core/auth/auth-error.service';
-
-interface HeroSlide {
-  title: string;
-  subtitle: string;
-  description: string;
-  color: string;
-  tag: string;
-  icon: string;
-  backgroundImage: string;
-}
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 interface StatItem {
   label: string;
@@ -57,12 +48,13 @@ interface StatItem {
     NzRateModule,
     NzDividerModule,
     FilePreviewComponent,
+    StudentHeroComponent,
   ],
   templateUrl: './student-resources.component.html',
   styleUrls: ['./student-resources.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class StudentResourcesComponent implements OnInit, OnDestroy {
+export class StudentResourcesComponent implements OnInit {
   private readonly resourceService = inject(ResourceService);
   private readonly portalService = inject(PortalService);
   private readonly majorService = inject(MajorService);
@@ -93,9 +85,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   recommendedResources = signal<RecommendedResourceDto[]>([]);
   recommendationsLoading = signal(false);
 
-  activeHeroSlide = signal(0);
-  heroAutoPlayTimer: ReturnType<typeof setInterval> | null = null;
-
   readonly ResourceType = ResourceType;
 
   // 站点统计（演示数据，实际可从后端获取）
@@ -124,36 +113,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     });
   }
 
-  heroSlides = signal<HeroSlide[]>([
-    {
-      title: '数字资源 · 一站获取',
-      subtitle: 'DIGITAL RESOURCE HUB',
-      description: '整合课程、微课、素材与文献资料，覆盖专业基础、专业核心与拓展课程，让学习更高效。',
-      color: '#1e6ce8',
-      tag: '资源库简介',
-      icon: 'cloud',
-      backgroundImage: '#1e6ce8',
-    },
-    {
-      title: '名师优课 · 在线学习',
-      subtitle: 'ONLINE PROFESSIONAL COURSES',
-      description: '汇聚国家级精品在线开放课程，专业教学团队系统讲解，支持在线学习与互动交流。',
-      color: '#0891b2',
-      tag: '学历课程体系',
-      icon: 'read',
-      backgroundImage: '#0891b2',
-    },
-    {
-      title: '知识图谱 · 体系化认知',
-      subtitle: 'KNOWLEDGE GRAPH',
-      description: '基于知识图谱构建专业认知体系，节点关系一目了然，助力学习者构建结构化知识网络。',
-      color: '#10b981',
-      tag: '知识图谱',
-      icon: 'apartment',
-      backgroundImage: '#10b981',
-    },
-  ]);
-
   resourceTypes = [
     { label: '全部', value: null as ResourceType | null, icon: 'appstore' },
     { label: '文档', value: ResourceType.Document, icon: 'file-text' },
@@ -163,8 +122,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   ];
 
   // 热门目录：从真实分类数据中取所有有效分类，按资源数量降序排列
-  visibleHeroSlides = computed(() => this.heroSlides());
-
   /** 从 MajorService 加载可用专业列表 */
   majorChips = computed(() => {
     return this.majors().map(m => ({
@@ -200,30 +157,6 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     this.loadResources();
     this.loadRecommendations();
     this.loadHomeStats();
-    this.startHeroAutoPlay();
-  }
-
-  ngOnDestroy() {
-    this.stopHeroAutoPlay();
-  }
-
-  startHeroAutoPlay() {
-    this.stopHeroAutoPlay();
-    this.heroAutoPlayTimer = setInterval(() => {
-      this.activeHeroSlide.set((this.activeHeroSlide() + 1) % this.heroSlides().length);
-    }, 6000);
-  }
-
-  stopHeroAutoPlay() {
-    if (this.heroAutoPlayTimer) {
-      clearInterval(this.heroAutoPlayTimer);
-      this.heroAutoPlayTimer = null;
-    }
-  }
-
-  selectHeroSlide(index: number) {
-    this.activeHeroSlide.set(index);
-    this.startHeroAutoPlay();
   }
 
   loadResources() {

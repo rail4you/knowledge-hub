@@ -1,81 +1,10 @@
 <div class="courses-page">
   <!-- =================== HERO 区域 =================== -->
-  <section class="hero" aria-label="课程中心简介">
-    <div class="hero__bg" aria-hidden="true">
-      <span class="hero__shape hero__shape--1"></span>
-      <span class="hero__shape hero__shape--2"></span>
-      <span class="hero__shape hero__shape--3"></span>
-      <span class="hero__shape hero__shape--4"></span>
-    </div>
-
-    <div class="hero__inner">
-      <div class="hero__carousel">
-        <div class="carousel-stage">
-          @for (slide of heroSlides(); track $index; let i = $index) {
-            <article
-              class="carousel-slide"
-              [class.is-active]="activeHeroSlide() === i"
-              [style.background]="slide.color"
-            >
-              <div class="slide-tag">
-                <span nz-icon [nzType]="slide.icon" nzTheme="outline"></span>
-                {{ slide.tag }}
-              </div>
-              <h2 class="slide-title">{{ slide.title }}</h2>
-              <p class="slide-subtitle">{{ slide.subtitle }}</p>
-              <p class="slide-desc">{{ slide.description }}</p>
-              <div class="slide-deco" aria-hidden="true">
-                <span class="deco-ring"></span>
-                <span class="deco-ring deco-ring--alt"></span>
-                <span class="deco-dot"></span>
-              </div>
-            </article>
-          }
-        </div>
-
-        <div class="carousel-dots" role="tablist">
-          @for (slide of heroSlides(); track $index; let i = $index) {
-            <button
-              class="carousel-dot"
-              [class.is-active]="activeHeroSlide() === i"
-              (click)="selectHeroSlide(i)"
-              role="tab"
-              [attr.aria-selected]="activeHeroSlide() === i"
-            >
-              <span class="dot-index">0{{ i + 1 }}</span>
-              <span class="dot-line"></span>
-            </button>
-          }
-        </div>
-      </div>
-
-      <div class="hero__stats">
-        <div class="stats-card">
-          <h3 class="stats-card__title">
-            <span class="stats-card__bar"></span>
-            学习概览
-            <span class="stats-card__hint">实时更新</span>
-          </h3>
-          <div class="stats-grid">
-            @for (s of stats(); track s.label) {
-              <div class="stat-cell">
-                <div class="stat-cell__icon" [style.background]="s.color">
-                  <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
-                </div>
-                <div class="stat-cell__body">
-                  <div class="stat-cell__value">
-                    <strong>{{ s.value | number }}</strong>
-                    <span class="stat-cell__suffix">{{ s.suffix }}</span>
-                  </div>
-                  <div class="stat-cell__label">{{ s.label }}</div>
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <app-student-hero
+    title="课程中心"
+    description="汇聚专业精品课程，章节清晰、资源丰富、习题完备，构建从知识获取到技能掌握的完整学习路径。"
+    [stats]="stats()"
+  ></app-student-hero>
 
   <!-- =================== 搜索 + 筛选 =================== -->
   <section class="quick-bar" aria-label="课程筛选">

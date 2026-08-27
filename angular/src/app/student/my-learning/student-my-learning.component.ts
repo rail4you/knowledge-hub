@@ -17,6 +17,7 @@ import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 echarts.use([LineChart, CanvasRenderer, TooltipComponent, GridComponent]);
 import type { CourseDto } from '../../proxy/courses/dtos/models';
@@ -62,6 +63,7 @@ interface DailyPoint {
     NzEmptyModule,
     NzDividerModule,
     MasteryRadarComponent,
+    StudentHeroComponent,
   ],
   templateUrl: './student-my-learning.component.html',
   styleUrls: ['./student-my-learning.component.scss'],
