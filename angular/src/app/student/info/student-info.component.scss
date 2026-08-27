@@ -1,0 +1,77 @@
+@use '../../student/styles/student-design' as ds;
+
+:host {
+  display: block;
+}
+
+.info-page {
+  min-height: 100%;
+  padding: 24px 0 48px;
+  background: ds.$student-bg;
+}
+
+.info-content {
+  @include ds.student-container;
+}
+
+.info-section {
+  background: ds.$student-surface;
+  border: 1px solid ds.$student-border-soft;
+  border-radius: ds.$student-radius-lg;
+  box-shadow: ds.$student-shadow-soft;
+  padding: 22px 26px;
+  margin-bottom: 16px;
+
+  &__heading {
+    @include ds.section-heading(17px);
+    margin-bottom: 14px;
+  }
+
+  &__text {
+    margin: 0 0 10px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: ds.$student-text-muted;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__list {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      position: relative;
+      padding-left: 18px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.8;
+      color: ds.$student-text-muted;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 2px;
+        top: 11px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: ds.$student-primary;
+        opacity: 0.55;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .info-section {
+    padding: 18px 16px;
+  }
+}

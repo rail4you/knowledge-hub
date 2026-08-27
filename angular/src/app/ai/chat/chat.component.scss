@@ -260,7 +260,7 @@
 
 // ===== Resource Sidebar =====
 .resource-sidebar {
-  width: 280px;
+  width: 380px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -322,6 +322,11 @@
 :host ::ng-deep .ant-tree {
   background: transparent;
 
+  // 缩小层级缩进：默认每层 24px，改为 12px，给文档名称腾出更多横向空间
+  .ant-tree-indent-unit {
+    width: 12px;
+  }
+
   .ant-tree-node-content-wrapper {
     width: calc(100% - 8px);
     padding: 0 4px;
@@ -352,9 +357,9 @@
 .tree-resource {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  padding: 4px 6px;
+  padding: 3px 4px;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.15s;
@@ -377,6 +382,15 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  // 索引标签更紧凑，减少对名称空间的占用
+  ::ng-deep .ant-tag {
+    margin-inline-end: 0;
+    padding: 0 4px;
+    font-size: 11px;
+    line-height: 18px;
+    flex-shrink: 0;
   }
 }
 

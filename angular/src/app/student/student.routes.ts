@@ -215,6 +215,14 @@ export const STUDENT_ROUTES: Routes = [
           icon: 'search'
         }
       },
+      {
+        // 页脚信息页：关于我们 / 帮助中心 / 隐私政策。
+        path: 'info/:type',
+        loadComponent: () => import('./info/student-info.component').then(m => m.StudentInfoComponent),
+        data: {
+          name: '平台信息'
+        }
+      },
     ]
   }
 ];
