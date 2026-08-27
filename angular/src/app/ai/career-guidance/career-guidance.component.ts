@@ -137,11 +137,6 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
     return this.resumes().find(r => r.id === id) ?? null;
   });
 
-  // ============= 学生历史就业指导 =============
-  readonly historyRecords = signal<ParsedRecord[]>([]);
-  readonly historyLoading = signal(false);
-  readonly expandedRecordId = signal<string | null>(null);
-
   // ============= 全部学生记录（Tab 2） =============
   readonly allRecords = signal<ParsedRecord[]>([]);
   readonly allRecordsLoading = signal(false);
@@ -192,40 +187,6 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
     this.selectedResumeId.set(null);
     this.resumes.set(this.selectedStudent()?.resumes || []);
     this.resetResult();
-    this.loadHistory(studentId);
-  }
-
-  loadHistory(studentId: string) {
-    this.historyLoading.set(true);
-    this.historyRecords.set([]);
-    this.employmentService.getGuidanceRecordList({
-      studentId,
-      skipCount: 0,
-      maxResultCount: 100,
-    })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: result => {
-          const records: ParsedRecord[] = (result.items || []).map(r => ({
-            id: r.id!,
-            title: r.title || '未命名就业指导',
-            careerGoal: r.careerGoal,
-            guidedAt: r.guidedAt!,
-            content: r.content || '',
-            parsed: this.tryParseAiResult(r.content),
-          }));
-          this.historyRecords.set(records);
-          this.historyLoading.set(false);
-        },
-        error: () => {
-          this.historyLoading.set(false);
-          this.messageService.error('加载历史就业指导失败');
-        },
-      });
-  }
-
-  toggleRecord(recordId: string): void {
-    this.expandedRecordId.set(this.expandedRecordId() === recordId ? null : recordId);
   }
 
   /** Tab 切换到「就业指导历史记录」时懒加载全租户记录 */
@@ -386,7 +347,6 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
     this.result.set(null);
     this.rawJson.set('');
     this.savedRecordId.set(null);
-    this.expandedRecordId.set(null);
   }
 
   /**
@@ -418,7 +378,6 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
           this.isSaving.set(false);
           this.savedRecordId.set(saved.id);
           this.messageService.success('已保存到该学生的就业指导');
-          this.loadHistory(student.studentId);
         },
         error: (err) => {
           this.isSaving.set(false);
