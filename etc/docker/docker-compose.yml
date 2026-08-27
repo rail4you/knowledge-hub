@@ -127,7 +127,12 @@ services:
       # 安全
       - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
       - StringEncryption__DefaultPassPhrase=${STRING_ENCRYPTION_PASSPHRASE}
-      # 账号：禁用用户自助注册（登录页隐藏"注册新用户"提示/按钮）
+      # 招聘直播 WebRTC：TURN 中继凭据（coturn time-limited credential）
+      - RecruitmentLive__Turn__Url=turn:${PUBLIC_IP:-119.45.170.4}:3478?transport=udp
+      - RecruitmentLive__Turn__UrlTcp=turn:${PUBLIC_IP:-119.45.170.4}:3478?transport=tcp
+      - RecruitmentLive__Turn__Secret=${TURN_SECRET:-change-me}
+      - RecruitmentLive__Turn__ValiditySeconds=21600
+      # 账号：禁用用户自助注册（登录页隐藏“注册新用户”提示/按钮）
       - Settings__Abp.Account.IsSelfRegistrationEnabled=false
       # 日志
       - Serilog__MinimumLevel__Default=Information
@@ -195,6 +200,32 @@ services:
     restart: unless-stopped
     networks:
       - abp-network
+
+  # ----------------------------------------------------------
+  # coturn — WebRTC TURN 媒体中继（招聘直播）
+  # 解决双方位于对称/严格 NAT（校园网、家庭宽带、运营商 CGNAT）后
+  # 仅靠 STUN 无法建立 P2P 媒体连接的问题：ICE 无法直连时媒体经此中继。
+  # 认证：static-auth-secret + time-limited credential
+  #   （GetIceServersAsync 用 HMAC-SHA1(secret, username) 动态签发）。
+  # 注意：使用 host 网络模式以直接绑定 UDP 中继端口段；
+  #       云安全组/防火墙必须放行 UDP 3478、TCP 3478、UDP/TCP 49160-49200。
+  # ----------------------------------------------------------
+  coturn:
+    image: coturn/coturn:4.6.2
+    container_name: coturn
+    hostname: coturn
+    network_mode: host
+    command: >
+      -n --log-file=stdout
+      --listening-port=3478
+      --min-port=49160 --max-port=49200
+      --external-ip=${PUBLIC_IP:-119.45.170.4}
+      --realm=knowledgehub
+      --fingerprint
+      --no-multicast-peers
+      --no-tls --no-dtls
+      --static-auth-secret=${TURN_SECRET:-change-me} --use-auth-secret
+    restart: unless-stopped
 
   # ----------------------------------------------------------
   # Gotenberg — Office 文档转 PDF（预览转换服务）

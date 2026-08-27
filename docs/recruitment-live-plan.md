@@ -289,7 +289,7 @@ Domains+EF ──► App层 ──► WebSocket ──► Angular ──► 菜�
 
 ## 阶段 7：部署检查清单
 
-- [ ] Nginx 配置添加 WebSocket 代理支持
+- [x] Nginx 配置添加 WebSocket 代理支持
   ```nginx
   location /api/recruitment-live/ws {
       proxy_pass http://api:44305;
@@ -299,8 +299,25 @@ Domains+EF ──► App层 ──► WebSocket ──► Angular ──► 菜�
       proxy_read_timeout 86400s;
   }
   ```
-- [ ] 确认 Kestrel 不限制 WebSocket 请求体大小
-- [ ] HTTPS 配置（摄像头 API 要求安全上下文）
+- [x] 确认 Kestrel 不限制 WebSocket 请求体大小
+- [x] HTTPS 配置（摄像头 API 要求安全上下文）
+- [ ] **TURN 服务器（coturn）— 双向视频连通的前提**
+  - ⚠️ 仅 STUN 时，双方位于对称/严格 NAT（校园网/家庭宽带/运营商 CGNAT）后面
+    无法建立 P2P 媒体连接：信令（WebSocket）正常、双方都能看到自己的摄像头，
+    但看不到对方的视频。必须在公网服务器部署 coturn 并配置 `RecruitmentLive:Turn`。
+  - 部署：`etc/docker/docker-compose.yml` 中的 `coturn` 服务（host 网络模式，
+    UDP/TCP 3478 + 中继端口段 49160-49200，static-auth-secret）
+  - 凭证：`GetIceServersAsync` 按 coturn time-limited credential 生成
+    username=`{过期时间戳}:{随机串}`、credential=HMAC-SHA1(secret, username)
+  - ⚠️ 云安全组/防火墙必须放行：UDP 3478、TCP 3478、UDP/TCP 49160-49200
+  - 环境变量：`TURN_SECRET`（openssl rand -base64 32）、`PUBLIC_IP`
+
+验证 TURN 是否生效：
+```bash
+# 接口应返回含 turn: 的 ice server 条目
+curl -sk https://<域名>/api/app/recruitment-live/ice-servers | jq .
+# 浏览器两个不同网络下进入同一直播间，应能看到彼此视频
+```
 
 ---
 

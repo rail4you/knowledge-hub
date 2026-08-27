@@ -420,6 +420,37 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             // 默认 Google STUN
             servers.Add(new IceServerDto { Urls = ["stun:stun.l.google.com:19302"] });
         }
+
+        // TURN 中继（coturn）：解决双方 NAT 不对称/严格 NAT 下 P2P 无法穿透的问题。
+        // 使用 coturn 的 time-limited credential 机制：
+        //   username = "{过期Unix时间戳}:{随机串}"
+        //   credential = base64(HMAC-SHA1(secret, username))
+        // coturn 端配置 static-auth-secret = 同一密钥即可校验，无需把固定密码发给浏览器。
+        var turnUrl = _configuration["RecruitmentLive:Turn:Url"];
+        var turnSecret = _configuration["RecruitmentLive:Turn:Secret"];
+        if (!string.IsNullOrWhiteSpace(turnUrl) && !string.IsNullOrWhiteSpace(turnSecret))
+        {
+            var validitySeconds = _configuration.GetValue<int>("RecruitmentLive:Turn:ValiditySeconds", 6 * 3600);
+            var expires = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + validitySeconds;
+            var username = $"{expires}:{Guid.NewGuid():N}";
+            using var hmac = new HMACSHA1(Encoding.UTF8.GetBytes(turnSecret));
+            var credential = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(username)));
+
+            var urls = new List<string> { turnUrl };
+            var turnUrlTcp = _configuration["RecruitmentLive:Turn:UrlTcp"];
+            if (!string.IsNullOrWhiteSpace(turnUrlTcp))
+            {
+                urls.Add(turnUrlTcp);
+            }
+
+            servers.Add(new IceServerDto
+            {
+                Urls = urls,
+                Username = username,
+                Credential = credential
+            });
+        }
+
         return Task.FromResult(servers);
     }
 
