@@ -27,6 +27,11 @@ import {
   RecordInterviewResultDto,
 } from '../../employment/employment.service';
 
+interface ApplicationNode {
+  application: JobApplicationDto;
+  interviews: InterviewScheduleDto[];
+}
+
 @Component({
   selector: 'app-employment-interview-management',
   standalone: true,
@@ -54,6 +59,13 @@ export class EmploymentInterviewManagementComponent implements OnInit {
   readonly interviews = signal<InterviewScheduleDto[]>([]);
   readonly interviewerOptions = signal<InterviewerCandidateDto[]>([]);
   readonly loading = signal(false);
+
+  /** 层级结构：投递（父）→ 关联的面试记录（子） */
+  readonly tree = signal<ApplicationNode[]>([]);
+  readonly expanded = signal<Set<string>>(new Set());
+
+  /** 顶层表格列数（展开单元格跨列用） */
+  readonly colSpan = 8;
 
   readonly appStatus = EmploymentApplicationStatus;
   readonly interviewResults = EmploymentInterviewResult;
@@ -107,13 +119,36 @@ export class EmploymentInterviewManagementComponent implements OnInit {
   reload(): void {
     this.loading.set(true);
     this.employmentService.getJobApplicationList({ skipCount: 0, maxResultCount: 200 }).subscribe({
-      next: result => { this.applications.set(result.items || []); this.loading.set(false); },
+      next: result => { this.applications.set(result.items || []); this.loading.set(false); this.rebuildTree(); },
       error: () => { this.message.error('加载投递列表失败'); this.loading.set(false); },
     });
     this.employmentService.getInterviewList({ skipCount: 0, maxResultCount: 200 }).subscribe({
-      next: result => this.interviews.set(result.items || []),
+      next: result => { this.interviews.set(result.items || []); this.rebuildTree(); },
       error: () => this.message.error('加载面试记录失败'),
     });
+  }
+
+  /** 按投递分组，把每条面试挂到对应投递下，组成层级结构 */
+  private rebuildTree(): void {
+    const apps = this.applications();
+    const ints = this.interviews();
+    this.tree.set(apps.map(app => ({
+      application: app,
+      interviews: ints
+        .filter(i => i.applicationId === app.id)
+        .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()),
+    })));
+  }
+
+  isExpanded(applicationId: string): boolean {
+    return this.expanded().has(applicationId);
+  }
+
+  toggleExpand(applicationId: string, event?: Event): void {
+    event?.stopPropagation();
+    const next = new Set(this.expanded());
+    if (next.has(applicationId)) { next.delete(applicationId); } else { next.add(applicationId); }
+    this.expanded.set(next);
   }
 
   loadInterviewerOptions(): void {
@@ -286,6 +321,11 @@ export class EmploymentInterviewManagementComponent implements OnInit {
       [EmploymentInterviewResult.Failed]: 'red',
     };
     return m[r] ?? 'default';
+  }
+
+  /** 面试结果是否已定（非待定），用于顶层投递状态徽标 */
+  hasFinalResult(node: ApplicationNode): boolean {
+    return node.interviews.some(i => i.result !== EmploymentInterviewResult.Pending);
   }
 
   /** 是否显示"完成面试"按钮：面试已安排但尚未完成，且结果仍为 Pending */

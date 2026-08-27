@@ -76,7 +76,7 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
 
   // 从已录用投递导入
   importVisible = false;
-  importLoading = false;
+  readonly importLoading = signal(false);
   offeredApps = signal<JobApplicationDto[]>([]);
 
   // xlsx 批量导入
@@ -202,7 +202,7 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
       return;
     }
     this.importVisible = true;
-    this.importLoading = true;
+    this.importLoading.set(true);
     this.offeredApps.set([]);
     this.employmentService
       .getJobApplicationList({
@@ -214,10 +214,10 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
       .subscribe({
         next: result => {
           this.offeredApps.set(result.items || []);
-          this.importLoading = false;
+          this.importLoading.set(false);
         },
         error: () => {
-          this.importLoading = false;
+          this.importLoading.set(false);
           this.message.error('加载该学生的已录用投递失败');
         },
       });

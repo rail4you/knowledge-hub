@@ -96,3 +96,135 @@
   color: #94a3b8;
   text-align: right;
 }
+
+// ===================== 层级视图（投递 → 面试） =====================
+.page-summary {
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.expand-col {
+  width: 36px;
+}
+
+.expand-btn {
+  padding: 4px;
+  color: #6b7280;
+}
+
+.app-row {
+  cursor: pointer;
+
+  &:hover > td {
+    background: #f8fafc;
+  }
+
+  td { vertical-align: middle; }
+}
+
+.interview-count .anticon {
+  margin-right: 4px;
+}
+
+// 展开的子级块
+.interview-block-row {
+  background: #fafbfc;
+}
+
+.interview-block {
+  padding: 6px 12px 12px 48px;
+}
+
+.sub-empty {
+  padding: 14px 0;
+}
+
+.sub-list {
+  display: grid;
+  gap: 10px;
+}
+
+.sub-item {
+  background: #fff;
+  border: 1px solid #eef2f6;
+  border-left: 3px solid #4f8ef7;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.sub-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sub-index {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4f8ef7;
+  background: #eef4ff;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.sub-title {
+  font-weight: 500;
+  color: #334155;
+}
+
+.sub-time {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.sub-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sub-body {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sub-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #475569;
+  max-width: 100%;
+}
+
+.sub-note,
+.sub-comment,
+.sub-result {
+  flex-basis: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.sub-note::before {
+  content: "备注：";
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.sub-comment::before {
+  content: "后续提示：";
+  color: #0891b2;
+  font-size: 12px;
+}
+
+.sub-result::before {
+  content: "结果说明：";
+  color: #94a3b8;
+  font-size: 12px;
+}
