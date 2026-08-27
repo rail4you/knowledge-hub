@@ -17,7 +17,7 @@ public interface IAccountValidityAppService : IApplicationService
     Task<PagedResultDto<AccountValidityDto>> GetListAsync(GetAccountValidityListInput input);
 
     /// <summary>查询单个账号的有效期信息（无配置时返回永久有效）。</summary>
-    Task<AccountValidityDto> GetAsync(Guid userId);
+    Task<AccountValidityDto> GetAsync(Guid id);
 
     /// <summary>为单个账号设置有效期（续期 / 新设 / 永久有效）。</summary>
     Task<AccountValidityDto> SetAsync(SetAccountValidityInput input);

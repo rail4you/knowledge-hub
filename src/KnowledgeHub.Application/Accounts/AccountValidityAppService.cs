@@ -107,16 +107,16 @@ public class AccountValidityAppService : KnowledgeHubAppService, IAccountValidit
         }
     }
 
-    public async Task<AccountValidityDto> GetAsync(Guid userId)
+    public async Task<AccountValidityDto> GetAsync(Guid id)
     {
         await EnsureHostAsync();
 
         using (DataFilter.Disable<IMultiTenant>())
         {
-            var user = await _userRepository.FindAsync(userId, includeDetails: true);
+            var user = await _userRepository.FindAsync(id, includeDetails: true);
             if (user == null)
             {
-                throw new UserFriendlyException($"用户不存在: {userId}");
+                throw new UserFriendlyException($"用户不存在: {id}");
             }
 
             var roles = await _roleRepository.GetListAsync(includeDetails: false);
@@ -127,7 +127,7 @@ public class AccountValidityAppService : KnowledgeHubAppService, IAccountValidit
                 throw new UserFriendlyException($"账号 {user.UserName} 不处于有效期管控范围（仅租户管理员/教师可管控）。");
             }
 
-            var validity = await _validityRepository.FindAsync(x => x.UserId == userId);
+            var validity = await _validityRepository.FindAsync(x => x.UserId == id);
             var tenants = await _tenantRepository.GetListAsync(includeDetails: false);
             var tenantNameById = tenants.ToDictionary(t => t.Id, t => t.Name);
 
