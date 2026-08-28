@@ -116,6 +116,10 @@ import {
   PlayCircleFill,
   LinkOutline,
   UserAddOutline,
+  // 课程详情 难度 / 统计 图标
+  ThunderboltFill,
+  FireOutline,
+  BarChartOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -230,6 +234,10 @@ const icons = [
   PlayCircleFill,
   LinkOutline,
   UserAddOutline,
+  // 课程详情 难度 / 统计 图标
+  ThunderboltFill,
+  FireOutline,
+  BarChartOutline,
 ];
 
 export const appConfig: ApplicationConfig = {

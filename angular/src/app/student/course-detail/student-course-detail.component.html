@@ -23,15 +23,18 @@
     <section class="detail-head">
       <!-- 左：封面 / 视频演示区 -->
       <div class="detail-media">
-        <div class="detail-media__stage" [style.background]="courseGradient(c)">
+        <div class="detail-media__stage"
+             [style.background]="courseGradient(c)"
+             (click)="c.isEnrolled ? startLearning() : enrollCourse()"
+             role="button"
+             tabindex="0"
+             (keyup.enter)="c.isEnrolled ? startLearning() : enrollCourse()"
+             [attr.aria-label]="c.isEnrolled ? '继续学习' : '选课学习'">
           @if (hasCover(c)) {
             <img class="detail-media__img" [src]="c.coverImageUrl" [alt]="c.title" />
           } @else {
             <span class="detail-media__icon" nz-icon nzType="read" nzTheme="outline"></span>
           }
-          <button class="detail-media__play" (click)="c.isEnrolled ? startLearning() : enrollCourse()" [attr.aria-label]="c.isEnrolled ? '继续学习' : '选课学习'">
-            <span nz-icon nzType="caret-right" nzTheme="fill"></span>
-          </button>
           <div class="detail-media__shadow" aria-hidden="true"></div>
         </div>
         <div class="detail-media__bar">
@@ -424,15 +427,12 @@
           ></span>
         </span>
         <div class="tree-node__text">
-          <span class="tree-node__title">{{ node.title }}</span>
-          @if (node.description) {
-            <span
-              class="tree-node__desc"
-              nz-tooltip
-              [nzTooltipTitle]="node.description"
-              nzTooltipPlacement="top"
-            >{{ node.description }}</span>
-          }
+          <span
+            class="tree-node__title"
+            nz-tooltip
+            [nzTooltipTitle]="node.description || ''"
+            nzTooltipPlacement="top"
+          >{{ node.title }}</span>
         </div>
       </div>
       @if (node.children && node.children.length > 0 && isExpanded(node.id!)) {
