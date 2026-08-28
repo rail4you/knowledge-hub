@@ -53,21 +53,6 @@
   min-width: 0;
 }
 
-.page-hero__label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  margin-bottom: 10px;
-}
-
 .page-hero__title {
   @include ds.section-heading(28px);
   color: #fff;
@@ -75,12 +60,8 @@
   letter-spacing: -0.4px;
 
   &::before {
-    background: #fff;
+    display: none;
   }
-}
-
-.page-hero__bar {
-  display: none;
 }
 
 .page-hero__desc {
