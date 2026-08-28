@@ -95,7 +95,7 @@
                 [class.action-pill--active]="isCollected()"
                 (click)="toggleCollection()"
               >
-                <span nz-icon [nzType]="isCollected() ? 'heart' : 'heart'" [nzTheme]="isCollected() ? 'fill' : 'outline'"></span>
+                <span nz-icon nzType="star" [nzTheme]="isCollected() ? 'fill' : 'outline'"></span>
                 <span>{{ isCollected() ? '已收藏' : '收藏' }}</span>
               </button>
               <button class="action-pill" (click)="copyLink()">

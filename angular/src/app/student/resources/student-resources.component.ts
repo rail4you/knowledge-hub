@@ -23,6 +23,7 @@ import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../sear
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
 import { AuthErrorService } from '../../core/auth/auth-error.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { StudentResourceCollectionService } from '../resource-collection.service';
 
 interface StatItem {
   label: string;
@@ -63,6 +64,7 @@ export class StudentResourcesComponent implements OnInit {
   private readonly authErrorService = inject(AuthErrorService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
+  private readonly collectionService = inject(StudentResourceCollectionService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
@@ -81,6 +83,10 @@ export class StudentResourcesComponent implements OnInit {
 
   ratingSummaries = signal<Record<string, ResourceRatingSummaryDto>>({});
   collectedResourceIds = signal<Record<string, boolean>>({});
+  showFavorites = signal(false);
+  favoritesCount = signal(0);
+  /** 当前视图（普通分类 / 我的收藏）下的资源总条数 */
+  readonly viewTotal = computed(() => this.showFavorites() ? this.favoritesCount() : this.totalCount());
 
   recommendedResources = signal<RecommendedResourceDto[]>([]);
   recommendationsLoading = signal(false);
@@ -157,10 +163,36 @@ export class StudentResourcesComponent implements OnInit {
     this.loadResources();
     this.loadRecommendations();
     this.loadHomeStats();
+    this.loadFavoritesCount();
   }
 
   loadResources() {
     this.loading.set(true);
+
+    if (this.showFavorites()) {
+      this.collectionService.getCollectedList({
+        skipCount: (this.pageIndex() - 1) * this.pageSize(),
+        maxResultCount: this.pageSize(),
+      }).subscribe({
+        next: (result) => {
+          const items = result.items || [];
+          this.resources.set(items);
+          this.favoritesCount.set(result.totalCount || 0);
+          this.loading.set(false);
+          this.loadRatingSummaries(items);
+          // “我的收藏”里的资源全部视为已收藏
+          const map: Record<string, boolean> = {};
+          items.forEach(r => { if (r.id) map[r.id] = true; });
+          this.collectedResourceIds.set(map);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.message.error('收藏列表加载失败');
+        }
+      });
+      return;
+    }
+
     const input: any = {
       status: ResourceStatus.LeagueApproved,
       filter: this.filterText() || undefined,
@@ -236,13 +268,28 @@ export class StudentResourcesComponent implements OnInit {
     });
   }
 
+  selectFavorites() {
+    this.showFavorites.set(true);
+    this.pageIndex.set(1);
+    this.loadResources();
+  }
+
+  private loadFavoritesCount(): void {
+    this.collectionService.getCollectedList({ skipCount: 0, maxResultCount: 1 }).subscribe({
+      next: (result) => this.favoritesCount.set(result.totalCount || 0),
+      error: () => this.favoritesCount.set(0),
+    });
+  }
+
   selectCategory(categoryId: string | null) {
+    this.showFavorites.set(false);
     this.selectedCategoryId.set(categoryId);
     this.pageIndex.set(1);
     this.loadResources();
   }
 
   selectMajor(majorId: string | null) {
+    this.showFavorites.set(false);
     this.selectedMajorId.set(majorId);
     this.pageIndex.set(1);
     this.loadResources();
@@ -263,6 +310,7 @@ export class StudentResourcesComponent implements OnInit {
   }
 
   selectType(type: ResourceType | null) {
+    this.showFavorites.set(false);
     this.selectedType.set(type);
     this.pageIndex.set(1);
     this.loadResources();
@@ -274,6 +322,7 @@ export class StudentResourcesComponent implements OnInit {
   }
 
   onSearch() {
+    this.showFavorites.set(false);
     this.pageIndex.set(1);
     this.loadResources();
   }
@@ -339,6 +388,12 @@ export class StudentResourcesComponent implements OnInit {
     request$.subscribe({
       next: () => {
         const nextValue = !isCollected;
+        // 在“我的收藏”分类下取消收藏时，直接将该资源从列表移除
+        if (this.showFavorites() && !nextValue) {
+          this.resources.update(list => list.filter(r => r.id !== resource.id));
+          this.totalCount.update(c => Math.max(0, c - 1));
+          this.favoritesCount.update(c => Math.max(0, c - 1));
+        }
         this.collectedResourceIds.set({
           ...this.collectedResourceIds(),
           [resource.id!]: nextValue,

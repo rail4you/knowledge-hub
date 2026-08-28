@@ -170,7 +170,18 @@
           <div class="category-tree">
             <button
               class="tree-item tree-item--root"
-              [class.is-active]="selectedCategoryId() === null"
+              [class.is-active]="showFavorites()"
+              (click)="selectFavorites()"
+            >
+              <span class="tree-item__icon">
+                <span nz-icon nzType="star" nzTheme="fill"></span>
+              </span>
+              <span class="tree-item__name">我的收藏</span>
+              <span class="tree-item__count">{{ favoritesCount() }}</span>
+            </button>
+            <button
+              class="tree-item tree-item--root"
+              [class.is-active]="!showFavorites() && selectedCategoryId() === null"
               (click)="selectCategory(null)"
             >
               <span class="tree-item__icon">
@@ -214,7 +225,7 @@
       <main class="resource-main">
         <div class="main-toolbar">
           <div class="main-toolbar__title">
-            <span class="main-toolbar__label">资源列表</span>
+            <span class="main-toolbar__label">{{ showFavorites() ? '我的收藏' : '资源列表' }}</span>
             @if (selectedCategoryId()) {
               <button class="clear-filter" (click)="selectCategory(null)">
                 <span nz-icon nzType="close" nzTheme="outline"></span>
@@ -223,7 +234,7 @@
             }
           </div>
           <div class="main-toolbar__count">
-            共 <strong>{{ totalCount() | number }}</strong> 个资源
+            共 <strong>{{ viewTotal() | number }}</strong> 个资源
           </div>
         </div>
 
@@ -263,7 +274,7 @@
                     (click)="toggleCollection($event, resource)"
                     [attr.aria-label]="isCollected(resource.id) ? '取消收藏' : '收藏'"
                   >
-                    <span nz-icon [nzType]="isCollected(resource.id) ? 'heart' : 'heart'" [nzTheme]="isCollected(resource.id) ? 'fill' : 'outline'"></span>
+                    <span nz-icon nzType="star" [nzTheme]="isCollected(resource.id) ? 'fill' : 'outline'"></span>
                   </button>
                 </div>
 
@@ -333,12 +344,12 @@
             }
           </div>
 
-          @if (totalCount() > pageSize()) {
+          @if (viewTotal() > pageSize()) {
             <div class="pagination-wrapper">
               <nz-pagination
                 [nzPageIndex]="pageIndex()"
                 [nzPageSize]="pageSize()"
-                [nzTotal]="totalCount()"
+                [nzTotal]="viewTotal()"
                 (nzPageIndexChange)="onPageChange($event)"
                 nzAlign="center"
               ></nz-pagination>
