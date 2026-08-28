@@ -364,6 +364,7 @@
   cursor: pointer;
   transition: background 0.15s;
   min-width: 0;
+  overflow: hidden;
 
   &:hover {
     background: #e6f7ff;
@@ -384,13 +385,15 @@
     text-overflow: ellipsis;
   }
 
-  // 索引标签更紧凑，减少对名称空间的占用
+  // 索引标签更紧凑，并固定靠右对齐
   ::ng-deep .ant-tag {
     margin-inline-end: 0;
+    margin-left: auto;
     padding: 0 4px;
     font-size: 11px;
     line-height: 18px;
     flex-shrink: 0;
+    white-space: nowrap;
   }
 }
 
