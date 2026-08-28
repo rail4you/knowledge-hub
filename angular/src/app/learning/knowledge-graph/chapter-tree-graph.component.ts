@@ -126,7 +126,7 @@ interface ChapterDto {
 
             <!-- 浮层：操作提示 -->
             <div class="kg-hint">
-              <span><span nz-icon nzType="mouse" nzTheme="outline"></span> 滚轮缩放</span>
+              <span><span nz-icon nzType="zoom-in" nzTheme="outline"></span> 滚轮缩放</span>
               <span class="kg-hint__sep">·</span>
               <span><span nz-icon nzType="drag" nzTheme="outline"></span> 拖拽移动</span>
               <span class="kg-hint__sep">·</span>
@@ -261,9 +261,9 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   /** 图谱画布最小高度：按总节点数计算，确保 ECharts 树图完整渲染不被裁剪 */
   chartMinHeight = computed(() => {
     const total = this.countChapters(this.chapters);
-    // 每个节点约 56px（symbolSize 28 + 标签高度 + 间距）
-    const neededHeight = total * 56;
-    return Math.max(600, Math.min(neededHeight, 5000));
+    // 每个节点约 52px（symbolSize 36 + 标签高度 + 间距）
+    const neededHeight = total * 52;
+    return Math.max(480, Math.min(neededHeight, 5000));
   });
 
   ngAfterViewInit() {
@@ -609,9 +609,11 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           bottom: '5%',
           right: '22%',
           symbol: 'circle',
-          symbolSize: 28,
+          symbolSize: 36,
           orient: 'LR',
           roam: true,
+          // 缩放时节点符号与坐标系同比例放大，避免边缘被拉得过长、浪费空间
+          nodeScaleRatio: 1,
           nodeDraggable: false,
           initialTreeDepth: 1,
           expandAndCollapse: true,
@@ -624,7 +626,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           lineStyle: {
             color: '#cbd5e1',
             width: 1.4,
-            curveness: 0.5,
+            curveness: 0.3,
             opacity: 0.85,
           },
           // 节点样式
@@ -656,12 +658,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           label: {
             show: true,
             position: this.nonLeafLabelPosition,
-            distance: 10,
+            distance: 12,
             formatter: (params: any) => {
               const data = params.data as any;
               return data?.name || '';
             },
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 600,
             color: '#1f2937',
             backgroundColor: 'transparent',
@@ -671,15 +673,19 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
             label: {
               show: true,
               position: 'right',
-              distance: 10,
+              distance: 12,
               formatter: (params: any) => {
                 const data = params.data as any;
                 return data?.name || '';
               },
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: 600,
               color: '#1f2937',
             },
+          },
+          // 标签自动避让：文字放大后避免相互重叠 / 溢出
+          labelLayout: {
+            hideOverlap: true,
           },
         },
       ],
