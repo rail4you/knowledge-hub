@@ -117,11 +117,6 @@ export class StudentMyApplicationsComponent implements OnInit {
     this.router.navigate(['/student/employment/jobs', item.jobPostingId]);
   }
 
-  /** 已录用 → 一键转为就业去向 */
-  goOutcomes(item: JobApplicationDto): void {
-    this.router.navigate(['/student/employment/my-outcomes'], { queryParams: { import: item.id } });
-  }
-
   getStatusLabel(s: EmploymentApplicationStatus): string {
     const m: Record<number, string> = {
       [EmploymentApplicationStatus.Submitted]: '已投递',

@@ -880,16 +880,10 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         await _guidanceRepository.DeleteAsync(record);
     }
 
-    [Authorize(KnowledgeHubPermissions.Employment.Default)]
+    // 就业去向由教师/管理端统一维护，学生端仅查看，因此创建/编辑仅限拥有 ManageOutcome 权限的账号。
+    [Authorize(KnowledgeHubPermissions.Employment.ManageOutcome)]
     public async Task<EmploymentOutcomeDto> SaveOutcomeAsync(CreateUpdateEmploymentOutcomeDto input)
     {
-        var currentUserId = CurrentUser.Id;
-        var canManageOutcome = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Employment.ManageOutcome);
-        if (!canManageOutcome && currentUserId != input.StudentId)
-        {
-            throw new AbpAuthorizationException();
-        }
-
         if (string.IsNullOrWhiteSpace(input.EmployerName) || string.IsNullOrWhiteSpace(input.JobTitle))
         {
             throw new UserFriendlyException("去向单位和岗位名称不能为空。");
@@ -899,10 +893,6 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         if (input.Id.HasValue)
         {
             entity = await _outcomeRepository.GetAsync(input.Id.Value);
-            if (!canManageOutcome && entity.StudentId != currentUserId)
-            {
-                throw new AbpAuthorizationException();
-            }
         }
         else
         {
@@ -1435,16 +1425,10 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         }
     }
 
-    [Authorize(KnowledgeHubPermissions.Employment.Default)]
+    [Authorize(KnowledgeHubPermissions.Employment.ManageOutcome)]
     public async Task DeleteOutcomeAsync(Guid id)
     {
-        var currentUserId = CurrentUser.Id;
-        var canManageOutcome = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Employment.ManageOutcome);
         var entity = await _outcomeRepository.GetAsync(id);
-        if (!canManageOutcome && (!currentUserId.HasValue || entity.StudentId != currentUserId.Value))
-        {
-            throw new AbpAuthorizationException();
-        }
 
         await _outcomeRepository.DeleteAsync(entity, autoSave: true);
     }

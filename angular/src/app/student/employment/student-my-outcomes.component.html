@@ -6,25 +6,15 @@
         <h1 class="page-hero__title">
           我的就业去向
         </h1>
-        <p class="page-hero__desc">记录签约、入职等就业去向。已录用的投递可一键转为去向，也可手动录入</p>
+        <p class="page-hero__desc">查看你的签约、入职等就业去向记录</p>
       </div>
-      <div class="page-hero__actions">
-        <button class="hero-btn hero-btn--ghost" (click)="openImport()">
-          <span nz-icon nzType="swap" nzTheme="outline"></span>
-          从录用投递导入
-        </button>
-        <button class="hero-btn hero-btn--primary" (click)="openCreate()">
-          <span nz-icon nzType="plus" nzTheme="outline"></span>
-          手动录入
-        </button>
+      <div class="page-hero__stats">
+        <span class="stat-chip">
+          <span class="stat-chip__dot"></span>
+          共 <strong>{{ items().length }}</strong> 条去向，
+          主要去向：<strong>{{ primaryCount() }} 条</strong>
+        </span>
       </div>
-    </div>
-    <div class="page-hero__stats">
-      <span class="stat-chip">
-        <span class="stat-chip__dot"></span>
-        共 <strong>{{ items().length }}</strong> 条去向，
-        主要去向：<strong>{{ primaryCount() }} 条</strong>
-      </span>
     </div>
   </section>
 
@@ -40,17 +30,7 @@
         <span nz-icon nzType="compass" nzTheme="outline"></span>
       </div>
       <h3>还没有就业去向记录</h3>
-      <p>可以从已录用的投递一键转为去向，也可以手动录入</p>
-      <div class="empty-state__actions">
-        <button class="empty-btn empty-btn--ghost" (click)="openImport()">
-          <span nz-icon nzType="swap" nzTheme="outline"></span>
-          从录用投递导入
-        </button>
-        <button class="empty-btn" (click)="openCreate()">
-          <span nz-icon nzType="plus" nzTheme="outline"></span>
-          手动录入
-        </button>
-      </div>
+      <p>就业去向由学校就业指导老师统一录入，如有疑问请联系就业指导中心</p>
     </div>
   } @else {
     <div class="outcome-list">
@@ -74,116 +54,14 @@
               @if (item.region) { <span><span nz-icon nzType="environment" nzTheme="outline"></span> {{ item.region }}</span> }
               @if (item.salaryRange) { <span><span nz-icon nzType="wallet" nzTheme="outline"></span> {{ item.salaryRange }}</span> }
               @if (item.startDate) { <span><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ item.startDate | date:'yyyy-MM-dd' }} 入职</span> }
-              @if (item.applicationId) { <span class="from-application"><span nz-icon nzType="swap" nzTheme="outline"></span> 来自投递</span> }
             </div>
             @if (item.remark) { <p class="outcome-card__remark"><span nz-icon nzType="message" nzTheme="outline"></span> {{ item.remark }}</p> }
             <div class="outcome-card__foot">
               <span class="outcome-card__time">确认时间 {{ item.confirmedAt | date:'yyyy-MM-dd' }}</span>
             </div>
           </div>
-          <div class="outcome-card__actions">
-            @if (!item.isPrimary) { <button class="link-btn" (click)="setPrimary(item)">设为主要</button> }
-            <button class="link-btn" (click)="openEdit(item)">编辑</button>
-            <button class="link-btn link-btn--danger" (click)="delete(item)">删除</button>
-          </div>
         </article>
       }
     </div>
   }
-
-  <!-- =================== 新增 / 编辑 MODAL =================== -->
-  <nz-modal
-    [(nzVisible)]="modalVisible"
-    [nzTitle]="editingId ? '编辑就业去向' : '新增就业去向'"
-    nzWidth="560px"
-    [nzFooter]="null"
-    (nzOnCancel)="closeModal()"
-  >
-    <div class="form-grid" *nzModalContent>
-      <div class="form-field form-field--full">
-        <label>去向单位 <b class="req">*</b></label>
-        <input nz-input [(ngModel)]="form.employerName" placeholder="如：杭州某科技有限公司" />
-      </div>
-      <div class="form-field form-field--full">
-        <label>岗位名称 <b class="req">*</b></label>
-        <input nz-input [(ngModel)]="form.jobTitle" placeholder="如：Java 开发工程师" />
-      </div>
-      <div class="form-field">
-        <label>去向状态</label>
-        <nz-select [(ngModel)]="form.status" nzFullWidth>
-          @for (opt of statusesArr; track opt.value) {
-            <nz-option [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
-          }
-        </nz-select>
-      </div>
-      <div class="form-field">
-        <label>就业方式</label>
-        <nz-select [(ngModel)]="form.employmentType" nzFullWidth [nzAllowClear]="true">
-          <nz-option nzValue="校园招聘" nzLabel="校园招聘"></nz-option>
-          <nz-option nzValue="社会招聘" nzLabel="社会招聘"></nz-option>
-          <nz-option nzValue="实习转正" nzLabel="实习转正"></nz-option>
-          <nz-option nzValue="内推" nzLabel="内推"></nz-option>
-        </nz-select>
-      </div>
-      <div class="form-field">
-        <label>工作地点</label>
-        <input nz-input [(ngModel)]="form.region" placeholder="如：杭州" />
-      </div>
-      <div class="form-field">
-        <label>薪资范围</label>
-        <input nz-input [(ngModel)]="form.salaryRange" placeholder="如：8-12K" />
-      </div>
-      <div class="form-field">
-        <label>入职时间</label>
-        <input nz-input type="date" [(ngModel)]="form.startDate" />
-      </div>
-      <div class="form-field">
-        <label>是否为主要去向</label>
-        <nz-switch [(ngModel)]="form.isPrimary"></nz-switch>
-      </div>
-      <div class="form-field form-field--full">
-        <label>备注</label>
-        <textarea nz-input rows="3" [(ngModel)]="form.remark" placeholder="补充说明（选填）"></textarea>
-      </div>
-      <div class="modal-actions">
-        <button nz-button (click)="closeModal()">取消</button>
-        <button nz-button nzType="primary" [nzLoading]="saving()" (click)="save()">保存</button>
-      </div>
-    </div>
-  </nz-modal>
-
-  <!-- =================== 从录用投递导入 MODAL =================== -->
-  <nz-modal
-    [(nzVisible)]="importVisible"
-    nzTitle="从已录用投递导入"
-    nzWidth="680px"
-    [nzFooter]="null"
-    (nzOnCancel)="importVisible = false"
-  >
-    <ng-container *nzModalContent>
-      @if (importLoading()) {
-        <div class="modal-loading"><nz-spin nzSimple></nz-spin><p>加载已录用投递...</p></div>
-      } @else if (!offeredApps().length) {
-        <div class="import-empty">
-          <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-          <p>暂无已录用的投递记录</p>
-          <small>当你的投递被标记为「已录用」后，可在这里一键转为就业去向</small>
-        </div>
-      } @else {
-        <p class="import-hint">选择一份已录用的投递，将自动带入企业名称与岗位，可再补充状态、地点等信息。</p>
-        <div class="app-list">
-          @for (app of offeredApps(); track app.id) {
-            <div class="app-item" (click)="importApplication(app)">
-              <div class="app-item__icon"><span nz-icon nzType="trophy" nzTheme="fill"></span></div>
-              <div class="app-item__body">
-                <h4>{{ app.companyName || '未知企业' }}</h4>
-                <p>{{ app.jobTitle || '未知岗位' }}</p>
-              </div>
-              <span class="app-item__go"><span nz-icon nzType="swap" nzTheme="outline"></span> 转为去向</span>
-            </div>
-          }
-        </div>
-      }
-    </ng-container>
-  </nz-modal>
 </div>

@@ -119,9 +119,6 @@
             <span>简历：{{ item.resumeTitle || '-' }}</span>
             @if (item.reviewedAt) { <span>反馈：{{ item.reviewedAt | date:'yyyy-MM-dd HH:mm' }}</span> }
             <span class="card-foot__spacer"></span>
-            @if (item.status === statuses.Offered) {
-              <button class="card-foot__link card-foot__link--primary" (click)="goOutcomes(item)">转为就业去向 <span nz-icon nzType="swap" nzTheme="outline"></span></button>
-            }
             <button class="card-foot__link" (click)="goJob(item)">查看岗位 <span nz-icon nzType="right" nzTheme="outline"></span></button>
           </div>
         </article>
