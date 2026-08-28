@@ -40,8 +40,8 @@ export class StudentJobsComponent implements OnInit {
       x.applicationStatus === EmploymentApplicationStatus.InterviewCompleted
     ).length;
     return [
-      { label: '在招岗位', value: this.totalCount(), suffix: '个', color: '#1e6ce8', icon: 'briefcase' },
-      { label: '已投递', value: applied, suffix: '份', color: '#0c4cb8', icon: 'paper-plane' },
+      { label: '在招岗位', value: this.totalCount(), suffix: '个', color: '#1e6ce8', icon: 'solution' },
+      { label: '已投递', value: applied, suffix: '份', color: '#0c4cb8', icon: 'send' },
       { label: '面试邀请', value: interview, suffix: '份', color: '#0891b2', icon: 'calendar' },
     ];
   });

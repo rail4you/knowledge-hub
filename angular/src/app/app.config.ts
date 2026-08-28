@@ -120,6 +120,10 @@ import {
   ThunderboltFill,
   FireOutline,
   BarChartOutline,
+  // 就业服务大厅 & 就业管理页
+  EnvironmentOutline,
+  RedEnvelopeOutline,
+  WalletOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -238,6 +242,10 @@ const icons = [
   ThunderboltFill,
   FireOutline,
   BarChartOutline,
+  // 就业服务大厅 & 就业管理页
+  EnvironmentOutline,
+  RedEnvelopeOutline,
+  WalletOutline,
 ];
 
 export const appConfig: ApplicationConfig = {

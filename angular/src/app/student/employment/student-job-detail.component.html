@@ -62,7 +62,7 @@
     <!-- ========== FULL-WIDTH STATUS FLOW ========== -->
     @if (item.hasApplied && stage() > 0) {
       <div class="flow-bar">
-        @for (s of [{n:1,l:'已投递',i:'paper-plane'},{n:2,l:'面试安排',i:'calendar'},{n:3,l:'面试完成',i:'check-circle'},{n:4,l:'录用结果',i:'trophy'}]; track s.n) {
+        @for (s of [{n:1,l:'已投递',i:'send'},{n:2,l:'面试安排',i:'calendar'},{n:3,l:'面试完成',i:'check-circle'},{n:4,l:'录用结果',i:'trophy'}]; track s.n) {
           <div class="flow-step" [class.passed]="stage() > s.n" [class.current]="stage() === s.n">
             <span class="flow-dot">
               @if (stage() > s.n) { <span nz-icon nzType="check" nzTheme="outline"></span> }

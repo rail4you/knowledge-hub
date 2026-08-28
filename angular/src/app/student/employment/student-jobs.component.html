@@ -38,7 +38,7 @@
     <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中…</p></div>
   } @else if (jobs().length===0) {
     <div class="center">
-      <div class="empty-icon"><span nz-icon nzType="briefcase" nzTheme="outline"></span></div>
+      <div class="empty-icon"><span nz-icon nzType="solution" nzTheme="outline"></span></div>
       <h3>暂无岗位</h3><p>调整筛选条件试试</p>
       <button class="btn" (click)="reset()">重置筛选</button>
     </div>
@@ -51,7 +51,7 @@
             <div class="cover-decor">
               <span class="d1"></span><span class="d2"></span><span class="dc"></span>
             </div>
-            <span class="cover-icon"><span nz-icon nzType="briefcase" nzTheme="outline"></span></span>
+            <span class="cover-icon"><span nz-icon nzType="solution" nzTheme="outline"></span></span>
             <span class="cover-type" [style.background]="tc(item.jobType)+'22'" [style.color]="tc(item.jobType)">{{ tl(item.jobType) }}</span>
             @if (item.hasApplied) {
               <span class="cover-status" [style.background]="color(item.applicationStatus)">{{ label(item.applicationStatus) }}</span>

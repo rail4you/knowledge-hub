@@ -52,7 +52,7 @@ export class StudentMyApplicationsComponent implements OnInit {
     ).length;
     const offered = items.filter(x => x.status === EmploymentApplicationStatus.Offered).length;
     return [
-      { label: '累计投递', value: total, suffix: '份', color: '#1e6ce8', icon: 'paper-plane' },
+      { label: '累计投递', value: total, suffix: '份', color: '#1e6ce8', icon: 'send' },
       { label: '面试中', value: interview, suffix: '份', color: '#0891b2', icon: 'calendar' },
       { label: '已录用', value: offered, suffix: '份', color: '#10b981', icon: 'trophy' },
     ];
