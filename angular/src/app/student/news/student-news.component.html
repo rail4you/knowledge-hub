@@ -74,7 +74,7 @@
               @for (article of featuredArticles(); track article.id; let i = $index) {
                 <article
                   class="featured-card"
-                  [style.background]="coverGradient(article)"
+                  [class.has-cover]="hasCover(article)"
                   (click)="openArticle(article.id)"
                   tabindex="0"
                   (keyup.enter)="openArticle(article.id)"
@@ -89,6 +89,15 @@
                     [class.is-hidden]="!hasCover(article)"
                   />
                   <div class="featured-card__scrim" aria-hidden="true"></div>
+
+                  <!-- 无封面时的修饰背景 -->
+                  <div class="featured-card__deco" aria-hidden="true">
+                    <span class="deco-circle deco-circle--1"></span>
+                    <span class="deco-circle deco-circle--2"></span>
+                    <span class="deco-ring"></span>
+                    <span class="deco-line deco-line--1"></span>
+                    <span class="deco-line deco-line--2"></span>
+                  </div>
 
                   <div class="featured-card__content">
                     <div class="featured-card__top">
