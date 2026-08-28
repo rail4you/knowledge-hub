@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, OnInit, OnDestroy, signal, ViewChild } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink, ActivatedRoute } from '@angular/router';
+import { Router, RouterLink, RouterModule, ActivatedRoute } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -24,7 +24,7 @@ interface HeroSlide {
 @Component({
   selector: 'app-portal-home',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, FormsModule, RouterLink, NzIconModule, NzSelectModule, NzInputModule, FilePreviewComponent],
+  imports: [CommonModule, DecimalPipe, FormsModule, RouterModule, NzIconModule, NzSelectModule, NzInputModule, FilePreviewComponent],
   templateUrl: './portal-home.component.html',
   styleUrls: ['./portal-home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -217,6 +217,21 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     const jump = () => el()?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(jump, 60);
     window.setTimeout(jump, 500);
+  }
+
+  // ---- 文件扩展名对应的图标 ----
+  /** 根据文件扩展名返回对应的图标名 */
+  materialIcon(ext?: string): string {
+    if (!ext) return 'file';
+    const e = ext.toLowerCase();
+    if (e.includes('mp4') || e.includes('avi') || e.includes('mov') || e.includes('flv')) return 'video-camera';
+    if (e.includes('pdf')) return 'file-pdf';
+    if (e.includes('ppt')) return 'file-ppt';
+    if (e.includes('doc')) return 'file-word';
+    if (e.includes('xls')) return 'file-excel';
+    if (e.includes('zip') || e.includes('rar') || e.includes('7z')) return 'file-zip';
+    if (e.includes('png') || e.includes('jpg') || e.includes('gif') || e.includes('webp')) return 'file-image';
+    return 'file-text';
   }
 
   login() { this.authService.navigateToLogin(); }

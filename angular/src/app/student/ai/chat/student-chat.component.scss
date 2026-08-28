@@ -10,65 +10,74 @@
   flex-direction: column;
   height: calc(100vh - 230px);
   min-height: 600px;
-  padding: 0;
+  box-sizing: border-box;
+  width: 100%;
+  @include ds.student-container;
+  padding-top: 24px;
+  padding-bottom: 24px;
+  gap: 20px;
   background: ds.$student-bg;
 }
 
+/* ============ 蓝色 Banner（与其它学生端页头一致） ============ */
 .student-chat__hero {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  // 与其它学生端页面一致：内容宽度收敛到 1400px，两侧留白
-  width: 100%;
-  @include ds.student-container;
-  padding-top: 18px;
-  padding-bottom: 18px;
-  background: linear-gradient(135deg, rgba(30, 108, 232, 0.08), rgba(8, 145, 178, 0.06));
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.student-chat__hero-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #1e6ce8, #00b7ff);
-  color: #fff;
-  font-size: 22px;
-  box-shadow: 0 4px 12px rgba(30, 108, 232, 0.25);
+  position: relative;
   flex-shrink: 0;
+  border-radius: ds.$student-radius-lg;
+  overflow: hidden;
+  background: linear-gradient(120deg, #1e6ce8 0%, #0891b2 100%);
+  color: #fff;
+  box-shadow: 0 16px 36px rgba(30, 108, 232, 0.18);
 }
 
-.student-chat__hero-text {
+.student-chat__hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 30px;
+}
+
+.student-chat__hero-body {
   flex: 1;
   min-width: 0;
 }
 
 .student-chat__title {
-  margin: 0 0 4px;
-  font-size: 18px;
-  font-weight: 600;
-  color: ds.$student-text;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.student-chat__bar {
+  width: 4px;
+  height: 22px;
+  border-radius: 2px;
+  background: #fff;
+  flex-shrink: 0;
 }
 
 .student-chat__desc {
-  margin: 0;
+  margin: 8px 0 0;
+  max-width: 62ch;
+  color: rgba(255, 255, 255, 0.88);
   font-size: 13px;
-  color: ds.$student-text-muted;
-  line-height: 1.6;
+  line-height: 1.8;
 }
 
+/* ============ 聊天面板 ============ */
 .student-chat__panel {
   flex: 1;
   min-height: 0;
   display: flex;
-  // 与其它学生端页面一致：内容宽度收敛到 1400px，两侧留白
-  width: 100%;
-  @include ds.student-container;
-  padding-top: 16px;
-  padding-bottom: 24px;
+  flex-direction: column;
 
   app-chat {
     display: flex;
@@ -76,9 +85,19 @@
     width: 100%;
     flex: 1;
     min-height: 0;
-    // 覆盖 ChatComponent 内部 :host 的固定高度 calc(100vh - 102px)
-    //（该值按主布局的页头/页脚高度计算，套用学生端布局会把消息区/输入框
-    //  推到可视区域之外，导致聊天输入框看不到）。这里改为填满父面板高度。
     height: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .student-chat {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .student-chat__hero-inner {
+    padding: 18px 20px;
+  }
+  .student-chat__title {
+    font-size: 20px;
   }
 }

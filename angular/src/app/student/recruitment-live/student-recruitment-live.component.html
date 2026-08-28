@@ -3,15 +3,8 @@
   <section class="page-hero" aria-label="招聘直播">
     <div class="page-hero__inner">
       <div class="page-hero__body">
-        <span class="page-hero__label">RECRUITMENT LIVE</span>
         <h1 class="page-hero__title">招聘直播</h1>
         <p class="page-hero__desc">与面试官面对面实时视频沟通，展现最好的自己</p>
-      </div>
-      <div class="page-hero__actions">
-        <div class="hero-stat">
-          <span class="hero-stat__num">{{ lives().length }}</span>
-          <span class="hero-stat__text">场直播安排</span>
-        </div>
       </div>
     </div>
     <div class="page-hero__stats">
@@ -45,11 +38,46 @@
   }
   <!-- =================== GRID =================== -->
   @else {
+    <!-- 状态过滤 -->
+    <nav class="status-filter" aria-label="按状态筛选">
+      <button
+        class="status-filter__tab"
+        [class.is-active]="statusFilter() === 'all'"
+        (click)="setStatusFilter('all')"
+      >全部</button>
+      <button
+        class="status-filter__tab"
+        [class.is-active]="statusFilter() === 1"
+        (click)="setStatusFilter(1)"
+      >进行中</button>
+      <button
+        class="status-filter__tab"
+        [class.is-active]="statusFilter() === 0"
+        (click)="setStatusFilter(0)"
+      >等待中</button>
+      <button
+        class="status-filter__tab"
+        [class.is-active]="statusFilter() === 'expired'"
+        (click)="setStatusFilter('expired')"
+      >已过期</button>
+      <button
+        class="status-filter__tab"
+        [class.is-active]="statusFilter() === 2"
+        (click)="setStatusFilter(2)"
+      >已结束</button>
+      <button
+        class="status-filter__tab"
+        [class.is-active]="statusFilter() === 3"
+        (click)="setStatusFilter(3)"
+      >已取消</button>
+    </nav>
+
     <div class="live-grid">
-      @for (live of lives(); track live.id) {
+      @for (live of filteredLives(); track live.id) {
         <article
           class="live-card"
           [class.is-active]="live.status === 1"
+          [class.is-expired]="isExpired(live)"
           [class.is-clickable]="canEnter(live)"
           (click)="canEnter(live) && enterLive(live)"
         >
@@ -57,7 +85,7 @@
           <div class="live-card__banner" [class.is-live]="live.status === 1">
             <div class="live-card__status">
               <span class="live-dot" [class.pulse]="live.status === 1"></span>
-              {{ statusText(live.status) }}
+              {{ statusText(live) }}
             </div>
             @if (live.scheduledAt) {
               <div class="live-card__time">
@@ -88,11 +116,16 @@
           </div>
 
           <!-- 操作区 -->
-          @if (canEnter(live)) {
+          @if (showEnterAction(live)) {
             <div class="live-card__action">
-              <button class="enter-btn">
+              <button
+                class="enter-btn"
+                [class.is-disabled]="!canEnter(live)"
+                [disabled]="!canEnter(live)"
+                (click)="canEnter(live) && enterLive(live)"
+              >
                 <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-                进入直播间
+                {{ enterButtonText(live) }}
               </button>
             </div>
           } @else if (live.status === 2) {
@@ -102,6 +135,13 @@
             </div>
           }
         </article>
+      } @empty {
+        <div class="empty-state">
+          <div class="empty-state__art">
+            <span nz-icon nzType="inbox" nzTheme="outline"></span>
+          </div>
+          <h3>暂无该状态的直播</h3>
+        </div>
       }
     </div>
   }

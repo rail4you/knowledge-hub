@@ -129,42 +129,6 @@
   overflow: hidden;
 }
 
-.cover-pattern {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.pattern-circle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-
-  &--1 {
-    width: 180px;
-    height: 180px;
-    top: -60px;
-    right: -50px;
-  }
-
-  &--2 {
-    width: 120px;
-    height: 120px;
-    bottom: -40px;
-    left: -30px;
-    background: rgba(255, 255, 255, 0.12);
-  }
-
-  &--3 {
-    width: 80px;
-    height: 80px;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.06);
-  }
-}
-
 .cover-icon {
   position: relative;
   z-index: 1;
@@ -176,7 +140,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(8px);
 
   span[nz-icon] {
     font-size: 52px;

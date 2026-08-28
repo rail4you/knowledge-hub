@@ -1,11 +1,13 @@
 <div class="student-search">
   <header class="student-search__hero">
-    <div class="student-search__hero-icon" aria-hidden="true">
-      <span nz-icon nzType="search" nzTheme="outline"></span>
-    </div>
-    <div class="student-search__hero-text">
-      <h1 class="student-search__title">智能搜索</h1>
-      <p class="student-search__desc">在资源库中按关键词搜索已建索引的文档内容，点击结果查看完整资源。</p>
+    <div class="student-search__hero-inner">
+      <div class="student-search__hero-body">
+        <h1 class="student-search__title">
+          <span class="student-search__title-bar" aria-hidden="true"></span>
+          智能搜索
+        </h1>
+        <p class="student-search__desc">在资源库中按关键词搜索已建索引的文档内容，点击结果查看完整资源。</p>
+      </div>
     </div>
   </header>
 
@@ -74,7 +76,7 @@
             <div class="student-search__hint">
               <span nz-icon nzType="search" class="student-search__hint-icon"></span>
               <p>输入关键词搜索，或点击左侧热门词直接搜索</p>
-              <p class="student-search__hint-sub">例如：Kubernetes 入门、机器学习 课程标准、Vue 组件设计</p>
+              <p class="student-search__hint-sub">例如：课程思政、机床数控技术、课程教学设计、实训安全规范</p>
             </div>
           } @else {
             <div class="student-search__toolbar">

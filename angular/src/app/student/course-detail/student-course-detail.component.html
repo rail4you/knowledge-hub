@@ -19,204 +19,176 @@
       <nz-spin nzSimple nzSize="large" nzTip="课程加载中..."></nz-spin>
     </div>
   } @else if (course(); as c) {
-    <!-- 课程 Hero 卡 -->
-    <section class="hero-card" [style.background]="courseGradient(c)">
-      <div class="hero-card__pattern" aria-hidden="true">
-        <span class="pattern-circle pattern-circle--1"></span>
-        <span class="pattern-circle pattern-circle--2"></span>
-        <span class="pattern-circle pattern-circle--3"></span>
-        <span class="pattern-line pattern-line--1"></span>
-        <span class="pattern-line pattern-line--2"></span>
-      </div>
-      <div class="hero-card__overlay" aria-hidden="true"></div>
-
-      <div class="hero-card__inner">
-        <div class="hero-card__left">
-          <div class="hero-card__badges">
-            <span
-              class="hero-card__difficulty"
-              [style.background]="difficultyColor(c.difficulty)"
-            >
-              <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
-              {{ difficultyLabel(c.difficulty) }}
-            </span>
-            @if (c.major) {
-              <span class="hero-card__major">
-                <span nz-icon nzType="book" nzTheme="outline"></span>
-                {{ c.major }}
-              </span>
-            }
-            @if (c.semester) {
-              <span class="hero-card__major">
-                <span nz-icon nzType="calendar" nzTheme="outline"></span>
-                {{ c.semester }}
-              </span>
-            }
-          </div>
-
-          <h1 class="hero-card__title">{{ c.title }}</h1>
-
-          @if (c.description) {
-            <p class="hero-card__desc">{{ c.description }}</p>
+    <!-- ═══════════ 头部：视频/封面 + 课程信息 ═══════════ -->
+    <section class="detail-head">
+      <!-- 左：封面 / 视频演示区 -->
+      <div class="detail-media">
+        <div class="detail-media__stage" [style.background]="courseGradient(c)">
+          @if (hasCover(c)) {
+            <img class="detail-media__img" [src]="c.coverImageUrl" [alt]="c.title" />
+          } @else {
+            <span class="detail-media__icon" nz-icon nzType="read" nzTheme="outline"></span>
           }
+          <button class="detail-media__play" (click)="c.isEnrolled ? startLearning() : enrollCourse()" [attr.aria-label]="c.isEnrolled ? '继续学习' : '选课学习'">
+            <span nz-icon nzType="caret-right" nzTheme="fill"></span>
+          </button>
+          <div class="detail-media__shadow" aria-hidden="true"></div>
+        </div>
+        <div class="detail-media__bar">
+          <span class="detail-media__bar-dot"></span>
+          @if (c.isEnrolled) {
+            <span>已加入课程 · 可观看章节教学视频与课件</span>
+          } @else {
+            <span>选课后可解锁章节教学视频、课件与习题</span>
+          }
+        </div>
+      </div>
 
-          <div class="hero-card__stats">
-            <span class="stat-block">
-              <span class="stat-block__value">{{ countChapters(chapters()) }}</span>
-              <span class="stat-block__label">章节</span>
-            </span>
-            <span class="stat-block__divider"></span>
-            <span class="stat-block">
-              <span class="stat-block__value">{{ c.studentCount || 0 | number }}</span>
-              <span class="stat-block__label">学习者</span>
-            </span>
-            @if (c.credits) {
-              <span class="stat-block__divider"></span>
-              <span class="stat-block">
-                <span class="stat-block__value">{{ c.credits }}</span>
-                <span class="stat-block__label">学分</span>
-              </span>
-            }
-            @if (c.semesterHours) {
-              <span class="stat-block__divider"></span>
-              <span class="stat-block">
-                <span class="stat-block__value">{{ c.semesterHours }}</span>
-                <span class="stat-block__label">学时</span>
-              </span>
-            }
-          </div>
+      <!-- 右：课程信息面板 -->
+      <div class="detail-info">
+        <h1 class="detail-info__title">{{ c.title }}</h1>
 
-          <!-- 操作按钮 -->
-          <div class="hero-card__actions">
-            @if (c.isEnrolled) {
-              <button class="action-btn action-btn--primary" (click)="startLearning()">
-                <span nz-icon nzType="play-circle" nzTheme="fill"></span>
-                <span>继续学习</span>
-              </button>
-              <button class="action-btn" (click)="startExercise()">
-                <span nz-icon nzType="form" nzTheme="outline"></span>
-                <span>开始练习</span>
-              </button>
-            } @else {
-              <button
-                class="action-btn action-btn--primary"
-                [disabled]="enrolling()"
-                (click)="enrollCourse()"
-              >
-                <span nz-icon [nzType]="enrolling() ? 'loading' : 'plus'" nzTheme="outline"></span>
-                <span>{{ enrolling() ? '选课中...' : '立即选课' }}</span>
-              </button>
-            }
-            <button class="action-btn" (click)="setTab('graph')">
-              <span nz-icon nzType="apartment" nzTheme="outline"></span>
-              <span>查看知识图谱</span>
-            </button>
-          </div>
+        @if (c.description) {
+          <p class="detail-info__desc">{{ c.description }}</p>
+        }
+
+        <div class="detail-info__stats">
+          <span class="info-stat">
+            <strong>{{ countChapters(chapters()) }}</strong>
+            <span>章节</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ c.studentCount || 0 | number }}</strong>
+            <span>人次学习</span>
+          </span>
+          @if (c.credits) {
+            <span class="info-sep"></span>
+            <span class="info-stat">
+              <strong>{{ c.credits }}</strong>
+              <span>学分</span>
+            </span>
+          }
+          @if (c.semesterHours) {
+            <span class="info-sep"></span>
+            <span class="info-stat">
+              <strong>{{ c.semesterHours }}</strong>
+              <span>学时</span>
+            </span>
+          }
         </div>
 
-        <div class="hero-card__right">
-          <!-- 进度卡 -->
-          @if (c.isEnrolled) {
-            <div class="progress-card">
-              <div class="progress-card__title">
-                <span nz-icon nzType="line-chart" nzTheme="outline"></span>
-                <span>习题进度</span>
-              </div>
-              <div class="progress-card__ring">
-                <div class="ring">
-                  <svg viewBox="0 0 100 100" class="ring__svg" aria-hidden="true">
-                    <circle cx="50" cy="50" r="42" class="ring__bg"></circle>
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="42"
-                      class="ring__fg"
-                      [attr.stroke-dasharray]="264"
-                      [attr.stroke-dashoffset]="264 - (264 * exerciseProgress()) / 100"
-                    ></circle>
-                  </svg>
-                  <div class="ring__center">
-                    <strong>{{ exerciseProgress() }}%</strong>
-                    <span>习题进度</span>
-                  </div>
-                </div>
-              </div>
-              <div class="progress-card__meta">
-                <span><strong>{{ progress()?.chapterId || '—' }}</strong> 当前章节</span>
-                @if (progress()?.timeSpent) {
-                  <span>累计 <strong>{{ progress()?.timeSpent }}</strong></span>
-                }
-              </div>
-            </div>
-          } @else {
-            <div class="cover-card" [style.background]="courseGradient(c)">
-              @if (hasCover(c)) {
-                <img class="cover-card__img" [src]="c.coverImageUrl" [alt]="c.title" />
-              } @else {
-                <span nz-icon nzType="read" class="cover-card__icon"></span>
-              }
-            </div>
+        <ul class="detail-info__list">
+          @if (c.major) {
+            <li>
+              <span class="info-row__label">所属专业</span>
+              <span class="info-row__value">{{ c.major }}</span>
+            </li>
           }
+          @if (c.teacherName) {
+            <li>
+              <span class="info-row__label">授课教师</span>
+              <span class="info-row__value">{{ c.teacherName }}</span>
+            </li>
+          }
+          @if (c.semester) {
+            <li>
+              <span class="info-row__label">开课学期</span>
+              <span class="info-row__value">{{ c.semester }}</span>
+            </li>
+          }
+          <li>
+            <span class="info-row__label">学习难度</span>
+            <span class="info-row__value">
+              <span class="difficulty-tag" [style.background]="difficultyColor(c.difficulty) + '22'" [style.color]="difficultyColor(c.difficulty)">
+                <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
+                {{ difficultyLabel(c.difficulty) }}
+              </span>
+            </span>
+          </li>
+          <li>
+            <span class="info-row__label">课程状态</span>
+            <span class="info-row__value">
+              <span class="status-tag">
+                <span class="status-dot"></span>
+                {{ statusLabel(c.status) }}
+              </span>
+            </span>
+          </li>
+          <li>
+            <span class="info-row__label">更新时间</span>
+            <span class="info-row__value">{{ c.lastModificationTime | date:'yyyy-MM-dd' }}</span>
+          </li>
+        </ul>
+
+        <div class="detail-info__actions">
+          @if (c.isEnrolled) {
+            <button class="action-btn action-btn--primary" (click)="startLearning()">
+              <span nz-icon nzType="play-circle" nzTheme="fill"></span>
+              <span>继续学习</span>
+            </button>
+            <button class="action-btn" (click)="startExercise()">
+              <span nz-icon nzType="form" nzTheme="outline"></span>
+              <span>开始练习</span>
+            </button>
+          } @else {
+            <button class="action-btn action-btn--primary" [disabled]="enrolling()" (click)="enrollCourse()">
+              <span nz-icon [nzType]="enrolling() ? 'loading' : 'plus'" nzTheme="outline"></span>
+              <span>{{ enrolling() ? '选课中...' : '立即选课' }}</span>
+            </button>
+          }
+          <button class="action-btn" (click)="setTab('graph')">
+            <span nz-icon nzType="apartment" nzTheme="outline"></span>
+            <span>知识图谱</span>
+          </button>
         </div>
       </div>
     </section>
 
-    <!-- 主体两栏 -->
+    <!-- ═══════════ 主体两栏：Tabs + 侧栏 ═══════════ -->
     <div class="detail-grid">
       <!-- 左侧：Tabs + 内容 -->
       <main class="detail-main">
-        <nav class="tab-bar-detail" role="tablist">
+        <nav class="detail-tabs" role="tablist">
           <button
-            class="tab-pill"
+            class="tab-item"
             [class.is-active]="activeTab() === 'chapters'"
             (click)="setTab('chapters')"
             role="tab"
           >
-            <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
-            <span>课程章节</span>
-            <span class="tab-pill__count">{{ countChapters(chapters()) }}</span>
+            <span>课程大纲</span>
+            <span class="tab-item__count">{{ countChapters(chapters()) }}</span>
           </button>
           <button
-            class="tab-pill"
+            class="tab-item"
             [class.is-active]="activeTab() === 'graph'"
             (click)="setTab('graph')"
             role="tab"
           >
-            <span nz-icon nzType="apartment" nzTheme="outline"></span>
             <span>知识图谱</span>
           </button>
           <button
-            class="tab-pill"
+            class="tab-item"
             [class.is-active]="activeTab() === 'progress'"
             (click)="setTab('progress')"
             role="tab"
           >
-            <span nz-icon nzType="line-chart" nzTheme="outline"></span>
             <span>学习进度</span>
           </button>
           <button
-            class="tab-pill"
+            class="tab-item"
             [class.is-active]="activeTab() === 'related'"
             (click)="setTab('related')"
             role="tab"
           >
-            <span nz-icon nzType="link" nzTheme="outline"></span>
             <span>相关课程</span>
-            <span class="tab-pill__count">{{ related().length }}</span>
+            <span class="tab-item__count">{{ related().length }}</span>
           </button>
         </nav>
 
         <!-- 章节 Tab -->
         @if (activeTab() === 'chapters') {
           <section class="content-card">
-            <header class="content-card__header">
-              <h3 class="content-card__title">
-                <span class="content-card__bar"></span>
-                课程目录
-                <span class="content-card__sub">点击展开章节查看详情</span>
-              </h3>
-            </header>
-
             @if (chaptersLoading()) {
               <div class="loading-state loading-state--small">
                 <nz-spin nzSimple nzSize="default"></nz-spin>
@@ -237,14 +209,6 @@
         <!-- 知识图谱 Tab -->
         @if (activeTab() === 'graph') {
           <section class="content-card">
-            <header class="content-card__header">
-              <h3 class="content-card__title">
-                <span class="content-card__bar"></span>
-                知识图谱
-                <span class="content-card__sub">点击节点查看详情</span>
-              </h3>
-            </header>
-
             @if (chaptersLoading()) {
               <div class="loading-state loading-state--small">
                 <nz-spin nzSimple nzSize="default"></nz-spin>
@@ -268,14 +232,6 @@
         <!-- 学习进度 Tab -->
         @if (activeTab() === 'progress') {
           <section class="content-card">
-            <header class="content-card__header">
-              <h3 class="content-card__title">
-                <span class="content-card__bar"></span>
-                知识掌握度
-                <span class="content-card__sub">基于习题完成情况统计</span>
-              </h3>
-            </header>
-
             @if (mastery().length === 0) {
               <div class="empty-state empty-state--small">
                 <span nz-icon nzType="bulb" nzTheme="outline" class="empty-icon"></span>
@@ -300,10 +256,7 @@
                         </span>
                       </div>
                       <div class="mastery-item__bar">
-                        <span
-                          class="mastery-item__fill"
-                          [style.width.%]="(m.accuracy || 0)"
-                        ></span>
+                        <span class="mastery-item__fill" [style.width.%]="(m.accuracy || 0)"></span>
                       </div>
                       <div class="mastery-item__meta">
                         <span>练习 {{ m.practiceCount || 0 }} 次</span>
@@ -321,14 +274,6 @@
         <!-- 相关课程 Tab -->
         @if (activeTab() === 'related') {
           <section class="content-card">
-            <header class="content-card__header">
-              <h3 class="content-card__title">
-                <span class="content-card__bar"></span>
-                相关课程推荐
-                <span class="content-card__sub">基于专业与学习兴趣推荐</span>
-              </h3>
-            </header>
-
             @if (related().length === 0) {
               <div class="empty-state empty-state--small">
                 <span nz-icon nzType="compass" nzTheme="outline" class="empty-icon"></span>
@@ -368,71 +313,29 @@
         }
       </main>
 
-      <!-- 侧栏 -->
+      <!-- 右侧：侧栏 -->
       <aside class="detail-aside">
-        <!-- 课程信息卡 -->
+        <!-- 主讲教师 -->
         <div class="aside-card">
           <h3 class="aside-card__title">
-            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-            课程信息
+            <span nz-icon nzType="user" nzTheme="outline"></span>
+            主讲教师
           </h3>
-          <ul class="info-list">
-            @if (c.teacherName) {
-              <li>
-                <span class="info-list__label">授课教师</span>
-                <span class="info-list__value">{{ c.teacherName }}</span>
-              </li>
-            }
-            @if (c.major) {
-              <li>
-                <span class="info-list__label">所属专业</span>
-                <span class="info-list__value">{{ c.major }}</span>
-              </li>
-            }
-            @if (c.semester) {
-              <li>
-                <span class="info-list__label">开课学期</span>
-                <span class="info-list__value">{{ c.semester }}</span>
-              </li>
-            }
-            @if (c.credits) {
-              <li>
-                <span class="info-list__label">学分数</span>
-                <span class="info-list__value">{{ c.credits }} 学分</span>
-              </li>
-            }
-            @if (c.semesterHours) {
-              <li>
-                <span class="info-list__label">学时数</span>
-                <span class="info-list__value">{{ c.semesterHours }} 学时</span>
-              </li>
-            }
-            <li>
-              <span class="info-list__label">学习难度</span>
-              <span class="info-list__value">
-                <span
-                  class="difficulty-tag"
-                  [style.background]="difficultyColor(c.difficulty) + '22'"
-                  [style.color]="difficultyColor(c.difficulty)"
-                >
-                  {{ difficultyLabel(c.difficulty) }}
-                </span>
-              </span>
-            </li>
-            <li>
-              <span class="info-list__label">课程状态</span>
-              <span class="info-list__value">
-                <span class="status-tag">
-                  <span class="status-dot"></span>
-                  {{ statusLabel(c.status) }}
-                </span>
-              </span>
-            </li>
-            <li>
-              <span class="info-list__label">更新时间</span>
-              <span class="info-list__value">{{ c.lastModificationTime | date:'yyyy-MM-dd HH:mm' }}</span>
-            </li>
-          </ul>
+          <div class="teacher-box">
+            <div class="teacher-avatar">
+              {{ (c.teacherName || '师').slice(0, 1) }}
+            </div>
+            <div class="teacher-box__body">
+              <strong>{{ c.teacherName || '待定' }}</strong>
+              <span>授课教师</span>
+            </div>
+          </div>
+          @if (c.major) {
+            <p class="teacher-affiliate">
+              <span nz-icon nzType="bank" nzTheme="outline"></span>
+              {{ c.major }}
+            </p>
+          }
         </div>
 
         <!-- 课程统计 -->

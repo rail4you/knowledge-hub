@@ -26,11 +26,6 @@
         <!-- 资源卡片 -->
         <article class="resource-card" [class]="'type-' + (res.resourceType || 0)">
           <div class="resource-card__cover">
-            <div class="cover-pattern" aria-hidden="true">
-              <span class="pattern-circle pattern-circle--1"></span>
-              <span class="pattern-circle pattern-circle--2"></span>
-              <span class="pattern-circle pattern-circle--3"></span>
-            </div>
             <div class="cover-icon">
               <span nz-icon [nzType]="getResourceTypeIcon(res.resourceType)" nzTheme="outline"></span>
             </div>

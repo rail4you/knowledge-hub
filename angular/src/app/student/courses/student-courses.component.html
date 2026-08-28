@@ -129,11 +129,7 @@
                   <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" />
                 } @else {
                   <div class="course-card__pattern" aria-hidden="true">
-                    <span class="pattern-circle pattern-circle--1"></span>
-                    <span class="pattern-circle pattern-circle--2"></span>
-                    <span class="pattern-circle pattern-circle--3"></span>
-                    <span class="pattern-line pattern-line--1"></span>
-                    <span class="pattern-line pattern-line--2"></span>
+                    <span nz-icon nzType="read" nzTheme="outline" class="course-card__cover-icon"></span>
                   </div>
                 }
                 <div class="course-card__overlay" aria-hidden="true"></div>

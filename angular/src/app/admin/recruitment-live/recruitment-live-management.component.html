@@ -34,7 +34,7 @@
       <tr *ngFor="let live of lives()">
         <td>{{ live.title }}</td>
         <td>
-          <nz-tag [nzColor]="statusColor(live.status)">{{ statusText(live.status) }}</nz-tag>
+          <nz-tag [nzColor]="statusColor(live)">{{ statusText(live) }}</nz-tag>
         </td>
         <td>{{ scheduleText(live) }}</td>
         <td>{{ live.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
@@ -42,8 +42,9 @@
           <div class="action-btns">
             <button
               nz-button nzType="primary" nzSize="small" nzShape="round"
-              *ngIf="canEnter(live)"
-              (click)="enterLive(live)"
+              *ngIf="showEnterAction(live)"
+              [disabled]="!canEnter(live)"
+              (click)="canEnter(live) && enterLive(live)"
             >
               <span nz-icon nzType="video-camera" nzTheme="outline"></span>
               进入

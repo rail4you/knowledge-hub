@@ -29,6 +29,16 @@ export class StudentRecruitmentLiveComponent implements OnInit {
   lives = signal<RecruitmentLiveDto[]>([]);
   activeCount = computed(() => this.lives().filter(l => l.status === RecruitmentLiveStatus.Active).length);
 
+  /** 状态过滤：全部 / 进行中 / 等待中 / 已过期 / 已结束 / 已取消 */
+  statusFilter = signal<RecruitmentLiveStatus | 'all' | 'expired'>('all');
+
+  readonly filteredLives = computed(() => {
+    const list = this.lives();
+    const f = this.statusFilter();
+    if (f === 'all') return list;
+    return list.filter(l => (f === 'expired' ? this.isExpired(l) : l.status === f));
+  });
+
   ngOnInit() {
     this.loadLives();
   }
@@ -54,8 +64,14 @@ export class StudentRecruitmentLiveComponent implements OnInit {
     this.router.navigate(['/student/recruitment-live', live.id]);
   }
 
-  statusText(status: RecruitmentLiveStatus): string {
-    switch (status) {
+  setStatusFilter(f: RecruitmentLiveStatus | 'all' | 'expired') {
+    this.statusFilter.set(f);
+  }
+
+  /** 状态文本：过期优先显示“已过期” */
+  statusText(live: RecruitmentLiveDto): string {
+    if (this.isExpired(live)) return '已过期';
+    switch (live.status) {
       case RecruitmentLiveStatus.Waiting: return '等待中';
       case RecruitmentLiveStatus.Active: return '进行中';
       case RecruitmentLiveStatus.Ended: return '已结束';
@@ -64,12 +80,27 @@ export class StudentRecruitmentLiveComponent implements OnInit {
     }
   }
 
+  /** 是否已过期：仅“等待中且已超出计划结束时间”视为过期；已开始的直播不会过期 */
+  isExpired(live: RecruitmentLiveDto): boolean {
+    return live.status === RecruitmentLiveStatus.Waiting
+      && !!live.scheduledEndAt
+      && new Date(live.scheduledEndAt) < new Date();
+  }
+
+  /** 是否展示“进入/回到直播间”按钮（等待中 / 进行中） */
+  showEnterAction(live: RecruitmentLiveDto): boolean {
+    return live.status === RecruitmentLiveStatus.Waiting || live.status === RecruitmentLiveStatus.Active;
+  }
+
+  /** 是否可进入：进行中始终可进；等待中仅在未过期时可进 */
   canEnter(live: RecruitmentLiveDto): boolean {
-    // 仅在时间范围内（未到计划结束时间）可进入，避免已过期直播仍可进入
-    if (live.status !== RecruitmentLiveStatus.Waiting && live.status !== RecruitmentLiveStatus.Active)
-      return false;
-    if (live.scheduledEndAt && new Date(live.scheduledEndAt) < new Date()) return false;
-    return true;
+    if (live.status === RecruitmentLiveStatus.Active) return true;
+    if (live.status === RecruitmentLiveStatus.Waiting) return !this.isExpired(live);
+    return false;
+  }
+
+  enterButtonText(live: RecruitmentLiveDto): string {
+    return live.status === RecruitmentLiveStatus.Active ? '回到直播间' : '进入直播间';
   }
 
   /** 格式化计划时间范围，如“2026-08-01 09:00 ~ 12:00” */

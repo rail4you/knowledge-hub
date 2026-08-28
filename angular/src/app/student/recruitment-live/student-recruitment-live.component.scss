@@ -395,6 +395,52 @@
     transform: translateY(-1px);
     box-shadow: 0 6px 18px rgba(124, 58, 237, 0.4);
   }
+
+  &.is-disabled {
+    background: ds.$student-border;
+    color: ds.$student-text-light;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+    &:hover { transform: none; box-shadow: none; }
+  }
+}
+
+.live-card.is-expired .live-card__title { color: ds.$student-text-muted; }
+.live-card.is-expired .live-card__banner { background: #f5f6f8; }
+
+/* =================== 状态过滤 =================== */
+.status-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.status-filter__tab {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid ds.$student-border;
+  border-radius: 999px;
+  background: #fff;
+  color: ds.$student-text-muted;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: ds.$student-primary;
+    color: ds.$student-primary;
+  }
+
+  &.is-active {
+    border-color: #1e6ce8;
+    background: #1e6ce8;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(30, 108, 232, 0.24);
+  }
 }
 
 .live-card__footer-end {

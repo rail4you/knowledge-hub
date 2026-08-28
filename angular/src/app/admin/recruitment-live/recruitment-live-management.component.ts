@@ -231,8 +231,9 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     this.loadLives();
   }
 
-  statusColor(status: RecruitmentLiveStatus): string {
-    switch (status) {
+  statusColor(live: RecruitmentLiveDto): string {
+    if (this.isExpired(live)) return 'error';
+    switch (live.status) {
       case RecruitmentLiveStatus.Waiting: return 'gold';
       case RecruitmentLiveStatus.Active: return 'green';
       case RecruitmentLiveStatus.Ended: return 'default';
@@ -241,8 +242,9 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     }
   }
 
-  statusText(status: RecruitmentLiveStatus): string {
-    switch (status) {
+  statusText(live: RecruitmentLiveDto): string {
+    if (this.isExpired(live)) return '已过期';
+    switch (live.status) {
       case RecruitmentLiveStatus.Waiting: return '等待中';
       case RecruitmentLiveStatus.Active: return '进行中';
       case RecruitmentLiveStatus.Ended: return '已结束';
@@ -251,10 +253,15 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     }
   }
 
+  /** 是否展示“进入”按钮（等待中 / 进行中） */
+  showEnterAction(live: RecruitmentLiveDto): boolean {
+    return live.status === RecruitmentLiveStatus.Waiting || live.status === RecruitmentLiveStatus.Active;
+  }
+
   canEnter(live: RecruitmentLiveDto): boolean {
-    if (live.status !== RecruitmentLiveStatus.Waiting && live.status !== RecruitmentLiveStatus.Active)
-      return false;
-    return !this.isExpired(live);
+    if (live.status === RecruitmentLiveStatus.Active) return true;
+    if (live.status === RecruitmentLiveStatus.Waiting) return !this.isExpired(live);
+    return false;
   }
 
   canCancel(live: RecruitmentLiveDto): boolean {
@@ -266,11 +273,10 @@ export class RecruitmentLiveManagementComponent implements OnInit {
   }
 
   isExpired(live: RecruitmentLiveDto): boolean {
-    // 以计划结束时间为过期边界：未设置结束时间或在结束时间之前（时间范围内）都不会过期
-    if (!live.scheduledEndAt) return false;
-    return new Date(live.scheduledEndAt) < new Date()
-      && live.status !== RecruitmentLiveStatus.Ended
-      && live.status !== RecruitmentLiveStatus.Cancelled;
+    // 仅“等待中且已超出计划结束时间”视为过期；已开始的直播（Active）不会过期
+    return live.status === RecruitmentLiveStatus.Waiting
+      && !!live.scheduledEndAt
+      && new Date(live.scheduledEndAt) < new Date();
   }
 
 

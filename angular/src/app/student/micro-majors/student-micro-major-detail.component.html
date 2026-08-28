@@ -89,11 +89,6 @@
               <article class="course-card" [routerLink]="['/student/courses', course.courseId]"
   [queryParams]="{ fromMicroMajor: microMajorId() || undefined, from: fromSource() || undefined }">
                 <div class="course-card__cover" [style.background]="coverGradient(course)">
-                  <div class="cover-decor" aria-hidden="true">
-                    <span class="decor-line decor-line--1"></span>
-                    <span class="decor-line decor-line--2"></span>
-                    <span class="decor-circle"></span>
-                  </div>
                   <span class="cover-icon-sm">
                     <span nz-icon nzType="read" nzTheme="outline"></span>
                   </span>
