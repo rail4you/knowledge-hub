@@ -61,7 +61,13 @@ public class ChatAppService : KnowledgeHubAppService
 2. 回答要简洁、准确、有依据。
 3. 使用 Markdown 格式化回答。
 4. 如果文档中没有相关内容，如实告知用户。
-5. 只输出给用户看的最终答案，不要输出思考过程、工具调用日志、折叠块或与答案无关的中间信息。";
+5. 只输出给用户看的最终答案，不要输出思考过程、工具调用日志、折叠块或与答案无关的中间信息。
+
+关于文档结构 / 大纲 / 章节 / 目录类问题：
+- 目前没有可用的章节结构数据，不要尝试调用相关工具，也不要编造目录。
+- 直接调用 get_document 工具读取该文档的 summary 字段，把摘要中关于文档结构的描述作为答案回复给用户。
+- 如果用户明确要求按页码定位具体章节，可结合 search_document 工具按关键词检索相关内容。
+- 不要向用户透露任何内部技术细节（如 ""headings 为空""、""无 headings""、""结构未解析""、""索引缺失"" 等），用自然语言直接基于摘要回答即可。";
 
     private const int MaxToolCallRounds = 5;
 
@@ -415,10 +421,13 @@ public class ChatAppService : KnowledgeHubAppService
             ? new MeiliSearchDocumentTools(_meiliSearchService, _resourceRepository, resourceId.Value, _logger)
             : new MeiliSearchDocumentTools(_meiliSearchService, _resourceRepository, _logger);
 
+        // 注：章节结构工具（GetDocumentStructure）暂时下线，因为它依赖的页面标题层级
+        // 在很多文档里解析不出来（headings 为空数组），用户问大纲时体验差。
+        // 后续要么改进索引解析，要么基于 AI 摘要做章节抽取。
+        // 当前对大纲类问题改用 get_document 返回的 summary 字段回答。
         return new List<AITool>
         {
             AIFunctionFactory.Create(docTools.GetDocument),
-            AIFunctionFactory.Create(docTools.GetDocumentStructure),
             AIFunctionFactory.Create(docTools.GetPageContent),
             AIFunctionFactory.Create(docTools.SearchDocument),
         };
