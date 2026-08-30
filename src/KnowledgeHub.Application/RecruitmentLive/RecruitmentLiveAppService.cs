@@ -84,10 +84,16 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
         ValidateScheduleRange(input.ScheduledAt, input.ScheduledEndAt);
 
+        // 一对一直播：每次最多仅分配一名学生。
+        var studentIds = input.StudentIds?.Distinct().ToList() ?? new List<Guid>();
+        if (studentIds.Count > 1)
+        {
+            throw new UserFriendlyException("一次只能创建一对一直播，请仅选择一名学生。");
+        }
+
         var currentUserId = _currentUser.GetId();
         var currentUser = await _userRepository.GetAsync(currentUserId);
 
-        var studentIds = input.StudentIds?.Distinct().ToList() ?? new List<Guid>();
         // 至少需要一个参与者（教师自己），如果没有学生则创建空直播
         if (studentIds.Count == 0)
         {
