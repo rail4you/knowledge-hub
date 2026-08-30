@@ -1304,7 +1304,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await Repository.UpdateAsync(resource);
     }
 
-    [Authorize(KnowledgeHubPermissions.Resources.RequestDelete)]
+    // 申请删除资源：低风险动作（仅生成删除申请，实际删除由联盟管理员 PhysicalDelete 权限审核）。
+    // 以 Resources.Edit 作为门槛——所有能编辑资源的角色（Teacher/SchoolAdmin/admin）都可申请，
+    // 学生角色没有 Edit 权限不能误申请。RequestDelete 是独立子权限，在 RolePermissionSeeder 中授予，
+    // 门槛使用 Edit 避免“RequestDelete 未被某些租户种子授予”的生产权限漂移问题。
+    [Authorize(KnowledgeHubPermissions.Resources.Edit)]
     [IgnoreAntiforgeryToken]
     public virtual async Task<PhysicalDeleteRequestDto> RequestPhysicalDeleteAsync(CreatePhysicalDeleteRequestDto input)
     {

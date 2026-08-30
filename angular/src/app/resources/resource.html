@@ -175,7 +175,12 @@
                 <td>{{ item.creatorName }}</td>
                 <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
                 <td (click)="$event.stopPropagation()">
-                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="openDeleteModalForResource(item)" nz-tooltip nzTooltipTitle="{{ '::RequestDelete' | abpLocalization }}">
+                  <button
+                    *abpPermission="'KnowledgeHub.Resources.Edit'"
+                    nz-button nzType="link" nzSize="small" nzDanger
+                    (click)="openDeleteModalForResource(item)"
+                    nz-tooltip nzTooltipTitle="{{ '::RequestDelete' | abpLocalization }}"
+                  >
                     <span nz-icon nzType="delete"></span>
                   </button>
                 </td>

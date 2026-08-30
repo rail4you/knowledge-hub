@@ -273,6 +273,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.Download);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.SchoolAudit);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ManageCategory);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.RequestDelete);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ViewStatistics);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ViewRecommendation);
 
@@ -367,6 +368,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.Edit);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.Download);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.ViewRecommendation);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.RequestDelete);
 
         await GrantAsync("Teacher", KnowledgeHubPermissions.Search.Default);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Search.ManageIndex);
@@ -470,6 +472,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.SchoolAudit);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.LeagueAudit);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.ManageCategory);
+        await GrantAsync("admin", KnowledgeHubPermissions.Resources.RequestDelete);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.ViewStatistics);
         await GrantAsync("admin", KnowledgeHubPermissions.Resources.ViewRecommendation);
 
