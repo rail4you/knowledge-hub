@@ -144,10 +144,17 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
     {
         var query = await _teachingAgentRepository.GetQueryableAsync();
 
-        // 工作台"我的智能体"只展示自己创建的，以及全局公开的智能体；
-        // 即使拥有 Review/Manage 权限，也不展示他人创建的（除非公开）。
+        // 工作台"我的智能体"展示：
+        // 1) 自己创建的智能体；
+        // 2) 同一租户下标记为"校内共享"（School）的智能体——同租户管理员和老师共享；
+        // 3) 全局公开（Public）的智能体。
+        // 由于 TeachingAgent 实现 IMultiTenant，ABP 仓储已按当前租户过滤，
+        // 因此 School 可见性天然限定在同一租户内。
         var currentUserId = CurrentUser.GetId();
-        query = query.Where(x => x.OwnerUserId == currentUserId || x.Visibility == TeachingAgentVisibility.Public);
+        query = query.Where(x =>
+            x.OwnerUserId == currentUserId
+            || x.Visibility == TeachingAgentVisibility.School
+            || x.Visibility == TeachingAgentVisibility.Public);
 
         query = query
             .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x =>
