@@ -122,3 +122,33 @@ public interface IResourceCategoryAppService : ICrudAppService<ResourceCategoryD
 {
     Task<List<ResourceCategoryDto>> GetTreeAsync();
 }
+
+// =================== 资源共享（跨租户） ===================
+
+public interface IResourceShareAppService
+{
+    /// <summary>
+    /// 把资源共享给一个或多个目标租户（源租户视角）。
+    /// </summary>
+    Task<List<ResourceShareDto>> ShareAsync(CreateResourceShareDto input);
+
+    /// <summary>
+    /// 撤销对某个目标租户的共享。
+    /// </summary>
+    Task UnshareAsync(Guid resourceId, Guid targetTenantId);
+
+    /// <summary>
+    /// 获取资源当前共享给了哪些租户（源租户视角）。
+    /// </summary>
+    Task<List<ResourceShareDto>> GetSharesAsync(Guid resourceId);
+
+    /// <summary>
+    /// 当前租户收到的共享资源（"共享给我的" Tab 数据源）。
+    /// </summary>
+    Task<PagedResultDto<SharedResourceDto>> GetSharedToMeAsync(SharedResourceListQueryDto input);
+
+    /// <summary>
+    /// 当前租户共享出去的资源（"我共享的" Tab 数据源）。
+    /// </summary>
+    Task<PagedResultDto<SharedResourceDto>> GetSharedByMeAsync(SharedResourceListQueryDto input);
+}

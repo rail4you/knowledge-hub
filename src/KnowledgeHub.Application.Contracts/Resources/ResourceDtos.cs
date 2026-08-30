@@ -171,3 +171,55 @@ public class CreatePhysicalDeleteRequestDto
     public Guid ResourceId { get; set; }
     public string Reason { get; set; }
 }
+
+public class ResourceShareDto : EntityDto<Guid>
+{
+    public Guid ResourceId { get; set; }
+    public string? ResourceName { get; set; }
+    public Guid SourceTenantId { get; set; }
+    public string? SourceTenantName { get; set; }
+    public Guid TargetTenantId { get; set; }
+    public string? TargetTenantName { get; set; }
+    public Guid SharedByUserId { get; set; }
+    public string? SharedByUserName { get; set; }
+    public DateTime SharedAt { get; set; }
+    public string? Note { get; set; }
+}
+
+public class CreateResourceShareDto
+{
+    public Guid ResourceId { get; set; }
+    public List<Guid> TargetTenantIds { get; set; } = new();
+    public string? Note { get; set; }
+}
+
+public class SharedResourceDto : EntityDto<Guid>
+{
+    public Guid ShareId { get; set; }
+    public string Name { get; set; }
+    public string? Description { get; set; }
+    public ResourceType ResourceType { get; set; }
+    public Guid? CategoryId { get; set; }
+    public string? CategoryName { get; set; }
+    public Guid? MajorId { get; set; }
+    public string? MajorName { get; set; }
+    public string? FileExtension { get; set; }
+    public ResourceStatus Status { get; set; }
+    public string? Summary { get; set; }
+    public int CollectionCount { get; set; }
+    public int DownloadCount { get; set; }
+    public int ViewCount { get; set; }
+    public Guid SourceTenantId { get; set; }
+    public string? SourceTenantName { get; set; }
+    public DateTime SharedAt { get; set; }
+    public Guid SharedByUserId { get; set; }
+    public string? SharedByUserName { get; set; }
+}
+
+public class SharedResourceListQueryDto : PagedAndSortedResultRequestDto
+{
+    public string? Filter { get; set; }
+    public ResourceType? ResourceType { get; set; }
+    public Guid? CategoryId { get; set; }
+    public Guid? MajorId { get; set; }
+}

@@ -33,11 +33,21 @@
         class="tab-nav-item"
         [class.active]="selectedTabIndex === 3"
         (click)="onTabChange(3)"
-        *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'"
+        *abpPermission="'KnowledgeHub.Resources.Edit'"
       >
         <span nz-icon nzType="delete" class="tab-icon"></span>
         <span>{{ '::PhysicalDeleteRequests' | abpLocalization }}</span>
       </button>
+      <button
+        class="tab-nav-item"
+        [class.active]="selectedTabIndex === 4"
+        (click)="onTabChange(5)"
+        *abpPermission="'KnowledgeHub.Resources.Share'"
+      >
+        <span nz-icon nzType="export" class="tab-icon"></span>
+        <span>{{ '::SharedByMe' | abpLocalization }}</span>
+      </button>
+
     </div>
   </nav>
 
@@ -176,7 +186,7 @@
                 <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
                 <td (click)="$event.stopPropagation()">
                   <button
-                    *abpPermission="'KnowledgeHub.Resources.Edit'"
+                    *abpPermission="'KnowledgeHub.Resources.RequestDelete'"
                     nz-button nzType="link" nzSize="small" nzDanger
                     (click)="openDeleteModalForResource(item)"
                     nz-tooltip nzTooltipTitle="{{ '::RequestDelete' | abpLocalization }}"
@@ -328,10 +338,10 @@
             <td>{{ item.requesterName }}</td>
             <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
             <td>
-              <button nz-button nzType="primary" nzSize="small" (click)="approvePhysicalDelete(item.id)">
+              <button nz-button nzType="primary" nzSize="small" *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'" (click)="approvePhysicalDelete(item.id)">
                 {{ '::Approve' | abpLocalization }}
               </button>
-              <button nz-button nzType="danger" nzSize="small" (click)="rejectPhysicalDelete(item.id)" style="margin-left: 8px;">
+              <button nz-button nzType="danger" nzSize="small" *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'" (click)="rejectPhysicalDelete(item.id)" style="margin-left: 8px;">
                 {{ '::Reject' | abpLocalization }}
               </button>
             </td>
@@ -342,6 +352,70 @@
       <nz-empty *ngIf="physicalDeleteRequests().length === 0" [nzNotFoundContent]="'::NoDeleteRequests' | abpLocalization"></nz-empty>
     </div>
     </ng-container>
+    <!-- Shared By Me Tab -->
+    <ng-container *ngIf="selectedTabIndex === 4">
+      <div class="audit-container full-height">
+        <h3>{{ '::SharedByMe' | abpLocalization }}</h3>
+
+        <div class="filter-bar" style="margin-bottom: 16px;">
+          <nz-input-group [nzPrefix]="searchIconTemplate" style="max-width: 320px;">
+            <input
+              type="text"
+              nz-input
+              [placeholder]="'::Filter' | abpLocalization"
+              [ngModel]="sharedFilter()"
+              (ngModelChange)="onSharedFilterChange($event)"
+            />
+          </nz-input-group>
+          <ng-template #searchIconTemplate><span nz-icon nzType="search"></span></ng-template>
+        </div>
+
+        <nz-table
+          [nzData]="sharedByMeList().items"
+          [nzFrontPagination]="false"
+          [nzShowPagination]="true"
+          [nzPageIndex]="sharedPageIndex"
+          [nzPageSize]="sharedPageSize"
+          [nzTotal]="sharedByMeList().totalCount"
+          (nzPageIndexChange)="onSharedPageChange($event)"
+          [nzScroll]="{ y: 'calc(100vh - 320px)' }"
+        >
+          <thead>
+            <tr>
+              <th nzWidth="50%">{{ '::ResourceName' | abpLocalization }}</th>
+              <th nzWidth="20%">{{ '::Tenants' | abpLocalization }}</th>
+              <th nzWidth="30%">{{ '::Actions' | abpLocalization }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of sharedByMeList().items">
+              <td>
+                <a (click)="selectResource(item)" class="resource-link">
+                  <span nz-icon [nzType]="getResourceIcon(item.resourceType)"></span>
+                  {{ item.name }}
+                </a>
+              </td>
+              <td>
+                <a (click)="manageShares(item)">{{ '::Manage' | abpLocalization }}</a>
+              </td>
+              <td>
+                <button nz-button nzType="primary" nzSize="small" (click)="selectResource(item)">
+                  <span nz-icon nzType="eye"></span>
+                  {{ '::Preview' | abpLocalization }}
+                </button>
+                <button nz-button nzSize="small" (click)="manageShares(item)" style="margin-left: 8px;">
+                  <span nz-icon nzType="setting"></span>
+                  {{ '::Manage' | abpLocalization }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </nz-table>
+
+        <nz-empty *ngIf="sharedByMeList().totalCount === 0" [nzNotFoundContent]="'::NoSharedByMeResources' | abpLocalization"></nz-empty>
+      </div>
+    </ng-container>
+
   </div>
 </div>
 
@@ -400,6 +474,11 @@
             *ngIf="selectedResource()!.status === 0 || selectedResource()!.status === 4">
             <span nz-icon nzType="send"></span>
             {{ '::SubmitForReview' | abpLocalization }}
+          </button>
+          <button nz-button nzSize="small" (click)="openShareDialog()"
+            *abpPermission="'KnowledgeHub.Resources.Share'">
+            <span nz-icon nzType="share-alt"></span>
+            {{ '::ShareResource' | abpLocalization }}
           </button>
         </div>
       </div>
@@ -827,3 +906,111 @@
 
 <!-- File Preview Modal -->
 <app-file-preview #filePreview></app-file-preview>
+
+<!-- Share Resource Modal -->
+<nz-modal
+  [(nzVisible)]="isShareModalOpen"
+  [nzTitle]="'::ShareResource' | abpLocalization"
+  (nzOnCancel)="closeShareDialog()"
+  [nzFooter]="null"
+  nzWidth="640"
+>
+  <ng-container *nzModalContent>
+    <div class="share-modal-content">
+      <p class="share-modal-tip">
+        <span nz-icon nzType="info-circle"></span>
+        {{ '::ShareToTenants' | abpLocalization }}: <strong>{{ selectedResource()?.name }}</strong>
+      </p>
+
+      <div class="share-form-row">
+        <label>{{ '::SelectTenants' | abpLocalization }}</label>
+        <nz-select
+          nzMode="multiple"
+          [nzPlaceHolder]="'::SelectTenants' | abpLocalization"
+          [ngModel]="selectedShareTargetIds()"
+          (ngModelChange)="selectedShareTargetIds.set($event)"
+          [nzShowSearch]="true"
+          style="width: 100%;"
+        >
+          <nz-option
+            *ngFor="let t of availableTenants()"
+            [nzValue]="t.id"
+            [nzLabel]="t.name"
+          ></nz-option>
+        </nz-select>
+      </div>
+
+      <div class="share-form-row">
+        <label>{{ '::Note' | abpLocalization }}</label>
+        <textarea
+          nz-input
+          rows="2"
+          [ngModel]="shareNote()"
+          (ngModelChange)="shareNote.set($event)"
+          [placeholder]="'::Note' | abpLocalization"
+        ></textarea>
+      </div>
+
+      <div class="share-form-row">
+        <label>{{ '::CurrentlySharedWith' | abpLocalization }}</label>
+        <div class="share-current-list" *ngIf="currentShares().length > 0; else noShares">
+          <nz-tag
+            *ngFor="let s of currentShares()"
+            nzColor="processing"
+            [nzCloseable]="true"
+            (nzOnClose)="unshareTenant(s.targetTenantId)"
+          >
+            {{ s.targetTenantName }}
+          </nz-tag>
+        </div>
+        <ng-template #noShares>
+          <span class="muted">—</span>
+        </ng-template>
+      </div>
+
+      <div class="share-modal-footer">
+        <button nz-button (click)="closeShareDialog()">{{ '::Cancel' | abpLocalization }}</button>
+        <button
+          nz-button
+          nzType="primary"
+          (click)="confirmShare()"
+          [disabled]="selectedShareTargetIds().length === 0 || sharing()"
+        >
+          <span *ngIf="sharing()" nz-icon nzType="loading"></span>
+          {{ '::ConfirmShare' | abpLocalization }}
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</nz-modal>
+
+<!-- Manage Shares Modal -->
+<nz-modal
+  [(nzVisible)]="isManageSharesModalOpen"
+  [nzTitle]="'::ManageShare' | abpLocalization"
+  (nzOnCancel)="closeManageSharesDialog()"
+  [nzFooter]="null"
+  nzWidth="560"
+>
+  <ng-container *nzModalContent>
+    <nz-list>
+      <nz-list-item *ngFor="let s of currentShares()">
+        <span nz-list-item-meta-title>
+          {{ s.targetTenantName }}
+        </span>
+        <span nz-list-item-meta-description>
+          {{ '::SharedAt' | abpLocalization }}: {{ s.sharedAt | date:'yyyy-MM-dd HH:mm' }}
+          · {{ '::SharedBy' | abpLocalization }}: {{ s.sharedByUserName }}
+        </span>
+        <ul nz-list-item-actions>
+          <nz-list-item-action>
+            <button nz-button nzDanger nzSize="small" (click)="unshareTenant(s.targetTenantId)">
+              {{ '::Unshare' | abpLocalization }}
+            </button>
+          </nz-list-item-action>
+        </ul>
+      </nz-list-item>
+    </nz-list>
+    <nz-empty *ngIf="currentShares().length === 0" [nzNotFoundContent]="'::NoSharedResources' | abpLocalization"></nz-empty>
+  </ng-container>
+</nz-modal>

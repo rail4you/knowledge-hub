@@ -209,3 +209,51 @@ export interface UploadVersionDto {
   fileExtension?: string | null;
   originalFileName?: string | null;
 }
+
+export interface CreateResourceShareDto {
+  resourceId?: string;
+  targetTenantIds?: string[];
+  note?: string | null;
+}
+
+export interface ResourceShareDto extends EntityDto<string> {
+  resourceId?: string;
+  resourceName?: string | null;
+  sourceTenantId?: string;
+  sourceTenantName?: string | null;
+  targetTenantId?: string;
+  targetTenantName?: string | null;
+  sharedByUserId?: string;
+  sharedByUserName?: string | null;
+  sharedAt?: string;
+  note?: string | null;
+}
+
+export interface SharedResourceDto extends EntityDto<string> {
+  shareId?: string;
+  name?: string;
+  description?: string | null;
+  resourceType?: ResourceType;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  majorId?: string | null;
+  majorName?: string | null;
+  fileExtension?: string | null;
+  status?: ResourceStatus;
+  summary?: string | null;
+  collectionCount?: number;
+  downloadCount?: number;
+  viewCount?: number;
+  sourceTenantId?: string;
+  sourceTenantName?: string | null;
+  sharedAt?: string;
+  sharedByUserId?: string;
+  sharedByUserName?: string | null;
+}
+
+export interface SharedResourceListQueryDto extends PagedAndSortedResultRequestDto {
+  filter?: string | null;
+  resourceType?: ResourceType;
+  categoryId?: string | null;
+  majorId?: string | null;
+}

@@ -26,6 +26,8 @@ public static class KnowledgeHubPermissions
         public const string RequestDelete = Default + ".RequestDelete";
         public const string ViewStatistics = Default + ".ViewStatistics";
         public const string ViewRecommendation = Default + ".ViewRecommendation";
+        public const string Share = Default + ".Share";
+        public const string ManageShare = Default + ".ManageShare";
     }
 
     public static class Users

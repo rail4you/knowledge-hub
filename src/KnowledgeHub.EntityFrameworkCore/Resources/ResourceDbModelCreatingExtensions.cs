@@ -39,10 +39,10 @@ public static class ResourceDbModelCreatingExtensions
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceVersions", KnowledgeHubConsts.DbSchema);
             b.ConfigureByConvention();
-            
+
             b.Property(x => x.FilePath).HasMaxLength(512);
             b.Property(x => x.UpdateContent).HasMaxLength(500);
-            
+
             b.HasIndex(x => x.ResourceId);
             b.HasIndex(x => new { x.ResourceId, x.IsCurrentVersion });
         });
@@ -51,10 +51,10 @@ public static class ResourceDbModelCreatingExtensions
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceCategories", KnowledgeHubConsts.DbSchema);
             b.ConfigureByConvention();
-            
+
             b.Property(x => x.Name).IsRequired().HasMaxLength(128);
             b.Property(x => x.Code).HasMaxLength(64);
-            
+
             b.HasIndex(x => x.ParentId);
             b.HasIndex(x => x.TenantId);
         });
@@ -63,9 +63,9 @@ public static class ResourceDbModelCreatingExtensions
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceAudits", KnowledgeHubConsts.DbSchema);
             b.ConfigureByConvention();
-            
+
             b.Property(x => x.Comment).HasMaxLength(1000);
-            
+
             b.HasIndex(x => x.ResourceId);
         });
 
@@ -73,7 +73,7 @@ public static class ResourceDbModelCreatingExtensions
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceCollections", KnowledgeHubConsts.DbSchema);
             b.ConfigureByConvention();
-            
+
             b.HasIndex(x => new { x.ResourceId, x.UserId }).IsUnique();
             b.HasIndex(x => x.UserId);
         });
@@ -82,14 +82,26 @@ public static class ResourceDbModelCreatingExtensions
         {
             b.ToTable(KnowledgeHubConsts.DbTablePrefix + "PhysicalDeleteRequests", KnowledgeHubConsts.DbSchema);
             b.ConfigureByConvention();
-            
+
             b.Property(x => x.ResourceName).IsRequired().HasMaxLength(256);
             b.Property(x => x.Reason).HasMaxLength(1000);
             b.Property(x => x.RequesterName).HasMaxLength(128);
             b.Property(x => x.ApproverName).HasMaxLength(128);
-            
+
             b.HasIndex(x => x.ResourceId);
             b.HasIndex(x => x.Status);
+        });
+
+        builder.Entity<KnowledgeHub.Resources.ResourceShare>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceShares", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Note).HasMaxLength(500);
+
+            b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => x.TargetTenantId);
+            b.HasIndex(x => new { x.ResourceId, x.TargetTenantId }).IsUnique();
         });
     }
 }

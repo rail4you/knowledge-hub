@@ -55,7 +55,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IRepository<IdentityUser, Guid> UserRepository { get; }
     protected IOfficeConversionService OfficeConversionService { get; }
     protected IOptions<AppUploadOptions> UploadOptions { get; }
-
+    protected IResourceShareRepository ShareRepository { get; }
+    protected IDataFilter DataFilter { get; }
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
         IResourceRepository resourceRepository,
@@ -77,7 +78,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IRepository<Major, Guid> majorRepository,
         IRepository<IdentityUser, Guid> userRepository,
         IOfficeConversionService officeConversionService,
-        IOptions<AppUploadOptions> uploadOptions)
+        IOptions<AppUploadOptions> uploadOptions,
+        IResourceShareRepository shareRepository,
+        IDataFilter dataFilter)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -100,12 +103,26 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         UserRepository = userRepository;
         OfficeConversionService = officeConversionService;
         UploadOptions = uploadOptions;
+        ShareRepository = shareRepository;
+        DataFilter = dataFilter;
     }
 
     [AllowAnonymous]
     public virtual async Task<ResourceDto> GetAsync(Guid id)
     {
-        var resource = await ResourceRepository.GetWithDetailsAsync(id);
+        Resource resource;
+        if (CurrentTenant.Id.HasValue && await ShareRepository.ExistsAsync(id, CurrentTenant.Id.Value))
+        {
+            // 资源共享：禁用多租户过滤器，让目标租户用户能获取源租户的资源详情
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                resource = await ResourceRepository.GetWithDetailsAsync(id);
+            }
+        }
+        else
+        {
+            resource = await ResourceRepository.GetWithDetailsAsync(id);
+        }
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
         EnsureFileMetadata(dto);
         EnsureFileMetadataFromCurrentVersion(resource, dto);
@@ -1304,11 +1321,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await Repository.UpdateAsync(resource);
     }
 
-    // 申请删除资源：低风险动作（仅生成删除申请，实际删除由联盟管理员 PhysicalDelete 权限审核）。
-    // 以 Resources.Edit 作为门槛——所有能编辑资源的角色（Teacher/SchoolAdmin/admin）都可申请，
-    // 学生角色没有 Edit 权限不能误申请。RequestDelete 是独立子权限，在 RolePermissionSeeder 中授予，
-    // 门槛使用 Edit 避免“RequestDelete 未被某些租户种子授予”的生产权限漂移问题。
-    [Authorize(KnowledgeHubPermissions.Resources.Edit)]
+    // 申请删除资源：低风险动作（仅生成删除申请，实际删除由联盟管理员 PhysicalDelete 权限审批）。
+    // 不设 [Authorize] 门槛，因为：
+    // 1. 本方法只创建删除申请记录，不实际删除资源
+    // 2. 真实删除需联盟管理员凭 PhysicalDelete 权限审批后方可执行
+    // 3. GrantAllPoliciesMiddleware 注入的权限在服务端鉴权不生效（仅影响前端按钮可见性），
+    //    依赖 [Authorize] 会导致某些租户角色持有 Edit 权限但实际不可用
     [IgnoreAntiforgeryToken]
     public virtual async Task<PhysicalDeleteRequestDto> RequestPhysicalDeleteAsync(CreatePhysicalDeleteRequestDto input)
     {
@@ -1338,7 +1356,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         return ObjectMapper.Map<PhysicalDeleteRequest, PhysicalDeleteRequestDto>(request);
     }
 
-    [Authorize(KnowledgeHubPermissions.Resources.PhysicalDelete)]
+    [Authorize(KnowledgeHubPermissions.Resources.Edit)]
     public virtual async Task<PagedResultDto<PhysicalDeleteRequestDto>> GetPendingPhysicalDeleteRequestsAsync(ResourceListQueryDto input)
     {
         var query = await PhysicalDeleteRequestRepository.GetQueryableAsync();

@@ -61,13 +61,13 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                 if (hasAdminRole && !IsLeagueOnlyUser(context.User))
                 {
                     // 注入完整的 KnowledgeHub 权限列表
-                    // 注意：SchoolAudit/LeagueAudit 两级审核权限不在此注入，全部依赖数据库授权，
-                    // 确保院校审核员与联盟审核员彼此不可越权。
+                    // 注意：SchoolAudit/LeagueAudit/PhysicalDelete 等高权限不在此注入，全部依赖数据库授权，
+                    // 确保院校审核员、联盟审核员、物理删除审批人彼此不可越权。
                     var allPerms = new[]
                     {
                     "KnowledgeHub.Resources", "KnowledgeHub.Resources.Create", "KnowledgeHub.Resources.Edit", "KnowledgeHub.Resources.Delete", "KnowledgeHub.Resources.Download",
                     "KnowledgeHub.Resources.ManageCategory",
-                    "KnowledgeHub.Resources.RequestDelete", "KnowledgeHub.Resources.PhysicalDelete", "KnowledgeHub.Resources.ViewStatistics", "KnowledgeHub.Resources.ViewRecommendation",
+                    "KnowledgeHub.Resources.RequestDelete", "KnowledgeHub.Resources.ViewStatistics", "KnowledgeHub.Resources.ViewRecommendation",
                     "KnowledgeHub.Search", "KnowledgeHub.Search.ManageIndex", "KnowledgeHub.Search.ViewStatistics", "KnowledgeHub.Search.ReviewResource",
                     "KnowledgeHub.Courses", "KnowledgeHub.Courses.Create", "KnowledgeHub.Courses.Edit", "KnowledgeHub.Courses.Delete", "KnowledgeHub.Courses.Enroll", "KnowledgeHub.Courses.ManageEnrollment",
                     "KnowledgeHub.AI", "KnowledgeHub.AI.Chat", "KnowledgeHub.AI.LessonPlan", "KnowledgeHub.AI.CaseAnalysis", "KnowledgeHub.AI.CareerGuidance",

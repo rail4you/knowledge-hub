@@ -1,6 +1,8 @@
 import {ListService, LocalizationPipe, PagedResultDto, PermissionDirective, LocalizationService, RestService, Rest, EnvironmentService, PermissionService} from '@abp/ng.core';
 import {Component, OnInit, inject, signal, ViewChild} from '@angular/core';
-import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto} from '../proxy/resources';
+import {ResourceService, ResourceDto, ResourceVersionDto, ResourceCategoryDto, CreateUpdateResourceCategoryDto, AuditResourceDto, CompleteUploadResultDto, ResourceShareService, ResourceShareDto, SharedResourceDto, CreateResourceShareDto} from '../proxy/resources';
+import {PortalService, TenantResourceSummaryDto} from '../proxy/portal';
+import {ResourceShareMixin} from './resource-share.mixin';
 import {MajorService} from '../proxy/majors/major.service';
 import type {MajorLookupDto} from '../proxy/majors/dtos/models';
 import {AllianceService} from '../proxy/application/alliance/alliance.service';
@@ -36,6 +38,7 @@ import {NzUploadModule} from 'ng-zorro-antd/upload';
 import {NzCollapseModule} from 'ng-zorro-antd/collapse';
 import {NzCheckboxModule} from 'ng-zorro-antd/checkbox';
 import {NzDrawerModule} from 'ng-zorro-antd/drawer';
+import {NzListModule} from 'ng-zorro-antd/list';
 import {NzMessageService} from 'ng-zorro-antd/message';
 import {FilePreviewComponent} from '../shared/preview/file-preview.component';
 import {ResourceReviewComponent} from '../search/resource-review/resource-review.component';
@@ -80,11 +83,12 @@ import {buildDownloadFileName} from '../shared/download/download-file.util';
     NzUploadModule,
     NzCheckboxModule,
     NzDrawerModule,
+    NzListModule,
     FilePreviewComponent,
     ResourceReviewComponent
   ]
 })
-export class ResourceComponent implements OnInit {
+export class ResourceComponent extends ResourceShareMixin implements OnInit {
   resources = {items: [], totalCount: 0} as PagedResultDto<ResourceDto>;
   selectedResource = signal<ResourceDto>({} as ResourceDto);
   versions = signal<ResourceVersionDto[]>([]);
@@ -595,6 +599,8 @@ export class ResourceComponent implements OnInit {
       this.loadPendingAudits();
     } else if (index === 3) {
       this.loadPhysicalDeleteRequests();
+    } else if (index === 4) {
+      this.loadSharedByMe();
     }
   }
 

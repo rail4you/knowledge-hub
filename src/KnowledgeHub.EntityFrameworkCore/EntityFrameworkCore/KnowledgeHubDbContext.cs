@@ -83,6 +83,7 @@ public class KnowledgeHubDbContext :
     public DbSet<ResourceAudit> ResourceAudits { get; set; }
     public DbSet<ResourceCollection> ResourceCollections { get; set; }
     public DbSet<PhysicalDeleteRequest> PhysicalDeleteRequests { get; set; }
+    public DbSet<KnowledgeHub.Resources.ResourceShare> ResourceShares { get; set; }
 
     // Search entities
     public DbSet<DocumentIndex> DocumentIndices { get; set; }

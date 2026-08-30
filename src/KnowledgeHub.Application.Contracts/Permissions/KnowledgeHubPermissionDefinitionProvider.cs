@@ -32,6 +32,8 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.PhysicalDelete, L("Permission:Resources.PhysicalDelete"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ViewStatistics, L("Permission:Resources.ViewStatistics"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ViewRecommendation, L("Permission:Resources.ViewRecommendation"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.Share, L("Permission:Resources.Share"));
+        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ManageShare, L("Permission:Resources.ManageShare"));
         
         //Users permissions
         var usersPermission = myGroup.AddPermission(
