@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { ListService, LocalizationService, LocalizationPipe, PermissionDirective, RestService } from '@abp/ng.core';
+import { ConfigStateService, ListService, LocalizationService, LocalizationPipe, PermissionDirective, RestService } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { IdentityRoleService } from './identity-role.service';
 import type { IdentityRoleDto, IdentityRoleCreateDto, IdentityRoleUpdateDto } from './models';
@@ -84,6 +84,11 @@ export class IdentityRolesComponent implements OnInit {
   selectedTenantId: string | null = null;
   tenantNames: Record<string, string> = {};
 
+  /** 当前登录用户所属租户 ID；null 表示 host 全局管理员。 */
+  currentTenantId: string | null = null;
+  /** host 全局管理员可为 true；租户管理员为 false，只能查看/管理本租户的角色。 */
+  isHostAdmin = false;
+
   isPermissionModalOpen = false;
   permissionProviderKey = '';
   permissionEntityDisplayName = '';
@@ -99,6 +104,7 @@ export class IdentityRolesComponent implements OnInit {
   private readonly confirmation = inject(ConfirmationService);
   private readonly restService = inject(RestService);
   private readonly tenantPermissionService = inject(TenantPermissionService);
+  private readonly configState = inject(ConfigStateService);
 
   l(key: string): string {
     return this.localization.instant(key);
@@ -117,6 +123,17 @@ export class IdentityRolesComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // 识别当前用户租户身份：null 表示 host 全局管理员。
+    const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
+    const tenantId = cu?.['tenantId'];
+    this.currentTenantId = (tenantId as string | null | undefined) ?? null;
+    this.isHostAdmin = !this.currentTenantId;
+
+    // 租户管理员默认只能查看本租户角色，直接锁定选中。
+    if (!this.isHostAdmin) {
+      this.selectedTenantId = this.currentTenantId;
+    }
+
     this.loadTenants();
     this.buildForm();
   }
@@ -126,7 +143,10 @@ export class IdentityRolesComponent implements OnInit {
       method: 'GET',
       url: '/api/public/tenants'
     }).subscribe((tenants) => {
-      this.tenants = tenants;
+      // 租户管理员只展示本租户；host 全局管理员可看全部。
+      this.tenants = this.isHostAdmin
+        ? tenants
+        : (tenants || []).filter(t => t.id === this.currentTenantId);
       tenants.forEach(t => {
         if (t.id && t.name) {
           this.tenantNames[t.id] = t.name;
@@ -142,7 +162,10 @@ export class IdentityRolesComponent implements OnInit {
         ...query,
         maxResultCount: this.pageSize,
         skipCount: (this.pageIndex - 1) * this.pageSize,
-        tenantId: this.selectedTenantId || undefined,
+        // 租户管理员：只请求本租户角色。
+        tenantId: this.isHostAdmin
+          ? (this.selectedTenantId || undefined)
+          : this.currentTenantId!,
       });
 
     this.list.hookToQuery(roleStreamCreator).subscribe((response) => {
@@ -152,22 +175,37 @@ export class IdentityRolesComponent implements OnInit {
   }
 
   onTenantFilterChange(tenantId: string | null) {
+    // 租户管理员：不允许选择其他租户。host 全局管理员不受限。
+    if (!this.isHostAdmin && tenantId !== this.currentTenantId) {
+      this.selectedTenantId = this.currentTenantId;
+      this.pageIndex = 1;
+      this.loadRoles();
+      return;
+    }
     this.selectedTenantId = tenantId;
     this.pageIndex = 1;
     this.loadRoles();
   }
 
   buildForm() {
+    // 租户管理员：表单中 tenantId 锁定为当前租户，避免表单被污染后提交跨租户创建。
+    const tenantId = this.isHostAdmin
+      ? (this.selectedRole.tenantId || null)
+      : this.currentTenantId;
     this.form = this.fb.group({
       name: [this.selectedRole.name || '', Validators.required],
       isDefault: [this.selectedRole.isDefault || false],
       isPublic: [this.selectedRole.isPublic !== false],
-      tenantId: [this.selectedRole.tenantId || null],
+      tenantId: [tenantId],
     });
   }
 
   createRole() {
-    this.selectedRole = { tenantId: this.selectedTenantId } as IdentityRoleDto;
+    // 租户管理员：只能在本租户下创建角色。host 全局管理员可自由选择。
+    const tenantId = this.isHostAdmin
+      ? this.selectedTenantId
+      : this.currentTenantId;
+    this.selectedRole = { tenantId: tenantId ?? null } as IdentityRoleDto;
     this.buildForm();
     this.isModalOpen = true;
   }
@@ -238,9 +276,13 @@ export class IdentityRolesComponent implements OnInit {
       console.error('ProviderKey is required');
       return;
     }
+    // 租户管理员：只能查看/修改本租户角色的权限。即使列表中因其他原因带入其他租户角色，
+    // 这里也以当前租户为准，避免调用跨租户权限 API。
     this.permissionProviderKey = role.name;
     this.permissionEntityDisplayName = this.getRoleDisplayName(role.name);
-    this.permissionTenantId = role.tenantId || null;
+    this.permissionTenantId = this.isHostAdmin
+      ? (role.tenantId || null)
+      : this.currentTenantId;
     this.loadPermissions();
     setTimeout(() => {
       this.isPermissionModalOpen = true;

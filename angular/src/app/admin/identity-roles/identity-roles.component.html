@@ -7,15 +7,18 @@
       <span>{{ '::NewRole' | abpLocalization }}</span>
     </button>
     
-    <nz-select 
-      [(ngModel)]="selectedTenantId" 
+    <nz-select
+      [(ngModel)]="selectedTenantId"
       (ngModelChange)="onTenantFilterChange($event)"
       [ngModelOptions]="{standalone: true}"
       nzAllowClear
+      [nzDisabled]="!isHostAdmin"
       [nzPlaceHolder]="'::FilterByTenant' | abpLocalization"
       style="width: 200px;"
     >
-      <nz-option [nzValue]="null" [nzLabel]="'::All' | abpLocalization"></nz-option>
+      @if (isHostAdmin) {
+        <nz-option [nzValue]="null" [nzLabel]="'::All' | abpLocalization"></nz-option>
+      }
       @for (tenant of tenants; track tenant.id) {
         <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
       }
@@ -97,7 +100,7 @@
 >
   <ng-container *nzModalContent>
     <form [formGroup]="form" nzLayout="vertical" *ngIf="form">
-      @if (!selectedRole.id) {
+      @if (!selectedRole.id && isHostAdmin) {
         <nz-form-item>
           <nz-form-label>{{ '::Tenant' | abpLocalization }}</nz-form-label>
           <nz-form-control>
