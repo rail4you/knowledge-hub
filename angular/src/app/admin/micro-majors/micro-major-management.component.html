@@ -52,6 +52,7 @@
           <th>进度</th>
           <th>状态</th>
           <th>报名时间</th>
+          <th>发证时间</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -63,6 +64,13 @@
             <td>{{ item.progress | number:'1.2-2' }}%</td>
             <td>{{ getEnrollmentStatusLabel(item.status) }}</td>
             <td>{{ item.enrolledAt | date:'yyyy-MM-dd' }}</td>
+            <td>
+              @if (item.certificateIssuedAt) {
+                {{ item.certificateIssuedAt | date:'yyyy-MM-dd' }}
+              } @else {
+                -
+              }
+            </td>
             <td class="actions">
               @if (item.status === enrollmentStatuses.Pending) {
                 <button nz-button nzType="primary" nzSize="small" (click)="approveEnrollment(item.id)">通过</button>
@@ -77,17 +85,11 @@
                   发证
                 </button>
               }
-              @if (item.status === enrollmentStatuses.Certified) {
-                <span style="color:#52c41a;font-weight:500;">
-                  <span nz-icon nzType="check-circle"></span>
-                  已发证 {{ item.certificateIssuedAt | date:'yyyy-MM-dd' }}
-                </span>
-                @if (item.certificateImageUrl) {
-                  <button nz-button nzType="link" nzSize="small" (click)="openCertificatePreview(item.certificateImageUrl!)">
-                    <span nz-icon nzType="eye"></span>
-                    查看证书
-                  </button>
-                }
+              @if (item.status === enrollmentStatuses.Certified && item.certificateImageUrl) {
+                <button nz-button nzType="default" nzSize="small" class="view-cert-btn" (click)="openCertificatePreview(item.certificateImageUrl!)">
+                  <span nz-icon nzType="eye"></span>
+                  查看证书
+                </button>
               }
             </td>
           </tr>
