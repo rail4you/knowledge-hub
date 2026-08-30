@@ -517,6 +517,14 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         {
             var query = await _applicationRepository.GetQueryableAsync();
 
+            // 租户上下文（如 qidi-admin SchoolAdmin）：无论是否具备 ReviewJob/ManageApplication 权限，
+            // 都只能管理本租户的投递。仅有 host 全局管理员可跨租户查看/审核。
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                query = query.Where(x => x.TenantId == tenantId);
+            }
+
             if (input.JobPostingId.HasValue)
             {
                 query = query.Where(x => x.JobPostingId == input.JobPostingId.Value);
@@ -713,6 +721,13 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _interviewRepository.GetQueryableAsync();
+
+            // 租户上下文：强制按当前租户过滤，仅 host 全局管理员可跨租户查看。
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                query = query.Where(x => x.TenantId == tenantId);
+            }
 
             if (input.JobPostingId.HasValue)
             {
@@ -2237,6 +2252,13 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             entity = await _applicationRepository.GetAsync(id);
         }
 
+        // 租户上下文（如 qidi-admin SchoolAdmin）：即使持有 ReviewJob/ManageApplication 权限，
+        // 也只能操作本租户的投递。跨租户访问一律拒绝，避免权限提升。
+        if (CurrentTenant.Id.HasValue && entity.TenantId != CurrentTenant.Id.Value)
+        {
+            throw new AbpAuthorizationException();
+        }
+
         if (await CanReviewJobsAsync())
         {
             return entity;
@@ -2267,6 +2289,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         using (DataFilter.Disable<IMultiTenant>())
         {
             entity = await _interviewRepository.GetAsync(id);
+        }
+
+        // 租户上下文：仅允许操作本租户的面试记录，跨租户一律拒绝。
+        if (CurrentTenant.Id.HasValue && entity.TenantId != CurrentTenant.Id.Value)
+        {
+            throw new AbpAuthorizationException();
         }
 
         if (await CanReviewJobsAsync())
