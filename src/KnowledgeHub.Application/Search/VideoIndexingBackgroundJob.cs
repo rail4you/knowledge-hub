@@ -6,6 +6,7 @@ using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.BackgroundJobs;
@@ -24,6 +25,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
     private readonly IVideoAnalysisAppService _videoAnalysisAppService;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ICurrentTenant _currentTenant;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<VideoIndexingBackgroundJob> _logger;
 
     private static readonly string[] VideoExtensions = { ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".m4v", ".mpg", ".mpeg", ".3gp", ".qt" };
@@ -35,6 +37,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         IVideoAnalysisAppService videoAnalysisAppService,
         IUnitOfWorkManager unitOfWorkManager,
         ICurrentTenant currentTenant,
+        IConfiguration configuration,
         ILogger<VideoIndexingBackgroundJob> logger)
     {
         _jobRepository = jobRepository;
@@ -43,6 +46,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         _videoAnalysisAppService = videoAnalysisAppService;
         _unitOfWorkManager = unitOfWorkManager;
         _currentTenant = currentTenant;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -100,11 +104,13 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Analyzing, progress: 20);
         _logger.LogInformation("Analyzing video: {ResourceId}", args.ResourceId);
 
-        var analysisRequest = new VideoAnalysisRequestDto
-        {
-            FilePath = videoPath,
-            VideoUrl = string.IsNullOrEmpty(resource.FilePath) ? videoUrl : null
-        };
+        var analysisRequest = BuildVideoAnalysisRequest(videoPath, videoUrl, resource.FilePath);
+
+        _logger.LogInformation("Video analysis request: FilePath={FilePath}, VideoUrl={VideoUrl}",
+            analysisRequest.FilePath,
+            analysisRequest.VideoUrl != null && analysisRequest.VideoUrl.Length > 100
+                ? analysisRequest.VideoUrl[..100] + "..."
+                : analysisRequest.VideoUrl);
 
         var analysisResult = await _videoAnalysisAppService.AnalyzeVideoTimelineAsync(analysisRequest);
 
@@ -170,6 +176,49 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
 
         await _jobRepository.UpdateAsync(job);
         await uow.CompleteAsync();
+    }
+
+    /// <summary>
+    /// Build the video analysis request, preferring the absolute public URL when available
+    /// (for remote/production servers) and falling back to local base64 loading for localhost.
+    /// </summary>
+    private VideoAnalysisRequestDto BuildVideoAnalysisRequest(string videoPath, string? videoUrl, string? resourceFilePath)
+    {
+        var selfUrl = _configuration["App:SelfUrl"] ?? "";
+
+        // If SelfUrl is a public/remote address (not localhost or 127.0.0.1),
+        // construct the absolute video URL so Qwen VL API fetches it directly,
+        // bypassing the 7MB base64 limit in PrepareLocalVideoAsync.
+        if (!string.IsNullOrEmpty(videoUrl)
+            && !string.IsNullOrEmpty(selfUrl)
+            && !IsLocalhostUrl(selfUrl))
+        {
+            // videoUrl from GetFileUrl is relative (e.g. "/uploads/2025/04/xxx.mp4")
+            // Prepend SelfUrl to make it absolute and publicly accessible.
+            var absoluteVideoUrl = $"{selfUrl.TrimEnd('/')}{videoUrl}";
+            _logger.LogInformation("Using public video URL: {Url}", absoluteVideoUrl);
+
+            return new VideoAnalysisRequestDto
+            {
+                FilePath = null,  // Don't use local file path
+                VideoUrl = absoluteVideoUrl
+            };
+        }
+
+        // Localhost or no URL → fallback to local file path (base64 loading)
+        _logger.LogInformation("Using local video file path (base64): {Path}", videoPath);
+        return new VideoAnalysisRequestDto
+        {
+            FilePath = videoPath,
+            VideoUrl = null
+        };
+    }
+
+    private static bool IsLocalhostUrl(string url)
+    {
+        return url.Contains("localhost", StringComparison.OrdinalIgnoreCase)
+            || url.Contains("127.0.0.1")
+            || url.Contains("::1");
     }
 
     public static bool IsVideoFile(string? fileExtension)
