@@ -93,10 +93,7 @@
   <!-- Recursive tree template -->
   <ng-template #treeNode let-nodes let-depth="depth">
     @for (node of nodes; track node.id; let i = $index) {
-      <div 
-        class="tree-node" 
-        [style.padding-left.px]="depth * 20"
-      >
+      <div class="tree-node">
         <div
           class="tree-node-content"
           [class.selected]="selectedChapter()?.id === node.id"
@@ -104,6 +101,7 @@
           cdkDrag
           [cdkDragData]="node"
         >
+          <span class="tree-indent" [style.width.px]="depth * 16"></span>
           <span class="drag-handle" cdkDragHandle>
             <span nz-icon nzType="holder"></span>
           </span>
@@ -115,9 +113,15 @@
             <span class="toggle-icon placeholder"></span>
           }
           <span class="node-main">
-            <span class="node-title">{{ node.title }}</span>
             @if (node.description) {
-              <span class="node-desc">{{ node.description }}</span>
+              <span
+                class="node-title"
+                nz-tooltip
+                [nzTooltipTitle]="node.description"
+                nzTooltipPlacement="topLeft"
+              >{{ node.title }}</span>
+            } @else {
+              <span class="node-title">{{ node.title }}</span>
             }
           </span>
           <span class="node-actions">

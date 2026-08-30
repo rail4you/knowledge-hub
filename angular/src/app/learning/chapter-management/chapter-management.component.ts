@@ -16,6 +16,7 @@ import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzListModule } from 'ng-zorro-antd/list';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import type { CourseDto, ChapterDto, CreateUpdateChapterDto, ChapterImportResultDto } from '../../proxy/courses/dtos/models';
@@ -41,6 +42,7 @@ import { ChapterMindMapComponent } from './chapter-mind-map/chapter-mind-map.com
     NzInputNumberModule,
     NzListModule,
     NzTagModule,
+    NzTooltipModule,
     ChapterMindMapComponent,
   ],
   templateUrl: './chapter-management.component.html',
