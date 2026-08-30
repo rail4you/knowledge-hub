@@ -43,9 +43,6 @@
                 <nz-tag [nzColor]="getAppStatusColor(node.application.status)">
                   {{ getAppStatusLabel(node.application.status) }}
                 </nz-tag>
-                @if (hasFinalResult(node)) {
-                  <nz-tag nzColor="green">已有定论</nz-tag>
-                }
               </td>
               <td>
                 @if (node.interviews.length > 0) {

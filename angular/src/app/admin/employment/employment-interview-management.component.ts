@@ -323,11 +323,6 @@ export class EmploymentInterviewManagementComponent implements OnInit {
     return m[r] ?? 'default';
   }
 
-  /** 面试结果是否已定（非待定），用于顶层投递状态徽标 */
-  hasFinalResult(node: ApplicationNode): boolean {
-    return node.interviews.some(i => i.result !== EmploymentInterviewResult.Pending);
-  }
-
   /** 是否显示"完成面试"按钮：面试已安排但尚未完成，且结果仍为 Pending */
   canComplete(item: InterviewScheduleDto): boolean {
     return item.result === EmploymentInterviewResult.Pending && !item.completedAt;
