@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses;
 using KnowledgeHub.MicroMajors.Dtos;
@@ -373,6 +374,37 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
     }
 
     [Authorize(KnowledgeHubPermissions.MicroMajors.IssueCertificate)]
+    public async Task<IssueCertificateDefaultsDto> GetIssueCertificateDefaultsAsync(Guid enrollmentId)
+    {
+        var enrollment = await _microMajorEnrollmentRepository.GetAsync(enrollmentId);
+
+        string? studentName = null;
+        string? studentNo = null;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var user = await _userRepository.FindAsync(enrollment.StudentId);
+            if (user != null)
+            {
+                studentName = string.IsNullOrWhiteSpace(user.Name) ? user.UserName : user.Name;
+                studentNo = user.GetProperty<string>("StudentNumber");
+            }
+        }
+
+        var microMajor = await _microMajorRepository.GetAsync(enrollment.MicroMajorId);
+
+        return new IssueCertificateDefaultsDto
+        {
+            EnrollmentId = enrollment.Id,
+            MicroMajorId = enrollment.MicroMajorId,
+            MicroMajorTitle = microMajor.Title,
+            StudentName = studentName,
+            StudentNo = string.IsNullOrWhiteSpace(studentNo) ? null : studentNo.Trim(),
+            SuggestedCertificateNo = await GetNextCertificateNoAsync(enrollment.MicroMajorId),
+            IssueDate = Clock.Now.Date
+        };
+    }
+
+    [Authorize(KnowledgeHubPermissions.MicroMajors.IssueCertificate)]
     [HttpPost]
     public async Task<MicroMajorCertificateDto> IssueCertificateAsync(IssueCertificateInputDto input)
     {
@@ -411,7 +443,15 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         {
             throw new UserFriendlyException("所选证书模板不属于该微专业。");
         }
-        var certificateImageUrl = template.ImageUrl;
+        // 优先使用前端画布合成的最终证书图片，否则回退到模板原图
+        var certificateImageUrl = string.IsNullOrWhiteSpace(input.CompositeImageUrl)
+            ? template.ImageUrl
+            : input.CompositeImageUrl.Trim();
+
+        // 证书编号：手动填写覆盖自动编号
+        var certificateNo = string.IsNullOrWhiteSpace(input.CertificateNo)
+            ? await GetNextCertificateNoAsync(enrollment.MicroMajorId)
+            : input.CertificateNo.Trim();
 
         // 发证即代表认定完成，强制设为 100% 进度和已发证状态，无需校验实际学习进度
         enrollment.Progress = 100;
@@ -423,11 +463,15 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             enrollment.MicroMajorId,
             input.EnrollmentId,
             enrollment.StudentId,
-            $"MM-{Clock.Now:yyyyMMdd}-{GuidGenerator.Create():N}"[..21],
+            certificateNo,
             GuidGenerator.Create().ToString("N")[..10].ToUpperInvariant())
         {
             TenantId = enrollment.TenantId,
-            CertificateImageUrl = certificateImageUrl
+            CertificateImageUrl = certificateImageUrl,
+            StudentNo = string.IsNullOrWhiteSpace(input.StudentNo) ? null : input.StudentNo.Trim(),
+            Advisor = string.IsNullOrWhiteSpace(input.Advisor) ? null : input.Advisor.Trim(),
+            IssueDate = input.IssueDate ?? Clock.Now,
+            ValidUntil = input.ValidUntil
         };
 
         await _microMajorCertificateRepository.InsertAsync(certificate, autoSave: true);
@@ -452,6 +496,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
                 Name = x.Name,
                 ImageUrl = x.ImageUrl,
                 SortOrder = x.SortOrder,
+                Layers = DeserializeLayers(x.LayersJson),
                 CreationTime = x.CreationTime,
                 CreatorId = x.CreatorId,
                 LastModificationTime = x.LastModificationTime,
@@ -484,7 +529,8 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             input.ImageUrl.Trim())
         {
             TenantId = CurrentTenant.Id,
-            SortOrder = input.SortOrder == 0 ? count + 1 : input.SortOrder
+            SortOrder = input.SortOrder == 0 ? count + 1 : input.SortOrder,
+            LayersJson = SerializeLayers(input.Layers)
         };
 
         // 上传证书模板即代表要启用证书，避免发证时提示「未启用证书」
@@ -512,6 +558,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
 
         template.Name = input.Name.Trim();
         template.ImageUrl = input.ImageUrl.Trim();
+        template.LayersJson = SerializeLayers(input.Layers);
         if (input.SortOrder > 0)
         {
             template.SortOrder = input.SortOrder;
@@ -861,6 +908,10 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             CertificateImageUrl = item.CertificateImageUrl,
             Status = item.Status,
             IssuedAt = item.IssuedAt,
+            StudentNo = item.StudentNo,
+            Advisor = item.Advisor,
+            IssueDate = item.IssueDate,
+            ValidUntil = item.ValidUntil,
             CreationTime = item.CreationTime,
             CreatorId = item.CreatorId,
             LastModificationTime = item.LastModificationTime,
@@ -869,6 +920,45 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             DeleterId = item.DeleterId,
             DeletionTime = item.DeletionTime
         }).ToList();
+    }
+
+    private async Task<string> GetNextCertificateNoAsync(Guid microMajorId)
+    {
+        var count = await _microMajorCertificateRepository.CountAsync(x => x.MicroMajorId == microMajorId);
+        return $"KG-MM-{Clock.Now:yyyyMM}-{count + 1:D4}";
+    }
+
+    private static List<CertificateTemplateLayerDto> DeserializeLayers(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<CertificateTemplateLayerDto>();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<CertificateTemplateLayerDto>>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }) ?? new List<CertificateTemplateLayerDto>();
+        }
+        catch (JsonException)
+        {
+            return new List<CertificateTemplateLayerDto>();
+        }
+    }
+
+    private static string? SerializeLayers(List<CertificateTemplateLayerDto>? layers)
+    {
+        if (layers == null || layers.Count == 0)
+        {
+            return null;
+        }
+
+        return JsonSerializer.Serialize(layers, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
     }
 
     private static void CopyDto(MicroMajorDto source, MicroMajorDto target)

@@ -130,6 +130,25 @@ export interface MicroMajorCertificateDto {
   certificateImageUrl?: string;
   status: MicroMajorCertificateStatus;
   issuedAt: string;
+  studentNo?: string;
+  advisor?: string;
+  issueDate?: string;
+  validUntil?: string;
+}
+
+/** 证书模板占位符图层：发证时在证书图片上叠加字段 */
+export interface CertificateLayer {
+  id: string;
+  fieldType: string;
+  label: string;
+  customFieldName?: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+  fontWeight: number;
+  center: boolean;
+  fontFamily?: string;
 }
 
 export interface MicroMajorCertificateTemplateDto {
@@ -138,6 +157,7 @@ export interface MicroMajorCertificateTemplateDto {
   name: string;
   imageUrl: string;
   sortOrder: number;
+  layers: CertificateLayer[];
   creationTime?: string;
 }
 
@@ -146,6 +166,28 @@ export interface CreateUpdateMicroMajorCertificateTemplateDto {
   name: string;
   imageUrl: string;
   sortOrder: number;
+  layers?: CertificateLayer[];
+}
+
+export interface IssueCertificateDefaultsDto {
+  enrollmentId: string;
+  microMajorId: string;
+  microMajorTitle?: string;
+  studentName?: string;
+  studentNo?: string;
+  suggestedCertificateNo: string;
+  issueDate: string;
+}
+
+export interface IssueCertificateInput {
+  enrollmentId: string;
+  certificateTemplateId?: string;
+  studentNo?: string;
+  advisor?: string;
+  issueDate?: string;
+  validUntil?: string;
+  certificateNo?: string;
+  compositeImageUrl?: string;
 }
 
 @Injectable({
@@ -244,14 +286,18 @@ export class MicroMajorService {
     }, { apiName: this.apiName });
   }
 
-  issueCertificate(enrollmentId: string, certificateTemplateId: string): Observable<MicroMajorCertificateDto> {
+  issueCertificate(input: IssueCertificateInput): Observable<MicroMajorCertificateDto> {
     return this.restService.request<any, MicroMajorCertificateDto>({
       method: 'POST',
       url: `/api/app/micro-major/issue-certificate`,
-      body: {
-        enrollmentId,
-        certificateTemplateId,
-      },
+      body: input,
+    }, { apiName: this.apiName });
+  }
+
+  getIssueCertificateDefaults(enrollmentId: string): Observable<IssueCertificateDefaultsDto> {
+    return this.restService.request<any, IssueCertificateDefaultsDto>({
+      method: 'GET',
+      url: `/api/app/micro-major/issue-certificate-defaults/${enrollmentId}`,
     }, { apiName: this.apiName });
   }
 

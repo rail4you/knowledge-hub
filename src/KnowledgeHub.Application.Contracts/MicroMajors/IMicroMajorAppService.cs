@@ -26,6 +26,7 @@ public interface IMicroMajorAppService : IApplicationService
     Task RejectEnrollmentAsync(Guid enrollmentId);
     Task MarkAsCompletedAsync(Guid enrollmentId);
     Task<MicroMajorCertificateDto> IssueCertificateAsync(IssueCertificateInputDto input);
+    Task<IssueCertificateDefaultsDto> GetIssueCertificateDefaultsAsync(Guid enrollmentId);
     Task<List<MicroMajorCertificateTemplateDto>> GetCertificateTemplatesAsync(Guid microMajorId);
     Task<MicroMajorCertificateTemplateDto> CreateCertificateTemplateAsync(CreateUpdateMicroMajorCertificateTemplateDto input);
     Task<MicroMajorCertificateTemplateDto> UpdateCertificateTemplateAsync(Guid id, CreateUpdateMicroMajorCertificateTemplateDto input);

@@ -1,0 +1,60 @@
+<div class="issue-composer">
+  <div class="composer-left">
+    <div class="field">
+      <label>证书模板</label>
+      <nz-select [(ngModel)]="selectedTemplateId" [ngModelOptions]="{standalone: true}" (ngModelChange)="onTemplateChange()" style="width:100%;">
+        @for (t of templates; track t.id) {
+          <nz-option [nzValue]="t.id" [nzLabel]="t.name"></nz-option>
+        }
+      </nz-select>
+    </div>
+
+    <div class="field">
+      <label>姓名</label>
+      <input nz-input [(ngModel)]="studentName" readonly style="background:#f5f5f5;cursor:default;" />
+    </div>
+
+    <div class="field">
+      <label>学号</label>
+      <input nz-input [(ngModel)]="studentNo" placeholder="自动带出，可修改" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="field">
+      <label>导师</label>
+      <input nz-input [(ngModel)]="advisor" placeholder="手动填写" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="field">
+      <label>发证时间 <span class="auto-tag">自动</span></label>
+      <input type="date" nz-input [(ngModel)]="issueDate" (ngModelChange)="onFieldChange()" />
+      <div class="date-cn">{{ formatChineseDate(issueDate) }}</div>
+    </div>
+
+    <div class="field">
+      <label>证书编号 <span class="auto-tag">自动，可覆盖</span></label>
+      <input nz-input [(ngModel)]="certificateNo" placeholder="自动编号，可修改" (ngModelChange)="onFieldChange()" />
+    </div>
+
+    <div class="field">
+      <label>有效期</label>
+      <input type="date" nz-input [(ngModel)]="validUntil" (ngModelChange)="onFieldChange()" />
+      <div class="date-cn">{{ formatChineseDate(validUntil) }}</div>
+    </div>
+  </div>
+
+  <div class="composer-right">
+    <div class="preview-title">证书预览</div>
+    <div class="preview-wrap">
+      @if (imageLoading()) {
+        <nz-spin nzSimple></nz-spin>
+      }
+      <canvas #canvas [attr.width]="0" [attr.height]="0"></canvas>
+    </div>
+    <p class="preview-tip">图上文字为按模板占位符叠加的最终效果，确认后自动合成并上传。</p>
+  </div>
+
+  <div class="composer-footer">
+    <button nz-button (click)="cancel.emit()">取消</button>
+    <button nz-button nzType="primary" [nzLoading]="issueLoading()" [disabled]="!selectedTemplate" (click)="confirmIssue()">确认发证</button>
+  </div>
+</div>

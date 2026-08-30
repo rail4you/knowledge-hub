@@ -249,6 +249,12 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             client.Timeout = TimeSpan.FromMinutes(15);
         });
 
+        // 图片代理：用于前端画布合成证书（跨域读取 OSS 图片，避免画布被污染）
+        context.Services.AddHttpClient("ImageProxy", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         Configure<AbpBackgroundJobOptions>(options =>
         {
             options.IsJobExecutionEnabled = true;

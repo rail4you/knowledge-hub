@@ -54,6 +54,8 @@ public static class MicroMajorDbModelCreatingExtensions
 
             b.Property(x => x.CertificateNo).IsRequired().HasMaxLength(64);
             b.Property(x => x.VerifyCode).IsRequired().HasMaxLength(32);
+            b.Property(x => x.StudentNo).HasMaxLength(64);
+            b.Property(x => x.Advisor).HasMaxLength(128);
 
             // 唯一索引仅在未删除记录上生效：撤销(软删)后允许重新发证
             b.HasIndex(x => x.EnrollmentId).IsUnique().HasFilter("\"IsDeleted\" = false");
@@ -70,6 +72,7 @@ public static class MicroMajorDbModelCreatingExtensions
 
             b.Property(x => x.Name).IsRequired().HasMaxLength(128);
             b.Property(x => x.ImageUrl).IsRequired().HasMaxLength(512);
+            b.Property(x => x.LayersJson).HasMaxLength(4000);
 
             b.HasIndex(x => x.MicroMajorId);
             b.HasIndex(x => x.TenantId);

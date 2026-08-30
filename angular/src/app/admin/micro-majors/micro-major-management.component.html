@@ -161,40 +161,47 @@
     </ng-container>
   </nz-modal>
 
-  <!-- Certificate issue modal（直接选择该微专业下的证书模板，无需每次上传） -->
+  <!-- Certificate issue modal（选择该微专业下的证书模板，前端画布合成最终证书图） -->
   <nz-modal
     [(nzVisible)]="certificateModalVisible"
-    nzTitle="发放证书"
-    [nzWidth]="520"
-    [nzOkText]="'确认发放'"
-    [nzOkLoading]="certificateIssueLoading"
-    [nzOkDisabled]="issueTemplates().length === 0 || !selectedCertificateTemplateId"
-    [nzCancelText]="'取消'"
-    (nzOnOk)="confirmIssueCertificate()"
+    [nzTitle]="'发放证书 - ' + (issueDefaults()?.studentName || issueEnrollment?.studentName || '')"
+    [nzWidth]="880"
+    [nzFooter]="null"
     (nzOnCancel)="closeCertificateModal()"
   >
     <ng-container *nzModalContent>
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        <p style="margin:0;color:#666;">发证必须附带证书图片，请选择该微专业下已上传的证书模板。</p>
+      @if (issueDefaultsLoading || issueTemplatesLoading) {
+        <div style="text-align:center;padding:48px;"><nz-spin nzSimple></nz-spin></div>
+      } @else if (issueTemplates().length === 0) {
+        <nz-empty nzNotFoundContent="该微专业还没有证书模板，请先在该微专业的「证书模板」中上传证书图片，再回来发证"></nz-empty>
+      } @else if (issueEnrollment) {
+        <app-certificate-issue-composer
+          [enrollment]="issueEnrollment"
+          [templates]="issueTemplates()"
+          [defaults]="issueDefaults()!"
+          (cancel)="closeCertificateModal()"
+          (confirmed)="onIssueConfirmed($event)"
+        ></app-certificate-issue-composer>
+      }
+    </ng-container>
+  </nz-modal>
 
-        @if (issueTemplates().length > 0) {
-          <div>
-            <label style="display:block;margin-bottom:6px;font-weight:500;">证书模板</label>
-            <nz-select [(ngModel)]="selectedCertificateTemplateId" nzPlaceHolder="请选择证书模板" style="width:100%;">
-              @for (tpl of issueTemplates(); track tpl.id) {
-                <nz-option [nzValue]="tpl.id" [nzLabel]="tpl.name"></nz-option>
-              }
-            </nz-select>
-          </div>
-
-          @if (selectedTemplatePreviewUrl) {
-            <div style="text-align:center;">
-              <img [src]="selectedTemplatePreviewUrl" style="max-width:100%;max-height:220px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);" />
-            </div>
-          }
-        } @else {
-          <nz-empty nzNotFoundContent="该微专业还没有证书模板，请先在该微专业的「证书模板」中上传证书图片，再回来发证"></nz-empty>
-        }
+  <!-- 证书占位符图层编辑器 -->
+  <nz-modal
+    [(nzVisible)]="layerEditorVisible"
+    nzTitle="配置证书占位符"
+    [nzWidth]="920"
+    [nzFooter]="null"
+    (nzOnCancel)="closeLayerEditor()"
+  >
+    <ng-container *nzModalContent>
+      <div style="height:60vh;">
+        <app-certificate-layer-editor
+          [imageUrl]="layerEditorImageUrl"
+          [initialLayers]="layerEditorInitialLayers"
+          (onSave)="onLayerEditorSaved($event)"
+          (onClose)="closeLayerEditor()"
+        ></app-certificate-layer-editor>
       </div>
     </ng-container>
   </nz-modal>
@@ -219,8 +226,17 @@
                 <img [src]="tpl.imageUrl" style="width:64px;height:46px;object-fit:cover;border-radius:4px;background:#f5f5f5;" />
                 <div style="flex:1;min-width:0;">
                   <div style="font-weight:500;">{{ tpl.name }}</div>
-                  <div style="font-size:12px;color:#999;">上传于 {{ tpl.creationTime | date:'yyyy-MM-dd' }}</div>
+                  <div style="font-size:12px;color:#999;">
+                    上传于 {{ tpl.creationTime | date:'yyyy-MM-dd' }}
+                    @if (tpl.layers?.length) {
+                      <span style="margin-left:6px;color:#1677ff;">{{ tpl.layers.length }} 个占位符</span>
+                    }
+                  </div>
                 </div>
+                <button nz-button nzType="default" nzSize="small" (click)="openLayerEditorForTemplate(tpl)">
+                  <span nz-icon nzType="drag"></span>
+                  配置占位符
+                </button>
                 <button nz-button nzType="default" nzSize="small" (click)="openTemplateImagePreview(tpl.imageUrl)">
                   <span nz-icon nzType="eye"></span>
                 </button>
@@ -276,9 +292,14 @@
             (change)="uploadTemplateImage($event.target.files[0]); $event.target.value = ''"
           />
 
-          <div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button nz-button nzType="default" [disabled]="!templateImageUrl || templateImageUploading" (click)="openLayerEditorForNew()">
+              <span nz-icon nzType="drag"></span>
+              配置占位符{{ templateDraftLayers.length ? ' (' + templateDraftLayers.length + ')' : '' }}
+            </button>
             <button nz-button nzType="primary" [disabled]="templateImageUploading" (click)="addCertificateTemplate()">保存模板</button>
           </div>
+          <div style="font-size:12px;color:#999;">上传证书图片后，可点击「配置占位符」在图上拖放姓名、学号、发证时间等字段，发证时按真实数据自动填充。</div>
         </div>
       </div>
     </ng-container>

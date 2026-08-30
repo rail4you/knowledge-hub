@@ -10,6 +10,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
@@ -17,8 +18,11 @@ import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { OssUploadService, OssUploadResultDto } from '../../shared/oss-upload.service';
 import {
+  CertificateLayer,
   CreateUpdateMicroMajorDto,
   CreateUpdateMicroMajorCertificateTemplateDto,
+  IssueCertificateDefaultsDto,
+  IssueCertificateInput,
   MicroMajorCertificateDto,
   MicroMajorCertificateTemplateDto,
   MicroMajorDto,
@@ -27,6 +31,8 @@ import {
   MicroMajorService,
   MicroMajorStatus,
 } from '../../micro-majors/micro-major.service';
+import { CertificateLayerEditorComponent } from './certificate-layer-editor.component';
+import { CertificateIssueComposerComponent } from './certificate-issue-composer.component';
 
 @Component({
   selector: 'app-micro-major-management',
@@ -42,9 +48,12 @@ import {
     NzModalModule,
     NzProgressModule,
     NzSelectModule,
+    NzSpinModule,
     NzSwitchModule,
     NzTableModule,
     NzUploadModule,
+    CertificateLayerEditorComponent,
+    CertificateIssueComposerComponent,
   ],
   templateUrl: './micro-major-management.component.html',
   styleUrls: ['./micro-major-management.component.scss'],
@@ -86,9 +95,18 @@ export class MicroMajorManagementComponent implements OnInit {
   // Certificate issue modal
   certificateModalVisible = false;
   certificateEnrollmentId = '';
-  certificateIssueLoading = false;
+  issueEnrollment: MicroMajorEnrollmentDto | undefined;
   readonly issueTemplates = signal<MicroMajorCertificateTemplateDto[]>([]);
-  selectedCertificateTemplateId = '';
+  readonly issueDefaults = signal<IssueCertificateDefaultsDto | undefined>(undefined);
+  issueDefaultsLoading = false;
+  issueTemplatesLoading = false;
+
+  // Certificate layer editor modal
+  layerEditorVisible = false;
+  layerEditorImageUrl = '';
+  layerEditorInitialLayers: CertificateLayer[] = [];
+  layerEditingTemplateId: string | null = null;
+  templateDraftLayers: CertificateLayer[] = [];
 
   // Certificate preview modal
   certificatePreviewVisible = false;
@@ -274,6 +292,7 @@ export class MicroMajorManagementComponent implements OnInit {
     this.templateMicroMajorTitle = item.title;
     this.templateName = '';
     this.templateImageUrl = '';
+    this.templateDraftLayers = [];
     this.templateUploadProgress.set(0);
     this.certificateTemplates.set([]);
     this.loadCertificateTemplates(item.id);
@@ -284,7 +303,69 @@ export class MicroMajorManagementComponent implements OnInit {
     this.templateModalVisible = false;
     this.templateMicroMajorId = '';
     this.templateImageUrl = '';
+    this.templateDraftLayers = [];
     this.templateUploadProgress.set(0);
+  }
+
+  // 打开发放模板的占位符编辑器
+  openLayerEditorForNew(): void {
+    if (!this.templateImageUrl) {
+      this.message.warning('请先上传证书图片再配置占位符');
+      return;
+    }
+    this.layerEditorImageUrl = this.templateImageUrl;
+    this.layerEditorInitialLayers = this.templateDraftLayers;
+    this.layerEditingTemplateId = null;
+    this.layerEditorVisible = true;
+  }
+
+  // 打开发放已有模板的占位符编辑器
+  openLayerEditorForTemplate(tpl: MicroMajorCertificateTemplateDto): void {
+    this.layerEditorImageUrl = tpl.imageUrl;
+    this.layerEditorInitialLayers = tpl.layers || [];
+    this.layerEditingTemplateId = tpl.id;
+    this.layerEditorVisible = true;
+  }
+
+  closeLayerEditor(): void {
+    this.layerEditorVisible = false;
+    this.layerEditorImageUrl = '';
+    this.layerEditorInitialLayers = [];
+    this.layerEditingTemplateId = null;
+  }
+
+  onLayerEditorSaved(layers: CertificateLayer[]): void {
+    // 新建模板时暂存图层，随“保存模板”一起提交
+    if (!this.layerEditingTemplateId) {
+      this.templateDraftLayers = layers;
+      this.closeLayerEditor();
+      return;
+    }
+
+    // 编辑已有模板：直接调用更新接口持久化占位符图层
+    const tpl = this.certificateTemplates().find(x => x.id === this.layerEditingTemplateId);
+    if (!tpl) {
+      this.closeLayerEditor();
+      return;
+    }
+
+    const input: CreateUpdateMicroMajorCertificateTemplateDto = {
+      microMajorId: tpl.microMajorId,
+      name: tpl.name,
+      imageUrl: tpl.imageUrl,
+      sortOrder: tpl.sortOrder,
+      layers,
+    };
+    this.microMajorService.updateCertificateTemplate(tpl.id, input).subscribe({
+      next: () => {
+        this.message.success('占位符已保存');
+        this.loadCertificateTemplates(this.templateMicroMajorId);
+        this.closeLayerEditor();
+      },
+      error: (err) => {
+        this.message.error('保存失败: ' + (err?.error?.error?.message || err?.message || '未知错误'));
+      },
+    });
   }
 
   loadCertificateTemplates(microMajorId: string): void {
@@ -357,6 +438,7 @@ export class MicroMajorManagementComponent implements OnInit {
       name: this.templateName.trim(),
       imageUrl: this.templateImageUrl,
       sortOrder: 0,
+      layers: this.templateDraftLayers,
     };
 
     this.microMajorService.createCertificateTemplate(input).subscribe({
@@ -364,6 +446,7 @@ export class MicroMajorManagementComponent implements OnInit {
         this.message.success('证书模板已保存');
         this.templateName = '';
         this.templateImageUrl = '';
+        this.templateDraftLayers = [];
         this.templateUploadProgress.set(0);
         this.loadCertificateTemplates(this.templateMicroMajorId);
       },
@@ -384,18 +467,22 @@ export class MicroMajorManagementComponent implements OnInit {
   // ==================== 发证（选择微专业下的证书模板） ====================
   openIssueCertificateModal(item: MicroMajorEnrollmentDto): void {
     this.certificateEnrollmentId = item.id;
-    this.selectedCertificateTemplateId = '';
+    this.issueEnrollment = item;
     this.issueTemplates.set([]);
+    this.issueDefaults.set(undefined);
+    this.issueDefaultsLoading = true;
+    this.issueTemplatesLoading = true;
     // 预加载该微专业的证书模板，发证时直接选择
     this.microMajorService.getCertificateTemplates(item.microMajorId).subscribe({
-      next: result => {
-        this.issueTemplates.set(result || []);
-        // 默认选中第一个模板
-        if ((result?.length ?? 0) > 0) {
-          this.selectedCertificateTemplateId = result[0].id;
-        }
-      },
+      next: result => this.issueTemplates.set(result || []),
       error: () => this.message.error('证书模板加载失败'),
+      complete: () => { this.issueTemplatesLoading = false; },
+    });
+    // 拉取自动填充默认值（姓名、学号、证书编号、发证时间）
+    this.microMajorService.getIssueCertificateDefaults(item.id).subscribe({
+      next: d => this.issueDefaults.set(d),
+      error: () => this.issueDefaults.set(undefined),
+      complete: () => { this.issueDefaultsLoading = false; },
     });
     this.certificateModalVisible = true;
   }
@@ -403,12 +490,10 @@ export class MicroMajorManagementComponent implements OnInit {
   closeCertificateModal(): void {
     this.certificateModalVisible = false;
     this.certificateEnrollmentId = '';
-    this.selectedCertificateTemplateId = '';
-  }
-
-  get selectedTemplatePreviewUrl(): string {
-    const tpl = this.issueTemplates().find(x => x.id === this.selectedCertificateTemplateId);
-    return tpl?.imageUrl || '';
+    this.issueEnrollment = undefined;
+    this.issueDefaults.set(undefined);
+    this.issueDefaultsLoading = false;
+    this.issueTemplatesLoading = false;
   }
 
   openTemplateImagePreview(url: string): void {
@@ -421,26 +506,20 @@ export class MicroMajorManagementComponent implements OnInit {
     this.certificatePreviewVisible = true;
   }
 
-  confirmIssueCertificate(): void {
-    if (!this.certificateEnrollmentId) return;
-
-    this.certificateIssueLoading = true;
-    this.microMajorService.issueCertificate(this.certificateEnrollmentId, this.selectedCertificateTemplateId).subscribe({
-      next: (cert) => {
-        this.certificateIssueLoading = false;
+  onIssueConfirmed(input: IssueCertificateInput): void {
+    this.microMajorService.issueCertificate(input).subscribe({
+      next: () => {
         this.closeCertificateModal();
         this.message.success('证书已发放');
-
         // 切到全部 tab 再 reload，确保已发证的学生可见
         this.enrollmentFilter.set(null);
         this.reload();
       },
       error: (err) => {
-        this.certificateIssueLoading = false;
         if (err?.status === 401) {
           this.message.error('登录已过期，请刷新页面后重新登录');
         } else {
-          this.message.error('发证失败: ' + (err?.error?.error?.message || err?.message || '可能尚未满足完成条件'));
+          this.message.error('发证失败: ' + (err?.error?.error?.message || err?.message || '证书编号可能重复或模板无效'));
         }
       },
     });

@@ -18,6 +18,21 @@ public class MicroMajorCertificateTemplate : FullAuditedEntity<Guid>, IMultiTena
     public string ImageUrl { get; set; } = string.Empty;
     /// <summary>排序，数值小的排前面</summary>
     public int SortOrder { get; set; }
+    /// <summary>占位符图层配置（JSON 数组），发证时在证书图片上叠加姓名、学号、发证时间等字段</summary>
+    public string? LayersJson { get; set; }
+
+    /// <summary>
+    /// 占位符字段类型（与前端约定）。
+    /// 用于在模板编辑器中拖放图层并映射到实际数据。
+    /// </summary>
+    public const string FieldStudentName = "studentName";
+    public const string FieldStudentNo = "studentNo";
+    public const string FieldAdvisor = "advisor";
+    public const string FieldIssueDate = "issueDate";
+    public const string FieldCertificateNo = "certificateNo";
+    public const string FieldValidUntil = "validUntil";
+    public const string FieldMicroMajorTitle = "microMajorTitle";
+    public const string FieldCustom = "custom";
 
     public MicroMajorCertificateTemplate()
     {
