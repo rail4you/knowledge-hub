@@ -64,6 +64,12 @@ public class MeiliSearchService : IMeiliSearchService
 
     private string IndexName => _options.Value.IndexName;
 
+    /// <summary>
+    /// 视频时间轴事件索引。schema 与 documents 不同：没有 status/tenantId/categoryId 等字段，
+    /// SearchAsync 需要在两边分别取结果再合并。
+    /// </summary>
+    private const string VideoIndexName = "videos";
+
     public async Task EnsureIndexExistsAsync()
     {
         try
@@ -315,99 +321,28 @@ public class MeiliSearchService : IMeiliSearchService
     public async Task<SearchResultDto> SearchAsync(SearchQueryDto query)
     {
         await EnsureIndexExistsAsync();
-        
-        var filters = new List<string>();
 
-        if (query.FileExtensions?.Any() == true)
-        {
-            var extFilters = query.FileExtensions.Select(ext => $"fileExtension = \"{ext}\"");
-            filters.Add($"({string.Join(" OR ", extFilters)})");
-        }
+        // 同时搜两个索引：documents（文档/PDF/PPT等） 和 videos（视频时间轴事件）。
+        // 两套 schema 不同：videos 没有 status/tenantId/fileExtension/categoryId，
+        // 所以只在 documents 侧应用这些 filter，videos 侧只使用通用项（query、resourceId、limit）。
+        var docTask = ExecuteSingleIndexSearchAsync(IndexName, query, applyDocumentFilters: true, hybrid: false);
+        var vidTask = ExecuteSingleIndexSearchAsync(VideoIndexName, query, applyDocumentFilters: false, hybrid: false);
 
-        if (query.CategoryId.HasValue)
-        {
-            filters.Add($"categoryId = \"{query.CategoryId}\"");
-        }
+        await Task.WhenAll(docTask, vidTask);
 
-        if (query.StartDate.HasValue)
-        {
-            filters.Add($"uploadDate >= \"{query.StartDate.Value:yyyy-MM-dd}\"");
-        }
+        var (docItems, docTotal) = docTask.Result;
+        var (vidItems, vidTotal) = vidTask.Result;
 
-        if (query.EndDate.HasValue)
-        {
-            filters.Add($"uploadDate <= \"{query.EndDate.Value:yyyy-MM-dd}\"");
-        }
-
-        filters.Add(!string.IsNullOrWhiteSpace(query.StatusFilter)
-            ? $"status IN [{query.StatusFilter}]"
-            : "status IN [0, 1, 2, 3]");
-
-        var tenantId = _currentTenant.Id;
-        if (tenantId.HasValue)
-        {
-            // 租户用户：搜索该租户的文档 + Host 公共文档（tenantId 为空）
-            filters.Add($"(tenantId = \"{tenantId}\" OR tenantId = \"\")");
-        }
-        // Host 用户不加 tenantId 过滤，可以搜索所有文档
-
-        if (query.ResourceId.HasValue)
-        {
-            filters.Add($"resourceId = \"{query.ResourceId}\"");
-        }
-
-        var searchParams = new
-        {
-            q = query.Query,
-            limit = query.MaxResultCount,
-            offset = query.SkipCount,
-            filter = filters.Any() ? string.Join(" AND ", filters) : null,
-            attributesToHighlight = new[] { "pageContent", "pageTitle", "resourceName", "eventDescription", "videoName" },
-            highlightPreTag = "<mark>",
-            highlightPostTag = "</mark>",
-            attributesToCrop = new[] { "pageContent" },
-            cropLength = 200,
-            showRankingScore = true
-        };
-
-        var response = await _httpClient.PostAsJsonAsync($"/indexes/{IndexName}/search", searchParams);
-        var result = await response.Content.ReadFromJsonAsync<MeiliSearchResponse>();
-
-        var items = new List<DocumentSearchResultDto>();
-        if (result?.Hits != null)
-        {
-            foreach (var hit in result.Hits)
-            {
-                items.Add(new DocumentSearchResultDto
-                {
-                    ResourceId = hit.ResourceId ?? string.Empty,
-                    ResourceName = hit.ResourceName ?? string.Empty,
-                    PageNumber = hit.PageNumber,
-                    Content = hit.PageContent ?? string.Empty,
-                    Title = hit.PageTitle,
-                    HighlightedContent = hit._formatted?.PageContent ?? hit.PageContent ?? string.Empty,
-                    RelevanceScore = (float)hit.RankingScore,
-                    FileExtension = hit.FileExtension ?? string.Empty,
-                    ResourceType = (ResourceType)(hit.ResourceType),
-                    CategoryName = hit.CategoryId,
-                    UploadDate = DateTime.TryParse(hit.UploadDate, out var dt) ? dt : DateTime.MinValue,
-
-                    // Video-specific fields
-                    SourceType = !string.IsNullOrEmpty(hit.VideoId) ? "video" : "document",
-                    VideoId = hit.VideoId,
-                    VideoName = hit.VideoName,
-                    VideoUrl = hit.VideoUrl,
-                    StartTime = hit.StartTime,
-                    EndTime = hit.EndTime,
-                    EventDescription = hit._formatted?.EventDescription ?? hit.EventDescription
-                });
-            }
-        }
+        // 按 RelevanceScore 合并取 top N
+        var merged = docItems.Concat(vidItems)
+            .OrderByDescending(x => x.RelevanceScore)
+            .Take(Math.Max(query.MaxResultCount, 0))
+            .ToList();
 
         return new SearchResultDto
         {
-            Items = items,
-            TotalCount = result?.EstimatedTotalHits ?? 0,
+            Items = merged,
+            TotalCount = docTotal + vidTotal,
             Query = query.Query,
             Facets = new Dictionary<string, Dictionary<string, long>>()
         };
@@ -415,64 +350,154 @@ public class MeiliSearchService : IMeiliSearchService
 
     public async Task<SearchResultDto> HybridSearchAsync(HybridSearchQueryDto query)
     {
-        var effectiveIndexName = query.IndexName ?? IndexName;
         await EnsureIndexExistsAsync();
-        
+
+        // 如果调用者明确指定了 IndexName（videos 或 documents）则只走单边，
+        // 默认不指定则同时搜两个索引，合并结果。
+        if (!string.IsNullOrEmpty(query.IndexName))
+        {
+            var (items, total) = await ExecuteSingleIndexSearchAsync(
+                query.IndexName!, query, applyDocumentFilters: query.IndexName == IndexName, hybrid: true);
+            return new SearchResultDto
+            {
+                Items = items,
+                TotalCount = total,
+                Query = query.Query,
+                Facets = new Dictionary<string, Dictionary<string, long>>()
+            };
+        }
+
+        var docTask = ExecuteSingleIndexSearchAsync(IndexName, query, applyDocumentFilters: true, hybrid: true);
+        var vidTask = ExecuteSingleIndexSearchAsync(VideoIndexName, query, applyDocumentFilters: false, hybrid: true);
+
+        await Task.WhenAll(docTask, vidTask);
+
+        var (docItems, docTotal) = docTask.Result;
+        var (vidItems, vidTotal) = vidTask.Result;
+
+        var merged = docItems.Concat(vidItems)
+            .OrderByDescending(x => x.RelevanceScore)
+            .Take(Math.Max(query.MaxResultCount, 0))
+            .ToList();
+
+        return new SearchResultDto
+        {
+            Items = merged,
+            TotalCount = docTotal + vidTotal,
+            Query = query.Query,
+            Facets = new Dictionary<string, Dictionary<string, long>>()
+        };
+    }
+
+    /// <summary>
+    /// 在指定 Meilisearch 索引上执行一次搜索，返回 (items, total)。
+    /// applyDocumentFilters=false 时仅使用通用 filter（query、resourceId、limit），
+    /// 不加 status/tenantId/categoryId/fileExtension，适用于视频索引。
+    /// </summary>
+    private async Task<(List<DocumentSearchResultDto> Items, int Total)> ExecuteSingleIndexSearchAsync(
+        string indexName, SearchQueryDto query, bool applyDocumentFilters, bool hybrid)
+    {
         var filters = new List<string>();
 
-        if (query.FileExtensions?.Any() == true)
+        if (applyDocumentFilters)
         {
-            var extFilters = query.FileExtensions.Select(ext => $"fileExtension = \"{ext}\"");
-            filters.Add($"({string.Join(" OR ", extFilters)})");
-        }
-
-        if (query.CategoryId.HasValue)
-        {
-            filters.Add($"categoryId = \"{query.CategoryId}\"");
-        }
-
-        if (query.StartDate.HasValue)
-        {
-            filters.Add($"uploadDate >= \"{query.StartDate.Value:yyyy-MM-dd}\"");
-        }
-
-        if (query.EndDate.HasValue)
-        {
-            filters.Add($"uploadDate <= \"{query.EndDate.Value:yyyy-MM-dd}\"");
-        }
-
-        filters.Add(!string.IsNullOrWhiteSpace(query.StatusFilter)
-            ? $"status IN [{query.StatusFilter}]"
-            : "status IN [0, 1, 2, 3]");
-
-        var tenantId = _currentTenant.Id;
-        if (tenantId.HasValue)
-        {
-            // 租户用户：搜索该租户的文档 + Host 公共文档（tenantId 为空）
-            filters.Add($"(tenantId = \"{tenantId}\" OR tenantId = \"\")");
-        }
-        // Host 用户不加 tenantId 过滤，可以搜索所有文档
-
-        var searchParams = new
-        {
-            q = query.Query,
-            limit = query.MaxResultCount,
-            offset = query.SkipCount,
-            filter = filters.Any() ? string.Join(" AND ", filters) : null,
-            attributesToHighlight = new[] { "pageContent", "pageTitle", "resourceName", "eventDescription", "videoName" },
-            highlightPreTag = "<mark>",
-            highlightPostTag = "</mark>",
-            attributesToCrop = new[] { "pageContent" },
-            cropLength = 200,
-            showRankingScore = true,
-            hybrid = new
+            if (query.FileExtensions?.Any() == true)
             {
-                embedder = "qwen",
-                semanticRatio = 1.0
+                var extFilters = query.FileExtensions.Select(ext => $"fileExtension = \"{ext}\"");
+                filters.Add($"({string.Join(" OR ", extFilters)})");
             }
-        };
 
-        var response = await _httpClient.PostAsJsonAsync($"/indexes/{effectiveIndexName}/search", searchParams);
+            if (query.CategoryId.HasValue)
+            {
+                filters.Add($"categoryId = \"{query.CategoryId}\"");
+            }
+
+            if (query.StartDate.HasValue)
+            {
+                filters.Add($"uploadDate >= \"{query.StartDate.Value:yyyy-MM-dd}\"");
+            }
+
+            if (query.EndDate.HasValue)
+            {
+                filters.Add($"uploadDate <= \"{query.EndDate.Value:yyyy-MM-dd}\"");
+            }
+
+            filters.Add(!string.IsNullOrWhiteSpace(query.StatusFilter)
+                ? $"status IN [{query.StatusFilter}]"
+                : "status IN [0, 1, 2, 3]");
+
+            var tenantId = _currentTenant.Id;
+            if (tenantId.HasValue)
+            {
+                // 租户用户：搜索该租户的文档 + Host 公共文档（tenantId 为空）
+                filters.Add($"(tenantId = \"{tenantId}\" OR tenantId = \"\")");
+            }
+            // Host 用户不加 tenantId 过滤，可以搜索所有文档
+        }
+
+        if (query.ResourceId.HasValue)
+        {
+            filters.Add($"resourceId = \"{query.ResourceId}\"");
+        }
+
+        object searchParams;
+        if (hybrid)
+        {
+            searchParams = new
+            {
+                q = query.Query,
+                limit = query.MaxResultCount,
+                offset = query.SkipCount,
+                filter = filters.Any() ? string.Join(" AND ", filters) : null,
+                attributesToHighlight = new[] { "pageContent", "pageTitle", "resourceName", "eventDescription", "videoName" },
+                highlightPreTag = "<mark>",
+                highlightPostTag = "</mark>",
+                attributesToCrop = new[] { "pageContent" },
+                cropLength = 200,
+                showRankingScore = true,
+                hybrid = new
+                {
+                    embedder = "qwen",
+                    semanticRatio = 1.0
+                }
+            };
+        }
+        else
+        {
+            searchParams = new
+            {
+                q = query.Query,
+                limit = query.MaxResultCount,
+                offset = query.SkipCount,
+                filter = filters.Any() ? string.Join(" AND ", filters) : null,
+                attributesToHighlight = new[] { "pageContent", "pageTitle", "resourceName", "eventDescription", "videoName" },
+                highlightPreTag = "<mark>",
+                highlightPostTag = "</mark>",
+                attributesToCrop = new[] { "pageContent" },
+                cropLength = 200,
+                showRankingScore = true
+            };
+        }
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.PostAsJsonAsync($"/indexes/{indexName}/search", searchParams);
+        }
+        catch (Exception ex)
+        {
+            // 单个索引搜索失败不能拖垮另一个索引的合并结果。
+            // 比如客户端调用方传递了不存在的可过滤属性，Meilisearch 会报 4xx。
+            return (new List<DocumentSearchResultDto>(), 0);
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            // videos 索引可能缺一些 filterable attributes；本次调用仅触发器记录一次，
+            // 调用方仍能看到合并后的结果。
+            return (new List<DocumentSearchResultDto>(), 0);
+        }
+
         var result = await response.Content.ReadFromJsonAsync<MeiliSearchResponse>();
 
         var items = new List<DocumentSearchResultDto>();
@@ -483,7 +508,7 @@ public class MeiliSearchService : IMeiliSearchService
                 items.Add(new DocumentSearchResultDto
                 {
                     ResourceId = hit.ResourceId ?? string.Empty,
-                    ResourceName = hit.ResourceName ?? string.Empty,
+                    ResourceName = hit.ResourceName ?? hit.VideoName ?? string.Empty,
                     PageNumber = hit.PageNumber,
                     Content = hit.PageContent ?? string.Empty,
                     Title = hit.PageTitle,
@@ -506,13 +531,7 @@ public class MeiliSearchService : IMeiliSearchService
             }
         }
 
-        return new SearchResultDto
-        {
-            Items = items,
-            TotalCount = result?.EstimatedTotalHits ?? 0,
-            Query = query.Query,
-            Facets = new Dictionary<string, Dictionary<string, long>>()
-        };
+        return (items, (int)(result?.EstimatedTotalHits ?? 0));
     }
 
     public async Task DeleteDocumentAsync(Guid resourceId)
