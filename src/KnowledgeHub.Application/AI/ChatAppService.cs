@@ -32,6 +32,7 @@ public class ChatAppService : KnowledgeHubAppService
     private readonly IConfiguration _configuration;
     private readonly ILogger<ChatAppService> _logger;
     private readonly IRepository<PageContent, Guid> _pageContentRepository;
+    private readonly IRepository<VideoIndexingJob, Guid> _videoIndexingJobRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IResourceCategoryRepository _categoryRepository;
     private readonly IMeiliSearchService _meiliSearchService;
@@ -76,6 +77,7 @@ public class ChatAppService : KnowledgeHubAppService
         IConfiguration configuration,
         ILogger<ChatAppService> logger,
         IRepository<PageContent, Guid> pageContentRepository,
+        IRepository<VideoIndexingJob, Guid> videoIndexingJobRepository,
         IRepository<Resource, Guid> resourceRepository,
         IResourceCategoryRepository categoryRepository,
         IMeiliSearchService meiliSearchService,
@@ -86,6 +88,7 @@ public class ChatAppService : KnowledgeHubAppService
         _configuration = configuration;
         _logger = logger;
         _pageContentRepository = pageContentRepository;
+        _videoIndexingJobRepository = videoIndexingJobRepository;
         _resourceRepository = resourceRepository;
         _categoryRepository = categoryRepository;
         _meiliSearchService = meiliSearchService;
@@ -193,11 +196,22 @@ public class ChatAppService : KnowledgeHubAppService
 
     public async Task<List<ResourceForChatDto>> GetResourcesWithPageIndexAsync()
     {
-        // 1. 先查哪些资源有页面索引
+        // 1. 先查哪些资源有页面索引（文档/PDF/PPT 等走文档索引）
         var pcQuery = await _pageContentRepository.GetQueryableAsync();
         var indexedResourceIds = await AsyncExecuter.ToListAsync(
             pcQuery.Select(pc => pc.ResourceId).Distinct());
         var indexedSet = new HashSet<Guid>(indexedResourceIds);
+
+        // 1b. 视频资源走另一套索引：KhVideoIndexingJobs.Status = Completed。
+        //     前端 chat 树只读 HasPageIndex 字段，所以把“视频已索引”也合并进同一集合。
+        var vidQuery = await _videoIndexingJobRepository.GetQueryableAsync();
+        var indexedVideoIds = await AsyncExecuter.ToListAsync(
+            vidQuery.Where(v => v.Status == VideoIndexingJobStatus.Completed)
+                    .Select(v => v.ResourceId).Distinct());
+        foreach (var vid in indexedVideoIds)
+        {
+            indexedSet.Add(vid);
+        }
 
         // 2. 获取当前租户下所有审核通过的资源
         var approvedResources = await _resourceRepository.GetListAsync(r =>
