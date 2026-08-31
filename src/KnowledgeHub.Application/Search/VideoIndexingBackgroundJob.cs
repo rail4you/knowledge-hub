@@ -181,27 +181,43 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
     /// <summary>
     /// Build the video analysis request, preferring the absolute public URL when available
     /// (for remote/production servers) and falling back to local base64 loading for localhost.
+    ///
+    /// For production, also pre-compresses large videos (>= 30MB) to ~480p using ffmpeg,
+    /// because Qwen VL API (on Aliyun) times out downloading multi-hundred-MB videos
+    /// over cross-cloud links. The compressed file is written under uploads/_tmp/ so
+    /// nginx /uploads/ proxy serves it directly to Qwen.
     /// </summary>
     private VideoAnalysisRequestDto BuildVideoAnalysisRequest(string videoPath, string? videoUrl, string? resourceFilePath)
     {
         var selfUrl = _configuration["App:SelfUrl"] ?? "";
 
-        // If SelfUrl is a public/remote address (not localhost or 127.0.0.1),
-        // construct the absolute video URL so Qwen VL API fetches it directly,
-        // bypassing the 7MB base64 limit in PrepareLocalVideoAsync.
         if (!string.IsNullOrEmpty(videoUrl)
             && !string.IsNullOrEmpty(selfUrl)
             && !IsLocalhostUrl(selfUrl))
         {
-            // videoUrl from GetFileUrl is relative (e.g. "/uploads/2025/04/xxx.mp4")
-            // Prepend SelfUrl to make it absolute and publicly accessible.
-            var absoluteVideoUrl = $"{selfUrl.TrimEnd('/')}{videoUrl}";
-            _logger.LogInformation("Using public video URL: {Url}", absoluteVideoUrl);
+            string urlToUse = videoUrl;
+
+            // 大文件预压缩：Qwen 在阿里云，跨云下载大文件容易超时
+            var compressedPath = TryCompressForQwen(videoPath);
+            if (compressedPath != null)
+            {
+                var compressedFileName = Path.GetFileName(compressedPath);
+                urlToUse = $"/uploads/_tmp/{compressedFileName}";
+                _logger.LogInformation("Using compressed video URL: {Url} (original: {Size:F2} MB -> compressed: {CompSize:F2} MB)",
+                    $"{selfUrl.TrimEnd('/')}{urlToUse}",
+                    new FileInfo(videoPath).Length / 1024.0 / 1024.0,
+                    new FileInfo(compressedPath).Length / 1024.0 / 1024.0);
+            }
+            else
+            {
+                // 视频不大或者压缩失败，直接用原文件 URL
+                _logger.LogInformation("Using public video URL: {Url}", $"{selfUrl.TrimEnd('/')}{videoUrl}");
+            }
 
             return new VideoAnalysisRequestDto
             {
                 FilePath = null,  // Don't use local file path
-                VideoUrl = absoluteVideoUrl
+                VideoUrl = $"{selfUrl.TrimEnd('/')}{urlToUse}"
             };
         }
 
@@ -212,6 +228,94 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
             FilePath = videoPath,
             VideoUrl = null
         };
+    }
+
+    /// <summary>
+    /// 大文件压缩：阈值 30MB；压缩到 480p H.264，输出到 /app/uploads/_tmp/。
+    /// 同源文件多次索引会复用同一压缩产物（按源 mtime 判断）。
+    /// 失败时返回 null，调用方回退到原文件 URL。
+    /// </summary>
+    private string? TryCompressForQwen(string videoPath)
+    {
+        if (string.IsNullOrEmpty(videoPath) || !File.Exists(videoPath))
+        {
+            return null;
+        }
+
+        var fileInfo = new FileInfo(videoPath);
+        // 仅压缩 > 30MB 的视频；小文件直接走原 URL 即可
+        if (fileInfo.Length <= 30 * 1024 * 1024)
+        {
+            return null;
+        }
+
+        try
+        {
+            // 输出路径：/app/uploads/_tmp/<safe_name>.compressed.mp4
+            // 用 sha1(源路径) 做文件名，避免中文/空格/特殊字符在文件系统/URL 上出问题
+            var tmpDir = Path.Combine(_fileStorageService.RootPath, "_tmp");
+            Directory.CreateDirectory(tmpDir);
+
+            using var sha1 = System.Security.Cryptography.SHA1.Create();
+            var hashBytes = sha1.ComputeHash(System.Text.Encoding.UTF8.GetBytes(videoPath));
+            var hashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
+            var compressedPath = Path.Combine(tmpDir, $"{hashHex}.compressed.mp4");
+
+            // 缓存：如果压缩产物已存在且比源文件新，直接复用
+            if (File.Exists(compressedPath) && File.GetLastWriteTime(compressedPath) >= fileInfo.LastWriteTime)
+            {
+                return compressedPath;
+            }
+
+            _logger.LogInformation("Compressing video for Qwen: {Source} ({Size:F2} MB) -> {Target}",
+                videoPath, fileInfo.Length / 1024.0 / 1024.0, compressedPath);
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "ffmpeg",
+                // 480p + crf 32：保留下采样后清晰度足够 Qwen 1fps 抽帧理解内容，文件能压到几 MB~几十 MB
+                Arguments = $"-i \"{videoPath}\" -vf \"scale=-2:480\" -vcodec libx264 -crf 32 -preset fast -acodec aac -b:a 64k -movflags +faststart -y \"{compressedPath}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process == null)
+            {
+                _logger.LogWarning("Failed to start ffmpeg for compression, falling back to original URL");
+                return null;
+            }
+
+            // 给压缩一些时间；视频很大时可能耗时数分钟
+            if (!process.WaitForExit(15 * 60 * 1000))
+            {
+                try { process.Kill(true); } catch { }
+                _logger.LogWarning("ffmpeg compression timed out after 15min, falling back to original URL");
+                return null;
+            }
+
+            if (process.ExitCode != 0)
+            {
+                var stderr = process.StandardError.ReadToEnd();
+                _logger.LogWarning("ffmpeg compression failed (exit={Code}): {Err}", process.ExitCode, stderr);
+                return null;
+            }
+
+            if (!File.Exists(compressedPath))
+            {
+                _logger.LogWarning("ffmpeg exit 0 but compressed file missing, falling back");
+                return null;
+            }
+
+            return compressedPath;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Compression exception, falling back to original URL");
+            return null;
+        }
     }
 
     private static bool IsLocalhostUrl(string url)
