@@ -98,6 +98,33 @@ public class MeiliSearchService : IMeiliSearchService
 
         await _httpClient.PutAsJsonAsync($"{index}/settings/sortable-attributes",
             new[] { "uploadDate", "pageNumber", "relevanceScore" });
+
+        // ====== 中文搜索质量保护（2026-08-31 加固）======
+        // 生产环境曾被手动改过 ranking-rules（移除 'words' 规则），导致搜索"医生"时
+        // 把大量不含 query 词的文档也返回（基于 attributeRank 等次要规则凑分）。
+        // 在这里强制设置默认 ranking-rules，确保每次重建索引时 settings 保持正确。
+        await _httpClient.PutAsJsonAsync($"{index}/settings/ranking-rules", new[]
+        {
+            "words",        // 必须放第一位：匹配 query 词的百分比，剔除不相关文档
+            "typo",
+            "proximity",
+            "attribute",
+            "sort",
+            "exactness"
+        });
+
+        // typo-tolerance 保持默认：中文 5 字以下不做 typo，避免"医/以"这种字符级错配
+        await _httpClient.PutAsJsonAsync($"{index}/settings/typo-tolerance", new
+        {
+            enabled = true,
+            minWordSizeForTypos = new { oneTypo = 5, twoTypos = 9 }
+        });
+
+        // prefix-search 保持 indexingTime：用户输入时即时补全，但 ranking 仍然受 words 约束
+        await _httpClient.PutAsJsonAsync($"{index}/settings/prefix-search", "indexingTime");
+
+        // proximityPrecision 用 byAttribute：按属性而不是按字计算 proximity，召回更准
+        await _httpClient.PutAsJsonAsync($"{index}/settings/proximity-precision", "byAttribute");
     }
 
     public async Task<IndexTaskResultDto> IndexDocumentAsync(Guid resourceId)
