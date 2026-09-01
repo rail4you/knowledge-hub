@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { 
+  ConfigStateService,
   ListService, 
   LocalizationService, 
   LocalizationPipe, 
@@ -126,6 +127,12 @@ export class IdentityUsersComponent implements OnInit {
   
   tenants: TenantDto[] = [];
   selectedTenantId: string | null = null;
+  tenantNames: Record<string, string> = {};
+
+  /** 当前登录用户所属租户 ID；null 表示 host 全局管理员。 */
+  currentTenantId: string | null = null;
+  /** host 全局管理员可为 true；租户管理员为 false，只能管理本租户的用户。 */
+  isHostAdmin = false;
   
   roles: RoleDto[] = [];
   selectedUserRole: string | null = null;
@@ -142,6 +149,7 @@ export class IdentityUsersComponent implements OnInit {
   private readonly confirmation = inject(ConfirmationService);
   private readonly tenantUserService = inject(TenantUserService);
   private readonly majorService = inject(MajorService);
+  private readonly configState = inject(ConfigStateService);
 
   readonly majors = signal<MajorLookupDto[]>([]);
 
@@ -160,6 +168,15 @@ export class IdentityUsersComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
+    const tenantId = cu?.['tenantId'];
+    this.currentTenantId = (tenantId as string | null | undefined) ?? null;
+    this.isHostAdmin = !this.currentTenantId;
+
+    if (!this.isHostAdmin) {
+      this.selectedTenantId = this.currentTenantId;
+    }
+
     this.loadTenants();
     this.buildForm();
     this.majorService.getLookupList().subscribe({
@@ -172,12 +189,20 @@ export class IdentityUsersComponent implements OnInit {
       method: 'GET',
       url: '/api/public/tenants'
     }).subscribe((tenants) => {
-      this.tenants = tenants;
+      this.tenants = this.isHostAdmin
+        ? tenants
+        : (tenants || []).filter(t => t.id === this.currentTenantId);
+      (tenants || []).forEach(t => {
+        if (t.id && t.name) {
+          this.tenantNames[t.id] = t.name;
+        }
+      });
       this.loadUsers();
     });
   }
 
   loadUsers() {
+    const effectiveTenantId = this.isHostAdmin ? this.selectedTenantId : this.currentTenantId;
     const userStreamCreator = (query: any) =>
       this.restService.request<any, PagedResultDto<IdentityUserDto>>({
         method: 'GET',
@@ -186,7 +211,7 @@ export class IdentityUsersComponent implements OnInit {
           ...query,
           maxResultCount: this.pageSize,
           skipCount: (this.pageIndex - 1) * this.pageSize,
-          tenantId: this.selectedTenantId || undefined,
+          tenantId: effectiveTenantId || undefined,
         },
       });
 
@@ -219,11 +244,15 @@ export class IdentityUsersComponent implements OnInit {
 
   getTenantName(tenantId: string | undefined | null): string {
     if (!tenantId) return 'Host';
+    if (this.tenantNames[tenantId]) return this.tenantNames[tenantId];
     const tenant = this.tenants.find(t => t.id === tenantId);
     return tenant?.name || tenantId;
   }
 
   buildForm() {
+    const tenantIdForForm = this.isHostAdmin
+      ? (this.selectedUser.tenantId || this.selectedTenantId || null)
+      : this.currentTenantId;
     this.form = this.fb.group({
       userName: [this.selectedUser.userName || '', Validators.required],
       email: [this.selectedUser.email || '', [Validators.required, Validators.email]],
@@ -231,7 +260,7 @@ export class IdentityUsersComponent implements OnInit {
       name: [this.selectedUser.name || ''],
       phoneNumber: [this.selectedUser.phoneNumber || ''],
       isActive: [this.selectedUser.isActive ?? true],
-      tenantId: [this.selectedTenantId || null],
+      tenantId: [tenantIdForForm],
       roleName: [this.selectedUserRole, Validators.required],
       studentNumber: [this.selectedUser.studentNumber || ''],
       employeeNumber: [this.selectedUser.employeeNumber || ''],
@@ -262,12 +291,13 @@ export class IdentityUsersComponent implements OnInit {
   }
 
   loadRolesForTenant(tenantId: string | null = this.form.get('tenantId')?.value ?? null) {
+    const effectiveTenantId = this.isHostAdmin ? tenantId : this.currentTenantId;
     this.restService.request<any, { items: RoleDto[] }>({
       method: 'GET',
       url: '/api/app/tenant-role',
       params: { 
         maxResultCount: 1000,
-        tenantId: tenantId || undefined
+        tenantId: effectiveTenantId || undefined
       }
     }).subscribe((response) => {
       this.roles = response.items || [];
@@ -282,16 +312,23 @@ export class IdentityUsersComponent implements OnInit {
 
   createUser() {
     this.selectedUser = {} as IdentityUserDto;
-    this.selectedTenantId = null;
     this.selectedUserRole = null;
+    if (this.isHostAdmin) {
+      this.selectedTenantId = null;
+    } else {
+      this.selectedTenantId = this.currentTenantId;
+      // 确保新建用户的 tenantId 锁定为当前租户
+      this.selectedUser.tenantId = this.currentTenantId ?? undefined;
+    }
     this.buildForm();
-    this.loadRolesForTenant(this.selectedTenantId);
+    const effectiveTenantId = this.isHostAdmin ? this.selectedTenantId : this.currentTenantId;
+    this.loadRolesForTenant(effectiveTenantId);
     this.isModalOpen = true;
   }
 
   editUser(user: IdentityUserDto) {
     this.selectedUser = user;
-    this.selectedTenantId = user.tenantId || null;
+    this.selectedTenantId = this.isHostAdmin ? (user.tenantId || null) : this.currentTenantId;
     this.buildForm();
     
     this.restService.request<any, string[]>({
@@ -310,7 +347,8 @@ export class IdentityUsersComponent implements OnInit {
       return;
     }
 
-    const { tenantId, roleName, password, email, ...formValue } = this.form.value;
+    const { tenantId: formTenantId, roleName, password, email, ...formValue } = this.form.value;
+    const tenantId = this.isHostAdmin ? formTenantId : this.currentTenantId;
     
     this.isLoading.set(true);
 
@@ -393,6 +431,12 @@ export class IdentityUsersComponent implements OnInit {
   }
 
   onTenantFilterChange(tenantId: string | null): void {
+    if (!this.isHostAdmin && tenantId !== this.currentTenantId) {
+      this.selectedTenantId = this.currentTenantId;
+      this.pageIndex = 1;
+      this.loadUsers();
+      return;
+    }
     this.selectedTenantId = tenantId;
     this.pageIndex = 1;
     this.loadUsers();
@@ -410,7 +454,7 @@ export class IdentityUsersComponent implements OnInit {
   }
 
   openPermissions(user: IdentityUserDto) {
-    this.permissionProviderKey = user.id;
+    this.permissionProviderKey = user.id ?? '';
     setTimeout(() => {
       this.isPermissionModalOpen = true;
     });

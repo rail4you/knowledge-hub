@@ -13,10 +13,14 @@
       <nz-select 
         [(ngModel)]="selectedTenantId" 
         (ngModelChange)="onTenantFilterChange($event)"
-        nzPlaceHolder="全部租户"
-        nzAllowClear
+        [nzDisabled]="!isHostAdmin"
+        [nzAllowClear]="isHostAdmin"
+        [nzPlaceHolder]="isHostAdmin ? '全部租户' : (getTenantName(currentTenantId) || '当前租户')"
         style="width: 180px;"
       >
+        @if (isHostAdmin) {
+          <nz-option [nzValue]="null" [nzLabel]="'全部租户'"></nz-option>
+        }
         @for (tenant of tenants; track tenant.id) {
           <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || '未命名'"></nz-option>
         }
@@ -130,6 +134,7 @@
               <nz-select 
                 formControlName="tenantId"
                 [nzPlaceHolder]="'::SelectTenant' | abpLocalization"
+                [nzDisabled]="!isHostAdmin"
                 style="width: 100%;"
               >
                 @for (tenant of tenants; track tenant.id) {
