@@ -33,7 +33,7 @@
         class="tab-nav-item"
         [class.active]="selectedTabIndex === 3"
         (click)="onTabChange(3)"
-        *abpPermission="'KnowledgeHub.Resources.Edit'"
+        *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'"
       >
         <span nz-icon nzType="delete" class="tab-icon"></span>
         <span>{{ '::PhysicalDeleteRequests' | abpLocalization }}</span>

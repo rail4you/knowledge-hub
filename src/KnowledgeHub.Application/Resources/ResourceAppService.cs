@@ -1335,6 +1335,21 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     {
         var query = await PhysicalDeleteRequestRepository.GetQueryableAsync();
         query = query.Where(x => x.Status == PhysicalDeleteStatus.Pending);
+
+        // 租户隔离：租户管理员只应看到本租户资源的删除申请。
+        // PhysicalDeleteRequest 本身无 TenantId，需通过 Resource.TenantId 间接过滤；
+        // host（无租户）则返回全量以便全局管理员审批跨租户资源。
+        if (CurrentTenant.Id.HasValue)
+        {
+            var resourceQuery = await Repository.GetQueryableAsync();
+            var tenantResourceIds = await AsyncExecuter.ToListAsync(
+                resourceQuery.Select(r => r.Id));
+            if (tenantResourceIds.Count == 0)
+            {
+                return new PagedResultDto<PhysicalDeleteRequestDto>(0, new List<PhysicalDeleteRequestDto>());
+            }
+            query = query.Where(x => tenantResourceIds.Contains(x.ResourceId));
+        }
         
         var totalCount = await AsyncExecuter.CountAsync(query);
         
@@ -1350,6 +1365,16 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<PhysicalDeleteRequestDto> ApprovePhysicalDeleteAsync(Guid id)
     {
         var request = await PhysicalDeleteRequestRepository.GetAsync(id);
+
+        // 租户校验：租户管理员只能审批本租户资源的删除申请
+        if (CurrentTenant.Id.HasValue)
+        {
+            var tenantResource = await Repository.FindAsync(request.ResourceId);
+            if (tenantResource == null)
+            {
+                throw new UserFriendlyException("资源不存在或不属于当前租户");
+            }
+        }
 
         Resource resource;
         using (DataFilter.Disable<IMultiTenant>())
@@ -1390,6 +1415,16 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task<PhysicalDeleteRequestDto> RejectPhysicalDeleteAsync(Guid id)
     {
         var request = await PhysicalDeleteRequestRepository.GetAsync(id);
+
+        // 租户校验：租户管理员只能驳回本租户资源的删除申请
+        if (CurrentTenant.Id.HasValue)
+        {
+            var tenantResource = await Repository.FindAsync(request.ResourceId);
+            if (tenantResource == null)
+            {
+                throw new UserFriendlyException("资源不存在或不属于当前租户");
+            }
+        }
         
         request.Status = PhysicalDeleteStatus.Rejected;
         request.ApproverId = CurrentUser.Id ?? Guid.Empty;

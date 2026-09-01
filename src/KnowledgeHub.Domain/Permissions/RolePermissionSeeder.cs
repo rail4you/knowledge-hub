@@ -62,12 +62,13 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
     };
 
     /// <summary>
-    /// 联盟独有权限：SchoolAdmin（院校管理员）不得拥有，避免院校审核员越权做联盟审核/物理删除/直播管理。
+    /// 联盟独有权限：SchoolAdmin（院校管理员）不得拥有，避免院校审核员越权做联盟审核/直播管理。
+    /// 注意：PhysicalDelete 已从此列表移除 —— 租户管理员需审批本租户内用户（包括老师）的资源删除申请，
+    /// 因此 SchoolAdmin 必须持有 PhysicalDelete 权限；审批时后端会按租户隔离，只能处理本租户资源。
     /// </summary>
     private static readonly string[] SchoolAdminForbiddenPermissions =
     {
         KnowledgeHubPermissions.Resources.LeagueAudit,
-        KnowledgeHubPermissions.Resources.PhysicalDelete,
         KnowledgeHubPermissions.RecruitmentLive.Manage,
     };
 
@@ -274,6 +275,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.SchoolAudit);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ManageCategory);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.RequestDelete);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.PhysicalDelete);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ViewStatistics);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ViewRecommendation);
 
@@ -369,6 +371,8 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.Download);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.ViewRecommendation);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.RequestDelete);
+        // 教师仅可申请删除，不能审批物理删除
+        await RevokeAsync("Teacher", KnowledgeHubPermissions.Resources.PhysicalDelete);
 
         await GrantAsync("Teacher", KnowledgeHubPermissions.Search.Default);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Search.ManageIndex);
