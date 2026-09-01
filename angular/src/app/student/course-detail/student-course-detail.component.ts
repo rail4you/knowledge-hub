@@ -88,6 +88,43 @@ export class StudentCourseDetailComponent implements OnInit {
   readonly progress = signal<LearningProgressDto | null>(null);
   readonly mastery = signal<KnowledgeMasteryDto[]>([]);
 
+  /** 本课程的全部习题完成记录（用于汇总统计） */
+  readonly allExerciseRecords = signal<StudentExerciseRecordDto[]>([]);
+  /** 最近习题记录加载状态（与章节进度共用 loading） */
+  readonly recentExerciseLoading = signal(true);
+
+  /** 习题完成汇总（基于全部已提交记录，保证正确率准确） */
+  readonly exerciseStats = computed(() => {
+    const records = this.allExerciseRecords();
+    const total = records.length;
+    const correct = records.filter(r => r.isCorrect === true).length;
+    const wrong = records.filter(r => r.isCorrect === false).length;
+    const rate = total > 0 ? Math.round((correct / total) * 100) : 0;
+    return { total, correct, wrong, rate };
+  });
+
+  /** 累计练习用时（毫秒） */
+  readonly totalTimeSpentMs = computed<number>(() => {
+    return this.allExerciseRecords().reduce((sum, r) => {
+      const ms = this.parseTimeSpentMs(r.timeSpent);
+      return sum + (Number.isFinite(ms) ? ms : 0);
+    }, 0);
+  });
+
+  /** 最近习题记录（去重，每个习题取最近一次提交，最多 10 条） */
+  readonly recentExerciseDedup = computed<StudentExerciseRecordDto[]>(() => {
+    const seen = new Set<string>();
+    const list: StudentExerciseRecordDto[] = [];
+    for (const r of this.allExerciseRecords()) {
+      const key = r.exerciseId;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      list.push(r);
+      if (list.length >= 10) break;
+    }
+    return list;
+  });
+
   /** 按章节统计习题进度（与学习页面一致） */
   readonly chapterProgressMap = signal<Map<string, { total: number; completed: number }>>(new Map());
   readonly masteredChapterCount = computed(() => {
@@ -155,6 +192,8 @@ export class StudentCourseDetailComponent implements OnInit {
       this.progress.set(null);
       this.mastery.set([]);
       this.chapterProgressMap.set(new Map());
+      this.allExerciseRecords.set([]);
+      this.recentExerciseLoading.set(true);
       this.expandedNodes.set(new Set());
       this.backToCourse.set(fromCourse || null);
       // 微专业上下文：从微专业课程进入时，返回按钮回到微专业页（保留 from 参数还原原 URL）
@@ -222,7 +261,11 @@ export class StudentCourseDetailComponent implements OnInit {
   }
 
   private loadExerciseProgress(courseId: string) {
-    if (!this.authService.isAuthenticated) return;
+    if (!this.authService.isAuthenticated) {
+      this.recentExerciseLoading.set(false);
+      return;
+    }
+    this.recentExerciseLoading.set(true);
     this.exerciseService.getByCourse(courseId).subscribe({
       next: (data: any) => {
         const list = (data?.items || data || []) as ExerciseDto[];
@@ -258,10 +301,86 @@ export class StudentCourseDetailComponent implements OnInit {
               progressMap.set(chId, { total, completed: chapterCompletedMap.get(chId) || 0 });
             }
             this.chapterProgressMap.set(progressMap);
+
+            // 保存全部记录（按完成时间倒序，统计和最近列表都基于此计算）
+            const sorted = [...records].sort((a, b) => {
+              const at = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+              const bt = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+              return bt - at;
+            });
+            this.allExerciseRecords.set(sorted);
+
+            this.recentExerciseLoading.set(false);
           },
+          error: () => this.recentExerciseLoading.set(false),
         });
       },
+      error: () => this.recentExerciseLoading.set(false),
     });
+  }
+
+  /** 解析 TimeSpan 字符串（如 "00:05:30"、"00:00:45"、"1.02:30:00"）为毫秒数 */
+  private parseTimeSpentMs(value?: string | null): number {
+    if (!value) return 0;
+    const trimmed = value.trim();
+    if (!trimmed) return 0;
+
+    // 含天数的格式："d.hh:mm:ss" 或 "d.hh:mm"
+    const dayMatch = /^(\d+)\.(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(trimmed);
+    if (dayMatch) {
+      const d = Number(dayMatch[1]);
+      const h = Number(dayMatch[2]);
+      const m = Number(dayMatch[3]);
+      const s = Number(dayMatch[4] || 0);
+      return ((d * 24 + h) * 3600 + m * 60 + s) * 1000;
+    }
+
+    // 标准格式："hh:mm:ss" 或 "hh:mm"
+    const parts = trimmed.split(':');
+    if (parts.length === 3) {
+      const h = Number(parts[0]);
+      const m = Number(parts[1]);
+      const s = Number(parts[2]);
+      return (h * 3600 + m * 60 + s) * 1000;
+    }
+    if (parts.length === 2) {
+      const h = Number(parts[0]);
+      const m = Number(parts[1]);
+      return (h * 3600 + m * 60) * 1000;
+    }
+    return 0;
+  }
+
+  /** 把毫秒数格式化为 "Xh Ym" / "Ym Ys" / "Ys" */
+  formatDuration(ms: number): string {
+    if (!ms || ms <= 0) return '0分钟';
+    const totalSeconds = Math.round(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0 && minutes > 0) return `${hours}小时${minutes}分钟`;
+    if (hours > 0) return `${hours}小时`;
+    if (minutes > 0) return `${minutes}分钟`;
+    return `${seconds}秒`;
+  }
+
+  /** 单条记录的用时（"3分钟" / "45秒"） */
+  formatRecordTimeSpent(record: StudentExerciseRecordDto): string {
+    return this.formatDuration(this.parseTimeSpentMs(record.timeSpent));
+  }
+
+  /** 记录结果展示文本 */
+  recordResultLabel(record: StudentExerciseRecordDto): string {
+    if (record.isCorrect === true) return '正确';
+    if (record.isCorrect === false) return '错误';
+    return '已作答';
+  }
+
+  /** 记录结果 CSS 类（用于标签颜色） */
+  recordResultClass(record: StudentExerciseRecordDto): string {
+    if (record.isCorrect === true) return 'is-correct';
+    if (record.isCorrect === false) return 'is-wrong';
+    return 'is-neutral';
   }
 
   loadRelated(majorId?: string | null) {
