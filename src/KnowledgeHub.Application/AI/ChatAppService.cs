@@ -64,6 +64,11 @@ public class ChatAppService : KnowledgeHubAppService
 4. 如果文档中没有相关内容，如实告知用户。
 5. 只输出给用户看的最终答案，不要输出思考过程、工具调用日志、折叠块或与答案无关的中间信息。
 
+关于总结/概括类问题（""总结一下""、""概括""、""讲了什么""、""主要内容""）：
+- 不要仅依赖 get_document 的 summary 字段——视频等资源的 summary 可能为空，已在 get_document 中通过 timeline_text/page_contents_preview 补齐；若仍为空，必须调用 search_document 获取正文。
+- 对视频资源：调用 search_document（query 可用文档名或空，maxResults 10~20）按 time 索引返回的 start_time/end_time+event_description 按时间顺序组织成带时间轴的要点总结，形如 ""00:00:00-00:00:02：兔子躺在草地...""
+- 对文档资源：调用 search_document 后基于 page_number/content 归纳要点。
+
 关于文档结构 / 大纲 / 章节 / 目录类问题：
 - 目前没有可用的章节结构数据，不要尝试调用相关工具，也不要编造目录。
 - 直接调用 get_document 工具读取该文档的 summary 字段，把摘要中关于文档结构的描述作为答案回复给用户。

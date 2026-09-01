@@ -114,7 +114,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
 
         var analysisResult = await _videoAnalysisAppService.AnalyzeVideoTimelineAsync(analysisRequest);
 
-        await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Indexing, progress: 70, totalEvents: analysisResult.Events.Count);
+        await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Indexing, progress: 70, totalEvents: analysisResult.Events.Count, processedEvents: 0);
         _logger.LogInformation("Analyzed {EventCount} timeline events, saving to Meilisearch", analysisResult.Events.Count);
 
         try
@@ -129,10 +129,12 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         }
         catch (Exception meiliEx)
         {
-            _logger.LogWarning(meiliEx, "Meilisearch indexing failed for resource {ResourceId}", args.ResourceId);
+            _logger.LogError(meiliEx, "Meilisearch indexing failed for resource {ResourceId}", args.ResourceId);
+            await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Failed, errorMessage: $"Meilisearch索引失败: {meiliEx.Message}");
+            throw;
         }
 
-        await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Completed, progress: 100);
+        await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Completed, progress: 100, processedEvents: analysisResult.Events.Count);
         _logger.LogInformation("Video indexing completed for resource {ResourceId}", args.ResourceId);
     }
 

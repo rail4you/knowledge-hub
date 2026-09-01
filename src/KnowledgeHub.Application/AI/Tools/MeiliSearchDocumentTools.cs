@@ -83,8 +83,9 @@ public class MeiliSearchDocumentTools
                 return JsonSerializer.Serialize(new { error = $"Document not found: {_resourceId}" });
             }
 
-            // Count pages by searching for all pages of this resource
+            // Count pages / segments by searching for all indexed chunks of this resource
             int pageCount = 0;
+            List<DocumentSearchResultDto> indexedItems = new();
             try
             {
                 var structureResult = await _meiliSearchService.SearchAsync(new SearchQueryDto
@@ -95,10 +96,39 @@ public class MeiliSearchDocumentTools
                     SkipCount = 0,
                 });
                 pageCount = structureResult.TotalCount;
+                indexedItems = structureResult.Items;
             }
             catch
             {
                 pageCount = 0;
+            }
+
+            // 对于视频或 summary 为空的资源，从索引时间轴/页面正文合成可读摘要，供 AI 总结
+            string? synthesizedTimeline = null;
+            List<object>? videoTimeline = null;
+            string? pagePreview = null;
+            var isVideo = resource.ResourceType == KnowledgeHub.Resources.Enums.ResourceType.Video
+                          || IsVideoExtension(resource.FileExtension);
+            if (isVideo && indexedItems.Any(x => x.SourceType == "video"))
+            {
+                var videoItems = indexedItems.Where(x => x.SourceType == "video")
+                    .OrderBy(x => x.StartTime).Take(20).ToList();
+                videoTimeline = videoItems.Select(v => new
+                {
+                    start_time = v.StartTime ?? "",
+                    end_time = v.EndTime ?? "",
+                    event_description = v.EventDescription ?? ""
+                } as object).ToList();
+                synthesizedTimeline = string.Join("\n", videoItems.Select(v =>
+                    $"[{v.StartTime} - {v.EndTime}] {v.EventDescription}"));
+            }
+            else if (string.IsNullOrWhiteSpace(resource.Summary) && string.IsNullOrWhiteSpace(resource.Description) && indexedItems.Any())
+            {
+                // 兜底：文档类但摘要为空时，给出前几页正文预览
+                var docItems = indexedItems.Where(x => x.SourceType == "document")
+                    .OrderBy(x => x.PageNumber).Take(3).ToList();
+                if (docItems.Count > 0)
+                    pagePreview = string.Join("\n\n", docItems.Select(d => TruncateText(d.Content ?? "", 800)));
             }
 
             var result = new Dictionary<string, object>
@@ -113,6 +143,20 @@ public class MeiliSearchDocumentTools
                 ["keywords"] = resource.Keywords ?? "",
                 ["status"] = "completed"
             };
+            if (videoTimeline != null)
+            {
+                result["video_timeline"] = videoTimeline;
+                result["timeline_text"] = synthesizedTimeline ?? "";
+                // 覆盖 summary 供纯 get_document 总结：若原 summary 为空则用时间轴合成
+                if (string.IsNullOrWhiteSpace(resource.Summary) && string.IsNullOrWhiteSpace(resource.Description))
+                    result["summary"] = synthesizedTimeline ?? "";
+            }
+            if (pagePreview != null)
+            {
+                result["page_contents_preview"] = pagePreview;
+                if (string.IsNullOrWhiteSpace(resource.Summary) && string.IsNullOrWhiteSpace(resource.Description))
+                    result["summary"] = pagePreview;
+            }
 
             return JsonSerializer.Serialize(result, new JsonSerializerOptions
             {
@@ -213,7 +257,7 @@ public class MeiliSearchDocumentTools
                 return JsonSerializer.Serialize(new { error = $"Invalid pages format: {pages}" });
             }
 
-            // Fetch all pages for this resource and filter
+            // Fetch all pages / timeline segments for this resource
             var result = await _meiliSearchService.SearchAsync(new SearchQueryDto
             {
                 Query = "",
@@ -223,16 +267,44 @@ public class MeiliSearchDocumentTools
                 Sorting = "pageNumber:asc"
             });
 
-            var matchedPages = result.Items
-                .Where(p => pageNumbers.Contains(p.PageNumber))
-                .OrderBy(p => p.PageNumber)
-                .Select(p => new
-                {
-                    page_number = p.PageNumber,
-                    title = p.Title ?? "",
-                    content = p.Content ?? ""
-                })
-                .ToList();
+            // 视频资源：按时间轴段序号过滤（pageNumber 均为 0，需按 order/startTime 排序后按序号切片）
+            var isVideoForPaging = result.Items.Any(x => x.SourceType == "video");
+            List<object> matchedPages;
+            if (isVideoForPaging)
+            {
+                var orderedVideo = result.Items.Where(x => x.SourceType == "video")
+                    .OrderBy(x => x.StartTime).ToList();
+                // pages 视为段序号（1-based）
+                matchedPages = orderedVideo
+                    .Select((item, idx) => new { item, idx = idx + 1 })
+                    .Where(x => pageNumbers.Contains(x.idx))
+                    .Select(x => new
+                    {
+                        page_number = (object)x.idx,
+                        title = (object)$"{x.item.StartTime} - {x.item.EndTime}",
+                        content = (object)(x.item.EventDescription ?? ""),
+                        start_time = x.item.StartTime ?? "",
+                        end_time = x.item.EndTime ?? "",
+                        source_type = "video"
+                    } as object)
+                    .ToList();
+            }
+            else
+            {
+                matchedPages = result.Items
+                    .Where(p => pageNumbers.Contains(p.PageNumber))
+                    .OrderBy(p => p.PageNumber)
+                    .Select(p => new
+                    {
+                        page_number = (object)p.PageNumber,
+                        title = (object)(p.Title ?? ""),
+                        content = (object)(p.Content ?? ""),
+                        start_time = (object?)null,
+                        end_time = (object?)null,
+                        source_type = "document"
+                    } as object)
+                    .ToList();
+            }
 
             if (matchedPages.Count == 0)
             {
@@ -287,14 +359,41 @@ public class MeiliSearchDocumentTools
                 return JsonSerializer.Serialize(new { message = $"未找到与 \"{query}\" 相关的内容。" });
             }
 
-            var hits = result.Items.Select(h => new
+            var hits = result.Items.Select(h =>
             {
-                resource_name = h.ResourceName,
-                resource_id = h.ResourceId,
-                section = h.Title ?? "",
-                page_number = h.PageNumber,
-                content = h.Content ?? "",
-                relevance_score = Math.Round(h.RelevanceScore, 3)
+                if (h.SourceType == "video")
+                {
+                    return new
+                    {
+                        resource_name = h.ResourceName,
+                        resource_id = h.ResourceId,
+                        source_type = "video",
+                        video_name = h.VideoName ?? h.ResourceName,
+                        video_url = h.VideoUrl ?? "",
+                        start_time = h.StartTime ?? "",
+                        end_time = h.EndTime ?? "",
+                        section = $"{h.StartTime ?? ""} - {h.EndTime ?? ""}".Trim(' ', '-'),
+                        page_number = 0,
+                        content = h.EventDescription ?? "",
+                        event_description = h.EventDescription ?? "",
+                        relevance_score = Math.Round(h.RelevanceScore, 3)
+                    } as object;
+                }
+                return new
+                {
+                    resource_name = h.ResourceName,
+                    resource_id = h.ResourceId,
+                    source_type = "document",
+                    video_name = (string?)null,
+                    video_url = (string?)null,
+                    start_time = (string?)null,
+                    end_time = (string?)null,
+                    section = h.Title ?? "",
+                    page_number = h.PageNumber,
+                    content = h.Content ?? "",
+                    event_description = (string?)null,
+                    relevance_score = Math.Round(h.RelevanceScore, 3)
+                } as object;
             }).ToList();
 
             return JsonSerializer.Serialize(new
@@ -356,6 +455,14 @@ public class MeiliSearchDocumentTools
         }
 
         return result.Distinct().OrderBy(p => p).ToList();
+    }
+
+    private static bool IsVideoExtension(string? ext)
+    {
+        if (string.IsNullOrWhiteSpace(ext)) return false;
+        var normalized = ext.Trim().ToLowerInvariant();
+        if (!normalized.StartsWith(".")) normalized = "." + normalized;
+        return new[] { ".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".wmv", ".m4v", ".mpg", ".mpeg", ".3gp", ".qt" }.Contains(normalized);
     }
 
     private static string TruncateText(string text, int maxLength)

@@ -542,6 +542,14 @@ public class MeiliSearchService : IMeiliSearchService
         await _httpClient.PostAsync($"/indexes/{IndexName}/documents/delete", 
             new StringContent(JsonSerializer.Serialize(content), Encoding.UTF8, "application/json"));
 
+        // 同步清理视频时间轴索引（videoIndex 的 resourceId 与 document 同字段）
+        try
+        {
+            await _httpClient.PostAsync($"/indexes/{VideoIndexName}/documents/delete",
+                new StringContent(JsonSerializer.Serialize(content), Encoding.UTF8, "application/json"));
+        }
+        catch { /* videos 索引可能不存在或无该资源，静默忽略 */ }
+
         var indices = await _documentIndexRepository.GetByResourceIdAsync(resourceId);
         foreach (var docIndex in indices)
         {

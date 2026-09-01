@@ -131,6 +131,14 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         var checkResponse = await client.GetAsync($"/indexes/{VideosIndexName}");
         if (checkResponse.IsSuccessStatusCode)
         {
+            // 已存在也需补齐 filterable（旧索引缺 resourceId 导致按资源检索失败）
+            var indexBaseExisting = client.BaseAddress + $"/indexes/{VideosIndexName}";
+            try
+            {
+                await client.PutAsJsonAsync($"{indexBaseExisting}/settings/filterable-attributes",
+                    new[] { "resourceId", "videoId", "videoName", "indexedAt" });
+            }
+            catch { }
             return;
         }
 
@@ -143,7 +151,7 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         var indexBase = client.BaseAddress + $"/indexes/{VideosIndexName}";
 
         await client.PostAsJsonAsync($"{indexBase}/settings/filterable-attributes",
-            new[] { "videoId", "videoName", "indexedAt" });
+            new[] { "resourceId", "videoId", "videoName", "indexedAt" });
 
         await client.PostAsJsonAsync($"{indexBase}/settings/searchable-attributes",
             new[] { "videoName", "eventDescription" });
