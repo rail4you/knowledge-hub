@@ -82,6 +82,7 @@ export interface CourseFilterDto {
   categoryId?: string | null;
   teacherId?: string | null;
   status?: CourseStatus | null;
+  tenantId?: string | null;
 }
 
 export interface CreateStudentCourseDto {
@@ -188,6 +189,7 @@ export interface PagedCourseRequestDto extends PagedAndSortedResultRequestDto {
   difficulty?: number | null;
   categoryId?: string | null;
   status?: CourseStatus | null;
+  tenantId?: string | null;
 }
 
 export interface RelatedChapterInfoDto {

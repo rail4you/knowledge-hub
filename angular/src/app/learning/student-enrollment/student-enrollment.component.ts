@@ -116,7 +116,10 @@ export class StudentEnrollmentComponent implements OnInit {
   }
 
   loadCourses() {
-    this.courseService.getList({ maxResultCount: 1000, skipCount: 0 } as any).subscribe({
+    // 租户隔离：租户管理员由后端 CurrentTenant 自动过滤；Host 根据选中的租户过滤，
+    // 未选中则传 undefined 让 Host 看到所有租户课程（后端 tenantFilter 为 null 时不过滤 TenantId）。
+    const tenantId = this.isHost ? (this.selectedTenantId || undefined) : undefined;
+    this.courseService.getList({ maxResultCount: 1000, skipCount: 0, tenantId } as any).subscribe({
       next: (result) => {
         this.courses.set(result.items || []);
         this.cdr.markForCheck();
@@ -180,6 +183,12 @@ export class StudentEnrollmentComponent implements OnInit {
 
   onTenantChange() {
     this.pageIndex = 1;
+    // Host 切换租户时，课程下拉也应按租户重新加载，避免看到其他租户的课程
+    if (this.isHost) {
+      this.selectedCourseId = null;
+      this.enrollments.set([]);
+      this.loadCourses();
+    }
     this.loadEnrollments();
   }
 

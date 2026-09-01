@@ -54,6 +54,7 @@ public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
     public int? Difficulty { get; set; }
     public Guid? CategoryId { get; set; }
     public CourseStatus? Status { get; set; }
+    public Guid? TenantId { get; set; }
 }
 
 public class CourseFilterDto
@@ -65,6 +66,7 @@ public class CourseFilterDto
     public Guid? CategoryId { get; set; }
     public Guid? TeacherId { get; set; }
     public CourseStatus? Status { get; set; }
+    public Guid? TenantId { get; set; }
 }
 
 public class AuditCourseDto

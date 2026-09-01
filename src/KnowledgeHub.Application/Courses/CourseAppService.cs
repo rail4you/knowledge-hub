@@ -54,10 +54,20 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _logger = logger;
     }
 
+    private Guid? ResolveTenantFilter(Guid? inputTenantId)
+    {
+        if (CurrentTenant.Id.HasValue)
+            return CurrentTenant.Id.Value;
+        return inputTenantId;
+    }
+
     [Authorize(KnowledgeHubPermissions.Courses.Create)]
     public async Task<CourseDto> CreateAsync(CreateUpdateCourseDto input)
     {
-        var course = new Course(GuidGenerator.Create(), input.Title);
+        var course = new Course(GuidGenerator.Create(), input.Title)
+        {
+            TenantId = CurrentTenant.Id
+        };
         course.Description = input.Description;
         course.CoverImageUrl = input.CoverImageUrl;
         course.MajorId = input.MajorId;
@@ -111,21 +121,32 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
     public async Task<PagedResultDto<CourseDto>> GetListAsync(PagedCourseRequestDto input)
     {
-        var query = await _courseRepository.GetQueryableAsync();
-        query = query.WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
-                     .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
-                     .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
-                     .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
-                     .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
-                     .WhereIf(input.Status.HasValue, x => x.Status == input.Status);
+        var tenantFilter = ResolveTenantFilter(input.TenantId);
 
-        var totalCount = query.Count();
-        var courses = query.OrderByDescending(x => x.CreationTime)
-                           .Skip(input.SkipCount)
-                           .Take(input.MaxResultCount)
-                           .ToList();
+        List<Course> courses;
+        int totalCount;
+        Dictionary<Guid, string> majorNames;
 
-        var majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _courseRepository.GetQueryableAsync();
+            query = query.WhereIf(tenantFilter.HasValue, x => x.TenantId == tenantFilter.Value)
+                         .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
+                         .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
+                         .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
+                         .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
+                         .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
+                         .WhereIf(input.Status.HasValue, x => x.Status == input.Status);
+
+            totalCount = await query.CountAsync();
+            courses = await query.OrderByDescending(x => x.CreationTime)
+                               .Skip(input.SkipCount)
+                               .Take(input.MaxResultCount)
+                               .ToListAsync();
+
+            majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
+        }
+
         return new PagedResultDto<CourseDto>(
             totalCount,
             courses.Select(x => MapToDtoWithMajor(x, majorNames)).ToList()
@@ -272,19 +293,27 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
     public async Task<PagedResultDto<CourseDto>> GetPublishedAsync(PagedCourseRequestDto input)
     {
-        var query = await _courseRepository.GetQueryableAsync();
-        query = query.Where(x => x.Status == CourseStatus.Published)
-                     .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
-                     .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
-                     .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
-                     .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
-                     .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId);
+        var tenantFilter = ResolveTenantFilter(input.TenantId);
+        List<Course> courses;
+        int totalCount;
 
-        var totalCount = query.Count();
-        var courses = query.OrderByDescending(x => x.CreationTime)
-                           .Skip(input.SkipCount)
-                           .Take(input.MaxResultCount)
-                           .ToList();
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _courseRepository.GetQueryableAsync();
+            query = query.WhereIf(tenantFilter.HasValue, x => x.TenantId == tenantFilter.Value)
+                         .Where(x => x.Status == CourseStatus.Published)
+                         .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
+                         .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
+                         .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
+                         .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
+                         .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId);
+
+            totalCount = await query.CountAsync();
+            courses = await query.OrderByDescending(x => x.CreationTime)
+                               .Skip(input.SkipCount)
+                               .Take(input.MaxResultCount)
+                               .ToListAsync();
+        }
 
         // 批量查询章节数和选课人数
         var courseIds = courses.Select(c => c.Id).ToList();
@@ -397,16 +426,22 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     [Authorize]
     public async Task<PagedResultDto<CourseDto>> GetByFilterAsync(CourseFilterDto filter)
     {
-        var query = await _courseRepository.GetQueryableAsync();
-        query = query.WhereIf(!string.IsNullOrWhiteSpace(filter.Filter), x => x.Title.Contains(filter.Filter))
-                     .WhereIf(filter.MajorId.HasValue, x => x.MajorId == filter.MajorId.Value)
-                     .WhereIf(!string.IsNullOrWhiteSpace(filter.Semester), x => x.Semester == filter.Semester)
-                     .WhereIf(filter.Difficulty.HasValue, x => x.Difficulty == filter.Difficulty)
-                     .WhereIf(filter.CategoryId.HasValue, x => x.CategoryId == filter.CategoryId)
-                     .WhereIf(filter.TeacherId.HasValue, x => x.TeacherId == filter.TeacherId)
-                     .WhereIf(filter.Status.HasValue, x => x.Status == filter.Status);
+        var tenantFilter = ResolveTenantFilter(filter.TenantId);
+        List<Course> courses;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _courseRepository.GetQueryableAsync();
+            query = query.WhereIf(tenantFilter.HasValue, x => x.TenantId == tenantFilter.Value)
+                         .WhereIf(!string.IsNullOrWhiteSpace(filter.Filter), x => x.Title.Contains(filter.Filter))
+                         .WhereIf(filter.MajorId.HasValue, x => x.MajorId == filter.MajorId.Value)
+                         .WhereIf(!string.IsNullOrWhiteSpace(filter.Semester), x => x.Semester == filter.Semester)
+                         .WhereIf(filter.Difficulty.HasValue, x => x.Difficulty == filter.Difficulty)
+                         .WhereIf(filter.CategoryId.HasValue, x => x.CategoryId == filter.CategoryId)
+                         .WhereIf(filter.TeacherId.HasValue, x => x.TeacherId == filter.TeacherId)
+                         .WhereIf(filter.Status.HasValue, x => x.Status == filter.Status);
 
-        var courses = query.OrderByDescending(x => x.CreationTime).ToList();
+            courses = await query.OrderByDescending(x => x.CreationTime).ToListAsync();
+        }
         var majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
 
         return new PagedResultDto<CourseDto>(
@@ -417,12 +452,17 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
     public async Task<List<string>> GetSemestersAsync()
     {
-        var query = await _courseRepository.GetQueryableAsync();
-        return query.Where(x => x.Semester != null)
-                    .Select(x => x.Semester!)
-                    .Distinct()
-                    .OrderBy(x => x)
-                    .ToList();
+        var tenantFilter = ResolveTenantFilter(null);
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _courseRepository.GetQueryableAsync();
+            query = query.WhereIf(tenantFilter.HasValue, x => x.TenantId == tenantFilter.Value);
+            return await query.Where(x => x.Semester != null)
+                        .Select(x => x.Semester!)
+                        .Distinct()
+                        .OrderBy(x => x)
+                        .ToListAsync();
+        }
     }
 
     private List<ChapterDto> BuildChapterTree(List<ChapterDto> chapters)
