@@ -90,8 +90,8 @@ public static class ChineseTextTokenizer
     {
         var candidates = new List<string>();
 
-        // 按标点、空白、英文/数字等分割
-        const string splitPattern = @"[，。！？、；：""""''\[\]【】（）\(\)——\-=+\.\,\!\?\;\:\s\d\w\u3000\u00A0]+";
+        // 按标点、空白、英文/数字/符号等分割，保留中文连续片段（\w 会匹配中文，必须改用 A-Za-z0-9_）
+        const string splitPattern = @"[，。！？、；：""""''\[\]【】（）\(\)——\-=+\.\,\!\?\;\:\s\dA-Za-z_％%～~\/\\·•・\u3000\u00A0]+";
         var segments = Regex.Split(text, splitPattern);
 
         foreach (var segment in segments)
@@ -136,11 +136,18 @@ public static class ChineseTextTokenizer
     }
 
     /// <summary>
-    /// 判断一个短语是否有效（不含噪音字、首尾不能是停用词、长度 >= 2）。
+    /// 判断一个短语是否有效（不含噪音字、首尾不能是停用词、长度 >= 2，且必须为纯中文）。
     /// </summary>
     private static bool IsValidPhrase(string phrase)
     {
         if (string.IsNullOrEmpty(phrase) || phrase.Length < 2) return false;
+
+        // 必须是纯中文（2-6 字），过滤掉 %~ / kg/m2 等符号拼接的噪音
+        foreach (var c in phrase)
+        {
+            if (c < '\u4e00' || c > '\u9fff')
+                return false;
+        }
 
         // 首尾不能是典型的停用词/噪音字
         if (ChineseStopChars.Contains(phrase[0]) || ChineseStopChars.Contains(phrase[^1]))

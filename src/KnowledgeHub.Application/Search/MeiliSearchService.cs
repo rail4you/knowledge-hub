@@ -664,9 +664,10 @@ public class MeiliSearchService : IMeiliSearchService
 
     public async Task<List<HotWordDto>> GetHotWordsAsync(Guid resourceId, int count = 30)
     {
+        string? combinedText = null;
         try
         {
-            // 从 MeiliSearch 拉取该资源的所有页面内容
+            // 优先从 MeiliSearch 拉取该资源的所有页面内容
             var searchResult = await SearchAsync(new SearchQueryDto
             {
                 Query = "",
@@ -676,32 +677,49 @@ public class MeiliSearchService : IMeiliSearchService
                 Sorting = "pageNumber:asc"
             });
 
-            if (searchResult.TotalCount == 0)
+            if (searchResult.TotalCount > 0)
             {
-                return [];
+                combinedText = string.Join("\n", searchResult.Items.Select(p => p.Content));
             }
-
-            // 合并所有正文文本
-            var combinedText = string.Join("\n", searchResult.Items.Select(p => p.Content));
-
-            if (string.IsNullOrWhiteSpace(combinedText))
-            {
-                return [];
-            }
-
-            // 使用 ChineseTextTokenizer 提取高频词
-            var hotWords = ChineseTextTokenizer.ExtractHotWords(combinedText, count);
-
-            return hotWords.Select(hw => new HotWordDto
-            {
-                Word = hw.Word,
-                Frequency = hw.Frequency
-            }).ToList();
         }
         catch (Exception ex)
         {
+            // Meili 失败则回退到数据库
+        }
+
+        // 回退：直接从数据库 PageContents 读取（应对索引缺失/Meili 不可用场景）
+        if (string.IsNullOrWhiteSpace(combinedText))
+        {
+            try
+            {
+                List<PageContent> pages;
+                using (_dataFilter.Disable<IMultiTenant>())
+                {
+                    pages = await _pageContentRepository.GetListAsync(x => x.ResourceId == resourceId);
+                }
+                if (pages.Any())
+                {
+                    combinedText = string.Join("\n", pages.OrderBy(p => p.PageNumber).Select(p => p.Content));
+                }
+            }
+            catch
+            {
+                // 忽略，回退失败则返回空
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(combinedText))
+        {
             return [];
         }
+
+        var hotWords = ChineseTextTokenizer.ExtractHotWords(combinedText, count);
+
+        return hotWords.Select(hw => new HotWordDto
+        {
+            Word = hw.Word,
+            Frequency = hw.Frequency
+        }).ToList();
     }
 }
 

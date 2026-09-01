@@ -245,6 +245,11 @@ public class PptxImagePreprocessor : ISingletonDependency
                 new FileInfo(sourcePath).Length / 1048576);
             return true;
         }
+        catch (InvalidDataException idex)
+        {
+            _logger.LogWarning(idex, "[PptxPreprocess] 源文件 Zip 结构损坏，跳过预压缩: {Source}", sourcePath);
+            return false;
+        }
         finally
         {
             try { Directory.Delete(workDir, recursive: true); }
