@@ -325,13 +325,31 @@
   // 缩小层级缩进：默认每层 24px，改为 12px，给文档名称腾出更多横向空间
   .ant-tree-indent-unit {
     width: 12px;
+    flex-shrink: 0;
+  }
+
+  .ant-tree-treenode {
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .ant-tree-node-content-wrapper {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
     width: calc(100% - 8px);
     padding: 0 4px;
     border-radius: 6px;
     transition: background 0.15s;
+  }
+
+  .ant-tree-title {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
   }
 
   .ant-tree-node-selected {
@@ -355,16 +373,19 @@
 }
 
 .tree-resource {
-  display: flex;
+  // 使用 grid 保证：图标固定 16px，文件名自适应剩余空间（可收缩省略），标签固定 auto 右对齐
+  // 彻底避免过长文件名把“已索引/未索引”挤出可视区
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 6px;
+  column-gap: 6px;
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
   padding: 3px 4px;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.15s;
-  min-width: 0;
-  overflow: hidden;
 
   &:hover {
     background: #e6f7ff;
@@ -375,25 +396,31 @@
     border: 1px solid #91d5ff;
   }
 
+  .doc-icon {
+    flex-shrink: 0;
+  }
+
   .tree-resource-name {
-    flex: 1;
     min-width: 0;
     font-size: 12.5px;
     color: #333;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    // 允许在任意字符处断开，避免无空格长串（如 100 字符英文/数字）撑开 grid
+    word-break: break-all;
   }
 
-  // 索引标签更紧凑，并固定靠右对齐
+  // 索引标签更紧凑，并固定靠右对齐，不随文件名长度被挤压
   ::ng-deep .ant-tag {
+    margin: 0;
     margin-inline-end: 0;
-    margin-left: auto;
     padding: 0 4px;
     font-size: 11px;
     line-height: 18px;
     flex-shrink: 0;
     white-space: nowrap;
+    justify-self: end;
   }
 }
 
