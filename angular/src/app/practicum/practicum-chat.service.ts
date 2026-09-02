@@ -98,12 +98,14 @@ export class PracticumChatService implements OnDestroy {
 
       // 关键修复：服务端未及时发送 data: 事件时，EventSource 会一直处于 CONNECTING，
       // onerror 只有 readyState===CLOSED 才触发，导致 UI 永远"连接中"。
-      // 增加 5 秒超时兜底，超时未 open 则判定失败，让组件显示"已断开/重试"。
+      // 增加超时兜底，超时未 open 则判定失败。生产环境经 Nginx 代理 + TLS 握手
+      // 首次建立可能 >5s，原 5s 过于敏感导致误报“连接已断开”toast，现延长至 15s
+      // 且错误已在组件层静默（不再弹 warning），避免已连接却误提示的问题。
       const timeout = setTimeout(() => {
         if (!hasOpened && !completed) {
           fail(new Error('SSE connection timeout'));
         }
-      }, 5000);
+      }, 15000);
 
       es.onopen = () => {
         hasOpened = true;

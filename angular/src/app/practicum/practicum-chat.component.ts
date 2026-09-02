@@ -283,8 +283,13 @@ export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, Aft
           });
       },
       error: () => {
+        // 已移除误报的断开提示：生产环境 SSE 初次连接的 5s 超时 / 代理缓冲会导致
+        // EventSource 在已建立连接前触发 error，但实际消息收发（HTTP + 轮询兜底）
+        // 已正常工作，弹出的 warning 会误导用户以为需要刷新。
+        // 静默标记为非连接中，靠 messages$ 的后续推送及轮询兜底保证可用性，
+        // 不再弹出 toast。如需排查可在控制台查看日志。
         this.isConnecting.set(false);
-        this.message.warning('聊天连接已断开，请刷新页面重试');
+        console.warn('[PracticumChat] SSE connect failed (suppressed toast), will rely on polling fallback');
       },
     });
   }

@@ -236,7 +236,11 @@ export class PracticumDetailComponent implements OnInit, OnDestroy {
             }
           });
       },
-      error: () => { this.chatConnecting.set(false); this.message.warning('聊天连接失败'); },
+      error: () => {
+        // 静默处理：与 practicum-chat.component 保持一致，避免误报的断开提示
+        this.chatConnecting.set(false);
+        console.warn('[PracticumDetail] SSE connect failed (suppressed)');
+      },
     });
   }
 
