@@ -165,7 +165,14 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "AI agent reply failed for project {ProjectId}: {ErrorMessage}", projectId, ex.Message);
+                    logger.LogError(ex, "AI agent reply failed for project {ProjectId}: {ErrorMessage} | {FullException}", projectId, ex.Message, ex.ToString());
+                    // 阿里云 DashScope 欠费时会返回 Arrearage，需给用户更明确的提示
+                    var isArrearage = ex.Message.Contains("Arrearage", StringComparison.OrdinalIgnoreCase)
+                        || ex.ToString().Contains("Arrearage", StringComparison.OrdinalIgnoreCase)
+                        || ex.ToString().Contains("overdue", StringComparison.OrdinalIgnoreCase);
+                    var fallbackContent = isArrearage
+                        ? "AI 服务暂时不可用（阿里云账号已欠费，请联系管理员充值后重试）。"
+                        : "智能体暂时无法回复，请稍后再试。";
                     try
                     {
                         using var errorScope = scopeFactory.CreateScope();
@@ -177,7 +184,7 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
                             null,
                             PracticumChatSenderType.AIAgent,
                             agentName,
-                            "智能体暂时无法回复，请稍后再试。",
+                            fallbackContent,
                             PracticumChatMessageType.Text)
                         {
                             TenantId = projectTenantId,

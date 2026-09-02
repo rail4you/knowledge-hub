@@ -84,8 +84,35 @@ export class PracticumChatService implements OnDestroy {
       const es = new EventSource(url);
       this.eventSources.set(projectId, es);
 
+      let hasOpened = false;
+      let completed = false;
+
+      const fail = (err: Error) => {
+        if (completed) return;
+        completed = true;
+        clearTimeout(timeout);
+        es.close();
+        this.eventSources.delete(projectId);
+        observer.error(err);
+      };
+
+      // 关键修复：服务端未及时发送 data: 事件时，EventSource 会一直处于 CONNECTING，
+      // onerror 只有 readyState===CLOSED 才触发，导致 UI 永远"连接中"。
+      // 增加 5 秒超时兜底，超时未 open 则判定失败，让组件显示"已断开/重试"。
+      const timeout = setTimeout(() => {
+        if (!hasOpened && !completed) {
+          fail(new Error('SSE connection timeout'));
+        }
+      }, 5000);
+
       es.onopen = () => {
-        observer.next();
+        hasOpened = true;
+        clearTimeout(timeout);
+        if (!completed) {
+          completed = true;
+          observer.next();
+          observer.complete();
+        }
       };
 
       es.onmessage = (event) => {
@@ -100,9 +127,20 @@ export class PracticumChatService implements OnDestroy {
       };
 
       es.onerror = () => {
-        if (es.readyState === EventSource.CLOSED) {
+        // 已建立连接后的短暂网络抖动：EventSource 会自动重连，不视为致命错误
+        if (hasOpened) {
+          return;
+        }
+        // 尚未 open 就出错（包括 404/500 或后端未 flush），直接失败
+        fail(new Error('SSE connection closed'));
+      };
+
+      // 清理函数：组件取消订阅时关闭连接
+      return () => {
+        clearTimeout(timeout);
+        if (!hasOpened && !completed) {
+          es.close();
           this.eventSources.delete(projectId);
-          observer.error(new Error('SSE connection closed'));
         }
       };
     });

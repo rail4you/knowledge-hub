@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.Auditing;
+using Volo.Abp.Uow;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.Controllers;
@@ -41,10 +42,14 @@ public class PracticumChatController : AbpControllerBase
 
     /// <summary>
     /// SSE stream endpoint. Client connects and receives new messages in real time.
+    /// 关键修复：禁用 ABP 的 WrapResult 与 UOW，否则 Kestrel 会缓冲响应直到 Action 结束，
+    /// 前端 EventSource 收不到 data: 事件，一直显示"连接中"。
     /// </summary>
     [HttpGet("stream/{projectId:guid}")]
     [AllowAnonymous]
     [IgnoreAntiforgeryToken]
+    [UnitOfWork(IsDisabled = true)]
+    [Produces("text/event-stream")]
     public async Task Stream(Guid projectId)
     {
         var httpContext = HttpContext;
