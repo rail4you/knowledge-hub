@@ -1,13 +1,18 @@
-import { Component, inject, OnInit, signal, HostListener } from '@angular/core';
+import { Component, inject, OnInit, signal, HostListener, computed } from '@angular/core';
 import { UntypedFormBuilder, UntypedFormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink, ActivatedRoute, Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { RouterLink, RouterLinkActive, ActivatedRoute, Router } from '@angular/router';
 import {
   AuthService,
   ConfigStateService,
   SessionStateService,
   LocalizationPipe,
   EnvironmentService,
+  AbpTenantService,
 } from '@abp/ng.core';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { TenantListService } from '../proxy/controllers/tenant-list.service';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { DOCUMENT } from '@angular/common';
 import { catchError, finalize } from 'rxjs/operators';
@@ -17,7 +22,7 @@ import { throwError } from 'rxjs';
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
-  imports: [ReactiveFormsModule, RouterLink, LocalizationPipe],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, RouterLinkActive, LocalizationPipe, NzIconModule],
 })
 export class LoginComponent implements OnInit {
   private readonly fb = inject(UntypedFormBuilder);
@@ -29,6 +34,8 @@ export class LoginComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
   private readonly environmentService = inject(EnvironmentService);
+  private readonly abpTenantService = inject(AbpTenantService);
+  private readonly tenantListService = inject(TenantListService);
 
   form!: UntypedFormGroup;
   inProgress = false;
@@ -37,10 +44,61 @@ export class LoginComponent implements OnInit {
   languages: { cultureName: string; displayName: string; flagIcon: string }[] = [];
   currentLang = '';
 
+  // 租户（Tab 列表方式）
+  tenantList = signal<{ id: string; name: string }[]>([]);
+  currentTenantName = signal<string | null>(null);
+  currentTenantId = signal<string | null>(null);
+
   ngOnInit() {
     this.clearSession();
     this.buildForm();
     this.loadLanguages();
+    this.loadTenants();
+    this.loadCurrentTenant();
+  }
+
+  private loadTenants() {
+    this.tenantListService.getTenants().subscribe({
+      next: (list: any) => {
+        const items = Array.isArray(list) ? list : [];
+        this.tenantList.set(items.map((t: any) => ({ id: t.id, name: t.name })));
+      },
+      error: () => this.tenantList.set([]),
+    });
+  }
+
+  private loadCurrentTenant() {
+    try {
+      const match = this.document.cookie.match(/(?:^|; )__tenant=([^;]*)/);
+      const tenantId = match ? decodeURIComponent(match[1]) : null;
+      if (tenantId) {
+        this.currentTenantId.set(tenantId);
+        this.abpTenantService.findTenantById(tenantId).subscribe({
+          next: (res: any) => {
+            if (res?.success && res?.name) {
+              this.currentTenantName.set(res.name);
+            } else {
+              this.currentTenantName.set(tenantId);
+            }
+          },
+          error: () => this.currentTenantName.set(tenantId),
+        });
+      }
+    } catch {}
+  }
+
+  selectTenant(tenant: { id: string; name: string }) {
+    this.document.cookie = `__tenant=${encodeURIComponent(tenant.id)}; path=/; SameSite=Lax`;
+    this.currentTenantId.set(tenant.id);
+    this.currentTenantName.set(tenant.name);
+    this.toasterService.success(`已切换到租户：${tenant.name}`);
+  }
+
+  clearTenant() {
+    this.document.cookie = `__tenant=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+    this.currentTenantId.set(null);
+    this.currentTenantName.set(null);
+    this.toasterService.success('已清除租户，将以宿主身份登录');
   }
 
   /**

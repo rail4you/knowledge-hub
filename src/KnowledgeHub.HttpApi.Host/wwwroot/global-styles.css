@@ -38,13 +38,60 @@
 }
 
 .kh-tenant-option:hover {
-    border-color: #059669;
-    color: #047857;
-    background: #ecfdf5;
+    border-color: var(--kh-accent, #1890ff);
+    color: var(--kh-accent-deep, #0a6fce);
+    background: var(--kh-accent-soft, rgba(24,144,255,0.10));
 }
 
 .kh-tenant-option.active {
-    border-color: #059669;
-    background: #059669;
+    border-color: var(--kh-accent, #1890ff);
+    background: var(--kh-accent, #1890ff);
     color: #fff;
+}
+
+/* ── Account / Login 页面：贴合教师端风格（深蓝不用于表单页，仅提亮按钮与输入聚焦） ── */
+:root {
+    --kh-accent: #1890ff;
+    --kh-accent-deep: #0a6fce;
+    --kh-accent-soft: rgba(24,144,255,0.10);
+    --kh-canvas: #f5f7fa;
+    --kh-line: rgba(24,144,255,0.10);
+    --kh-line-2: #e7edf5;
+}
+
+/* Account 布局底色 + 轻量底纹，避免中央卡片悬浮感过空 */
+.lpx-account-layout,
+body:has(.abp-account-layout) {
+    background: var(--kh-canvas) !important;
+}
+
+.abp-account-layout .card,
+.lpx-account-layout .card {
+    border: 1px solid var(--kh-line) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 2px rgba(14,27,46,0.04), 0 10px 30px -12px rgba(24,144,255,0.14) !important;
+}
+
+/* Account 页主按钮 / 链接 / 输入聚焦改为教师端品牌蓝 */
+.abp-account-layout .btn-primary,
+.lpx-account-layout .btn-primary {
+    background-color: var(--kh-accent) !important;
+    border-color: var(--kh-accent) !important;
+}
+
+.abp-account-layout .btn-primary:hover,
+.lpx-account-layout .btn-primary:hover {
+    background-color: var(--kh-accent-deep) !important;
+    border-color: var(--kh-accent-deep) !important;
+}
+
+.abp-account-layout a,
+.lpx-account-layout a {
+    color: var(--kh-accent);
+}
+
+.abp-account-layout .form-control:focus,
+.lpx-account-layout .form-control:focus {
+    border-color: var(--kh-accent) !important;
+    box-shadow: 0 0 0 3px var(--kh-accent-soft) !important;
 }
