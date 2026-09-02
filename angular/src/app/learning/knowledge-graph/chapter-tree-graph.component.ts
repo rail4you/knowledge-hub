@@ -219,12 +219,38 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
 
   selectedNode = signal<any | null>(null);
   zoomPercent = signal<number>(100);
+  /** 缩放下限 50% */
+  private readonly MIN_ZOOM = 0.5;
+  /** 缩放上限 150% */
+  private readonly MAX_ZOOM = 1.5;
   /** 当前绝对缩放比例 — 通过 treeRoam 事件的 delta 参数累乘得到 */
   private currentAbsoluteZoom = 1;
   /** 首次适配是否已执行，避免后续 ngOnChanges 重新适配 */
   private hasInitiallyFit = false;
   /** 当前非叶子节点标签位置：缩放小时从 'right' 改为 'bottom' 避免重叠 */
   private nonLeafLabelPosition: 'right' | 'bottom' = 'right';
+  /**
+   * 下一次 treeRoam 是由本组件派发的"回滚"事件，用于把视觉缩放拉回边界。
+   * 在该事件中不要再次累乘 currentAbsoluteZoom（否则会把刚夹紧的值再次乘偏）。
+   */
+  private skipNextRoamMultiply = false;
+  /**
+   * capture 阶段 wheel 监听器，挂在 chartContainer 上、echarts.init 之前挂载。
+   * ECharts 把自己的 wheel 监听挂在内层 zrender canvas 上，且用 bubble 阶段；
+   * 父元素 capture 阶段先于子元素 bubble 阶段触发，所以我们可以赶在 ECharts 之前
+   * 看到 wheel 事件，并在到达边界时直接 stopImmediatePropagation，让 ECharts
+   * 根本不会越界（避免视觉上出现"缩小到 45% 再弹回 50%"的闪烁）。
+   */
+  private readonly wheelGuard = (e: WheelEvent) => {
+    // deltaY > 0 = 向下滚 = 缩小；deltaY < 0 = 向上滚 = 放大
+    if (this.currentAbsoluteZoom <= this.MIN_ZOOM && e.deltaY > 0) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    } else if (this.currentAbsoluteZoom >= this.MAX_ZOOM && e.deltaY < 0) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  };
 
   /** 折叠状态：记录被手动折叠的节点 id */
   private collapsedSet = new Set<string>();
@@ -296,6 +322,10 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
 
   ngOnDestroy() {
     this.resizeObserver?.disconnect();
+    const container = this.chartContainer()?.nativeElement;
+    if (container) {
+      container.removeEventListener('wheel', this.wheelGuard, { capture: true });
+    }
     this.chart?.dispose();
     this.chart = null;
   }
@@ -315,6 +345,13 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     const container = this.chartContainer()?.nativeElement;
     if (!container) return;
 
+    // 必须先于 echarts.init 挂载 capture 阶段的 wheel 守卫，
+    // 才能赶在 ECharts 内部的 wheel handler 之前截获事件。
+    container.addEventListener('wheel', this.wheelGuard, {
+      passive: false,
+      capture: true,
+    });
+
     this.chart = echarts.init(container, null, { renderer: 'canvas' });
     this.updateChart();
 
@@ -322,12 +359,37 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
       // Tree 系列的 roam event 名是 'treeRoam'（不是 'graphRoam'）。
       // params.zoom 是相对增量（ECharts RoamController 内部约定）。
       if (params && typeof params.zoom === 'number') {
-        this.currentAbsoluteZoom *= params.zoom;
-        const pct = Math.round(this.currentAbsoluteZoom * 100);
+        // 本组件自己发起的"回滚到边界"事件：视觉缩放已被拉回，
+        // 不要再次累乘 currentAbsoluteZoom（currentAbsoluteZoom 已经是边界值）。
+        if (this.skipNextRoamMultiply) {
+          this.skipNextRoamMultiply = false;
+          return;
+        }
+
+        const targetZoom = this.currentAbsoluteZoom * params.zoom;
+        if (targetZoom < this.MIN_ZOOM || targetZoom > this.MAX_ZOOM) {
+          // 超出 [50%, 150%] 范围：把 currentAbsoluteZoom 夹紧到边界，
+          // 然后派发一次反向 treeRoam 把视觉缩放也拉回边界。
+          const clamped = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, targetZoom));
+          const revertRatio = clamped / targetZoom;
+          this.currentAbsoluteZoom = clamped;
+          this.zoomPercent.set(Math.round(clamped * 100));
+          this.skipNextRoamMultiply = true;
+          this.chart?.dispatchAction({
+            type: 'treeRoam',
+            zoom: revertRatio,
+            originX: this.chart.getWidth() / 2,
+            originY: this.chart.getHeight() / 2,
+          } as any);
+          return;
+        }
+
+        this.currentAbsoluteZoom = targetZoom;
+        const pct = Math.round(targetZoom * 100);
         this.zoomPercent.set(pct);
 
-        // 缩放比例 <= 40% 时非叶子节点标签改到下方，避免长标题重叠
-        const wantBottom = pct <= 40;
+        // 缩放比例较小时非叶子节点标签改到下方，避免长标题重叠
+        const wantBottom = pct <= 70;
         if (wantBottom !== (this.nonLeafLabelPosition === 'bottom')) {
           this.nonLeafLabelPosition = wantBottom ? 'bottom' : 'right';
           // 只更新 label 位置，不重建整张图
@@ -370,12 +432,15 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   private computeFitZoom(nodeCount: number, depth: number): number {
     // 综合考虑节点数量与树的深度（层级越多，水平方向越容易被压缩）
     const complexity = nodeCount * Math.max(depth, 1);
-    if (complexity <= 60) return 1.0;       // 极少节点：默认 1.0
-    if (complexity <= 120) return 0.85;     // 简单图谱
-    if (complexity <= 250) return 0.7;      // 中等图谱
-    if (complexity <= 500) return 0.6;      // 较多节点
-    if (complexity <= 900) return 0.5;      // 大量节点
-    return 0.42;                             // 极复杂图谱
+    let zoom: number;
+    if (complexity <= 60) zoom = 1.0;       // 极少节点：默认 1.0
+    else if (complexity <= 120) zoom = 0.85; // 简单图谱
+    else if (complexity <= 250) zoom = 0.7;  // 中等图谱
+    else if (complexity <= 500) zoom = 0.6;  // 较多节点
+    else if (complexity <= 900) zoom = 0.5;  // 大量节点
+    else zoom = 0.42;                        // 极复杂图谱
+    // 初始适配也必须落在 [50%, 150%] 范围内
+    return Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, zoom));
   }
 
   /** 计算树的最大深度（用于辅助缩放判断） */
@@ -442,8 +507,10 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   private dispatchZoom(zoomDelta: number) {
     if (!this.chart) return;
     const current = this.currentAbsoluteZoom;
-    const next = Math.max(0.3, Math.min(2.5, current * zoomDelta));
+    // 工具栏 +/- 按钮也遵守 [50%, 150%] 范围
+    const next = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, current * zoomDelta));
     const ratio = next / current;
+    if (ratio === 1) return; // 已在边界，无变化
     this.chart.dispatchAction({
       type: 'treeRoam',
       zoom: ratio,
