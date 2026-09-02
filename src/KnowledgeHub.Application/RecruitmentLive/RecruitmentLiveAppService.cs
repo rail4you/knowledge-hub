@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Authorization;
 using RecruitmentLiveEntity = KnowledgeHub.RecruitmentLive.RecruitmentLive;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
@@ -26,20 +25,23 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 {
     private readonly IRepository<RecruitmentLiveEntity, Guid> _liveRepository;
     private readonly IRepository<RecruitmentLiveChatMessage, Guid> _chatMessageRepository;
+    private readonly IRepository<RecruitmentLiveParticipant, Guid> _participantRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IConfiguration _configuration;
     private readonly ICurrentUser _currentUser;
-    private static readonly char[] RoomCodeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray(); // 去掉易混淆的 0/O/1/I
+    private static readonly char[] RoomCodeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".ToCharArray();
 
     public RecruitmentLiveAppService(
         IRepository<RecruitmentLiveEntity, Guid> liveRepository,
         IRepository<RecruitmentLiveChatMessage, Guid> chatMessageRepository,
+        IRepository<RecruitmentLiveParticipant, Guid> participantRepository,
         IRepository<IdentityUser, Guid> userRepository,
         IConfiguration configuration,
         ICurrentUser currentUser)
     {
         _liveRepository = liveRepository;
         _chatMessageRepository = chatMessageRepository;
+        _participantRepository = participantRepository;
         _userRepository = userRepository;
         _configuration = configuration;
         _currentUser = currentUser;
@@ -57,7 +59,8 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
         if (!string.IsNullOrWhiteSpace(input.Filter))
         {
-            query = query.Where(x => x.Title.Contains(input.Filter) || (x.StudentName != null && x.StudentName.Contains(input.Filter)));
+            // 不支持直接在 teacher lives 查询中过滤学生姓名，简化只过滤标题
+            query = query.Where(x => x.Title.Contains(input.Filter));
         }
         if (input.Status.HasValue)
         {
@@ -71,7 +74,10 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             .Take(input.MaxResultCount)
             .ToListAsync();
 
-        return new PagedResultDto<RecruitmentLiveDto>(totalCount, items.Select(MapToDto).ToList());
+        var liveIds = items.Select(x => x.Id).ToList();
+        var participants = await _participantRepository.GetListAsync(p => liveIds.Contains(p.LiveId));
+
+        return new PagedResultDto<RecruitmentLiveDto>(totalCount, items.Select(e => MapToDto(e, participants.Where(p => p.LiveId == e.Id).ToList())).ToList());
     }
 
     [Authorize(KnowledgeHubPermissions.RecruitmentLive.Create)]
@@ -84,59 +90,64 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
         ValidateScheduleRange(input.ScheduledAt, input.ScheduledEndAt);
 
-        // 一对一直播：每次最多仅分配一名学生。
         var studentIds = input.StudentIds?.Distinct().ToList() ?? new List<Guid>();
-        if (studentIds.Count > 1)
-        {
-            throw new UserFriendlyException("一次只能创建一对一直播，请仅选择一名学生。");
-        }
-
         var currentUserId = _currentUser.GetId();
         var currentUser = await _userRepository.GetAsync(currentUserId);
 
-        // 至少需要一个参与者（教师自己），如果没有学生则创建空直播
-        if (studentIds.Count == 0)
+        var roomCode = await GenerateUniqueRoomCodeAsync();
+        var liveId = GuidGenerator.Create();
+
+        // 创建直播间（设置第一个学生为主学生兼容旧代码）
+        var primaryStudentName = (string?)null;
+        if (studentIds.Count > 0)
         {
-            var roomCode = await GenerateUniqueRoomCodeAsync();
-            var entity = new RecruitmentLiveEntity(
-                GuidGenerator.Create(),
-                input.Title.Trim(),
-                currentUserId,
-                currentUser.Name ?? currentUser.UserName ?? "未知",
-                roomCode)
-            {
-                TenantId = CurrentTenant.Id,
-                Description = input.Description?.Trim(),
-                ScheduledAt = input.ScheduledAt?.ToUniversalTime(),
-                ScheduledEndAt = input.ScheduledEndAt?.ToUniversalTime(),
-            };
-            await _liveRepository.InsertAsync(entity, autoSave: true);
-            return new List<RecruitmentLiveDto> { MapToDto(entity) };
+            var firstStudent = await _userRepository.GetAsync(studentIds[0]);
+            primaryStudentName = firstStudent.Name ?? firstStudent.UserName ?? "未知";
         }
 
-        // 每个学生创建一个独立的直播间
-        var results = new List<RecruitmentLiveDto>();
+        var entity = new RecruitmentLiveEntity(
+            liveId,
+            input.Title.Trim(),
+            currentUserId,
+            currentUser.Name ?? currentUser.UserName ?? "未知",
+            roomCode)
+        {
+            TenantId = CurrentTenant.Id,
+            Description = input.Description?.Trim(),
+            ScheduledAt = input.ScheduledAt?.ToUniversalTime(),
+            ScheduledEndAt = input.ScheduledEndAt?.ToUniversalTime(),
+        };
+
+        if (studentIds.Count > 0)
+        {
+            var firstStudent = await _userRepository.GetAsync(studentIds[0]);
+            entity.AssignStudent(firstStudent.Id, firstStudent.Name ?? firstStudent.UserName ?? "未知");
+        }
+
+        await _liveRepository.InsertAsync(entity, autoSave: true);
+
+        // 添加参与者记录
+        var participants = new List<RecruitmentLiveParticipant>
+        {
+            new(GuidGenerator.Create(), liveId, currentUserId, currentUser.Name ?? currentUser.UserName ?? "未知", "teacher")
+            {
+                TenantId = CurrentTenant.Id,
+            }
+        };
+
         foreach (var studentId in studentIds)
         {
             var student = await _userRepository.GetAsync(studentId);
-            var roomCode = await GenerateUniqueRoomCodeAsync();
-            var entity = new RecruitmentLiveEntity(
-                GuidGenerator.Create(),
-                input.Title.Trim(),
-                currentUserId,
-                currentUser.Name ?? currentUser.UserName ?? "未知",
-                roomCode)
+            participants.Add(new RecruitmentLiveParticipant(
+                GuidGenerator.Create(), liveId, student.Id, student.Name ?? student.UserName ?? "未知", "student")
             {
                 TenantId = CurrentTenant.Id,
-                Description = input.Description?.Trim(),
-                ScheduledAt = input.ScheduledAt?.ToUniversalTime(),
-                ScheduledEndAt = input.ScheduledEndAt?.ToUniversalTime(),
-            };
-            entity.AssignStudent(student.Id, student.Name ?? student.UserName ?? "未知");
-            await _liveRepository.InsertAsync(entity, autoSave: true);
-            results.Add(MapToDto(entity));
+            });
         }
-        return results;
+
+        await _participantRepository.InsertManyAsync(participants, autoSave: true);
+
+        return new List<RecruitmentLiveDto> { MapToDto(entity, participants) };
     }
 
     [Authorize(KnowledgeHubPermissions.RecruitmentLive.Create)]
@@ -168,7 +179,8 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         }
 
         await _liveRepository.UpdateAsync(entity, autoSave: true);
-        return MapToDto(entity);
+        var participants = await _participantRepository.GetListAsync(p => p.LiveId == id);
+        return MapToDto(entity, participants);
     }
 
     [Authorize(KnowledgeHubPermissions.RecruitmentLive.Create)]
@@ -179,10 +191,6 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         await _liveRepository.UpdateAsync(entity, autoSave: true);
     }
 
-    /// <summary>
-    /// 结束直播（仅教师/管理员可调用，学生退出不结束直播）。
-    /// 进行中→已结束，等待中→已取消，已结束/已取消幂等返回。
-    /// </summary>
     [Authorize]
     public async Task EndLiveAsync(Guid id)
     {
@@ -191,7 +199,6 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             var entity = await _liveRepository.GetAsync(id);
             var currentUserId = _currentUser.GetId();
 
-            // 只有教师（或管理员）可以结束直播；学生退出不结束直播
             var isTeacherOrAdmin = entity.TeacherId == currentUserId
                 || await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.RecruitmentLive.Manage);
             if (!isTeacherOrAdmin)
@@ -201,13 +208,12 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
             if (entity.Status == RecruitmentLiveStatus.Active)
             {
-                entity.End(); // Active → Ended
+                entity.End();
             }
             else if (entity.Status == RecruitmentLiveStatus.Waiting)
             {
-                entity.Cancel(); // Waiting → Cancelled
+                entity.Cancel();
             }
-            // 已结束/已取消：幂等，不重复修改
 
             await _liveRepository.UpdateAsync(entity, autoSave: true);
         }
@@ -217,6 +223,9 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
     public async Task DeleteLiveAsync(Guid id)
     {
         var entity = await GetOwnedLiveAsync(id);
+        // 清理关联数据
+        await _participantRepository.DeleteAsync(p => p.LiveId == id);
+        await _chatMessageRepository.DeleteAsync(m => m.LiveId == id);
         await _liveRepository.DeleteAsync(entity);
     }
 
@@ -228,18 +237,22 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             var entity = await _liveRepository.GetAsync(liveId);
             var currentUserId = _currentUser.GetId();
 
-            // 验证当前用户是否为该直播的参与者
-            var isTeacher = entity.TeacherId == currentUserId;
-            var isStudent = entity.StudentId == currentUserId;
+            // 通过参与者表验证，兼容旧版（只有 TeacherId/StudentId 的旧记录）
+            var allParticipants = await _participantRepository.GetListAsync(p => p.LiveId == liveId);
+            var isParticipant = allParticipants.Any(p => p.UserId == currentUserId)
+                || entity.TeacherId == currentUserId    // 兼容旧记录
+                || entity.StudentId == currentUserId;    // 兼容旧记录
+            var isTeacher = allParticipants.Any(p => p.UserId == currentUserId && p.Role == "teacher")
+                || entity.TeacherId == currentUserId;   // 兼容旧记录
 
-            if (!isTeacher && !isStudent)
+            if (!isParticipant)
             {
                 var canManage = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.RecruitmentLive.Manage);
                 if (!canManage)
                 {
                     throw new UserFriendlyException("您不是该直播的参与者。");
                 }
-                isTeacher = true; // 管理员当教师处理
+                isTeacher = true;
             }
 
             if (entity.Status == RecruitmentLiveStatus.Ended || entity.Status == RecruitmentLiveStatus.Cancelled)
@@ -269,8 +282,15 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
         using (DataFilter.Disable<IMultiTenant>())
         {
-            var query = await _liveRepository.GetQueryableAsync();
-            query = query.Where(x => x.StudentId == currentUserId);
+            // 通过参与者表查询分配给当前学生的直播，兼容旧记录（仅 StudentId）
+            var participantQuery = await _participantRepository.GetQueryableAsync();
+            var participantLiveIds = await participantQuery
+                .Where(p => p.UserId == currentUserId && p.Role == "student")
+                .Select(p => p.LiveId)
+                .ToListAsync();
+
+            var query = (await _liveRepository.GetQueryableAsync())
+                .Where(x => participantLiveIds.Contains(x.Id) || x.StudentId == currentUserId);
 
             if (!string.IsNullOrWhiteSpace(input.Filter))
             {
@@ -288,7 +308,10 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
                 .Take(input.MaxResultCount)
                 .ToListAsync();
 
-            return new PagedResultDto<RecruitmentLiveDto>(totalCount, items.Select(MapToDto).ToList());
+            var allParticipants = await _participantRepository.GetListAsync(p => items.Select(i => i.Id).Contains(p.LiveId));
+
+            return new PagedResultDto<RecruitmentLiveDto>(totalCount,
+                items.Select(e => MapToDto(e, allParticipants.Where(p => p.LiveId == e.Id).ToList())).ToList());
         }
     }
 
@@ -301,8 +324,6 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         {
             var entity = await _liveRepository.GetAsync(id);
 
-            // 检查是否已过期（设置了计划结束时间且已过计划结束时间的直播不允许进入；
-            // 未设置计划结束时间或尚未到计划结束时间（时间范围内）的直播不会过期）
             if (entity.ScheduledEndAt.HasValue && entity.ScheduledEndAt.Value < DateTime.UtcNow
                 && entity.Status != RecruitmentLiveStatus.Ended && entity.Status != RecruitmentLiveStatus.Cancelled)
             {
@@ -310,9 +331,11 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             }
 
             var currentUserId = _currentUser.GetId();
-            var dto = MapToDto(entity);
-            dto.IsParticipant = entity.TeacherId == currentUserId 
-                || entity.StudentId == currentUserId 
+            var participants = await _participantRepository.GetListAsync(p => p.LiveId == id);
+            var dto = MapToDto(entity, participants);
+            dto.IsParticipant = participants.Any(p => p.UserId == currentUserId)
+                || entity.TeacherId == currentUserId     // 兼容旧记录
+                || entity.StudentId == currentUserId     // 兼容旧记录
                 || await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.RecruitmentLive.Manage);
             return dto;
         }
@@ -327,39 +350,27 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         var query = await _userRepository.GetQueryableAsync();
         query = query.Where(u => u.TenantId == currentTenantId);
 
-        // 通过 AbpUserRoles / AbpRoles 子查询过滤 Student 角色（避免 N+1 GetRolesAsync）
         var dbContext = await _userRepository.GetDbContextAsync();
         var userRoles = dbContext.Set<IdentityUserRole>();
         var roles = dbContext.Set<IdentityRole>();
 
-        // AbpRoles 和 AbpUserRoles 都受多租户过滤。当租户用户分配的
-        // 是 host 级别的 Student 角色时，AbpUserRoles.TenantId = NULL，
-        // 但多租户过滤器会加 WHERE TenantId = 当前租户 ID，导致不匹配。
-        // 需要临时禁用多租户过滤来查询角色和用户关联。
         List<Guid> studentRoleIds;
         List<Guid> studentUserIds;
         using (DataFilter.Disable<IMultiTenant>())
         {
-            // 收集所有可用的 Student 角色：先查当前租户的，再添加 host 级别的。
-            // 租户可能有自己的 Student 角色但无人被分配，需要同时检查 host Student 角色。
             studentRoleIds = await roles
                 .Where(r => r.Name == studentRoleName && r.TenantId == currentTenantId)
                 .Select(r => r.Id)
                 .ToListAsync();
 
-            // 额外加上 host 级别的 Student 角色（host 角色可被租户用户共享）
             var hostStudentRoleIds = await roles
                 .Where(r => r.Name == studentRoleName && r.TenantId == null)
                 .Select(r => r.Id)
                 .ToListAsync();
             studentRoleIds.AddRange(hostStudentRoleIds);
 
-            if (studentRoleIds.Count == 0)
-            {
-                return [];
-            }
+            if (studentRoleIds.Count == 0) return [];
 
-            // AbpUserRoles 也有多租户过滤，在同一 using 块内查询
             studentUserIds = await userRoles
                 .Where(ur => studentRoleIds.Contains(ur.RoleId))
                 .Select(ur => ur.UserId)
@@ -394,12 +405,17 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         if (string.IsNullOrWhiteSpace(content) || content.Length > 500) return;
 
         var userId = _currentUser.GetId();
-        RecruitmentLiveEntity live;
+        var role = "student";
         using (DataFilter.Disable<IMultiTenant>())
         {
-            live = await _liveRepository.GetAsync(liveId);
+            var live = await _liveRepository.GetAsync(liveId);
+            role = live.TeacherId == userId ? "teacher" : "student";
+
+            // 尝试通过参与者表获取更准确的角色
+            var participants = await _participantRepository.GetListAsync(p => p.LiveId == liveId);
+            var participant = participants.FirstOrDefault(p => p.UserId == userId);
+            if (participant != null) role = participant.Role;
         }
-        var role = live.TeacherId == userId ? "teacher" : "student";
 
         var msg = new RecruitmentLiveChatMessage(
             GuidGenerator.Create(), liveId, role, userId, content);
@@ -411,8 +427,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
-            var msgs = await _chatMessageRepository.GetListAsync(
-                x => x.LiveId == liveId);
+            var msgs = await _chatMessageRepository.GetListAsync(x => x.LiveId == liveId);
             return msgs
                 .OrderBy(x => x.SentAt)
                 .Select(x => new RecruitmentLiveChatMessageDto
@@ -431,15 +446,9 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         var servers = _configuration.GetSection("RecruitmentLive:IceServers").Get<List<IceServerDto>>() ?? [];
         if (servers.Count == 0)
         {
-            // 默认 Google STUN
             servers.Add(new IceServerDto { Urls = ["stun:stun.l.google.com:19302"] });
         }
 
-        // TURN 中继（coturn）：解决双方 NAT 不对称/严格 NAT 下 P2P 无法穿透的问题。
-        // 使用 coturn 的 time-limited credential 机制：
-        //   username = "{过期Unix时间戳}:{随机串}"
-        //   credential = base64(HMAC-SHA1(secret, username))
-        // coturn 端配置 static-auth-secret = 同一密钥即可校验，无需把固定密码发给浏览器。
         var turnUrl = _configuration["RecruitmentLive:Turn:Url"];
         var turnSecret = _configuration["RecruitmentLive:Turn:Secret"];
         if (!string.IsNullOrWhiteSpace(turnUrl) && !string.IsNullOrWhiteSpace(turnSecret))
@@ -452,17 +461,9 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
             var urls = new List<string> { turnUrl };
             var turnUrlTcp = _configuration["RecruitmentLive:Turn:UrlTcp"];
-            if (!string.IsNullOrWhiteSpace(turnUrlTcp))
-            {
-                urls.Add(turnUrlTcp);
-            }
+            if (!string.IsNullOrWhiteSpace(turnUrlTcp)) urls.Add(turnUrlTcp);
 
-            servers.Add(new IceServerDto
-            {
-                Urls = urls,
-                Username = username,
-                Credential = credential
-            });
+            servers.Add(new IceServerDto { Urls = urls, Username = username, Credential = credential });
         }
 
         return Task.FromResult(servers);
@@ -473,9 +474,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
     private static void ValidateScheduleRange(DateTime? start, DateTime? end)
     {
         if (start.HasValue && end.HasValue && end.Value < start.Value)
-        {
             throw new UserFriendlyException("计划结束时间不能早于计划开始时间。");
-        }
     }
 
     private async Task<RecruitmentLiveEntity> GetOwnedLiveAsync(Guid id)
@@ -485,12 +484,9 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
         if (entity.TeacherId != currentUserId)
         {
-            // 管理员也能操作
             var canManage = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.RecruitmentLive.Manage);
             if (!canManage)
-            {
                 throw new UserFriendlyException("您没有权限操作该直播。");
-            }
         }
 
         return entity;
@@ -503,10 +499,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         {
             var code = GenerateRoomCode();
             var exists = await _liveRepository.AnyAsync(x => x.RoomCode == code);
-            if (!exists)
-            {
-                return code;
-            }
+            if (!exists) return code;
         }
         throw new BusinessException("RecruitmentLive:RoomCodeGenerationFailed", "无法生成唯一房间码，请重试。");
     }
@@ -516,9 +509,7 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         var bytes = RandomNumberGenerator.GetBytes(6);
         var sb = new StringBuilder(6);
         for (var i = 0; i < 6; i++)
-        {
             sb.Append(RoomCodeChars[bytes[i] % RoomCodeChars.Length]);
-        }
         return sb.ToString();
     }
 
@@ -528,7 +519,6 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         var expiresAt = DateTimeOffset.UtcNow.AddSeconds(expirationSeconds).ToUnixTimeSeconds();
         var payload = $"{liveId}|{userId}|{role}|{expiresAt}";
 
-        // AES 加密
         var keyBytes = SHA256.HashData(Encoding.UTF8.GetBytes("KnowledgeHub-RecruitmentLive-WS-2026"));
         using var aes = Aes.Create();
         aes.Key = keyBytes;
@@ -540,7 +530,6 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         using var encryptor = aes.CreateEncryptor();
         var cipherBytes = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
 
-        // IV + cipher → Base64
         var result = new byte[aes.IV.Length + cipherBytes.Length];
         Buffer.BlockCopy(aes.IV, 0, result, 0, aes.IV.Length);
         Buffer.BlockCopy(cipherBytes, 0, result, aes.IV.Length, cipherBytes.Length);
@@ -548,9 +537,9 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         return Convert.ToBase64String(result);
     }
 
-    private RecruitmentLiveDto MapToDto(RecruitmentLiveEntity entity)
+    private RecruitmentLiveDto MapToDto(RecruitmentLiveEntity entity, List<RecruitmentLiveParticipant>? participants = null)
     {
-        return new RecruitmentLiveDto
+        var dto = new RecruitmentLiveDto
         {
             Id = entity.Id,
             CreationTime = entity.CreationTime,
@@ -571,6 +560,22 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
             DurationSeconds = entity.GetDurationSeconds(),
             InterviewScheduleId = entity.InterviewScheduleId,
         };
+
+        if (participants != null)
+        {
+            dto.Participants = participants
+                .OrderBy(p => p.Role == "teacher" ? 0 : 1)
+                .ThenBy(p => p.UserName)
+                .Select(p => new ParticipantBriefDto
+                {
+                    UserId = p.UserId,
+                    UserName = p.UserName,
+                    Role = p.Role,
+                })
+                .ToList();
+        }
+
+        return dto;
     }
 
     private static string GetStatusText(RecruitmentLiveStatus status) => status switch

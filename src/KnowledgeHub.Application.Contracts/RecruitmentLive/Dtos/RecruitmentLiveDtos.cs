@@ -12,9 +12,16 @@ public class RecruitmentLiveDto : FullAuditedEntityDto<Guid>
     public Guid TeacherId { get; set; }
     public string TeacherName { get; set; } = string.Empty;
     public string? TeacherUserName { get; set; }
+
+    /// <summary>主学生 ID（兼容旧一对一）</summary>
     public Guid? StudentId { get; set; }
+    /// <summary>主学生姓名（兼容旧一对一）</summary>
     public string? StudentName { get; set; }
     public string? StudentUserName { get; set; }
+
+    /// <summary>所有参与者（教师+学生）的摘要列表</summary>
+    public List<ParticipantBriefDto> Participants { get; set; } = new();
+
     public string RoomCode { get; set; } = string.Empty;
     public RecruitmentLiveStatus Status { get; set; }
     public string StatusText { get; set; } = string.Empty;
@@ -34,7 +41,7 @@ public class CreateRecruitmentLiveDto
     public string Title { get; set; } = string.Empty;
     /// <summary>直播描述</summary>
     public string? Description { get; set; }
-    /// <summary>分配到学生ID列表（可选，可多选）</summary>
+    /// <summary>分配到学生ID列表（可多选，创建多人直播）</summary>
     public List<Guid>? StudentIds { get; set; }
     /// <summary>计划开始时间（可选）</summary>
     public DateTime? ScheduledAt { get; set; }
@@ -87,4 +94,11 @@ public class RecruitmentLiveChatMessageDto
 public class SaveChatMessageInputDto
 {
     public string Content { get; set; } = string.Empty;
+}
+
+public class ParticipantBriefDto
+{
+    public Guid UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
 }

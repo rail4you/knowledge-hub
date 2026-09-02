@@ -10,7 +10,7 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { FormsModule } from '@angular/forms';
 import { RecruitmentLiveService, LiveState } from './recruitment-live.service';
-import { RecruitmentLiveDto } from './recruitment-live.models';
+import { RecruitmentLiveDto, RemoteParticipantStream, ParticipantBriefDto } from './recruitment-live.models';
 import { ConfigStateService } from '@abp/ng.core';
 import { NzMessageService } from 'ng-zorro-antd/message';
 
@@ -34,7 +34,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private liveService = inject(RecruitmentLiveService);
+  liveService = inject(RecruitmentLiveService);
   private configState = inject(ConfigStateService);
   private message = inject(NzMessageService);
 
@@ -49,12 +49,13 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   readonly chatOpen = this.liveService.chatOpen;
   readonly chatMessages = this.liveService.chatMessages;
   readonly callDurationSec = this.liveService.callDurationSec;
-  readonly remoteStream = this.liveService.remoteStream;
+  readonly remoteStreams = this.liveService.remoteStreams;
+  readonly participants = this.liveService.participants;
   readonly connectionLabel = this.liveService.connectionLabel;
 
   readonly localStreamActive = computed(() => this.liveService.localStreamReady());
   readonly isCallActive = computed(() =>
-    this.liveState() === 'connected' || this.liveState() === 'signaling' || this.liveState() === 'disconnected'
+    this.liveState() === 'connected' || this.liveState() === 'signaling'
   );
   readonly canHangUp = computed(() =>
     this.liveState() !== 'idle' && this.liveState() !== 'ended'
@@ -66,7 +67,19 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
     return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   });
 
-  readonly remoteVideoActive = computed(() => this.remoteStream() !== null);
+  /** 计算远程参与者人数 */
+  readonly participantCount = computed(() => this.participants().length);
+
+  /** 是否显示 gallery 网格（多人模式） */
+  readonly isGroupCall = computed(() => this.participantCount() > 1);
+
+  /** Gallery 布局列数 */
+  readonly galleryCols = computed(() => {
+    const count = this.participantCount() + 1; // +1 为自己
+    if (count <= 2) return 1;
+    if (count <= 4) return 2;
+    return 3;
+  });
 
   @ViewChild('chatMessagesContainer', { static: false }) chatMessagesContainer!: ElementRef;
   private previousMsgCount = 0;
@@ -87,15 +100,8 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   readonly waitingText = computed(() => {
-    return this.myRole === 'teacher' ? '等待学生加入...' : '等待教师发起连接...';
+    return this.myRole === 'teacher' ? '等待学生加入...' : '等待连接...';
   });
-
-  /** 远程区占位文案：每次变更检测重新求值（避免 computed 缓存普通字段的旧值） */
-  placeholderText(): string {
-    if (this.liveState() === 'connected') return '对方摄像头未开启';
-    if (this.liveState() === 'ended') return '通话已结束';
-    return this.myRole === 'teacher' ? '等待学生加入...' : '等待教师发起连接...';
-  }
 
   ngOnInit() {
     this.liveId = this.route.snapshot.paramMap.get('id') || '';
@@ -110,17 +116,17 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
         const currentUser = this.configState.getDeep('currentUser') as any;
         const userId = currentUser?.id;
 
-        // 权限校验：参与者本人或管理员均可进入
-        const isOwner = live.teacherId === userId || live.studentId === userId;
-        if (!isOwner) {
-          // 检查是否为管理员（通过 isParticipant 判断，API 在非参与者但管理员时设为 teacher）
-          if (!live.isParticipant) {
-            this.message.error('您没有权限进入该直播间');
-            this.router.navigate(this.myRole === 'teacher'
-              ? ['/admin/recruitment-live']
-              : ['/student/recruitment-live']);
-            return;
-          }
+        // 权限校验
+        const isTeacher = live.teacherId === userId;
+        const participantUserIds = (live.participants || []).map(p => p.userId);
+        const isParticipant = isTeacher || participantUserIds.includes(userId);
+
+        if (!isParticipant && !live.isParticipant) {
+          this.message.error('您没有权限进入该直播间');
+          this.router.navigate(this.myRole === 'teacher'
+            ? ['/admin/recruitment-live']
+            : ['/student/recruitment-live']);
+          return;
         }
 
         this.live = live;
@@ -131,9 +137,8 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
           return;
         }
 
-        // 先加载历史聊天消息，完成后再连接 WebSocket，避免历史消息覆盖实时消息
         this.loadChatHistory(() => {
-          this.joinLive();
+          this.joinLive(userId, live);
         });
       },
       error: () => {
@@ -151,14 +156,14 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
           from: m.senderRole,
           self: m.senderRole === this.myRole,
           time: new Date(m.sentAt).getTime(),
+          fromUserName: m.senderRole === 'teacher' ? (this.live?.teacherName || '面试官') : (m as any).senderId !== this.live?.teacherId ? '学生' : '面试官',
         }));
         this.liveService.chatMessages.set(chatMsgs);
-        // 有历史消息时自动打开聊天面板并滚动到底部
         if (chatMsgs.length > 0) {
           this.liveService.chatOpen.set(true);
           this.scrollToBottom();
         }
-         afterLoad?.();
+        afterLoad?.();
       },
       error: () => {
         console.warn('[LiveRoom] Failed to load chat history');
@@ -171,25 +176,28 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.liveService.disconnect();
   }
 
-  private joinLive() {
+  private joinLive(userId: string, live: RecruitmentLiveDto) {
+    const userName = live.teacherId === userId
+      ? (live.teacherName || '教师')
+      : (live.participants?.find(p => p.userId === userId)?.userName || '学生');
+
     this.liveService.getWebSocketToken(this.liveId).subscribe({
       next: (tokenRes) => {
-        this.liveService.connect(this.liveId, tokenRes.token, tokenRes.wsUrl, this.myRole)
-          .catch(err => this.message.error(err.message || '连接失败'));
+        this.liveService.connect(
+          this.liveId, tokenRes.token, tokenRes.wsUrl, this.myRole, userId, userName
+        ).catch(err => this.message.error(err.message || '连接失败'));
       },
       error: () => this.message.error('获取连接令牌失败'),
     });
   }
 
   goBack() {
-    // 返回直播列表（仅断开连接，不结束直播；直播未结束可随时再进入）
     this.liveService.disconnect();
     this.router.navigate(this.myRole === 'teacher'
       ? ['/admin/recruitment-live']
       : ['/student/recruitment-live']);
   }
 
-  /** 教师端手动结束直播：结束直播 + 通知对方挂断 + 返回列表 */
   stopLive() {
     this.liveService.hangUp();
     this.liveService.endLive(this.liveId).subscribe({
@@ -206,8 +214,16 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   onChatKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      this.sendChatMessage();
-    }
+    if (event.key === 'Enter') this.sendChatMessage();
+  }
+
+  /** 获取指定参与者的流 */
+  getStreamFor(userId: string): MediaStream | null {
+    return this.remoteStreams().find(s => s.userId === userId)?.stream || null;
+  }
+
+  /** 获取流状态 */
+  getStreamState(userId: string): string {
+    return this.remoteStreams().find(s => s.userId === userId)?.connectionState || 'connecting';
   }
 }

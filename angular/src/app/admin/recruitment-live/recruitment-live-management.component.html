@@ -137,14 +137,14 @@
 
     <nz-divider></nz-divider>
 
-    <!-- 学生选择表格：一对一直播，仅可选 0 或 1 名学生 -->
+    <!-- 学生选择表格：可多选，创建多人直播 -->
     <div class="student-table-toolbar">
       <input nz-input [(ngModel)]="studentSearch" (keyup.enter)="onStudentSearch($any($event).target.value)" placeholder="搜索学生姓名..." [ngModelOptions]="{standalone: true}" />
       <button nz-button nzSize="small" (click)="loadStudents()">搜索</button>
     </div>
 
     <div class="selected-hint">
-      已选 <strong>{{ selectedStudentIds().size }}</strong> / 1 名学生（一次创建一个一对一直播）
+      已选 <strong>{{ selectedStudentIds().size }}</strong> 名学生（可多选，所有选定学生将加入同一直播间视频沟通）
     </div>
 
     @if (studentLoading()) {

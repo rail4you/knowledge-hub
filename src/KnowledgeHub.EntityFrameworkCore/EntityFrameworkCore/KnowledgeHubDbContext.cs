@@ -34,6 +34,7 @@ using KnowledgeHub.TeachingAgents;
 using KnowledgeHub.EntityFrameworkCore.TeachingAgents;
 using KnowledgeHub.KnowledgeGraph;
 using KnowledgeHub.RecruitmentLive;
+using KnowledgeHub.RecruitmentLive;
 using KnowledgeHub.EntityFrameworkCore.RecruitmentLive;
 
 namespace KnowledgeHub.EntityFrameworkCore;
@@ -188,6 +189,7 @@ public class KnowledgeHubDbContext :
     // RecruitmentLive entities
     public DbSet<global::KnowledgeHub.RecruitmentLive.RecruitmentLive> RecruitmentLives { get; set; }
     public DbSet<RecruitmentLiveChatMessage> RecruitmentLiveChatMessages { get; set; }
+public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set; }
 
     // Account validity (multi-school account lifecycle) entities
     public DbSet<AccountValidity> AccountValidities { get; set; }

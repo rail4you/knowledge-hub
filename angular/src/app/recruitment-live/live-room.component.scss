@@ -1,9 +1,7 @@
 /* ================================================================
-   Live Room — Professional video-call layout
-   Inspired by Google Meet / Zoom Web
+   Live Room — Gallery view supporting 1-to-many video calls
    ================================================================ */
 
-// Tokens
 $bg: #0f1117;
 $bg-surface: #1a1d27;
 $bg-elevated: #222633;
@@ -15,9 +13,6 @@ $danger: #ea4335;
 $success: #0f9d58;
 $warning: #f9ab00;
 
-// ── Host ──
-// 直播室内全屏占位：ABP 管理端的 .lpx-content 是 block 盒子，flex:1 无法撑高视频区，
-// 因此这里用 fixed 铺满视口（学生门户的 flex 链路也不会受影响），做沉浸式通话界面。
 :host {
   position: fixed;
   inset: 0;
@@ -29,7 +24,6 @@ $warning: #f9ab00;
   background: $bg;
 }
 
-// ── Container ──
 .live-room {
   display: flex;
   flex-direction: column;
@@ -43,7 +37,7 @@ $warning: #f9ab00;
   width: 100%;
 }
 
-// ── TOP BAR ──────────────────────────────────────────────────────
+// ── TOP BAR ──
 .live-topbar {
   display: flex;
   align-items: center;
@@ -56,119 +50,31 @@ $warning: #f9ab00;
   gap: 12px;
 }
 
-.topbar-left {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.topbar-brand {
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.topbar-center {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
+.topbar-left { display: flex; align-items: center; min-width: 0; }
+.topbar-brand { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-center { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.topbar-right { display: flex; align-items: center; }
 
 .conn-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: $text-secondary;
-  flex-shrink: 0;
+  width: 7px; height: 7px; border-radius: 50%; background: $text-secondary; flex-shrink: 0;
   transition: background .3s, box-shadow .3s;
-  &.active {
-    background: $success;
-    box-shadow: 0 0 6px rgba($success, .5);
-  }
+  &.active { background: $success; box-shadow: 0 0 6px rgba($success, .5); }
 }
-
-.conn-label {
-  font-size: 12px;
-  color: $text-secondary;
-}
-
-.live-timer {
-  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
-  font-size: 12px;
-  color: $success;
-  margin-left: 6px;
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-}
-
+.conn-label { font-size: 12px; color: $text-secondary; }
+.live-timer { font-family: 'SF Mono', 'Monaco', 'Menlo', monospace; font-size: 12px; color: $success; margin-left: 6px; }
 .btn-exit {
   color: $text-secondary !important;
-  &:hover {
-    color: $text-primary !important;
-    background: rgba(255, 255, 255, .06) !important;
-  }
+  &:hover { color: $text-primary !important; background: rgba(255,255,255,.06) !important; }
 }
 
-// ── WAITING OVERLAY（浮在视频区上的等待状态）─────────────────────
-.invite-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  z-index: 3;
-  pointer-events: none;
-}
-
-.waiting-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: rgba(15, 17, 23, .72);
-  border: 1px solid $border;
-  border-radius: 999px;
-  font-size: 13px;
-  color: $text-primary;
-  backdrop-filter: blur(4px);
-}
-
-.caption-hint {
-  margin-left: 4px;
-  font-size: 12px;
-  color: $text-secondary;
-}
-
-// ── PULSE ──
-.pulse {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: $warning;
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: .35; transform: scale(.75); }
-}
-
-// ── LIVE BODY: 视频区 + 侧边聊天 ─────────────────────────────────
+// ── LIVE BODY ──
 .live-body {
   flex: 1;
   display: flex;
   min-height: 0;
 }
 
-// ── VIDEO STAGE ──────────────────────────────────────────────────
+// ── VIDEO STAGE ──
 .video-stage {
   flex: 1;
   min-width: 0;
@@ -178,6 +84,21 @@ $warning: #f9ab00;
   background: #000;
   position: relative;
   min-height: 0;
+  overflow: hidden;
+
+  &.is-gallery {
+    padding: 8px;
+  }
+}
+
+// ── Single mode (1-to-1) ──
+.single-video-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .video-remote {
@@ -186,12 +107,19 @@ $warning: #f9ab00;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  video { width: 100%; height: 100%; object-fit: contain; }
+}
 
-  video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
+.video-remote__label {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  font-size: 12px;
+  color: $text-primary;
+  background: rgba(0,0,0,.5);
+  padding: 2px 10px;
+  border-radius: 4px;
 }
 
 .video-placeholder {
@@ -202,34 +130,40 @@ $warning: #f9ab00;
   color: $text-secondary;
   font-size: 13px;
 }
-
 .ph-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: $bg-elevated;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 30px;
+  width: 64px; height: 64px; border-radius: 50%; background: $bg-elevated;
+  display: flex; align-items: center; justify-content: center; font-size: 30px;
 }
 
 .video-local {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  width: 160px;
-  height: 100px;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, .15);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, .5);
-  z-index: 5;
-  background: #000;
-  cursor: pointer;
-  transition: border-color .2s;
+  position: absolute; bottom: 16px; right: 16px;
+  width: 160px; height: 100px; border-radius: 10px; overflow: hidden;
+  border: 2px solid rgba(255,255,255,.15);
+  box-shadow: 0 4px 20px rgba(0,0,0,.5); z-index: 5; background: #000;
+  cursor: pointer; transition: border-color .2s;
+  &:hover { border-color: rgba(255,255,255,.35); }
+  video { width: 100%; height: 100%; object-fit: cover; }
+}
 
-  &:hover { border-color: rgba(255, 255, 255, .35); }
+// ── Gallery grid (multi-person) ──
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), 1fr);
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  align-content: center;
+}
+
+.gallery-tile {
+  position: relative;
+  background: $bg-elevated;
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   video {
     width: 100%;
@@ -238,225 +172,178 @@ $warning: #f9ab00;
   }
 }
 
-// ── ENDED ────────────────────────────────────────────────────────
-.ended-hero {
-  flex: 1;
+.gallery-tile__placeholder {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 24px;
+  gap: 8px;
+  color: $text-secondary;
+  font-size: 12px;
+
+  .ph-avatar {
+    width: 48px; height: 48px; font-size: 20px;
+    background: rgba(255,255,255,.08);
+    color: $text-primary;
+  }
+  .ph-name { font-size: 13px; color: $text-primary; }
+  .ph-status { font-size: 11px; }
 }
 
-.ended-card {
-  text-align: center;
-  padding: 32px;
+.gallery-tile__label {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: $text-primary;
+  text-shadow: 0 1px 4px rgba(0,0,0,.6);
 
+  .tile-name {
+    background: rgba(0,0,0,.4);
+    padding: 1px 8px;
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
+  }
+  .tile-badge {
+    background: rgba($accent, .7);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    backdrop-filter: blur(2px);
+  }
+}
+
+.gallery-tile__indicators {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+
+  .indicator-icon {
+    font-size: 12px;
+    color: $danger;
+    background: rgba(0,0,0,.4);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.gallery-tile--self {
+  border: 2px solid rgba($accent, .3);
+}
+
+// ── ENDED ──
+.ended-hero {
+  flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.ended-card {
+  text-align: center; padding: 32px;
   h3 { font-size: 18px; margin: 12px 0 4px; }
   p { color: $text-secondary; font-size: 13px; margin: 0 0 20px; }
 }
+.ended-icon { font-size: 40px; color: $success; .anticon { font-size: 40px; } }
 
-.ended-icon {
-  font-size: 40px;
-  color: $success;
-  .anticon { font-size: 40px; }
-}
+// ── CONTROL BAR ──
+.control-bar { flex-shrink: 0; background: $bg-surface; border-top: 1px solid $border; }
 
-// ── CONTROL BAR ──────────────────────────────────────────────────
-.control-bar {
-  flex-shrink: 0;
-  background: $bg-surface;
-  border-top: 1px solid $border;
-}
-
-// Chat 侧边面板
+// ── CHAT ──
 .chat-sidebar {
-  width: 320px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: $bg-surface;
-  border-left: 1px solid $border;
+  width: 300px; flex-shrink: 0; display: flex; flex-direction: column;
+  min-height: 0; background: $bg-surface; border-left: 1px solid $border;
+}
+
+.chat-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px; font-size: 13px; font-weight: 600;
+  border-bottom: 1px solid $border;
+
+  .chat-count {
+    background: $accent; color: #fff; border-radius: 10px;
+    padding: 0 7px; font-size: 11px; line-height: 18px;
+  }
 }
 
 .chat-messages {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 10px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 6px;
 }
 
 .chat-msg {
-  display: flex;
-  gap: 6px;
-  max-width: 75%;
-  font-size: 12px;
-  line-height: 1.4;
-
-  &.self { align-self: flex-end; flex-direction: row-reverse; }
+  display: flex; gap: 4px; max-width: 80%; font-size: 12px; line-height: 1.4;
+  flex-direction: column;
+  &.self { align-self: flex-end; }
   &.other { align-self: flex-start; }
 }
 
-.chat-sender {
-  font-size: 10px;
-  color: $text-secondary;
-  white-space: nowrap;
-}
+.chat-sender { font-size: 10px; color: $text-secondary; }
 
 .chat-text {
-  background: $bg-elevated;
-  border-radius: 8px;
-  padding: 5px 10px;
-  color: $text-primary;
+  background: $bg-elevated; border-radius: 8px; padding: 5px 10px; color: $text-primary;
+  word-break: break-word;
 }
 
-.chat-msg.self .chat-text {
-  background: $accent;
-  color: #fff;
-}
+.chat-msg.self .chat-text { background: $accent; color: #fff; }
 
 .chat-send {
-  display: flex;
-  gap: 6px;
-  padding: 6px 12px 10px;
-  border-top: 1px solid $border;
-
+  display: flex; gap: 6px; padding: 6px 12px 10px; border-top: 1px solid $border;
   input {
-    flex: 1;
-    background: $bg-elevated;
-    border: 1px solid $border;
-    border-radius: 20px;
-    color: $text-primary;
-    font-size: 13px;
-    padding: 5px 14px;
-    outline: none;
+    flex: 1; background: $bg-elevated; border: 1px solid $border;
+    border-radius: 20px; color: $text-primary; font-size: 13px;
+    padding: 5px 14px; outline: none;
     &::placeholder { color: $text-secondary; }
     &:focus { border-color: $accent; }
   }
 }
 
-// Control buttons row
+// ── Control buttons ──
 .control-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 10px 16px;
 }
 
 .ctrl-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: none;
-  background: $bg-elevated;
-  color: $text-primary;
-  font-size: 18px;
-  cursor: pointer;
-  transition: background .15s, color .15s, transform .1s;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 50%; border: none;
+  background: $bg-elevated; color: $text-primary; font-size: 18px;
+  cursor: pointer; transition: background .15s, color .15s, transform .1s;
   outline: none;
-
-  &:hover {
-    background: lighten($bg-elevated, 6%);
-  }
-
-  &:active {
-    transform: scale(.94);
-  }
-
-  &.off {
-    background: $danger;
-    color: #fff;
-    &:hover { background: lighten($danger, 6%); }
-  }
-
-  &.active {
-    background: rgba($accent, .2);
-    color: $accent;
-  }
+  &:hover { background: lighten($bg-elevated, 6%); }
+  &:active { transform: scale(.94); }
+  &.off { background: $danger; color: #fff; &:hover { background: lighten($danger, 6%); } }
+  &.active { background: rgba($accent, .2); color: $accent; }
 }
 
-// Hangup — prominent red
 .ctrl-hangup {
-  background: $danger;
-  color: #fff;
-  width: 52px;
-  height: 52px;
-  font-size: 20px;
-
-  :host ::ng-deep .anticon {
-    transform: rotate(135deg);
-  }
-
-  &:hover {
-    background: lighten($danger, 6%);
-  }
+  background: $danger; color: #fff; width: 52px; height: 52px; font-size: 20px;
+  :host ::ng-deep .anticon { transform: rotate(135deg); }
+  &:hover { background: lighten($danger, 6%); }
 }
 
-// 教师端「结束直播」按钮
 .ctrl-end {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  // 覆盖 .ctrl-btn 的固定 42px 圆形宽高，改为自适应文本宽度
-  width: auto;
-  height: 42px;
-  padding: 0 16px;
-  border-radius: 21px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  background: rgba($danger, .15);
-  border: 1px solid rgba($danger, .5);
-  color: $danger;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background .15s, color .15s;
-
-  &:hover {
-    background: $danger;
-    color: #fff;
-  }
-
-  .anticon {
-    font-size: 15px;
-  }
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  width: auto; height: 42px; padding: 0 16px; border-radius: 21px;
+  white-space: nowrap; flex-shrink: 0;
+  background: rgba($danger, .15); border: 1px solid rgba($danger, .5);
+  color: $danger; font-size: 13px;
+  cursor: pointer; transition: background .15s, color .15s;
+  &:hover { background: $danger; color: #fff; }
+  .anticon { font-size: 15px; }
 }
 
-// ── RESPONSIVE ───────────────────────────────────────────────────
+// ── RESPONSIVE ──
 @media (max-width: 600px) {
-  .chat-sidebar {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .video-local {
-    width: 100px;
-    height: 70px;
-    bottom: 12px;
-    right: 12px;
-  }
-
-  .control-row {
-    gap: 6px;
-    padding: 8px 10px;
-  }
-
-  .ctrl-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
-  }
-
-  .ctrl-hangup {
-    width: 44px;
-    height: 44px;
-    font-size: 18px;
-  }
+  .chat-sidebar { width: 100%; min-width: 0; }
+  .video-local { width: 100px; height: 70px; bottom: 12px; right: 12px; }
+  .control-row { gap: 6px; padding: 8px 10px; }
+  .ctrl-btn { width: 36px; height: 36px; font-size: 16px; }
+  .ctrl-hangup { width: 44px; height: 44px; font-size: 18px; }
+  .gallery-grid { gap: 4px; }
+  .gallery-tile { min-height: 100px; }
 }

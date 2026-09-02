@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
@@ -22,11 +23,14 @@ using Volo.Abp.Identity;
 
 namespace KnowledgeHub.LiveWs;
 
-/// <summary>招聘直播 WebSocket 信令处理器</summary>
+/// <summary>
+/// 招聘直播 WebSocket 信令处理器 — 多人版。
+/// 支持一个教师 + 多个学生的 mesh 拓扑视频通信。
+/// </summary>
 public class RecruitmentLiveWebSocketHandler
 {
     private static readonly ConcurrentDictionary<string, LiveRoom> Rooms = new();
-    private const int MaxMessageSize = 16384; // 16KB
+    private const int MaxMessageSize = 32768; // 32KB
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -98,12 +102,12 @@ public class RecruitmentLiveWebSocketHandler
         }
 
         // 3. 创建 scope 验证直播权限
-        // 注意：WebSocket 请求不走 HTTP 认证管线，没有租户上下文，
-        // 必须禁用多租户过滤器，否则 FindAsync 会被租户过滤掉导致返回 null
         using var scope = _serviceProvider.CreateScope();
         var dataFilter = scope.ServiceProvider.GetRequiredService<IDataFilter>();
-        using var _ = dataFilter.Disable<IMultiTenant>();
         var liveRepo = scope.ServiceProvider.GetRequiredService<IRepository<RecruitmentLiveEntity, Guid>>();
+        var participantRepo = scope.ServiceProvider.GetRequiredService<IRepository<RecruitmentLiveParticipant, Guid>>();
+
+        using var disableMultiTenant = dataFilter.Disable<IMultiTenant>();
 
         RecruitmentLiveEntity? live;
         try
@@ -128,100 +132,93 @@ public class RecruitmentLiveWebSocketHandler
             return;
         }
 
-        // 验证用户是否是参与者（或具有管理权限）
-        var userIdStr = tokenUserId.ToString();
-        var isParticipant = live.TeacherId == tokenUserId || live.StudentId == tokenUserId;
+        // 验证用户是否为参与者
+        var participants = await participantRepo.GetListAsync(p => p.LiveId == liveId);
+        var participant = participants.FirstOrDefault(p => p.UserId == tokenUserId);
+        var isParticipant = participant != null;
 
         if (!isParticipant)
         {
-            // 非参与者：检查用户是否为管理员（拥有 Manage 权限的管理员可代管教师端）
             var userMgr = scope.ServiceProvider.GetRequiredService<IdentityUserManager>();
-            var user = await userMgr.FindByIdAsync(userIdStr);
+            var user = await userMgr.FindByIdAsync(tokenUserId.ToString());
             var isAdmin = user != null && await userMgr.IsInRoleAsync(user, "admin");
 
             if (!isAdmin)
             {
-                _logger.LogWarning("用户 {UserId} 不是直播 {LiveId} 的参与者 (teacherId={TeacherId}, studentId={StudentId})",
-                    tokenUserId, liveId, live.TeacherId, live.StudentId);
+                _logger.LogWarning("用户 {UserId} 不是直播 {LiveId} 的参与者", tokenUserId, liveId);
                 await SendErrorAndClose(ws, "您不是该直播的参与者");
                 return;
             }
 
             _logger.LogInformation("管理员 {UserId} 以教师身份代管直播 {LiveId}", tokenUserId, liveId);
+            participant = new RecruitmentLiveParticipant(Guid.NewGuid(), liveId, tokenUserId, user?.Name ?? "管理员", "teacher");
         }
 
-        _logger.LogInformation("ws handler 校验通过: userId={UserId}, role={Role}, liveId={LiveId}",
-            tokenUserId, live.TeacherId == tokenUserId || !isParticipant ? "teacher" : "student", liveId);
+        var userName = participant.UserName;
+        var role = participant.Role;
 
-        var role = (live.TeacherId == tokenUserId || !isParticipant) ? "teacher" : "student";
+        _logger.LogInformation("ws handler 校验通过: userId={UserId}, role={Role}, liveId={LiveId}",
+            tokenUserId, role, liveId);
 
         // 4. 加入房间
         var roomKey = liveId.ToString();
         var room = Rooms.GetOrAdd(roomKey, _ => new LiveRoom(liveId));
 
-        // 踢掉同一角色的旧连接
-        if (role == "teacher")
+        var userIdStr = tokenUserId.ToString();
+
+        // 踢掉同一用户的旧连接
+        var existing = room.GetByUserId(userIdStr);
+        if (existing?.Ws is { State: WebSocketState.Open } oldWs && oldWs != ws)
         {
-            if (room.TeacherWs is { State: System.Net.WebSockets.WebSocketState.Open } oldWs)
-            {
-                await TryCloseWebSocket(oldWs, "您已在其他设备进入直播间");
-            }
-            room.TeacherWs = ws;
-            room.TeacherUserId = userIdStr;
+            await TryCloseWebSocket(oldWs, "您已在其他设备进入直播间");
         }
-        else
-        {
-            if (room.StudentWs is { State: System.Net.WebSockets.WebSocketState.Open } oldWs)
-            {
-                await TryCloseWebSocket(oldWs, "您已在其他设备进入直播间");
-            }
-            room.StudentWs = ws;
-            room.StudentUserId = userIdStr;
-        }
+        room.AddParticipant(userIdStr, ws, role, userName);
 
         _logger.LogInformation("用户 {UserId}({Role}) 进入直播间 {LiveId}", userIdStr, role, liveId);
 
-        // 通知双方：新加入的人需要知道对方是否已在房间，先加入的人需要知道新人加入了
-        var other = room.GetOther(ws);
-        _logger.LogInformation("房间通知检查: role={Role}, otherWsState={OtherState}",
-            role, other?.State.ToString() ?? "null");
-        if (other is { State: System.Net.WebSockets.WebSocketState.Open })
+        // 5. 发送参与者列表给新加入的人
+        var allParticipants = room.GetAllParticipants();
+        var participantListData = allParticipants.Select(p => new
         {
-            // 通知先加入的人："新成员 {role} 已加入"
-            _logger.LogInformation("→ 通知已有用户 user-joined (role={Role})", role);
-            await SendJson(other, new { type = "user-joined", role });
-            // 通知刚加入的人："房间里已有人，对方是 {otherRole}"
-            var otherRole = role == "teacher" ? "student" : "teacher";
-            _logger.LogInformation("→ 通知新用户 user-joined (role={Role})", otherRole);
-            await SendJson(ws, new { type = "user-joined", role = otherRole });
-        }
-        else
+            userId = p.UserId,
+            userName = p.UserName,
+            role = p.Role,
+            you = p.UserId == userIdStr,
+        }).ToList();
+
+        await SendJson(ws, new { type = "participant-list", participants = participantListData });
+
+        // 6. 广播 user-joined 给房间内的其他人（带用户名）
+        var others = room.GetOthers(ws);
+        foreach (var other in others)
         {
-            _logger.LogInformation("对方尚未连接，不发送 user-joined");
+            if (other.Ws is { State: WebSocketState.Open })
+            {
+                await SendJson(other.Ws, new { type = "user-joined", userId = userIdStr, userName, role });
+            }
         }
 
-        // 如果直播状态是 Waiting，更新为 Active
-        if (live.Status == RecruitmentLiveStatus.Waiting && room.HasTeacher && room.HasStudent)
+        // 7. 如果直播状态是 Waiting，更新为 Active
+        if (live.Status == RecruitmentLiveStatus.Waiting && room.HasAnyone)
         {
             live.Start();
             await liveRepo.UpdateAsync(live, autoSave: true);
         }
 
-        // 5. 消息循环
-        await MessageLoop(ws, room, role, liveId, liveRepo, tokenUserId);
+        // 8. 消息循环
+        await MessageLoop(ws, room, userIdStr, role, userName, liveId, liveRepo);
     }
 
     private async Task MessageLoop(
         System.Net.WebSockets.WebSocket ws,
         LiveRoom room,
+        string userId,
         string role,
+        string userName,
         Guid liveId,
-        IRepository<RecruitmentLiveEntity, Guid> liveRepo,
-        Guid userId)
+        IRepository<RecruitmentLiveEntity, Guid> liveRepo)
     {
         var buffer = new byte[MaxMessageSize];
-        var lastPing = DateTime.UtcNow;
-
         try
         {
             while (ws.State == System.Net.WebSockets.WebSocketState.Open)
@@ -236,22 +233,12 @@ public class RecruitmentLiveWebSocketHandler
                     break;
                 }
 
-                if (result.MessageType == WebSocketMessageType.Close)
-                {
-                    break;
-                }
+                if (result.MessageType == WebSocketMessageType.Close) break;
 
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
                     var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    await HandleMessage(ws, room, role, message, liveId, userId);
-                    lastPing = DateTime.UtcNow;
-                }
-                else if (result.MessageType == WebSocketMessageType.Binary)
-                {
-                    // Binary pong
-                    lastPing = DateTime.UtcNow;
-                    continue;
+                    await HandleMessage(ws, room, userId, role, userName, message);
                 }
             }
         }
@@ -261,20 +248,19 @@ public class RecruitmentLiveWebSocketHandler
         }
         finally
         {
-            // 断开清理
-            await HandleDisconnect(ws, room, role, liveId, liveRepo);
+            await HandleDisconnect(ws, room, userId, role, liveId, liveRepo);
         }
     }
 
     private async Task HandleMessage(
         System.Net.WebSockets.WebSocket ws,
         LiveRoom room,
+        string userId,
         string role,
-        string message,
-        Guid liveId,
-        Guid userId)
+        string userName,
+        string message)
     {
-        JsonElement? json = null;
+        JsonElement? json;
         try
         {
             json = JsonSerializer.Deserialize<JsonElement>(message, JsonOptions);
@@ -285,7 +271,6 @@ public class RecruitmentLiveWebSocketHandler
         }
 
         var type = json?.TryGetProperty("type", out var t) == true ? t.GetString() : null;
-        var other = room.GetOther(ws);
 
         switch (type)
         {
@@ -294,21 +279,32 @@ public class RecruitmentLiveWebSocketHandler
                 break;
 
             case "pong":
-                // 心跳不处理
                 break;
 
             case "offer":
             case "answer":
             case "ice-candidate":
-                _logger.LogInformation("转发 {Type} from {Role}", type, role);
-                if (other is { State: System.Net.WebSockets.WebSocketState.Open })
+                // 转发给指定目标用户
+                var targetUserId = json?.TryGetProperty("targetUserId", out var target) == true
+                    ? target.GetString()
+                    : null;
+                if (!string.IsNullOrEmpty(targetUserId))
                 {
-                    var data = json?.TryGetProperty("data", out var d) == true ? (object?)d : null;
-                    await SendJson(other, new { type, data });
+                    var targetParticipant = room.GetByUserId(targetUserId);
+                    if (targetParticipant?.Ws is { State: WebSocketState.Open } targetWs)
+                    {
+                        var data = json?.TryGetProperty("data", out var d) == true ? (object?)d : null;
+                        _logger.LogInformation("转发 {Type} from {UserId} to {TargetId}", type, userId, targetUserId);
+                        await SendJson(targetWs, new { type, data, fromUserId = userId, fromRole = role, fromUserName = userName });
+                    }
+                    else
+                    {
+                        _logger.LogWarning("无法转发 {Type}: 目标用户 {TargetId} 已断开", type, targetUserId);
+                    }
                 }
                 else
                 {
-                    _logger.LogWarning("无法转发 {Type}: 对方已断开", type);
+                    _logger.LogWarning("{Type} 消息缺少 targetUserId", type);
                 }
                 break;
 
@@ -316,20 +312,22 @@ public class RecruitmentLiveWebSocketHandler
                 var text = json?.TryGetProperty("data", out var cd) == true ? cd.GetString() : null;
                 if (!string.IsNullOrWhiteSpace(text) && text.Length <= 500)
                 {
-                    // 不在此处保存数据库 —— REST 端点负责唯一持久化，避免重复
-                    if (other is { State: System.Net.WebSockets.WebSocketState.Open })
+                    // 广播给房间内所有其他人
+                    var others = room.GetOthers(ws);
+                    foreach (var other in others)
                     {
-                        await SendJson(other, new { type = "chat", data = text, from = role });
-                        await SendJson(ws, new { type = "chat", data = text, from = role, self = true });
+                        if (other.Ws is { State: WebSocketState.Open })
+                        {
+                            await SendJson(other.Ws, new { type = "chat", data = text, from = role, fromUserId = userId, fromUserName = userName });
+                        }
                     }
+                    // Echo 给自己（标记 self=true 让发送方知道自己已发送）
+                    await SendJson(ws, new { type = "chat", data = text, from = role, fromUserId = userId, fromUserName = userName, self = true });
                 }
                 break;
 
             case "hang-up":
-                if (other is { State: System.Net.WebSockets.WebSocketState.Open })
-                {
-                    await SendJson(other, new { type = "hang-up", reason = "对方已挂断" });
-                }
+                // 不通知他人，只是自己离开
                 break;
 
             default:
@@ -341,35 +339,30 @@ public class RecruitmentLiveWebSocketHandler
     private async Task HandleDisconnect(
         System.Net.WebSockets.WebSocket ws,
         LiveRoom room,
+        string userId,
         string role,
         Guid liveId,
         IRepository<RecruitmentLiveEntity, Guid> liveRepo)
     {
-        _logger.LogInformation("用户 {Role} 离开直播间 {LiveId}", role, liveId);
+        _logger.LogInformation("用户 {UserId}({Role}) 离开直播间 {LiveId}", userId, role, liveId);
 
-        // 通知对方
-        var other = room.GetOther(ws);
-        if (other is { State: System.Net.WebSockets.WebSocketState.Open })
+        // 广播 user-left
+        var others = room.GetOthers(ws);
+        foreach (var other in others)
         {
-            await SendJson(other, new { type = "user-left", role, reason = "对方已断开连接" });
+            if (other.Ws is { State: WebSocketState.Open })
+            {
+                await SendJson(other.Ws, new { type = "user-left", userId, role, reason = "对方已断开连接" });
+            }
         }
 
         // 清理房间引用
-        if (role == "teacher")
-        {
-            room.TeacherWs = null;
-            room.TeacherUserId = null;
-        }
-        else
-        {
-            room.StudentWs = null;
-            room.StudentUserId = null;
-        }
+        room.RemoveParticipant(userId);
 
-        // 如果房间空了，清理房间缓存（不自动结束直播，允许反复进入退出）
+        // 如果房间空了，清理房间缓存
         if (!room.HasAnyone)
         {
-            _logger.LogInformation("直播间 {LiveId} 双方都已离开，清理房间缓存", liveId);
+            _logger.LogInformation("直播间 {LiveId} 所有人已离开，清理房间缓存", liveId);
             Rooms.TryRemove(liveId.ToString(), out _);
         }
 
@@ -451,7 +444,7 @@ public class RecruitmentLiveWebSocketHandler
         try
         {
             var data = Convert.FromBase64String(token);
-            if (data.Length < 16 + 4) return false; // IV(16) + at least some data
+            if (data.Length < 16 + 4) return false;
 
             var iv = new byte[16];
             Buffer.BlockCopy(data, 0, iv, 0, 16);
@@ -468,7 +461,6 @@ public class RecruitmentLiveWebSocketHandler
             var plain = decryptor.TransformFinalBlock(cipher, 0, cipher.Length);
             var payload = Encoding.UTF8.GetString(plain);
 
-            // 格式: liveId|userId|role|expiresAt
             var parts = payload.Split('|');
             if (parts.Length != 4) return false;
 

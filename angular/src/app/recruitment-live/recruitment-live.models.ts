@@ -15,6 +15,7 @@ export interface RecruitmentLiveDto {
   studentId?: string;
   studentName?: string;
   studentUserName?: string;
+  participants: ParticipantBriefDto[];
   roomCode: string;
   status: RecruitmentLiveStatus;
   statusText: string;
@@ -31,7 +32,7 @@ export interface RecruitmentLiveDto {
 export interface CreateRecruitmentLiveDto {
   title: string;
   description?: string;
-  studentIds?: string[];
+  studentIds?: string[];  // 可多选，创建多人直播
   scheduledAt?: string;
   scheduledEndAt?: string;
 }
@@ -74,4 +75,21 @@ export interface ChatMessage {
   from: string;
   self: boolean;
   time: number;
+  fromUserName?: string;
+}
+
+export interface ParticipantBriefDto {
+  userId: string;
+  userName: string;
+  role: string;
+}
+
+/** 远程视频流，关联到特定参与者 */
+export interface RemoteParticipantStream {
+  userId: string;
+  userName: string;
+  role: string;
+  stream: MediaStream;
+  connectionState: string;
+  muted?: boolean;
 }

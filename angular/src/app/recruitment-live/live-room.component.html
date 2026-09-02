@@ -1,17 +1,19 @@
-<!-- ===== 直播间 ===== -->
+<!-- ===== 多人直播间 ===== -->
 <div class="live-room">
   <!-- Top bar -->
   <header class="live-topbar">
     <div class="topbar-left">
       <span class="topbar-brand" *ngIf="live">
         <span *ngIf="myRole === 'teacher'">面试官 · {{ live.teacherName }}</span>
-        <span *ngIf="myRole === 'student'">候选人 · {{ live.studentName }}</span>
+        <span *ngIf="myRole === 'student'">面试直播间</span>
       </span>
     </div>
     <div class="topbar-center">
       <span class="conn-dot" [class.active]="liveState() === 'connected'"></span>
       <span class="conn-label">{{ connectionLabel() }}</span>
-      <span class="live-timer" *ngIf="isCallActive()">{{ formattedTime() }}</span>
+      @if (isCallActive()) {
+        <span class="live-timer">{{ formattedTime() }}</span>
+      }
     </div>
     <div class="topbar-right">
       <button nz-button nzType="text" nzSize="small" class="btn-exit" (click)="goBack()">
@@ -20,53 +22,103 @@
     </div>
   </header>
 
-  <!-- ────────── LIVE BODY: 视频区 + 侧边聊天面板 ────────── -->
+  <!-- ────────── LIVE BODY ────────── -->
   <div class="live-body" *ngIf="liveState() !== 'ended'">
-    <!-- VIDEO STAGE（始终占满主区域） -->
-    <div class="video-stage">
-      <!-- Remote (full) -->
-      <div class="video-remote">
-        <div class="video-placeholder" *ngIf="!remoteVideoActive()">
-          <div class="ph-avatar">👤</div>
-          <span>{{ placeholderText() }}</span>
-        </div>
-        <video
-          *ngIf="remoteVideoActive()"
-          #remoteVideo
-          [srcObject]="remoteStream()"
-          autoplay playsinline
-        ></video>
-      </div>
 
-      <!-- ── WAITING 状态（无需房间码/邀请卡片，学生通过链接直接进入即可连通）── -->
-      <div class="invite-overlay" *ngIf="liveState() === 'waiting'">
-        <div class="waiting-status">
-          <span class="pulse"></span>
-          <span>{{ waitingText() }}</span>
-          <span class="caption-hint" *ngIf="!localStreamActive()">
-            （未检测到摄像头/麦克风，将以文字模式进行沟通）
-          </span>
-        </div>
-      </div>
+    <!-- VIDEO STAGE: 多人 Gallery 视图 -->
+    <div class="video-stage" [class.is-gallery]="isGroupCall()">
 
-      <!-- Local (PiP) -->
-      <div class="video-local" *ngIf="localStreamActive()">
-        <video
-          #localVideo
-          [srcObject]="liveService.getLocalStream()"
-          autoplay playsinline muted
-        ></video>
-      </div>
+      <!-- ── Gallery 网格（多人模式）── -->
+      @if (isGroupCall()) {
+        <div class="gallery-grid" [style.--cols]="galleryCols()">
+          <!-- 自己的视频（小画面） -->
+          <div class="gallery-tile gallery-tile--self" *ngIf="localStreamActive()">
+            <video
+              #selfVideo
+              [srcObject]="liveService.getLocalStream()"
+              autoplay playsinline muted
+            ></video>
+            <div class="gallery-tile__label">
+              <span class="tile-name">{{ live?.teacherName || '我' }}</span>
+              <span class="tile-badge" *ngIf="myRole === 'teacher'">教师</span>
+            </div>
+            <div class="gallery-tile__indicators">
+              <span class="indicator-icon" *ngIf="!micEnabled()" nz-tooltip nzTooltipTitle="麦克风已关闭">
+                <span nz-icon nzType="audio-muted" nzTheme="outline"></span>
+              </span>
+            </div>
+          </div>
+
+          <!-- 其他人的视频 -->
+          @for (p of participants(); track p.userId) {
+            <div class="gallery-tile">
+              @if (getStreamFor(p.userId)) {
+                <video
+                  [srcObject]="getStreamFor(p.userId)!"
+                  autoplay playsinline
+                ></video>
+              } @else {
+                <div class="gallery-tile__placeholder">
+                  <div class="ph-avatar">{{ p.userName.charAt(0).toUpperCase() }}</div>
+                  <span class="ph-name">{{ p.userName }}</span>
+                  <span class="ph-status">{{ getStreamState(p.userId) === 'connected' ? '摄像头未开启' : '连接中...' }}</span>
+                </div>
+              }
+              <div class="gallery-tile__label">
+                <span class="tile-name">{{ p.userName }}</span>
+                <span class="tile-badge" *ngIf="p.role === 'teacher'">教师</span>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <!-- ── 单人模式（1对1，保留原有大屏+PiP 布局）── -->
+        <div class="single-video-stage">
+          <!-- Remote (full) - 如果有多个远程流，显示第一个 -->
+          @if (remoteStreams().length > 0) {
+            <div class="video-remote">
+              <video
+                [srcObject]="remoteStreams()[0].stream"
+                autoplay playsinline
+              ></video>
+              <div class="video-remote__label">
+                {{ remoteStreams()[0].userName }}
+              </div>
+            </div>
+          } @else {
+            <div class="video-remote">
+              <div class="video-placeholder">
+                <div class="ph-avatar">👤</div>
+                <span>{{ myRole === 'teacher' ? '等待学生加入...' : '等待教师发起连接...' }}</span>
+              </div>
+            </div>
+          }
+
+          <!-- Local (PiP) -->
+          <div class="video-local" *ngIf="localStreamActive()">
+            <video
+              #localVideo
+              [srcObject]="liveService.getLocalStream()"
+              autoplay playsinline muted
+            ></video>
+          </div>
+        </div>
+      }
     </div>
 
-    <!-- ── CHAT SIDEBAR（侧边聊天面板） ── -->
+    <!-- ── CHAT SIDEBAR ── -->
     <aside class="chat-sidebar" *ngIf="chatOpen()">
+      <div class="chat-header">
+        <span>聊天</span>
+        <span class="chat-count" *ngIf="chatMessages().length > 0">{{ chatMessages().length }}</span>
+      </div>
       <div class="chat-messages" #chatMessagesContainer>
-        <div class="chat-msg" *ngFor="let msg of chatMessages()"
-             [class.self]="msg.self" [class.other]="!msg.self">
-          <span class="chat-sender">{{ msg.from === 'teacher' ? live?.teacherName || '面试官' : live?.studentName || '候选人' }}</span>
-          <span class="chat-text">{{ msg.text }}</span>
-        </div>
+        @for (msg of chatMessages(); track msg.time) {
+          <div class="chat-msg" [class.self]="msg.self" [class.other]="!msg.self">
+            <span class="chat-sender">{{ msg.fromUserName || (msg.from === 'teacher' ? (live?.teacherName || '面试官') : '学生') }}</span>
+            <span class="chat-text">{{ msg.text }}</span>
+          </div>
+        }
       </div>
       <div class="chat-send">
         <input
@@ -97,7 +149,6 @@
 
   <!-- ────────── BOTTOM CONTROLS ────────── -->
   <footer class="control-bar" *ngIf="liveState() !== 'idle' && liveState() !== 'ended'">
-    <!-- Control buttons -->
     <div class="control-row">
       <button
         class="ctrl-btn"
@@ -125,7 +176,6 @@
         <span nz-icon nzType="phone" nzTheme="outline"></span>
       </button>
 
-      <!-- 教师端手动结束直播（学生端不显示） -->
       <button
         class="ctrl-btn ctrl-end"
         *ngIf="myRole === 'teacher'"

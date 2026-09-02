@@ -134,21 +134,19 @@ export class RecruitmentLiveManagementComponent implements OnInit {
 
   toggleStudent(id: string) {
     this.selectedStudentIds.update(s => {
-      // 一对一直播：一次最多选 1 名学生。重复点击同一行表示取消选择。
       const next = new Set(s);
       if (next.has(id)) {
         next.delete(id);
       } else {
-        next.clear();
         next.add(id);
       }
       return next;
     });
   }
 
-  /** 是否可以创建：表单有效且学生数 <= 1。 */
+  /** 是否可以创建：表单有效且至少选中0或多名学生（0表示创建空直播） */
   canSubmit(): boolean {
-    return this.form.valid && this.selectedStudentIds().size <= 1;
+    return this.form.valid;
   }
 
   isSelected(id: string): boolean {
@@ -160,13 +158,6 @@ export class RecruitmentLiveManagementComponent implements OnInit {
       Object.values(this.form.controls).forEach(c => {
         if (c.invalid) { c.markAsDirty(); c.updateValueAndValidity({ onlySelf: true }); }
       });
-      return;
-    }
-
-    // 防御：超过 1 名学生不允许创建（后端亦会拒绝）。
-    const selectedCount = this.selectedStudentIds().size;
-    if (selectedCount > 1) {
-      this.message.error('一次只能创建一对一直播，请仅选择 1 名学生。');
       return;
     }
 
@@ -191,7 +182,7 @@ export class RecruitmentLiveManagementComponent implements OnInit {
       next: (lives) => {
         this.loading.set(false);
         const codes = lives.map(l => l.roomCode).join(', ');
-        const label = lives.length === 1 && selectedCount === 1 ? '一对一直播创建成功' : '直播创建成功';
+        const label = '直播创建成功';
         this.message.success(`${label}，房间码: ${codes}`);
         this.closeCreateModal();
         this.loadLives();
