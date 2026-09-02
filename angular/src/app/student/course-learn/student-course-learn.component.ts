@@ -129,6 +129,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
   // 进度
   readonly chapterStartTime = signal<number>(Date.now());
+  readonly exerciseStartTime = signal<number>(Date.now());
   readonly chapterProgress = signal<number>(0);
 
   readonly ExerciseType = ExerciseType;
@@ -537,6 +538,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.currentAnswer.set('');
     this.multiSelected.set(new Set());
     this.selfAssessment.set(SelfAssessment.None);
+    this.exerciseStartTime.set(Date.now());
     // 查找已存在的记录
     const record = this.chapterRecords().find(r => r.exerciseId === e.id);
     if (record) {
@@ -639,11 +641,15 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       additionalMinutes: 1,
     } as any).subscribe();
 
+    const elapsed = Date.now() - this.exerciseStartTime();
+    // timeSpentTicks = ms * 10000, 与 exercise-learning.component 保持一致
+    const timeSpentTicks = Math.max(elapsed, 1000) * 10000;
     this.recordService.saveOrUpdateRecord({
       courseId: course.id,
       chapterId: chapter.id,
       exerciseId: ex.id,
       studentAnswer: answer,
+      timeSpentTicks,
     } as any).subscribe({
       next: (record: any) => {
         this.submitting.set(false);

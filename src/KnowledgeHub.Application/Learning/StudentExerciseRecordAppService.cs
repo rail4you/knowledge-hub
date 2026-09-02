@@ -312,6 +312,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         // Get enrolled students for the course
         List<StudentCourse> studentCourses;
         List<StudentExerciseRecord> allRecords;
+        List<LearningProgress> learningProgresses;
         List<Exercise> allExercises;
 
         using (DataFilter.Disable<IMultiTenant>())
@@ -330,6 +331,15 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
                 .WhereIf(input.EndTime.HasValue, r => r.CompletedAt <= input.EndTime!.Value)
                 .ToListAsync();
 
+            var progressQuery = await _learningProgressRepository.GetQueryableAsync();
+            learningProgresses = await progressQuery
+                .Where(p => p.CourseId == input.CourseId)
+                .WhereIf(tenantFilter.HasValue, p => p.TenantId == tenantFilter!.Value)
+                .WhereIf(input.ChapterId.HasValue, p => p.ChapterId == input.ChapterId!.Value)
+                .WhereIf(input.StartTime.HasValue, p => p.LastAccessAt >= input.StartTime!.Value)
+                .WhereIf(input.EndTime.HasValue, p => p.LastAccessAt <= input.EndTime!.Value)
+                .ToListAsync();
+
             var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
             allExercises = await exerciseQuery
                 .WhereIf(input.ChapterId.HasValue, e => e.ChapterId == input.ChapterId!.Value)
@@ -339,8 +349,24 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
 
         var exerciseCount = allExercises.Count;
 
+        // 统计口径与 GetCourseLearningOverviewAsync 对齐：学习人数 = 选课 ∪ 做题 ∪ 视频/资源进度 去重，
+        // 这样顶部「学习时长(分钟)」与下方每人的时长之和能对应上。
+        var allLearnerIds = studentCourses.Select(sc => sc.StudentId)
+            .Concat(allRecords.Select(r => r.StudentId))
+            .Concat(learningProgresses.Select(p => p.StudentId))
+            .Distinct()
+            .ToList();
+        var studentIds = allLearnerIds.Count > 0 ? allLearnerIds : studentCourses.Select(sc => sc.StudentId).Distinct().ToList();
+
+        // 聚合视频/资源时长与最后活跃时间，按学生分组
+        var progressTimeMap = learningProgresses
+            .GroupBy(p => p.StudentId)
+            .ToDictionary(g => g.Key, g => g.Aggregate(TimeSpan.Zero, (acc, p) => acc + p.TimeSpent));
+        var progressLastAccessMap = learningProgresses
+            .GroupBy(p => p.StudentId)
+            .ToDictionary(g => g.Key, g => g.Max(p => p.LastAccessAt));
+
         // Load student names
-        var studentIds = studentCourses.Select(sc => sc.StudentId).Distinct().ToList();
         Dictionary<Guid, string> studentMap;
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -355,7 +381,18 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             var completedCount = studentRecords.Count(r => r.CompletedAt.HasValue);
             var gradedRecords = studentRecords.Where(r => r.IsCorrect.HasValue).ToList();
             var correctCount = gradedRecords.Count(r => r.IsCorrect!.Value);
-            var totalTime = studentRecords.Aggregate(TimeSpan.Zero, (acc, r) => acc + r.TimeSpent);
+            var exerciseTime = studentRecords.Aggregate(TimeSpan.Zero, (acc, r) => acc + r.TimeSpent);
+            var videoTime = progressTimeMap.TryGetValue(studentId, out var pt) ? pt : TimeSpan.Zero;
+            var totalTime = exerciseTime + videoTime;
+
+            var lastExerciseTime = studentRecords
+                .Where(r => r.CompletedAt.HasValue)
+                .Select(r => r.CompletedAt!.Value)
+                .DefaultIfEmpty(DateTime.MinValue)
+                .Max();
+            var lastProgressTime = progressLastAccessMap.TryGetValue(studentId, out var lat) ? lat : DateTime.MinValue;
+            var lastActive = new[] { lastExerciseTime, lastProgressTime }.Max();
+            DateTime? lastActiveTime = lastActive == DateTime.MinValue ? null : lastActive;
 
             return new StudentLearningStatisticsDto
             {
@@ -372,11 +409,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
                     ? Math.Round((decimal)correctCount / gradedRecords.Count * 100, 1)
                     : 0,
                 TotalTimeSpent = totalTime,
-                LastActiveTime = studentRecords
-                    .Where(r => r.CompletedAt.HasValue)
-                    .Select(r => r.CompletedAt!.Value)
-                    .DefaultIfEmpty()
-                    .Max()
+                LastActiveTime = lastActiveTime
             };
         }).ToList();
 

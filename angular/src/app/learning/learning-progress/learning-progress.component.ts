@@ -142,16 +142,34 @@ export class LearningProgressComponent implements OnInit {
 
   formatTimeSpan(ts?: string): string {
     if (!ts) return '0分钟';
-    // Format time span string like "hh:mm:ss" to readable form
-    const parts = ts.split(':');
+    // TimeSpan from .NET: "hh:mm:ss" or "d.hh:mm:ss" / "hh:mm:ss.fffffff"
+    // Parse to total seconds for accurate display, keep consistent with top totalLearningMinutes (which sums LearningProgress + exercise time)
+    const normalized = ts.split('.')[0];
+    const parts = normalized.split(':');
+    let totalSeconds = 0;
     if (parts.length === 3) {
-      const h = parseInt(parts[0]);
-      const m = parseInt(parts[1]);
-      if (h > 0) return `${h}小时${m}分钟`;
-      if (m > 0) return `${m}分钟`;
-      return '不到1分钟';
+      const h = parseInt(parts[0], 10) || 0;
+      const m = parseInt(parts[1], 10) || 0;
+      const s = parseInt(parts[2], 10) || 0;
+      totalSeconds = h * 3600 + m * 60 + s;
+    } else if (parts.length === 2) {
+      const m = parseInt(parts[0], 10) || 0;
+      const s = parseInt(parts[1], 10) || 0;
+      totalSeconds = m * 60 + s;
+    } else {
+      return ts;
     }
-    return ts;
+    if (totalSeconds === 0) return '0分钟';
+    if (totalSeconds < 60) return `${totalSeconds}秒`;
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    if (h > 0) {
+      if (m > 0) return `${h}小时${m}分钟`;
+      return `${h}小时`;
+    }
+    if (s > 0 && m < 60) return `${m}分${s}秒`;
+    return `${m}分钟`;
   }
 
   formatDate(d?: string | null): string {
