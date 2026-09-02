@@ -1,50 +1,67 @@
-<div class="micro-major-page">
-  <div class="hero">
-    <h1>微专业</h1>
+<div class="micro-page">
+  <!-- 标题区 -->
+  <div class="micro-hero">
+    <h2>微专业</h2>
     <p>围绕行业细分方向组织课程、进度和认证证书。</p>
   </div>
 
-  <div class="toolbar">
+  <!-- 一体化搜索栏 -->
+  <div class="micro-search">
+    <span nz-icon nzType="search" class="mag"></span>
     <input
-      nz-input
+      type="text"
       placeholder="搜索微专业名称、简介、行业方向"
       [ngModel]="filter()"
       (ngModelChange)="filter.set($event)"
       (keyup.enter)="loadItems()"
     />
-    <button nz-button nzType="primary" (click)="loadItems()">搜索</button>
+    <button type="button" (click)="loadItems()">搜索</button>
   </div>
 
   @if (loading()) {
-    <div class="state">
+    <div class="micro-state">
       <nz-spin nzTip="加载中..."></nz-spin>
     </div>
+  } @else if (items().length === 0) {
+    <nz-empty nzNotFoundContent="暂无微专业"></nz-empty>
   } @else {
-    <div class="grid">
+    <!-- 卡片网格 -->
+    <div class="micro-grid">
       @for (item of items(); track item.id) {
-        <nz-card class="major-card" [nzHoverable]="true" (click)="openDetail(item.id)">
-          <div class="major-card__head">
+        <div class="micro-card" (click)="openDetail(item.id)">
+          <div class="micro-card-top">
             <h3>{{ item.title }}</h3>
             @if (item.isCertificateEnabled) {
-              <nz-tag nzColor="green">含证书</nz-tag>
+              <span class="cert-tag">
+                <span nz-icon nzType="safety-certificate" nzTheme="fill"></span>
+                含证书
+              </span>
             }
           </div>
-          <p>{{ item.summary || item.description || '暂无简介' }}</p>
-          <div class="major-card__meta">
-            <span>{{ item.courseCount }} 门课程</span>
-            <span>{{ item.enrollmentCount }} 人报名</span>
+          <div class="micro-card-mid">
+            <span class="dir-tag">{{ item.industryField || '通用方向' }}</span>
+            <p class="micro-desc">{{ item.summary || item.description || '暂无简介' }}</p>
           </div>
-          <div class="major-card__footer">
-            <span>{{ item.industryField || '通用方向' }}</span>
+          <div class="micro-card-bottom">
+            <div class="micro-stats">
+              <span><b>{{ item.courseCount }}</b>门课程</span>
+              <span class="sep"></span>
+              <span><b>{{ item.enrollmentCount }}</b>人报名</span>
+            </div>
             @if (canEnroll()) {
-              <button nz-button nzType="primary" (click)="enroll(item, $event)">
+              <button
+                class="micro-btn"
+                [class.enrolled]="item.isCurrentUserEnrolled"
+                [class.apply]="!item.isCurrentUserEnrolled"
+                (click)="enroll(item, $event)"
+              >
                 {{ item.isCurrentUserEnrolled ? '已报名' : '立即报名' }}
               </button>
             } @else if (item.isCurrentUserEnrolled) {
-              <span class="enrolled-badge">已报名</span>
+              <span class="micro-btn enrolled">已报名</span>
             }
           </div>
-        </nz-card>
+        </div>
       }
     </div>
   }

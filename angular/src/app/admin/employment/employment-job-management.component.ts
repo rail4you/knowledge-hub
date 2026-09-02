@@ -290,6 +290,27 @@ export class EmploymentJobManagementComponent implements OnInit {
     return JOB_TYPE_LABEL[type] ?? '未知';
   }
 
+  getTypeClass(type: EmploymentJobType): string {
+    const classes: Record<number, string> = {
+      [EmploymentJobType.FullTime]: 'fulltime',
+      [EmploymentJobType.PartTime]: 'parttime',
+      [EmploymentJobType.Internship]: 'intern',
+      [EmploymentJobType.Apprenticeship]: 'intern',
+    };
+    return classes[type] ?? 'fulltime';
+  }
+
+  getStatusClass(status: EmploymentJobStatus): string {
+    const classes: Record<number, string> = {
+      [EmploymentJobStatus.Draft]: 'pending',
+      [EmploymentJobStatus.PendingReview]: 'pending',
+      [EmploymentJobStatus.Published]: 'published',
+      [EmploymentJobStatus.Rejected]: 'closed',
+      [EmploymentJobStatus.Closed]: 'closed',
+    };
+    return classes[status] ?? 'pending';
+  }
+
   // 按钮显隐：仅在可执行的状态显示
   canReview(item: JobPostingDto, target: EmploymentJobStatus): boolean {
     if (target === EmploymentJobStatus.Published) {

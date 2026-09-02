@@ -1,29 +1,31 @@
-<nz-card nzTitle="就业去向管理" [nzExtra]="extraTpl">
-  <ng-template #extraTpl>
-    <div class="toolbar">
-      <button nz-button (click)="downloadTemplate()">
-        <span nz-icon nzType="download"></span>
+<div class="dest-page">
+  <!-- 标题 + 操作按钮（原型 page-header） -->
+  <div class="page-header">
+    <div class="page-title">就业去向管理</div>
+    <div class="header-actions">
+      <button class="action-btn" type="button" (click)="downloadTemplate()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         下载模板
       </button>
-      <button nz-button nzType="primary" (click)="openCreate()">
-        <span nz-icon nzType="plus"></span>
+      <button class="action-btn primary" type="button" (click)="openCreate()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         新增去向
       </button>
-      <button nz-button nzType="primary" nzGhost (click)="openXlsxImport()">
-        <span nz-icon nzType="upload"></span>
-        导入 Excel
+      <button class="action-btn" type="button" (click)="openXlsxImport()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        导入Excel
       </button>
     </div>
-  </ng-template>
+  </div>
 
+  <!-- 搜索筛选栏（原型 filter-bar） -->
   <div class="filter-bar">
-    <input
-      nz-input
-      [(ngModel)]="keyword"
-      placeholder="搜索学生 / 单位 / 岗位"
-      (keyup.enter)="search()"
-    />
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" [(ngModel)]="keyword" placeholder="搜索学生 / 单位 / 岗位" (keyup.enter)="search()" />
+    </div>
     <nz-select
+      class="filter-select"
       [(ngModel)]="studentFilter"
       nzAllowClear
       nzPlaceHolder="选择学生"
@@ -34,6 +36,7 @@
       }
     </nz-select>
     <nz-select
+      class="filter-select"
       [(ngModel)]="statusFilter"
       nzAllowClear
       nzPlaceHolder="去向状态"
@@ -46,96 +49,94 @@
       <nz-option [nzValue]="statuses.Entrepreneurship" nzLabel="创业"></nz-option>
       <nz-option [nzValue]="statuses.Unemployed" nzLabel="待就业"></nz-option>
     </nz-select>
-    <button nz-button nzType="primary" (click)="search()">搜索</button>
-    <button nz-button (click)="resetFilter()">重置</button>
+    <button class="reset-btn" type="button" (click)="resetFilter()">重置</button>
   </div>
 
-  <nz-table
-    #outcomeTable
-    [nzData]="filteredItems()"
-    [nzFrontPagination]="false"
-    [nzLoading]="loading()"
-    [nzTotal]="totalCount()"
-    [nzPageSize]="pageSize"
-    [nzPageIndex]="pageIndex"
-    [nzShowSizeChanger]="true"
-    [nzPageSizeOptions]="[10, 20, 50, 100]"
-    (nzPageIndexChange)="onPageIndexChange($event)"
-    (nzPageSizeChange)="onPageSizeChange($event)"
-  >
-    <thead>
-      <tr>
-        <th>学生</th>
-        <th>单位 / 岗位</th>
-        <th>状态</th>
-        <th>方式 / 地点 / 薪资</th>
-        <th>入职 / 确认时间</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (item of filteredItems(); track item.id) {
+  <!-- 表格（原型 table-card + dest-table） -->
+  <div class="table-card">
+    <nz-table
+      #outcomeTable
+      [nzData]="filteredItems()"
+      [nzFrontPagination]="false"
+      [nzLoading]="loading()"
+      [nzTotal]="totalCount()"
+      [nzPageSize]="pageSize"
+      [nzPageIndex]="pageIndex"
+      [nzShowSizeChanger]="true"
+      [nzPageSizeOptions]="[10, 20, 50, 100]"
+      (nzPageIndexChange)="onPageIndexChange($event)"
+      (nzPageSizeChange)="onPageSizeChange($event)"
+      class="dest-table"
+    >
+      <thead>
         <tr>
-          <td>
-            <div class="student-cell">
-              <div>
-                <div class="student-name">{{ item.studentName || '-' }}</div>
-                <div class="muted">ID: {{ item.studentId.substring(0, 8) }}</div>
-              </div>
-            </div>
-          </td>
-          <td>
-            <div class="job-title">{{ item.employerName }}</div>
-            <div class="muted">{{ item.jobTitle || '未填写岗位' }}</div>
-            @if (item.applicationId) {
-              <nz-tag nzColor="cyan" class="mt-tag">来自投递</nz-tag>
-            }
-          </td>
-          <td>
-            <nz-tag [nzColor]="statusColor(item.status)">{{ statusLabel(item.status) }}</nz-tag>
-            @if (item.isPrimary) {
-              <div class="primary-tag">
-                <span nz-icon nzType="star" nzTheme="fill"></span> 主要去向
-              </div>
-            }
-          </td>
-          <td>
-            <div class="info-cell">
-              {{ item.employmentType || '-' }}
-              @if (item.region) { · {{ item.region }} }
-              @if (item.salaryRange) { · {{ item.salaryRange }} }
-            </div>
-            @if (item.remark) {
-              <div class="muted" [title]="item.remark">{{ item.remark }}</div>
-            }
-          </td>
-          <td>
-            <div>{{ item.startDate ? (item.startDate | date:'yyyy-MM-dd') : '未填写' }} 入职</div>
-            <div class="muted">确认 {{ item.confirmedAt | date:'yyyy-MM-dd' }}</div>
-          </td>
-          <td>
-            <div class="actions">
-              <button nz-button nzSize="small" nzType="link" (click)="openEdit(item)">编辑</button>
-              @if (!item.isPrimary) {
-                <button nz-button nzSize="small" nzType="link" (click)="setPrimary(item)">设为主要</button>
-              }
-              <button
-                nz-button
-                nzSize="small"
-                nzType="link"
-                nzDanger
-                nz-popconfirm
-                nzPopconfirmTitle="确认删除该就业去向？"
-                nzPopconfirmDescription="删除后无法恢复"
-                (nzOnConfirm)="delete(item)"
-              >删除</button>
-            </div>
-          </td>
+          <th>学生</th>
+          <th>单位 / 岗位</th>
+          <th>状态</th>
+          <th>方式 / 地点 / 薪资</th>
+          <th>入职 / 确认时间</th>
+          <th>操作</th>
         </tr>
-      }
-    </tbody>
-  </nz-table>
-</nz-card>
+      </thead>
+      <tbody>
+        @for (item of filteredItems(); track item.id) {
+          <tr>
+            <td>
+              <div class="student-name">{{ item.studentName || '-' }}</div>
+              <div class="student-id">ID: {{ item.studentId.substring(0, 8) }}</div>
+            </td>
+            <td>
+              <div class="company-cell">
+                <div class="company-info">
+                  <div class="company-name">{{ item.employerName }}</div>
+                  <div class="job-name">{{ item.jobTitle || '未填写岗位' }}</div>
+                </div>
+                <div class="cell-tags">
+                  @if (item.applicationId) {
+                    <span class="from-tag">来自投递</span>
+                  }
+                  @if (item.isPrimary) {
+                    <span class="main-tag"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>主要去向</span>
+                  }
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="status-tag" [ngClass]="getOutcomeStatusClass(item.status)">{{ statusLabel(item.status) }}</span>
+            </td>
+            <td>
+              <div class="info-cell">
+                {{ item.employmentType || '-' }}
+                @if (item.region) { <span class="dot">·</span> {{ item.region }} }
+                @if (item.salaryRange) { <span class="dot">·</span> {{ item.salaryRange }} }
+              </div>
+              @if (item.remark) {
+                <div class="muted" [title]="item.remark">{{ item.remark }}</div>
+              }
+            </td>
+            <td>
+              <div class="time-cell">
+                <span class="entry-time">{{ item.startDate ? (item.startDate | date:'yyyy-MM-dd') : '未填写' }} 入职</span>
+                <span class="confirm-time">确认 {{ item.confirmedAt | date:'yyyy-MM-dd' }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="op-links">
+                <a class="op-link" (click)="openEdit(item)">编辑</a>
+                @if (!item.isPrimary) {
+                  <span class="op-sep">|</span>
+                  <a class="op-link main" (click)="setPrimary(item)">设为主要</a>
+                }
+                <span class="op-sep">|</span>
+                <a class="op-link delete" nz-popconfirm nzPopconfirmTitle="确认删除该就业去向？" nzPopconfirmDescription="删除后无法恢复" (nzOnConfirm)="delete(item)">删除</a>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+  </div>
+</div>
 
 <!-- =================== 新增 / 编辑弹窗 =================== -->
 <nz-modal

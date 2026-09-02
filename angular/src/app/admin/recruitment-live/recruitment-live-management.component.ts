@@ -42,13 +42,7 @@ import { RecruitmentLiveDto, RecruitmentLiveStatus, UserBriefDto } from '../../r
     NzSpinModule,
   ],
   templateUrl: './recruitment-live-management.component.html',
-  styles: [`
-    .action-btns { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .action-btns .ant-btn + .ant-tag { margin-left: 0; }
-    .student-table-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-    .student-table-toolbar input { width: 200px; }
-    .selected-hint { margin-bottom: 12px; font-size: 13px; color: #666; }
-  `],
+  styleUrls: ['./recruitment-live-management.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RecruitmentLiveManagementComponent implements OnInit {

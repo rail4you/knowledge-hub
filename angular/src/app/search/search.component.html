@@ -1,0 +1,205 @@
+<div class="search-container">
+  <div class="search-panel">
+    <!-- 顶部大搜索栏 -->
+    <div class="hero-search">
+      <div class="hs-wrap">
+        <span nz-icon nzType="search" class="mag"></span>
+        <input
+          nz-input
+          type="text"
+          placeholder="输入关键词搜索文档..."
+          [(ngModel)]="searchQuery"
+          (keyup.enter)="search()"
+        />
+      </div>
+      <button class="hs-btn" (click)="search()" [disabled]="loading()">
+        <span nz-icon nzType="search"></span>
+        搜索
+      </button>
+    </div>
+
+    <!-- 筛选条件 -->
+    <div class="search-filters">
+      <div class="filter-group">
+        <label class="filter-label">
+          <span nz-icon nzType="search"></span>
+          搜索类型
+        </label>
+        <nz-select [(ngModel)]="searchType" class="filter-select" nzPlaceHolder="搜索类型">
+          <nz-option nzValue="keyword" nzLabel="关键词搜索"></nz-option>
+          <nz-option nzValue="hybrid" nzLabel="混合搜索"></nz-option>
+        </nz-select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">
+          <span nz-icon nzType="database"></span>
+          搜索索引
+        </label>
+        <nz-select [(ngModel)]="selectedIndex" class="filter-select" nzPlaceHolder="选择索引">
+          @for (idx of availableIndexes(); track idx.uid) {
+            <nz-option [nzValue]="idx.uid" [nzLabel]="getIndexLabel(idx.uid)"></nz-option>
+          }
+        </nz-select>
+      </div>
+
+      <div class="filter-group date-range-group">
+        <label class="filter-label">
+          <span nz-icon nzType="calendar"></span>
+          时间范围
+        </label>
+        <div class="date-range">
+          <nz-date-picker [(ngModel)]="startDate" nzPlaceHolder="开始日期" nzSize="default"></nz-date-picker>
+          <span class="date-separator">—</span>
+          <nz-date-picker [(ngModel)]="endDate" nzPlaceHolder="结束日期" nzSize="default"></nz-date-picker>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-content">
+    <nz-spin [nzSpinning]="loading()">
+      @if (results().length === 0 && !loading() && searchQuery) {
+        <nz-empty nzNotFoundContent="未找到搜索结果"></nz-empty>
+      } @else if (results().length === 0 && !loading()) {
+        <div class="search-empty-hint">
+          <div class="hint-icon">
+            <span nz-icon nzType="search"></span>
+          </div>
+          <b>输入关键词开始搜索文档</b>
+          <p>支持按文档标题、内容关键词、专业分类等多维度检索，可结合上方筛选条件精确查找所需教学资源。</p>
+        </div>
+      } @else {
+        <div class="results-toolbar">
+          <span class="results-count">找到 <strong>{{ filteredResults().length }}</strong> 个结果</span>
+          <nz-divider nzType="vertical"></nz-divider>
+          <div class="ext-filter">
+            <span class="ext-filter-label">按类型筛选：</span>
+            <nz-tag
+              class="ext-tag"
+              [nzColor]="selectedFileExtension() === '' ? 'blue' : ''"
+              (click)="selectedFileExtension.set('')"
+            >全部</nz-tag>
+            @for (ext of availableExtensions(); track ext) {
+              <nz-tag
+                class="ext-tag"
+                [nzColor]="selectedFileExtension() === ext ? 'blue' : ''"
+                (click)="selectedFileExtension.set(ext)"
+              >{{ ext }}</nz-tag>
+            }
+          </div>
+        </div>
+
+        <div class="search-results">
+          @for (result of filteredResults(); track result.resourceId + '-' + result.pageNumber) {
+            <div class="result-card" (click)="viewDocument(result)">
+              <div class="result-header">
+                <div class="result-title">
+                  <span nz-icon [nzType]="result.sourceType === 'video' ? 'video-camera' : getFileIcon(result.fileExtension)" class="result-icon"></span>
+                  <span class="result-name">{{ result.resourceName }}</span>
+                  @if (result.sourceType === 'video') {
+                    <nz-tag class="result-page-tag" nzColor="purple">
+                      {{ result.startTime || '' }}
+                      {{ result.startTime && result.endTime ? ' - ' : '' }}
+                      {{ result.endTime || '' }}
+                    </nz-tag>
+                  } @else {
+                    <nz-tag class="result-page-tag">第 {{ result.pageNumber }} 页</nz-tag>
+                  }
+                </div>
+                <div class="result-meta">
+                  @if (result.categoryName) {
+                    <nz-tag nzColor="blue">{{ result.categoryName }}</nz-tag>
+                  }
+                  <nz-tag [nzColor]="getScoreColor(result.relevanceScore)">
+                    {{ (result.relevanceScore * 100).toFixed(0) }} 分
+                  </nz-tag>
+                  @if (result.sourceType === 'video') {
+                    <span class="file-ext-badge">视频</span>
+                  } @else {
+                    <span class="file-ext-badge">{{ result.fileExtension }}</span>
+                  }
+                  <button nz-button nzSize="small" nzType="text" class="review-btn"
+                    nz-tooltip="查看评价"
+                    (click)="openReviewModal(result.resourceId, result.resourceName, $event)">
+                    <span nz-icon nzType="star" nzTheme="outline"></span>
+                  </button>
+                </div>
+              </div>
+              <div class="result-content">
+                <p class="preview-text" [innerHTML]="result.highlightedContent || result.eventDescription || result.content"></p>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="pagination">
+          <nz-pagination
+            [(nzPageIndex)]="pageIndex"
+            [nzTotal]="filteredResults().length"
+            [nzPageSize]="pageSize"
+            (nzPageIndexChange)="onPageChange()">
+          </nz-pagination>
+        </div>
+      }
+    </nz-spin>
+  </div>
+</div>
+
+<nz-modal
+  [nzVisible]="isVideoModalOpen()"
+  [nzTitle]="currentVideoName()"
+  [nzWidth]="900"
+  [nzFooter]="videoModalFooter"
+  (nzOnCancel)="closeVideoModal()"
+  nzMaskClosable="false"
+>
+  <ng-container *nzModalContent>
+    <div class="video-player-container">
+      <video
+        #videoPlayer
+        controls
+        [src]="currentVideoUrl()"
+        style="width: 100%; max-height: 70vh;"
+        (loadedmetadata)="onVideoMetadataLoaded(videoPlayer)"
+      ></video>
+      @if (currentVideoEventDescription()) {
+        <div class="video-info">
+          <h4>事件描述</h4>
+          <p>{{ currentVideoEventDescription() }}</p>
+        </div>
+      }
+      @if (currentVideoStartTime() && currentVideoEndTime()) {
+        <div class="video-timeline">
+          <span class="timeline-label">时间范围：</span>
+          <span class="timeline-value">{{ currentVideoStartTime() }} - {{ currentVideoEndTime() }}</span>
+        </div>
+      }
+    </div>
+  </ng-container>
+  <ng-template #videoModalFooter>
+    <div class="video-modal-footer">
+      <button nz-button nzType="default" (click)="returnToSearch()">
+        <span nz-icon nzType="left"></span>
+        返回搜索界面
+      </button>
+      <button nz-button nzType="primary" (click)="closeVideoModal()">
+        关闭
+      </button>
+    </div>
+  </ng-template>
+</nz-modal>
+
+<nz-modal
+  [nzVisible]="isReviewModalOpen()"
+  [nzTitle]="'评价 - ' + reviewResourceName()"
+  [nzWidth]="600"
+  [nzFooter]="null"
+  (nzOnCancel)="closeReviewModal()"
+>
+  <ng-container *nzModalContent>
+    @if (reviewResourceId()) {
+      <app-resource-review [resourceId]="reviewResourceId()"></app-resource-review>
+    }
+  </ng-container>
+</nz-modal>

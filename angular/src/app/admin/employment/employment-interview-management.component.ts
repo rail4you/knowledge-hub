@@ -303,6 +303,19 @@ export class EmploymentInterviewManagementComponent implements OnInit {
     return m[s] ?? 'default';
   }
 
+  getAppStatusTagClass(s: EmploymentApplicationStatus): string {
+    if (s === EmploymentApplicationStatus.Offered) return 'status-tag hired';
+    if (s === EmploymentApplicationStatus.Rejected || s === EmploymentApplicationStatus.Withdrawn) return 'status-tag rejected';
+    return 'status-tag pending';
+  }
+
+  getResultTagClass(r: EmploymentInterviewResult): string {
+    if (r === EmploymentInterviewResult.Passed) return 'record-result pass';
+    if (r === EmploymentInterviewResult.Failed) return 'record-result fail';
+    if (r === EmploymentInterviewResult.Deferred) return 'record-result pending';
+    return 'record-result pending';
+  }
+
   getResultLabel(r: EmploymentInterviewResult): string {
     const m: Record<number, string> = {
       [EmploymentInterviewResult.Pending]: '待定',

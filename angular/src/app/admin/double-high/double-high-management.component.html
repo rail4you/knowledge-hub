@@ -1,109 +1,161 @@
-<div class="page">
-  <nz-card nzTitle="双高评估项目管理" [nzExtra]="extraTpl">
-    <ng-template #extraTpl>
-      <button nz-button nzType="primary" (click)="openCreate()">新建项目</button>
-    </ng-template>
+<div class="eval-page">
+  <div class="page-hero">
+    <h1>双高评估项目</h1>
+    <p>配置双高建设评估指标、批次与数据来源</p>
+  </div>
 
-    <nz-table [nzData]="items()" [nzFrontPagination]="false">
-      <thead>
-        <tr>
-          <th>项目</th>
-          <th>批次</th>
-          <th>状态</th>
-          <th>指标数</th>
-          <th>完成率</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of items(); track item.id) {
+  <div class="search-bar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" placeholder="搜索项目名称" disabled />
+      <button class="search-btn" type="button" (click)="reload()">搜索</button>
+      <button class="reset-btn" type="button" (click)="reload()">重置</button>
+    </div>
+    <button class="create-btn" type="button" (click)="openCreate()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      新建项目
+    </button>
+  </div>
+
+  <div class="eval-card">
+    <div class="table-card">
+      <nz-table [nzData]="items()" [nzFrontPagination]="false" [nzShowPagination]="false" nzSize="middle" class="data-table-host">
+        <thead>
           <tr>
-            <td>{{ item.title }}</td>
-            <td>{{ item.batchCode }}</td>
-            <td>{{ getStatusLabel(item.status) }}</td>
-            <td>{{ item.indicatorCount }}</td>
-            <td>{{ item.completionRate }}%</td>
-            <td class="actions">
-              <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
-              <button nz-button nzType="link" nzDanger (click)="delete(item.id)">删除</button>
-            </td>
+            <th>项目</th>
+            <th>批次</th>
+            <th>状态</th>
+            <th>指标数</th>
+            <th>完成率</th>
+            <th>操作</th>
           </tr>
-        }
-      </tbody>
-    </nz-table>
-  </nz-card>
+        </thead>
+        <tbody>
+          @for (item of items(); track item.id) {
+            <tr>
+              <td class="name-cell">{{ item.title }}</td>
+              <td><span class="batch-tag">{{ item.batchCode }}</span></td>
+              <td>
+                <span class="st-tag" [ngClass]="item.status === statuses.Active ? 'running' : item.status === statuses.Closed ? 'ended' : 'draft'">
+                  {{ getStatusLabel(item.status) }}
+                </span>
+              </td>
+              <td class="num-cell">{{ item.indicatorCount }}</td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-bar"><div class="fill" [style.width.%]="item.completionRate"></div></div>
+                  <span class="progress-text">{{ item.completionRate }}%</span>
+                </div>
+              </td>
+              <td>
+                <div class="op-links">
+                  <a class="op-link edit" (click)="openEdit(item)">编辑</a>
+                  <span class="op-sep">|</span>
+                  <a class="op-link delete" (click)="delete(item.id)">删除</a>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      <div *ngIf="items().length === 0" class="empty-tip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <span>暂无评估项目，点击右上角新建</span>
+      </div>
+
+      <div class="pagination">
+        <div class="page-info">共 {{ items().length }} 条</div>
+        <div class="page-controls">
+          <button class="page-btn" type="button" disabled>&lt;</button>
+          <button class="page-btn active" type="button">1</button>
+          <button class="page-btn" type="button" disabled>&gt;</button>
+          <select class="page-size" disabled><option>10 条/页</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <nz-modal
     [nzVisible]="modalVisible()"
     [nzTitle]="editingId ? '编辑双高评估项目' : '新建双高评估项目'"
-    [nzWidth]="980"
+    [nzWidth]="960"
+    [nzFooter]="null"
     (nzOnCancel)="modalVisible.set(false)"
-    (nzOnOk)="save()"
+    nzWrapClassName="eval-modal-wrap"
   >
     <ng-container *nzModalContent>
-      <div class="form-grid">
-        <label>项目名称</label>
-        <input nz-input [(ngModel)]="form.title" />
+      <div class="eval-modal">
+        <div class="form-grid">
+          <label>项目名称</label>
+          <input nz-input [(ngModel)]="form.title" placeholder="输入评估项目名称" />
 
-        <label>批次编码</label>
-        <input nz-input [(ngModel)]="form.batchCode" />
+          <label>批次编码</label>
+          <input nz-input [(ngModel)]="form.batchCode" placeholder="如：2026-S1" />
 
-        <label>项目说明</label>
-        <textarea nz-input rows="4" [(ngModel)]="form.description"></textarea>
+          <label>项目说明</label>
+          <textarea nz-input rows="3" [(ngModel)]="form.description" placeholder="评估项目背景与说明"></textarea>
 
-        <label>状态</label>
-        <nz-select [(ngModel)]="form.status">
-          <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
-          <nz-option [nzValue]="statuses.Active" nzLabel="进行中"></nz-option>
-          <nz-option [nzValue]="statuses.Closed" nzLabel="已关闭"></nz-option>
-        </nz-select>
+          <label>状态</label>
+          <nz-select [(ngModel)]="form.status" style="width:100%">
+            <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+            <nz-option [nzValue]="statuses.Active" nzLabel="进行中"></nz-option>
+            <nz-option [nzValue]="statuses.Closed" nzLabel="已关闭"></nz-option>
+          </nz-select>
 
-        <label>开始时间</label>
-        <input nz-input type="datetime-local" [(ngModel)]="form.startTime" />
+          <label>开始时间</label>
+          <input nz-input type="datetime-local" [(ngModel)]="form.startTime" />
 
-        <label>结束时间</label>
-        <input nz-input type="datetime-local" [(ngModel)]="form.endTime" />
-      </div>
-
-      <div class="sub-section">
-        <div class="sub-toolbar">
-          <h3>指标配置</h3>
-          <button nz-button (click)="addIndicator()">新增指标</button>
+          <label>结束时间</label>
+          <input nz-input type="datetime-local" [(ngModel)]="form.endTime" />
         </div>
 
-        @for (indicator of form.indicators; track $index) {
-          <div class="indicator-grid">
-            <input nz-input [(ngModel)]="indicator.categoryName" placeholder="分类，如 产教融合 / 教学成果" />
-            <input nz-input [(ngModel)]="indicator.indicatorCode" placeholder="指标编码" />
-            <input nz-input [(ngModel)]="indicator.name" placeholder="指标名称" />
-            <textarea nz-input rows="2" [(ngModel)]="indicator.description" placeholder="指标说明"></textarea>
-            <input nz-input [(ngModel)]="indicator.unit" placeholder="单位，如 项 / 门 / %" />
-            <nz-select [(ngModel)]="indicator.dataSourceType">
-              <nz-option [nzValue]="dataSources.Manual" nzLabel="手工填报"></nz-option>
-              <nz-option [nzValue]="dataSources.ResourceCount" nzLabel="资源数量"></nz-option>
-              <nz-option [nzValue]="dataSources.CourseCount" nzLabel="课程数量"></nz-option>
-              <nz-option [nzValue]="dataSources.MicroMajorCount" nzLabel="微专业数量"></nz-option>
-              <nz-option [nzValue]="dataSources.PracticumProjectCount" nzLabel="实训项目数量"></nz-option>
-              <nz-option [nzValue]="dataSources.NewsArticleCount" nzLabel="资讯数量"></nz-option>
-              <nz-option [nzValue]="dataSources.MicroMajorEnrollmentCount" nzLabel="微专业报名量"></nz-option>
-              <nz-option [nzValue]="dataSources.PracticumEnrollmentCount" nzLabel="实训参与量"></nz-option>
-            </nz-select>
-            <input nz-input type="number" [(ngModel)]="indicator.targetValue" placeholder="目标值" />
-            <label class="weight-label" title="指标权重，默认 1，范围 1 ~ 10" >
-              权重
-              <nz-input-number
-                [(ngModel)]="indicator.weight"
-                [nzMin]="1"
-                [nzMax]="10"
-                [nzStep]="1"
-                [nzPrecision]="0"
-                nzPlaceHolder="1"
-                style="width: 110px"
-              />
-            </label>
-            <button nz-button nzDanger (click)="removeIndicator($index)">删除指标</button>
+        <div class="sub-section">
+          <div class="sub-toolbar">
+            <h3>指标配置</h3>
+            <button nz-button nzType="primary" nzShape="round" (click)="addIndicator()">
+              <span nz-icon nzType="plus"></span> 新增指标
+            </button>
           </div>
-        }
+
+          @for (indicator of form.indicators; track $index) {
+            <div class="indicator-card">
+              <div class="indicator-head">
+                <span class="indicator-index">#{{ $index + 1 }}</span>
+                <button nz-button nzType="text" nzDanger (click)="removeIndicator($index)">
+                  <span nz-icon nzType="delete"></span> 删除
+                </button>
+              </div>
+              <div class="indicator-grid">
+                <input nz-input [(ngModel)]="indicator.categoryName" placeholder="分类，如 产教融合" />
+                <input nz-input [(ngModel)]="indicator.indicatorCode" placeholder="指标编码" />
+                <input nz-input [(ngModel)]="indicator.name" placeholder="指标名称" />
+                <textarea nz-input rows="2" [(ngModel)]="indicator.description" placeholder="指标说明" class="col-span-2"></textarea>
+                <input nz-input [(ngModel)]="indicator.unit" placeholder="单位，如 项 / 门 / %" />
+                <nz-select [(ngModel)]="indicator.dataSourceType" style="width:100%">
+                  <nz-option [nzValue]="dataSources.Manual" nzLabel="手工填报"></nz-option>
+                  <nz-option [nzValue]="dataSources.ResourceCount" nzLabel="资源数量"></nz-option>
+                  <nz-option [nzValue]="dataSources.CourseCount" nzLabel="课程数量"></nz-option>
+                  <nz-option [nzValue]="dataSources.MicroMajorCount" nzLabel="微专业数量"></nz-option>
+                  <nz-option [nzValue]="dataSources.PracticumProjectCount" nzLabel="实训项目数量"></nz-option>
+                  <nz-option [nzValue]="dataSources.NewsArticleCount" nzLabel="资讯数量"></nz-option>
+                  <nz-option [nzValue]="dataSources.MicroMajorEnrollmentCount" nzLabel="微专业报名量"></nz-option>
+                  <nz-option [nzValue]="dataSources.PracticumEnrollmentCount" nzLabel="实训参与量"></nz-option>
+                </nz-select>
+                <input nz-input type="number" [(ngModel)]="indicator.targetValue" placeholder="目标值" />
+                <label class="weight-label">
+                  权重
+                  <nz-input-number [(ngModel)]="indicator.weight" [nzMin]="1" [nzMax]="10" [nzStep]="1" [nzPrecision]="0" nzPlaceHolder="1" style="width: 100px" />
+                </label>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="modal-foot">
+          <button nz-button (click)="modalVisible.set(false)">取消</button>
+          <button nz-button nzType="primary" (click)="save()">保存</button>
+        </div>
       </div>
     </ng-container>
   </nz-modal>

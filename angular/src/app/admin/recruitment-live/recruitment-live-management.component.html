@@ -1,187 +1,181 @@
-<div class="recruitment-live-management">
+<div class="live-page">
   <div class="page-header">
-    <h2>
-      <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-      我的直播
-    </h2>
-    <button nz-button nzType="primary" (click)="openCreateModal()">
-      <span nz-icon nzType="plus" nzTheme="outline"></span>
+    <div class="page-title">我的直播</div>
+    <button class="create-btn" type="button" (click)="openCreateModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       创建直播
     </button>
   </div>
 
-  <nz-table
-    #table
-    [nzData]="lives()"
-    [nzTotal]="total()"
-    [nzPageIndex]="pageIndex()"
-    [nzPageSize]="pageSize()"
-    [nzLoading]="loading()"
-    (nzPageIndexChange)="pageChange($event)"
-    [nzFrontPagination]="false"
-    nzSize="middle"
-  >
-    <thead>
-      <tr>
-        <th nzWidth="35%">标题</th>
-        <th nzWidth="12%">状态</th>
-        <th nzWidth="18%">计划时间范围</th>
-        <th nzWidth="18%">创建时间</th>
-        <th nzWidth="17%">操作</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let live of lives()">
-        <td>{{ live.title }}</td>
-        <td>
-          <nz-tag [nzColor]="statusColor(live)">{{ statusText(live) }}</nz-tag>
-        </td>
-        <td>{{ scheduleText(live) }}</td>
-        <td>{{ live.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
-        <td>
-          <div class="action-btns">
-            <button
-              nz-button nzType="primary" nzSize="small" nzShape="round"
-              *ngIf="showEnterAction(live)"
-              [disabled]="!canEnter(live)"
-              (click)="canEnter(live) && enterLive(live)"
-            >
-              <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-              进入
-            </button>
-            <button
-              nz-button nzSize="small" nzShape="round"
-              *ngIf="canCancel(live)"
-              nz-popconfirm
-              nzPopconfirmTitle="确定要取消该直播吗？"
-              (nzOnConfirm)="cancelLive(live)"
-            >
-              <span nz-icon nzType="close-circle" nzTheme="outline"></span>
-              取消
-            </button>
-            <button
-              nz-button nzSize="small" nzShape="round" nzDanger
-              *ngIf="canDelete(live)"
-              nz-popconfirm
-              nzPopconfirmTitle="确定要删除该直播吗？删除后不可恢复。"
-              (nzOnConfirm)="deleteLive(live)"
-            >
-              <span nz-icon nzType="delete" nzTheme="outline"></span>
-              删除
-            </button>
-            <nz-tag *ngIf="isExpired(live) && live.status !== 2 && live.status !== 3" nzColor="error">已过期</nz-tag>
-          </div>
-        </td>
-      </tr>
-    </tbody>
-  </nz-table>
+  <div class="filter-bar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" [ngModel]="filter()" (ngModelChange)="filter.set($event)" (keyup.enter)="search()" placeholder="搜索直播标题" />
+    </div>
+    <button class="search-btn" type="button" (click)="search()">搜索</button>
+    <button class="reset-btn" type="button" (click)="filter.set(''); search()">重置</button>
+  </div>
+
+  <div class="table-card">
+    <nz-table
+      #table
+      [nzData]="lives()"
+      [nzTotal]="total()"
+      [nzPageIndex]="pageIndex()"
+      [nzPageSize]="pageSize()"
+      [nzLoading]="loading()"
+      (nzPageIndexChange)="pageChange($event)"
+      [nzFrontPagination]="false"
+      [nzShowPagination]="false"
+      nzSize="middle"
+      class="live-table-host"
+    >
+      <thead>
+        <tr>
+          <th style="width:30%">标题</th>
+          <th style="width:12%">状态</th>
+          <th style="width:23%">计划时间范围</th>
+          <th style="width:18%">创建时间</th>
+          <th style="width:17%">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let live of lives()">
+          <td>
+            <span class="title-cell">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              {{ live.title }}
+            </span>
+          </td>
+          <td>
+            <span class="status-tag" [ngClass]="isExpired(live) ? 'expired' : (live.status === 1 ? 'live' : 'ended')">
+              {{ statusText(live) }}
+            </span>
+          </td>
+          <td class="time-cell" [class.empty]="scheduleText(live) === '-'">{{ scheduleText(live) }}</td>
+          <td class="time-cell">{{ live.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
+          <td>
+            <div class="op-links">
+              <a
+                *ngIf="showEnterAction(live)"
+                class="op-link enter"
+                [class.disabled]="!canEnter(live)"
+                (click)="canEnter(live) && enterLive(live)"
+                >进入</a>
+              <span *ngIf="showEnterAction(live) && canCancel(live)" class="op-sep">|</span>
+              <a
+                *ngIf="canCancel(live)"
+                class="op-link cancel"
+                nz-popconfirm
+                nzPopconfirmTitle="确定要取消该直播吗？"
+                (nzOnConfirm)="cancelLive(live)"
+                >取消</a>
+              <span *ngIf="canCancel(live)" class="op-sep">|</span>
+              <a
+                class="op-link delete"
+                nz-popconfirm
+                nzPopconfirmTitle="确定要删除该直播吗？删除后不可恢复。"
+                (nzOnConfirm)="deleteLive(live)"
+                >删除</a>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </nz-table>
+
+    <div *ngIf="!loading() && lives().length === 0" class="empty-tip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <span>暂无直播，点击右上角创建</span>
+    </div>
+
+    <div class="pagination">
+      <div class="page-info">共 {{ total() }} 条</div>
+      <div class="page-controls">
+        <button class="page-btn" type="button" [disabled]="pageIndex() <= 1" (click)="pageChange(pageIndex() - 1)">&lt;</button>
+        <button class="page-btn active" type="button">{{ pageIndex() }}</button>
+        <button class="page-btn" type="button" [disabled]="pageIndex() * pageSize() >= total()" (click)="pageChange(pageIndex() + 1)">&gt;</button>
+        <select class="page-size" disabled><option>10 条/页</option></select>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- Create live modal -->
+<!-- Create live modal — prototype live-modal visual -->
 <nz-modal
   [(nzVisible)]="createModalVisible"
   nzTitle="创建直播"
   [nzFooter]="createModalFooter"
-  [nzWidth]="640"
+  [nzWidth]="720"
+  [nzBodyStyle]="{ padding: '0' }"
   (nzOnCancel)="closeCreateModal()"
+  nzWrapClassName="live-modal-wrap"
 >
-  <div *nzModalContent>
-    <form nz-form [formGroup]="form" class="create-form">
-      <nz-form-item>
-        <nz-form-label nzRequired>直播标题</nz-form-label>
-        <nz-form-control [nzErrorTip]="'请输入直播标题'">
-          <input nz-input formControlName="title" placeholder="输入直播标题" maxlength="200" />
-        </nz-form-control>
-      </nz-form-item>
+  <div *nzModalContent class="live-modal">
+    <form nz-form [formGroup]="form" class="live-form">
+      <div class="fld">
+        <label>直播标题 <span class="req">*</span></label>
+        <input nz-input formControlName="title" placeholder="输入直播标题" maxlength="200" />
+      </div>
+      <div class="fld">
+        <label>描述</label>
+        <textarea nz-input formControlName="description" placeholder="直播描述（可选）" rows="2" maxlength="1000"></textarea>
+      </div>
+      <div class="time-row">
+        <div class="fld">
+          <label>计划开始时间</label>
+          <nz-date-picker formControlName="scheduledAt" nzShowTime nzShowNow nzPlaceHolder="选择计划开始时间（可选）" style="width: 100%"></nz-date-picker>
+        </div>
+        <div class="fld">
+          <label>计划结束时间</label>
+          <nz-date-picker formControlName="scheduledEndAt" nzShowTime nzShowNow nzPlaceHolder="选择计划结束时间（可选）" style="width: 100%"></nz-date-picker>
+        </div>
+      </div>
+      <div class="tip-text">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span>设置时间范围后，在计划结束时间之前的直播均可正常进入，不会过期；未设置结束时间则永久有效。</span>
+      </div>
 
-      <nz-form-item>
-        <nz-form-label>描述</nz-form-label>
-        <nz-form-control>
-          <textarea nz-input formControlName="description" placeholder="直播描述（可选）" rows="2" maxlength="1000"></textarea>
-        </nz-form-control>
-      </nz-form-item>
+      <div class="student-section">
+        <div class="student-search">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input nz-input [ngModel]="studentSearch()" (ngModelChange)="studentSearch.set($event)" (keyup.enter)="onStudentSearch($any($event).target.value)" [ngModelOptions]="{standalone: true}" placeholder="搜索学生姓名..." />
+          </div>
+          <button nz-button class="search-btn" type="button" (click)="loadStudents()">搜索</button>
+        </div>
+        <div class="selected-tip">已选 <b>{{ selectedStudentIds().size }}</b> 名学生（可多选，所有选定学生将加入同一直播间）</div>
 
-      <nz-form-item>
-        <nz-form-label>计划开始时间</nz-form-label>
-        <nz-form-control>
-          <nz-date-picker
-            formControlName="scheduledAt"
-            nzShowTime nzShowNow
-            nzPlaceHolder="选择计划开始时间（可选）"
-            style="width: 100%"
-          ></nz-date-picker>
-        </nz-form-control>
-      </nz-form-item>
-
-      <nz-form-item>
-        <nz-form-label>计划结束时间</nz-form-label>
-        <nz-form-control [nzErrorTip]="'结束时间不能早于开始时间'">
-          <nz-date-picker
-            formControlName="scheduledEndAt"
-            nzShowTime nzShowNow
-            nzPlaceHolder="选择计划结束时间（可选）· 在此前有效，不会过期"
-            style="width: 100%"
-          ></nz-date-picker>
-        </nz-form-control>
-      </nz-form-item>
-
-      <nz-form-item>
-        <nz-form-label>说明</nz-form-label>
-        <nz-form-control>
-          <span style="color:#999;font-size:12px;">
-            设置时间范围后，在计划结束时间之前的直播均可正常进入，不会过期；未设置结束时间则永久有效。
-          </span>
-        </nz-form-control>
-      </nz-form-item>
+        @if (studentLoading()) {
+          <div style="text-align:center; padding: 24px;"><nz-spin nzSimple></nz-spin></div>
+        } @else if (students().length === 0) {
+          <nz-empty nzNotFoundContent="没有可分配的学生"></nz-empty>
+        } @else {
+          <nz-table [nzData]="students()" [nzFrontPagination]="true" nzSize="small" [nzPageSize]="8" [nzShowSizeChanger]="false" class="student-table-host">
+            <thead>
+              <tr>
+                <th nzWidth="60px">选择</th>
+                <th>姓名</th>
+                <th nzWidth="140px">用户名</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let s of students()" (click)="toggleStudent(s.id)" style="cursor:pointer;">
+                <td (click)="$event.stopPropagation()">
+                  <label nz-checkbox [nzChecked]="isSelected(s.id)" (nzCheckedChange)="toggleStudent(s.id)"></label>
+                </td>
+                <td>{{ s.name }}</td>
+                <td>{{ s.userName }}</td>
+              </tr>
+            </tbody>
+          </nz-table>
+        }
+      </div>
     </form>
-
-    <nz-divider></nz-divider>
-
-    <!-- 学生选择表格：可多选，创建多人直播 -->
-    <div class="student-table-toolbar">
-      <input nz-input [(ngModel)]="studentSearch" (keyup.enter)="onStudentSearch($any($event).target.value)" placeholder="搜索学生姓名..." [ngModelOptions]="{standalone: true}" />
-      <button nz-button nzSize="small" (click)="loadStudents()">搜索</button>
-    </div>
-
-    <div class="selected-hint">
-      已选 <strong>{{ selectedStudentIds().size }}</strong> 名学生（可多选，所有选定学生将加入同一直播间视频沟通）
-    </div>
-
-    @if (studentLoading()) {
-      <div style="text-align:center; padding: 24px;"><nz-spin nzSimple></nz-spin></div>
-    } @else if (students().length === 0) {
-      <nz-empty nzNotFoundContent="没有可分配的学生"></nz-empty>
-    } @else {
-      <nz-table
-        [nzData]="students()"
-        [nzFrontPagination]="true"
-        nzSize="small"
-        [nzPageSize]="8"
-        [nzShowSizeChanger]="false"
-      >
-        <thead>
-          <tr>
-            <th nzWidth="60px">选择</th>
-            <th>姓名</th>
-            <th nzWidth="140px">用户名</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let s of students()" (click)="toggleStudent(s.id)" style="cursor:pointer;">
-            <td (click)="$event.stopPropagation()">
-              <label nz-checkbox [nzChecked]="isSelected(s.id)" (nzCheckedChange)="toggleStudent(s.id)"></label>
-            </td>
-            <td>{{ s.name }}</td>
-            <td>{{ s.userName }}</td>
-          </tr>
-        </tbody>
-      </nz-table>
-    }
   </div>
 
   <ng-template #createModalFooter>
     <button nz-button (click)="closeCreateModal()">取消</button>
-    <button nz-button nzType="primary" [nzLoading]="loading()" [nzDisabled]="!canSubmit()" (click)="submit()">
+    <button nz-button nzType="primary" [nzLoading]="loading()" [disabled]="!canSubmit()" (click)="submit()">
       <span nz-icon nzType="plus" nzTheme="outline"></span>
       确认创建
     </button>

@@ -1,43 +1,76 @@
-<div class="double-high-list-page">
-  <div class="hero">
-    <div>
-      <h1>双高评估项目</h1>
-      <p>围绕指标管理、数据采集、佐证材料和报表导出构建专业群评估闭环。</p>
-    </div>
+<div class="eval-page">
+  <div class="page-hero">
+    <h1>双高评估项目</h1>
+    <p>围绕指标管理、数据采集、佐证材料和报表导出构建专业群评估闭环。</p>
+  </div>
+
+  <div class="search-bar">
     <div class="search-box">
-      <input nz-input [(ngModel)]="keyword" placeholder="搜索项目名称、批次编码" />
-      <button nz-button nzType="primary" (click)="reload()">查询</button>
+      <svg class="mag" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>
+      <input type="text" [(ngModel)]="keyword" placeholder="搜索项目名称、批次编码" (keyup.enter)="reload()" />
     </div>
+    <button class="btn-primary" type="button" (click)="reload()">
+      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z"/></svg>
+      查询
+    </button>
   </div>
 
-  <div class="grid">
-    @for (item of items(); track item.id) {
-      <nz-card class="project-card">
-        <div class="card-head">
-          <div>
-            <h2>{{ item.title }}</h2>
-            <p>{{ item.batchCode }}</p>
+  @if (items().length === 0) {
+    <div class="empty-state">
+      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>
+      <p>暂无评估项目</p>
+    </div>
+  } @else {
+    <div class="eval-grid">
+      @for (item of items(); track item.id) {
+        <div class="eval-card">
+          <div class="eval-card-head">
+            <div class="eval-card-title">{{ item.title }}</div>
+            <span class="eval-status"
+                  [class.running]="item.status === statuses.Active"
+                  [class.ended]="item.status === statuses.Closed"
+                  [class.pending]="item.status === statuses.Draft">
+              {{ getStatusLabel(item.status) }}
+            </span>
           </div>
-          <span nz-tag [nzColor]="item.status === statuses.Active ? 'green' : 'default'">{{ getStatusLabel(item.status) }}</span>
+          <div class="eval-code">批次编码：{{ item.batchCode }}</div>
+          <div class="eval-desc">{{ item.description || '暂无项目说明' }}</div>
+          <div class="eval-stats">
+            <div class="eval-stat">
+              <div class="val">{{ item.indicatorCount }}</div>
+              <div class="label">指标数</div>
+            </div>
+            <div class="eval-stat">
+              <div class="val">{{ item.collectedIndicatorCount }}</div>
+              <div class="label">已采集</div>
+            </div>
+            <div class="eval-stat">
+              <div class="val">{{ item.evidenceCount }}</div>
+              <div class="label">佐证材料</div>
+            </div>
+            <div class="eval-stat">
+              <div class="val">
+                <span class="progress-ring">
+                  <svg viewBox="0 0 36 36" aria-hidden="true">
+                    <circle class="ring-bg" cx="18" cy="18" r="15.9155"></circle>
+                    <circle class="ring-fg" cx="18" cy="18" r="15.9155"
+                            [attr.stroke-dasharray]="'100 100'"
+                            [attr.stroke-dashoffset]="100 - (+item.completionRate)"></circle>
+                  </svg>
+                  <span class="ring-text">{{ item.completionRate }}%</span>
+                </span>
+              </div>
+              <div class="label">完成率</div>
+            </div>
+          </div>
+          <div class="eval-card-foot">
+            <a class="btn-link" [routerLink]="['/assessment/double-high/project', item.id]">
+              查看详情
+              <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-56,56a8,8,0,0,1-11.32-11.32L164.69,128,114.34,77.66a8,8,0,0,1,11.32-11.32l56,56A8,8,0,0,1,181.66,133.66Z"/></svg>
+            </a>
+          </div>
         </div>
-
-        <p class="summary">{{ item.description || '暂无项目说明' }}</p>
-
-        <div class="meta">
-          <div>指标数：{{ item.indicatorCount }}</div>
-          <div>已采集：{{ item.collectedIndicatorCount }}</div>
-          <div>佐证材料：{{ item.evidenceCount }}</div>
-        </div>
-
-        <div class="progress-box">
-          <span>完成率</span>
-          <nz-progress [nzPercent]="+item.completionRate" [nzStrokeColor]="'#0d9488'"></nz-progress>
-        </div>
-
-        <div class="actions">
-          <a nz-button nzType="default" [routerLink]="['/assessment/double-high/project', item.id]">查看详情</a>
-        </div>
-      </nz-card>
-    }
-  </div>
+      }
+    </div>
+  }
 </div>

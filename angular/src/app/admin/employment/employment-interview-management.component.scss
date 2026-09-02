@@ -1,6 +1,40 @@
+:host {
+  display: block;
+  background: var(--kh-canvas);
+  min-height: 100%;
+}
+
 .interview-page {
-  display: grid;
-  gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px 24px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--kh-ink);
+  line-height: 1.2;
+}
+
+.page-tip {
+  font-size: 14px;
+  color: var(--kh-muted);
+  line-height: 1.6;
+  b {
+    color: var(--kh-accent);
+    font-weight: 600;
+  }
+}
+
+// ── card wrapper ──────────────────────────────────────────
+.table-card {
+  background: var(--kh-panel);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
+  overflow: hidden;
+  border: 1px solid var(--kh-line);
 }
 
 .loading-wrap {
@@ -9,47 +43,349 @@
   padding: 40px 0;
 }
 
-// Action buttons
-.action-group {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  align-items: center;
+// ── nz-table overrides to look like prototype interview-table ──
+:host ::ng-deep .interview-table {
+  .ant-table {
+    background: transparent;
+  }
+  .ant-table-thead > tr > th {
+    background: #fafafa !important;
+    padding: 12px 14px !important;
+    text-align: center !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--kh-ink) !important;
+    border-bottom: 1px solid var(--kh-line-2) !important;
+    white-space: nowrap;
+    &::before { display: none !important; }
+  }
+  .ant-table-tbody > tr > td {
+    padding: 10px 14px !important;
+    font-size: 14px;
+    color: var(--kh-ink);
+    border-bottom: 1px solid #f5f5f5 !important;
+    vertical-align: middle;
+    text-align: center;
+  }
+  .ant-table-tbody > tr:nth-child(even) > td {
+    // nz-table striped via even app rows — skip expand rows handled separately
+  }
+  .ant-table-tbody > tr.app-row:nth-child(4n-2) > td,
+  .ant-table-tbody > tr.app-row:nth-child(4n) > td {
+    // fallback — prototype uses tbody tr:nth-child(even) but our DOM intermixes expand rows
+  }
+  .ant-table-tbody > tr:hover > td {
+    background: #e6f7ff !important;
+  }
+  .ant-table-tbody > tr.expanded > td {
+    background: #f0f7ff !important;
+  }
+  .ant-table-pagination {
+    padding: 12px 16px;
+    margin: 0 !important;
+    background: var(--kh-panel);
+    border-top: 1px solid var(--kh-line-2);
+  }
 }
 
-// Info chips for location/meeting link
+// ── expand icon ───────────────────────────────────────────
+.expand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  color: #999;
+  transition: color 0.2s;
+  user-select: none;
+  &:hover { color: var(--kh-accent); }
+  svg {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.25s;
+  }
+}
+tr.expanded .expand-icon svg {
+  transform: rotate(90deg);
+}
+
+// ── student cell ──────────────────────────────────────────
+.student-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.student-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--kh-accent), #36cfc9);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.student-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kh-ink);
+}
+.time-cell {
+  font-size: 13px !important;
+  color: #8c8c8c !important;
+}
+
+// ── status tags (prototype) ───────────────────────────────
+.status-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #fff;
+  &.hired { background: var(--kh-ok); }
+  &.pending { background: var(--kh-accent); }
+  &.rejected { background: var(--kh-bad); }
+}
+
+// ── interview count ───────────────────────────────────────
+.interview-count {
+  color: var(--kh-accent);
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+  &:hover { text-decoration: underline; }
+}
+.interview-none {
+  color: #bfbfbf;
+  font-size: 13px;
+}
+
+// ── op button ─────────────────────────────────────────────
+.op-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--kh-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+  &:hover { background: var(--kh-accent-deep); }
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  svg { width: 12px; height: 12px; }
+}
+.action-group {
+  display: flex;
+  justify-content: center;
+}
+
+// ── expand row ────────────────────────────────────────────
+.expand-row {
+  display: none;
+  &.show { display: table-row; }
+}
+.expand-cell {
+  background: #f7f8fa !important;
+  padding: 0 !important;
+  border-bottom: 1px solid var(--kh-line-2) !important;
+  text-align: left !important;
+}
+.expand-content {
+  padding: 16px 20px;
+}
+.empty-tip {
+  text-align: center;
+  color: #bfbfbf;
+  font-size: 13px;
+  padding: 20px 0;
+}
+
+// ── timeline ──────────────────────────────────────────────
+.timeline {
+  position: relative;
+  padding-left: 24px;
+  &::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: var(--kh-line-2);
+  }
+}
+.timeline-item {
+  position: relative;
+  padding-bottom: 16px;
+  &:last-child { padding-bottom: 0; }
+}
+.timeline-dot {
+  position: absolute;
+  left: -24px;
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--kh-accent);
+  z-index: 1;
+}
+.timeline-item.completed .timeline-dot { border-color: var(--kh-ok); }
+.timeline-item.cancelled .timeline-dot { border-color: #bfbfbf; }
+
+// ── interview record card ─────────────────────────────────
+.interview-record {
+  background: var(--kh-panel);
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f0f0;
+}
+.record-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.record-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.record-round {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kh-ink);
+}
+.record-interviewer {
+  font-size: 13px;
+  color: var(--kh-muted);
+}
+.record-time {
+  font-size: 13px;
+  color: #8c8c8c;
+}
+.record-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.record-status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  &.completed { background: var(--kh-ok); }
+  &.pending { background: var(--kh-accent); }
+  &.cancelled { background: #8c8c8c; }
+}
+.record-result {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  &.pass { background: var(--kh-accent); }
+  &.fail { background: var(--kh-bad); }
+  &.pending { background: #faad14; }
+}
+.record-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sub-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .info-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 2px 8px;
-  background: #f0f5ff;
+  background: var(--kh-accent-ghost);
+  border: 1px solid var(--kh-line);
   border-radius: 4px;
   font-size: 12px;
-  color: #1e6ce8;
-  margin-right: 6px;
-  margin-bottom: 4px;
-
+  color: var(--kh-accent);
   .anticon { font-size: 12px; }
 }
-
 .info-chip--link {
   color: #0891b2;
   background: #ecfeff;
+  border-color: #c3eef5;
   cursor: pointer;
   text-decoration: none;
-
   &:hover { text-decoration: underline; }
 }
+.record-tip {
+  font-size: 13px;
+  color: #8c8c8c;
+  padding-top: 8px;
+  border-top: 1px dashed #f0f0f0;
+}
+.record-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.record-action {
+  font-size: 12px;
+  color: var(--kh-accent);
+  cursor: pointer;
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+  &.delete { color: var(--kh-bad); }
+}
 
-.text-muted { color: #94a3b8; }
+.add-interview-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  background: transparent;
+  color: var(--kh-accent);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px dashed var(--kh-accent);
+  cursor: pointer;
+  transition: all 0.2s;
+  &:hover { background: var(--kh-accent-ghost); }
+  svg { width: 12px; height: 12px; }
+}
 
-// Modal styles
+// ── modal ─────────────────────────────────────────────────
 .modal-body {
   display: grid;
   gap: 16px;
 }
-
 .context-row {
   display: flex;
   flex-wrap: wrap;
@@ -58,173 +394,38 @@
   padding: 10px 14px;
   background: #f6f8fa;
   border-radius: 8px;
-
   strong { font-size: 14px; }
 }
-
 .hint-text {
   margin: 0;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--kh-muted);
   line-height: 1.5;
 }
-
 .form-item {
   display: grid;
   gap: 6px;
 }
-
 .form-label {
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--kh-ink);
 }
-
-.required { color: #ef4444; }
+.required { color: var(--kh-bad); }
 .optional { font-weight: 400; color: #94a3b8; font-size: 12px; }
-
 .input-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
-
 .flex-1 { width: 100%; }
-
 .char-count {
   font-size: 12px;
   color: #94a3b8;
   text-align: right;
 }
 
-// ===================== 层级视图（投递 → 面试） =====================
-.page-summary {
-  margin-bottom: 14px;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.expand-col {
-  width: 36px;
-}
-
-.expand-btn {
-  padding: 4px;
-  color: #6b7280;
-}
-
-.app-row {
-  cursor: pointer;
-
-  &:hover > td {
-    background: #f8fafc;
-  }
-
-  td { vertical-align: middle; }
-}
-
-.interview-count .anticon {
-  margin-right: 4px;
-}
-
-// 展开的子级块
-.interview-block-row {
-  background: #fafbfc;
-}
-
-.interview-block {
-  padding: 6px 12px 12px 48px;
-}
-
-.sub-empty {
-  padding: 14px 0;
-}
-
-.sub-list {
-  display: grid;
-  gap: 10px;
-}
-
-.sub-item {
-  background: #fff;
-  border: 1px solid #eef2f6;
-  border-left: 3px solid #4f8ef7;
-  border-radius: 8px;
-  padding: 12px 16px;
-}
-
-.sub-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.sub-index {
-  font-size: 12px;
-  font-weight: 600;
-  color: #4f8ef7;
-  background: #eef4ff;
-  border-radius: 4px;
-  padding: 2px 8px;
-}
-
-.sub-title {
-  font-weight: 500;
-  color: #334155;
-}
-
-.sub-time {
-  color: #64748b;
-  font-size: 13px;
-}
-
-.sub-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.sub-body {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.sub-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: #475569;
-  max-width: 100%;
-}
-
-.sub-note,
-.sub-comment,
-.sub-result {
-  flex-basis: 100%;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: #f8fafc;
-}
-
-.sub-note::before {
-  content: "备注：";
-  color: #94a3b8;
-  font-size: 12px;
-}
-
-.sub-comment::before {
-  content: "后续提示：";
-  color: #0891b2;
-  font-size: 12px;
-}
-
-.sub-result::before {
-  content: "结果说明：";
-  color: #94a3b8;
-  font-size: 12px;
+// empty inside table-card when no data
+:host ::ng-deep .table-card .ant-empty {
+  padding: 32px 0;
 }

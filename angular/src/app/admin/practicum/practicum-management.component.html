@@ -1,62 +1,118 @@
-<div class="page">
-  <!-- Project list -->
-  <nz-card nzTitle="实训项目列表">
-    <div class="toolbar">
-      <button nz-button nzType="primary" (click)="openCreate()">新建实训项目</button>
-    </div>
+<div class="training-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-title">实训项目列表</div>
+    <button class="create-btn" type="button" (click)="openCreate()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      新建实训项目
+    </button>
+  </div>
 
-    <nz-table [nzData]="projects()" [nzFrontPagination]="false" nzSize="small">
+  <!-- Filter bar (prototype visual, keep list display) -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" placeholder="搜索项目名称" disabled />
+    </div>
+    <select class="filter-select" disabled>
+      <option>全部状态</option>
+      <option>草稿</option>
+      <option>已发布</option>
+      <option>已归档</option>
+    </select>
+    <button class="search-btn" type="button" (click)="reload()">搜索</button>
+    <button class="reset-btn" type="button" (click)="reload()">重置</button>
+  </div>
+
+  <!-- Table card -->
+  <div class="table-card">
+    <nz-table
+      [nzData]="projects()"
+      [nzFrontPagination]="false"
+      nzSize="small"
+      [nzShowPagination]="false"
+      class="training-table-host"
+    >
       <thead>
         <tr>
-          <th>项目名称</th>
-          <th>课程</th>
-          <th>状态</th>
-          <th>任务</th>
-          <th>资料</th>
-          <th>参与人数</th>
-          <th>操作</th>
+          <th style="width:20%">项目名称</th>
+          <th style="width:15%">课程</th>
+          <th style="width:12%">状态</th>
+          <th style="width:10%">任务</th>
+          <th style="width:10%">资料</th>
+          <th style="width:10%">参与人数</th>
+          <th style="width:23%">操作</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let item of projects()" [class.selected]="item.id === selectedProjectId">
-          <td><a (click)="openEdit(item)">{{ item.title }}</a></td>
-          <td>{{ item.courseTitle || '-' }}</td>
-          <td>
-            <nz-tag [nzColor]="item.status === statuses.Published ? 'green' : item.status === statuses.Archived ? 'default' : 'orange'">
-              {{ statusLabel(item.status) }}
-            </nz-tag>
-            @if (item.isExpired) {
-              <nz-tag nzColor="red">已结束</nz-tag>
-            }
+          <td class="project-name">
+            <a class="project-link" (click)="openEdit(item)" [title]="item.title">{{ item.title }}</a>
           </td>
-          <td>{{ item.taskCount }}</td>
-          <td>{{ item.materialCount }}</td>
-          <td>{{ item.enrollmentCount }}</td>
+          <td class="course-name">{{ item.courseTitle || '—' }}</td>
           <td>
-            <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
-            <button nz-button nzType="link" nzDanger (click)="deleteProject(item.id)">删除</button>
+            <div class="status-tags">
+              <span class="status-tag" [ngClass]="item.status === statuses.Published ? 'published' : item.status === statuses.Archived ? 'ended' : 'draft'">
+                {{ statusLabel(item.status) }}
+              </span>
+              <span *ngIf="item.isExpired" class="status-tag ended">已结束</span>
+            </div>
+          </td>
+          <td class="num-cell"><a (click)="openEdit(item)">{{ item.taskCount }}</a></td>
+          <td class="num-cell"><a (click)="openEdit(item)">{{ item.materialCount }}</a></td>
+          <td class="num-cell">{{ item.enrollmentCount || '—' }}</td>
+          <td>
+            <div class="op-links">
+              <a class="op-link edit" (click)="openEdit(item)">编辑</a>
+              <span class="op-sep">|</span>
+              <a class="op-link delete" (click)="deleteProject(item.id)">删除</a>
+            </div>
           </td>
         </tr>
       </tbody>
     </nz-table>
-  </nz-card>
 
-  <!-- 内联编辑表单：基本信息 + 关联资料 -->
-  <nz-card *ngIf="formVisible" nzTitle="{{ editingId ? '编辑实训项目' : '新建实训项目' }}">
-    <div class="form-section">
-      <h3 class="form-section-title">基本信息</h3>
-      <div class="form-grid">
-        <label>项目名称 <span class="required-hint">*</span></label>
-        <input nz-input [(ngModel)]="form.title" placeholder="输入实训项目名称" />
+    <div *ngIf="projects().length === 0" class="empty-tip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>暂无实训项目，点击右上角新建</span>
+    </div>
 
-        <label>项目简介</label>
-        <textarea nz-input rows="2" [(ngModel)]="form.summary" placeholder="简要描述实训项目"></textarea>
+    <div class="pagination">
+      <div class="page-info">共 {{ projects().length }} 条</div>
+      <div class="page-controls">
+        <button class="page-btn" type="button" disabled>&lt;</button>
+        <button class="page-btn active" type="button">1</button>
+        <button class="page-btn" type="button" disabled>&gt;</button>
+        <select class="page-size" disabled><option>10 条/页</option></select>
+      </div>
+    </div>
+  </div>
 
-        <label>项目描述</label>
-        <textarea nz-input rows="3" [(ngModel)]="form.description" placeholder="详细描述实训项目内容"></textarea>
+  <!-- Inline edit form — styled as prototype training-modal form groups, but rendered inline -->
+  <div *ngIf="formVisible" class="table-card form-card">
+    <div class="form-card-header">
+      <h3>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+        {{ editingId ? '编辑实训项目' : '新建实训项目' }}
+      </h3>
+      <button class="close-icon" type="button" (click)="formVisible = false">
+        <span nz-icon nzType="close"></span>
+      </button>
+    </div>
 
-        <label>封面图片</label>
-        <div class="cover-upload-group">
+    <div class="form-body">
+      <!-- Cover card -->
+      <div class="cover-card">
+        <div class="cover-card-inner">
+          <ng-container *ngIf="coverFileList.length === 0; else coverPreview">
+            <div class="cover-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <p>暂无封面，上传一张图片作为实训项目封面</p>
+            </div>
+          </ng-container>
+          <ng-template #coverPreview>
+            <div class="cover-thumb"><img *ngIf="form.coverImageUrl" [src]="form.coverImageUrl" alt="封面" /></div>
+          </ng-template>
           <nz-upload
             nzListType="picture-card"
             [nzMultiple]="false"
@@ -67,94 +123,145 @@
             [nzDisabled]="coverUploading"
             nzAccept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
           >
-            @if (coverFileList.length === 0) {
-              <div class="cover-upload-trigger">
-                <span nz-icon nzType="plus"></span>
-                <div style="margin-top: 8px">上传封面</div>
-              </div>
-            }
+            <div *ngIf="coverFileList.length === 0" class="cover-upload-trigger">
+              <span nz-icon nzType="plus"></span>
+              <div style="margin-top: 4px">上传封面</div>
+            </div>
           </nz-upload>
         </div>
-
-        <label>关联课程</label>
-        <nz-select [(ngModel)]="form.courseId" nzAllowClear nzPlaceHolder="选择关联课程（可选）">
-          <nz-option *ngFor="let course of courses()" [nzValue]="course.id" [nzLabel]="course.title"></nz-option>
-        </nz-select>
-
-        <label>专业方向</label>
-        <input nz-input [(ngModel)]="form.major" placeholder="可选" />
-
-        <label>班级</label>
-        <input nz-input [(ngModel)]="form.className" placeholder="可选" />
-
-        <label>状态</label>
-        <nz-select [(ngModel)]="form.status">
-          <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
-          <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
-          <nz-option [nzValue]="statuses.Archived" nzLabel="已归档"></nz-option>
-        </nz-select>
-
-        <label>开始时间</label>
-        <input nz-input type="datetime-local" [(ngModel)]="form.startTime" [max]="form.endTime || undefined" />
-
-        <label>结束时间</label>
-        <input nz-input type="datetime-local" [(ngModel)]="form.endTime" [min]="form.startTime || undefined" />
-
-        <label>满分</label>
-        <input nz-input type="number" [(ngModel)]="form.maxScore" />
-
-        <label>允许重复提交</label>
-        <nz-switch [(ngModel)]="form.allowResubmission"></nz-switch>
-      </div>
-    </div>
-
-    <!-- 关联资料（嵌入表单，可多条） -->
-    <div class="form-section">
-      <div class="form-section-header">
-        <h3 class="form-section-title">关联资料</h3>
-        <button nz-button nzType="primary" nzShape="round" (click)="openAddMaterialDrawer()">
-          <span nz-icon nzType="plus"></span> 添加资料
-        </button>
       </div>
 
-      <div *ngIf="form.materials.length === 0" class="empty-state">
-        <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-        尚未添加资料，点击右上角"添加资料"开始配置。
-      </div>
-
-      <div class="material-inline-list" *ngIf="form.materials.length > 0">
-        <div class="material-inline-item" *ngFor="let material of form.materials; let i = index">
-          <div class="material-inline-item__icon">
-            <span nz-icon [nzType]="material.materialType === 3 ? 'link' : 'file-text'" nzTheme="outline"></span>
+      <!-- Basic info -->
+      <div class="form-group">
+        <div class="group-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          基本信息
+        </div>
+        <div class="grid-2">
+          <div class="fld">
+            <label>项目名称 <span class="req">*</span></label>
+            <input nz-input [(ngModel)]="form.title" placeholder="输入实训项目名称" />
           </div>
-          <div class="material-inline-item__body">
-            <div class="material-inline-item__title">
-              <span class="cell-title">{{ material.title || '（未命名）' }}</span>
-              <nz-tag [nzColor]="materialTypeColor(material.materialType)" nzSize="small">
-                {{ materialTypeLabel(material.materialType) }}
-              </nz-tag>
+          <div class="fld">
+            <label>项目简介</label>
+            <input nz-input [(ngModel)]="form.summary" placeholder="简要描述实训项目" />
+          </div>
+          <div class="fld col-span-2">
+            <label>项目描述</label>
+            <textarea nz-input rows="3" [(ngModel)]="form.description" placeholder="详细描述实训项目内容"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Course & class -->
+      <div class="form-group">
+        <div class="group-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          课程与班级
+        </div>
+        <div class="grid-3">
+          <div class="fld">
+            <label>关联课程</label>
+            <nz-select [(ngModel)]="form.courseId" nzAllowClear nzPlaceHolder="选择关联课程（可选）" style="width:100%">
+              <nz-option *ngFor="let course of courses()" [nzValue]="course.id" [nzLabel]="course.title"></nz-option>
+            </nz-select>
+          </div>
+          <div class="fld">
+            <label>专业方向</label>
+            <input nz-input [(ngModel)]="form.major" placeholder="可选" />
+          </div>
+          <div class="fld">
+            <label>班级</label>
+            <input nz-input [(ngModel)]="form.className" placeholder="可选" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="form-group">
+        <div class="group-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          实训设置
+        </div>
+        <div class="grid-2">
+          <div class="fld">
+            <label>状态</label>
+            <nz-select [(ngModel)]="form.status" style="width:100%">
+              <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+              <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
+              <nz-option [nzValue]="statuses.Archived" nzLabel="已归档"></nz-option>
+            </nz-select>
+          </div>
+          <div class="fld">
+            <label>满分</label>
+            <input nz-input type="number" [(ngModel)]="form.maxScore" />
+          </div>
+          <div class="fld">
+            <label>开始时间</label>
+            <input nz-input type="datetime-local" [(ngModel)]="form.startTime" [max]="form.endTime || undefined" />
+          </div>
+          <div class="fld">
+            <label>结束时间</label>
+            <input nz-input type="datetime-local" [(ngModel)]="form.endTime" [min]="form.startTime || undefined" />
+          </div>
+          <div class="fld col-span-2">
+            <label>允许重复提交</label>
+            <div class="switch-row">
+              <nz-switch [(ngModel)]="form.allowResubmission"></nz-switch>
+              <span class="switch-desc">开启后学生可多次提交实训成果</span>
             </div>
-            <div class="material-inline-item__desc">{{ material.description || '—' }}</div>
-            <a *ngIf="material.resourceUrl" [href]="material.resourceUrl" target="_blank" rel="noopener noreferrer" class="material-inline-item__link">
-              <span nz-icon nzType="link" nzTheme="outline"></span> {{ material.resourceUrl | slice:0:60 }}{{ material.resourceUrl.length > 60 ? '…' : '' }}
-            </a>
           </div>
-          <div class="material-inline-item__actions">
-            <button nz-button nzType="link" nzSize="small" (click)="openEditMaterialDrawer(i)">编辑</button>
-            <button nz-button nzType="link" nzSize="small" nzDanger (click)="removeMaterial(i)">删除</button>
+        </div>
+      </div>
+
+      <!-- Materials -->
+      <div class="form-group">
+        <div class="material-section">
+          <div class="material-header">
+            <span class="title">关联资料</span>
+            <button class="add-material-btn" type="button" (click)="openAddMaterialDrawer()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              添加资料
+            </button>
+          </div>
+          <div *ngIf="form.materials.length === 0" class="material-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <p>尚未添加资料，点击右上角“添加资料”开始配置。</p>
+          </div>
+          <div class="material-inline-list" *ngIf="form.materials.length > 0">
+            <div class="material-inline-item" *ngFor="let material of form.materials; let i = index">
+              <div class="material-inline-item__icon">
+                <span nz-icon [nzType]="material.materialType === 3 ? 'link' : 'file-text'" nzTheme="outline"></span>
+              </div>
+              <div class="material-inline-item__body">
+                <div class="material-inline-item__title">
+                  <span class="cell-title">{{ material.title || '（未命名）' }}</span>
+                  <nz-tag [nzColor]="materialTypeColor(material.materialType)" nzSize="small">{{ materialTypeLabel(material.materialType) }}</nz-tag>
+                </div>
+                <div class="material-inline-item__desc">{{ material.description || '—' }}</div>
+                <a *ngIf="material.resourceUrl" [href]="material.resourceUrl" target="_blank" rel="noopener noreferrer" class="material-inline-item__link">
+                  <span nz-icon nzType="link" nzTheme="outline"></span> {{ material.resourceUrl | slice:0:60 }}{{ material.resourceUrl.length > 60 ? '…' : '' }}
+                </a>
+              </div>
+              <div class="material-inline-item__actions">
+                <a class="op-link edit" (click)="openEditMaterialDrawer(i)">编辑</a>
+                <span class="op-sep">|</span>
+                <a class="op-link delete" (click)="removeMaterial(i)">删除</a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="actions-bar form-actions">
+    <div class="form-actions">
+      <button nz-button (click)="formVisible = false">取消</button>
       <button nz-button nzType="primary" (click)="saveForm()">保存</button>
       <button nz-button nzDanger *ngIf="editingId" (click)="deleteProject(editingId)">删除实训项目</button>
-      <button nz-button (click)="formVisible = false">取消</button>
     </div>
-  </nz-card>
+  </div>
 
-  <!-- ===== 资料编辑弹窗 ===== -->
+  <!-- Material drawer modal (nz-modal, keep logic) -->
   <nz-modal
     [nzVisible]="drawerVisible()"
     [nzTitle]="drawerMode() === 'add' ? '新增资料' : '编辑资料'"
@@ -191,12 +298,7 @@
                 [nzMultiple]="false"
                 [nzMaxCount]="1"
                 [nzBeforeUpload]="beforeMaterialUploadInDrawer()"
-                [nzFileList]="draft.resourceUrl ? [{
-                  uid: 'material-drawer-existing',
-                  name: draft.title || fileNameFromUrl(draft.resourceUrl),
-                  status: 'done',
-                  url: draft.resourceUrl
-                }] : []"
+                [nzFileList]="draft.resourceUrl ? [{ uid: 'material-drawer-existing', name: draft.title || 'file', status: 'done', url: draft.resourceUrl }] : []"
                 [nzRemove]="removeMaterialFileInDrawer()"
                 [nzDisabled]="!!drawerUploading()"
                 [nzShowUploadList]="true">
@@ -211,13 +313,11 @@
       </div>
     </div>
     <ng-template #materialEditorFooter>
-      <button nz-button nzDanger *ngIf="drawerMode() === 'edit'"
-        (click)="deleteFromDrawer()">
+      <button nz-button nzDanger *ngIf="drawerMode() === 'edit'" (click)="deleteFromDrawer()">
         <span nz-icon nzType="delete"></span> 删除
       </button>
       <button nz-button (click)="closeDrawer()">取消</button>
-      <button nz-button nzType="primary" [nzLoading]="drawerSaving()"
-        (click)="saveDrawer()">
+      <button nz-button nzType="primary" [nzLoading]="drawerSaving()" (click)="saveDrawer()">
         {{ drawerMode() === 'add' ? '新增' : '保存' }}
       </button>
     </ng-template>

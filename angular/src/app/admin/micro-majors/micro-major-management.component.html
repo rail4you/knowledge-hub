@@ -1,102 +1,134 @@
-<div class="page">
-  <nz-card nzTitle="微专业管理" [nzExtra]="extraTpl">
-    <ng-template #extraTpl>
-      <button nz-button nzType="primary" (click)="openCreate()">新建微专业</button>
-    </ng-template>
+<div class="mgmt-page">
+  <!-- 标题行 -->
+  <div class="mgmt-head">
+    <h2>微专业管理</h2>
+    <button class="mgmt-new-btn" (click)="openCreate()">
+      <span nz-icon nzType="plus"></span>
+      新建微专业
+    </button>
+  </div>
 
-    <nz-table [nzData]="items()" [nzFrontPagination]="false">
+  <!-- 微专业列表 -->
+  <div class="mgmt-card">
+    <table class="mgmt-table">
       <thead>
         <tr>
-          <th>名称</th>
-          <th>状态</th>
-          <th>课程数</th>
-          <th>报名数</th>
-          <th>操作</th>
+          <th style="width:34%">名称</th>
+          <th class="center" style="width:16%">状态</th>
+          <th class="center" style="width:13%">课程数</th>
+          <th class="center" style="width:13%">报名数</th>
+          <th class="center" style="width:24%">操作</th>
         </tr>
       </thead>
       <tbody>
         @for (item of items(); track item.id) {
           <tr>
-            <td>{{ item.title }}</td>
-            <td>{{ getStatusLabel(item.status) }}</td>
-            <td>{{ item.courseCount }}</td>
-            <td>{{ item.enrollmentCount }}</td>
-            <td class="actions">
-              <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
-              <button nz-button nzType="link" (click)="openTemplateModal(item)">
-                <span nz-icon nzType="safety-certificate"></span>
-                证书模板
-              </button>
-              <button nz-button nzType="link" nzDanger (click)="delete(item.id)">删除</button>
+            <td class="name-cell">{{ item.title }}</td>
+            <td class="center">
+              <span class="st-tag" [class]="getStatusClass(item.status)">{{ getStatusLabel(item.status) }}</span>
+            </td>
+            <td class="center">{{ item.courseCount }}</td>
+            <td class="center">{{ item.enrollmentCount }}</td>
+            <td class="center">
+              <span class="op-links">
+                <a class="edit" (click)="openEdit(item)">编辑</a><span class="sep">|</span>
+                <a class="cert" (click)="openTemplateModal(item)">证书模板</a><span class="sep">|</span>
+                <a class="del" (click)="delete(item.id)">删除</a>
+              </span>
+            </td>
+          </tr>
+        }
+        @empty {
+          <tr>
+            <td colspan="5">
+              <div class="mgmt-empty">
+                <span nz-icon nzType="inbox"></span>
+                <span>暂无微专业</span>
+              </div>
             </td>
           </tr>
         }
       </tbody>
-    </nz-table>
-  </nz-card>
+    </table>
+  </div>
 
-  <nz-card nzTitle="报名与发证">
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <button nz-button [nzType]="enrollmentFilter() === null ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(null)">全部</button>
-      <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.Pending ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.Pending)">待审批</button>
-      <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.Enrolled ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.Enrolled)">已通过</button>
-      <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.InProgress ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.InProgress)">学习中</button>
-      <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.Completed ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.Completed)">已结业</button>
-      <button nz-button [nzType]="enrollmentFilter() === enrollmentStatuses.Certified ? 'primary' : 'default'" nzSize="small" (click)="setEnrollmentFilter(enrollmentStatuses.Certified)">已发证</button>
+  <!-- 报名与发证 -->
+  <div class="mgmt-card">
+    <div class="mgmt-card-title">报名与发证</div>
+    <div class="mgmt-tabs">
+      <button [class.on]="enrollmentFilter() === null" (click)="setEnrollmentFilter(null)">全部</button>
+      <button [class.on]="enrollmentFilter() === enrollmentStatuses.Pending" (click)="setEnrollmentFilter(enrollmentStatuses.Pending)">待审批</button>
+      <button [class.on]="enrollmentFilter() === enrollmentStatuses.Enrolled" (click)="setEnrollmentFilter(enrollmentStatuses.Enrolled)">已通过</button>
+      <button [class.on]="enrollmentFilter() === enrollmentStatuses.InProgress" (click)="setEnrollmentFilter(enrollmentStatuses.InProgress)">学习中</button>
+      <button [class.on]="enrollmentFilter() === enrollmentStatuses.Completed" (click)="setEnrollmentFilter(enrollmentStatuses.Completed)">已结业</button>
+      <button [class.on]="enrollmentFilter() === enrollmentStatuses.Certified" (click)="setEnrollmentFilter(enrollmentStatuses.Certified)">已发证</button>
     </div>
-    <nz-table [nzData]="enrollments()" [nzFrontPagination]="false">
+    <table class="mgmt-table">
       <thead>
         <tr>
-          <th>微专业</th>
-          <th>学生</th>
-          <th>进度</th>
-          <th>状态</th>
-          <th>报名时间</th>
-          <th>发证时间</th>
-          <th>操作</th>
+          <th style="width:18%">微专业</th>
+          <th class="center" style="width:12%">学生</th>
+          <th class="center" style="width:16%">进度</th>
+          <th class="center" style="width:12%">状态</th>
+          <th class="center" style="width:14%">报名时间</th>
+          <th class="center" style="width:14%">发证时间</th>
+          <th class="center" style="width:14%">操作</th>
         </tr>
       </thead>
       <tbody>
         @for (item of enrollments(); track item.id) {
           <tr>
             <td>{{ item.microMajorTitle }}</td>
-            <td>{{ item.studentName }}</td>
-            <td>{{ item.progress | number:'1.2-2' }}%</td>
-            <td>{{ getEnrollmentStatusLabel(item.status) }}</td>
-            <td>{{ item.enrolledAt | date:'yyyy-MM-dd' }}</td>
-            <td>
+            <td class="center">{{ item.studentName }}</td>
+            <td class="center">
+              <div class="progress-wrap">
+                <div class="progress-bar"><div class="fill" [style.width.%]="item.progress"></div></div>
+                <span class="progress-text">{{ item.progress | number:'1.2-2' }}%</span>
+              </div>
+            </td>
+            <td class="center">
+              <span class="st-tag" [class]="getEnrollmentStatusClass(item.status)">{{ getEnrollmentStatusLabel(item.status) }}</span>
+            </td>
+            <td class="center">{{ item.enrolledAt | date:'yyyy-MM-dd' }}</td>
+            <td class="center">
               @if (item.certificateIssuedAt) {
                 {{ item.certificateIssuedAt | date:'yyyy-MM-dd' }}
               } @else {
                 -
               }
             </td>
-            <td class="actions">
-              @if (item.status === enrollmentStatuses.Pending) {
-                <button nz-button nzType="primary" nzSize="small" (click)="approveEnrollment(item.id)">通过</button>
-                <button nz-button nzType="default" nzSize="small" nzDanger (click)="rejectEnrollment(item.id)">拒绝</button>
-              }
-              @if (item.status === enrollmentStatuses.InProgress) {
-                <button nz-button nzType="primary" nzSize="small" (click)="markAsCompleted(item.id)">结业</button>
-              }
-              @if (item.status === enrollmentStatuses.Completed) {
-                <button nz-button nzType="primary" nzSize="small" (click)="openIssueCertificateModal(item)">
-                  <span nz-icon nzType="safety-certificate"></span>
-                  发证
-                </button>
-              }
-              @if (item.status === enrollmentStatuses.Certified && item.certificateImageUrl) {
-                <button nz-button nzType="default" nzSize="small" class="view-cert-btn" (click)="openCertificatePreview(item.certificateImageUrl!)">
-                  <span nz-icon nzType="eye"></span>
-                  查看证书
-                </button>
-              }
+            <td class="center">
+              <span class="op-links">
+                @if (item.status === enrollmentStatuses.Pending) {
+                  <a class="edit" (click)="approveEnrollment(item.id)">通过</a><span class="sep">|</span>
+                  <a class="del" (click)="rejectEnrollment(item.id)">拒绝</a>
+                }
+                @if (item.status === enrollmentStatuses.InProgress) {
+                  <a class="edit" (click)="markAsCompleted(item.id)">结业</a>
+                }
+                @if (item.status === enrollmentStatuses.Completed) {
+                  <a class="cert" (click)="openIssueCertificateModal(item)">发证</a>
+                }
+                @if (item.status === enrollmentStatuses.Certified && item.certificateImageUrl) {
+                  <a class="view-cert-btn" (click)="openCertificatePreview(item.certificateImageUrl!)">查看证书</a>
+                }
+              </span>
+            </td>
+          </tr>
+        }
+        @empty {
+          <tr>
+            <td colspan="7">
+              <div class="mgmt-empty">
+                <span nz-icon nzType="check-circle"></span>
+                <span>暂无数据</span>
+              </div>
             </td>
           </tr>
         }
       </tbody>
-    </nz-table>
-  </nz-card>
+    </table>
+  </div>
 
   <nz-modal
     [nzVisible]="modalVisible"

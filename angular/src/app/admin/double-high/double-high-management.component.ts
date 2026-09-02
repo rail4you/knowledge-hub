@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -21,7 +22,7 @@ import {
 @Component({
   selector: 'app-double-high-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, NzButtonModule, NzCardModule, NzInputModule, NzInputNumberModule, NzModalModule, NzSelectModule, NzTableModule],
+  imports: [CommonModule, FormsModule, NzButtonModule, NzCardModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzSelectModule, NzTableModule],
   templateUrl: './double-high-management.component.html',
   styleUrls: ['./double-high-management.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

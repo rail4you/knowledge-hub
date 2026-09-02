@@ -1,124 +1,123 @@
-<nz-card nzTitle="岗位管理" [nzExtra]="extraTpl">
-  <ng-template #extraTpl>
-    <div class="toolbar">
-      <button nz-button nzType="primary" (click)="openCreate()">新增岗位</button>
-    </div>
-  </ng-template>
-
+<div class="job-page">
   <div class="filter-bar">
-    <input
-      nz-input
-      [(ngModel)]="keyword"
-      placeholder="搜索岗位 / 企业 / 技能"
-      (keyup.enter)="onFilterChange()"
-    />
-    <input
-      nz-input
-      [(ngModel)]="locationFilter"
-      placeholder="地区"
-      (keyup.enter)="onFilterChange()"
-    />
-    <nz-select
-      [(ngModel)]="jobTypeFilter"
-      nzAllowClear
-      nzPlaceHolder="岗位类型"
-    >
-      <nz-option [nzValue]="jobTypes.FullTime" nzLabel="全职"></nz-option>
-      <nz-option [nzValue]="jobTypes.Internship" nzLabel="实习"></nz-option>
-      <nz-option [nzValue]="jobTypes.PartTime" nzLabel="兼职"></nz-option>
-      <nz-option [nzValue]="jobTypes.Apprenticeship" nzLabel="学徒"></nz-option>
-    </nz-select>
-    <nz-select
-      [(ngModel)]="statusFilter"
-      nzAllowClear
-      nzPlaceHolder="状态"
-    >
-      <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
-      <nz-option [nzValue]="statuses.PendingReview" nzLabel="待审"></nz-option>
-      <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
-      <nz-option [nzValue]="statuses.Rejected" nzLabel="已驳回"></nz-option>
-      <nz-option [nzValue]="statuses.Closed" nzLabel="已关闭"></nz-option>
-    </nz-select>
-    <button nz-button nzType="primary" (click)="search()">搜索</button>
-    <button nz-button (click)="resetFilter()">重置</button>
+    <div class="search-input">
+      <span nz-icon nzType="search"></span>
+      <input type="text" placeholder="搜索岗位/企业/技能" [(ngModel)]="keyword" (keyup.enter)="onFilterChange()" />
+    </div>
+    <div class="filter-select">
+      <input nz-input [(ngModel)]="locationFilter" placeholder="地区" (keyup.enter)="onFilterChange()" />
+    </div>
+    <div class="filter-select">
+      <nz-select [(ngModel)]="jobTypeFilter" nzAllowClear nzPlaceHolder="岗位类型">
+        <nz-option [nzValue]="jobTypes.FullTime" nzLabel="全职"></nz-option>
+        <nz-option [nzValue]="jobTypes.Internship" nzLabel="实习"></nz-option>
+        <nz-option [nzValue]="jobTypes.PartTime" nzLabel="兼职"></nz-option>
+        <nz-option [nzValue]="jobTypes.Apprenticeship" nzLabel="学徒"></nz-option>
+      </nz-select>
+    </div>
+    <div class="filter-select">
+      <nz-select [(ngModel)]="statusFilter" nzAllowClear nzPlaceHolder="状态">
+        <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+        <nz-option [nzValue]="statuses.PendingReview" nzLabel="待审"></nz-option>
+        <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
+        <nz-option [nzValue]="statuses.Rejected" nzLabel="已驳回"></nz-option>
+        <nz-option [nzValue]="statuses.Closed" nzLabel="已关闭"></nz-option>
+      </nz-select>
+    </div>
+    <button class="btn-search" (click)="search()">搜索</button>
+    <button class="btn-reset" (click)="resetFilter()">重置</button>
+    <button class="btn-add" style="margin-left:auto" (click)="openCreate()">
+      <span nz-icon nzType="plus"></span>
+      新增岗位
+    </button>
   </div>
 
-  <nz-table
-    [nzData]="items()"
-    [nzFrontPagination]="false"
-    [nzLoading]="loading()"
-    [nzTotal]="totalCount()"
-    [nzPageSize]="pageSize"
-    [nzPageIndex]="pageIndex"
-    [nzShowSizeChanger]="true"
-    [nzPageSizeOptions]="[10, 20, 50, 100]"
-    (nzPageIndexChange)="onPageIndexChange($event)"
-    (nzPageSizeChange)="onPageSizeChange($event)"
-  >
-    <thead>
-      <tr>
-        <th>岗位</th>
-        <th>企业</th>
-        <th>类型</th>
-        <th>状态</th>
-        <th>招聘人数</th>
-        <th>投递数</th>
-        <th>创建时间</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (item of items(); track item.id) {
+  <div class="table-card">
+    <table class="job-table">
+      <thead>
         <tr>
-          <td>
-            <strong>{{ item.title }}</strong>
-            @if (item.location) {
-              <div class="muted">{{ item.location }}</div>
-            }
-          </td>
-          <td>{{ item.companyName }}</td>
-          <td>{{ getTypeLabel(item.jobType) }}</td>
-          <td>
-            <nz-tag [nzColor]="getStatusColor(item.status)">{{ getStatusLabel(item.status) }}</nz-tag>
-          </td>
-          <td>{{ item.recruitmentCount }}</td>
-          <td>{{ item.applicationCount }}</td>
-          <td>{{ item.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
-          <td class="actions">
-            <a nz-button nzType="link" (click)="openView(item)">查看</a>
-            <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
-            @if (canReview(item, statuses.Published)) {
-              <button nz-button nzType="link" (click)="review(item, statuses.Published)">通过</button>
-            }
-            @if (canReview(item, statuses.Rejected)) {
-              <button nz-button nzType="link" nzDanger (click)="review(item, statuses.Rejected)">驳回</button>
-            }
-            @if (canReview(item, statuses.Closed)) {
-              <button nz-button nzType="link" (click)="review(item, statuses.Closed)">关闭</button>
-            }
-            @if (canReopen(item)) {
-              <button nz-button nzType="link" style="color: #52c41a" (click)="review(item, statuses.Published)">重新开放</button>
-            }
-            <button
-              nz-button
-              nzType="link"
-              nzDanger
-              nz-popconfirm
-              nzPopconfirmTitle="确认删除该岗位？相关投递与面试记录会一并删除。"
-              (nzOnConfirm)="delete(item.id)"
-            >
-              删除
-            </button>
-          </td>
+          <th style="width:18%">岗位</th>
+          <th style="width:18%">企业</th>
+          <th style="width:10%">类型</th>
+          <th style="width:10%">状态</th>
+          <th style="width:8%">招聘人数</th>
+          <th style="width:8%">投递数</th>
+          <th style="width:12%">创建时间</th>
+          <th style="width:16%">操作</th>
         </tr>
-      } @empty {
-        <tr>
-          <td colspan="8" class="empty-row">暂无岗位数据</td>
-        </tr>
-      }
-    </tbody>
-  </nz-table>
-</nz-card>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id) {
+          <tr>
+            <td>
+              <div class="job-name">{{ item.title }}</div>
+              <div class="job-location">
+                <span nz-icon nzType="environment"></span>
+                {{ item.location || '-' }}
+              </div>
+            </td>
+            <td>
+              <div class="company-name">{{ item.companyName }}</div>
+              @if (item.salaryRange) {
+                <div class="company-salary">薪资：{{ item.salaryRange }}</div>
+              }
+            </td>
+            <td><span class="type-tag" [class]="getTypeClass(item.jobType)">{{ getTypeLabel(item.jobType) }}</span></td>
+            <td><span class="status-tag" [class]="getStatusClass(item.status)">{{ getStatusLabel(item.status) }}</span></td>
+            <td class="num-cell">{{ item.recruitmentCount }}</td>
+            <td class="num-cell">{{ item.applicationCount }}</td>
+            <td class="time-cell">{{ item.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
+            <td class="op-cell">
+              <a class="op-link view" (click)="openView(item)">查看</a>
+              <span class="op-sep">|</span>
+              <a class="op-link edit" (click)="openEdit(item)">编辑</a>
+              @if (canReview(item, statuses.Published)) {
+                <span class="op-sep">|</span>
+                <a class="op-link view" (click)="review(item, statuses.Published)">通过</a>
+              }
+              @if (canReview(item, statuses.Rejected)) {
+                <span class="op-sep">|</span>
+                <a class="op-link delete" (click)="review(item, statuses.Rejected)">驳回</a>
+              }
+              @if (canReview(item, statuses.Closed)) {
+                <span class="op-sep">|</span>
+                <a class="op-link close" (click)="review(item, statuses.Closed)">关闭</a>
+              }
+              @if (canReopen(item)) {
+                <span class="op-sep">|</span>
+                <a class="op-link reopen" (click)="review(item, statuses.Published)">重新开放</a>
+              }
+              <span class="op-sep">|</span>
+              <a class="op-link delete" nz-popconfirm nzPopconfirmTitle="确认删除该岗位？相关投递与面试记录会一并删除。" (nzOnConfirm)="delete(item.id)">删除</a>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="8" class="empty-row">暂无岗位数据</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <div class="pagination">
+      <span class="page-info">共 {{ totalCount() }} 条</span>
+      <div class="page-controls">
+        <button class="page-btn" (click)="onPageIndexChange(pageIndex - 1)" [disabled]="pageIndex <= 1">
+          <span nz-icon nzType="left"></span>
+        </button>
+        <button class="page-btn active">{{ pageIndex }}</button>
+        <button class="page-btn" (click)="onPageIndexChange(pageIndex + 1)" [disabled]="pageIndex * pageSize >= totalCount()">
+          <span nz-icon nzType="right"></span>
+        </button>
+        <select class="page-size" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
+          <option [ngValue]="10">10 条/页</option>
+          <option [ngValue]="20">20 条/页</option>
+          <option [ngValue]="50">50 条/页</option>
+          <option [ngValue]="100">100 条/页</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
 
 <nz-modal
   [(nzVisible)]="modalVisible"

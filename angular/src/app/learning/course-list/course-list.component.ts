@@ -142,12 +142,30 @@ export class CourseListComponent implements OnInit {
     return this.difficulties.find(d => d.value === difficulty)?.label || '入门';
   }
 
+  getDifficultyClass(difficulty?: number): string {
+    const classes: Record<number, string> = {
+      1: 'intro',
+      2: 'basic',
+      3: 'mid',
+      4: 'adv'
+    };
+    return classes[difficulty || 1] || 'intro';
+  }
+
   getStatusLabel(status?: number): string {
     const labels: Record<number, string> = {
       0: '草稿',
       5: '已发布'
     };
     return labels[status ?? 0] || '未知';
+  }
+
+  getStatusClass(status?: number): string {
+    const classes: Record<number, string> = {
+      0: 'draft',
+      5: 'published'
+    };
+    return classes[status ?? 0] || 'draft';
   }
 
   getStatusColor(status?: number): string {

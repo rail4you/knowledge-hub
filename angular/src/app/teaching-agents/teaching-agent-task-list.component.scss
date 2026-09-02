@@ -1,104 +1,146 @@
+/* ── Page canvas ── matches employment / resource pages ── */
 .task-page {
-  padding: 1.5rem;
-  min-height: 100%;
-  background:
-    radial-gradient(circle at right top, rgba(15, 118, 110, 0.14), transparent 24rem),
-    linear-gradient(180deg, #f2fbf9 0%, #ffffff 100%);
-  display: grid;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--kh-canvas);
   max-width: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d4dde8;
+    border-radius: 3px;
+  }
 }
 
+/* ── Header as white card ── */
 .page-head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
+  padding: 16px 20px;
 }
 
 .eyebrow {
   margin: 0;
-  color: #0f766e;
+  color: var(--kh-accent);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 700;
+  font-size: 11px;
 }
 
 .page-head h1 {
-  margin: 0.4rem 0 0;
-  color: #14323e;
+  margin: 0.35rem 0 0;
+  color: var(--kh-ink);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .page-head p {
-  color: #5a6f78;
+  margin: 4px 0 0;
+  color: var(--kh-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .head-actions {
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0;
+  align-items: center;
 }
 
-/* ── Summary strip ── */
+/* ── Summary strip — 4 white stat cards ── */
 .summary-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 16px;
 }
 
 .summary-strip article {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(12, 43, 89, 0.08);
-  border-radius: 0.75rem;
-  padding: 0.75rem 0.5rem;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.04);
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  padding: 16px 12px;
+  box-shadow: var(--kh-shadow-card);
   text-align: center;
+  transition: box-shadow 0.2s, transform 0.2s;
+
+  &:hover {
+    box-shadow: var(--kh-shadow-pop);
+  }
 }
 
 .summary-strip strong {
   display: block;
-  font-size: 1.3rem;
-  color: #14323e;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--kh-ink);
+  line-height: 1.1;
 }
 
 .summary-strip span {
-  color: #5a6f78;
-  font-size: 0.88em;
+  display: block;
+  margin-top: 4px;
+  color: var(--kh-muted);
+  font-size: 13px;
 }
 
-/* 待介入（需要教师介入）显眼化：常态即用暖橙色标注，有告警时整卡高亮 */
+/* 待介入 — needs-help uses warning semantic tokens */
 .summary-strip article.summary-needs-help {
   span {
-    color: #9a3412;
+    color: var(--kh-warn-ink);
     font-weight: 600;
   }
 
   &.has-alerts {
     background: #fff7ed;
-    border-color: #fdba74;
-    box-shadow: 0 16px 40px rgba(234, 88, 12, 0.14);
+    border-color: rgba(232, 135, 26, 0.32);
+    box-shadow: 0 1px 2px rgba(14, 27, 46, 0.04), 0 10px 30px -12px rgba(232, 135, 26, 0.22);
 
     strong {
-      color: #c2410c;
+      color: var(--kh-warn-ink);
       font-weight: 700;
     }
 
     span {
-      color: #c2410c;
+      color: var(--kh-warn-ink);
       font-weight: 700;
     }
   }
 }
 
-/* ── Task table ── */
+/* ── Task table — white table card ── */
 .task-table-shell {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
+  overflow: hidden;
   overflow-x: auto;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(12, 43, 89, 0.08);
-  border-radius: 1rem;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d4dde8;
+    border-radius: 3px;
+  }
 }
 
 .task-table {
@@ -109,20 +151,37 @@
 
 .task-table th,
 .task-table td {
-  padding: 0.65rem 0.75rem;
-  vertical-align: top;
-  border-bottom: 1px solid rgba(12, 43, 89, 0.08);
+  padding: 12px 14px;
+  vertical-align: middle;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .task-table th {
   text-align: left;
-  color: #47606d;
-  font-size: 0.86rem;
-  letter-spacing: 0.03em;
+  color: var(--kh-ink-2);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  background: rgba(241, 248, 247, 0.92);
+  background: #f7f9fc;
+  border-bottom: 1px solid var(--kh-line-2);
+  white-space: nowrap;
+}
+
+.task-table td {
+  font-size: 13.5px;
+  color: var(--kh-ink-2);
+  border-bottom: 1px solid #f5f7fa;
+  line-height: 1.4;
+}
+
+.task-table tbody tr:nth-child(even) {
+  background: #fafbfd;
+}
+
+.task-table tbody tr:hover {
+  background: var(--kh-accent-ghost);
 }
 
 .task-table tbody tr:last-child td {
@@ -135,21 +194,23 @@
 }
 
 .task-table td span {
-  color: #5a6f78;
+  color: var(--kh-muted);
   margin-top: 0.15rem;
   font-size: 0.85em;
 }
 
 .title-cell strong {
-  color: #14323e;
+  color: var(--kh-ink);
+  font-weight: 600;
 }
 
 .title-cell p {
   margin: 0.25rem 0 0;
-  color: #5a6f78;
+  color: var(--kh-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 13px;
 }
 
 .progress-cell,
@@ -157,32 +218,36 @@
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .progress-cell span {
   margin: 0;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  background: #f4fbfa;
-  color: #285965;
-  font-size: 0.82em;
+  padding: 2px 10px;
+  border-radius: var(--kh-r-pill);
+  background: var(--kh-accent-ghost);
+  border: 1px solid var(--kh-line);
+  color: var(--kh-blue-ink);
+  font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
+  line-height: 1.6;
 }
 
 .progress-cell span.progress-needs-help {
   background: #fff7ed;
-  color: #9a3412;
+  color: var(--kh-warn-ink);
   border: 1px solid transparent;
 
   &.has-alerts {
     background: #ffedd5;
-    border-color: #fdba74;
-    color: #c2410c;
+    border-color: rgba(232, 135, 26, 0.32);
+    color: var(--kh-warn-ink);
     font-weight: 700;
   }
 }
 
-/* ── Modal form ── */
+/* ── Modal form — form panel style ── */
 .modal-form {
   display: grid;
   gap: 1rem;
@@ -195,13 +260,14 @@
 
 .modal-form .field > span {
   font-weight: 500;
-  color: #18324d;
-  font-size: 0.9em;
+  color: var(--kh-ink);
+  font-size: 13px;
 }
 
 .modal-form .field > span em {
-  color: #ef4444;
+  color: var(--kh-bad);
   font-style: normal;
+  margin-left: 2px;
 }
 
 .field-row {
@@ -210,11 +276,44 @@
   gap: 1rem;
 }
 
+/* Inputs respect design tokens */
+.modal-form ::ng-deep .ant-input,
+.modal-form ::ng-deep .ant-input-affix-wrapper,
+.modal-form ::ng-deep textarea.ant-input,
+.student-picker ::ng-deep .ant-input,
+.student-picker ::ng-deep .ant-input-affix-wrapper {
+  border-color: var(--kh-line-2) !important;
+
+  &:hover {
+    border-color: var(--kh-accent) !important;
+  }
+
+  &:focus,
+  &.ant-input-focused,
+  &:focus-within {
+    border-color: var(--kh-accent) !important;
+    box-shadow: 0 0 0 3px var(--kh-accent-soft) !important;
+  }
+}
+
+.modal-form ::ng-deep .ant-select:not(.ant-select-disabled):hover .ant-select-selector,
+.modal-form ::ng-deep .ant-picker:hover,
+.student-picker ::ng-deep .ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+  border-color: var(--kh-accent) !important;
+}
+
+.modal-form ::ng-deep .ant-select-focused:not(.ant-select-disabled).ant-select:not(.ant-select-customize-input) .ant-select-selector,
+.modal-form ::ng-deep .ant-picker-focused,
+.student-picker ::ng-deep .ant-select-focused .ant-select-selector {
+  border-color: var(--kh-accent) !important;
+  box-shadow: 0 0 0 3px var(--kh-accent-soft) !important;
+}
+
 /* P1-16：批量选学生工具条 + 实时统计。 */
 .student-counter {
   margin-left: 8px;
   font-weight: 400;
-  color: #5a6f78;
+  color: var(--kh-muted);
   font-size: 0.85em;
 }
 
@@ -225,7 +324,7 @@
   padding: 6px 0 2px;
 
   .bulk-hint {
-    color: #94a3b8;
+    color: var(--kh-muted);
     font-size: 12px;
   }
 }
@@ -238,7 +337,7 @@
   padding: 4px 0;
 
   .bulk-hint {
-    color: #94a3b8;
+    color: var(--kh-muted);
     font-size: 12px;
   }
 }
@@ -252,19 +351,20 @@
 
 .student-chip {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
+  padding: 2px 10px;
+  border-radius: var(--kh-r-pill);
+  background: var(--kh-accent-ghost);
+  color: var(--kh-blue-ink);
+  border: 1px solid var(--kh-line);
   font-size: 0.78em;
+  font-weight: 600;
   line-height: 1.6;
   white-space: nowrap;
 
   &.more {
-    background: #f1f5f9;
-    color: #475569;
-    border-color: #cbd5e1;
+    background: #f5f7fa;
+    color: var(--kh-muted);
+    border-color: var(--kh-line-2);
   }
 }
 
@@ -294,16 +394,16 @@
 
 .picker-summary {
   font-size: 0.85em;
-  color: #475569;
+  color: var(--kh-muted);
 
   strong {
-    color: #047857;
+    color: var(--kh-accent);
     font-weight: 600;
   }
 
   .filter-hint {
     margin-left: 0.5rem;
-    color: #94a3b8;
+    color: var(--kh-muted);
   }
 }
 
@@ -312,11 +412,11 @@
   transition: background-color 0.15s ease;
 
   &:hover {
-    background: #f0fdfa;
+    background: var(--kh-accent-ghost);
   }
 
   &.picker-row--picked {
-    background: rgba(16, 185, 129, 0.06);
+    background: var(--kh-accent-ghost);
   }
 }
 
@@ -327,11 +427,12 @@
 /* ── Responsive ── */
 @media (max-width: 980px) {
   .task-page {
-    padding: 1rem;
+    padding: 16px;
   }
 
   .page-head {
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .summary-strip {

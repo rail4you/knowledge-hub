@@ -416,6 +416,13 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
     return m[s] ?? 'default';
   }
 
+  getOutcomeStatusClass(s: EmploymentOutcomeStatus): string {
+    if (s === EmploymentOutcomeStatus.Employed) return 'status-tag employed';
+    if (s === EmploymentOutcomeStatus.Intention) return 'status-tag intention';
+    if (s === EmploymentOutcomeStatus.Signed) return 'status-tag signed';
+    return 'status-tag intention';
+  }
+
   /** 前端关键字过滤当前页（后端列表接口无 keyword 参数） */
   filteredItems(): EmploymentOutcomeDto[] {
     const k = this.keyword.trim().toLowerCase();

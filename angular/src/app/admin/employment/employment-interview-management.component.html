@@ -1,19 +1,17 @@
 <div class="interview-page">
-  <!-- ============ 投递 → 关联面试（层级视图） ============ -->
-  <nz-card nzTitle="投递管理 · 关联面试">
-    <div class="page-summary">
-      共 {{ tree().length }} 份投递。点击展开行查看并操作为该投递安排的面试记录。
-    </div>
+  <div class="page-title">面试管理</div>
+  <div class="page-tip">共<b>{{ tree().length }}</b>份投递。点击展开行查看并操作为该投递安排的面试记录。</div>
 
+  <div class="table-card">
     @if (loading()) {
       <div class="loading-wrap"><nz-spin nzSimple></nz-spin></div>
     } @else if (tree().length === 0) {
       <nz-empty nzNotFoundImage="simple" nzNotFoundContent="暂无投递记录"></nz-empty>
     } @else {
-      <nz-table [nzData]="tree()" [nzFrontPagination]="true" [nzPageSize]="10">
+      <nz-table [nzData]="tree()" [nzFrontPagination]="true" [nzPageSize]="10" nzSize="middle" class="interview-table">
         <thead>
           <tr>
-            <th nzWidth="36px" class="expand-col"></th>
+            <th nzWidth="40px"></th>
             <th>学生</th>
             <th>岗位</th>
             <th>企业</th>
@@ -25,139 +23,131 @@
         </thead>
         <tbody>
           @for (node of tree(); track node.application.id) {
-            <!-- ====== 父级：投递 ====== -->
-            <tr class="app-row" (click)="toggleExpand(node.application.id)">
-              <td class="expand-col">
-                <button nz-button nzType="text" nzSize="small" class="expand-btn"
-                  (click)="toggleExpand(node.application.id, $event)">
-                  <span nz-icon [nzType]="isExpanded(node.application.id) ? 'down' : 'right'" nzTheme="outline"></span>
-                </button>
+            <tr class="app-row" [class.expanded]="isExpanded(node.application.id)" (click)="toggleExpand(node.application.id)">
+              <td>
+                <span class="expand-icon" (click)="toggleExpand(node.application.id, $event)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                </span>
               </td>
               <td>
-                <strong>{{ node.application.studentName || '-' }}</strong>
+                <div class="student-cell">
+                  <div class="student-avatar">{{ (node.application.studentName || '-').charAt(0) }}</div>
+                  <span class="student-name">{{ node.application.studentName || '-' }}</span>
+                </div>
               </td>
               <td>{{ node.application.jobTitle || '-' }}</td>
               <td>{{ node.application.companyName || '-' }}</td>
-              <td>{{ node.application.appliedAt | date:'yyyy-MM-dd HH:mm' }}</td>
+              <td class="time-cell">{{ node.application.appliedAt | date:'yyyy-MM-dd HH:mm' }}</td>
               <td>
-                <nz-tag [nzColor]="getAppStatusColor(node.application.status)">
-                  {{ getAppStatusLabel(node.application.status) }}
-                </nz-tag>
+                <span class="status-tag" [class]="getAppStatusTagClass(node.application.status)">{{ getAppStatusLabel(node.application.status) }}</span>
               </td>
               <td>
                 @if (node.interviews.length > 0) {
-                  <nz-tag nzColor="geekblue" class="interview-count">
-                    <span nz-icon nzType="audit" nzTheme="outline"></span>
-                    {{ node.interviews.length }} 场面试
-                  </nz-tag>
+                  <span class="interview-count" (click)="toggleExpand(node.application.id, $event)">{{ node.interviews.length }}场面试</span>
                 } @else {
-                  <span class="text-muted">暂无</span>
+                  <span class="interview-none">暂无</span>
                 }
               </td>
               <td>
                 <div class="action-group" (click)="$event.stopPropagation()">
-                  <button nz-button nzType="primary" nzSize="small" (click)="openSchedule(node.application)"
+                  <button class="op-btn" type="button" (click)="openSchedule(node.application)"
                     [disabled]="node.application.status === appStatus.Offered || node.application.status === appStatus.Rejected || node.application.status === appStatus.Withdrawn">
-                    <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
                     安排面试
                   </button>
                 </div>
               </td>
             </tr>
 
-            <!-- ====== 子级：该投递下的面试记录（展开时显示） ====== -->
-            @if (isExpanded(node.application.id)) {
-              <tr class="interview-block-row">
-                <td [attr.colspan]="colSpan" class="interview-block">
+            <!-- expand row -->
+            <tr class="expand-row" [class.show]="isExpanded(node.application.id)">
+              <td colspan="8" class="expand-cell">
+                <div class="expand-content">
                   @if (node.interviews.length === 0) {
-                    <nz-empty nzNotFoundImage="simple" nzNotFoundContent="该投递暂未安排面试"
-                      class="sub-empty"></nz-empty>
+                    <div class="empty-tip">该投递暂未安排面试</div>
+                    <button class="add-interview-btn" type="button" (click)="openSchedule(node.application)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                      新增面试
+                    </button>
                   } @else {
-                    <div class="sub-list">
+                    <div class="timeline">
                       @for (item of node.interviews; track item.id) {
-                        <div class="sub-item">
-                          <div class="sub-head">
-                            <span class="sub-index">{{ $index + 1 }}轮</span>
-                            <span class="sub-title">
-                              <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-                              {{ item.interviewerName || '未指定面试官' }}
-                            </span>
-                            <span class="sub-time">
-                              <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                              {{ item.scheduledAt | date:'yyyy-MM-dd HH:mm' }}
-                            </span>
-                            @if (item.completedAt) {
-                              <nz-tag nzColor="geekblue">已完成</nz-tag>
-                            }
-                            <nz-tag [nzColor]="getResultColor(item.result)">{{ getResultLabel(item.result) }}</nz-tag>
-                            <span class="sub-actions" (click)="$event.stopPropagation()">
+                        <div class="timeline-item" [class.completed]="!!item.completedAt" [class.cancelled]="item.result === interviewResults.Failed">
+                          <div class="timeline-dot"></div>
+                          <div class="interview-record">
+                            <div class="record-header">
+                              <div class="record-title">
+                                <span class="record-round">{{ $index + 1 }}轮</span>
+                                <span class="record-interviewer">面试官：{{ item.interviewerName || '未指定' }}</span>
+                                <span class="record-time">{{ item.scheduledAt | date:'yyyy-MM-dd HH:mm' }}</span>
+                              </div>
+                              <div class="record-tags">
+                                @if (item.completedAt) {
+                                  <span class="record-status completed">已完成</span>
+                                } @else {
+                                  <span class="record-status pending">待完成</span>
+                                }
+                                <span class="record-result" [ngClass]="getResultTagClass(item.result)">{{ getResultLabel(item.result) }}</span>
+                              </div>
+                            </div>
+
+                            <div class="record-body">
+                              @if (item.location || item.meetingUrl) {
+                                <div class="sub-meta-row">
+                                  @if (item.location) {
+                                    <span class="info-chip">
+                                      <span nz-icon nzType="environment" nzTheme="outline"></span>
+                                      {{ item.location }}
+                                    </span>
+                                  }
+                                  @if (item.meetingUrl) {
+                                    <a class="info-chip info-chip--link" [href]="item.meetingUrl" target="_blank">
+                                      <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+                                      会议链接
+                                    </a>
+                                  }
+                                </div>
+                              }
+                              @if (item.note) {
+                                <div class="record-tip">备注：{{ item.note }}</div>
+                              }
+                              @if (item.completionMessage) {
+                                <div class="record-tip">后续提示：{{ item.completionMessage }}</div>
+                              }
+                              @if (item.summary || item.resultComment) {
+                                <div class="record-tip">结果说明：{{ item.summary }}{{ item.summary && item.resultComment ? ' —— ' : '' }}{{ item.resultComment }}</div>
+                              }
+                            </div>
+
+                            <div class="record-actions">
                               @if (canComplete(item)) {
-                                <button nz-button nzType="primary" nzSize="small" nzDanger (click)="openComplete(item)"
-                                  nz-tooltip nzTooltipTitle="标记面试完成并填写后续提示">
-                                  <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-                                  完成
-                                </button>
+                                <a class="record-action" (click)="openComplete(item)">完成</a>
                               }
-                              <button nz-button nzSize="small" (click)="openUpdate(item)"
-                                nz-tooltip nzTooltipTitle="修改面试信息">
-                                <span nz-icon nzType="edit" nzTheme="outline"></span>
-                              </button>
+                              <a class="record-action" (click)="openUpdate(item)">编辑面试记录</a>
                               @if (canRecordResult(item)) {
-                                <button nz-button nzSize="small" (click)="openResult(item)"
-                                  nz-tooltip nzTooltipTitle="回填面试结果（通过/未通过）">
-                                  <span nz-icon nzType="file-done" nzTheme="outline"></span>
-                                  结果
-                                </button>
+                                <a class="record-action" (click)="openResult(item)">回填结果</a>
                               }
-                              <button nz-button nzSize="small" nzDanger
+                              <a class="record-action delete"
                                 nz-popconfirm nzPopconfirmTitle="确定删除该面试记录？关联的投递状态将恢复。"
-                                (nzOnConfirm)="deleteInterview(item)">
-                                <span nz-icon nzType="delete" nzTheme="outline"></span>
-                              </button>
-                            </span>
-                          </div>
-                          <div class="sub-body">
-                            @if (item.location || item.meetingUrl) {
-                              <span class="sub-meta">
-                                @if (item.location) {
-                                  <span class="info-chip">
-                                    <span nz-icon nzType="environment" nzTheme="outline"></span>
-                                    {{ item.location }}
-                                  </span>
-                                }
-                                @if (item.meetingUrl) {
-                                  <a class="info-chip info-chip--link" [href]="item.meetingUrl" target="_blank">
-                                    <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-                                    会议链接
-                                  </a>
-                                }
-                              </span>
-                            }
-                            @if (item.note) {
-                              <span class="sub-meta sub-note"><span nz-icon nzType="file-text" nzTheme="outline"></span>{{ item.note }}</span>
-                            }
-                            @if (item.completionMessage) {
-                              <span class="sub-meta sub-comment"><span nz-icon nzType="notification" nzTheme="outline"></span>{{ item.completionMessage }}</span>
-                            }
-                            @if (item.summary || item.resultComment) {
-                              <span class="sub-meta sub-result">
-                                <span nz-icon nzType="profile" nzTheme="outline"></span>
-                                {{ item.summary }}{{ item.summary && item.resultComment ? ' —— ' : '' }}{{ item.resultComment }}
-                              </span>
-                            }
+                                (nzOnConfirm)="deleteInterview(item)">删除</a>
+                            </div>
                           </div>
                         </div>
                       }
                     </div>
+                    <button class="add-interview-btn" type="button" (click)="openSchedule(node.application)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                      新增面试
+                    </button>
                   }
-                </td>
-              </tr>
-            }
+                </div>
+              </td>
+            </tr>
           }
         </tbody>
       </nz-table>
     }
-  </nz-card>
+  </div>
 </div>
 
 <!-- =================== 安排面试弹窗 =================== -->

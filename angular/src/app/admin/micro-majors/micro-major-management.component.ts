@@ -564,15 +564,36 @@ export class MicroMajorManagementComponent implements OnInit {
     return labels[status] || '未知';
   }
 
+  getStatusClass(status: MicroMajorStatus): string {
+    const classes: Record<number, string> = {
+      [MicroMajorStatus.Draft]: 'draft',
+      [MicroMajorStatus.Published]: 'published',
+      [MicroMajorStatus.Archived]: 'pending',
+    };
+    return classes[status] || 'draft';
+  }
+
   getEnrollmentStatusLabel(status: MicroMajorEnrollmentStatus): string {
     const labels: Record<number, string> = {
       [MicroMajorEnrollmentStatus.Pending]: '待审批',
       [MicroMajorEnrollmentStatus.Enrolled]: '已通过',
       [MicroMajorEnrollmentStatus.InProgress]: '学习中',
-      [MicroMajorEnrollmentStatus.Completed]: '已完成',
+      [MicroMajorEnrollmentStatus.Completed]: '已结业',
       [MicroMajorEnrollmentStatus.Certified]: '已发证',
       [MicroMajorEnrollmentStatus.Cancelled]: '已取消',
     };
     return labels[status] || '未知';
+  }
+
+  getEnrollmentStatusClass(status: MicroMajorEnrollmentStatus): string {
+    const classes: Record<number, string> = {
+      [MicroMajorEnrollmentStatus.Pending]: 'pending',
+      [MicroMajorEnrollmentStatus.Enrolled]: 'learning',
+      [MicroMajorEnrollmentStatus.InProgress]: 'learning',
+      [MicroMajorEnrollmentStatus.Completed]: 'graduated',
+      [MicroMajorEnrollmentStatus.Certified]: 'certified',
+      [MicroMajorEnrollmentStatus.Cancelled]: 'draft',
+    };
+    return classes[status] || 'draft';
   }
 }

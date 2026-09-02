@@ -1,26 +1,101 @@
-.course-list-container {
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
+.course-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+  padding: 20px 24px;
+  overflow-y: auto;
 
-.page-header {
-  margin-bottom: 16px;
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
 
-  h1 {
-    margin: 0;
-    font-size: 24px;
+  &::-webkit-scrollbar-thumb {
+    background: #d4dde8;
+    border-radius: 3px;
   }
 }
 
-.toolbar {
+.course-head {
   display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
   align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 
-  .search-input {
-    width: 300px;
+  h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--kh-ink);
+    margin: 0;
+  }
+}
+
+.course-new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--kh-accent);
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  box-shadow: 0 3px 10px -3px rgba(24, 144, 255, 0.5);
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--kh-accent-deep);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.course-search {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: 20px;
+  padding: 4px 4px 4px 18px;
+  box-shadow: var(--kh-shadow-card);
+  max-width: 380px;
+
+  &:focus-within {
+    border-color: var(--kh-accent);
+    box-shadow: 0 0 0 3px var(--kh-accent-soft);
+  }
+
+  .mag {
+    font-size: 16px;
+    color: var(--kh-muted);
+    flex: none;
+  }
+
+  input {
+    flex: 1;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--kh-ink);
+    padding: 8px 10px;
+    min-width: 0;
+    box-shadow: none !important;
+
+    &::placeholder {
+      color: #9aa9ba;
+    }
+
+    &:focus {
+      box-shadow: none;
+    }
   }
 }
 
@@ -30,14 +105,73 @@
   padding: 48px;
 }
 
+.course-card {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: 12px;
+  box-shadow: var(--kh-shadow-card);
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .course-table {
-  .course-cover-cell {
-    width: 56px;
-    height: 40px;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+
+  thead th {
+    background: #f7f9fc;
+    color: var(--kh-ink-2);
+    font-size: 13px;
+    font-weight: 650;
+    padding: 12px 14px;
+    text-align: center;
+    border-bottom: 1px solid var(--kh-line-2);
+    white-space: nowrap;
+
+    &:first-child {
+      text-align: left;
+      padding-left: 20px;
+    }
+  }
+
+  tbody td {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--kh-ink-2);
+    border-bottom: 1px solid #f0f3f8;
+    vertical-align: middle;
+    text-align: center;
+
+    &:first-child {
+      text-align: left;
+      padding-left: 20px;
+    }
+  }
+
+  tbody tr:nth-child(even) {
+    background: #fafbfd;
+  }
+
+  tbody tr:hover {
+    background: var(--kh-accent-ghost);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .course-cover {
+    width: 72px;
+    height: 52px;
     border-radius: 6px;
+    background: linear-gradient(135deg, #e8f0fe, #d4e4fc);
+    display: grid;
+    place-items: center;
     overflow: hidden;
-    background: #fafafa;
-    border: 1px solid #f0f0f0;
+    flex: none;
 
     img {
       width: 100%;
@@ -46,36 +180,112 @@
       display: block;
     }
 
-    &__empty {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #d9d9d9;
+    .anticon {
+      font-size: 24px;
+      color: #7ba7e0;
+    }
+  }
 
-      span[nz-icon] {
-        font-size: 20px;
+  .course-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--kh-ink);
+    text-align: left;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .course-major {
+    font-size: 11.5px;
+    color: #9ca8b8;
+    margin-top: 3px;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .course-term {
+    color: #8c8c8c;
+    font-size: 12.5px;
+  }
+
+  .course-num {
+    font-weight: 600;
+    color: var(--kh-ink-2);
+    font-size: 13.5px;
+  }
+
+  .course-diff {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &.intro { background: #f6ffed; color: #52c41a; }
+    &.basic { background: #e6f7ff; color: #1890ff; }
+    &.mid   { background: #fff7e6; color: #faad14; }
+    &.adv   { background: #f9f0ff; color: #722ed1; }
+  }
+
+  .course-status {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &.published { background: #f6ffed; color: #52c41a; }
+    &.draft     { background: #f5f5f5; color: #8c8c8c; }
+    &.pending   { background: #fff7e6; color: #faad14; }
+  }
+
+  .op-links {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    a {
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 500;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    a .anticon {
+      font-size: 12px;
+    }
+
+    .edit {
+      color: var(--kh-accent);
+
+      &:hover {
+        color: var(--kh-accent-deep);
+        font-weight: 700;
       }
     }
-  }
 
-  .course-name-cell {
-    .course-desc {
-      color: #888;
-      font-size: 12px;
-      margin-top: 4px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 260px;
+    .del {
+      color: #ff4d4f;
+
+      &:hover {
+        color: #cf1322;
+        font-weight: 700;
+      }
     }
-  }
 
-  .action-btns {
-    display: flex;
-    gap: 4px;
-    flex-wrap: nowrap;
+    .sep {
+      color: #d9d9d9;
+      font-size: 11px;
+    }
   }
 }
 

@@ -1,43 +1,69 @@
-<div class="page">
-  <nz-card nzTitle="专业管理" [nzExtra]="extraTpl">
-    <ng-template #extraTpl>
-      <button nz-button nzType="primary" (click)="openCreate()">新建专业</button>
-    </ng-template>
+<div class="major-page">
+  <!-- 标题行 -->
+  <div class="major-head">
+    <h2>专业管理</h2>
+    <button class="major-new-btn" (click)="openCreate()">
+      <span nz-icon nzType="plus"></span>
+      新建专业
+    </button>
+  </div>
 
-    <div class="toolbar">
-      <input
-        nz-input
-        placeholder="搜索专业名称或代号"
-        [ngModel]="filter()"
-        (ngModelChange)="filter.set($event); reload()"
-        style="max-width: 320px;"
-      />
-    </div>
+  <!-- 搜索栏 -->
+  <div class="major-search">
+    <span nz-icon nzType="search" class="mag"></span>
+    <input
+      type="text"
+      placeholder="搜索专业名称或代号"
+      [ngModel]="filter()"
+      (ngModelChange)="filter.set($event); reload()"
+      (keyup.enter)="reload()"
+    />
+    <button type="button" (click)="reload()">搜索</button>
+  </div>
 
-    <nz-table [nzData]="items()" [nzFrontPagination]="false">
+  <!-- 专业列表 -->
+  <div class="major-card">
+    <table class="major-table">
       <thead>
         <tr>
-          <th>专业名称</th>
-          <th>专业代号</th>
-          <th>创建时间</th>
-          <th>操作</th>
+          <th style="width:30%">专业名称</th>
+          <th class="center" style="width:20%">专业代号</th>
+          <th class="center" style="width:25%">创建时间</th>
+          <th class="center" style="width:25%">操作</th>
         </tr>
       </thead>
       <tbody>
         @for (item of items(); track item.id) {
           <tr>
-            <td>{{ item.name }}</td>
-            <td>{{ item.code || '-' }}</td>
-            <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
-            <td class="actions">
-              <button nz-button nzType="link" (click)="openEdit(item)">编辑</button>
-              <button nz-button nzType="link" nzDanger (click)="delete(item)">删除</button>
+            <td class="name-cell">{{ item.name }}</td>
+            <td class="center code-cell">{{ item.code || '-' }}</td>
+            <td class="center time-cell">{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+            <td class="center op-cell">
+              <span class="op-links">
+                <a class="edit" (click)="openEdit(item)">
+                  <span nz-icon nzType="edit"></span>编辑
+                </a>
+                <span class="sep">|</span>
+                <a class="del" (click)="delete(item)">
+                  <span nz-icon nzType="delete"></span>删除
+                </a>
+              </span>
+            </td>
+          </tr>
+        }
+        @empty {
+          <tr>
+            <td colspan="4">
+              <div class="mgmt-empty">
+                <span nz-icon nzType="inbox"></span>
+                <span>暂无专业</span>
+              </div>
             </td>
           </tr>
         }
       </tbody>
-    </nz-table>
-  </nz-card>
+    </table>
+  </div>
 
   <nz-modal
     [nzVisible]="modalVisible"

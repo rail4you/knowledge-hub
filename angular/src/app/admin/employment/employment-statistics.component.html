@@ -1,92 +1,71 @@
 <div class="stats-page">
-  <!-- Summary Cards -->
-  <div class="summary-row">
-    <div class="summary-card">
-      <div class="summary-card__icon" style="background: #e6f7ff;">
-        <span nz-icon nzType="user" nzTheme="outline" style="color:#1890ff;"></span>
-      </div>
-      <div class="summary-card__body">
-        <div class="summary-card__value">{{ totalStudents() }}</div>
-        <div class="summary-card__label">投递学生数</div>
-      </div>
+  <div class="page-title">就业统计</div>
+
+  <!-- 统计卡片：对齐原型 stats-cards，扩展为 6 项时自动换行 -->
+  <div class="stats-cards">
+    <div class="stat-card">
+      <div class="stat-value">{{ totalStudents() }}</div>
+      <div class="stat-label">投递学生总数</div>
     </div>
-    <div class="summary-card">
-      <div class="summary-card__icon" style="background: #f6ffed;">
-        <span nz-icon nzType="file-text" nzTheme="outline" style="color:#52c41a;"></span>
-      </div>
-      <div class="summary-card__body">
-        <div class="summary-card__value">{{ totalApplications() }}</div>
-        <div class="summary-card__label">投递次数</div>
-      </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ totalApplications() }}</div>
+      <div class="stat-label">投递次数</div>
     </div>
-    <div class="summary-card">
-      <div class="summary-card__icon" style="background: #ecfdf5;">
-        <span nz-icon nzType="compass" nzTheme="outline" style="color:#10b981;"></span>
-      </div>
-      <div class="summary-card__body">
-        <div class="summary-card__value">{{ outcomeTotal() }}</div>
-        <div class="summary-card__label">就业去向总数</div>
-      </div>
+    <div class="stat-card employed">
+      <div class="stat-value">{{ outcomeTotal() }}</div>
+      <div class="stat-label">就业去向总数</div>
     </div>
-    <div class="summary-card">
-      <div class="summary-card__icon" style="background: #f0f9ff;">
-        <span nz-icon nzType="bank" nzTheme="outline" style="color:#0891b2;"></span>
-      </div>
-      <div class="summary-card__body">
-        <div class="summary-card__value">{{ outcomeEmployed() }}</div>
-        <div class="summary-card__label">已就业</div>
-      </div>
+    <div class="stat-card employed">
+      <div class="stat-value">{{ outcomeEmployed() }}</div>
+      <div class="stat-label">已就业</div>
     </div>
-    <div class="summary-card">
-      <div class="summary-card__icon" style="background: #fdf6ec;">
-        <span nz-icon nzType="file-done" nzTheme="outline" style="color:#d97706;"></span>
-      </div>
-      <div class="summary-card__body">
-        <div class="summary-card__value">{{ outcomeSigned() }}</div>
-        <div class="summary-card__label">已签约</div>
-      </div>
+    <div class="stat-card signed">
+      <div class="stat-value">{{ outcomeSigned() }}</div>
+      <div class="stat-label">已签约</div>
     </div>
-    <div class="summary-card">
-      <div class="summary-card__icon" style="background: #faf5ff;">
-        <span nz-icon nzType="rise" nzTheme="outline" style="color:#7c3aed;"></span>
-      </div>
-      <div class="summary-card__body">
-        <div class="summary-card__value">{{ outcomeRate() }}%</div>
-        <div class="summary-card__label">就业率（签约+就业）</div>
-      </div>
+    <div class="stat-card rate">
+      <div class="stat-value">{{ outcomeRate() }}%</div>
+      <div class="stat-label">就业率<small>（签约+就业）</small></div>
     </div>
   </div>
 
-  <!-- Time Filter + Export -->
-  <div class="toolbar">
-    <nz-radio-group [ngModel]="days()" (ngModelChange)="setDays($event)" nzSize="small">
-      <label nz-radio-button [nzValue]="7">近 7 天</label>
-      <label nz-radio-button [nzValue]="30">近 30 天</label>
-      <label nz-radio-button [nzValue]="null">全部</label>
-    </nz-radio-group>
-    <button nz-button nzType="primary" nzSize="small" (click)="export()">导出 Excel</button>
+  <!-- 筛选栏：原型 filter-bar 含 tabs + 导出 -->
+  <div class="filter-bar">
+    <div class="tabs">
+      <button class="tab-btn" [class.active]="days() === 7" type="button" (click)="setDays(7)">近7天</button>
+      <button class="tab-btn" [class.active]="days() === 30" type="button" (click)="setDays(30)">近30天</button>
+      <button class="tab-btn" [class.active]="days() === null" type="button" (click)="setDays(null)">全部</button>
+    </div>
+    <button class="export-btn" type="button" (click)="export()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      导出Excel
+    </button>
   </div>
 
-  <!-- =================== 图表 =================== -->
-  <div class="chart-row">
-    <nz-card nzTitle="就业去向状态分布" nzSize="small" class="chart-card">
+  <!-- 图表区：原型 charts-row -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">就业去向状态分布</div>
       <div class="chart-box" #outcomeChart></div>
-    </nz-card>
-    <nz-card nzTitle="投递状态分布" nzSize="small" class="chart-card">
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">投递状态分布</div>
       <div class="chart-box" #applicationChart></div>
-    </nz-card>
+    </div>
   </div>
 
-  <!-- =================== 就业去向 =================== -->
-  <nz-card nzTitle="就业去向" nzSize="small">
+  <!-- 就业去向表格：原型 table-card + stats-table -->
+  <div class="table-card">
+    <div class="table-card__header">就业去向</div>
     @if (outcomeLoading()) {
-      <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin></div>
+      <div class="loading-state"><nz-spin nzSimple></nz-spin></div>
     } @else if (outcomes().length === 0) {
-      <nz-empty nzNotFoundContent="暂无就业去向记录"></nz-empty>
+      <div class="empty-wrap"><nz-empty nzNotFoundContent="暂无就业去向记录"></nz-empty></div>
     } @else {
-      <nz-table [nzData]="outcomes()" [nzFrontPagination]="false" nzSize="small">
+      <nz-table [nzData]="outcomes()" [nzFrontPagination]="false" nzSize="small" class="stats-table">
         <thead>
           <tr>
+            <th>就业去向</th>
             <th>学生</th>
             <th>单位 / 岗位</th>
             <th>状态</th>
@@ -98,44 +77,46 @@
         <tbody>
           @for (o of outcomes(); track o.id) {
             <tr>
+              <td>{{ outcomeStatusLabel(o.status) }}</td>
               <td>{{ o.studentName || '-' }}</td>
               <td>
-                <div class="oc-job">{{ o.employerName }}</div>
-                <div class="oc-sub">{{ o.jobTitle || '未填写岗位' }}</div>
+                <div class="company-name">{{ o.employerName }}</div>
+                <div class="job-name">{{ o.jobTitle || '未填写岗位' }}</div>
               </td>
-              <td><nz-tag [nzColor]="outcomeStatusColor(o.status)">{{ outcomeStatusLabel(o.status) }}</nz-tag></td>
-              <td class="oc-info">
+              <td><span class="status-tag" [attr.data-status]="o.status">{{ outcomeStatusLabel(o.status) }}</span></td>
+              <td class="info-cell">
                 {{ o.employmentType || '-' }}
-                @if (o.region) { · {{ o.region }} }
-                @if (o.salaryRange) { · {{ o.salaryRange }} }
+                @if (o.region) { <span class="dot">·</span> {{ o.region }} }
+                @if (o.salaryRange) { <span class="dot">·</span> {{ o.salaryRange }} }
               </td>
-              <td>{{ o.startDate ? (o.startDate | date:'yyyy-MM-dd') : '-' }}</td>
-              <td>@if (o.isPrimary) { <span nz-icon nzType="star" nzTheme="fill" style="color:#f59e0b;"></span> } @else { <span class="oc-sub">—</span> }</td>
+              <td>{{ o.startDate ? (o.startDate | date:'yyyy-MM-dd') : '—' }}</td>
+              <td>@if (o.isPrimary) { <span class="main-star">★</span> } @else { <span class="main-star empty">—</span> }</td>
             </tr>
           }
         </tbody>
       </nz-table>
     }
-  </nz-card>
+  </div>
 
-  <!-- =================== 投递明细 =================== -->
+  <!-- 投递明细：保留原有按学生分组列表，用同一卡片风格 -->
   @if (loading()) {
-    <nz-card>
-      <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin></div>
-    </nz-card>
+    <div class="table-card">
+      <div class="loading-state"><nz-spin nzSimple></nz-spin></div>
+    </div>
   } @else if (items().length === 0) {
-    <nz-card><nz-empty nzNotFoundContent="暂无投递数据"></nz-empty></nz-card>
+    <div class="table-card">
+      <div class="empty-wrap"><nz-empty nzNotFoundContent="暂无投递数据"></nz-empty></div>
+    </div>
   } @else {
-    <!-- Student Group List -->
     <div class="group-list">
       @for (group of groups(); track group.studentId) {
-        <nz-card class="group-card">
+        <div class="group-card table-card">
           <div class="group-header">
             <span class="group-header__name">
               <span nz-icon nzType="user" nzTheme="outline"></span>
               {{ group.studentName }}
             </span>
-            <nz-tag>{{ group.items.length }} 次投递</nz-tag>
+            <span class="count-tag">{{ group.items.length }} 次投递</span>
           </div>
           <div class="group-items">
             @for (item of group.items; track item.jobTitle + item.appliedAt) {
@@ -153,7 +134,7 @@
               </div>
             }
           </div>
-        </nz-card>
+        </div>
       }
     </div>
   }

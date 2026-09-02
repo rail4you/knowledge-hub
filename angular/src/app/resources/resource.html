@@ -144,6 +144,7 @@
 
         <div class="table-wrapper">
           <nz-table
+            nzTableLayout="fixed"
             [nzData]="resources.items"
             [nzTotal]="resources.totalCount"
             [nzPageIndex]="pageIndex"
@@ -155,13 +156,13 @@
           >
             <thead>
               <tr>
-                <th>{{ '::ResourceName' | abpLocalization }}</th>
-                <th>{{ '::ResourceType' | abpLocalization }}</th>
-                <th>{{ '::Version' | abpLocalization }}</th>
-                <th>{{ '::Status' | abpLocalization }}</th>
-                <th>{{ '::Creator' | abpLocalization }}</th>
-                <th>{{ '::CreationTime' | abpLocalization }}</th>
-                <th>{{ '::Actions' | abpLocalization }}</th>
+                <th class="th-name">{{ '::ResourceName' | abpLocalization }}</th>
+                <th nzWidth="84px" class="th-type">{{ '::ResourceType' | abpLocalization }}</th>
+                <th nzWidth="44px" class="th-version">{{ '::Version' | abpLocalization }}</th>
+                <th nzWidth="124px" class="th-status">{{ '::Status' | abpLocalization }}</th>
+                <th nzWidth="88px" class="th-creator">{{ '::Creator' | abpLocalization }}</th>
+                <th nzWidth="128px" class="th-time">{{ '::CreationTime' | abpLocalization }}</th>
+                <th nzWidth="118px" class="th-ops">{{ '::Actions' | abpLocalization }}</th>
               </tr>
             </thead>
             <tbody>
@@ -169,14 +170,14 @@
                   (click)="selectResource(item)"
                   [class.selected]="selectedResource()?.id === item.id"
                   style="cursor: pointer;">
-                <td>
+                <td class="td-name">
                   <span class="file-name-cell">
                     <span nz-icon [nzType]="getResourceIcon(item.resourceType)" class="file-icon"></span>
-                    {{ item.name }}
+                    <span class="file-name-text" [title]="item.name">{{ item.name }}</span>
                   </span>
                 </td>
                 <td><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
-                <td>v{{ item.currentVersion }}</td>
+                <td class="td-version">v{{ item.currentVersion }}</td>
                 <td>
                   <nz-tag [nzColor]="getStatusColor(item.status)">
                     {{ getStatusName(item.status) }}
@@ -184,15 +185,32 @@
                 </td>
                 <td>{{ item.creatorName }}</td>
                 <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
-                <td (click)="$event.stopPropagation()">
-                  <button
-                    *abpPermission="'KnowledgeHub.Resources.RequestDelete'"
-                    nz-button nzType="link" nzSize="small" nzDanger
-                    (click)="openDeleteModalForResource(item)"
-                    nz-tooltip nzTooltipTitle="{{ '::RequestDelete' | abpLocalization }}"
-                  >
-                    <span nz-icon nzType="delete"></span>
-                  </button>
+                <td class="td-ops" (click)="$event.stopPropagation()">
+                  <span class="row-ops">
+                    <button
+                      nz-button nzType="link" nzSize="small" class="row-op"
+                      (click)="selectResource(item)"
+                      nz-tooltip nzTooltipTitle="{{ '::Preview' | abpLocalization }}"
+                    >
+                      <span nz-icon nzType="eye"></span>
+                    </button>
+                    <button
+                      nz-button nzType="link" nzSize="small" class="row-op"
+                      *abpPermission="'KnowledgeHub.Resources.Edit'"
+                      (click)="editResource(item.id)"
+                      nz-tooltip nzTooltipTitle="{{ '::Edit' | abpLocalization }}"
+                    >
+                      <span nz-icon nzType="edit"></span>
+                    </button>
+                    <button
+                      nz-button nzType="link" nzSize="small" class="row-op row-op-danger"
+                      *abpPermission="'KnowledgeHub.Resources.RequestDelete'"
+                      (click)="openDeleteModalForResource(item)"
+                      nz-tooltip nzTooltipTitle="{{ '::RequestDelete' | abpLocalization }}"
+                    >
+                      <span nz-icon nzType="delete"></span>
+                    </button>
+                  </span>
                 </td>
               </tr>
             </tbody>

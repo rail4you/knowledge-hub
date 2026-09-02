@@ -1,164 +1,133 @@
-<div class="lesson-plan-container">
-  <div class="lesson-plan-header">
-    <h2>教案生成</h2>
-    <p class="subtitle">基于资源库资源，智能生成教学教案</p>
-  </div>
-
-  <!-- Step 1: Select resource -->
-  <nz-card class="step-card">
-    <div class="step-title">
-      <span class="step-number">1</span>
-      <span>选择教学资源</span>
-    </div>
-
-    @if (resourcesLoading()) {
-      <div class="loading-container">
-        <nz-spin nzSimple nzTip="加载资源列表..."></nz-spin>
+<div class="lesson-page">
+  <div class="lesson-cards">
+    <!-- 左侧：选择教学资源 -->
+    <div class="lesson-card left">
+      <div class="lesson-card-head">
+        <b>选择教学资源</b>
+        <span>请选择一个资源作为教案生成的基础</span>
       </div>
-    } @else if (resources().length === 0) {
-      <nz-empty nzNotFoundContent="暂无可用资源，请先上传并索引文档"></nz-empty>
-    } @else {
-      <nz-select
-        class="resource-select"
-        [ngModel]="selectedResourceId()"
-        (ngModelChange)="selectedResourceId.set($event)"
-        nzPlaceHolder="请选择一个资源"
-        nzAllowClear
-        nzShowSearch
-        [nzOptionHeightPx]="64"
-      >
-        @for (resource of resources(); track resource.id) {
-          <nz-option [nzValue]="resource.id" [nzLabel]="resource.name" [nzDisabled]="!resource.hasSummary">
-            <div class="resource-option">
-              <span nz-icon nzType="file-text" nzTheme="outline" class="resource-icon"></span>
-              <div class="resource-option-info">
-                <div class="resource-option-name">{{ resource.name }}</div>
-                <div class="resource-option-meta">
-                  @if (resource.hasSummary) {
-                    <nz-tag nzColor="success" [nzSize]="'small'">已生成摘要</nz-tag>
-                  } @else {
-                    <nz-tag nzColor="default" [nzSize]="'small'">未生成摘要</nz-tag>
-                  }
+      <div class="lesson-card-body">
+        @if (resourcesLoading()) {
+          <div class="loading-container">
+            <nz-spin nzSimple nzTip="加载资源列表..."></nz-spin>
+          </div>
+        } @else if (resources().length === 0) {
+          <nz-empty nzNotFoundContent="暂无可用资源，请先上传并索引文档"></nz-empty>
+        } @else {
+          @for (resource of resources(); track resource.id) {
+            <div
+              class="res-item"
+              [class.on]="selectedResourceId() === resource.id"
+              [class.disabled]="!resource.hasSummary"
+              (click)="selectedResourceId.set(resource.id)"
+            >
+              <span class="radio"></span>
+              <span class="ricon">
+                <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              </span>
+              <div class="rinfo">
+                <b>{{ resource.name }}</b>
+                <span>
                   @if (resource.sourceFormat) {
                     <nz-tag [nzColor]="'blue'" [nzSize]="'small'">{{ resource.sourceFormat }}</nz-tag>
                   }
-                </div>
+                  @if (resource.nodeCount > 0) {
+                    <span class="meta-text">{{ resource.nodeCount }} 个索引节点</span>
+                  }
+                </span>
               </div>
+              @if (resource.hasSummary) {
+                <span class="rtag ok">已索引</span>
+              } @else {
+                <span class="rtag no">未索引</span>
+              }
             </div>
-          </nz-option>
+          }
         }
-      </nz-select>
-
-      @if (selectedResource()) {
-        <div class="selected-resource-info">
-          <nz-tag [nzColor]="'green'">
-            <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-            已选择：{{ selectedResource()!.name }}
-          </nz-tag>
-          @if (selectedResource()!.hasSummary) {
-            <nz-tag nzColor="success">已生成摘要</nz-tag>
-          } @else {
-            <nz-tag nzColor="default">未生成摘要</nz-tag>
-            <span class="warn-text">该资源尚未生成 AI 摘要，无法生成教案</span>
-          }
-          @if (selectedResource()!.sourceFormat) {
-            <nz-tag [nzColor]="'blue'">{{ selectedResource()!.sourceFormat }}</nz-tag>
-          }
-          @if (selectedResource()!.nodeCount > 0) {
-            <span class="meta-text">{{ selectedResource()!.nodeCount }} 个索引节点</span>
-          }
-        </div>
-        @if (!selectedResource()!.hasSummary) {
-          <div class="warn-banner">
-            <span nz-icon nzType="exclamation-circle" nzTheme="outline"></span>
-            请先为该资源生成摘要（资源详情页 → 重新生成摘要）
-          </div>
-        }
-      }
-    }
-  </nz-card>
-
-  <!-- Step 2: Configure parameters -->
-  <nz-card class="step-card">
-    <div class="step-title">
-      <span class="step-number">2</span>
-      <span>填写教学参数</span>
+      </div>
     </div>
 
-    <div nz-form nzLayout="vertical">
-      <div nz-row [nzGutter]="[16, 16]">
-        <div nz-col [nzSpan]="24">
-          <nz-form-item>
-            <nz-form-label nzFor="topic">课程主题</nz-form-label>
-            <nz-form-control>
-              <input
-                #topic
-                nz-input
-                id="topic"
-                [ngModel]="input().topic"
-                (ngModelChange)="updateTopic($event)"
-                placeholder="例如：数据结构与算法、高等数学、有机化学"
-                [disabled]="isLoading()"
-              />
-            </nz-form-control>
-          </nz-form-item>
+    <!-- 右侧：填写教学参数 -->
+    <div class="lesson-card right">
+      <div class="lesson-card-head">
+        <b>填写教学参数</b>
+      </div>
+      <div class="lp-form">
+        @if (selectedResource()) {
+          <div class="selected-resource-info">
+            <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+            已选择：{{ selectedResource()!.name }}
+            @if (selectedResource()!.hasSummary) {
+              <span class="meta-text">· 已生成摘要</span>
+            }
+          </div>
+        }
+
+        <div class="lp-row">
+          <label><span class="req">*</span>课程主题</label>
+          <div class="lp-ctl">
+            <input
+              nz-input
+              type="text"
+              [ngModel]="input().topic"
+              (ngModelChange)="updateTopic($event)"
+              placeholder="例如：数据结构与算法、高等数学、有机化学"
+              [disabled]="isLoading()"
+            />
+          </div>
         </div>
 
-        <div nz-col [nzSpan]="8">
-          <nz-form-item>
-            <nz-form-label nzFor="subject">学科门类</nz-form-label>
-            <nz-form-control>
-              <nz-select
-                [ngModel]="input().subject"
-                (ngModelChange)="updateSubject($event)"
-                nzPlaceHolder="请选择学科门类"
-                nzAllowClear
-                [disabled]="isLoading()"
-              >
-                <nz-option nzValue="哲学" nzLabel="哲学"></nz-option>
-                <nz-option nzValue="经济学" nzLabel="经济学"></nz-option>
-                <nz-option nzValue="法学" nzLabel="法学"></nz-option>
-                <nz-option nzValue="教育学" nzLabel="教育学"></nz-option>
-                <nz-option nzValue="文学" nzLabel="文学"></nz-option>
-                <nz-option nzValue="历史学" nzLabel="历史学"></nz-option>
-                <nz-option nzValue="理学" nzLabel="理学"></nz-option>
-                <nz-option nzValue="工学" nzLabel="工学"></nz-option>
-                <nz-option nzValue="农学" nzLabel="农学"></nz-option>
-                <nz-option nzValue="医学" nzLabel="医学"></nz-option>
-                <nz-option nzValue="管理学" nzLabel="管理学"></nz-option>
-                <nz-option nzValue="艺术学" nzLabel="艺术学"></nz-option>
-                <nz-option nzValue="交叉学科" nzLabel="交叉学科"></nz-option>
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
+        <div class="lp-row">
+          <label><span class="req">*</span>学科门类</label>
+          <div class="lp-ctl">
+            <nz-select
+              [ngModel]="input().subject"
+              (ngModelChange)="updateSubject($event)"
+              nzPlaceHolder="请选择学科门类"
+              nzAllowClear
+              [disabled]="isLoading()"
+            >
+              <nz-option nzValue="哲学" nzLabel="哲学"></nz-option>
+              <nz-option nzValue="经济学" nzLabel="经济学"></nz-option>
+              <nz-option nzValue="法学" nzLabel="法学"></nz-option>
+              <nz-option nzValue="教育学" nzLabel="教育学"></nz-option>
+              <nz-option nzValue="文学" nzLabel="文学"></nz-option>
+              <nz-option nzValue="历史学" nzLabel="历史学"></nz-option>
+              <nz-option nzValue="理学" nzLabel="理学"></nz-option>
+              <nz-option nzValue="工学" nzLabel="工学"></nz-option>
+              <nz-option nzValue="农学" nzLabel="农学"></nz-option>
+              <nz-option nzValue="医学" nzLabel="医学"></nz-option>
+              <nz-option nzValue="管理学" nzLabel="管理学"></nz-option>
+              <nz-option nzValue="艺术学" nzLabel="艺术学"></nz-option>
+              <nz-option nzValue="交叉学科" nzLabel="交叉学科"></nz-option>
+            </nz-select>
+          </div>
         </div>
 
-        <div nz-col [nzSpan]="8">
-          <nz-form-item>
-            <nz-form-label nzFor="grade">授课对象</nz-form-label>
-            <nz-form-control>
-              <nz-select
-                [ngModel]="input().grade"
-                (ngModelChange)="updateGrade($event)"
-                nzPlaceHolder="请选择授课对象"
-                nzAllowClear
-                [disabled]="isLoading()"
-              >
-                <nz-option nzValue="大一" nzLabel="大一"></nz-option>
-                <nz-option nzValue="大二" nzLabel="大二"></nz-option>
-                <nz-option nzValue="大三" nzLabel="大三"></nz-option>
-                <nz-option nzValue="大四" nzLabel="大四"></nz-option>
-                <nz-option nzValue="研究生" nzLabel="研究生"></nz-option>
-                <nz-option nzValue="博士" nzLabel="博士"></nz-option>
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
+        <div class="lp-row">
+          <label><span class="req">*</span>授课对象</label>
+          <div class="lp-ctl">
+            <nz-select
+              [ngModel]="input().grade"
+              (ngModelChange)="updateGrade($event)"
+              nzPlaceHolder="请选择授课对象"
+              nzAllowClear
+              [disabled]="isLoading()"
+            >
+              <nz-option nzValue="大一" nzLabel="大一"></nz-option>
+              <nz-option nzValue="大二" nzLabel="大二"></nz-option>
+              <nz-option nzValue="大三" nzLabel="大三"></nz-option>
+              <nz-option nzValue="大四" nzLabel="大四"></nz-option>
+              <nz-option nzValue="研究生" nzLabel="研究生"></nz-option>
+              <nz-option nzValue="博士" nzLabel="博士"></nz-option>
+            </nz-select>
+          </div>
         </div>
 
-        <div nz-col [nzSpan]="8">
-          <nz-form-item>
-            <nz-form-label nzFor="duration">课时（分钟）</nz-form-label>
-            <nz-form-control>
+        <div class="lp-row">
+          <label>课时</label>
+          <div class="lp-ctl">
+            <div class="lp-duration">
               <nz-input-number
                 [ngModel]="input().duration"
                 (ngModelChange)="updateDuration($event)"
@@ -166,63 +135,65 @@
                 [nzMax]="180"
                 [nzStep]="5"
                 [disabled]="isLoading()"
-                style="width: 100%"
               ></nz-input-number>
-            </nz-form-control>
-          </nz-form-item>
+              <span class="unit">分钟</span>
+            </div>
+            <span class="lp-hint">单节课时长，默认 45 分钟</span>
+          </div>
         </div>
 
-        <div nz-col [nzSpan]="24">
-          <nz-form-item>
-            <nz-form-label nzFor="customPrompt">教学要求 / 特殊说明（可选）</nz-form-label>
-            <nz-form-control>
-              <textarea
-                nz-input
-                id="customPrompt"
-                [nzAutosize]="{ minRows: 3, maxRows: 6 }"
-                [ngModel]="input().customPrompt"
-                (ngModelChange)="updateCustomPrompt($event)"
-                placeholder="例如：希望融入课程思政元素；强调工程实践；面向非计算机专业学生；需要双语关键词；本课时为线上混合式教学..."
-                [disabled]="isLoading()"
-              ></textarea>
-            </nz-form-control>
-          </nz-form-item>
+        <div class="lp-row">
+          <label>教学要求 / 特殊说明</label>
+          <div class="lp-ctl">
+            <textarea
+              nz-input
+              [nzAutosize]="{ minRows: 4, maxRows: 8 }"
+              [ngModel]="input().customPrompt"
+              (ngModelChange)="updateCustomPrompt($event)"
+              placeholder="请输入教学要求或特殊说明，例如：&#10;1. 重点讲解阴阳失调的病因病机部分&#10;2. 结合临床案例进行分析&#10;3. 课后布置思考题，引导学生自主探究&#10;4. 建议使用多媒体课件配合教学"
+              [disabled]="isLoading()"
+            ></textarea>
+          </div>
         </div>
+
+        @if (!canGenerate()) {
+          <div class="warn-banner">
+            <span nz-icon nzType="exclamation-circle" nzTheme="outline"></span>
+            @if (!selectedResource()?.hasSummary) {
+              该资源尚未生成 AI 摘要，无法生成教案（资源详情页 → 重新生成摘要）
+            } @else {
+              请填写课程主题、学科门类和授课对象后生成
+            }
+          </div>
+        }
       </div>
     </div>
+  </div>
 
-    <nz-divider></nz-divider>
-
-    <div class="action-bar">
-      <button nz-button nzType="primary" nzSize="large" (click)="generate()" [disabled]="!canGenerate()" [nzLoading]="isLoading()">
-        <span nz-icon nzType="thunderbolt"></span>
-        生成教案
-      </button>
-      <button nz-button nzSize="large" (click)="reset()" [disabled]="isLoading()">
-        重置
-      </button>
-    </div>
-  </nz-card>
+  <!-- 操作按钮 -->
+  <div class="lp-actions">
+    <button class="lp-btn ghost" (click)="reset()" [disabled]="isLoading()">重置</button>
+    <button class="lp-btn primary" (click)="generate()" [disabled]="!canGenerate() || isLoading()">
+      <span nz-icon nzType="thunderbolt"></span>
+      @if (isLoading()) { 正在生成… } @else { 生成教案 }
+    </button>
+  </div>
 
   <!-- Loading state -->
   @if (isLoading() && !result()) {
-    <nz-card class="step-card loading-card">
+    <div class="loading-card">
       <div class="generating-container">
         <nz-spin nzSimple nzSize="large"></nz-spin>
         <p class="generating-text">正在基于文档内容生成教案，请稍候...</p>
         <p class="generating-hint">AI 正在分析文档结构与关键内容</p>
       </div>
-    </nz-card>
+    </div>
   }
 
-  <!-- Step 3: Result preview -->
+  <!-- Result preview -->
   @if (result(); as r) {
-    <nz-card class="step-card result-card">
+    <div class="result-card">
       <div class="result-header">
-        <div class="step-title">
-          <span class="step-number">3</span>
-          <span>教案预览</span>
-        </div>
         <div class="result-actions">
           <button nz-button nzType="primary" (click)="downloadDocx()" [nzLoading]="isExporting()">
             <span nz-icon nzType="download"></span>
@@ -328,6 +299,6 @@
           </ul>
         </div>
       </div>
-    </nz-card>
+    </div>
   }
 </div>

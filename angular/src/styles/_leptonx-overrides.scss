@@ -1,0 +1,203 @@
+/* ═══════════════════════════════════════════════════════════════
+   LeptonX 主题定制层 · 对齐教师端高保真原型
+   深蓝黑侧边栏（#0d1b30 渐变）+ 品牌蓝 #1890ff + 亮色工作台画布 #f5f7fa
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 品牌 / 主题变量覆盖 ── */
+:root {
+  --lpx-brand: #1890ff;
+  --lpx-primary: #1890ff;
+  --lpx-secondary: #2b6fce;
+  --lpx-success: #52c41a;
+  --lpx-info: #1890ff;
+  --lpx-danger: #e5484d;
+  --lpx-warning: #e8871a;
+  --lpx-body-bg: #f5f7fa;
+  --lpx-content-bg: #f5f7fa;
+  --bs-primary: #1890ff;
+  --bs-body-bg: #f5f7fa;
+  --bs-dark-rgb: 13, 27, 48;
+}
+
+body {
+  background-color: #f5f7fa !important;
+}
+
+html,
+body {
+  background-color: #f5f7fa !important;
+}
+
+/* ── 侧边栏容器：深蓝黑渐变 ── */
+.lpx-sidebar-container {
+  background-color: #0d1b30;
+}
+
+.lpx-sidebar,
+.lpx-sidebar .lpx-nav,
+.lpx-sidebar .lpx-nav .lpx-nav-menu {
+  background-color: transparent;
+  background-image: linear-gradient(180deg, #0e1c31 0%, #0b1729 100%);
+  color: var(--kh-on-side);
+}
+
+.lpx-sidebar .lpx-logo-container {
+  background-color: transparent;
+  background-image: linear-gradient(180deg, #0e1c31 0%, #0b1729 100%);
+}
+
+/* 侧边栏整体滚动条：隐藏（保留滚动能力） */
+.lpx-sidebar-container,
+.lpx-sidebar,
+.lpx-sidebar.lpx-scroll-container,
+.lpx-nav,
+.lpx-nav-menu {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.lpx-sidebar-container::-webkit-scrollbar,
+.lpx-sidebar::-webkit-scrollbar,
+.lpx-sidebar.lpx-scroll-container::-webkit-scrollbar,
+.lpx-nav::-webkit-scrollbar,
+.lpx-nav-menu::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* ── 菜单项：文字与图标 ── */
+.lpx-nav-menu .lpx-menu-item-link,
+.lpx-menu-item {
+  color: var(--kh-on-side);
+  height: 40px;
+  line-height: 40px;
+  border-radius: 10px;
+  margin: 2px 8px;
+  padding: 0 12px;
+  width: auto;
+  transition: background 0.15s, color 0.15s;
+}
+
+.lpx-nav-menu .lpx-menu-item-link:hover,
+.lpx-menu-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.lpx-nav-menu .lpx-menu-item-link.selected,
+.lpx-nav-menu .lpx-menu-item-link.expanded,
+.lpx-menu-item.selected {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(24, 144, 255, 0.32), rgba(24, 144, 255, 0.14));
+  box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.42);
+}
+
+.lpx-nav-menu .lpx-menu-item-link.selected .lpx-menu-item-icon,
+.lpx-nav-menu .lpx-menu-item-link.expanded .lpx-menu-item-icon,
+.lpx-nav-menu .lpx-menu-item-link.selected .dd-icon,
+.lpx-nav-menu .lpx-menu-item-link.expanded .dd-icon,
+.lpx-menu-item.selected .lpx-menu-item-icon,
+.lpx-menu-item.selected .dd-icon {
+  color: #4da7ff;
+}
+
+.lpx-nav-menu .lpx-menu-item-link .lpx-menu-item-icon .lpx-icon,
+.lpx-menu-item .lpx-menu-item-icon .lpx-icon {
+  color: #7e92ac;
+}
+
+/* ── 二级菜单 ── */
+.lpx-nav-menu .lpx-inner-menu-item,
+.lpx-nav-menu .lpx-inner-menu-item lpx-sub-navbar {
+  display: block;
+  width: 100%;
+}
+
+.lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-link {
+  height: 34px;
+  line-height: 34px;
+  padding: 0 12px 0 48px;
+  margin: 2px 8px;
+  border-radius: 9px;
+  font-size: 0.925em;
+  color: #9fb2c9;
+  background: transparent;
+  width: auto;
+}
+
+.lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-icon {
+  margin-right: 8px;
+}
+
+.lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-icon .lpx-icon {
+  width: 16px;
+}
+
+.lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-text {
+  width: auto;
+  flex: 1;
+}
+
+.lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-link:hover,
+.lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-link.selected {
+  background: linear-gradient(90deg, rgba(24, 144, 255, 0.24), rgba(24, 144, 255, 0.10));
+  box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.28);
+  color: #fff;
+}
+
+/* 分割线：带子菜单的组之间 */
+lpx-navbar-item:has(> .lpx-menu-item-submenu) {
+  border-bottom: 1px solid var(--kh-side-line);
+}
+
+/* ── 顶部栏 ── */
+.lpx-topbar-container {
+  background-color: #f5f7fa;
+  box-shadow: none;
+}
+
+.lpx-topbar {
+  background-color: #ffffff;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 0 0 14px 14px;
+}
+
+.lpx-content-wrapper {
+  border: none;
+  border-top: 1px solid var(--kh-line-2);
+  border-radius: 14px 14px 0 0;
+}
+
+.lpx-main-title {
+  color: var(--kh-ink);
+  font-weight: 700;
+}
+
+.lpx-breadcrumb-item {
+  color: var(--kh-muted);
+}
+.lpx-breadcrumb-item:hover,
+.lpx-breadcrumb-item:last-child {
+  color: var(--kh-accent);
+}
+
+.lpx-avatar .lpx-avatar-icon {
+  background: linear-gradient(140deg, #3da5ff, #2b6fce);
+  color: #fff;
+}
+
+/* ── 底部栏 ── */
+.lpx-footbar-container {
+  background-color: #f5f7fa;
+}
+.lpx-footbar-container .lpx-footbar {
+  background-color: #ffffff;
+  border: 1px solid var(--kh-line-2);
+}
+
+/* ── 页脚 ── */
+app-footer .lpx-footbar,
+.lpx-footbar {
+  background-color: #ffffff;
+  border-top: 1px solid var(--kh-line-2);
+}

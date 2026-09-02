@@ -1,23 +1,39 @@
 .practicum-list-page {
-  padding: 24px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
 }
 
 .hero {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 24px;
   align-items: end;
-}
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: 12px;
+  box-shadow: var(--kh-shadow-card);
+  padding: 22px 26px;
 
-.hero h1 {
-  margin: 0 0 8px;
-  font-size: 30px;
-}
+  h1 {
+    margin: 0 0 4px;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--kh-ink);
+  }
 
-.hero p {
-  margin: 0;
-  color: #64748b;
+  p {
+    margin: 0;
+    color: var(--kh-muted);
+    font-size: 14px;
+  }
 }
 
 .search-box {
@@ -28,12 +44,21 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 20px;
 }
 
 .project-card {
   overflow: hidden;
+  border: 1px solid var(--kh-line);
+  border-radius: 12px;
+  box-shadow: var(--kh-shadow-card);
+  transition: transform 0.18s, box-shadow 0.18s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--kh-shadow-pop);
+  }
 }
 
 .cover {
@@ -58,7 +83,7 @@
 .meta {
   display: grid;
   gap: 8px;
-  color: #334155;
+  color: var(--kh-ink-2);
 }
 
 .progress-row {

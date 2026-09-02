@@ -3,6 +3,11 @@
 /* Mind Elixir 样式 */
 @import 'mind-elixir/style';
 
+/* KnowledgeHub 设计令牌 + 主题定制层（对齐教师端高保真原型） */
+@import './styles/_design-tokens.scss';
+@import './styles/_leptonx-overrides.scss';
+@import './styles/_ngzorro-overrides.scss';
+
 
 :root {
   --lpx-theme-light-bg: url('assets/images/login/login-bg-img-light.svg');
