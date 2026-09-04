@@ -44,16 +44,19 @@
         }
         a { text-decoration: none; }
 
-        /* ── Header — 与首页 PortalHome 顶栏统一 ── */
+        /* ── Header — 与首页 PortalHome 顶栏统一（1152 紧凑） ── */
         .login-header {
             display: flex;
             align-items: center;
             gap: 24px;
-            padding: 0 32px;
-            height: 64px;
+            padding: 0 24px;
+            height: 52px;
             border-bottom: 1px solid #eef1f6;
             background: #ffffff;
             flex-shrink: 0;
+        }
+        @@media (min-width: 1200px) {
+            .login-header { padding: 0 calc((100% - 1152px) / 2); }
         }
         .brand {
             display: flex;
@@ -63,19 +66,19 @@
             color: inherit;
         }
         .brand-mark {
-            width: 38px; height: 38px; border-radius: 9px;
+            width: 34px; height: 34px; border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
             background: #1e6ce8;
-            color: #fff; font-size: 19px; font-weight: 700;
+            color: #fff; font-size: 17px; font-weight: 700;
         }
         .brand-text { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; line-height: 1.2; }
-        .brand-text strong { font-size: 18px; font-weight: 700; color: #1f2d3d; letter-spacing: -0.3px; }
+        .brand-text strong { font-size: 16px; font-weight: 700; color: #1f2d3d; letter-spacing: -0.3px; }
         .brand-text span { font-size: 12px; font-weight: 500; color: #8a93a6; }
         .header-nav {
             display: flex; align-items: center; gap: 2px; margin-left: 8px; flex: 1;
         }
         .header-nav a {
-            padding: 8px 14px; border-radius: 6px; font-size: 14px; font-weight: 500;
+            padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
             color: #5b6573; transition: color 0.15s, background 0.15s;
         }
         .header-nav a:hover { color: #1e6ce8; background: #eef4ff; }
@@ -93,19 +96,23 @@
             display: flex;
             flex: 1;
             min-height: 0;
-            padding: 20px;
-            gap: 20px;
+            max-width: 1152px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 16px 0 16px;
+            gap: 12px;
             background: var(--kh-canvas);
+            box-sizing: border-box;
         }
-        /* Left — 修饰背景图（占比 40%） */
+        /* Left — 修饰背景图（占比 40%，居中，适度留白） */
         .login-left {
             flex: 4;
-            border-radius: 16px;
+            border-radius: 12px;
             position: relative;
             overflow: hidden;
             display: flex;
             align-items: center;
-            padding: 40px 36px;
+            padding: 32px 28px;
             background:
                 linear-gradient(rgba(13,27,48,0.82), rgba(13,27,48,0.92)),
                 url('/images/intro-bg_001.jpg') center/cover no-repeat,
@@ -127,25 +134,25 @@
             background: radial-gradient(circle, rgba(24,144,255,0.18) 0%, transparent 70%);
             pointer-events: none;
         }
-        .left-inner { position: relative; z-index: 1; max-width: 460px; }
-        .left-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 6px 12px; border-radius: 999px;
-            background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18);
-            color: rgba(255,255,255,0.92); font-size: 12.5px; font-weight: 500;
-            margin-bottom: 20px; backdrop-filter: blur(4px);
-        }
-        /* 标题图标不显示：隐藏左侧 badge 中的图标 */
-        .left-badge i { display: none; }
-        .left-title { font-size: 32px; font-weight: 800; color: #fff; margin: 0 0 12px; line-height: 1.15; }
+        .left-inner { position: relative; z-index: 1; max-width: 440px; }
+        .left-title { font-size: 28px; font-weight: 800; color: #fff; margin: 0 0 8px; line-height: 1.15; }
         .left-title span { color: #7ec8ff; }
-        .left-subtitle { font-size: 14.5px; color: rgba(255,255,255,0.88); margin: 0 0 28px; line-height: 1.6; }
-        .feature-list { display: flex; flex-direction: column; gap: 14px; }
+        .left-subtitle { font-size: 13.5px; color: rgba(255,255,255,0.88); margin: 0 0 20px; line-height: 1.6; }
+        .feature-list { display: flex; flex-direction: column; gap: 10px; }
         .feature-item { display: flex; align-items: flex-start; gap: 14px; }
         /* 功能图标不显示：仅保留文字 */
         .feature-icon { display: none; }
         .feature-text h3 { font-size: 14px; font-weight: 600; color: #fff; margin: 0 0 2px; }
         .feature-text p { font-size: 13px; color: rgba(255,255,255,0.68); margin: 0; line-height: 1.4; }
+        .left-quote {
+            margin-top: 24px;
+            padding: 14px 18px;
+            border-left: 3px solid rgba(126,200,255,0.5);
+            background: rgba(255,255,255,0.06);
+            border-radius: 0 8px 8px 0;
+        }
+        .left-quote p { margin: 0 0 4px; font-size: 13.5px; font-weight: 600; color: #fff; font-style: italic; }
+        .left-quote span { font-size: 11px; color: rgba(255,255,255,0.6); }
         .left-stats {
             display: flex; align-items: center; gap: 24px;
             margin-top: 36px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.12);
@@ -155,14 +162,14 @@
         .left-stats .stat span { font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 0.04em; }
         .left-stats .stat-divider { width: 1px; height: 32px; background: rgba(255,255,255,0.12); }
 
-        /* Right — 表单（占比 60%） */
+        /* Right — 表单（占比 60%，居中） */
         .login-right {
             flex: 6;
             display: flex; align-items: center; justify-content: center;
             position: relative; overflow: hidden;
-            border-radius: 16px; background: #ffffff;
+            border-radius: 12px; background: #ffffff;
             border: 1px solid rgba(24,144,255,0.10); box-shadow: 0 1px 2px rgba(14,27,46,0.04);
-            padding: 32px 40px;
+            padding: 28px 28px;
         }
         .login-right::before {
             content: ''; position: absolute; right: -30px; bottom: -20px;
@@ -176,15 +183,15 @@
             opacity: 0.025; pointer-events: none;
         }
         .login-card { width: 100%; max-width: 440px; position: relative; z-index: 1; }
-        .form-title { font-size: 24px; font-weight: 700; color: var(--kh-ink); margin: 0 0 6px; }
-        .form-subtitle { font-size: 13.5px; color: var(--kh-muted); margin: 0 0 24px; }
-        .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
-        .form-group label { font-size: 13px; font-weight: 500; color: var(--kh-ink-2); display: flex; align-items: center; gap: 6px; }
+        .form-title { font-size: 20px; font-weight: 700; color: var(--kh-ink); margin: 0 0 4px; }
+        .form-subtitle { font-size: 12.5px; color: var(--kh-muted); margin: 0 0 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+        .form-group label { font-size: 12.5px; font-weight: 500; color: var(--kh-ink-2); display: flex; align-items: center; gap: 6px; }
         .form-group label i { color: var(--kh-muted); font-size: 12px; }
         .form-input {
-            width: 100%; padding: 11px 14px;
+            width: 100%; padding: 9px 12px;
             border: 1px solid var(--kh-line-2); border-radius: var(--kh-r-control);
-            font-size: 14px; color: var(--kh-ink); background: #fbfcfe;
+            font-size: 13.5px; color: var(--kh-ink); background: #fbfcfe;
             outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
         }
         .form-input::placeholder { color: #9aa9ba; }
@@ -200,8 +207,8 @@
         .remember-me { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--kh-muted); cursor: pointer; }
         .remember-me input[type='checkbox'] { width: 16px; height: 16px; accent-color: var(--kh-accent); }
         .login-btn {
-            width: 100%; padding: 12px; border: none; border-radius: var(--kh-r-control);
-            background: var(--kh-accent); color: #fff; font-size: 15px; font-weight: 600;
+            width: 100%; padding: 10px; border: none; border-radius: var(--kh-r-control);
+            background: var(--kh-accent); color: #fff; font-size: 14px; font-weight: 600;
             cursor: pointer; transition: background 0.15s; box-shadow: 0 8px 18px -8px rgba(24,144,255,0.55);
         }
         .login-btn:hover { background: var(--kh-accent-deep); }
@@ -219,21 +226,39 @@
         .alert { border-radius: 10px; font-size: 13px; }
         .card-foot {
             display: flex; align-items: center; justify-content: space-between;
-            margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--kh-line-2);
-            font-size: 12px; color: var(--kh-muted);
+            margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--kh-line-2);
+            font-size: 11.5px; color: var(--kh-muted);
         }
         .card-foot a { color: var(--kh-accent); text-decoration: none; }
         .card-foot a:hover { text-decoration: underline; }
 
+        /* ── Footer — 与首页一致 ── */
+        .footer { background: #1f2a44; color: rgba(255,255,255,0.7); padding: 28px 0 0; margin-top: 16px; }
+        .footer__inner { max-width: 1152px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: 1.4fr 2fr; gap: 40px; }
+        .footer__brand-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .footer__brand-top strong { display: block; font-size: 17px; font-weight: 700; color: #fff; }
+        .footer__brand-top p { margin: 2px 0 0; font-size: 12px; color: rgba(255,255,255,0.55); }
+        .footer .brand__mark--lg { background: rgba(255,255,255,0.1); width: 44px; height: 44px; font-size: 22px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; }
+        .footer__tagline { margin: 10px 0 0; font-size: 12px; line-height: 1.55; color: rgba(255,255,255,0.5); max-width: 360px; }
+        .footer__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+        .footer__col h5 { font-size: 13px; font-weight: 600; color: #fff; margin: 0 0 12px; }
+        .footer__col a { display: block; font-size: 12px; color: rgba(255,255,255,0.55); text-decoration: none; margin-bottom: 8px; }
+        .footer__col a:hover { color: #fff; }
+        .footer__copy { margin-top: 24px; padding: 14px 24px; text-align: center; font-size: 11px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.08); max-width: 1152px; margin-left: auto; margin-right: auto; }
+        @@media (max-width: 860px) {
+            .footer__inner { grid-template-columns: 1fr; gap: 20px; padding: 0 16px; }
+            .footer__grid { grid-template-columns: 1fr 1fr; }
+        }
+
         @@media (max-width: 960px) {
             .header-nav { display: none; }
-            .login-body { flex-direction: column; overflow-y: auto; padding: 16px; }
-            .login-left { min-height: 320px; padding: 32px 24px; }
-            .left-title { font-size: 28px; }
-            .login-right { flex: none; width: 100%; padding: 24px 20px; }
+            .login-body { flex-direction: column; overflow-y: auto; padding: 12px 16px; gap: 12px; max-width: none; margin: 0; }
+            .login-left { min-height: 240px; padding: 20px 20px; }
+            .left-title { font-size: 22px; }
+            .login-right { flex: none; width: 100%; padding: 20px 20px; }
         }
         @@media (max-width: 640px) {
-            .login-header { padding: 0 16px; height: 56px; }
+            .login-header { padding: 0 16px; height: 52px; }
         }
     </style>
 </head>
@@ -260,7 +285,6 @@
     <div class="login-body">
         <div class="login-left">
             <div class="left-inner">
-                <div class="left-badge"><i class="fa fa-book" style="font-size:13px;"></i> 智能化知识管理与学习平台</div>
                 <h1 class="left-title">易课通<br /><span>教学资源库</span></h1>
                 <p class="left-subtitle">集成 AI 技术的新一代知识管理系统，为教育机构提供全方位的数字化教学支持</p>
                 <div class="feature-list">
@@ -280,6 +304,9 @@
                         <div class="feature-icon"><i class="fa fa-book"></i></div>
                         <div class="feature-text"><h3>课程学习</h3><p>系统化课程管理，跟踪学习进度</p></div>
                     </div>
+                </div>
+                <div class="left-quote">
+                    <p>“让优质教育资源触手可及”</p>
                 </div>
             </div>
         </div>
@@ -362,12 +389,45 @@
                     }
                 }
 
-                <div class="card-foot">
-                    <span>© 2026 易课通 · 教学资源库</span>
-                </div>
             </div>
         </div>
     </div>
+    <footer class="footer">
+        <div class="footer__inner">
+            <div class="footer__brand">
+                <div class="footer__brand-top">
+                    <span class="brand__mark brand__mark--lg">易</span>
+                    <div>
+                        <strong>易课通 · 资源库</strong>
+                        <p>教学资源库</p>
+                    </div>
+                </div>
+                <p class="footer__tagline">汇聚课程、资源、实训，服务院校教学</p>
+            </div>
+            <div class="footer__grid">
+                <div class="footer__col">
+                    <h5>学习中心</h5>
+                    <a href="/student/courses">课程中心</a>
+                    <a href="/student/resources">资源库</a>
+                    <a href="/student/micro-majors">微专业</a>
+                    <a href="/student/practicums">实训项目</a>
+                </div>
+                <div class="footer__col">
+                    <h5>智能应用</h5>
+                    <a href="/ai/chat">AI 助手</a>
+                    <a href="/ai/lesson-plan">智能备课</a>
+                    <a href="/search">智能搜索</a>
+                </div>
+                <div class="footer__col">
+                    <h5>关于</h5>
+                    <a href="/">平台介绍</a>
+                    <a href="/">帮助中心</a>
+                    <a href="/">联系我们</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer__copy">&copy; 2026 易课通 · 资源库</div>
+    </footer>
 </div>
 <script>
 (function() {

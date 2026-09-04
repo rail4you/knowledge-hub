@@ -4,25 +4,30 @@
 }
 
 .login-page {
-  position: fixed;
-  inset: 0;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--kh-canvas, #f5f7fa);
-  z-index: 1000;
-  overflow: hidden;
+  overflow: auto;
 }
 
 // ── Header — 与首页 PortalHome 顶栏统一 ──
+// 首页 hero 卡片 1152 居中，两侧空白 (W-1152)/2；登录页保持相同：1152 居中
 .login-header {
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 0 32px;
-  height: 64px;
+  padding: 0 24px;
+  height: 52px;
   border-bottom: 1px solid #eef1f6;
   background: #fff;
   flex-shrink: 0;
+}
+
+@media (min-width: 1200px) {
+  .login-header {
+    padding: 0 calc((100% - 1152px) / 2);
+  }
 }
 
 .header-left {
@@ -40,15 +45,15 @@
 }
 
 .brand-mark {
-  width: 38px;
-  height: 38px;
-  border-radius: 9px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #1e6ce8;
   color: #fff;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -61,7 +66,7 @@
   line-height: 1.2;
 
   strong {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     color: #1f2d3d;
     letter-spacing: -0.3px;
@@ -82,9 +87,9 @@
   flex: 1;
 
   a {
-    padding: 8px 14px;
+    padding: 6px 12px;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     color: #5b6573;
     text-decoration: none;
@@ -207,25 +212,31 @@
 }
 
 // ── Body — 占满剩余高度的两栏 ──
+// 与首页 hero 1152 对齐：两侧空白 (W-1152)/2，内部紧凑
 .login-body {
   display: flex;
   flex: 1;
   min-height: 0;
-  padding: 20px;
-  gap: 20px;
+  max-width: 1152px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 12px 0 16px;
+  gap: 12px;
   background: var(--kh-canvas, #f5f7fa);
   overflow: hidden;
+  box-sizing: border-box;
 }
 
-// 左侧：修饰背景图 — 占比 40%
+// 左侧：修饰背景图 — 占比 40%（紧凑）
+// 两栏内部空白保持一致：均 20px，减少顶部无效空白
 .login-left {
   flex: 4;
-  border-radius: 16px;
+  border-radius: 12px;
   position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
-  padding: 40px 36px;
+  padding: 32px 28px;
   background:
     linear-gradient(rgba(13,27,48,0.82), rgba(13,27,48,0.92)),
     url('/assets/images/intro-bg_001.jpg') center/cover no-repeat,
@@ -258,7 +269,7 @@
 .left-inner {
   position: relative;
   z-index: 1;
-  max-width: 460px;
+  max-width: 440px;
 }
 
 // 标题图标不显示：隐藏左侧 badge 中的图标
@@ -266,26 +277,26 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 999px;
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.18);
   color: rgba(255,255,255,0.92);
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 500;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   backdrop-filter: blur(4px);
 
   .anticon {
-    display: none; // 隐藏标题图标
+    display: none;
   }
 }
 
 .left-title {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   color: #fff;
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   line-height: 1.15;
   letter-spacing: 0.01em;
 
@@ -295,16 +306,16 @@
 }
 
 .left-subtitle {
-  font-size: 14.5px;
+  font-size: 13.5px;
   color: rgba(255,255,255,0.88);
-  margin: 0 0 28px;
+  margin: 0 0 20px;
   line-height: 1.6;
 }
 
 .feature-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .feature-item {
@@ -332,6 +343,16 @@
     margin: 0;
     line-height: 1.4;
   }
+}
+
+.left-quote {
+  margin-top: 24px;
+  padding: 14px 18px;
+  border-left: 3px solid rgba(126,200,255,0.5);
+  background: rgba(255,255,255,0.06);
+  border-radius: 0 8px 8px 0;
+  p { margin: 0 0 4px; font-size: 13.5px; font-weight: 600; color: #fff; font-style: italic; }
+  span { font-size: 11px; color: rgba(255,255,255,0.6); }
 }
 
 .tenant-tabs {
@@ -413,19 +434,19 @@
   }
 }
 
-// 右侧：登录表单 — 占比 60%
+// 右侧：登录表单 — 占比 60%（与左侧内边距一致，紧凑专业）
 .login-right {
   flex: 6;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   position: relative;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
   border: 1px solid rgba(24,144,255,0.10);
   box-shadow: 0 1px 2px rgba(14,27,46,0.04);
-  padding: 32px 40px;
+  padding: 20px 24px;
 
   // 底部插画水印
   &::before {
@@ -458,19 +479,19 @@
 }
 
 .card-head {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .form-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--kh-ink, #1c2733);
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   letter-spacing: 0.01em;
 }
 
 .form-subtitle {
-  font-size: 13.5px;
+  font-size: 12.5px;
   color: var(--kh-muted, #5f6f81);
   margin: 0;
 }
@@ -478,16 +499,16 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 
   label {
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 500;
     color: var(--kh-ink-2, #46586a);
     display: flex;
@@ -496,17 +517,17 @@
 
     i {
       color: var(--kh-muted, #5f6f81);
-      font-size: 12px;
+      font-size: 11px;
     }
   }
 }
 
 .form-input {
   width: 100%;
-  padding: 11px 14px;
+  padding: 9px 12px;
   border: 1px solid var(--kh-line-2, #e7edf5);
   border-radius: var(--kh-r-control, 10px);
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--kh-ink, #1c2733);
   background: #fbfcfe;
   outline: none;
@@ -580,12 +601,12 @@
 
 .login-btn {
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   border: none;
   border-radius: var(--kh-r-control, 10px);
   background: var(--kh-accent, #1890ff);
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, transform 0.08s;
@@ -593,7 +614,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 2px;
   box-shadow: 0 8px 18px -8px rgba(24,144,255,0.55);
 
   &:hover:not(:disabled) {
@@ -618,10 +639,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid var(--kh-line-2, #e7edf5);
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--kh-muted, #5f6f81);
 
   a {
@@ -631,7 +652,21 @@
   }
 }
 
-// ── Responsive ──
+// ── Footer — 与首页一致 ──
+.footer { background: #1f2a44; color: rgba(255,255,255,0.7); padding: 28px 0 0; margin-top: 16px; }
+.footer__inner { max-width: 1152px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: 1.4fr 2fr; gap: 40px; }
+.footer__brand-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.footer__brand-top strong { display: block; font-size: 17px; font-weight: 700; color: #fff; }
+.footer__brand-top p { margin: 2px 0 0; font-size: 12px; color: rgba(255,255,255,0.55); }
+.footer .brand__mark--lg { background: rgba(255,255,255,0.1); width: 44px; height: 44px; font-size: 22px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; }
+.footer__tagline { margin: 10px 0 0; font-size: 12px; line-height: 1.55; color: rgba(255,255,255,0.5); max-width: 360px; }
+.footer__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+.footer__col h5 { font-size: 13px; font-weight: 600; color: #fff; margin: 0 0 12px; }
+.footer__col a { display: block; font-size: 12px; color: rgba(255,255,255,0.55); text-decoration: none; margin-bottom: 8px; }
+.footer__col a:hover { color: #fff; }
+.footer__copy { margin-top: 24px; padding: 14px 24px; text-align: center; font-size: 11px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.08); max-width: 1152px; margin-left: auto; margin-right: auto; }
+
+// ── Responsive — 与首页 860 断点对齐 ──
 @media (max-width: 960px) {
   .header-nav {
     display: none;
@@ -640,16 +675,20 @@
   .login-body {
     flex-direction: column;
     overflow-y: auto;
-    padding: 16px;
+    padding: 12px 16px;
+    gap: 12px;
+    max-width: none;
+    margin: 0;
   }
 
   .login-left {
-    min-height: 320px;
-    padding: 32px 24px;
+    min-height: 240px;
+    padding: 20px 20px;
+    border-radius: 12px;
   }
 
   .left-title {
-    font-size: 28px;
+    font-size: 22px;
   }
 
   .left-stats {
@@ -659,7 +698,8 @@
   .login-right {
     flex: none;
     width: 100%;
-    padding: 24px 20px;
+    padding: 20px 20px;
+    border-radius: 12px;
   }
 }
 

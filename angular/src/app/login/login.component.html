@@ -50,10 +50,6 @@
     <!-- 左侧：修饰背景图 + 平台介绍 -->
     <div class="login-left">
       <div class="left-inner">
-        <div class="left-badge">
-          <span nz-icon nzType="read" nzTheme="outline"></span>
-          智能化知识管理与学习平台
-        </div>
         <h1 class="left-title">
           易课通<br />
           <span>教学资源库</span>
@@ -90,8 +86,9 @@
             </div>
           </div>
         </div>
-
-
+        <div class="left-quote">
+          <p>“让优质教育资源触手可及”</p>
+        </div>
       </div>
     </div>
 
@@ -190,10 +187,43 @@
           </button>
         </form>
 
-        <div class="card-foot">
-          <span>© 2026 易课通 · 教学资源库</span>
-        </div>
       </div>
     </div>
   </div>
+  <footer class="footer">
+    <div class="footer__inner">
+      <div class="footer__brand">
+        <div class="footer__brand-top">
+          <span class="brand__mark brand__mark--lg">易</span>
+          <div>
+            <strong>易课通 · 资源库</strong>
+            <p>教学资源库</p>
+          </div>
+        </div>
+        <p class="footer__tagline">汇聚课程、资源、实训，服务院校教学</p>
+      </div>
+      <div class="footer__grid">
+        <div class="footer__col">
+          <h5>学习中心</h5>
+          <a routerLink="/student/courses">课程中心</a>
+          <a routerLink="/student/resources">资源库</a>
+          <a routerLink="/student/micro-majors">微专业</a>
+          <a routerLink="/student/practicums">实训项目</a>
+        </div>
+        <div class="footer__col">
+          <h5>智能应用</h5>
+          <a routerLink="/ai/chat">AI 助手</a>
+          <a routerLink="/ai/lesson-plan">智能备课</a>
+          <a routerLink="/search">智能搜索</a>
+        </div>
+        <div class="footer__col">
+          <h5>关于</h5>
+          <a routerLink="/">平台介绍</a>
+          <a routerLink="/">帮助中心</a>
+          <a routerLink="/">联系我们</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer__copy">&copy; 2026 易课通 · 资源库</div>
+  </footer>
 </div>
