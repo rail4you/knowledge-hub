@@ -279,10 +279,22 @@
   flex: 1;
   overflow: hidden;
   min-width: 0;
+  width: 100%;
 
   ::ng-deep .ant-table {
     table {
       table-layout: fixed !important;
+      width: 100%;
+    }
+
+    .ant-table-container {
+      width: 100%;
+    }
+
+    // 允许横向滚动而非隐藏列：侧边栏展开时容器变窄，靠滚动条保全所有列
+    .ant-table-content {
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
     }
 
     .ant-table-tbody > tr {
@@ -319,6 +331,8 @@
 
     .th-name {
       text-align: left;
+      // 标题列占比 32%，避免过宽挤压其他列，已在 nzWidth 中声明，此处兜底
+      max-width: 420px;
     }
 
     // 让资源名称列的单元格允许文字截断而非撑开
@@ -336,14 +350,14 @@
     max-width: 100%;
 
     .file-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 9px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
       display: grid;
       place-items: center;
       background: var(--kh-accent-soft);
       color: var(--kh-accent);
-      font-size: 17px;
+      font-size: 16px;
       flex-shrink: 0;
     }
 
@@ -369,9 +383,33 @@
     white-space: nowrap;
   }
 
-  // 资源名列：占满剩余宽度，不加 min-width 以免挤压固定列
+  // 资源名列：标题列已限宽至 32%，此处仅保留右侧呼吸间隙
   .td-name {
     padding-right: 16px !important;
+  }
+
+  .td-creator {
+    text-align: center;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .td-time {
+    text-align: center;
+    white-space: nowrap;
+    font-size: 13px;
+    color: var(--kh-ink-2);
+
+    span {
+      cursor: default;
+      border-bottom: 1px dashed transparent;
+      transition: border-color 0.15s;
+      &:hover {
+        border-bottom-color: var(--kh-line);
+      }
+    }
   }
 
   // 操作列：保证图标完整显示，不截断

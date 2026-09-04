@@ -574,6 +574,14 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     this.loadResourceStatistics(resource.id!);
   }
 
+  toggleSidebar() {
+    this.leftPanelVisible.update(v => !v);
+    // nz-table with table-layout:fixed + nzScroll caches column widths;
+    // container width changes with sidebar transition (0.2s), dispatch resize to force recalc
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 250);
+  }
+
   closeDrawer() {
     this.drawerVisible.set(false);
     this.resourceStatistics.set(null);

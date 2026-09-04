@@ -59,7 +59,7 @@
         <div *ngIf="leftPanelVisible()" class="sidebar-inner">
           <div class="sidebar-header">
             <h4>{{ '::Categories' | abpLocalization }}</h4>
-            <button nz-button nzType="text" nzSize="small" (click)="leftPanelVisible.set(false)">
+            <button nz-button nzType="text" nzSize="small" (click)="toggleSidebar()">
               <span nz-icon nzType="menu-fold"></span>
             </button>
           </div>
@@ -82,7 +82,7 @@
             <nz-empty *ngIf="categoryTreeNodes().length === 0" nzNotFoundContent=""></nz-empty>
           </div>
         </div>
-        <div *ngIf="!leftPanelVisible()" class="sidebar-collapsed-bar" (click)="leftPanelVisible.set(true)">
+        <div *ngIf="!leftPanelVisible()" class="sidebar-collapsed-bar" (click)="toggleSidebar()">
           <span nz-icon nzType="menu-unfold"></span>
         </div>
       </div>
@@ -152,17 +152,17 @@
             [nzFrontPagination]="false"
             (nzPageIndexChange)="onPageIndexChange($event)"
             nzSize="middle"
-            [nzScroll]="{ y: 'calc(100vh - 280px)' }"
+            [nzScroll]="{ x: '780px', y: 'calc(100vh - 280px)' }"
           >
             <thead>
               <tr>
-                <th class="th-name">{{ '::ResourceName' | abpLocalization }}</th>
-                <th nzWidth="84px" class="th-type">{{ '::ResourceType' | abpLocalization }}</th>
-                <th nzWidth="44px" class="th-version">{{ '::Version' | abpLocalization }}</th>
-                <th nzWidth="124px" class="th-status">{{ '::Status' | abpLocalization }}</th>
-                <th nzWidth="88px" class="th-creator">{{ '::Creator' | abpLocalization }}</th>
-                <th nzWidth="128px" class="th-time">{{ '::CreationTime' | abpLocalization }}</th>
-                <th nzWidth="118px" class="th-ops">{{ '::Actions' | abpLocalization }}</th>
+                <th nzWidth="32%" class="th-name">{{ '::ResourceName' | abpLocalization }}</th>
+                <th nzWidth="82px" class="th-type">{{ '::ResourceType' | abpLocalization }}</th>
+                <th nzWidth="62px" class="th-version">{{ '::Version' | abpLocalization }}</th>
+                <th nzWidth="112px" class="th-status">{{ '::Status' | abpLocalization }}</th>
+                <th nzWidth="98px" class="th-creator">{{ '::Creator' | abpLocalization }}</th>
+                <th nzWidth="106px" class="th-time">{{ '::CreationTime' | abpLocalization }}</th>
+                <th nzWidth="110px" class="th-ops">{{ '::Actions' | abpLocalization }}</th>
               </tr>
             </thead>
             <tbody>
@@ -183,8 +183,13 @@
                     {{ getStatusName(item.status) }}
                   </nz-tag>
                 </td>
-                <td>{{ item.creatorName }}</td>
-                <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+                <td class="td-creator" [title]="item.creatorName || ''">{{ item.creatorName }}</td>
+                <td class="td-time">
+                  <span
+                    nz-tooltip
+                    [nzTooltipTitle]="(item.creationTime | date:'yyyy-MM-dd HH:mm:ss') || ''"
+                  >{{ item.creationTime | date:'yyyy-MM-dd' }}</span>
+                </td>
                 <td class="td-ops" (click)="$event.stopPropagation()">
                   <span class="row-ops">
                     <button
