@@ -245,3 +245,266 @@ app-footer .lpx-footbar,
   background-color: #ffffff;
   border-top: 1px solid var(--kh-line-2);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   侧边栏折叠按钮 + 折叠后子菜单弹出
+   ─────────────────────────────────────────────
+   三个优化点：
+   1) 折叠按钮 (menu-collapse-icon) 始终可见，位置自适应
+   2) 折叠后禁用 hover 展开子菜单（不再因悬停/当前路由自动展开）
+   3) 点击父菜单图标后在右侧弹出子菜单浮层（带文字）
+   ═══════════════════════════════════════════════════════════════ */
+.lpx-sidebar .lpx-logo-container .menu-collapse-icon {
+  /* 始终贴在 logo 容器右边缘，展开/折叠两状态均可见 */
+  left: auto;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4em;
+  color: #c5d2e5;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  z-index: 5;
+  /* 仅过渡背景/颜色，不要过渡 transform，避免悬浮时出现尺寸跳变 */
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.lpx-sidebar .lpx-logo-container .menu-collapse-icon:hover {
+  color: #fff;
+  background: rgba(24, 144, 255, 0.45);
+}
+
+/* 折叠后折叠按钮的 icon 需要朝向切换：
+   展开状态 = 左指 (收起)，折叠状态 = 右指 (展开)
+   同时保留 translateY(-50%) 以维持垂直居中 */
+#lpx-wrapper.hover-trigger .lpx-sidebar .lpx-logo-container .menu-collapse-icon {
+  transform: translateY(-50%) scaleX(-1);
+  background: rgba(24, 144, 255, 0.35);
+  color: #fff;
+}
+
+#lpx-wrapper.hover-trigger .lpx-sidebar .lpx-logo-container .menu-collapse-icon:hover {
+  background: rgba(24, 144, 255, 0.6);
+}
+
+/* 折叠态下 logo 容器固定 72px */
+.hover-trigger .lpx-sidebar-container:not(:hover) .lpx-logo-container,
+.hover-trigger .lpx-sidebar-container:hover .lpx-logo-container,
+#lpx-wrapper.hover-trigger .lpx-sidebar-container:not(:hover) .lpx-logo-container,
+#lpx-wrapper.hover-trigger .lpx-sidebar-container:hover .lpx-logo-container {
+  width: 72px !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
+}
+
+/* 禁用 hover 自动展开：折叠后保持 72px，让用户能稳定点击折叠按钮 */
+.hover-trigger .lpx-sidebar-container:hover,
+#lpx-wrapper.hover-trigger .lpx-sidebar-container:hover {
+  min-width: 72px !important;
+  max-width: 72px !important;
+}
+
+.hover-trigger .lpx-sidebar-container:hover .lpx-sidebar,
+.hover-trigger .lpx-sidebar-container:hover .lpx-sidebar .lpx-nav,
+#lpx-wrapper.hover-trigger .lpx-sidebar-container:hover .lpx-sidebar,
+#lpx-wrapper.hover-trigger .lpx-sidebar-container:hover .lpx-sidebar .lpx-nav {
+  min-width: 72px !important;
+  max-width: 72px !important;
+}
+
+/* 允许折叠态下子菜单弹层超出侧边栏边界 */
+.hover-trigger .lpx-sidebar-container,
+#lpx-wrapper.hover-trigger .lpx-sidebar-container,
+.hover-trigger .lpx-sidebar,
+#lpx-wrapper.hover-trigger .lpx-sidebar,
+.hover-trigger .lpx-nav,
+#lpx-wrapper.hover-trigger .lpx-nav {
+  overflow: visible !important;
+}
+
+/* ── 折叠态：父菜单链接作为浮层定位上下文 ── */
+.hover-trigger .lpx-nav-menu .lpx-menu-item-link {
+  position: relative;
+  z-index: 1;
+}
+
+/* 让 lpx-sub-navbar 成为定位上下文（否则 offsetParent 是 .lpx-sidebar） */
+.hover-trigger lpx-sub-navbar {
+  position: relative !important;
+  display: block !important;
+}
+
+/* ── 折叠态：强制 .lpx-inner-menu 作为右侧弹出子菜单 ──
+   覆盖框架的：
+   a) .lpx-inner-menu.collapsed { display: none } — 即使父项 expanded 也不内联显示
+   b) .hover-trigger .lpx-sidebar-container:not(:hover) .hidden-in-hover-trigger { display: none }
+      — 折叠时让 .lpx-inner-menu 表现为“弹层”，默认隐藏、点击后弹出 */
+.hover-trigger .lpx-inner-menu,
+#lpx-wrapper.hover-trigger .lpx-inner-menu {
+  /* 1) 覆盖内联块默认行为 */
+  display: block !important;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+
+  /* 2) 弹层定位：贴在父链接右侧，margin 仅装饰用（不影响可点击区域） */
+  position: absolute !important;
+  left: 100% !important;
+  top: -2px !important;
+  margin-left: 10px !important;
+
+  /* 3) 弹层外观 */
+  min-width: 220px;
+  max-width: 280px;
+  padding: 8px 0;
+  background: linear-gradient(180deg, #0e1c31 0%, #0b1729 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+  transform: translateX(-6px);
+}
+
+/* 3.5) 用伪元素补齐 link → popup 之间的 10px 间隙，
+   使鼠标从父项移向弹层时不会出现“脱目标”关闭。 */
+.hover-trigger .lpx-menu-item-link.expanded::after,
+#lpx-wrapper.hover-trigger .lpx-menu-item-link.expanded::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 14px;  /* 覆盖 link 与 popup 之间的 10px 间隙 */
+  z-index: 1;
+}
+
+/* 4) 父菜单 .expanded 后，仅在“被点击/被聚焦”时才显示弹层
+   框架默认会在当前路由所在分组上自动 .expanded（hover 也会出现），
+   在折叠态下变为右侧弹层会干扰用户。这里仅在父项 :focus / :focus-within / :hover 时才弹出 */
+.hover-trigger .lpx-menu-item-link.expanded:focus + .lpx-inner-menu,
+.hover-trigger .lpx-menu-item-link.expanded:focus-within + .lpx-inner-menu,
+.hover-trigger .lpx-menu-item-link.expanded:hover + .lpx-inner-menu,
+.hover-trigger .lpx-inner-menu:hover,
+#lpx-wrapper.hover-trigger .lpx-menu-item-link.expanded:focus + .lpx-inner-menu,
+#lpx-wrapper.hover-trigger .lpx-menu-item-link.expanded:focus-within + .lpx-inner-menu,
+#lpx-wrapper.hover-trigger .lpx-menu-item-link.expanded:hover + .lpx-inner-menu,
+#lpx-wrapper.hover-trigger .lpx-inner-menu:hover {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+/* 5) 弹层内部恢复文字/箭头（覆盖 .hidden-in-hover-trigger） */
+.hover-trigger .lpx-inner-menu .lpx-menu-item-text,
+#lpx-wrapper.hover-trigger .lpx-inner-menu .lpx-menu-item-text,
+.hover-trigger .lpx-inner-menu .dd-icon,
+#lpx-wrapper.hover-trigger .lpx-inner-menu .dd-icon {
+  display: inline-block !important;
+}
+
+/* 5.5) 折叠态下父项的 chevron 需要可见（与展开状态同位置），
+       提示父项可点击展开弹层 */
+.hover-trigger .lpx-menu-item-link .dd-icon,
+#lpx-wrapper.hover-trigger .lpx-menu-item-link .dd-icon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+}
+
+/* 6) 弹层里的子菜单项加些内边距让文字间距更舒适 */
+.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link,
+#lpx-wrapper.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link {
+  padding: 0 16px !important;
+  margin: 2px 8px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  border-radius: 8px !important;
+  font-size: 13.5px !important;
+  color: #d4dde9 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  white-space: nowrap;
+}
+
+.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link:hover,
+#lpx-wrapper.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link:hover {
+  background: rgba(24, 144, 255, 0.22) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link.selected,
+#lpx-wrapper.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-link.selected {
+  background: linear-gradient(90deg, rgba(24, 144, 255, 0.34), rgba(24, 144, 255, 0.12)) !important;
+  color: #fff !important;
+}
+
+/* 7) 弹层里的子菜单项 icon 着色 */
+.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-icon .lpx-icon,
+#lpx-wrapper.hover-trigger .lpx-inner-menu .lpx-inner-menu-item .lpx-menu-item-icon .lpx-icon {
+  color: #8fa2bb;
+  width: 20px;
+  font-size: 14px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   折叠态父项图标的尺寸与箭头方向
+   ─────────────────────────────────────────────
+   框架中 .lpx-menu-item-link .lpx-menu-item-icon .lpx-icon 有 width:36px，
+   远大于 16px 字体尺寸的图标本身，产生右侧空白。
+   折叠后 .dd-icon（chveronUp/Down）被隐藏。这里重新以
+   “展开子菜单的 chevron（已隐藏但作为尺寸基准）”为参照调齐：
+   ─ 父项图标容器宽度 ＝ chevron 宽度 ＝ 24px（居中）
+   ─ chevron 旋转 90° 指向右侧（提示弹层在右侧）
+   ─ 不再过渡 transform，避免 hover 出现尺寸跳变
+   ═══════════════════════════════════════════════════════════════ */
+.hover-trigger .lpx-nav-menu .lpx-menu-item-link .lpx-menu-item-icon,
+#lpx-wrapper.hover-trigger .lpx-nav-menu .lpx-menu-item-link .lpx-menu-item-icon {
+  /* 框架内 .lpx-menu-item-link 为 display:flex，这里 override 让 icon 容器不再撑满 */
+  width: 24px;
+  min-width: 24px;
+}
+
+.hover-trigger .lpx-nav-menu .lpx-menu-item-link .lpx-menu-item-icon .lpx-icon,
+#lpx-wrapper.hover-trigger .lpx-nav-menu .lpx-menu-item-link .lpx-menu-item-icon .lpx-icon {
+  width: 24px;
+  min-width: 24px;
+  font-size: 16px;
+  /* 不要走 transition: all，否则偶发会过渡 width/transform，导致 hover 出现“尺寸抖动” */
+  transition: color 0.18s ease, opacity 0.18s ease;
+}
+
+/* 折叠态父项的右侧 chevron 旋转为水平指向右侧，提示“右侧弹层” */
+.hover-trigger .lpx-menu-item-link .dd-icon,
+#lpx-wrapper.hover-trigger .lpx-menu-item-link .dd-icon {
+  right: 4px;
+  width: 24px;
+  /* chevronDown (v) + rotate(-90°) = > (右)
+     chevronUp   (^) + rotate( 90°) = > (右)
+     两者统一指向右侧，仅背景色区分展开/收起 */
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: color 0.18s ease, opacity 0.18s ease;
+}
+
+.hover-trigger .lpx-menu-item-link.expanded .dd-icon,
+#lpx-wrapper.hover-trigger .lpx-menu-item-link.expanded .dd-icon {
+  /* 已展开状态：使用 rotate(90°) 让 chevronUp (^) 也指向右侧 */
+  transform: rotate(90deg);
+  color: #4da7ff;
+  opacity: 1;
+}
+
+/* 折叠态隐藏顶层父项的文字标签（即使 hover 也不显示）。
+   弹层 (.lpx-inner-menu) 内的文字不受影响，仍保留。 */
+.hover-trigger .lpx-nav-menu > li.outer-menu-item > lpx-sub-navbar > a.lpx-menu-item-link > .lpx-menu-item-text,
+#lpx-wrapper.hover-trigger .lpx-nav-menu > li.outer-menu-item > lpx-sub-navbar > a.lpx-menu-item-link > .lpx-menu-item-text {
+  display: none !important;
+}
