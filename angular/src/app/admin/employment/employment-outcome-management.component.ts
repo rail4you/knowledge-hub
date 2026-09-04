@@ -13,6 +13,8 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import {
   CreateUpdateEmploymentOutcomeDto,
@@ -43,6 +45,8 @@ import {
     NzSwitchModule,
     NzTableModule,
     NzTagModule,
+    NzTooltipModule,
+    NzEmptyModule,
     NzUploadModule,
   ],
   templateUrl: './employment-outcome-management.component.html',

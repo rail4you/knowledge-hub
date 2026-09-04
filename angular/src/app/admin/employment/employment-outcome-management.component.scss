@@ -159,6 +159,11 @@
     white-space: nowrap;
     &::before { display: none !important; }
   }
+  // 名称列（第1列）左对齐，其余居中
+  .ant-table-thead > tr > th.col-student {
+    text-align: left !important;
+    padding-left: 18px !important;
+  }
   .ant-table-tbody > tr > td {
     padding: 12px 14px !important;
     font-size: 14px;
@@ -166,6 +171,10 @@
     border-bottom: 1px solid #f5f5f5 !important;
     vertical-align: middle;
     text-align: center;
+  }
+  .ant-table-tbody > tr > td.col-student {
+    text-align: left !important;
+    padding-left: 18px !important;
   }
   .ant-table-tbody > tr:nth-child(even) > td {
     background: #fafbfc;
@@ -184,63 +193,52 @@
   }
 }
 
-// ── student cells ─────────────────────────────────────────
+// ── student cells (left aligned) ──────────────────────────
 .student-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--kh-ink);
-  margin-bottom: 2px;
-}
-.student-id {
-  font-size: 12px;
-  color: #8c8c8c;
-}
-
-// ── company cell ──────────────────────────────────────────
-.company-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.company-info { text-align: left; }
-.company-name {
-  font-size: 14px;
-  color: var(--kh-ink);
-  margin-bottom: 2px;
-  font-weight: 600;
-}
-.job-name {
-  font-size: 12px;
-  color: #8c8c8c;
-}
-.cell-tags {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: flex-end;
-}
-.from-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  background: var(--kh-accent-ghost);
-  color: var(--kh-accent);
-  white-space: nowrap;
-  border: 1px solid var(--kh-line);
-}
-.main-tag {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  font-size: 11px;
-  color: #faad14;
+  gap: 6px;
+  font-size: 14px;
   font-weight: 600;
+  color: var(--kh-ink);
+  max-width: 100%;
+}
+.student-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 140px;
+}
+.primary-star {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: #faad14;
   svg { width: 12px; height: 12px; fill: #faad14; }
 }
+.from-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kh-accent);
+  flex-shrink: 0;
+}
+
+// ── employer / job cells (split columns) ──────────────────
+.employer-name,
+.job-title-cell {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-size: 14px;
+  color: var(--kh-ink);
+}
+.employer-name { font-weight: 600; }
+.job-title-cell { font-weight: 400; color: var(--kh-muted); }
 
 // ── status tags ───────────────────────────────────────────
 .status-tag {
@@ -256,45 +254,62 @@
   &.signed { background: #722ed1; }
 }
 
-// ── info/time cells ───────────────────────────────────────
-.info-cell {
+// ── info/time cells (single main value + tooltip) ─────────
+.meta-main,
+.time-main {
+  display: inline-block;
   font-size: 13px;
-  color: var(--kh-muted);
-  line-height: 1.5;
-  .dot { color: #d9d9d9; margin: 0 4px; }
+  color: var(--kh-ink);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: default;
+  border-bottom: 1px dashed transparent;
+  &:hover { border-bottom-color: #d9d9d9; }
+}
+.time-main { color: var(--kh-muted); }
+.tooltip-detail {
+  line-height: 1.7;
+  font-size: 12px;
 }
 .muted {
   color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
   margin-top: 2px;
 }
-.time-cell {
-  font-size: 12px;
-  color: #8c8c8c;
-  line-height: 1.6;
-  .entry-time { display: block; }
-  .confirm-time { display: block; }
-}
 
-// ── operations ────────────────────────────────────────────
+// ── operations (always 3 links, disabled grey but aligned) ─
 .op-links {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
   justify-content: center;
-  flex-wrap: wrap;
+  gap: 0;
+  font-size: 13px;
+  white-space: nowrap;
 }
 .op-link {
   color: var(--kh-accent);
   cursor: pointer;
   transition: color 0.2s;
   text-decoration: none;
+  padding: 0 6px;
+  &.main-active { color: #faad14; }
   &:hover { text-decoration: underline; }
-  &.main { color: #faad14; }
   &.delete { color: var(--kh-bad); }
+  &.disabled {
+    color: #bfbfbf !important;
+    cursor: not-allowed;
+    pointer-events: none;
+    text-decoration: none;
+  }
 }
-.op-sep { color: #d9d9d9; }
+.op-sep {
+  color: #d9d9d9;
+  padding: 0 2px;
+  user-select: none;
+}
 
 // ── legacy helpers kept for modals ────────────────────────
 .toolbar,
