@@ -9,7 +9,6 @@
       <div class="hero__stats">
         @for (s of stats(); track s.label) {
           <div class="stat">
-            <span class="stat__icon" [style.background]="s.color"><span nz-icon [nzType]="s.icon" nzTheme="outline"></span></span>
             <div class="stat__val"><b>{{ s.value }}</b><small>{{ s.suffix }}</small></div>
             <div class="stat__lbl">{{ s.label }}</div>
           </div>

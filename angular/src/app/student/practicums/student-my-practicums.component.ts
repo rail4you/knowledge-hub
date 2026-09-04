@@ -160,9 +160,9 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
         smooth: true,
         symbolSize: 7,
         data: values,
-        lineStyle: { width: 3, color: '#0284c7' },
-        itemStyle: { color: '#0284c7' },
-        areaStyle: { color: 'rgba(2,132,199,0.12)' },
+        lineStyle: { width: 3, color: '#2563eb' },
+        itemStyle: { color: '#2563eb' },
+        areaStyle: { color: 'rgba(37,99,235,0.12)' },
         label: { show: true, formatter: '{c}%' },
       }],
     });

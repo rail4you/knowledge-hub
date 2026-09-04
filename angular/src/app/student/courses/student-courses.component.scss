@@ -47,7 +47,7 @@
 
   &:focus-within {
     border-color: ds.$student-primary;
-    box-shadow: 0 0 0 3px rgba(ds.$student-primary, 0.08);
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.08);
   }
 
   &__icon {
@@ -94,18 +94,18 @@
     padding: 0 18px;
     border: 0;
     border-radius: 999px;
-    background: #1e6ce8;
+    background: ds.$student-primary;
     color: #fff;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(30, 108, 232, 0.24);
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.24);
     transition: all 0.2s ease;
 
     &:hover {
-      background: #0c4cb8;
+      background: ds.$student-primary-dark;
       transform: translateY(-1px);
-      box-shadow: 0 8px 18px rgba(30, 108, 232, 0.32);
+      box-shadow: 0 8px 18px rgba(15, 118, 110, 0.32);
     }
   }
 }
@@ -147,7 +147,7 @@
     border-color: var(--chip-color);
     background: var(--chip-color);
     color: #fff;
-    box-shadow: 0 4px 12px rgba(30, 108, 232, 0.2);
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);
 
     span[nz-icon] {
       color: #fff;
@@ -280,9 +280,9 @@
   }
 
   &.is-active {
-    background: #1e6ce8;
+    background: ds.$student-primary;
     color: #fff;
-    box-shadow: 0 4px 10px rgba(30, 108, 232, 0.24);
+    box-shadow: 0 4px 10px rgba(15, 118, 110, 0.24);
   }
 }
 
@@ -545,15 +545,15 @@
 
   &--primary {
     flex: 1.6;
-    background: #1e6ce8;
+    background: ds.$student-primary;
     border-color: transparent;
     color: #fff;
-    box-shadow: 0 4px 10px rgba(30, 108, 232, 0.2);
+    box-shadow: 0 4px 10px rgba(15, 118, 110, 0.2);
 
     &:hover:not([disabled]) {
-      background: #0c4cb8;
+      background: ds.$student-primary-dark;
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(30, 108, 232, 0.3);
+      box-shadow: 0 6px 16px rgba(15, 118, 110, 0.3);
       color: #fff;
     }
 
@@ -682,7 +682,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #1e6ce8;
+  background: ds.$student-primary;
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -715,16 +715,16 @@
   gap: 12px;
   padding: 14px 16px;
   border-radius: ds.$student-radius-lg;
-  background: #1e6ce8;
+  background: ds.$student-primary;
   color: #fff;
   text-decoration: none;
-  box-shadow: 0 8px 20px rgba(30, 108, 232, 0.24);
+  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.24);
   transition: all 0.2s ease;
 
   &:hover {
-    background: #0c4cb8;
+    background: ds.$student-primary-dark;
     transform: translateY(-2px);
-    box-shadow: 0 12px 24px rgba(30, 108, 232, 0.32);
+    box-shadow: 0 12px 24px rgba(15, 118, 110, 0.32);
   }
 
   &__icon {

@@ -40,11 +40,10 @@ export class StudentAgentTaskListComponent implements OnInit {
 
   coverGradient(task: StudentAgentTask): string {
     const palettes = [
-      '#1e6ce8',
-      '#0c4cb8',
       '#2563eb',
-      '#0891b2',
-      '#0284c7',
+      '#1d4ed8',
+      '#3b82f6',
+      '#0ea5e9',
     ];
     const key = task.teachingAgentName || task.title || '';
     let hash = 0;

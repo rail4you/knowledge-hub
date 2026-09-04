@@ -22,21 +22,11 @@
 /* =================== PAGE HERO =================== */
 .page-hero {
   position: relative;
-  border-radius: ds.$student-radius-xl;
-  overflow: hidden;
-  background: #1e6ce8;
-  color: #fff;
-  box-shadow: 0 20px 40px rgba(30, 108, 232, 0.18);
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.14) 0%, transparent 50%),
-      radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
-    pointer-events: none;
-  }
+  border-radius: ds.$student-radius-lg;
+  background: #fff;
+  color: ds.$student-text;
+  border: 1px solid ds.$student-border-soft;
+  box-shadow: ds.$student-shadow-soft;
 }
 
 .page-hero__inner {
@@ -54,19 +44,15 @@
 }
 
 .page-hero__title {
-  @include ds.section-heading(28px);
-  color: #fff;
+  @include ds.section-heading(24px);
+  color: ds.$student-text;
   margin: 0 0 8px;
   letter-spacing: -0.4px;
-
-  &::before {
-    display: none;
-  }
 }
 
 .page-hero__desc {
   margin: 0;
-  color: rgba(255, 255, 255, 0.82);
+  color: ds.$student-text-muted;
   font-size: 14px;
   line-height: 1.6;
 }
@@ -79,38 +65,35 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 42px;
-  padding: 0 20px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  height: 38px;
+  padding: 0 18px;
+  border: 1px solid ds.$student-border;
   border-radius: ds.$student-radius;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
+  background: #fff;
+  color: ds.$student-text-muted;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  backdrop-filter: blur(6px);
   transition: all 0.2s ease;
 
   span[nz-icon] {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.24);
-    border-color: rgba(255, 255, 255, 0.55);
-    transform: translateY(-1px);
+    background: ds.$student-surface-soft;
+    color: ds.$student-primary;
+    border-color: ds.$student-primary;
   }
 
   &--primary {
-    background: #fff;
-    color: ds.$student-primary;
+    background: ds.$student-primary;
+    color: #fff;
     border-color: transparent;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
 
     &:hover {
-      background: #f8fbff;
-      border-color: transparent;
-      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
+      background: ds.$student-primary-dark;
+      color: #fff;
     }
   }
 }
@@ -119,35 +102,33 @@
   position: relative;
   display: flex;
   align-items: center;
-  padding: 12px 36px 18px;
+  padding: 0 36px 18px;
   z-index: 1;
 }
 
 .stat-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding: 0 14px;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(6px);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 13px;
+  background: ds.$student-surface-soft;
+  color: ds.$student-text-muted;
+  font-size: 12px;
 
   strong {
-    color: #fff;
-    font-size: 16px;
+    color: ds.$student-primary;
+    font-size: 15px;
     font-weight: 700;
     margin: 0 2px;
   }
 
   &__dot {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: #93c5fd;
-    box-shadow: 0 0 6px rgba(147, 197, 253, 0.6);
+    background: ds.$student-primary;
   }
 }
 
@@ -233,8 +214,8 @@
     }
   }
 
-  &.type-0 .resource-card__cover { background: #1e6ce8; }
-  &.type-1 .resource-card__cover { background: #1e6ce8; }
+  &.type-0 .resource-card__cover { background: #1e6ce8; }.type-0 .resource-card__cover { background: #0f766e; }
+  &.type-1 .resource-card__cover { background: #1e6ce8; }.type-1 .resource-card__cover { background: #0ea5e9; }
   &.type-2 .resource-card__cover { background: #059669; }
   &.type-3 .resource-card__cover { background: #10b981; }
   &.type-4 .resource-card__cover { background: #0284c7; }
@@ -387,7 +368,7 @@
     font-size: 11px;
   }
 
-  &--0 { background: rgba(30, 108, 232, 0.1); color: #1e6ce8; }
+  &--0 { background: rgba(15, 118, 110, 0.1); color: #0f766e; }
   &--1 { background: rgba(124, 58, 237, 0.1); color: #7c3aed; }
   &--2 { background: rgba(245, 158, 11, 0.12); color: #d97706; }
   &--3 { background: rgba(16, 185, 129, 0.12); color: #059669; }
@@ -505,7 +486,7 @@
   }
 
   &:hover {
-    background: #e8f0fe;
+    background: #ecfdf5;
     color: ds.$student-primary;
   }
 

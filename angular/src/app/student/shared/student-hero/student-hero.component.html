@@ -16,30 +16,12 @@
     </div>
 
     <div class="student-hero__stats">
-      <div class="hero-stats-card">
-        <h3 class="hero-stats-card__title">
-          <span class="hero-stats-card__bar" aria-hidden="true"></span>
-          数据总览
-        </h3>
-        <div class="hero-stats-grid">
-          @for (s of stats(); track s.label) {
-            <div class="hero-stat-cell">
-              <span class="hero-stat-cell__icon" [style.background]="s.color">
-                <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
-              </span>
-              <div class="hero-stat-cell__body">
-                <div class="hero-stat-cell__value">
-                  <strong>{{ s.value | number }}</strong>
-                  @if (s.suffix) {
-                    <span class="hero-stat-cell__suffix">{{ s.suffix }}</span>
-                  }
-                </div>
-                <span class="hero-stat-cell__label">{{ s.label }}</span>
-              </div>
-            </div>
-          }
+      @for (s of stats(); track s.label) {
+        <div class="stat">
+          <div class="stat__val"><b>{{ s.value | number }}</b>@if (s.suffix) {<small>{{ s.suffix }}</small>}</div>
+          <div class="stat__lbl">{{ s.label }}</div>
         </div>
-      </div>
+      }
     </div>
   </div>
 </section>

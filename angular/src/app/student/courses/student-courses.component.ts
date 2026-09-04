@@ -102,14 +102,14 @@ export class StudentCoursesComponent implements OnInit {
   });
 
   readonly stats = signal<StatItem[]>([
-    { label: '已选课程', value: 0, suffix: '门', icon: 'book', color: '#1e6ce8' },
-    { label: '学习中', value: 0, suffix: '门', icon: 'play-circle', color: '#06b6d4' },
-    { label: '已完成', value: 0, suffix: '门', icon: 'check-circle', color: '#10b981' },
-    { label: '学习进度', value: 0, suffix: '%', icon: 'rise', color: '#0c4cb8' },
+    { label: '已选课程', value: 0, suffix: '门', icon: 'book', color: '#0f766e' },
+    { label: '学习中', value: 0, suffix: '门', icon: 'play-circle', color: '#14b8a6' },
+    { label: '已完成', value: 0, suffix: '门', icon: 'check-circle', color: '#16a34a' },
+    { label: '学习进度', value: 0, suffix: '%', icon: 'rise', color: '#0d5e56' },
   ]);
 
   readonly majors = signal<MajorChip[]>([
-    { id: null, name: '全部专业', icon: 'appstore', color: '#1e6ce8' },
+    { id: null, name: '全部专业', icon: 'appstore', color: '#0f766e' },
   ]);
 
   readonly difficulties: DifficultyChip[] = [
@@ -128,11 +128,11 @@ export class StudentCoursesComponent implements OnInit {
 
   /** 热门课程（基于已选学生数排序，mock） */
   readonly hotCourses = signal<HotCourse[]>([
-    { rank: 1, title: 'Python 程序设计基础', students: 2840, color: '#1e6ce8' },
-    { rank: 2, title: '高等数学（上）', students: 2654, color: '#0c4cb8' },
-    { rank: 3, title: '大学英语（一）', students: 2320, color: '#0891b2' },
-    { rank: 4, title: '计算机网络原理', students: 1987, color: '#059669' },
-    { rank: 5, title: '机械制图与 CAD', students: 1854, color: '#0284c7' },
+    { rank: 1, title: 'Python 程序设计基础', students: 2840, color: '#0f766e' },
+    { rank: 2, title: '高等数学（上）', students: 2654, color: '#0d5e56' },
+    { rank: 3, title: '大学英语（一）', students: 2320, color: '#14b8a6' },
+    { rank: 4, title: '计算机网络原理', students: 1987, color: '#16a34a' },
+    { rank: 5, title: '机械制图与 CAD', students: 1854, color: '#0ea5e9' },
   ]);
 
   ngOnInit(): void {
@@ -210,10 +210,10 @@ export class StudentCoursesComponent implements OnInit {
     );
 
     this.stats.set([
-      { label: '已选课程', value: totalCourses, suffix: '门', icon: 'book', color: '#1e6ce8' },
-      { label: '学习中', value: inProgress, suffix: '门', icon: 'play-circle', color: '#06b6d4' },
-      { label: '已完成', value: completed, suffix: '门', icon: 'check-circle', color: '#10b981' },
-      { label: '学习进度', value: avgProgress, suffix: '%', icon: 'rise', color: '#0c4cb8' },
+      { label: '已选课程', value: totalCourses, suffix: '门', icon: 'book', color: '#0f766e' },
+      { label: '学习中', value: inProgress, suffix: '门', icon: 'play-circle', color: '#14b8a6' },
+      { label: '已完成', value: completed, suffix: '门', icon: 'check-circle', color: '#16a34a' },
+      { label: '学习进度', value: avgProgress, suffix: '%', icon: 'rise', color: '#0d5e56' },
     ]);
   }
 
@@ -224,8 +224,8 @@ export class StudentCoursesComponent implements OnInit {
         map.set(c.majorName, c.majorId);
       }
     });
-    const colorPalette = ['#06b6d4', '#10b981', '#0c4cb8', '#22c55e', '#14b8a6', '#3b82f6'];
-    const chips: MajorChip[] = [{ id: null, name: '全部专业', icon: 'appstore', color: '#1e6ce8' }];
+    const colorPalette = ['#0f766e', '#14b8a6', '#0d5e56', '#16a34a', '#0ea5e9', '#8b5cf6'];
+    const chips: MajorChip[] = [{ id: null, name: '全部专业', icon: 'appstore', color: '#0f766e' }];
     let i = 0;
     Array.from(map.entries()).slice(0, 6).forEach(([name, id]) => {
       chips.push({ id, name, icon: 'book', color: colorPalette[i % colorPalette.length] });
@@ -303,14 +303,14 @@ export class StudentCoursesComponent implements OnInit {
 
   gradientByKey(primary: string, secondary: string): string {
     const palettes = [
-      '#1e6ce8',
-      '#0c4cb8',
-      '#2563eb',
-      '#0891b2',
-      '#0284c7',
+      '#0f766e',
+      '#0d5e56',
+      '#14b8a6',
+      '#16a34a',
+      '#0ea5e9',
       '#059669',
       '#0d9488',
-      '#16a34a',
+      '#d97706',
     ];
     const key = (primary || 'x') + (secondary || '');
     let hash = 0;
@@ -330,7 +330,7 @@ export class StudentCoursesComponent implements OnInit {
   }
 
   difficultyColor(d: number | null | undefined): string {
-    const colors = ['#34d399', '#22c55e', '#3b82f6', '#1e6ce8', '#0c4cb8'];
+    const colors = ['#34d399', '#22c55e', '#0f766e', '#0d5e56', '#14b8a6'];
     return colors[(d || 1) - 1] || '#94a3b8';
   }
 

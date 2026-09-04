@@ -76,10 +76,10 @@ export class StudentPracticumsComponent implements OnInit {
 
   coverGradient(item: PracticumProjectDto): string {
     const palettes = [
-      '#0284c7',
       '#2563eb',
-      '#1e6ce8',
       '#1d4ed8',
+      '#3b82f6',
+      '#0ea5e9',
     ];
     const key = item.title || item.id || '';
     let hash = 0;

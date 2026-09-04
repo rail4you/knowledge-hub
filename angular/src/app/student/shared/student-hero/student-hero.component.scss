@@ -2,48 +2,15 @@
 
 .student-hero {
   position: relative;
-  border-radius: ds.$student-radius-xl;
-  overflow: hidden;
-  background: #1e6ce8;
-  color: #fff;
-  box-shadow: 0 20px 40px rgba(30, 108, 232, 0.18);
+  border-radius: ds.$student-radius-lg;
+  background: #fff;
+  color: ds.$student-text;
+  border: 1px solid ds.$student-border-soft;
+  box-shadow: ds.$student-shadow-soft;
 }
 
 .student-hero__bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.student-hero__shape {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-
-  &--1 {
-    width: 300px;
-    height: 300px;
-    top: -110px;
-    right: -70px;
-  }
-
-  &--2 {
-    width: 160px;
-    height: 160px;
-    bottom: -60px;
-    left: 30%;
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  &--3 {
-    width: 90px;
-    height: 90px;
-    top: 40%;
-    left: 45%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.05);
-  }
+  display: none;
 }
 
 .student-hero__inner {
@@ -52,8 +19,7 @@
   display: flex;
   align-items: stretch;
   gap: 28px;
-  min-height: 190px;
-  padding: 30px 34px;
+  padding: 28px 30px;
 }
 
 /* ---- 左侧标题 ---- */
@@ -63,120 +29,55 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
+  padding-right: 20px;
 }
 
 .student-hero__title {
   margin: 0;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   line-height: 1.3;
-  letter-spacing: -0.01em;
-  text-wrap: balance;
-  color: #fff;
+  color: ds.$student-text;
 }
 
 .student-hero__desc {
   margin: 0;
   max-width: 56ch;
-  color: rgba(255, 255, 255, 0.86);
+  color: ds.$student-text-muted;
   font-size: 14px;
-  line-height: 1.9;
+  line-height: 1.8;
 }
 
-/* ---- 右侧数据总览 ---- */
+/* ---- 右侧数据总览（纯文本风格）---- */
 .student-hero__stats {
   display: flex;
   align-items: center;
+  gap: 24px;
+  flex-shrink: 0;
 }
 
-.hero-stats-card {
-  width: 380px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 20px 22px;
-  border-radius: ds.$student-radius-lg;
-  background: rgba(255, 255, 255, 0.96);
-  color: ds.$student-text;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
-}
+.stat {
+  text-align: center;
+  min-width: 56px;
 
-.hero-stats-card__title {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: ds.$student-text;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.hero-stats-card__bar {
-  width: 3px;
-  height: 15px;
-  border-radius: 2px;
-  background: #1e6ce8;
-}
-
-.hero-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.hero-stat-cell {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 56px;
-  padding: 10px 12px;
-  border-radius: ds.$student-radius;
-  background: ds.$student-surface-soft;
-
-  &__icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 14px;
-    flex-shrink: 0;
-  }
-
-  &__body {
-    min-width: 0;
-  }
-
-  &__value {
-    display: flex;
-    align-items: baseline;
-    gap: 2px;
-    line-height: 1.15;
-
-    strong {
-      font-size: 19px;
+  &__val {
+    b {
+      font-size: 22px;
       font-weight: 700;
-      letter-spacing: -0.4px;
       color: ds.$student-text;
+    }
+    small {
+      font-size: 12px;
+      color: ds.$student-text-muted;
+      margin-left: 2px;
     }
   }
 
-  &__suffix {
-    color: ds.$student-text-muted;
+  &__lbl {
     font-size: 11px;
-  }
-
-  &__label {
-    display: block;
-    margin-top: 3px;
-    color: ds.$student-text-muted;
-    font-size: 11px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: ds.$student-text-light;
+    margin-top: 2px;
   }
 }
 
@@ -191,14 +92,11 @@
   }
 
   .student-hero__title {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .student-hero__stats {
     width: 100%;
-  }
-
-  .hero-stats-card {
-    width: 100%;
+    justify-content: flex-start;
   }
 }

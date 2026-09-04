@@ -28,28 +28,26 @@
 
 .brand-bar__inner {
   @include ds.student-container;
-  height: 68px;
+  height: 60px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+  gap: 16px;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   text-decoration: none;
   color: ds.$student-text;
   min-width: 0;
   flex: 1 1 auto;
 
   &__logo {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     display: inline-flex;
     flex-shrink: 0;
-    filter: drop-shadow(0 6px 12px rgba(30, 108, 232, 0.25));
 
     svg {
       width: 100%;
@@ -61,15 +59,14 @@
   &__text {
     display: inline-flex;
     align-items: baseline;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
     max-width: 520px;
   }
 
   &__title {
-    font-size: 22px;
+    font-size: 16px;
     font-weight: 700;
-    letter-spacing: -0.4px;
     color: ds.$student-primary;
     white-space: nowrap;
   }
@@ -77,11 +74,11 @@
   &__divider {
     color: ds.$student-border;
     font-weight: 300;
-    font-size: 18px;
+    font-size: 14px;
   }
 
   &__subtitle {
-    font-size: 14px;
+    font-size: 13px;
     color: ds.$student-text-muted;
     font-weight: 500;
     white-space: nowrap;
@@ -93,22 +90,23 @@
 .brand-bar__actions {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
   flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .brand-bar__back {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: ds.$student-radius;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
   background: ds.$student-surface-soft;
   color: ds.$student-text-muted;
   text-decoration: none;
-  font-size: 13px;
+  font-size: 12px;
   transition: all 0.2s ease;
 
   &:hover {
@@ -140,29 +138,28 @@
 .brand-bar__user {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  height: 44px;
-  padding: 0 14px 0 6px;
-  border-radius: ds.$student-radius;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px 0 4px;
+  border-radius: 6px;
   background: ds.$student-surface-soft;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: #eaf2ff;
+    background: #e8f0fe;
   }
 
   .user-avatar {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: #fff;
     font-weight: 700;
-    font-size: 14px;
-    letter-spacing: -0.5px;
+    font-size: 12px;
   }
 
   .user-meta {
@@ -193,7 +190,7 @@
   min-width: 220px;
   padding: 8px;
   border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 12px 32px rgba(28, 25, 23, 0.14);
 
   &__info {
     pointer-events: none;
@@ -245,11 +242,11 @@
 /* ============ Tab 栏 (Part 2) ============ */
 .tab-bar {
   background: #fff;
-  border-bottom: 1px solid ds.$student-border-soft;
+  border-bottom: 1px solid ds.$student-border;
   position: sticky;
   top: 68px;
   z-index: 180;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 4px 12px rgba(28, 25, 23, 0.04);
   flex-shrink: 0;
 }
 
@@ -292,14 +289,16 @@
   font-size: 15px;
   font-weight: 500;
   white-space: nowrap;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease;
 
   span[nz-icon] {
     font-size: 16px;
+    transition: color 0.2s ease;
   }
 
   &:hover {
     color: ds.$student-primary;
+    background: rgba(15, 118, 110, 0.04);
   }
 
   &.active {
@@ -312,9 +311,13 @@
       left: 18px;
       right: 18px;
       bottom: 0;
-      height: 3px;
-      border-radius: 3px 3px 0 0;
-      background: #1e6ce8;
+      height: 2.5px;
+      border-radius: 2px 2px 0 0;
+      background: ds.$student-primary;
+    }
+
+    &:hover {
+      background: transparent;
     }
   }
 }
@@ -377,7 +380,7 @@
     }
 
     &:hover {
-      background: #f5f9ff;
+      background: #ecfdf5;
       color: ds.$student-primary;
 
       span[nz-icon] {
@@ -412,9 +415,9 @@
     left: 18px;
     right: 18px;
     bottom: 0;
-    height: 3px;
-    border-radius: 3px 3px 0 0;
-    background: #1e6ce8;
+    height: 2.5px;
+    border-radius: 2px 2px 0 0;
+    background: ds.$student-primary;
     opacity: 0;
   }
 
@@ -436,10 +439,10 @@
 }
 
 .app-footer {
-  background: #1f2a44;
+  background: #1c1917;
   padding: 32px 24px;
   margin-top: 0;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.7);
   flex-shrink: 0;
 }
 
@@ -617,7 +620,7 @@
     background: #fff;
     border-radius: 0 0 0 12px;
     border-bottom: 1px solid ds.$student-border-soft;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    box-shadow: 0 8px 24px rgba(28, 25, 23, 0.12);
     padding: 4px 6px 10px;
   }
 
@@ -636,7 +639,7 @@
     width: 100%;
 
     &.active {
-      background: #eef4ff;
+      background: #ecfdf5;
       &::after { display: none; }
     }
 

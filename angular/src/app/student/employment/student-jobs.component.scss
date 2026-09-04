@@ -3,24 +3,22 @@
 :host { flex:1; display:flex; flex-direction:column; background: ds.$student-bg; }
 
 .page {
-  flex:1; width:100%; max-width:1100px; margin:0 auto; padding:24px 20px 48px;
-  display:flex; flex-direction:column; gap:20px;
+  box-sizing:border-box; flex:1; width:100%; @include ds.student-container;
+  display:flex; flex-direction:column; gap:20px; padding-top:24px; padding-bottom:48px;
 }
 
 // ====== HERO ======
 .hero {
-  background:linear-gradient(135deg,#1e6ce8,#0c4cb8); border-radius:16px;
-  color:#fff; padding:28px 32px 20px; box-shadow:0 12px 32px rgba(30,108,232,.22);
+  background:#fff; border-radius:ds.$student-radius-lg;
+  color:ds.$student-text; padding:24px 28px; border:1px solid ds.$student-border-soft; box-shadow:ds.$student-shadow-soft;
   &__inner { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; }
-  h1 { color:#fff; font-size:26px; font-weight:800; margin:0; letter-spacing:-.5px; }
-  p { margin:4px 0 0; opacity:.78; font-size:13px; }
+  h1 { color:ds.$student-text; font-size:24px; font-weight:700; margin:0; }
+  p { margin:4px 0 0; color:ds.$student-text-muted; font-size:13px; }
   &__stats { display:flex; gap:20px; }
 }
 .stat { text-align:center; min-width:68px;
-  &__icon { width:36px; height:36px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; margin-bottom:6px;
-    span[nz-icon] { font-size:18px; color:#fff; } }
-  &__val { b { font-size:22px; } small { font-size:12px; opacity:.7; margin-left:2px; } }
-  &__lbl { font-size:11px; opacity:.75; margin-top:2px; }
+  &__val { b { font-size:22px; color:ds.$student-text; } small { font-size:12px; color:ds.$student-text-muted; margin-left:2px; } }
+  &__lbl { font-size:11px; color:ds.$student-text-light; margin-top:2px; }
 }
 
 // ====== BAR ======
@@ -32,10 +30,10 @@
   }
   &__chips { display:flex; gap:6px; flex-wrap:wrap; }
 }
-.chip { height:30px; padding:0 14px; border-radius:99px; border:1px solid #e2e8f0; background:#fff;
-  font-size:12px; font-weight:600; color:#64748b; cursor:pointer; transition:.15s;
-  &:hover { border-color:#93c5fd; color:#1e6ce8; }
-  &.on { background:#1e6ce8; color:#fff; border-color:#1e6ce8; }
+.chip { height:30px; padding:0 14px; border-radius:99px; border:1px solid ds.$student-border; background:#fff;
+  font-size:12px; font-weight:600; color:ds.$student-text-muted; cursor:pointer; transition:.15s;
+  &:hover { border-color:ds.$student-primary-light; color:ds.$student-primary; }
+  &.on { background:ds.$student-primary; color:#fff; border-color:ds.$student-primary; }
 }
 
 // ====== GRID ======
@@ -69,7 +67,7 @@
 .card-desc { margin:0; font-size:12px; color:#94a3b8; line-height:1.5;
   overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .card-tags { display:flex; gap:4px; flex-wrap:wrap; overflow:hidden; }
-.tag { height:20px; padding:0 8px; border-radius:4px; background:#eff6ff; font-size:11px; font-weight:600; color:#1e6ce8;
+.tag { height:20px; padding:0 8px; border-radius:4px; background:rgba(37,99,235,.1); font-size:11px; font-weight:600; color:ds.$student-primary;
   max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .card-meta { display:flex; gap:12px; font-size:12px; color:#64748b;
   span { display:inline-flex; align-items:center; gap:3px; }
@@ -81,8 +79,8 @@
 .card-actions { display:flex; border-top:1px solid #f1f5f9; }
 .act { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:4px;
   height:36px; font-size:12px; font-weight:600; cursor:pointer; transition:.15s;
-  &-view { color:#64748b; &:hover { color:#1e6ce8; background:#f8fafc; } }
-  &--apply { color:#fff; background:#1e6ce8; &:hover { background:#0c4cb8; } }
+  &-view { color:ds.$student-text-muted; &:hover { color:ds.$student-primary; background:#f8fafc; } }
+  &--apply { color:#fff; background:ds.$student-primary; &:hover { background:ds.$student-primary-dark; } }
   &--applied { color:#94a3b8; background:#f8fafc; cursor:default; }
   span[nz-icon] { font-size:13px; }
 }
@@ -94,7 +92,7 @@
 .empty-icon { width:72px; height:72px; border-radius:50%; background:#f1f5f9;
   display:inline-flex; align-items:center; justify-content:center; font-size:32px; color:#cbd5e1; }
 .btn { display:inline-flex; align-items:center; gap:4px; height:36px; padding:0 18px; border-radius:8px;
-  background:#1e6ce8; color:#fff; font-weight:700; font-size:13px; border:none; cursor:pointer; }
+  background:ds.$student-primary; color:#fff; font-weight:700; font-size:13px; border:none; cursor:pointer; }
 .pager { display:flex; justify-content:center; padding-top:4px; }
 
 @media (max-width:640px) {

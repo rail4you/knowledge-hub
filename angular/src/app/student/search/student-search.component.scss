@@ -17,10 +17,10 @@
 .student-search__hero {
   position: relative;
   border-radius: ds.$student-radius-lg;
-  overflow: hidden;
-  background: linear-gradient(120deg, #1e6ce8 0%, #0ea5e9 100%);
-  color: #fff;
-  box-shadow: 0 16px 36px rgba(30, 108, 232, 0.18);
+  background: #fff;
+  color: ds.$student-text;
+  border: 1px solid ds.$student-border-soft;
+  box-shadow: ds.$student-shadow-soft;
 }
 
 .student-search__hero-inner {
@@ -29,7 +29,7 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 24px 30px;
+  padding: 22px 26px;
 }
 
 .student-search__hero-body {
@@ -39,30 +39,22 @@
 
 .student-search__title {
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.3;
-  letter-spacing: -0.01em;
-  color: #fff;
+  color: ds.$student-text;
 }
 
 .student-search__title-bar {
-  width: 4px;
-  height: 22px;
-  border-radius: 2px;
-  background: #fff;
-  flex-shrink: 0;
+  display: none;
 }
 
 .student-search__desc {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   max-width: 62ch;
-  color: rgba(255, 255, 255, 0.88);
+  color: ds.$student-text-muted;
   font-size: 13px;
-  line-height: 1.8;
+  line-height: 1.7;
 }
 
 // ===== Two-column layout =====
