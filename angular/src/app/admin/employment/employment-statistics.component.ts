@@ -15,6 +15,7 @@ import * as echarts from 'echarts/core';
 import { PieChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
 import { TooltipComponent, LegendComponent } from 'echarts/components';
+import { LabelLayout } from 'echarts/features';
 import {
   EmploymentOutcomeDto,
   EmploymentOutcomeStatus,
@@ -22,7 +23,7 @@ import {
   StudentApplicationStatDto,
 } from '../../employment/employment.service';
 
-echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer]);
+echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer, LabelLayout]);
 
 const STATUS_LABELS: Record<number, string> = {
   0: '已投递', 1: '已查看', 2: '面试中', 3: '已录取', 4: '已拒绝', 5: '已撤回', 6: '面试完成',
@@ -216,12 +217,20 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         name: '就业去向状态',
         type: 'pie',
         radius: ['45%', '70%'],
-        center: ['50%', '45%'],
+        center: ['50%', '46%'],
         avoidLabelOverlap: true,
         itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
-        label: { show: false },
-        emphasis: { label: { show: true, fontSize: 15, fontWeight: 'bold' } },
-        data: counts,
+        label: {
+          show: true,
+          position: 'outside',
+          formatter: '{b}',
+          fontSize: 12,
+          color: '#475569',
+        },
+        labelLine: { show: true, length: 12, length2: 10 },
+        labelLayout: { hideOverlap: true },
+        emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+        data: counts.filter(d => (d.value as number) > 0),
       }],
     });
   }
@@ -248,12 +257,20 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         name: '投递状态',
         type: 'pie',
         radius: ['45%', '70%'],
-        center: ['50%', '45%'],
+        center: ['50%', '46%'],
         avoidLabelOverlap: true,
         itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
-        label: { show: false },
-        emphasis: { label: { show: true, fontSize: 15, fontWeight: 'bold' } },
-        data,
+        label: {
+          show: true,
+          position: 'outside',
+          formatter: '{b}',
+          fontSize: 12,
+          color: '#475569',
+        },
+        labelLine: { show: true, length: 12, length2: 10 },
+        labelLayout: { hideOverlap: true },
+        emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
+        data: (data as { value: number; name: string; itemStyle: { color: string } }[]).filter(d => d.value > 0),
       }],
     });
   }
