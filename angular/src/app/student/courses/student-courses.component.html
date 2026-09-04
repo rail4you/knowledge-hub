@@ -6,91 +6,60 @@
     [stats]="stats()"
   ></app-student-hero>
 
-  <!-- =================== 搜索 + 筛选 =================== -->
-  <section class="quick-bar" aria-label="课程筛选">
-    <div class="quick-bar__inner">
-      <div class="search-pill">
-        <span class="search-pill__icon">
-          <span nz-icon nzType="search" nzTheme="outline"></span>
-        </span>
-        <input
-          type="text"
-          [ngModel]="filter()"
-          (ngModelChange)="filter.set($event)"
-          (keyup.enter)="onSearch()"
-          placeholder="搜索课程名称、关键词或专业..."
-          class="search-pill__input"
-          aria-label="搜索课程"
-        />
-        @if (filter()) {
-          <button class="search-pill__clear" (click)="filter.set('')" aria-label="清空">
-            <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
-          </button>
-        }
-        <button class="search-pill__btn" (click)="onSearch()">
-          <span nz-icon nzType="search" nzTheme="outline"></span>
-          <span>搜索</span>
-        </button>
-      </div>
-
-      <div class="filter-chips" role="tablist" aria-label="专业筛选">
-        @for (m of majors(); track m.id) {
-          <button
-            class="filter-chip"
-            [class.is-active]="selectedMajor() === m.id"
-            (click)="selectMajor(m.id)"
-            role="tab"
-            [attr.aria-selected]="selectedMajor() === m.id"
-            [style.--chip-color]="m.color"
-          >
-            <span nz-icon [nzType]="m.icon" nzTheme="outline"></span>
-            <span>{{ m.name }}</span>
-          </button>
-        }
-      </div>
-
-      <div class="difficulty-row">
-        <div class="difficulty-chips">
-          @for (d of difficulties; track d.value) {
-            <button
-              class="difficulty-chip"
-              [class.is-active]="selectedDifficulty() === d.value"
-              (click)="selectDifficulty(d.value)"
-            >
-              <span nz-icon [nzType]="d.icon" nzTheme="outline"></span>
-              <span>{{ d.label }}</span>
-            </button>
-          }
-        </div>
-        <button class="reset-btn" (click)="onReset()">
-          <span nz-icon nzType="reload" nzTheme="outline"></span>
-          <span>重置筛选</span>
-        </button>
-      </div>
-    </div>
-  </section>
+  <!-- =================== 搜索栏 =================== -->
+  <div class="search-bar">
+    <span nz-icon nzType="search" nzTheme="outline" class="search-bar__icon"></span>
+    <input
+      type="text"
+      [ngModel]="filter()"
+      (ngModelChange)="filter.set($event)"
+      (keyup.enter)="onSearch()"
+      placeholder="搜索课程名称、关键词或专业..."
+      class="search-bar__input"
+      aria-label="搜索课程"
+    />
+    @if (filter()) {
+      <button class="search-bar__clear" (click)="filter.set('')" aria-label="清空">
+        <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
+      </button>
+    }
+    <button class="search-bar__btn" (click)="onSearch()">搜索</button>
+  </div>
 
   <!-- =================== 主体两栏 =================== -->
   <div class="content-grid">
     <!-- 左侧：状态切换 + 课程列表 -->
     <main class="content-main">
-      <div class="status-tabs" role="tablist">
-        @for (s of statusFilters; track s.value) {
-          <button
-            class="status-tab"
-            [class.is-active]="selectedStatus() === s.value"
-            (click)="selectStatus(s.value)"
-            role="tab"
-          >
-            <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
-            <span>{{ s.label }}</span>
-          </button>
-        }
+      <div class="status-row">
+        <div class="status-tabs" role="tablist">
+          @for (s of statusFilters; track s.value) {
+            <button
+              class="status-tab"
+              [class.is-active]="selectedStatus() === s.value"
+              (click)="selectStatus(s.value)"
+              role="tab"
+            >
+              <span nz-icon [nzType]="s.icon" nzTheme="outline"></span>
+              <span>{{ s.label }}</span>
+            </button>
+          }
+        </div>
+
+        <div class="major-chips">
+          @for (m of majors(); track m.id) {
+            <button
+              class="major-chip"
+              [class.is-active]="selectedMajor() === m.id"
+              (click)="selectMajor(m.id)"
+            >
+              {{ m.name }}
+            </button>
+          }
+        </div>
       </div>
 
       <div class="section-header">
         <h2 class="section-header__title">
-          <span class="section-header__bar"></span>
           @if (selectedStatus() === 'enrolled') {
             <span>我的课程</span>
           } @else if (selectedStatus() === 'recommended') {
@@ -154,31 +123,19 @@
 
               <!-- 信息 -->
               <div class="course-card__body">
-                <h3 class="course-card__title" [title]="course.title">{{ course.title }}</h3>
-
-                @if (course.description) {
-                  <p class="course-card__desc">{{ course.description }}</p>
-                }
-
-                <div class="course-card__meta">
-                  @if (course.major) {
-                    <span class="meta-pill">
-                      <span nz-icon nzType="book" nzTheme="outline"></span>
-                      {{ course.major }}
-                    </span>
-                  }
-                  @if (course.semester) {
-                    <span class="meta-pill">
-                      <span nz-icon nzType="calendar" nzTheme="outline"></span>
-                      {{ course.semester }}
-                    </span>
-                  }
-                  @if (course.credits) {
-                    <span class="meta-pill">
-                      <span nz-icon nzType="trophy" nzTheme="outline"></span>
-                      {{ course.credits }} 学分
-                    </span>
-                  }
+                <div class="course-card__top">
+                  <h3 class="course-card__title" [title]="course.title">{{ course.title }}</h3>
+                  <div class="course-card__tags">
+                    @if (course.major) {
+                      <span class="tag">{{ course.major }}</span>
+                    }
+                    @if (course.semester) {
+                      <span class="tag">{{ course.semester }}</span>
+                    }
+                    @if (course.credits) {
+                      <span class="tag">{{ course.credits }}学分</span>
+                    }
+                  </div>
                 </div>
 
                 <div class="course-card__stats">
@@ -190,7 +147,6 @@
                     <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
                     {{ course.chapterCount || 0 }} 章节
                   </span>
-                  <!-- 教师信息已移除 -->
                 </div>
 
                 <!-- 进度条（仅已选课显示） -->
