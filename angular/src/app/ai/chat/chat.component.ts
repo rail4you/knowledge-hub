@@ -91,10 +91,9 @@ export class ChatComponent implements OnInit, OnDestroy {
   // Thread history
   threads = signal<ChatThread[]>([]);
   isThreadsLoading = signal(false);
-  showHistory = signal(true);
 
-  // Resource sidebar collapse
-  showResource = signal(true);
+  // Left sidebar tabs: resource first (default), then history
+  activeTab = signal<'resource' | 'history'>('resource');
 
   /** Threads grouped by type */
   generalThreads = computed(() =>
@@ -396,12 +395,8 @@ export class ChatComponent implements OnInit, OnDestroy {
       });
   }
 
-  toggleHistory() {
-    this.showHistory.update(v => !v);
-  }
-
-  toggleResource() {
-    this.showResource.update(v => !v);
+  switchTab(tab: 'resource' | 'history') {
+    this.activeTab.set(tab);
   }
 
   selectResource(resource: ResourceForChat) {

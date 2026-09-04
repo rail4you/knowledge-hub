@@ -1,28 +1,24 @@
+:host {
+  display: block;
+  min-height: 0;
+}
+
 .lesson-page {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  flex: 1;
-  min-height: 0;
   padding: 20px 24px;
-  height: calc(100vh - 102px);
-  overflow-y: auto;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #d4dde8;
-    border-radius: 3px;
-  }
+  min-height: calc(100vh - 102px);
+  // 关键修复：移除固定 height + overflow-y:auto 的嵌套滚动容器，
+  // 改为自然高度 + 依赖外层 LeptonX 滚动，避免结果卡片被裁切且无滚动条
+  height: auto;
+  overflow: visible;
 }
 
 .lesson-cards {
   display: flex;
   gap: 18px;
-  flex: 1;
-  min-height: 0;
+  align-items: flex-start;
 }
 
 .lesson-card {
@@ -65,11 +61,12 @@
 
 .lesson-card-body {
   padding: 16px 18px;
-  flex: 1;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  // 资源列表过长时内部滚动，但不依赖父容器固定高度
+  max-height: 520px;
+  overflow-y: auto;
 
   &::-webkit-scrollbar {
     width: 5px;
@@ -212,17 +209,8 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  flex: 1;
-  overflow-y: auto;
-
-  &::-webkit-scrollbar {
-    width: 5px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #d4dde8;
-    border-radius: 3px;
-  }
+  // 表单区自然高度，随内容增长，不再内部滚动
+  overflow: visible;
 }
 
 .selected-resource-info {

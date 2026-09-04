@@ -1,166 +1,170 @@
 <div class="chat-layout">
-  <!-- ═══ 左侧栏：聊天记录 + 资源文档 ═══ -->
-  <div class="qa-sidebar" [class.hidden]="!showHistory() && !showResource()">
-
-    <!-- 聊天记录（可折叠） -->
-    <div class="qa-section" [class.collapsed]="!showHistory()">
-      <div class="qa-section-head" (click)="toggleHistory()">
-        <span nz-icon nzType="message" nzTheme="outline" class="sic"></span>
-        <b>聊天记录</b>
+  <!-- ═══ 左侧栏：资源文档 / 聊天记录 Tab ═══ -->
+  <div class="qa-sidebar">
+    <div class="qa-tabs">
+      <button
+        type="button"
+        class="qa-tab"
+        [class.active]="activeTab() === 'resource'"
+        (click)="switchTab('resource')"
+      >
+        <span nz-icon nzType="file-text" nzTheme="outline"></span>
+        <span>资源文档</span>
+        <span class="count">{{ filteredResources().length }}</span>
+      </button>
+      <button
+        type="button"
+        class="qa-tab"
+        [class.active]="activeTab() === 'history'"
+        (click)="switchTab('history')"
+      >
+        <span nz-icon nzType="message" nzTheme="outline"></span>
+        <span>聊天记录</span>
         <span class="count">{{ threads().length }}</span>
-        <span nz-icon nzType="down" nzTheme="outline" class="chev"></span>
+      </button>
+    </div>
+
+    <!-- 资源文档 Tab Pane -->
+    <div class="qa-tab-pane" [class.hidden]="activeTab() !== 'resource'">
+      <div class="qa-doc-search">
+        <span nz-icon nzType="search" nzTheme="outline"></span>
+        <input
+          type="text"
+          nz-input
+          [value]="resourceSearchText()"
+          (input)="resourceSearchText.set($any($event.target).value)"
+          placeholder="搜索资源文档..."
+        />
       </div>
-      <div class="qa-section-body">
-        <div class="qa-list">
-          @if (isThreadsLoading()) {
-            <div class="loading-container">
-              <nz-spin nzSimple></nz-spin>
-            </div>
-          } @else if (threads().length === 0) {
-            <div class="qa-empty">
-              <span nz-icon nzType="message" nzTheme="outline"></span>
-              <span>暂无聊天记录</span>
-            </div>
-          } @else {
-            <!-- 文档问答 -->
-            @if (documentThreads().length > 0) {
-              <div class="qa-thread-group">
-                <div class="qa-thread-group-title">文档问答</div>
-                @for (t of documentThreads(); track t.id) {
-                  <div
-                    class="qa-chat-item"
-                    [class.on]="threadId() === t.id"
-                    (click)="selectThread(t)"
-                  >
-                    <span nz-icon nzType="file-text" nzTheme="outline" class="ci"></span>
-                    <div class="meta">
-                      <div class="t">{{ t.title || '未命名对话' }}</div>
-                      <div class="s">{{ t.createdAt | date:'MM-dd HH:mm' }}</div>
-                    </div>
-                    <span class="badge">{{ t.messageCount }}条</span>
-                    <button
-                      nz-button
-                      nzType="text"
-                      nzSize="small"
-                      class="qa-del"
-                      nz-tooltip
-                      nzTooltipTitle="删除"
-                      (click)="deleteThread(t.id, $event)"
-                    >
-                      <span nz-icon nzType="close" nzTheme="outline"></span>
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-            <!-- 通用对话 -->
-            @if (generalThreads().length > 0) {
-              <div class="qa-thread-group">
-                <div class="qa-thread-group-title">通用对话</div>
-                @for (t of generalThreads(); track t.id) {
-                  <div
-                    class="qa-chat-item"
-                    [class.on]="threadId() === t.id"
-                    (click)="selectThread(t)"
-                  >
-                    <span nz-icon nzType="message" nzTheme="outline" class="ci"></span>
-                    <div class="meta">
-                      <div class="t">{{ t.title || '未命名对话' }}</div>
-                      <div class="s">{{ t.createdAt | date:'MM-dd HH:mm' }}</div>
-                    </div>
-                    <span class="badge">{{ t.messageCount }}条</span>
-                    <button
-                      nz-button
-                      nzType="text"
-                      nzSize="small"
-                      class="qa-del"
-                      nz-tooltip
-                      nzTooltipTitle="删除"
-                      (click)="deleteThread(t.id, $event)"
-                    >
-                      <span nz-icon nzType="close" nzTheme="outline"></span>
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-          }
-        </div>
+      <div class="qa-list qa-list--scroll">
+        @if (isResourcesLoading() || isCategoriesLoading()) {
+          <div class="loading-container">
+            <nz-spin nzSimple></nz-spin>
+          </div>
+        } @else if (filteredResources().length === 0) {
+          <div class="qa-empty">
+            <span nz-icon nzType="inbox" nzTheme="outline"></span>
+            <span>暂无文档资源</span>
+          </div>
+        } @else {
+          <nz-tree
+            [nzData]="categoryTreeNodes()"
+            nzBlockNode
+            [nzShowExpand]="true"
+            [nzShowIcon]="false"
+            (nzClick)="onTreeClick($event)"
+          >
+            <ng-template #nzTreeTemplate let-node>
+              @if (node.origin?.meta?.resource) {
+                <div
+                  class="qa-doc-item"
+                  [class.on]="selectedResource()?.id === node.origin.meta.resource.id"
+                  (click)="selectResource(node.origin.meta.resource); $event.stopPropagation()"
+                >
+                  <span class="dic">
+                    <span
+                      class="doc-icon"
+                      [attr.data-ext]="(node.origin.meta.resource.sourceFormat || '').toLowerCase()"
+                      [nzType]="getDocIcon(node.origin.meta.resource.sourceFormat)"
+                      nz-icon
+                      nzTheme="outline"
+                    ></span>
+                  </span>
+                  <span class="dn" [title]="node.origin.meta.resource.name">
+                    {{ node.origin.meta.resource.name }}
+                  </span>
+                  @if (node.origin.meta.resource.hasPageIndex) {
+                    <span class="idx-tag ok">已索引</span>
+                  } @else {
+                    <span class="idx-tag no">未索引</span>
+                  }
+                </div>
+              } @else {
+                <span class="tree-category-name">
+                  <span nz-icon nzType="folder" nzTheme="fill" class="cat-icon"></span>
+                  {{ node.title }}
+                </span>
+              }
+            </ng-template>
+          </nz-tree>
+        }
       </div>
     </div>
 
-    <!-- 资源文档（可折叠） -->
-    <div class="qa-section" [class.collapsed]="!showResource()">
-      <div class="qa-section-head" (click)="toggleResource()">
-        <span nz-icon nzType="file-text" nzTheme="outline" class="sic"></span>
-        <b>资源文档</b>
-        <span class="count">{{ filteredResources().length }}</span>
-        <span nz-icon nzType="down" nzTheme="outline" class="chev"></span>
-      </div>
-      <div class="qa-section-body">
-        <div class="qa-doc-search">
-          <span nz-icon nzType="search" nzTheme="outline"></span>
-          <input
-            type="text"
-            nz-input
-            [value]="resourceSearchText()"
-            (input)="resourceSearchText.set($any($event.target).value)"
-            placeholder="搜索资源文档..."
-          />
-        </div>
-        <div class="qa-list">
-          @if (isResourcesLoading() || isCategoriesLoading()) {
-            <div class="loading-container">
-              <nz-spin nzSimple></nz-spin>
-            </div>
-          } @else if (filteredResources().length === 0) {
-            <div class="qa-empty">
-              <span nz-icon nzType="inbox" nzTheme="outline"></span>
-              <span>暂无文档资源</span>
-            </div>
-          } @else {
-            <nz-tree
-              [nzData]="categoryTreeNodes()"
-              nzBlockNode
-              [nzShowExpand]="true"
-              [nzShowIcon]="false"
-              (nzClick)="onTreeClick($event)"
-            >
-              <ng-template #nzTreeTemplate let-node>
-                @if (node.origin?.meta?.resource) {
-                  <div
-                    class="qa-doc-item"
-                    [class.on]="selectedResource()?.id === node.origin.meta.resource.id"
-                    (click)="selectResource(node.origin.meta.resource); $event.stopPropagation()"
-                  >
-                    <span class="dic">
-                      <span
-                        class="doc-icon"
-                        [attr.data-ext]="(node.origin.meta.resource.sourceFormat || '').toLowerCase()"
-                        [nzType]="getDocIcon(node.origin.meta.resource.sourceFormat)"
-                        nz-icon
-                        nzTheme="outline"
-                      ></span>
-                    </span>
-                    <span class="dn" [title]="node.origin.meta.resource.name">
-                      {{ node.origin.meta.resource.name }}
-                    </span>
-                    @if (node.origin.meta.resource.hasPageIndex) {
-                      <span class="idx-tag ok">已索引</span>
-                    } @else {
-                      <span class="idx-tag no">未索引</span>
-                    }
+    <!-- 聊天记录 Tab Pane -->
+    <div class="qa-tab-pane" [class.hidden]="activeTab() !== 'history'">
+      <div class="qa-list qa-list--scroll">
+        @if (isThreadsLoading()) {
+          <div class="loading-container">
+            <nz-spin nzSimple></nz-spin>
+          </div>
+        } @else if (threads().length === 0) {
+          <div class="qa-empty">
+            <span nz-icon nzType="message" nzTheme="outline"></span>
+            <span>暂无聊天记录</span>
+          </div>
+        } @else {
+          @if (documentThreads().length > 0) {
+            <div class="qa-thread-group">
+              <div class="qa-thread-group-title">文档问答</div>
+              @for (t of documentThreads(); track t.id) {
+                <div
+                  class="qa-chat-item"
+                  [class.on]="threadId() === t.id"
+                  (click)="selectThread(t)"
+                >
+                  <span nz-icon nzType="file-text" nzTheme="outline" class="ci"></span>
+                  <div class="meta">
+                    <div class="t">{{ t.title || '未命名对话' }}</div>
+                    <div class="s">{{ t.createdAt | date:'MM-dd HH:mm' }}</div>
                   </div>
-                } @else {
-                  <span class="tree-category-name">
-                    <span nz-icon nzType="folder" nzTheme="fill" class="cat-icon"></span>
-                    {{ node.title }}
-                  </span>
-                }
-              </ng-template>
-            </nz-tree>
+                  <span class="badge">{{ t.messageCount }}条</span>
+                  <button
+                    nz-button
+                    nzType="text"
+                    nzSize="small"
+                    class="qa-del"
+                    nz-tooltip
+                    nzTooltipTitle="删除"
+                    (click)="deleteThread(t.id, $event)"
+                  >
+                    <span nz-icon nzType="close" nzTheme="outline"></span>
+                  </button>
+                </div>
+              }
+            </div>
           }
-        </div>
+          @if (generalThreads().length > 0) {
+            <div class="qa-thread-group">
+              <div class="qa-thread-group-title">通用对话</div>
+              @for (t of generalThreads(); track t.id) {
+                <div
+                  class="qa-chat-item"
+                  [class.on]="threadId() === t.id"
+                  (click)="selectThread(t)"
+                >
+                  <span nz-icon nzType="message" nzTheme="outline" class="ci"></span>
+                  <div class="meta">
+                    <div class="t">{{ t.title || '未命名对话' }}</div>
+                    <div class="s">{{ t.createdAt | date:'MM-dd HH:mm' }}</div>
+                  </div>
+                  <span class="badge">{{ t.messageCount }}条</span>
+                  <button
+                    nz-button
+                    nzType="text"
+                    nzSize="small"
+                    class="qa-del"
+                    nz-tooltip
+                    nzTooltipTitle="删除"
+                    (click)="deleteThread(t.id, $event)"
+                  >
+                    <span nz-icon nzType="close" nzTheme="outline"></span>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        }
       </div>
     </div>
   </div>
