@@ -66,6 +66,10 @@ export class PracticumAgentChatComponent implements OnInit {
     }
   }
 
+  get agentDisplayName(): string {
+    return this.agentConfigForm.agentName?.trim() || '小智';
+  }
+
   saveAgentConfig(): void {
     if (!this.selectedProjectId) return;
     this.agentSaving = true;

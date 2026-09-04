@@ -16,7 +16,7 @@
           <div class="section-header">
             <div>
               <h3>实训智能体配置</h3>
-              <span class="hint">学生可在聊天室中 @@ 智能体名称进行提问</span>
+              <span class="hint">学生可在聊天室中 @{{ agentDisplayName }} 进行提问</span>
             </div>
             <button nz-button nzType="primary" [nzLoading]="agentSaving" (click)="saveAgentConfig()">保存智能体配置</button>
           </div>
