@@ -435,6 +435,13 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.DoubleHigh',
     },
+    {
+      path: '/assessment/double-high/project',
+      name: '::Menu:DoubleHighProject',
+      parentName: '::Menu:InfoManagement',
+      layout: eLayoutType.application,
+      invisible: true,
+    },
 
     // ══════════════════════════════════════════════════════════
     //  搜索和租户管理
