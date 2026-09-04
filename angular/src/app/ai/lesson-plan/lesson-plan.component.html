@@ -276,10 +276,14 @@
             @if (!canGenerate() && !isLoading()) {
               <div class="warn-banner">
                 <span nz-icon nzType="exclamation-circle"></span>
-                @if (!selectedResource()?.hasSummary) {
+                @if (!selectedResource()) {
+                  请先选择已索引文档
+                } @else if (selectedResource() && !selectedResource()!.hasSummary) {
                   该资源尚未生成 AI 摘要，无法生成教案（资源详情页 → 重新生成摘要）
+                } @else if (!input().topic.trim()) {
+                  请填写课程主题
                 } @else {
-                  请先选择已索引文档并填写课程主题
+                  请检查必填项后生成
                 }
               </div>
             }
