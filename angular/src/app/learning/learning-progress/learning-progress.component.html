@@ -96,7 +96,7 @@
           </div>
         </nz-card>
 
-        <!-- Student statistics table -->
+        <!-- Student statistics table (expandable learning records) -->
         <nz-card nzTitle="学生学习统计">
           @if (loadingStudents()) {
             <div class="loading-container">
@@ -105,9 +105,10 @@
           } @else if (studentStats().length === 0) {
             <nz-empty nzNotFoundContent="暂无学习记录"></nz-empty>
           } @else {
-            <nz-table [nzData]="studentStats()" [nzFrontPagination]="false" nzSize="small">
+            <nz-table #studentTable [nzData]="studentStats()" [nzFrontPagination]="false" nzSize="small" [nzShowPagination]="false">
               <thead>
                 <tr>
+                  <th nzWidth="48px"></th>
                   <th>学生</th>
                   <th>完成数 / 总题数</th>
                   <th>完成率</th>
@@ -118,8 +119,13 @@
                 </tr>
               </thead>
               <tbody>
-                @for (stat of studentStats(); track stat.studentId) {
+                @for (stat of studentTable.data; track stat.studentId) {
                   <tr>
+                    @if (hasRecords(stat)) {
+                      <td [nzExpand]="isExpanded(stat.studentId!)" (nzExpandChange)="onExpandChange(stat, $event)"></td>
+                    } @else {
+                      <td></td>
+                    }
                     <td><strong>{{ stat.studentName }}</strong></td>
                     <td>{{ stat.completedCount }} / {{ stat.totalCount }}</td>
                     <td>
@@ -130,14 +136,67 @@
                       ></nz-progress>
                     </td>
                     <td>
-                      <nz-tag [nzColor]="getScoreColor(stat.correctRate ?? 0)">{{ stat.correctRate }}%</nz-tag>
+                      @let cr = stat.correctRate ?? 0;
+                      <nz-tag [nzColor]="getRateTagPreset(cr)" [class.rate-tag-low]="cr < 60">{{ cr }}%</nz-tag>
                     </td>
                     <td>{{ formatTimeSpan(stat.totalTimeSpent) }}</td>
                     <td>{{ formatDate(stat.lastActiveTime) }}</td>
                     <td>
-                      <button nz-button nzType="link" nzSize="small" (click)="viewStudentRecords(stat.studentId)">
-                        学习记录
+                      <button
+                        nz-button
+                        nzType="link"
+                        nzSize="small"
+                        [disabled]="!hasRecords(stat)"
+                        (click)="toggleRecords(stat)"
+                      >
+                        @if (isExpanded(stat.studentId!)) {
+                          收起 <span nz-icon nzType="up"></span>
+                        } @else {
+                          学习记录 <span nz-icon nzType="down"></span>
+                        }
                       </button>
+                    </td>
+                  </tr>
+                  <tr [nzExpand]="isExpanded(stat.studentId!)" class="expand-row">
+                    <td colspan="8">
+                      <div class="expand-inner">
+                        @if (isLoadingRecords(stat.studentId!)) {
+                          <div class="loading-container" style="padding: 24px 0;">
+                            <nz-spin nzSimple></nz-spin>
+                          </div>
+                        } @else if (getExpandedRecords(stat.studentId!).length === 0) {
+                          <nz-empty nzNotFoundContent="暂无学习记录" style="padding: 12px 0;"></nz-empty>
+                        } @else {
+                          <nz-table [nzData]="getExpandedRecords(stat.studentId!)" [nzFrontPagination]="false" nzSize="small" [nzShowPagination]="false" nzTableLayout="fixed" style="width: 100%;">
+                            <thead>
+                              <tr>
+                                <th>习题</th>
+                                <th>章节</th>
+                                <th>是否正确</th>
+                                <th>完成时间</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (record of getExpandedRecords(stat.studentId!); track record.id) {
+                                <tr>
+                                  <td>{{ record.exerciseTitle }}</td>
+                                  <td>{{ record.chapterName || '-' }}</td>
+                                  <td>
+                                    @if (record.isCorrect === true) {
+                                      <nz-tag [nzColor]="'success'">正确</nz-tag>
+                                    } @else if (record.isCorrect === false) {
+                                      <nz-tag [nzColor]="'error'">错误</nz-tag>
+                                    } @else {
+                                      <nz-tag>未批改</nz-tag>
+                                    }
+                                  </td>
+                                  <td>{{ formatDate(record.completedAt) }}</td>
+                                </tr>
+                              }
+                            </tbody>
+                          </nz-table>
+                        }
+                      </div>
                     </td>
                   </tr>
                 }
@@ -145,40 +204,6 @@
             </nz-table>
           }
         </nz-card>
-
-        <!-- Student exercise records -->
-        @if (studentRecords().length > 0) {
-          <nz-card nzTitle="学习记录（近 50 条）" class="records-card">
-            <nz-table [nzData]="studentRecords()" [nzFrontPagination]="false" nzSize="small">
-              <thead>
-                <tr>
-                  <th>习题</th>
-                  <th>章节</th>
-                  <th>是否正确</th>
-                  <th>完成时间</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (record of studentRecords(); track record.id) {
-                  <tr>
-                    <td>{{ record.exerciseTitle }}</td>
-                    <td>{{ record.chapterName || '-' }}</td>
-                    <td>
-                      @if (record.isCorrect === true) {
-                        <nz-tag [nzColor]="'success'">正确</nz-tag>
-                      } @else if (record.isCorrect === false) {
-                        <nz-tag [nzColor]="'error'">错误</nz-tag>
-                      } @else {
-                        <nz-tag>未批改</nz-tag>
-                      }
-                    </td>
-                    <td>{{ formatDate(record.completedAt) }}</td>
-                  </tr>
-                }
-              </tbody>
-            </nz-table>
-          </nz-card>
-        }
       </div>
     }
   }

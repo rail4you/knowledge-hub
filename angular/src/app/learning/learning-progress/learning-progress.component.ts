@@ -61,6 +61,11 @@ export class LearningProgressComponent implements OnInit {
   studentStats = signal<StudentLearningStatisticsDto[]>([]);
   studentRecords = signal<StudentExerciseRecordDto[]>([]);
 
+  // Expandable learning records (per student)
+  expandedStudentId = signal<string | null>(null);
+  expandedRecordsMap = signal<Record<string, StudentExerciseRecordDto[]>>({});
+  loadingRecordsMap = signal<Record<string, boolean>>({});
+
   ngOnInit() {
     this.loadCourses();
   }
@@ -99,6 +104,9 @@ export class LearningProgressComponent implements OnInit {
     this.selectedCourseId.set(courseId);
     this.studentStats.set([]);
     this.studentRecords.set([]);
+    this.expandedStudentId.set(null);
+    this.expandedRecordsMap.set({});
+    this.loadingRecordsMap.set({});
     if (courseId) {
       this.loadStudentStats(courseId);
     }
@@ -122,22 +130,95 @@ export class LearningProgressComponent implements OnInit {
     });
   }
 
-  viewStudentRecords(studentId: string) {
+  hasRecords(stat: StudentLearningStatisticsDto): boolean {
+    return (stat.completedCount ?? 0) > 0;
+  }
+
+  isExpanded(studentId: string): boolean {
+    return this.expandedStudentId() === studentId;
+  }
+
+  getExpandedRecords(studentId: string): StudentExerciseRecordDto[] {
+    return this.expandedRecordsMap()[studentId] ?? [];
+  }
+
+  isLoadingRecords(studentId: string): boolean {
+    return !!this.loadingRecordsMap()[studentId];
+  }
+
+  toggleRecords(stat: StudentLearningStatisticsDto) {
+    if (!stat.studentId) return;
+    if (!this.hasRecords(stat)) return;
+    const id = stat.studentId;
+    if (this.expandedStudentId() === id) {
+      this.expandedStudentId.set(null);
+      return;
+    }
+    this.expandedStudentId.set(id);
+    // keep legacy studentRecords in sync for any external usage
+    const cached = this.expandedRecordsMap()[id];
+    if (cached) {
+      this.studentRecords.set(cached);
+      return;
+    }
+    this.loadRecordsForStudent(id);
+  }
+
+  onExpandChange(stat: StudentLearningStatisticsDto, expanded: boolean) {
+    if (!stat.studentId) return;
+    if (!this.hasRecords(stat)) return;
+    if (expanded) {
+      this.expandedStudentId.set(stat.studentId);
+      const cached = this.expandedRecordsMap()[stat.studentId];
+      if (!cached) this.loadRecordsForStudent(stat.studentId);
+      else this.studentRecords.set(cached);
+    } else {
+      if (this.expandedStudentId() === stat.studentId) this.expandedStudentId.set(null);
+    }
+  }
+
+  private loadRecordsForStudent(studentId: string) {
     const courseId = this.selectedCourseId();
     if (!courseId) return;
-
+    this.loadingRecordsMap.update(m => ({ ...m, [studentId]: true }));
     this.statsService.getStudentRecords({
       courseId,
       skipCount: 0,
       maxResultCount: 50,
     }, studentId).subscribe({
       next: (result) => {
-        this.studentRecords.set(result.items || []);
+        const items = result.items || [];
+        this.expandedRecordsMap.update(m => ({ ...m, [studentId]: items }));
+        this.studentRecords.set(items);
+        this.loadingRecordsMap.update(m => ({ ...m, [studentId]: false }));
       },
       error: () => {
+        this.loadingRecordsMap.update(m => ({ ...m, [studentId]: false }));
         this.message.error('加载学习记录失败');
       },
     });
+  }
+
+  viewStudentRecords(studentId: string) {
+    const stat = this.studentStats().find(s => s.studentId === studentId);
+    if (stat) {
+      this.toggleRecords(stat);
+      return;
+    }
+    // fallback: direct id (legacy calls)
+    const courseId = this.selectedCourseId();
+    if (!courseId) return;
+    // treat as expand toggle if we can find or just load
+    if (this.expandedStudentId() === studentId) {
+      this.expandedStudentId.set(null);
+      return;
+    }
+    this.expandedStudentId.set(studentId);
+    if (this.expandedRecordsMap()[studentId]) {
+      this.studentRecords.set(this.expandedRecordsMap()[studentId]);
+      return;
+    }
+    this.loadRecordsForStudent(studentId);
   }
 
   formatTimeSpan(ts?: string): string {
@@ -186,5 +267,12 @@ export class LearningProgressComponent implements OnInit {
     if (rate >= 80) return '#52c41a';
     if (rate >= 60) return '#faad14';
     return '#ff4d4f';
+  }
+
+  /** Tag preset: high/medium keep colored tag, low uses neutral default to avoid solid red background with poor contrast */
+  getRateTagPreset(rate: number): 'success' | 'warning' | 'default' {
+    if (rate >= 80) return 'success';
+    if (rate >= 60) return 'warning';
+    return 'default';
   }
 }
