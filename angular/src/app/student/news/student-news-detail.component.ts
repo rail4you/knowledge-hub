@@ -43,6 +43,7 @@ export class StudentNewsDetailComponent implements OnInit {
   readonly relatedLoading = signal(false);
 
   readonly copyLinkSuccess = signal(false);
+  readonly showCommentForm = signal(false);
 
   /** 评论区根元素（用于滚动定位） */
   readonly commentSection = viewChild<ElementRef<HTMLElement>>('commentSection');
@@ -167,6 +168,19 @@ export class StudentNewsDetailComponent implements OnInit {
     }
   }
 
+  openCommentForm(): void {
+    this.showCommentForm.set(true);
+    // 等待渲染后聚焦输入框
+    setTimeout(() => {
+      this.commentTextarea()?.nativeElement.focus({ preventScroll: true });
+    }, 50);
+  }
+
+  closeCommentForm(): void {
+    this.showCommentForm.set(false);
+    this.commentText.set('');
+  }
+
   submitComment(): void {
     const article = this.article();
     const content = this.commentText().trim();
@@ -179,6 +193,7 @@ export class StudentNewsDetailComponent implements OnInit {
       next: comment => {
         this.comments.set([comment, ...this.comments()]);
         this.commentText.set('');
+        this.showCommentForm.set(false);
         this.article.set({
           ...article,
           commentCount: article.commentCount + 1,

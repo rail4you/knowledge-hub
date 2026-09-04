@@ -5,12 +5,12 @@
       <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
       <span>返回资讯列表</span>
     </button>
-    <nav class="breadcrumb" aria-label="breadcrumb">
+    <nav class="breadcrumb-nav">
       <a routerLink="/student">首页</a>
-      <span class="breadcrumb__sep">/</span>
+      <span class="breadcrumb-nav__sep">/</span>
       <a routerLink="/student/news">资讯中心</a>
-      <span class="breadcrumb__sep">/</span>
-      <span class="breadcrumb__current">资讯详情</span>
+      <span class="breadcrumb-nav__sep">/</span>
+      <span class="breadcrumb-nav__cur">资讯详情</span>
     </nav>
   </div>
 
@@ -77,21 +77,7 @@
 
           <footer class="article-card__footer">
             <div class="article-actions">
-              <button
-                class="action-pill"
-                [class.action-pill--active]="article.userHasLiked"
-                (click)="likeArticle()"
-                [disabled]="article.userHasLiked"
-              >
-                <span nz-icon nzType="like" [nzTheme]="article.userHasLiked ? 'fill' : 'outline'"></span>
-                <span>{{ article.userHasLiked ? '已点赞' : '点赞' }}</span>
-                <span class="action-pill__count">{{ article.likeCount || 0 }}</span>
-              </button>
-              <button class="action-pill" (click)="copyLink()">
-                <span nz-icon [nzType]="copyLinkSuccess() ? 'check' : 'link'" nzTheme="outline"></span>
-                <span>{{ copyLinkSuccess() ? '已复制' : '分享链接' }}</span>
-              </button>
-              <button type="button" class="action-pill" (click)="focusComment()">
+              <button type="button" class="action-pill action-pill--primary" (click)="focusComment()">
                 <span nz-icon nzType="message" nzTheme="outline"></span>
                 <span>写评论</span>
                 <span class="action-pill__count">{{ article.commentCount || 0 }}</span>
@@ -116,35 +102,42 @@
           </header>
 
           @if (article.allowComments) {
-            <div class="comment-form">
-              <span class="comment-form__avatar" [style.background]="commentAuthorGradient('我')">
-                U
-              </span>
-              <div class="comment-form__body">
-                <textarea
-                  #commentTextarea
-                  [ngModel]="commentText()"
-                  (ngModelChange)="commentText.set($event)"
-                  rows="3"
-                  maxlength="500"
-                  placeholder="写下你的想法，与作者和其他读者交流..."
-                  class="comment-form__textarea"
-                ></textarea>
-                <div class="comment-form__footer">
-                  <span class="comment-form__count">
-                    {{ commentText().length }} / 500
-                  </span>
-                  <button
-                    class="comment-form__submit"
-                    [disabled]="!commentText().trim()"
-                    (click)="submitComment()"
-                  >
-                    <span nz-icon nzType="send" nzTheme="outline"></span>
-                    <span>发表评论</span>
-                  </button>
+            @if (!showCommentForm()) {
+              <div class="comment-form-toggle" (click)="openCommentForm()">
+                <span class="comment-form-toggle__avatar" [style.background]="commentAuthorGradient('我')">
+                  U
+                </span>
+                <span class="comment-form-toggle__placeholder">写下你的想法，与作者和其他读者交流...</span>
+              </div>
+            } @else {
+              <div class="comment-form">
+                <span class="comment-form__avatar" [style.background]="commentAuthorGradient('我')">
+                  U
+                </span>
+                <div class="comment-form__body">
+                  <textarea
+                    #commentTextarea
+                    [ngModel]="commentText()"
+                    (ngModelChange)="commentText.set($event)"
+                    rows="3"
+                    maxlength="500"
+                    placeholder="写下你的想法，与作者和其他读者交流..."
+                    class="comment-form__textarea"
+                  ></textarea>
+                  <div class="comment-form__footer">
+                    <button class="comment-form__cancel" (click)="closeCommentForm()">取消</button>
+                    <button
+                      class="comment-form__submit"
+                      [disabled]="!commentText().trim()"
+                      (click)="submitComment()"
+                    >
+                      <span nz-icon nzType="send" nzTheme="outline"></span>
+                      <span>发表评论</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            }
           } @else {
             <div class="comment-disabled">
               <span nz-icon nzType="lock" nzTheme="outline"></span>
@@ -174,16 +167,6 @@
                       <span class="comment-item__time">{{ comment.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
                     </div>
                     <p class="comment-item__content">{{ comment.content }}</p>
-                    <div class="comment-item__actions">
-                      <button class="mini-action">
-                        <span nz-icon nzType="like" nzTheme="outline"></span>
-                        <span>点赞</span>
-                      </button>
-                      <button class="mini-action">
-                        <span nz-icon nzType="message" nzTheme="outline"></span>
-                        <span>回复</span>
-                      </button>
-                    </div>
                   </div>
                 </div>
               }
@@ -196,41 +179,21 @@
       <aside class="detail-aside">
         <!-- 资讯数据卡 -->
         <div class="aside-card aside-stats">
-          <h3 class="aside-card__title">
-            <span nz-icon nzType="bar-chart" nzTheme="outline"></span>
-            资讯数据
-          </h3>
-          <ul class="stats-list">
-            <li>
-              <span class="stats-list__icon stats-list__icon--eye">
-                <span nz-icon nzType="eye" nzTheme="outline"></span>
-              </span>
-              <span class="stats-list__info">
-                <span class="stats-list__value">{{ article.viewCount | number }}</span>
-                <span class="stats-list__label">阅读次数</span>
-              </span>
-            </li>
-            <li>
-              <span class="stats-list__icon stats-list__icon--like">
-                <span nz-icon nzType="like" nzTheme="outline"></span>
-              </span>
-              <span class="stats-list__info">
-                <span class="stats-list__value">{{ article.likeCount | number }}</span>
-                <span class="stats-list__label">点赞次数</span>
-              </span>
-            </li>
-            <li>
-              <span class="stats-list__icon stats-list__icon--comment">
-                <span nz-icon nzType="message" nzTheme="outline"></span>
-              </span>
-              <span class="stats-list__info">
-                <span class="stats-list__value">{{ article.commentCount | number }}</span>
-                <span class="stats-list__label">评论次数</span>
-              </span>
-            </li>
-          </ul>
-
-          <div class="aside-divider"></div>
+          <h3 class="aside-card__title">资讯数据</h3>
+          <div class="stats-row">
+            <div class="stat-blk">
+              <span class="stat-blk__val">{{ article.viewCount | number }}</span>
+              <span class="stat-blk__lbl">阅读</span>
+            </div>
+            <div class="stat-blk">
+              <span class="stat-blk__val">{{ article.likeCount | number }}</span>
+              <span class="stat-blk__lbl">点赞</span>
+            </div>
+            <div class="stat-blk">
+              <span class="stat-blk__val">{{ article.commentCount | number }}</span>
+              <span class="stat-blk__lbl">评论</span>
+            </div>
+          </div>
 
           <ul class="info-list">
             <li>
