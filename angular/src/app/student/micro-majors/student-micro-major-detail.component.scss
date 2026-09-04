@@ -4,150 +4,225 @@
 
 .mm-detail {
   box-sizing: border-box; flex: 1 1 auto; width: 100%;
-  @include ds.student-container; padding-top: 24px; padding-bottom: 48px;
+  @include ds.student-container; padding-top: 20px; padding-bottom: 48px;
   display: flex; flex-direction: column; gap: 20px;
-}
-
-.back-link {
-  display: inline-flex; align-items: center; align-self: flex-start; color: ds.$student-text-muted;
-  font-size: 13px; font-weight: 500; text-decoration: none; padding: 6px 12px;
-  border-radius: ds.$student-radius; transition: all .2s ease;
-  &:hover { color: ds.$student-primary; background: #f0f6ff; }
 }
 
 .loading-state {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 300px; background: #fff; border-radius: ds.$student-radius-lg;
+  min-height: 400px; background: #fff; border-radius: ds.$student-radius-lg;
   box-shadow: ds.$student-shadow-soft; color: ds.$student-text-muted;
   p { margin: 12px 0 0; }
 }
 
-/* =================== Header =================== */
-.detail-header {
-  display: grid; grid-template-columns: 100px 1fr auto; gap: 20px; align-items: center;
-  background: #fff; border-radius: ds.$student-radius-lg; padding: 24px;
-  box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft;
+/* ========== BREADCRUMB ========== */
+.detail-breadcrumb { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px;
+  border: 1px solid ds.$student-border; border-radius: 999px; background: #fff;
+  color: ds.$student-text-muted; font-size: 13px; cursor: pointer; transition: .2s;
+  &:hover { color: ds.$student-primary; border-color: rgba(ds.$student-primary, .4); background: #f0f6ff; }
 }
-.detail-header__cover {
-  width: 100px; height: 100px; border-radius: ds.$student-radius-lg; display: flex;
-  align-items: center; justify-content: center; color: #fff; font-size: 42px;
-}
-.detail-header__body { min-width: 0; }
-.detail-header__tags { display: flex; gap: 8px; margin-bottom: 10px; }
-.tag {
-  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px;
-  border-radius: 999px; font-size: 11px; font-weight: 600;
-  &--blue { background: #eff6ff; color: #2563eb; }
-}
-.detail-header__body h1 { margin: 0 0 8px; color: ds.$student-text; font-size: 24px; font-weight: 700; }
-.detail-header__summary { margin: 0 0 12px; color: ds.$student-text-muted; font-size: 14px; line-height: 1.6; }
-.detail-header__stats {
-  display: flex; flex-wrap: wrap; gap: 16px; color: ds.$student-text-light; font-size: 13px;
-  span { display: inline-flex; align-items: center; gap: 4px; }
-  span[nz-icon] { font-size: 13px; }
-}
-.detail-header__action {
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  text-align: center;
-}
-.enroll-btn {
-  display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 24px;
-  border: 0; border-radius: ds.$student-radius; background: #1e6ce8;
-  color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
-  box-shadow: 0 6px 14px rgba(30,108,232,.28); transition: all .2s ease;
-  &:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(30,108,232,.36); }
-}
-.enrolled-badge {
-  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px;
-  border-radius: 999px; background: #eff6ff; color: #2563eb; font-size: 14px; font-weight: 600;
-  span[nz-icon] { font-size: 16px; }
+.breadcrumb-nav { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: ds.$student-text-light;
+  a { color: ds.$student-text-muted; text-decoration: none; &:hover { color: ds.$student-primary; } }
+  &__sep { color: ds.$student-border; }
+  &__cur { color: ds.$student-primary; font-weight: 600; }
 }
 
+/* ========== HERO CARD（专业简洁、白底） ========== */
+.hero-card {
+  position: relative; border-radius: ds.$student-radius-lg;
+  background: #fff;
+  border: 1px solid ds.$student-border-soft;
+  box-shadow: ds.$student-shadow-soft;
+}
+.hero-card__inner {
+  display: grid; grid-template-columns: minmax(0, 1fr) 200px;
+  gap: 20px; padding: 24px 28px;
+}
+.hero-card__left { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.hero-card__head { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.hero-card__head-text { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.hero-card__cover {
+  width: 80px; height: 80px; flex-shrink: 0; border-radius: ds.$student-radius;
+  background: ds.$student-surface-soft; border: 1px solid ds.$student-border-soft;
+  display: flex; align-items: center; justify-content: center;
+  color: ds.$student-text-light; font-size: 32px;
+  object-fit: cover; overflow: hidden;
+  &--placeholder { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); color: #2563eb; }
+}
+
+.hero-card__title { margin: 0; font-size: 24px; font-weight: 700; line-height: 1.3; color: ds.$student-text; letter-spacing: -.2px; }
+.hero-card__summary { margin: 0; color: ds.$student-text-muted; font-size: 13px; line-height: 1.7; max-width: 64ch; }
+.hero-card__stats { display: flex; align-items: center; gap: 0; margin-top: 6px; padding-top: 14px; border-top: 1px dashed ds.$student-border-soft; }
+.stat-blk { text-align: center; padding: 0 14px;
+  &__val { font-size: 20px; font-weight: 700; display: block; line-height: 1; color: ds.$student-text; font-variant-numeric: tabular-nums;
+    small { font-size: 12px; font-weight: 600; color: ds.$student-text-muted; margin-left: 1px; }
+  }
+  &__lbl { font-size: 11px; color: ds.$student-text-light; display: block; margin-top: 4px; }
+}
+.stat-blk-div { width: 1px; height: 28px; background: ds.$student-border; flex-shrink: 0; }
+
+.hero-card__right {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px;
+}
+.hero-card__action {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 40px; padding: 0 20px; border: 0; border-radius: ds.$student-radius;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: .2s; white-space: nowrap;
+  &--primary { background: ds.$student-primary; color: #fff;
+    &:hover { background: ds.$student-primary-dark; transform: translateY(-1px); box-shadow: 0 6px 14px rgba(37,99,235,.28); }
+  }
+}
 .status-badge {
   display: inline-flex; align-items: center; justify-content: center; gap: 4px;
   height: 36px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 600;
-  &--pending { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
-  &--cancelled { background: ds.$student-surface-soft; color: ds.$student-text-light; border: 1px solid ds.$student-border-soft; }
+  border: 1px solid transparent;
+  &--pending  { background: #fef3c7; color: #d97706; border-color: #fde68a; }
+  &--enrolled { background: #ecfdf5; color: #16a34a; border-color: #bbf7d0; }
 }
-.enroll-progress { width: 100%; max-width: 200px; }
+.progress-hint { font-size: 12px; color: ds.$student-text-light; }
 
-/* =================== Description =================== */
-.detail-desc {
-  background: #fff; border-radius: ds.$student-radius-lg; padding: 20px 24px;
-  box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft;
-  h2 { margin: 0 0 12px; display: flex; align-items: center; gap: 8px; color: ds.$student-text; font-size: 16px; font-weight: 700; }
-  p { margin: 0; color: ds.$student-text-muted; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+/* ========== 微专业介绍 ========== */
+.block {
+  background: #fff; border: 1px solid ds.$student-border-soft;
+  border-radius: ds.$student-radius-lg; padding: 20px 24px;
+  box-shadow: ds.$student-shadow-soft;
+  &__title { @include ds.section-heading(15px); margin: 0 0 12px; }
+  &__bar { display: inline-block; width: 4px; height: 14px; border-radius: 2px; background: ds.$student-primary; }
+  &__desc { margin: 0; font-size: 13px; color: ds.$student-text-muted; line-height: 1.8; white-space: pre-wrap; }
 }
 
-/* =================== Tabs =================== */
-.detail-tabs {
-  background: #fff; border-radius: ds.$student-radius-lg; padding: 20px 24px;
-  box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft;
-}
-.tab-nav {
-  display: flex; gap: 4px; margin-bottom: 20px;
-  border-bottom: 1px solid ds.$student-border-soft;
+/* ========== TABS ========== */
+.tab-nav { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid ds.$student-border-soft;
   button {
-    position: relative;
-    display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 16px;
-    border: 0; background: transparent;
-    color: ds.$student-text-muted; font-size: 14px; font-weight: 500; cursor: pointer;
-    transition: color .2s ease;
+    position: relative; display: inline-flex; align-items: center; gap: 6px;
+    height: 44px; padding: 0 16px; border: 0; background: transparent;
+    color: ds.$student-text-muted; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: color .2s ease;
     .tab-count { color: ds.$student-text-light; font-size: 12px; }
     &:hover { color: ds.$student-primary; }
-    &.active {
-      color: ds.$student-primary; font-weight: 600;
-      &::after {
-        content: ''; position: absolute; left: 14px; right: 14px; bottom: 0;
-        height: 3px; border-radius: 3px 3px 0 0; background: #1e6ce8;
-      }
+    &.active { color: ds.$student-primary; font-weight: 600;
+      &::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: ds.$student-primary; }
       .tab-count { color: ds.$student-primary; }
     }
   }
 }
 
-/* =================== Course Grid =================== */
-.courses-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+/* ========== 课程卡片（与课程列表卡片 1:1 一致） ========== */
+.courses-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
 .course-card {
-  display: flex; flex-direction: column; border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius-lg; background: #fff; overflow: hidden; cursor: pointer;
-  text-decoration: none; outline: none; transition: all .25s ease;
-  &:hover { border-color: rgba(ds.$student-primary,.4); box-shadow: 0 12px 24px rgba(15,23,42,.06); transform: translateY(-2px); }
+  background: #fff;
+  border-radius: ds.$student-radius-lg;
+  box-shadow: ds.$student-shadow-soft;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all .25s ease;
+  display: flex; flex-direction: column;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: ds.$student-shadow-hover;
+    .course-card__cover-img,
+    .course-card__pattern { transform: scale(1.04); }
+  }
 }
 .course-card__cover {
-  position: relative; height: 100px; display: flex; align-items: center; justify-content: center; color: #fff; overflow: hidden;
+  position: relative;
+  height: 140px;
+  overflow: hidden;
 }
-.cover-icon-sm {
-  width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.32);
+.course-card__cover-img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  transition: transform .4s ease;
+}
+.course-card__pattern {
+  position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  span[nz-icon] { font-size: 22px; color: #fff; }
+  transition: transform .4s ease;
 }
-.core-badge {
-  position: absolute; top: 8px; right: 8px; height: 22px; padding: 0 8px; border-radius: 999px;
-  background: #0891b2; color: #fff; font-size: 10px; font-weight: 700;
-  display: inline-flex; align-items: center;
-}
-.course-card__body { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-.course-card__body h3 {
-  margin: 0; color: ds.$student-text; font-size: 14px; font-weight: 600; line-height: 1.4;
-  @include ds.line-clamp(2);
-}
-.course-card__meta {
-  display: flex; flex-wrap: wrap; gap: 8px; color: ds.$student-text-light; font-size: 12px;
-  span { display: inline-flex; align-items: center; gap: 3px; }
+.course-card__cover-icon { font-size: 44px; color: rgba(255,255,255,.7); }
+.course-card__overlay { position: absolute; inset: 0; background: rgba(0,0,0,.12); pointer-events: none; }
+
+.course-card__difficulty {
+  position: absolute; top: 8px; left: 8px;
+  height: 20px; padding: 0 8px;
+  border-radius: 4px;
+  color: #fff; font-size: 10px; font-weight: 600;
+  display: inline-flex; align-items: center; line-height: 1;
 }
 
-/* =================== Resources =================== */
+.course-card__badge {
+  position: absolute; top: 8px; right: 8px;
+  display: inline-flex; align-items: center; gap: 3px;
+  height: 20px; padding: 0 8px;
+  border-radius: 4px;
+  font-size: 10px; font-weight: 600;
+  color: #fff;
+  span[nz-icon] { font-size: 10px; }
+
+  &--core     { background: rgba(245,158,11,.92); }
+  &--enrolled { background: rgba(16,185,129,.92); }
+}
+
+.course-card__body { padding: 12px 16px 10px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.course-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.course-card__title {
+  margin: 0; font-size: 15px; font-weight: 700; color: ds.$student-text; line-height: 1.4;
+  @include ds.line-clamp(2); flex: 1; min-width: 0;
+}
+.course-card__tags { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.tag {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  background: ds.$student-surface-soft; color: ds.$student-text-muted;
+  font-size: 10px; font-weight: 500; line-height: 1.7; white-space: nowrap;
+}
+
+.course-card__stats { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 2px; color: ds.$student-text-light; font-size: 11px; }
+.stat-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  span[nz-icon] { font-size: 11px; }
+}
+
+.course-card__progress { padding-top: 2px; }
+.progress-label {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; color: ds.$student-text-muted;
+  margin-bottom: 3px; gap: 8px;
+  strong { color: ds.$student-primary; font-weight: 700; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; white-space: nowrap; }
+}
+
+.course-card__footer {
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+  border-top: 1px solid ds.$student-border-soft; background: ds.$student-surface-soft;
+}
+.footer-btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  height: 30px; padding: 0 10px;
+  border: 1px solid ds.$student-border; border-radius: 6px; background: #fff;
+  color: ds.$student-text; font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all .2s ease;
+  span[nz-icon] { font-size: 12px; }
+  &:hover { border-color: ds.$student-primary; color: ds.$student-primary; }
+  &--primary {
+    flex: 1.6; background: ds.$student-primary; border-color: transparent; color: #fff;
+    &:hover:not([disabled]) { background: ds.$student-primary-dark; color: #fff; }
+    &[disabled] { opacity: .7; cursor: not-allowed; }
+  }
+}
+
+/* ========== 学习资料 ========== */
 .resources-list { display: flex; flex-direction: column; gap: 8px; }
 .resource-item {
   display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: ds.$student-radius;
   border: 1px solid ds.$student-border-soft; background: #fff; text-decoration: none; color: inherit;
   transition: all .2s ease;
-  &:hover { border-color: rgba(ds.$student-primary,.4); background: #f8fbff; }
+  &:hover { border-color: rgba(ds.$student-primary, .4); background: #f8fbff; }
 }
 .resource-item__icon {
   width: 44px; height: 44px; border-radius: 10px; background: ds.$student-surface-soft;
-  display: flex; align-items: center; justify-content: center; color: ds.$student-primary; font-size: 20px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: ds.$student-primary; font-size: 20px; flex-shrink: 0;
 }
 .resource-item__body { flex: 1; min-width: 0; }
 .resource-item__name { display: block; color: ds.$student-text; font-size: 14px; font-weight: 600; }
@@ -156,15 +231,20 @@
 .resource-item:hover .resource-item__action { color: ds.$student-primary; }
 
 .empty-small {
-  text-align: center; padding: 40px 0; color: ds.$student-text-light; font-size: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 56px 20px; color: ds.$student-text-light;
+  background: ds.$student-surface-soft; border-radius: ds.$student-radius;
+  border: 1px dashed ds.$student-border; font-size: 13px;
+  span[nz-icon] { font-size: 32px; color: ds.$student-border; }
 }
 
 @media (max-width: 768px) {
   .mm-detail { padding-top: 16px; padding-bottom: 32px; }
-  .detail-header { grid-template-columns: 1fr; text-align: center; }
-  .detail-header__cover { margin: 0 auto; }
-  .detail-header__tags { justify-content: center; }
-  .detail-header__stats { justify-content: center; }
-  .detail-header__action { flex-direction: row; }
+  .hero-card__inner { grid-template-columns: 1fr; padding: 20px 22px; }
+  .hero-card__head { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .hero-card__cover { width: 64px; height: 64px; font-size: 26px; }
+  .hero-card__right { flex-direction: row; align-items: flex-start; }
+  .hero-card__title { font-size: 22px; }
+  .hero-card__stats { flex-wrap: wrap; .stat-blk-div { display: none; } }
   .courses-grid { grid-template-columns: 1fr; }
 }

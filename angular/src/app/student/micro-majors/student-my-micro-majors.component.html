@@ -27,134 +27,90 @@
   } @else {
     <div class="mymm-grid">
       @for (item of items(); track item.enrollmentId) {
-        <article class="mymm-card" (click)="openDetail(item)" tabindex="0" (keyup.enter)="openDetail(item)">
-          <!-- 封面 -->
-          <div class="mymm-card__cover" [style.background]="coverGradient(item)">
-            <div class="mymm-card__cover-top">
-              @if (item.industryField) {
-                <span class="cover-badge">{{ item.industryField }}</span>
-              }
-              <span
-                class="cover-status"
-                [class.cover-status--done]="item.enrollmentStatus === EnrollmentStatus.Completed || item.enrollmentStatus === EnrollmentStatus.Certified"
-                [class.cover-status--cancel]="item.enrollmentStatus === EnrollmentStatus.Cancelled"
-                [class.cover-status--muted]="item.enrollmentStatus === EnrollmentStatus.Pending"
-              >
-                <span nz-icon [nzType]="getStatusIcon(item.enrollmentStatus)" nzTheme="outline"></span>
-                {{ getStatusLabel(item.enrollmentStatus) }}
-              </span>
-            </div>
-            <div class="mymm-card__cover-icon">
+        <article
+          class="mymm-card"
+          (click)="openDetail(item)"
+          tabindex="0"
+          (keyup.enter)="openDetail(item)"
+        >
+          <!-- 封面（与微专业列表一致） -->
+          <div class="mymm-card__cover">
+            @if (hasCover(item)) {
+              <img
+                class="mymm-card__cover-img"
+                [src]="item.coverImageUrl"
+                [alt]="item.title"
+                loading="lazy"
+              />
+            }
+            <div
+              class="mymm-card__cover-bg"
+              [style.background]="coverGradient(item)"
+              aria-hidden="true"
+            ></div>
+            <div class="mymm-card__overlay" aria-hidden="true"></div>
+
+            <div class="cover-icon">
               <span nz-icon nzType="trophy" nzTheme="outline"></span>
             </div>
+
+            @if (item.industryField) {
+              <span class="cover-badge">
+                <span nz-icon nzType="environment" nzTheme="outline"></span>
+                {{ item.industryField }}
+              </span>
+            }
+
+            <span
+              class="cover-status"
+              [class.cover-status--pending]="item.enrollmentStatus === EnrollmentStatus.Pending"
+              [class.cover-status--active]="item.enrollmentStatus === EnrollmentStatus.Enrolled || item.enrollmentStatus === EnrollmentStatus.InProgress"
+              [class.cover-status--done]="item.enrollmentStatus === EnrollmentStatus.Completed"
+              [class.cover-status--cert]="item.enrollmentStatus === EnrollmentStatus.Certified"
+              [class.cover-status--cancel]="item.enrollmentStatus === EnrollmentStatus.Cancelled"
+            >
+              <span nz-icon [nzType]="getStatusIcon(item.enrollmentStatus)" nzTheme="outline"></span>
+              {{ getStatusLabel(item.enrollmentStatus) }}
+            </span>
           </div>
 
-          <!-- 主体 -->
+          <!-- 主体（与微专业列表一致 + 进度行） -->
           <div class="mymm-card__body">
-            <h2 class="mymm-card__title" [title]="item.title">{{ item.title }}</h2>
-            <p class="mymm-card__desc">{{ item.summary || '暂无简介' }}</p>
+            <h3 class="mymm-card__title" [title]="item.title">{{ item.title }}</h3>
 
-            <div class="mymm-card__stats">
-              <span class="mymm-stat">
-                <span nz-icon nzType="read" nzTheme="outline"></span>
-                {{ item.courseCount || item.courses?.length || 0 }} 门课程
-              </span>
-              <span class="mymm-stat">
-                <span nz-icon nzType="team" nzTheme="outline"></span>
-                {{ item.enrollmentCount || 0 }} 人已报
-              </span>
-              @if (item.collaborationUnit) {
-                <span class="mymm-stat mymm-stat--unit" [title]="item.collaborationUnit">
-                  <span nz-icon nzType="bank" nzTheme="outline"></span>
-                  {{ item.collaborationUnit }}
+            <ul class="mymm-attrs">
+              <li class="mymm-attrs__row">
+                <span class="attr-cell">
+                  <span class="attr-label">行业</span>
+                  <span class="attr-value">{{ item.industryField || '综合' }}</span>
                 </span>
-              }
-            </div>
-
-            <div class="mymm-card__progress">
-              <div class="progress-head">
-                <span>学习进度</span>
-                <strong>{{ roundProgress(item.progress) }}%</strong>
-              </div>
-              <nz-progress
-                [nzPercent]="roundProgress(item.progress)"
-                nzSize="small"
-                [nzStrokeColor]="roundProgress(item.progress) >= 100 ? '#10b981' : '#1e6ce8'"
-              ></nz-progress>
-            </div>
-
-            @if (item.enrolledAt) {
-              <div class="mymm-card__time">
-                报名于 {{ item.enrolledAt | date:'yyyy-MM-dd' }}
-                @if (item.completedAt) {
-                  <span class="time-sep">·</span>
-                  完成于 {{ item.completedAt | date:'yyyy-MM-dd' }}
-                }
-              </div>
-            }
-          </div>
-
-          <!-- 课程（默认收起，点击展开） -->
-          @if (item.courses?.length) {
-            <div class="mymm-card__courses" (click)="$event.stopPropagation()">
-              <button
-                class="courses-toggle"
-                (click)="toggleCourses(item.enrollmentId)"
-                [attr.aria-expanded]="isCoursesExpanded(item.enrollmentId)"
-              >
-                <span class="courses-toggle__label">
+                <span class="attr-sep">·</span>
+                <span class="attr-cell">
                   <span nz-icon nzType="read" nzTheme="outline"></span>
-                  课程
-                  <span class="courses-toggle__count">{{ item.courses.length }}</span>
+                  <span class="attr-value">{{ item.courseCount || item.courses?.length || 0 }}</span>
+                  <span class="attr-suffix">门课程</span>
                 </span>
-                <span class="courses-toggle__hint">
-                  {{ isCoursesExpanded(item.enrollmentId) ? '收起' : '展开全部' }}
-                  <span nz-icon [nzType]="isCoursesExpanded(item.enrollmentId) ? 'up' : 'down'" nzTheme="outline"></span>
+                <span class="attr-sep">·</span>
+                <span class="attr-cell">
+                  <span nz-icon nzType="team" nzTheme="outline"></span>
+                  <span class="attr-value">{{ item.enrollmentCount || 0 }}</span>
+                  <span class="attr-suffix">人报名</span>
                 </span>
-              </button>
+              </li>
 
-              <div class="courses-collapse" [class.is-open]="isCoursesExpanded(item.enrollmentId)">
-                <div class="courses-list">
-                  <div class="courses-list__inner">
-                    @for (course of item.courses; track course.courseId) {
-                      <button class="course-row" (click)="goCourse(course, item)" title="进入课程学习">
-                        <span class="course-row__icon">
-                          <span nz-icon nzType="play-circle" nzTheme="outline"></span>
-                        </span>
-                        <span class="course-row__text">
-                          <span class="course-row__name">{{ course.courseTitle || '未命名课程' }}</span>
-                          <span class="course-row__meta">
-                            @if (course.major) { <span>{{ course.major }}</span> }
-                            @if (course.semester) { <span>{{ course.semester }}</span> }
-                            @if (course.isCore) { <span class="core-dot">核心课</span> }
-                          </span>
-                        </span>
-                        <span nz-icon nzType="right" nzTheme="outline" class="course-row__arrow"></span>
-                      </button>
-                    }
-                  </div>
-                </div>
-              </div>
-            </div>
-          }
-
-          <!-- 底部操作：证书为隐藏式入口 -->
-          <div class="mymm-card__footer">
-            @if (item.certificateImageUrl) {
-              <button class="foot-btn foot-btn--cert" (click)="openCertificate(item); $event.stopPropagation()">
-                <span nz-icon nzType="safety-certificate" nzTheme="fill"></span>
-                查看证书
-              </button>
-            } @else if (item.isCertificateEnabled) {
-              <span class="cert-pending">
-                <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
-                证书待发放
-              </span>
-            }
-            <button class="foot-btn foot-btn--detail" (click)="openDetail(item); $event.stopPropagation()">
-              <span>查看详情</span>
-              <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
-            </button>
+              <li class="mymm-attrs__row progress-row">
+                <span class="progress-label">
+                  <span nz-icon nzType="line-chart" nzTheme="outline"></span>
+                  学习进度
+                </span>
+                <span
+                  class="progress-value"
+                  [class.progress-value--done]="roundProgress(item.progress) >= 100"
+                >
+                  {{ roundProgress(item.progress) }}%
+                </span>
+              </li>
+            </ul>
           </div>
         </article>
       }
@@ -162,36 +118,3 @@
 
   }
 </div>
-
-<!-- 证书查看弹窗 -->
-<nz-modal
-  [(nzVisible)]="certificateVisible"
-  nzTitle="微专业证书"
-  [nzWidth]="720"
-  [nzFooter]="null"
-  (nzOnCancel)="closeCertificate()"
->
-  <ng-container *nzModalContent>
-    @if (activeCertificate(); as item) {
-      <div class="cert-viewer">
-        <div class="cert-viewer__img">
-          <img [src]="item.certificateImageUrl" alt="微专业证书" />
-        </div>
-        <div class="cert-viewer__meta">
-          <span class="meta-label">微专业</span>
-          <span class="meta-value">{{ item.title }}</span>
-        </div>
-        <div class="cert-viewer__meta">
-          <span class="meta-label">发证时间</span>
-          <span class="meta-value">{{ item.certificateIssuedAt | date:'yyyy-MM-dd' }}</span>
-        </div>
-        <div class="cert-viewer__actions">
-          <button nz-button nzType="primary" nzSize="large" (click)="downloadCertificate()">
-            <span nz-icon nzType="download" nzTheme="outline"></span>
-            下载证书图片
-          </button>
-        </div>
-      </div>
-    }
-  </ng-container>
-</nz-modal>

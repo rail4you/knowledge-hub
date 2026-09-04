@@ -3,10 +3,6 @@ import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzModalModule } from 'ng-zorro-antd/modal';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import {
   MicroMajorService,
@@ -14,7 +10,6 @@ import {
 } from '../../micro-majors/micro-major.service';
 import type {
   MyMicroMajorDto,
-  MicroMajorCourseDto,
 } from '../../micro-majors/micro-major.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
@@ -23,7 +18,7 @@ import { StudentHeroComponent } from '../shared/student-hero/student-hero.compon
   standalone: true,
   imports: [
     CommonModule, DatePipe, DecimalPipe, RouterModule,
-    NzIconModule, NzSpinModule, NzProgressModule, NzEmptyModule, NzModalModule, NzButtonModule,
+    NzIconModule, NzSpinModule,
     StudentHeroComponent,
   ],
   templateUrl: './student-my-micro-majors.component.html',
@@ -39,9 +34,6 @@ export class StudentMyMicroMajorsComponent implements OnInit {
   readonly loading = signal(true);
   readonly EnrollmentStatus = MicroMajorEnrollmentStatus;
 
-  /** 卡片内“课程”折叠状态（key = enrollmentId） */
-  readonly expandedCourseIds = signal<Set<string>>(new Set());
-
   /** 头部数据总览 */
   readonly heroStats = computed(() => {
     const items = this.items();
@@ -54,9 +46,6 @@ export class StudentMyMicroMajorsComponent implements OnInit {
       { label: '已获证书', value: countOf(MicroMajorEnrollmentStatus.Certified), suffix: '个', icon: 'safety-certificate', color: '#f59e0b' },
     ];
   });
-
-  readonly certificateVisible = signal(false);
-  readonly activeCertificate = signal<MyMicroMajorDto | null>(null);
 
   ngOnInit(): void {
     this.loadData();
@@ -74,64 +63,6 @@ export class StudentMyMicroMajorsComponent implements OnInit {
         this.message.error('加载我的微专业失败');
       },
     });
-  }
-
-  openCertificate(item: MyMicroMajorDto): void {
-    this.activeCertificate.set(item);
-    this.certificateVisible.set(true);
-  }
-
-  closeCertificate(): void {
-    this.certificateVisible.set(false);
-    this.activeCertificate.set(null);
-  }
-
-  toggleCourses(enrollmentId: string): void {
-    this.expandedCourseIds.update(set => {
-      const next = new Set(set);
-      if (next.has(enrollmentId)) {
-        next.delete(enrollmentId);
-      } else {
-        next.add(enrollmentId);
-      }
-      return next;
-    });
-  }
-
-  isCoursesExpanded(enrollmentId: string): boolean {
-    return this.expandedCourseIds().has(enrollmentId);
-  }
-
-  downloadCertificate(item?: MyMicroMajorDto): void {
-    const cert = item ?? this.activeCertificate();
-    if (!cert?.certificateImageUrl) return;
-
-    const url = cert.certificateImageUrl;
-    const extMatch = url.split('?')[0].match(/\.(png|jpe?g|webp|gif)$/i);
-    const ext = extMatch ? extMatch[1].toLowerCase() : 'png';
-    const safeTitle = (cert.title || '微专业证书').replace(/[\\/:*?"<>|]/g, '_');
-    const filename = `微专业证书_${safeTitle}.${ext}`;
-
-    fetch(url, { mode: 'cors' })
-      .then(resp => {
-        if (!resp.ok) throw new Error('download failed');
-        return resp.blob();
-      })
-      .then(blob => {
-        const objectUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = objectUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(objectUrl);
-      })
-      .catch(() => {
-        // CORS 或网络失败时降级为新窗口打开原图，由用户手动保存
-        window.open(url, '_blank');
-        this.message.info('证书图片已在新窗口打开，可右键另存为保存');
-      });
   }
 
   getStatusLabel(status: number): string {
@@ -164,19 +95,16 @@ export class StudentMyMicroMajorsComponent implements OnInit {
     this.router.navigate(['/student/micro-majors', item.id], { queryParams: { from: 'my-micro-majors' } });
   }
 
-  goCourse(course: MicroMajorCourseDto, item: MyMicroMajorDto): void {
-    // 从“我的微专业”列表直达课程：携带微专业上下文，课程详情页的“返回”会回到本列表
-    const queryParams: Record<string, string> = { from: 'my-micro-majors-list' };
-    if (item?.id) queryParams['fromMicroMajor'] = item.id;
-    this.router.navigate(['/student/courses', course.courseId], { queryParams });
-  }
-
   coverGradient(item: MyMicroMajorDto): string {
     const palettes = ['#1e6ce8', '#0c4cb8', '#2563eb', '#0284c7', '#0891b2'];
     const key = item.title || item.id || '';
     let hash = 0;
     for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
     return palettes[Math.abs(hash) % palettes.length];
+  }
+
+  hasCover(item: MyMicroMajorDto): boolean {
+    return !!item.coverImageUrl && item.coverImageUrl.trim().length > 0;
   }
 
   /** 学习进度保留 2 位小数 */

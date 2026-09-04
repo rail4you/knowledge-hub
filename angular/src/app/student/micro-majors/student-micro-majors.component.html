@@ -29,59 +29,76 @@
           tabindex="0"
           (keyup.enter)="openDetail(item)"
         >
-          <div class="mm-card__cover" [style.background]="coverGradient(item)">
+          <!-- 封面（较高，展示背景图） -->
+          <div class="mm-card__cover">
+            @if (hasCover(item)) {
+              <img
+                class="mm-card__cover-img"
+                [src]="item.coverImageUrl"
+                [alt]="item.title"
+                loading="lazy"
+              />
+            }
+            <div
+              class="mm-card__cover-bg"
+              [style.background]="coverGradient(item)"
+              aria-hidden="true"
+            ></div>
+            <div class="mm-card__overlay" aria-hidden="true"></div>
+
             <div class="cover-icon">
               <span nz-icon nzType="trophy" nzTheme="outline"></span>
             </div>
+
             @if (item.industryField) {
-              <span class="cover-badge">{{ item.industryField }}</span>
-            }
-          </div>
-
-          <div class="mm-card__body">
-            <div class="mm-card__top">
-              <span class="field-tag">
+              <span class="cover-badge">
                 <span nz-icon nzType="environment" nzTheme="outline"></span>
-                {{ item.industryField || '综合' }}
+                {{ item.industryField }}
               </span>
-              @if (item.isCertificateEnabled) {
-                <span class="cert-tag">
-                  <span nz-icon nzType="safety-certificate" nzTheme="outline"></span>
-                  可获证书
-                </span>
-              }
-            </div>
+            }
 
-            <h3 class="mm-card__title" [title]="item.title">{{ item.title }}</h3>
-            <p class="mm-card__desc">{{ item.summary || '暂无简介' }}</p>
-
-            <div class="mm-card__stats">
-              <span class="mm-stat">
-                <span nz-icon nzType="read" nzTheme="outline"></span>
-                {{ item.courseCount || 0 }} 门课程
+            @if (item.isCertificateEnabled) {
+              <span class="cover-cert" title="完成可获得证书">
+                <span nz-icon nzType="safety-certificate" nzTheme="fill"></span>
               </span>
-              <span class="mm-stat">
-                <span nz-icon nzType="team" nzTheme="outline"></span>
-                {{ item.enrollmentCount || 0 }} 人已报
-              </span>
-            </div>
-
-            @if (item.currentUserProgress != null) {
-              <div class="mm-card__progress">
-                <nz-progress
-                  [nzPercent]="roundProgress(item.currentUserProgress)"
-                  nzSize="small"
-                  nzStrokeColor="#1e6ce8"
-                ></nz-progress>
-              </div>
             }
           </div>
 
+          <!-- 主体：紧凑属性行 -->
+          <div class="mm-card__body">
+            <h3 class="mm-card__title" [title]="item.title">{{ item.title }}</h3>
+
+            <ul class="mm-attrs">
+              <li class="mm-attrs__row">
+                <span class="attr-cell">
+                  <span class="attr-label">行业</span>
+                  <span class="attr-value">{{ item.industryField || '综合' }}</span>
+                </span>
+                <span class="attr-sep">·</span>
+                <span class="attr-cell">
+                  <span nz-icon nzType="read" nzTheme="outline"></span>
+                  <span class="attr-value">{{ item.courseCount || 0 }}</span>
+                  <span class="attr-suffix">门课程</span>
+                </span>
+                <span class="attr-sep">·</span>
+                <span class="attr-cell">
+                  <span nz-icon nzType="team" nzTheme="outline"></span>
+                  <span class="attr-value">{{ item.enrollmentCount || 0 }}</span>
+                  <span class="attr-suffix">人报名</span>
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- 底部操作 -->
           <div class="mm-card__actions">
             @if (item.isCurrentUserEnrolled) {
               @if (enrollmentStatusMap()[item.id!]; as status) {
                 @if (status === EnrollmentStatus.Pending) {
-                  <span class="status-badge status-badge--pending">⏳ 待审批</span>
+                  <span class="status-badge status-badge--pending">
+                    <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+                    待审批
+                  </span>
                 } @else if (status === EnrollmentStatus.Cancelled) {
                   <span class="status-badge status-badge--cancelled">已取消</span>
                 } @else {

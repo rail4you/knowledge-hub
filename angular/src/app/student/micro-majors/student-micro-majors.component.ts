@@ -5,7 +5,6 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { MicroMajorService, MicroMajorEnrollmentStatus } from '../../micro-majors/micro-major.service';
 import type { MicroMajorDto, MicroMajorEnrollmentDto } from '../../micro-majors/micro-major.service';
@@ -16,7 +15,7 @@ import { StudentHeroComponent } from '../shared/student-hero/student-hero.compon
   standalone: true,
   imports: [
     CommonModule, DatePipe, DecimalPipe, RouterModule,
-    NzButtonModule, NzIconModule, NzSpinModule, NzPaginationModule, NzProgressModule,
+    NzButtonModule, NzIconModule, NzSpinModule, NzPaginationModule,
     StudentHeroComponent,
   ],
   templateUrl: './student-micro-majors.component.html',
@@ -118,6 +117,10 @@ export class StudentMicroMajorsComponent implements OnInit {
     });
   }
 
+  hasCover(item: MicroMajorDto): boolean {
+    return !!item.coverImageUrl && item.coverImageUrl.trim().length > 0;
+  }
+
   coverGradient(item: MicroMajorDto): string {
     const palettes = [
       '#1e6ce8',
@@ -130,11 +133,5 @@ export class StudentMicroMajorsComponent implements OnInit {
     let hash = 0;
     for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
     return palettes[Math.abs(hash) % palettes.length];
-  }
-
-  /** 学习进度保留 2 位小数 */
-  roundProgress(value: number | null | undefined): number {
-    if (value == null || isNaN(value)) return 0;
-    return Math.round(value * 100) / 100;
   }
 }

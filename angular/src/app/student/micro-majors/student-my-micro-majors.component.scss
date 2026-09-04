@@ -10,503 +10,141 @@
 
 /* =================== HERO（使用共享组件 app-student-hero） =================== */
 
-/* =================== 列表（网格，不占满整行） =================== */
-.mymm-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 20px;
-  /* 卡片各自保持自然高度：某张卡展开时，同一行其它卡片内容位置不受影响 */
-  align-items: start;
-  grid-auto-rows: auto;
-}
+/* =================== Grid（与微专业列表同结构） =================== */
+.mymm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
 
 .mymm-card {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius-lg;
-  background: #fff;
-  overflow: hidden;
-  cursor: pointer;
-  outline: none;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-
-  &:hover,
-  &:focus-visible {
+  display: flex; flex-direction: column; border: 1px solid ds.$student-border-soft;
+  border-radius: ds.$student-radius-lg; background: #fff; overflow: hidden; cursor: pointer;
+  outline: none; transition: all .25s ease; box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  &:hover, &:focus-visible {
+    border-color: rgba(ds.$student-primary, .4); box-shadow: 0 16px 32px rgba(15,23,42,.1);
     transform: translateY(-3px);
-    border-color: rgba(ds.$student-primary, 0.35);
-    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+    .cover-icon { transform: scale(1.06) rotate(-2deg); }
+    .mymm-card__cover-img { transform: scale(1.04); }
   }
 }
 
-/* ---------- 封面 ---------- */
+/* ---------- 封面（与微专业列表一致） ---------- */
 .mymm-card__cover {
-  position: relative;
-  height: 112px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  overflow: hidden;
+  position: relative; height: 210px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; overflow: hidden;
 }
-
-.mymm-card__cover-top {
-  position: absolute;
-  top: 12px;
-  left: 14px;
-  right: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+.mymm-card__cover-img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  transition: transform .4s ease; z-index: 1;
 }
-
+.mymm-card__cover-bg {
+  position: absolute; inset: 0; z-index: 0;
+}
+.mymm-card__overlay {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.42) 100%);
+}
+.cover-icon {
+  position: relative; z-index: 3;
+  width: 64px; height: 64px; border-radius: 16px; background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.32); display: flex; align-items: center;
+  justify-content: center; backdrop-filter: blur(6px); transition: transform .3s ease;
+  span[nz-icon] { font-size: 30px; color: #fff; }
+}
 .cover-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  position: absolute; top: 12px; left: 12px; z-index: 3;
+  height: 24px; padding: 0 10px; border-radius: 6px;
+  background: rgba(0,0,0,.28); backdrop-filter: blur(6px);
+  color: #fff; font-size: 11px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 4px;
+  max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  span[nz-icon] { font-size: 12px; }
 }
 
+/* 报名状态徽章（右上角） */
 .cover-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #1e6ce8;
-  font-size: 11px;
-  font-weight: 600;
-  flex-shrink: 0;
+  position: absolute; top: 12px; right: 12px; z-index: 3;
+  height: 24px; padding: 0 10px; border-radius: 999px;
+  background: rgba(255,255,255,.94); color: ds.$student-primary;
+  font-size: 11px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  span[nz-icon] { font-size: 11px; }
 
-  span[nz-icon] {
-    font-size: 11px;
-  }
-
-  &--done { color: #16a34a; }
-  &--cancel { color: #94a3b8; }
-  &--muted { color: #64748b; }
+  &--pending  { color: #d97706; background: #fef3c7; }
+  &--active   { color: ds.$student-primary; background: #dbeafe; }
+  &--done     { color: #10b981; background: #d1fae5; }
+  &--cert     { color: #b45309; background: #fef3c7; }
+  &--cancel   { color: ds.$student-text-light; background: #f1f5f9; }
 }
 
-.mymm-card__cover-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  span[nz-icon] { font-size: 22px; }
-}
-
-/* ---------- 主体 ---------- */
-.mymm-card__body {
-  padding: 14px 18px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-}
+/* ---------- 主体（与微专业列表同结构 + 进度行） ---------- */
+.mymm-card__body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
 
 .mymm-card__title {
-  margin: 0;
-  color: ds.$student-text;
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1.4;
-  letter-spacing: -0.2px;
-  @include ds.line-clamp(1);
+  margin: 0; color: ds.$student-text; font-size: 16px; font-weight: 700;
+  line-height: 1.4; letter-spacing: -.2px; @include ds.line-clamp(2);
 }
 
-.mymm-card__desc {
-  margin: 0;
+/* ---------- 紧凑属性区（与微专业列表同结构） ---------- */
+.mymm-attrs {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.mymm-attrs__row {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 4px 6px; font-size: 12px; line-height: 1.55;
   color: ds.$student-text-muted;
-  font-size: 13px;
-  line-height: 1.65;
-  @include ds.line-clamp(2);
 }
-
-.mymm-card__stats {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  color: ds.$student-text-light;
-  font-size: 12px;
+.attr-cell {
+  display: inline-flex; align-items: center; gap: 4px;
+  span[nz-icon] { font-size: 12px; color: ds.$student-text-light; flex-shrink: 0; }
 }
+.attr-label { color: ds.$student-text-light; }
+.attr-value { color: ds.$student-text; font-weight: 600; font-variant-numeric: tabular-nums; }
+.attr-suffix { color: ds.$student-text-muted; font-weight: 400; }
+.attr-sep { color: ds.$student-border; margin: 0 -2px; user-select: none; }
 
-.mymm-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-
-  span[nz-icon] { font-size: 12px; }
-
-  &--unit {
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-.mymm-card__progress {
-  padding-top: 2px;
-}
-
-.progress-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  color: ds.$student-text-muted;
-  margin-bottom: 2px;
-
-  strong {
-    color: ds.$student-text;
-    font-size: 13px;
-  }
-}
-
-.mymm-card__time {
-  font-size: 12px;
-  color: ds.$student-text-light;
-}
-
-.time-sep {
-  margin: 0 4px;
-  color: ds.$student-border;
-}
-
-/* ---------- 课程（默认收起） ---------- */
-.mymm-card__courses {
-  border-top: 1px solid ds.$student-border-soft;
-  cursor: default;
-}
-
-.courses-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 11px 18px;
-  border: 0;
-  background: #fff;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: ds.$student-surface-soft;
-  }
-
-  &__label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: ds.$student-text;
-
-    span[nz-icon] { color: ds.$student-primary; }
-  }
-
-  &__count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: ds.$student-surface-soft;
-    color: ds.$student-text-muted;
-    font-size: 11px;
-    font-weight: 600;
-  }
-
-  &__hint {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    color: ds.$student-text-light;
-  }
-}
-
-.courses-collapse {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.28s ease;
-
-  &.is-open {
-    grid-template-rows: 1fr;
-  }
-}
-
-.courses-list {
-  min-height: 0;
-  overflow: hidden;
-}
-
-.courses-list__inner {
-  padding: 2px 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.course-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius;
-  background: #fff;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: rgba(ds.$student-primary, 0.4);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
-
-    .course-row__icon {
-      background: ds.$student-primary;
-      color: #fff;
-    }
-  }
-
-  &__icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: #e8f0fe;
-    color: ds.$student-primary;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: all 0.2s ease;
-  }
-
-  &__text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-    flex: 1;
-  }
-
-  &__name {
-    font-size: 13px;
-    font-weight: 600;
-    color: ds.$student-text;
-    @include ds.line-clamp(1);
-  }
-
-  &__meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    color: ds.$student-text-light;
-  }
-
-  &__arrow {
-    color: ds.$student-border;
-    font-size: 11px;
-    flex-shrink: 0;
-  }
-}
-
-.core-dot { color: #b45309; }
-
-/* ---------- 底部操作（证书隐藏式入口） ---------- */
-.mymm-card__footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 18px 14px;
+/* ---------- 进度行（数字 + 文字标签） ---------- */
+.progress-row {
+  padding-top: 4px;
   border-top: 1px dashed ds.$student-border-soft;
-}
-
-.foot-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 32px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: ds.$student-radius;
-  background: transparent;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-
-  span[nz-icon] { font-size: 14px; }
-
-  &--cert {
-    color: #b45309;
-
-    &:hover {
-      background: #fffbeb;
-    }
-  }
-
-  &--detail {
-    margin-left: auto;
-    color: ds.$student-primary;
-
-    &:hover {
-      background: #eef5ff;
-    }
-  }
-}
-
-.cert-pending {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  margin-top: 2px;
+  justify-content: space-between;
   font-size: 12px;
-  color: ds.$student-text-light;
-
-  span[nz-icon] { font-size: 13px; }
 }
-
-/* ---------- 证书查看弹窗 ---------- */
-.cert-viewer {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 4px 0;
-
-  &__img {
-    text-align: center;
-    background: ds.$student-surface-soft;
-    border-radius: ds.$student-radius-lg;
-    padding: 16px;
-    border: 1px solid ds.$student-border-soft;
-
-    img {
-      max-width: 100%;
-      max-height: 62vh;
-      object-fit: contain;
-      border-radius: ds.$student-radius;
-      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.12);
-    }
-  }
-
-  &__meta {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-
-    .meta-label {
-      flex: 0 0 72px;
-      color: ds.$student-text-light;
-      font-size: 13px;
-    }
-
-    .meta-value { color: ds.$student-text; font-weight: 600; }
-  }
-
-  &__actions {
-    display: flex;
-    justify-content: center;
-    padding-top: 6px;
-  }
+.progress-label {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: ds.$student-text-light;
+  span[nz-icon] { font-size: 12px; }
+}
+.progress-value {
+  color: ds.$student-primary; font-weight: 700; font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  &--done { color: #10b981; }
 }
 
 /* =================== States =================== */
 .loading-state, .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 360px;
-  background: #fff;
-  border-radius: ds.$student-radius-lg;
-  border: 1px solid ds.$student-border-soft;
-  box-shadow: ds.$student-shadow-soft;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 360px; background: #fff; border-radius: ds.$student-radius-lg;
+  border: 1px solid ds.$student-border-soft; box-shadow: ds.$student-shadow-soft;
   color: ds.$student-text-muted;
-
-  p {
-    margin: 12px 0 0;
-    font-size: 14px;
-  }
+  p { margin: 12px 0 0; font-size: 14px; }
 }
-
-.empty-state {
-  gap: 8px;
-
-  &__art {
-    width: 88px;
-    height: 88px;
-    border-radius: 50%;
-    background: ds.$student-surface-soft;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: ds.$student-border;
-    font-size: 38px;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-  }
-
-  h3 {
-    margin: 16px 0 4px;
-    color: ds.$student-text;
-    font-size: 18px;
-  }
-
+.empty-state { gap: 8px;
+  &__art { width: 88px; height: 88px; border-radius: 50%; background: ds.$student-surface-soft; display: inline-flex; align-items: center; justify-content: center; color: ds.$student-border; font-size: 38px; box-shadow: 0 4px 14px rgba(15,23,42,.06); }
+  h3 { margin: 16px 0 4px; color: ds.$student-text; font-size: 18px; }
   .goto-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 10px;
-    height: 38px;
-    padding: 0 20px;
-    border: 0;
-    border-radius: ds.$student-radius;
-    background: #1e6ce8;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 10px; height: 38px; padding: 0 20px;
+    border: 0; border-radius: ds.$student-radius;
+    background: #1e6ce8; color: #fff;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s ease;
     &:hover { background: ds.$student-primary-dark; }
   }
 }
 
 @media (max-width: 768px) {
   .mymm-page { padding-top: 16px; padding-bottom: 32px; }
-
-  .mymm-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .mymm-card__cover {
-    height: 96px;
-  }
+  .mymm-grid { grid-template-columns: 1fr; }
+  .mymm-card__cover { height: 180px; }
 }
