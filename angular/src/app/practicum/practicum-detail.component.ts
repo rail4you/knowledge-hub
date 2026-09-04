@@ -51,7 +51,7 @@ type SubmissionForm = {
   imports: [
     CommonModule, FormsModule, DatePipe,
     NzButtonModule, NzCardModule, NzDescriptionsModule, NzDividerModule,
-    NzIconModule, NzInputModule, NzTableModule, NzTabsModule, NzTagModule,
+    NzIconModule, NzInputModule, NzTableModule, NzTagModule,
     NzAvatarModule, NzSpinModule, NzTooltipModule, RouterModule,
   ],
   templateUrl: './practicum-detail.component.html',
@@ -85,6 +85,7 @@ export class PracticumDetailComponent implements OnInit, OnDestroy {
 
   // ─── Tab state ──────────────────────────────
   activeTab = signal<number>(0);
+  readonly tabIcons = ['info-circle', 'profile', 'folder-open', 'message'];
 
   // ─── Chat state ─────────────────────────────
   chatMessages = signal<PracticumChatMessageDto[]>([]);

@@ -10,10 +10,10 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
-import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzUploadFile, NzUploadModule } from 'ng-zorro-antd/upload';
 import { ResourceService } from '../proxy/resources/resource.service';
@@ -45,10 +45,11 @@ import {
     NzIconModule,
     NzModalModule,
     NzProgressModule,
+    NzSpinModule,
     NzRadioModule,
     NzSelectModule,
     NzTableModule,
-    NzTabsModule,
+
     NzTagModule,
     NzUploadModule,
     RouterLink,
@@ -69,6 +70,8 @@ export class DoubleHighProjectDetailComponent implements OnInit {
   readonly evidenceTypes = DoubleHighEvidenceType;
   readonly statuses = DoubleHighProjectStatus;
   readonly activeTab = signal(0);
+  readonly tabs = ['项目概述', '指标数据', '佐证材料', '导出信息'];
+  readonly tabIcons = ['dashboard', 'bars', 'paper-clip', 'file-excel'];
 
   indicatorVisible = false;
   editingIndicatorId: string | null = null;

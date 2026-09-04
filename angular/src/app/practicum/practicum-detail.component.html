@@ -1,59 +1,60 @@
 <div class="practicum-detail-page">
-  <a routerLink="/practicum/projects" class="back-link">
-    <span nz-icon nzType="arrow-left" nzTheme="outline"></span> 返回实训列表
-  </a>
+  <div class="page-toolbar">
+    <a routerLink="/practicum/projects" class="back-link">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span> 返回实训列表
+    </a>
+  </div>
 
   @if (project(); as project) {
-    <!-- ─── Header ────────────────────────────── -->
-    <div class="detail-hero">
-      <div class="detail-hero__cover">
-        <span nz-icon nzType="experiment" nzTheme="outline"></span>
-      </div>
-      <div class="detail-hero__body">
-        <div class="detail-hero__tags">
-          @if (project.major) { <span class="tag tag--blue">{{ project.major }}</span> }
-          @if (project.className) { <span class="tag tag--green">{{ project.className }}</span> }
-          <span class="tag" [class.tag--published]="project.status === 1" [class.tag--draft]="project.status === 0">
-            {{ project.status === 1 ? '已发布' : project.status === 0 ? '草稿' : '已归档' }}
-          </span>
+    <!-- ─── Hero Header ────────────────────────── -->
+    <nz-card class="hero-card">
+      <div class="hero-grid">
+        <div class="hero-icon">
+          <span nz-icon nzType="experiment" nzTheme="outline"></span>
         </div>
-        <h1>{{ project.title }}</h1>
-        <p class="detail-hero__summary">{{ project.summary || '暂无简介' }}</p>
-        <div class="detail-hero__meta">
-          <span><span nz-icon nzType="book" nzTheme="outline"></span> {{ project.courseTitle || '未绑定课程' }}</span>
-          <span><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ (project.startTime || '未设置') + ' ~ ' + (project.endTime || '未设置') }}</span>
-          <span><span nz-icon nzType="profile" nzTheme="outline"></span> {{ project.tasks?.length || 0 }} 个任务</span>
-          <span><span nz-icon nzType="team" nzTheme="outline"></span> {{ project.enrollmentCount || 0 }} 人已报</span>
+        <div class="hero-body">
+          <div class="hero-tags">
+            @if (project.major) { <span class="tag tag--blue">{{ project.major }}</span> }
+            @if (project.className) { <span class="tag tag--green">{{ project.className }}</span> }
+            <span class="tag" [class.tag--published]="project.status === 1" [class.tag--draft]="project.status === 0">
+              {{ project.status === 1 ? '已发布' : project.status === 0 ? '草稿' : '已归档' }}
+            </span>
+          </div>
+          <h1>{{ project.title }}</h1>
+          <p class="hero-summary">{{ project.summary || '暂无简介' }}</p>
+          <div class="hero-meta">
+            <span><span nz-icon nzType="book" nzTheme="outline"></span> {{ project.courseTitle || '未绑定课程' }}</span>
+            <span><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ (project.startTime || '未设置') + ' ~ ' + (project.endTime || '未设置') }}</span>
+            <span><span nz-icon nzType="profile" nzTheme="outline"></span> {{ project.tasks?.length || 0 }} 个任务</span>
+            <span><span nz-icon nzType="team" nzTheme="outline"></span> {{ project.enrollmentCount || 0 }} 人已报</span>
+          </div>
+        </div>
+        <div class="hero-action">
+          @if (project.isCurrentUserEnrolled) {
+            <span class="enrolled-badge"><span nz-icon nzType="check-circle" nzTheme="fill"></span> 已加入</span>
+          } @else if (canEnroll()) {
+            <button class="enroll-btn" (click)="enroll()">
+              <span nz-icon nzType="user-add" nzTheme="outline"></span> 加入实训
+            </button>
+          }
         </div>
       </div>
-      <div class="detail-hero__action">
-        @if (project.isCurrentUserEnrolled) {
-          <span class="enrolled-badge"><span nz-icon nzType="check-circle" nzTheme="fill"></span> 已加入</span>
-        } @else if (canEnroll()) {
-          <button class="enroll-btn" (click)="enroll()">
-            <span nz-icon nzType="user-add" nzTheme="outline"></span> 加入实训
-          </button>
-        }
-      </div>
-    </div>
+    </nz-card>
 
     <!-- ─── Description ───────────────────────── -->
     @if (project.description) {
-      <div class="detail-desc">
+      <nz-card class="detail-desc">
         <h2><span nz-icon nzType="info-circle" nzTheme="outline"></span> 项目介绍</h2>
         <pre>{{ project.description }}</pre>
-      </div>
+      </nz-card>
     }
 
     <!-- ─── Tabs ──────────────────────────────── -->
-    <div class="detail-content">
-      <nav class="tab-nav">
+    <nz-card class="detail-tabs-card">
+      <nav class="tab-nav" role="tablist">
         @for (tab of ['基本信息', '实训任务', '实训资料', '沟通聊天']; track $index) {
-          <button [class.active]="activeTab() === $index" (click)="selectTab($index)">
-            @if ($index === 0) { <span nz-icon nzType="info-circle" nzTheme="outline"></span> }
-            @if ($index === 1) { <span nz-icon nzType="profile" nzTheme="outline"></span> }
-            @if ($index === 2) { <span nz-icon nzType="folder-open" nzTheme="outline"></span> }
-            @if ($index === 3) { <span nz-icon nzType="message" nzTheme="outline"></span> }
+          <button [class.active]="activeTab() === $index" (click)="selectTab($index)" role="tab" [attr.aria-selected]="activeTab() === $index">
+            <span nz-icon [nzType]="tabIcons[$index]" nzTheme="outline"></span>
             {{ tab }}
           </button>
         }
@@ -63,7 +64,7 @@
         <!-- Tab 0: 基本信息 -->
         @if (activeTab() === 0) {
           <div class="tab-grid">
-            <div class="info-card">
+            <div class="info-section">
               <h3><span nz-icon nzType="setting" nzTheme="outline"></span> 基本信息</h3>
               <div class="info-grid">
                 <div class="info-item"><span class="info-label">关联课程</span><span>{{ project.courseTitle || '未绑定' }}</span></div>
@@ -78,7 +79,7 @@
             </div>
 
             @if (project.isCurrentUserEnrolled && guidances().length > 0) {
-              <div class="info-card">
+              <div class="info-section">
                 <h3><span nz-icon nzType="compass" nzTheme="outline"></span> 教师指导记录</h3>
                 <div class="guidance-list">
                   @for (item of guidances(); track item.id) {
@@ -112,7 +113,7 @@
                   <div class="task-card__body">
                     <div class="task-card__head">
                       <h4>{{ task.title }}</h4>
-                      @if (task.scoreWeight) { <span class="task-score">{{ task.scoreWeight }} 分</span> }
+                      @if (task.scoreWeight) { <span class="task-score-pill">{{ task.scoreWeight }} 分</span> }
                     </div>
                     @if (task.description) { <p class="task-text">{{ task.description }}</p> }
                     @if (task.requirement) {
@@ -137,7 +138,7 @@
                     }
 
                     @if (getTaskSubmissions(task.id).length) {
-                      <nz-table [nzData]="getTaskSubmissions(task.id)" [nzFrontPagination]="false" nzSize="small" class="submission-table">
+                      <nz-table [nzData]="getTaskSubmissions(task.id)" [nzFrontPagination]="false" nzSize="small" class="detail-submission-table">
                         <thead>
                           <tr>
                             <th>版本</th>
@@ -200,11 +201,10 @@
 
         <!-- Tab 3: 沟通聊天 -->
         @if (activeTab() === 3) {
-          <div class="chat-tab">
-            <!-- Chat Header -->
-            <div class="chat-tab__header">
+          <div class="chat-container">
+            <div class="chat-header">
               <h3><span nz-icon nzType="message" nzTheme="outline"></span> 项目群聊</h3>
-              <span class="chat-tab__subtitle">所有已报名的学生和教师均可见</span>
+              <span class="chat-subtitle">所有已报名的学生和教师均可见</span>
               @if (chatConnecting()) {
                 <span class="chat-status connecting"><nz-spin nzSize="small"></nz-spin> 连接中...</span>
               } @else {
@@ -212,13 +212,12 @@
               }
             </div>
 
-            <!-- Messages -->
-            <div class="chat-tab__messages" #messagesContainer>
+            <div class="chat-messages" #messagesContainer>
               @if (chatLoading()) {
                 <div class="chat-empty"><nz-spin nzSize="default"></nz-spin><p>加载聊天记录...</p></div>
               } @else if (chatMessages().length === 0) {
                 <div class="chat-empty">
-                  <span nz-icon nzType="message" nzTheme="outline" class="empty-icon"></span>
+                  <span nz-icon nzType="message" nzTheme="outline" class="chat-empty-icon"></span>
                   <h3>还没有消息</h3>
                   <p>发送第一条消息开始沟通吧！&#64;{{ agentName() }} 可以召唤智能助手。</p>
                 </div>
@@ -273,8 +272,7 @@
               }
             </div>
 
-            <!-- Input -->
-            <div class="chat-tab__input">
+            <div class="chat-input-bar">
               <button nz-button nzType="text" class="mention-btn" nz-tooltip [nzTooltipTitle]="'召唤 ' + agentName()" (click)="insertMention()">
                 <span nz-icon nzType="robot" nzTheme="outline"></span>&#64;{{ agentName() }}
               </button>
@@ -295,6 +293,6 @@
           </div>
         }
       </div>
-    </div>
+    </nz-card>
   }
 </div>
