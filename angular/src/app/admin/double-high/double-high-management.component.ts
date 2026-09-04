@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
@@ -22,7 +23,7 @@ import {
 @Component({
   selector: 'app-double-high-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, NzButtonModule, NzCardModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzSelectModule, NzTableModule],
+  imports: [CommonModule, FormsModule, NzButtonModule, NzCardModule, NzDatePickerModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzSelectModule, NzTableModule],
   templateUrl: './double-high-management.component.html',
   styleUrls: ['./double-high-management.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,6 +31,7 @@ import {
 export class DoubleHighManagementComponent implements OnInit {
   private readonly doubleHighService = inject(DoubleHighService);
   private readonly message = inject(NzMessageService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly items = signal<DoubleHighProjectDto[]>([]);
   readonly statuses = DoubleHighProjectStatus;
@@ -40,8 +42,12 @@ export class DoubleHighManagementComponent implements OnInit {
   // 都不存在，但组件实例里 modalVisible 已经是 true）。改用 signal 后，
   // set() 会自动把组件标脏，下一帧模板就能拿到最新值并把 modal 渲染出来。
   readonly modalVisible = signal(false);
+  readonly saving = signal(false);
   editingId: string | null = null;
   form: CreateUpdateDoubleHighProjectDto = this.createEmptyForm();
+  // nz-date-picker 绑定的本地 Date 对象，保存时再转 ISO 字符串
+  startDate: Date | null = null;
+  endDate: Date | null = null;
 
   ngOnInit(): void {
     this.reload();
@@ -83,6 +89,8 @@ export class DoubleHighManagementComponent implements OnInit {
   openCreate(): void {
     this.editingId = null;
     this.form = this.createEmptyForm();
+    this.startDate = null;
+    this.endDate = null;
     this.modalVisible.set(true);
   }
 
@@ -94,12 +102,8 @@ export class DoubleHighManagementComponent implements OnInit {
         batchCode: detail.batchCode,
         description: detail.description || '',
         status: detail.status,
-        // 关键修复：<input type="datetime-local"> 只接受 YYYY-MM-DDTHH:MM
-        // 格式，但后端返回的是 ISO 8601 带秒（"2026-07-01T09:00:00" 或带 Z），
-        // 浏览器拿到不认识的格式会把 input 显示成空白，让用户以为时间没设。
-        // 截断到 16 位正好是 datetime-local 期望的格式，input 能正确回显。
-        startTime: detail.startTime?.slice(0, 16),
-        endTime: detail.endTime?.slice(0, 16),
+        startTime: detail.startTime,
+        endTime: detail.endTime,
         indicators: detail.indicators.map(x => ({
           parentId: x.parentId,
           // 关键修复：原实现 categoryName / indicatorCode / name 没有 `|| ''` 兜底，
@@ -118,6 +122,9 @@ export class DoubleHighManagementComponent implements OnInit {
           sortOrder: x.sortOrder,
         })),
       };
+      // nz-date-picker 需要 Date 对象，ISO 字符串转 Date
+      this.startDate = detail.startTime ? new Date(detail.startTime) : null;
+      this.endDate = detail.endTime ? new Date(detail.endTime) : null;
       // 关键修复：用 signal.set() 而不是 =，确保 OnPush 组件在异步回调里
       // 也能触发变更检测，让 modal 真正渲染到 DOM。
       this.modalVisible.set(true);
@@ -125,21 +132,88 @@ export class DoubleHighManagementComponent implements OnInit {
   }
 
   addIndicator(): void {
-    this.form.indicators.push(this.createEmptyIndicator(this.form.indicators.length + 1));
+    // OnPush 下直接 push 不会新建引用，手动创建新数组并 markForCheck
+    this.form.indicators = [...this.form.indicators, this.createEmptyIndicator(this.form.indicators.length + 1)];
+    this.cdr.markForCheck();
   }
 
   removeIndicator(index: number): void {
-    this.form.indicators.splice(index, 1);
+    this.form.indicators = this.form.indicators.filter((_, i) => i !== index);
     this.form.indicators.forEach((item, idx) => item.sortOrder = idx + 1);
+    this.cdr.markForCheck();
   }
 
   save(): void {
+    // ---- 前端归一化与校验：修复“新增指标无法保存” ----
+    // 1) title / batchCode 必填
+    if (!this.form.title?.trim()) {
+      this.message.warning('请填写项目名称');
+      return;
+    }
+    if (!this.form.batchCode?.trim()) {
+      this.message.warning('请填写批次编码');
+      return;
+    }
+    if (this.form.indicators.length === 0) {
+      this.message.warning('至少需要配置一个指标');
+      return;
+    }
+    for (let i = 0; i < this.form.indicators.length; i++) {
+      const r = this.form.indicators[i] as any;
+      // 关键：type="number" 的 <input> 在空值时会把 model 设为 ""，直接发给后端会报
+      // "could not be converted to System.Nullable`1[System.Decimal]"。这里把空串统一归为 undefined。
+      if (r.targetValue === '' || r.targetValue === null) r.targetValue = undefined;
+      if (typeof r.targetValue === 'string') {
+        const n = Number(r.targetValue);
+        r.targetValue = isNaN(n) ? undefined : n;
+      }
+      if (r.weight === '' || r.weight == null) r.weight = 1;
+      if (typeof r.weight === 'string') {
+        const n = Number(r.weight);
+        r.weight = isNaN(n) ? 1 : Math.round(n);
+      }
+      const cat = (r.categoryName ?? '').trim();
+      const code = (r.indicatorCode ?? '').trim();
+      const name = (r.name ?? '').trim();
+      if (!cat || !code || !name) {
+        this.message.warning(`指标 #${i + 1} 的分类、编码、名称均为必填`);
+        return;
+      }
+    }
+    // 2) 编码重复前端预检
+    const codes = this.form.indicators.map(x => (x.indicatorCode ?? '').trim());
+    if (new Set(codes).size !== codes.length) {
+      this.message.warning('存在重复的指标编码，请检查后重试');
+      return;
+    }
+
+    // 3) 同步 nz-date-picker 的 Date 到表单字符串（ISO，无秒截断兼容）
+    const payload: CreateUpdateDoubleHighProjectDto = {
+      ...this.form,
+      title: this.form.title.trim(),
+      batchCode: this.form.batchCode.trim(),
+      description: this.form.description?.trim(),
+      startTime: this.startDate ? this.startDate.toISOString() : undefined,
+      endTime: this.endDate ? this.endDate.toISOString() : undefined,
+      indicators: this.form.indicators.map(x => ({
+        ...x,
+        categoryName: (x.categoryName ?? '').trim(),
+        indicatorCode: (x.indicatorCode ?? '').trim(),
+        name: (x.name ?? '').trim(),
+        description: x.description?.trim(),
+        unit: x.unit?.trim(),
+        weight: x.weight == null || x.weight === 0 ? 1 : Math.round(Number(x.weight)),
+      })),
+    };
+
+    this.saving.set(true);
     const request = this.editingId
-      ? this.doubleHighService.update(this.editingId, this.form)
-      : this.doubleHighService.create(this.form);
+      ? this.doubleHighService.update(this.editingId, payload)
+      : this.doubleHighService.create(payload);
 
     request.subscribe({
       next: () => {
+        this.saving.set(false);
         this.modalVisible.set(false);
         this.message.success('双高评估项目已保存');
         this.reload();
@@ -148,7 +222,10 @@ export class DoubleHighManagementComponent implements OnInit {
       // 一旦后端返回 500（例如 ReplaceIndicatorsAsync 中 NRE、外键冲突、唯一索引冲突），
       // 用户和开发者都看不到真实原因。
       // 现在把后端 message 透传出来，并打 console.error 留详细堆栈供排查。
-      error: err => this.showApiError(err, '保存失败'),
+      error: err => {
+        this.saving.set(false);
+        this.showApiError(err, '保存失败');
+      },
     });
   }
 
