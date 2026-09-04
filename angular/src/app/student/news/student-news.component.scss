@@ -152,6 +152,214 @@
   gap: 18px;
 }
 
+/* =================== News Grid & Card (竖向布局，3 列) =================== */
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.news-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: ds.$student-radius;
+  border: 1px solid ds.$student-border-soft;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: rgba(37, 99, 235, 0.35);
+    box-shadow: ds.$student-shadow-card;
+
+    .news-card__cover-icon {
+      transform: scale(1.06);
+    }
+  }
+
+  &__cover {
+    position: relative;
+    height: 130px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  &__cover-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+
+    &.is-hidden { display: none; }
+  }
+
+  &__pattern {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__cover-icon {
+    font-size: 36px;
+    color: rgba(255, 255, 255, 0.7);
+    transition: transform 0.3s ease;
+  }
+
+  &__hot-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 4px;
+    background: #16a34a;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+  }
+
+  &__body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: ds.$student-text;
+    line-height: 1.4;
+    @include ds.line-clamp(2);
+  }
+
+  &__summary {
+    margin: 0;
+    color: ds.$student-text-muted;
+    font-size: 12px;
+    line-height: 1.5;
+    @include ds.line-clamp(2);
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    color: ds.$student-text-light;
+    font-size: 11px;
+  }
+
+  &__actions {
+    margin-top: auto;
+    padding-top: 6px;
+  }
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  span[nz-icon] { font-size: 11px; }
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &--primary {
+    background: ds.$student-primary;
+    color: #fff;
+    width: 100%;
+
+    &:hover:not([disabled]) {
+      background: ds.$student-primary-dark;
+    }
+
+    &[disabled] {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.loading-state {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: ds.$student-radius-lg;
+  box-shadow: ds.$student-shadow-soft;
+  color: ds.$student-text-muted;
+
+  p {
+    margin: 12px 0 0;
+    font-size: 14px;
+  }
+}
+
+.empty-state {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: ds.$student-radius-lg;
+  border: 1px solid ds.$student-border-soft;
+  box-shadow: ds.$student-shadow-soft;
+  color: ds.$student-text-muted;
+  padding: 40px;
+  gap: 8px;
+
+  &__art {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: ds.$student-surface-soft;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: ds.$student-border;
+    font-size: 32px;
+  }
+
+  h3 {
+    margin: 12px 0 4px;
+    color: ds.$student-text;
+    font-size: 18px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+  }
+}
+
 .aside-card {
   background: #fff;
   border-radius: ds.$student-radius-lg;
@@ -417,26 +625,6 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-  }
-
-  .featured-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .featured-card {
-    height: 236px;
-
-    &__title {
-      font-size: 18px;
-    }
-
-    &__summary {
-      display: none;
-    }
-
-    &__read {
-      display: none;
-    }
   }
 
   .news-grid {

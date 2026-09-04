@@ -191,58 +191,6 @@
   span[nz-icon] { font-size: 13px; }
 }
 
-/* ============ 操作栏 ============ */
-.article-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px dashed ds.$student-border-soft;
-}
-
-.action-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 16px;
-  border: 1px solid ds.$student-border;
-  border-radius: 6px;
-  background: #fff;
-  color: ds.$student-text;
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  span[nz-icon] { font-size: 14px; }
-
-  &__count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
-    background: ds.$student-surface-soft;
-    color: ds.$student-text-muted;
-    font-size: 11px;
-    font-weight: 600;
-  }
-
-  &:hover { border-color: ds.$student-primary; color: ds.$student-primary; background: #f0f6ff; }
-
-  &--primary {
-    background: ds.$student-primary;
-    color: #fff;
-    border-color: transparent;
-    &:hover { background: ds.$student-primary-dark; color: #fff; }
-  }
-}
-
 /* ============ 评论区 ============ */
 .comment-section {
   background: #fff;
@@ -279,36 +227,28 @@
   font-weight: 400;
 }
 
-.comment-form-toggle {
-  display: flex;
+/* 触发按钮 */
+.comment-trigger {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px dashed ds.$student-border;
   border-radius: ds.$student-radius;
   background: ds.$student-surface-soft;
-  margin-bottom: 20px;
+  color: ds.$student-text-muted;
+  font-size: 13px;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.2s ease;
+  margin-bottom: 20px;
 
-  &:hover { background: #e8f0fe; }
+  span[nz-icon] { font-size: 14px; color: ds.$student-primary; }
 
-  &__avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-weight: 700;
-    font-size: 14px;
-    flex-shrink: 0;
-  }
-
-  &__placeholder {
-    flex: 1;
-    color: ds.$student-text-light;
-    font-size: 14px;
+  &:hover {
+    border-color: ds.$student-primary;
+    color: ds.$student-primary;
+    background: #f0f6ff;
   }
 }
 

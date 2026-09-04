@@ -76,14 +76,6 @@
           </div>
 
           <footer class="article-card__footer">
-            <div class="article-actions">
-              <button type="button" class="action-pill action-pill--primary" (click)="focusComment()">
-                <span nz-icon nzType="message" nzTheme="outline"></span>
-                <span>写评论</span>
-                <span class="action-pill__count">{{ article.commentCount || 0 }}</span>
-              </button>
-            </div>
-
             <div class="article-copyright">
               <span nz-icon nzType="copyright" nzTheme="outline"></span>
               <span>本文为本站原创内容，版权归原作者及本站所有，未经授权请勿转载。</span>
@@ -102,12 +94,10 @@
           </header>
 
           @if (article.allowComments) {
-            <div class="comment-form-toggle" (click)="openCommentModal()">
-              <span class="comment-form-toggle__avatar" [style.background]="commentAuthorGradient('我')">
-                U
-              </span>
-              <span class="comment-form-toggle__placeholder">写下你的想法，与作者和其他读者交流...</span>
-            </div>
+            <button type="button" class="comment-trigger" (click)="openCommentModal()">
+              <span nz-icon nzType="edit" nzTheme="outline"></span>
+              <span>写评论</span>
+            </button>
           } @else {
             <div class="comment-disabled">
               <span nz-icon nzType="lock" nzTheme="outline"></span>

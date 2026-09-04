@@ -19,7 +19,6 @@ import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.ser
     FormsModule,
     RouterModule,
     NzIconModule,
-    NzButtonModule,
     NzSpinModule,
     NzModalModule,
   ],
@@ -43,7 +42,6 @@ export class StudentNewsDetailComponent implements OnInit {
   readonly hotArticles = signal<NewsArticleDto[]>([]);
   readonly relatedLoading = signal(false);
 
-  readonly copyLinkSuccess = signal(false);
   modalVisible = false;
   submitting = false;
 
@@ -136,38 +134,6 @@ export class StudentNewsDetailComponent implements OnInit {
     });
   }
 
-  copyLink(): void {
-    const article = this.article();
-    if (!article?.id) return;
-    const url = `${window.location.origin}/student/news/${article.id}`;
-
-    const showSuccess = () => {
-      this.copyLinkSuccess.set(true);
-      this.message.success('链接已复制到剪贴板');
-      setTimeout(() => this.copyLinkSuccess.set(false), 1800);
-    };
-
-    const fallback = () => {
-      const input = document.createElement('input');
-      input.value = url;
-      document.body.appendChild(input);
-      input.select();
-      try {
-        document.execCommand('copy');
-        showSuccess();
-      } catch {
-        this.message.error('复制失败，请手动复制');
-      }
-      document.body.removeChild(input);
-    };
-
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(showSuccess).catch(fallback);
-    } else {
-      fallback();
-    }
-  }
-
   openCommentModal(): void {
     this.modalVisible = true;
     this.commentText.set('');
@@ -220,15 +186,6 @@ export class StudentNewsDetailComponent implements OnInit {
    * 修复 bug：旧实现是 `<a href="#comments">`，在某些路由配置下被 Angular 路由器误解为
    * 路由片段，回退到首页。改为按钮事件后由组件显式处理。
    */
-  focusComment(): void {
-    // 打开评论弹窗
-    if (this.article()?.allowComments) {
-      this.openCommentModal();
-    } else {
-      this.message.info('该资讯已关闭评论功能');
-    }
-  }
-
   /** 资讯封面渐变（与列表页一致） */
   coverGradient(article: NewsArticleDto | { title?: string; id?: string; categoryName?: string }): string {
     return this.gradientByKey(
