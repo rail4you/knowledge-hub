@@ -747,18 +747,7 @@ public class MeiliSearchService : IMeiliSearchService
             }
         }
 
-        // 若校验后不足 count（如小文档词少）则回退用初筛结果补齐
-        if (validated.Count < count && validated.Count < candidates.Count)
-        {
-            var seen = new HashSet<string>(validated.Select(v => v.Word));
-            foreach (var hw in candidates)
-            {
-                if (seen.Contains(hw.Word)) continue;
-                validated.Add(new HotWordDto { Word = hw.Word, Frequency = hw.Frequency });
-                if (validated.Count >= count) break;
-            }
-        }
-
+        // 不再用不可召回的候选补齐——宁可返回更少但可搜的有效词，也比“理表现”这类搜不到的碎片好
         return validated.Take(count).ToList();
     }
 }
