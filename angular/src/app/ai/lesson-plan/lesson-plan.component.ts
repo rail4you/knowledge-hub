@@ -14,6 +14,8 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
 import { ChatService, ResourceForChat } from '../services/chat.service';
@@ -48,6 +50,19 @@ interface LessonPlanResult {
   homework: string[];
 }
 
+interface LessonPlanHistoryItem {
+  id: string;
+  title: string;
+  subject: string;
+  grade: string;
+  duration: number;
+  resourceName: string;
+  resourceId: string;
+  createdAt: string;
+  result: LessonPlanResult;
+  rawJson: string;
+}
+
 @Component({
   selector: 'app-lesson-plan',
   standalone: true,
@@ -66,7 +81,9 @@ interface LessonPlanResult {
     NzTagModule,
     NzSpinModule,
     NzIconModule,
-    NzEmptyModule
+    NzEmptyModule,
+    NzTableModule,
+    NzTooltipModule
   ],
   templateUrl: './lesson-plan.component.html',
   styleUrls: ['./lesson-plan.component.scss'],
@@ -76,10 +93,13 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
   private readonly messageService = inject(NzMessageService);
   private readonly destroy$ = new Subject<void>();
+  private readonly HISTORY_KEY = 'kh-lesson-plan-history';
 
+  // resources
   resources = signal<ResourceForChat[]>([]);
   resourcesLoading = signal(false);
   selectedResourceId = signal<string | null>(null);
+  resourceFilter = signal('');
 
   selectedResource = computed(() => {
     const id = this.selectedResourceId();
@@ -87,6 +107,14 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     return this.resources().find(r => r.id === id) ?? null;
   });
 
+  filteredResources = computed(() => {
+    const kw = this.resourceFilter().trim().toLowerCase();
+    const list = this.resources().filter(r => r.hasSummary === true);
+    if (!kw) return list;
+    return list.filter(r => r.name.toLowerCase().includes(kw) || (r.sourceFormat ?? '').toLowerCase().includes(kw));
+  });
+
+  // form input
   input = signal<LessonPlanInput>({
     topic: '',
     subject: '',
@@ -95,10 +123,19 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     customPrompt: ''
   });
 
+  // ui state per spec
+  showForm = signal(false);
+  viewMode = signal<'list' | 'preview'>('list');
+
+  // generation
   result = signal<LessonPlanResult | null>(null);
   rawJson = signal('');
   isLoading = signal(false);
   isExporting = signal(false);
+
+  // history table
+  history = signal<LessonPlanHistoryItem[]>([]);
+  previewItem = signal<LessonPlanHistoryItem | null>(null);
 
   canGenerate = computed(() => {
     const i = this.input();
@@ -107,6 +144,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
+    this.loadHistory();
     this.loadResources();
   }
 
@@ -115,6 +153,24 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // ---------- history persistence ----------
+  private loadHistory() {
+    try {
+      const raw = localStorage.getItem(this.HISTORY_KEY);
+      if (raw) {
+        const parsed: LessonPlanHistoryItem[] = JSON.parse(raw);
+        if (Array.isArray(parsed)) this.history.set(parsed);
+      }
+    } catch { /* ignore */ }
+  }
+
+  private saveHistory() {
+    try {
+      localStorage.setItem(this.HISTORY_KEY, JSON.stringify(this.history().slice(0, 50)));
+    } catch { /* ignore */ }
+  }
+
+  // ---------- resources ----------
   private loadResources() {
     this.resourcesLoading.set(true);
     this.chatService.getResources()
@@ -132,26 +188,34 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       });
   }
 
+  // ---------- form helpers ----------
   updateTopic(value: string) {
     this.input.update(v => ({ ...v, topic: value }));
   }
-
   updateSubject(value: string) {
     this.input.update(v => ({ ...v, subject: value }));
   }
-
   updateGrade(value: string) {
     this.input.update(v => ({ ...v, grade: value }));
   }
-
   updateDuration(value: number) {
     this.input.update(v => ({ ...v, duration: value }));
   }
-
   updateCustomPrompt(value: string) {
     this.input.update(v => ({ ...v, customPrompt: value }));
   }
 
+  toggleForm() {
+    this.showForm.update(v => !v);
+  }
+  openForm() {
+    this.showForm.set(true);
+  }
+  cancelForm() {
+    this.showForm.set(false);
+  }
+
+  // ---------- generate ----------
   generate() {
     const input = this.input();
     const resource = this.selectedResource();
@@ -190,6 +254,31 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
           if (fullResponse && !this.result()) {
             this.tryParseResult(fullResponse, true);
           }
+          const parsed = this.result();
+          const json = this.rawJson();
+          if (parsed && json) {
+            const item: LessonPlanHistoryItem = {
+              id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+              title: parsed.title || input.topic || '未命名教案',
+              subject: parsed.subject || input.subject || '-',
+              grade: parsed.grade || input.grade || '-',
+              duration: parsed.duration || input.duration,
+              resourceName: resource.name,
+              resourceId: resource.id,
+              createdAt: new Date().toISOString(),
+              result: parsed,
+              rawJson: json
+            };
+            this.history.update(list => [item, ...list].slice(0, 50));
+            this.saveHistory();
+            this.previewItem.set(item);
+            this.viewMode.set('preview');
+            this.showForm.set(false);
+            this.messageService.success('教案已生成');
+          } else if (fullResponse) {
+            // parsing failed but still show preview with raw
+            this.messageService.warning('AI 返回的数据格式不完整，已保存原始内容，请重试或检查预览');
+          }
         }
       });
   }
@@ -213,10 +302,47 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     }
   }
 
-  async downloadDocx() {
+  // ---------- preview / table actions ----------
+  previewHistory(item: LessonPlanHistoryItem) {
+    this.previewItem.set(item);
+    this.viewMode.set('preview');
+  }
+
+  backToList() {
+    this.viewMode.set('list');
+  }
+
+  async downloadHistory(item: LessonPlanHistoryItem) {
+    if (!item.rawJson) return;
+    this.isExporting.set(true);
+    try {
+      const blob = await this.chatService.exportLessonPlanDocx(item.rawJson);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${item.title || '教案'}_${item.createdAt.slice(0, 10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      this.messageService.success('教案已下载');
+    } catch (err) {
+      console.error('Failed to export docx:', err);
+      this.messageService.error('导出失败，请重试');
+    } finally {
+      this.isExporting.set(false);
+    }
+  }
+
+  async downloadPreview() {
+    const item = this.previewItem();
+    if (item) {
+      await this.downloadHistory(item);
+      return;
+    }
+    // fallback: current rawJson (streaming before saved)
     const json = this.rawJson();
     if (!json) return;
-
     this.isExporting.set(true);
     try {
       const blob = await this.chatService.exportLessonPlanDocx(json);
@@ -237,10 +363,34 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     }
   }
 
-  reset() {
+  removeHistory(item: LessonPlanHistoryItem, event?: MouseEvent) {
+    event?.stopPropagation();
+    this.history.update(list => list.filter(x => x.id !== item.id));
+    this.saveHistory();
+    if (this.previewItem()?.id === item.id) {
+      this.previewItem.set(null);
+      this.viewMode.set('list');
+    }
+    this.messageService.success('已删除');
+  }
+
+  formatDate(iso: string): string {
+    try {
+      const d = new Date(iso);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    } catch { return iso; }
+  }
+
+  resetForm() {
     this.selectedResourceId.set(null);
     this.input.set({ topic: '', subject: '', grade: '', duration: 45, customPrompt: '' });
     this.result.set(null);
     this.rawJson.set('');
+    this.resourceFilter.set('');
+  }
+
+  // keep legacy reset for template compat if needed
+  reset() {
+    this.resetForm();
   }
 }
