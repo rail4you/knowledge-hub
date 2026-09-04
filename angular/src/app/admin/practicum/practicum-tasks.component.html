@@ -153,27 +153,40 @@
   <nz-modal
     [nzVisible]="drawerVisible()"
     [nzTitle]="drawerMode() === 'add' ? '新增任务' : '编辑任务'"
-    nzWidth="560"
+    nzWidth="480"
+    nzWrapClassName="practicum-modal-wrap"
     [nzFooter]="taskEditorFooter"
     (nzOnCancel)="closeDrawer()"
     (nzVisibleChange)="drawerVisible.set($event)">
     <div *nzModalContent>
-      <div class="form-grid">
+      <div class="dh-modal">
         <ng-container *ngIf="taskDraft() as draft">
-          <label>任务名称 <span class="required-hint">*</span></label>
-          <input nz-input [(ngModel)]="draft.title" placeholder="例如：完成实验报告" />
+          <div class="dh-form">
+            <label class="field full">
+              <span class="label">任务名称 <em>*</em></span>
+              <input nz-input [(ngModel)]="draft.title" placeholder="例如：完成实验报告" />
+            </label>
 
-          <label>任务描述</label>
-          <textarea nz-input [(ngModel)]="draft.description" rows="3" placeholder="简要说明任务内容"></textarea>
+            <label class="field full">
+              <span class="label">任务描述</span>
+              <textarea nz-input [(ngModel)]="draft.description" rows="3" placeholder="简要说明任务内容" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
+            </label>
 
-          <label>任务要求</label>
-          <textarea nz-input [(ngModel)]="draft.requirement" rows="3" placeholder="学生需满足的具体要求"></textarea>
+            <label class="field full">
+              <span class="label">任务要求</span>
+              <textarea nz-input [(ngModel)]="draft.requirement" rows="3" placeholder="学生需满足的具体要求" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
+            </label>
 
-          <label>分值</label>
-          <nz-input-number [(ngModel)]="draft.scoreWeight" [nzMin]="0" [nzMax]="100" [nzStep]="1" style="width: 100%;"></nz-input-number>
+            <label class="field">
+              <span class="label">分值</span>
+              <nz-input-number [(ngModel)]="draft.scoreWeight" [nzMin]="0" [nzMax]="100" [nzStep]="1" style="width: 100%;"></nz-input-number>
+            </label>
 
-          <label>截止时间</label>
-          <input nz-input type="datetime-local" [ngModel]="draft.dueTimeInput" (ngModelChange)="draft.dueTimeInput = $event" />
+            <label class="field">
+              <span class="label">截止时间</span>
+              <input nz-input type="datetime-local" [ngModel]="draft.dueTimeInput" (ngModelChange)="draft.dueTimeInput = $event" />
+            </label>
+          </div>
         </ng-container>
       </div>
     </div>
@@ -186,17 +199,25 @@
   </nz-modal>
 
   <!-- Guidance modal -->
-  <nz-modal [(nzVisible)]="guidanceModalVisible" nzTitle="添加指导" [nzFooter]="null" (nzOnCancel)="guidanceModalVisible = false" [nzWidth]="520">
+  <nz-modal [(nzVisible)]="guidanceModalVisible" nzTitle="添加指导" [nzFooter]="null" (nzOnCancel)="guidanceModalVisible = false"   <nz-modal [(nzVisible)]="guidanceModalVisible" nzTitle="添加指导" [nzFooter]="null" (nzOnCancel)="guidanceModalVisible = false" nzWidth="420" nzWrapClassName="practicum-modal-wrap">
     <div *nzModalContent>
-      <div class="form-grid guidance-form-grid">
-        <label>学生</label>
-        <nz-select [(ngModel)]="guidanceForm.enrollmentId" nzPlaceHolder="请选择学生" style="width: 100%;">
-          <nz-option *ngFor="let entry of studentGuidance()" [nzValue]="entry.enrollment.id" [nzLabel]="entry.enrollment.studentName || '学生'"></nz-option>
-        </nz-select>
-        <label>指导意见</label>
-        <textarea nz-input [(ngModel)]="guidanceForm.content" rows="5" placeholder="填写指导意见"></textarea>
-        <label>学生可见</label>
-        <nz-switch [(ngModel)]="guidanceForm.isVisibleToStudent"></nz-switch>
+      <div class="dh-modal">
+        <div class="dh-form">
+          <label class="field full">
+            <span class="label">学生 <em>*</em></span>
+            <nz-select [(ngModel)]="guidanceForm.enrollmentId" nzPlaceHolder="请选择学生" style="width: 100%;">
+              <nz-option *ngFor="let entry of studentGuidance()" [nzValue]="entry.enrollment.id" [nzLabel]="entry.enrollment.studentName || '学生'"></nz-option>
+            </nz-select>
+          </label>
+          <label class="field full">
+            <span class="label">指导意见 <em>*</em></span>
+            <textarea nz-input [(ngModel)]="guidanceForm.content" rows="5" placeholder="填写指导意见" [nzAutosize]="{ minRows: 5, maxRows: 8 }"></textarea>
+          </label>
+          <div class="field full">
+            <span class="label">学生可见</span>
+            <nz-switch [(ngModel)]="guidanceForm.isVisibleToStudent"></nz-switch>
+          </div>
+        </div>
       </div>
       <div class="actions-bar">
         <button nz-button (click)="guidanceModalVisible = false">取消</button>
@@ -206,13 +227,19 @@
   </nz-modal>
 
   <!-- Guidance edit modal -->
-  <nz-modal [(nzVisible)]="guidanceEditVisible" nzTitle="编辑指导记录" [nzFooter]="null" (nzOnCancel)="guidanceEditVisible = false" [nzWidth]="520">
+  <nz-modal [(nzVisible)]="guidanceEditVisible" nzTitle="编辑指导记录" [nzFooter]="null" (nzOnCancel)="guidanceEditVisible = false" nzWidth="420" nzWrapClassName="practicum-modal-wrap">
     <div *nzModalContent>
-      <div class="form-grid guidance-form-grid">
-        <label>指导意见</label>
-        <textarea nz-input [(ngModel)]="guidanceEditForm.content" rows="5" placeholder="填写指导意见"></textarea>
-        <label>学生可见</label>
-        <nz-switch [(ngModel)]="guidanceEditForm.isVisibleToStudent"></nz-switch>
+      <div class="dh-modal">
+        <div class="dh-form">
+          <label class="field full">
+            <span class="label">指导意见 <em>*</em></span>
+            <textarea nz-input [(ngModel)]="guidanceEditForm.content" rows="5" placeholder="填写指导意见" [nzAutosize]="{ minRows: 5, maxRows: 8 }"></textarea>
+          </label>
+          <div class="field full">
+            <span class="label">学生可见</span>
+            <nz-switch [(ngModel)]="guidanceEditForm.isVisibleToStudent"></nz-switch>
+          </div>
+        </div>
       </div>
       <div class="actions-bar">
         <button nz-button (click)="guidanceEditVisible = false">取消</button>
@@ -222,13 +249,23 @@
   </nz-modal>
 
   <!-- Score modal -->
-  <nz-modal [(nzVisible)]="scoreVisible" [nzTitle]="scoreTitle" [nzFooter]="null" (nzOnCancel)="scoreVisible = false" [nzWidth]="520">
+  <nz-modal [(nzVisible)]="scoreVisible" [nzTitle]="scoreTitle" [nzFooter]="null" (nzOnCancel)="scoreVisible = false" nzWidth="420" nzWrapClassName="practicum-modal-wrap">
     <div *nzModalContent>
-      <div class="nested-grid">
-        <label>分数（最高 {{ scoreMax }} 分）</label>
-        <nz-input-number [(ngModel)]="scoreForm.score" [nzMin]="0" [nzMax]="scoreMax" [nzStep]="1" style="width:100%;"></nz-input-number>
-        <label>评分建议</label>
-        <textarea nz-input [(ngModel)]="scoreForm.comment" rows="4" placeholder="填写评分建议"></textarea>
+      <div class="dh-modal">
+        <div class="dh-form">
+          <label class="field full">
+            <span class="label">分数 <em>*</em></span>
+            <div class="score-input-wrap">
+              <nz-input-number [(ngModel)]="scoreForm.score" [nzMin]="0" [nzMax]="scoreMax" [nzStep]="1" style="width:160px;"></nz-input-number>
+              <span class="score-sep">/</span>
+              <span class="score-max">{{ scoreMax }} 分</span>
+            </div>
+          </label>
+          <label class="field full">
+            <span class="label">评分建议</span>
+            <textarea nz-input [(ngModel)]="scoreForm.comment" rows="4" placeholder="填写评分建议" [nzAutosize]="{ minRows: 4, maxRows: 8 }"></textarea>
+          </label>
+        </div>
       </div>
       <div class="actions-bar">
         <button nz-button (click)="scoreVisible = false">取消</button>

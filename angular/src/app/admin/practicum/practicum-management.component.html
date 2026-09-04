@@ -1,27 +1,21 @@
 <div class="training-page">
   <!-- Header -->
-  <div class="page-header">
-    <div class="page-title">实训项目列表</div>
+  <div class="page-hero">
+    <h1>实训项目列表</h1>
+    <p>管理实训项目基础信息、关联资料与课程班级</p>
+  </div>
+
+  <div class="search-bar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" placeholder="搜索项目名称" disabled />
+      <button class="search-btn" type="button" (click)="reload()">搜索</button>
+      <button class="reset-btn" type="button" (click)="reload()">重置</button>
+    </div>
     <button class="create-btn" type="button" (click)="openCreate()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       新建实训项目
     </button>
-  </div>
-
-  <!-- Filter bar (prototype visual, keep list display) -->
-  <div class="filter-bar">
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input type="text" placeholder="搜索项目名称" disabled />
-    </div>
-    <select class="filter-select" disabled>
-      <option>全部状态</option>
-      <option>草稿</option>
-      <option>已发布</option>
-      <option>已归档</option>
-    </select>
-    <button class="search-btn" type="button" (click)="reload()">搜索</button>
-    <button class="reset-btn" type="button" (click)="reload()">重置</button>
   </div>
 
   <!-- Table card -->
@@ -103,31 +97,35 @@
     <div class="form-body">
       <!-- Cover card -->
       <div class="cover-card">
-        <div class="cover-card-inner">
-          <ng-container *ngIf="coverFileList.length === 0; else coverPreview">
-            <div class="cover-placeholder">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <p>暂无封面，上传一张图片作为实训项目封面</p>
-            </div>
+        <div class="cover-card-label">
+          <span class="dot"></span>
+          <span>项目封面</span>
+          <span class="hint">建议 16:9，仅 1 张</span>
+        </div>
+        <div class="cover-uploader" [class.has-cover]="!!form.coverImageUrl" [class.uploading]="coverUploading">
+          <ng-container *ngIf="form.coverImageUrl; else coverEmpty">
+            <img [src]="form.coverImageUrl" alt="项目封面" class="cover-img" />
           </ng-container>
-          <ng-template #coverPreview>
-            <div class="cover-thumb"><img *ngIf="form.coverImageUrl" [src]="form.coverImageUrl" alt="封面" /></div>
-          </ng-template>
-          <nz-upload
-            nzListType="picture-card"
-            [nzMultiple]="false"
-            [nzMaxCount]="1"
-            [nzBeforeUpload]="beforeCoverUpload"
-            [nzFileList]="coverFileList"
-            [nzRemove]="removeCover"
-            [nzDisabled]="coverUploading"
-            nzAccept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
-          >
-            <div *ngIf="coverFileList.length === 0" class="cover-upload-trigger">
-              <span nz-icon nzType="plus"></span>
-              <div style="margin-top: 4px">上传封面</div>
+          <ng-template #coverEmpty>
+            <div class="cover-empty">
+              <span nz-icon nzType="picture" class="cover-empty-icon"></span>
+              <p class="cover-empty-title">点击下方按钮上传封面</p>
+              <span class="cover-empty-hint">JPG / PNG / WebP / GIF / BMP，≤ 10MB</span>
             </div>
-          </nz-upload>
+          </ng-template>
+
+          <div class="cover-actions">
+            <button type="button" class="cover-action-btn primary" nz-button (click)="triggerCoverUpload()" [disabled]="coverUploading">
+              <span nz-icon [nzType]="form.coverImageUrl ? 'reload' : 'upload'"></span>
+              {{ form.coverImageUrl ? '替换封面' : '上传封面' }}
+            </button>
+            <button *ngIf="form.coverImageUrl" type="button" class="cover-action-btn danger" nz-button nzDanger (click)="removeCoverClick()" [disabled]="coverUploading">
+              <span nz-icon nzType="delete"></span> 移除
+            </button>
+          </div>
+
+          <nz-spin *ngIf="coverUploading" nzSimple class="cover-spin"></nz-spin>
+          <input #coverFileInput type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/bmp" hidden (change)="onCoverFileChange($event)" />
         </div>
       </div>
 
@@ -265,50 +263,64 @@
   <nz-modal
     [nzVisible]="drawerVisible()"
     [nzTitle]="drawerMode() === 'add' ? '新增资料' : '编辑资料'"
-    nzWidth="560"
+    nzWidth="420"
+    nzWrapClassName="practicum-modal-wrap"
     [nzFooter]="materialEditorFooter"
     (nzOnCancel)="closeDrawer()"
     (nzVisibleChange)="drawerVisible.set($event)">
     <div *nzModalContent>
-      <div class="form-grid">
+      <div class="dh-modal">
         <ng-container *ngIf="materialDraft() as draft">
-          <label>资料名称 <span class="required-hint">*</span></label>
-          <input nz-input [(ngModel)]="draft.title" placeholder="例如：实验操作手册" />
+          <div class="dh-form">
+            <label class="field full">
+              <span class="label">资料名称 <em>*</em></span>
+              <input nz-input [(ngModel)]="draft.title" placeholder="例如：实验操作手册" />
+            </label>
 
-          <label>资料说明</label>
-          <textarea nz-input [(ngModel)]="draft.description" rows="3" placeholder="简要说明这份资料的用途或内容"></textarea>
+            <label class="field full">
+              <span class="label">资料说明</span>
+              <textarea nz-input [(ngModel)]="draft.description" rows="3" placeholder="简要说明这份资料的用途或内容" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
+            </label>
 
-          <label>资料类型 <span class="required-hint">*</span></label>
-          <nz-select [(ngModel)]="draft.materialType" style="width: 100%;">
-            <nz-option [nzValue]="0" nzLabel="指南（文档/课件）"></nz-option>
-            <nz-option [nzValue]="1" nzLabel="案例（视频/案例）"></nz-option>
-            <nz-option [nzValue]="2" nzLabel="模板（参考模板）"></nz-option>
-            <nz-option [nzValue]="3" nzLabel="链接（外部链接）"></nz-option>
-          </nz-select>
+            <label class="field full">
+              <span class="label">资料类型 <em>*</em></span>
+              <nz-select [(ngModel)]="draft.materialType" style="width: 100%;">
+                <nz-option [nzValue]="0" nzLabel="指南（文档/课件）"></nz-option>
+                <nz-option [nzValue]="1" nzLabel="案例（视频/案例）"></nz-option>
+                <nz-option [nzValue]="2" nzLabel="模板（参考模板）"></nz-option>
+                <nz-option [nzValue]="3" nzLabel="链接（外部链接）"></nz-option>
+              </nz-select>
+            </label>
 
-          <ng-container *ngIf="draft.materialType === 3">
-            <label>链接地址 <span class="required-hint">*</span></label>
-            <input nz-input [(ngModel)]="draft.resourceUrl" placeholder="https://..." />
-          </ng-container>
+            <ng-container *ngIf="draft.materialType === 3">
+              <label class="field full">
+                <span class="label">链接地址 <em>*</em></span>
+                <input nz-input [(ngModel)]="draft.resourceUrl" placeholder="https://..." />
+              </label>
+            </ng-container>
 
-          <ng-container *ngIf="draft.materialType !== 3">
-            <label>资料文件 <span class="required-hint">*</span></label>
-            <div class="editor-upload">
-              <nz-upload
-                [nzMultiple]="false"
-                [nzMaxCount]="1"
-                [nzBeforeUpload]="beforeMaterialUploadInDrawer()"
-                [nzFileList]="draft.resourceUrl ? [{ uid: 'material-drawer-existing', name: draft.title || 'file', status: 'done', url: draft.resourceUrl }] : []"
-                [nzRemove]="removeMaterialFileInDrawer()"
-                [nzDisabled]="!!drawerUploading()"
-                [nzShowUploadList]="true">
-                <button nz-button [nzLoading]="!!drawerUploading()">
-                  <span nz-icon nzType="upload"></span>
-                  {{ draft.resourceUrl ? '替换文件' : '点击上传' }}
-                </button>
-              </nz-upload>
-            </div>
-          </ng-container>
+            <ng-container *ngIf="draft.materialType !== 3">
+              <div class="field full">
+                <span class="label">资料文件 <em>*</em></span>
+                <div class="editor-upload">
+                  <nz-upload
+                    [nzMultiple]="false"
+                    [nzMaxCount]="1"
+                    [nzBeforeUpload]="beforeMaterialUploadInDrawer()"
+                    [nzFileList]="draft.resourceUrl ? [{ uid: 'material-drawer-existing', name: draft.title || 'file', status: 'done', url: draft.resourceUrl }] : []"
+                    [nzRemove]="removeMaterialFileInDrawer()"
+                    [nzDisabled]="!!drawerUploading()"
+                    [nzShowUploadList]="true">
+                    <button nz-button [nzLoading]="!!drawerUploading()">
+                      <span nz-icon nzType="upload"></span>
+                      {{ draft.resourceUrl ? '替换文件' : '点击上传' }}
+                    </button>
+                  </nz-upload>
+                  <span class="upload-hint">支持文档 / 视频 / 压缩包等常见格式，≤ 50MB</span>
+                </div>
+              </div>
+            </ng-container>
+          </div>
         </ng-container>
       </div>
     </div>

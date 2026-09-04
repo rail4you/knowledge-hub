@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -13,7 +13,8 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzUploadFile, NzUploadModule } from 'ng-zorro-antd/upload';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { OssUploadService } from '../../shared/oss-upload.service';
@@ -30,7 +31,7 @@ import {
   imports: [
     CommonModule, FormsModule,
     NzButtonModule, NzCardModule, NzEmptyModule, NzInputModule, NzModalModule, NzSelectModule,
-    NzSwitchModule, NzTableModule, NzTagModule, NzTooltipModule, NzIconModule, NzUploadModule,
+    NzSpinModule, NzSwitchModule, NzTableModule, NzTagModule, NzTooltipModule, NzIconModule, NzUploadModule,
   ],
   templateUrl: './practicum-management.component.html',
   styleUrls: ['./practicum-management.component.scss'],
@@ -58,6 +59,7 @@ export class PracticumManagementComponent implements OnInit {
   coverUploading = false;
   coverFileList: NzUploadFile[] = [];
   materialUploading: Record<number, boolean> = {};
+  @ViewChild('coverFileInput') coverFileInputRef?: ElementRef<HTMLInputElement>;
 
   // ===== 资料抽屉(统一承载"查看 / 新增 / 编辑"资料) =====
   readonly drawerMode = signal<'add' | 'edit'>('add');
@@ -376,19 +378,29 @@ export class PracticumManagementComponent implements OnInit {
     }
   }
 
-  beforeCoverUpload = (file: NzUploadFile): boolean => {
-    const rawFile = file as any as File;
+  /** 点击“上传/替换封面”按钮：触发隐藏的文件选择。 */
+  triggerCoverUpload(): void {
+    this.coverFileInputRef?.nativeElement.click();
+  }
+
+  /** 选中本地文件后实际走 OSS 上传。 */
+  onCoverFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
-    if (!allowed.includes(rawFile.type)) {
+    if (!allowed.includes(file.type)) {
       this.message.error('封面仅支持 JPG/PNG/GIF/WebP/BMP 格式');
-      return false;
+      return;
     }
-    if (rawFile.size > 10 * 1024 * 1024) {
+    if (file.size > 10 * 1024 * 1024) {
       this.message.error('封面大小不能超过 10MB');
-      return false;
+      return;
     }
     this.coverUploading = true;
-    this.ossUploadService.uploadImage(rawFile).subscribe({
+    this.cdr.markForCheck();
+    this.ossUploadService.uploadImage(file).subscribe({
       next: (res) => {
         this.coverUploading = false;
         this.form.coverImageUrl = res.url;
@@ -398,20 +410,17 @@ export class PracticumManagementComponent implements OnInit {
       },
       error: () => {
         this.coverUploading = false;
-        this.coverFileList = [];
         this.message.error('封面上传失败');
         this.cdr.markForCheck();
       },
     });
-    return false;
-  };
+  }
 
-  removeCover = (): boolean => {
+  removeCoverClick(): void {
     this.form.coverImageUrl = '';
     this.coverFileList = [];
     this.cdr.markForCheck();
-    return true;
-  };
+  }
 
   beforeMaterialUpload = (index: number) => (file: NzUploadFile): boolean => {
     const rawFile = file as any as File;

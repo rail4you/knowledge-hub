@@ -1,3 +1,5 @@
+:host { display: block; background: var(--kh-canvas); min-height: 100vh; }
+
 .page {
   padding: 24px;
   display: flex;
@@ -75,18 +77,33 @@
   color: #999;
 }
 
-.form-grid {
+/* ── dh-form 风格（与项目管理、双高等页面一致） ── */
+.dh-modal {
+  display: block;
+  padding: 4px 0;
+  max-height: 70vh; overflow-y: auto;
+  &::-webkit-scrollbar { width: 5px; }
+  &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
+}
+.dh-form {
   display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 12px;
-  align-items: center;
-  max-width: 700px;
-
-  label {
-    text-align: right;
-    color: #666;
-    font-size: 14px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+  .field {
+    display: flex; flex-direction: column; gap: 4px;
+    &.full { grid-column: 1 / -1; }
+    .label {
+      font-size: 13px; color: rgba(0, 0, 0, 0.65);
+      em { color: #ff4d4f; font-style: normal; margin-left: 2px; }
+    }
   }
+  @media (max-width: 560px) { grid-template-columns: 1fr; }
+}
+
+.score-input-wrap {
+  display: flex; align-items: center; gap: 8px;
+  .score-sep { color: #999; font-size: 16px; }
+  .score-max { font-size: 13px; color: var(--kh-muted); }
 }
 
 .actions-bar {
@@ -270,9 +287,31 @@
   }
 }
 
+/* 弹窗样式统一 */
+::ng-deep .practicum-modal-wrap {
+  .ant-modal-content { border-radius: var(--kh-r-card) !important; overflow: hidden; box-shadow: var(--kh-shadow-pop) !important; }
+  .ant-modal-header { border-bottom: 1px solid var(--kh-line-2) !important; padding: 14px 24px !important; }
+  .ant-modal-body { padding: 16px 24px !important; }
+  .ant-modal-title { font-weight: 700 !important; font-size: 15px !important; }
+
+  .ant-input,
+  .ant-input-number,
+  .ant-select-selector,
+  .ant-picker {
+    border-radius: var(--kh-r-control) !important;
+  }
+
+  .ant-input:focus,
+  .ant-input-focused,
+  .ant-picker-focused,
+  .ant-select-focused .ant-select-selector {
+    border-color: var(--kh-accent) !important;
+    box-shadow: 0 0 0 3px var(--kh-accent-soft) !important;
+  }
+}
+
 @media (max-width: 720px) {
-  .form-grid {
+  .dh-form {
     grid-template-columns: 1fr;
-    label { text-align: left; }
   }
 }
