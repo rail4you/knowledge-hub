@@ -6,54 +6,43 @@
     [stats]="stats()"
   ></app-student-hero>
 
-  <!-- =================== 搜索 + 分类筛选 =================== -->
-  <section class="quick-bar" aria-label="资讯筛选">
-    <div class="quick-bar__inner">
-      <div class="search-pill">
-        <span class="search-pill__icon">
-          <span nz-icon nzType="search" nzTheme="outline"></span>
-        </span>
-        <input
-          type="text"
-          [ngModel]="filter()"
-          (ngModelChange)="filter.set($event)"
-          (keyup.enter)="onSearch()"
-          placeholder="搜索资讯标题、摘要或关键词..."
-          class="search-pill__input"
-          aria-label="搜索资讯"
-        />
-        @if (filter()) {
-          <button class="search-pill__clear" (click)="filter.set('')" aria-label="清空">
-            <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
-          </button>
-        }
-        <button class="search-pill__btn" (click)="onSearch()">
-          <span nz-icon nzType="search" nzTheme="outline"></span>
-          <span>搜索</span>
-        </button>
-      </div>
+  <!-- =================== 搜索栏 =================== -->
+  <div class="search-bar">
+    <span nz-icon nzType="search" nzTheme="outline" class="search-bar__icon"></span>
+    <input
+      type="text"
+      [ngModel]="filter()"
+      (ngModelChange)="filter.set($event)"
+      (keyup.enter)="onSearch()"
+      placeholder="搜索资讯标题、摘要或关键词..."
+      class="search-bar__input"
+      aria-label="搜索资讯"
+    />
+    @if (filter()) {
+      <button class="search-bar__clear" (click)="filter.set('')" aria-label="清空">
+        <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
+      </button>
+    }
+    <button class="search-bar__btn" (click)="onSearch()">搜索</button>
+  </div>
 
-      <div class="category-chips">
-        <span class="category-chips__label">资讯分类</span>
-        <div class="category-chips__list">
-          @for (chip of categoryChips(); track chip.id) {
-            <button
-              class="cat-chip"
-              [class.is-active]="categoryId() === chip.id"
-              (click)="selectCategory(chip.id)"
-            >
-              @if (chip.id) {
-                <span class="cat-chip__dot" [style.background]="chip.color"></span>
-              } @else {
-                <span nz-icon [nzType]="chip.icon" nzTheme="outline"></span>
-              }
-              <span>{{ chip.name }}</span>
-            </button>
-          }
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- =================== 资讯分类 =================== -->
+  <div class="category-chips">
+    @for (chip of categoryChips(); track chip.id) {
+      <button
+        class="cat-chip"
+        [class.is-active]="categoryId() === chip.id"
+        (click)="selectCategory(chip.id)"
+      >
+        @if (chip.id) {
+          <span class="cat-chip__dot" [style.background]="chip.color"></span>
+        } @else {
+          <span nz-icon [nzType]="chip.icon" nzTheme="outline"></span>
+        }
+        <span>{{ chip.name }}</span>
+      </button>
+    }
+  </div>
 
   <!-- =================== 主体：资讯卡片 + 侧边栏 =================== -->
   <section class="news-content">
@@ -65,7 +54,6 @@
           <div class="featured-section">
             <div class="section-header">
               <h2 class="section-header__title">
-                <span class="section-header__bar"></span>
                 头条资讯
                 <span class="section-header__sub">置顶推荐 · 不容错过</span>
               </h2>
@@ -151,7 +139,6 @@
         <div class="latest-section">
           <div class="section-header">
             <h2 class="section-header__title">
-              <span class="section-header__bar"></span>
               最新资讯
               <span class="section-header__sub">持续更新 · 把握脉搏</span>
             </h2>
@@ -194,70 +181,37 @@
                       (error)="onCoverError($event)"
                       [class.is-hidden]="!hasCover(article)"
                     />
-                    <div class="news-card__pattern" aria-hidden="true">
-                      <span class="news-pattern-circle news-pattern-circle--1"></span>
-                      <span class="news-pattern-circle news-pattern-circle--2"></span>
-                    </div>
-                    <div class="news-card__cover-mask" aria-hidden="true"></div>
-
                     @if (article.isHot) {
-                      <span class="news-card__hot">
-                        <span nz-icon nzType="fire" nzTheme="fill"></span>
-                        热门
-                      </span>
-                    }
-                    @if (article.categoryName) {
-                      <span class="news-card__category">
-                        <span nz-icon nzType="folder" nzTheme="outline"></span>
-                        {{ article.categoryName }}
-                      </span>
+                      <span class="news-card__hot-badge">热门</span>
                     }
                   </div>
 
                   <div class="news-card__body">
-                    <h3 class="news-card__title" [title]="article.title">
-                      {{ article.title }}
-                    </h3>
+                    <div class="news-card__top">
+                      <h3 class="news-card__title" [title]="article.title">
+                        {{ article.title }}
+                      </h3>
+                      <div class="news-card__tags">
+                        @if (article.categoryName) {
+                          <span class="tag">{{ article.categoryName }}</span>
+                        }
+                      </div>
+                    </div>
 
                     @if (article.summary) {
                       <p class="news-card__summary">{{ article.summary }}</p>
-                    } @else {
-                      <p class="news-card__summary news-card__summary--empty">暂无摘要</p>
-                    }
-
-                    @if (parseTags(article.tags).length > 0) {
-                      <div class="news-card__tags">
-                        @for (tag of parseTags(article.tags); track tag) {
-                          <span class="news-tag">#{{ tag }}</span>
-                        }
-                      </div>
                     }
 
                     <div class="news-card__meta">
-                      <span class="news-card__author" [title]="article.authorName || '系统发布'">
-                        <span class="news-card__avatar">
-                          {{ ((article.authorName || '系统')[0]).toUpperCase() }}
-                        </span>
-                        <span class="news-card__author-name">{{ article.authorName || '系统发布' }}</span>
-                      </span>
-                      <span class="news-card__date">
-                        {{ article.publishedAt || article.creationTime | date:'MM-dd' }}
-                      </span>
+                      <span>{{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd' }}</span>
+                      <span><span nz-icon nzType="eye" nzTheme="outline"></span> {{ article.viewCount || 0 }}</span>
+                      <span><span nz-icon nzType="like" nzTheme="outline"></span> {{ article.likeCount || 0 }}</span>
                     </div>
 
-                    <div class="news-card__stats">
-                      <span class="stat-pill">
-                        <span nz-icon nzType="eye" nzTheme="outline"></span>
-                        {{ article.viewCount || 0 }}
-                      </span>
-                      <span class="stat-pill">
-                        <span nz-icon nzType="like" nzTheme="outline"></span>
-                        {{ article.likeCount || 0 }}
-                      </span>
-                      <span class="stat-pill">
-                        <span nz-icon nzType="message" nzTheme="outline"></span>
-                        {{ article.commentCount || 0 }}
-                      </span>
+                    <div class="news-card__actions">
+                      <button class="action-btn action-btn--primary" (click)="openArticle(article.id); $event.stopPropagation()">
+                        阅读全文
+                      </button>
                     </div>
                   </div>
                 </article>

@@ -62,9 +62,9 @@
             <div class="cover-icon">
               <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
             </div>
-            <div class="cover-extension" *ngIf="resource.fileExtension">
-              .{{ (resource.fileExtension || '').toUpperCase() }}
-            </div>
+            <span class="cover-type-badge" [ngClass]="'type-badge--' + (resource.resourceType || 0)">
+              {{ getResourceTypeName(resource.resourceType) }}
+            </span>
             <button
               class="cover-favorite is-active"
               (click)="toggleCollection($event, resource)"
@@ -77,10 +77,6 @@
           <!-- 卡片内容 -->
           <div class="resource-card__body">
             <div class="resource-card__top">
-              <span class="type-badge" [ngClass]="'type-badge--' + (resource.resourceType || 0)">
-                <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
-                <span>{{ getResourceTypeName(resource.resourceType) }}</span>
-              </span>
               @if (resource.categoryName) {
                 <span class="category-name" [title]="resource.categoryName">
                   <span nz-icon nzType="folder" nzTheme="outline"></span>
@@ -110,15 +106,14 @@
                 <span nz-icon nzType="eye" nzTheme="outline"></span>
                 {{ resource.viewCount || 0 }}
               </span>
+              @if (ratingSummaries()[resource.id!]; as summary) {
+                <span class="meta-item rating-inline">
+                  <span nz-icon nzType="star" nzTheme="fill"></span>
+                  {{ summary.averageRating | number:'1.1-1' }}
+                  <span class="rating-count">({{ summary.totalReviews }})</span>
+                </span>
+              }
             </div>
-
-            @if (ratingSummaries()[resource.id!]; as summary) {
-              <div class="resource-card__rating">
-                <nz-rate [ngModel]="summary.averageRating" [nzDisabled]="true" nzSize="small" nzAllowHalf></nz-rate>
-                <span class="rating-score">{{ summary.averageRating | number:'1.1-1' }}</span>
-                <span class="rating-count">({{ summary.totalReviews }})</span>
-              </div>
-            }
           </div>
 
           <!-- 操作按钮 -->
