@@ -33,6 +33,11 @@ interface TenantDto {
 interface PermissionGroup {
   name: string;
   displayName: string;
+  /** 顶层 Default 权限，例如 KnowledgeHub.Resources，对应层级2（无边框背景） */
+  parent: PermissionItem | null;
+  /** 子权限，对应层级3（有背景，按层级缩进） */
+  children: PermissionItem[];
+  /** 扁平列表，用于保存/兼容旧逻辑 */
   permissions: PermissionItem[];
 }
 
@@ -308,25 +313,27 @@ export class IdentityRolesComponent implements OnInit {
 
   private buildPermissionGroups(permissions: any[]): PermissionGroup[] {
     const knowledgeHubPermissions = permissions.filter((p: any) => p.name && p.name.startsWith('KnowledgeHub.'));
-    
+
     const groups: PermissionGroup[] = [];
     const groupMap = new Map<string, PermissionGroup>();
-    
+
     knowledgeHubPermissions.forEach((p: any) => {
       const parts = p.name.replace('KnowledgeHub.', '').split('.');
       const groupName = parts.length > 1 ? parts[0] : 'Other';
       const displayName = this.getGroupDisplayName(groupName);
-      
+
       if (!groupMap.has(groupName)) {
         const group: PermissionGroup = {
           name: groupName,
           displayName: displayName,
+          parent: null,
+          children: [],
           permissions: [],
         };
         groupMap.set(groupName, group);
         groups.push(group);
       }
-      
+
       groupMap.get(groupName)!.permissions.push({
         name: p.name,
         displayName: this.getPermissionDisplayName(p.name),
@@ -335,7 +342,28 @@ export class IdentityRolesComponent implements OnInit {
         isGranted: p.isGranted,
       });
     });
-    
+
+    // 拆分层级：第二层（Default，无边框背景）与第三层（有背景、按层级缩进）
+    // 约定：KnowledgeHub.{Group} 为父权限，其余 KnowledgeHub.{Group}.* 为子权限
+    groups.forEach(group => {
+      const parentName = `KnowledgeHub.${group.name}`;
+      const parentIndex = group.permissions.findIndex(p => p.name === parentName);
+      if (parentIndex >= 0) {
+        group.parent = group.permissions[parentIndex];
+        group.children = group.permissions.filter((_, i) => i !== parentIndex);
+      } else {
+        group.parent = null;
+        group.children = [...group.permissions];
+      }
+      // 子权限按层级深度 + 名称排序，保证同层级相邻，展开时缩进有规律
+      group.children.sort((a, b) => {
+        const depthA = a.name.split('.').length;
+        const depthB = b.name.split('.').length;
+        if (depthA !== depthB) return depthA - depthB;
+        return a.name.localeCompare(b.name);
+      });
+    });
+
     return groups;
   }
 
@@ -418,7 +446,7 @@ export class IdentityRolesComponent implements OnInit {
 
   savePermissions() {
     this.permissionSaving.set(true);
-    const permissions = this.permissionGroups.flatMap(g => g.permissions);
+    const permissions = this.permissionGroups.flatMap(g => g.parent ? [g.parent, ...g.children] : [...g.children]);
     
     this.tenantPermissionService.setForTenant({
       tenantId: this.permissionTenantId,
@@ -435,15 +463,42 @@ export class IdentityRolesComponent implements OnInit {
   }
 
   isGroupAllGranted(group: PermissionGroup): boolean {
-    return group.permissions.length > 0 && group.permissions.every(p => p.isGranted);
+    const all = group.parent ? [group.parent, ...group.children] : group.children;
+    return all.length > 0 && all.every(p => p.isGranted);
   }
 
   isGroupIndeterminate(group: PermissionGroup): boolean {
-    const granted = group.permissions.filter(p => p.isGranted).length;
-    return granted > 0 && granted < group.permissions.length;
+    const all = group.parent ? [group.parent, ...group.children] : group.children;
+    const granted = all.filter(p => p.isGranted).length;
+    return granted > 0 && granted < all.length;
   }
 
   toggleGroupPermissions(group: PermissionGroup, granted: boolean) {
+    if (group.parent) group.parent.isGranted = granted;
+    group.children.forEach(p => p.isGranted = granted);
+    // 兼容旧的扁平列表（save 时会扁平化，所以也要同步）
     group.permissions.forEach(p => p.isGranted = granted);
+  }
+
+  /** 子权限单独切换时，保持 parent 同步；若全部子权限勾选则 parent 也勾选 */
+  onChildToggle(group: PermissionGroup) {
+    if (!group.parent) return;
+    const allChildrenGranted = group.children.length > 0 && group.children.every(p => p.isGranted);
+    // 不强制联动，但保持扁平列表一致
+    group.permissions.forEach(p => {
+      if (p.name === group.parent!.name) p.isGranted = group.parent!.isGranted;
+    });
+    // 可选：子全选时自动勾选父（更符合层级语义）
+    if (allChildrenGranted && !group.parent.isGranted) {
+      // 不自动勾选，保持用户显式控制；如需自动可取消注释下一行
+      // group.parent.isGranted = true;
+    }
+  }
+
+  getPermissionIndent(name: string): number {
+    // KnowledgeHub.Resources.Create -> 3 段，缩进 1 级；更深层级递增
+    const depth = name.split('.').length;
+    // Group 本身为 2 段 (KnowledgeHub.Resources)，子为 3 段及以上
+    return Math.max(0, depth - 3);
   }
 }

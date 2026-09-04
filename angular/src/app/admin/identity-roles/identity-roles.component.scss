@@ -9,3 +9,101 @@
 small {
   font-size: 12px;
 }
+
+// 权限弹窗三层级样式
+.permission-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+// 层级1：外层卡片（模块分组）- 唯一有外边框/标题背景的层级
+.permission-group-card.perm-level-1 {
+  border: 1px solid #eceef2;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+:host ::ng-deep .permission-group-card.perm-level-1 .ant-card-head {
+  background: #fbfcfe;
+  border-bottom: 1px solid #eef0f3;
+  font-weight: 600;
+}
+
+:host ::ng-deep .permission-group-card.perm-level-1 .ant-card-body {
+  padding: 0 16px 14px;
+}
+
+// 层级2：无边框、无背景，平铺的分组总控
+.perm-level-2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0 8px;
+  background: transparent;
+  border: none;
+
+  .perm-parent-checkbox {
+    font-weight: 500;
+    font-size: 14px;
+    color: #1f2937;
+
+    .perm-count {
+      margin-left: 6px;
+      font-weight: 400;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+  }
+
+  .perm-select-all-hint {
+    font-size: 12px;
+    color: #9ca3af;
+    white-space: nowrap;
+  }
+}
+
+// 层级3：有背景、按层级缩进
+.perm-level-3-panel {
+  margin: 4px 0 0 24px; // 整体相对层级2缩进
+  background: #f7f8fa;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 8px;
+
+  .perm-child-item {
+    background: #fff;
+    border: 1px solid #e8eaf0;
+    border-radius: 6px;
+    padding: 7px 10px;
+    margin: 0;
+    transition: all 0.2s;
+    font-size: 13px;
+    line-height: 1.4;
+    display: inline-flex;
+    align-items: center;
+
+    &:hover {
+      border-color: #1677ff;
+      background: #f0f7ff;
+    }
+
+    &.ant-checkbox-wrapper-checked {
+      border-color: #1677ff;
+      background: #eef6ff;
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .perm-level-3-panel {
+    grid-template-columns: 1fr;
+    margin-left: 16px;
+  }
+}

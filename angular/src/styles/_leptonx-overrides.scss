@@ -106,22 +106,25 @@ body {
   color: #7e92ac;
 }
 
-/* ── 二级菜单 ── */
+/* ── 二级菜单（身份验证管理等）── 无边框、无背景、平铺 ── */
 .lpx-nav-menu .lpx-inner-menu-item,
 .lpx-nav-menu .lpx-inner-menu-item lpx-sub-navbar {
   display: block;
   width: 100%;
 }
 
+/* 二级：直接挂在顶级 submenu 下的 inner-item */
 .lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-link {
   height: 34px;
   line-height: 34px;
-  padding: 0 12px 0 48px;
+  padding: 0 12px 0 40px;
   margin: 2px 8px;
   border-radius: 9px;
   font-size: 0.925em;
-  color: #9fb2c9;
+  color: #b8c7dc;
   background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
   width: auto;
 }
 
@@ -138,11 +141,52 @@ body {
   flex: 1;
 }
 
-.lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-link:hover,
-.lpx-nav-menu .lpx-inner-menu-item .lpx-menu-item-link.selected {
-  background: linear-gradient(90deg, rgba(24, 144, 255, 0.24), rgba(24, 144, 255, 0.10));
-  box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.28);
-  color: #fff;
+/* 二级 hover/选中/展开：仍无边框背景，仅文字高亮 */
+.lpx-nav-menu .lpx-menu-item-submenu > .lpx-inner-menu-item > .lpx-menu-item-link:hover,
+.lpx-nav-menu .lpx-menu-item-submenu > .lpx-inner-menu-item > .lpx-menu-item-link.selected,
+.lpx-nav-menu .lpx-menu-item-submenu > .lpx-inner-menu-item > .lpx-menu-item-link.expanded {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
+/* 三级及以上（角色/用户等）── 有背景、按层级缩进、宽度收窄 */
+.lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link {
+  height: 32px;
+  line-height: 32px;
+  /* 再加大：相对二级多 52px，强化层级感 */
+  margin: 2px 16px 2px 60px;
+  padding: 0 12px 0 16px;
+  border-radius: 8px;
+  font-size: 0.88em;
+  color: #9fb2c9;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+  width: auto;
+}
+
+.lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link:hover {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+
+.lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link.selected,
+.lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link.active {
+  background: linear-gradient(90deg, rgba(24, 144, 255, 0.28), rgba(24, 144, 255, 0.12)) !important;
+  box-shadow: inset 0 0 0 1px rgba(24, 144, 255, 0.32) !important;
+  border-color: rgba(24, 144, 255, 0.32) !important;
+  color: #fff !important;
+}
+
+/* 四级兜底：再缩进一格（第三级基础上再 +16px），文字同样贴边 */
+.lpx-nav-menu .lpx-inner-menu-item .lpx-inner-menu-item .lpx-inner-menu-item .lpx-menu-item-link {
+  margin-left: 76px;
+  margin-right: 16px;
+  padding-left: 16px;
 }
 
 /* 分割线：带子菜单的组之间 */

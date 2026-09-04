@@ -163,26 +163,45 @@
       
       <div class="permission-container">
         @for (group of permissionGroups; track group.name) {
-          <nz-card [nzTitle]="group.displayName" [nzSize]="'small'" class="permission-group-card">
-            <div class="group-actions">
-              <label nz-checkbox 
-                [ngModel]="isGroupAllGranted(group)" 
-                [nzIndeterminate]="isGroupIndeterminate(group)"
-                (ngModelChange)="toggleGroupPermissions(group, $event)">
-                {{ '::SelectAll' | abpLocalization }}
-              </label>
-            </div>
-            <nz-divider></nz-divider>
-            <div class="permissions-grid">
-              @for (permission of group.permissions; track permission.name) {
-                <div class="permission-item">
-                  <label nz-checkbox 
-                    [(ngModel)]="permission.isGranted">
-                    {{ permission.displayName }}
-                  </label>
-                </div>
+          <nz-card [nzTitle]="group.displayName" [nzSize]="'small'" class="permission-group-card perm-level-1">
+            <!-- 层级2：无边框、无背景，承载模块总控 -->
+            <div class="perm-level-2">
+              @if (group.parent) {
+                <label nz-checkbox
+                  [ngModel]="isGroupAllGranted(group)"
+                  [nzIndeterminate]="isGroupIndeterminate(group)"
+                  (ngModelChange)="toggleGroupPermissions(group, $event)"
+                  class="perm-parent-checkbox">
+                  {{ group.parent.displayName }}
+                  <span class="perm-count">({{ group.children.length + 1 }})</span>
+                </label>
+                <span class="perm-select-all-hint">{{ '::SelectAll' | abpLocalization }}</span>
+              } @else {
+                <label nz-checkbox
+                  [ngModel]="isGroupAllGranted(group)"
+                  [nzIndeterminate]="isGroupIndeterminate(group)"
+                  (ngModelChange)="toggleGroupPermissions(group, $event)"
+                  class="perm-parent-checkbox">
+                  {{ '::SelectAll' | abpLocalization }}
+                  <span class="perm-count">({{ group.children.length }})</span>
+                </label>
               }
             </div>
+
+            <!-- 层级3：有背景、按层级缩进 -->
+            @if (group.children.length > 0) {
+              <div class="perm-level-3-panel">
+                @for (permission of group.children; track permission.name) {
+                  <label nz-checkbox
+                    [(ngModel)]="permission.isGranted"
+                    (ngModelChange)="onChildToggle(group)"
+                    class="perm-child-item"
+                    [style.margin-left.px]="getPermissionIndent(permission.name) * 16">
+                    {{ permission.displayName }}
+                  </label>
+                }
+              </div>
+            }
           </nz-card>
         }
       </div>
