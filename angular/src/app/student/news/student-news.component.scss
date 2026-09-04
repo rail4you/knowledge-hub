@@ -490,23 +490,26 @@
 
 .news-card {
   display: flex;
+  flex-direction: column;
   background: #fff;
   border-radius: ds.$student-radius;
   border: 1px solid ds.$student-border-soft;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 0;
 
   &:hover {
     border-color: rgba(37, 99, 235, 0.35);
     box-shadow: ds.$student-shadow-card;
+
+    .news-card__cover-icon {
+      transform: scale(1.06);
+    }
   }
 
   &__cover {
     position: relative;
-    width: 110px;
-    min-height: 110px;
+    height: 130px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -521,18 +524,29 @@
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s ease;
-
     &.is-hidden { display: none; }
+  }
+
+  &__pattern {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__cover-icon {
+    font-size: 36px;
+    color: rgba(255, 255, 255, 0.7);
+    transition: transform 0.3s ease;
   }
 
   &__hot-badge {
     position: absolute;
-    top: 6px;
-    left: 6px;
-    height: 18px;
-    padding: 0 6px;
-    border-radius: 3px;
-    background: #ef4444;
+    top: 8px;
+    left: 8px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 4px;
+    background: #16a34a;
     color: #fff;
     font-size: 10px;
     font-weight: 600;
@@ -542,19 +556,12 @@
   }
 
   &__body {
-    flex: 1;
-    min-width: 0;
     padding: 12px 14px;
     display: flex;
     flex-direction: column;
     gap: 6px;
-  }
-
-  &__top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
+    flex: 1;
+    min-width: 0;
   }
 
   &__title {
@@ -564,28 +571,6 @@
     color: ds.$student-text;
     line-height: 1.4;
     @include ds.line-clamp(2);
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__tags {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 3px;
-    flex-shrink: 0;
-  }
-
-  .tag {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 3px;
-    background: ds.$student-surface-soft;
-    color: ds.$student-text-muted;
-    font-size: 10px;
-    font-weight: 500;
-    line-height: 1.7;
-    white-space: nowrap;
   }
 
   &__summary {
@@ -603,18 +588,18 @@
     gap: 6px 12px;
     color: ds.$student-text-light;
     font-size: 11px;
+  }
 
-    span {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-    }
+  .meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     span[nz-icon] { font-size: 11px; }
   }
 
   &__actions {
     margin-top: auto;
-    padding-top: 4px;
+    padding-top: 6px;
   }
 
   .action-btn {
@@ -634,7 +619,7 @@
     &--primary {
       background: ds.$student-primary;
       color: #fff;
-
+      width: 100%;
       &:hover {
         background: ds.$student-primary-dark;
       }

@@ -70,17 +70,8 @@ export class StudentNewsComponent implements OnInit {
     { id: null, name: '全部资讯', icon: 'appstore', color: '#1e6ce8' },
   ]);
 
-  readonly featuredArticles = computed(() => {
-    return this.articles()
-      .filter(a => a.isTop)
-      .slice(0, 2);
-  });
-
-  readonly latestArticles = computed(() => {
-    const featuredIds = new Set(this.featuredArticles().map(a => a.id));
-    return this.articles()
-      .filter(a => !featuredIds.has(a.id))
-      .slice(0, 12);
+  readonly allArticles = computed(() => {
+    return this.articles().slice(0, 30);
   });
 
   readonly trendingArticles = computed(() => {
@@ -188,12 +179,12 @@ export class StudentNewsComponent implements OnInit {
 
   private gradientByKey(primary: string, secondary: string): string {
     const palettes = [
-      '#1e6ce8',
-      '#0891b2',
-      '#10b981',
-      '#059669',
-      '#0284c7',
       '#2563eb',
+      '#1d4ed8',
+      '#3b82f6',
+      '#0ea5e9',
+      '#0284c7',
+      '#6366f1',
       '#0891b2',
       '#0c4cb8',
     ];
