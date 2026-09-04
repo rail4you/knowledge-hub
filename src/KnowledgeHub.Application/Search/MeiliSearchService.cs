@@ -679,7 +679,9 @@ public class MeiliSearchService : IMeiliSearchService
 
             if (searchResult.TotalCount > 0)
             {
-                combinedText = string.Join("\n", searchResult.Items.Select(p => p.Content));
+                combinedText = string.Join("\n", searchResult.Items.Select(p =>
+                    !string.IsNullOrWhiteSpace(p.Content) ? p.Content :
+                    !string.IsNullOrWhiteSpace(p.EventDescription) ? p.EventDescription! : string.Empty));
             }
         }
         catch (Exception ex)
@@ -713,13 +715,51 @@ public class MeiliSearchService : IMeiliSearchService
             return [];
         }
 
-        var hotWords = ChineseTextTokenizer.ExtractHotWords(combinedText, count);
+        // 初筛时多取一些，过一轮可检索性校验（Meilisearch 能否召回）后再截断到 count，
+        // 确保 /ai/chat 热门词点击后“在文档中搜索关于“xxx”的内容”一定有结果，
+        // 避免“本概念/成的三”这类 n-gram 碎片虽在原文出现却因召回分词不一致而搜不到。
+        var candidates = ChineseTextTokenizer.ExtractHotWords(combinedText, count * 2 + 10);
 
-        return hotWords.Select(hw => new HotWordDto
+        // 可检索性校验：仅保留在当前资源下 Meilisearch 能召回的词
+        var validated = new List<HotWordDto>();
+        foreach (var hw in candidates)
         {
-            Word = hw.Word,
-            Frequency = hw.Frequency
-        }).ToList();
+            try
+            {
+                var r = await SearchAsync(new SearchQueryDto
+                {
+                    Query = hw.Word,
+                    ResourceId = resourceId,
+                    MaxResultCount = 1,
+                    SkipCount = 0
+                });
+                if (r.TotalCount > 0)
+                {
+                    validated.Add(new HotWordDto { Word = hw.Word, Frequency = hw.Frequency });
+                    if (validated.Count >= count) break;
+                }
+            }
+            catch
+            {
+                // 校验失败（索引不可用等）则保守保留，避免热门词面板完全空白
+                validated.Add(new HotWordDto { Word = hw.Word, Frequency = hw.Frequency });
+                if (validated.Count >= count) break;
+            }
+        }
+
+        // 若校验后不足 count（如小文档词少）则回退用初筛结果补齐
+        if (validated.Count < count && validated.Count < candidates.Count)
+        {
+            var seen = new HashSet<string>(validated.Select(v => v.Word));
+            foreach (var hw in candidates)
+            {
+                if (seen.Contains(hw.Word)) continue;
+                validated.Add(new HotWordDto { Word = hw.Word, Frequency = hw.Frequency });
+                if (validated.Count >= count) break;
+            }
+        }
+
+        return validated.Take(count).ToList();
     }
 }
 

@@ -74,13 +74,34 @@ public static class ChineseTextTokenizer
             }
         }
 
-        // 排序取 top N
-        return freq
+        // 排序：高频优先，同频长词优先（长词更具语义完整性，短的 interior 碎片如“本概念/成的三”
+        // 往往是长词“基本概念/构成的三大要素”的子串且同频，应被去重）。
+        var sorted = freq
             .OrderByDescending(kv => kv.Value)
-            .ThenBy(kv => kv.Key.Length) // 同频词短的优先
-            .Take(maxWords)
-            .Select(kv => (kv.Key, kv.Value))
+            .ThenByDescending(kv => kv.Key.Length)
+            .ThenBy(kv => kv.Key, StringComparer.Ordinal)
             .ToList();
+
+        // 去重：若短词是已保留长词的子串且频率相等，说明它只是长词内部滑动窗口的副产物，无独立语义
+        var kept = new List<(string Key, int Value)>();
+        foreach (var kv in sorted)
+        {
+            var isSubstringDuplicate = false;
+            foreach (var (keptKey, keptValue) in kept)
+            {
+                if (kv.Value == keptValue && keptKey.Contains(kv.Key, StringComparison.Ordinal) && kv.Key != keptKey)
+                {
+                    isSubstringDuplicate = true;
+                    break;
+                }
+            }
+            if (isSubstringDuplicate) continue;
+
+            kept.Add((kv.Key, kv.Value));
+            if (kept.Count >= maxWords) break;
+        }
+
+        return kept.Select(kv => (kv.Key, kv.Value)).ToList();
     }
 
     /// <summary>
@@ -152,6 +173,13 @@ public static class ChineseTextTokenizer
         // 首尾不能是典型的停用词/噪音字
         if (ChineseStopChars.Contains(phrase[0]) || ChineseStopChars.Contains(phrase[^1]))
             return false;
+
+        // 热门词内部不应含停用词（如“的/与/及”）——“成的三/用与意”等即由此过滤
+        foreach (var c in phrase)
+        {
+            if (ChineseStopChars.Contains(c))
+                return false;
+        }
 
         // 不能全部由噪音字组成
         var noiseCount = 0;

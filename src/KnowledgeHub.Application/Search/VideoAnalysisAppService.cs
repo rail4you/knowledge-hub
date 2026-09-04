@@ -131,12 +131,34 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         var checkResponse = await client.GetAsync($"/indexes/{VideosIndexName}");
         if (checkResponse.IsSuccessStatusCode)
         {
-            // 已存在也需补齐 filterable（旧索引缺 resourceId 导致按资源检索失败）
+            // 已存在也需同步设置：历史索引可能是 wildcard searchable-attributes ("*")，导致数字查询 "1"
+            // 误匹配到 id/order 等隐藏字段而产生 1.0 满分（见 https://localhost:4200/search?q=1 复现）。
             var indexBaseExisting = client.BaseAddress + $"/indexes/{VideosIndexName}";
             try
             {
                 await client.PutAsJsonAsync($"{indexBaseExisting}/settings/filterable-attributes",
                     new[] { "resourceId", "videoId", "videoName", "indexedAt" });
+            }
+            catch { }
+            try
+            {
+                await client.PutAsJsonAsync($"{indexBaseExisting}/settings/searchable-attributes",
+                    new[] { "videoName", "eventDescription" });
+            }
+            catch { }
+            try
+            {
+                await client.PutAsJsonAsync($"{indexBaseExisting}/settings/sortable-attributes",
+                    new[] { "order", "indexedAt", "startTime" });
+            }
+            catch { }
+            // 同步 ranking-rules，保持与 documents 索引一致的 words 优先策略
+            try
+            {
+                await client.PutAsJsonAsync($"{indexBaseExisting}/settings/ranking-rules", new[]
+                {
+                    "words", "typo", "proximity", "attribute", "sort", "exactness"
+                });
             }
             catch { }
             return;
@@ -150,14 +172,19 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
 
         var indexBase = client.BaseAddress + $"/indexes/{VideosIndexName}";
 
-        await client.PostAsJsonAsync($"{indexBase}/settings/filterable-attributes",
+        await client.PutAsJsonAsync($"{indexBase}/settings/filterable-attributes",
             new[] { "resourceId", "videoId", "videoName", "indexedAt" });
 
-        await client.PostAsJsonAsync($"{indexBase}/settings/searchable-attributes",
+        await client.PutAsJsonAsync($"{indexBase}/settings/searchable-attributes",
             new[] { "videoName", "eventDescription" });
 
-        await client.PostAsJsonAsync($"{indexBase}/settings/sortable-attributes",
+        await client.PutAsJsonAsync($"{indexBase}/settings/sortable-attributes",
             new[] { "order", "indexedAt", "startTime" });
+
+        await client.PutAsJsonAsync($"{indexBase}/settings/ranking-rules", new[]
+        {
+            "words", "typo", "proximity", "attribute", "sort", "exactness"
+        });
 
         _logger.LogInformation("Videos index created successfully");
     }
