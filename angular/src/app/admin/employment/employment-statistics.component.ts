@@ -182,7 +182,10 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `employment-stats-${Date.now()}.xlsx`;
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const d = new Date();
+        const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+        link.download = `投递与去向统计_${ts}.xlsx`;
         link.click();
         URL.revokeObjectURL(url);
       },
