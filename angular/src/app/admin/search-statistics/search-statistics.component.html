@@ -1,11 +1,9 @@
-<div class="stats-container">
-  <div class="stats-header">
-    <h1>{{ '::Menu:SearchStatistics' | abpLocalization }}</h1>
-    <div class="filters">
-      <button nz-button nzType="primary" (click)="exportToExcel()" [disabled]="!dashboard()">
-        <span nz-icon nzType="download"></span>
-        导出 Excel
-      </button>
+<div class="stats-page">
+  <div class="page-title">{{ '::Menu:SearchStatistics' | abpLocalization }}</div>
+
+  <!-- 筛选栏 -->
+  <div class="filter-bar">
+    <div class="filter-left">
       <nz-range-picker [(ngModel)]="dateRange" (ngModelChange)="onDateRangeChange()"></nz-range-picker>
       @if (isHost) {
         <nz-select [(ngModel)]="selectedTenantId" (ngModelChange)="onTenantChange()" nzPlaceHolder="{{ '::SearchStatistics:SelectTenant' | abpLocalization }}" style="min-width: 200px">
@@ -16,134 +14,170 @@
         </nz-select>
       }
     </div>
+    <button class="export-btn" type="button" (click)="exportToExcel()" [disabled]="!dashboard()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      导出 Excel
+    </button>
   </div>
 
   <nz-spin [nzSpinning]="loading()">
     @if (dashboard(); as d) {
-      <div class="stats-cards">
-        <nz-card>
-          <nz-statistic [nzTitle]="'全部: 检索次数' | abpLocalization" [nzValue]="d.all.totalSearches"></nz-statistic>
-        </nz-card>
-        <nz-card>
-          <nz-statistic [nzTitle]="'全部: 今日检索' | abpLocalization" [nzValue]="d.all.todaySearches"></nz-statistic>
-        </nz-card>
-        <nz-card>
-          <nz-statistic [nzTitle]="'文档: 检索次数' | abpLocalization" [nzValue]="d.document.totalSearches"></nz-statistic>
-        </nz-card>
-        <nz-card>
-          <nz-statistic [nzTitle]="'文档: 今日检索' | abpLocalization" [nzValue]="d.document.todaySearches"></nz-statistic>
-        </nz-card>
-        <nz-card>
-          <nz-statistic [nzTitle]="'视频: 检索次数' | abpLocalization" [nzValue]="d.video.totalSearches"></nz-statistic>
-        </nz-card>
-        <nz-card>
-          <nz-statistic [nzTitle]="'视频: 今日检索' | abpLocalization" [nzValue]="d.video.todaySearches"></nz-statistic>
-        </nz-card>
+      <!-- 统计卡片（容器内一行） -->
+      <div class="stats-panel">
+        <div class="stats-panel__header">检索概览</div>
+        <div class="stats-cards">
+          <div class="stat-card">
+            <div class="stat-value accent">{{ d.all.totalSearches | number }}</div>
+            <div class="stat-label">总检索次数</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value cyan">{{ d.all.todaySearches | number }}</div>
+            <div class="stat-label">今日检索</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value green">{{ d.document.totalSearches | number }}</div>
+            <div class="stat-label">文档检索</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value green-light">{{ d.document.todaySearches | number }}</div>
+            <div class="stat-label">文档今日</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value purple">{{ d.video.totalSearches | number }}</div>
+            <div class="stat-label">视频检索</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value purple-light">{{ d.video.todaySearches | number }}</div>
+            <div class="stat-label">视频今日</div>
+          </div>
+        </div>
       </div>
 
-      <nz-card [nzTitle]="'::SearchStatistics:DailyTrend' | abpLocalization" style="margin-top: 16px">
-        <div class="trend-legend">
-          <span class="legend-item"><span class="legend-dot" style="background:#1890ff"></span>全部</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#52c41a"></span>文档</span>
-          <span class="legend-item"><span class="legend-dot" style="background:#722ed1"></span>视频</span>
-        </div>
-        <div class="trend-chart">
-          @for (item of d.dailyTrends; track item.date) {
-            <div class="trend-bar-wrapper"
-                 nz-tooltip
-                 [nzTooltipTitle]="tip"
-                 [nzTooltipMouseEnterDelay]="0.1">
-              <ng-template #tip>
-                <div class="trend-tooltip">
-                  <div class="trend-tooltip-date">{{ item.date | date:'yyyy/MM/dd' }}</div>
-                  <div>全部：{{ item.totalSearchCount }}</div>
-                  <div>文档：{{ item.documentSearchCount }}</div>
-                  <div>视频：{{ item.videoSearchCount }}</div>
+      <!-- 图表区：左侧每日趋势 + 右侧类型分布 -->
+      <div class="charts-row">
+        <div class="section-card">
+          <div class="section-card__title">每日检索趋势</div>
+          <div class="trend-chart">
+            @for (item of d.dailyTrends; track item.date) {
+              <div class="trend-bar-wrapper"
+                   nz-tooltip
+                   [nzTooltipTitle]="tip"
+                   [nzTooltipMouseEnterDelay]="0.1">
+                <ng-template #tip>
+                  <div class="trend-tooltip">
+                    <div class="trend-tooltip-date">{{ item.date | date:'yyyy/MM/dd' }}</div>
+                    <div>全部：{{ item.totalSearchCount }}</div>
+                    <div>文档：{{ item.documentSearchCount }}</div>
+                    <div>视频：{{ item.videoSearchCount }}</div>
+                  </div>
+                </ng-template>
+                <div class="trend-bar-group">
+                  <div class="trend-bar bar-all" [style.height.px]="getTrendHeight(item.totalSearchCount)"></div>
+                  <div class="trend-bar bar-doc" [style.height.px]="getTrendHeight(item.documentSearchCount)"></div>
+                  <div class="trend-bar bar-video" [style.height.px]="getTrendHeight(item.videoSearchCount)"></div>
                 </div>
-              </ng-template>
-              <div class="trend-bar-group">
-                <div class="trend-bar bar-search" [style.height.px]="getTrendHeight(item.totalSearchCount)"></div>
-                <div class="trend-bar bar-user" [style.height.px]="getTrendHeight(item.documentSearchCount)"></div>
-                <div class="trend-bar bar-video" [style.height.px]="getTrendHeight(item.videoSearchCount)"></div>
+                <div class="trend-label">{{ item.date | date:'M/d' }}</div>
               </div>
-              <div class="trend-label">{{ item.date | date:'M/d' }}</div>
-            </div>
-          }
+            }
+          </div>
+          <div class="trend-legend">
+            <span class="legend-item"><span class="legend-dot dot-all"></span>全部</span>
+            <span class="legend-item"><span class="legend-dot dot-doc"></span>文档</span>
+            <span class="legend-item"><span class="legend-dot dot-video"></span>视频</span>
+          </div>
         </div>
-      </nz-card>
 
-      <div class="stats-tables">
-        <nz-card [nzTitle]="'::SearchStatistics:PopularSearches' | abpLocalization" style="flex: 1">
-          <nz-table [nzData]="d.popularSearches" [nzPageSize]="10" nzSize="small">
-            <thead>
-              <tr>
-                <th>{{ '::SearchStatistics:Keyword' | abpLocalization }}</th>
-                <th>{{ '::SearchStatistics:Frequency' | abpLocalization }}</th>
-                <th>类型</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of d.popularSearches; track item.keyword + item.sourceType) {
-                <tr>
-                  <td>{{ item.keyword }}</td>
-                  <td><nz-tag nzColor="blue">{{ item.count }}</nz-tag></td>
-                  <td>
-                    @if (item.sourceType === 'video') {
-                      <nz-tag nzColor="purple">视频</nz-tag>
-                    } @else if (item.sourceType === 'document') {
-                      <nz-tag nzColor="cyan">文档</nz-tag>
-                    } @else {
-                      <nz-tag nzColor="default">全部</nz-tag>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </nz-table>
-        </nz-card>
+        <div class="section-card">
+          <div class="section-card__title">检索类型分布</div>
+          <div class="type-chart-container" #typeChart></div>
+          <div class="type-dots">
+            <span class="type-dot-item"><span class="type-dot green"></span>文档</span>
+            <span class="type-dot-item"><span class="type-dot purple"></span>视频</span>
+          </div>
+        </div>
+      </div>
 
-        <nz-card [nzTitle]="'::SearchStatistics:TopResources' | abpLocalization" style="flex: 1">
-          <nz-table [nzData]="d.topResources" [nzPageSize]="10" nzSize="small">
-            <thead>
-              <tr>
-                <th>{{ '::SearchStatistics:ResourceName' | abpLocalization }}</th>
-                <th>{{ '::SearchStatistics:SearchCount' | abpLocalization }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of d.topResources; track item.resourceId) {
+      <!-- 排行榜区 -->
+      <div class="rankings-panel">
+        <div class="rankings-header">排行榜</div>
+        <div class="tables-row">
+          <div class="ranking-card">
+            <div class="ranking-card__title">热门搜索</div>
+            <nz-table [nzData]="d.popularSearches" [nzPageSize]="10" nzSize="small" class="stats-table" [nzFrontPagination]="false">
+              <thead>
                 <tr>
-                  <td>{{ item.resourceName }}</td>
-                  <td>{{ item.searchCount }}</td>
+                  <th>关键词</th>
+                  <th>次数</th>
+                  <th>类型</th>
                 </tr>
-              }
-            </tbody>
-          </nz-table>
-        </nz-card>
+              </thead>
+              <tbody>
+                @for (item of d.popularSearches; track item.keyword + item.sourceType) {
+                  <tr>
+                    <td class="cell-left">{{ item.keyword }}</td>
+                    <td><nz-tag nzColor="blue">{{ item.count }}</nz-tag></td>
+                    <td>
+                      @if (item.sourceType === 'video') {
+                        <nz-tag nzColor="purple">视频</nz-tag>
+                      } @else if (item.sourceType === 'document') {
+                        <nz-tag nzColor="cyan">文档</nz-tag>
+                      } @else {
+                        <nz-tag nzColor="default">全部</nz-tag>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          </div>
 
-        <nz-card [nzTitle]="'::SearchStatistics:TopRatedResources' | abpLocalization" style="flex: 1">
-          <nz-table [nzData]="d.topRatedResources" [nzPageSize]="10" nzSize="small">
-            <thead>
-              <tr>
-                <th>{{ '::SearchStatistics:ResourceName' | abpLocalization }}</th>
-                <th>{{ '::SearchStatistics:AvgRating' | abpLocalization }}</th>
-                <th>{{ '::SearchStatistics:ReviewCount' | abpLocalization }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of d.topRatedResources; track item.resourceId) {
+          <div class="ranking-card">
+            <div class="ranking-card__title">热门资源</div>
+            <nz-table [nzData]="d.topResources" [nzPageSize]="10" nzSize="small" class="stats-table" [nzFrontPagination]="false">
+              <thead>
                 <tr>
-                  <td>{{ item.resourceName }}</td>
-                  <td>{{ item.averageRating }} / 5</td>
-                  <td>{{ item.reviewCount }}</td>
+                  <th>资源名称</th>
+                  <th>搜索次数</th>
                 </tr>
-              }
-            </tbody>
-          </nz-table>
-        </nz-card>
+              </thead>
+              <tbody>
+                @for (item of d.topResources; track item.resourceId) {
+                  <tr>
+                    <td class="cell-left">{{ item.resourceName }}</td>
+                    <td>{{ item.searchCount }}</td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          </div>
+
+          <div class="ranking-card">
+            <div class="ranking-card__title">高评分资源</div>
+            <nz-table [nzData]="d.topRatedResources" [nzPageSize]="10" nzSize="small" class="stats-table" [nzFrontPagination]="false">
+              <thead>
+                <tr>
+                  <th>资源名称</th>
+                  <th>评分</th>
+                  <th>评价数</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of d.topRatedResources; track item.resourceId) {
+                  <tr>
+                    <td class="cell-left">{{ item.resourceName }}</td>
+                    <td>{{ item.averageRating }} / 5</td>
+                    <td>{{ item.reviewCount }}</td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          </div>
+        </div>
       </div>
     } @else if (!loading()) {
-      <nz-empty [nzNotFoundContent]="'::SearchStatistics:NoData' | abpLocalization"></nz-empty>
+      <div class="empty-state">
+        <nz-empty [nzNotFoundContent]="'::SearchStatistics:NoData' | abpLocalization"></nz-empty>
+      </div>
     }
   </nz-spin>
 </div>

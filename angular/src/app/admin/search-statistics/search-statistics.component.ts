@@ -1,9 +1,7 @@
-import { Component, inject, signal, OnInit, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, OnInit, computed, ChangeDetectionStrategy, ElementRef, viewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzStatisticModule } from 'ng-zorro-antd/statistic';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -14,22 +12,31 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { ConfigStateService, LocalizationModule } from '@abp/ng.core';
 import { SearchStatisticsService, SearchDashboardDto } from './search-statistics.service';
+import * as echarts from 'echarts/core';
+import { PieChart, BarChart } from 'echarts/charts';
+import { CanvasRenderer } from 'echarts/renderers';
+import { TooltipComponent, LegendComponent, GridComponent } from 'echarts/components';
+
+echarts.use([PieChart, BarChart, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer]);
 
 @Component({
   selector: 'app-search-statistics',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, LocalizationModule, NzCardModule, NzSpinModule, NzStatisticModule,
+    CommonModule, FormsModule, LocalizationModule, NzSpinModule,
     NzDatePickerModule, NzSelectModule, NzTableModule, NzTagModule, NzEmptyModule, NzTooltipModule, NzButtonModule
   ],
   templateUrl: './search-statistics.component.html',
   styleUrls: ['./search-statistics.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SearchStatisticsComponent implements OnInit {
+export class SearchStatisticsComponent implements OnInit, OnDestroy {
   private readonly statsService = inject(SearchStatisticsService);
   private readonly configService = inject(ConfigStateService);
   private readonly message = inject(NzMessageService);
+
+  private readonly typeChartRef = viewChild<ElementRef<HTMLDivElement>>('typeChart');
+  private typeChart: echarts.ECharts | null = null;
 
   loading = signal(false);
   dashboard = signal<SearchDashboardDto | null>(null);
@@ -44,16 +51,19 @@ export class SearchStatisticsComponent implements OnInit {
     return Math.max(...d.dailyTrends.map(t => t.totalSearchCount), 1);
   });
 
-  maxDocumentSearchCount = computed(() => {
+  // 类型分布数据（供 ECharts 饼图使用）
+  typeDistribution = computed(() => {
     const d = this.dashboard();
-    if (!d || d.dailyTrends.length === 0) return 1;
-    return Math.max(...d.dailyTrends.map(t => t.documentSearchCount), 1);
+    if (!d) return [];
+    return [
+      { name: '文档检索', value: d.document.totalSearches },
+      { name: '视频检索', value: d.video.totalSearches },
+    ];
   });
 
-  maxVideoSearchCount = computed(() => {
-    const d = this.dashboard();
-    if (!d || d.dailyTrends.length === 0) return 1;
-    return Math.max(...d.dailyTrends.map(t => t.videoSearchCount), 1);
+  typeDistributionTotal = computed(() => {
+    const dist = this.typeDistribution();
+    return dist.reduce((s, i) => s + i.value, 0);
   });
 
   ngOnInit() {
@@ -62,6 +72,58 @@ export class SearchStatisticsComponent implements OnInit {
       this.loadTenants();
     }
     this.loadData();
+  }
+
+  ngOnDestroy() {
+    this.typeChart?.dispose();
+  }
+
+  private initTypeChart() {
+    const el = this.typeChartRef();
+    if (!el) return;
+    this.typeChart?.dispose();
+    this.typeChart = echarts.init(el.nativeElement);
+    this.updateTypeChart();
+  }
+
+  private updateTypeChart() {
+    const chart = this.typeChart;
+    const dist = this.typeDistribution();
+    if (!chart || dist.length === 0) return;
+    chart.setOption({
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c} ({d}%)'
+      },
+      legend: {
+        show: false,
+      },
+      series: [{
+        type: 'pie',
+        radius: ['46%', '72%'],
+        avoidLabelOverlap: true,
+        center: ['50%', '46%'],
+        itemStyle: {
+          borderRadius: 6,
+          borderWidth: 0,
+        },
+        label: {
+          show: true,
+          formatter: '{b}',
+          fontSize: 13,
+          fontWeight: 600,
+          color: '#1c2733',
+        },
+        emphasis: {
+          label: { show: true, fontSize: 14, fontWeight: 700 },
+          itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' },
+        },
+        data: [
+          { name: '文档检索', value: dist[0].value, itemStyle: { color: '#52c41a' } },
+          { name: '视频检索', value: dist[1].value, itemStyle: { color: '#722ed1' } },
+        ],
+      }],
+    });
   }
 
   private loadTenants() {
@@ -89,6 +151,8 @@ export class SearchStatisticsComponent implements OnInit {
       next: (data) => {
         this.dashboard.set(data);
         this.loading.set(false);
+        // 等 DOM 渲染完成再初始化 ECharts（#typeChart 在 @if 内，首次不存在）
+        setTimeout(() => this.initTypeChart());
       },
       error: () => {
         this.message.error('加载统计数据失败');
@@ -110,10 +174,9 @@ export class SearchStatisticsComponent implements OnInit {
     const d = this.dashboard();
     if (!d) return;
 
-    const XLSX = await import('xlsx');
-    const wb = XLSX.utils.book_new();
+    const XLSW = await import('xlsx');
+    const wb = XLSW.utils.book_new();
 
-    // 概览数据
     const overview = [
       ['统计项', '数值'],
       ['全部检索次数', d.all.totalSearches],
@@ -123,38 +186,34 @@ export class SearchStatisticsComponent implements OnInit {
       ['视频检索次数', d.video.totalSearches],
       ['视频今日检索', d.video.todaySearches]
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overview), '概览');
+    XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(overview), '概览');
 
-    // 每日趋势
     const trends = [
       ['日期', '全部检索', '文档检索', '视频检索'],
       ...d.dailyTrends.map(t => [t.date, t.totalSearchCount, t.documentSearchCount, t.videoSearchCount])
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trends), '每日趋势');
+    XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(trends), '每日趋势');
 
-    // 热门搜索
     const popular = [
       ['关键词', '次数', '类型'],
       ...d.popularSearches.map(p => [p.keyword, p.count, p.sourceType === 'video' ? '视频' : p.sourceType === 'document' ? '文档' : '全部'])
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(popular), '热门搜索');
+    XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(popular), '热门搜索');
 
-    // 热门资源
     const resources = [
       ['资源名称', '搜索次数'],
       ...d.topResources.map(r => [r.resourceName, r.searchCount])
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resources), '热门资源');
+    XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(resources), '热门资源');
 
-    // 高评分资源
     const rated = [
       ['资源名称', '平均评分', '评价数'],
       ...d.topRatedResources.map(r => [r.resourceName, r.averageRating, r.reviewCount])
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rated), '高评分资源');
+    XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(rated), '高评分资源');
 
     const fileName = `搜索统计_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+    XLSW.writeFile(wb, fileName);
     this.message.success('导出成功');
   }
 }
