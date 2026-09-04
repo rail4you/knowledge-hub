@@ -6,7 +6,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzRateModule } from 'ng-zorro-antd/rate';
+import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.service';
 
 @Component({
@@ -21,7 +21,7 @@ import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.ser
     NzIconModule,
     NzButtonModule,
     NzSpinModule,
-    NzRateModule,
+    NzModalModule,
   ],
   templateUrl: './student-news-detail.component.html',
   styleUrls: ['./student-news-detail.component.scss'],
@@ -31,6 +31,7 @@ export class StudentNewsDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly newsService = inject(NewsService);
   private readonly message = inject(NzMessageService);
+  private readonly modal = inject(NzModalService);
   private readonly router = inject(Router);
 
   readonly loading = signal(false);
@@ -43,10 +44,9 @@ export class StudentNewsDetailComponent implements OnInit {
   readonly relatedLoading = signal(false);
 
   readonly copyLinkSuccess = signal(false);
-  readonly showCommentForm = signal(false);
+  modalVisible = false;
+  submitting = false;
 
-  /** 评论区根元素（用于滚动定位） */
-  readonly commentSection = viewChild<ElementRef<HTMLElement>>('commentSection');
   /** 评论输入框（用于聚焦） */
   readonly commentTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('commentTextarea');
 
@@ -168,16 +168,18 @@ export class StudentNewsDetailComponent implements OnInit {
     }
   }
 
-  openCommentForm(): void {
-    this.showCommentForm.set(true);
+  openCommentModal(): void {
+    this.modalVisible = true;
+    this.commentText.set('');
     // 等待渲染后聚焦输入框
     setTimeout(() => {
       this.commentTextarea()?.nativeElement.focus({ preventScroll: true });
-    }, 50);
+    }, 150);
   }
 
-  closeCommentForm(): void {
-    this.showCommentForm.set(false);
+  closeCommentModal(): void {
+    if (this.submitting) return;
+    this.modalVisible = false;
     this.commentText.set('');
   }
 
@@ -186,21 +188,26 @@ export class StudentNewsDetailComponent implements OnInit {
     const content = this.commentText().trim();
     if (!article || !content) return;
 
+    this.submitting = true;
     this.newsService.createComment({
       articleId: article.id,
       content,
     }).subscribe({
       next: comment => {
+        this.submitting = false;
+        this.modalVisible = false;
         this.comments.set([comment, ...this.comments()]);
         this.commentText.set('');
-        this.showCommentForm.set(false);
         this.article.set({
           ...article,
           commentCount: article.commentCount + 1,
         });
         this.message.success('评论已发布');
       },
-      error: () => this.message.error('评论提交失败'),
+      error: () => {
+        this.submitting = false;
+        this.message.error('评论提交失败');
+      },
     });
   }
 
@@ -214,14 +221,11 @@ export class StudentNewsDetailComponent implements OnInit {
    * 路由片段，回退到首页。改为按钮事件后由组件显式处理。
    */
   focusComment(): void {
-    const section = this.commentSection()?.nativeElement;
-    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    // 评论可能被作者关闭，此时 textarea 不存在
-    const textarea = this.commentTextarea()?.nativeElement;
-    if (textarea) {
-      // 等待滚动开始 + 内容渲染后再聚焦，避免 iOS Safari 因聚焦中断滚动
-      setTimeout(() => textarea.focus({ preventScroll: true }), 350);
+    // 打开评论弹窗
+    if (this.article()?.allowComments) {
+      this.openCommentModal();
+    } else {
+      this.message.info('该资讯已关闭评论功能');
     }
   }
 

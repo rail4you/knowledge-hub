@@ -102,42 +102,12 @@
           </header>
 
           @if (article.allowComments) {
-            @if (!showCommentForm()) {
-              <div class="comment-form-toggle" (click)="openCommentForm()">
-                <span class="comment-form-toggle__avatar" [style.background]="commentAuthorGradient('我')">
-                  U
-                </span>
-                <span class="comment-form-toggle__placeholder">写下你的想法，与作者和其他读者交流...</span>
-              </div>
-            } @else {
-              <div class="comment-form">
-                <span class="comment-form__avatar" [style.background]="commentAuthorGradient('我')">
-                  U
-                </span>
-                <div class="comment-form__body">
-                  <textarea
-                    #commentTextarea
-                    [ngModel]="commentText()"
-                    (ngModelChange)="commentText.set($event)"
-                    rows="3"
-                    maxlength="500"
-                    placeholder="写下你的想法，与作者和其他读者交流..."
-                    class="comment-form__textarea"
-                  ></textarea>
-                  <div class="comment-form__footer">
-                    <button class="comment-form__cancel" (click)="closeCommentForm()">取消</button>
-                    <button
-                      class="comment-form__submit"
-                      [disabled]="!commentText().trim()"
-                      (click)="submitComment()"
-                    >
-                      <span nz-icon nzType="send" nzTheme="outline"></span>
-                      <span>发表评论</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            }
+            <div class="comment-form-toggle" (click)="openCommentModal()">
+              <span class="comment-form-toggle__avatar" [style.background]="commentAuthorGradient('我')">
+                U
+              </span>
+              <span class="comment-form-toggle__placeholder">写下你的想法，与作者和其他读者交流...</span>
+            </div>
           } @else {
             <div class="comment-disabled">
               <span nz-icon nzType="lock" nzTheme="outline"></span>
@@ -300,4 +270,45 @@
       </aside>
     </div>
   }
+
+  <!-- 评论弹窗 -->
+  <nz-modal
+    [nzVisible]="modalVisible"
+    [nzTitle]="'写评论'"
+    [nzWidth]="560"
+    [nzMaskClosable]="false"
+    [nzOkLoading]="submitting"
+    [nzOkText]="submitting ? '发表中...' : '发表评论'"
+    [nzOkDisabled]="!commentText().trim()"
+    nzCancelText="取消"
+    (nzOnCancel)="closeCommentModal()"
+    (nzOnOk)="submitComment()"
+  >
+    <ng-container *nzModalContent>
+      <div class="comment-modal">
+        @if (article(); as a) {
+          <div class="comment-modal__target">
+            <span nz-icon nzType="message" nzTheme="outline"></span>
+            <span class="comment-modal__target-title" [title]="a.title">{{ a.title }}</span>
+          </div>
+        }
+        <textarea
+          #commentTextarea
+          [ngModel]="commentText()"
+          (ngModelChange)="commentText.set($event)"
+          rows="5"
+          maxlength="500"
+          placeholder="写下你的想法，与作者和其他读者交流..."
+          class="comment-modal__textarea"
+        ></textarea>
+        <div class="comment-modal__footer">
+          <span class="comment-modal__count">{{ commentText().length }} / 500</span>
+          <span class="comment-modal__hint">
+            <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+            文明发言，友善交流
+          </span>
+        </div>
+      </div>
+    </ng-container>
+  </nz-modal>
 </div>
