@@ -1,28 +1,17 @@
 <div class="resumes-page">
   <!-- =================== HERO =================== -->
-  <section class="page-hero" aria-label="我的简历">
-    <div class="page-hero__inner">
-      <div class="page-hero__body">
-        <h1 class="page-hero__title">
-          我的简历
-        </h1>
-        <p class="page-hero__desc">上传和维护多份简历，应聘不同岗位时可以选择最合适的一份</p>
-      </div>
-      <div class="page-hero__actions">
-        <button class="hero-btn hero-btn--primary" (click)="openCreate()">
-          <span nz-icon nzType="plus" nzTheme="outline"></span>
-          新增简历
-        </button>
-      </div>
-    </div>
-    <div class="page-hero__stats">
-      <span class="stat-chip">
-        <span class="stat-chip__dot"></span>
-        共 <strong>{{ items().length }}</strong> 份简历，
-        默认：<strong>{{ getDefaultName() }}</strong>
-      </span>
-    </div>
-  </section>
+  <app-student-hero
+    title="我的简历"
+    description="上传和维护多份简历，应聘不同岗位时可以选择最合适的一份"
+    [stats]="heroStats()"
+  ></app-student-hero>
+
+  <div class="resumes-actions">
+    <button class="hero-btn hero-btn--primary" (click)="openCreate()">
+      <span nz-icon nzType="plus" nzTheme="outline"></span>
+      新增简历
+    </button>
+  </div>
 
   <!-- =================== LIST =================== -->
   @if (loading()) {

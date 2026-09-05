@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -6,10 +6,10 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzUploadModule } from 'ng-zorro-antd/upload';
 import { CreateUpdateStudentResumeDto, EmploymentService, StudentResumeDto } from '../../employment/employment.service';
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 interface ResumeFormState extends CreateUpdateStudentResumeDto {
   attachmentFileName?: string;
@@ -19,7 +19,7 @@ interface ResumeFormState extends CreateUpdateStudentResumeDto {
 @Component({
   selector: 'app-student-my-resumes',
   standalone: true,
-  imports: [CommonModule, DatePipe, DecimalPipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule, NzInputModule, NzButtonModule, NzCheckboxModule, NzUploadModule],
+  imports: [CommonModule, DatePipe, DecimalPipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule, NzInputModule, NzCheckboxModule, NzUploadModule, StudentHeroComponent],
   templateUrl: './student-my-resumes.component.html',
   styleUrls: ['./student-my-resumes.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,6 +33,18 @@ export class StudentMyResumesComponent implements OnInit {
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly uploading = signal(false);
+
+  /** Hero 区数据总览 */
+  readonly heroStats = computed(() => {
+    const items = this.items();
+    const def = items.find(x => x.isDefault);
+    return [
+      { label: '简历总数', value: items.length, suffix: '份', icon: 'file-text', color: '#1e6ce8' },
+      { label: '已设默认', value: def ? 1 : 0, suffix: '份', icon: 'star', color: '#f59e0b' },
+      { label: '最近更新', value: items.length > 0 ? this.formatRelativeDate(items[0].lastModificationTime) : '—', suffix: '', icon: 'clock-circle', color: '#10b981' },
+      { label: '本周新增', value: items.filter(x => this.isThisWeek(x.creationTime)).length, suffix: '份', icon: 'rise', color: '#0891b2' },
+    ];
+  });
 
   modalVisible = false;
   editingId: string | null = null;
@@ -286,5 +298,29 @@ export class StudentMyResumesComponent implements OnInit {
   getDefaultName(): string {
     const def = this.items().find(x => x.isDefault);
     return def?.title || '（未设置）';
+  }
+
+  /** 相对日期格式（用于 Hero 统计） */
+  formatRelativeDate(value?: string | Date): string {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '—';
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const day = 24 * 60 * 60 * 1000;
+    if (diffMs < day) return '今天';
+    if (diffMs < 2 * day) return '昨天';
+    if (diffMs < 7 * day) return `${Math.floor(diffMs / day)} 天前`;
+    return `${d.getMonth() + 1}-${d.getDate()}`;
+  }
+
+  /** 是否在本周内（用于 Hero 统计） */
+  isThisWeek(value?: string | Date): boolean {
+    if (!value) return false;
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return d >= weekAgo && d <= now;
   }
 }
