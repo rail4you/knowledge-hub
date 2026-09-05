@@ -8,21 +8,6 @@
   display: flex; flex-direction: column; gap: 20px;
 }
 
-.page-hero {
-  position: relative; border-radius: ds.$student-radius-lg;
-  background: #fff; color: ds.$student-text;
-  border: 1px solid ds.$student-border-soft; box-shadow: ds.$student-shadow-soft;
-  padding: 24px 28px;
-}
-
-.page-hero__title {
-  margin: 0 0 6px; color: ds.$student-text; font-size: 24px; font-weight: 700;
-}
-
-.page-hero__desc {
-  margin: 0; color: ds.$student-text-muted; font-size: 14px;
-}
-
 .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; background: #fff; border-radius: ds.$student-radius-lg; box-shadow: ds.$student-shadow-soft; color: ds.$student-text-muted; p { margin: 12px 0 0; } }
 
 .empty-state { display: flex; align-items: center; justify-content: center; min-height: 320px; background: #fff; border-radius: ds.$student-radius-lg; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft; }

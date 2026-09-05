@@ -1,8 +1,9 @@
 <div class="px-my-practicums">
-  <section class="page-hero">
-    <h1 class="page-hero__title">我的实训</h1>
-    <p class="page-hero__desc">查看你参与的实训项目，跟踪进度与成绩，并查阅教师指导记录。</p>
-  </section>
+  <app-student-hero
+    title="我的实训"
+    description="查看你参与的实训项目，跟踪进度与成绩，并查阅教师指导记录。"
+    [stats]="heroStats()"
+  ></app-student-hero>
 
   @if (loading()) {
     <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>

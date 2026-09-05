@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -20,6 +20,7 @@ import {
   PracticumTimelineItemDto,
 } from '../../proxy/practicums/dtos/models';
 import { PracticumEnrollmentStatus } from '../../proxy/practicums/enums/practicum-enrollment-status.enum';
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 echarts.use([PieChart, LineChart, CanvasRenderer, TooltipComponent, LegendComponent, GridComponent]);
 
@@ -29,6 +30,7 @@ echarts.use([PieChart, LineChart, CanvasRenderer, TooltipComponent, LegendCompon
   imports: [
     CommonModule, DatePipe, RouterModule,
     NzButtonModule, NzIconModule, NzSpinModule, NzProgressModule, NzTagModule, NzEmptyModule, NzModalModule,
+    StudentHeroComponent,
   ],
   templateUrl: './student-my-practicums.component.html',
   styleUrls: ['./student-my-practicums.component.scss'],
@@ -55,6 +57,17 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
   // ─── 统计汇总 ───────────────────────────
   readonly summary = signal({
     total: 0, enrolled: 0, inProgress: 0, submitted: 0, reviewed: 0, completed: 0, cancelled: 0, avgProgress: 0,
+  });
+
+  /** Hero 区数据总览 */
+  readonly heroStats = computed(() => {
+    const s = this.summary();
+    return [
+      { label: '参与实训', value: s.total, suffix: '个', icon: 'experiment', color: '#1e6ce8' },
+      { label: '已完成', value: s.completed, suffix: '个', icon: 'check-circle', color: '#10b981' },
+      { label: '平均进度', value: s.avgProgress, suffix: '%', icon: 'line-chart', color: '#0891b2' },
+      { label: '进行中', value: s.inProgress, suffix: '个', icon: 'play-circle', color: '#f59e0b' },
+    ];
   });
 
   @ViewChild('pieChartEl') pieChartEl?: ElementRef<HTMLDivElement>;
