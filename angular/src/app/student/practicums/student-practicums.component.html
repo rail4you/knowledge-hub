@@ -1,19 +1,10 @@
 <div class="px-page">
   <!-- HERO -->
-  <section class="page-hero">
-    <div class="page-hero__inner">
-      <div class="page-hero__body">
-        <h1 class="page-hero__title">实训项目</h1>
-        <p class="page-hero__desc">参与真实项目实训，完成任务提交成果，获得教师指导与评分</p>
-      </div>
-    </div>
-    <div class="page-hero__stats">
-      <span class="stat-chip">
-        <span class="stat-chip__dot"></span>
-        共 <strong>{{ totalCount() | number }}</strong> 个实训项目
-      </span>
-    </div>
-  </section>
+  <app-student-hero
+    title="实训项目"
+    description="参与真实项目实训，完成任务提交成果，获得教师指导与评分"
+    [stats]="heroStats()"
+  ></app-student-hero>
 
   @if (loading()) {
     <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>正在加载实训项目...</p></div>

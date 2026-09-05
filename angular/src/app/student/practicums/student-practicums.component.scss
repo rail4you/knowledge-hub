@@ -8,18 +8,6 @@
   display: flex; flex-direction: column; gap: 24px;
 }
 
-.page-hero {
-  position: relative; border-radius: ds.$student-radius-lg;
-  background: #fff; color: ds.$student-text;
-  border: 1px solid ds.$student-border-soft; box-shadow: ds.$student-shadow-soft;
-}
-.page-hero__inner { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 28px 18px; z-index: 1; }
-.page-hero__body { min-width: 0; }
-.page-hero__title { margin: 0 0 8px; color: ds.$student-text; font-size: 24px; font-weight: 700; letter-spacing: -.4px; }
-.page-hero__desc { margin: 0; color: ds.$student-text-muted; font-size: 14px; line-height: 1.6; }
-.page-hero__stats { position: relative; display: flex; align-items: center; padding: 0 28px 18px; z-index: 1; }
-.stat-chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; background: ds.$student-surface-soft; color: ds.$student-text-muted; font-size: 12px; strong { color: ds.$student-primary; font-size: 15px; font-weight: 700; margin: 0 2px; } &__dot { width: 6px; height: 6px; border-radius: 50%; background: ds.$student-primary; } }
-
 .px-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
 .px-card { display: flex; flex-direction: column; border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius-lg; background: #fff; overflow: hidden; cursor: pointer; outline: none; transition: all .25s ease; box-shadow: 0 1px 2px rgba(15,23,42,.03);
   &:hover, &:focus-visible { border-color: rgba(ds.$student-primary,.4); box-shadow: 0 16px 32px rgba(15,23,42,.08); transform: translateY(-3px); .cover-icon { transform: scale(1.06) rotate(-2deg); } }
@@ -51,4 +39,4 @@
 .empty-state { gap: 8px; &__art { width: 88px; height: 88px; border-radius: 50%; background: ds.$student-surface-soft; display: inline-flex; align-items: center; justify-content: center; color: ds.$student-border; font-size: 38px; box-shadow: 0 4px 14px rgba(15,23,42,.06); } h3 { margin: 16px 0 4px; color: ds.$student-text; font-size: 18px; } }
 .pagination-wrapper { display: flex; justify-content: center; padding: 6px 0; }
 
-@media (max-width: 768px) { .px-page { padding-top: 16px; padding-bottom: 32px; } .page-hero__inner { padding: 24px 22px 18px; } .page-hero__stats { padding: 0 22px 18px; } .page-hero__title { font-size: 22px; } .px-grid { grid-template-columns: 1fr; } }
+@media (max-width: 768px) { .px-page { padding-top: 16px; padding-bottom: 32px; } .px-grid { grid-template-columns: 1fr; } }

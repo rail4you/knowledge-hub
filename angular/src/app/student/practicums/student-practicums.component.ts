@@ -1,20 +1,21 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { PracticumService } from '../../proxy/practicums/practicum.service';
 import type { PracticumProjectDto } from '../../proxy/practicums/dtos/models';
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
   selector: 'app-student-practicums',
   standalone: true,
   imports: [
     CommonModule, DatePipe, DecimalPipe, RouterModule,
-    NzButtonModule, NzIconModule, NzSpinModule, NzPaginationModule,
+    NzIconModule, NzSpinModule, NzPaginationModule,
+    StudentHeroComponent,
   ],
   templateUrl: './student-practicums.component.html',
   styleUrls: ['./student-practicums.component.scss'],
@@ -30,6 +31,20 @@ export class StudentPracticumsComponent implements OnInit {
   readonly totalCount = signal(0);
   readonly pageIndex = signal(1);
   readonly pageSize = signal(12);
+
+  /** Hero 区数据总览 */
+  readonly heroStats = computed(() => {
+    const items = this.items();
+    const totalTasks = items.reduce((s, x) => s + (x.taskCount || 0), 0);
+    const totalEnroll = items.reduce((s, x) => s + (x.enrollmentCount || 0), 0);
+    const activeCount = items.filter(x => !x.isExpired).length;
+    return [
+      { label: '实训总数', value: this.totalCount(), suffix: '个', icon: 'experiment', color: '#1e6ce8' },
+      { label: '当前页', value: items.length, suffix: '个', icon: 'appstore', color: '#0ea5e9' },
+      { label: '进行中', value: activeCount, suffix: '个', icon: 'play-circle', color: '#10b981' },
+      { label: '总报名', value: totalEnroll, suffix: '人次', icon: 'team', color: '#f59e0b' },
+    ];
+  });
 
   ngOnInit(): void {
     this.loadItems();
