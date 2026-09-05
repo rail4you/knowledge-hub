@@ -38,10 +38,13 @@ export class StudentMyResumesComponent implements OnInit {
   readonly heroStats = computed(() => {
     const items = this.items();
     const def = items.find(x => x.isDefault);
+    const latest = items.length
+      ? items.reduce((a, b) => (new Date(a.creationTime) > new Date(b.creationTime) ? a : b)).creationTime
+      : undefined;
     return [
       { label: '简历总数', value: items.length, suffix: '份', icon: 'file-text', color: '#1e6ce8' },
       { label: '已设默认', value: def ? 1 : 0, suffix: '份', icon: 'star', color: '#f59e0b' },
-      { label: '最近更新', value: items.length > 0 ? this.formatRelativeDate(items[0].lastModificationTime) : '—', suffix: '', icon: 'clock-circle', color: '#10b981' },
+      { label: '最近更新', value: items.length > 0 ? this.formatRelativeDate(latest) : '—', suffix: '', icon: 'clock-circle', color: '#10b981' },
       { label: '本周新增', value: items.filter(x => this.isThisWeek(x.creationTime)).length, suffix: '份', icon: 'rise', color: '#0891b2' },
     ];
   });

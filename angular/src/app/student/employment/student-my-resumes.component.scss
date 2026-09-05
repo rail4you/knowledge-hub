@@ -58,29 +58,6 @@
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
   }
 }
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(6px);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 13px;
-  strong {
-    color: #fff;
-    font-size: 15px;
-    font-weight: 700;
-    margin: 0 2px;
-  }
-  &__dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #7dd3fc;
-    box-shadow: 0 0 6px rgba(125, 211, 252, 0.6);
-  }
-}
 
 /* =================== GRID =================== */
 .resume-grid {
@@ -542,7 +519,5 @@
   }
   .resume-grid {
     grid-template-columns: 1fr;
-  }
-    font-size: 22px;
   }
 }
