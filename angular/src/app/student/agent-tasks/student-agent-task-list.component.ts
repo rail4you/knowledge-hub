@@ -1,16 +1,15 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { ClassroomAgentTaskService } from '../../teaching-agents/classroom-agent-task.service';
 import { StudentAgentTask, assignmentStatusLabel, formatDateTime } from '../../teaching-agents/models';
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
   selector: 'app-student-agent-task-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, NzButtonModule, NzIconModule, NzEmptyModule],
+  imports: [CommonModule, RouterModule, NzIconModule, StudentHeroComponent],
   templateUrl: './student-agent-task-list.component.html',
   styleUrls: ['./student-agent-task-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,6 +19,17 @@ export class StudentAgentTaskListComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly tasks = signal<StudentAgentTask[]>([]);
+
+  /** Hero 区数据总览 */
+  readonly heroStats = computed(() => {
+    const tasks = this.tasks();
+    return [
+      { label: '任务总数', value: tasks.length, suffix: '个', icon: 'robot', color: '#1e6ce8' },
+      { label: '进行中', value: tasks.filter(t => t.status === 0).length, suffix: '个', icon: 'play-circle', color: '#10b981' },
+      { label: '已完成', value: tasks.filter(t => t.status === 2 || t.status === 3).length, suffix: '个', icon: 'check-circle', color: '#0ea5e9' },
+      { label: '智能体', value: new Set(tasks.map(t => t.teachingAgentName).filter(Boolean)).size, suffix: '位', icon: 'experiment', color: '#f59e0b' },
+    ];
+  });
 
   ngOnInit(): void {
     void this.load();

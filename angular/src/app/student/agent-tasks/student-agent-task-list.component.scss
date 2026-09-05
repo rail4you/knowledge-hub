@@ -19,78 +19,7 @@
   gap: 24px;
 }
 
-/* =================== PAGE HERO =================== */
-.page-hero {
-  position: relative;
-  border-radius: ds.$student-radius-lg;
-  background: #fff;
-  color: ds.$student-text;
-  border: 1px solid ds.$student-border-soft;
-  box-shadow: ds.$student-shadow-soft;
-}
-
-.page-hero__inner {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 24px 28px 18px;
-  z-index: 1;
-}
-
-.page-hero__body {
-  min-width: 0;
-}
-
-.page-hero__title {
-  margin: 0 0 8px;
-  color: ds.$student-text;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.4px;
-}
-
-.page-hero__desc {
-  margin: 0;
-  color: ds.$student-text-muted;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.page-hero__stats {
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding: 0 28px 18px;
-  z-index: 1;
-}
-
-.stat-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: ds.$student-surface-soft;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-
-  strong {
-    color: ds.$student-primary;
-    font-size: 15px;
-    font-weight: 700;
-    margin: 0 2px;
-  }
-
-  &__dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: ds.$student-primary;
-  }
-}
+/* =================== PAGE HERO（已使用共享组件 app-student-hero） =================== */
 
 /* =================== 空态 =================== */
 .empty-state {
@@ -366,18 +295,6 @@
   .task-page {
     padding-top: 16px;
     padding-bottom: 32px;
-  }
-
-  .page-hero__inner {
-    padding: 24px 22px 18px;
-  }
-
-  .page-hero__stats {
-    padding: 0 22px 18px;
-  }
-
-  .page-hero__title {
-    font-size: 22px;
   }
 
   .task-grid {
