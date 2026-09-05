@@ -1,23 +1,10 @@
 <div class="recruitment-page">
   <!-- =================== HERO =================== -->
-  <section class="page-hero" aria-label="招聘直播">
-    <div class="page-hero__inner">
-      <div class="page-hero__body">
-        <h1 class="page-hero__title">招聘直播</h1>
-        <p class="page-hero__desc">与面试官面对面实时视频沟通，展现最好的自己</p>
-      </div>
-    </div>
-    <div class="page-hero__stats">
-      <span class="stat-chip" *ngIf="activeCount() > 0">
-        <span class="stat-chip__dot stat-chip__dot--live"></span>
-        进行中 <strong>{{ activeCount() }}</strong> 场
-      </span>
-      <span class="stat-chip">
-        <span class="stat-chip__dot"></span>
-        共 <strong>{{ lives().length }}</strong> 场直播
-      </span>
-    </div>
-  </section>
+  <app-student-hero
+    title="招聘直播"
+    description="与面试官面对面实时视频沟通，展现最好的自己"
+    [stats]="heroStats()"
+  ></app-student-hero>
 
   <!-- =================== LOADING =================== -->
   @if (loading()) {

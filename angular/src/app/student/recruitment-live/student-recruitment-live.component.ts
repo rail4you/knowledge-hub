@@ -29,6 +29,17 @@ export class StudentRecruitmentLiveComponent implements OnInit {
   lives = signal<RecruitmentLiveDto[]>([]);
   activeCount = computed(() => this.lives().filter(l => l.status === RecruitmentLiveStatus.Active).length);
 
+  /** Hero 区数据总览 */
+  readonly heroStats = computed(() => {
+    const lives = this.lives();
+    return [
+      { label: '直播总数', value: lives.length, suffix: '场', icon: 'video-camera', color: '#1e6ce8' },
+      { label: '进行中', value: lives.filter(l => l.status === RecruitmentLiveStatus.Active).length, suffix: '场', icon: 'play-circle', color: '#10b981' },
+      { label: '等待中', value: lives.filter(l => l.status === RecruitmentLiveStatus.Waiting && !this.isExpired(l)).length, suffix: '场', icon: 'clock-circle', color: '#f59e0b' },
+      { label: '已结束', value: lives.filter(l => l.status === RecruitmentLiveStatus.Ended).length, suffix: '场', icon: 'check-circle', color: '#94a3b8' },
+    ];
+  });
+
   /** 状态过滤：全部 / 进行中 / 等待中 / 已过期 / 已结束 / 已取消 */
   statusFilter = signal<RecruitmentLiveStatus | 'all' | 'expired'>('all');
 
