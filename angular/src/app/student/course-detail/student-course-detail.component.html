@@ -37,17 +37,9 @@
           }
           <div class="detail-media__shadow" aria-hidden="true"></div>
         </div>
-        <div class="detail-media__bar">
-          <span class="detail-media__bar-dot"></span>
-          @if (c.isEnrolled) {
-            <span>已加入课程 · 可观看章节教学视频与课件</span>
-          } @else {
-            <span>选课后可解锁章节教学视频、课件与习题</span>
-          }
-        </div>
       </div>
 
-      <!-- 右：课程信息面板 -->
+      <!-- 右：课程信息面板（含教师 + 统计） -->
       <div class="detail-info">
         <h1 class="detail-info__title">{{ c.title }}</h1>
 
@@ -59,6 +51,11 @@
           <span class="info-stat">
             <strong>{{ countChapters(chapters()) }}</strong>
             <span>章节</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ masteredChapterCount() }}</strong>
+            <span>已学习章节</span>
           </span>
           <span class="info-sep"></span>
           <span class="info-stat">
@@ -86,12 +83,6 @@
             <li>
               <span class="info-row__label">所属专业</span>
               <span class="info-row__value">{{ c.major }}</span>
-            </li>
-          }
-          @if (c.teacherName) {
-            <li>
-              <span class="info-row__label">授课教师</span>
-              <span class="info-row__value">{{ c.teacherName }}</span>
             </li>
           }
           @if (c.semester) {
@@ -124,33 +115,35 @@
           </li>
         </ul>
 
-        <div class="detail-info__actions">
-          @if (c.isEnrolled) {
-            <button class="action-btn action-btn--primary" (click)="startLearning()">
-              <span nz-icon nzType="play-circle" nzTheme="fill"></span>
-              <span>继续学习</span>
-            </button>
-            <button class="action-btn" (click)="startExercise()">
-              <span nz-icon nzType="form" nzTheme="outline"></span>
-              <span>开始练习</span>
-            </button>
-          } @else {
-            <button class="action-btn action-btn--primary" [disabled]="enrolling()" (click)="enrollCourse()">
-              <span nz-icon [nzType]="enrolling() ? 'loading' : 'plus'" nzTheme="outline"></span>
-              <span>{{ enrolling() ? '选课中...' : '立即选课' }}</span>
-            </button>
-          }
-          <button class="action-btn" (click)="setTab('graph')">
-            <span nz-icon nzType="apartment" nzTheme="outline"></span>
-            <span>知识图谱</span>
-          </button>
-        </div>
+        <!-- 主讲教师 -->
+        @if (c.teacherName) {
+          <div class="intro-teacher">
+            <div class="intro-teacher__body">
+              <strong>{{ c.teacherName }}</strong>
+              <span>主讲教师</span>
+            </div>
+          </div>
+        }
+
+        <!-- 主操作按钮（右侧底部全宽） -->
+        <div class="intro-action">
+            @if (c.isEnrolled) {
+              <button class="action-btn action-btn--primary action-btn--full" (click)="startLearning()">
+                <span nz-icon nzType="play-circle" nzTheme="fill"></span>
+                <span>继续学习</span>
+              </button>
+            } @else {
+              <button class="action-btn action-btn--primary action-btn--full" [disabled]="enrolling()" (click)="enrollCourse()">
+                <span nz-icon [nzType]="enrolling() ? 'loading' : 'plus'" nzTheme="outline"></span>
+                <span>{{ enrolling() ? '选课中...' : '立即选课' }}</span>
+              </button>
+            }
+          </div>
       </div>
     </section>
 
-    <!-- ═══════════ 主体两栏：Tabs + 侧栏 ═══════════ -->
+    <!-- ═══════════ 主体（Tabs） ═══════════ -->
     <div class="detail-grid">
-      <!-- 左侧：Tabs + 内容 -->
       <main class="detail-main">
         <nav class="detail-tabs" role="tablist">
           <button
@@ -433,91 +426,6 @@
           </section>
         }
       </main>
-
-      <!-- 右侧：侧栏 -->
-      <aside class="detail-aside">
-        <!-- 主讲教师 -->
-        <div class="aside-card">
-          <h3 class="aside-card__title">
-            <span nz-icon nzType="user" nzTheme="outline"></span>
-            主讲教师
-          </h3>
-          <div class="teacher-box">
-            <div class="teacher-avatar">
-              {{ (c.teacherName || '师').slice(0, 1) }}
-            </div>
-            <div class="teacher-box__body">
-              <strong>{{ c.teacherName || '待定' }}</strong>
-              <span>授课教师</span>
-            </div>
-          </div>
-          @if (c.major) {
-            <p class="teacher-affiliate">
-              <span nz-icon nzType="bank" nzTheme="outline"></span>
-              {{ c.major }}
-            </p>
-          }
-        </div>
-
-        <!-- 课程统计 -->
-        <div class="aside-card">
-          <h3 class="aside-card__title">
-            <span nz-icon nzType="bar-chart" nzTheme="outline"></span>
-            课程统计
-          </h3>
-          <ul class="stats-mini">
-            <li>
-              <span class="stats-mini__icon" style="background: #1e6ce8;">
-                <span nz-icon nzType="team" nzTheme="outline"></span>
-              </span>
-              <div class="stats-mini__body">
-                <strong>{{ c.studentCount || 0 | number }}</strong>
-                <span>累计学习者</span>
-              </div>
-            </li>
-            <li>
-              <span class="stats-mini__icon" style="background: #0891b2;">
-                <span nz-icon nzType="unordered-list" nzTheme="outline"></span>
-              </span>
-              <div class="stats-mini__body">
-                <strong>{{ countChapters(chapters()) }}</strong>
-                <span>章节数</span>
-              </div>
-            </li>
-            <li>
-              <span class="stats-mini__icon" style="background: #0c4cb8;">
-                <span nz-icon nzType="fire" nzTheme="outline"></span>
-              </span>
-              <div class="stats-mini__body">
-                <strong>{{ masteredChapterCount() }}</strong>
-                <span>已完成章节</span>
-              </div>
-            </li>
-          </ul>
-        </div>
-
-        <!-- 学习小贴士 -->
-        <div class="aside-card aside-tip">
-          <h3 class="aside-card__title">
-            <span nz-icon nzType="bulb" nzTheme="outline"></span>
-            学习小贴士
-          </h3>
-          <ul class="tip-list">
-            <li>
-              <strong>1. 循序渐进</strong>
-              <p>按章节顺序学习，前置知识是后续内容的基础。</p>
-            </li>
-            <li>
-              <strong>2. 学完即练</strong>
-              <p>每学完一节建议立即完成配套习题巩固知识。</p>
-            </li>
-            <li>
-              <strong>3. 善用图谱</strong>
-              <p>知识图谱帮你建立整体认知，避免"只见树木不见森林"。</p>
-            </li>
-          </ul>
-        </div>
-      </aside>
     </div>
   }
 </div>

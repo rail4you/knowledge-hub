@@ -500,16 +500,6 @@ export class StudentCourseDetailComponent implements OnInit {
     this.router.navigate(['/student/courses', c.id, 'learn'], { queryParamsHandling: 'preserve' });
   }
 
-  startExercise() {
-    const c = this.course();
-    if (!c?.id) return;
-    this.router.navigate(['/student/courses', c.id, 'learn'], { queryParamsHandling: 'preserve' });
-  }
-
-  viewKnowledgeGraph() {
-    this.setTab('graph');
-  }
-
   openRelated(id: string) {
     const c = this.course();
     // 携带来源课程 id，详情页可据此显示“返回相关课程”链接

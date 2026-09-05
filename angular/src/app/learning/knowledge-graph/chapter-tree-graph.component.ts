@@ -55,20 +55,8 @@ interface ChapterDto {
     <div class="kg-shell" [class.kg-shell--has-detail]="!!selectedNode()">
       <!-- 画布主区 -->
       <div class="kg-main">
-        <!-- 浮动工具栏 -->
-        <div class="kg-floating-toolbar">
-          <div class="kg-toolbar__title">
-            <span class="kg-toolbar__icon">
-              <span nz-icon nzType="apartment" nzTheme="outline"></span>
-            </span>
-            <div class="kg-toolbar__title-text">
-              <strong>章节图谱</strong>
-              <span class="kg-toolbar__subtitle">共 {{ chapterCount() }} 章</span>
-            </div>
-          </div>
-
-          <div class="kg-toolbar__divider"></div>
-
+        <!-- 顶部工具栏（位于图谱上方，文档流布局） -->
+        <div class="kg-floating-toolbar kg-floating-toolbar--flat">
           <nz-input-group
             [nzPrefix]="searchPrefix"
             class="kg-search"
@@ -95,7 +83,6 @@ interface ChapterDto {
               <span nz-icon nzType="close" nzTheme="outline"></span>
             </button>
           }
-
         </div>
 
         <!-- 图谱画布 -->
@@ -289,7 +276,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     const total = this.countChapters(this.chapters);
     // 每个节点约 52px（symbolSize 36 + 标签高度 + 间距）
     const neededHeight = total * 52;
-    return Math.max(480, Math.min(neededHeight, 5000));
+    return Math.max(280, Math.min(neededHeight, 5000));
   });
 
   ngAfterViewInit() {
@@ -427,18 +414,19 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
 
   /**
    * 根据节点总数计算合适的初始缩放比例。
-   * 目标：节点越多越缩小，确保所有节点文字标签不重叠、保持合理间距。
+   * 目标：节点越多越缩小，确保所有节点文字标签不重叠、保持合理间距，
+   * 并且整个图谱能够在一页高度内完整呈现（避免用户上下滚动查看）。
    */
   private computeFitZoom(nodeCount: number, depth: number): number {
     // 综合考虑节点数量与树的深度（层级越多，水平方向越容易被压缩）
     const complexity = nodeCount * Math.max(depth, 1);
     let zoom: number;
     if (complexity <= 60) zoom = 1.0;       // 极少节点：默认 1.0
-    else if (complexity <= 120) zoom = 0.85; // 简单图谱
-    else if (complexity <= 250) zoom = 0.7;  // 中等图谱
+    else if (complexity <= 120) zoom = 0.9;  // 简单图谱（原 0.8）
+    else if (complexity <= 250) zoom = 0.75; // 中等图谱
     else if (complexity <= 500) zoom = 0.6;  // 较多节点
     else if (complexity <= 900) zoom = 0.5;  // 大量节点
-    else zoom = 0.42;                        // 极复杂图谱
+    else zoom = 0.45;                        // 极复杂图谱
     // 初始适配也必须落在 [50%, 150%] 范围内
     return Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, zoom));
   }
@@ -671,10 +659,10 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           type: 'tree',
           name: '章节图谱',
           data: treeData,
-          top: '5%',
-          left: '2%',
-          bottom: '5%',
-          right: '22%',
+          top: 0,
+          left: 4,
+          bottom: 0,
+          right: '4%',
           symbol: 'circle',
           symbolSize: 36,
           orient: 'LR',

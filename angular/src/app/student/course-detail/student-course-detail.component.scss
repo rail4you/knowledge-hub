@@ -77,7 +77,7 @@
 /* ---- 左：封面 / 演示区 ---- */
 .detail-media {
   position: relative;
-  background: #0a1526;
+  background: #fff;
 }
 .detail-media__stage {
   position: relative;
@@ -100,32 +100,14 @@
 }
 .detail-media__icon {
   font-size: 84px;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.55);
 }
 .detail-media__shadow {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.5) 100%);
+  background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, 0.25) 100%);
   pointer-events: none;
 }
-.detail-media__bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 18px;
-  background: #fff;
-  color: ds.$student-text-muted;
-  font-size: 13px;
-  border-top: 1px solid ds.$student-border-soft;
-}
-.detail-media__bar-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #10b981;
-  flex-shrink: 0;
-}
-
 /* ---- 右：信息面板 ---- */
 .detail-info {
   padding: 28px 28px 24px;
@@ -239,12 +221,31 @@
   background: #10b981;
 }
 
-.detail-info__actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding-top: 6px;
+/* ---------- 右侧底部主操作按钮（push 到面板底部） ---------- */
+.intro-action {
+  margin-top: auto;
+  padding-top: 4px;
 }
+.action-btn--full {
+  width: 100%;
+  height: 44px;
+  font-size: 15px;
+}
+
+/* ---------- 主讲教师（课程介绍区，文本风格） ---------- */
+.intro-teacher {
+  padding: 10px 14px;
+  border: 1px solid ds.$student-border-soft;
+  border-radius: ds.$student-radius;
+  background: ds.$student-surface-soft;
+}
+.intro-teacher__body {
+  display: flex; align-items: baseline; gap: 10px; min-width: 0;
+  flex-wrap: wrap;
+  strong { color: ds.$student-text; font-size: 14px; font-weight: 600; }
+  span { color: ds.$student-text-light; font-size: 12px; }
+}
+
 .action-btn {
   display: inline-flex;
   align-items: center;
@@ -287,12 +288,9 @@
   }
 }
 
-/* =================== 主体两栏 =================== */
+/* =================== 主体（单列） =================== */
 .detail-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 20px;
-  align-items: start;
+  display: block;
 }
 .detail-main {
   min-width: 0;
@@ -301,12 +299,6 @@
   border-radius: ds.$student-radius-lg;
   overflow: hidden;
   box-shadow: ds.$student-shadow-soft;
-}
-.detail-aside {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
 }
 
 /* ---- Tabs（下划线式，对齐参考站） ---- */
@@ -771,127 +763,8 @@
   span { font-size: 11px; }
 }
 
-/* =================== 侧栏 =================== */
-.aside-card {
-  background: #fff;
-  border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius-lg;
-  padding: 20px;
-  box-shadow: ds.$student-shadow-soft;
-}
-.aside-card__title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 16px;
-  font-size: 15px;
-  font-weight: 700;
-  color: ds.$student-text;
-  letter-spacing: -0.2px;
-
-  span { color: ds.$student-primary; font-size: 15px; }
-}
-
-/* 主讲教师 */
-.teacher-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.teacher-avatar {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1e6ce8, #00b7ff);
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.teacher-box__body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  strong { color: ds.$student-text; font-size: 15px; }
-  span { color: ds.$student-text-light; font-size: 12px; }
-}
-.teacher-affiliate {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 14px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid ds.$student-border-soft;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-  span { color: ds.$student-text-light; }
-}
-
-/* 统计 */
-.stats-mini {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-
-  li {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-}
-.stats-mini__icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-.stats-mini__body {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-  strong {
-    font-size: 18px;
-    font-weight: 700;
-    color: ds.$student-text;
-    font-variant-numeric: tabular-nums;
-  }
-  span { font-size: 12px; color: ds.$student-text-light; }
-}
-
-/* 小贴士 */
-.tip-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  li {
-    padding: 10px 12px;
-    border-radius: ds.$student-radius;
-    background: ds.$student-surface-soft;
-    border: 1px solid ds.$student-border-soft;
-    strong {
-      display: block;
-      color: ds.$student-text;
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 2px;
-    }
-    p { margin: 0; color: ds.$student-text-muted; font-size: 12px; line-height: 1.5; }
-  }
-}
+/* =================== 侧栏样式（已移除，保留兼容占位） =================== */
+.detail-aside { display: none; }
 
 /* =================== 状态 =================== */
 .loading-state {
@@ -925,8 +798,6 @@
   .detail-head { grid-template-columns: 1fr; }
   .detail-media__stage { aspect-ratio: 16 / 8; }
   .detail-grid { grid-template-columns: 1fr; }
-  .detail-aside { flex-direction: row; flex-wrap: wrap; }
-  .aside-card { flex: 1 1 260px; }
 }
 
 @media (max-width: 768px) {
@@ -935,8 +806,6 @@
   .detail-info__title { font-size: 22px; }
   .mastery-layout { grid-template-columns: 1fr; }
   .detail-info__stats { flex-wrap: wrap; gap: 14px; }
-  .detail-info__actions .action-btn { flex: 1 1 48%; }
-  .detail-aside { flex-direction: column; }
   .exercise-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .record-row { flex-wrap: wrap; }
   .record-row__tag { margin-top: 4px; }

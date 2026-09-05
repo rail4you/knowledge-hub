@@ -9,12 +9,12 @@
   position: relative;
   display: grid;
   grid-template-columns: 1fr;
-  background: linear-gradient(180deg, #f8fbff 0%, #eef4fc 100%);
+  background: #fff;
   border-radius: ds.$student-radius-lg;
   border: 1px solid ds.$student-border-soft;
   overflow: hidden;
   transition: grid-template-columns 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  min-height: 520px;
+  min-height: 360px;
 
   &--has-detail {
     grid-template-columns: 1fr 320px;
@@ -29,31 +29,26 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
   position: relative;
 }
 
-// ============= 浮动工具栏 =============
+// ============= 顶部工具栏（位于图谱上方，文档流布局） =============
 .kg-floating-toolbar {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  right: 16px;
-  z-index: 10;
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  box-shadow:
-    0 4px 20px rgba(15, 23, 42, 0.06),
-    0 1px 3px rgba(15, 23, 42, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #fff;
+  flex-shrink: 0;
   pointer-events: auto;
+
+  &--flat {
+    left: auto;
+  }
 }
 
 .kg-toolbar {
@@ -111,25 +106,28 @@
 }
 
 .kg-search {
-  width: 200px;
-  border-radius: 8px;
+  width: 220px;
+  border-radius: 6px;
   overflow: hidden;
 
   ::ng-deep .ant-input {
-    background: rgba(255, 255, 255, 0.7) !important;
-    border: 1px solid ds.$student-border !important;
+    background: #fff !important;
+    border: 1px solid ds.$student-border-soft !important;
     font-size: 12px !important;
+    padding-left: 4px !important;
 
     &:focus {
       border-color: ds.$student-primary !important;
-      box-shadow: 0 0 0 2px rgba(30, 108, 232, 0.12) !important;
+      box-shadow: none !important;
     }
   }
 
   ::ng-deep .ant-input-group-addon {
-    background: rgba(245, 248, 252, 0.7) !important;
-    border: 1px solid ds.$student-border !important;
+    background: #fff !important;
+    border: 1px solid ds.$student-border-soft !important;
+    border-right: 0 !important;
     color: ds.$student-text-muted !important;
+    padding: 0 6px 0 8px !important;
   }
 }
 
@@ -137,25 +135,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid ds.$student-border;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.8);
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   color: ds.$student-text-muted;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.15s ease;
 
   span[nz-icon] {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   &:hover {
     color: ds.$student-primary;
-    border-color: rgba(ds.$student-primary, 0.4);
-    background: #fff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(30, 108, 232, 0.15);
+    background: ds.$student-surface-soft;
   }
 
   &:active {
@@ -177,33 +172,13 @@
 .kg-canvas-wrap {
   position: relative;
   width: 100%;
-  min-height: 520px;
+  flex: 1;
+  min-height: 320px;
   overflow: hidden;
-  background:
-    radial-gradient(
-      ellipse at 30% 0%,
-      rgba(30, 108, 232, 0.05) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      ellipse at 70% 100%,
-      rgba(0, 183, 255, 0.04) 0%,
-      transparent 50%
-    ),
-    linear-gradient(180deg, #f8fbff 0%, #eef4fc 100%);
+  background: #fff;
 }
 
-.kg-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(30, 108, 232, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(30, 108, 232, 0.045) 1px, transparent 1px);
-  background-size: 32px 32px;
-  pointer-events: none;
-  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 90%);
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 90%);
-}
+.kg-grid { display: none; }
 
 .kg-canvas {
   position: relative;
@@ -240,35 +215,22 @@
 // ============= 缩放指示器 =============
 .kg-zoom-indicator {
   position: absolute;
-  top: 80px;
-  right: 16px;
+  top: 8px;
+  right: 8px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 999px;
+  padding: 4px 10px;
+  background: #fff;
+  border: 1px solid ds.$student-border;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
   color: ds.$student-text;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
   pointer-events: none;
   z-index: 5;
-  animation: kg-zoom-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
 
-  &__bar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #1e6ce8, #00b7ff);
-    border-radius: 0 0 999px 999px;
-    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
+  &__bar { display: none; }
 
   span[nz-icon] {
     font-size: 11px;
@@ -296,20 +258,17 @@
 // ============= 操作提示 =============
 .kg-hint {
   position: absolute;
-  bottom: 16px;
-  left: 16px;
+  bottom: 8px;
+  left: 8px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 14px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 999px;
+  padding: 4px 10px;
+  background: #fff;
+  border: 1px solid ds.$student-border;
+  border-radius: 6px;
   font-size: 11px;
   color: ds.$student-text-muted;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
   pointer-events: none;
   z-index: 5;
   flex-wrap: wrap;
@@ -352,37 +311,21 @@
   }
 
   &__head {
-    padding: 20px 20px 18px;
-    color: #fff;
+    padding: 16px 18px 14px;
+    color: ds.$student-text;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, #1e6ce8 0%, #0c4cb8 100%);
-
-    &::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(
-        circle at 100% 0%,
-        rgba(255, 255, 255, 0.18),
-        transparent 50%
-      );
-      pointer-events: none;
-    }
+    background: #fff;
+    border-bottom: 1px solid ds.$student-border-soft;
   }
 
-  &__head-pattern {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    overflow: hidden;
-  }
+  &__head-pattern { display: none; }
 
   &__head-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
     position: relative;
   }
 
@@ -390,14 +333,12 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 12px;
-    background: rgba(255, 255, 255, 0.22);
-    backdrop-filter: blur(8px);
-    border-radius: 999px;
+    padding: 3px 10px;
+    background: #eff6ff;
+    border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.5px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: ds.$student-primary;
 
     span[nz-icon] {
       font-size: 11px;
@@ -405,29 +346,30 @@
   }
 
   &__close {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.18);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: ds.$student-surface-soft;
+    border: 1px solid ds.$student-border-soft;
+    color: ds.$student-text-muted;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.32);
-      transform: rotate(90deg);
+      color: ds.$student-primary;
+      background: #eff6ff;
     }
   }
 
   &__title {
-    margin: 0 0 6px;
-    font-size: 19px;
-    font-weight: 700;
-    line-height: 1.35;
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: ds.$student-text;
     word-break: break-word;
     position: relative;
   }
@@ -569,35 +511,6 @@
   }
 }
 
-.kg-pattern-dot {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-
-  &--1 {
-    width: 80px;
-    height: 80px;
-    top: -20px;
-    right: -20px;
-  }
-
-  &--2 {
-    width: 50px;
-    height: 50px;
-    bottom: 20px;
-    right: 40px;
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  &--3 {
-    width: 30px;
-    height: 30px;
-    top: 30px;
-    right: 80px;
-    background: rgba(255, 255, 255, 0.1);
-  }
-}
-
 @keyframes kg-detail-slide {
   from {
     opacity: 0;
@@ -618,46 +531,30 @@
 
 @media (max-width: 720px) {
   .kg-floating-toolbar {
-    padding: 8px 12px;
-    gap: 6px;
-    left: 8px;
-    right: 8px;
-    top: 8px;
-  }
-
-  .kg-toolbar {
-    &__title-text strong {
-      font-size: 12px;
-    }
-
-    &__subtitle {
-      display: none;
-    }
-
-    &__divider {
-      display: none;
-    }
-
-    &__actions {
-      margin-left: auto;
-    }
+    padding: 8px 10px;
+    gap: 4px;
   }
 
   .kg-search {
-    width: 130px;
+    width: 140px;
   }
 
   .kg-icon-btn {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
   }
 
   .kg-canvas-wrap {
-    height: 420px;
+    height: 300px;
   }
 
   .kg-hint {
     font-size: 10px;
-    padding: 5px 10px;
+    padding: 3px 8px;
+  }
+
+  .kg-zoom-indicator {
+    top: 6px;
+    right: 6px;
   }
 }
