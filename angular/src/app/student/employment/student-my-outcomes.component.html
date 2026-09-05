@@ -1,22 +1,10 @@
 <div class="outcomes-page">
   <!-- =================== HERO =================== -->
-  <section class="page-hero" aria-label="我的就业去向">
-    <div class="page-hero__inner">
-      <div class="page-hero__body">
-        <h1 class="page-hero__title">
-          我的就业去向
-        </h1>
-        <p class="page-hero__desc">查看你的签约、入职等就业去向记录</p>
-      </div>
-      <div class="page-hero__stats">
-        <span class="stat-chip">
-          <span class="stat-chip__dot"></span>
-          共 <strong>{{ items().length }}</strong> 条去向，
-          主要去向：<strong>{{ primaryCount() }} 条</strong>
-        </span>
-      </div>
-    </div>
-  </section>
+  <app-student-hero
+    title="我的就业去向"
+    description="查看你的签约、入职等就业去向记录"
+    [stats]="heroStats()"
+  ></app-student-hero>
 
   <!-- =================== LIST =================== -->
   @if (loading()) {

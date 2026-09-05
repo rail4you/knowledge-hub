@@ -19,80 +19,7 @@
   gap: 24px;
 }
 
-/* =================== PAGE HERO =================== */
-.page-hero {
-  position: relative;
-  border-radius: ds.$student-radius-lg;
-  background: #fff;
-  color: ds.$student-text;
-  border: 1px solid ds.$student-border-soft;
-  box-shadow: ds.$student-shadow-soft;
-}
-
-.page-hero__inner {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 28px 36px 22px;
-  z-index: 1;
-}
-
-.page-hero__body { min-width: 0; }
-
-.page-hero__title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 12px 0 8px;
-  font-size: 24px;
-  font-weight: 700;
-  color: ds.$student-text;
-}
-
-.page-hero__desc { margin: 0; font-size: 14px; color: ds.$student-text-muted; line-height: 1.6; }
-
-.page-hero__actions { display: flex; gap: 10px; flex-shrink: 0; }
-
-.hero-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 16px;
-  border: 1px solid ds.$student-border;
-  border-radius: ds.$student-radius;
-  background: #fff;
-  color: ds.$student-text-muted;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  span[nz-icon] { font-size: 14px; }
-
-  &:hover { border-color: ds.$student-primary; color: ds.$student-primary; }
-
-  &--primary { background: ds.$student-primary; color: #fff; border-color: transparent; &:hover { background: ds.$student-primary-dark; } }
-}
-
-.page-hero__stats { position: relative; padding: 0 28px 18px; z-index: 1; }
-
-.stat-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: ds.$student-surface-soft;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-  strong { font-weight: 700; color: ds.$student-primary; }
-}
-
-.stat-chip__dot { width: 6px; height: 6px; border-radius: 50%; background: ds.$student-primary; }
+/* HERO 已使用共享组件 app-student-hero */
 
 /* =================== LOADING / EMPTY =================== */
 .loading-state {
@@ -372,10 +299,6 @@
 
 @media (max-width: 768px) {
   .outcomes-page { padding-top: 16px; padding-bottom: 32px; }
-  .page-hero__inner { flex-direction: column; align-items: flex-start; padding: 24px 20px 16px; }
-  .page-hero__actions { width: 100%; }
-  .hero-btn { flex: 1; justify-content: center; }
-  .page-hero__stats { padding: 0 20px 16px; }
   .outcome-card { flex-wrap: wrap; }
   .outcome-card__actions { flex-direction: row; width: 100%; justify-content: flex-end; }
   .form-grid { grid-template-columns: 1fr; }

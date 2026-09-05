@@ -10,6 +10,7 @@ import {
   EmploymentOutcomeStatus,
   EmploymentService,
 } from '../../employment/employment.service';
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
   selector: 'app-student-my-outcomes',
@@ -17,6 +18,7 @@ import {
   imports: [
     CommonModule, DatePipe,
     NzIconModule, NzSpinModule, NzEmptyModule, NzTagModule,
+    StudentHeroComponent,
   ],
   templateUrl: './student-my-outcomes.component.html',
   styleUrls: ['./student-my-outcomes.component.scss'],
@@ -39,6 +41,19 @@ export class StudentMyOutcomesComponent implements OnInit {
   ];
 
   readonly primaryCount = computed(() => this.items().filter(x => x.isPrimary).length);
+
+  /** Hero 区数据总览 */
+  readonly heroStats = computed(() => {
+    const items = this.items();
+    const signed = items.filter(x => x.status === EmploymentOutcomeStatus.Signed).length;
+    const employed = items.filter(x => x.status === EmploymentOutcomeStatus.Employed).length;
+    return [
+      { label: '总记录数', value: items.length, suffix: '条', icon: 'compass', color: '#1e6ce8' },
+      { label: '已签约', value: signed, suffix: '条', icon: 'file-protect', color: '#10b981' },
+      { label: '已就业', value: employed, suffix: '条', icon: 'rocket', color: '#0891b2' },
+      { label: '主要去向', value: this.primaryCount(), suffix: '条', icon: 'star', color: '#f59e0b' },
+    ];
+  });
 
   ngOnInit(): void {
     this.reload();
