@@ -284,7 +284,8 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['chapters'] && this.chart) {
+    // courseName 可能比 chapters 先到/后到（如课程详情先回来），任一变化都需重建
+    if ((changes['chapters'] || changes['courseName']) && this.chart) {
       this.updateChart();
     }
   }
@@ -670,9 +671,11 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           // 缩放时节点符号与坐标系同比例放大，避免边缘被拉得过长、浪费空间
           nodeScaleRatio: 1,
           nodeDraggable: false,
-          initialTreeDepth: 1,
           expandAndCollapse: true,
-          initialExpandDepth: 1,
+          // 必须全部展开：画布高度按总节点数计算（每个节点约 52px），
+          // 若只展开首层（如 initialTreeDepth: 1），少量可见节点会被拉伸到
+          // 整个高画布上 + 初始缩放居中，导致视口内一片空白（101 章节课程必现）。
+          initialTreeDepth: -1,
           animationDuration: 600,
           animationDurationUpdate: 500,
           animationEasing: 'cubicOut',
