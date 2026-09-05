@@ -1,27 +1,17 @@
 <div class="favorites-page">
-  <!-- =================== 顶部标题区 =================== -->
-  <section class="page-hero">
-    <div class="page-hero__inner">
-      <div class="page-hero__body">
-        <h1 class="page-hero__title">
-          我的收藏
-        </h1>
-        <p class="page-hero__desc">集中查看你已收藏的资源，支持预览、下载或取消收藏</p>
-      </div>
-      <div class="page-hero__actions">
-        <button class="hero-btn" (click)="browseResources()">
-          <span nz-icon nzType="appstore" nzTheme="outline"></span>
-          去资源库
-        </button>
-      </div>
-    </div>
-    <div class="page-hero__stats">
-      <span class="stat-chip">
-        <span class="stat-chip__dot"></span>
-        共收藏 <strong>{{ totalCount() | number }}</strong> 个资源
-      </span>
-    </div>
-  </section>
+  <!-- =================== HERO =================== -->
+  <app-student-hero
+    title="我的收藏"
+    description="集中查看你已收藏的资源，支持预览、下载或取消收藏"
+    [stats]="heroStats()"
+  ></app-student-hero>
+
+  <div class="favorites-actions">
+    <button class="hero-btn" (click)="browseResources()">
+      <span nz-icon nzType="appstore" nzTheme="outline"></span>
+      去资源库
+    </button>
+  </div>
 
   <!-- =================== 加载态 / 空态 =================== -->
   @if (loading()) {

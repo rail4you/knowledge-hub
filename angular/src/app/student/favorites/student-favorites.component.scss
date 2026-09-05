@@ -19,46 +19,12 @@
   gap: 24px;
 }
 
-/* =================== PAGE HERO =================== */
-.page-hero {
-  position: relative;
-  border-radius: ds.$student-radius-lg;
-  background: #fff;
-  color: ds.$student-text;
-  border: 1px solid ds.$student-border-soft;
-  box-shadow: ds.$student-shadow-soft;
-}
-
-.page-hero__inner {
-  position: relative;
+/* =================== 顶部动作区 =================== */
+.favorites-actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 28px 36px 22px;
-  z-index: 1;
-}
-
-.page-hero__body {
-  min-width: 0;
-}
-
-.page-hero__title {
-  @include ds.section-heading(24px);
-  color: ds.$student-text;
-  margin: 0 0 8px;
-  letter-spacing: -0.4px;
-}
-
-.page-hero__desc {
-  margin: 0;
-  color: ds.$student-text-muted;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.page-hero__actions {
-  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: -8px;
 }
 
 .hero-btn {
@@ -76,9 +42,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
 
-  span[nz-icon] {
-    font-size: 14px;
-  }
+  span[nz-icon] { font-size: 14px; }
 
   &:hover {
     background: ds.$student-surface-soft;
@@ -95,40 +59,6 @@
       background: ds.$student-primary-dark;
       color: #fff;
     }
-  }
-}
-
-.page-hero__stats {
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding: 0 36px 18px;
-  z-index: 1;
-}
-
-.stat-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: ds.$student-surface-soft;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-
-  strong {
-    color: ds.$student-primary;
-    font-size: 15px;
-    font-weight: 700;
-    margin: 0 2px;
-  }
-
-  &__dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: ds.$student-primary;
   }
 }
 
@@ -537,18 +467,6 @@
 }
 
 /* =================== Responsive =================== */
-@media (max-width: 900px) {
-  .page-hero__inner {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 24px 22px 18px;
-  }
-
-  .page-hero__stats {
-    padding: 0 22px 18px;
-  }
-}
-
 @media (max-width: 768px) {
   .favorites-page {
     padding-top: 16px;
@@ -557,9 +475,5 @@
 
   .resources-grid {
     grid-template-columns: 1fr;
-  }
-
-  .page-hero__title {
-    font-size: 22px;
   }
 }

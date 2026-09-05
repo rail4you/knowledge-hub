@@ -1,11 +1,9 @@
-import { ChangeDetectionStrategy, Component, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { NzRateModule } from 'ng-zorro-antd/rate';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import type { ResourceDto } from '../../proxy/resources/models';
 import { ResourceService } from '../../proxy/resources/resource.service';
@@ -14,6 +12,7 @@ import { FilePreviewComponent } from '../../shared/preview/file-preview.componen
 import { StudentResourceCollectionService } from '../resource-collection.service';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
+import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
   selector: 'app-student-favorites',
@@ -23,12 +22,11 @@ import { buildDownloadFileName } from '../../shared/download/download-file.util'
     DatePipe,
     DecimalPipe,
     RouterModule,
-    NzButtonModule,
     NzIconModule,
     NzPaginationModule,
-    NzRateModule,
     NzSpinModule,
     FilePreviewComponent,
+    StudentHeroComponent,
   ],
   templateUrl: './student-favorites.component.html',
   styleUrls: ['./student-favorites.component.scss'],
@@ -50,6 +48,28 @@ export class StudentFavoritesComponent implements OnInit {
   pageSize = signal(12);
 
   ratingSummaries = signal<Record<string, ResourceRatingSummaryDto>>({});
+
+  /** Hero 区数据总览 */
+  readonly heroStats = computed(() => {
+    const total = this.totalCount();
+    const items = this.resources();
+    const rated = items.filter(r => (this.ratingSummaries()[r.id!]?.averageRating || 0) > 0).length;
+    return [
+      { label: '已收藏', value: total, suffix: '个', icon: 'heart', color: '#ef4444' },
+      { label: '当前页', value: items.length, suffix: '个', icon: 'appstore', color: '#1e6ce8' },
+      { label: '已评分', value: rated, suffix: '个', icon: 'star', color: '#f59e0b' },
+      { label: '平均评分', value: this.avgRating(), suffix: '分', icon: 'like', color: '#10b981' },
+    ];
+  });
+
+  private readonly avgRating = computed(() => {
+    const summaries = this.ratingSummaries();
+    const items = this.resources();
+    const rated = items.filter(r => (summaries[r.id!]?.averageRating || 0) > 0);
+    if (rated.length === 0) return 0;
+    const sum = rated.reduce((s, r) => s + (summaries[r.id!]?.averageRating || 0), 0);
+    return Math.round((sum / rated.length) * 10) / 10;
+  });
 
   ngOnInit() {
     this.loadFavorites();
