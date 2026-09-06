@@ -72,5 +72,14 @@ public static class NewsDbModelCreatingExtensions
             b.HasIndex(x => new { x.ArticleId, x.UserId }).IsUnique();
             b.HasIndex(x => x.TenantId);
         });
+
+        builder.Entity<NewsCommentLike>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "NewsCommentLikes", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.HasIndex(x => new { x.CommentId, x.UserId }).IsUnique();
+            b.HasIndex(x => x.TenantId);
+        });
     }
 }

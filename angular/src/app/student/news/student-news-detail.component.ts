@@ -1,12 +1,13 @@
-import { ChangeDetectionStrategy, Component, ElementRef, OnInit, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, inject, signal, viewChild } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.service';
 
 @Component({
@@ -19,6 +20,7 @@ import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.ser
     FormsModule,
     RouterModule,
     NzIconModule,
+    NzButtonModule,
     NzSpinModule,
     NzModalModule,
   ],
@@ -30,8 +32,8 @@ export class StudentNewsDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly newsService = inject(NewsService);
   private readonly message = inject(NzMessageService);
-  private readonly modal = inject(NzModalService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(false);
   readonly article = signal<NewsArticleDto | null>(null);
@@ -42,6 +44,12 @@ export class StudentNewsDetailComponent implements OnInit {
   readonly hotArticles = signal<NewsArticleDto[]>([]);
   readonly relatedLoading = signal(false);
 
+  readonly commentLikingIds = signal<Set<string>>(new Set());
+
+  /** 头图加载失败时降级为渐变封面（脏数据/坏链会导致空白占位） */
+  readonly coverImgOk = signal(true);
+  readonly coverFailedIds = signal<Set<string>>(new Set());
+
   modalVisible = false;
   submitting = false;
 
@@ -49,19 +57,23 @@ export class StudentNewsDetailComponent implements OnInit {
   readonly commentTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('commentTextarea');
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (!id) {
-      this.router.navigate(['/student/news']);
-      return;
-    }
-
-    this.loadArticle(id);
-    this.loadComments(id);
-    this.loadHot();
+    // 订阅 paramMap：从相关/热门资讯跳转到同一路由的不同 id 时组件会被复用，
+    // 只靠 snapshot 的 ngOnInit 不会再次执行，必须监听 paramMap 才能重新加载。
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const id = params.get('id');
+      if (!id) {
+        this.router.navigate(['/student/news']);
+        return;
+      }
+      this.loadArticle(id);
+      this.loadComments(id);
+      this.loadHot();
+    });
   }
 
   loadArticle(id: string): void {
     this.loading.set(true);
+    this.coverImgOk.set(true);
     this.newsService.getArticle(id).subscribe({
       next: article => {
         this.article.set(article);
@@ -117,21 +129,57 @@ export class StudentNewsDetailComponent implements OnInit {
     this.router.navigate(['/student/news']);
   }
 
-  likeArticle(): void {
-    const article = this.article();
-    if (!article || article.userHasLiked) return;
+  likeComment(comment: NewsCommentDto): void {
+    if (this.commentLikingIds().has(comment.id)) return;
 
-    this.newsService.like(article.id).subscribe({
-      next: () => {
-        this.article.set({
-          ...article,
-          userHasLiked: true,
-          likeCount: article.likeCount + 1,
+    const liked = !comment.userHasLiked;
+    // 乐观更新：先翻转态，失败再回滚
+    this.applyCommentLike(comment.id, liked);
+    this.commentLikingIds.update(set => new Set(set).add(comment.id));
+    this.newsService.likeComment(comment.id).subscribe({
+      next: updated => {
+        this.commentLikingIds.update(set => {
+          const next = new Set(set);
+          next.delete(comment.id);
+          return next;
         });
-        this.message.success('已点赞');
+        this.comments.update(list =>
+          list.map(c =>
+            c.id === comment.id
+              ? { ...c, likeCount: updated.likeCount ?? c.likeCount, userHasLiked: updated.userHasLiked ?? liked }
+              : c
+          )
+        );
       },
-      error: () => this.message.error('点赞失败'),
+      error: err => {
+        this.commentLikingIds.update(set => {
+          const next = new Set(set);
+          next.delete(comment.id);
+          return next;
+        });
+        this.applyCommentLike(comment.id, !liked);
+        this.message.error(this.errMsg(err, '点赞失败'));
+      },
     });
+  }
+
+  private applyCommentLike(id: string, liked: boolean): void {
+    this.comments.update(list =>
+      list.map(c =>
+        c.id === id
+          ? { ...c, userHasLiked: liked, likeCount: Math.max(0, (c.likeCount || 0) + (liked ? 1 : -1)) }
+          : c
+      )
+    );
+  }
+
+  private errMsg(err: unknown, fallback: string): string {
+    const e = err as { error?: { error?: { message?: string }; message?: string }; message?: string };
+    return e?.error?.error?.message || e?.error?.message || fallback;
+  }
+
+  isCommentLiking(id: string): boolean {
+    return this.commentLikingIds().has(id);
   }
 
   openCommentModal(): void {
@@ -162,7 +210,7 @@ export class StudentNewsDetailComponent implements OnInit {
       next: comment => {
         this.submitting = false;
         this.modalVisible = false;
-        this.comments.set([comment, ...this.comments()]);
+        this.comments.set([{ ...comment, likeCount: 0, userHasLiked: false }, ...this.comments()]);
         this.commentText.set('');
         this.article.set({
           ...article,
@@ -170,9 +218,9 @@ export class StudentNewsDetailComponent implements OnInit {
         });
         this.message.success('评论已发布');
       },
-      error: () => {
+      error: err => {
         this.submitting = false;
-        this.message.error('评论提交失败');
+        this.message.error(this.errMsg(err, '评论提交失败'));
       },
     });
   }
@@ -181,11 +229,6 @@ export class StudentNewsDetailComponent implements OnInit {
     this.router.navigate(['/student/news', id]);
   }
 
-  /**
-   * 滚动到评论区，并聚焦评论输入框（如果已开启评论）。
-   * 修复 bug：旧实现是 `<a href="#comments">`，在某些路由配置下被 Angular 路由器误解为
-   * 路由片段，回退到首页。改为按钮事件后由组件显式处理。
-   */
   /** 资讯封面渐变（与列表页一致） */
   coverGradient(article: NewsArticleDto | { title?: string; id?: string; categoryName?: string }): string {
     return this.gradientByKey(
@@ -219,6 +262,23 @@ export class StudentNewsDetailComponent implements OnInit {
 
   hasCover(article: NewsArticleDto): boolean {
     return !!article.coverImageUrl && article.coverImageUrl.trim().length > 0;
+  }
+
+  /** 头图加载失败（脏数据/坏链）→ 降级为渐变封面 */
+  onCoverError(): void {
+    this.coverImgOk.set(false);
+  }
+
+  showCover(article: NewsArticleDto): boolean {
+    return this.hasCover(article) && this.coverImgOk();
+  }
+
+  onRelatedCoverError(id: string): void {
+    this.coverFailedIds.update(set => new Set(set).add(id));
+  }
+
+  showRelatedCover(r: NewsArticleDto): boolean {
+    return this.hasCover(r) && !this.coverFailedIds().has(r.id);
   }
 
   parseTags(tags?: string): string[] {

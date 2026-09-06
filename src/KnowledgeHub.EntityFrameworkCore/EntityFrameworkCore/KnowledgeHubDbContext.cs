@@ -132,6 +132,7 @@ public class KnowledgeHubDbContext :
     public DbSet<NewsArticle> NewsArticles { get; set; }
     public DbSet<NewsAudit> NewsAudits { get; set; }
     public DbSet<NewsComment> NewsComments { get; set; }
+    public DbSet<NewsCommentLike> NewsCommentLikes { get; set; }
     public DbSet<NewsReaction> NewsReactions { get; set; }
 
     // KnowledgeGraph entities

@@ -12,6 +12,7 @@ public interface INewsCommentAppService : IApplicationService
     Task<PagedResultDto<NewsCommentDto>> GetListAsync(PagedNewsCommentRequestDto input);
     Task<List<NewsCommentDto>> GetApprovedListByArticleAsync(Guid articleId);
     Task<NewsCommentDto> CreateAsync(CreateNewsCommentDto input);
+    Task<NewsCommentDto> LikeAsync(Guid id);
     Task<NewsCommentDto> ReviewAsync(Guid id, ReviewNewsCommentDto input);
     Task DeleteAsync(Guid id);
 }

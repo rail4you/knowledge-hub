@@ -13,6 +13,7 @@ public class NewsComment : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public Guid UserId { get; set; }
     public string Content { get; set; } = string.Empty;
     public NewsCommentStatus Status { get; set; } = NewsCommentStatus.Approved;
+    public int LikeCount { get; set; }
 
     public NewsComment()
     {

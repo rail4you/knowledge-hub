@@ -91,6 +91,8 @@ export interface NewsCommentDto {
   userName?: string;
   content: string;
   status: NewsCommentStatus;
+  likeCount: number;
+  userHasLiked: boolean;
   creationTime: string;
 }
 
@@ -265,6 +267,13 @@ export class NewsService {
       method: 'POST',
       url: '/api/app/news-comment',
       body: input,
+    }, { apiName: this.apiName });
+  }
+
+  likeComment(id: string): Observable<NewsCommentDto> {
+    return this.restService.request<any, NewsCommentDto>({
+      method: 'POST',
+      url: `/api/app/news-comment/${id}/like`,
     }, { apiName: this.apiName });
   }
 

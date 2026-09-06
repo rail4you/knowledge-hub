@@ -21,6 +21,7 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
     private readonly IRepository<NewsCategory, Guid> _categoryRepository;
     private readonly IRepository<NewsAudit, Guid> _auditRepository;
     private readonly IRepository<NewsComment, Guid> _commentRepository;
+    private readonly IRepository<NewsCommentLike, Guid> _commentLikeRepository;
     private readonly IRepository<NewsReaction, Guid> _reactionRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly ICurrentUser _currentUser;
@@ -30,6 +31,7 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
         IRepository<NewsCategory, Guid> categoryRepository,
         IRepository<NewsAudit, Guid> auditRepository,
         IRepository<NewsComment, Guid> commentRepository,
+        IRepository<NewsCommentLike, Guid> commentLikeRepository,
         IRepository<NewsReaction, Guid> reactionRepository,
         IRepository<IdentityUser, Guid> userRepository,
         ICurrentUser currentUser)
@@ -38,6 +40,7 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
         _categoryRepository = categoryRepository;
         _auditRepository = auditRepository;
         _commentRepository = commentRepository;
+        _commentLikeRepository = commentLikeRepository;
         _reactionRepository = reactionRepository;
         _userRepository = userRepository;
         _currentUser = currentUser;
@@ -149,6 +152,11 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
         var comments = await _commentRepository.GetListAsync(x => x.ArticleId == id);
         foreach (var comment in comments)
         {
+            var commentLikes = await _commentLikeRepository.GetListAsync(x => x.CommentId == comment.Id);
+            foreach (var commentLike in commentLikes)
+            {
+                await _commentLikeRepository.HardDeleteAsync(commentLike);
+            }
             await _commentRepository.DeleteAsync(comment);
         }
 

@@ -12,6 +12,8 @@ public class NewsCommentDto : FullAuditedEntityDto<Guid>
     public string? UserName { get; set; }
     public string Content { get; set; } = string.Empty;
     public NewsCommentStatus Status { get; set; }
+    public int LikeCount { get; set; }
+    public bool UserHasLiked { get; set; }
 }
 
 public class CreateNewsCommentDto

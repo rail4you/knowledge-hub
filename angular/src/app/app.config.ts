@@ -124,6 +124,12 @@ import {
   EnvironmentOutline,
   RedEnvelopeOutline,
   WalletOutline,
+  // 资讯点赞 & 收藏实心态（未注册会导致 nz-icon 空渲染）
+  LikeOutline,
+  LikeFill,
+  HeartOutline,
+  HeartFill,
+  StarFill,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -246,6 +252,12 @@ const icons = [
   EnvironmentOutline,
   RedEnvelopeOutline,
   WalletOutline,
+  // 资讯点赞 & 收藏实心态
+  LikeOutline,
+  LikeFill,
+  HeartOutline,
+  HeartFill,
+  StarFill,
 ];
 
 export const appConfig: ApplicationConfig = {
