@@ -240,7 +240,10 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             using (_dataFilter.Disable<IMultiTenant>())
             {
                 stats.TotalCourseCount += (int)await _courseRepository.CountAsync(x => x.TenantId == tenant.Id);
-                stats.TotalResourceCount += (int)await _resourceRepository.CountAsync(x => x.TenantId == tenant.Id);
+                // 只统计已上架（校级/联盟级审核通过）的资源：草稿、待审核、驳回、隐藏的不应计入公开数据，
+                // 否则首页/资源库顶部的总数会与实际可见列表（LeagueApproved）对不上。
+                stats.TotalResourceCount += (int)await _resourceRepository.CountAsync(
+                    x => x.TenantId == tenant.Id && x.Status >= ResourceStatus.SchoolApproved);
                 stats.TotalMicroMajorCount += (int)await _microMajorRepository.CountAsync(
                     x => x.TenantId == tenant.Id && x.Status == MicroMajorStatus.Published);
             }

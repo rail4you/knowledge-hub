@@ -1,18 +1,195 @@
-.review-container { padding: 16px 0; }
-.rating-summary { display: flex; gap: 32px; align-items: center; padding: 16px; }
-.rating-summary .overall-rating { text-align: center; min-width: 120px; }
-.rating-summary .overall-rating .big-rating { font-size: 36px; font-weight: 600; color: #faad14; line-height: 1.2; }
-.rating-summary .overall-rating .total-reviews { font-size: 13px; color: #999; margin-top: 4px; }
-.rating-summary .rating-distribution { flex: 1; }
-.rating-summary .distribution-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.rating-summary .star-label { font-size: 12px; color: #666; min-width: 30px; }
-.rating-summary .distribution-bar-bg { flex: 1; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
-.rating-summary .distribution-bar { height: 100%; background: #faad14; border-radius: 4px; transition: width 0.3s ease; }
-.rating-summary .distribution-count { font-size: 12px; color: #999; min-width: 24px; text-align: right; }
-.review-form h4 { margin-bottom: 12px; font-weight: 500; }
-.review-form .form-rating { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.review-form textarea { margin-bottom: 12px; }
-.review-form .form-actions { display: flex; gap: 8px; }
-.reviews-list .review-header { display: flex; align-items: center; gap: 8px; }
-.reviews-list .reviewer-name { font-weight: 500; }
-.reviews-list .review-time { font-size: 12px; color: #999; }
+@use '../../student/styles/student-design' as ds;
+
+.review-container {
+  padding: 4px 0;
+}
+
+.rating-summary {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  padding: 20px 22px;
+  border: 1px solid ds.$student-border-soft;
+  border-radius: ds.$student-radius;
+  background: ds.$student-surface-soft;
+
+  .overall-rating {
+    text-align: center;
+    min-width: 130px;
+
+    .big-rating {
+      font-size: 40px;
+      font-weight: 700;
+      color: #fa8c16;
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .total-reviews {
+      font-size: 12px;
+      color: ds.$student-text-light;
+      margin-top: 6px;
+    }
+  }
+
+  .rating-distribution {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .distribution-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .star-label {
+    font-size: 12px;
+    color: ds.$student-text-muted;
+    min-width: 36px;
+  }
+
+  .distribution-bar-bg {
+    flex: 1;
+    height: 8px;
+    background: #e8eef5;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .distribution-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #faad14, #fa8c16);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  .distribution-count {
+    font-size: 12px;
+    color: ds.$student-text-light;
+    min-width: 24px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.review-form {
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 700;
+    color: ds.$student-text;
+
+    span[nz-icon] {
+      color: ds.$student-primary;
+    }
+  }
+
+  .form-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    color: ds.$student-text-muted;
+    font-size: 13px;
+  }
+
+  textarea {
+    margin-bottom: 12px;
+    border-radius: ds.$student-radius;
+
+    &:focus,
+    &:focus-within {
+      border-color: ds.$student-primary;
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    ::ng-deep {
+      .ant-btn-primary {
+        background: #1e6ce8;
+        border-color: #1e6ce8;
+        border-radius: ds.$student-radius;
+        height: 38px;
+        padding: 0 22px;
+        font-weight: 600;
+
+        &:hover:not([disabled]) {
+          background: #0c4cb8;
+          border-color: #0c4cb8;
+        }
+      }
+
+      .ant-btn-dangerous {
+        border-radius: ds.$student-radius;
+        height: 38px;
+      }
+    }
+  }
+  .form-hint {
+    color: ds.$student-text-light;
+    font-size: 12px;
+  }
+}
+
+.reviews-list {
+  .reviews-list__title {
+    margin: 0 0 4px;
+    color: ds.$student-text;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .review-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .reviewer-name {
+    font-weight: 600;
+    color: ds.$student-text;
+    font-size: 13px;
+  }
+
+  .review-time {
+    font-size: 12px;
+    color: ds.$student-text-light;
+  }
+
+  ::ng-deep {
+    .ant-list-item {
+      padding: 14px 4px;
+      border-bottom: 1px solid ds.$student-border-soft;
+    }
+
+    .ant-avatar {
+      background: ds.$student-primary;
+    }
+
+    .ant-list-item-meta-description {
+      color: ds.$student-text-muted;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .rating-summary {
+    flex-direction: column;
+    gap: 16px;
+  }
+}

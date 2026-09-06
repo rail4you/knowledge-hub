@@ -122,6 +122,8 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
   timeFilter = signal<string>('all');
   statusFilter = signal<number | null>(null);
   selectedMajorId = signal<string | null>(null);
+  keywordFilter = signal<string>('');
+  private keywordTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Drawer Tab state
   drawerTabIndex = signal<number>(0);
@@ -230,6 +232,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
       categoryId: this.selectedCategoryId(),
       status: this.statusFilter(),
       majorId: this.selectedMajorId(),
+      filter: this.keywordFilter()?.trim() || undefined,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate
     }).subscribe((response) => {
@@ -905,15 +908,28 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     this.loadResources();
   }
 
+  /** 关键词搜索：防抖 400ms，避免每敲一个字刷一次列表 */
+  onKeywordChange(value: string): void {
+    this.keywordFilter.set(value ?? '');
+    if (this.keywordTimer) {
+      clearTimeout(this.keywordTimer);
+    }
+    this.keywordTimer = setTimeout(() => {
+      this.pageIndex = 1;
+      this.loadResources();
+    }, 400);
+  }
+
   clearAllFilters(): void {
     this.timeFilter.set('all');
     this.statusFilter.set(null);
+    this.keywordFilter.set('');
     this.pageIndex = 1;
     this.loadResources();
   }
 
   hasActiveFilters(): boolean {
-    return this.timeFilter() !== 'all' || this.statusFilter() !== null;
+    return this.timeFilter() !== 'all' || this.statusFilter() !== null || this.keywordFilter().trim() !== '';
   }
 
   private getDateRangeFromFilter(filter: string): { startDate?: string; endDate?: string } {

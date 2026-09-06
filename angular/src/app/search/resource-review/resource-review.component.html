@@ -2,14 +2,14 @@
   @if (summary(); as s) {
     <div class="rating-summary">
       <div class="overall-rating">
-        <div class="big-rating">{{ s.averageRating }}</div>
+        <div class="big-rating">{{ s.averageRating | number:'1.1-1' }}</div>
         <nz-rate [ngModel]="s.averageRating" [nzDisabled]="true" nzAllowHalf></nz-rate>
-        <div class="total-reviews">{{ 'ResourceReview:ReviewCount' | abpLocalization: s.totalReviews }}</div>
+        <div class="total-reviews">{{ s.totalReviews }} 条评价 · 综合评分</div>
       </div>
       <div class="rating-distribution">
         @for (star of [5, 4, 3, 2, 1]; track star) {
           <div class="distribution-row">
-            <span class="star-label">{{ 'ResourceReview:Star' | abpLocalization: star }}</span>
+            <span class="star-label">{{ star }} 星</span>
             <div class="distribution-bar-bg">
               <div class="distribution-bar" [style.width.%]="getRatingPercent(star)"></div>
             </div>
@@ -22,18 +22,32 @@
     <nz-divider></nz-divider>
 
     <div class="review-form">
-      <h4>{{ editingReviewId ? ('ResourceReview:EditReview' | abpLocalization) : ('ResourceReview:SubmitReview' | abpLocalization) }}</h4>
+      <h4>
+        <span nz-icon nzType="edit" nzTheme="outline"></span>
+        @if (singleEvaluation && hasReviewed()) {
+          我的评价
+        } @else if (editingReviewId() && !singleEvaluation) {
+          编辑评价
+        } @else {
+          发表评价
+        }
+      </h4>
       <div class="form-rating">
-        <span>{{ 'ResourceReview:Rating' | abpLocalization }}：</span>
-        <nz-rate [(ngModel)]="myRating"></nz-rate>
+        <span>评分：</span>
+        <nz-rate [ngModel]="myRating()" (ngModelChange)="myRating.set($event)" [nzDisabled]="singleEvaluation && hasReviewed()"></nz-rate>
       </div>
-      <textarea nz-input [(ngModel)]="myContent" [placeholder]="'ResourceReview:ContentPlaceholder' | abpLocalization" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
+      <textarea #reviewInput nz-input [ngModel]="myContent()" (ngModelChange)="myContent.set($event)" placeholder="请输入评价内容..." [nzAutosize]="{ minRows: 3, maxRows: 5 }" [disabled]="singleEvaluation && hasReviewed()"></textarea>
       <div class="form-actions">
-        <button nz-button nzType="primary" (click)="submitReview()" [nzLoading]="submitting()" [disabled]="myRating === 0">
-          {{ editingReviewId ? ('ResourceReview:UpdateReview' | abpLocalization) : ('ResourceReview:SubmitReview' | abpLocalization) }}
-        </button>
-        @if (editingReviewId) {
-          <button nz-button nzDanger (click)="deleteReview(editingReviewId!)">{{ 'ResourceReview:DeleteReview' | abpLocalization }}</button>
+        @if (singleEvaluation && hasReviewed()) {
+          <button nz-button nzType="primary" disabled>已评价</button>
+          <span class="form-hint">每人只能评价一次，感谢您的反馈</span>
+        } @else {
+          <button nz-button nzType="primary" (click)="submitReview()" [nzLoading]="submitting()" [disabled]="myRating() === 0">
+            {{ editingReviewId() && !singleEvaluation ? '更新评价' : '提交评价' }}
+          </button>
+          @if (editingReviewId() && !singleEvaluation) {
+            <button nz-button nzDanger (click)="deleteReview(editingReviewId()!)">删除评价</button>
+          }
         }
       </div>
     </div>
@@ -42,9 +56,10 @@
   }
 
   <div class="reviews-list">
+    <div class="reviews-list__title">全部评价（{{ reviews().length }}）</div>
     <nz-spin [nzSpinning]="loading()">
-      @if (reviews().length === 0) {
-        <nz-empty [nzNotFoundContent]="'ResourceReview:NoReviews' | abpLocalization"></nz-empty>
+      @if (reviews().length === 0 && !loading()) {
+        <nz-empty nzNotFoundContent="暂无评价，快来发表第一条吧"></nz-empty>
       } @else {
         <nz-list [nzDataSource]="reviews()" [nzRenderItem]="reviewItem">
           <ng-template #reviewItem let-item>

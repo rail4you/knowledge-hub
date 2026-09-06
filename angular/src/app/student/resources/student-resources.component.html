@@ -6,26 +6,6 @@
     [stats]="stats()"
   ></app-student-hero>
 
-  <!-- =================== 搜索栏 =================== -->
-  <div class="search-bar">
-    <span nz-icon nzType="search" nzTheme="outline" class="search-bar__icon"></span>
-    <input
-      type="text"
-      [ngModel]="filterText()"
-      (ngModelChange)="filterText.set($event)"
-      (keyup.enter)="onSearch()"
-      placeholder="请输入资源名称、关键词、课程或作者..."
-      class="search-bar__input"
-      aria-label="搜索资源"
-    />
-    @if (filterText()) {
-      <button class="search-bar__clear" (click)="filterText.set('')" aria-label="清空">
-        <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
-      </button>
-    }
-    <button class="search-bar__btn" (click)="onSearch()">搜索</button>
-  </div>
-
   <!-- =================== 为你推荐 =================== -->
   @if (recommendationsLoading()) {
     <div class="recommend-loading">
@@ -73,6 +53,26 @@
   }
 
   <!-- =================== 按专业分组 Tab =================== -->
+
+  <!-- =================== 搜索栏（紧贴资源表格上方） =================== -->
+  <div class="search-bar">
+    <span nz-icon nzType="search" nzTheme="outline" class="search-bar__icon"></span>
+    <input
+      type="text"
+      [ngModel]="filterText()"
+      (ngModelChange)="filterText.set($event)"
+      (keyup.enter)="onSearch()"
+      placeholder="请输入资源名称、关键词、课程或作者..."
+      class="search-bar__input"
+      aria-label="搜索资源"
+    />
+    @if (filterText()) {
+      <button class="search-bar__clear" (click)="filterText.set('')" aria-label="清空">
+        <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
+      </button>
+    }
+    <button class="search-bar__btn" (click)="onSearch()">搜索</button>
+  </div>
 
   <!-- =================== 资源分类 + 素材列表 =================== -->
   <section class="resource-section">
@@ -224,14 +224,21 @@
               <article
                 class="resource-card"
                 [ngClass]="'type-' + (resource.resourceType || 0)"
-                (click)="previewResource($event, resource)"
+                (click)="openDetail(resource)"
                 tabindex="0"
-                (keyup.enter)="previewResource($event, resource)"
+                (keyup.enter)="openDetail(resource)"
               >
                 <div class="resource-card__cover">
-                  <div class="cover-icon">
-                    <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
-                  </div>
+                  <app-resource-cover
+                    [resourceId]="resource.id!"
+                    [resourceType]="resource.resourceType ?? 0"
+                    [fileName]="resource.originalFileName || resource.name || ''"
+                    [alt]="resource.name || ''"
+                  >
+                    <div class="cover-icon">
+                      <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
+                    </div>
+                  </app-resource-cover>
                   <span class="cover-type-badge" [ngClass]="'type-badge--' + (resource.resourceType || 0)">
                     {{ getResourceTypeName(resource.resourceType) }}
                   </span>

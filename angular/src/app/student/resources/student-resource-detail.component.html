@@ -20,97 +20,141 @@
     </div>
   } @else if (resource()) {
     @let res = resource()!;
+    <!-- ═══════════ 头部：封面 + 标题/统计/操作 ═══════════ -->
+    <section class="detail-head">
+      <!-- 左：资源封面 -->
+      <div class="detail-media">
+        <div class="detail-media__stage" [class]="'media-type-' + (res.resourceType || 0)" (click)="preview()" role="button" tabindex="0" (keyup.enter)="preview()" aria-label="在线预览">
+          <app-resource-cover
+            [resourceId]="res.id!"
+            [resourceType]="res.resourceType ?? 0"
+            [fileName]="res.originalFileName || res.name || ''"
+            [alt]="res.name || ''"
+          >
+            <span class="detail-media__icon" nz-icon [nzType]="getResourceTypeIcon(res.resourceType)" nzTheme="outline"></span>
+          </app-resource-cover>
+          <span class="detail-media__type">{{ getResourceTypeName(res.resourceType) }}</span>
+          <span class="detail-media__preview-hint">
+            <span nz-icon nzType="eye" nzTheme="outline"></span>
+            点击在线预览
+          </span>
+        </div>
+      </div>
+
+      <!-- 右：标题 + 统计 + 操作 -->
+      <div class="detail-info">
+        <div class="detail-info__kicker">
+          @if (res.categoryName) {
+            <span class="kicker-chip">
+              <span nz-icon nzType="folder" nzTheme="outline"></span>
+              {{ res.categoryName }}
+            </span>
+          }
+          @if (res.fileExtension) {
+            <span class="kicker-chip">
+              <span nz-icon nzType="file" nzTheme="outline"></span>
+              {{ (res.fileExtension || '').toUpperCase() }} 格式
+            </span>
+          }
+          @if (ratingSummary(); as r) {
+            @if (r.totalReviews > 0) {
+              <span class="kicker-chip kicker-chip--rating">
+                <span nz-icon nzType="star" nzTheme="fill"></span>
+                {{ r.averageRating | number:'1.1-1' }} · {{ r.totalReviews }} 人评价
+              </span>
+            }
+          }
+        </div>
+
+        <h1 class="detail-info__title">{{ res.name }}</h1>
+
+        @if (res.description) {
+          <p class="detail-info__desc">{{ res.description }}</p>
+        } @else {
+          <p class="detail-info__desc detail-info__desc--empty">该资源暂无简介</p>
+        }
+
+        <!-- 数据统计（原侧栏“资源数据”已上移至此） -->
+        <div class="detail-info__stats">
+          <span class="info-stat">
+            <strong>{{ res.viewCount || 0 | number }}</strong>
+            <span>浏览次数</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ res.downloadCount || 0 | number }}</strong>
+            <span>下载次数</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ res.collectionCount || 0 | number }}</strong>
+            <span>收藏次数</span>
+          </span>
+          @if (ratingSummary(); as r) {
+            <span class="info-sep"></span>
+            <span class="info-stat">
+              <strong>{{ r.totalReviews > 0 ? (r.averageRating | number:'1.1-1') : '暂无' }}</strong>
+              <span>平均评分</span>
+            </span>
+          }
+        </div>
+
+        <ul class="detail-info__list">
+          <li>
+            <span class="info-row__label">文件大小</span>
+            <span class="info-row__value">{{ formatFileSize(res.fileSize) }}</span>
+          </li>
+          <li>
+            <span class="info-row__label">上传者</span>
+            <span class="info-row__value">{{ res.creatorName || '匿名' }}</span>
+          </li>
+          <li>
+            <span class="info-row__label">上传时间</span>
+            <span class="info-row__value">{{ res.creationTime | date:'yyyy-MM-dd' }}</span>
+          </li>
+          <li>
+            <span class="info-row__label">下载权限</span>
+            <span class="info-row__value">
+              <span class="status-tag" [class.status-tag--on]="res.isDownloadable">
+                <span class="status-dot"></span>
+                {{ res.isDownloadable ? '允许下载' : '仅在线预览' }}
+              </span>
+            </span>
+          </li>
+        </ul>
+
+        <!-- 操作按钮（与课程详情页 action-btn 风格同步） -->
+        <div class="intro-action">
+          <button class="action-btn action-btn--primary" (click)="preview()">
+            <span nz-icon nzType="eye" nzTheme="outline"></span>
+            <span>在线预览</span>
+          </button>
+          <button class="action-btn"
+            [disabled]="!res.isDownloadable"
+            [title]="res.isDownloadable ? '' : '该资源不允许下载，仅支持在线预览'"
+            (click)="download()">
+            <span nz-icon nzType="download" nzTheme="outline"></span>
+            <span>{{ res.isDownloadable ? '下载资源' : '不允许下载' }}</span>
+          </button>
+          <button class="action-btn" [class.action-btn--collected]="isCollected()" (click)="toggleCollection()">
+            <span nz-icon nzType="star" [nzTheme]="isCollected() ? 'fill' : 'outline'"></span>
+            <span>{{ isCollected() ? '已收藏' : '收藏' }}</span>
+          </button>
+          <button class="action-btn" (click)="copyLink()">
+            <span nz-icon [nzType]="copyLinkSuccess() ? 'check' : 'link'" nzTheme="outline"></span>
+            <span>{{ copyLinkSuccess() ? '已复制' : '分享' }}</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
     <div class="detail-grid">
       <!-- 主体内容 -->
       <div class="detail-main">
-        <!-- 资源卡片 -->
-        <article class="resource-card" [class]="'type-' + (res.resourceType || 0)">
-          <div class="resource-card__cover">
-            <div class="cover-icon">
-              <span nz-icon [nzType]="getResourceTypeIcon(res.resourceType)" nzTheme="outline"></span>
-            </div>
-            <div class="cover-type">
-              <span class="cover-type__icon">
-                <span nz-icon [nzType]="getResourceTypeIcon(res.resourceType)" nzTheme="outline"></span>
-              </span>
-              <span>{{ getResourceTypeName(res.resourceType) }}</span>
-            </div>
-            <div class="cover-extension" *ngIf="res.fileExtension">
-              .{{ res.fileExtension }}
-            </div>
-          </div>
-
-          <div class="resource-card__body">
-            <div class="resource-card__meta-top">
-              @if (res.categoryName) {
-                <span class="meta-chip">
-                  <span nz-icon nzType="folder" nzTheme="outline"></span>
-                  {{ res.categoryName }}
-                </span>
-              }
-              @if (res.fileExtension) {
-                <span class="meta-chip">
-                  <span nz-icon nzType="file" nzTheme="outline"></span>
-                  {{ (res.fileExtension || '').toUpperCase() }} 格式
-                </span>
-              }
-            </div>
-
-            <h1 class="resource-card__title">{{ res.name }}</h1>
-
-            <div class="resource-card__rating">
-              @if (ratingSummary(); as r) {
-                <nz-rate [ngModel]="r.averageRating" [nzDisabled]="true" nzSize="small" nzAllowHalf></nz-rate>
-                <span class="rating-score">{{ r.averageRating | number:'1.1-1' }}</span>
-                <span class="rating-divider">|</span>
-                <span class="rating-count">{{ r.totalReviews }} 人评价</span>
-              } @else {
-                <nz-rate [ngModel]="0" [nzDisabled]="true" nzSize="small"></nz-rate>
-                <span class="rating-count">暂无评分</span>
-              }
-            </div>
-
-            @if (res.description) {
-              <p class="resource-card__desc">{{ res.description }}</p>
-            } @else {
-              <p class="resource-card__desc resource-card__desc--empty">该资源暂无简介</p>
-            }
-
-            <!-- 操作按钮 -->
-            <div class="resource-card__actions">
-              <button class="action-pill action-pill--primary" (click)="preview()">
-                <span nz-icon nzType="eye" nzTheme="outline"></span>
-                <span>在线预览</span>
-              </button>
-              <button class="action-pill"
-                [disabled]="!res.isDownloadable"
-                [class.action-pill--disabled]="!res.isDownloadable"
-                [title]="res.isDownloadable ? '' : '该资源不允许下载，仅支持在线预览'"
-                (click)="download()">
-                <span nz-icon nzType="download" nzTheme="outline"></span>
-                <span>{{ res.isDownloadable ? '下载资源' : '不允许下载' }}</span>
-              </button>
-              <button
-                class="action-pill"
-                [class.action-pill--active]="isCollected()"
-                (click)="toggleCollection()"
-              >
-                <span nz-icon nzType="star" [nzTheme]="isCollected() ? 'fill' : 'outline'"></span>
-                <span>{{ isCollected() ? '已收藏' : '收藏' }}</span>
-              </button>
-              <button class="action-pill" (click)="copyLink()">
-                <span nz-icon [nzType]="copyLinkSuccess() ? 'check' : 'link'" nzTheme="outline"></span>
-                <span>{{ copyLinkSuccess() ? '已复制' : '分享链接' }}</span>
-              </button>
-            </div>
-          </div>
-        </article>
-
         <!-- 资源信息表格 -->
         <section class="info-section">
           <header class="section-header">
             <h2>
-              <span class="section-header__bar"></span>
               资源信息
             </h2>
           </header>
@@ -190,67 +234,35 @@
         </section>
 
         <!-- 评价 -->
-        <section class="review-section">
+        <section class="review-section" id="resource-reviews">
           <header class="section-header">
             <h2>
-              <span class="section-header__bar"></span>
               资源评价
             </h2>
-            @if (ratingSummary(); as r) {
-              <div class="review-summary">
-                <strong>{{ r.averageRating | number:'1.1-1' }}</strong>
-                <nz-rate [ngModel]="r.averageRating" [nzDisabled]="true" nzSize="small" nzAllowHalf></nz-rate>
-                <span class="review-summary__count">共 {{ r.totalReviews }} 条评价</span>
-              </div>
-            }
+            <div class="review-header-right">
+              @if (ratingSummary(); as r) {
+                <div class="review-summary">
+                  <strong>{{ r.averageRating | number:'1.1-1' }}</strong>
+                  <nz-rate [ngModel]="r.averageRating" [nzDisabled]="true" nzSize="small" nzAllowHalf></nz-rate>
+                  <span class="review-summary__count">共 {{ r.totalReviews }} 条评价</span>
+                </div>
+              }
+              <button class="action-btn action-btn--primary action-btn--sm" (click)="focusReviewForm()">
+                <span nz-icon nzType="edit" nzTheme="outline"></span>
+                <span>写评价</span>
+              </button>
+            </div>
           </header>
           <app-resource-review
             [resourceId]="res.id!"
+            [singleEvaluation]="true"
             (reviewChanged)="onReviewChanged()"
           ></app-resource-review>
         </section>
       </div>
 
-      <!-- 侧边栏 -->
+      <!-- 侧边栏：仅保留相关资源 -->
       <aside class="detail-aside">
-        <!-- 资源统计卡 -->
-        <div class="aside-card aside-stats">
-          <h3 class="aside-card__title">
-            <span nz-icon nzType="bar-chart" nzTheme="outline"></span>
-            资源数据
-          </h3>
-          <ul class="stats-list">
-            <li>
-              <span class="stats-list__icon stats-list__icon--eye">
-                <span nz-icon nzType="eye" nzTheme="outline"></span>
-              </span>
-              <span class="stats-list__info">
-                <span class="stats-list__value">{{ res.viewCount || 0 }}</span>
-                <span class="stats-list__label">浏览次数</span>
-              </span>
-            </li>
-            <li>
-              <span class="stats-list__icon stats-list__icon--download">
-                <span nz-icon nzType="download" nzTheme="outline"></span>
-              </span>
-              <span class="stats-list__info">
-                <span class="stats-list__value">{{ res.downloadCount || 0 }}</span>
-                <span class="stats-list__label">下载次数</span>
-              </span>
-            </li>
-            <li>
-              <span class="stats-list__icon stats-list__icon--star">
-                <span nz-icon nzType="star" nzTheme="outline"></span>
-              </span>
-              <span class="stats-list__info">
-                <span class="stats-list__value">{{ res.collectionCount || 0 }}</span>
-                <span class="stats-list__label">收藏次数</span>
-              </span>
-            </li>
-          </ul>
-        </div>
-
-        <!-- 推荐素材 -->
         <div class="aside-card aside-related">
           <h3 class="aside-card__title">
             <span nz-icon nzType="fire" nzTheme="outline"></span>

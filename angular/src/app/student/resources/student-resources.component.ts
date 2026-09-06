@@ -24,6 +24,7 @@ import { RecommendationService, type RecommendedResourceDto } from '../../search
 import { AuthErrorService } from '../../core/auth/auth-error.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 import { StudentResourceCollectionService } from '../resource-collection.service';
+import { ResourceCoverComponent } from '../../shared/resource-cover/resource-cover.component';
 
 interface StatItem {
   label: string;
@@ -50,6 +51,7 @@ interface StatItem {
     NzDividerModule,
     FilePreviewComponent,
     StudentHeroComponent,
+    ResourceCoverComponent,
   ],
   templateUrl: './student-resources.component.html',
   styleUrls: ['./student-resources.component.scss'],
@@ -103,7 +105,6 @@ export class StudentResourcesComponent implements OnInit {
         this.stats.set([
           { label: '课程数', value: data.totalCourseCount ?? 0, suffix: '门', icon: 'book', color: '#1e6ce8' },
           { label: '资源数', value: data.totalResourceCount ?? 0, suffix: '份', icon: 'play-circle', color: '#00b7ff' },
-          { label: '微专业数', value: data.totalMicroMajorCount ?? 0, suffix: '个', icon: 'appstore', color: '#7c3aed' },
           { label: '入驻租户', value: data.tenantCount ?? 0, suffix: '家', icon: 'team', color: '#f59e0b' },
         ]);
       },
@@ -112,7 +113,6 @@ export class StudentResourcesComponent implements OnInit {
         this.stats.set([
           { label: '课程数', value: 0, suffix: '门', icon: 'book', color: '#1e6ce8' },
           { label: '资源数', value: 0, suffix: '份', icon: 'play-circle', color: '#00b7ff' },
-          { label: '微专业数', value: 0, suffix: '个', icon: 'appstore', color: '#7c3aed' },
           { label: '入驻租户', value: 0, suffix: '家', icon: 'team', color: '#f59e0b' },
         ]);
       },

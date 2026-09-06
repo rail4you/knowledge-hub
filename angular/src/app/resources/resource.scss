@@ -258,6 +258,20 @@
     gap: 4px;
   }
 
+  // 表格上方关键词搜索：宽度收窄，不抢占表格空间
+  .toolbar-search {
+    width: 240px;
+
+    &__clear {
+      color: var(--kh-muted);
+      cursor: pointer;
+
+      &:hover {
+        color: var(--kh-text);
+      }
+    }
+  }
+
   .breadcrumb {
     display: flex;
     align-items: center;

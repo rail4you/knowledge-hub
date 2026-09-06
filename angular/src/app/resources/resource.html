@@ -100,6 +100,29 @@
               {{ selectedCategoryName() }}
             </span>
           </div>
+          <div class="toolbar-right">
+            <nz-input-group [nzPrefix]="tableSearchPrefix" [nzSuffix]="tableSearchSuffix" class="toolbar-search">
+              <input
+                type="text"
+                nz-input
+                nzSize="small"
+                [placeholder]="'::SearchResources' | abpLocalization"
+                [ngModel]="keywordFilter()"
+                (ngModelChange)="onKeywordChange($event)"
+                (keyup.enter)="onKeywordChange(keywordFilter())"
+              />
+            </nz-input-group>
+            <ng-template #tableSearchPrefix><span nz-icon nzType="search"></span></ng-template>
+            <ng-template #tableSearchSuffix>
+              <span
+                *ngIf="keywordFilter()"
+                nz-icon
+                nzType="close-circle"
+                class="toolbar-search__clear"
+                (click)="onKeywordChange('')"
+              ></span>
+            </ng-template>
+          </div>
         </div>
 
         <!-- Filter Bar -->

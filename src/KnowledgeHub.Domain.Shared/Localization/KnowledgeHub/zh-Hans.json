@@ -38,6 +38,7 @@
     "NewsletterPrivacyAcceptMessage": "我接受<a href='/privacy-policy'>隐私政策</a>。",
     "Language": "语言",
     "Search": "搜索",
+    "SearchResources": "搜索资源名称/简介",
     "LoadMore": "加载更多",
     "Settings": "设置",
     "Theme": "主题",

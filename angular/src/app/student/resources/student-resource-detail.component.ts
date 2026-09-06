@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, ViewChild, inject, signal, DestroyRef } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -12,6 +13,7 @@ import { ResourceService } from '../../proxy/resources/resource.service';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import type { ResourceDto } from '../../proxy/resources/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
+import { ResourceCoverComponent } from '../../shared/resource-cover/resource-cover.component';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
 import { ResourceReviewComponent } from '../../search/resource-review/resource-review.component';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
@@ -33,6 +35,7 @@ import { AuthErrorService } from '../../core/auth/auth-error.service';
     NzTagModule,
     FilePreviewComponent,
     ResourceReviewComponent,
+    ResourceCoverComponent,
   ],
   templateUrl: './student-resource-detail.component.html',
   styleUrls: ['./student-resource-detail.component.scss'],
@@ -41,6 +44,7 @@ import { AuthErrorService } from '../../core/auth/auth-error.service';
 export class StudentResourceDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly resourceService = inject(ResourceService);
   private readonly reviewService = inject(ResourceReviewService);
   private readonly recommendationService = inject(RecommendationService);
@@ -48,6 +52,7 @@ export class StudentResourceDetailComponent implements OnInit {
   private readonly message = inject(NzMessageService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
+  @ViewChild(ResourceReviewComponent) reviewForm?: ResourceReviewComponent;
 
   readonly resource = signal<ResourceDto | null>(null);
   readonly loading = signal(false);
@@ -60,13 +65,17 @@ export class StudentResourceDetailComponent implements OnInit {
   readonly copyLinkSuccess = signal(false);
 
   ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.loadDetail(id);
-      this.loadRelated(id);
-    } else {
-      this.router.navigate(['/student/resources']);
-    }
+    // 订阅 paramMap：从相关资源跳转到同一路由的不同 id 时，组件会被复用，
+    // snapshot 只读一次会导致详情和评论都不刷新，这里改为响应式订阅。
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const id = params.get('id');
+      if (id) {
+        this.loadDetail(id);
+        this.loadRelated(id);
+      } else {
+        this.router.navigate(['/student/resources']);
+      }
+    });
   }
 
   loadDetail(id: string) {
@@ -118,6 +127,11 @@ export class StudentResourceDetailComponent implements OnInit {
 
   goBack() {
     this.router.navigate(['/student/resources']);
+  }
+
+  /** 评论区“写评价”按钮：聚焦到评价输入框，给出明确反馈 */
+  focusReviewForm() {
+    this.reviewForm?.focusForm();
   }
 
   preview() {

@@ -1,0 +1,25 @@
+<div class="cover-fill" #host>
+  <!-- fallback 垫底：调用方传入的图标 -->
+  <div class="cover-fallback">
+    <ng-content></ng-content>
+  </div>
+  <!-- 真实缩略图盖在上层；PDF 第一页渲染完成前保持隐藏，露出垫底图标 -->
+  @if (loadMedia() && !failed() && mode() !== 'icon') {
+    <div class="cover-media" [class.is-hidden]="mode() === 'pdf' && !pdfReady()">
+      @if (mode() === 'video') {
+        <video
+          [src]="previewUrl()"
+          preload="metadata"
+          muted
+          playsinline
+          disablepictureinpicture
+          (error)="onMediaError()"
+        ></video>
+      } @else if (mode() === 'image') {
+        <img [src]="previewUrl()" [alt]="alt()" loading="lazy" (error)="onMediaError()" />
+      } @else if (mode() === 'pdf') {
+        <canvas #pdfCanvas></canvas>
+      }
+    </div>
+  }
+</div>

@@ -203,7 +203,7 @@ public class ResourceFileController : AbpControllerBase
 
     [HttpGet("{resourceId}/preview")]
     [AllowAnonymous]
-    public virtual async Task<IActionResult> Preview(Guid resourceId)
+    public virtual async Task<IActionResult> Preview(Guid resourceId, [FromQuery] bool countView = true)
     {
         Resource resource;
         using (DataFilter.Disable<IMultiTenant>())
@@ -221,9 +221,12 @@ public class ResourceFileController : AbpControllerBase
             return Forbid();
         }
 
-        // 每次预览增加查看次数
-        resource.ViewCount++;
-        await Repository.UpdateAsync(resource);
+        // 每次预览增加查看次数（封面缩略图用 countView=false，不计入，避免列表页刷出虚假浏览量）
+        if (countView)
+        {
+            resource.ViewCount++;
+            await Repository.UpdateAsync(resource);
+        }
 
         var filePath = resource.FilePath;
         if (string.IsNullOrEmpty(filePath))
