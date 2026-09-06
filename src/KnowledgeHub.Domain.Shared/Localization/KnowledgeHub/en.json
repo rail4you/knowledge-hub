@@ -488,6 +488,19 @@
     "Enum:SelfAssessment.3": "Incorrect",
     "Menu:SearchAndTenantManagement": "Search & Tenant Management",
     "Menu:PracticumMirrorManagement": "Practicum Mirror Management",
-    "AbpUi::Logout": "Log Out"
+    "AbpUi::Logout": "Log Out",
+    "Menu:SpecialEducation": "Special Education",
+    "Menu:TeachingDesign": "Teaching Design",
+    "Menu:IEP": "IEP Plans",
+    "Menu:SpecialResources": "Multimodal Resources",
+    "Menu:SpecialEduAdmin": "SpecialEdu Activation",
+    "Permission:SpecialEducation": "Special Education",
+    "Permission:SpecialEducation.TeachingDesign": "Teaching Design",
+    "Permission:SpecialEducation.IEP": "IEP",
+    "Permission:SpecialEducation.Resource": "Multimodal Resources",
+    "Permission:SpecialEducation.Review": "Review & Publish",
+    "Permission:SpecialEducation.Manage": "SpecialEdu Management",
+    "Features:SpecialEducation": "Special Education",
+    "Features:SpecialEducationDescription": "Per-tenant special education extension module"
   }
 }

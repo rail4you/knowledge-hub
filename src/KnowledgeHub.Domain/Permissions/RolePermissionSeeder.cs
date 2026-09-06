@@ -339,6 +339,13 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.Export);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Practicum.ViewStatistics);
 
+        // ── 特教扩展模块（整体式权限，随 Feature 开关生效） ──
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.SpecialEducation.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.SpecialEducation.TeachingDesign);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.SpecialEducation.IEP);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.SpecialEducation.Resource);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.SpecialEducation.Review);
+
         // 租户级管理员可管理本租户的角色与用户（身份模块权限）
         await GrantAsync("SchoolAdmin", "AbpIdentity.Roles");
         await GrantAsync("SchoolAdmin", "AbpIdentity.Roles.Create");
@@ -424,6 +431,15 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.Practicum.Export);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Practicum.ViewStatistics);
 
+        // ── 特教：教师可生成/管理教案、IEP、资源（审核由 SchoolAdmin 做） ──
+        await GrantAsync("Teacher", KnowledgeHubPermissions.SpecialEducation.Default);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.SpecialEducation.TeachingDesign);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.SpecialEducation.IEP);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.SpecialEducation.Resource);
+        // 指派审核制：被指派的教师可审核自己名下的待审方案（后端按 ReviewerUserId 放行），
+        // 同时授予 Review 权限以便教师之间可互审；学生绝不授予。
+        await GrantAsync("Teacher", KnowledgeHubPermissions.SpecialEducation.Review);
+
         // ── Student：学生（只读） ──
         await GrantAsync("Student", KnowledgeHubPermissions.Resources.Default);
         await GrantAsync("Student", KnowledgeHubPermissions.Resources.Download);
@@ -448,6 +464,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Student", KnowledgeHubPermissions.MicroMajors.Default);
 
         await GrantAsync("Student", KnowledgeHubPermissions.Practicum.Default);
+
+        // ── 特教：学生仅查看适配资源 + 自己的 IEP（后端按 CurrentUser.Id 过滤） ──
+        await GrantAsync("Student", KnowledgeHubPermissions.SpecialEducation.Default);
+        await GrantAsync("Student", KnowledgeHubPermissions.SpecialEducation.Resource);
 
         // ── EnterpriseUser：企业用户 ──
         await GrantAsync("EnterpriseUser", KnowledgeHubPermissions.Resources.Default);
@@ -579,6 +599,14 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         if (_currentTenant.Id == null)
         {
             await GrantAsync("admin", KnowledgeHubPermissions.AccountValidity.Default);
+
+            // 特教总开关管理：仅 host 全局管理员（按租户开/关 Feature + 跨租户查看）。
+            await GrantAsync("admin", KnowledgeHubPermissions.SpecialEducation.Default);
+            await GrantAsync("admin", KnowledgeHubPermissions.SpecialEducation.TeachingDesign);
+            await GrantAsync("admin", KnowledgeHubPermissions.SpecialEducation.IEP);
+            await GrantAsync("admin", KnowledgeHubPermissions.SpecialEducation.Resource);
+            await GrantAsync("admin", KnowledgeHubPermissions.SpecialEducation.Review);
+            await GrantAsync("admin", KnowledgeHubPermissions.SpecialEducation.Manage);
         }
     }
 

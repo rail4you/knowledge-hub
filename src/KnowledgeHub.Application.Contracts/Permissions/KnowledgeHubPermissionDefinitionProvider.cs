@@ -152,6 +152,14 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
 
         // AccountValidity permissions (账号有效期/多校协同 — 仅 host 全局管理员)
         myGroup.AddPermission(KnowledgeHubPermissions.AccountValidity.Default, L("Permission:AccountValidity"));
+
+        // SpecialEducation permissions（特教扩展模块 — 整体式权限，插件式开关）
+        var specialEduPermission = myGroup.AddPermission(KnowledgeHubPermissions.SpecialEducation.Default, L("Permission:SpecialEducation"));
+        specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.TeachingDesign, L("Permission:SpecialEducation.TeachingDesign"));
+        specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.IEP, L("Permission:SpecialEducation.IEP"));
+        specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.Resource, L("Permission:SpecialEducation.Resource"));
+        specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.Review, L("Permission:SpecialEducation.Review"));
+        specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.Manage, L("Permission:SpecialEducation.Manage"));
     }
 
     private static LocalizableString L(string name)

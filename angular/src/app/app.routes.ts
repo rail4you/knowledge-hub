@@ -453,6 +453,39 @@ export const APP_ROUTES: Routes = [
       requiredPolicy: 'KnowledgeHub.TeachingAgents.Manage',
     },
   },
+  // ════════════ 特殊教育扩展模块（独立分组，插件式开关） ════════════
+  {
+    path: 'special-edu/teaching-design',
+    loadComponent: () => import('./special-edu/teaching-design/teaching-design.component').then(c => c.TeachingDesignComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.SpecialEducation.TeachingDesign',
+    },
+  },
+  {
+    path: 'special-edu/iep',
+    loadComponent: () => import('./special-edu/iep/iep.component').then(c => c.IepComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.SpecialEducation.IEP',
+    },
+  },
+  {
+    path: 'special-edu/resources',
+    loadComponent: () => import('./special-edu/resources/special-resources.component').then(c => c.SpecialResourcesComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.SpecialEducation.Resource',
+    },
+  },
+  {
+    path: 'admin/special-education',
+    loadComponent: () => import('./special-edu/admin/special-edu-admin.component').then(c => c.SpecialEduAdminComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.SpecialEducation.Manage',
+    },
+  },
   {
     path: 'teaching/agents/new',
     loadComponent: () => import('./teaching-agents/teaching-agent-editor.component').then(c => c.TeachingAgentEditorComponent),

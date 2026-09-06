@@ -33,4 +33,6 @@ public class EditionDto
     public bool IsAllianceEnabled { get; set; }
     
     public bool IsTwoLevelApprovalEnabled { get; set; }
+
+    public bool IsSpecialEducationEnabled { get; set; }
 }

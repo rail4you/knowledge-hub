@@ -120,6 +120,11 @@ public class InstallAppService : ApplicationService, IInstallAppService
             @"INSERT INTO ""AbpFeatureValues"" (""Id"", ""Name"", ""Value"", ""ProviderName"", ""ProviderKey"")
               VALUES ({0}, {1}, {2}, {3}, {4})",
             Guid.NewGuid(), KnowledgeHubFeatures.TwoLevelApproval, twoLevelApproval, "H", (string?)null);
+
+        await _dbContext.Database.ExecuteSqlRawAsync(
+            @"INSERT INTO ""AbpFeatureValues"" (""Id"", ""Name"", ""Value"", ""ProviderName"", ""ProviderKey"")
+              VALUES ({0}, {1}, {2}, {3}, {4})",
+            Guid.NewGuid(), KnowledgeHubFeatures.SpecialEducation, "false", "H", (string?)null);
     }
 
     private async Task CreateDefaultTenantAsync()

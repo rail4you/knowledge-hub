@@ -40,13 +40,15 @@ public class EditionAppService : ApplicationService, IEditionAppService
         var maxTenantCount = await _editionConfig.GetMaxTenantCountAsync();
         var isAllianceEnabled = await _editionConfig.IsAllianceEnabledAsync();
         var isTwoLevelApprovalEnabled = await _editionConfig.IsTwoLevelApprovalEnabledAsync();
+        var isSpecialEducationEnabled = await _editionConfig.IsSpecialEducationEnabledAsync();
 
         return new EditionDto
         {
             Edition = edition,
             MaxTenantCount = maxTenantCount,
             IsAllianceEnabled = isAllianceEnabled,
-            IsTwoLevelApprovalEnabled = isTwoLevelApprovalEnabled
+            IsTwoLevelApprovalEnabled = isTwoLevelApprovalEnabled,
+            IsSpecialEducationEnabled = isSpecialEducationEnabled
         };
     }
 
@@ -98,6 +100,10 @@ public class EditionAppService : ApplicationService, IEditionAppService
         await _dbContext.Database.ExecuteSqlRawAsync(
             @"UPDATE ""AbpFeatureValues"" SET ""Value"" = {0} WHERE ""Name"" = {1} AND ""ProviderName"" = {2}",
             "true", KnowledgeHubFeatures.TwoLevelApproval, "H");
+
+        await _dbContext.Database.ExecuteSqlRawAsync(
+            @"UPDATE ""AbpFeatureValues"" SET ""Value"" = {0} WHERE ""Name"" = {1} AND ""ProviderName"" = {2}",
+            "true", KnowledgeHubFeatures.SpecialEducation, "H");
     }
 
     private async Task CreateDefaultTenantAsync()

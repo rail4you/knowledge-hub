@@ -221,6 +221,23 @@ export const STUDENT_ROUTES: Routes = [
           name: '平台信息'
         }
       },
+      {
+        // 特教扩展模块（学生端只读）：适配资源 + 我的 IEP。
+        path: 'special-edu/resources',
+        loadComponent: () => import('./special-edu/student-special-resources.component').then(m => m.StudentSpecialResourcesComponent),
+        data: {
+          name: '特教资源',
+          icon: 'heart'
+        }
+      },
+      {
+        path: 'special-edu/my-iep',
+        loadComponent: () => import('./special-edu/student-my-iep.component').then(m => m.StudentMyIepComponent),
+        data: {
+          name: '我的IEP',
+          icon: 'user'
+        }
+      },
     ]
   }
 ];

@@ -40,6 +40,13 @@ public class KnowledgeHubFeatureDefinitionProvider : FeatureDefinitionProvider
             L("Features:TwoLevelApproval"),
             L("Features:TwoLevelApprovalDescription")
         );
+
+        group.AddFeature(
+            KnowledgeHubFeatures.SpecialEducation,
+            "false",
+            L("Features:SpecialEducation"),
+            L("Features:SpecialEducationDescription")
+        );
     }
 
     private static LocalizableString L(string name)

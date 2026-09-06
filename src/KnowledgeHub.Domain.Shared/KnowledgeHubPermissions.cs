@@ -180,4 +180,18 @@ public static class KnowledgeHubPermissions
     {
         public const string Default = GroupName + ".AccountValidity";
     }
+
+    /// <summary>
+    /// 特殊教育扩展模块：整体式权限，插件式开关。
+    /// L1 Feature 按租户开通，L2 本组权限在租户内按角色分配。
+    /// </summary>
+    public static class SpecialEducation
+    {
+        public const string Default = GroupName + ".SpecialEducation";
+        public const string TeachingDesign = Default + ".TeachingDesign";
+        public const string IEP = Default + ".IEP";
+        public const string Resource = Default + ".Resource";
+        public const string Review = Default + ".Review";
+        public const string Manage = Default + ".Manage";
+    }
 }

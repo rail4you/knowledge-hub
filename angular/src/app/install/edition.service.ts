@@ -8,6 +8,7 @@ export interface EditionDto {
   maxTenantCount: number;
   isAllianceEnabled: boolean;
   isTwoLevelApprovalEnabled: boolean;
+  isSpecialEducationEnabled?: boolean;
 }
 
 @Injectable({
@@ -35,7 +36,8 @@ export class EditionService {
           edition: 'Basic',
           maxTenantCount: 1,
           isAllianceEnabled: false,
-          isTwoLevelApprovalEnabled: false
+          isTwoLevelApprovalEnabled: false,
+          isSpecialEducationEnabled: false
         };
         this.editionCache = defaultEdition;
         this.editionSubject.next(defaultEdition);
@@ -58,6 +60,10 @@ export class EditionService {
 
   isTwoLevelApprovalEnabled(): boolean {
     return this.editionCache?.isTwoLevelApprovalEnabled ?? false;
+  }
+
+  isSpecialEducationEnabled(): boolean {
+    return this.editionCache?.isSpecialEducationEnabled ?? false;
   }
 
   getMaxTenantCount(): number {

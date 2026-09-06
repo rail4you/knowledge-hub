@@ -36,7 +36,7 @@ using KnowledgeHub.KnowledgeGraph;
 using KnowledgeHub.RecruitmentLive;
 using KnowledgeHub.RecruitmentLive;
 using KnowledgeHub.EntityFrameworkCore.RecruitmentLive;
-
+using KnowledgeHub.EntityFrameworkCore.SpecialEducation;
 namespace KnowledgeHub.EntityFrameworkCore;
 
 [ReplaceDbContext(typeof(IIdentityDbContext))]
@@ -195,6 +195,11 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
     // Account validity (multi-school account lifecycle) entities
     public DbSet<AccountValidity> AccountValidities { get; set; }
 
+    // Special education extension module entities
+    public DbSet<KnowledgeHub.SpecialEducation.SpecialTeachingDesign> SpecialTeachingDesigns { get; set; }
+    public DbSet<KnowledgeHub.SpecialEducation.IepPlan> IepPlans { get; set; }
+    public DbSet<KnowledgeHub.SpecialEducation.SpecialEduResource> SpecialEduResources { get; set; }
+
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)
     {
@@ -236,5 +241,6 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
         builder.ConfigureTeachingAgents();
         builder.ConfigureTenantInfo();
         builder.ConfigureAccountValidity();
+        builder.ConfigureSpecialEdu();
     }
 }

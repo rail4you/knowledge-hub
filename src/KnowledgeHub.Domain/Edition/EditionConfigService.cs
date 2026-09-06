@@ -16,6 +16,7 @@ public interface IEditionConfigService
     Task<int> GetMaxTenantCountAsync();
     Task<bool> IsAllianceEnabledAsync();
     Task<bool> IsTwoLevelApprovalEnabledAsync();
+    Task<bool> IsSpecialEducationEnabledAsync();
 }
 
 public class EditionConfigService : IEditionConfigService, ITransientDependency
@@ -67,5 +68,10 @@ public class EditionConfigService : IEditionConfigService, ITransientDependency
     public async Task<bool> IsTwoLevelApprovalEnabledAsync()
     {
         return await _featureChecker.IsEnabledAsync(KnowledgeHubFeatures.TwoLevelApproval);
+    }
+
+    public async Task<bool> IsSpecialEducationEnabledAsync()
+    {
+        return await _featureChecker.IsEnabledAsync(KnowledgeHubFeatures.SpecialEducation);
     }
 }

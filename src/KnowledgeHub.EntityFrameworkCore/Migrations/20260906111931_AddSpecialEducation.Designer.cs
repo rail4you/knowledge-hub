@@ -3,6 +3,7 @@ using System;
 using KnowledgeHub.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Volo.Abp.EntityFrameworkCore;
@@ -12,9 +13,11 @@ using Volo.Abp.EntityFrameworkCore;
 namespace KnowledgeHub.Migrations
 {
     [DbContext(typeof(KnowledgeHubDbContext))]
-    partial class KnowledgeHubDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260906111931_AddSpecialEducation")]
+    partial class AddSpecialEducation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5614,9 +5617,6 @@ namespace KnowledgeHub.Migrations
                     b.Property<string>("ReviewComment")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("ReviewerUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("ShortTermGoalsJson")
                         .IsRequired()
                         .HasColumnType("text");
@@ -5728,18 +5728,9 @@ namespace KnowledgeHub.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("ReviewComment")
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("ReviewerUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("SourceInputJson")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
 
                     b.Property<Guid?>("TeachingDesignId")
                         .HasColumnType("uuid");
@@ -5878,9 +5869,6 @@ namespace KnowledgeHub.Migrations
                     b.Property<string>("ReviewComment")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
-
-                    b.Property<Guid?>("ReviewerUserId")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("SectionsJson")
                         .IsRequired()
