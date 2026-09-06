@@ -44,19 +44,16 @@
         }
         a { text-decoration: none; }
 
-        /* ── Header — 与首页 PortalHome 顶栏统一（1152 紧凑） ── */
+        /* ── Header — 与首页 PortalHome 顶栏统一（1760 居中 + 两侧 16px） ── */
         .login-header {
             display: flex;
             align-items: center;
             gap: 24px;
-            padding: 0 24px;
-            height: 52px;
+            padding: 0 max(16px, calc((100% - 1760px) / 2));
+            height: 56px;
             border-bottom: 1px solid #eef1f6;
             background: #ffffff;
             flex-shrink: 0;
-        }
-        @@media (min-width: 1200px) {
-            .login-header { padding: 0 calc((100% - 1152px) / 2); }
         }
         .brand {
             display: flex;
@@ -96,10 +93,10 @@
             display: flex;
             flex: 1;
             min-height: 0;
-            max-width: 1152px;
+            max-width: 1760px;
             width: 100%;
             margin: 0 auto;
-            padding: 16px 0 16px;
+            padding: 12px 16px 16px;
             gap: 12px;
             background: var(--kh-canvas);
             box-sizing: border-box;
@@ -234,7 +231,7 @@
 
         /* ── Footer — 与首页一致 ── */
         .footer { background: #1f2a44; color: rgba(255,255,255,0.7); padding: 28px 0 0; margin-top: 16px; }
-        .footer__inner { max-width: 1152px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: 1.4fr 2fr; gap: 40px; }
+        .footer__inner { max-width: 1760px; margin: 0 auto; padding: 0 16px; display: grid; grid-template-columns: 1.4fr 2fr; gap: 40px; }
         .footer__brand-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
         .footer__brand-top strong { display: block; font-size: 17px; font-weight: 700; color: #fff; }
         .footer__brand-top p { margin: 2px 0 0; font-size: 12px; color: rgba(255,255,255,0.55); }
@@ -244,7 +241,7 @@
         .footer__col h5 { font-size: 13px; font-weight: 600; color: #fff; margin: 0 0 12px; }
         .footer__col a { display: block; font-size: 12px; color: rgba(255,255,255,0.55); text-decoration: none; margin-bottom: 8px; }
         .footer__col a:hover { color: #fff; }
-        .footer__copy { margin-top: 24px; padding: 14px 24px; text-align: center; font-size: 11px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.08); max-width: 1152px; margin-left: auto; margin-right: auto; }
+        .footer__copy { margin-top: 24px; padding: 14px 16px; text-align: center; font-size: 11px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.08); max-width: 1760px; margin-left: auto; margin-right: auto; }
         @@media (max-width: 860px) {
             .footer__inner { grid-template-columns: 1fr; gap: 20px; padding: 0 16px; }
             .footer__grid { grid-template-columns: 1fr 1fr; }

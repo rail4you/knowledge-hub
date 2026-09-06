@@ -5,10 +5,9 @@ import { CommonModule, ViewportScroller } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzCarouselModule } from 'ng-zorro-antd/carousel';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
-import { AuthService } from '@abp/ng.core';
+import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { TenantInfoService } from '../../proxy/tenant-infos/tenant-info.service';
 import { PortalService } from '../../proxy/portal/portal.service';
@@ -23,19 +22,28 @@ import { TooltipComponent } from 'echarts/components';
 
 echarts.use([GraphChart, CanvasRenderer, TooltipComponent]);
 
-/** 节点视觉配置 */
-const NODE_STYLE: Record<string, {
-  color: string; glow: string; symbolSize: number; labelColor: string;
-}> = {
-  tenant: { color: '#e74c3c', glow: 'rgba(231,76,60,0.35)', symbolSize: 72, labelColor: '#fff' },
-  major:  { color: '#2980b9', glow: 'rgba(41,128,185,0.25)', symbolSize: 48, labelColor: '#fff' },
-  course: { color: '#27ae60', glow: 'rgba(39,174,96,0.2)',  symbolSize: 36, labelColor: '#fff' },
+/** 节点视觉配置 — 小圆点 + 下方悬浮信息卡（白底/描边/投影/圆角，标题与内容区分） */
+const NODE_BORDER: Record<string, string> = {
+  tenant: '#3730a3',
+  major: '#0d9488',
+  course: '#b45309',
+};
+/** 卡片内类型 tag 配色 */
+const TAG_STYLE: Record<string, { bg: string; fg: string }> = {
+  tenant: { bg: '#e9e8fa', fg: '#3730a3' },
+  major: { bg: '#dcf3ef', fg: '#0d9488' },
+  course: { bg: '#faecd4', fg: '#b45309' },
+};
+const TYPE_LABEL: Record<string, string> = {
+  tenant: '资源库',
+  major: '专业',
+  course: '课程',
 };
 
 const EDGE_STYLE: Record<string, { color: string; width: number }> = {
-  contains: { color: '#3498db', width: 2.5 },
-  parallel: { color: '#f39c12', width: 1.8 },
-  sequence: { color: '#e74c3c', width: 1.8 },
+  contains: { color: '#c3cedd', width: 1 },
+  parallel: { color: '#d4dce6', width: 1 },
+  sequence: { color: '#c3cedd', width: 1 },
 };
 
 interface NavCard {
@@ -43,7 +51,6 @@ interface NavCard {
   title: string;
   desc: string;
   icon: string;
-  gradient: string;
   targetId: string;
 }
 
@@ -55,7 +62,6 @@ interface NavCard {
     RouterModule,
     NzIconModule,
     NzSpinModule,
-    NzCarouselModule,
     NzDrawerModule,
     NzAlertModule,
   ],
@@ -67,6 +73,7 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly configState = inject(ConfigStateService);
   private readonly tenantInfoService = inject(TenantInfoService);
   private readonly portalService = inject(PortalService);
   private readonly courseService = inject(CourseService);
@@ -74,6 +81,19 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   private readonly scroller = inject(ViewportScroller);
 
   readonly loading = signal(true);
+  readonly userName = signal('');
+
+  get isLoggedIn(): boolean {
+    return this.authService.isAuthenticated;
+  }
+
+  login(): void {
+    this.authService.navigateToLogin();
+  }
+
+  logout(): void {
+    this.authService.logout().subscribe();
+  }
 
   /** 当前登录学生已选课程 id 集合（选过的课程显示徽章、点击直接跳转详情页） */
   readonly enrolledCourseIds = signal<Set<string>>(new Set());
@@ -115,6 +135,9 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     this.difficultyFilter.set(diff);
   }
 
+  // Hero 背景：复用首页租户卡片同一张封面（coverImageList[0]），静态单张不轮播
+  readonly heroCover = computed(() => this.tenantInfo()?.coverImageList?.[0] || null);
+
   // 顶部分区导航
   readonly navCards: NavCard[] = [
     {
@@ -122,7 +145,6 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
       title: '资源库简介',
       desc: '建设背景 · 目标定位',
       icon: '📘',
-      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
       targetId: 'section-intro',
     },
     {
@@ -130,7 +152,6 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
       title: '专业建设',
       desc: '培养方案 · 教学标准',
       icon: '🏛️',
-      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
       targetId: 'section-construction',
     },
     {
@@ -138,7 +159,6 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
       title: '学历课程',
       desc: '精品课程 · 在线学习',
       icon: '🎓',
-      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
       targetId: 'section-courses',
     },
     {
@@ -146,7 +166,6 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
       title: '知识图谱',
       desc: '专业 · 课程 · 关联',
       icon: '🧠',
-      gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
       targetId: 'section-graph',
     },
   ];
@@ -158,6 +177,8 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   private nodeMap = new Map<string, TenantGraphNodeDto>();
 
   ngOnInit(): void {
+    const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
+    if (typeof cu?.['userName'] === 'string') this.userName.set(cu['userName'] as string);
     const tenantId = this.route.snapshot.paramMap.get('id');
     if (tenantId) {
       this.loadData(tenantId);
@@ -309,46 +330,60 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     });
 
     const nodes: any[] = (kg.allNodes || []).map(n => {
-      const style = NODE_STYLE[n.nodeType || 'course'] || NODE_STYLE.course;
-      const labelLen = (n.name || '').length;
+      const t = n.nodeType || 'course';
+      const dot = NODE_BORDER[t] || NODE_BORDER.course;
+      const tag = TAG_STYLE[t] || TAG_STYLE.course;
+      const title = this.sanitizeRich(n.name || '');
+      const typeLabel = TYPE_LABEL[t] || '课程';
+      const subFull = n.childrenCount > 0
+        ? `下级 ${n.childrenCount}`
+        : this.sanitizeRich(n.description || '');
+      const sub = subFull.length > 12 ? subFull.slice(0, 12) + '…' : subFull;
       return {
         id: n.id,
         name: n.name,
-        symbolSize: style.symbolSize,
-        category: n.nodeType === 'tenant' ? 0 : n.nodeType === 'major' ? 1 : 2,
+        symbol: 'circle',
+        symbolSize: 12,
+        category: t === 'tenant' ? 0 : t === 'major' ? 1 : 2,
         itemStyle: {
-          color: style.color,
-          shadowBlur: 16,
-          shadowColor: style.glow,
-          borderColor: 'rgba(255,255,255,0.35)',
-          borderWidth: 2.5,
+          color: dot,
+          borderColor: '#ffffff',
+          borderWidth: 2,
         },
         label: {
           show: true,
-          position: 'inside',
-          fontSize: n.nodeType === 'tenant' ? 14 : n.nodeType === 'major' ? 12 : 10,
-          fontWeight: 700,
-          color: style.labelColor,
-          textShadowBlur: 3,
-          textShadowColor: 'rgba(0,0,0,0.45)',
-          formatter: labelLen > 12 ? (n.name || '').slice(0, 12) + '…' : n.name,
+          position: 'bottom',
+          distance: 8,
+          backgroundColor: '#ffffff',
+          borderColor: '#e2e8f0',
+          borderWidth: 1,
+          borderRadius: 8,
+          padding: [8, 10, 7, 10],
+          shadowBlur: 8,
+          shadowColor: 'rgba(15,23,42,0.12)',
+          shadowOffsetY: 2,
+          formatter: [`{t|${title}}`, `{tag|${typeLabel}} {m|${sub}}`].join('\n'),
+          rich: {
+            t: { fontSize: 12, fontWeight: 700, color: '#1f2d3d', lineHeight: 18, width: 132, overflow: 'truncate' },
+            tag: { fontSize: 10, color: tag.fg, backgroundColor: tag.bg, borderRadius: 4, padding: [1, 6] },
+            m: { fontSize: 10, color: '#8a93a6', lineHeight: 16 },
+          },
         },
         emphasis: {
-          scale: true,
-          label: { fontSize: n.nodeType === 'tenant' ? 16 : n.nodeType === 'major' ? 14 : 12 },
+          scale: 1.3,
+          label: { borderColor: dot, borderWidth: 1.5 },
         },
         _node: n,
       };
     });
-
     const links: any[] = (kg.relations || []).map(r => ({
       source: r.sourceId,
       target: r.targetId,
       lineStyle: {
         color: (EDGE_STYLE[r.relationType || 'contains'] || EDGE_STYLE.contains).color,
         width: (EDGE_STYLE[r.relationType || 'contains'] || EDGE_STYLE.contains).width,
-        curveness: 0.18,
-        opacity: 0.7,
+        curveness: 0.05,
+        opacity: 0.9,
       },
       _rel: r,
     }));
@@ -357,29 +392,29 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
       backgroundColor: 'transparent',
       tooltip: {
         trigger: 'item',
-        backgroundColor: 'rgba(255,255,255,0.97)',
-        borderColor: '#dde4ee',
+        backgroundColor: '#ffffff',
+        borderColor: '#e4e8ee',
         borderWidth: 1,
         padding: 0,
-        textStyle: { color: '#1f2937', fontSize: 13 },
-        extraCssText: 'box-shadow: 0 12px 36px rgba(15,23,42,0.15); border-radius: 12px; overflow: hidden;',
+        textStyle: { color: '#1f2d3d', fontSize: 12 },
+        extraCssText: 'box-shadow: 0 8px 24px rgba(15,23,42,0.12); border-radius: 8px; overflow: hidden;',
         formatter: (p: any) => this.graphTooltipHtml(p),
       },
       series: [{
         type: 'graph',
         layout: 'force',
-        force: { repulsion: 500, gravity: 0.04, edgeLength: [80, 250], friction: 0.85, layoutAnimation: true },
+        force: { repulsion: 420, gravity: 0.05, edgeLength: [160, 320], friction: 0.9, layoutAnimation: true },
         roam: true,
         draggable: true,
+        cursor: 'pointer',
         categories: [{ name: '资源库' }, { name: '专业' }, { name: '课程' }],
         label: { show: false },
-        edgeSymbol: ['none', 'arrow'],
-        edgeSymbolSize: [4, 8],
-        lineStyle: { curveness: 0.18, opacity: 0.6 },
+        edgeSymbol: ['none', 'none'],
+        lineStyle: { curveness: 0.05, opacity: 0.9 },
         emphasis: {
           focus: 'adjacency',
-          lineStyle: { width: 3, opacity: 1 },
-          itemStyle: { shadowBlur: 24, shadowColor: 'rgba(0,0,0,0.3)' },
+          lineStyle: { width: 1.5, opacity: 1 },
+          itemStyle: { shadowBlur: 6, shadowColor: 'rgba(15,23,42,0.2)' },
         },
         blur: { itemStyle: { opacity: 0.3 }, lineStyle: { opacity: 0.1 } },
         data: nodes,
@@ -388,6 +423,16 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     };
 
     this.chartInstance.setOption(option);
+    // 点击节点高亮其关联，再次点击空白处取消
+    this.chartInstance.off('click');
+    this.chartInstance.on('click', (p: any) => {
+      if (!this.chartInstance) return;
+      if (p.dataType === 'node') {
+        this.chartInstance.dispatchAction({ type: 'focusNodeAdjacency', seriesIndex: 0, dataIndex: p.dataIndex });
+      } else {
+        this.chartInstance.dispatchAction({ type: 'unfocusNodeAdjacency', seriesIndex: 0 });
+      }
+    });
     this.resizeHandler = () => this.chartInstance?.resize();
     window.addEventListener('resize', this.resizeHandler);
   }
@@ -399,50 +444,51 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
       const tgt = this.nodeMap.get(rel?.targetId)?.name || rel?.targetId || '';
       const rt = rel?.relationType || 'contains';
       const rtLabel: Record<string, string> = { contains: '包含', parallel: '并列', sequence: '先后' };
-      const rtColor: Record<string, string> = { contains: '#3498db', parallel: '#f39c12', sequence: '#e74c3c' };
       return `
-        <div style="padding:14px 18px; min-width:200px;">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <span style="background:#f0f5ff; padding:3px 10px; border-radius:999px; font-size:12px; color:#2980b9;">${this.escapeHtml(src)}</span>
-            <span style="color:${rtColor[rt] || '#5b6573'}; font-weight:700;">→</span>
-            <span style="background:#f0fdf4; padding:3px 10px; border-radius:999px; font-size:12px; color:#16a34a;">${this.escapeHtml(tgt)}</span>
+        <div style="padding:10px 12px; min-width:180px; max-width:280px;">
+          <div style="font-size:12.5px; color:#1f2d3d; line-height:1.6;">
+            <span style="font-weight:600;">${this.escapeHtml(src)}</span>
+            <span style="color:#8a93a6; margin:0 6px;">→</span>
+            <span style="font-weight:600;">${this.escapeHtml(tgt)}</span>
           </div>
-          <div style="display:inline-block; padding:2px 10px; border-radius:999px; font-size:12px; color:#fff; background:${rtColor[rt] || '#5b6573'};">
-            ${rtLabel[rt] || rt}
+          <div style="margin-top:6px; padding-top:6px; border-top:1px solid #eef1f6; font-size:11px; color:#8a93a6;">
+            关系 · ${rtLabel[rt] || rt}${rel?.label ? ` · ${this.escapeHtml(rel.label)}` : ''}
           </div>
-          ${rel?.label ? `<div style="margin-top:8px; font-size:12px; color:#5b6573;">${this.escapeHtml(rel.label)}</div>` : ''}
         </div>`;
     }
     const n: TenantGraphNodeDto | undefined = p.data?._node;
     if (!n) return '';
-    const m: Record<string, { label: string; bg: string; fg: string; icon: string }> = {
-      tenant: { label: '资源库', bg: 'rgba(231,76,60,0.1)',  fg: '#e74c3c', icon: '📦' },
-      major:  { label: '专业',   bg: 'rgba(41,128,185,0.1)', fg: '#2980b9', icon: '📚' },
-      course: { label: '课程',   bg: 'rgba(39,174,96,0.1)',  fg: '#16a34a', icon: '📖' },
+    const m: Record<string, { label: string; color: string }> = {
+      tenant: { label: '资源库', color: '#3730a3' },
+      major:  { label: '专业',   color: '#0d9488' },
+      course: { label: '课程',   color: '#b45309' },
     };
     const meta = m[n.nodeType || 'course'] || m.course;
     const desc = n.description
-      ? `<div style="margin-top:8px; font-size:12px; line-height:1.6; color:#5b6573;">${this.escapeHtml(n.description)}</div>`
+      ? `<div style="margin-top:6px; font-size:12px; line-height:1.6; color:#5b6573;">${this.escapeHtml(n.description)}</div>`
       : '';
     const children = n.childrenCount > 0
-      ? `<div style="display:inline-block; margin-top:10px; padding:3px 10px; border-radius:999px; font-size:11px; background:#eef5ff; color:#1e6ce8;">
-           子节点 ${n.childrenCount}
+      ? `<div style="margin-top:6px; padding-top:6px; border-top:1px solid #eef1f6; font-size:11px; color:#8a93a6;">
+           下级节点 ${n.childrenCount} 个 · 点击高亮关联
          </div>`
-      : '';
+      : `<div style="margin-top:6px; padding-top:6px; border-top:1px solid #eef1f6; font-size:11px; color:#8a93a6;">
+           点击高亮关联
+         </div>`;
     return `
-      <div style="padding:14px 18px; min-width:240px; max-width:320px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-          <span style="font-size:22px;">${meta.icon}</span>
-          <div>
-            <div style="font-weight:700; font-size:14px; color:#1f2937;">${this.escapeHtml(n.name || '')}</div>
-            <div style="display:inline-block; padding:1px 8px; border-radius:4px; font-size:11px; background:${meta.bg}; color:${meta.fg}; margin-top:2px;">
-              ${meta.label}
-            </div>
-          </div>
+      <div style="padding:10px 12px; min-width:220px; max-width:300px;">
+        <div style="display:flex; align-items:center; gap:7px;">
+          <span style="width:8px; height:8px; border-radius:50%; background:${meta.color}; flex-shrink:0;"></span>
+          <span style="font-weight:700; font-size:13px; color:#1f2d3d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${this.escapeHtml(n.name || '')}</span>
+          <span style="margin-left:auto; font-size:11px; color:#8a93a6; flex-shrink:0;">${meta.label}</span>
         </div>
         ${desc}
         ${children}
       </div>`;
+  }
+
+  /** 去掉会影响 ECharts 富文本解析的字符（{ } 与换行） */
+  private sanitizeRich(s: string): string {
+    return (s || '').replace(/[{}\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
   }
 
   private escapeHtml(s: string): string {

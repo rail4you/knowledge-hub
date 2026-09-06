@@ -67,6 +67,8 @@ $pad:           16px;
 }
 .nav__inner {
   height: 100%;
+  max-width: $max-w;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   gap: 24px;

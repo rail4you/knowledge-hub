@@ -28,6 +28,12 @@ export const APP_ROUTES: Routes = [
   {
     path: 'account',
     loadChildren: () => import('@abp/ng.account').then(c => c.createRoutes()),
+    // 登录页是自带整站导航/页脚的全幅定制页（LoginComponent），需与首页一样
+    // 使用 empty 布局，否则 LeptonX 应用布局的内容容器会约束宽度导致两侧空白对不上。
+    // 子路由快照 data 会合并父级 data，ABP account 子路由本身不设 layout，此处生效。
+    data: {
+      layout: eLayoutType.empty
+    }
   },
   {
     path: 'identity',

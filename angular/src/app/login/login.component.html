@@ -1,47 +1,44 @@
 <div class="login-page">
-  <!-- Header — 教师端风格顶栏 -->
-  <header class="login-header">
-    <div class="header-left">
+  <!-- Header — 与首页 PortalHome 顶栏统一：logo + 居中导航 + 账户区 -->
+  <header class="nav">
+    <div class="nav__inner">
       <a routerLink="/" class="brand">
-        <span class="brand-mark">易</span>
-        <span class="brand-text">
-          <strong>易课通</strong>
-          <span>教学资源库</span>
-        </span>
+        <span class="brand__mark">易</span>
+        <span class="brand__name">易课通 <span class="brand__sub">教学资源库</span></span>
       </a>
-    </div>
 
-    <nav class="header-nav">
-      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
-      <a routerLink="/student/courses" routerLinkActive="active">课程中心</a>
-      <a routerLink="/student/resources" routerLinkActive="active">资源库</a>
-      <a routerLink="/student/micro-majors" routerLinkActive="active">微专业</a>
-      <a routerLink="/student/practicums" routerLinkActive="active">实训</a>
-      <a routerLink="/student/employment/jobs" routerLinkActive="active">就业</a>
-    </nav>
+      <nav class="nav__links">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
+        <a routerLink="/student/courses" routerLinkActive="active">课程中心</a>
+        <a routerLink="/student/resources" routerLinkActive="active">资源库</a>
+        <a routerLink="/student/micro-majors" routerLinkActive="active">微专业</a>
+        <a routerLink="/student/practicums" routerLinkActive="active">实训</a>
+        <a routerLink="/student/employment/jobs" routerLinkActive="active">就业</a>
+      </nav>
 
-    <div class="header-right">
-      <div class="language-selector" [class.open]="langDropdownOpen()">
-        <button class="lang-btn" (click)="toggleLangDropdown()">
-          <i class="fa fa-globe"></i>
-          <span>{{ getCurrentLangDisplayName() }}</span>
-          <i class="fa fa-chevron-down"></i>
-        </button>
-        <div class="lang-dropdown-menu">
-          @for (lang of languages; track lang.cultureName) {
-            <button
-              [class.active]="lang.cultureName === currentLang"
-              (click)="onChangeLang(lang.cultureName)"
-            >
-              {{ lang.displayName }}
-            </button>
-          }
+      <div class="nav__end">
+        <div class="language-selector" [class.open]="langDropdownOpen()">
+          <button class="lang-btn" (click)="toggleLangDropdown()">
+            <i class="fa fa-globe"></i>
+            <span>{{ getCurrentLangDisplayName() }}</span>
+            <i class="fa fa-chevron-down"></i>
+          </button>
+          <div class="lang-dropdown-menu">
+            @for (lang of languages; track lang.cultureName) {
+              <button
+                [class.active]="lang.cultureName === currentLang"
+                (click)="onChangeLang(lang.cultureName)"
+              >
+                {{ lang.displayName }}
+              </button>
+            }
+          </div>
         </div>
+        <a routerLink="/" class="btn btn--sm btn--ghost">
+          <i class="fa fa-home"></i>
+          <span>{{ '::BackToHome' | abpLocalization }}</span>
+        </a>
       </div>
-      <a routerLink="/" class="back-home">
-        <i class="fa fa-home"></i>
-        <span>{{ '::BackToHome' | abpLocalization }}</span>
-      </a>
     </div>
   </header>
 

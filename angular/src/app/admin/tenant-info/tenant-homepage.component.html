@@ -1,32 +1,27 @@
-<!-- ═══════════════════ HEADER ═══════════════════ -->
-<header class="brand-bar">
-  <div class="brand-bar__inner">
+<!-- ═══════════════════ HEADER — 与首页 PortalHome 统一：logo + 导航 + 账户 ═══════════════════ -->
+<header class="nav">
+  <div class="nav__inner">
     <a routerLink="/" class="brand">
-      <span class="brand__logo" aria-hidden="true">
-        <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="bg" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#1E6CE8"/><stop offset="1" stop-color="#00B7FF"/>
-            </linearGradient>
-          </defs>
-          <rect width="44" height="44" rx="10" fill="url(#bg)"/>
-          <path d="M12 14.5h20a1.5 1.5 0 011.5 1.5v9.4a1.5 1.5 0 01-1.5 1.5H21l-5.4 3.6a.5.5 0 01-.77-.42v-3.18H12a1.5 1.5 0 01-1.5-1.5V16a1.5 1.5 0 011.5-1.5z" fill="#fff" opacity=".95"/>
-          <circle cx="17.5" cy="20.7" r="1.4" fill="#1E6CE8"/>
-          <circle cx="22" cy="20.7" r="1.4" fill="#1E6CE8"/>
-          <circle cx="26.5" cy="20.7" r="1.4" fill="#1E6CE8"/>
-        </svg>
-      </span>
-      <span class="brand__text">
-        <span class="brand__title">易课通</span>
-        <span class="brand__divider">|</span>
-        <span class="brand__subtitle">在线教学资源库</span>
-      </span>
+      <span class="brand__mark">易</span>
+      <span class="brand__name">易课通 <span class="brand__sub">教学资源库</span></span>
     </a>
-    <div class="brand-bar__actions">
-      <a routerLink="/" class="brand-bar__back">
-        <span nz-icon nzType="home" nzTheme="outline"></span>
-        <span>主站首页</span>
-      </a>
+    <nav class="nav__links">
+      <a routerLink="/">主站首页</a>
+      <a (click)="scrollToSection('section-intro')" class="nav__anchor">资源库简介</a>
+      <a (click)="scrollToSection('section-construction')" class="nav__anchor">专业建设</a>
+      <a (click)="scrollToSection('section-courses')" class="nav__anchor">学历课程</a>
+      <a (click)="scrollToSection('section-graph')" class="nav__anchor">知识图谱</a>
+    </nav>
+    <div class="nav__end">
+      @if (isLoggedIn) {
+        <span class="nav__user">
+          <span class="nav__avatar">{{ (userName() || '用').slice(0, 1) }}</span>
+          <span>{{ userName() }}</span>
+        </span>
+        <button class="btn btn--sm btn--ghost" (click)="logout()">退出</button>
+      } @else {
+        <button class="btn btn--sm" (click)="login()">登录</button>
+      }
     </div>
   </div>
 </header>
@@ -36,73 +31,59 @@
     <div class="loading-wrapper"><nz-spin nzSize="large" nzTip="加载中…"></nz-spin></div>
   } @else {
 
-    <!-- ═══════ HERO ═══════ -->
+    <!-- ═══════ HERO — 租户封面（与首页租户卡片同一张，静态）+ 分区导航 ═══════ -->
     <section class="hero">
-      @if (tenantInfo(); as info) {
-        @if (info.coverImageList && info.coverImageList.length > 0) {
-          <nz-carousel [nzAutoPlay]="true" [nzEffect]="'fade'" [nzDotPosition]="'bottom'" [nzAutoPlaySpeed]="5000">
-            @for (img of info.coverImageList; track img) {
-              <div nz-carousel-content>
-                <div class="hero-slide" [style.background-image]="'url(' + img + ')'">
-                  <div class="hero-overlay">
-                    <h1 class="hero-title">{{ info.name }}</h1>
-                    <p class="hero-subtitle">{{ info.description || '对接企业需求，应用新技术、创设新场景。增强产业转型升级的技术技能人才支撑。' }}</p>
-                  </div>
-                </div>
-              </div>
-            }
-          </nz-carousel>
-        } @else {
-          <div class="hero-fallback" [style.background-image]="'url(assets/images/tenant-hero_001.jpg)'">
-            <div class="hero-overlay">
-              <h1 class="hero-title">{{ info.name }}</h1>
-              <p class="hero-subtitle">{{ info.description || '对接企业需求，应用新技术、创设新场景。增强产业转型升级的技术技能人才支撑。' }}</p>
-            </div>
-          </div>
-        }
-      } @else {
-        <div class="hero-fallback" [style.background-image]="'url(assets/images/tenant-hero_001.jpg)'">
-          <div class="hero-overlay">
-            <h1 class="hero-title">专业教学资源库</h1>
-            <p class="hero-subtitle">对接企业需求，应用新技术、创设新场景。</p>
-          </div>
-        </div>
+      @if (heroCover(); as cover) {
+        <div class="hero__bg" [style.background-image]="'url(' + cover + ')'"></div>
       }
-
-      <!-- 分区导航 -->
-      <nav class="nav-cards" aria-label="页面分区导航">
-        @for (card of navCards; track card.key) {
-          <button type="button" class="nav-card" (click)="scrollToSection(card.targetId)">
-            <span class="nav-card__icon" [style.background]="card.gradient">{{ card.icon }}</span>
-            <span class="nav-card__body">
-              <span class="nav-card__title">{{ card.title }}</span>
-              <span class="nav-card__desc">{{ card.desc }}</span>
-            </span>
-            <span class="nav-card__arrow" aria-hidden="true">→</span>
-          </button>
+      <div class="hero__inner hero__inner--center">
+        @if (tenantInfo(); as info) {
+          <h1 class="hero__title">{{ info.name }}</h1>
+          <p class="hero__desc">{{ info.description || '对接企业需求，应用新技术、创设新场景。增强产业转型升级的技术技能人才支撑。' }}</p>
+        } @else {
+          <h1 class="hero__title">专业教学资源库</h1>
+          <p class="hero__desc">对接企业需求，应用新技术、创设新场景。增强产业转型升级的技术技能人才支撑。</p>
         }
-      </nav>
+
+        <!-- 分区导航 -->
+        <nav class="hero-nav" aria-label="页面分区导航">
+          @for (card of navCards; track card.key) {
+            <button type="button" class="hero-nav__item" (click)="scrollToSection(card.targetId)">
+              <span class="hero-nav__icon">{{ card.icon }}</span>
+              <span class="hero-nav__body">
+                <span class="hero-nav__title">{{ card.title }}</span>
+                <span class="hero-nav__desc">{{ card.desc }}</span>
+              </span>
+              <span class="hero-nav__arrow" aria-hidden="true">→</span>
+            </button>
+          }
+        </nav>
+      </div>
     </section>
 
-    <!-- ═══════ 资源库简介 ═══════ -->
+    <!-- ═══════ 资源库简介 — 介绍与数据统计同一容器 ═══════ -->
     <section id="section-intro" class="section intro-section">
-      <div class="intro-bg-layer" [style.background-image]="'url(assets/images/edu-bg_001.jpg)'"></div>
       <div class="section-inner">
-        <h2 class="section-heading">资源库简介</h2>
-        <div class="intro-body">
-          <div class="intro-text">
-            @if (tenantInfo(); as info) {
-              <p>{{ info.description || '基于国家实施扩大内需战略的规划背景，围绕品牌强国、消费提振、构建双循环新发展格局等政策举措，瞄准数字经济下新型消费模式对营销人才的新需求，引入数字技术、AI智能技术，对接国家专业教学标准，重构营销领域新思维、新场景、新技能图谱。' }}</p>
-            }
-          </div>
-          <div class="intro-stats">
+        <div class="panel">
+          <div class="panel__head">
+            <h2 class="section-heading">资源库简介</h2>
             @if (portalData(); as pd) {
               @if (pd.stats) {
-                <div class="stat-box"><span class="stat-num">{{ pd.stats.courseCount || 0 }}</span><span class="stat-label">课程数</span></div>
-                <div class="stat-box"><span class="stat-num">{{ pd.stats.resourceCount || 0 }}</span><span class="stat-label">素材数</span></div>
-                <div class="stat-box"><span class="stat-num">{{ pd.stats.microMajorCount || 0 }}</span><span class="stat-label">微专业</span></div>
-                <div class="stat-box"><span class="stat-num">{{ pd.stats.studentCount || 0 }}</span><span class="stat-label">学员数</span></div>
+                <div class="panel__meta">
+                  <span>课程 <strong>{{ pd.stats.courseCount || 0 }}</strong> 门</span>
+                  <i></i>
+                  <span>素材 <strong>{{ pd.stats.resourceCount || 0 }}</strong> 份</span>
+                  <i></i>
+                  <span>微专业 <strong>{{ pd.stats.microMajorCount || 0 }}</strong> 个</span>
+                  <i></i>
+                  <span>学员 <strong>{{ pd.stats.studentCount || 0 }}</strong> 人</span>
+                </div>
               }
+            }
+          </div>
+          <div class="panel__body">
+            @if (tenantInfo(); as info) {
+              <p class="panel__text">{{ info.description || '基于国家实施扩大内需战略的规划背景，围绕品牌强国、消费提振、构建双循环新发展格局等政策举措，瞄准数字经济下新型消费模式对营销人才的新需求，引入数字技术、AI智能技术，对接国家专业教学标准，重构营销领域新思维、新场景、新技能图谱。' }}</p>
             }
           </div>
         </div>
@@ -114,7 +95,11 @@
       @if (info.talentTrainingPlan || info.professionalTeachingStandards) {
         <section id="section-construction" class="section construction-section">
           <div class="section-inner">
-            <h2 class="section-heading">专业建设</h2>
+            <div class="panel">
+              <div class="panel__head">
+                <h2 class="section-heading">专业建设</h2>
+              </div>
+              <div class="panel__body">
             <div class="construction-grid">
               @if (info.talentTrainingPlan) {
                 <article class="construct-card">
@@ -135,6 +120,8 @@
                 </article>
               }
             </div>
+              </div>
+            </div>
           </div>
         </section>
       }
@@ -145,7 +132,12 @@
       @if (info.specialProjectList && info.specialProjectList.length > 0) {
         <section class="section project-section">
           <div class="section-inner">
-            <h2 class="section-heading">特色项目</h2>
+            <div class="panel">
+              <div class="panel__head">
+                <h2 class="section-heading">特色项目</h2>
+                <div class="panel__meta"><span>共 <strong>{{ info.specialProjectList.length }}</strong> 项</span></div>
+              </div>
+              <div class="panel__body">
             <div class="project-grid">
               @for (p of info.specialProjectList; track p.title) {
                 <article class="project-card">
@@ -155,34 +147,38 @@
                 </article>
               }
             </div>
+              </div>
+            </div>
           </div>
         </section>
       }
     }
 
-    <!-- ═══════ 学历课程体系 — 两列 + 点击预览 ═══════ -->
+    <!-- ═══════ 学历课程体系 — 点击预览 ═══════ -->
     @if (portalData(); as pd) {
       @if (pd.featuredCourses && pd.featuredCourses.length > 0) {
         <section id="section-courses" class="section course-section">
           <div class="section-inner">
-            <header class="course-section__head">
-              <div class="course-section__title-wrap">
-                <h2 class="section-heading">学历课程体系</h2>
-                <p class="course-section__sub">点击卡片查看课程详情与章节大纲</p>
-              </div>
-              <div class="course-categories">
-                <button type="button" class="cat-tag" [class.active]="difficultyFilter() === 0"
-                        (click)="setDifficultyFilter(0)">
-                  全部 ({{ getDifficultyCount(0) }})
-                </button>
-                @for (opt of difficultyOptions; track opt.value) {
-                  <button type="button" class="cat-tag" [class.active]="difficultyFilter() === opt.value"
-                          (click)="setDifficultyFilter(opt.value)">
-                    {{ opt.label }} ({{ getDifficultyCount(opt.value) }})
+            <div class="panel">
+              <div class="panel__head">
+                <div class="panel__title-wrap">
+                  <h2 class="section-heading">学历课程体系</h2>
+                  <p class="panel__sub">点击卡片查看课程详情与章节大纲</p>
+                </div>
+                <div class="course-categories">
+                  <button type="button" class="cat-tag" [class.active]="difficultyFilter() === 0"
+                          (click)="setDifficultyFilter(0)">
+                    全部 ({{ getDifficultyCount(0) }})
                   </button>
-                }
+                  @for (opt of difficultyOptions; track opt.value) {
+                    <button type="button" class="cat-tag" [class.active]="difficultyFilter() === opt.value"
+                            (click)="setDifficultyFilter(opt.value)">
+                      {{ opt.label }} ({{ getDifficultyCount(opt.value) }})
+                    </button>
+                  }
+                </div>
               </div>
-            </header>
+              <div class="panel__body">
 
             @if (filteredCourses().length === 0) {
               <div class="course-empty">该难度暂无课程</div>
@@ -192,8 +188,7 @@
                 <article class="course-card" (click)="handleCourseClick(c)" tabindex="0"
                          (keydown.enter)="handleCourseClick(c)" role="button"
                          [attr.aria-label]="(isEnrolled(c.id) ? '进入课程：' : '预览课程：') + (c.title || '')">
-                  <div class="course-cover"
-                       [style.background]="'linear-gradient(135deg, ' + courseColors[i % courseColors.length] + ' 0%, ' + courseColors[(i + 1) % courseColors.length] + ' 100%)'">
+                  <div class="course-cover">
                     @if (isEnrolled(c.id)) {
                       <span class="course-enrolled-badge">
                         <span nz-icon nzType="check-circle" nzTheme="fill"></span>已选课
@@ -241,43 +236,37 @@
                 }
               </div>
             }
+              </div>
+            </div>
           </div>
         </section>
       }
     }
 
-    <!-- ═══════ 知识图谱 — 紧凑统计条 + 图例 ═══════ -->
+    <!-- ═══════ 知识图谱 ═══════ -->
     @if (knowledgeGraph(); as kg) {
       <section id="section-graph" class="section graph-section">
         <div class="section-inner">
-          <h2 class="section-heading">知识图谱</h2>
-
-          <div class="graph-stats">
-            <div class="graph-stat">
-              <span class="graph-stat__num">{{ (kg.allNodes || []).length }}</span>
-              <span class="graph-stat__label">总节点</span>
+          <div class="panel">
+            <div class="panel__head">
+              <h2 class="section-heading">知识图谱</h2>
+              <div class="panel__meta">
+                <span>共 <strong>{{ (kg.allNodes || []).length }}</strong> 个节点</span>
+                <i></i>
+                <span><span class="legend-dot" style="background:#3730a3"></span>资源库 1</span>
+                <i></i>
+                <span><span class="legend-dot" style="background:#0d9488"></span>专业 <strong>{{ getMajorCount(kg) }}</strong></span>
+                <i></i>
+                <span><span class="legend-dot" style="background:#b45309"></span>课程 <strong>{{ getCourseCount(kg) }}</strong></span>
+                <i></i>
+                <span>关系 <strong>{{ getRelationCount(kg) }}</strong> 条</span>
+              </div>
             </div>
-            <div class="graph-stat">
-              <span class="graph-stat__num">{{ getMajorCount(kg) }}</span>
-              <span class="graph-stat__label">专业</span>
-            </div>
-            <div class="graph-stat">
-              <span class="graph-stat__num">{{ getCourseCount(kg) }}</span>
-              <span class="graph-stat__label">课程</span>
-            </div>
-            <div class="graph-stat">
-              <span class="graph-stat__num">{{ getRelationCount(kg) }}</span>
-              <span class="graph-stat__label">关系</span>
-            </div>
-            <div class="graph-stat graph-stat--legend">
-              <span class="legend-group"><span class="legend-dot" style="background:#e74c3c"></span><span>资源库</span></span>
-              <span class="legend-group"><span class="legend-dot" style="background:#2980b9"></span><span>专业</span></span>
-              <span class="legend-group"><span class="legend-dot" style="background:#27ae60"></span><span>课程</span></span>
+            <div class="panel__body">
+              <div class="graph-chart" id="tenant-graph-chart"></div>
+              <p class="graph-hint">拖动节点调整布局 · 滚轮缩放 · 点击节点高亮关联 · 悬停查看详情</p>
             </div>
           </div>
-
-          <div class="graph-chart" id="tenant-graph-chart"></div>
-          <p class="graph-hint">提示：拖动节点调整布局，滚轮缩放，悬停查看节点详情。</p>
         </div>
       </section>
     }
@@ -395,15 +384,40 @@
   </ng-container>
 </nz-drawer>
 
-<!-- ═══════════════════ FOOTER ═══════════════════ -->
-<footer class="app-footer">
-  <div class="footer-inner">
-    <div class="footer-links">
-      <a href="#">关于我们</a>
-      <a href="#">帮助中心</a>
-      <a href="#">隐私政策</a>
-      <a href="#">联系客服</a>
+<!-- ═══════════════════ FOOTER — 与首页统一 ═══════════════════ -->
+<footer class="footer">
+  <div class="footer__inner">
+    <div class="footer__brand">
+      <div class="footer__brand-top">
+        <span class="brand__mark brand__mark--lg">易</span>
+        <div>
+          <strong>易课通 · 资源库</strong>
+          <p>教学资源库</p>
+        </div>
+      </div>
+      <p class="footer__tagline">汇聚课程、资源、实训，服务院校教学</p>
     </div>
-    <div class="footer-copyright">&copy; 2026 易课通在线教学资源库 · 让学习更简单</div>
+    <div class="footer__grid">
+      <div class="footer__col">
+        <h5>学习中心</h5>
+        <a routerLink="/student/courses">课程中心</a>
+        <a routerLink="/student/resources">资源库</a>
+        <a routerLink="/student/micro-majors">微专业</a>
+        <a routerLink="/student/practicums">实训项目</a>
+      </div>
+      <div class="footer__col">
+        <h5>智能应用</h5>
+        <a routerLink="/ai/chat">AI 助手</a>
+        <a routerLink="/ai/lesson-plan">智能备课</a>
+        <a routerLink="/search">智能搜索</a>
+      </div>
+      <div class="footer__col">
+        <h5>关于</h5>
+        <a routerLink="/">平台介绍</a>
+        <a routerLink="/">帮助中心</a>
+        <a routerLink="/">联系我们</a>
+      </div>
+    </div>
   </div>
+  <div class="footer__copy">&copy; 2026 易课通 · 资源库</div>
 </footer>
