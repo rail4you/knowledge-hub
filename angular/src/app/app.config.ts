@@ -116,6 +116,7 @@ import {
   PlayCircleFill,
   LinkOutline,
   UserAddOutline,
+  MailOutline,
   // 课程详情 难度 / 统计 图标
   ThunderboltFill,
   FireOutline,
@@ -244,6 +245,7 @@ const icons = [
   PlayCircleFill,
   LinkOutline,
   UserAddOutline,
+  MailOutline,
   // 课程详情 难度 / 统计 图标
   ThunderboltFill,
   FireOutline,

@@ -1,174 +1,223 @@
-@if (loading()) {
-  <div class="detail-page"><div class="loading"><nz-spin nzSimple nzSize="large"></nz-spin></div></div>
-} @else if (job(); as item) {
-  <div class="detail-page">
+<div class="job-detail">
+  <!-- 顶部面包屑导航（与资源详情页同步） -->
+  <div class="detail-breadcrumb">
+    <button class="back-btn" routerLink="/student/employment/jobs">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+      <span>返回岗位列表</span>
+    </button>
+    <nav class="breadcrumb" aria-label="breadcrumb">
+      <a routerLink="/student">首页</a>
+      <span class="breadcrumb__sep">/</span>
+      <a routerLink="/student/employment/jobs">就业大厅</a>
+      <span class="breadcrumb__sep">/</span>
+      <span class="breadcrumb__current">岗位详情</span>
+    </nav>
+  </div>
 
-    <!-- ========== BREADCRUMB ========== -->
-    <div class="detail-breadcrumb">
-      <button class="back-btn" routerLink="/student/employment/jobs">
-        <span nz-icon nzType="arrow-left" nzTheme="outline"></span>返回岗位列表
-      </button>
-      <nav class="breadcrumb-nav">
-        <a routerLink="/student">首页</a><span class="breadcrumb-nav__sep">/</span>
-        <a routerLink="/student/employment/jobs">就业大厅</a><span class="breadcrumb-nav__sep">/</span>
-        <span class="breadcrumb-nav__cur">岗位详情</span>
-      </nav>
+  @if (loading()) {
+    <div class="loading-state">
+      <nz-spin nzTip="正在加载岗位详情..." nzSize="large"></nz-spin>
     </div>
-
-    <!-- ========== HERO CARD ========== -->
-    <section class="hero-card" [style.background]="coverGradient(item)">
-      <div class="hero-card__pattern" aria-hidden="true">
-        <span class="pc pc--1"></span><span class="pc pc--2"></span><span class="pc pc--3"></span>
-        <span class="pl pl--1"></span><span class="pl pl--2"></span>
-      </div>
-      <div class="hero-card__overlay"></div>
-      <div class="hero-card__inner">
-        <div class="hero-card__left">
-          <div class="hero-card__badges">
-            <span class="hero-badge hero-badge--type" [style.background]="getTypeColor(item.jobType)">
-              {{ getTypeLabel(item.jobType) }}
-            </span>
-            @if (item.industry) { <span class="hero-badge hero-badge--industry">{{ item.industry }}</span> }
-            @if (item.hasApplied) {
-              <span class="hero-badge hero-badge--status" [style.background]="getStatusColor(item.applicationStatus!)">
-                <span nz-icon nzType="check-circle" nzTheme="fill"></span>{{ getStatusLabel(item.applicationStatus!) }}
-              </span>
-            }
+  } @else if (job(); as item) {
+    <!-- ═══════════ 头部：视觉封面 + 标题/统计 ═══════════ -->
+    <section class="detail-head">
+      <!-- 左：岗位视觉 -->
+      <div class="detail-media">
+        <div class="detail-media__stage" [ngClass]="'media-type-' + (item.jobType ?? 0)">
+          <div class="media-decor" aria-hidden="true">
+            <span class="md md--ring"></span>
+            <span class="md md--dot1"></span>
+            <span class="md md--dot2"></span>
+            <span class="md md--line1"></span>
+            <span class="md md--line2"></span>
           </div>
-          <h1 class="hero-card__title">{{ item.title }}</h1>
-          <p class="hero-card__company"><span nz-icon nzType="bank" nzTheme="outline"></span>{{ item.companyName }}</p>
-          <div class="hero-card__stats">
-            <div class="stat-blk"><span class="stat-blk__val">{{ item.viewCount || 0 }}</span><span class="stat-blk__lbl">浏览</span></div>
-            <span class="stat-blk-div"></span>
-            <div class="stat-blk"><span class="stat-blk__val">{{ item.applicationCount || 0 }}</span><span class="stat-blk__lbl">投递</span></div>
-            <span class="stat-blk-div"></span>
-            <div class="stat-blk"><span class="stat-blk__val">{{ item.recruitmentCount }}</span><span class="stat-blk__lbl">招聘</span></div>
+          <div class="media-center">
+            <span class="media-logo">{{ item.companyName }}</span>
+            <span class="media-icon"><span nz-icon [nzType]="getTypeIcon(item.jobType)" nzTheme="outline"></span>{{ getTypeLabel(item.jobType) }}@if (item.industry) { · {{ item.industry }}}</span>
+            <div class="media-salary">
+              <span class="media-salary__val">{{ item.salaryRange || '薪资面议' }}</span>
+              <span class="media-salary__lbl">@if (item.recruitmentCount) {招 {{ item.recruitmentCount }} 人 ·} {{ item.location || '地点待定' }}</span>
+            </div>
           </div>
         </div>
-        <div class="hero-card__right">
-          @if (item.hasApplied) {
-            <button class="hero-card__action hero-card__action--ghost" routerLink="/student/employment/my-applications">
-              <span nz-icon nzType="file-text" nzTheme="outline"></span>我的投递
-            </button>
-          } @else {
-            <button class="hero-card__action hero-card__action--primary" (click)="apply()" [disabled]="submitting()">
-              <span nz-icon nzType="send" nzTheme="outline"></span>{{ submitting()?'投递中…':'立即投递' }}
-            </button>
+      </div>
+
+      <!-- 右：标题 + 统计（内容整合） -->
+      <div class="detail-info">
+        <div class="detail-info__kicker">
+          <span class="kicker-chip kicker-chip--type" [style.background]="getTypeColor(item.jobType) + '1a'" [style.color]="getTypeColor(item.jobType)">
+            <span nz-icon nzType="idcard" nzTheme="outline"></span>
+            {{ getTypeLabel(item.jobType) }}
+          </span>
+          @if (item.industry) {
+            <span class="kicker-chip">
+              <span nz-icon nzType="bank" nzTheme="outline"></span>
+              {{ item.industry }}
+            </span>
+          }
+          @if (item.educationRequirement) {
+            <span class="kicker-chip">
+              <span nz-icon nzType="read" nzTheme="outline"></span>
+              {{ item.educationRequirement }}
+            </span>
+          }
+          @if (item.location) {
+            <span class="kicker-chip">
+              <span nz-icon nzType="environment" nzTheme="outline"></span>
+              {{ item.location }}
+            </span>
           }
         </div>
+
+        <h1 class="detail-info__title">{{ item.title }}</h1>
+        <p class="detail-info__company">
+          <span nz-icon nzType="bank" nzTheme="outline"></span>
+          <span class="company-name">{{ item.companyName }}</span>
+          @if (item.address && item.address !== item.location) {
+            <span class="company-addr">· {{ item.address }}</span>
+          }
+        </p>
+
+        @if (item.summary) {
+          <p class="detail-info__desc">{{ item.summary }}</p>
+        } @else {
+          <p class="detail-info__desc detail-info__desc--empty">该岗位暂无一句话简介，查看下方完整岗位描述</p>
+        }
+
+        <!-- 数据统计 -->
+        <div class="detail-info__stats">
+          <span class="info-stat">
+            <strong>{{ item.viewCount || 0 | number }}</strong>
+            <span>浏览次数</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ item.applicationCount || 0 | number }}</strong>
+            <span>投递人数</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ item.recruitmentCount || 0 }}</strong>
+            <span>招聘人数</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat" [class.info-stat--warn]="isExpired(item)">
+            <strong>{{ item.deadline ? (item.deadline | date:'MM-dd') : '长期' }}</strong>
+            <span>截止日期</span>
+          </span>
+        </div>
+
+        <ul class="detail-info__list">
+          <li>
+            <span class="info-row__label">薪资待遇</span>
+            <span class="info-row__value info-row__value--salary">{{ item.salaryRange || '面议' }}</span>
+          </li>
+          <li>
+            <span class="info-row__label">学历要求</span>
+            <span class="info-row__value">{{ item.educationRequirement || '不限' }}</span>
+          </li>
+          <li>
+            <span class="info-row__label">工作地点</span>
+            <span class="info-row__value">{{ item.location || '待定' }}@if (item.address && item.address !== item.location) { · {{ item.address }}}</span>
+          </li>
+          <li>
+            <span class="info-row__label">发布 / 截止</span>
+            <span class="info-row__value">
+              {{ item.publishedAt ? (item.publishedAt | date:'yyyy-MM-dd') : (item.creationTime | date:'yyyy-MM-dd') }} 发布
+              <span class="deadline-tag" [class.deadline-tag--over]="isExpired(item)">{{ deadlineHint(item) }}</span>
+            </span>
+          </li>
+        </ul>
       </div>
     </section>
 
-    <!-- ========== FULL-WIDTH STATUS FLOW ========== -->
-    @if (item.hasApplied && stage() > 0) {
-      <div class="flow-bar">
-        @for (s of [{n:1,l:'已投递',i:'send'},{n:2,l:'面试安排',i:'calendar'},{n:3,l:'面试完成',i:'check-circle'},{n:4,l:'录用结果',i:'trophy'}]; track s.n) {
-          <div class="flow-step" [class.passed]="stage() > s.n" [class.current]="stage() === s.n">
-            <span class="flow-dot">
-              @if (stage() > s.n) { <span nz-icon nzType="check" nzTheme="outline"></span> }
-              @else { {{ s.n }} }
-            </span>
-            <span class="flow-label">{{ s.l }}</span>
-          </div>
-          @if (s.n < 4) { <span class="flow-line" [class.on]="stage() > s.n"></span> }
-        }
-      </div>
+    <!-- ═══════════ 求职进度时间轴（保留） ═══════════ -->
+    @if (item.hasApplied && stage() !== 0) {
+      <section class="flow-card">
+        <header class="section-header">
+          <h2>我的求职进度</h2>
+          <span class="flow-now">
+            <span class="status-dot" [style.background]="getStatusColor(item.applicationStatus!)"></span>
+            当前：{{ getStatusLabel(item.applicationStatus!) }}
+          </span>
+        </header>
+        <div class="flow-steps">
+          @for (s of [{n:1,l:'已投递',d:'简历已送达企业',i:'send'},{n:2,l:'面试安排',d:'等待/查看面试通知',i:'calendar'},{n:3,l:'面试完成',d:'面试结果确认中',i:'check-circle'},{n:4,l:'录用结果',d:'Offer / 未通过',i:'trophy'}]; track s.n) {
+            <div class="flow-step" [class.passed]="stage() > s.n" [class.current]="stage() === s.n">
+              <span class="flow-dot">
+                @if (stage() > s.n) { <span nz-icon nzType="check" nzTheme="outline"></span> }
+                @else { <span nz-icon [nzType]="s.i" nzTheme="outline"></span> }
+              </span>
+              <div class="flow-text">
+                <b>{{ s.l }}</b>
+                <span>{{ s.d }}</span>
+              </div>
+            </div>
+            @if (s.n < 4) { <span class="flow-line" [class.on]="stage() > s.n"></span> }
+          }
+        </div>
+      </section>
     }
 
-    <!-- ========== MAIN CONTAINER ========== -->
-    <div class="main-container">
-      <!-- 面试信息 -->
-      @if (item.hasApplied && interview(); as iv) {
-        <div class="block block--interview" [class.block--done]="item.applicationStatus === appStatus.InterviewCompleted">
-          <div class="block__head block__head--interview">
-            <span class="block__head-icon"><span nz-icon nzType="calendar" nzTheme="outline"></span></span>
-            <span class="block__head-title">面试安排</span>
-            @if (item.applicationStatus === appStatus.InterviewCompleted) {
-              <nz-tag nzColor="purple">已完成</nz-tag>
-            } @else { <nz-tag nzColor="cyan">等待中</nz-tag> }
-          </div>
-          <div class="block__body">
-            <div class="iv-grid">
-              <div class="iv-f"><span class="iv-k">面试时间</span><span class="iv-v iv-v--t">{{ iv.scheduledAt | date:'yyyy年MM月dd日 HH:mm' }}</span></div>
-              <div class="iv-f"><span class="iv-k">面试官</span><span class="iv-v">{{ iv.interviewerName || '待定' }}</span></div>
-              @if (iv.interviewerPhone) { <div class="iv-f"><span class="iv-k">联系电话</span><span class="iv-v">{{ iv.interviewerPhone }}</span></div> }
-              @if (iv.location) { <div class="iv-f"><span class="iv-k">面试地点</span><span class="iv-v">{{ iv.location }}</span></div> }
-              @if (iv.meetingUrl) { <div class="iv-f"><span class="iv-k">视频会议</span><a class="iv-v iv-link" [href]="iv.meetingUrl" target="_blank"><span nz-icon nzType="video-camera" nzTheme="outline"></span>加入会议</a></div> }
-              @if (iv.note) { <div class="iv-f iv-f--w"><span class="iv-k">备注</span><span class="iv-v">{{ iv.note }}</span></div> }
-            </div>
+    @if (item.hasApplied && interview(); as iv) {
+      <div class="detail-main">
+        <!-- 面试时间线（与进度联动，字体排版优化） -->
+          <section class="info-section interview-section" [class.interview-section--done]="item.applicationStatus === appStatus.InterviewCompleted">
+            <header class="section-header">
+              <h2>面试安排</h2>
+              @if (item.applicationStatus === appStatus.InterviewCompleted) {
+                <span class="pill pill--done"><span nz-icon nzType="check-circle" nzTheme="fill"></span>已完成</span>
+              } @else {
+                <span class="pill pill--wait"><span class="pulse"></span>等待面试</span>
+              }
+            </header>
+
+            <dl class="iv-list">
+              <div class="iv-row">
+                <dt><span nz-icon nzType="clock-circle" nzTheme="outline"></span>面试时间</dt>
+                <dd class="iv-row__time">{{ iv.scheduledAt | date:'yyyy年MM月dd日 HH:mm' }}</dd>
+              </div>
+              <div class="iv-row">
+                <dt><span nz-icon nzType="user" nzTheme="outline"></span>面试官</dt>
+                <dd>{{ iv.interviewerName || '待定' }}</dd>
+              </div>
+              @if (iv.interviewerPhone) {
+                <div class="iv-row">
+                  <dt><span nz-icon nzType="phone" nzTheme="outline"></span>联系电话</dt>
+                  <dd><a class="iv-tel" [href]="'tel:' + iv.interviewerPhone">{{ iv.interviewerPhone }}</a></dd>
+                </div>
+              }
+              @if (item.contactEmail) {
+                <div class="iv-row">
+                  <dt><span nz-icon nzType="mail" nzTheme="outline"></span>联系邮箱</dt>
+                  <dd><a class="iv-tel" [href]="'mailto:' + item.contactEmail">{{ item.contactEmail }}</a></dd>
+                </div>
+              }
+              @if (iv.location) {
+                <div class="iv-row">
+                  <dt><span nz-icon nzType="environment" nzTheme="outline"></span>面试地点</dt>
+                  <dd>{{ iv.location }}</dd>
+                </div>
+              }
+              @if (iv.note) {
+                <div class="iv-row iv-row--full">
+                  <dt><span nz-icon nzType="message" nzTheme="outline"></span>面试须知</dt>
+                  <dd>{{ iv.note }}</dd>
+                </div>
+              }
+            </dl>
+
             @if (iv.completionMessage) {
               <div class="iv-msg">
                 <span class="iv-msg__icon"><span nz-icon nzType="check-circle" nzTheme="fill"></span></span>
-                <div><b>面试已完成 · 后续提示</b><p>{{ iv.completionMessage }}</p></div>
+                <div class="iv-msg__body">
+                  <b>面试已完成 · 后续提示</b>
+                  <p>{{ iv.completionMessage }}</p>
+                </div>
               </div>
             }
-          </div>
-        </div>
-      }
-
-      <!-- 岗位描述 -->
-      <div class="block">
-        <h3 class="block__title"><span class="block__bar"></span>岗位描述</h3>
-        @if (item.summary) { <p class="summary">{{ item.summary }}</p> }
-        <p class="desc">{{ item.description }}</p>
+          </section>
       </div>
-
-      <!-- 技能 & 福利 并排 -->
-      <div class="row-2">
-        @if (getSkillTags(item).length) {
-          <div class="block block--half">
-            <h3 class="block__title"><span class="block__bar"></span>技能要求</h3>
-            <div class="tags">@for (t of getSkillTags(item); track t) {<span class="tag">{{ t }}</span>}</div>
-          </div>
-        }
-        @if (getBenefitItems(item).length) {
-          <div class="block block--half">
-            <h3 class="block__title"><span class="block__bar"></span>福利待遇</h3>
-            <ul class="bens">@for (b of getBenefitItems(item); track b) {<li><span nz-icon nzType="check" nzTheme="outline"></span>{{ b }}</li>}</ul>
-          </div>
-        }
-      </div>
-
-      <!-- 联系方式 + 投递面板 并排 -->
-      <div class="row-2">
-        <div class="block block--half">
-          <h3 class="block__title"><span class="block__bar"></span>联系方式</h3>
-          <div class="contact-grid">
-            <div class="cr"><span>联系人</span><b>{{ item.contactName || '-' }}</b></div>
-            <div class="cr"><span>电话</span><b>{{ item.contactPhone || '-' }}</b></div>
-            <div class="cr"><span>邮箱</span><b>{{ item.contactEmail || '-' }}</b></div>
-            <div class="cr"><span>地址</span><b>{{ item.address || item.location || '-' }}</b></div>
-          </div>
-        </div>
-
-        <!-- 投递面板 -->
-        <div class="block block--half block--apply">
-          <h3 class="block__title"><span class="block__bar"></span>投递岗位</h3>
-          @if (item.hasApplied) {
-            <div class="applied-badge">
-              <span class="applied-badge__icon" [style.background]="getStatusColor(item.applicationStatus!)"><span nz-icon nzType="check-circle" nzTheme="fill"></span></span>
-              <div>
-                <div class="applied-badge__text">{{ getStatusLabel(item.applicationStatus!) }}</div>
-                <div class="applied-badge__sub">请关注面试安排通知</div>
-              </div>
-            </div>
-          } @else if (resumes().length === 0) {
-            <div class="no-resume"><span nz-icon nzType="info-circle" nzTheme="outline"></span>还没有简历<button class="link-btn" (click)="goMyResumes()">前往创建</button></div>
-          } @else {
-            <div class="form-block"><label>选择简历</label>
-              <div class="r-list">@for (r of resumes(); track r.id) {
-                <label class="r-opt" [class.on]="selectedResumeId()===r.id">
-                  <input type="radio" name="resume" [value]="r.id" [ngModel]="selectedResumeId()" (ngModelChange)="selectedResumeId.set($event)"/><span class="r-opt__dot"></span>
-                  <div><div class="r-opt__t">{{ r.title }} <small>v{{ r.versionNo }}</small> @if(r.isDefault){<span class="def">默认</span>}</div><div class="r-opt__s">{{ r.fullName }} @if(r.major){· {{ r.major }}} @if(r.grade){· {{ r.grade }}}</div></div>
-                </label>
-              }</div>
-            </div>
-            <div class="form-block"><label>求职说明 <small>（可选）</small></label><textarea rows="3" [ngModel]="coverLetter()" (ngModelChange)="coverLetter.set($event)" placeholder="可补充优势、期望到岗时间等" maxlength="500"></textarea><div class="cnt">{{ coverLetter().length }}/500</div></div>
-            <button class="apply-btn" (click)="apply()" [disabled]="submitting()||!selectedResumeId()"><span nz-icon nzType="send" nzTheme="outline"></span>{{ submitting()?'投递中…':'立即投递' }}</button>
-          }
-        </div>
-      </div>
-    </div>
-
-  </div>
-}
+    }
+  }
+</div>

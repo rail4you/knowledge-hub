@@ -4,7 +4,6 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzTagModule } from 'ng-zorro-antd/tag';
 import {
   EmploymentOutcomeDto,
   EmploymentOutcomeStatus,
@@ -17,7 +16,7 @@ import { StudentHeroComponent } from '../shared/student-hero/student-hero.compon
   standalone: true,
   imports: [
     CommonModule, DatePipe,
-    NzIconModule, NzSpinModule, NzEmptyModule, NzTagModule,
+    NzIconModule, NzSpinModule, NzEmptyModule,
     StudentHeroComponent,
   ],
   templateUrl: './student-my-outcomes.component.html',
@@ -49,9 +48,9 @@ export class StudentMyOutcomesComponent implements OnInit {
     const employed = items.filter(x => x.status === EmploymentOutcomeStatus.Employed).length;
     return [
       { label: '总记录数', value: items.length, suffix: '条', icon: 'compass', color: '#1e6ce8' },
-      { label: '已签约', value: signed, suffix: '条', icon: 'file-protect', color: '#10b981' },
-      { label: '已就业', value: employed, suffix: '条', icon: 'rocket', color: '#0891b2' },
-      { label: '主要去向', value: this.primaryCount(), suffix: '条', icon: 'star', color: '#f59e0b' },
+      { label: '已签约', value: signed, suffix: '条', icon: 'safety-certificate', color: '#2563eb' },
+      { label: '已就业', value: employed, suffix: '条', icon: 'trophy', color: '#1d4ed8' },
+      { label: '主要去向', value: this.primaryCount(), suffix: '条', icon: 'star', color: '#0ea5e9' },
     ];
   });
 
@@ -77,15 +76,22 @@ export class StudentMyOutcomesComponent implements OnInit {
     return this.statusesArr.find(x => x.value === s)?.label ?? '未知';
   }
 
-  statusColor(s: EmploymentOutcomeStatus): string {
+  /** 岗位行完整文本（长文本截断时供悬停显示全部） */
+  jobFullText(item: EmploymentOutcomeDto): string {
+    const t = item.jobTitle || '未填写岗位';
+    return item.employmentType ? `${t} · ${item.employmentType}` : t;
+  }
+
+  /** 去向状态对应的封面图标（均为已注册图标） */
+  statusIcon(s: EmploymentOutcomeStatus): string {
     switch (s) {
-      case EmploymentOutcomeStatus.Intention: return 'blue';
-      case EmploymentOutcomeStatus.Signed: return 'cyan';
-      case EmploymentOutcomeStatus.Employed: return 'green';
-      case EmploymentOutcomeStatus.FurtherStudy: return 'purple';
-      case EmploymentOutcomeStatus.Entrepreneurship: return 'gold';
-      case EmploymentOutcomeStatus.Unemployed: return 'default';
-      default: return 'default';
+      case EmploymentOutcomeStatus.Intention: return 'compass';
+      case EmploymentOutcomeStatus.Signed: return 'safety-certificate';
+      case EmploymentOutcomeStatus.Employed: return 'bank';
+      case EmploymentOutcomeStatus.FurtherStudy: return 'read';
+      case EmploymentOutcomeStatus.Entrepreneurship: return 'bulb';
+      case EmploymentOutcomeStatus.Unemployed: return 'clock-circle';
+      default: return 'bank';
     }
   }
 }

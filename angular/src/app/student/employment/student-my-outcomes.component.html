@@ -21,32 +21,65 @@
       <p>就业去向由学校就业指导老师统一录入，如有疑问请联系就业指导中心</p>
     </div>
   } @else {
-    <div class="outcome-list">
+    <div class="outcome-grid">
       @for (item of items(); track item.id) {
-        <article class="outcome-card" [class.is-primary]="item.isPrimary">
-          @if (item.isPrimary) { <div class="outcome-card__badge">主要去向</div> }
-          <div class="outcome-card__icon">
-            <span nz-icon nzType="bank" nzTheme="outline"></span>
+        <article class="outcome-card" [ngClass]="'st-' + item.status">
+          <div class="outcome-card__cover">
+            <span class="cover-icon">
+              <span nz-icon [nzType]="statusIcon(item.status)" nzTheme="outline"></span>
+            </span>
           </div>
+
           <div class="outcome-card__body">
-            <div class="outcome-card__head">
-              <h3 class="outcome-card__title">{{ item.employerName }}</h3>
-              <nz-tag [nzColor]="statusColor(item.status)">{{ statusLabel(item.status) }}</nz-tag>
+            <div class="outcome-card__top">
+              <span class="status-chip">{{ statusLabel(item.status) }}</span>
+              @if (item.isPrimary) {
+                <span class="primary-inline">
+                  <span nz-icon nzType="star" nzTheme="fill"></span>
+                  主要去向
+                </span>
+              }
             </div>
-            <p class="outcome-card__job">
+
+            <h3 class="outcome-card__title" [title]="item.employerName">
+              {{ item.employerName }}
+            </h3>
+
+            <p class="outcome-card__job" [title]="jobFullText(item)">
               <span nz-icon nzType="idcard" nzTheme="outline"></span>
               {{ item.jobTitle || '未填写岗位' }}
               @if (item.employmentType) { <span class="dot">·</span> {{ item.employmentType }} }
             </p>
+
             <div class="outcome-card__meta">
-              @if (item.region) { <span><span nz-icon nzType="environment" nzTheme="outline"></span> {{ item.region }}</span> }
-              @if (item.salaryRange) { <span><span nz-icon nzType="wallet" nzTheme="outline"></span> {{ item.salaryRange }}</span> }
-              @if (item.startDate) { <span><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ item.startDate | date:'yyyy-MM-dd' }} 入职</span> }
+              @if (item.region) {
+                <span class="meta-item">
+                  <span nz-icon nzType="environment" nzTheme="outline"></span>
+                  {{ item.region }}
+                </span>
+              }
+              @if (item.salaryRange) {
+                <span class="meta-item meta-item--salary">
+                  <span nz-icon nzType="wallet" nzTheme="outline"></span>
+                  {{ item.salaryRange }}
+                </span>
+              }
+              @if (item.startDate) {
+                <span class="meta-item">
+                  <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                  {{ item.startDate | date:'yyyy-MM-dd' }}入职
+                </span>
+              }
+              <span class="meta-item">
+                <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                确认 {{ item.confirmedAt | date:'yyyy-MM-dd' }}
+              </span>
             </div>
-            @if (item.remark) { <p class="outcome-card__remark"><span nz-icon nzType="message" nzTheme="outline"></span> {{ item.remark }}</p> }
-            <div class="outcome-card__foot">
-              <span class="outcome-card__time">确认时间 {{ item.confirmedAt | date:'yyyy-MM-dd' }}</span>
-            </div>
+
+            <p class="outcome-card__remark" [class.outcome-card__remark--empty]="!item.remark" [title]="item.remark || ''">
+              <span nz-icon nzType="message" nzTheme="outline"></span>
+              {{ item.remark || '暂无备注说明' }}
+            </p>
           </div>
         </article>
       }

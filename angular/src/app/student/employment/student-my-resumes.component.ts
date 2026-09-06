@@ -38,14 +38,9 @@ export class StudentMyResumesComponent implements OnInit {
   readonly heroStats = computed(() => {
     const items = this.items();
     const def = items.find(x => x.isDefault);
-    const latest = items.length
-      ? items.reduce((a, b) => (new Date(a.creationTime) > new Date(b.creationTime) ? a : b)).creationTime
-      : undefined;
     return [
       { label: '简历总数', value: items.length, suffix: '份', icon: 'file-text', color: '#1e6ce8' },
       { label: '已设默认', value: def ? 1 : 0, suffix: '份', icon: 'star', color: '#f59e0b' },
-      { label: '最近更新', value: items.length > 0 ? this.formatRelativeDate(latest) : '—', suffix: '', icon: 'clock-circle', color: '#10b981' },
-      { label: '本周新增', value: items.filter(x => this.isThisWeek(x.creationTime)).length, suffix: '份', icon: 'rise', color: '#0891b2' },
     ];
   });
 
@@ -271,6 +266,23 @@ export class StudentMyResumesComponent implements OnInit {
     });
   }
 
+  /** 表单当前是否为新选择的文件（尚未保存） */
+  isNewAttachment(): boolean {
+    return !!this.attachmentFile;
+  }
+
+  /** 表单附件显示名：新文件显示文件名，已有附件显示原文件名或占位 */
+  attachmentDisplayName(): string {
+    if (this.form.attachmentFileName) return this.form.attachmentFileName;
+    return this.isNewAttachment() ? '已选择文件' : '已上传附件';
+  }
+
+  /** 表单附件图标：新文件按文件名，已有附件按线上地址判断 */
+  attachmentIcon(): string {
+    const src = this.isNewAttachment() ? this.form.attachmentFileName : this.form.attachmentUrl;
+    return this.getFileIcon(src || '');
+  }
+
   getFileIcon(attachmentUrl?: string): string {
     if (!attachmentUrl) return 'file';
     const ext = attachmentUrl.toLowerCase();
@@ -301,29 +313,5 @@ export class StudentMyResumesComponent implements OnInit {
   getDefaultName(): string {
     const def = this.items().find(x => x.isDefault);
     return def?.title || '（未设置）';
-  }
-
-  /** 相对日期格式（用于 Hero 统计） */
-  formatRelativeDate(value?: string | Date): string {
-    if (!value) return '—';
-    const d = new Date(value);
-    if (isNaN(d.getTime())) return '—';
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const day = 24 * 60 * 60 * 1000;
-    if (diffMs < day) return '今天';
-    if (diffMs < 2 * day) return '昨天';
-    if (diffMs < 7 * day) return `${Math.floor(diffMs / day)} 天前`;
-    return `${d.getMonth() + 1}-${d.getDate()}`;
-  }
-
-  /** 是否在本周内（用于 Hero 统计） */
-  isThisWeek(value?: string | Date): boolean {
-    if (!value) return false;
-    const d = new Date(value);
-    if (isNaN(d.getTime())) return false;
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    return d >= weekAgo && d <= now;
   }
 }

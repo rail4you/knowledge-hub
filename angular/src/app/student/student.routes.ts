@@ -170,12 +170,10 @@ export const STUDENT_ROUTES: Routes = [
             loadComponent: () => import('./employment/student-my-outcomes.component').then(m => m.StudentMyOutcomesComponent),
           },
           {
-            // 关键修复 P1-19：教师端 `/employment/my-guidance`（就业指导）已存在，
-            // 学生端一直没有入口。原 routes 把 guidance 漏掉了，导致学生顶栏即使加了 Tab 也会 404。
-            // 这里直接复用 my-guidance.component（不区分角色），数据由 EmploymentService.GetMyGuidance
-            // 走当前用户过滤。学生看到的是自己被指导的记录。
+            // 学生端就业指导独立页：标题区 + 表格 + 预览/下载弹窗。
+            // 教师端 `/employment/my-guidance` 仍复用 my-guidance.component，不受影响。
             path: 'guidance',
-            loadComponent: () => import('../employment/my-guidance.component').then(m => m.MyGuidanceComponent),
+            loadComponent: () => import('./employment/student-guidance.component').then(m => m.StudentGuidanceComponent),
             data: {
               name: '就业指导',
               icon: 'compass'

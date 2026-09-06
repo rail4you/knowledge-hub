@@ -36,6 +36,7 @@ export class StudentJobDetailComponent implements OnInit {
   readonly submitting = signal(false);
   readonly selectedResumeId = signal('');
   readonly coverLetter = signal('');
+  readonly copyLinkSuccess = signal(false);
   readonly jobTypes = EmploymentJobType;
   readonly appStatus = EmploymentApplicationStatus;
   /** 当前岗位关联的面试记录 */
@@ -96,6 +97,58 @@ export class StudentJobDetailComponent implements OnInit {
   }
 
   goMyResumes(): void { this.router.navigate(['/student/employment/my-resumes']); }
+
+  copyLink(): void {
+    const j = this.job();
+    if (!j?.id) return;
+    const url = `${window.location.origin}/student/employment/jobs/${j.id}`;
+    const done = () => {
+      this.copyLinkSuccess.set(true);
+      this.message.success('链接已复制到剪贴板');
+      setTimeout(() => this.copyLinkSuccess.set(false), 1800);
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(done).catch(() => this.message.error('复制失败，请手动复制'));
+    } else {
+      this.message.error('当前浏览器不支持一键复制');
+    }
+  }
+
+  getCompanyInitial(item: JobPostingDto): string {
+    const n = (item.companyName || item.title || '职').trim();
+    return n ? n.charAt(0) : '职';
+  }
+
+  getTypeIcon(t: EmploymentJobType): string {
+    const m: Record<number, string> = {
+      [EmploymentJobType.FullTime]: 'solution',
+      [EmploymentJobType.Internship]: 'experiment',
+      [EmploymentJobType.PartTime]: 'clock-circle',
+      [EmploymentJobType.Apprenticeship]: 'tool',
+    };
+    return m[t] || 'solution';
+  }
+
+  /** 截止剩余天数：null=未设置，<=0=已截止 */
+  deadlineDays(item: JobPostingDto): number | null {
+    if (!item.deadline) return null;
+    const end = new Date(item.deadline).getTime();
+    if (Number.isNaN(end)) return null;
+    return Math.ceil((end - Date.now()) / 86400000);
+  }
+
+  deadlineHint(item: JobPostingDto): string {
+    const d = this.deadlineDays(item);
+    if (d === null) return '长期有效';
+    if (d < 0) return '已截止';
+    if (d === 0) return '今天截止';
+    return `剩 ${d} 天`;
+  }
+
+  isExpired(item: JobPostingDto): boolean {
+    const d = this.deadlineDays(item);
+    return d !== null && d < 0;
+  }
 
   getStatusLabel(s: EmploymentApplicationStatus): string {
     const m: Record<number, string> = {

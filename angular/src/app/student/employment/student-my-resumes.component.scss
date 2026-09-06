@@ -25,7 +25,7 @@
 /* 顶部动作区 */
 .resumes-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 10px;
   margin-top: -8px;
 }
@@ -49,13 +49,14 @@
   }
   &:hover { border-color: ds.$student-primary; color: ds.$student-primary; }
   &--primary {
-    background: #fff;
-    color: ds.$student-primary;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    background: ds.$student-primary;
+    border-color: transparent;
+    color: #fff;
   }
   &--primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+    background: ds.$student-primary-dark;
+    border-color: transparent;
+    color: #fff;
   }
 }
 
@@ -69,7 +70,7 @@
 .resume-card {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #f0f7ff 0%, #e8f2ff 50%, #f5faff 100%);
+  background: #fff;
   border: 1px solid rgba(30, 108, 232, 0.12);
   border-radius: ds.$student-radius-lg;
   overflow: hidden;
@@ -209,29 +210,6 @@
   color: ds.$student-primary;
   font-size: 11px;
   font-weight: 500;
-}
-
-.attachment {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  padding: 6px 10px;
-  background: rgba(ds.$student-primary, 0.06);
-  border: 1px dashed rgba(ds.$student-primary, 0.3);
-  border-radius: ds.$student-radius;
-  color: ds.$student-primary;
-  font-size: 12px;
-  text-decoration: none;
-  font-weight: 500;
-  align-self: flex-start;
-  transition: all 0.2s ease;
-  span[nz-icon] {
-    font-size: 13px;
-  }
-  &:hover {
-    background: rgba(ds.$student-primary, 0.12);
-  }
 }
 
 .resume-card__actions {
@@ -433,6 +411,28 @@
   color: ds.$student-primary;
   span[nz-icon] {
     font-size: 18px;
+  }
+}
+
+.upload-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: ds.$student-radius;
+  background: ds.$student-primary;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  span[nz-icon] {
+    font-size: 13px;
+  }
+  &:hover {
+    background: ds.$student-primary-dark;
+    color: #fff;
   }
 }
 

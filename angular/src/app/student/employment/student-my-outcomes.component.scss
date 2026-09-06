@@ -51,8 +51,8 @@
     width: 72px;
     height: 72px;
     border-radius: 20px;
-    background: #ecfeff;
-    color: #0e7490;
+    background: #eff6ff;
+    color: ds.$student-primary;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -85,120 +85,188 @@
   &--ghost { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
 }
 
-/* =================== OUTCOME LIST =================== */
-.outcome-list { display: flex; flex-direction: column; gap: 14px; }
+/* =================== OUTCOME GRID（资源卡片布局） =================== */
+.outcome-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+  gap: 18px;
+}
 
 .outcome-card {
-  position: relative;
   display: flex;
-  gap: 16px;
-  padding: 20px 22px;
-  background: #fff;
-  border-radius: ds.$student-radius-lg;
-  box-shadow: ds.$student-shadow-soft;
+  flex-direction: column;
   border: 1px solid ds.$student-border-soft;
-  transition: all 0.2s ease;
+  border-radius: ds.$student-radius-lg;
+  background: #fff;
   overflow: hidden;
+  transition: all 0.25s ease;
 
-  &:hover { border-color: rgba(14, 116, 144, 0.35); box-shadow: 0 8px 22px rgba(15, 23, 42, 0.07); }
+  &:hover {
+    border-color: rgba(ds.$student-primary, 0.4);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+    transform: translateY(-3px);
 
-  &.is-primary { border-color: rgba(14, 116, 144, 0.45); background: linear-gradient(180deg, #f0fdff 0%, #fff 45%); }
+    .cover-icon {
+      transform: scale(1.06) rotate(-2deg);
+    }
+  }
+
+  /* 状态封面：纯色，全蓝系 */
+  &.st-0 .outcome-card__cover { background: #0ea5e9; }  /* 就业意向 - 天蓝 */
+  &.st-1 .outcome-card__cover { background: #2563eb; }  /* 已签约 - 主蓝 */
+  &.st-2 .outcome-card__cover { background: #1e40af; }  /* 已就业 - 深蓝 */
+  &.st-3 .outcome-card__cover { background: #0284c7; }  /* 升学 - 海蓝 */
+  &.st-4 .outcome-card__cover { background: #0369a1; }  /* 创业 - 藏青 */
+  &.st-5 .outcome-card__cover { background: #64748b; }  /* 待就业 - 雾蓝灰 */
 }
 
-.outcome-card__badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 24px;
-  padding: 0 12px;
-  display: flex;
-  align-items: center;
-  border-radius: 0 0 0 12px;
-  background: linear-gradient(135deg, #0e7490 0%, #06b6d4 100%);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.outcome-card__icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: #ecfeff;
-  color: #0e7490;
+.outcome-card__cover {
+  position: relative;
+  height: 150px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  color: #fff;
+  overflow: hidden;
   flex-shrink: 0;
 }
 
-.outcome-card__body { flex: 1; min-width: 0; }
-
-.outcome-card__head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.outcome-card__title { margin: 0; color: ds.$student-text; font-size: 17px; font-weight: 700; }
-
-.outcome-card__job {
-  margin: 0 0 8px;
-  color: ds.$student-text-muted;
-  font-size: 14px;
+.cover-icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.32);
   display: flex;
   align-items: center;
-  gap: 5px;
-  span[nz-icon] { color: #0e7490; }
+  justify-content: center;
+  transition: transform 0.3s ease;
+
+  span[nz-icon] {
+    font-size: 32px;
+    color: #fff;
+  }
+}
+
+.outcome-card__body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.outcome-card__top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.outcome-card.st-0 .status-chip { color: #0284c7; background: rgba(14, 165, 233, 0.12); }
+.outcome-card.st-1 .status-chip { color: #1d4ed8; background: rgba(37, 99, 235, 0.1); }
+.outcome-card.st-2 .status-chip { color: #1e40af; background: rgba(30, 64, 175, 0.1); }
+.outcome-card.st-3 .status-chip { color: #0369a1; background: rgba(2, 132, 199, 0.12); }
+.outcome-card.st-4 .status-chip { color: #075985; background: rgba(3, 105, 161, 0.12); }
+.outcome-card.st-5 .status-chip { color: #475569; background: rgba(100, 116, 139, 0.12); }
+
+.primary-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #d97706;
+
+  span[nz-icon] {
+    font-size: 11px;
+    color: #f59e0b;
+  }
+}
+
+.outcome-card__title {
+  margin: 0;
+  color: ds.$student-text;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: -0.2px;
+  @include ds.line-clamp(2);
+  min-height: 44px;
+}
+
+.outcome-card__job {
+  margin: 0;
+  color: ds.$student-text-muted;
+  font-size: 12px;
+  line-height: 1.6;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  span[nz-icon] { color: ds.$student-primary; font-size: 12px; flex-shrink: 0; }
   .dot { color: ds.$student-text-light; }
 }
 
 .outcome-card__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  align-items: center;
+  align-content: flex-start;
+  gap: 4px 10px;
   color: ds.$student-text-light;
-  font-size: 13px;
+  font-size: 11px;
+  min-height: 34px;
+}
 
-  span { display: inline-flex; align-items: center; gap: 4px; }
-  span[nz-icon] { font-size: 13px; }
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 
-  .from-application { color: #0f766e; background: #f0fdfa; border: 1px solid #a7f3d0; border-radius: 6px; padding: 1px 8px; font-size: 12px; }
+  span[nz-icon] {
+    font-size: 11px;
+  }
+
+  &--salary {
+    color: #059669;
+    font-weight: 600;
+  }
 }
 
 .outcome-card__remark {
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  border-radius: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: ds.$student-radius;
   background: ds.$student-surface-soft;
   color: ds.$student-text-muted;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.6;
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  span[nz-icon] { margin-top: 2px; color: ds.$student-text-light; }
-}
+  min-height: 38px;
+  @include ds.line-clamp(2);
+  span[nz-icon] { margin-top: 2px; color: ds.$student-text-light; flex-shrink: 0; }
 
-.outcome-card__foot { margin-top: 10px; }
-.outcome-card__time { color: ds.$student-text-light; font-size: 12px; }
-
-.outcome-card__actions { display: flex; flex-direction: column; justify-content: center; gap: 6px; flex-shrink: 0; }
-
-.link-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 8px;
-  background: ds.$student-surface-soft;
-  color: ds.$student-primary;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover { background: #e0eefe; }
-
-  &--danger { color: #dc2626; &:hover { background: #fef2f2; } }
+  &--empty {
+    color: ds.$student-text-light;
+    font-style: italic;
+  }
 }
 
 /* =================== FORM MODAL =================== */
@@ -299,7 +367,6 @@
 
 @media (max-width: 768px) {
   .outcomes-page { padding-top: 16px; padding-bottom: 32px; }
-  .outcome-card { flex-wrap: wrap; }
-  .outcome-card__actions { flex-direction: row; width: 100%; justify-content: flex-end; }
+  .outcome-grid { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
 }

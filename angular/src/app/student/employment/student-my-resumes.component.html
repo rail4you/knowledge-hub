@@ -81,13 +81,6 @@
                 <span class="info-row__value">{{ item.schoolName }}</span>
               </div>
             }
-            @if (item.attachmentUrl) {
-              <a class="attachment" [href]="item.attachmentUrl" target="_blank" rel="noopener">
-                <span nz-icon [nzType]="getFileIcon(item.attachmentUrl)" nzTheme="outline"></span>
-                查看附件简历
-                <span nz-icon nzType="export" nzTheme="outline"></span>
-              </a>
-            }
           </div>
 
           <div class="resume-card__actions">
@@ -205,9 +198,22 @@
               <span class="upload-zone-hint">支持 .pdf .doc .docx .jpg .png 等格式</span>
             } @else {
               <span class="upload-zone-file">
-                <span nz-icon [nzType]="getFileIcon(form.attachmentFileName || '')" nzTheme="outline"></span>
-                {{ form.attachmentFileName || '已选择文件' }}
+                <span nz-icon [nzType]="attachmentIcon()" nzTheme="outline"></span>
+                {{ attachmentDisplayName() }}
               </span>
+              @if (!isNewAttachment() && form.attachmentUrl) {
+                <a
+                  class="upload-view"
+                  [href]="form.attachmentUrl"
+                  target="_blank"
+                  rel="noopener"
+                  (click)="$event.stopPropagation()"
+                >
+                  <span nz-icon nzType="eye" nzTheme="outline"></span>
+                  查看附件
+                  <span nz-icon nzType="export" nzTheme="outline"></span>
+                </a>
+              }
               <div class="upload-zone-actions">
                 <button type="button" class="upload-action" (click)="$event.stopPropagation(); fileInput.click()">
                   重新选择
