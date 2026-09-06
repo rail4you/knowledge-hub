@@ -166,17 +166,9 @@
                 }
               </div>
 
-              <!-- 底部操作 -->
-              <div class="course-card__footer">
-                @if (isEnrolled(course.id!)) {
-                  <button
-                    class="footer-btn footer-btn--primary"
-                    (click)="startLearning(course, $event)"
-                  >
-                    <span nz-icon nzType="play-circle" nzTheme="outline"></span>
-                    <span>继续学习</span>
-                  </button>
-                } @else {
+              @if (!isEnrolled(course.id!)) {
+                <!-- 底部：仅保留选课操作；已选课点击卡片进入详情 -->
+                <div class="course-card__footer">
                   <button
                     class="footer-btn footer-btn--primary"
                     [disabled]="enrolling() === course.id"
@@ -185,84 +177,12 @@
                     <span nz-icon [nzType]="enrolling() === course.id ? 'loading' : 'plus'" nzTheme="outline"></span>
                     <span>{{ enrolling() === course.id ? '选课中...' : '选课学习' }}</span>
                   </button>
-                }
-                <button class="footer-btn" (click)="openCourse(course.id!); $event.stopPropagation()">
-                  <span nz-icon nzType="eye" nzTheme="outline"></span>
-                  <span>详情</span>
-                </button>
-              </div>
+                </div>
+              }
             </article>
           }
         </div>
       }
     </main>
-
-    <!-- 侧栏 -->
-    <aside class="content-aside">
-      <!-- 热门课程 -->
-      <div class="aside-card">
-        <h3 class="aside-card__title">
-          <span nz-icon nzType="fire" nzTheme="fill"></span>
-          本周热门
-        </h3>
-        <ul class="hot-list">
-          @for (h of hotCourses(); track h.rank) {
-            <li class="hot-item">
-              <span class="hot-item__rank" [style.background]="h.color">{{ h.rank }}</span>
-              <div class="hot-item__body">
-                <span class="hot-item__title" [title]="h.title">{{ h.title }}</span>
-                <span class="hot-item__meta">
-                  <span nz-icon nzType="team" nzTheme="outline"></span>
-                  {{ h.students | number }} 人学习
-                </span>
-              </div>
-            </li>
-          }
-        </ul>
-      </div>
-
-      <!-- 学习建议 -->
-      <div class="aside-card">
-        <h3 class="aside-card__title">
-          <span nz-icon nzType="bulb" nzTheme="outline"></span>
-          学习建议
-        </h3>
-        <ul class="tip-list">
-          <li class="tip-item">
-            <span class="tip-num">1</span>
-            <div class="tip-body">
-              <strong>制定学习计划</strong>
-              <p>每周固定 3-5 小时学习时间，按章节逐步推进。</p>
-            </div>
-          </li>
-          <li class="tip-item">
-            <span class="tip-num">2</span>
-            <div class="tip-body">
-              <strong>章节配套练习</strong>
-              <p>完成每个章节后立即做配套习题，及时巩固知识。</p>
-            </div>
-          </li>
-          <li class="tip-item">
-            <span class="tip-num">3</span>
-            <div class="tip-body">
-              <strong>善用知识图谱</strong>
-              <p>通过知识图谱建立整体认知，把握课程脉络。</p>
-            </div>
-          </li>
-        </ul>
-      </div>
-
-      <!-- 我的学习入口 -->
-      <a class="aside-cta" routerLink="/student/my-learning">
-        <div class="aside-cta__icon">
-          <span nz-icon nzType="line-chart" nzTheme="outline"></span>
-        </div>
-        <div class="aside-cta__body">
-          <strong>查看我的学习数据</strong>
-          <span>学习时长、答题正确率、知识掌握度一应俱全</span>
-        </div>
-        <span nz-icon nzType="right" nzTheme="outline" class="aside-cta__arrow"></span>
-      </a>
-    </aside>
   </div>
 </div>

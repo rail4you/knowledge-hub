@@ -5,8 +5,8 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -19,7 +19,6 @@ import {
   ClassroomAgentAssignment,
   assignmentStatusLabel,
   formatDateTime,
-  targetTypeLabel,
 } from '../../teaching-agents/models';
 
 interface HelpRecord {
@@ -37,8 +36,8 @@ interface HelpRecord {
     NzAlertModule,
     NzButtonModule,
     NzCardModule,
-    NzDividerModule,
     NzEmptyModule,
+    NzIconModule,
     NzInputModule,
     NzModalModule,
     NzSpinModule,
@@ -105,11 +104,12 @@ export class StudentAgentTaskDetailComponent implements OnInit {
     try {
       const detail = await this.agentRunService.getRun(assignmentId).toPromise();
       this.detail.set(detail ?? null);
+      const agentName = detail?.task.teachingAgentName || '';
       this.messages.set(detail?.messages?.length ? detail.messages : [{
         id: 'welcome',
         agentRunId: detail?.run.id || '',
         role: 'assistant',
-        content: '课堂智能体已就绪。先阅读任务说明，再用聊天区逐步完成本次任务。',
+        content: `你好！我是${agentName}智能体。先阅读上方任务说明，再用聊天区逐步完成本次任务，最后使用「提交任务」提交所有对话信息。`,
         toolCallsJson: '[]',
       }]);
     } finally {
@@ -204,9 +204,5 @@ export class StudentAgentTaskDetailComponent implements OnInit {
 
   formatDate(value?: string): string {
     return formatDateTime(value);
-  }
-
-  targetText(value?: number): string {
-    return targetTypeLabel(value ?? 0);
   }
 }

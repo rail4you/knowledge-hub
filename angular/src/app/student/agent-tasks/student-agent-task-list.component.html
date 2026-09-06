@@ -56,28 +56,23 @@
               <p class="task-card__desc">{{ task.description }}</p>
             }
 
-            <div class="task-card__meta">
+            <div class="task-card__meta task-card__meta--inline">
               @if (task.dueTime) {
                 <span class="meta-item">
                   <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
                   截止 {{ formatDate(task.dueTime) }}
                 </span>
               }
+              @if (task.dueTime && task.lastActiveAt) {
+                <span class="meta-sep" aria-hidden="true">·</span>
+              }
               @if (task.lastActiveAt) {
                 <span class="meta-item">
                   <span nz-icon nzType="history" nzTheme="outline"></span>
-                  {{ formatDate(task.lastActiveAt) }}
+                  活跃 {{ formatDate(task.lastActiveAt) }}
                 </span>
               }
             </div>
-          </div>
-
-          <!-- 操作按钮 -->
-          <div class="task-card__actions">
-            <button class="action-btn" (click)="openTask(task.assignmentId)">
-              <span nz-icon nzType="login" nzTheme="outline"></span>
-              <span>进入任务</span>
-            </button>
           </div>
         </article>
       }

@@ -192,14 +192,16 @@
   min-height: 22px;
 }
 
+/* 智能体徽标：扁平无背景 */
 .agent-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 26px;
-  padding: 0 10px 0 4px;
-  border-radius: 999px;
-  background: ds.$student-surface-soft;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: ds.$student-text-muted;
   font-size: 12px;
   font-weight: 500;
@@ -246,6 +248,19 @@
   gap: 6px 14px;
   color: ds.$student-text-light;
   font-size: 12px;
+
+  /* 两段时间放一行，不换行 */
+  &--inline {
+    flex-wrap: nowrap;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+}
+
+.meta-sep {
+  color: ds.$student-border;
+  flex-shrink: 0;
 }
 
 .meta-item {
@@ -255,38 +270,6 @@
 
   span[nz-icon] {
     font-size: 12px;
-  }
-}
-
-.task-card__actions {
-  padding: 12px 14px 14px;
-  border-top: 1px dashed ds.$student-border-soft;
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  height: 38px;
-  border: 0;
-  border-radius: ds.$student-radius;
-  background: ds.$student-primary;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 10px rgba(30, 108, 232, 0.22);
-
-  span[nz-icon] {
-    font-size: 15px;
-  }
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(30, 108, 232, 0.34);
   }
 }
 

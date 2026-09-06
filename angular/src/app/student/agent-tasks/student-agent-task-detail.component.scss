@@ -13,10 +13,13 @@
   width: 100%;
   @include ds.student-container;
   padding-top: 24px;
-  padding-bottom: 48px;
+  padding-bottom: 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
+  /* 聊天布局：占满视口剩余高度（顶栏 60px + Tab 栏 56px） */
+  height: calc(100vh - 116px);
+  min-height: 560px;
 }
 
 /* =================== Back Link =================== */
@@ -58,7 +61,7 @@
 }
 
 .page-head h1 {
-  margin: 4px 0 8px;
+  margin: 0 0 8px;
   color: ds.$student-text;
   font-size: 22px;
   font-weight: 700;
@@ -70,15 +73,6 @@
   color: ds.$student-text-muted;
   font-size: 14px;
   line-height: 1.6;
-}
-
-.eyebrow {
-  margin: 0;
-  color: ds.$student-primary;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
 }
 
 .status-box {
@@ -94,24 +88,60 @@
   }
 }
 
-/* =================== Workspace =================== */
+/* nz-spin 包裹层必须参与 flex 高度链，否则 workspace 无法被约束 */
+.student-detail-page > nz-spin {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.student-detail-page ::ng-deep .ant-spin-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+/* =================== Workspace（聊天双栏） =================== */
 .workspace {
   display: grid;
   grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
 }
 
 .context-column {
-  position: sticky;
-  top: 144px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
+  height: 100%;
+  /* 左侧保持不动：不产生内部滚动 */
+  overflow: visible;
 }
 
 .chat-column {
   min-width: 0;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  ::ng-deep .ant-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
 }
 
 /* =================== Cards =================== */
@@ -142,67 +172,129 @@
   }
 }
 
-/* =================== Meta list =================== */
-.meta-list {
-  display: grid;
+/* =================== 任务简报（左侧，占满栏高） =================== */
+.task-brief {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: ds.$student-radius-lg;
+  background: #fff;
+  border: 1px solid ds.$student-border-soft;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 
-  > div {
+  &__head {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 10px 14px;
-    border-radius: ds.$student-radius;
-    background: ds.$student-surface-soft;
-
-    span {
-      color: ds.$student-text-light;
-      font-size: 13px;
-    }
-
-    strong {
-      color: ds.$student-text;
-      font-size: 13px;
-      font-weight: 600;
-    }
   }
-}
 
-/* =================== Snapshot =================== */
-.snapshot {
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: ds.$student-radius;
-  background: ds.$student-surface-soft;
-
-  h3 {
-    margin: 0 0 6px;
+  &__title {
     color: ds.$student-text;
     font-size: 14px;
     font-weight: 700;
   }
 
-  p {
-    margin: 0 0 10px;
+  &__usage {
+    margin: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
     color: ds.$student-text-muted;
-    font-size: 13px;
-    line-height: 1.5;
+    font-size: 12px;
+    line-height: 1.6;
+
+    span[nz-icon] {
+      color: ds.$student-primary;
+      font-size: 14px;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
   }
 
-  .ant-tag {
-    margin-right: 4px;
-    margin-bottom: 4px;
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px dashed ds.$student-border;
+  }
+
+  &__row {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    font-size: 13px;
+  }
+
+  &__label {
+    color: ds.$student-text-light;
+    flex-shrink: 0;
+    min-width: 52px;
+  }
+
+  &__value {
+    margin: 0;
+    color: ds.$student-text;
+    font-weight: 600;
+    min-width: 0;
+
+    &--text {
+      font-weight: 400;
+      color: ds.$student-text-muted;
+      line-height: 1.6;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 10px;
+    padding-top: 4px;
+    flex-wrap: wrap;
   }
 }
 
-/* =================== Action blocks =================== */
-.action-block {
-  margin-bottom: 12px;
+/* 简报区操作按钮（学生端风格） */
+.brief-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: ds.$student-radius;
+  border: 1px solid ds.$student-border;
+  background: #fff;
+  color: ds.$student-text;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 
-  button {
-    border-radius: ds.$student-radius;
-    height: 40px;
-    font-weight: 600;
+  span[nz-icon] {
+    font-size: 14px;
+  }
+
+  &:hover:not([disabled]) {
+    border-color: ds.$student-primary;
+    color: ds.$student-primary;
+  }
+
+  &[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: ds.$student-primary;
+    border-color: transparent;
+    color: #fff;
+
+    &:hover:not([disabled]) {
+      background: ds.$student-primary-dark;
+      color: #fff;
+    }
   }
 }
 
@@ -311,15 +403,16 @@
   margin-top: 8px;
 }
 
-/* =================== Chat messages =================== */
+/* =================== Chat messages（聊天气泡 + 独立滚动） =================== */
 .message-list {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: 120px;
-  max-height: 520px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 4px 0;
+  overscroll-behavior: contain;
+  padding: 4px 2px;
 }
 
 .message {
@@ -381,8 +474,9 @@
   }
 
   pre {
-    background: #1e293b;
-    color: #e2e8f0;
+    background: ds.$student-surface-soft;
+    color: ds.$student-text;
+    border: 1px solid ds.$student-border-soft;
     border-radius: 8px;
     padding: 1em;
     overflow-x: auto;
@@ -430,9 +524,10 @@
   strong { color: ds.$student-text; }
 }
 
-/* =================== Composer =================== */
+/* =================== Composer（底部输入框） =================== */
 .composer {
-  margin-top: 18px;
+  margin-top: 12px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -486,12 +581,39 @@
 
 /* =================== Responsive =================== */
 @media (max-width: 980px) {
+  .student-detail-page {
+    height: auto;
+  }
+
   .workspace {
     grid-template-columns: 1fr;
   }
 
   .context-column {
-    position: static;
+    height: auto;
+    overflow: visible;
+  }
+
+  .task-brief {
+    flex: none;
+  }
+
+  .chat-column {
+    height: auto;
+    display: block;
+
+    ::ng-deep .ant-card {
+      display: block;
+    }
+
+    ::ng-deep .ant-card-body {
+      display: block;
+    }
+  }
+
+  .message-list {
+    flex: none;
+    max-height: 60vh;
   }
 
   .page-head {

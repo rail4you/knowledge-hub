@@ -90,10 +90,10 @@
   }
 }
 
-/* =================== 内容两栏 =================== */
+/* =================== 内容单栏 =================== */
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }

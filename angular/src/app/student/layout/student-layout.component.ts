@@ -47,7 +47,6 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     { key: 'resources', label: '资源库', icon: 'database', route: '/student/resources' },
     { key: 'news', label: '资讯中心', icon: 'file-text', route: '/student/news' },
     { key: 'my-learning', label: '我的学习', icon: 'line-chart', route: '/student/my-learning' },
-    { key: 'favorites', label: '我的收藏', icon: 'star', route: '/student/favorites' },
     { key: 'agent-tasks', label: '课堂任务', icon: 'robot', route: '/student/agent-tasks' },
     {
       key: 'practicums',

@@ -101,17 +101,9 @@
                   </span>
                 } @else if (status === EnrollmentStatus.Cancelled) {
                   <span class="status-badge status-badge--cancelled">已取消</span>
-                } @else {
-                  <button class="action-btn action-btn--view" (click)="openDetail(item)">
-                    <span nz-icon nzType="eye" nzTheme="outline"></span>
-                    <span>查看详情</span>
-                  </button>
                 }
               } @else {
-                <button class="action-btn action-btn--view" (click)="openDetail(item)">
-                  <span nz-icon nzType="eye" nzTheme="outline"></span>
-                  <span>查看详情</span>
-                </button>
+                <!-- 已报名：点击卡片进入详情，无需按钮 -->
               }
             } @else {
               <button class="action-btn action-btn--enroll" (click)="enroll($event, item)">

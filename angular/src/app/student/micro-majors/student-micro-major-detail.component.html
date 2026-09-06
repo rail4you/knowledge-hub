@@ -33,52 +33,48 @@
               }
             </div>
           </div>
-
-          <div class="hero-card__stats">
-            <div class="stat-blk">
-              <span class="stat-blk__val">{{ d.courseCount || 0 }}</span>
-              <span class="stat-blk__lbl">门课程</span>
-            </div>
-            <span class="stat-blk-div"></span>
-            <div class="stat-blk">
-              <span class="stat-blk__val">{{ d.enrollmentCount || 0 }}</span>
-              <span class="stat-blk__lbl">人已报</span>
-            </div>
-            @if (d.isCertificateEnabled) {
-              <span class="stat-blk-div"></span>
-              <div class="stat-blk">
-                <span class="stat-blk__val">{{ d.requiredCompletionRate || 0 }}<small>%</small></span>
-                <span class="stat-blk__lbl">完成要求</span>
-              </div>
-            }
-            @if (d.currentUserProgress != null) {
-              <span class="stat-blk-div"></span>
-              <div class="stat-blk">
-                <span class="stat-blk__val">{{ roundProgress(d.currentUserProgress) }}<small>%</small></span>
-                <span class="stat-blk__lbl">学习进度</span>
-              </div>
+          <div class="hero-card__status">
+            @if (d.isCurrentUserEnrolled) {
+              @if (d.currentUserProgress == null) {
+                <span class="status-badge status-badge--pending">
+                  <span nz-icon nzType="clock-circle" nzTheme="outline"></span>待审批
+                </span>
+              } @else {
+                <span class="status-badge status-badge--enrolled">
+                  <span nz-icon nzType="check-circle" nzTheme="fill"></span>已报名
+                </span>
+              }
+            } @else {
+              <button class="hero-card__action hero-card__action--primary" (click)="enrollMicroMajor()">
+                <span nz-icon nzType="user-add" nzTheme="outline"></span>立即报名
+              </button>
             }
           </div>
         </div>
 
         <div class="hero-card__right">
-          @if (d.isCurrentUserEnrolled) {
-            @if (d.currentUserProgress == null) {
-              <span class="status-badge status-badge--pending">
-                <span nz-icon nzType="clock-circle" nzTheme="outline"></span>待审批
-              </span>
-            } @else {
-              <span class="status-badge status-badge--enrolled">
-                <span nz-icon nzType="check-circle" nzTheme="fill"></span>已报名
-              </span>
-              @if (d.currentUserProgress != null) {
-                <span class="progress-hint">学习进度 {{ roundProgress(d.currentUserProgress) }}%</span>
-              }
-            }
-          } @else {
-            <button class="hero-card__action hero-card__action--primary" (click)="enrollMicroMajor()">
-              <span nz-icon nzType="user-add" nzTheme="outline"></span>立即报名
-            </button>
+          <div class="stat-blk">
+            <span class="stat-blk__val">{{ d.courseCount || 0 }}</span>
+            <span class="stat-blk__lbl">门课程</span>
+          </div>
+          <span class="stat-blk-div"></span>
+          <div class="stat-blk">
+            <span class="stat-blk__val">{{ d.enrollmentCount || 0 }}</span>
+            <span class="stat-blk__lbl">人已报</span>
+          </div>
+          @if (d.isCertificateEnabled) {
+            <span class="stat-blk-div"></span>
+            <div class="stat-blk">
+              <span class="stat-blk__val">{{ d.requiredCompletionRate || 0 }}<small>%</small></span>
+              <span class="stat-blk__lbl">完成要求</span>
+            </div>
+          }
+          @if (d.currentUserProgress != null) {
+            <span class="stat-blk-div"></span>
+            <div class="stat-blk">
+              <span class="stat-blk__val">{{ roundProgress(d.currentUserProgress) }}<small>%</small></span>
+              <span class="stat-blk__lbl">学习进度</span>
+            </div>
           }
         </div>
       </div>
@@ -201,14 +197,9 @@
                   }
                 </div>
 
-                <!-- 底部 -->
-                <div class="course-card__footer">
-                  @if (isEnrolled(course.id!)) {
-                    <button class="footer-btn footer-btn--primary" (click)="startLearning(course, $event)">
-                      <span nz-icon nzType="play-circle" nzTheme="outline"></span>
-                      <span>继续学习</span>
-                    </button>
-                  } @else {
+                @if (!isEnrolled(course.id!)) {
+                  <!-- 底部：仅保留选课操作；已选课点击卡片进入详情 -->
+                  <div class="course-card__footer">
                     <button
                       class="footer-btn footer-btn--primary"
                       [disabled]="enrolling() === course.id"
@@ -217,12 +208,8 @@
                       <span nz-icon [nzType]="enrolling() === course.id ? 'loading' : 'plus'" nzTheme="outline"></span>
                       <span>{{ enrolling() === course.id ? '选课中...' : '选课学习' }}</span>
                     </button>
-                  }
-                  <button class="footer-btn" (click)="openCourse(course.id!); $event.stopPropagation()">
-                    <span nz-icon nzType="eye" nzTheme="outline"></span>
-                    <span>详情</span>
-                  </button>
-                </div>
+                  </div>
+                }
               </article>
             }
           </div>

@@ -27,15 +27,15 @@ $student-shadow-card: 0 6px 20px rgba(15, 23, 42, 0.06);
 $student-radius: 8px;
 $student-radius-lg: 14px;
 $student-radius-xl: 20px;
-$student-container: 1400px;
+$student-container: 1760px;
 $student-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
 @mixin student-container {
   box-sizing: border-box;
   width: min(100%, #{$student-container});
   margin: 0 auto;
-  padding-left: 24px;
-  padding-right: 24px;
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
 @mixin section-heading($size: 18px) {

@@ -2,7 +2,7 @@
   <!-- 第一部分：品牌栏 + 登录信息 -->
   <header class="brand-bar">
     <div class="brand-bar__inner">
-      <a routerLink="/student" class="brand">
+      <a routerLink="/student" class="brand" title="回到首页">
         <span class="brand__logo" aria-hidden="true">
           <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -25,47 +25,18 @@
         </span>
       </a>
 
-      <a routerLink="/" class="brand-bar__back" title="返回主站">
-        <span nz-icon nzType="home" nzTheme="outline"></span>
-        <span class="brand-bar__back-text">主站首页</span>
-      </a>
-
-      <!-- 移动端菜单按钮 -->
-      <button class="menu-toggle" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-label="导航菜单">
-        <span nz-icon [nzType]="menuOpen() ? 'close' : 'menu-fold'" nzTheme="outline"></span>
-      </button>
-
       <div class="brand-bar__actions">
         @if (isLoggedIn) {
-          <div class="brand-bar__user" nz-dropdown [nzDropdownMenu]="userMenu" nzTrigger="click">
-            <span class="user-avatar" [style.background]="avatarGradient()">
+          <span class="user-chip" title="{{ userName() }}">
+            <span class="user-chip__avatar" [style.background]="avatarGradient()">
               {{ userInitial }}
             </span>
-            <span class="user-meta">
-              <span class="user-meta__name">你好，{{ userName() }}</span>
-              <span class="user-meta__role">{{ userRoleLabel() }}</span>
-            </span>
-            <span nz-icon nzType="caret-down" class="user-meta__caret"></span>
-          </div>
-
-          <nz-dropdown-menu #userMenu="nzDropdownMenu">
-            <ul nz-menu class="user-menu">
-              <li nz-menu-item class="user-menu__info">
-                <div class="user-menu__avatar" [style.background]="avatarGradient()">
-                  {{ userInitial }}
-                </div>
-                <div class="user-menu__detail">
-                  <div class="user-menu__name">{{ userName() }}</div>
-                  <div class="user-menu__role">{{ userRoleLabel() }} · 已登录</div>
-                </div>
-              </li>
-              <li nz-menu-divider></li>
-              <li nz-menu-item (click)="logout()">
-                <span nz-icon nzType="logout" nzTheme="outline"></span>
-                <span>退出登录</span>
-              </li>
-            </ul>
-          </nz-dropdown-menu>
+            <span class="user-chip__name">{{ userName() }}</span>
+          </span>
+          <button type="button" class="logout-btn" (click)="logout()" title="退出登录">
+            <span nz-icon nzType="logout" nzTheme="outline"></span>
+            <span>退出登录</span>
+          </button>
         } @else {
           <button class="brand-bar__login" (click)="login()">
             <span nz-icon nzType="user" nzTheme="outline"></span>
@@ -73,6 +44,11 @@
           </button>
         }
       </div>
+
+      <!-- 移动端菜单按钮 -->
+      <button class="menu-toggle" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-label="导航菜单">
+        <span nz-icon [nzType]="menuOpen() ? 'close' : 'menu-fold'" nzTheme="outline"></span>
+      </button>
     </div>
   </header>
 

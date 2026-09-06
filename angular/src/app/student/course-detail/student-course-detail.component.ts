@@ -12,6 +12,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { LearningService } from '../../proxy/learning/learning.service';
@@ -58,6 +59,7 @@ interface ResourceItem {
     NzTabsModule,
     NzTooltipModule,
     NzDividerModule,
+    NzTableModule,
     ChapterTreeGraphComponent,
     MasteryRadarComponent,
   ],
@@ -367,6 +369,14 @@ export class StudentCourseDetailComponent implements OnInit {
   /** 单条记录的用时（"3分钟" / "45秒"） */
   formatRecordTimeSpent(record: StudentExerciseRecordDto): string {
     return this.formatDuration(this.parseTimeSpentMs(record.timeSpent));
+  }
+
+  /** 掌握等级文本 */
+  masteryLevelLabel(level?: number | null): string {
+    if (level === 0) return '未学习';
+    if (level === 1) return '入门';
+    if (level === 2) return '熟练';
+    return '精通';
   }
 
   /** 记录结果展示文本 */

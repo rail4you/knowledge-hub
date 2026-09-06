@@ -261,27 +261,35 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         var agentMap = agents.ToDictionary(x => x.Id);
         var taskMap = tasks.ToDictionary(x => x.Id);
 
-        var items = assignments
-            .Where(x => taskMap.ContainsKey(x.ClassroomAgentTaskId))
-            .Select(assignment =>
+        // 版本或智能体可能因跨租户、删除等原因无法解析，跳过脏数据而不是整页 500
+        var items = new List<StudentAgentTaskDto>();
+        foreach (var assignment in assignments)
+        {
+            if (!taskMap.TryGetValue(assignment.ClassroomAgentTaskId, out var task))
             {
-                var task = taskMap[assignment.ClassroomAgentTaskId];
-                var version = versionMap[task.TeachingAgentVersionId];
-                var agent = agentMap[version.TeachingAgentId];
+                continue;
+            }
+            if (!versionMap.TryGetValue(task.TeachingAgentVersionId, out var version))
+            {
+                continue;
+            }
+            if (!agentMap.TryGetValue(version.TeachingAgentId, out var agent))
+            {
+                continue;
+            }
 
-                return new StudentAgentTaskDto
-                {
-                    AssignmentId = assignment.Id,
-                    TaskId = task.Id,
-                    Title = task.Title,
-                    Description = task.Description,
-                    TeachingAgentName = agent.Name,
-                    Status = assignment.Status,
-                    DueTime = task.DueTime,
-                    LastActiveAt = assignment.LastActiveAt
-                };
-            })
-            .ToList();
+            items.Add(new StudentAgentTaskDto
+            {
+                AssignmentId = assignment.Id,
+                TaskId = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                TeachingAgentName = agent.Name,
+                Status = assignment.Status,
+                DueTime = task.DueTime,
+                LastActiveAt = assignment.LastActiveAt
+            });
+        }
 
         return new PagedResultDto<StudentAgentTaskDto>(totalCount, items);
     }
@@ -353,13 +361,22 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         var agentMap = agents.ToDictionary(x => x.Id);
         var versionMap = versions.ToDictionary(x => x.Id);
 
-        var items = tasks.Select(task =>
+        // 同学生端：版本或智能体无法解析时跳过脏数据，避免整页 500
+        var items = new List<ClassroomAgentTaskDto>();
+        foreach (var task in tasks)
         {
+            if (!agentMap.TryGetValue(task.TeachingAgentId, out var agent))
+            {
+                continue;
+            }
+            if (!versionMap.TryGetValue(task.TeachingAgentVersionId, out var version))
+            {
+                continue;
+            }
+
             var taskAssignments = assignments.Where(x => x.ClassroomAgentTaskId == task.Id).ToList();
-            var agent = agentMap[task.TeachingAgentId];
-            var version = versionMap[task.TeachingAgentVersionId];
-            return MapTask(task, agent, version, taskAssignments);
-        }).ToList();
+            items.Add(MapTask(task, agent, version, taskAssignments));
+        }
 
         return new PagedResultDto<ClassroomAgentTaskDto>(totalCount, items);
     }

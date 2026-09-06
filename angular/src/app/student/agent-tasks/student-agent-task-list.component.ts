@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { ClassroomAgentTaskService } from '../../teaching-agents/classroom-agent-task.service';
-import { StudentAgentTask, assignmentStatusLabel, formatDateTime } from '../../teaching-agents/models';
+import { StudentAgentTask, assignmentStatusLabel } from '../../teaching-agents/models';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
@@ -68,6 +68,18 @@ export class StudentAgentTaskListComponent implements OnInit {
   }
 
   formatDate(value?: string): string {
-    return formatDateTime(value);
+    if (!value) {
+      return '';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    // 仅精确到年月日
+    return new Intl.DateTimeFormat('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
   }
 }
