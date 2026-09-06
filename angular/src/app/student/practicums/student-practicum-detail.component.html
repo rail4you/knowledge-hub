@@ -1,58 +1,115 @@
 <div class="px-detail">
-  <a routerLink="/student/practicums" class="back-link">← 返回实训列表</a>
+  <!-- 顶部面包屑导航（与资讯/资源详情页同步） -->
+  <div class="detail-breadcrumb">
+    <button class="back-btn" routerLink="/student/practicums">
+      <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+      <span>返回实训列表</span>
+    </button>
+    <nav class="breadcrumb" aria-label="breadcrumb">
+      <a routerLink="/student">首页</a>
+      <span class="breadcrumb__sep">/</span>
+      <a routerLink="/student/practicums">实训项目</a>
+      <span class="breadcrumb__sep">/</span>
+      <span class="breadcrumb__current">实训详情</span>
+    </nav>
+  </div>
 
   @if (loading()) {
     <div class="loading-state"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中...</p></div>
   } @else if (detail(); as d) {
-    <!-- Header -->
-    <div class="detail-header">
-      <div class="detail-header__cover" style.background="#0284c7">
-        <span nz-icon nzType="experiment" nzTheme="outline"></span>
-      </div>
-      <div class="detail-header__body">
-        <div class="detail-header__tags">
-          @if (d.major) { <span class="tag tag--blue">{{ d.major }}</span> }
-          @if (d.className) { <span class="tag tag--green">{{ d.className }}</span> }
+    <!-- Header：封面 + 标题/统计/操作（与资讯/资源详情 detail-head 对齐） -->
+    <section class="detail-head">
+      <!-- 左：实训封面 -->
+      <div class="detail-media">
+        <div class="detail-media__stage" [style.background]="coverGradient(d)">
+          <div class="cover-decor" aria-hidden="true">
+            <span class="decor-line decor-line--1"></span>
+            <span class="decor-line decor-line--2"></span>
+            <span class="decor-circle"></span>
+          </div>
+          <span class="detail-media__icon" nz-icon nzType="experiment" nzTheme="outline"></span>
+          @if (d.major) {
+            <span class="detail-media__type">{{ d.major }}</span>
+          }
         </div>
-        <h1>{{ d.title }}</h1>
-        <p class="detail-header__summary">{{ d.summary || '暂无简介' }}</p>
-        <div class="detail-header__stats">
-          <span><span nz-icon nzType="profile" nzTheme="outline"></span> {{ d.tasks?.length || 0 }} 任务</span>
-          <span><span nz-icon nzType="folder-open" nzTheme="outline"></span> {{ d.materials?.length || 0 }} 资料</span>
-          <span><span nz-icon nzType="team" nzTheme="outline"></span> {{ d.enrollmentCount || 0 }} 人已报</span>
+      </div>
+
+      <!-- 右：标题 + 统计 + 操作 -->
+      <div class="detail-info">
+        <div class="detail-info__kicker">
+          @if (d.major) {
+            <span class="kicker-chip">
+              <span nz-icon nzType="bank" nzTheme="outline"></span>
+              {{ d.major }}
+            </span>
+          }
+          @if (d.className) {
+            <span class="kicker-chip">
+              <span nz-icon nzType="team" nzTheme="outline"></span>
+              {{ d.className }}
+            </span>
+          }
           @if (d.startTime || d.endTime) {
-            <span><span nz-icon nzType="calendar" nzTheme="outline"></span>
+            <span class="kicker-chip">
+              <span nz-icon nzType="calendar" nzTheme="outline"></span>
               {{ d.startTime | date:'MM-dd' }} ~ {{ d.endTime | date:'MM-dd' }}
             </span>
           }
         </div>
-      </div>
-      <div class="detail-header__action">
-        @if (d.isExpired) {
-          <span class="expired-badge"><span nz-icon nzType="stop" nzTheme="fill"></span> 实训已结束</span>
-        } @else if (d.isCurrentUserEnrolled) {
-          <span class="enrolled-badge"><span nz-icon nzType="check-circle" nzTheme="fill"></span> 已报名</span>
+
+        <h1 class="detail-info__title">{{ d.title }}</h1>
+
+        @if (d.summary) {
+          <p class="detail-info__desc">{{ d.summary }}</p>
         } @else {
-          <button class="enroll-btn" (click)="enroll()">
-            <span nz-icon nzType="user-add" nzTheme="outline"></span> 报名参加
-          </button>
+          <p class="detail-info__desc detail-info__desc--empty">该实训暂无简介</p>
         }
+
+        <!-- 数据统计 -->
+        <div class="detail-info__stats">
+          <span class="info-stat">
+            <strong>{{ d.tasks?.length || 0 }}</strong>
+            <span>实训任务</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ d.materials?.length || 0 }}</strong>
+            <span>实训资料</span>
+          </span>
+          <span class="info-sep"></span>
+          <span class="info-stat">
+            <strong>{{ d.enrollmentCount || 0 }}</strong>
+            <span>人已报名</span>
+          </span>
+        </div>
+
+        <div class="detail-info__action">
+          @if (d.isExpired) {
+            <span class="expired-badge"><span nz-icon nzType="stop" nzTheme="fill"></span> 实训已结束</span>
+          } @else if (d.isCurrentUserEnrolled) {
+            <span class="enrolled-badge"><span nz-icon nzType="check-circle" nzTheme="fill"></span> 已报名</span>
+          } @else {
+            <button class="enroll-btn" (click)="enroll()">
+              <span nz-icon nzType="user-add" nzTheme="outline"></span> 报名参加
+            </button>
+          }
+        </div>
       </div>
-    </div>
+
+      <!-- 项目介绍：并入顶部卡片，通栏展示 -->
+      @if (d.description) {
+        <div class="detail-intro">
+          <h2><span nz-icon nzType="info-circle" nzTheme="outline"></span> 项目介绍</h2>
+          <p>{{ d.description }}</p>
+        </div>
+      }
+    </section>
 
     <!-- Expired notice -->
     @if (d.isExpired) {
       <div class="expired-banner">
         <span nz-icon nzType="stop" nzTheme="filled"></span>
         该实训项目已结束，仅可查看项目介绍，不再参与任务、资料与实训沟通。
-      </div>
-    }
-
-    <!-- Description -->
-    @if (d.description) {
-      <div class="detail-desc">
-        <h2><span nz-icon nzType="info-circle" nzTheme="outline"></span> 项目介绍</h2>
-        <p>{{ d.description }}</p>
       </div>
     }
 
@@ -115,27 +172,31 @@
         @if (!d.tasks?.length) {
           <div class="empty-small">暂无实训任务</div>
         } @else {
-          <div class="tasks-list">
+          <div class="tasks-grid">
             @for (task of d.tasks; track task.id) {
-              <div class="task-item">
-                <div class="task-item__num">{{ $index + 1 }}</div>
-                <div class="task-item__body">
-                  <div class="task-item__head">
-                    <h4>{{ task.title }}</h4>
+              <article class="task-card">
+                <div class="task-card__body">
+                  <div class="task-card__top">
+                    <span class="task-card__num">任务 {{ $index + 1 }}</span>
                     @if (task.scoreWeight) { <span class="task-score">{{ task.scoreWeight }} 分</span> }
                   </div>
-                  @if (task.description) { <p class="task-desc">{{ task.description }}</p> }
-                  @if (task.requirement) { <p class="task-req"><span nz-icon nzType="exclamation-circle" nzTheme="outline"></span> {{ task.requirement }}</p> }
-                  @if (task.dueTime) { <span class="task-due">截止 {{ task.dueTime | date:'yyyy-MM-dd HH:mm' }}</span> }
-                </div>
-                <div class="task-item__action">
-                  @if (d.isCurrentUserEnrolled) {
-                    <button class="submit-btn" (click)="openSubmit(task.id)">
-                      <span nz-icon nzType="upload" nzTheme="outline"></span> 提交
-                    </button>
+                  <h4 class="task-card__title" [title]="task.title">{{ task.title }}</h4>
+                  @if (task.description) { <p class="task-card__desc" [title]="task.description">{{ task.description }}</p> }
+                  @if (task.requirement) { <p class="task-card__req"><span nz-icon nzType="exclamation-circle" nzTheme="outline"></span> {{ task.requirement }}</p> }
+                  @if (task.dueTime) {
+                    <div class="task-card__meta">
+                      <span><span nz-icon nzType="clock-circle" nzTheme="outline"></span> 截止 {{ task.dueTime | date:'yyyy-MM-dd HH:mm' }}</span>
+                    </div>
                   }
                 </div>
-              </div>
+                @if (d.isCurrentUserEnrolled) {
+                  <div class="task-card__actions">
+                    <button class="submit-btn" (click)="openSubmit(task.id)">
+                      <span nz-icon nzType="upload" nzTheme="outline"></span> 提交任务
+                    </button>
+                  </div>
+                }
+              </article>
             }
           </div>
         }
@@ -147,27 +208,31 @@
         } @else {
           <div class="materials-grid">
             @for (mat of d.materials; track mat.id) {
-              <div class="material-card" (click)="downloadMaterial(mat)">
-                <div class="material-card__icon">
-                  @if (mat.materialType === 4) {
-                    <span nz-icon nzType="play-circle" nzTheme="outline"></span>
-                  } @else {
-                    <span nz-icon nzType="file-text" nzTheme="outline"></span>
-                  }
-                </div>
+              <article class="material-card" (click)="downloadMaterial(mat)">
                 <div class="material-card__body">
-                  <h4>{{ mat.title }}</h4>
-                  @if (mat.description) { <p>{{ mat.description }}</p> }
-                  <span class="material-type">{{ mat.materialType === 0 ? '指南' : mat.materialType === 1 ? '案例' : mat.materialType === 2 ? '模板' : mat.materialType === 3 ? '链接' : mat.materialType === 4 ? '仿真实训' : '其他' }}</span>
-                </div>
-                <div class="material-card__action">
-                  @if (mat.materialType === 4) {
-                    <span nz-icon nzType="play-circle" nzTheme="outline"></span>
+                  <div class="material-card__top">
+                    <span class="material-card__icon">
+                      <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                    </span>
+                    <span class="material-type">{{ mat.materialType === 0 ? '指南' : mat.materialType === 1 ? '案例' : mat.materialType === 2 ? '模板' : mat.materialType === 3 ? '链接' : '其他' }}</span>
+                  </div>
+                  <h4 class="material-card__title" [title]="mat.title">{{ mat.title }}</h4>
+                  @if (mat.description) {
+                    <p class="material-card__desc" [title]="mat.description">{{ mat.description }}</p>
                   } @else {
-                    <span nz-icon nzType="download" nzTheme="outline"></span>
+                    <p class="material-card__desc material-card__desc--empty">暂无描述</p>
                   }
                 </div>
-              </div>
+                <div class="material-card__actions">
+                  <button class="download-btn" (click)="downloadMaterial(mat); $event.stopPropagation()">
+                    @if (mat.materialType === 3) {
+                      <span nz-icon nzType="link" nzTheme="outline"></span> 打开链接
+                    } @else {
+                      <span nz-icon nzType="download" nzTheme="outline"></span> 下载资料
+                    }
+                  </button>
+                </div>
+              </article>
             }
           </div>
         }

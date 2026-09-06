@@ -13,7 +13,7 @@
 .empty-state { display: flex; align-items: center; justify-content: center; min-height: 320px; background: #fff; border-radius: ds.$student-radius-lg; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft; }
 .empty-actions { margin-top: 12px; }
 
-.enroll-list { display: flex; flex-direction: column; gap: 14px; }
+.enroll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
 
 /* =================== 统计汇总 =================== */
 .stats-section {
@@ -65,15 +65,27 @@
 }
 
 
-.enroll-card { display: flex; gap: 16px; padding: 20px 22px; background: #fff; border-radius: ds.$student-radius-lg; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft; transition: all .2s ease; &:hover { border-color: rgba(ds.$student-primary, .3); box-shadow: 0 6px 18px rgba(15,23,42,.06); } }
+/* =================== 我的实训卡片（与实训主列表 px-card 同语言） =================== */
+.enroll-card { display: flex; flex-direction: column; border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius-lg; background: #fff; overflow: hidden; cursor: pointer; outline: none; transition: all .25s ease; box-shadow: 0 1px 2px rgba(15,23,42,.03);
+  &:hover, &:focus-visible { border-color: rgba(ds.$student-primary,.4); box-shadow: 0 16px 32px rgba(15,23,42,.08); transform: translateY(-3px); .cover-icon { transform: scale(1.06) rotate(-2deg); } }
+}
+.enroll-card__cover { position: relative; height: 132px; display: flex; align-items: center; justify-content: center; color: #fff; overflow: hidden; flex-shrink: 0; }
+.cover-decor { position: absolute; inset: 0; pointer-events: none; }
+.decor-line { position: absolute; background: rgba(255,255,255,.18); border-radius: 2px; &--1 { width: 60px; height: 3px; top: 18px; right: 24px; transform: rotate(-12deg); } &--2 { width: 30px; height: 3px; top: 32px; right: 60px; transform: rotate(-12deg); background: rgba(255,255,255,.32); } }
+.decor-circle { position: absolute; width: 50px; height: 50px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); bottom: 18px; left: 24px; }
+.cover-icon { width: 56px; height: 56px; border-radius: 14px; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.32); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); transition: transform .3s ease; span[nz-icon] { font-size: 26px; color: #fff; } }
+.cover-status { position: absolute; top: 12px; right: 12px; }
 
-.enroll-card__body { flex: 1; min-width: 0; cursor: pointer; }
-.enroll-card__title { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; h3 { margin: 0; color: ds.$student-text; font-size: 17px; font-weight: 700; } }
-.enroll-card__meta { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 14px; color: ds.$student-text-light; font-size: 12px; }
-.enroll-card__progress { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; .progress-label { color: ds.$student-text-muted; font-size: 13px; font-weight: 500; flex-shrink: 0; } .progress-value { color: ds.$student-primary; font-size: 13px; font-weight: 600; flex-shrink: 0; } .ant-progress { flex: 1; margin: 0; } }
-.enroll-card__score { display: flex; align-items: baseline; gap: 10px; .score-label { color: ds.$student-text-muted; font-size: 13px; font-weight: 500; flex-shrink: 0; } .score-value { color: ds.$student-primary; font-size: 22px; font-weight: 700; .score-max { font-size: 13px; font-weight: 500; color: ds.$student-text-light; } &.score-value--pending { color: ds.$student-text-light; font-size: 15px; font-weight: 500; } } .score-comment { color: ds.$student-text-muted; font-size: 13px; @include ds.line-clamp(1); } }
+.enroll-card__body { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0; }
+.enroll-card__title { margin: 0; color: ds.$student-text; font-size: 16px; font-weight: 700; line-height: 1.45; letter-spacing: -0.2px; @include ds.line-clamp(2); min-height: 46px; }
+.enroll-card__progress { display: flex; align-items: center; gap: 10px; .progress-value { color: ds.$student-primary; font-size: 13px; font-weight: 600; flex-shrink: 0; font-variant-numeric: tabular-nums; } .ant-progress { flex: 1; margin: 0; } }
+.enroll-card__score { display: flex; align-items: baseline; gap: 8px; min-height: 30px; .score-value { color: ds.$student-primary; font-size: 22px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; .score-max { font-size: 12px; font-weight: 500; color: ds.$student-text-light; } &.score-value--pending { color: ds.$student-text-light; font-size: 14px; font-weight: 500; } } .score-comment { color: ds.$student-text-muted; font-size: 12px; @include ds.line-clamp(1); } }
+.enroll-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: auto; padding-top: 2px; color: ds.$student-text-light; font-size: 11px; span { display: inline-flex; align-items: center; gap: 3px; } span[nz-icon] { font-size: 11px; } }
 
-.enroll-card__actions { display: flex; flex-direction: column; justify-content: center; gap: 8px; flex-shrink: 0; }
+.enroll-card__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px 14px; border-top: 1px dashed ds.$student-border-soft; }
+.card-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 34px; border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius; background: ds.$student-surface-soft; color: ds.$student-text; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .2s ease; span[nz-icon] { font-size: 14px; }
+  &:hover { background: #e8f0fe; color: ds.$student-primary; border-color: rgba(37,99,235,.35); }
+}
 
 .guidance-list { display: flex; flex-direction: column; gap: 14px; max-height: 60vh; overflow: auto; padding-right: 4px; }
 .guidance-item { padding: 14px 16px; border-radius: ds.$student-radius; border: 1px solid ds.$student-border-soft; background: ds.$student-surface-soft; }
@@ -93,7 +105,6 @@
 
 @media (max-width: 768px) {
   .px-my-practicums { padding-top: 16px; padding-bottom: 32px; }
-  .enroll-card { flex-direction: column; }
-  .enroll-card__actions { flex-direction: row; flex-wrap: wrap; }
+  .enroll-grid { grid-template-columns: 1fr; }
   .timeline-item { grid-template-columns: 1fr; }
 }

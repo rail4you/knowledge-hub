@@ -38,48 +38,50 @@
       </div>
     </div>
 
-    <div class="enroll-list">
+    <div class="enroll-grid">
       @for (item of items(); track item.id) {
-        <div class="enroll-card">
-          <div class="enroll-card__body" (click)="openDetail(item)">
-            <div class="enroll-card__title">
-              <h3>{{ item.projectTitle || '实训项目' }}</h3>
-              <nz-tag [nzColor]="getStatusColor(item.status)">{{ getStatusLabel(item.status) }}</nz-tag>
+        <article class="enroll-card" (click)="openDetail(item)" tabindex="0" (keyup.enter)="openDetail(item)">
+          <div class="enroll-card__cover" [style.background]="coverGradient(item)">
+            <div class="cover-decor" aria-hidden="true">
+              <span class="decor-line decor-line--1"></span>
+              <span class="decor-line decor-line--2"></span>
+              <span class="decor-circle"></span>
             </div>
-            <div class="enroll-card__meta">
-              <span>报名时间 {{ item.enrolledAt | date:'yyyy-MM-dd' }}</span>
-              @if (item.lastSubmittedAt) { <span>最后提交 {{ item.lastSubmittedAt | date:'yyyy-MM-dd HH:mm' }}</span> }
-              @if (item.completedAt) { <span>完成时间 {{ item.completedAt | date:'yyyy-MM-dd' }}</span> }
+            <div class="cover-icon">
+              <span nz-icon nzType="experiment" nzTheme="outline"></span>
             </div>
+            <nz-tag class="cover-status" [nzColor]="getStatusColor(item.status)" nzBorderless>{{ getStatusLabel(item.status) }}</nz-tag>
+          </div>
+          <div class="enroll-card__body">
+            <h3 class="enroll-card__title" [title]="item.projectTitle || '实训项目'">{{ item.projectTitle || '实训项目' }}</h3>
             <div class="enroll-card__progress">
-              <span class="progress-label">进度</span>
               <nz-progress [nzPercent]="+item.progress" [nzSize]="'small'"></nz-progress>
               <span class="progress-value">{{ item.progress }}%</span>
             </div>
             <div class="enroll-card__score">
-              <span class="score-label">最终成绩</span>
               @if (hasScore(item)) {
                 <span class="score-value">{{ item.finalScore }}<span class="score-max"> / 100</span></span>
               } @else {
                 <span class="score-value score-value--pending">未评分</span>
               }
               @if (item.finalComment) {
-                <span class="score-comment">{{ item.finalComment }}</span>
+                <span class="score-comment" [title]="item.finalComment">{{ item.finalComment }}</span>
               }
+            </div>
+            <div class="enroll-card__meta">
+              <span><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ item.enrolledAt | date:'yyyy-MM-dd' }} 报名</span>
+              @if (item.completedAt) { <span><span nz-icon nzType="check-circle" nzTheme="outline"></span> {{ item.completedAt | date:'yyyy-MM-dd' }} 完成</span> }
             </div>
           </div>
           <div class="enroll-card__actions">
-            <button nz-button (click)="openDetail(item)">
-              <span nz-icon nzType="profile" nzTheme="outline"></span> 查看项目
-            </button>
-            <button nz-button (click)="openGuidance(item)">
+            <button class="card-btn" (click)="openGuidance(item); $event.stopPropagation()">
               <span nz-icon nzType="message" nzTheme="outline"></span> 指导记录
             </button>
-            <button nz-button (click)="openTimeline(item)">
+            <button class="card-btn" (click)="openTimeline(item); $event.stopPropagation()">
               <span nz-icon nzType="history" nzTheme="outline"></span> 过程追溯
             </button>
           </div>
-        </div>
+        </article>
       }
     </div>
   }

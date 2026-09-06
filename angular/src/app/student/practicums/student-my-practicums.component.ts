@@ -246,6 +246,20 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
     return item.finalScore != null;
   }
 
+  /** 封面渐变（与实训主列表页一致） */
+  coverGradient(item: PracticumEnrollmentDto): string {
+    const palettes = [
+      '#2563eb',
+      '#1d4ed8',
+      '#3b82f6',
+      '#0ea5e9',
+    ];
+    const key = item.projectTitle || item.projectId || item.id || '';
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
+    return palettes[Math.abs(hash) % palettes.length];
+  }
+
   hasMetadata(item: PracticumTimelineItemDto, key: string): boolean {
     return item.metadata?.[key] != null;
   }
