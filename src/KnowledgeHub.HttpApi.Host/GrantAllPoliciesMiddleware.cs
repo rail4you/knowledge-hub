@@ -24,6 +24,20 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
 
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
+        // SSE 长连接（如 /api/learning/practicum-chat/stream/{id}）必须直通：
+        // 下方会把 Response.Body 换成 MemoryStream 并在 next() 返回后才回拷，
+        // 而 SSE 的 Action 永不返回（直到客户端断开），会导致首个 data: 事件
+        // 永远发不出去，前端 EventSource 一直停在 CONNECTING（页面显示"连接中"）。
+        // 这类端点与 application-configuration 无关，直接放行。
+        var path = context.Request.Path.Value;
+        if (path != null &&
+            (path.Contains("/stream", System.StringComparison.OrdinalIgnoreCase)
+             || path.Contains("/practicum-chat/", System.StringComparison.OrdinalIgnoreCase)))
+        {
+            await next(context);
+            return;
+        }
+
         // 拦截 application-configuration 响应
         var originalBody = context.Response.Body;
         using var newBody = new System.IO.MemoryStream();
