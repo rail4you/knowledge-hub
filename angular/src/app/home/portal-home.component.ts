@@ -12,12 +12,9 @@ import type { PublicHomeStatsDto, PortalHomeDataDto, TenantResourceSummaryDto, P
 import { FilePreviewComponent } from '../shared/preview/file-preview.component';
 
 interface HeroSlide {
-  eyebrow: string;
   title: string;
   highlight: string;
   desc: string;
-  primaryCta: { label: string; link: string };
-  secondaryCta: { label: string; link: string };
   accent: string;
 }
 
@@ -55,31 +52,22 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
 
   readonly heroSlides: HeroSlide[] = [
     {
-      eyebrow: '海量资源 · 一站尽览',
       title: '智慧资源库',
       highlight: '让学习更高效',
       desc: '汇聚精品课程、教案素材、实训案例，为院校提供完整的教学资源解决方案。',
-      primaryCta: { label: '浏览资源库', link: '/student/resources' },
-      secondaryCta: { label: '了解更多', link: '/student/courses' },
-      accent: '#1a5fe0',
+      accent: '#7cc4ff',
     },
     {
-      eyebrow: '精品课程 · 名师领航',
       title: '在线课程中心',
       highlight: '名师就在身边',
       desc: '覆盖各专业核心课程，名师团队精心打造，支持在线学习、互动答疑与学习追踪。',
-      primaryCta: { label: '探索课程', link: '/student/courses' },
-      secondaryCta: { label: '我的学习', link: '/student/my-learning' },
-      accent: '#0ea5e9',
+      accent: '#7cc4ff',
     },
     {
-      eyebrow: 'AI 驱动 · 因材施教',
       title: '智能教学助手',
       highlight: 'AI 让教学更轻松',
       desc: '智能备课、个性化学习路径、AI 答疑，为师生提供全方位的智能教学服务。',
-      primaryCta: { label: '体验 AI 助手', link: '/ai/chat' },
-      secondaryCta: { label: '智能搜索', link: '/search' },
-      accent: '#0891b2',
+      accent: '#7cc4ff',
     },
   ];
 
@@ -87,8 +75,14 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
 
   readonly rankedMaterials = () => {
     const mats = this.homeData()?.latestMaterials || [];
-    return [...mats].sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0)).slice(0, 8);
+    return [...mats].sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0)).slice(0, 5);
   };
+
+  /** 最新资源榜：取前五项 */
+  readonly latestResourcesTop5 = () => (this.homeData()?.latestMaterials || []).slice(0, 5);
+
+  /** 资源排行版：取前五项 */
+  readonly topResourcesTop5 = () => (this.topResources() || []).slice(0, 5);
 
   previewMaterial(m: MaterialBriefDto | PublicResourceDto): void {
     if (!m.id) return;
@@ -159,8 +153,8 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
       if (id) this.portal.getHomeData(id).subscribe(d => this.homeData.set(d));
     });
 
-    // 资源排行榜：跨所有租户取下载量最高的资源
-    this.portal.getTopResourcesByDownload(8).subscribe(d => this.topResources.set(d || []));
+    // 资源排行榜：跨所有租户取下载量最高的前 5 项
+    this.portal.getTopResourcesByDownload(5).subscribe(d => this.topResources.set(d || []));
 
     this.loadBrowseData();
     this.startHeroAutoplay();
@@ -185,22 +179,6 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     this.loadBrowseData();
   }
 
-  heroPrimaryLink(s: HeroSlide): string { return this.resolveHeroLink(s.primaryCta.link); }
-  heroSecondaryLink(s: HeroSlide): string { return this.resolveHeroLink(s.secondaryCta.link); }
-
-  private resolveHeroLink(path: string): string {
-    if (!this.isLoggedIn) return '/account/login';
-    if (this.isStudent) {
-      const studentMap: Record<string, string> = { '/ai/chat': '/student/ai/chat', '/search': '/student/search' };
-      return studentMap[path] ?? path;
-    }
-    const map: Record<string, string> = {
-      '/student/resources': '/resources', '/student/courses': '/learning/course-list',
-      '/student/my-learning': '/learning/my-courses',
-    };
-    return map[path] ?? path;
-  }
-
   ngOnDestroy() { this.stopHeroAutoplay(); }
 
   setHeroSlide(i: number) { this.heroIndex.set(i); this.restartHeroAutoplay(); }
@@ -220,8 +198,17 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   }
 
   // ---- 文件扩展名对应的图标 ----
-  /** 根据文件扩展名返回对应的图标名 */
-  materialIcon(ext?: string): string {
+  /** 格式化文件大小（与学生端一致） */
+  formatFileSize(bytes?: number): string {
+    if (!bytes || bytes <= 0) return '未知大小';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = bytes;
+    let i = 0;
+    while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
+    return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+  }
+
+  /** 根据文件扩展名返回对应的图标名 */  materialIcon(ext?: string): string {
     if (!ext) return 'file';
     const e = ext.toLowerCase();
     if (e.includes('mp4') || e.includes('avi') || e.includes('mov') || e.includes('flv')) return 'video-camera';

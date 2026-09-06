@@ -39,36 +39,13 @@
       <div class="hero__content">
         @for (s of heroSlides; track $index) {
           <div class="hero__pane" [class.is-active]="heroIndex() === $index">
-            <span class="hero__eyebrow">
-              <span class="hero__eyebrow-bar"></span>
-              {{ s.eyebrow }}
-            </span>
             <h1 class="hero__title">
               <span class="hero__title-line">{{ s.title }}</span>
               <span class="hero__title-line hero__title-line--hl">{{ s.highlight }}</span>
             </h1>
             <p class="hero__desc">{{ s.desc }}</p>
-            <div class="hero__cta">
-              <a [routerLink]="heroPrimaryLink(s)" class="btn btn--hero-primary">
-                {{ s.primaryCta.label }}
-                <span class="btn__arrow">→</span>
-              </a>
-              <a [routerLink]="heroSecondaryLink(s)" class="btn btn--hero-ghost">
-                {{ s.secondaryCta.label }}
-              </a>
-            </div>
           </div>
         }
-      </div>
-
-      <div class="hero__visual">
-        <div class="hero__image-wrap">
-          <img
-            src="assets/images/home/resource-library-hero.png"
-            alt="易课通资源库"
-            class="hero__image"
-          />
-        </div>
       </div>
     </div>
 
@@ -109,14 +86,6 @@
         <div class="stat__body">
           <strong>{{ (stats()?.totalMicroMajorCount || 0) | number }}</strong>
           <span>个微专业</span>
-        </div>
-      </div>
-      <div class="stat__divider"></div>
-      <div class="stat">
-        <div class="stat__icon stat__icon--ai"><span nz-icon nzType="robot" nzTheme="outline"></span></div>
-        <div class="stat__body">
-          <strong>AI 辅助</strong>
-          <span>智能教学服务</span>
         </div>
       </div>
     </div>
@@ -189,7 +158,14 @@
                 <span class="course-card__badge">精选</span>
               </div>
               <div class="course-card__body">
+                <div class="course-card__tags">
+                  @if (c.majorName) { <span class="course-card__tag course-card__tag--major">{{ c.majorName }}</span> }
+                </div>
                 <h4>{{ c.title }}</h4>
+                <div class="course-card__stats">
+                  <span class="stat-pill"><span nz-icon nzType="team" nzTheme="outline"></span>{{ c.studentCount || 0 }} 人学习</span>
+                  @if (c.difficulty) { <span class="stat-pill"><span nz-icon nzType="thunderbolt" nzTheme="outline"></span>{{ ['入门','初级','中级','高级','专家'][(c.difficulty || 1) - 1] || '未设置' }}</span> }
+                </div>
                 <div class="course-card__meta">
                   <span class="course-card__teacher">
                     <span class="meta-avatar">{{ (c.teacherName || '专业教师').slice(0, 1) }}</span>
@@ -198,6 +174,7 @@
                   <span class="course-card__students"><span nz-icon nzType="team" nzTheme="outline"></span> {{ c.studentCount || 0 }} 人</span>
                 </div>
               </div>
+
             </a>
           }
         </div>
@@ -241,36 +218,61 @@
     </section>
   }
 
-  <!-- ===== 最新资源 ===== -->
-  @if (homeData()?.latestMaterials?.length) {
-    <section class="section">
-      <div class="section__inner">
-        <div class="section__head">
-          <div class="section__head-left">
-            <h2>最新资源</h2>
-          </div>
-          <a routerLink="/student/resources" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
-        </div>
-        <div class="material-grid">
-          @for (m of homeData()?.latestMaterials; track m.id) {
-            <div class="material-card" [class.material-card--clickable]="canPreview(m)" (click)="canPreview(m) && previewMaterial(m)">
-              <span class="material-card__icon">
-                <span nz-icon [nzType]="materialIcon(m.fileExtension)" nzTheme="outline"></span>
-              </span>
-              <div class="material-card__body">
-                <h5>{{ m.name }}</h5>
-                <div class="material-card__meta">
-                  <span class="material-card__ext">{{ m.fileExtension ? '.' + m.fileExtension : '文件' }}</span>
-                  <span class="material-card__dot"></span>
-                  <span class="material-card__meta-item"><span nz-icon nzType="download" nzTheme="outline"></span> {{ m.downloadCount || 0 }}</span>
-                  @if (canPreview(m)) {
-                    <span class="material-card__meta-item"><span nz-icon nzType="eye" nzTheme="outline"></span> 预览</span>
-                  }
-                </div>
-              </div>
+  <!-- ===== 最新资源 + 资源排行（同一容器，两栏榜单，各前五） ===== -->
+  @if (homeData()?.latestMaterials?.length || topResources().length) {
+    <section class="section dual-section">
+      <div class="dual-section__inner">
+        @if (homeData()?.latestMaterials?.length) {
+          <div class="rank-panel">
+            <div class="rank-panel__head">
+              <h3><span nz-icon nzType="file-text" nzTheme="outline"></span>最新资源</h3>
+              <a routerLink="/student/resources" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
             </div>
-          }
-        </div>
+            <div class="rank-list">
+              @for (m of latestResourcesTop5(); track m.id; let i = $index) {
+                <div class="rank-row" [class.rank-row--clickable]="canPreview(m)" [class.rank-row--top3]="i < 3" (click)="canPreview(m) && previewMaterial(m)">
+                  <span class="rank-row__num">{{ i + 1 }}</span>
+                  <div class="rank-row__body">
+                    <h5>{{ m.name }}</h5>
+                    <span class="rank-row__meta">
+                      <span>{{ m.downloadCount || 0 }} 次下载</span>
+                      @if (canPreview(m)) {
+                        <span class="rank-row__dot"></span>
+                        <span>可预览</span>
+                      }
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        @if (topResources().length) {
+          <div class="rank-panel">
+            <div class="rank-panel__head">
+              <h3><span nz-icon nzType="rise" nzTheme="outline"></span>资源排行</h3>
+              <a routerLink="/student/resources" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
+            </div>
+            <div class="rank-list">
+              @for (m of topResourcesTop5(); track m.id; let i = $index) {
+                <div class="rank-row" [class.rank-row--clickable]="canPreview(m)" [class.rank-row--top3]="i < 3" (click)="canPreview(m) && previewMaterial(m)">
+                  <span class="rank-row__num">{{ i + 1 }}</span>
+                  <div class="rank-row__body">
+                    <h5>{{ m.name }}</h5>
+                    <span class="rank-row__meta">
+                      <span>{{ m.downloadCount || 0 }} 次下载</span>
+                      @if (canPreview(m)) {
+                        <span class="rank-row__dot"></span>
+                        <span>可预览</span>
+                      }
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
       </div>
     </section>
   }
@@ -294,38 +296,12 @@
               </div>
               <div class="news-card__body">
                 <h5>{{ n.title }}</h5>
+                <div class="news-card__meta">
+                  <span class="news-card__date"><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ n.publishedAt | date:'yyyy-MM-dd' }}</span>
+                  <span class="news-card__more">阅读全文 <span nz-icon nzType="right" nzTheme="outline"></span></span>
+                </div>
               </div>
             </a>
-          }
-        </div>
-      </div>
-    </section>
-  }
-
-  <!-- ===== 资源排行榜 ===== -->
-  @if (topResources().length) {
-    <section class="section">
-      <div class="section__inner">
-        <div class="section__head">
-          <div class="section__head-left">
-            <h2>资源排行</h2>
-          </div>
-          <a routerLink="/student/resources" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
-        </div>
-        <div class="rank-list">
-          @for (m of topResources(); track m.id; let i = $index) {
-            <div class="rank-card" [class.rank-card--clickable]="canPreview(m)" [class.rank-card--top3]="i < 3" (click)="canPreview(m) && previewMaterial(m)">
-              <span class="rank-card__num">{{ i + 1 }}</span>
-              <div class="rank-card__icon"><span nz-icon nzType="file-text" nzTheme="outline"></span></div>
-              <div class="rank-card__body">
-                <h5>{{ m.name }}</h5>
-                <span class="rank-card__meta">
-                  <span class="rank-card__ext">{{ m.fileExtension ? '.' + m.fileExtension : '文件' }}</span>
-                  <span class="rank-card__dot"></span>
-                  <span>{{ m.downloadCount || 0 }} 次下载</span>
-                </span>
-              </div>
-            </div>
           }
         </div>
       </div>
@@ -398,11 +374,21 @@
                   @if (c.majorName) { <span class="course-card__tag course-card__tag--major">{{ c.majorName }}</span> }
                 </div>
                 <h4>{{ c.title }}</h4>
+                @if (c.description) { <p class="course-card__desc">{{ c.description }}</p> }
+                <div class="course-card__stats">
+                  <span class="stat-pill"><span nz-icon nzType="team" nzTheme="outline"></span>{{ c.studentCount || 0 }} 人学习</span>
+                </div>
                 <div class="course-card__meta">
-                  @if (c.teacherName) { <span class="course-card__teacher">{{ c.teacherName }}</span> }
-                  <span class="course-card__students"><span nz-icon nzType="team" nzTheme="outline"></span> {{ c.studentCount || 0 }}</span>
+                  @if (c.teacherName) {
+                    <span class="course-card__teacher">
+                      <span class="meta-avatar">{{ c.teacherName.slice(0, 1) }}</span>
+                      {{ c.teacherName }}
+                    </span>
+                  }
+                  <span class="course-card__students"><span nz-icon nzType="team" nzTheme="outline"></span> {{ c.studentCount || 0 }} 人</span>
                 </div>
               </div>
+
             </a>
           } @empty {
             <div class="browse-empty">暂无课程数据</div>
@@ -414,16 +400,22 @@
         <div class="material-grid">
           @for (r of browseResources(); track r.id) {
             <div class="material-card" [class.material-card--clickable]="canPreview(r)" (click)="canPreview(r) && previewMaterial(r)">
-              <span class="material-card__icon">
-                <span nz-icon [nzType]="materialIcon(r.fileExtension)" nzTheme="outline"></span>
-              </span>
+              <div class="material-card__cover">
+                @if (r.coverUrl) {
+                  <img [src]="r.coverUrl" [alt]="r.name" loading="lazy" class="material-card__cover-img" />
+                } @else {
+                  <span class="material-card__cover-icon">
+                    <span nz-icon [nzType]="materialIcon(r.fileExtension)" nzTheme="outline"></span>
+                  </span>
+                }
+                <span class="material-card__type-badge">{{ r.fileExtension ? '.' + r.fileExtension : '文件' }}</span>
+              </div>
               <div class="material-card__body">
                 <h5>{{ r.name }}</h5>
+                @if (r.tenantName) { <p class="material-card__desc">{{ r.tenantName }}</p> }
                 <div class="material-card__meta">
-                  @if (r.tenantName) { <span class="material-card__tenant">{{ r.tenantName }}</span> }
-                  <span class="material-card__ext">{{ r.fileExtension ? '.' + r.fileExtension : '文件' }}</span>
-                  <span class="material-card__dot"></span>
-                  <span class="material-card__meta-item"><span nz-icon nzType="download" nzTheme="outline"></span> {{ r.downloadCount || 0 }}</span>
+                  <span class="material-card__meta-item"><span nz-icon nzType="download" nzTheme="outline"></span> {{ r.downloadCount || 0 }} 下载</span>
+                  @if (r.fileSize) { <span class="material-card__meta-item">{{ formatFileSize(r.fileSize) }}</span> }
                   @if (canPreview(r)) { <span class="material-card__meta-item"><span nz-icon nzType="eye" nzTheme="outline"></span> 预览</span> }
                 </div>
               </div>
