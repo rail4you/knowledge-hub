@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NewsArticleDto, NewsCategoryDto, NewsService } from '../../news/news.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
@@ -12,13 +13,6 @@ interface StatItem {
   label: string;
   value: number;
   suffix: string;
-  icon: string;
-  color: string;
-}
-
-interface CategoryChip {
-  id: string | null;
-  name: string;
   icon: string;
   color: string;
 }
@@ -33,6 +27,7 @@ interface CategoryChip {
     FormsModule,
     NzIconModule,
     NzSpinModule,
+    NzDividerModule,
     StudentHeroComponent,
   ],
   templateUrl: './student-news.component.html',
@@ -46,10 +41,15 @@ export class StudentNewsComponent implements OnInit {
 
   readonly loading = signal(false);
   readonly articles = signal<NewsArticleDto[]>([]);
+  readonly totalCount = signal(0);
   readonly hotArticles = signal<NewsArticleDto[]>([]);
   readonly categories = signal<NewsCategoryDto[]>([]);
   readonly filter = signal('');
   readonly categoryId = signal<string | null>(null);
+  /** 文章属性筛选：all 全部，top 头条，hot 热门，normal 一般文章 */
+  readonly attrFilter = signal<'all' | 'top' | 'hot' | 'normal'>('all');
+  /** 发布时间筛选：all 全部，week 本周，month 本月，older 更早 */
+  readonly timeFilter = signal<'all' | 'week' | 'month' | 'older'>('all');
 
   // 数据统计（从实际数据计算）
   readonly stats = computed<StatItem[]>(() => {
@@ -65,20 +65,37 @@ export class StudentNewsComponent implements OnInit {
     ];
   });
 
-  // 分类筛选 chips
-  readonly categoryChips = signal<CategoryChip[]>([
-    { id: null, name: '全部资讯', icon: 'appstore', color: '#1e6ce8' },
-  ]);
-
-  readonly allArticles = computed(() => {
-    return this.articles().slice(0, 30);
+  /** 工具栏标题：时间 + 属性 + 分类组合 */
+  readonly toolbarLabel = computed(() => {
+    const parts: string[] = [];
+    const timeLabel = this.timeFilterLabel();
+    if (timeLabel) parts.push(timeLabel);
+    const attrLabel = this.attrFilterLabel();
+    if (attrLabel) parts.push(attrLabel);
+    const cat = this.findCategoryName(this.categoryId());
+    if (cat) parts.push(cat);
+    return parts.length > 0 ? parts.join(' · ') : '资讯列表';
   });
 
-  readonly trendingArticles = computed(() => {
-    return [...this.articles()]
-      .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
-      .slice(0, 5);
-  });
+  /** 当前时间筛选的中文名（全部返回空） */
+  timeFilterLabel(): string {
+    switch (this.timeFilter()) {
+      case 'week': return '本周';
+      case 'month': return '本月';
+      case 'older': return '更早';
+      default: return '';
+    }
+  }
+
+  /** 当前属性筛选的中文名（全部返回空） */
+  attrFilterLabel(): string {
+    switch (this.attrFilter()) {
+      case 'top': return '头条';
+      case 'hot': return '热门';
+      case 'normal': return '一般文章';
+      default: return '';
+    }
+  }
 
   ngOnInit(): void {
     this.loadCategories();
@@ -90,37 +107,27 @@ export class StudentNewsComponent implements OnInit {
     this.newsService.getCategoryTree().subscribe({
       next: categories => {
         this.categories.set(categories || []);
-        // 同步生成快捷分类 chips
-        const chips: CategoryChip[] = [
-          { id: null, name: '全部资讯', icon: 'appstore', color: '#1e6ce8' },
-        ];
-        const colorPalette = ['#7c3aed', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
-        let colorIndex = 0;
-        const flat = this.categoryOptions();
-        flat.slice(0, 6).forEach(cat => {
-          chips.push({
-            id: cat.id,
-            name: cat.name,
-            icon: 'folder',
-            color: colorPalette[colorIndex % colorPalette.length],
-          });
-          colorIndex++;
-        });
-        this.categoryChips.set(chips);
       },
     });
   }
 
   loadArticles(): void {
     this.loading.set(true);
+    const attr = this.attrFilter();
+    const time = this.timeRange();
     this.newsService.getPublishedArticles({
       filter: this.filter() || undefined,
       categoryId: this.categoryId() || undefined,
+      isTop: attr === 'top' ? true : attr === 'normal' ? false : undefined,
+      isHot: attr === 'hot' ? true : attr === 'normal' ? false : undefined,
+      publishedAfter: time.after,
+      publishedBefore: time.before,
       skipCount: 0,
       maxResultCount: 30,
     }).subscribe({
       next: result => {
         this.articles.set(result.items || []);
+        this.totalCount.set(result.totalCount || 0);
         this.loading.set(false);
       },
       error: () => {
@@ -145,22 +152,57 @@ export class StudentNewsComponent implements OnInit {
     this.loadArticles();
   }
 
+  selectAttrFilter(value: 'all' | 'top' | 'hot' | 'normal'): void {
+    this.attrFilter.set(value);
+    this.loadArticles();
+  }
+
+  selectTimeFilter(value: 'all' | 'week' | 'month' | 'older'): void {
+    this.timeFilter.set(value);
+    this.loadArticles();
+  }
+
+  /** 发布时间范围（周一起点 / 月初，ISO 字符串） */
+  private timeRange(): { after?: string; before?: string } {
+    const mode = this.timeFilter();
+    if (mode === 'all') return {};
+    const now = new Date();
+    if (mode === 'older') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { before: monthStart.toISOString() };
+    }
+    const start = mode === 'week'
+      ? this.startOfWeek(now)
+      : new Date(now.getFullYear(), now.getMonth(), 1);
+    return { after: start.toISOString() };
+  }
+
+  /** 本周一 00:00（周日归入本周） */
+  private startOfWeek(date: Date): Date {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const day = d.getDay();
+    d.setDate(d.getDate() - ((day + 6) % 7));
+    return d;
+  }
+
   onSearch(): void {
     this.loadArticles();
   }
 
-  categoryOptions(): NewsCategoryDto[] {
-    const result: NewsCategoryDto[] = [];
-    const append = (items: NewsCategoryDto[]) => {
+  /** 在分类树中查找名称（含子级） */
+  private findCategoryName(id: string | null): string | null {
+    if (!id) return null;
+    const walk = (items: NewsCategoryDto[]): string | null => {
       for (const item of items) {
-        result.push(item);
+        if (item.id === id) return item.name;
         if (item.children?.length) {
-          append(item.children);
+          const found = walk(item.children);
+          if (found) return found;
         }
       }
+      return null;
     };
-    append(this.categories());
-    return result;
+    return walk(this.categories());
   }
 
   /**
@@ -168,13 +210,6 @@ export class StudentNewsComponent implements OnInit {
    */
   coverGradient(article: NewsArticleDto): string {
     return this.gradientByKey(article.title || article.id || 'x', article.categoryName || '');
-  }
-
-  /**
-   * 基于分类名生成稳定的渐变色（用于侧边栏分类图标）
-   */
-  gradientByCategory(categoryName: string): string {
-    return this.gradientByKey(categoryName, categoryName);
   }
 
   private gradientByKey(primary: string, secondary: string): string {
@@ -203,11 +238,6 @@ export class StudentNewsComponent implements OnInit {
   parseTags(tags?: string): string[] {
     if (!tags) return [];
     return tags.split(/[,，;；\s]+/).map(t => t.trim()).filter(t => t.length > 0).slice(0, 3);
-  }
-
-  /** 热门资讯排行榜数字 */
-  rankNumber(index: number): string {
-    return (index + 1).toString().padStart(2, '0');
   }
 
   /** 封面图加载失败时隐藏 img，露出底层渐变 pattern */

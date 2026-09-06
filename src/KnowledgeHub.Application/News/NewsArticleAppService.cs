@@ -257,7 +257,11 @@ public class NewsArticleAppService : KnowledgeHubAppService, INewsArticleAppServ
                 x.Title.Contains(input.Filter!) ||
                 (x.Summary != null && x.Summary.Contains(input.Filter!)) ||
                 (x.Tags != null && x.Tags.Contains(input.Filter!)))
-            .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId.Value);
+            .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId.Value)
+            .WhereIf(input.IsTop.HasValue, x => x.IsTop == input.IsTop.Value)
+            .WhereIf(input.IsHot.HasValue, x => x.IsHot == input.IsHot.Value)
+            .WhereIf(input.PublishedAfter.HasValue, x => (x.PublishedAt ?? x.CreationTime) >= input.PublishedAfter!.Value)
+            .WhereIf(input.PublishedBefore.HasValue, x => (x.PublishedAt ?? x.CreationTime) < input.PublishedBefore!.Value);
 
         return query;
     }

@@ -74,6 +74,10 @@ export interface PagedNewsArticleRequestDto {
   filter?: string;
   categoryId?: string;
   status?: NewsArticleStatus;
+  isTop?: boolean;
+  isHot?: boolean;
+  publishedAfter?: string;
+  publishedBefore?: string;
   sorting?: string;
   skipCount: number;
   maxResultCount: number;

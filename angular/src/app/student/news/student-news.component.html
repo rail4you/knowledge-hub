@@ -26,29 +26,183 @@
     <button class="search-bar__btn" (click)="onSearch()">搜索</button>
   </div>
 
-  <!-- =================== 资讯分类 =================== -->
-  <div class="category-chips">
-    @for (chip of categoryChips(); track chip.id) {
-      <button
-        class="cat-chip"
-        [class.is-active]="categoryId() === chip.id"
-        (click)="selectCategory(chip.id)"
-      >
-        @if (chip.id) {
-          <span class="cat-chip__dot" [style.background]="chip.color"></span>
-        } @else {
-          <span nz-icon [nzType]="chip.icon" nzTheme="outline"></span>
-        }
-        <span>{{ chip.name }}</span>
-      </button>
-    }
-  </div>
-
-  <!-- =================== 资讯卡片列表 =================== -->
-  <section class="news-content">
+  <!-- =================== 分类侧栏 + 资讯列表 =================== -->
+  <section class="news-section">
     <div class="news-layout">
-      <!-- 左侧主内容 -->
-      <div class="news-main">
+      <!-- 左侧双层分类 -->
+      <aside class="category-sidebar" aria-label="资讯分类">
+        <div class="sidebar-header">
+          <h3>
+            <span nz-icon nzType="menu" nzTheme="outline"></span>
+            资讯分类
+          </h3>
+        </div>
+
+        <div class="sidebar-categories">
+          <span class="sidebar-categories__label">发布时间</span>
+          <div class="category-tree">
+            <button
+              class="tree-item tree-item--root"
+              [class.is-active]="timeFilter() === 'all'"
+              (click)="selectTimeFilter('all')"
+            >
+              <span class="tree-item__icon">
+                <span nz-icon nzType="calendar" nzTheme="outline"></span>
+              </span>
+              <span class="tree-item__name">全部时间</span>
+            </button>
+            <button
+              class="tree-item"
+              [class.is-active]="timeFilter() === 'week'"
+              (click)="selectTimeFilter('week')"
+            >
+              <span class="tree-item__icon">
+                <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+              </span>
+              <span class="tree-item__name">本周</span>
+            </button>
+            <button
+              class="tree-item"
+              [class.is-active]="timeFilter() === 'month'"
+              (click)="selectTimeFilter('month')"
+            >
+              <span class="tree-item__icon">
+                <span nz-icon nzType="calendar" nzTheme="outline"></span>
+              </span>
+              <span class="tree-item__name">本月</span>
+            </button>
+            <button
+              class="tree-item"
+              [class.is-active]="timeFilter() === 'older'"
+              (click)="selectTimeFilter('older')"
+            >
+              <span class="tree-item__icon">
+                <span nz-icon nzType="history" nzTheme="outline"></span>
+              </span>
+              <span class="tree-item__name">更早</span>
+            </button>
+          </div>
+        </div>
+
+        <nz-divider></nz-divider>
+
+        <div class="sidebar-categories">
+          <span class="sidebar-categories__label">文章属性</span>
+          <div class="category-tree">
+            <button
+              class="tree-item tree-item--root"
+              [class.is-active]="attrFilter() === 'all'"
+              (click)="selectAttrFilter('all')"
+            >
+              <span class="tree-item__icon">
+                <span nz-icon nzType="appstore" nzTheme="outline"></span>
+              </span>
+              <span class="tree-item__name">全部资讯</span>
+            </button>
+            <button
+              class="tree-item"
+              [class.is-active]="attrFilter() === 'top'"
+              (click)="selectAttrFilter('top')"
+            >
+              <span class="tree-item__icon">
+                <span nz-icon nzType="pushpin" nzTheme="outline"></span>
+              </span>
+              <span class="tree-item__name">头条</span>
+            </button>
+            <button
+              class="tree-item"
+              [class.is-active]="attrFilter() === 'hot'"
+              (click)="selectAttrFilter('hot')"
+            >
+              <span class="tree-item__icon">
+                <span nz-icon nzType="fire" nzTheme="outline"></span>
+              </span>
+              <span class="tree-item__name">热门</span>
+            </button>
+            <button
+              class="tree-item"
+              [class.is-active]="attrFilter() === 'normal'"
+              (click)="selectAttrFilter('normal')"
+            >
+              <span class="tree-item__icon">
+                <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              </span>
+              <span class="tree-item__name">一般文章</span>
+            </button>
+          </div>
+        </div>
+
+        <nz-divider></nz-divider>
+
+        <div class="sidebar-categories">
+          <span class="sidebar-categories__label">分类目录</span>
+          <div class="category-tree">
+            <button
+              class="tree-item tree-item--root"
+              [class.is-active]="categoryId() === null"
+              (click)="selectCategory(null)"
+            >
+              <span class="tree-item__icon">
+                <span nz-icon nzType="folder-open" nzTheme="outline"></span>
+              </span>
+              <span class="tree-item__name">全部分类</span>
+            </button>
+            @for (cat of categories(); track cat.id) {
+              <button
+                class="tree-item"
+                [class.is-active]="categoryId() === cat.id"
+                (click)="selectCategory(cat.id)"
+              >
+                <span class="tree-item__icon">
+                  <span nz-icon nzType="folder" nzTheme="outline"></span>
+                </span>
+                <span class="tree-item__name">{{ cat.name }}</span>
+              </button>
+              @if (cat.children && cat.children.length > 0) {
+                @for (child of cat.children; track child.id) {
+                  <button
+                    class="tree-item tree-item--child"
+                    [class.is-active]="categoryId() === child.id"
+                    (click)="selectCategory(child.id)"
+                  >
+                    <span class="tree-item__name">{{ child.name }}</span>
+                  </button>
+                }
+              }
+            }
+          </div>
+        </div>
+      </aside>
+
+      <!-- 右侧资讯列表 -->
+      <main class="news-main">
+        <div class="main-toolbar">
+          <div class="main-toolbar__title">
+            <span class="main-toolbar__label">{{ toolbarLabel() }}</span>
+            @if (timeFilter() !== 'all') {
+              <button class="clear-filter" (click)="selectTimeFilter('all')">
+                <span nz-icon nzType="close" nzTheme="outline"></span>
+                {{ timeFilterLabel() }}
+              </button>
+            }
+            @if (attrFilter() !== 'all') {
+              <button class="clear-filter" (click)="selectAttrFilter('all')">
+                <span nz-icon nzType="close" nzTheme="outline"></span>
+                {{ attrFilterLabel() }}
+              </button>
+            }
+            @if (categoryId()) {
+              <button class="clear-filter" (click)="selectCategory(null)">
+                <span nz-icon nzType="close" nzTheme="outline"></span>
+                清除分类筛选
+              </button>
+            }
+          </div>
+          <div class="main-toolbar__count">
+            共 <strong>{{ totalCount() }}</strong> 篇
+          </div>
+        </div>
+
         @if (loading()) {
           <div class="loading-state">
             <nz-spin nzSimple nzSize="large"></nz-spin>
@@ -64,7 +218,7 @@
           </div>
         } @else {
           <div class="news-grid">
-            @for (article of allArticles(); track article.id) {
+            @for (article of articles(); track article.id) {
               <article
                 class="news-card"
                 (click)="openArticle(article.id)"
@@ -81,29 +235,47 @@
                     [class.is-hidden]="!hasCover(article)"
                   />
                   <div class="news-card__pattern">
-                    <span nz-icon nzType="file-text" nzTheme="outline" class="news-card__cover-icon"></span>
+                    <span class="cover-icon">
+                      <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                    </span>
                   </div>
-                  @if (article.isHot) {
-                    <span class="news-card__hot-badge">头条</span>
+                  @if (article.isTop || article.isHot) {
+                    <span class="news-card__badges">
+                      @if (article.isTop) {
+                        <span class="news-card__badge news-card__badge--top">头条</span>
+                      }
+                      @if (article.isHot) {
+                        <span class="news-card__badge news-card__badge--hot">热门</span>
+                      }
+                    </span>
                   }
                 </div>
 
                 <div class="news-card__body">
+                  <div class="news-card__top">
+                    @if (article.categoryName) {
+                      <span class="category-name" [title]="article.categoryName">
+                        <span nz-icon nzType="folder" nzTheme="outline"></span>
+                        {{ article.categoryName }}
+                      </span>
+                    }
+                  </div>
+
                   <h3 class="news-card__title" [title]="article.title">
                     {{ article.title }}
                   </h3>
 
                   @if (article.summary) {
-                    <p class="news-card__summary">{{ article.summary }}</p>
+                    <p class="news-card__summary" [title]="article.summary">{{ article.summary }}</p>
                   }
 
-                  <div class="news-card__meta">
-                    @if (article.categoryName) {
-                      <span class="meta-item">
-                        <span nz-icon nzType="folder" nzTheme="outline"></span>
-                        {{ article.categoryName }}
-                      </span>
+                  <div class="news-card__tags">
+                    @for (tag of parseTags(article.tags); track tag) {
+                      <span class="tag-pill" [title]="tag">{{ tag }}</span>
                     }
+                  </div>
+
+                  <div class="news-card__meta">
                     <span class="meta-item">
                       <span nz-icon nzType="calendar" nzTheme="outline"></span>
                       {{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd' }}
@@ -117,90 +289,12 @@
                       {{ article.likeCount || 0 }}
                     </span>
                   </div>
-
-                  <div class="news-card__actions">
-                    <button class="action-btn action-btn--primary" (click)="openArticle(article.id); $event.stopPropagation()">
-                      阅读全文
-                    </button>
-                  </div>
                 </div>
               </article>
             }
           </div>
         }
-      </div>
-
-      <!-- 右侧侧边栏 -->
-      <aside class="news-aside">
-        <!-- 热门资讯 Top 5 -->
-        <div class="aside-card aside-hot">
-          <h3 class="aside-card__title">
-            <span nz-icon nzType="fire" nzTheme="outline"></span>
-            热门资讯
-            <span class="aside-card__count">{{ trendingArticles().length }}</span>
-          </h3>
-          @if (trendingArticles().length === 0) {
-            <div class="hot-empty">
-              <span nz-icon nzType="inbox" nzTheme="outline"></span>
-              <p>暂无热门资讯</p>
-            </div>
-          } @else {
-            <ul class="hot-ranking">
-              @for (article of trendingArticles(); track article.id; let i = $index) {
-                <li class="hot-item" (click)="openArticle(article.id)">
-                  <span class="hot-rank" [class]="'hot-rank--' + (i < 3 ? 'top' : 'normal')">
-                    {{ rankNumber(i) }}
-                  </span>
-                  <div class="hot-item__body">
-                    <span class="hot-item__title" [title]="article.title">{{ article.title }}</span>
-                    <span class="hot-item__meta">
-                      <span>
-                        <span nz-icon nzType="eye" nzTheme="outline"></span>
-                        {{ article.viewCount || 0 }}
-                      </span>
-                      @if (article.categoryName) {
-                        <span>{{ article.categoryName }}</span>
-                      }
-                    </span>
-                  </div>
-                </li>
-              }
-            </ul>
-          }
-        </div>
-
-        <!-- 资讯分类导航 -->
-        <div class="aside-card aside-nav">
-          <h3 class="aside-card__title">
-            <span nz-icon nzType="menu" nzTheme="outline"></span>
-            资讯分类
-          </h3>
-          <ul class="aside-nav-list">
-            <li
-              class="aside-nav-item"
-              [class.is-active]="categoryId() === null"
-              (click)="selectCategory(null)"
-            >
-              <span class="aside-nav-item__icon" style="background: #2563eb">
-                <span nz-icon nzType="appstore" nzTheme="outline"></span>
-              </span>
-              <span class="aside-nav-item__name">全部资讯</span>
-            </li>
-            @for (cat of categoryOptions(); track cat.id) {
-              <li
-                class="aside-nav-item"
-                [class.is-active]="categoryId() === cat.id"
-                (click)="selectCategory(cat.id)"
-              >
-                <span class="aside-nav-item__icon" [style.background]="gradientByCategory(cat.name)">
-                  <span nz-icon nzType="folder" nzTheme="outline"></span>
-                </span>
-                <span class="aside-nav-item__name">{{ cat.name }}</span>
-              </li>
-            }
-          </ul>
-        </div>
-      </aside>
+      </main>
     </div>
   </section>
 </div>

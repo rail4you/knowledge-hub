@@ -10,12 +10,13 @@
   gap: 24px;
 }
 
-/* =================== 搜索栏（扁平风格） =================== */
+/* =================== 搜索栏（扁平风格，窄幅） =================== */
 .search-bar {
   display: flex;
   align-items: center;
   gap: 8px;
   height: 42px;
+  max-width: 560px;
   padding: 0 8px 0 14px;
   border: 1px solid ds.$student-border;
   border-radius: ds.$student-radius;
@@ -81,106 +82,238 @@
   }
 }
 
-.category-chips {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+/* =================== 布局：左侧双层分类 + 右侧列表 =================== */
+.news-section {
+  display: block;
 }
 
-.cat-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 12px;
-  border: 1px solid ds.$student-border;
-  border-radius: 6px;
-  background: #fff;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.news-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
 
-  &__dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+/* 左侧分类侧栏（与资源列表一致） */
+.category-sidebar {
+  position: sticky;
+  top: 144px;
+  border-radius: ds.$student-radius;
+  background: ds.$student-surface-soft;
+  padding: 16px 0;
+}
+
+.sidebar-header {
+  padding: 0 18px 12px;
+  border-bottom: 1px solid ds.$student-border-soft;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: ds.$student-text;
   }
 
   span[nz-icon] {
+    color: ds.$student-primary;
+  }
+}
+
+.sidebar-categories {
+  padding: 6px 14px 14px;
+
+  &__label {
+    display: block;
+    color: ds.$student-text-light;
     font-size: 12px;
+    margin-bottom: 8px;
+    padding: 0 6px;
+  }
+}
+
+.category-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: ds.$student-radius;
+  background: transparent;
+  color: ds.$student-text;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &__icon {
+    width: 18px;
+    color: ds.$student-text-light;
+    flex-shrink: 0;
+
+    span[nz-icon] {
+      font-size: 13px;
+    }
+  }
+
+  &__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &:hover {
-    border-color: ds.$student-primary;
+    background: #fff;
     color: ds.$student-primary;
   }
 
   &.is-active {
     background: ds.$student-primary;
     color: #fff;
-    border-color: ds.$student-primary;
+
+    .tree-item__icon {
+      color: rgba(255, 255, 255, 0.85);
+    }
+  }
+
+  &--child {
+    min-height: 30px;
+    padding-left: 24px;
+    font-size: 12px;
+    color: ds.$student-text-muted;
+
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: ds.$student-border;
+      margin-right: 4px;
+    }
   }
 }
 
-/* =================== Main =================== */
-.news-content {
-  display: block;
-}
-
-.news-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 24px;
-  align-items: start;
-}
-
+/* 右侧主列 */
 .news-main {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 16px;
 }
 
-.news-aside {
-  position: sticky;
-  top: 144px;
+.main-toolbar {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 0;
+
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__label {
+    font-size: 16px;
+    font-weight: 700;
+    color: ds.$student-text;
+    position: relative;
+    padding-left: 12px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 18px;
+      border-radius: 3px;
+      background: #1e6ce8;
+    }
+  }
+
+  &__count {
+    color: ds.$student-text-muted;
+    font-size: 13px;
+
+    strong {
+      color: ds.$student-primary;
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 2px;
+    }
+  }
 }
 
-/* =================== News Grid & Card (竖向布局，3 列) =================== */
+.clear-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff7e6;
+  color: #d46b08;
+  font-size: 12px;
+  cursor: pointer;
+
+  span[nz-icon] {
+    font-size: 11px;
+  }
+
+  &:hover {
+    background: #ffe7ba;
+  }
+}
+
+/* =================== News Grid & Card（对齐资源卡片比例与动效） =================== */
 .news-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+  gap: 18px;
 }
 
 .news-card {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-radius: ds.$student-radius;
+  border-radius: ds.$student-radius-lg;
   border: 1px solid ds.$student-border-soft;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.2s ease;
+  outline: none;
+  transition: all 0.25s ease;
 
-  &:hover {
-    border-color: rgba(37, 99, 235, 0.35);
-    box-shadow: ds.$student-shadow-card;
+  &:hover,
+  &:focus-visible {
+    border-color: rgba(ds.$student-primary, 0.4);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+    transform: translateY(-3px);
 
-    .news-card__cover-icon {
-      transform: scale(1.06);
+    .cover-icon {
+      transform: scale(1.06) rotate(-2deg);
     }
   }
 
   &__cover {
     position: relative;
-    height: 130px;
+    height: 150px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -194,9 +327,13 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
+    transition: transform 0.4s ease;
 
     &.is-hidden { display: none; }
+  }
+
+  &:hover &__cover-img {
+    transform: scale(1.04);
   }
 
   &__pattern {
@@ -205,44 +342,61 @@
     justify-content: center;
   }
 
-  &__cover-icon {
-    font-size: 36px;
-    color: rgba(255, 255, 255, 0.7);
-    transition: transform 0.3s ease;
+  &__badges {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: inline-flex;
+    gap: 6px;
   }
 
-  &__hot-badge {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    height: 20px;
+  &__badge {
+    height: 22px;
     padding: 0 8px;
     border-radius: 4px;
-    background: #16a34a;
     color: #fff;
     font-size: 10px;
     font-weight: 600;
     display: inline-flex;
     align-items: center;
     line-height: 1;
+
+    &--top {
+      background: rgba(37, 99, 235, 0.92);
+    }
+
+    &--hot {
+      background: rgba(22, 163, 74, 0.92);
+    }
   }
 
   &__body {
-    padding: 12px 14px;
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     flex: 1;
     min-width: 0;
   }
 
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 22px;
+  }
+
   &__title {
     margin: 0;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 700;
     color: ds.$student-text;
-    line-height: 1.4;
-    @include ds.line-clamp(2);
+    line-height: 1.45;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__summary {
@@ -250,7 +404,18 @@
     color: ds.$student-text-muted;
     font-size: 12px;
     line-height: 1.5;
-    @include ds.line-clamp(2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    /* 无标签时也占位，保证卡片等高 */
+    min-height: 20px;
+    align-items: center;
   }
 
   &__meta {
@@ -261,11 +426,54 @@
     color: ds.$student-text-light;
     font-size: 11px;
   }
+}
 
-  &__actions {
-    margin-top: auto;
-    padding-top: 6px;
+.cover-icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+
+  span[nz-icon] {
+    font-size: 32px;
+    color: #fff;
   }
+}
+
+.category-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: ds.$student-text-light;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+
+  span[nz-icon] {
+    font-size: 11px;
+  }
+}
+
+.tag-pill {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 8px;
+  border-radius: 3px;
+  background: ds.$student-surface-soft;
+  color: ds.$student-text-muted;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.7;
 }
 
 .meta-item {
@@ -273,36 +481,6 @@
   align-items: center;
   gap: 3px;
   span[nz-icon] { font-size: 11px; }
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  height: 30px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 5px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &--primary {
-    background: ds.$student-primary;
-    color: #fff;
-    width: 100%;
-
-    &:hover:not([disabled]) {
-      background: ds.$student-primary-dark;
-    }
-
-    &[disabled] {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-  }
 }
 
 .loading-state {
@@ -360,239 +538,14 @@
   }
 }
 
-.aside-card {
-  background: #fff;
-  border-radius: ds.$student-radius-lg;
-  padding: 20px;
-  box-shadow: ds.$student-shadow-soft;
-}
-
-.aside-card__title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 16px;
-  font-size: 16px;
-  font-weight: 700;
-  color: ds.$student-text;
-  letter-spacing: -0.2px;
-
-  span[nz-icon] {
-    color: ds.$student-primary;
-    font-size: 16px;
-  }
-}
-
-.aside-card__count {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
-  background: ds.$student-surface-soft;
-  color: ds.$student-text-light;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.aside-hot .aside-card__title span[nz-icon] {
-  color: #fa8c16;
-}
-
-/* 热门排行榜 */
-.hot-ranking {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.hot-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  cursor: pointer;
-  padding: 6px 4px;
-  border-radius: ds.$student-radius;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: ds.$student-surface-soft;
-
-    .hot-item__title {
-      color: ds.$student-primary;
-    }
-  }
-}
-
-.hot-rank {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: ds.$student-surface-soft;
-  color: ds.$student-text-light;
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
-  font-feature-settings: 'tnum';
-
-  &--top {
-    color: #fff;
-    background: #0284c7;
-
-    &.hot-rank {
-      // 第一个是金，第二三个是橙
-    }
-  }
-
-  &--top:nth-child(1) {
-    background: #2563eb;
-  }
-
-  &--top:nth-child(2) {
-    background: #0891b2;
-  }
-
-  &--top:nth-child(3) {
-    background: #059669;
-  }
-}
-
-.hot-item__body {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.hot-item__title {
-  color: ds.$student-text;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.5;
-  @include ds.line-clamp(2);
-  transition: color 0.2s ease;
-}
-
-.hot-item__meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: ds.$student-text-light;
-  font-size: 11px;
-
-  span {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-  }
-
-  span[nz-icon] {
-    font-size: 11px;
-  }
-}
-
-.hot-empty {
-  min-height: 96px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: ds.$student-text-light;
-  font-size: 13px;
-  background: ds.$student-surface-soft;
-  border-radius: ds.$student-radius;
-
-  span[nz-icon] {
-    font-size: 28px;
-    color: ds.$student-border;
-  }
-
-  p {
-    margin: 0;
-  }
-}
-
-/* 分类导航 */
-.aside-nav-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.aside-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: ds.$student-radius;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: ds.$student-surface-soft;
-
-    .aside-nav-item__name {
-      color: ds.$student-primary;
-    }
-  }
-
-  &.is-active {
-    background: #2563eb;
-    color: #fff;
-
-    .aside-nav-item__name {
-      color: #fff;
-    }
-  }
-
-  &__icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 14px;
-    flex-shrink: 0;
-  }
-
-  &__name {
-    color: ds.$student-text;
-    font-size: 13px;
-    font-weight: 500;
-    transition: color 0.2s ease;
-  }
-}
-
 /* =================== Responsive =================== */
-@media (max-width: 1180px) {
+@media (max-width: 1100px) {
   .news-layout {
     grid-template-columns: 1fr;
   }
 
-  .news-aside {
+  .category-sidebar {
     position: static;
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
-  .aside-card {
-    flex: 1 1 280px;
   }
 }
 
@@ -602,36 +555,7 @@
     padding-right: 16px;
   }
 
-  .quick-bar,
-  .news-content {
-    padding: 0;
-  }
-
-  .quick-bar {
-    padding: 16px;
-  }
-
-  .search-pill {
-    height: 46px;
-
-    &__btn {
-      height: 38px;
-      padding: 0 14px;
-      font-size: 14px;
-    }
-  }
-
-  .category-chips {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
   .news-grid {
     grid-template-columns: 1fr;
-  }
-
-  .news-aside {
-    flex-direction: column;
   }
 }

@@ -44,6 +44,10 @@ public class PagedNewsArticleRequestDto : PagedAndSortedResultRequestDto
     public string? Filter { get; set; }
     public Guid? CategoryId { get; set; }
     public NewsArticleStatus? Status { get; set; }
+    public bool? IsTop { get; set; }
+    public bool? IsHot { get; set; }
+    public DateTime? PublishedAfter { get; set; }
+    public DateTime? PublishedBefore { get; set; }
 }
 
 public class ReviewNewsArticleDto
