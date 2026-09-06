@@ -39,7 +39,11 @@
         </div>
       }
 
-      <div class="content">{{ article.content }}</div>
+      @if (article.content?.trim()) {
+        <div class="content markdown-body" markdown [data]="article.content"></div>
+      } @else {
+        <div class="content content--empty">该资讯暂无正文内容</div>
+      }
 
       <div class="actions">
         <button nz-button nzType="primary" [disabled]="article.userHasLiked" (click)="likeArticle()">

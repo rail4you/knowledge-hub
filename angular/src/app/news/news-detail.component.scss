@@ -94,8 +94,100 @@ blockquote {
   font-size: 16px;
   line-height: 1.8;
   color: #333;
+  word-break: break-word;
 
   p { margin: 0 0 16px; }
+
+  &--empty {
+    color: #bfbfbf;
+    font-style: italic;
+    text-align: center;
+    padding: 32px 0;
+  }
+}
+
+/* Markdown 正文排版（与学生端同步） */
+.content.markdown-body {
+  :first-child { margin-top: 0; }
+  :last-child { margin-bottom: 0; }
+
+  h1, h2, h3, h4, h5, h6 {
+    margin: 1.2em 0 0.5em;
+    color: #1a1a1a;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  h1 { font-size: 22px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 18px; }
+
+  ul, ol {
+    padding-left: 1.6em;
+    margin: 0 0 16px;
+  }
+
+  li { margin: 4px 0; }
+
+  a { color: var(--kh-accent); }
+
+  code {
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+    font-size: 0.88em;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 1em;
+    overflow-x: auto;
+    margin: 0.6em 0;
+
+    code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+  }
+
+  blockquote {
+    border-left: 3px solid var(--kh-accent);
+    background: #f0f7ff;
+    padding: 12px 18px;
+    margin: 0 0 16px;
+    color: #555;
+    border-radius: 0 8px 8px 0;
+  }
+
+  img {
+    max-width: 100%;
+    border-radius: 8px;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.6em 0;
+
+    th, td {
+      border: 1px solid #eef1f5;
+      padding: 0.4em 0.7em;
+      text-align: left;
+    }
+    th {
+      background: #f5f7fa;
+      font-weight: 600;
+    }
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid #f0f3f8;
+    margin: 1em 0;
+  }
 }
 
 .actions {

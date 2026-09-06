@@ -119,22 +119,11 @@
             <h2>资讯正文</h2>
           </header>
 
-          <div class="article-body">
-            @if (getContentParagraphs(article.content).length > 0) {
-              @for (paragraph of getContentParagraphs(article.content); track $index) {
-                <p class="article-paragraph">{{ paragraph }}</p>
-              }
-            } @else {
-              <p class="article-paragraph article-paragraph--empty">该资讯暂无正文内容</p>
-            }
-          </div>
-
-          <footer class="article-card__footer">
-            <div class="article-copyright">
-              <span nz-icon nzType="copyright" nzTheme="outline"></span>
-              <span>本文为本站原创内容，版权归原作者及本站所有，未经授权请勿转载。</span>
-            </div>
-          </footer>
+          @if (hasContent(article.content)) {
+            <div class="article-body markdown-body" markdown [data]="article.content"></div>
+          } @else {
+            <p class="article-paragraph article-paragraph--empty">该资讯暂无正文内容</p>
+          }
         </article>
 
         <!-- 评论区 -->

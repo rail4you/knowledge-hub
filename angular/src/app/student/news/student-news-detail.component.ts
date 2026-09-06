@@ -8,6 +8,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { MarkdownComponent, MARKED_OPTIONS, provideMarkdown } from 'ngx-markdown';
 import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.service';
 
 @Component({
@@ -23,6 +24,17 @@ import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.ser
     NzButtonModule,
     NzSpinModule,
     NzModalModule,
+    MarkdownComponent,
+  ],
+  providers: [
+    // breaks: true 让单个换行也渲染为 <br>，兼容管理端 textarea 的普通换行文本；
+    // 同时完整支持 Markdown（标题/加粗/列表/链接/代码等）。
+    provideMarkdown({
+      markedOptions: {
+        provide: MARKED_OPTIONS,
+        useValue: { gfm: true, breaks: true },
+      },
+    }),
   ],
   templateUrl: './student-news-detail.component.html',
   styleUrls: ['./student-news-detail.component.scss'],
@@ -332,12 +344,8 @@ export class StudentNewsDetailComponent implements OnInit {
     return palettes[Math.abs(hash) % palettes.length];
   }
 
-  /** 渲染文章正文（处理段落、空行） */
-  getContentParagraphs(content: string): string[] {
-    if (!content) return [];
-    return content
-      .split(/\n\s*\n/)
-      .map(p => p.trim())
-      .filter(p => p.length > 0);
+  /** 正文是否有内容（模板空态判断用） */
+  hasContent(content?: string): boolean {
+    return !!content && content.trim().length > 0;
   }
 }

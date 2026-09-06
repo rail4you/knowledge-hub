@@ -8,6 +8,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { MarkdownComponent, MARKED_OPTIONS, provideMarkdown } from 'ngx-markdown';
 import { NewsArticleDto, NewsCommentDto, NewsService } from './news.service';
 
 @Component({
@@ -22,6 +23,16 @@ import { NewsArticleDto, NewsCommentDto, NewsService } from './news.service';
     NzInputModule,
     NzSpinModule,
     NzTagModule,
+    MarkdownComponent,
+  ],
+  providers: [
+    // 与学生端一致：单个换行渲染为 <br>，同时支持 Markdown。
+    provideMarkdown({
+      markedOptions: {
+        provide: MARKED_OPTIONS,
+        useValue: { gfm: true, breaks: true },
+      },
+    }),
   ],
   templateUrl: './news-detail.component.html',
   styleUrls: ['./news-detail.component.scss'],

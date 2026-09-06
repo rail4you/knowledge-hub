@@ -169,7 +169,8 @@
         <input nz-input [(ngModel)]="articleForm.tags" />
 
         <label>正文</label>
-        <textarea nz-input rows="10" [(ngModel)]="articleForm.content"></textarea>
+        <textarea nz-input rows="10" [(ngModel)]="articleForm.content" placeholder="支持 Markdown：# 标题、**加粗**、- 列表、[链接](https://...)、```代码块```；换行会自动分段，空一行另起段落"></textarea>
+        <span class="form-hint">支持 Markdown 格式，学生端自动渲染；普通换行也会保留分段。</span>
 
         <label>置顶</label>
         <nz-switch [(ngModel)]="articleForm.isTop"></nz-switch>

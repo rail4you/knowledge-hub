@@ -54,8 +54,19 @@ textarea {
   resize: vertical;
 }
 
+.form-hint {
+  grid-column: 2;
+  color: #8c8c8c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 @media (max-width: 720px) {
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .form-hint {
+    grid-column: 1;
   }
 }
