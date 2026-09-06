@@ -54,10 +54,7 @@
           </div>
           <div class="enroll-card__body">
             <h3 class="enroll-card__title" [title]="item.projectTitle || '实训项目'">{{ item.projectTitle || '实训项目' }}</h3>
-            <div class="enroll-card__progress">
-              <nz-progress [nzPercent]="+item.progress" [nzSize]="'small'"></nz-progress>
-              <span class="progress-value">{{ item.progress }}%</span>
-            </div>
+            <div class="enroll-card__progress-text">进度 <strong>{{ item.progress }}%</strong></div>
             <div class="enroll-card__score">
               @if (hasScore(item)) {
                 <span class="score-value">{{ item.finalScore }}<span class="score-max"> / 100</span></span>

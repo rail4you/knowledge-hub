@@ -4,7 +4,6 @@ import { Router, RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzModalModule } from 'ng-zorro-antd/modal';
@@ -29,7 +28,7 @@ echarts.use([PieChart, LineChart, CanvasRenderer, TooltipComponent, LegendCompon
   standalone: true,
   imports: [
     CommonModule, DatePipe, RouterModule,
-    NzButtonModule, NzIconModule, NzSpinModule, NzProgressModule, NzTagModule, NzEmptyModule, NzModalModule,
+    NzButtonModule, NzIconModule, NzSpinModule, NzTagModule, NzEmptyModule, NzModalModule,
     StudentHeroComponent,
   ],
   templateUrl: './student-my-practicums.component.html',
