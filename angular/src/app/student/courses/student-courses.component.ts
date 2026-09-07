@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -16,6 +16,7 @@ import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 import type { CourseDto, StudentCourseDto } from '../../proxy/courses/dtos/models';
 import type { LearningDashboardDto } from '../../proxy/learning/dtos/models';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { VoiceContextService } from '../voice/voice-context.service';
 
 interface StatItem {
   label: string;
@@ -65,12 +66,13 @@ interface HotCourse {
   styleUrls: ['./student-courses.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class StudentCoursesComponent implements OnInit {
+export class StudentCoursesComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
   private readonly learningService = inject(LearningService);
   private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
+  private readonly voiceContext = inject(VoiceContextService);
 
   readonly loading = signal(false);
   readonly enrolling = signal<string | null>(null);
@@ -136,9 +138,30 @@ export class StudentCoursesComponent implements OnInit {
   ]);
 
   ngOnInit(): void {
+    this.voiceContext.register('courses', () => {
+      const list = this.visibleCourses();
+      const stats = this.stats();
+      const head = list.slice(0, 10);
+      const lines = head.map(
+        (c, i) => `第${i + 1}门：${c.title || '未命名'}，${c.majorName || '专业未知'}，${this.getMyProgress(c.id!) > 0 ? `进度${Math.round(this.getMyProgress(c.id!))}%` : this.isEnrolled(c.id!) ? '已选课未开始' : '未选课'}。`
+      );
+      return {
+        key: 'courses',
+        route: this.router.url,
+        title: '课程中心',
+        summary:
+          `课程中心。${stats.map(s => `${s.label}${s.value}${s.suffix}`).join('，')}。` +
+          `当前列表共${list.length}门。${lines.join('')}`,
+        items: list.slice(0, 10).map(c => ({ id: c.id!, title: c.title || '未命名课程' })),
+      };
+    });
     this.loadCourses();
     this.loadMyCourses();
     this.loadDashboard();
+  }
+
+  ngOnDestroy(): void {
+    this.voiceContext.unregister('courses');
   }
 
   loadCourses(): void {

@@ -145,6 +145,11 @@
 
   <app-auth-error-modal></app-auth-error-modal>
 
+  <!-- 语音助手：Feature 开关控制显隐（KnowledgeHub.VoiceAssistant，超管按租户开关） -->
+  @if (voiceAssistantEnabled()) {
+    <app-voice-panel></app-voice-panel>
+  }
+
   <footer class="app-footer">
     <div class="footer-container">
       <div class="footer-links">

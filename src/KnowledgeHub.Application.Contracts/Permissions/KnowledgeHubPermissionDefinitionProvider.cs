@@ -160,6 +160,10 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.Resource, L("Permission:SpecialEducation.Resource"));
         specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.Review, L("Permission:SpecialEducation.Review"));
         specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.Manage, L("Permission:SpecialEducation.Manage"));
+
+        // VoiceAssistant permissions（学生端语音助手 — 仅 host 全局管理员按租户开关）
+        var voiceAssistantPermission = myGroup.AddPermission(KnowledgeHubPermissions.VoiceAssistant.Default, L("Permission:VoiceAssistant"));
+        voiceAssistantPermission.AddChild(KnowledgeHubPermissions.VoiceAssistant.Manage, L("Permission:VoiceAssistant.Manage"));
     }
 
     private static LocalizableString L(string name)

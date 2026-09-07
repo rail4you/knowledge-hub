@@ -502,6 +502,11 @@
     "Permission:SpecialEducation.Manage": "SpecialEdu Management",
     "Features:SpecialEducation": "Special Education",
     "Features:SpecialEducationDescription": "Per-tenant special education extension module",
+    "Features:VoiceAssistant": "Student Voice Assistant",
+    "Features:VoiceAssistantDescription": "Per-tenant toggle for the student voice assistant button (navigate/summarize/read/QA, read-only)",
+    "Permission:VoiceAssistant": "Voice Assistant",
+    "Permission:VoiceAssistant.Manage": "Manage Voice Assistant",
+    "Menu:VoiceAssistantAdmin": "Voice Assistant",
     "Menu:BrailleStudy": "Braille Study"
   }
 }

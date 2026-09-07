@@ -194,4 +194,13 @@ public static class KnowledgeHubPermissions
         public const string Review = Default + ".Review";
         public const string Manage = Default + ".Manage";
     }
+
+    /// <summary>
+    /// 学生端语音助手：管理页按租户开/关 Feature，学生端按特性值显隐。
+    /// </summary>
+    public static class VoiceAssistant
+    {
+        public const string Default = GroupName + ".VoiceAssistant";
+        public const string Manage = Default + ".Manage";
+    }
 }

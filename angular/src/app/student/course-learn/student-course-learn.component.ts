@@ -30,6 +30,7 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { SelfAssessment } from '../../proxy/learning/enums/self-assessment.enum';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
+import { VoiceContextService } from '../voice/voice-context.service';
 
 type TabKey = 'resources' | 'exercises' | 'submissions';
 
@@ -85,6 +86,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   private readonly recordService = inject(StudentExerciseRecordService);
   private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
+  private readonly voiceContext = inject(VoiceContextService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
@@ -182,11 +184,38 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       this.router.navigate(['/student/courses']);
       return;
     }
+    // 语音助手：注册本页上下文（只读摘要，供总结/朗读/本页问答用）。
+    this.voiceContext.register('course-learn', () => {
+      const course = this.course();
+      const chapter = this.currentChapter();
+      const resources = this.currentResources();
+      const exercises = this.currentExercises();
+      const flat = this.flatChapters();
+      const chapterTitles = flat
+        .slice(0, 12)
+        .map(f => f.title)
+        .join('；');
+      return {
+        key: 'course-learn',
+        route: this.router.url,
+        title: course ? `《${course.title || '未命名'}》章节学习` : '章节学习',
+        summary:
+          `${course ? `课程《${course.title}》` : '本课程'}，共${flat.length}个章节，习题进度${this.courseProgress()}%。` +
+          `${chapter ? `当前章节：${chapter.title || '未命名'}${chapter.description ? `，${chapter.description.slice(0, 200)}` : ''}。` : ''}` +
+          `本章有${resources.length}个学习资源${resources.length ? `：${resources.slice(0, 8).map(r => r.name || '未命名资源').join('；')}` : ''}。` +
+          `本章有${exercises.length}道习题。` +
+          `${chapterTitles ? `全课程章节有：${chapterTitles}。` : ''}`,
+        items: [],
+        courseId: course?.id ?? courseId,
+        chapterId: this.currentChapterId(),
+      };
+    });
     this.loadCourse(courseId);
     this.loadChapters(courseId, chapterId);
   }
 
   ngOnDestroy() {
+    this.voiceContext.unregister('course-learn');
     this.recordChapterProgress(true);
   }
 

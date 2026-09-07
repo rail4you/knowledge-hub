@@ -6,6 +6,7 @@ import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { hasRole } from '../../auth/current-user.utils';
 import { AuthErrorModalComponent } from '../../core/auth/auth-error-modal.component';
+import { VoicePanelComponent } from '../voice/voice-panel.component';
 import { Subscription, filter } from 'rxjs';
 
 interface StudentNavEntry {
@@ -26,6 +27,7 @@ interface StudentNavEntry {
     NzIconModule,
     NzDropDownModule,
     AuthErrorModalComponent,
+    VoicePanelComponent,
   ],
   templateUrl: './student-layout.component.html',
   styleUrls: ['./student-layout.component.scss'],
@@ -39,6 +41,8 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   userName = signal('用户');
   userRoleLabel = signal('学生');
   menuOpen = signal(false);
+  /** 语音助手 Feature 开关（KnowledgeHub.VoiceAssistant，按租户控制；取不到值时默认显示） */
+  readonly voiceAssistantEnabled = signal(true);
 
   private readonly allItems: StudentNavEntry[] = [
     { key: 'micro-majors', label: '微专业', icon: 'trophy', route: '/student/micro-majors' },
@@ -97,6 +101,9 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   @ViewChild('tabTabs') tabTabsEl?: ElementRef<HTMLElement>;
 
   ngOnInit() {
+    const flag = this.configState.getFeature('KnowledgeHub.VoiceAssistant');
+    this.voiceAssistantEnabled.set((flag ?? 'True').toLowerCase() === 'true');
+
     const currentUser = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
     const userName = currentUser?.['userName'];
 

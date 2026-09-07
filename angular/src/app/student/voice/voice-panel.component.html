@@ -1,0 +1,111 @@
+<!-- 学生端语音助手：悬浮开启按钮 + 对话面板 -->
+<button
+  type="button"
+  class="voice-fab"
+  (click)="toggle()"
+  [attr.aria-pressed]="assistant.isOpen()"
+  aria-label="语音助手，按 Alt 加 V 开关"
+  title="语音助手（Alt+V）"
+>
+  <span nz-icon nzType="audio" nzTheme="outline"></span>
+  @if (assistant.state() === 'listening') {
+    <span class="voice-fab__dot" aria-hidden="true"></span>
+  }
+</button>
+
+@if (assistant.isOpen()) {
+  <section class="voice-panel" role="dialog" aria-modal="false" aria-label="语音助手">
+    <header class="voice-panel__head">
+      <div class="voice-panel__title">
+        <span nz-icon nzType="audio" nzTheme="outline" aria-hidden="true"></span>
+        <strong>语音助手</strong>
+        <span class="voice-panel__state" role="status">
+          @switch (assistant.state()) {
+            @case ('listening') { <span>正在聆听…</span> }
+            @case ('thinking') { <span>思考中…</span> }
+            @case ('speaking') { <span>播报中…</span> }
+            @default { <span>就绪</span> }
+          }
+        </span>
+      </div>
+      <button type="button" class="voice-panel__close" (click)="toggle()" aria-label="关闭语音助手">
+        <span nz-icon nzType="close" nzTheme="outline"></span>
+      </button>
+    </header>
+
+    @if (!assistant.sttSupported()) {
+      <p class="voice-panel__warn">当前浏览器不支持语音识别（请用 Chrome/Edge），可直接在下方打字使用总结与问答。</p>
+    }
+    @if (assistant.error()) {
+      <p class="voice-panel__warn" role="alert">{{ assistant.error() }}</p>
+    }
+
+    <!-- 字幕区：读屏器可读 -->
+    <div class="voice-panel__log" aria-live="polite" aria-label="语音助手对话记录">
+      @for (s of assistant.subtitles(); track $index) {
+        <div class="voice-line" [class.voice-line--user]="s.role === 'user'">
+          <span class="voice-line__who">{{ s.role === 'user' ? '我' : s.role === 'assistant' ? '助手' : '提示' }}</span>
+          <p class="voice-line__text">{{ s.text }}</p>
+        </div>
+      }
+      @if (assistant.interimText()) {
+        <div class="voice-line voice-line--interim">
+          <span class="voice-line__who">聆听</span>
+          <p class="voice-line__text">{{ assistant.interimText() }}…</p>
+        </div>
+      }
+      @if (assistant.subtitles().length === 0 && !assistant.interimText()) {
+        <p class="voice-panel__hint">点“语音输入”或按 Ctrl+Enter 说话，识别后按回车发送；播报中再按 Ctrl+Enter 可打断。说“停止”退出助手。</p>
+      }
+    </div>
+
+    <div class="voice-panel__controls">
+      <button
+        type="button"
+        nz-button
+        nzType="primary"
+        class="voice-mic"
+        (click)="voice()"
+        aria-label="语音输入，快捷键 Control 加回车"
+        title="语音输入（Ctrl+Enter）"
+      >
+        <span nz-icon [nzType]="assistant.state() === 'listening' ? 'loading' : 'audio'" nzTheme="outline"></span>
+        <span>{{ assistant.state() === 'listening' ? '聆听中…' : '语音输入' }}</span>
+      </button>
+      <button
+        type="button"
+        nz-button
+        nzType="default"
+        (click)="stop()"
+        aria-label="停止播报，助手继续保留"
+      >
+        <span nz-icon nzType="pause-circle" nzTheme="outline"></span>
+        <span>停止播报</span>
+      </button>
+      <label class="voice-rate">
+        语速
+        <select (change)="onRateChange($event)" [value]="assistant.rate()" aria-label="播报语速">
+          <option [value]="0.8">慢</option>
+          <option [value]="1">中</option>
+          <option [value]="1.2">快</option>
+        </select>
+      </label>
+    </div>
+
+    <form class="voice-panel__form" (ngSubmit)="send()">
+      <label class="sr-only" for="voice-text-input">给语音助手发文字消息</label>
+      <input
+        id="voice-text-input"
+        type="text"
+        [ngModel]="assistant.draft()"
+        (ngModelChange)="assistant.draft.set($event)"
+        name="voiceDraft"
+        placeholder="识别结果在此确认，打字也可直接回车发送"
+        autocomplete="off"
+      />
+      <button type="submit" nz-button nzType="primary" class="voice-send" [attr.aria-disabled]="!assistant.draft().trim()" aria-label="发送">
+        <span nz-icon nzType="send" nzTheme="outline"></span>
+      </button>
+    </form>
+  </section>
+}

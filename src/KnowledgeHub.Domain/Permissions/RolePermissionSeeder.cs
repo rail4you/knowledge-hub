@@ -607,6 +607,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
             await GrantAsync("admin", KnowledgeHubPermissions.SpecialEducation.Resource);
             await GrantAsync("admin", KnowledgeHubPermissions.SpecialEducation.Review);
             await GrantAsync("admin", KnowledgeHubPermissions.SpecialEducation.Manage);
+
+            // 语音助手总开关管理：仅 host 全局管理员（按租户开/关 Feature）。
+            await GrantAsync("admin", KnowledgeHubPermissions.VoiceAssistant.Default);
+            await GrantAsync("admin", KnowledgeHubPermissions.VoiceAssistant.Manage);
         }
     }
 

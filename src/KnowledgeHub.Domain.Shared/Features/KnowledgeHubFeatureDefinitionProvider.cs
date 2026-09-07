@@ -47,6 +47,13 @@ public class KnowledgeHubFeatureDefinitionProvider : FeatureDefinitionProvider
             L("Features:SpecialEducation"),
             L("Features:SpecialEducationDescription")
         );
+
+        group.AddFeature(
+            KnowledgeHubFeatures.VoiceAssistant,
+            "true",
+            L("Features:VoiceAssistant"),
+            L("Features:VoiceAssistantDescription")
+        );
     }
 
     private static LocalizableString L(string name)

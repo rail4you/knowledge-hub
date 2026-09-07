@@ -1,0 +1,219 @@
+@use '../styles/student-design' as ds;
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.voice-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 84px;
+  z-index: 500;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: #0f766e;
+  color: #fff;
+  font-size: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(15, 118, 110, 0.4);
+
+  &:hover {
+    background: #0d5e56;
+  }
+
+  &:focus-visible {
+    outline: 3px solid #14b8a6;
+    outline-offset: 2px;
+  }
+
+  &__dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #f87171;
+    animation: voice-blink 1s infinite;
+  }
+}
+
+@keyframes voice-blink {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.voice-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 148px;
+  z-index: 500;
+  width: min(360px, calc(100vw - 40px));
+  max-height: min(560px, calc(100vh - 220px));
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid ds.$student-border-soft;
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(2, 32, 71, 0.22);
+  overflow: hidden;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #0f766e;
+    color: #fff;
+  }
+
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  &__state {
+    font-size: 12px;
+    opacity: 0.9;
+  }
+
+  &__close {
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    border-radius: 8px;
+
+    &:focus-visible {
+      outline: 2px solid #fff;
+    }
+  }
+
+  &__warn {
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #92400e;
+    background: #fef3c7;
+    border-bottom: 1px solid #fde68a;
+  }
+
+  &__log {
+    padding: 10px 12px;
+    overflow-y: auto;
+    min-height: 140px;
+    max-height: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 12px;
+    color: ds.$student-text-muted;
+  }
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid ds.$student-border-soft;
+  }
+
+  &__form {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px 12px;
+
+    // 发送按钮用 aria-disabled 而不是 disabled：空草稿时回车仍能进入表单，
+    // 由 sendDraft 预存一次（识别结果一到自动发送），避免第一次回车被吞。
+    .voice-send[aria-disabled='true'] {
+      opacity: 0.5;
+    }
+
+    input {
+      flex: 1;
+      min-width: 0;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid ds.$student-border-soft;
+      border-radius: 10px;
+      font-size: 14px;
+
+      &:focus-visible {
+        outline: 2px solid #14b8a6;
+        outline-offset: 1px;
+      }
+    }
+  }
+}
+
+.voice-mic {
+  flex: 1;
+}
+
+.voice-line {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+
+  &__who {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: ds.$student-text-muted;
+    padding-top: 2px;
+    min-width: 28px;
+  }
+
+  &__text {
+    margin: 0;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: #f0fdfa;
+    color: ds.$student-text;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+
+  &--user &__text {
+    background: #eff6ff;
+  }
+
+  &--interim &__text {
+    background: transparent;
+    border: 1px dashed ds.$student-border-soft;
+    color: ds.$student-text-muted;
+  }
+}
+
+.voice-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: ds.$student-text-muted;
+
+  select {
+    height: 32px;
+    border: 1px solid ds.$student-border-soft;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+}

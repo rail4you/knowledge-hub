@@ -137,6 +137,7 @@ import { APP_ROUTES } from './app.routes';
 import { APP_ROUTE_PROVIDER } from './route.provider';
 import { ALLIANCE_ROUTE_PROVIDER } from './alliance-route.provider';
 import { SPECIAL_EDU_ROUTE_PROVIDER } from './special-edu-route.provider';
+import { VOICE_ASSISTANT_ROUTE_PROVIDER } from './voice-assistant-route.provider';
 import { accountEditFormPropContributors } from './account-form-prop-contributors';
 import { FOOTER_PROVIDER } from './footer/footer.config';
 import { IDENTITY_ROLES_PROVIDER } from './identity-roles.config';
@@ -272,6 +273,7 @@ export const appConfig: ApplicationConfig = {
     APP_ROUTE_PROVIDER,
     ALLIANCE_ROUTE_PROVIDER,
     SPECIAL_EDU_ROUTE_PROVIDER,
+    VOICE_ASSISTANT_ROUTE_PROVIDER,
     FOOTER_PROVIDER,
     IDENTITY_ROLES_PROVIDER,
     IDENTITY_USERS_PROVIDER,

@@ -716,6 +716,11 @@
     "Permission:SpecialEducation.Manage": "特教全局管理",
     "Features:SpecialEducation": "特殊教育模块",
     "Features:SpecialEducationDescription": "按租户开通的特殊教育扩展模块（教学设计/IEP/多模态资源）",
+    "Features:VoiceAssistant": "学生端语音助手",
+    "Features:VoiceAssistantDescription": "按租户控制学生端是否显示语音助手悬浮按钮（导航/总结/朗读/问答，只读）",
+    "Permission:VoiceAssistant": "语音助手",
+    "Permission:VoiceAssistant.Manage": "语音助手开通管理",
+    "Menu:VoiceAssistantAdmin": "语音助手管理",
     "Menu:BrailleStudy": "盲文对照"
   }
 }

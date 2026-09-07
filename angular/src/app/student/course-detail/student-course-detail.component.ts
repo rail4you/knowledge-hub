@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -24,6 +24,7 @@ import type { LearningProgressDto, KnowledgeMasteryDto } from '../../proxy/learn
 import type { StudentExerciseRecordDto } from '../../proxy/learning/dtos/models';
 import { ChapterTreeGraphComponent } from '../../learning/knowledge-graph/chapter-tree-graph.component';
 import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
+import { VoiceContextService } from '../voice/voice-context.service';
 
 type TabKey = 'chapters' | 'graph' | 'progress' | 'related';
 
@@ -67,7 +68,7 @@ interface ResourceItem {
   styleUrls: ['./student-course-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class StudentCourseDetailComponent implements OnInit {
+export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly courseService = inject(CourseService);
@@ -77,6 +78,7 @@ export class StudentCourseDetailComponent implements OnInit {
   private readonly recordService = inject(StudentExerciseRecordService);
   private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
+  private readonly voiceContext = inject(VoiceContextService);
 
   readonly loading = signal(true);
   readonly enrolling = signal(false);
@@ -171,6 +173,35 @@ export class StudentCourseDetailComponent implements OnInit {
   readonly resources = signal<ResourceItem[]>([]);
 
   ngOnInit() {
+    // 语音助手：注册本页上下文（只读摘要，供总结/问答/跳转学习页用）。
+    this.voiceContext.register('course-detail', () => {
+      const c = this.course();
+      if (!c) return null;
+      const chapters = this.chapters() || [];
+      const flat: string[] = [];
+      const walk = (nodes: ChapterDto[], depth: number) => {
+        for (const n of nodes.slice(0, depth === 0 ? 8 : 4)) {
+          flat.push(`${'—'.repeat(Math.min(depth, 2))}${n.title || '未命名章节'}`);
+          if (flat.length >= 20) return;
+          if (n.children?.length && depth < 2) walk(n.children, depth + 1);
+        }
+      };
+      walk(chapters, 0);
+      const count = this.countChapters(chapters);
+      return {
+        key: 'course-detail',
+        route: this.router.url,
+        title: `《${c.title || '未命名'}》课程详情`,
+        summary:
+          `课程《${c.title || '未命名'}》${c.teacherName ? `，主讲${c.teacherName}` : ''}` +
+          `${c.majorName ? `，所属${c.majorName}` : ''}，共${count}个章节` +
+          `${c.description ? `。简介：${c.description.slice(0, 300)}` : ''}` +
+          `${flat.length ? `。章节有：${flat.join('；')}` : ''}` +
+          `${c.isEnrolled ? '。你已选本课程，可说“开始学习”进入学习页。' : '。你尚未选课。'}`,
+        items: [],
+        courseId: c.id,
+      };
+    });
     // 订阅路由参数：从“相关课程”点击跳转到其他课程时，URL 参数变化但组件会被复用，
     // 只靠 snapshot 的 ngOnInit 不会再次执行，必须监听 paramMap 才能重新加载目标课程。
     this.route.paramMap.subscribe(params => {
@@ -615,4 +646,8 @@ export class StudentCourseDetailComponent implements OnInit {
     if (data.length === 0) return 0;
     return Math.round(data.reduce((s, m) => s + (m.accuracy || 0), 0) / data.length);
   });
+
+  ngOnDestroy(): void {
+    this.voiceContext.unregister('course-detail');
+  }
 }

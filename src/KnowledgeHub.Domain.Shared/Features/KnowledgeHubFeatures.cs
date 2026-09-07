@@ -14,6 +14,8 @@ public static class KnowledgeHubFeatures
     public const string TwoLevelApproval = DefaultPrefix + "TwoLevelApproval";
 
     public const string SpecialEducation = DefaultPrefix + "SpecialEducation";
+
+    public const string VoiceAssistant = DefaultPrefix + "VoiceAssistant";
 }
 
 public static class KnowledgeHubEditions

@@ -495,6 +495,14 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/voice-assistant',
+    loadComponent: () => import('./admin/voice-assistant/voice-assistant-admin.component').then(c => c.VoiceAssistantAdminComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.VoiceAssistant.Manage',
+    },
+  },
+  {
     path: 'teaching/agents/new',
     loadComponent: () => import('./teaching-agents/teaching-agent-editor.component').then(c => c.TeachingAgentEditorComponent),
     canActivate: [authGuard, permissionGuard],
