@@ -44,26 +44,78 @@ export class LoginComponent implements OnInit {
   languages: { cultureName: string; displayName: string; flagIcon: string }[] = [];
   currentLang = '';
 
-  // 租户（Tab 列表方式）
+  // 租户（Tab 列表方式，仅展示真实租户；宿主/全局入口已隐藏，见 isHostLogin）
   tenantList = signal<{ id: string; name: string }[]>([]);
+  tenantsLoaded = signal(false);
+  tenantsLoadError = signal(false);
   currentTenantName = signal<string | null>(null);
   currentTenantId = signal<string | null>(null);
+  // 宿主管理员专用通道：通过隐藏网址 /admin-login（或 /account/login?host=true）进入，
+  // 页面上不显示任何入口。普通登录页此值为 false。
+  isHostLogin = signal(false);
+  // 是否展示账号密码登录表单：
+  // - 宿主通道：始终展示
+  // - 普通页加载中：先隐藏，避免租户 cookie 就绪前误以宿主身份提交
+  // - 普通页加载失败：仍展示（用户可能已有有效租户 cookie，允许尝试登录）
+  // - 普通页无租户：隐藏，等管理员分配租户后再登录
+  canShowForm = computed(() => {
+    if (this.isHostLogin()) return true;
+    if (!this.tenantsLoaded()) return false;
+    if (this.tenantsLoadError()) return true;
+    return this.tenantList().length > 0;
+  });
 
   ngOnInit() {
     this.clearSession();
     this.buildForm();
     this.loadLanguages();
-    this.loadTenants();
-    this.loadCurrentTenant();
+    const dataHostMode = this.route.snapshot.data?.['hostMode'] === true;
+    const queryHost = this.route.snapshot.queryParams?.['host'];
+    const pathHost = this.router.url.split('?')[0].includes('admin-login');
+    const hostMode = dataHostMode || pathHost || queryHost === 'true' || queryHost === '1';
+    this.isHostLogin.set(hostMode);
+    if (hostMode) {
+      // 强制宿主上下文：清除残留租户 cookie，不拉取租户列表
+      this.clearTenantCookie();
+      this.currentTenantId.set(null);
+      this.currentTenantName.set(null);
+    } else {
+      this.loadTenants();
+      this.loadCurrentTenant();
+    }
   }
 
   private loadTenants() {
     this.tenantListService.getTenants().subscribe({
       next: (list: any) => {
         const items = Array.isArray(list) ? list : [];
-        this.tenantList.set(items.map((t: any) => ({ id: t.id, name: t.name })));
+        // 过滤掉后端返回的 { Id: null, Name: '全局' } 占位项，只保留真实租户
+        const realTenants = items
+          .filter((t: any) => t?.id != null && t?.name)
+          .map((t: any) => ({ id: t.id, name: t.name }));
+        this.tenantList.set(realTenants);
+        this.tenantsLoaded.set(true);
+        this.tenantsLoadError.set(false);
+        if (realTenants.length === 0) {
+          // 无租户兜底：系统尚无租户（或接口返回空）时，清除可能残留的租户 cookie，
+          // 直接以宿主身份登录，模板侧显示文字提示。
+          this.clearTenantCookie();
+          this.currentTenantId.set(null);
+          this.currentTenantName.set(null);
+          return;
+        }
+        // 普通登录页默认不再是宿主：无 cookie，或 cookie 指向已不存在的租户时，
+        // 自动选中第一个租户，避免误以宿主身份登录失败。
+        const current = this.currentTenantId();
+        if (!current || !realTenants.some(t => t.id === current)) {
+          this.selectTenant(realTenants[0], true);
+        }
       },
-      error: () => this.tenantList.set([]),
+      error: () => {
+        this.tenantList.set([]);
+        this.tenantsLoaded.set(true);
+        this.tenantsLoadError.set(true);
+      },
     });
   }
 
@@ -87,18 +139,25 @@ export class LoginComponent implements OnInit {
     } catch {}
   }
 
-  selectTenant(tenant: { id: string; name: string }) {
+  selectTenant(tenant: { id: string; name: string }, silent = false) {
+    if (!tenant?.id) return;
     this.document.cookie = `__tenant=${encodeURIComponent(tenant.id)}; path=/; SameSite=Lax`;
     this.currentTenantId.set(tenant.id);
     this.currentTenantName.set(tenant.name);
-    this.toasterService.success(`已切换到租户：${tenant.name}`);
+    if (!silent) {
+      this.toasterService.success(`已切换到租户：${tenant.name}`);
+    }
+  }
+
+  private clearTenantCookie() {
+    this.document.cookie = `__tenant=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
   }
 
   clearTenant() {
-    this.document.cookie = `__tenant=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+    this.clearTenantCookie();
     this.currentTenantId.set(null);
     this.currentTenantName.set(null);
-    this.toasterService.success('已清除租户，将以宿主身份登录');
+    this.toasterService.success('已清除租户，将以系统管理员身份登录');
   }
 
   /**

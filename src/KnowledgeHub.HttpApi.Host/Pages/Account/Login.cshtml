@@ -8,6 +8,10 @@
     Layout = null;
     var returnUrl = Model.ReturnUrl;
     var returnUrlHash = Model.ReturnUrlHash;
+    // 宿主（全局超级管理员）专用通道：仅通过隐藏网址 /Account/Login?host=true 进入，
+    // 页面上不显示任何入口。普通登录页此值为 false。
+    var hostQuery = Request.Query["host"].ToString();
+    var hostMode = hostQuery == "true" || hostQuery == "1";
 }
 <!DOCTYPE html>
 <html lang="zh-Hans">
@@ -312,7 +316,14 @@
             <div class="login-card">
                 <div class="card-head">
                     <h2 class="form-title">@L["Login"]</h2>
-                    <p class="form-subtitle">欢迎回来，请登录您的账号</p>
+                    @if (hostMode)
+                    {
+                        <p class="form-subtitle">系统管理员登录</p>
+                    }
+                    else
+                    {
+                        <p class="form-subtitle">欢迎回来，请登录您的账号</p>
+                    }
                 </div>
 
                 @if (!Model.EnableLocalLogin && !Model.VisibleExternalProviders.Any())
@@ -326,19 +337,29 @@
                 {
                     @if (Model.EnableLocalLogin)
                     {
-                        <form method="post">
+                        <form method="post" id="localLoginForm">
                             <input type="hidden" asp-for="ReturnUrl" />
                             <input type="hidden" asp-for="ReturnUrlHash" />
                             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-                            <div class="form-group">
-                                <label><i class="fa fa-building"></i> 选择租户</label>
-                                <div id="tenantTabs" class="tenant-tabs">
-                                    <button type="button" class="tenant-tab active" data-tenant-id="" onclick="selectTenant('', '')"><i class="fa fa-home"></i> 宿主</button>
+                            @if (hostMode)
+                            {
+                                <div class="current-tenant-hint muted" style="margin-bottom:14px;">系统管理员专用通道</div>
+                            }
+                            else
+                            {
+                                <!-- 租户选择（仅真实租户；宿主/全局入口已移除，宿主请走隐藏网址 /Account/Login?host=true） -->
+                                <div class="form-group" id="tenantBlock">
+                                    <label><i class="fa fa-building"></i> 选择租户</label>
+                                    <div id="tenantTabs" class="tenant-tabs"></div>
+                                    <div id="currentTenantHint" class="current-tenant-hint muted">正在加载租户列表…</div>
                                 </div>
-                                <div id="currentTenantHint" class="current-tenant-hint muted">当前以宿主身份登录</div>
-                            </div>
+                                <div class="form-group" id="noTenantNotice" style="display:none;">
+                                    <div class="current-tenant-hint muted">当前暂无可用租户，请联系管理员分配后再登录</div>
+                                </div>
+                            }
 
+                            <div id="loginFields">
                             <div class="form-group">
                                 <label asp-for="LoginInput.UserNameOrEmailAddress"></label>
                                 <input asp-for="LoginInput.UserNameOrEmailAddress" class="form-input" placeholder="@L["UserNameOrEmailAddress"]" autofocus />
@@ -369,6 +390,7 @@
                             {
                                 <button type="submit" name="Action" value="Cancel" class="btn btn-secondary w-100 mt-2">@L["Cancel"]</button>
                             }
+                            </div>
                         </form>
                     }
 
@@ -428,9 +450,13 @@
 </div>
 <script>
 (function() {
+    var HOST_MODE = @(hostMode ? "true" : "false");
     function getTenantCookie() {
         var m = document.cookie.match(/(?:^|; )__tenant=([^;]*)/);
         return m ? decodeURIComponent(m[1]) : null;
+    }
+    function clearTenantCookie() {
+        document.cookie = '__tenant=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     }
     function updateHint(html, isMuted) {
         var el = document.getElementById('currentTenantHint');
@@ -445,38 +471,20 @@
         });
     }
     window.selectTenant = function(id, name) {
-        if (!id) { clearTenant(); return; }
+        if (!id) return;
         document.cookie = '__tenant=' + encodeURIComponent(id) + '; path=/; SameSite=Lax';
         setActiveTab(id);
         updateHint('当前租户：<strong>' + name + '</strong>', false);
     };
-    window.clearTenant = function() {
-        document.cookie = '__tenant=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-        setActiveTab('');
-        updateHint('当前以宿主身份登录', true);
-    };
-    document.addEventListener('DOMContentLoaded', function() {
-        // 加载租户列表渲染为 Tab
-        fetch('/api/public/tenants', { headers: { 'accept': 'application/json' } })
-            .then(function(r) { return r.json(); })
-            .then(function(list) {
-                if (!Array.isArray(list)) return;
-                var container = document.getElementById('tenantTabs');
-                list.forEach(function(t) {
-                    var btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'tenant-tab';
-                    btn.setAttribute('data-tenant-id', t.id);
-                    btn.innerHTML = '<i class="fa fa-bank"></i> ' + t.name;
-                    btn.onclick = function() { selectTenant(t.id, t.name); };
-                    container.appendChild(btn);
-                });
-                var currentId = getTenantCookie();
-                if (currentId) setActiveTab(currentId);
-            })
-            .catch(function() {});
-        var tenantId = getTenantCookie();
-        if (!tenantId) return;
+    function showNoTenant() {
+        var block = document.getElementById('tenantBlock');
+        var notice = document.getElementById('noTenantNotice');
+        var fields = document.getElementById('loginFields');
+        if (block) block.style.display = 'none';
+        if (notice) notice.style.display = '';
+        if (fields) fields.style.display = 'none';
+    }
+    function resolveTenantName(tenantId) {
         fetch('/api/abp/multi-tenancy/tenants/by-id/' + encodeURIComponent(tenantId), { headers: { 'accept': 'application/json' } })
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -491,6 +499,48 @@
             .catch(function() {
                 setActiveTab(tenantId);
                 updateHint('当前租户ID：<strong>' + tenantId + '</strong>', false);
+            });
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        if (HOST_MODE) {
+            // 宿主专用通道：强制宿主上下文，不拉取租户列表
+            clearTenantCookie();
+            return;
+        }
+        var container = document.getElementById('tenantTabs');
+        if (!container) return;
+        // 加载租户列表渲染为 Tab（仅真实租户；过滤后端返回的 Id 为空的“全局”占位项）
+        fetch('/api/public/tenants', { headers: { 'accept': 'application/json' } })
+            .then(function(r) { return r.json(); })
+            .then(function(list) {
+                if (!Array.isArray(list)) throw new Error('bad tenants');
+                var realTenants = list.filter(function(t) { return t && t.id != null && t.name; });
+                if (realTenants.length === 0) {
+                    // 无租户：不提供登录界面，等管理员分配租户
+                    clearTenantCookie();
+                    showNoTenant();
+                    return;
+                }
+                realTenants.forEach(function(t) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'tenant-tab';
+                    btn.setAttribute('data-tenant-id', t.id);
+                    btn.innerHTML = '<i class="fa fa-bank"></i> ' + t.name;
+                    btn.onclick = function() { selectTenant(t.id, t.name); };
+                    container.appendChild(btn);
+                });
+                var currentId = getTenantCookie();
+                var stillExists = currentId && realTenants.some(function(t) { return t.id === currentId; });
+                if (!stillExists) {
+                    // 无 cookie 或指向已不存在的租户：默认选中第一个，避免误以宿主身份登录
+                    selectTenant(realTenants[0].id, realTenants[0].name);
+                    return;
+                }
+                resolveTenantName(currentId);
+            })
+            .catch(function() {
+                updateHint('租户列表加载失败，请刷新页面重试', true);
             });
     });
 })();

@@ -36,6 +36,17 @@ export const APP_ROUTES: Routes = [
     }
   },
   {
+    // 宿主（全局超级管理员）专用登录网址，不在页面任何位置显示入口。
+    // 普通登录页仅展示真实租户 Tab；此地址强制宿主上下文并隐藏租户选择器。
+    // （同时支持 /account/login?host=true 作为备用。）
+    path: 'admin-login',
+    loadComponent: () => import('./login/login.component').then(c => c.LoginComponent),
+    data: {
+      layout: eLayoutType.empty,
+      hostMode: true,
+    },
+  },
+  {
     path: 'identity',
     loadChildren: () =>
       import('@abp/ng.identity').then((m) =>

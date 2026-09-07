@@ -94,45 +94,59 @@
       <div class="login-card">
         <div class="card-head">
           <h2 class="form-title">{{ 'AbpAccount::Login' | abpLocalization }}</h2>
-          <p class="form-subtitle">欢迎回来，请登录您的账号</p>
+          @if (isHostLogin()) {
+            <p class="form-subtitle">系统管理员登录</p>
+          } @else {
+            <p class="form-subtitle">欢迎回来，请登录您的账号</p>
+          }
         </div>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
-          <!-- 租户选择（多租户区分 · Tab/列表） -->
-          <div class="form-group">
-            <label>
-              <span nz-icon nzType="apartment" nzTheme="outline"></span>
-              选择租户
-            </label>
-            <div class="tenant-tabs">
-              <button
-                type="button"
-                class="tenant-tab"
-                [class.active]="!currentTenantId()"
-                (click)="clearTenant()"
-              >
-                <span nz-icon nzType="home" nzTheme="outline"></span>
-                宿主
-              </button>
-              @for (t of tenantList(); track t.id) {
-                <button
-                  type="button"
-                  class="tenant-tab"
-                  [class.active]="currentTenantId() === t.id"
-                  (click)="selectTenant(t)"
-                >
-                  <span nz-icon nzType="bank" nzTheme="outline"></span>
-                  {{ t.name }}
-                </button>
-              }
-            </div>
-            @if (currentTenantName()) {
-              <div class="current-tenant-hint">当前租户：<strong>{{ currentTenantName() }}</strong></div>
+          @if (isHostLogin()) {
+            <div class="current-tenant-hint muted">系统管理员专用通道</div>
+          } @else {
+            <!-- 租户选择（仅真实租户；宿主/全局入口已移除，宿主请走隐藏网址 /admin-login） -->
+            @if (!tenantsLoaded()) {
+              <div class="form-group">
+                <div class="current-tenant-hint muted">正在加载租户列表…</div>
+              </div>
+            } @else if (tenantsLoadError()) {
+              <div class="form-group">
+                <div class="current-tenant-hint muted">租户列表加载失败，请刷新页面重试</div>
+              </div>
+            } @else if (tenantList().length === 0) {
+              <div class="form-group">
+                <div class="current-tenant-hint muted">当前暂无可用租户，请联系管理员分配后再登录</div>
+              </div>
             } @else {
-              <div class="current-tenant-hint muted">当前以宿主身份登录</div>
+              <div class="form-group">
+                <label>
+                  <span nz-icon nzType="apartment" nzTheme="outline"></span>
+                  选择租户
+                </label>
+                <div class="tenant-tabs">
+                  @for (t of tenantList(); track t.id) {
+                    <button
+                      type="button"
+                      class="tenant-tab"
+                      [class.active]="currentTenantId() === t.id"
+                      (click)="selectTenant(t)"
+                    >
+                      <span nz-icon nzType="bank" nzTheme="outline"></span>
+                      {{ t.name }}
+                    </button>
+                  }
+                </div>
+                @if (currentTenantName()) {
+                  <div class="current-tenant-hint">当前租户：<strong>{{ currentTenantName() }}</strong></div>
+                } @else {
+                  <div class="current-tenant-hint muted">请选择您所在的租户</div>
+                }
+              </div>
             }
-          </div>
+          }
 
+          @if (canShowForm()) {
           <div class="form-group">
             <label for="login-username">
               <i class="fa fa-user"></i>
@@ -182,6 +196,7 @@
             }
             {{ 'AbpAccount::Login' | abpLocalization }}
           </button>
+          }
         </form>
 
       </div>
