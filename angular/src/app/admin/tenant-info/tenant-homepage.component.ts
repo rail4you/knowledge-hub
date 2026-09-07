@@ -242,12 +242,15 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
 
   // ═══ Course preview drawer ═══
 
-  /** 已选课 → 直接跳转学生课程详情页；未选课 → 打开右侧预览抽屉 */
+  /** 已选课 → 直接跳转学生课程详情页（带 tenantId，让课程详情页返回资源库而非课程中心）；未选课 → 打开右侧预览抽屉 */
   handleCourseClick(course: CourseBriefDto): void {
     if (!course?.id) return;
     if (this.isEnrolled(course.id)) {
       this.previewOpen.set(false);
-      this.router.navigate(['/student/courses', course.id]);
+      const tenantId = this.route.snapshot.paramMap.get('id');
+      const queryParams: Record<string, string> = {};
+      if (tenantId) queryParams['tenantId'] = tenantId;
+      this.router.navigate(['/student/courses', course.id], { queryParams });
       return;
     }
     this.openCoursePreview(course);
