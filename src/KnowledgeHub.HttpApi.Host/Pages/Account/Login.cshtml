@@ -8,7 +8,7 @@
     Layout = null;
     var returnUrl = Model.ReturnUrl;
     var returnUrlHash = Model.ReturnUrlHash;
-    // 宿主（全局超级管理员）专用通道：仅通过隐藏网址 /Account/Login?host=true 进入，
+    // 系统管理员专用通道：仅通过隐藏网址 /Account/Login?host=true 进入，
     // 页面上不显示任何入口。普通登录页此值为 false。
     var hostQuery = Request.Query["host"].ToString();
     var hostMode = hostQuery == "true" || hostQuery == "1";
@@ -18,436 +18,761 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>易课通教学资源库 - 登录</title>
+    <title>登录 · 易课通教学资源库</title>
     <link rel="stylesheet" href="/libs/bootstrap/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-        :root {
-            --kh-canvas: #f5f7fa;
-            --kh-panel: #ffffff;
-            --kh-ink: #1c2733;
-            --kh-ink-2: #46586a;
-            --kh-muted: #5f6f81;
-            --kh-line: rgba(24,144,255,0.10);
-            --kh-line-2: #e7edf5;
-            --kh-accent: #1890ff;
-            --kh-accent-deep: #0a6fce;
-            --kh-accent-soft: rgba(24,144,255,0.10);
-            --kh-accent-ghost: rgba(24,144,255,0.06);
-            --kh-r-shell: 16px;
-            --kh-r-control: 10px;
-            --kh-shadow-card: 0 1px 2px rgba(14,27,46,0.04), 0 10px 30px -12px rgba(24,144,255,0.14), 0 22px 48px -30px rgba(14,27,46,0.18);
+        /* 配色取自应用主题：深海军蓝品牌区 + 主题蓝点缀，排版布局参考登录原型页 */
+        :root{
+            --ink: #13233a;
+            --ink-deep: #0d1b30;
+            --paper: #f5f7fa;
+            --paper-card: #ffffff;
+            --gold: #1890ff;
+            --gold-light: #7ec8ff;
+            --gold-soft: rgba(24,144,255,0.14);
+            --text-muted: #5f6f81;
+            --text-muted-on-ink: rgba(255,255,255,0.62);
+            --border: #e7edf5;
+            --danger: #e5484d;
+            --radius: 10px;
+            --shadow-card: 0 20px 50px -25px rgba(13,27,48,0.35);
         }
-        * { box-sizing: border-box; }
-        html, body { height: 100%; margin: 0; }
-        body {
-            font-family: "PingFang SC","Source Han Sans SC","Noto Sans SC","Microsoft YaHei",-apple-system,"Segoe UI",Roboto,sans-serif;
-            background: var(--kh-canvas);
-            color: var(--kh-ink);
+
+        *{ box-sizing: border-box; }
+
+        html,body{
+            margin:0;
+            padding:0;
+            min-height:100%;
+            background: var(--paper);
+            font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", -apple-system, "Segoe UI", sans-serif;
+            color: var(--ink);
             -webkit-font-smoothing: antialiased;
         }
-        a { text-decoration: none; }
 
-        /* ── Header — 与首页 PortalHome 顶栏统一（1760 居中 + 两侧 16px） ── */
-        .login-header {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            padding: 0 max(16px, calc((100% - 1760px) / 2));
-            height: 56px;
-            border-bottom: 1px solid #eef1f6;
-            background: #ffffff;
-            flex-shrink: 0;
-        }
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            color: inherit;
-        }
-        .brand-mark {
-            width: 34px; height: 34px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            background: #1e6ce8;
-            color: #fff; font-size: 17px; font-weight: 700;
-        }
-        .brand-text { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; line-height: 1.2; }
-        .brand-text strong { font-size: 16px; font-weight: 700; color: #1f2d3d; letter-spacing: -0.3px; }
-        .brand-text span { font-size: 12px; font-weight: 500; color: #8a93a6; }
-        .header-nav {
-            display: flex; align-items: center; gap: 2px; margin-left: 8px; flex: 1;
-        }
-        .header-nav a {
-            padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
-            color: #5b6573; transition: color 0.15s, background 0.15s;
-        }
-        .header-nav a:hover { color: #1e6ce8; background: #eef4ff; }
-        .header-nav a.active { color: #1e6ce8; font-weight: 600; }
-        .header-right { display: flex; align-items: center; gap: 14px; }
-
-        /* ── Page ── */
-        .login-page {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background: var(--kh-canvas);
-        }
-        .login-body {
-            display: flex;
-            flex: 1;
-            min-height: 0;
-            max-width: 1760px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 12px 16px 16px;
-            gap: 12px;
-            background: var(--kh-canvas);
-            box-sizing: border-box;
-        }
-        /* Left — 修饰背景图（占比 40%，居中，适度留白） */
-        .login-left {
-            flex: 4;
-            border-radius: 12px;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            padding: 32px 28px;
-            background:
-                linear-gradient(rgba(13,27,48,0.82), rgba(13,27,48,0.92)),
-                url('/images/intro-bg_001.jpg') center/cover no-repeat,
-                linear-gradient(135deg, #0d1b30 0%, #13233a 40%, #1a3a5c 100%);
-            background-blend-mode: normal, normal, normal;
-        }
-        .login-left::before {
-            content: '';
-            position: absolute; inset: 0;
-            background: url('/assets/images/login/login-bg-img-light.svg') center/cover no-repeat;
-            opacity: 0.07;
-            pointer-events: none;
-        }
-        .login-left::after {
-            content: '';
-            position: absolute;
-            top: -80px; right: -80px;
-            width: 320px; height: 320px; border-radius: 50%;
-            background: radial-gradient(circle, rgba(24,144,255,0.18) 0%, transparent 70%);
-            pointer-events: none;
-        }
-        .left-inner { position: relative; z-index: 1; max-width: 440px; }
-        .left-title { font-size: 28px; font-weight: 800; color: #fff; margin: 0 0 8px; line-height: 1.15; }
-        .left-title span { color: #7ec8ff; }
-        .left-subtitle { font-size: 13.5px; color: rgba(255,255,255,0.88); margin: 0 0 20px; line-height: 1.6; }
-        .feature-list { display: flex; flex-direction: column; gap: 10px; }
-        .feature-item { display: flex; align-items: flex-start; gap: 14px; }
-        /* 功能图标不显示：仅保留文字 */
-        .feature-icon { display: none; }
-        .feature-text h3 { font-size: 14px; font-weight: 600; color: #fff; margin: 0 0 2px; }
-        .feature-text p { font-size: 13px; color: rgba(255,255,255,0.68); margin: 0; line-height: 1.4; }
-        .left-quote {
-            margin-top: 24px;
-            padding: 14px 18px;
-            border-left: 3px solid rgba(126,200,255,0.5);
-            background: rgba(255,255,255,0.06);
-            border-radius: 0 8px 8px 0;
-        }
-        .left-quote p { margin: 0 0 4px; font-size: 13.5px; font-weight: 600; color: #fff; font-style: italic; }
-        .left-quote span { font-size: 11px; color: rgba(255,255,255,0.6); }
-        .left-stats {
-            display: flex; align-items: center; gap: 24px;
-            margin-top: 36px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.12);
-        }
-        .left-stats .stat { display: flex; flex-direction: column; gap: 2px; }
-        .left-stats .stat strong { font-size: 22px; font-weight: 800; color: #fff; line-height: 1; }
-        .left-stats .stat span { font-size: 11px; color: rgba(255,255,255,0.6); letter-spacing: 0.04em; }
-        .left-stats .stat-divider { width: 1px; height: 32px; background: rgba(255,255,255,0.12); }
-
-        /* Right — 表单（占比 60%，居中） */
-        .login-right {
-            flex: 6;
-            display: flex; align-items: center; justify-content: center;
-            position: relative; overflow: hidden;
-            border-radius: 12px; background: #ffffff;
-            border: 1px solid rgba(24,144,255,0.10); box-shadow: 0 1px 2px rgba(14,27,46,0.04);
-            padding: 28px 28px;
-        }
-        .login-right::before {
-            content: ''; position: absolute; right: -30px; bottom: -20px;
-            width: 420px; height: 340px;
-            background: url('/assets/images/home/resource-library-hero.png') center/contain no-repeat;
-            opacity: 0.05; pointer-events: none;
-        }
-        .login-right::after {
-            content: ''; position: absolute; inset: 0;
-            background: url('/assets/images/login/login-bg-img-light.svg') center/cover no-repeat;
-            opacity: 0.025; pointer-events: none;
-        }
-        .login-card { width: 100%; max-width: 440px; position: relative; z-index: 1; }
-        .form-title { font-size: 20px; font-weight: 700; color: var(--kh-ink); margin: 0 0 4px; }
-        .form-subtitle { font-size: 12.5px; color: var(--kh-muted); margin: 0 0 16px; }
-        .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
-        .form-group label { font-size: 12.5px; font-weight: 500; color: var(--kh-ink-2); display: flex; align-items: center; gap: 6px; }
-        .form-group label i { color: var(--kh-muted); font-size: 12px; }
-        .form-input {
-            width: 100%; padding: 9px 12px;
-            border: 1px solid var(--kh-line-2); border-radius: var(--kh-r-control);
-            font-size: 13.5px; color: var(--kh-ink); background: #fbfcfe;
-            outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-        }
-        .form-input::placeholder { color: #9aa9ba; }
-        .form-input:focus { border-color: var(--kh-accent); background: #fff; box-shadow: 0 0 0 3px var(--kh-accent-soft); }
-        .password-wrapper { position: relative; }
-        .password-wrapper .form-input { padding-right: 42px; }
-        .toggle-password {
-            position: absolute; right: 1px; top: 1px; bottom: 1px; width: 40px;
-            border: none; background: none; color: #9ca3af; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; border-radius: 0 9px 9px 0;
-        }
-        .form-options { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-        .remember-me { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--kh-muted); cursor: pointer; }
-        .remember-me input[type='checkbox'] { width: 16px; height: 16px; accent-color: var(--kh-accent); }
-        .login-btn {
-            width: 100%; padding: 10px; border: none; border-radius: var(--kh-r-control);
-            background: var(--kh-accent); color: #fff; font-size: 14px; font-weight: 600;
-            cursor: pointer; transition: background 0.15s; box-shadow: 0 8px 18px -8px rgba(24,144,255,0.55);
-        }
-        .login-btn:hover { background: var(--kh-accent-deep); }
-        .tenant-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
-        .tenant-tab {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 7px 14px; border-radius: 999px; border: 1px solid var(--kh-line-2); background: #fff;
-            color: var(--kh-ink-2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
-        }
-        .tenant-tab:hover { border-color: var(--kh-accent); color: var(--kh-accent); background: var(--kh-accent-ghost); }
-        .tenant-tab.active { border-color: var(--kh-accent); background: var(--kh-accent); color: #fff; }
-        .current-tenant-hint { font-size: 12px; color: var(--kh-muted); margin-top: 6px; }
-        .current-tenant-hint strong { color: var(--kh-accent); font-weight: 600; }
-        .current-tenant-hint.muted { color: #9aa9ba; }
-        .alert { border-radius: 10px; font-size: 13px; }
-        .card-foot {
-            display: flex; align-items: center; justify-content: space-between;
-            margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--kh-line-2);
-            font-size: 11.5px; color: var(--kh-muted);
-        }
-        .card-foot a { color: var(--kh-accent); text-decoration: none; }
-        .card-foot a:hover { text-decoration: underline; }
-
-        /* ── Footer — 与首页一致 ── */
-        .footer { background: #1f2a44; color: rgba(255,255,255,0.7); padding: 28px 0 0; margin-top: 16px; }
-        .footer__inner { max-width: 1760px; margin: 0 auto; padding: 0 16px; display: grid; grid-template-columns: 1.4fr 2fr; gap: 40px; }
-        .footer__brand-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-        .footer__brand-top strong { display: block; font-size: 17px; font-weight: 700; color: #fff; }
-        .footer__brand-top p { margin: 2px 0 0; font-size: 12px; color: rgba(255,255,255,0.55); }
-        .footer .brand__mark--lg { background: rgba(255,255,255,0.1); width: 44px; height: 44px; font-size: 22px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; }
-        .footer__tagline { margin: 10px 0 0; font-size: 12px; line-height: 1.55; color: rgba(255,255,255,0.5); max-width: 360px; }
-        .footer__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-        .footer__col h5 { font-size: 13px; font-weight: 600; color: #fff; margin: 0 0 12px; }
-        .footer__col a { display: block; font-size: 12px; color: rgba(255,255,255,0.55); text-decoration: none; margin-bottom: 8px; }
-        .footer__col a:hover { color: #fff; }
-        .footer__copy { margin-top: 24px; padding: 14px 16px; text-align: center; font-size: 11px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.08); max-width: 1760px; margin-left: auto; margin-right: auto; }
-        @@media (max-width: 860px) {
-            .footer__inner { grid-template-columns: 1fr; gap: 20px; padding: 0 16px; }
-            .footer__grid { grid-template-columns: 1fr 1fr; }
+        @@media (prefers-reduced-motion: reduce){
+            *{ transition: none !important; animation: none !important; }
         }
 
-        @@media (max-width: 960px) {
-            .header-nav { display: none; }
-            .login-body { flex-direction: column; overflow-y: auto; padding: 12px 16px; gap: 12px; max-width: none; margin: 0; }
-            .login-left { min-height: 240px; padding: 20px 20px; }
-            .left-title { font-size: 22px; }
-            .login-right { flex: none; width: 100%; padding: 20px 20px; }
+        .screen{
+            display:flex;
+            min-height:100vh;
+            width:100%;
         }
-        @@media (max-width: 640px) {
-            .login-header { padding: 0 16px; height: 52px; }
+
+        /* ---------- header ---------- */
+        .topbar{
+            display:flex;
+            align-items:center;
+            gap:24px;
+            padding:0 2rem;
+            height:56px;
+            background:var(--paper-card);
+            border-bottom:1px solid var(--border);
+            position:sticky;
+            top:0;
+            z-index:50;
+        }
+        .topbar .brand{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            text-decoration:none;
+            color:inherit;
+            flex-shrink:0;
+        }
+        .topbar .brand-name{
+            font-family:"Noto Serif SC", "Songti SC", serif;
+            font-weight:700;
+            font-size:1.05rem;
+            color:var(--ink);
+            white-space:nowrap;
+        }
+        .topbar .brand-sub{
+            font-size:0.72rem;
+            color:var(--text-muted);
+            white-space:nowrap;
+        }
+        .topbar nav{
+            display:flex;
+            align-items:center;
+            gap:2rem;
+            margin:0 0 0 8px;
+            flex:1;
+        }
+        .topbar nav a{
+            padding:0.4rem 0;
+            position:relative;
+            font-size:0.92rem;
+            font-weight:500;
+            color:var(--text-muted);
+            text-decoration:none;
+            transition:color 0.15s;
+            white-space:nowrap;
+        }
+        .topbar nav a:hover{ color:var(--ink); }
+        .topbar nav a.active{ color:var(--ink); }
+        .topbar nav a.active::after{
+            content:"";
+            position:absolute;
+            left:0; right:0; bottom:-2px;
+            height:2px;
+            background:var(--gold);
+        }
+        .topbar .topbar-end{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            flex-shrink:0;
+        }
+        .topbar .home-link{
+            font-size:0.83rem;
+            color:var(--text-muted);
+            text-decoration:none;
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+        }
+        .topbar .home-link:hover{ color:var(--gold); }
+
+        /* ---------- footer ---------- */
+        .site-footer{
+            background:#0b1626;
+            border-top:1px solid rgba(124,196,255,0.16);
+            color:rgba(255,255,255,0.7);
+            padding:28px 2rem 0;
+        }
+        .site-footer__inner{
+            max-width:1200px;
+            margin:0 auto;
+            display:grid;
+            grid-template-columns:1.4fr 2fr;
+            gap:40px;
+        }
+        .site-footer__brand-top{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+        .site-footer__brand-top strong{ display:block; font-size:1.05rem; font-weight:700; color:#fff; font-family:"Noto Serif SC", "Songti SC", serif; }
+        .site-footer__brand-top p{ margin:2px 0 0; font-size:0.75rem; color:rgba(255,255,255,0.55); }
+        .site-footer__tagline{ margin:10px 0 0; font-size:0.75rem; line-height:1.55; color:rgba(255,255,255,0.5); max-width:360px; }
+        .site-footer__grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:28px; }
+        .site-footer__grid h5{ font-size:0.82rem; font-weight:600; color:#fff; margin:0 0 12px; }
+        .site-footer__grid a{ display:block; font-size:0.75rem; color:rgba(255,255,255,0.55); text-decoration:none; margin-bottom:8px; }
+        .site-footer__grid a:hover{ color:#fff; }
+        .site-footer__copy{
+            margin:24px auto 0;
+            max-width:1200px;
+            padding:14px 0;
+            text-align:center;
+            font-size:0.7rem;
+            color:rgba(255,255,255,0.4);
+            border-top:1px solid rgba(255,255,255,0.08);
+        }
+
+        /* ---------- LEFT: brand panel ---------- */
+        .brand-panel{
+            position:relative;
+            flex: 0 0 44%;
+            background: linear-gradient(160deg, var(--ink) 0%, var(--ink-deep) 100%);
+            color: #fff;
+            padding: 4.2rem 4rem;
+            display:flex;
+            flex-direction:column;
+            justify-content:space-between;
+            overflow:hidden;
+        }
+
+        .brand-panel::before{
+            content:"";
+            position:absolute;
+            inset:0;
+            background-image:
+                radial-gradient(1px 1px at 20% 30%, rgba(126,200,255,0.35) 0, transparent 60%),
+                radial-gradient(1px 1px at 70% 15%, rgba(126,200,255,0.25) 0, transparent 60%),
+                radial-gradient(1px 1px at 85% 65%, rgba(126,200,255,0.3) 0, transparent 60%),
+                radial-gradient(1px 1px at 40% 80%, rgba(126,200,255,0.2) 0, transparent 60%);
+            pointer-events:none;
+        }
+
+        .brand-mark{
+            display:flex;
+            align-items:center;
+            gap:0.65rem;
+            position:relative;
+            z-index:1;
+        }
+
+        .brand-mark svg{ flex-shrink:0; }
+
+        .brand-mark span{
+            font-family:"Noto Serif SC", "Songti SC", serif;
+            font-weight:600;
+            font-size:1.15rem;
+            letter-spacing:0.02em;
+        }
+
+        .brand-hero{ position:relative; z-index:1; }
+
+        .brand-hero h1{
+            font-family:"Noto Serif SC", "Songti SC", serif;
+            font-weight:700;
+            font-size: clamp(2rem, 3.4vw, 2.6rem);
+            line-height:1.35;
+            margin: 2.4rem 0 0.9rem;
+            color:#fff;
+        }
+
+        .brand-hero p.lede{
+            font-size:0.98rem;
+            line-height:1.7;
+            color: var(--text-muted-on-ink);
+            max-width: 30ch;
+            margin:0;
+        }
+
+        .gold-rule{
+            width:44px;
+            height:2px;
+            background: var(--gold);
+            margin: 2.1rem 0 1.9rem;
+            position:relative;
+            z-index:1;
+        }
+
+        .feature-list{
+            list-style:none;
+            margin:0 0 2.2rem;
+            padding:0;
+            position:relative;
+            z-index:1;
+        }
+
+        .feature-list li{
+            display:flex;
+            gap:0.85rem;
+            padding: 0.85rem 0;
+            border-top:1px solid rgba(255,255,255,0.1);
+        }
+        .feature-list li:first-child{ border-top:none; }
+
+        .feature-list .dot{
+            width:6px;
+            height:6px;
+            border-radius:50%;
+            background: var(--gold-light);
+            margin-top:0.55rem;
+            flex-shrink:0;
+        }
+
+        .feature-list h3{
+            font-size:0.95rem;
+            font-weight:600;
+            margin:0 0 0.25rem;
+            color:#fff;
+        }
+
+        .feature-list p{
+            font-size:0.85rem;
+            line-height:1.6;
+            color: var(--text-muted-on-ink);
+            margin:0;
+        }
+
+        /* ---------- RIGHT: form panel ---------- */
+        .form-panel{
+            flex:1;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding: 3rem 2rem;
+            background: var(--paper);
+        }
+
+        .form-card{
+            width:100%;
+            max-width: 392px;
+            transform: translateY(-40px);
+        }
+
+        .form-card h2{
+            font-family:"Noto Serif SC", "Songti SC", serif;
+            font-weight:600;
+            font-size:1.7rem;
+            margin:0 0 0.45rem;
+            color:var(--ink);
+        }
+
+        .form-card .sub{
+            font-size:0.9rem;
+            color: var(--text-muted);
+            margin:0 0 2.1rem;
+        }
+
+        .field{ margin-bottom:1.3rem; }
+
+        .field label{
+            display:block;
+            font-size:0.82rem;
+            font-weight:500;
+            color: var(--ink);
+            margin-bottom:0.5rem;
+        }
+
+        .field input[type="text"],
+        .field input[type="password"],
+        .field input[type="email"]{
+            width:100%;
+            padding:0.72rem 0.9rem;
+            font-size:0.92rem;
+            font-family:inherit;
+            color: var(--ink);
+            background: var(--paper-card);
+            border:1px solid var(--border);
+            border-radius: var(--radius);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .field input::placeholder{ color:#9aa9ba; }
+
+        .field input:focus{
+            outline:none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px var(--gold-soft);
+        }
+
+        .password-wrap{ position:relative; }
+        .password-wrap input{ padding-right: 2.6rem; }
+
+        .toggle-visibility{
+            position:absolute;
+            right:0.6rem;
+            top:50%;
+            transform:translateY(-50%);
+            background:none;
+            border:none;
+            padding:0.35rem;
+            cursor:pointer;
+            color: var(--text-muted);
+            display:flex;
+            border-radius:6px;
+        }
+        .toggle-visibility:hover{ color: var(--ink); }
+        .toggle-visibility:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+        /* tenant select */
+        .tenant-select{ position:relative; }
+
+        .tenant-trigger{
+            width:100%;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:0.68rem 0.9rem;
+            background: var(--paper-card);
+            border:1px solid var(--border);
+            border-radius: var(--radius);
+            cursor:pointer;
+            font-family:inherit;
+            font-size:0.92rem;
+            color: var(--ink);
+        }
+
+        .tenant-trigger:focus-visible{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px var(--gold-soft); }
+
+        .tenant-trigger .current{ display:flex; align-items:center; gap:0.55rem; }
+
+        .tenant-badge{
+            width:22px; height:22px;
+            border-radius:6px;
+            background: var(--ink);
+            color: var(--gold-light);
+            font-size:0.72rem;
+            font-weight:700;
+            display:flex; align-items:center; justify-content:center;
+            font-family:"Noto Serif SC", "Songti SC", serif;
+            flex-shrink:0;
+        }
+
+        .tenant-trigger svg{ transition: transform 0.15s ease; color:var(--text-muted); flex-shrink:0; }
+        .tenant-select.open .tenant-trigger svg{ transform: rotate(180deg); }
+
+        .tenant-menu{
+            position:absolute;
+            left:0; right:0;
+            top: calc(100% + 6px);
+            background: var(--paper-card);
+            border:1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-card);
+            padding:0.35rem;
+            z-index:20;
+            display:none;
+            max-height:220px;
+            overflow-y:auto;
+        }
+        .tenant-select.open .tenant-menu{ display:block; }
+
+        .tenant-option{
+            display:flex;
+            align-items:center;
+            gap:0.6rem;
+            width:100%;
+            padding:0.55rem 0.6rem;
+            border:none;
+            background:none;
+            text-align:left;
+            font-family:inherit;
+            font-size:0.88rem;
+            color: var(--ink);
+            border-radius:7px;
+            cursor:pointer;
+        }
+        .tenant-option:hover{ background: var(--gold-soft); }
+        .tenant-option.active{ font-weight:600; }
+        .tenant-option .check{ margin-left:auto; color: var(--gold); opacity:0; }
+        .tenant-option.active .check{ opacity:1; }
+
+        .tenant-hint{
+            font-size:0.83rem;
+            color: var(--text-muted);
+            margin-top:0.55rem;
+        }
+
+        .row-between{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom:1.7rem;
+        }
+
+        .remember{
+            display:flex;
+            align-items:center;
+            gap:0.55rem;
+            font-size:0.85rem;
+            color: var(--text-muted);
+            cursor:pointer;
+            user-select:none;
+            margin-bottom:0;
+        }
+
+        .remember input{
+            appearance:none;
+            -webkit-appearance:none;
+            width:16px; height:16px;
+            border:1.5px solid var(--border);
+            border-radius:4px;
+            display:grid;
+            place-content:center;
+            cursor:pointer;
+            margin:0;
+        }
+        .remember input::before{
+            content:"";
+            width:9px; height:9px;
+            transform:scale(0);
+            border-radius:2px;
+            background: var(--gold);
+        }
+        .remember input:checked::before{ transform:scale(1); }
+        .remember input:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+        .forgot{
+            font-size:0.85rem;
+            color: var(--ink);
+            text-decoration:none;
+            border-bottom:1px solid var(--gold);
+        }
+        .forgot:hover{ color: var(--gold); }
+
+        .submit-btn{
+            position:relative;
+            width:100%;
+            padding:0.85rem 1rem;
+            background: var(--ink);
+            color: #fff;
+            border:none;
+            border-radius: var(--radius);
+            font-family:inherit;
+            font-size:0.96rem;
+            font-weight:600;
+            letter-spacing:0.02em;
+            cursor:pointer;
+            transition: background 0.15s ease;
+        }
+        .submit-btn:hover{ background: var(--ink-deep); }
+        .submit-btn:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; }
+
+        .helper-text{
+            text-align:center;
+            font-size:0.83rem;
+            color: var(--text-muted);
+            margin-top:1.5rem;
+        }
+
+        .channel-hint{
+            font-size:0.83rem;
+            color: var(--text-muted);
+            margin-bottom:1.3rem;
+        }
+
+        .validation-summary{
+            font-size:0.85rem;
+            margin-bottom:1.1rem;
+        }
+        .validation-summary ul{ margin:0; padding-left:1.1rem; }
+
+        /* ---------- responsive ---------- */
+        @@media (max-width: 900px){
+            .topbar{ padding:0 1.25rem; gap:12px; }
+            .topbar nav{ display:none; }
+            .topbar .brand-sub{ display:none; }
+            .site-footer{ padding:24px 1.5rem 0; }
+            .site-footer__inner{ grid-template-columns:1fr; gap:20px; }
+            .site-footer__grid{ grid-template-columns:1fr 1fr; }
+            .screen{ flex-direction:column; }
+            .brand-panel{
+                flex:none;
+                padding: 2.2rem 1.75rem;
+            }
+            .brand-hero h1{ font-size:1.5rem; margin-top:1.4rem; }
+            .brand-hero p.lede{ max-width:none; }
+            .feature-list{ display:none; }
+            .gold-rule{ margin: 1.5rem 0; }
+            .form-panel{ padding: 2.4rem 1.5rem 3rem; }
         }
     </style>
 </head>
 <body>
-<div class="login-page">
-    <header class="login-header">
-        <a href="/" class="brand">
-            <span class="brand-mark">易</span>
-            <span class="brand-text"><strong>易课通</strong> <span>教学资源库</span></span>
-        </a>
-        <nav class="header-nav">
-            <a href="/" class="active">首页</a>
-            <a href="/student/courses">课程中心</a>
-            <a href="/student/resources">资源库</a>
-            <a href="/student/micro-majors">微专业</a>
-            <a href="/student/practicums">实训</a>
-            <a href="/student/employment/jobs">就业</a>
-        </nav>
-        <div class="header-right">
-            <a href="/" style="font-size:13px;color:#5b6573;display:inline-flex;align-items:center;gap:6px;"><i class="fa fa-home"></i> 返回首页</a>
-        </div>
-    </header>
 
-    <div class="login-body">
-        <div class="login-left">
-            <div class="left-inner">
-                <h1 class="left-title">易课通<br /><span>教学资源库</span></h1>
-                <p class="left-subtitle">集成 AI 技术的新一代知识管理系统，为教育机构提供全方位的数字化教学支持</p>
-                <div class="feature-list">
-                    <div class="feature-item">
-                        <div class="feature-icon"><i class="fa fa-folder-open"></i></div>
-                        <div class="feature-text"><h3>资源管理</h3><p>上传管理教学资源，支持多种文档格式</p></div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon"><i class="fa fa-search"></i></div>
-                        <div class="feature-text"><h3>智能搜索</h3><p>基于 AI 的全文搜索，快速定位知识内容</p></div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon"><i class="fa fa-comments"></i></div>
-                        <div class="feature-text"><h3>AI 助手</h3><p>智能对话问答，辅助学习与知识探索</p></div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon"><i class="fa fa-book"></i></div>
-                        <div class="feature-text"><h3>课程学习</h3><p>系统化课程管理，跟踪学习进度</p></div>
-                    </div>
-                </div>
-                <div class="left-quote">
-                    <p>“让优质教育资源触手可及”</p>
-                </div>
-            </div>
+<header class="topbar">
+    <a href="/" class="brand">
+        <svg width="26" height="26" viewBox="0 0 30 30" fill="none">
+            <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
+            <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
+        </svg>
+        <span class="brand-name">易课通</span>
+        <span class="brand-sub">教学资源库</span>
+    </a>
+    <nav>
+        <a href="/" class="active">首页</a>
+        <a href="/student/courses">课程中心</a>
+        <a href="/student/resources">资源库</a>
+        <a href="/student/micro-majors">微专业</a>
+        <a href="/student/practicums">实训</a>
+        <a href="/student/employment/jobs">就业</a>
+    </nav>
+    <div class="topbar-end">
+        <a href="/" class="home-link">返回首页</a>
+    </div>
+</header>
+
+<div class="screen">
+
+    <!-- LEFT: brand / value panel -->
+    <div class="brand-panel">
+        <div class="brand-mark">
+            <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+                <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
+                <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
+            </svg>
+            <span>易课通</span>
         </div>
 
-        <div class="login-right">
-            <div class="login-card">
-                <div class="card-head">
-                    <h2 class="form-title">@L["Login"]</h2>
-                    @if (hostMode)
-                    {
-                        <p class="form-subtitle">系统管理员登录</p>
-                    }
-                    else
-                    {
-                        <p class="form-subtitle">欢迎回来，请登录您的账号</p>
-                    }
-                </div>
+        <div class="brand-hero">
+            <h1>教学资源库<br />为机构而生的知识底座</h1>
+            <p class="lede">集成 AI 能力的新一代知识管理系统，帮助教育机构沉淀资源、加速教学与研发协同。</p>
 
-                @if (!Model.EnableLocalLogin && !Model.VisibleExternalProviders.Any())
-                {
-                    <div class="alert alert-warning">
-                        <strong>@L["InvalidLoginRequest"]</strong>
-                        @L["ThereAreNoLoginSchemesConfiguredForThisClient"]
+            <div class="gold-rule"></div>
+
+            <ul class="feature-list">
+                <li>
+                    <span class="dot"></span>
+                    <div>
+                        <h3>资源管理</h3>
+                        <p>上传与管理教学资源，支持多种文档格式</p>
                     </div>
-                }
-                else
+                </li>
+                <li>
+                    <span class="dot"></span>
+                    <div>
+                        <h3>智能搜索</h3>
+                        <p>基于 AI 的全文搜索，快速定位知识内容</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="dot"></span>
+                    <div>
+                        <h3>AI 助手</h3>
+                        <p>智能对话问答，辅助学习与知识探索</p>
+                    </div>
+                </li>
+                <li>
+                    <span class="dot"></span>
+                    <div>
+                        <h3>课程学习</h3>
+                        <p>系统化课程管理，跟踪学习进度</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- RIGHT: login form -->
+    <div class="form-panel">
+        <div class="form-card">
+            <h2>@L["Login"]</h2>
+            @if (hostMode)
+            {
+                <p class="sub">系统管理员登录</p>
+            }
+            else
+            {
+                <p class="sub">欢迎回来，请登录您的账号</p>
+            }
+
+            @if (!Model.EnableLocalLogin && !Model.VisibleExternalProviders.Any())
+            {
+                <div class="alert alert-warning">
+                    <strong>@L["InvalidLoginRequest"]</strong>
+                    @L["ThereAreNoLoginSchemesConfiguredForThisClient"]
+                </div>
+            }
+            else
+            {
+                @if (Model.EnableLocalLogin)
                 {
-                    @if (Model.EnableLocalLogin)
-                    {
-                        <form method="post" id="localLoginForm">
-                            <input type="hidden" asp-for="ReturnUrl" />
-                            <input type="hidden" asp-for="ReturnUrlHash" />
-                            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <form method="post" id="localLoginForm" autocomplete="off">
+                        <input type="hidden" asp-for="ReturnUrl" />
+                        <input type="hidden" asp-for="ReturnUrlHash" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger validation-summary"></div>
 
-                            @if (hostMode)
-                            {
-                                <div class="current-tenant-hint muted" style="margin-bottom:14px;">系统管理员专用通道</div>
-                            }
-                            else
-                            {
-                                <!-- 租户选择（仅真实租户；宿主/全局入口已移除，宿主请走隐藏网址 /Account/Login?host=true） -->
-                                <div class="form-group" id="tenantBlock">
-                                    <label><i class="fa fa-building"></i> 选择租户</label>
-                                    <div id="tenantTabs" class="tenant-tabs"></div>
-                                    <div id="currentTenantHint" class="current-tenant-hint muted">正在加载租户列表…</div>
+                        @if (hostMode)
+                        {
+                            <div class="channel-hint">系统管理员专用通道</div>
+                        }
+                        else
+                        {
+                            <div class="field" id="tenantBlock">
+                                <label id="tenant-label">机构</label>
+                                <div class="tenant-select" id="tenantSelect">
+                                    <button type="button" class="tenant-trigger" id="tenantTrigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="tenant-label">
+                                        <span class="current">
+                                            <span class="tenant-badge" id="tenantBadge">·</span>
+                                            <span id="tenantCurrentName">正在加载机构列表…</span>
+                                        </span>
+                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </button>
+                                    <div class="tenant-menu" role="listbox" id="tenantMenu"></div>
                                 </div>
-                                <div class="form-group" id="noTenantNotice" style="display:none;">
-                                    <div class="current-tenant-hint muted">当前暂无可用租户，请联系管理员分配后再登录</div>
-                                </div>
-                            }
+                                <div class="tenant-hint" id="tenantHint" style="display:none;"></div>
+                            </div>
+                            <div class="field" id="noTenantNotice" style="display:none;">
+                                <div class="tenant-hint">当前暂无可用租户，请联系管理员分配后再登录</div>
+                            </div>
+                        }
 
-                            <div id="loginFields">
-                            <div class="form-group">
+                        <div id="loginFields">
+                            <div class="field">
                                 <label asp-for="LoginInput.UserNameOrEmailAddress"></label>
-                                <input asp-for="LoginInput.UserNameOrEmailAddress" class="form-input" placeholder="@L["UserNameOrEmailAddress"]" autofocus />
+                                <input asp-for="LoginInput.UserNameOrEmailAddress" placeholder="@L["UserNameOrEmailAddress"]" autofocus />
                                 <span asp-validation-for="LoginInput.UserNameOrEmailAddress" class="text-danger" style="font-size:12px;"></span>
                             </div>
 
-                            <div class="form-group">
+                            <div class="field">
                                 <label asp-for="LoginInput.Password"></label>
-                                <div class="password-wrapper">
-                                    <input asp-for="LoginInput.Password" type="password" class="form-input" id="BackendPassword" placeholder="@L["Password"]" />
-                                    <button type="button" class="toggle-password" onclick="var i=document.getElementById('BackendPassword'); i.type=i.type==='password'?'text':'password'; this.querySelector('i').classList.toggle('fa-eye'); this.querySelector('i').classList.toggle('fa-eye-slash');">
-                                        <i class="fa fa-eye-slash"></i>
+                                <div class="password-wrap">
+                                    <input asp-for="LoginInput.Password" type="password" id="BackendPassword" placeholder="@L["Password"]" />
+                                    <button type="button" class="toggle-visibility" id="toggleVisibility" aria-label="显示密码">
+                                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" id="eyeIcon">
+                                            <path d="M1.5 9S4 3.5 9 3.5 16.5 9 16.5 9 14 14.5 9 14.5 1.5 9 1.5 9z" stroke="currentColor" stroke-width="1.4"/>
+                                            <circle cx="9" cy="9" r="2.4" stroke="currentColor" stroke-width="1.4"/>
+                                        </svg>
                                     </button>
                                 </div>
                                 <span asp-validation-for="LoginInput.Password" class="text-danger" style="font-size:12px;"></span>
                             </div>
 
-                            <div class="form-options">
-                                <label class="remember-me">
+                            <div class="row-between">
+                                <label class="remember">
                                     <input asp-for="LoginInput.RememberMe" />
                                     <span>@L["RememberMe"]</span>
                                 </label>
-                                <a href="@Url.Page("./ForgotPassword", new {returnUrl = Model.ReturnUrl, returnUrlHash = Model.ReturnUrlHash})" style="font-size:13px;color:var(--kh-accent);">@L["ForgotPassword"]</a>
+                                <a href="@Url.Page("./ForgotPassword", new {returnUrl = Model.ReturnUrl, returnUrlHash = Model.ReturnUrlHash})" class="forgot">@L["ForgotPassword"]</a>
                             </div>
 
-                            <button type="submit" name="Action" value="Login" class="login-btn">@L["Login"]</button>
+                            <button type="submit" name="Action" value="Login" class="submit-btn">@L["Login"]</button>
                             @if (Model.ShowCancelButton)
                             {
                                 <button type="submit" name="Action" value="Cancel" class="btn btn-secondary w-100 mt-2">@L["Cancel"]</button>
                             }
-                            </div>
-                        </form>
-                    }
-
-                    @if (Model.VisibleExternalProviders.Any())
-                    {
-                        <div class="mt-3">
-                            <h6 style="font-size:13px;color:var(--kh-muted);">@L["OrLoginWith"]</h6>
-                            <form asp-page="./Login" asp-page-handler="ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" asp-route-returnUrlHash="@Model.ReturnUrlHash" method="post">
-                                @foreach (var provider in Model.VisibleExternalProviders)
-                                {
-                                    <button type="submit" class="btn btn-outline-primary m-1" name="provider" value="@provider.AuthenticationScheme">@provider.DisplayName</button>
-                                }
-                            </form>
                         </div>
+                    </form>
+                    @if (!hostMode)
+                    {
+                        <p class="helper-text">没有账号？请联系机构管理员开通</p>
                     }
                 }
 
+                @if (Model.VisibleExternalProviders.Any())
+                {
+                    <div class="mt-3">
+                        <h6 style="font-size:13px;color:var(--text-muted);">@L["OrLoginWith"]</h6>
+                        <form asp-page="./Login" asp-page-handler="ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" asp-route-returnUrlHash="@Model.ReturnUrlHash" method="post">
+                            @foreach (var provider in Model.VisibleExternalProviders)
+                            {
+                                <button type="submit" class="btn btn-outline-primary m-1" name="provider" value="@provider.AuthenticationScheme">@provider.DisplayName</button>
+                            }
+                        </form>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+</div>
+
+<footer class="site-footer">
+    <div class="site-footer__inner">
+        <div>
+            <div class="site-footer__brand-top">
+                <svg width="34" height="34" viewBox="0 0 30 30" fill="none">
+                    <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
+                    <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
+                </svg>
+                <div>
+                    <strong>易课通 · 资源库</strong>
+                    <p>教学资源库</p>
+                </div>
+            </div>
+            <p class="site-footer__tagline">汇聚课程、资源、实训，服务院校教学</p>
+        </div>
+        <div class="site-footer__grid">
+            <div>
+                <h5>学习中心</h5>
+                <a href="/student/courses">课程中心</a>
+                <a href="/student/resources">资源库</a>
+                <a href="/student/micro-majors">微专业</a>
+                <a href="/student/practicums">实训项目</a>
+            </div>
+            <div>
+                <h5>智能应用</h5>
+                <a href="/ai/chat">AI 助手</a>
+                <a href="/ai/lesson-plan">智能备课</a>
+                <a href="/search">智能搜索</a>
+            </div>
+            <div>
+                <h5>关于</h5>
+                <a href="/">平台介绍</a>
+                <a href="/">帮助中心</a>
+                <a href="/">联系我们</a>
             </div>
         </div>
     </div>
-    <footer class="footer">
-        <div class="footer__inner">
-            <div class="footer__brand">
-                <div class="footer__brand-top">
-                    <span class="brand__mark brand__mark--lg">易</span>
-                    <div>
-                        <strong>易课通 · 资源库</strong>
-                        <p>教学资源库</p>
-                    </div>
-                </div>
-                <p class="footer__tagline">汇聚课程、资源、实训，服务院校教学</p>
-            </div>
-            <div class="footer__grid">
-                <div class="footer__col">
-                    <h5>学习中心</h5>
-                    <a href="/student/courses">课程中心</a>
-                    <a href="/student/resources">资源库</a>
-                    <a href="/student/micro-majors">微专业</a>
-                    <a href="/student/practicums">实训项目</a>
-                </div>
-                <div class="footer__col">
-                    <h5>智能应用</h5>
-                    <a href="/ai/chat">AI 助手</a>
-                    <a href="/ai/lesson-plan">智能备课</a>
-                    <a href="/search">智能搜索</a>
-                </div>
-                <div class="footer__col">
-                    <h5>关于</h5>
-                    <a href="/">平台介绍</a>
-                    <a href="/">帮助中心</a>
-                    <a href="/">联系我们</a>
-                </div>
-            </div>
-        </div>
-        <div class="footer__copy">&copy; 2026 易课通 · 资源库</div>
-    </footer>
-</div>
+    <div class="site-footer__copy">&copy; 2026 易课通 · 资源库</div>
+</footer>
+
 <script>
 (function() {
     var HOST_MODE = @(hostMode ? "true" : "false");
@@ -458,24 +783,20 @@
     function clearTenantCookie() {
         document.cookie = '__tenant=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     }
-    function updateHint(html, isMuted) {
-        var el = document.getElementById('currentTenantHint');
-        if (!el) return;
-        el.innerHTML = html;
-        el.className = isMuted ? 'current-tenant-hint muted' : 'current-tenant-hint';
-    }
-    function setActiveTab(tenantId) {
-        var tabs = document.querySelectorAll('#tenantTabs .tenant-tab');
-        tabs.forEach(function(btn) {
-            btn.classList.toggle('active', btn.getAttribute('data-tenant-id') === (tenantId || ''));
+
+    // 密码显隐切换
+    var pwInput = document.getElementById('BackendPassword');
+    var toggleBtn = document.getElementById('toggleVisibility');
+    var eyeIcon = document.getElementById('eyeIcon');
+    if (pwInput && toggleBtn) {
+        toggleBtn.addEventListener('click', function() {
+            var isPw = pwInput.type === 'password';
+            pwInput.type = isPw ? 'text' : 'password';
+            toggleBtn.setAttribute('aria-label', isPw ? '隐藏密码' : '显示密码');
+            if (eyeIcon) eyeIcon.style.opacity = isPw ? '0.55' : '1';
         });
     }
-    window.selectTenant = function(id, name) {
-        if (!id) return;
-        document.cookie = '__tenant=' + encodeURIComponent(id) + '; path=/; SameSite=Lax';
-        setActiveTab(id);
-        updateHint('当前租户：<strong>' + name + '</strong>', false);
-    };
+
     function showNoTenant() {
         var block = document.getElementById('tenantBlock');
         var notice = document.getElementById('noTenantNotice');
@@ -484,32 +805,74 @@
         if (notice) notice.style.display = '';
         if (fields) fields.style.display = 'none';
     }
+    function showTenantHint(text) {
+        var el = document.getElementById('tenantHint');
+        if (!el) return;
+        el.textContent = text;
+        el.style.display = '';
+    }
+
+    // 机构下拉框
+    var tenantSelect = document.getElementById('tenantSelect');
+    var tenantTrigger = document.getElementById('tenantTrigger');
+    var tenantMenu = document.getElementById('tenantMenu');
+    var tenantBadge = document.getElementById('tenantBadge');
+    var tenantCurrentName = document.getElementById('tenantCurrentName');
+
+    function closeTenant() {
+        if (!tenantSelect || !tenantTrigger) return;
+        tenantSelect.classList.remove('open');
+        tenantTrigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function applyTenant(id, name) {
+        if (!id) return;
+        document.cookie = '__tenant=' + encodeURIComponent(id) + '; path=/; SameSite=Lax';
+        if (tenantCurrentName) tenantCurrentName.textContent = name;
+        if (tenantBadge) tenantBadge.textContent = name.charAt(0);
+        if (tenantMenu) {
+            tenantMenu.querySelectorAll('.tenant-option').forEach(function(o) {
+                o.classList.toggle('active', o.getAttribute('data-id') === id);
+            });
+        }
+    }
+    window.selectTenant = applyTenant;
+
     function resolveTenantName(tenantId) {
         fetch('/api/abp/multi-tenancy/tenants/by-id/' + encodeURIComponent(tenantId), { headers: { 'accept': 'application/json' } })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data && data.success && data.name) {
-                    setActiveTab(tenantId);
-                    updateHint('当前租户：<strong>' + data.name + '</strong>', false);
+                    applyTenant(tenantId, data.name);
                 } else {
-                    setActiveTab(tenantId);
-                    updateHint('当前租户ID：<strong>' + tenantId + '</strong>', false);
+                    applyTenant(tenantId, tenantId);
                 }
             })
             .catch(function() {
-                setActiveTab(tenantId);
-                updateHint('当前租户ID：<strong>' + tenantId + '</strong>', false);
+                if (tenantCurrentName) tenantCurrentName.textContent = tenantId;
+                if (tenantBadge) tenantBadge.textContent = tenantId.charAt(0);
             });
     }
+
     document.addEventListener('DOMContentLoaded', function() {
         if (HOST_MODE) {
-            // 宿主专用通道：强制宿主上下文，不拉取租户列表
+            // 系统管理员专用通道：强制宿主上下文，不拉取租户列表
             clearTenantCookie();
             return;
         }
-        var container = document.getElementById('tenantTabs');
-        if (!container) return;
-        // 加载租户列表渲染为 Tab（仅真实租户；过滤后端返回的 Id 为空的“全局”占位项）
+        if (!tenantSelect || !tenantMenu) return;
+        if (tenantTrigger) {
+            tenantTrigger.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var willOpen = !tenantSelect.classList.contains('open');
+                tenantSelect.classList.toggle('open', willOpen);
+                tenantTrigger.setAttribute('aria-expanded', String(willOpen));
+            });
+        }
+        document.addEventListener('click', closeTenant);
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeTenant(); });
+
+        // 加载机构列表（仅真实租户；过滤后端返回的 Id 为空的占位项）
         fetch('/api/public/tenants', { headers: { 'accept': 'application/json' } })
             .then(function(r) { return r.json(); })
             .then(function(list) {
@@ -524,23 +887,30 @@
                 realTenants.forEach(function(t) {
                     var btn = document.createElement('button');
                     btn.type = 'button';
-                    btn.className = 'tenant-tab';
-                    btn.setAttribute('data-tenant-id', t.id);
-                    btn.innerHTML = '<i class="fa fa-bank"></i> ' + t.name;
-                    btn.onclick = function() { selectTenant(t.id, t.name); };
-                    container.appendChild(btn);
+                    btn.className = 'tenant-option';
+                    btn.setAttribute('data-id', t.id);
+                    btn.setAttribute('role', 'option');
+                    btn.innerHTML = '<span class="current"><span class="tenant-badge"></span></span><span class="opt-name"></span><span class="check">✓</span>';
+                    btn.querySelector('.tenant-badge').textContent = t.name.charAt(0);
+                    btn.querySelector('.opt-name').textContent = t.name;
+                    btn.addEventListener('click', function() {
+                        applyTenant(t.id, t.name);
+                        closeTenant();
+                    });
+                    tenantMenu.appendChild(btn);
                 });
                 var currentId = getTenantCookie();
                 var stillExists = currentId && realTenants.some(function(t) { return t.id === currentId; });
                 if (!stillExists) {
                     // 无 cookie 或指向已不存在的租户：默认选中第一个，避免误以宿主身份登录
-                    selectTenant(realTenants[0].id, realTenants[0].name);
+                    applyTenant(realTenants[0].id, realTenants[0].name);
                     return;
                 }
                 resolveTenantName(currentId);
             })
             .catch(function() {
-                updateHint('租户列表加载失败，请刷新页面重试', true);
+                if (tenantCurrentName) tenantCurrentName.textContent = '请选择机构';
+                showTenantHint('机构列表加载失败，请刷新页面重试');
             });
     });
 })();

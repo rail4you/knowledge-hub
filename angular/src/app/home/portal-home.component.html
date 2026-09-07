@@ -3,8 +3,12 @@
   <header class="nav">
     <div class="nav__inner">
       <a routerLink="/" class="brand">
-        <span class="brand__mark">易</span>
-        <span class="brand__name">易课通 <span class="brand__sub">教学资源库</span></span>
+        <svg width="26" height="26" viewBox="0 0 30 30" fill="none">
+          <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
+          <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
+        </svg>
+        <span class="brand__name">易课通</span>
+        <span class="brand__sub">教学资源库</span>
       </a>
       <nav class="nav__links">
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
@@ -27,7 +31,7 @@
           }
           <button class="btn btn--sm btn--ghost" (click)="logout()">退出</button>
         } @else {
-          <button class="btn btn--sm" (click)="login()">登录</button>
+          <button class="btn btn--sm btn--ink" (click)="login()">登录</button>
         }
       </div>
     </div>
@@ -35,6 +39,30 @@
 
   <!-- ===== HERO 轮播 ===== -->
   <section class="hero" [style.--hero-accent]="heroSlides[heroIndex()].accent">
+    <div class="hero__deco" aria-hidden="true">
+      <svg class="deco-book" width="72" height="72" viewBox="0 0 72 72" fill="none">
+        <path d="M12 18c8-4 16-4 24 0v36c-8-4-16-4-24 0V18z" stroke="currentColor" stroke-width="2"/>
+        <path d="M60 18c-8-4-16-4-24 0v36c8-4 16-4 24 0V18z" stroke="currentColor" stroke-width="2"/>
+        <path d="M24 28h8M24 34h8M40 28h8M40 34h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <svg class="deco-cap" width="84" height="84" viewBox="0 0 84 84" fill="none">
+        <path d="M42 22 10 34l32 12 26-9.8V52" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M28 40v12c0 5 28 5 28 0V40" stroke="currentColor" stroke-width="2"/>
+        <circle cx="68" cy="52" r="2.5" fill="currentColor"/>
+      </svg>
+      <svg class="deco-bulb" width="60" height="60" viewBox="0 0 60 60" fill="none">
+        <path d="M30 6c-9 0-15 6.5-15 15 0 5.5 3 9.5 6.5 12.5V40h17v-6.5C42 30.5 45 26.5 45 21c0-8.5-6-15-15-15z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M25 45h10M26 50h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <svg class="deco-globe" width="66" height="66" viewBox="0 0 66 66" fill="none">
+        <circle cx="33" cy="33" r="22" stroke="currentColor" stroke-width="2"/>
+        <path d="M11 33h44M33 11c-8 8-8 36 0 44M33 11c8 8 8 36 0 44" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      <svg class="deco-ring" width="120" height="120" viewBox="0 0 120 120" fill="none">
+        <circle cx="60" cy="60" r="44" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 7"/>
+        <circle cx="60" cy="60" r="30" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </div>
     <div class="hero__inner">
       <div class="hero__content">
         @for (s of heroSlides; track $index) {
@@ -47,18 +75,18 @@
           </div>
         }
       </div>
-    </div>
 
-    <div class="hero__dots" role="tablist">
-      @for (s of heroSlides; track $index) {
-        <button
-          type="button"
-          class="hero__dot"
-          [class.is-active]="heroIndex() === $index"
-          (click)="setHeroSlide($index)"
-          [attr.aria-label]="'切换到第' + ($index + 1) + '张：' + s.title"
-        ></button>
-      }
+      <div class="hero__dots" role="tablist">
+        @for (s of heroSlides; track $index) {
+          <button
+            type="button"
+            class="hero__dot"
+            [class.is-active]="heroIndex() === $index"
+            (click)="setHeroSlide($index)"
+            [attr.aria-label]="'切换到第' + ($index + 1) + '张：' + s.title"
+          ></button>
+        }
+      </div>
     </div>
   </section>
 
@@ -456,7 +484,10 @@
     <div class="footer__inner">
       <div class="footer__brand">
         <div class="footer__brand-top">
-          <span class="brand__mark brand__mark--lg">易</span>
+          <svg width="34" height="34" viewBox="0 0 30 30" fill="none">
+            <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
+            <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
+          </svg>
           <div>
             <strong>易课通 · 资源库</strong>
             <p>教学资源库</p>

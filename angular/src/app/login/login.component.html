@@ -1,241 +1,235 @@
-<div class="login-page">
-  <!-- Header — 与首页 PortalHome 顶栏统一：logo + 居中导航 + 账户区 -->
-  <header class="nav">
-    <div class="nav__inner">
-      <a routerLink="/" class="brand">
-        <span class="brand__mark">易</span>
-        <span class="brand__name">易课通 <span class="brand__sub">教学资源库</span></span>
-      </a>
-
-      <nav class="nav__links">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
-        <a routerLink="/student/courses" routerLinkActive="active">课程中心</a>
-        <a routerLink="/student/resources" routerLinkActive="active">资源库</a>
-        <a routerLink="/student/micro-majors" routerLinkActive="active">微专业</a>
-        <a routerLink="/student/practicums" routerLinkActive="active">实训</a>
-        <a routerLink="/student/employment/jobs" routerLinkActive="active">就业</a>
-      </nav>
-
-      <div class="nav__end">
-        <div class="language-selector" [class.open]="langDropdownOpen()">
-          <button class="lang-btn" (click)="toggleLangDropdown()">
-            <i class="fa fa-globe"></i>
-            <span>{{ getCurrentLangDisplayName() }}</span>
-            <i class="fa fa-chevron-down"></i>
+<header class="topbar">
+  <a routerLink="/" class="brand">
+    <svg width="26" height="26" viewBox="0 0 30 30" fill="none">
+      <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
+      <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
+    </svg>
+    <span class="brand-name">易课通</span>
+    <span class="brand-sub">教学资源库</span>
+  </a>
+  <nav>
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
+    <a routerLink="/student/courses" routerLinkActive="active">课程中心</a>
+    <a routerLink="/student/resources" routerLinkActive="active">资源库</a>
+    <a routerLink="/student/micro-majors" routerLinkActive="active">微专业</a>
+    <a routerLink="/student/practicums" routerLinkActive="active">实训</a>
+    <a routerLink="/student/employment/jobs" routerLinkActive="active">就业</a>
+  </nav>
+  <div class="topbar-end">
+    <div class="language-selector" [class.open]="langDropdownOpen()">
+      <button class="lang-btn" (click)="toggleLangDropdown()">
+        <i class="fa fa-globe"></i>
+        <span>{{ getCurrentLangDisplayName() }}</span>
+        <i class="fa fa-chevron-down"></i>
+      </button>
+      <div class="lang-dropdown-menu">
+        @for (lang of languages; track lang.cultureName) {
+          <button
+            [class.active]="lang.cultureName === currentLang"
+            (click)="onChangeLang(lang.cultureName)"
+          >
+            {{ lang.displayName }}
           </button>
-          <div class="lang-dropdown-menu">
-            @for (lang of languages; track lang.cultureName) {
-              <button
-                [class.active]="lang.cultureName === currentLang"
-                (click)="onChangeLang(lang.cultureName)"
-              >
-                {{ lang.displayName }}
-              </button>
-            }
-          </div>
-        </div>
-        <a routerLink="/" class="btn btn--sm btn--ghost">
-          <i class="fa fa-home"></i>
-          <span>{{ '::BackToHome' | abpLocalization }}</span>
-        </a>
+        }
       </div>
     </div>
-  </header>
+    <a routerLink="/" class="home-link">
+      <i class="fa fa-home"></i>
+      <span>{{ '::BackToHome' | abpLocalization }}</span>
+    </a>
+  </div>
+</header>
 
-  <!-- Body — 两栏 -->
-  <div class="login-body">
-    <!-- 左侧：修饰背景图 + 平台介绍 -->
-    <div class="login-left">
-      <div class="left-inner">
-        <h1 class="left-title">
-          易课通<br />
-          <span>教学资源库</span>
-        </h1>
-        <p class="left-subtitle">集成 AI 技术的新一代知识管理系统，为教育机构提供全方位的数字化教学支持</p>
-
-        <div class="feature-list">
-          <div class="feature-item">
-            <div class="feature-icon"><span nz-icon nzType="folder-open" nzTheme="outline"></span></div>
-            <div class="feature-text">
-              <h3>资源管理</h3>
-              <p>上传管理教学资源，支持多种文档格式</p>
-            </div>
-          </div>
-          <div class="feature-item">
-            <div class="feature-icon"><span nz-icon nzType="search" nzTheme="outline"></span></div>
-            <div class="feature-text">
-              <h3>智能搜索</h3>
-              <p>基于 AI 的全文搜索，快速定位知识内容</p>
-            </div>
-          </div>
-          <div class="feature-item">
-            <div class="feature-icon"><span nz-icon nzType="robot" nzTheme="outline"></span></div>
-            <div class="feature-text">
-              <h3>AI 助手</h3>
-              <p>智能对话问答，辅助学习与知识探索</p>
-            </div>
-          </div>
-          <div class="feature-item">
-            <div class="feature-icon"><span nz-icon nzType="book" nzTheme="outline"></span></div>
-            <div class="feature-text">
-              <h3>课程学习</h3>
-              <p>系统化课程管理，跟踪学习进度</p>
-            </div>
-          </div>
-        </div>
-        <div class="left-quote">
-          <p>“让优质教育资源触手可及”</p>
-        </div>
-      </div>
+<div class="screen">
+  <!-- LEFT: brand / value panel -->
+  <div class="brand-panel">
+    <div class="brand-mark">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
+        <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
+      </svg>
+      <span>易课通</span>
     </div>
 
-    <!-- 右侧：登录表单 -->
-    <div class="login-right">
-      <div class="login-card">
-        <div class="card-head">
-          <h2 class="form-title">{{ 'AbpAccount::Login' | abpLocalization }}</h2>
-          @if (isHostLogin()) {
-            <p class="form-subtitle">系统管理员登录</p>
-          } @else {
-            <p class="form-subtitle">欢迎回来，请登录您的账号</p>
-          }
-        </div>
+    <div class="brand-hero">
+      <h1>教学资源库<br />为机构而生的知识底座</h1>
+      <p class="lede">集成 AI 能力的新一代知识管理系统，帮助教育机构沉淀资源、加速教学与研发协同。</p>
 
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
-          @if (isHostLogin()) {
-            <div class="current-tenant-hint muted">系统管理员专用通道</div>
+      <div class="gold-rule"></div>
+
+      <ul class="feature-list">
+        <li>
+          <span class="dot"></span>
+          <div>
+            <h3>资源管理</h3>
+            <p>上传与管理教学资源，支持多种文档格式</p>
+          </div>
+        </li>
+        <li>
+          <span class="dot"></span>
+          <div>
+            <h3>智能搜索</h3>
+            <p>基于 AI 的全文搜索，快速定位知识内容</p>
+          </div>
+        </li>
+        <li>
+          <span class="dot"></span>
+          <div>
+            <h3>AI 助手</h3>
+            <p>智能对话问答，辅助学习与知识探索</p>
+          </div>
+        </li>
+        <li>
+          <span class="dot"></span>
+          <div>
+            <h3>课程学习</h3>
+            <p>系统化课程管理，跟踪学习进度</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- RIGHT: login form -->
+  <div class="form-panel">
+    <div class="form-card">
+      <h2>{{ 'AbpAccount::Login' | abpLocalization }}</h2>
+      @if (isHostLogin()) {
+        <p class="sub">系统管理员登录</p>
+      } @else {
+        <p class="sub">欢迎回来，请登录您的账号</p>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" autocomplete="off">
+        @if (isHostLogin()) {
+          <div class="channel-hint">系统管理员专用通道</div>
+        } @else {
+          @if (!tenantsLoaded()) {
+            <div class="field">
+              <div class="tenant-hint">正在加载机构列表…</div>
+            </div>
+          } @else if (tenantsLoadError()) {
+            <div class="field">
+              <div class="tenant-hint">机构列表加载失败，请刷新页面重试</div>
+            </div>
+          } @else if (tenantList().length === 0) {
+            <div class="field">
+              <div class="tenant-hint">当前暂无可用租户，请联系管理员分配后再登录</div>
+            </div>
           } @else {
-            <!-- 租户选择（仅真实租户；宿主/全局入口已移除，宿主请走隐藏网址 /admin-login） -->
-            @if (!tenantsLoaded()) {
-              <div class="form-group">
-                <div class="current-tenant-hint muted">正在加载租户列表…</div>
-              </div>
-            } @else if (tenantsLoadError()) {
-              <div class="form-group">
-                <div class="current-tenant-hint muted">租户列表加载失败，请刷新页面重试</div>
-              </div>
-            } @else if (tenantList().length === 0) {
-              <div class="form-group">
-                <div class="current-tenant-hint muted">当前暂无可用租户，请联系管理员分配后再登录</div>
-              </div>
-            } @else {
-              <div class="form-group">
-                <label>
-                  <span nz-icon nzType="apartment" nzTheme="outline"></span>
-                  选择租户
-                </label>
-                <div class="tenant-tabs">
-                  @for (t of tenantList(); track t.id) {
-                    <button
-                      type="button"
-                      class="tenant-tab"
-                      [class.active]="currentTenantId() === t.id"
-                      (click)="selectTenant(t)"
-                    >
-                      <span nz-icon nzType="bank" nzTheme="outline"></span>
-                      {{ t.name }}
-                    </button>
-                  }
-                </div>
-                @if (currentTenantName()) {
-                  <div class="current-tenant-hint">当前租户：<strong>{{ currentTenantName() }}</strong></div>
-                } @else {
-                  <div class="current-tenant-hint muted">请选择您所在的租户</div>
+            <div class="field">
+              <label>机构</label>
+              <div class="tenant-tabs">
+                @for (t of tenantList(); track t.id) {
+                  <button
+                    type="button"
+                    class="tenant-tab"
+                    [class.active]="currentTenantId() === t.id"
+                    (click)="selectTenant(t)"
+                  >
+                    <span class="tenant-badge">{{ t.name.charAt(0) }}</span>
+                    {{ t.name }}
+                  </button>
                 }
               </div>
-            }
-          }
-
-          @if (canShowForm()) {
-          <div class="form-group">
-            <label for="login-username">
-              <i class="fa fa-user"></i>
-              {{ 'AbpAccount::UserNameOrEmailAddress' | abpLocalization }}
-            </label>
-            <input
-              id="login-username"
-              type="text"
-              class="form-input"
-              formControlName="username"
-              autocomplete="username"
-              placeholder="{{ 'AbpAccount::UserNameOrEmailAddress' | abpLocalization }}"
-              autofocus
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="login-password">
-              <i class="fa fa-lock"></i>
-              {{ 'AbpAccount::Password' | abpLocalization }}
-            </label>
-            <div class="password-wrapper">
-              <input
-                id="login-password"
-                [type]="showPassword() ? 'text' : 'password'"
-                class="form-input"
-                formControlName="password"
-                autocomplete="current-password"
-                placeholder="{{ 'AbpAccount::Password' | abpLocalization }}"
-              />
-              <button type="button" class="toggle-password" (click)="togglePassword()">
-                <i class="fa" [class.fa-eye]="!showPassword()" [class.fa-eye-slash]="showPassword()"></i>
-              </button>
+              @if (currentTenantName()) {
+                <div class="tenant-hint">当前机构：<strong>{{ currentTenantName() }}</strong></div>
+              } @else {
+                <div class="tenant-hint">请选择您所在的机构</div>
+              }
             </div>
-          </div>
-
-          <div class="form-options">
-            <label class="remember-me">
-              <input type="checkbox" formControlName="rememberMe" />
-              <span>{{ 'AbpAccount::RememberMe' | abpLocalization }}</span>
-            </label>
-          </div>
-
-          <button type="submit" class="login-btn" [disabled]="inProgress">
-            @if (inProgress) {
-              <i class="fa fa-spinner fa-spin"></i>
-            }
-            {{ 'AbpAccount::Login' | abpLocalization }}
-          </button>
           }
-        </form>
+        }
 
+        @if (canShowForm()) {
+          <div id="loginFields">
+            <div class="field">
+              <label for="login-username">{{ 'AbpAccount::UserNameOrEmailAddress' | abpLocalization }}</label>
+              <input
+                id="login-username"
+                type="text"
+                formControlName="username"
+                autocomplete="username"
+                placeholder="{{ 'AbpAccount::UserNameOrEmailAddress' | abpLocalization }}"
+                autofocus
+              />
+            </div>
+
+            <div class="field">
+              <label for="login-password">{{ 'AbpAccount::Password' | abpLocalization }}</label>
+              <div class="password-wrap">
+                <input
+                  id="login-password"
+                  [type]="showPassword() ? 'text' : 'password'"
+                  formControlName="password"
+                  autocomplete="current-password"
+                  placeholder="{{ 'AbpAccount::Password' | abpLocalization }}"
+                />
+                <button type="button" class="toggle-visibility" (click)="togglePassword()" aria-label="显示密码">
+                  <i class="fa" [class.fa-eye]="!showPassword()" [class.fa-eye-slash]="showPassword()"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="row-between">
+              <label class="remember">
+                <input type="checkbox" formControlName="rememberMe" />
+                <span>{{ 'AbpAccount::RememberMe' | abpLocalization }}</span>
+              </label>
+            </div>
+
+            <button type="submit" class="submit-btn" [disabled]="inProgress">
+              @if (inProgress) {
+                <i class="fa fa-spinner fa-spin"></i>
+              }
+              {{ 'AbpAccount::Login' | abpLocalization }}
+            </button>
+          </div>
+        }
+      </form>
+      @if (!isHostLogin() && canShowForm()) {
+        <p class="helper-text">没有账号？请联系机构管理员开通</p>
+      }
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer__inner">
+    <div>
+      <div class="site-footer__brand-top">
+        <svg width="34" height="34" viewBox="0 0 30 30" fill="none">
+          <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
+          <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
+        </svg>
+        <div>
+          <strong>易课通 · 资源库</strong>
+          <p>教学资源库</p>
+        </div>
+      </div>
+      <p class="site-footer__tagline">汇聚课程、资源、实训，服务院校教学</p>
+    </div>
+    <div class="site-footer__grid">
+      <div>
+        <h5>学习中心</h5>
+        <a routerLink="/student/courses">课程中心</a>
+        <a routerLink="/student/resources">资源库</a>
+        <a routerLink="/student/micro-majors">微专业</a>
+        <a routerLink="/student/practicums">实训项目</a>
+      </div>
+      <div>
+        <h5>智能应用</h5>
+        <a routerLink="/ai/chat">AI 助手</a>
+        <a routerLink="/ai/lesson-plan">智能备课</a>
+        <a routerLink="/search">智能搜索</a>
+      </div>
+      <div>
+        <h5>关于</h5>
+        <a routerLink="/">平台介绍</a>
+        <a routerLink="/">帮助中心</a>
+        <a routerLink="/">联系我们</a>
       </div>
     </div>
   </div>
-  <footer class="footer">
-    <div class="footer__inner">
-      <div class="footer__brand">
-        <div class="footer__brand-top">
-          <span class="brand__mark brand__mark--lg">易</span>
-          <div>
-            <strong>易课通 · 资源库</strong>
-            <p>教学资源库</p>
-          </div>
-        </div>
-        <p class="footer__tagline">汇聚课程、资源、实训，服务院校教学</p>
-      </div>
-      <div class="footer__grid">
-        <div class="footer__col">
-          <h5>学习中心</h5>
-          <a routerLink="/student/courses">课程中心</a>
-          <a routerLink="/student/resources">资源库</a>
-          <a routerLink="/student/micro-majors">微专业</a>
-          <a routerLink="/student/practicums">实训项目</a>
-        </div>
-        <div class="footer__col">
-          <h5>智能应用</h5>
-          <a routerLink="/ai/chat">AI 助手</a>
-          <a routerLink="/ai/lesson-plan">智能备课</a>
-          <a routerLink="/search">智能搜索</a>
-        </div>
-        <div class="footer__col">
-          <h5>关于</h5>
-          <a routerLink="/">平台介绍</a>
-          <a routerLink="/">帮助中心</a>
-          <a routerLink="/">联系我们</a>
-        </div>
-      </div>
-    </div>
-    <div class="footer__copy">&copy; 2026 易课通 · 资源库</div>
-  </footer>
-</div>
+  <div class="site-footer__copy">&copy; 2026 易课通 · 资源库</div>
+</footer>
