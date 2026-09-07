@@ -1,63 +1,257 @@
+/* ═══════════════════════════════════════════════════════════════
+   学生选课管理 —— 视觉层（与教师端高保真原型对齐）
+   ═══════════════════════════════════════════════════════════════ */
+
 .enrollment-container {
-  padding: 24px;
+  padding: 0 24px 24px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.page-header {
-  margin-bottom: 16px;
+/* ── Text Ellipsis 工具类（应用于 td 内的 span，不直接用于 td） ── */
+.text-ellipsis {
+  display: block;            /* block 才能在 td 内约束宽度 */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-all;     /* 中文长串也能正确截断 */
+}
 
-  h1 {
-    margin: 0;
-    font-size: 24px;
+.text-ellipsis-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+/* ── Page Header（nz-page-header）── */
+.page-header {
+  margin: 0 -24px 16px;
+  padding: 16px 24px;
+  background: var(--kh-panel);
+  border-bottom: 1px solid var(--kh-line-2);
+
+  /* 标题内图标 + 文字 横排 + 整体不换行 */
+  .title-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .title-icon {
+    color: var(--kh-accent);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .title-text {
+    white-space: nowrap;
+  }
+
+  ::ng-deep .ant-page-header-heading {
+    text-align: left;
+    align-items: center;
+    flex-wrap: nowrap;       /* 标题 + subtitle + extra 同一行 */
+    justify-content: flex-start;
+  }
+
+  ::ng-deep .ant-page-header-heading-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;            /* 允许 flex item 收缩 */
+    flex: 1 1 auto;
+    text-align: left;
+    justify-content: flex-start;
+  }
+
+  ::ng-deep .ant-page-header-heading-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--kh-ink);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  ::ng-deep .ant-page-header-heading-sub-title {
+    font-size: 13px;
+    color: var(--kh-muted);
+    font-weight: 400;
+    white-space: nowrap;     /* subtitle 也不换行，避免挤压标题 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    max-width: 480px;        /* subtitle 太长就截断 */
+    flex-shrink: 1;
+  }
+
+  ::ng-deep .ant-page-header-content {
+    padding: 0;
+    min-height: 0;
+  }
+
+  ::ng-deep .ant-page-header-heading-extra {
+    margin-left: auto;
+    flex-shrink: 0;
+    text-align: left;
   }
 }
 
-.toolbar {
-  display: flex;
-  gap: 12px;
+/* ── Filter Card ── */
+.filter-card {
   margin-bottom: 16px;
-  align-items: center;
-  flex-wrap: wrap;
 
-  .course-select {
-    min-width: 200px;
+  ::ng-deep .ant-card-body {
+    padding: 16px 20px;
   }
+}
 
-  .tenant-select {
-    min-width: 160px;
-  }
+.filter-row {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1.4fr)   /* course */
+    minmax(160px, 1fr)     /* tenant */
+    minmax(120px, 0.8fr)   /* status */
+    minmax(200px, 1.2fr);  /* search */
+  gap: 16px 20px;
+  align-items: end;
+}
 
-  .status-select {
-    min-width: 120px;
-  }
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
 
-  .search-input {
-    width: 200px;
+.filter-label {
+  font-size: 12px;
+  color: var(--kh-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.filter-select,
+.filter-input {
+  width: 100%;
+}
+
+/* ── Table Card ── */
+.table-card {
+  ::ng-deep .ant-card-body {
+    padding: 4px 4px 16px;
   }
 }
 
 .loading-container {
   display: flex;
   justify-content: center;
-  padding: 48px;
+  padding: 64px;
 }
 
+/* ── Enrollment Table ── */
 .enrollment-table {
-  .action-btns {
-    display: flex;
-    gap: 4px;
-    flex-wrap: nowrap;
+  /* 统一：所有列（表头 + 数据）都居中对齐 */
+  ::ng-deep .ant-table-thead > tr > th,
+  ::ng-deep .ant-table-tbody > tr > td {
+    text-align: center !important;
+    vertical-align: middle;
   }
 
+  /* td 内的文本单元格：让 span 占据全部 td 宽度 */
+  .cell-name,
+  .cell-course,
+  .cell-time,
+  .cell-email {
+    /* td 默认是 table-cell，inline 内容按 text-align 居中 */
+    /* span.text-ellipsis 是 block，会占据 td 内的整宽 */
+  }
+
+  .cell-name {
+    font-weight: 500;
+    color: var(--kh-ink);
+  }
+
+  .cell-course .text-ellipsis {
+    color: var(--kh-ink-2);
+  }
+
+  .cell-time .text-ellipsis {
+    font-variant-numeric: tabular-nums;
+    color: var(--kh-muted);
+    font-size: 13px;
+  }
+
+  .status-tag {
+    margin: 0;
+  }
+
+  /* ── Action Cell ── */
+  .col-actions {
+    ::ng-deep .ant-table-thead > tr > th {
+      text-align: center !important;
+    }
+  }
+
+  .action-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .action-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.18s ease, color 0.18s ease,
+      box-shadow 0.18s ease;
+
+    span[nz-icon] {
+      font-size: 15px;
+    }
+
+    &:hover:not([disabled]) {
+      box-shadow: 0 2px 6px rgba(14, 27, 46, 0.08);
+    }
+
+    &--primary:hover:not([disabled]) {
+      background: var(--kh-accent-soft) !important;
+      color: var(--kh-accent) !important;
+    }
+
+    &--danger:hover:not([disabled]) {
+      background: rgba(229, 72, 77, 0.10) !important;
+      color: var(--kh-bad) !important;
+    }
+
+    &[disabled] {
+      cursor: not-allowed;
+      opacity: 0.35;
+    }
+  }
+
+  /* ── Progress Cell ── */
   .progress-cell {
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 140px;
-    max-width: 220px;
+    max-width: 240px;
+    margin: 0 auto;
+    padding: 0 8px;
 
-    nz-progress {
+    &__bar {
       flex: 1 1 auto;
       min-width: 0;
     }
@@ -65,37 +259,114 @@
     &__value {
       flex: 0 0 auto;
       font-size: 12px;
-      font-weight: 500;
+      font-weight: 600;
       font-variant-numeric: tabular-nums;
-      color: rgba(0, 0, 0, 0.65);
-      min-width: 38px;
+      color: var(--kh-muted);
+      min-width: 42px;
       text-align: right;
     }
 
     &--done &__value {
-      color: #52c41a;
+      color: var(--kh-ok);
     }
   }
 }
 
+/* ── Add Modal Toolbar ── */
 .add-modal-toolbar {
-  display: flex;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 1fr) auto;
+  gap: 12px 16px;
   align-items: center;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  margin-bottom: 12px;
 
   .modal-search-input {
-    width: 200px;
+    width: 100%;
   }
 
   .major-select {
-    min-width: 160px;
+    width: 100%;
   }
 
   .selected-count {
-    color: #1890ff;
+    color: var(--kh-muted);
+    font-size: 13px;
+    white-space: nowrap;
+
+    strong {
+      color: var(--kh-accent);
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0 2px;
+    }
+  }
+}
+
+.add-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: #f9fbfe;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+
+  button[nz-button] {
+    border-radius: 8px;
+  }
+}
+
+/* ── Modal Table (Student Picker) ── */
+::ng-deep .ant-modal-body {
+  .row-selected td {
+    background: var(--kh-accent-ghost) !important;
+  }
+
+  .col-checkbox {
+    text-align: center !important;
+
+    ::ng-deep .ant-table-thead > tr > th,
+    ::ng-deep .ant-table-tbody > tr > td {
+      text-align: center !important;
+    }
+  }
+
+  .cell-name .text-ellipsis {
     font-weight: 500;
-    margin-left: auto;
+    color: var(--kh-ink);
+  }
+
+  .cell-email .text-ellipsis {
+    font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--kh-muted);
+  }
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .filter-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .add-modal-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .enrollment-container {
+    padding: 0 12px 12px;
+  }
+
+  .page-header {
+    margin: 0 -12px 12px;
+    padding: 12px;
   }
 }

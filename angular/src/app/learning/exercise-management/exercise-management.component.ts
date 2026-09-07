@@ -15,6 +15,8 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
@@ -43,6 +45,8 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
     NzCheckboxModule,
     NzSpinModule,
     NzRadioModule,
+    NzTooltipModule,
+    NzPageHeaderModule,
     SlicePipe,
   ],
   templateUrl: './exercise-management.component.html',
