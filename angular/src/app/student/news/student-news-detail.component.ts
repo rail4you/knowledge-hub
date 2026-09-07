@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -51,6 +51,18 @@ export class StudentNewsDetailComponent implements OnInit {
   readonly article = signal<NewsArticleDto | null>(null);
   readonly comments = signal<NewsCommentDto[]>([]);
   readonly commentText = signal('');
+
+  /** 正在回复的目标评论；null 表示发表一级评论 */
+  readonly replyTo = signal<NewsCommentDto | null>(null);
+
+  /** 评论 id → 评论（回复链查找与孤儿兜底用） */
+  readonly commentMap = computed(() => new Map(this.comments().map(c => [c.id, c])));
+
+  /** 一级评论：无 parentId，或父评论不在列表中（脏数据兜底为一级展示） */
+  readonly rootComments = computed(() => {
+    const map = this.commentMap();
+    return this.comments().filter(c => !c.parentId || !map.has(c.parentId));
+  });
 
   readonly relatedArticles = signal<NewsArticleDto[]>([]);
   readonly hotArticles = signal<NewsArticleDto[]>([]);
@@ -195,6 +207,7 @@ export class StudentNewsDetailComponent implements OnInit {
   }
 
   openCommentModal(): void {
+    this.replyTo.set(null);
     this.modalVisible = true;
     this.commentText.set('');
     // 等待渲染后聚焦输入框
@@ -203,10 +216,46 @@ export class StudentNewsDetailComponent implements OnInit {
     }, 150);
   }
 
+  /** 打开回复弹窗：目标为被回复的评论（可为一级或回复） */
+  openReplyModal(comment: NewsCommentDto): void {
+    this.replyTo.set(comment);
+    this.modalVisible = true;
+    this.commentText.set('');
+    setTimeout(() => {
+      this.commentTextarea()?.nativeElement.focus({ preventScroll: true });
+    }, 150);
+  }
+
+  /** 某一级评论下的全部回复（含楼中楼，统一挂根下按时间正序展示） */
+  repliesOf(rootId: string): NewsCommentDto[] {
+    const map = this.commentMap();
+    const isDescendant = (c: NewsCommentDto): boolean => {
+      let pid = c.parentId;
+      const seen = new Set<string>([c.id]);
+      while (pid) {
+        if (pid === rootId) return true;
+        if (seen.has(pid)) return false;
+        seen.add(pid);
+        pid = map.get(pid)?.parentId;
+      }
+      return false;
+    };
+    return this.comments()
+      .filter(c => c.id !== rootId && !!c.parentId && isDescendant(c))
+      .sort((a, b) => +new Date(a.creationTime) - +new Date(b.creationTime));
+  }
+
+  /** 回复直接 @ 的人名（父评论作者；父为根时模板不展示） */
+  replyTargetName(reply: NewsCommentDto): string {
+    if (!reply.parentId) return '';
+    return this.commentMap().get(reply.parentId)?.userName || '';
+  }
+
   closeCommentModal(): void {
     if (this.submitting) return;
     this.modalVisible = false;
     this.commentText.set('');
+    this.replyTo.set(null);
   }
 
   submitComment(): void {
@@ -214,25 +263,29 @@ export class StudentNewsDetailComponent implements OnInit {
     const content = this.commentText().trim();
     if (!article || !content) return;
 
+    const target = this.replyTo();
     this.submitting = true;
     this.newsService.createComment({
       articleId: article.id,
       content,
+      parentId: target?.id,
     }).subscribe({
-      next: comment => {
+      next: () => {
         this.submitting = false;
         this.modalVisible = false;
-        this.comments.set([{ ...comment, likeCount: 0, userHasLiked: false }, ...this.comments()]);
         this.commentText.set('');
+        this.replyTo.set(null);
+        // 重新拉取以保证嵌套树与排序一致；条数后端已累加
+        this.loadComments(article.id);
         this.article.set({
           ...article,
           commentCount: article.commentCount + 1,
         });
-        this.message.success('评论已发布');
+        this.message.success(target ? '回复已发布' : '评论已发布');
       },
       error: err => {
         this.submitting = false;
-        this.message.error(this.errMsg(err, '评论提交失败'));
+        this.message.error(this.errMsg(err, target ? '回复提交失败' : '评论提交失败'));
       },
     });
   }

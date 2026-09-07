@@ -76,9 +76,21 @@ public class NewsCommentAppService : KnowledgeHubAppService, INewsCommentAppServ
             throw new UserFriendlyException("该资讯未开启评论。");
         }
 
+        // 回复归属校验：父评论必须存在且属于同一篇文章，防止跨文章串回复
+        Guid? parentId = null;
+        if (input.ParentId.HasValue)
+        {
+            var parent = await _commentRepository.FindAsync(input.ParentId.Value);
+            if (parent == null || parent.ArticleId != input.ArticleId)
+            {
+                throw new UserFriendlyException("回复的评论不存在。");
+            }
+            parentId = parent.Id;
+        }
+
         var comment = new NewsComment(GuidGenerator.Create(), input.ArticleId, userId, input.Content.Trim())
         {
-            ParentId = input.ParentId,
+            ParentId = parentId,
             TenantId = CurrentTenant.Id,
             Status = NewsCommentStatus.Approved
         };

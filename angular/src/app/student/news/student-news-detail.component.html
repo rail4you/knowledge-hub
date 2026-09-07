@@ -156,7 +156,7 @@
                 <p>暂无评论，快来抢沙发吧！</p>
               </div>
             } @else {
-              @for (comment of comments(); track comment.id) {
+              @for (comment of rootComments(); track comment.id) {
                 <div class="comment-item">
                   <span class="comment-avatar" [style.background]="commentAuthorGradient(comment.userName)">
                     {{ commentAuthorInitial(comment.userName) }}
@@ -168,28 +168,75 @@
                     </div>
                     <p class="comment-item__content">{{ comment.content }}</p>
                     <div class="comment-item__footer">
-                      <button
-                        type="button"
-                        class="comment-like"
-                        [class.comment-like--active]="comment.userHasLiked"
-                        [class.comment-like--pending]="isCommentLiking(comment.id)"
-                        [disabled]="isCommentLiking(comment.id)"
-                        (click)="likeComment(comment)"
-                        [title]="comment.userHasLiked ? '取消点赞' : '点赞'"
-                      >
-                        <span
-                          nz-icon
-                          nzType="like"
-                          [nzTheme]="comment.userHasLiked ? 'fill' : 'outline'"
-                        ></span>
-                        <span class="comment-like__count">{{ comment.likeCount || 0 }}</span>
-                      </button>
+                      <ng-container *ngTemplateOutlet="commentActions; context: { $implicit: comment }"></ng-container>
                     </div>
+                    @if (repliesOf(comment.id); as replies) {
+                      @if (replies.length > 0) {
+                        <div class="comment-replies">
+                          @for (r of replies; track r.id) {
+                            <div class="comment-reply">
+                              <span
+                                class="comment-avatar comment-avatar--sm"
+                                [style.background]="commentAuthorGradient(r.userName)"
+                              >
+                                {{ commentAuthorInitial(r.userName) }}
+                              </span>
+                              <div class="comment-item__body">
+                                <div class="comment-item__header">
+                                  <span class="comment-item__name">{{ r.userName || '匿名用户' }}</span>
+                                  <span class="comment-item__time">{{ r.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+                                </div>
+                                <p class="comment-item__content">
+                                  @if (r.parentId !== comment.id && replyTargetName(r)) {
+                                    <span class="comment-reply-tag">回复 @{{ replyTargetName(r) }}</span>
+                                  }
+                                  {{ r.content }}
+                                </p>
+                                <div class="comment-item__footer">
+                                  <ng-container *ngTemplateOutlet="commentActions; context: { $implicit: r }"></ng-container>
+                                </div>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    }
                   </div>
                 </div>
               }
             }
           </div>
+
+          <!-- 评论操作（点赞 + 回复）：一级与嵌套回复共用 -->
+          <ng-template #commentActions let-c>
+            <button
+              type="button"
+              class="comment-like"
+              [class.comment-like--active]="c.userHasLiked"
+              [class.comment-like--pending]="isCommentLiking(c.id)"
+              [disabled]="isCommentLiking(c.id)"
+              (click)="likeComment(c)"
+              [title]="c.userHasLiked ? '取消点赞' : '点赞'"
+            >
+              <span
+                nz-icon
+                nzType="like"
+                [nzTheme]="c.userHasLiked ? 'fill' : 'outline'"
+              ></span>
+              <span class="comment-like__count">{{ c.likeCount || 0 }}</span>
+            </button>
+            @if (article.allowComments) {
+              <button
+                type="button"
+                class="comment-reply-btn"
+                (click)="openReplyModal(c)"
+                [title]="'回复 ' + (c.userName || '该用户')"
+              >
+                <span nz-icon nzType="message" nzTheme="outline"></span>
+                <span>回复</span>
+              </button>
+            }
+          </ng-template>
         </section>
       </div>
 
@@ -273,11 +320,11 @@
   <!-- 评论弹窗 -->
   <nz-modal
     [nzVisible]="modalVisible"
-    [nzTitle]="'写评论'"
+    [nzTitle]="replyTo() ? '回复 @' + (replyTo()?.userName || '匿名用户') : '写评论'"
     [nzWidth]="560"
     [nzMaskClosable]="false"
     [nzOkLoading]="submitting"
-    [nzOkText]="submitting ? '发表中...' : '发表评论'"
+    [nzOkText]="submitting ? '发表中...' : replyTo() ? '发表回复' : '发表评论'"
     [nzOkDisabled]="!commentText().trim()"
     nzCancelText="取消"
     (nzOnCancel)="closeCommentModal()"
@@ -285,7 +332,12 @@
   >
     <ng-container *nzModalContent>
       <div class="comment-modal">
-        @if (article(); as a) {
+        @if (replyTo(); as rt) {
+          <div class="comment-modal__target comment-modal__target--reply">
+            <span nz-icon nzType="message" nzTheme="outline"></span>
+            <span class="comment-modal__target-title" [title]="rt.content">{{ rt.content }}</span>
+          </div>
+        } @else if (article(); as a) {
           <div class="comment-modal__target">
             <span nz-icon nzType="message" nzTheme="outline"></span>
             <span class="comment-modal__target-title" [title]="a.title">{{ a.title }}</span>
@@ -297,7 +349,7 @@
           (ngModelChange)="commentText.set($event)"
           rows="5"
           maxlength="500"
-          placeholder="写下你的想法，与作者和其他读者交流..."
+          [placeholder]="replyTo() ? '回复 @' + (replyTo()?.userName || '') + '：' : '写下你的想法，与作者和其他读者交流...'"
           class="comment-modal__textarea"
         ></textarea>
         <div class="comment-modal__footer">

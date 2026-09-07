@@ -798,6 +798,70 @@
   font-weight: 600;
 }
 
+/* 评论回复按钮（与点赞同排） */
+.comment-reply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: ds.$student-text-light;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  span[nz-icon] {
+    font-size: 14px;
+  }
+
+  &:hover {
+    color: ds.$student-primary;
+    background: #eff6ff;
+  }
+}
+
+/* 嵌套回复楼层 */
+.comment-replies {
+  margin-top: 12px;
+  padding-left: 14px;
+  border-left: 2px solid ds.$student-border-soft;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-reply {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px dashed ds.$student-border-soft;
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 4px;
+  }
+}
+
+.comment-avatar--sm {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+}
+
+.comment-reply-tag {
+  color: ds.$student-primary;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+/* 回复弹窗：被回复内容摘要 */
+.comment-modal__target--reply {
+  border-left: 3px solid ds.$student-primary;
+}
+
 /* ============ 侧边栏 ============ */
 .aside-card {
   background: #fff;
