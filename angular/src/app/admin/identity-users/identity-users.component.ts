@@ -300,7 +300,13 @@ export class IdentityUsersComponent implements OnInit {
         tenantId: effectiveTenantId || undefined
       }
     }).subscribe((response) => {
-      this.roles = response.items || [];
+      const items = response.items || [];
+      // 联盟管理员是全局角色，建租户用户时不提供该选项。
+      // 目标为某租户（租户管理员，或 host 指定租户建用户）时过滤掉 LeagueAdmin；
+      // host 建全局用户（tenantId 为空）时保留。
+      this.roles = effectiveTenantId
+        ? items.filter(role => role.name !== 'LeagueAdmin')
+        : items;
       const availableRoleNames = new Set(this.roles.map(role => role.name));
       const selectedRoleName = this.form.get('roleName')?.value as string | null;
       if (selectedRoleName && !availableRoleNames.has(selectedRoleName)) {
@@ -349,7 +355,13 @@ export class IdentityUsersComponent implements OnInit {
 
     const { tenantId: formTenantId, roleName, password, email, ...formValue } = this.form.value;
     const tenantId = this.isHostAdmin ? formTenantId : this.currentTenantId;
-    
+
+    // 联盟管理员是全局角色，租户内不允许分配，前端先拦截避免无效请求。
+    if (tenantId && roleName === 'LeagueAdmin') {
+      this.formError = '租户内不允许分配“联盟管理员”角色，联盟管理员为全局账号。';
+      return;
+    }
+
     this.isLoading.set(true);
 
     const handleError = (err: any) => {

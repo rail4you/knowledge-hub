@@ -47,6 +47,10 @@ public class TenantRoleAppService : KnowledgeHubAppService, ITenantRoleAppServic
         {
             var queryable = await _repository.GetQueryableAsync();
 
+            // 联盟管理员是全局角色（TenantId=null），租户内不应存在：
+            // 列表中隐藏租户级 LeagueAdmin 副本，仅保留全局的。
+            queryable = queryable.Where(r => r.TenantId == null || r.Name != "LeagueAdmin");
+
             if (input.TenantId.HasValue)
             {
                 queryable = queryable.Where(r => r.TenantId == input.TenantId);
@@ -118,6 +122,13 @@ public class TenantRoleAppService : KnowledgeHubAppService, ITenantRoleAppServic
                 throw new AbpAuthorizationException("仅全局管理员可在其他租户下创建角色。");
             }
             input.TenantId = CurrentTenant.Id.Value;
+        }
+
+        // 联盟管理员是全局角色，禁止在租户内创建同名角色。
+        if (input.TenantId.HasValue
+            && string.Equals(input.Name, "LeagueAdmin", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UserFriendlyException("租户内不允许创建“联盟管理员”角色，联盟管理员为全局角色。");
         }
 
         using (_currentTenant.Change(input.TenantId))

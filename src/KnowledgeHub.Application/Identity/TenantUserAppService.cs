@@ -47,6 +47,11 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             input.TenantId = _currentTenant.Id.Value;
         }
 
+        // 联盟管理员是全局角色（TenantId=null），租户内不应存在。
+        // 目标租户非空时拒绝分配 LeagueAdmin，防止租户管理员（或 host 代建）
+        // 在租户内创建联盟管理员用户。
+        EnsureNoLeagueAdminForTenantUser(input.TenantId, input.RoleNames);
+
         using (_currentTenant.Change(input.TenantId))
         {
             var user = new Volo.Abp.Identity.IdentityUser(
@@ -172,6 +177,9 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
 
             CheckTenantOwnership(user);
 
+            // 租户用户不允许持有全局 LeagueAdmin 角色。
+            EnsureNoLeagueAdminForTenantUser(user.TenantId, input.RoleNames);
+
             using (_currentTenant.Change(user.TenantId))
             {
                 (await _userManager.SetUserNameAsync(user, input.UserName))
@@ -243,6 +251,23 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         if (_currentTenant.Id.HasValue && user.TenantId != _currentTenant.Id)
         {
             throw new UserFriendlyException("您没有权限访问该租户的用户数据");
+        }
+    }
+
+    /// <summary>
+    /// 联盟管理员（LeagueAdmin）是全局角色（TenantId=null），租户内不应存在。
+    /// 目标用户归属某租户时，拒绝分配 LeagueAdmin。
+    /// </summary>
+    private static void EnsureNoLeagueAdminForTenantUser(Guid? targetTenantId, IEnumerable<string>? roleNames)
+    {
+        if (!targetTenantId.HasValue || roleNames == null)
+        {
+            return;
+        }
+
+        if (roleNames.Any(r => string.Equals(r, "LeagueAdmin", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new UserFriendlyException("租户内不允许分配“联盟管理员”角色，联盟管理员为全局账号。");
         }
     }
 
