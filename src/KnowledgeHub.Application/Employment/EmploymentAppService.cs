@@ -297,6 +297,334 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         return await MapJobDtoAsync(entity);
     }
 
+    // ==================== 岗位批量导入（xlsx） ====================
+
+    // 岗位导入模板表头（18 列），与 ImportJobsAsync 读取的列顺序严格对应。
+    private static readonly string[] JobImportTemplateHeaders =
+    {
+        "企业名称", "所属行业", "岗位名称", "岗位摘要", "岗位描述", "工作地区",
+        "详细地址", "岗位类型", "学历要求", "薪资范围", "招聘人数", "技能标签",
+        "福利待遇", "联系人", "联系电话", "联系邮箱", "截止日期", "状态"
+    };
+
+    private static readonly Dictionary<string, EmploymentJobType> JobTypeLabelMap = new()
+    {
+        { "全职", EmploymentJobType.FullTime },
+        { "实习", EmploymentJobType.Internship },
+        { "兼职", EmploymentJobType.PartTime },
+        { "学徒", EmploymentJobType.Apprenticeship }
+    };
+
+    private static readonly Dictionary<string, EmploymentJobStatus> JobStatusLabelMap = new()
+    {
+        { "草稿", EmploymentJobStatus.Draft },
+        { "待审", EmploymentJobStatus.PendingReview },
+        { "直接发布", EmploymentJobStatus.Published },
+        { "已发布", EmploymentJobStatus.Published }
+    };
+
+    [Authorize(KnowledgeHubPermissions.Employment.PublishJob)]
+    public async Task<JobImportResultDto> ImportJobsAsync(ImportJobsInput input)
+    {
+        var result = new JobImportResultDto();
+
+        if (string.IsNullOrWhiteSpace(input.FileBase64))
+        {
+            throw new UserFriendlyException("请选择要导入的 Excel 文件。");
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(input.FileBase64);
+        }
+        catch
+        {
+            throw new UserFriendlyException("文件内容不是有效的 xlsx，请使用下载的模板填写后再导入。");
+        }
+
+        var currentUser = await GetCurrentIdentityUserAsync();
+        var canReview = await CanReviewJobsAsync();
+
+        using var stream = new MemoryStream(bytes);
+        using var workbook = new XLWorkbook(stream);
+
+        var worksheet = workbook.Worksheet(1);
+        if (worksheet == null)
+        {
+            throw new UserFriendlyException("Excel 文件中没有工作表。");
+        }
+
+        var headerRowNumber = ValidateJobImportHeader(worksheet);
+        var rows = worksheet.RangeUsed()?.RowsUsed().Skip(headerRowNumber);
+        if (rows == null)
+        {
+            return result;
+        }
+
+        var rowNumber = headerRowNumber + 1;
+        foreach (var row in rows)
+        {
+            if (row.IsEmpty())
+            {
+                rowNumber++;
+                continue;
+            }
+
+            try
+            {
+                var companyName = row.Cell(1).GetString().Trim();
+                var industry = GetNullableCell(row.Cell(2));
+                var title = row.Cell(3).GetString().Trim();
+                var summary = GetNullableCell(row.Cell(4));
+                var description = row.Cell(5).GetString().Trim();
+
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    throw new UserFriendlyException("岗位名称不能为空");
+                }
+                if (string.IsNullOrWhiteSpace(description))
+                {
+                    throw new UserFriendlyException("岗位描述不能为空");
+                }
+                if (string.IsNullOrWhiteSpace(companyName))
+                {
+                    companyName = "平台代发";
+                }
+
+                var jobType = ParseJobImportType(row.Cell(8).GetString().Trim());
+                if (!jobType.HasValue)
+                {
+                    result.FailCount++;
+                    result.FailItems.Add(new JobImportFailItemDto
+                    {
+                        RowNumber = rowNumber,
+                        JobTitle = title,
+                        Reason = $"岗位类型「{row.Cell(8).GetString().Trim()}」无效，应为：全职/实习/兼职/学徒（可留空，默认全职）"
+                    });
+                    rowNumber++;
+                    continue;
+                }
+
+                var status = ParseJobImportStatus(row.Cell(18).GetString().Trim());
+                if (!status.HasValue)
+                {
+                    result.FailCount++;
+                    result.FailItems.Add(new JobImportFailItemDto
+                    {
+                        RowNumber = rowNumber,
+                        JobTitle = title,
+                        Reason = $"状态「{row.Cell(18).GetString().Trim()}」无效，应为：草稿/待审/直接发布（可留空，默认草稿）"
+                    });
+                    rowNumber++;
+                    continue;
+                }
+
+                var recruitmentCount = ParseJobImportCount(row.Cell(11).GetString().Trim());
+                var resolvedStatus = ResolveCreateOrUpdateStatus(status.Value, canReview);
+
+                var entity = new JobPosting(GuidGenerator.Create(), currentUser.Id, companyName, title, description)
+                {
+                    TenantId = CurrentTenant.Id,
+                    Industry = industry,
+                    Summary = summary,
+                    Location = GetNullableCell(row.Cell(6)),
+                    Address = GetNullableCell(row.Cell(7)),
+                    JobType = jobType.Value,
+                    EducationRequirement = GetNullableCell(row.Cell(9)),
+                    SalaryRange = GetNullableCell(row.Cell(10)),
+                    RecruitmentCount = recruitmentCount,
+                    SkillTags = GetNullableCell(row.Cell(12)),
+                    Benefits = GetNullableCell(row.Cell(13)),
+                    ContactName = GetNullableCell(row.Cell(14)) ?? currentUser.Name,
+                    ContactPhone = GetNullableCell(row.Cell(15)) ?? currentUser.PhoneNumber,
+                    ContactEmail = GetNullableCell(row.Cell(16)) ?? currentUser.Email,
+                    Deadline = ParseImportDate(row.Cell(17)),
+                    Status = resolvedStatus,
+                    PublishedAt = resolvedStatus == EmploymentJobStatus.Published ? Clock.Now : null
+                };
+
+                await _jobPostingRepository.InsertAsync(entity, autoSave: true);
+                result.SuccessCount++;
+            }
+            catch (Exception ex)
+            {
+                result.FailCount++;
+                result.FailItems.Add(new JobImportFailItemDto
+                {
+                    RowNumber = rowNumber,
+                    JobTitle = GetNullableCell(row.Cell(3)),
+                    Reason = ex.Message
+                });
+            }
+
+            rowNumber++;
+        }
+
+        result.TotalCount = result.SuccessCount + result.FailCount;
+        return result;
+    }
+
+    [Authorize(KnowledgeHubPermissions.Employment.PublishJob)]
+    public Task<IRemoteStreamContent> GetJobImportTemplateAsync()
+    {
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("岗位导入模板");
+
+        // 第 1 行：标题
+        worksheet.Cell(1, 1).Value = "岗位批量导入模板";
+        worksheet.Range(1, 1, 1, JobImportTemplateHeaders.Length).Merge();
+        worksheet.Cell(1, 1).Style.Font.Bold = true;
+        worksheet.Cell(1, 1).Style.Font.FontSize = 14;
+        worksheet.Cell(1, 1).Style.Fill.BackgroundColor = XLColor.FromArgb(30, 108, 232);
+        worksheet.Cell(1, 1).Style.Font.FontColor = XLColor.White;
+        worksheet.Cell(1, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+        // 第 2 行：说明
+        worksheet.Cell(2, 1).Value =
+            "企业名称、岗位名称、岗位描述为必填；岗位类型可填：全职/实习/兼职/学徒（默认全职）；" +
+            "招聘人数为数字（默认 1）；截止日期格式如 2025-12-31；状态可填：草稿/待审/直接发布（默认草稿）。导入前请删除示例行。";
+        worksheet.Range(2, 1, 2, JobImportTemplateHeaders.Length).Merge();
+        worksheet.Cell(2, 1).Style.Font.Italic = true;
+        worksheet.Cell(2, 1).Style.Font.FontColor = XLColor.Gray;
+        worksheet.Cell(2, 1).Style.Alignment.WrapText = true;
+        worksheet.Row(2).Height = 34;
+
+        // 第 3 行：表头
+        for (var i = 0; i < JobImportTemplateHeaders.Length; i++)
+        {
+            var cell = worksheet.Cell(3, i + 1);
+            cell.Value = JobImportTemplateHeaders[i];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(232, 244, 255);
+            cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        }
+
+        // 第 4 行：示例
+        worksheet.Cell(4, 1).Value = "杭州云启科技有限公司";
+        worksheet.Cell(4, 2).Value = "互联网";
+        worksheet.Cell(4, 3).Value = "前端开发工程师";
+        worksheet.Cell(4, 4).Value = "负责企业级中后台前端开发";
+        worksheet.Cell(4, 5).Value = "负责产品前端功能开发与维护；参与技术方案评审与代码评审。";
+        worksheet.Cell(4, 6).Value = "杭州";
+        worksheet.Cell(4, 7).Value = "杭州市余杭区文一西路 1000 号";
+        worksheet.Cell(4, 8).Value = "全职";
+        worksheet.Cell(4, 9).Value = "本科及以上";
+        worksheet.Cell(4, 10).Value = "15k-25k · 14 薪";
+        worksheet.Cell(4, 11).Value = 3;
+        worksheet.Cell(4, 12).Value = "Angular, TypeScript, RxJS";
+        worksheet.Cell(4, 13).Value = "六险一金、弹性工作、年度体检";
+        worksheet.Cell(4, 14).Value = "张 HR";
+        worksheet.Cell(4, 15).Value = "13800000000";
+        worksheet.Cell(4, 16).Value = "hr@example.com";
+        worksheet.Cell(4, 17).Value = "2025-12-31";
+        worksheet.Cell(4, 18).Value = "草稿";
+        for (var i = 1; i <= JobImportTemplateHeaders.Length; i++)
+        {
+            worksheet.Cell(4, i).Style.Font.FontColor = XLColor.Gray;
+            worksheet.Cell(4, i).Style.Font.Italic = true;
+        }
+
+        worksheet.Columns().AdjustToContents();
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+        return Task.FromResult<IRemoteStreamContent>(
+            new RemoteStreamContent(
+                stream,
+                $"岗位导入模板_{Clock.Now:yyyyMMdd}.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+    }
+
+    /// <summary>
+    /// 校验岗位导入表头并返回表头所在行号（数据从 headerRow + 1 开始）。默认模板表头在第 3 行，也兼容表头在第 1 行的旧格式。
+    /// </summary>
+    private static int ValidateJobImportHeader(IXLWorksheet worksheet)
+    {
+        for (var row = 1; row <= 3; row++)
+        {
+            if (worksheet.Cell(row, 1).GetString().Trim() != JobImportTemplateHeaders[0])
+            {
+                continue;
+            }
+
+            var matched = true;
+            for (var i = 1; i < JobImportTemplateHeaders.Length; i++)
+            {
+                if (worksheet.Cell(row, i + 1).GetString().Trim() != JobImportTemplateHeaders[i])
+                {
+                    matched = false;
+                    break;
+                }
+            }
+
+            if (!matched)
+            {
+                throw new UserFriendlyException("Excel 表头与模板不一致，请下载最新模板后重新填写。");
+            }
+
+            return row;
+        }
+
+        throw new UserFriendlyException("未找到模板表头，请下载岗位导入模板后填写导入。");
+    }
+
+    /// <summary>解析岗位类型：支持中文标签、数字（0-3），空默认全职</summary>
+    private static EmploymentJobType? ParseJobImportType(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return EmploymentJobType.FullTime;
+        }
+
+        if (JobTypeLabelMap.TryGetValue(text.Trim(), out var type))
+        {
+            return type;
+        }
+
+        if (int.TryParse(text.Trim(), out var code)
+            && Enum.IsDefined(typeof(EmploymentJobType), code))
+        {
+            return (EmploymentJobType)code;
+        }
+
+        return null;
+    }
+
+    /// <summary>解析岗位状态：支持中文标签、数字，空默认草稿</summary>
+    private static EmploymentJobStatus? ParseJobImportStatus(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return EmploymentJobStatus.Draft;
+        }
+
+        if (JobStatusLabelMap.TryGetValue(text.Trim(), out var status))
+        {
+            return status;
+        }
+
+        if (int.TryParse(text.Trim(), out var code)
+            && Enum.IsDefined(typeof(EmploymentJobStatus), code))
+        {
+            return (EmploymentJobStatus)code;
+        }
+
+        return null;
+    }
+
+    /// <summary>解析招聘人数：空或非法默认 1，钳制 1~9999</summary>
+    private static int ParseJobImportCount(string text)
+    {
+        if (int.TryParse(text.Trim(), out var count) && count > 0)
+        {
+            return Math.Min(count, 9999);
+        }
+
+        return 1;
+    }
+
     [Authorize(KnowledgeHubPermissions.Employment.ManageResume)]
     public async Task<List<StudentResumeDto>> GetMyResumeListAsync()
     {

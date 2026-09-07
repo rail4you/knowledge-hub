@@ -1,23 +1,27 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import {
   CreateUpdateJobPostingDto,
   EmploymentJobStatus,
   EmploymentJobType,
   EmploymentService,
+  JobImportResultDto,
   JobPostingDto,
 } from '../../employment/employment.service';
 
@@ -49,18 +53,22 @@ const JOB_TYPE_LABEL: Record<number, string> = {
   standalone: true,
   imports: [
     CommonModule,
+    DatePipe,
     FormsModule,
-    RouterLink,
     NzButtonModule,
     NzCardModule,
     NzDatePickerModule,
+    NzEmptyModule,
+    NzIconModule,
     NzInputModule,
     NzInputNumberModule,
     NzModalModule,
     NzPopconfirmModule,
     NzSelectModule,
+    NzSpinModule,
     NzTableModule,
     NzTagModule,
+    NzUploadModule,
   ],
   templateUrl: './employment-job-management.component.html',
   styleUrls: ['./employment-job-management.component.scss'],
@@ -80,7 +88,6 @@ export class EmploymentJobManagementComponent implements OnInit {
   // 表格筛选
   statusFilter?: EmploymentJobStatus;
   keyword = '';
-  locationFilter = '';
   jobTypeFilter?: EmploymentJobType;
 
   // 分页
@@ -96,6 +103,12 @@ export class EmploymentJobManagementComponent implements OnInit {
   // 查看模态框
   viewModalVisible = false;
   viewItem = signal<JobPostingDto | null>(null);
+
+  // xlsx 批量导入
+  xlsxImportVisible = false;
+  importing = false;
+  importFileList: NzUploadFile[] = [];
+  importResult: JobImportResultDto | null = null;
 
   ngOnInit(): void {
     this.reload();
@@ -136,7 +149,6 @@ export class EmploymentJobManagementComponent implements OnInit {
       .getManageJobList({
         status: this.statusFilter,
         filter: this.keyword || undefined,
-        location: this.locationFilter || undefined,
         jobType: this.jobTypeFilter,
         skipCount: (this.pageIndex - 1) * this.pageSize,
         maxResultCount: this.pageSize,
@@ -176,7 +188,6 @@ export class EmploymentJobManagementComponent implements OnInit {
 
   resetFilter(): void {
     this.keyword = '';
-    this.locationFilter = '';
     this.jobTypeFilter = undefined;
     this.statusFilter = undefined;
     this.onFilterChange();
@@ -275,6 +286,90 @@ export class EmploymentJobManagementComponent implements OnInit {
       },
       error: err => this.message.error(this.extractErrorMessage(err, '删除失败')),
     });
+  }
+
+  // ===== xlsx 批量导入 =====
+  openXlsxImport(): void {
+    this.xlsxImportVisible = true;
+    this.importFileList = [];
+    this.importResult = null;
+  }
+
+  beforeXlsxImportUpload = (file: NzUploadFile): boolean => {
+    const name = (file.name || '').toLowerCase();
+    if (!name.endsWith('.xlsx')) {
+      this.message.warning('仅支持 .xlsx 文件');
+      return false;
+    }
+    this.importFileList = [file];
+    return false;
+  };
+
+  downloadTemplate(): void {
+    this.employmentService.getJobImportTemplate().subscribe({
+      next: blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `岗位导入模板_${this.todayStr()}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: err => this.message.error(this.extractErrorMessage(err, '模板下载失败')),
+    });
+  }
+
+  importXlsx(): void {
+    const file = this.importFileList[0];
+    if (!file) {
+      this.message.warning('请先选择要导入的 xlsx 文件');
+      return;
+    }
+
+    this.importing = true;
+    this.importResult = null;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(',')[1] || '';
+      this.employmentService
+        .importJobs({ fileBase64: base64, fileName: file.name })
+        .subscribe({
+          next: result => {
+            this.importing = false;
+            const ok = result.successCount ?? 0;
+            const fail = result.failCount ?? 0;
+            if (fail > 0) {
+              this.importResult = result;
+              this.message.warning(`导入完成：成功 ${ok} 条，失败 ${fail} 条，详见下方明细`);
+            } else {
+              this.xlsxImportVisible = false;
+              this.importFileList = [];
+              this.importResult = null;
+              this.message.success(`导入完成：成功 ${ok} 条`);
+            }
+            this.reload();
+          },
+          error: err => {
+            this.importing = false;
+            this.importResult = null;
+            this.message.error(this.extractErrorMessage(err, '导入失败'));
+          },
+        });
+    };
+    reader.onerror = () => {
+      this.importing = false;
+      this.message.error('读取文件失败，请重试');
+    };
+    reader.readAsDataURL(file as any);
+  }
+
+  private todayStr(): string {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
   }
 
   // 枚举 -> 中文标签

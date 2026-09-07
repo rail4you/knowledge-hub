@@ -422,6 +422,24 @@ export interface EmploymentOutcomeImportFailItemDto {
   reason?: string;
 }
 
+export interface ImportJobsInput {
+  fileBase64: string;
+  fileName?: string;
+}
+
+export interface JobImportResultDto {
+  totalCount?: number;
+  successCount?: number;
+  failCount?: number;
+  failItems?: JobImportFailItemDto[];
+}
+
+export interface JobImportFailItemDto {
+  rowNumber?: number;
+  jobTitle?: string;
+  reason?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -680,6 +698,20 @@ export class EmploymentService {
     this.restService.request<any, EmploymentOutcomeImportResultDto>({
       method: 'POST',
       url: '/api/app/employment/import-outcomes',
+      body: input,
+    }, { apiName: this.apiName });
+
+  getJobImportTemplate = () =>
+    this.restService.request<any, Blob>({
+      method: 'GET',
+      responseType: 'blob',
+      url: '/api/app/employment/job-import-template',
+    }, { apiName: this.apiName });
+
+  importJobs = (input: ImportJobsInput) =>
+    this.restService.request<any, JobImportResultDto>({
+      method: 'POST',
+      url: '/api/app/employment/import-jobs',
       body: input,
     }, { apiName: this.apiName });
 

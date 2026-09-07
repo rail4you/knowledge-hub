@@ -21,6 +21,12 @@ public interface IEmploymentAppService : IApplicationService
     Task DeleteJobAsync(Guid id);
     Task<JobPostingDto> ReviewJobAsync(Guid id, ReviewJobPostingDto input);
 
+    /// <summary>批量导入岗位（xlsx，Base64 传输）</summary>
+    Task<JobImportResultDto> ImportJobsAsync(ImportJobsInput input);
+
+    /// <summary>下载岗位导入模板（xlsx）</summary>
+    Task<IRemoteStreamContent> GetJobImportTemplateAsync();
+
     Task<List<StudentResumeDto>> GetMyResumeListAsync();
     Task<StudentResumeDto> CreateResumeAsync(CreateUpdateStudentResumeDto input);
     Task<StudentResumeDto> UpdateResumeAsync(Guid id, CreateUpdateStudentResumeDto input);

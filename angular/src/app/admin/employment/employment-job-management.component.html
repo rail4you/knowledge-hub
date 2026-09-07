@@ -1,121 +1,130 @@
 <div class="job-page">
-  <div class="filter-bar">
-    <div class="search-input">
-      <span nz-icon nzType="search"></span>
-      <input type="text" placeholder="搜索岗位/企业/技能" [(ngModel)]="keyword" (keyup.enter)="onFilterChange()" />
+  <!-- 标题 + 操作按钮（原型 page-header） -->
+  <div class="page-header">
+    <div class="page-title">岗位管理</div>
+    <div class="header-actions">
+      <button class="action-btn" type="button" (click)="downloadTemplate()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        下载模板
+      </button>
+      <button class="action-btn" type="button" (click)="openXlsxImport()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        导入Excel
+      </button>
+      <button class="action-btn primary" type="button" (click)="openCreate()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        新增岗位
+      </button>
     </div>
-    <div class="filter-select">
-      <input nz-input [(ngModel)]="locationFilter" placeholder="地区" (keyup.enter)="onFilterChange()" />
-    </div>
-    <div class="filter-select">
-      <nz-select [(ngModel)]="jobTypeFilter" nzAllowClear nzPlaceHolder="岗位类型">
-        <nz-option [nzValue]="jobTypes.FullTime" nzLabel="全职"></nz-option>
-        <nz-option [nzValue]="jobTypes.Internship" nzLabel="实习"></nz-option>
-        <nz-option [nzValue]="jobTypes.PartTime" nzLabel="兼职"></nz-option>
-        <nz-option [nzValue]="jobTypes.Apprenticeship" nzLabel="学徒"></nz-option>
-      </nz-select>
-    </div>
-    <div class="filter-select">
-      <nz-select [(ngModel)]="statusFilter" nzAllowClear nzPlaceHolder="状态">
-        <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
-        <nz-option [nzValue]="statuses.PendingReview" nzLabel="待审"></nz-option>
-        <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
-        <nz-option [nzValue]="statuses.Rejected" nzLabel="已驳回"></nz-option>
-        <nz-option [nzValue]="statuses.Closed" nzLabel="已关闭"></nz-option>
-      </nz-select>
-    </div>
-    <button class="btn-search" (click)="search()">搜索</button>
-    <button class="btn-reset" (click)="resetFilter()">重置</button>
-    <button class="btn-add" style="margin-left:auto" (click)="openCreate()">
-      <span nz-icon nzType="plus"></span>
-      新增岗位
-    </button>
   </div>
 
+  <!-- 搜索筛选栏（原型 filter-bar） -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" [(ngModel)]="keyword" placeholder="搜索岗位 / 企业 / 技能" (keyup.enter)="search()" />
+    </div>
+    <nz-select
+      class="filter-select"
+      [(ngModel)]="jobTypeFilter"
+      nzAllowClear
+      nzPlaceHolder="岗位类型"
+      (ngModelChange)="onFilterChange()"
+    >
+      <nz-option [nzValue]="jobTypes.FullTime" nzLabel="全职"></nz-option>
+      <nz-option [nzValue]="jobTypes.Internship" nzLabel="实习"></nz-option>
+      <nz-option [nzValue]="jobTypes.PartTime" nzLabel="兼职"></nz-option>
+      <nz-option [nzValue]="jobTypes.Apprenticeship" nzLabel="学徒"></nz-option>
+    </nz-select>
+    <nz-select
+      class="filter-select"
+      [(ngModel)]="statusFilter"
+      nzAllowClear
+      nzPlaceHolder="状态"
+      (ngModelChange)="onFilterChange()"
+    >
+      <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+      <nz-option [nzValue]="statuses.PendingReview" nzLabel="待审"></nz-option>
+      <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
+      <nz-option [nzValue]="statuses.Rejected" nzLabel="已驳回"></nz-option>
+      <nz-option [nzValue]="statuses.Closed" nzLabel="已关闭"></nz-option>
+    </nz-select>
+    <button class="search-btn" type="button" (click)="search()">搜索</button>
+    <button class="reset-btn" type="button" (click)="resetFilter()">重置</button>
+  </div>
+
+  <!-- 表格（原型 table-card + job-table） -->
   <div class="table-card">
-    <table class="job-table">
+    <nz-table
+      #jobTable
+      [nzData]="items()"
+      [nzFrontPagination]="false"
+      [nzLoading]="loading()"
+      [nzTotal]="totalCount()"
+      [nzPageSize]="pageSize"
+      [nzPageIndex]="pageIndex"
+      [nzShowSizeChanger]="true"
+      [nzPageSizeOptions]="[10, 20, 50, 100]"
+      (nzPageIndexChange)="onPageIndexChange($event)"
+      (nzPageSizeChange)="onPageSizeChange($event)"
+      class="job-table"
+    >
       <thead>
         <tr>
-          <th style="width:18%">岗位</th>
-          <th style="width:18%">企业</th>
-          <th style="width:10%">类型</th>
-          <th style="width:10%">状态</th>
-          <th style="width:8%">招聘人数</th>
-          <th style="width:8%">投递数</th>
-          <th style="width:12%">创建时间</th>
-          <th style="width:16%">操作</th>
+          <th class="col-job">岗位</th>
+          <th>企业</th>
+          <th>类型</th>
+          <th>状态</th>
+          <th>招聘人数</th>
+          <th>投递数</th>
+          <th>创建时间</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
-        @for (item of items(); track item.id) {
+        @for (item of jobTable.data; track item.id) {
           <tr>
-            <td>
-              <div class="job-name">{{ item.title }}</div>
-              <div class="job-location">
-                <span nz-icon nzType="environment"></span>
-                {{ item.location || '-' }}
-              </div>
+            <td class="col-job">
+              <div class="job-name" [title]="item.title">{{ item.title }}</div>
+              <div class="job-location">{{ item.location || '-' }}</div>
             </td>
             <td>
-              <div class="company-name">{{ item.companyName }}</div>
-              @if (item.salaryRange) {
-                <div class="company-salary">薪资：{{ item.salaryRange }}</div>
-              }
+              <span class="company-name" [title]="item.companyName">{{ item.companyName }}</span>
             </td>
             <td><span class="type-tag" [class]="getTypeClass(item.jobType)">{{ getTypeLabel(item.jobType) }}</span></td>
             <td><span class="status-tag" [class]="getStatusClass(item.status)">{{ getStatusLabel(item.status) }}</span></td>
             <td class="num-cell">{{ item.recruitmentCount }}</td>
             <td class="num-cell">{{ item.applicationCount }}</td>
             <td class="time-cell">{{ item.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
-            <td class="op-cell">
-              <a class="op-link view" (click)="openView(item)">查看</a>
-              <span class="op-sep">|</span>
-              <a class="op-link edit" (click)="openEdit(item)">编辑</a>
-              @if (canReview(item, statuses.Published)) {
+            <td>
+              <div class="op-links">
+                <a class="op-link" (click)="openView(item)">查看</a>
                 <span class="op-sep">|</span>
-                <a class="op-link view" (click)="review(item, statuses.Published)">通过</a>
-              }
-              @if (canReview(item, statuses.Rejected)) {
+                <a class="op-link" (click)="openEdit(item)">编辑</a>
+                @if (canReview(item, statuses.Published)) {
+                  <span class="op-sep">|</span>
+                  <a class="op-link" (click)="review(item, statuses.Published)">通过</a>
+                }
+                @if (canReview(item, statuses.Rejected)) {
+                  <span class="op-sep">|</span>
+                  <a class="op-link delete" (click)="review(item, statuses.Rejected)">驳回</a>
+                }
+                @if (canReview(item, statuses.Closed)) {
+                  <span class="op-sep">|</span>
+                  <a class="op-link warn" (click)="review(item, statuses.Closed)">关闭</a>
+                }
+                @if (canReopen(item)) {
+                  <span class="op-sep">|</span>
+                  <a class="op-link reopen" (click)="review(item, statuses.Published)">重新开放</a>
+                }
                 <span class="op-sep">|</span>
-                <a class="op-link delete" (click)="review(item, statuses.Rejected)">驳回</a>
-              }
-              @if (canReview(item, statuses.Closed)) {
-                <span class="op-sep">|</span>
-                <a class="op-link close" (click)="review(item, statuses.Closed)">关闭</a>
-              }
-              @if (canReopen(item)) {
-                <span class="op-sep">|</span>
-                <a class="op-link reopen" (click)="review(item, statuses.Published)">重新开放</a>
-              }
-              <span class="op-sep">|</span>
-              <a class="op-link delete" nz-popconfirm nzPopconfirmTitle="确认删除该岗位？相关投递与面试记录会一并删除。" (nzOnConfirm)="delete(item.id)">删除</a>
+                <a class="op-link delete" nz-popconfirm nzPopconfirmTitle="确认删除该岗位？相关投递与面试记录会一并删除。" (nzOnConfirm)="delete(item.id)">删除</a>
+              </div>
             </td>
-          </tr>
-        } @empty {
-          <tr>
-            <td colspan="8" class="empty-row">暂无岗位数据</td>
           </tr>
         }
       </tbody>
-    </table>
-    <div class="pagination">
-      <span class="page-info">共 {{ totalCount() }} 条</span>
-      <div class="page-controls">
-        <button class="page-btn" (click)="onPageIndexChange(pageIndex - 1)" [disabled]="pageIndex <= 1">
-          <span nz-icon nzType="left"></span>
-        </button>
-        <button class="page-btn active">{{ pageIndex }}</button>
-        <button class="page-btn" (click)="onPageIndexChange(pageIndex + 1)" [disabled]="pageIndex * pageSize >= totalCount()">
-          <span nz-icon nzType="right"></span>
-        </button>
-        <select class="page-size" [ngModel]="pageSize" (ngModelChange)="onPageSizeChange($event)">
-          <option [ngValue]="10">10 条/页</option>
-          <option [ngValue]="20">20 条/页</option>
-          <option [ngValue]="50">50 条/页</option>
-          <option [ngValue]="100">100 条/页</option>
-        </select>
-      </div>
-    </div>
+    </nz-table>
   </div>
 </div>
 
@@ -363,5 +372,91 @@
         </label>
       </div>
     }
+  </ng-container>
+</nz-modal>
+
+<!-- =================== xlsx 批量导入弹窗 =================== -->
+<nz-modal
+  [(nzVisible)]="xlsxImportVisible"
+  nzTitle="导入岗位（xlsx）"
+  nzWidth="640px"
+  [nzFooter]="null"
+  (nzOnCancel)="xlsxImportVisible = false"
+>
+  <ng-container *nzModalContent>
+    <div class="xlsx-import">
+      <div class="xlsx-import__hint">
+        <span nz-icon nzType="info-circle" nzTheme="fill"></span>
+        请先下载模板并按模板填写，再上传导入。
+        <a (click)="downloadTemplate()">点击下载模板</a>
+      </div>
+      <div class="xlsx-import__note">企业名称、岗位名称、岗位描述为必填；岗位类型：全职/实习/兼职/学徒（默认全职）；状态：草稿/待审/直接发布（默认草稿）。导入前请删除示例行。</div>
+
+      <nz-upload
+        [nzBeforeUpload]="beforeXlsxImportUpload"
+        [nzFileList]="importFileList"
+        accept=".xlsx"
+        [nzShowUploadList]="{ showPreviewIcon: false, showRemoveIcon: true }"
+      >
+        <button nz-button>
+          <span nz-icon nzType="file-excel"></span>
+          选择 xlsx 文件
+        </button>
+      </nz-upload>
+
+      <div class="xlsx-import__actions">
+        <button nz-button (click)="xlsxImportVisible = false">取消</button>
+        <button
+          nz-button
+          nzType="primary"
+          [nzLoading]="importing"
+          [nzDisabled]="!importFileList.length"
+          (click)="importXlsx()"
+        >
+          <span nz-icon nzType="upload"></span>
+          开始导入
+        </button>
+      </div>
+
+      @if (importResult) {
+        <div class="xlsx-import__result">
+          <div
+            class="xlsx-import__summary"
+            [class.is-error]="(importResult.failCount ?? 0) > 0"
+          >
+            <span nz-icon nzType="check-circle" nzTheme="fill"></span>
+            导入完成：共 {{ importResult.totalCount ?? 0 }} 条，成功
+            {{ importResult.successCount ?? 0 }} 条，失败 {{ importResult.failCount ?? 0 }} 条
+          </div>
+
+          @if ((importResult.failItems ?? []).length > 0) {
+            <nz-table
+              #failTable
+              [nzData]="importResult.failItems || []"
+              [nzFrontPagination]="false"
+              [nzShowPagination]="false"
+              nzSize="small"
+            >
+              <thead>
+                <tr>
+                  <th style="width: 80px">行号</th>
+                  <th style="width: 160px">岗位</th>
+                  <th>失败原因</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of importResult.failItems || []; track $index) {
+                  <tr>
+                    <td>{{ item.rowNumber }}</td>
+                    <td>{{ item.jobTitle || '-' }}</td>
+                    <td class="xlsx-import__reason">{{ item.reason }}</td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          }
+        </div>
+      }
+    </div>
   </ng-container>
 </nz-modal>
