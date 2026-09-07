@@ -220,6 +220,13 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     return this.userName()?.charAt(0)?.toUpperCase() || 'U';
   }
 
+  /** 用户下拉菜单顶部标题：「用户名 · 角色」 */
+  userMenuTitle(): string {
+    const name = this.userName() || '用户';
+    const role = this.userRoleLabel() || '学生';
+    return `${name} · ${role}`;
+  }
+
   /** 头像渐变背景色（基于用户名稳定生成） */
   avatarGradient(): string {
     const name = this.userName() || 'U';

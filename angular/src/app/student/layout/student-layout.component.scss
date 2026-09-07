@@ -9,50 +9,47 @@
   overflow-x: hidden;
 }
 
-/* ============ 品牌栏 (Part 1) ============ */
-
-/* S5: 学生端隐藏 LeptonX 顶栏（避免与自定义品牌栏重叠） */
+/* S5: 学生端隐藏 LeptonX 顶栏（避免与自定义头部重叠） */
 :host ::ng-deep .lpx-topbar-host {
   display: none;
 }
 
-.brand-bar {
+/* ============ 统一头部：Logo + Tab + 账户 ============ */
+.app-header {
   background: #fff;
   border-bottom: 1px solid ds.$student-border-soft;
   position: sticky;
   top: 0;
   z-index: 200;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
   flex-shrink: 0;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02), 0 4px 16px rgba(15, 23, 42, 0.04);
 }
 
-.brand-bar__inner {
+.app-header__inner {
   box-sizing: border-box;
   width: 100%;
   max-width: none;
   margin: 0;
-  padding-left: 16px;
-  padding-right: 16px;
-  height: 60px;
+  padding: 0 24px;
+  height: 64px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
 }
 
+/* 品牌区（左侧） */
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   text-decoration: none;
   color: ds.$student-text;
-  min-width: 0;
-  flex: 0 1 auto;
-  margin-right: auto;
+  flex: 0 0 auto;
+  padding-right: 16px;
 
   &__logo {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     display: inline-flex;
     flex-shrink: 0;
 
@@ -66,22 +63,22 @@
   &__text {
     display: inline-flex;
     align-items: baseline;
-    gap: 8px;
-    min-width: 0;
-    max-width: 520px;
+    gap: 6px;
+    line-height: 1.1;
   }
 
   &__title {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
-    color: ds.$student-primary;
+    color: ds.$student-text;
+    letter-spacing: -0.2px;
     white-space: nowrap;
   }
 
   &__divider {
     color: ds.$student-border;
     font-weight: 300;
-    font-size: 14px;
+    font-size: 12px;
   }
 
   &__subtitle {
@@ -89,162 +86,18 @@
     color: ds.$student-text-muted;
     font-weight: 500;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 }
 
-/* 返回主站首页按钮 */
-.brand-bar__back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 6px;
-  background: transparent;
-  border: 1px solid ds.$student-border-soft;
-  color: ds.$student-text-muted;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-
-  &:hover {
-    background: rgba(37, 99, 235, 0.08);
-    border-color: rgba(37, 99, 235, 0.25);
-    color: ds.$student-primary;
-  }
-}
-
-.brand-bar__actions {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  min-width: 0;
-  flex: 0 0 auto;
-  margin-left: auto;
-}
-
-/* 用户信息：扁平展示，无背景无边框 */
-.user-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  max-width: 220px;
-  min-width: 0;
-
-  &__avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-weight: 700;
-    font-size: 12px;
-    flex-shrink: 0;
-  }
-
-  &__name {
-    color: ds.$student-text;
-    font-size: 14px;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-/* 退出登录：扁平文字按钮，无边框 */
-.logout-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 8px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: ds.$student-text-muted;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 400;
-  white-space: nowrap;
-  transition: color 0.15s ease, background 0.15s ease;
-
-  &:hover {
-    background: rgba(37, 99, 235, 0.08);
-    color: ds.$student-primary;
-  }
-
-  &:active {
-    background: rgba(37, 99, 235, 0.12);
-  }
-}
-
-.brand-bar__login {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 18px;
-  border-radius: ds.$student-radius;
-  background: ds.$student-primary;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: ds.$student-primary-dark;
-  }
-}
-
-/* ============ Tab 栏 (Part 2) ============ */
-.tab-bar {
-  background: #fff;
-  border-bottom: 1px solid ds.$student-border;
-  position: sticky;
-  top: 68px;
-  z-index: 180;
-  box-shadow: 0 4px 12px rgba(28, 25, 23, 0.04);
-  flex-shrink: 0;
-}
-
-.tab-bar__inner {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  padding-left: 16px;
-  padding-right: 16px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0;
-}
-
-.tab-bar__tabs {
+/* Tab 导航（中部）：文本 tab + 可展开子菜单 */
+.app-nav {
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
   gap: 4px;
   height: 100%;
-  min-width: 0;
   flex: 1 1 auto;
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
 
@@ -253,18 +106,18 @@
   }
 }
 
-.tab-link {
+.nav-item {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   height: 100%;
-  padding: 0 18px;
-  color: ds.$student-text-muted;
+  padding: 0 16px;
+  color: ds.$student-text;
   text-decoration: none;
   font-size: 15px;
   font-weight: 500;
   white-space: nowrap;
+  cursor: pointer;
   transition: color 0.2s ease, background 0.2s ease;
 
   span[nz-icon] {
@@ -274,88 +127,88 @@
 
   &:hover {
     color: ds.$student-primary;
-    background: rgba(15, 118, 110, 0.04);
+    background: rgba(37, 99, 235, 0.05);
   }
 
   &.active {
     color: ds.$student-primary;
     font-weight: 600;
 
+    // 底部高亮条：MOOC 风格
     &::after {
       content: '';
       position: absolute;
-      left: 18px;
-      right: 18px;
+      left: 16px;
+      right: 16px;
       bottom: 0;
-      height: 2.5px;
-      border-radius: 2px 2px 0 0;
+      height: 3px;
+      border-radius: 3px 3px 0 0;
       background: ds.$student-primary;
     }
-
-    &:hover {
-      background: transparent;
-    }
   }
 
-  /* 首个 tab 与上方 logo 左对齐：去掉左侧内边距 */
   &:first-child {
-    padding-left: 0;
+    padding-left: 4px;
 
     &.active::after {
-      left: 0;
+      left: 4px;
     }
   }
 }
 
-// 触发下拉的 tab（无 routerLink，但需要 hover/focus 反馈 + active 下划线）
-.tab-link--dropdown {
-  cursor: default;
-  user-select: none;
-}
-
-.dropdown-label {
+.nav-item__label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   height: 100%;
 }
 
-.tab-link__caret {
+.nav-item__caret {
   font-size: 10px !important;
   margin-left: 2px;
   opacity: 0.7;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-.tab-link--dropdown:hover .tab-link__caret,
-.tab-link--dropdown.active .tab-link__caret {
+.nav-item--dropdown {
+  user-select: none;
+}
+
+.nav-item--dropdown:hover .nav-item__caret,
+.nav-item--dropdown.active .nav-item__caret {
   transform: translateY(1px);
   opacity: 1;
 }
 
-// 就业服务下拉菜单 & 「更多」折叠菜单
-.employment-menu,
-.more-menu {
-  min-width: 180px;
+// 触发下拉的 tab 激活态：避免覆盖 routerLinkActive 行为
+.nav-item--dropdown.active {
+  background: transparent;
+
+  &::after {
+    display: block;
+  }
+}
+
+/* 下拉菜单（就业服务 / 实训 / AI 功能 / 更多） */
+.nav-menu {
+  min-width: 200px;
   padding: 6px;
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
 
   li[nz-menu-item],
-  li[nz-menu-item-group] > ul > li[nz-menu-item] {
+  li[nz-menu-group] > ul > li[nz-menu-item] {
     display: flex;
     align-items: center;
     height: 40px;
-    padding: 0 16px !important;
+    padding: 0 14px !important;
     border-radius: 6px;
     font-size: 14px;
 
-    // 内容被 ng-zorro 包在 .ant-menu-title-content 中（运行时生成、无 scope 属性，
-    // 需 ::ng-deep 命中），li 自身的 gap 不会作用到图标与文字上，这里才是真正的间距
     ::ng-deep .ant-menu-title-content {
       display: flex;
       align-items: center;
-      gap: 18px;
+      gap: 12px;
       min-width: 0;
     }
 
@@ -365,7 +218,7 @@
     }
 
     &:hover {
-      background: #ecfdf5;
+      background: rgba(37, 99, 235, 0.08);
       color: ds.$student-primary;
 
       span[nz-icon] {
@@ -373,35 +226,31 @@
       }
     }
   }
-}
 
-.more-menu {
-  max-height: 70vh;
-  overflow-y: auto;
-
-  [nz-menu-item-group-title] {
+  ::ng-deep .ant-menu-item-group-title {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 16px 4px;
+    padding: 8px 14px 4px !important;
     font-size: 12px;
     font-weight: 600;
     color: ds.$student-text-light;
+    letter-spacing: 0.4px;
   }
 }
 
-// 「更多」折叠入口
-.tab-link--more {
-  color: ds.$student-text-muted;
+/* 「更多」折叠入口 */
+.nav-item--more {
+  color: ds.$student-text;
 
   &::after {
     content: '';
     position: absolute;
-    left: 18px;
-    right: 18px;
+    left: 16px;
+    right: 16px;
     bottom: 0;
-    height: 2.5px;
-    border-radius: 2px 2px 0 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
     background: ds.$student-primary;
     opacity: 0;
   }
@@ -410,6 +259,170 @@
     color: ds.$student-primary;
     font-weight: 600;
     &::after { opacity: 1; }
+  }
+}
+
+/* 右侧操作区 */
+.app-header__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 0 0 auto;
+  height: 100%;
+}
+
+/* 返回主站链接（克制的小入口） */
+.back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: ds.$student-text-muted;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    background: rgba(37, 99, 235, 0.06);
+    color: ds.$student-primary;
+  }
+}
+
+/* 用户胶囊（点击展开个人菜单） */
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 10px 0 4px;
+  border-radius: 22px;
+  border: 1px solid ds.$student-border-soft;
+  background: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 200px;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: rgba(37, 99, 235, 0.4);
+    background: rgba(37, 99, 235, 0.03);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+  }
+
+  &__avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  &__name {
+    color: ds.$student-text;
+    font-size: 14px;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
+  }
+
+  &__caret {
+    font-size: 10px !important;
+    color: ds.$student-text-muted;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+}
+
+/* 用户下拉菜单 */
+.user-menu {
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+
+  // ng-zorro 会把 [nzTitle] 渲染为 .ant-menu-item-group-title
+  ::ng-deep .ant-menu-item-group-title {
+    padding: 4px 14px 6px !important;
+    color: ds.$student-text;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  li[nz-menu-item] {
+    display: flex;
+    align-items: center;
+    height: 38px;
+    padding: 0 14px !important;
+    border-radius: 6px;
+    font-size: 14px;
+    color: ds.$student-text;
+
+    ::ng-deep .ant-menu-title-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    span[nz-icon] {
+      font-size: 15px;
+      color: ds.$student-text-muted;
+    }
+
+    &:hover {
+      background: rgba(37, 99, 235, 0.08);
+      color: ds.$student-primary;
+
+      span[nz-icon] {
+        color: ds.$student-primary;
+      }
+    }
+  }
+
+  // 分隔线更柔和
+  ::ng-deep .ant-menu-item-divider,
+  ::ng-deep .ant-dropdown-menu-item-divider {
+    margin: 4px 0 !important;
+    background: ds.$student-border-soft;
+  }
+}
+
+/* 登录按钮（未登录态） */
+.header-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 20px;
+  background: ds.$student-primary;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    background: ds.$student-primary-dark;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  }
+
+  &:active {
+    transform: translateY(1px);
   }
 }
 
@@ -481,65 +494,46 @@
   }
 }
 
-/* 蒙层 */
-.tab-overlay {
-  display: none;
-}
-
-@media (max-width: 960px) {
-  .brand-bar__inner {
-    height: 60px;
+/* 平板：收窄 tab 内边距 */
+@media (max-width: 1280px) {
+  .app-header__inner {
+    padding: 0 16px;
     gap: 12px;
   }
 
-  .brand__subtitle,
-  .brand__divider {
+  .brand {
+    padding-right: 8px;
+  }
+
+  .nav-item {
+    padding: 0 12px;
+    font-size: 14px;
+
+    &:first-child {
+      padding-left: 0;
+    }
+
+    &.active::after {
+      left: 12px;
+      right: 12px;
+    }
+  }
+
+  .back-home__text {
     display: none;
   }
 
-  .user-chip {
-    padding: 0;
-    max-width: 40px;
-
-    &__name {
-      display: none;
-    }
-  }
-
-  .logout-btn {
-    padding: 0 8px;
-  }
-
-  .tab-bar {
-    top: 60px;
-  }
-
-  .tab-bar__inner {
-    height: 50px;
-    overflow-x: auto;
-  }
-
-  .tab-link {
-    padding: 0 14px;
-    font-size: 14px;
-
-    &.active::after {
-      left: 14px;
-      right: 14px;
-    }
+  .user-chip__name {
+    max-width: 100px;
   }
 }
 
-/* ── 手机端：菜单折叠下拉 ── */
+/* 移动端（手机）：tab 改为抽屉下拉 */
 @media (max-width: 768px) {
-  .menu-toggle {
-    display: inline-flex;
-  }
-
-  .brand-bar__inner {
-    height: 48px;
-    gap: 8px;
+  .app-header__inner {
+    height: 56px;
     padding: 0 12px;
+    gap: 8px;
   }
 
   .brand__logo {
@@ -551,144 +545,122 @@
     font-size: 16px;
   }
 
-  .brand-bar__actions {
-    gap: 8px;
-    margin-left: auto;
-    order: 2;
+  .brand__divider,
+  .brand__subtitle {
+    display: none;
   }
 
   .menu-toggle {
-    order: 3;
+    display: inline-flex;
+  }
+
+  .back-home {
+    display: none;
   }
 
   .user-chip {
-    height: 32px;
-    padding: 0;
-    max-width: 140px;
+    height: 36px;
+    padding: 0 8px 0 4px;
 
     &__avatar {
-      width: 24px;
-      height: 24px;
+      width: 26px;
+      height: 26px;
       font-size: 11px;
     }
-  }
 
-  .logout-btn {
-    height: 32px;
-    padding: 0 8px;
-    font-size: 12px;
-  }
+    &__name {
+      display: none;
+    }
 
-  /* Tab bar → 紧凑下拉 */
-  .tab-bar {
-    position: fixed;
-    top: 48px;
-    left: 0;
-    right: 0;
-    z-index: 300;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .2s;
-    border-bottom: none;
-    box-shadow: none;
-    background: transparent;
-
-    &.open {
-      opacity: 1;
-      pointer-events: auto;
+    &__caret {
+      display: none;
     }
   }
 
-  .tab-bar__inner {
-    width: auto;
-    max-width: 260px;
-    margin-left: auto;
-    height: auto;
-    max-height: 60vh;
-    overflow-y: auto;
-    background: #fff;
-    border-radius: 0 0 0 12px;
-    border-bottom: 1px solid ds.$student-border-soft;
-    box-shadow: 0 8px 24px rgba(28, 25, 23, 0.12);
-    padding: 4px 6px 10px;
-  }
-
-  .tab-bar__tabs {
-    flex-direction: column;
-    gap: 1px;
-    height: auto;
-    overflow-x: visible;
-  }
-
-  .tab-link {
-    height: 44px;
+  .header-login {
+    height: 34px;
     padding: 0 14px;
-    border-radius: 8px;
-    font-size: 14px;
+    font-size: 13px;
+  }
+
+  /* 移动端：tab 抽屉 */
+  .app-nav {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: #fff;
+    border-bottom: 1px solid ds.$student-border-soft;
+    height: auto;
+    max-height: 0;
+    overflow: hidden;
+    overflow-y: auto;
+    z-index: 300;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    transition: max-height 0.25s ease;
+  }
+
+  .app-header.open .app-nav {
+    max-height: calc(100vh - 56px);
+  }
+
+  .nav-item {
     width: 100%;
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 0;
+    font-size: 15px;
+    border-bottom: 1px solid ds.$student-border-soft;
+    justify-content: flex-start;
 
     &.active {
-      background: #ecfdf5;
+      background: rgba(37, 99, 235, 0.06);
       &::after { display: none; }
     }
 
-    &:hover {
-      background: ds.$student-surface-soft;
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:first-child {
+      padding-left: 16px;
     }
   }
 
-  .tab-link--dropdown {
-    display: flex;
+  .nav-item--dropdown {
     flex-direction: column;
     align-items: stretch;
-    pointer-events: auto;
+    height: auto;
 
-    > .dropdown-label {
+    > .nav-item__label {
       display: flex;
       align-items: center;
-      gap: 8px;
       height: 44px;
-      padding: 0 14px;
-      border-radius: 8px;
-      font-size: 14px;
-      color: ds.$student-text-muted;
-      cursor: pointer;
+      padding: 0 16px;
       width: 100%;
-      background: none;
-      border: none;
-      text-align: left;
-      font-family: inherit;
-      transition: background .15s;
+      color: ds.$student-text;
+      cursor: pointer;
 
-      &:hover {
-        background: ds.$student-surface-soft;
-      }
-
-      .tab-link__caret {
-        font-size: 10px;
+      .nav-item__caret {
         margin-left: auto;
-        opacity: .6;
       }
     }
 
-    .employment-menu {
+    .nav-menu {
       display: block;
-      padding: 2px 0 4px 24px;
+      padding: 4px 12px 8px 36px;
+      box-shadow: none;
+      border-radius: 0;
+      background: ds.$student-surface-soft;
+      min-width: 0;
 
       li[nz-menu-item] {
         height: 38px;
-        padding: 0 12px !important;
-        font-size: 13px;
+        font-size: 14px;
         border-radius: 6px;
-        display: flex;
-        align-items: center;
-
-        ::ng-deep .ant-menu-title-content {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          min-width: 0;
-        }
       }
     }
   }
@@ -712,12 +684,8 @@
   }
 }
 
-@media (max-width: 600px) {
-  .brand {
-    gap: 8px;
-  }
-
-  .brand__title {
-    font-size: 16px;
+@media (max-width: 480px) {
+  .header-login span:not([nz-icon]) {
+    display: none;
   }
 }

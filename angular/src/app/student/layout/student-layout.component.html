@@ -1,8 +1,9 @@
 <div class="student-layout">
-  <!-- 第一部分：品牌栏 + 登录信息 -->
-  <header class="brand-bar">
-    <div class="brand-bar__inner">
-      <a routerLink="/student" class="brand" title="回到首页">
+  <!-- 统一头部：Logo + Tab 导航 + 账户操作（MOOC 风格：单行 + 文本 tab） -->
+  <header class="app-header" [class.open]="menuOpen()">
+    <div class="app-header__inner">
+      <!-- 品牌区（Logo + 名称） -->
+      <a routerLink="/student" class="brand" title="返回学生端首页">
         <span class="brand__logo" aria-hidden="true">
           <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -20,65 +21,31 @@
         </span>
         <span class="brand__text">
           <span class="brand__title">易课通</span>
-          <span class="brand__divider" aria-hidden="true">|</span>
-          <span class="brand__subtitle">在线教学资源库</span>
+          <span class="brand__divider" aria-hidden="true">·</span>
+          <span class="brand__subtitle">学生中心</span>
         </span>
       </a>
 
-      <a routerLink="/" class="brand-bar__back" title="返回主站首页">
-        <span nz-icon nzType="home" nzTheme="outline"></span>
-        <span class="brand-bar__back-text">返回首页</span>
-      </a>
-
-      <div class="brand-bar__actions">
-        @if (isLoggedIn) {
-          <span class="user-chip" title="{{ userName() }}">
-            <span class="user-chip__avatar" [style.background]="avatarGradient()">
-              {{ userInitial }}
-            </span>
-            <span class="user-chip__name">{{ userName() }}</span>
-          </span>
-          <button type="button" class="logout-btn" (click)="logout()" title="退出登录">
-            <span nz-icon nzType="logout" nzTheme="outline"></span>
-            <span>退出登录</span>
-          </button>
-        } @else {
-          <button class="brand-bar__login" (click)="login()">
-            <span nz-icon nzType="user" nzTheme="outline"></span>
-            <span>登录</span>
-          </button>
-        }
-      </div>
-
-      <!-- 移动端菜单按钮 -->
-      <button class="menu-toggle" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-label="导航菜单">
-        <span nz-icon [nzType]="menuOpen() ? 'close' : 'menu-fold'" nzTheme="outline"></span>
-      </button>
-    </div>
-  </header>
-
-  <!-- 第二部分：Tab 导航（移动端可折叠；桌面溢出时折叠进「更多」） -->
-  <nav class="tab-bar" [class.open]="menuOpen()" aria-label="主导航">
-    <div class="tab-bar__inner">
-      <div class="tab-bar__tabs" #tabTabs>
+      <!-- Tab 导航（文本 tab + 可展开子菜单，溢出折入「更多」） -->
+      <nav class="app-nav" #tabTabs aria-label="主导航">
         @for (item of visibleItems(); track item.key) {
           @if (item.children && item.children.length) {
             <div
-              class="tab-link tab-link--dropdown"
+              class="nav-item nav-item--dropdown"
               [attr.data-nav-key]="item.key"
               nz-dropdown
               [nzDropdownMenu]="itemMenu"
               nzTrigger="click"
+              nzPlacement="bottomLeft"
               [class.active]="isActive(item)"
             >
-              <span class="dropdown-label">
-                <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
+              <span class="nav-item__label">
                 <span>{{ item.label }}</span>
-                <span nz-icon nzType="down" class="tab-link__caret"></span>
+                <span nz-icon nzType="down" class="nav-item__caret"></span>
               </span>
             </div>
             <nz-dropdown-menu #itemMenu="nzDropdownMenu">
-              <ul nz-menu class="employment-menu">
+              <ul nz-menu class="nav-menu">
                 @for (child of item.children; track child.key) {
                   <li nz-menu-item [routerLink]="child.route">
                     <span nz-icon [nzType]="child.icon" nzTheme="outline"></span>
@@ -89,12 +56,11 @@
             </nz-dropdown-menu>
           } @else {
             <a
-              class="tab-link"
+              class="nav-item"
               [attr.data-nav-key]="item.key"
               [routerLink]="item.route"
               routerLinkActive="active"
             >
-              <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
               <span>{{ item.label }}</span>
             </a>
           }
@@ -102,25 +68,24 @@
 
         @if (overflowItems().length) {
           <div
-            class="tab-link tab-link--more"
+            class="nav-item nav-item--more"
             data-nav-more
             nz-dropdown
             [nzDropdownMenu]="moreMenu"
             nzTrigger="click"
+            nzPlacement="bottomLeft"
             [class.active]="moreActive()"
           >
-            <span class="dropdown-label">
-              <span nz-icon nzType="appstore" nzTheme="outline"></span>
+            <span class="nav-item__label">
               <span>更多</span>
-              <span nz-icon nzType="down" class="tab-link__caret"></span>
+              <span nz-icon nzType="down" class="nav-item__caret"></span>
             </span>
           </div>
           <nz-dropdown-menu #moreMenu="nzDropdownMenu">
-            <ul nz-menu class="more-menu">
+            <ul nz-menu class="nav-menu">
               @for (item of overflowItems(); track item.key) {
                 @if (item.children && item.children.length) {
-                  <li nz-menu-item-group>
-                    <span nz-menu-item-group-title>{{ item.label }}</span>
+                  <li nz-menu-group [nzTitle]="item.label">
                     <ul>
                       @for (child of item.children; track child.key) {
                         <li nz-menu-item [routerLink]="child.route">
@@ -140,9 +105,77 @@
             </ul>
           </nz-dropdown-menu>
         }
+      </nav>
+
+      <!-- 右侧操作区：返回主站 + 用户/登录 -->
+      <div class="app-header__actions">
+        <a routerLink="/" class="back-home" title="返回主站首页">
+          <span nz-icon nzType="home" nzTheme="outline"></span>
+          <span class="back-home__text">主站</span>
+        </a>
+
+        @if (isLoggedIn) {
+          <div
+            class="user-chip"
+            nz-dropdown
+            [nzDropdownMenu]="userMenu"
+            nzTrigger="click"
+            nzPlacement="bottomRight"
+          >
+            <span class="user-chip__avatar" [style.background]="avatarGradient()">
+              {{ userInitial }}
+            </span>
+            <span class="user-chip__name">{{ userName() }}</span>
+            <span nz-icon nzType="down" class="user-chip__caret"></span>
+          </div>
+          <nz-dropdown-menu #userMenu="nzDropdownMenu">
+            <ul nz-menu class="user-menu">
+              <li nz-menu-group [nzTitle]="userMenuTitle()">
+                <ul>
+                  <li nz-menu-item routerLink="/student/my-learning">
+                    <span nz-icon nzType="line-chart" nzTheme="outline"></span>
+                    <span>我的学习</span>
+                  </li>
+                  <li nz-menu-item routerLink="/student/favorites">
+                    <span nz-icon nzType="star" nzTheme="outline"></span>
+                    <span>我的收藏</span>
+                  </li>
+                  <li nz-menu-item routerLink="/student/my-micro-majors">
+                    <span nz-icon nzType="trophy" nzTheme="outline"></span>
+                    <span>我的微专业</span>
+                  </li>
+                </ul>
+              </li>
+              <li nz-menu-divider></li>
+              <li nz-menu-item routerLink="/student/info/help">
+                <span nz-icon nzType="question-circle" nzTheme="outline"></span>
+                <span>帮助中心</span>
+              </li>
+              <li nz-menu-item routerLink="/student/info/about">
+                <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+                <span>关于我们</span>
+              </li>
+              <li nz-menu-divider></li>
+              <li nz-menu-item (click)="logout()">
+                <span nz-icon nzType="logout" nzTheme="outline"></span>
+                <span>退出登录</span>
+              </li>
+            </ul>
+          </nz-dropdown-menu>
+        } @else {
+          <button class="header-login" (click)="login()">
+            <span nz-icon nzType="user" nzTheme="outline"></span>
+            <span>登录 / 注册</span>
+          </button>
+        }
+
+        <!-- 移动端汉堡按钮 -->
+        <button class="menu-toggle" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-label="导航菜单">
+          <span nz-icon [nzType]="menuOpen() ? 'close' : 'menu'" nzTheme="outline"></span>
+        </button>
       </div>
     </div>
-  </nav>
+  </header>
 
   <main class="main-content">
     <router-outlet></router-outlet>
