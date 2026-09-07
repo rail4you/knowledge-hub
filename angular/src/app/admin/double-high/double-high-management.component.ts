@@ -1,20 +1,16 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
-import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import {
-  CreateUpdateDoubleHighIndicatorDto,
   CreateUpdateDoubleHighProjectDto,
-  DoubleHighDataSourceType,
   DoubleHighProjectDto,
   DoubleHighProjectStatus,
   DoubleHighService,
@@ -23,7 +19,7 @@ import {
 @Component({
   selector: 'app-double-high-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, NzButtonModule, NzCardModule, NzDatePickerModule, NzIconModule, NzInputModule, NzInputNumberModule, NzModalModule, NzSelectModule, NzTableModule],
+  imports: [CommonModule, FormsModule, NzButtonModule, NzCardModule, NzDatePickerModule, NzInputModule, NzModalModule, NzSelectModule, NzTableModule],
   templateUrl: './double-high-management.component.html',
   styleUrls: ['./double-high-management.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,11 +27,9 @@ import {
 export class DoubleHighManagementComponent implements OnInit {
   private readonly doubleHighService = inject(DoubleHighService);
   private readonly message = inject(NzMessageService);
-  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly items = signal<DoubleHighProjectDto[]>([]);
   readonly statuses = DoubleHighProjectStatus;
-  readonly dataSources = DoubleHighDataSourceType;
 
   // 关键修复：原实现是普通 boolean 属性，OnPush 组件在 subscribe 回调里
   // 改写它后不会触发变更检测，导致编辑弹窗永远不渲染（DOM 里 modal 元素
@@ -44,6 +38,7 @@ export class DoubleHighManagementComponent implements OnInit {
   readonly modalVisible = signal(false);
   readonly saving = signal(false);
   editingId: string | null = null;
+  keyword = '';
   form: CreateUpdateDoubleHighProjectDto = this.createEmptyForm();
   // nz-date-picker 绑定的本地 Date 对象，保存时再转 ISO 字符串
   startDate: Date | null = null;
@@ -61,29 +56,22 @@ export class DoubleHighManagementComponent implements OnInit {
       status: DoubleHighProjectStatus.Draft,
       startTime: undefined,
       endTime: undefined,
-      indicators: [this.createEmptyIndicator(1)],
-    };
-  }
-
-  createEmptyIndicator(sortOrder: number): CreateUpdateDoubleHighIndicatorDto {
-    return {
-      categoryName: '',
-      indicatorCode: '',
-      name: '',
-      description: '',
-      unit: '',
-      dataSourceType: DoubleHighDataSourceType.Manual,
-      targetValue: undefined,
-      weight: 1,
-      sortOrder,
+      // 指标在项目详情页单独管理，这里新建时为空
+      indicators: [],
     };
   }
 
   reload(): void {
     this.doubleHighService.getList({
+      filter: this.keyword?.trim() || undefined,
       skipCount: 0,
       maxResultCount: 100,
     }).subscribe(result => this.items.set(result.items || []));
+  }
+
+  resetSearch(): void {
+    this.keyword = '';
+    this.reload();
   }
 
   openCreate(): void {
@@ -104,13 +92,9 @@ export class DoubleHighManagementComponent implements OnInit {
         status: detail.status,
         startTime: detail.startTime,
         endTime: detail.endTime,
+        // 编辑时原样带回已有指标（本页不展示编辑），避免后端 ReplaceIndicators 把指标清空
         indicators: detail.indicators.map(x => ({
           parentId: x.parentId,
-          // 关键修复：原实现 categoryName / indicatorCode / name 没有 `|| ''` 兜底，
-          // 一旦后端返回 null（例如手动构造的数据 / 旧版数据 / 测试桩），前端会把 null
-          // 原样发回；后端 ReplaceIndicatorsAsync 中的 .Trim() 会抛 NullReferenceException，
-          // 直接 500，前端只看到笼统的"保存失败"。
-          // 改为与 description / unit 同样的兜底，把字符串字段都规整成 '' 再发出去。
           categoryName: x.categoryName || '',
           indicatorCode: x.indicatorCode || '',
           name: x.name || '',
@@ -131,21 +115,8 @@ export class DoubleHighManagementComponent implements OnInit {
     });
   }
 
-  addIndicator(): void {
-    // OnPush 下直接 push 不会新建引用，手动创建新数组并 markForCheck
-    this.form.indicators = [...this.form.indicators, this.createEmptyIndicator(this.form.indicators.length + 1)];
-    this.cdr.markForCheck();
-  }
-
-  removeIndicator(index: number): void {
-    this.form.indicators = this.form.indicators.filter((_, i) => i !== index);
-    this.form.indicators.forEach((item, idx) => item.sortOrder = idx + 1);
-    this.cdr.markForCheck();
-  }
-
   save(): void {
-    // ---- 前端归一化与校验：修复“新增指标无法保存” ----
-    // 1) title / batchCode 必填
+    // 本页只维护项目基本信息，指标在项目详情页单独管理
     if (!this.form.title?.trim()) {
       this.message.warning('请填写项目名称');
       return;
@@ -154,33 +125,7 @@ export class DoubleHighManagementComponent implements OnInit {
       this.message.warning('请填写批次编码');
       return;
     }
-    if (this.form.indicators.length === 0) {
-      this.message.warning('至少需要配置一个指标');
-      return;
-    }
-    for (let i = 0; i < this.form.indicators.length; i++) {
-      const r = this.form.indicators[i] as any;
-      // 关键：type="number" 的 <input> 在空值时会把 model 设为 ""，直接发给后端会报
-      // "could not be converted to System.Nullable`1[System.Decimal]"。这里把空串统一归为 undefined。
-      if (r.targetValue === '' || r.targetValue === null) r.targetValue = undefined;
-      if (typeof r.targetValue === 'string') {
-        const n = Number(r.targetValue);
-        r.targetValue = isNaN(n) ? undefined : n;
-      }
-      if (r.weight === '' || r.weight == null) r.weight = 1;
-      if (typeof r.weight === 'string') {
-        const n = Number(r.weight);
-        r.weight = isNaN(n) ? 1 : Math.round(n);
-      }
-      const cat = (r.categoryName ?? '').trim();
-      const code = (r.indicatorCode ?? '').trim();
-      const name = (r.name ?? '').trim();
-      if (!cat || !code || !name) {
-        this.message.warning(`指标 #${i + 1} 的分类、编码、名称均为必填`);
-        return;
-      }
-    }
-    // 2) 编码重复前端预检
+    // 2) 编码重复前端预检（编辑带回的已有指标）
     const codes = this.form.indicators.map(x => (x.indicatorCode ?? '').trim());
     if (new Set(codes).size !== codes.length) {
       this.message.warning('存在重复的指标编码，请检查后重试');
@@ -262,19 +207,5 @@ export class DoubleHighManagementComponent implements OnInit {
       [DoubleHighProjectStatus.Closed]: '已关闭',
     };
     return labels[status] || '未知';
-  }
-
-  getDataSourceLabel(type: DoubleHighDataSourceType): string {
-    const labels: Record<number, string> = {
-      [DoubleHighDataSourceType.Manual]: '手工填报',
-      [DoubleHighDataSourceType.ResourceCount]: '资源数量',
-      [DoubleHighDataSourceType.CourseCount]: '课程数量',
-      [DoubleHighDataSourceType.MicroMajorCount]: '微专业数量',
-      [DoubleHighDataSourceType.PracticumProjectCount]: '实训项目数量',
-      [DoubleHighDataSourceType.NewsArticleCount]: '资讯数量',
-      [DoubleHighDataSourceType.MicroMajorEnrollmentCount]: '微专业报名量',
-      [DoubleHighDataSourceType.PracticumEnrollmentCount]: '实训参与量',
-    };
-    return labels[type] || '未知';
   }
 }

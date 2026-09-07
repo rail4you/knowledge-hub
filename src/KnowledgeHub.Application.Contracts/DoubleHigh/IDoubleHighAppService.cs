@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using KnowledgeHub.DoubleHigh.Dtos;
+using KnowledgeHub.DoubleHigh.Enums;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Content;
@@ -16,6 +17,7 @@ public interface IDoubleHighAppService : IApplicationService
     Task<DoubleHighProjectDto> UpdateAsync(Guid id, CreateUpdateDoubleHighProjectDto input);
     Task DeleteAsync(Guid id);
     Task<DoubleHighDashboardDto> CollectProjectAsync(Guid projectId);
+    Task<decimal> GetDataSourcePreviewAsync(DoubleHighDataSourceType dataSourceType);
     Task<DoubleHighIndicatorDto> AddIndicatorAsync(Guid projectId, CreateUpdateDoubleHighIndicatorDto input);
     Task<DoubleHighIndicatorDto> UpdateIndicatorAsync(Guid id, CreateUpdateDoubleHighIndicatorDto input);
     Task DeleteIndicatorAsync(Guid id);

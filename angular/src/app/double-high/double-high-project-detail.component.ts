@@ -30,6 +30,7 @@ import {
   DoubleHighProjectStatus,
   DoubleHighReportDto,
   DoubleHighService,
+  DoubleHighValueSourceType,
 } from './double-high.service';
 
 @Component({
@@ -78,6 +79,8 @@ export class DoubleHighProjectDetailComponent implements OnInit {
   indicatorForm: CreateUpdateDoubleHighIndicatorDto = this.createEmptyIndicatorForm();
   latestValueDraft: number | null = null;
   latestNoteDraft = '';
+  readonly dataSourcePreview = signal<number | null>(null);
+  readonly previewLoading = signal(false);
 
   evidenceVisible = false;
   editingEvidenceId: string | null = null;
@@ -143,7 +146,31 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     this.indicatorForm = this.createEmptyIndicatorForm();
     this.latestValueDraft = null;
     this.latestNoteDraft = '';
+    this.dataSourcePreview.set(null);
     this.indicatorVisible = true;
+  }
+
+  onDataSourceChange(autoFill = true): void {
+    // 手工填报没有可统计值；其余来源实时统计当前租户数据并自动填入最新值
+    if (this.indicatorForm.dataSourceType === DoubleHighDataSourceType.Manual) {
+      this.dataSourcePreview.set(null);
+      return;
+    }
+    this.previewLoading.set(true);
+    this.doubleHighService.getDataSourcePreview(this.indicatorForm.dataSourceType).subscribe({
+      next: value => {
+        this.dataSourcePreview.set(value);
+        if (autoFill) {
+          this.latestValueDraft = value;
+        }
+        this.previewLoading.set(false);
+      },
+      error: () => {
+        this.dataSourcePreview.set(null);
+        this.previewLoading.set(false);
+        this.message.warning('当前数据来源统计值获取失败，可手工填写最新值');
+      },
+    });
   }
 
   openEditIndicator(item: DoubleHighIndicatorDto): void {
@@ -163,6 +190,12 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     this.latestValueDraft = item.latestValue?.value ?? null;
     this.latestNoteDraft = item.latestValue?.note || '';
     this.indicatorVisible = true;
+    // 编辑自动采集类指标时只展示当前统计值作参考，不覆盖已有的最新值
+    if (item.dataSourceType !== DoubleHighDataSourceType.Manual) {
+      this.onDataSourceChange(false);
+    } else {
+      this.dataSourcePreview.set(null);
+    }
   }
 
   saveIndicator(): void {
@@ -183,12 +216,8 @@ export class DoubleHighProjectDetailComponent implements OnInit {
           this.load(project.id);
         };
 
-        // 编辑时若填写了最新值，则一并手工填报（自动采集指标也允许手工覆盖，作为最新值）
-        if (
-          this.editingIndicatorId &&
-          this.latestValueDraft !== null &&
-          this.latestValueDraft !== undefined
-        ) {
+        // 填写了最新值则一并保存（新建/编辑通用；自动采集指标允许手工覆盖作为最新值）
+        if (this.latestValueDraft !== null && this.latestValueDraft !== undefined) {
           this.doubleHighService.saveManualValue({
             indicatorId: saved.id,
             value: this.latestValueDraft,
@@ -409,6 +438,37 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     return labels[status] || '未知';
   }
 
+  getStatusClass(status: DoubleHighProjectStatus): string {
+    const classes: Record<number, string> = {
+      [DoubleHighProjectStatus.Draft]: 'draft',
+      [DoubleHighProjectStatus.Active]: 'running',
+      [DoubleHighProjectStatus.Closed]: 'ended',
+    };
+    return classes[status] || 'draft';
+  }
+
+  getIndicatorProgress(item: DoubleHighIndicatorDto): number | null {
+    // 目标值与最新值齐备时展示完成度
+    const target = item.targetValue;
+    const latest = item.latestValue?.value;
+    if (target === null || target === undefined || target <= 0 || latest === null || latest === undefined) {
+      return null;
+    }
+    return Math.min(100, Math.round((latest / target) * 100));
+  }
+
+  getValueSourceLabel(sourceType?: DoubleHighValueSourceType): string {
+    return sourceType === DoubleHighValueSourceType.Automatic ? '自动采集' : '手工填报';
+  }
+
+  getEvidenceIcon(type: DoubleHighEvidenceType): string {
+    switch (type) {
+      case DoubleHighEvidenceType.AttachmentLink: return 'paper-clip';
+      case DoubleHighEvidenceType.ExternalLink: return 'global';
+      default: return 'link';
+    }
+  }
+
   formatLocalDate(value?: string): string {
     if (!value) {
       return '';
@@ -451,6 +511,21 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     return found?.name || '-';
   }
 
+  getEvidenceIndicatorName(item: DoubleHighEvidenceDto): string {
+    // 后端 IndicatorName 为空时（指标被删等孤儿数据）用项目内指标表兜底，仍找不到则明示已删除
+    if (item.indicatorName) {
+      return item.indicatorName;
+    }
+    const found = this.project()?.indicators.find(x => x.id === item.indicatorId);
+    return found?.name ?? '指标已删除';
+  }
+
+  isEvidenceIndicatorMissing(item: DoubleHighEvidenceDto): boolean {
+    if (item.indicatorName) {
+      return false;
+    }
+    return !this.project()?.indicators.some(x => x.id === item.indicatorId);
+  }
   private showApiError(err: any, fallback: string): void {
     const detail =
       err?.error?.error?.message ||

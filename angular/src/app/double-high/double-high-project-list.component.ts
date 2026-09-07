@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -12,7 +13,7 @@ import { DoubleHighProjectDto, DoubleHighProjectStatus, DoubleHighService } from
 @Component({
   selector: 'app-double-high-project-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, NzButtonModule, NzCardModule, NzInputModule, NzProgressModule, NzTagModule],
+  imports: [CommonModule, FormsModule, RouterLink, NzButtonModule, NzCardModule, NzIconModule, NzInputModule, NzProgressModule, NzTagModule],
   templateUrl: './double-high-project-list.component.html',
   styleUrls: ['./double-high-project-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,5 +44,14 @@ export class DoubleHighProjectListComponent implements OnInit {
       [DoubleHighProjectStatus.Closed]: '已关闭',
     };
     return labels[status] || '未知';
+  }
+
+  getStatusClass(status: DoubleHighProjectStatus): string {
+    const classes: Record<number, string> = {
+      [DoubleHighProjectStatus.Draft]: 'draft',
+      [DoubleHighProjectStatus.Active]: 'running',
+      [DoubleHighProjectStatus.Closed]: 'ended',
+    };
+    return classes[status] || 'draft';
   }
 }

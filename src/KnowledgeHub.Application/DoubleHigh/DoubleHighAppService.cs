@@ -291,6 +291,13 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         await _indicatorRepository.DeleteAsync(indicator, autoSave: true);
     }
 
+    [Authorize(KnowledgeHubPermissions.DoubleHigh.ManageIndicator)]
+    public Task<decimal> GetDataSourcePreviewAsync(DoubleHighDataSourceType dataSourceType)
+    {
+        // 表单里切换数据来源时实时预览当前租户的可统计值，前端自动填入最新值
+        return CalculateIndicatorValueAsync(CurrentTenant.Id, dataSourceType);
+    }
+
     [Authorize(KnowledgeHubPermissions.DoubleHigh.CollectData)]
     public async Task<DoubleHighDashboardDto> CollectProjectAsync(Guid projectId)
     {
@@ -383,6 +390,12 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
 
         var entity = await _evidenceRepository.GetAsync(id);
 
+        var indicator = await _indicatorRepository.GetAsync(input.IndicatorId);
+        if (indicator.ProjectId != entity.ProjectId)
+        {
+            throw new UserFriendlyException("佐证材料所属项目和指标不匹配。");
+        }
+
         if (input.EvidenceType == DoubleHighEvidenceType.ResourceLink && !input.ResourceId.HasValue)
         {
             throw new UserFriendlyException("资源型佐证材料必须绑定资源。");
@@ -395,6 +408,7 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
 
         entity.Title = input.Title.Trim();
         entity.Description = input.Description?.Trim();
+        entity.IndicatorId = input.IndicatorId;
         entity.EvidenceType = input.EvidenceType;
         entity.ResourceId = input.ResourceId;
         entity.AttachmentUrl = input.AttachmentUrl?.Trim();
@@ -580,11 +594,6 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         {
             throw new UserFriendlyException("申报批次编码不能为空。");
         }
-
-        if (input.Indicators.Count == 0)
-        {
-            throw new UserFriendlyException("至少需要配置一个指标项。");
-        }
     }
 
     private async Task ReplaceIndicatorsAsync(Guid projectId, List<CreateUpdateDoubleHighIndicatorDto> inputs)
@@ -609,6 +618,11 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         if (existingIds.Count > 0)
         {
             await dbContext.Set<DoubleHighIndicatorValue>()
+                .Where(x => existingIds.Contains(x.IndicatorId))
+                .ExecuteDeleteAsync();
+            // 同步清理挂在旧指标下的佐证材料，否则佐证会指向已删除的指标，
+            // 详情页关联指标列显示为空，导出报表指标名也为空。
+            await dbContext.Set<DoubleHighEvidence>()
                 .Where(x => existingIds.Contains(x.IndicatorId))
                 .ExecuteDeleteAsync();
         }

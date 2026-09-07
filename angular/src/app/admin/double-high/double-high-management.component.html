@@ -7,9 +7,9 @@
   <div class="search-bar">
     <div class="search-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input type="text" placeholder="搜索项目名称" disabled />
+      <input type="text" placeholder="搜索项目名称" [(ngModel)]="keyword" (keyup.enter)="reload()" />
       <button class="search-btn" type="button" (click)="reload()">搜索</button>
-      <button class="reset-btn" type="button" (click)="reload()">重置</button>
+      <button class="reset-btn" type="button" (click)="resetSearch()">重置</button>
     </div>
     <button class="create-btn" type="button" (click)="openCreate()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
@@ -19,7 +19,7 @@
 
   <div class="eval-card">
     <div class="table-card">
-      <nz-table [nzData]="items()" [nzFrontPagination]="false" [nzShowPagination]="false" nzSize="middle" class="data-table-host">
+      <nz-table [nzData]="items()" [nzFrontPagination]="false" [nzShowPagination]="false" nzSize="middle" class="data-table-host" [nzNoResult]="emptyTpl">
         <thead>
           <tr>
             <th>项目</th>
@@ -58,11 +58,12 @@
           }
         </tbody>
       </nz-table>
-
-      <div *ngIf="items().length === 0" class="empty-tip">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <span>暂无评估项目，点击右上角新建</span>
-      </div>
+      <ng-template #emptyTpl>
+        <div class="empty-tip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <span>暂无评估项目，点击右上角新建</span>
+        </div>
+      </ng-template>
 
       <div class="pagination">
         <div class="page-info">共 {{ items().length }} 条</div>
@@ -79,14 +80,14 @@
   <nz-modal
     [nzVisible]="modalVisible()"
     [nzTitle]="editingId ? '编辑双高评估项目' : '新建双高评估项目'"
-    [nzWidth]="860"
+    [nzWidth]="640"
     [nzFooter]="null"
     (nzOnCancel)="modalVisible.set(false)"
     nzWrapClassName="eval-modal-wrap"
   >
     <ng-container *nzModalContent>
       <div class="dh-modal">
-        <!-- 顶部项目信息：两列网格，与 employment-job 的 job-form 保持一致 -->
+        <!-- 项目基本信息；指标在项目详情页单独管理 -->
         <div class="dh-form">
           <label class="field">
             <span class="label">项目名称 <em>*</em></span>
@@ -126,84 +127,6 @@
             <span class="label">&nbsp;</span>
             <span class="hint">时间可选，留空表示不限期</span>
           </div>
-        </div>
-
-        <div class="sub-section">
-          <div class="sub-toolbar">
-            <h3>指标配置 <span class="count-badge">{{ form.indicators.length }} 项</span></h3>
-            <button nz-button nzType="primary" nzShape="round" (click)="addIndicator()">
-              <span nz-icon nzType="plus"></span> 新增指标
-            </button>
-          </div>
-
-          @if (form.indicators.length === 0) {
-            <div class="indicator-empty">
-              <span nz-icon nzType="inbox"></span>
-              <span>暂无指标，点击“新增指标”开始配置</span>
-            </div>
-          }
-
-          @for (indicator of form.indicators; track $index) {
-            <div class="indicator-card">
-              <div class="indicator-head">
-                <span class="indicator-index"><span nz-icon nzType="number"></span> 指标 #{{ $index + 1 }}</span>
-                <button nz-button nzType="text" nzDanger (click)="removeIndicator($index)">
-                  <span nz-icon nzType="delete"></span> 删除
-                </button>
-              </div>
-
-              <div class="indicator-grid">
-                <label class="field">
-                  <span class="label">分类 <em>*</em></span>
-                  <input nz-input [(ngModel)]="indicator.categoryName" placeholder="如 产教融合" />
-                </label>
-
-                <label class="field">
-                  <span class="label">指标编码 <em>*</em></span>
-                  <input nz-input [(ngModel)]="indicator.indicatorCode" placeholder="如 TJ-001，同一项目内唯一" />
-                </label>
-
-                <label class="field full">
-                  <span class="label">指标名称 <em>*</em></span>
-                  <input nz-input [(ngModel)]="indicator.name" placeholder="输入指标名称" />
-                </label>
-
-                <label class="field full">
-                  <span class="label">指标说明</span>
-                  <textarea nz-input rows="2" [(ngModel)]="indicator.description" placeholder="补充说明、口径或备注" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
-                </label>
-
-                <label class="field">
-                  <span class="label">单位</span>
-                  <input nz-input [(ngModel)]="indicator.unit" placeholder="如 项 / 门 / % / 人" />
-                </label>
-
-                <div class="field">
-                  <span class="label">数据来源</span>
-                  <nz-select [(ngModel)]="indicator.dataSourceType" style="width:100%">
-                    <nz-option [nzValue]="dataSources.Manual" nzLabel="手工填报"></nz-option>
-                    <nz-option [nzValue]="dataSources.ResourceCount" nzLabel="资源数量"></nz-option>
-                    <nz-option [nzValue]="dataSources.CourseCount" nzLabel="课程数量"></nz-option>
-                    <nz-option [nzValue]="dataSources.MicroMajorCount" nzLabel="微专业数量"></nz-option>
-                    <nz-option [nzValue]="dataSources.PracticumProjectCount" nzLabel="实训项目数量"></nz-option>
-                    <nz-option [nzValue]="dataSources.NewsArticleCount" nzLabel="资讯数量"></nz-option>
-                    <nz-option [nzValue]="dataSources.MicroMajorEnrollmentCount" nzLabel="微专业报名量"></nz-option>
-                    <nz-option [nzValue]="dataSources.PracticumEnrollmentCount" nzLabel="实训参与量"></nz-option>
-                  </nz-select>
-                </div>
-
-                <label class="field">
-                  <span class="label">目标值</span>
-                  <nz-input-number [(ngModel)]="indicator.targetValue" [nzStep]="1" nzPlaceHolder="留空表示不设目标" style="width:100%"></nz-input-number>
-                </label>
-
-                <label class="field">
-                  <span class="label">权重</span>
-                  <nz-input-number [(ngModel)]="indicator.weight" [nzMin]="1" [nzMax]="10" [nzStep]="1" [nzPrecision]="0" nzPlaceHolder="1~10" style="width:100%"></nz-input-number>
-                </label>
-              </div>
-            </div>
-          }
         </div>
 
         <div class="modal-foot">

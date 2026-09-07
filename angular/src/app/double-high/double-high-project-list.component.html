@@ -1,76 +1,85 @@
-<div class="eval-page">
-  <div class="page-hero">
-    <h1>双高评估项目</h1>
-    <p>围绕指标管理、数据采集、佐证材料和报表导出构建专业群评估闭环。</p>
+<div class="mgmt-page">
+  <div class="mgmt-head">
+    <h2>双高评估项目</h2>
   </div>
 
-  <div class="search-bar">
-    <div class="search-box">
-      <svg class="mag" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>
-      <input type="text" [(ngModel)]="keyword" placeholder="搜索项目名称、批次编码" (keyup.enter)="reload()" />
+  <div class="table-card">
+    <div class="table-toolbar">
+      <div class="toolbar-left">
+        <nz-input-group [nzSuffix]="searchSuffix" class="toolbar-search">
+          <input
+            nz-input
+            placeholder="搜索项目名称 / 批次编码"
+            [(ngModel)]="keyword"
+            (keyup.enter)="reload()"
+          />
+        </nz-input-group>
+        <ng-template #searchSuffix>
+          <span nz-icon nzType="search" class="search-icon" (click)="reload()"></span>
+        </ng-template>
+        <button nz-button nzType="primary" (click)="reload()">搜索</button>
+      </div>
+      <div class="toolbar-right">
+        <span class="toolbar-total">共 {{ items().length }} 条</span>
+      </div>
     </div>
-    <button class="btn-primary" type="button" (click)="reload()">
-      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z"/></svg>
-      查询
-    </button>
+    <div class="table-scroll">
+      <table class="data-table fixed">
+        <colgroup>
+          <col style="width:30%" />
+          <col style="width:11%" />
+          <col style="width:9%" />
+          <col style="width:9%" />
+          <col style="width:9%" />
+          <col style="width:17%" />
+          <col style="width:15%" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>项目</th>
+            <th class="center">状态</th>
+            <th class="center">指标数</th>
+            <th class="center">已采集</th>
+            <th class="center">佐证</th>
+            <th>完成率</th>
+            <th class="center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (items().length === 0) {
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">
+                  <span nz-icon nzType="inbox" nzTheme="outline" style="font-size:36px;color:#d9d9d9"></span>
+                  <p>暂无评估项目</p>
+                </div>
+              </td>
+            </tr>
+          } @else {
+            @for (item of items(); track item.id) {
+              <tr>
+                <td>
+                  <div class="cell-main">{{ item.title }}</div>
+                  <div class="cell-sub">{{ item.batchCode }}{{ item.description ? ' · ' + item.description : '' }}</div>
+                </td>
+                <td class="center"><span class="st-tag" [ngClass]="getStatusClass(item.status)">{{ getStatusLabel(item.status) }}</span></td>
+                <td class="center">{{ item.indicatorCount }}</td>
+                <td class="center">{{ item.collectedIndicatorCount }}</td>
+                <td class="center">{{ item.evidenceCount }}</td>
+                <td>
+                  <div class="progress-cell">
+                    <nz-progress [nzPercent]="item.completionRate" nzSize="small" [nzShowInfo]="false" [nzStrokeColor]="item.completionRate >= 100 ? '#52c41a' : '#1890ff'"></nz-progress>
+                    <span class="progress-num">{{ item.completionRate }}%</span>
+                  </div>
+                </td>
+                <td class="center">
+                  <a class="view-link" [routerLink]="['/assessment/double-high/project', item.id]">查看详情</a>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
   </div>
-
-  @if (items().length === 0) {
-    <div class="empty-state">
-      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>
-      <p>暂无评估项目</p>
-    </div>
-  } @else {
-    <div class="eval-grid">
-      @for (item of items(); track item.id) {
-        <div class="eval-card">
-          <div class="eval-card-head">
-            <div class="eval-card-title">{{ item.title }}</div>
-            <span class="eval-status"
-                  [class.running]="item.status === statuses.Active"
-                  [class.ended]="item.status === statuses.Closed"
-                  [class.pending]="item.status === statuses.Draft">
-              {{ getStatusLabel(item.status) }}
-            </span>
-          </div>
-          <div class="eval-code">批次编码：{{ item.batchCode }}</div>
-          <div class="eval-desc">{{ item.description || '暂无项目说明' }}</div>
-          <div class="eval-stats">
-            <div class="eval-stat">
-              <div class="val">{{ item.indicatorCount }}</div>
-              <div class="label">指标数</div>
-            </div>
-            <div class="eval-stat">
-              <div class="val">{{ item.collectedIndicatorCount }}</div>
-              <div class="label">已采集</div>
-            </div>
-            <div class="eval-stat">
-              <div class="val">{{ item.evidenceCount }}</div>
-              <div class="label">佐证材料</div>
-            </div>
-            <div class="eval-stat">
-              <div class="val">
-                <span class="progress-ring">
-                  <svg viewBox="0 0 36 36" aria-hidden="true">
-                    <circle class="ring-bg" cx="18" cy="18" r="15.9155"></circle>
-                    <circle class="ring-fg" cx="18" cy="18" r="15.9155"
-                            [attr.stroke-dasharray]="'100 100'"
-                            [attr.stroke-dashoffset]="100 - (+item.completionRate)"></circle>
-                  </svg>
-                  <span class="ring-text">{{ item.completionRate }}%</span>
-                </span>
-              </div>
-              <div class="label">完成率</div>
-            </div>
-          </div>
-          <div class="eval-card-foot">
-            <a class="btn-link" [routerLink]="['/assessment/double-high/project', item.id]">
-              查看详情
-              <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M181.66,133.66l-56,56a8,8,0,0,1-11.32-11.32L164.69,128,114.34,77.66a8,8,0,0,1,11.32-11.32l56,56A8,8,0,0,1,181.66,133.66Z"/></svg>
-            </a>
-          </div>
-        </div>
-      }
-    </div>
-  }
 </div>

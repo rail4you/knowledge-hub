@@ -223,6 +223,13 @@ export class DoubleHighService {
       url: `/api/app/double-high/collect-project/${projectId}`,
     }, { apiName: this.apiName });
 
+  getDataSourcePreview = (dataSourceType: DoubleHighDataSourceType) =>
+    this.restService.request<any, number>({
+      method: 'GET',
+      url: '/api/app/double-high/data-source-preview',
+      params: { dataSourceType },
+    }, { apiName: this.apiName });
+
   addIndicator = (projectId: string, input: CreateUpdateDoubleHighIndicatorDto) =>
     this.restService.request<any, DoubleHighIndicatorDto>({
       method: 'POST',

@@ -3,13 +3,13 @@
     <div style="display:flex;align-items:center;justify-content:center;padding:80px 0;color:var(--kh-muted);font-size:14px"><nz-spin nzSimple></nz-spin>&nbsp; 加载项目详情...</div>
   }
   @if (project(); as project) {
-    <button class="detail-back" routerLink="/assessment/double-high/projects" type="button">
-      <svg viewBox="0 0 256 256" fill="currentColor" width="15" height="15"><path d="M224,128a8,8,0,0,1-8,8H107.31l34.35,34.34a8,8,0,0,1-11.32,11.32l-48-48a8,8,0,0,1,0-11.32l48-48a8,8,0,0,1,11.32,11.32L107.31,120H216A8,8,0,0,1,224,128Z"/></svg>
-      返回项目列表
-    </button>
-
-    <div class="detail-title">{{ project.title }}</div>
-    <div class="detail-desc">{{ project.description || '暂无项目说明' }}</div>
+    <div class="detail-top">
+      <button class="detail-back" routerLink="/assessment/double-high/projects" type="button">
+        <svg viewBox="0 0 256 256" fill="currentColor" width="15" height="15"><path d="M224,128a8,8,0,0,1-8,8H107.31l34.35,34.34a8,8,0,0,1-11.32,11.32l-48-48a8,8,0,0,1,0-11.32l48-48a8,8,0,0,1,11.32,11.32L107.31,120H216A8,8,0,0,1,224,128Z"/></svg>
+        返回项目列表
+      </button>
+      <span class="detail-name">{{ project.title }}</span>
+    </div>
 
     <!-- Tab 选项卡 -->
     <div class="tabs">
@@ -25,105 +25,189 @@
     <div class="tab-content" [class.active]="activeTab() === 0">
       <div class="stat-row">
         <div class="stat-card">
-          <div class="num">{{ project.dashboard.totalIndicators }}</div>
-          <div class="lbl">指标总数</div>
+          <span class="stat-icon blue" nz-icon nzType="bars" nzTheme="outline"></span>
+          <div class="stat-body">
+            <div class="num">{{ project.dashboard.totalIndicators }}</div>
+            <div class="lbl">指标总数</div>
+          </div>
         </div>
         <div class="stat-card">
-          <div class="num accent">{{ project.dashboard.collectedIndicators }}</div>
-          <div class="lbl">已填报指标</div>
+          <span class="stat-icon cyan" nz-icon nzType="check-circle" nzTheme="outline"></span>
+          <div class="stat-body">
+            <div class="num accent">{{ project.dashboard.collectedIndicators }}</div>
+            <div class="lbl">已填报指标</div>
+          </div>
         </div>
         <div class="stat-card">
-          <div class="num good">{{ project.dashboard.completionRate }}%</div>
-          <div class="lbl">完成率</div>
+          <span class="stat-icon green" nz-icon nzType="pie-chart" nzTheme="outline"></span>
+          <div class="stat-body">
+            <div class="num good">{{ project.dashboard.completionRate }}%</div>
+            <div class="lbl">完成率</div>
+          </div>
         </div>
         <div class="stat-card">
-          <div class="num">{{ project.dashboard.evidenceCount }}</div>
-          <div class="lbl">佐证材料</div>
+          <span class="stat-icon orange" nz-icon nzType="paper-clip" nzTheme="outline"></span>
+          <div class="stat-body">
+            <div class="num">{{ project.dashboard.evidenceCount }}</div>
+            <div class="lbl">佐证材料</div>
+          </div>
         </div>
       </div>
 
-      <div class="info-table">
-        <div class="info-row">
-          <div class="info-key">批次编码</div>
-          <div class="info-val">{{ project.batchCode }}</div>
+      <div class="overview-card">
+        <h3>基本信息</h3>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-key">批次编码</span>
+            <span class="meta-val mono">{{ project.batchCode }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">状态</span>
+            <span class="meta-val"><span class="st-tag" [ngClass]="getStatusClass(project.status)">{{ getStatusLabel(project.status) }}</span></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">开始时间</span>
+            <span class="meta-val">{{ formatLocalDate(project.startTime) || '未设置' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">结束时间</span>
+            <span class="meta-val">{{ formatLocalDate(project.endTime) || '未设置' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">上次采集</span>
+            <span class="meta-val">{{ formatLocalDate(project.lastCollectedAt) || '尚未采集' }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-key">完成率</span>
+            <span class="meta-val accent">{{ project.dashboard.completionRate }}%</span>
+          </div>
         </div>
-        <div class="info-row">
-          <div class="info-key">状态</div>
-          <div class="info-val">{{ getStatusLabel(project.status) }}</div>
-        </div>
-        <div class="info-row">
-          <div class="info-key">开始时间</div>
-          <div class="info-val">{{ formatLocalDate(project.startTime) || '未设置' }}</div>
-        </div>
-        <div class="info-row">
-          <div class="info-key">结束时间</div>
-          <div class="info-val">{{ formatLocalDate(project.endTime) || '未设置' }}</div>
+        <div class="meta-progress">
+          <nz-progress [nzPercent]="project.dashboard.completionRate" nzSize="small" [nzShowInfo]="false" nzStrokeColor="#52c41a"></nz-progress>
         </div>
       </div>
     </div>
 
     <!-- Tab2：指标数据 -->
     <div class="tab-content" [class.active]="activeTab() === 1">
-      <div class="table-head">
-        <div class="count">已配置 <b>{{ project.indicators.length }}</b> 个指标</div>
-        <button nz-button nzType="primary" nzSize="small" (click)="openCreateIndicator()">
-          <span nz-icon nzType="plus" nzTheme="outline"></span> 新建指标
-        </button>
-      </div>
-      <div class="data-table-wrap">
-        <table class="data-table">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="toolbar-left">
+            <span class="toolbar-title">指标数据</span>
+            <span class="count-badge">{{ project.indicators.length }} 项</span>
+          </div>
+          <div class="toolbar-right">
+            <button class="toolbar-new-btn" (click)="openCreateIndicator()">
+              <span nz-icon nzType="plus" nzTheme="outline"></span>新建指标
+            </button>
+          </div>
+        </div>
+      <div class="table-scroll">
+        <table class="data-table fixed">
+          <colgroup>
+            <col style="width:30%" />
+            <col style="width:11%" />
+            <col style="width:10%" />
+            <col style="width:21%" />
+            <col style="width:13%" />
+            <col style="width:15%" />
+          </colgroup>
           <thead>
             <tr>
-              <th>分类</th>
-              <th>编码</th>
-              <th>名称</th>
-              <th>来源</th>
+              <th>指标</th>
+              <th>数据来源</th>
               <th class="center">目标值</th>
-              <th class="center">最新值</th>
-              <th>备注</th>
+              <th>最新值</th>
+              <th>完成度</th>
               <th class="center">操作</th>
             </tr>
           </thead>
           <tbody>
-            @for (item of project.indicators; track item.id) {
+            @if (project.indicators.length === 0) {
               <tr>
-                <td>{{ item.categoryName }}</td>
-                <td>{{ item.indicatorCode }}</td>
-                <td>
-                  <div class="indicator-name">{{ item.name }}</div>
-                  <small class="indicator-desc">{{ item.description || '-' }}</small>
-                </td>
-                <td><nz-tag>{{ getSourceLabel(item.dataSourceType) }}</nz-tag></td>
-                <td class="center">{{ item.targetValue ?? '-' }} {{ item.unit || '' }}</td>
-                <td class="center"><strong>{{ item.latestValue?.value ?? '-' }} {{ item.unit || '' }}</strong></td>
-                <td><span class="muted">{{ item.latestValue?.note || '-' }}</span></td>
-                <td class="center">
-                  <a nz-button nzType="link" nzSize="small" (click)="openEditIndicator(item)">编辑</a>
-                  <a nz-button nzType="link" nzSize="small" nzDanger (click)="deleteIndicator(item.id)">删除</a>
+                <td colspan="6">
+                  <div class="empty-state">
+                    <span nz-icon nzType="inbox" nzTheme="outline" style="font-size:36px;color:#d9d9d9"></span>
+                    <p>暂无指标，点击右上方"新建指标"开始配置</p>
+                  </div>
                 </td>
               </tr>
+            } @else {
+              @for (item of project.indicators; track item.id) {
+                <tr>
+                  <td>
+                    <div class="cell-main">{{ item.name }}</div>
+                    <div class="cell-sub">{{ item.description || '暂无说明' }}</div>
+                  </td>
+                  <td><nz-tag>{{ getSourceLabel(item.dataSourceType) }}</nz-tag></td>
+                  <td class="center">
+                    <span class="val">{{ item.targetValue ?? '-' }}</span>
+                    @if (item.targetValue !== null && item.targetValue !== undefined) {
+                      <span class="unit">{{ item.unit || '' }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (item.latestValue) {
+                      <div class="latest-val">{{ item.latestValue.value }} <span class="unit">{{ item.unit || '' }}</span></div>
+                      <div class="cell-sub">{{ item.latestValue.note || getValueSourceLabel(item.latestValue.sourceType) }} · {{ formatLocalDate(item.latestValue.collectedAt) }}</div>
+                    } @else {
+                      <span class="muted">尚未填报</span>
+                    }
+                  </td>
+                  <td>
+                    @if (getIndicatorProgress(item) === null) {
+                      <span class="muted">-</span>
+                    } @else {
+                      <div class="progress-cell">
+                        <nz-progress [nzPercent]="getIndicatorProgress(item)!" nzSize="small" [nzShowInfo]="false" [nzStrokeColor]="getIndicatorProgress(item)! >= 100 ? '#52c41a' : '#1890ff'"></nz-progress>
+                        <span class="progress-num">{{ getIndicatorProgress(item) }}%</span>
+                      </div>
+                    }
+                  </td>
+                  <td class="center">
+                    <span class="op-links">
+                      <a class="edit" (click)="openEditIndicator(item)">编辑</a><span class="sep">|</span>
+                      <a class="del" (click)="deleteIndicator(item.id)">删除</a>
+                    </span>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>
+        </div>
       </div>
     </div>
 
     <!-- Tab3：佐证材料 -->
     <div class="tab-content" [class.active]="activeTab() === 2">
-      <div class="table-head">
-        <div class="count">共 <b>{{ project.evidences.length }}</b> 条佐证材料</div>
-        <button nz-button nzType="primary" nzSize="small" (click)="openEvidence()">
-          <span nz-icon nzType="plus" nzTheme="outline"></span> 新建佐证材料
-        </button>
-      </div>
-      <div class="data-table-wrap">
-        <table class="data-table">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="toolbar-left">
+            <span class="toolbar-title">佐证材料</span>
+            <span class="count-badge">{{ project.evidences.length }} 条</span>
+          </div>
+          <div class="toolbar-right">
+            <button class="toolbar-new-btn" (click)="openEvidence()">
+              <span nz-icon nzType="plus" nzTheme="outline"></span>新建佐证材料
+            </button>
+          </div>
+        </div>
+      <div class="table-scroll">
+        <table class="data-table fixed">
+          <colgroup>
+            <col style="width:26%" />
+            <col style="width:18%" />
+            <col style="width:12%" />
+            <col style="width:29%" />
+            <col style="width:15%" />
+          </colgroup>
           <thead>
             <tr>
-              <th>指标</th>
-              <th>标题</th>
+              <th>佐证材料</th>
+              <th>关联指标</th>
               <th>类型</th>
-              <th>链接/资源</th>
+              <th>内容</th>
               <th class="center">操作</th>
             </tr>
           </thead>
@@ -140,75 +224,98 @@
             } @else {
               @for (item of project.evidences; track item.id) {
                 <tr>
-                  <td>{{ item.indicatorName }}</td>
                   <td>
-                    <div class="evidence-title">{{ item.title }}</div>
-                    @if (item.description) { <small>{{ item.description }}</small> }
+                    <div class="cell-main">{{ item.title }}</div>
+                    @if (item.description) { <div class="cell-sub">{{ item.description }}</div> }
                   </td>
-                  <td><nz-tag>{{ getEvidenceTypeLabel(item.evidenceType) }}</nz-tag></td>
+                  <td><span class="ref-chip" [class.missing]="isEvidenceIndicatorMissing(item)">{{ getEvidenceIndicatorName(item) }}</span></td>
                   <td>
-                    @if (item.externalLink) {
-                      <a [href]="item.externalLink" target="_blank" rel="noreferrer">{{ item.externalLink }}</a>
-                    } @else if (item.attachmentUrl) {
-                      <a [href]="item.attachmentUrl" target="_blank" rel="noreferrer">{{ item.attachmentUrl }}</a>
-                    } @else {
-                      <span>{{ item.resourceName || getResourceName(item.resourceId) }}</span>
-                    }
+                    <span class="type-tag">
+                      <span nz-icon [nzType]="getEvidenceIcon(item.evidenceType)" nzTheme="outline"></span>
+                      {{ getEvidenceTypeLabel(item.evidenceType) }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="link-cell">
+                      @if (item.externalLink) {
+                        <a [href]="item.externalLink" target="_blank" rel="noreferrer" [title]="item.externalLink">{{ item.externalLink }}</a>
+                      } @else if (item.attachmentUrl) {
+                        <a [href]="item.attachmentUrl" target="_blank" rel="noreferrer" [title]="item.attachmentUrl">{{ item.attachmentUrl }}</a>
+                      } @else {
+                        <span class="res-name">{{ item.resourceName || getResourceName(item.resourceId) }}</span>
+                      }
+                    </div>
                   </td>
                   <td class="center">
-                    <a nz-button nzType="link" nzSize="small" (click)="openEditEvidence(item)">编辑</a>
-                    <a nz-button nzType="link" nzSize="small" nzDanger (click)="deleteEvidence(item.id)">删除</a>
+                    <span class="op-links">
+                      <a class="edit" (click)="openEditEvidence(item)">编辑</a><span class="sep">|</span>
+                      <a class="del" (click)="deleteEvidence(item.id)">删除</a>
+                    </span>
                   </td>
                 </tr>
               }
             }
           </tbody>
         </table>
+        </div>
       </div>
     </div>
 
     <!-- Tab4：导出信息 -->
     <div class="tab-content" [class.active]="activeTab() === 3">
-      <div class="export-card">
-        <h3>导出配置</h3>
-        <div class="export-form">
-          <div class="export-field">
-            <label>导出范围</label>
-            <nz-select style="width:160px">
-              <nz-option nzValue="all" nzLabel="全部数据"></nz-option>
-              <nz-option nzValue="indicators" nzLabel="仅指标数据"></nz-option>
-              <nz-option nzValue="evidence" nzLabel="仅佐证材料"></nz-option>
-            </nz-select>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="toolbar-left">
+            <span class="toolbar-title">导出报表</span>
+            <span class="count-badge">{{ project.recentReports.length }} 次</span>
           </div>
-          <div class="export-field">
-            <label>包含内容</label>
-            <nz-select style="width:180px">
-              <nz-option nzValue="full" nzLabel="指标+佐证+统计"></nz-option>
-              <nz-option nzValue="indicators" nzLabel="仅指标"></nz-option>
-              <nz-option nzValue="stats" nzLabel="指标+统计"></nz-option>
-            </nz-select>
+          <div class="toolbar-right">
+            <button class="toolbar-new-btn" (click)="exportReport()">
+              <span nz-icon nzType="file-excel" nzTheme="outline"></span>导出 Excel
+            </button>
           </div>
-          <button nz-button nzType="primary" (click)="exportReport()">
-            <span nz-icon nzType="file-excel" nzTheme="outline"></span> 导出
-          </button>
         </div>
-
-        <div class="export-history">
-          <h4>导出历史</h4>
-          @if (project.recentReports.length === 0) {
-            <div class="history-empty">暂无导出记录</div>
-          } @else {
-            @for (item of project.recentReports; track item.id) {
-              <div class="history-item">
-                <div class="history-info">
-                  <span nz-icon nzType="file-text" nzTheme="outline"></span>
-                  <span class="history-name">{{ item.reportName }}</span>
-                  <span class="history-time">{{ formatLocalDate(item.generatedAt) }}</span>
-                </div>
-                <button nz-button nzType="link" (click)="downloadReport(item)">下载</button>
-              </div>
-            }
-          }
+        <div class="table-scroll">
+          <table class="data-table fixed">
+            <colgroup>
+              <col />
+              <col style="width:190px" />
+              <col style="width:110px" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>报表名称</th>
+                <th>生成时间</th>
+                <th class="center">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (project.recentReports.length === 0) {
+                <tr>
+                  <td colspan="3">
+                    <div class="empty-state">
+                      <span nz-icon nzType="file-excel" nzTheme="outline" style="font-size:36px;color:#d9d9d9"></span>
+                      <p>暂无导出记录，点击右上方导出生成报表</p>
+                    </div>
+                  </td>
+                </tr>
+              } @else {
+                @for (item of project.recentReports; track item.id) {
+                  <tr>
+                    <td>
+                      <span class="cell-main">{{ item.reportName }}</span>
+                    </td>
+                    <td><span class="muted">{{ formatLocalDate(item.generatedAt) }}</span></td>
+                    <td class="center">
+                      <span class="op-links">
+                        <a class="edit" (click)="downloadReport(item)">下载</a>
+                      </span>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -221,55 +328,62 @@
   [nzTitle]="editingIndicatorId ? '编辑指标' : '新建指标'"
   [nzFooter]="null"
   (nzOnCancel)="indicatorVisible = false"
-  nzWidth="480"
+  [nzWidth]="640"
   nzWrapClassName="dh-modal-wrap">
   <ng-container *nzModalContent>
-    <div class="dh-modal-form">
-      <label class="field full">
-        <span class="label">分类</span>
-        <input nz-input [(ngModel)]="indicatorForm.categoryName" placeholder="如 产教融合 / 教学成果" />
-      </label>
-      <label class="field full">
-        <span class="label">指标编码</span>
-        <input nz-input [(ngModel)]="indicatorForm.indicatorCode" placeholder="指标编码，如 I-001" />
-      </label>
-      <label class="field full">
-        <span class="label">指标名称</span>
-        <input nz-input [(ngModel)]="indicatorForm.name" placeholder="指标名称" />
-      </label>
-      <label class="field full">
-        <span class="label">指标说明</span>
-        <textarea nz-input rows="3" [(ngModel)]="indicatorForm.description" placeholder="指标说明"></textarea>
-      </label>
-      <label class="field">
-        <span class="label">单位</span>
-        <input nz-input [(ngModel)]="indicatorForm.unit" placeholder="如 项 / 门 / %" />
-      </label>
-      <label class="field">
-        <span class="label">数据来源</span>
-        <nz-select [(ngModel)]="indicatorForm.dataSourceType" style="width: 100%">
-          <nz-option [nzValue]="dataSources.Manual" nzLabel="手工填报"></nz-option>
-          <nz-option [nzValue]="dataSources.ResourceCount" nzLabel="资源数量"></nz-option>
-          <nz-option [nzValue]="dataSources.CourseCount" nzLabel="课程数量"></nz-option>
-          <nz-option [nzValue]="dataSources.MicroMajorCount" nzLabel="微专业数量"></nz-option>
-          <nz-option [nzValue]="dataSources.PracticumProjectCount" nzLabel="实训项目数量"></nz-option>
-          <nz-option [nzValue]="dataSources.NewsArticleCount" nzLabel="资讯数量"></nz-option>
-          <nz-option [nzValue]="dataSources.MicroMajorEnrollmentCount" nzLabel="微专业报名量"></nz-option>
-          <nz-option [nzValue]="dataSources.PracticumEnrollmentCount" nzLabel="实训参与量"></nz-option>
-        </nz-select>
-      </label>
-      <label class="field">
-        <span class="label">目标值</span>
-        <input nz-input type="number" [(ngModel)]="indicatorForm.targetValue" placeholder="目标值，可为空" />
-      </label>
-      <label class="field full">
-        <span class="label">最新值</span>
-        <input nz-input type="number" [(ngModel)]="latestValueDraft" placeholder="手工填报最新值，可为空" />
-      </label>
-      <label class="field full">
-        <span class="label">最新值备注</span>
-        <input nz-input [(ngModel)]="latestNoteDraft" placeholder="备注，可为空" />
-      </label>
+    <div class="form-grid">
+      <label>分类</label>
+      <input nz-input [(ngModel)]="indicatorForm.categoryName" placeholder="如 产教融合 / 教学成果" />
+
+      <label>指标编码</label>
+      <input nz-input [(ngModel)]="indicatorForm.indicatorCode" placeholder="指标编码，如 I-001" />
+
+      <label>指标名称</label>
+      <input nz-input [(ngModel)]="indicatorForm.name" placeholder="指标名称" />
+
+      <label>指标说明</label>
+      <textarea nz-input rows="3" [(ngModel)]="indicatorForm.description" placeholder="指标说明"></textarea>
+
+      <label>单位</label>
+      <input nz-input [(ngModel)]="indicatorForm.unit" placeholder="如 项 / 门 / %" />
+
+      <label>数据来源</label>
+      <nz-select [(ngModel)]="indicatorForm.dataSourceType" (ngModelChange)="onDataSourceChange()" style="width: 100%">
+        <nz-option [nzValue]="dataSources.Manual" nzLabel="手工填报"></nz-option>
+        <nz-option [nzValue]="dataSources.ResourceCount" nzLabel="资源数量"></nz-option>
+        <nz-option [nzValue]="dataSources.CourseCount" nzLabel="课程数量"></nz-option>
+        <nz-option [nzValue]="dataSources.MicroMajorCount" nzLabel="微专业数量"></nz-option>
+        <nz-option [nzValue]="dataSources.PracticumProjectCount" nzLabel="实训项目数量"></nz-option>
+        <nz-option [nzValue]="dataSources.NewsArticleCount" nzLabel="资讯数量"></nz-option>
+        <nz-option [nzValue]="dataSources.MicroMajorEnrollmentCount" nzLabel="微专业报名量"></nz-option>
+        <nz-option [nzValue]="dataSources.PracticumEnrollmentCount" nzLabel="实训参与量"></nz-option>
+      </nz-select>
+
+      @if (indicatorForm.dataSourceType !== dataSources.Manual) {
+        <span></span>
+        <span class="preview-hint">
+          @if (previewLoading()) {
+            正在统计当前租户数据…
+          } @else if (dataSourcePreview() !== null) {
+            当前统计值：<b>{{ dataSourcePreview() }}</b>，已自动填入最新值
+          }
+        </span>
+      }
+
+      <label>目标值</label>
+      <input nz-input type="number" [(ngModel)]="indicatorForm.targetValue" placeholder="目标值，可为空" />
+
+      <label>最新值</label>
+      <input nz-input type="number" [(ngModel)]="latestValueDraft" placeholder="手工填报最新值，可为空" />
+
+      <label>最新值备注</label>
+      <input nz-input [(ngModel)]="latestNoteDraft" placeholder="备注，可为空" />
+
+      <label>权重</label>
+      <input nz-input type="number" [(ngModel)]="indicatorForm.weight" placeholder="权重，默认为 1" />
+
+      <label>排序</label>
+      <input nz-input type="number" [(ngModel)]="indicatorForm.sortOrder" placeholder="排序，数字越小越靠前" />
     </div>
     <div class="dh-actions">
       <button nz-button (click)="indicatorVisible = false">取消</button>
@@ -284,7 +398,7 @@
   [nzTitle]="editingEvidenceId ? '编辑佐证材料' : '新增佐证材料'"
   [nzFooter]="null"
   (nzOnCancel)="evidenceVisible = false"
-  nzWidth="520"
+  [nzWidth]="520"
   nzWrapClassName="dh-modal-wrap">
   <ng-container *nzModalContent>
     <div class="dh-modal-form">
