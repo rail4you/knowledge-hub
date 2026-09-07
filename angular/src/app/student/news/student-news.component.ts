@@ -7,7 +7,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NewsArticleDto, NewsCategoryDto, NewsService } from '../../news/news.service';
-import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { HeadlineHeroComponent } from '../shared/headline-hero/headline-hero.component';
 
 interface StatItem {
   label: string;
@@ -28,7 +28,7 @@ interface StatItem {
     NzIconModule,
     NzSpinModule,
     NzDividerModule,
-    StudentHeroComponent,
+    HeadlineHeroComponent,
   ],
   templateUrl: './student-news.component.html',
   styleUrls: ['./student-news.component.scss'],
@@ -43,6 +43,8 @@ export class StudentNewsComponent implements OnInit {
   readonly articles = signal<NewsArticleDto[]>([]);
   readonly totalCount = signal(0);
   readonly hotArticles = signal<NewsArticleDto[]>([]);
+  /** 头条文章列表（第 0 个作为主推，其他作为右侧次条） */
+  readonly headlineArticles = signal<NewsArticleDto[]>([]);
   readonly categories = signal<NewsCategoryDto[]>([]);
   readonly filter = signal('');
   readonly categoryId = signal<string | null>(null);
@@ -101,6 +103,7 @@ export class StudentNewsComponent implements OnInit {
     this.loadCategories();
     this.loadArticles();
     this.loadHotArticles();
+    this.loadHeadlineArticles();
   }
 
   loadCategories(): void {
@@ -140,6 +143,18 @@ export class StudentNewsComponent implements OnInit {
   loadHotArticles(): void {
     this.newsService.getHotArticles().subscribe({
       next: items => this.hotArticles.set(items || []),
+    });
+  }
+
+  /** 拉取头条文章（isTop=true，按发布时间倒序，取前 4 篇） */
+  loadHeadlineArticles(): void {
+    this.newsService.getPublishedArticles({
+      isTop: true,
+      skipCount: 0,
+      maxResultCount: 4,
+    }).subscribe({
+      next: result => this.headlineArticles.set(result.items || []),
+      error: () => this.headlineArticles.set([]),
     });
   }
 

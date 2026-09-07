@@ -1,0 +1,234 @@
+@use '../../styles/student-design' as ds;
+
+// ═══════════════════════════════════════════
+// 头条资讯 Hero — 扁平卡片 + 真实实景图背景
+// ═══════════════════════════════════════════
+.headline-hero {
+  position: relative;
+  border-radius: ds.$student-radius-lg;
+  /* 兜底：本地浅灰，避免远端图片未加载时一片空 */
+  background-color: ds.$student-surface-soft;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  color: ds.$student-text;
+  border: 1px solid ds.$student-border-soft;
+  box-shadow: ds.$student-shadow-soft;
+  overflow: hidden;
+  min-height: 168px;
+}
+
+/* ---- 隐藏的图片探测器：用于探测头条封面图是否可加载 ---- */
+.headline-hero__probe {
+  display: none !important;
+  position: absolute;
+  width: 0;
+  height: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* 渐变遮罩：左侧白色 → 右侧透明
+   保证左侧文字可读，右侧实景图细节可见 */
+.headline-hero__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(255, 255, 255, 0.92) 30%,
+    rgba(255, 255, 255, 0.65) 55%,
+    rgba(255, 255, 255, 0.30) 80%,
+    rgba(255, 255, 255, 0.10) 100%
+  );
+}
+
+/* ---- 主体内容 ---- */
+.headline-hero__inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  gap: 28px;
+  padding: 22px 26px;
+}
+
+/* ---- 左侧：头条文章信息 ---- */
+.headline-hero__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding-right: 20px;
+}
+
+.headline-hero__eyebrow {
+  display: inline-block;
+  align-self: flex-start;
+  color: ds.$student-primary;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.headline-hero__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: ds.$student-text;
+  letter-spacing: -0.2px;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+  @include ds.line-clamp(2);
+}
+
+.headline-hero__desc {
+  margin: 0;
+  max-width: 64ch;
+  color: ds.$student-text-muted;
+  font-size: 13px;
+  line-height: 1.7;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+  @include ds.line-clamp(2);
+
+  &--muted {
+    color: ds.$student-text-light;
+    font-style: italic;
+  }
+}
+
+.headline-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  color: ds.$student-text-light;
+  font-size: 12px;
+  margin-top: 2px;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+
+  .meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    span[nz-icon] { font-size: 12px; }
+  }
+}
+
+.headline-hero__action {
+  margin-top: 4px;
+}
+
+.headline-hero__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: ds.$student-radius;
+  background: ds.$student-primary;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+
+  span[nz-icon] {
+    font-size: 13px;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover {
+    background: ds.$student-primary-dark;
+    transform: translateX(1px);
+
+    span[nz-icon] {
+      transform: translateX(2px);
+    }
+  }
+
+  &:focus-visible {
+    @include ds.focus-ring;
+  }
+}
+
+/* ---- 右侧：数据总览（与 StudentHero 一致） ---- */
+.headline-hero__stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-shrink: 0;
+}
+
+.stat {
+  text-align: center;
+  min-width: 56px;
+
+  &__val {
+    b {
+      font-size: 22px;
+      font-weight: 700;
+      color: ds.$student-text;
+    }
+    small {
+      font-size: 12px;
+      color: ds.$student-text-muted;
+      margin-left: 2px;
+    }
+  }
+
+  &__lbl {
+    font-size: 11px;
+    color: ds.$student-text-light;
+    margin-top: 2px;
+  }
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 900px) {
+  .headline-hero__inner {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .headline-hero__body {
+    padding-right: 0;
+  }
+
+  .headline-hero__title {
+    font-size: 20px;
+  }
+
+  .headline-hero__stats {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+  }
+
+  /* 移动端：垂直方向渐变 */
+  .headline-hero__overlay {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.92) 0%,
+      rgba(255, 255, 255, 0.85) 50%,
+      rgba(255, 255, 255, 0.78) 100%
+    );
+  }
+}
+
+@media (max-width: 560px) {
+  .headline-hero__inner {
+    padding: 18px 20px;
+  }
+
+  .headline-hero__meta {
+    gap: 4px 12px;
+  }
+}

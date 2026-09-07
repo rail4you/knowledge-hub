@@ -1,10 +1,12 @@
 <div class="news-page">
-  <!-- =================== HERO 区域 =================== -->
-  <app-student-hero
+  <!-- =================== 头条资讯 HERO 区域 =================== -->
+  <app-headline-hero
     title="资讯中心"
     description="汇集行业动态、政策解读、教学资讯与企业新闻，让你随时掌握最新前沿信息。"
+    [headlines]="headlineArticles()"
     [stats]="stats()"
-  ></app-student-hero>
+    (articleClick)="openArticle($event)"
+  ></app-headline-hero>
 
   <!-- =================== 搜索栏 =================== -->
   <div class="search-bar">

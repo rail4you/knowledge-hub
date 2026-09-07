@@ -1,0 +1,87 @@
+<!-- 隐藏的图片探测器：仅用于检测头条封面图 URL 是否可加载 -->
+@if (coverUrl()) {
+  <img
+    class="headline-hero__probe"
+    [src]="coverUrl()"
+    alt=""
+    (load)="onCoverLoad()"
+    (error)="onCoverError()"
+  />
+}
+
+<section
+  class="headline-hero"
+  aria-label="头条资讯"
+  [style.background-image]="backgroundImage()"
+>
+  <!-- 渐变遮罩：左侧白色 → 右侧透明，确保文字可读、右侧图片细节可见 -->
+  <div class="headline-hero__overlay" aria-hidden="true"></div>
+
+  <div class="headline-hero__inner">
+    <!-- 左侧：头条文章信息 -->
+    <div class="headline-hero__body">
+      <span class="headline-hero__eyebrow">今日头条</span>
+
+      @if (hasHeadline()) {
+        <h2 class="headline-hero__title" [title]="headline().title">
+          {{ headline().title }}
+        </h2>
+
+        @if (headline().summary) {
+          <p class="headline-hero__desc" [title]="headline().summary">
+            {{ headline().summary }}
+          </p>
+        }
+
+        <div class="headline-hero__meta">
+          <span class="meta-item">
+            <span nz-icon nzType="calendar" nzTheme="outline"></span>
+            {{ headline().publishedAt || headline().creationTime | date:'yyyy-MM-dd' }}
+          </span>
+          @if (headline().categoryName) {
+            <span class="meta-item">
+              <span nz-icon nzType="folder" nzTheme="outline"></span>
+              {{ headline().categoryName }}
+            </span>
+          }
+          <span class="meta-item">
+            <span nz-icon nzType="eye" nzTheme="outline"></span>
+            {{ headline().viewCount | number }} 阅读
+          </span>
+          <span class="meta-item">
+            <span nz-icon nzType="like" nzTheme="outline"></span>
+            {{ headline().likeCount | number }} 点赞
+          </span>
+        </div>
+
+        <div class="headline-hero__action">
+          <button class="headline-hero__btn" type="button" (click)="articleClick.emit(headline().id)">
+            <span>进入阅读</span>
+            <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+          </button>
+        </div>
+      } @else {
+        <h2 class="headline-hero__title">{{ title() }}</h2>
+        @if (description()) {
+          <p class="headline-hero__desc">{{ description() }}</p>
+        } @else {
+          <p class="headline-hero__desc headline-hero__desc--muted">暂无头条资讯</p>
+        }
+      }
+    </div>
+
+    <!-- 右侧：数据总览 -->
+    @if (stats().length > 0) {
+      <div class="headline-hero__stats">
+        @for (s of stats(); track s.label) {
+          <div class="stat">
+            <div class="stat__val">
+              <b>{{ s.value | number }}</b>@if (s.suffix) {<small>{{ s.suffix }}</small>}
+            </div>
+            <div class="stat__lbl">{{ s.label }}</div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</section>
