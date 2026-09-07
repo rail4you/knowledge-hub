@@ -75,11 +75,16 @@ export class LoginComponent implements OnInit {
     const hostMode = dataHostMode || pathHost || queryHost === 'true' || queryHost === '1';
     this.isHostLogin.set(hostMode);
     if (hostMode) {
-      // 强制宿主上下文：清除残留租户 cookie，不拉取租户列表
+      // 强制宿主上下文：清除残留租户 cookie，不拉取租户列表。
+      // 同时写 __host_login 标记：OAuth 跳转到后端 /Account/Login 时 query 会丢失，
+      // 后端靠此标记（且无租户 cookie）识别宿主模式，避免渲染租户页拦截 admin。
       this.clearTenantCookie();
+      this.document.cookie = `__host_login=1; path=/; SameSite=Lax`;
       this.currentTenantId.set(null);
       this.currentTenantName.set(null);
     } else {
+      // 普通页清除宿主标记，避免陈旧标记影响后端判断
+      this.document.cookie = `__host_login=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
       this.loadTenants();
       this.loadCurrentTenant();
     }
@@ -261,8 +266,10 @@ export class LoginComponent implements OnInit {
 
     this.inProgress = true;
     const { username, password, rememberMe } = this.form.value;
-    const redirectUrl =
-      this.route.snapshot.queryParams['returnUrl'] || '/';
+    const redirectUrl = this.isHostLogin()
+      // 系统管理员登录成功后直达管理端，不经过门户首页
+      ? (this.route.snapshot.queryParams['returnUrl'] || '/resources')
+      : (this.route.snapshot.queryParams['returnUrl'] || '/');
 
     // 登录前再次清除可能的残留 session
     this.clearSession();

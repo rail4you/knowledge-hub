@@ -10,8 +10,12 @@
     var returnUrlHash = Model.ReturnUrlHash;
     // 系统管理员专用通道：仅通过隐藏网址 /Account/Login?host=true 进入，
     // 页面上不显示任何入口。普通登录页此值为 false。
+    // Angular /admin-login 经 OAuth 跳转到此处时 query 会丢失，改由 __host_login
+    // 标记 cookie 透传（Angular 宿主页写入、普通页清除；仅无租户 cookie 时生效，
+    // 因此租户流程不受陈旧标记影响，登录失败重渲也能保持宿主模式）。
     var hostQuery = Request.Query["host"].ToString();
-    var hostMode = hostQuery == "true" || hostQuery == "1";
+    var hostMode = hostQuery == "true" || hostQuery == "1"
+        || (Request.Cookies["__host_login"] == "1" && string.IsNullOrEmpty(Request.Cookies["__tenant"]));
 }
 <!DOCTYPE html>
 <html lang="zh-Hans">
