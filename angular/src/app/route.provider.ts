@@ -427,15 +427,6 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.DoubleHigh',
     },
     {
-      path: '/assessment/double-high/report-center',
-      name: '::Menu:DoubleHighReportCenter',
-      iconClass: 'fas fa-file-export',
-      parentName: '::Menu:InfoManagement',
-      order: 5,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.DoubleHigh',
-    },
-    {
       path: '/assessment/double-high/project',
       name: '::Menu:DoubleHighProject',
       parentName: '::Menu:InfoManagement',
