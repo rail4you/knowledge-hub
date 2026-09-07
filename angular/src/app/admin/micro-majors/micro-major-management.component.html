@@ -2,14 +2,51 @@
   <!-- 标题行 -->
   <div class="mgmt-head">
     <h2>微专业管理</h2>
-    <button class="mgmt-new-btn" (click)="openCreate()">
-      <span nz-icon nzType="plus"></span>
-      新建微专业
-    </button>
   </div>
 
-  <!-- 微专业列表 -->
-  <div class="mgmt-card">
+  <nz-tabs
+    class="mgmt-tabset"
+    [nzSelectedIndex]="activeTab()"
+    (nzSelectedIndexChange)="onTabChange($event)"
+  >
+    <nz-tab nzTitle="微专业管理">
+      <!-- 微专业列表 -->
+      <div class="mgmt-card">
+    <div class="mgmt-toolbar">
+      <div class="toolbar-left">
+        <nz-input-group [nzSuffix]="majorSearchSuffix" class="toolbar-search">
+          <input
+            nz-input
+            placeholder="搜索名称 / 简介 / 行业方向"
+            #majorSearchInput
+            [value]="majorKeyword()"
+            (keyup.enter)="onMajorSearch(majorSearchInput.value)"
+          />
+        </nz-input-group>
+        <ng-template #majorSearchSuffix>
+          <span nz-icon nzType="search" class="search-icon" (click)="onMajorSearch(majorSearchInput.value)"></span>
+        </ng-template>
+        <nz-select
+          class="toolbar-select"
+          nzAllowClear
+          nzPlaceHolder="全部状态"
+          [ngModel]="majorStatusFilter()"
+          (ngModelChange)="onMajorStatusChange($event)"
+        >
+          <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+          <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
+          <nz-option [nzValue]="statuses.Archived" nzLabel="已归档"></nz-option>
+        </nz-select>
+        <button nz-button nzType="primary" (click)="onMajorSearch(majorSearchInput.value)">搜索</button>
+      </div>
+      <div class="toolbar-right">
+        <span class="toolbar-total">共 {{ majorTotal() }} 条</span>
+        <button class="mgmt-new-btn" (click)="openCreate()">
+          <span nz-icon nzType="plus"></span>
+          新建微专业
+        </button>
+      </div>
+    </div>
     <table class="mgmt-table">
       <thead>
         <tr>
@@ -50,19 +87,56 @@
         }
       </tbody>
     </table>
-  </div>
-
-  <!-- 报名与发证 -->
-  <div class="mgmt-card">
-    <div class="mgmt-card-title">报名与发证</div>
-    <div class="mgmt-tabs">
-      <button [class.on]="enrollmentFilter() === null" (click)="setEnrollmentFilter(null)">全部</button>
-      <button [class.on]="enrollmentFilter() === enrollmentStatuses.Pending" (click)="setEnrollmentFilter(enrollmentStatuses.Pending)">待审批</button>
-      <button [class.on]="enrollmentFilter() === enrollmentStatuses.Enrolled" (click)="setEnrollmentFilter(enrollmentStatuses.Enrolled)">已通过</button>
-      <button [class.on]="enrollmentFilter() === enrollmentStatuses.InProgress" (click)="setEnrollmentFilter(enrollmentStatuses.InProgress)">学习中</button>
-      <button [class.on]="enrollmentFilter() === enrollmentStatuses.Completed" (click)="setEnrollmentFilter(enrollmentStatuses.Completed)">已结业</button>
-      <button [class.on]="enrollmentFilter() === enrollmentStatuses.Certified" (click)="setEnrollmentFilter(enrollmentStatuses.Certified)">已发证</button>
+    <div class="mgmt-pagination">
+      <nz-pagination
+        [nzPageIndex]="majorPage()"
+        [nzPageSize]="majorPageSize()"
+        [nzTotal]="majorTotal()"
+        nzShowSizeChanger
+        nzShowQuickJumper
+        [nzShowTotal]="majorTotalTpl"
+        (nzPageIndexChange)="onMajorPageChange($event)"
+        (nzPageSizeChange)="onMajorPageSizeChange($event)"
+      ></nz-pagination>
+      <ng-template #majorTotalTpl let-total>共 {{ total }} 条</ng-template>
+      </div>
     </div>
+    </nz-tab>
+    <nz-tab nzTitle="报名与发证">
+      <!-- 报名与发证 -->
+      <div class="mgmt-card">
+        <div class="mgmt-toolbar">
+          <div class="toolbar-left">
+            <nz-input-group [nzSuffix]="enrollSearchSuffix" class="toolbar-search">
+              <input
+                nz-input
+                placeholder="搜索微专业 / 学生姓名 / 账号"
+                #enrollSearchInput
+                [value]="enrollmentKeyword()"
+                (keyup.enter)="onEnrollmentSearch(enrollSearchInput.value)"
+              />
+            </nz-input-group>
+            <ng-template #enrollSearchSuffix>
+              <span nz-icon nzType="search" class="search-icon" (click)="onEnrollmentSearch(enrollSearchInput.value)"></span>
+            </ng-template>
+            <nz-select
+              class="toolbar-select"
+              [ngModel]="enrollmentFilter() ?? 'ALL'"
+              (ngModelChange)="setEnrollmentFilter($event === 'ALL' ? null : $event)"
+            >
+              <nz-option nzValue="ALL" nzLabel="全部"></nz-option>
+              <nz-option [nzValue]="enrollmentStatuses.Pending" nzLabel="待审批"></nz-option>
+              <nz-option [nzValue]="enrollmentStatuses.Enrolled" nzLabel="已通过"></nz-option>
+              <nz-option [nzValue]="enrollmentStatuses.InProgress" nzLabel="学习中"></nz-option>
+              <nz-option [nzValue]="enrollmentStatuses.Completed" nzLabel="已结业"></nz-option>
+              <nz-option [nzValue]="enrollmentStatuses.Certified" nzLabel="已发证"></nz-option>
+            </nz-select>
+            <button nz-button nzType="primary" (click)="onEnrollmentSearch(enrollSearchInput.value)">搜索</button>
+          </div>
+          <div class="toolbar-right">
+            <span class="toolbar-total">共 {{ enrollmentTotal() }} 条</span>
+          </div>
+        </div>
     <table class="mgmt-table">
       <thead>
         <tr>
@@ -128,7 +202,22 @@
         }
       </tbody>
     </table>
+    <div class="mgmt-pagination">
+      <nz-pagination
+        [nzPageIndex]="enrollmentPage()"
+        [nzPageSize]="enrollmentPageSize()"
+        [nzTotal]="enrollmentTotal()"
+        nzShowSizeChanger
+        nzShowQuickJumper
+        [nzShowTotal]="enrollTotalTpl"
+        (nzPageIndexChange)="onEnrollmentPageChange($event)"
+        (nzPageSizeChange)="onEnrollmentPageSizeChange($event)"
+      ></nz-pagination>
+      <ng-template #enrollTotalTpl let-total>共 {{ total }} 条</ng-template>
+    </div>
   </div>
+    </nz-tab>
+  </nz-tabs>
 
   <nz-modal
     [nzVisible]="modalVisible"

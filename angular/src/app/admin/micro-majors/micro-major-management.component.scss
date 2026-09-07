@@ -35,17 +35,18 @@
 .mgmt-new-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   background: var(--kh-accent);
   color: #fff;
   border: 0;
-  border-radius: 8px;
-  padding: 10px 22px;
+  border-radius: 6px;
+  padding: 5px 15px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
+  line-height: 1.5715;
   cursor: pointer;
   transition: background 0.15s;
-  box-shadow: 0 3px 10px -3px rgba(24, 144, 255, 0.5);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.045);
   white-space: nowrap;
 
   &:hover {
@@ -66,11 +67,71 @@
   overflow: hidden;
 }
 
+/* Tab 容器：两个功能区切换 */
+.mgmt-tabset::ng-deep .ant-tabs-nav {
+  margin-bottom: 12px;
+}
+
 .mgmt-card-title {
   padding: 16px 22px 12px;
   font-size: 18px;
   font-weight: 700;
   color: var(--kh-ink);
+}
+
+/* 搜索 + 分页工具条 */
+.mgmt-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--kh-line-2);
+  flex-wrap: wrap;
+
+  &.slim {
+    padding-top: 0;
+  }
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-search {
+    width: 280px;
+  }
+
+  .toolbar-select {
+    width: 140px;
+  }
+
+  .search-icon {
+    cursor: pointer;
+    color: #bfbfbf;
+    &:hover { color: var(--kh-accent); }
+  }
+
+  .toolbar-total {
+    font-size: 13px;
+    color: var(--kh-muted);
+    white-space: nowrap;
+  }
+}
+
+.mgmt-pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 22px;
 }
 
 /* 表格 */

@@ -213,9 +213,22 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
       itemStyle: { color: item.color },
     }));
 
+    const rate = this.outcomeRate();
+    const total = this.outcomeTotal();
+
     this.outcomeChart.setOption({
       tooltip: { trigger: 'item', formatter: '{b}：{c} 条 ({d}%)', backgroundColor: '#fff', borderColor: '#e8ecf1', textStyle: { color: '#1e293b', fontSize: 13 } },
       legend: { bottom: 0, icon: 'circle', itemWidth: 10, itemHeight: 10, textStyle: { color: '#64748b', fontSize: 12 } },
+      title: {
+        text: `${rate}%`,
+        subtext: `就业率\n共 ${total} 条`,
+        left: 'center',
+        top: '32%',
+        textAlign: 'center',
+        textStyle: { fontSize: 26, fontWeight: 700, color: '#1e293b' },
+        subtextStyle: { fontSize: 12, color: '#64748b' },
+        itemGap: 4,
+      },
       series: [{
         name: '就业去向状态',
         type: 'pie',
@@ -225,13 +238,13 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
         label: {
           show: true,
-          position: 'outside',
-          formatter: '{b}',
+          position: 'inside',
+          formatter: (p: any) => ((p.percent ?? 0) >= 4 ? `${Math.round(p.percent)}%` : ''),
           fontSize: 12,
-          color: '#475569',
+          fontWeight: 600,
+          color: '#fff',
         },
-        labelLine: { show: true, length: 12, length2: 10 },
-        labelLayout: { hideOverlap: true },
+        labelLine: { show: false },
         emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
         data: counts.filter(d => (d.value as number) > 0),
       }],
@@ -265,13 +278,13 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
         itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
         label: {
           show: true,
-          position: 'outside',
-          formatter: '{b}',
+          position: 'inside',
+          formatter: (p: any) => ((p.percent ?? 0) >= 4 ? `${Math.round(p.percent)}%` : ''),
           fontSize: 12,
-          color: '#475569',
+          fontWeight: 600,
+          color: '#fff',
         },
-        labelLine: { show: true, length: 12, length2: 10 },
-        labelLayout: { hideOverlap: true },
+        labelLine: { show: false },
         emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } },
         data: (data as { value: number; name: string; itemStyle: { color: string } }[]).filter(d => d.value > 0),
       }],

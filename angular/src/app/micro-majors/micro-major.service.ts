@@ -113,6 +113,7 @@ export interface GetMicroMajorEnrollmentsInput {
   microMajorId?: string;
   studentId?: string;
   status?: MicroMajorEnrollmentStatus;
+  filter?: string;
   sorting?: string;
   skipCount: number;
   maxResultCount: number;

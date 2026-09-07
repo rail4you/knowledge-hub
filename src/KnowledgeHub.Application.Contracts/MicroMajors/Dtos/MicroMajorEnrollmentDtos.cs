@@ -36,4 +36,5 @@ public class GetMicroMajorEnrollmentsInput : PagedAndSortedResultRequestDto
     public Guid? MicroMajorId { get; set; }
     public Guid? StudentId { get; set; }
     public MicroMajorEnrollmentStatus? Status { get; set; }
+    public string? Filter { get; set; }
 }

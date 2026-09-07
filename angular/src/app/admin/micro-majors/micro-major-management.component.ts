@@ -13,6 +13,8 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
@@ -51,6 +53,8 @@ import { CertificateIssueComposerComponent } from './certificate-issue-composer.
     NzSpinModule,
     NzSwitchModule,
     NzTableModule,
+    NzPaginationModule,
+    NzTabsModule,
     NzUploadModule,
     CertificateLayerEditorComponent,
     CertificateIssueComposerComponent,
@@ -71,7 +75,29 @@ export class MicroMajorManagementComponent implements OnInit {
   readonly courses = signal<CourseDto[]>([]);
   readonly statuses = MicroMajorStatus;
   readonly enrollmentStatuses = MicroMajorEnrollmentStatus;
-  readonly enrollmentFilter = signal<number | null>(MicroMajorEnrollmentStatus.Pending);
+  readonly enrollmentFilter = signal<number | null>(null);
+
+  // Tab：0 = 微专业管理，1 = 报名与发证
+  readonly activeTab = signal(0);
+
+  onTabChange(index: number): void {
+    this.activeTab.set(index);
+  }
+
+  // 微专业列表：搜索 + 分页
+  readonly majorKeyword = signal('');
+  readonly majorStatusFilter = signal<number | null>(null);
+  readonly majorPage = signal(1);
+  readonly majorPageSize = signal(10);
+  readonly majorTotal = signal(0);
+  readonly majorLoading = signal(false);
+
+  // 报名列表：搜索 + 分页
+  readonly enrollmentKeyword = signal('');
+  readonly enrollmentPage = signal(1);
+  readonly enrollmentPageSize = signal(10);
+  readonly enrollmentTotal = signal(0);
+  readonly enrollmentLoading = signal(false);
 
   modalVisible = false;
   editingId: string | null = null;
@@ -143,23 +169,90 @@ export class MicroMajorManagementComponent implements OnInit {
 
   setEnrollmentFilter(status: number | null): void {
     this.enrollmentFilter.set(status);
-    this.reload();
+    this.enrollmentPage.set(1);
+    this.loadEnrollments();
+  }
+
+  // ===== 微专业列表：搜索 + 分页 =====
+  onMajorSearch(keyword: string): void {
+    this.majorKeyword.set(keyword?.trim() ?? '');
+    this.majorPage.set(1);
+    this.loadMajors();
+  }
+
+  onMajorStatusChange(status: number | null): void {
+    this.majorStatusFilter.set(status);
+    this.majorPage.set(1);
+    this.loadMajors();
+  }
+
+  onMajorPageChange(page: number): void {
+    this.majorPage.set(page);
+    this.loadMajors();
+  }
+
+  onMajorPageSizeChange(size: number): void {
+    this.majorPageSize.set(size);
+    this.majorPage.set(1);
+    this.loadMajors();
+  }
+
+  // ===== 报名列表：搜索 + 分页 =====
+  onEnrollmentSearch(keyword: string): void {
+    this.enrollmentKeyword.set(keyword?.trim() ?? '');
+    this.enrollmentPage.set(1);
+    this.loadEnrollments();
+  }
+
+  onEnrollmentPageChange(page: number): void {
+    this.enrollmentPage.set(page);
+    this.loadEnrollments();
+  }
+
+  onEnrollmentPageSizeChange(size: number): void {
+    this.enrollmentPageSize.set(size);
+    this.enrollmentPage.set(1);
+    this.loadEnrollments();
   }
 
   reload(): void {
-    this.microMajorService.getList({
-      skipCount: 0,
-      maxResultCount: 100,
-    }).subscribe({
-      next: result => this.items.set(result.items || []),
-    });
+    this.loadMajors();
+    this.loadEnrollments();
+  }
 
-    this.microMajorService.getEnrollmentList({
-      skipCount: 0,
-      maxResultCount: 100,
-      status: this.enrollmentFilter() ?? undefined,
+  loadMajors(): void {
+    this.majorLoading.set(true);
+    const keyword = this.majorKeyword().trim();
+    this.microMajorService.getList({
+      skipCount: (this.majorPage() - 1) * this.majorPageSize(),
+      maxResultCount: this.majorPageSize(),
+      filter: keyword || undefined,
+      status: this.majorStatusFilter() ?? undefined,
     }).subscribe({
-      next: result => this.enrollments.set(result.items || []),
+      next: result => {
+        this.items.set(result.items || []);
+        this.majorTotal.set(result.totalCount ?? 0);
+        this.majorLoading.set(false);
+      },
+      error: () => this.majorLoading.set(false),
+    });
+  }
+
+  loadEnrollments(): void {
+    this.enrollmentLoading.set(true);
+    const keyword = this.enrollmentKeyword().trim();
+    this.microMajorService.getEnrollmentList({
+      skipCount: (this.enrollmentPage() - 1) * this.enrollmentPageSize(),
+      maxResultCount: this.enrollmentPageSize(),
+      status: this.enrollmentFilter() ?? undefined,
+      filter: keyword || undefined,
+    }).subscribe({
+      next: result => {
+        this.enrollments.set(result.items || []);
+        this.enrollmentTotal.set(result.totalCount ?? 0);
+        this.enrollmentLoading.set(false);
+      },
+      error: () => this.enrollmentLoading.set(false),
     });
   }
 
@@ -513,6 +606,7 @@ export class MicroMajorManagementComponent implements OnInit {
         this.message.success('证书已发放');
         // 切到全部 tab 再 reload，确保已发证的学生可见
         this.enrollmentFilter.set(null);
+        this.enrollmentPage.set(1);
         this.reload();
       },
       error: (err) => {

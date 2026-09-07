@@ -202,6 +202,33 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             .WhereIf(input.StudentId.HasValue, x => x.StudentId == input.StudentId.Value)
             .WhereIf(input.Status.HasValue, x => x.Status == input.Status.Value);
 
+        if (!string.IsNullOrWhiteSpace(input.Filter))
+        {
+            var filter = input.Filter.Trim();
+
+            var mmQueryable = await _microMajorRepository.GetQueryableAsync();
+            var matchingMmIds = await mmQueryable
+                .Where(x => x.Title.Contains(filter))
+                .Select(x => x.Id)
+                .ToListAsync();
+
+            List<Guid> matchingUserIds;
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var userQueryable = await _userRepository.GetQueryableAsync();
+                matchingUserIds = await userQueryable
+                    .Where(x => x.UserName.Contains(filter) ||
+                                (x.Name != null && x.Name.Contains(filter)) ||
+                                (x.Surname != null && x.Surname.Contains(filter)))
+                    .Select(x => x.Id)
+                    .ToListAsync();
+            }
+
+            query = query.Where(x =>
+                matchingMmIds.Contains(x.MicroMajorId) ||
+                matchingUserIds.Contains(x.StudentId));
+        }
+
         var items = await query
             .OrderByDescending(x => x.EnrolledAt)
             .Skip(input.SkipCount)
