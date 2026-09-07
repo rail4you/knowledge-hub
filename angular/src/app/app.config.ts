@@ -1,5 +1,6 @@
-import { provideAbpCore, withOptions } from '@abp/ng.core';
+import { provideAbpCore, withOptions, AuthService } from '@abp/ng.core';
 import { provideAbpOAuth } from '@abp/ng.oauth';
+import { CustomAuthService } from './core/auth/custom-auth.service';
 import { provideSettingManagementConfig } from '@abp/ng.setting-management/config';
 import { provideFeatureManagementConfig } from '@abp/ng.feature-management';
 import { provideAbpThemeShared,} from '@abp/ng.theme.shared';
@@ -288,6 +289,10 @@ export const appConfig: ApplicationConfig = {
       }),
     ),
     provideAbpOAuth(),
+    // 关键修复：覆盖默认 AuthService，登出时清除 __host_login cookie，
+    // 避免用户在 /admin-login 流程后登出再点击首页「登录」时仍走宿主模式。
+    // 必须在 provideAbpOAuth() 之后注册以覆盖其提供的 AbpOAuthService。
+    { provide: AuthService, useClass: CustomAuthService },
     provideIdentityConfig(),
     provideSettingManagementConfig(),
     provideFeatureManagementConfig(),

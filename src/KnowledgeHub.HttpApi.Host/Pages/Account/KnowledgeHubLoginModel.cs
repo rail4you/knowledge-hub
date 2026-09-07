@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -150,6 +151,14 @@ public class KnowledgeHubLoginModel : OpenIddictSupportedLoginModel
             // 清除动态声明缓存，避免旧声明残留。
             await IdentityDynamicClaimsPrincipalContributorCache.ClearAsync(user.Id, user.TenantId);
         }
+
+        // 关键修复：登录成功后清除宿主登录标记 cookie。
+        // 该 cookie 由前端 LoginComponent 在访问 /admin-login 时写入，用于告知后端本次走的是宿主登录流程。
+        // 它是一次性标记：登录成功后流程即结束，必须清除，否则：
+        //   - 用户登出后再次从首页点击登录，会被该 cookie 误判为宿主模式，
+        //     持续显示系统管理员登录表单而非租户登录表单。
+        // 写入侧（前端）使用 path=/; SameSite=Lax，这里用相同的 Path 才能正确匹配并清除。
+        Response.Cookies.Delete("__host_login", new CookieOptions { Path = "/" });
 
         return await RedirectSafelyAsync(ReturnUrl, ReturnUrlHash);
     }
