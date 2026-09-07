@@ -25,6 +25,11 @@
         </span>
       </a>
 
+      <a routerLink="/" class="brand-bar__back" title="返回主站首页">
+        <span nz-icon nzType="home" nzTheme="outline"></span>
+        <span class="brand-bar__back-text">返回首页</span>
+      </a>
+
       <div class="brand-bar__actions">
         @if (isLoggedIn) {
           <span class="user-chip" title="{{ userName() }}">
