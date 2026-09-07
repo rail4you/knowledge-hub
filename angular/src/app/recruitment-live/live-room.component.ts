@@ -1,8 +1,9 @@
 import {
-  Component, OnInit, OnDestroy, AfterViewChecked, ChangeDetectionStrategy, inject, signal, computed, ViewChild, ElementRef
+  Component, OnInit, OnDestroy, AfterViewChecked, ChangeDetectionStrategy,
+  inject, signal, computed, ViewChild, ElementRef, HostListener, Renderer2
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule, NavigationStart } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -13,6 +14,7 @@ import { RecruitmentLiveService, LiveState } from './recruitment-live.service';
 import { RecruitmentLiveDto, RemoteParticipantStream, ParticipantBriefDto } from './recruitment-live.models';
 import { ConfigStateService } from '@abp/ng.core';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-live-room',
@@ -37,6 +39,8 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   liveService = inject(RecruitmentLiveService);
   private configState = inject(ConfigStateService);
   private message = inject(NzMessageService);
+  private hostEl = inject(ElementRef<HTMLElement>);
+  private renderer = inject(Renderer2);
 
   liveId = '';
   live: RecruitmentLiveDto | null = null;
@@ -84,6 +88,54 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('chatMessagesContainer', { static: false }) chatMessagesContainer!: ElementRef;
   private previousMsgCount = 0;
 
+  /** 组件是否已销毁（防止异步回调在销毁后继续操作状态） */
+  private destroyed = false;
+  /** Router 事件订阅：离开当前直播间路由时主动断开连接 */
+  private routerSub = this.router.events
+    .pipe(filter((e): e is NavigationStart => e instanceof NavigationStart))
+    .subscribe((e) => {
+      const target = (e.url || '').split('?')[0];
+      const current = this.router.url.split('?')[0];
+      // 当前路由以 /student/recruitment-live/<id> 形式存在，离开这一层即视为退出直播
+      const inLiveRoute = current.startsWith('/student/recruitment-live/')
+        || current.startsWith('/admin/recruitment-live/');
+      const leavingLiveRoute = inLiveRoute
+        && !target.startsWith('/student/recruitment-live/')
+        && !target.startsWith('/admin/recruitment-live/');
+      if (leavingLiveRoute) {
+        this.liveService.disconnect();
+      }
+    });
+
+  /** 浏览器关闭 / 刷新时同步断开（避免后台残留摄像头/麦克风占用） */
+  @HostListener('window:beforeunload')
+  onBeforeUnload() {
+    this.liveService.disconnect();
+  }
+
+  /** ResizeObserver：观察 footer 高度变化（窗口变窄、链接换行等） */
+  private footerObserver?: ResizeObserver;
+
+  /**
+   * 根据 viewport - header - footer 计算 :host 的 max-height，避免撑大 main-content。
+   * 使用 ResizeObserver 监听 footer、window resize，确保变化时及时更新。
+   */
+  private updateMaxHeight = () => {
+    if (this.destroyed) return;
+    const layoutEl = document.querySelector('app-student-layout');
+    const headerEl = layoutEl?.querySelector('.app-header') as HTMLElement | null;
+    const footerEl = layoutEl?.querySelector('.app-footer') as HTMLElement | null;
+    if (!headerEl || !footerEl || !this.hostEl?.nativeElement) return;
+
+    const headerH = headerEl.offsetHeight || 0;
+    const footerH = footerEl.offsetHeight || 0;
+    const maxHeight = window.innerHeight - headerH - footerH;
+    // 限制下限：viewport 很小（手机横屏）时不为 0，保证至少还能看到控件
+    if (maxHeight > 200) {
+      this.renderer.setStyle(this.hostEl.nativeElement, 'max-height', `${maxHeight}px`);
+    }
+  };
+
   ngAfterViewChecked() {
     const count = this.chatMessages().length;
     if (count > this.previousMsgCount) {
@@ -104,6 +156,18 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   });
 
   ngOnInit() {
+    // 设置 :host max-height，让页面整体不超出 viewport
+    // 延迟一帧确保 header / footer 已完成布局
+    setTimeout(() => this.updateMaxHeight(), 0);
+    window.addEventListener('resize', this.updateMaxHeight);
+
+    const layoutEl = document.querySelector('app-student-layout');
+    const footerEl = layoutEl?.querySelector('.app-footer') as HTMLElement | null;
+    if (footerEl && typeof ResizeObserver !== 'undefined') {
+      this.footerObserver = new ResizeObserver(this.updateMaxHeight);
+      this.footerObserver.observe(footerEl);
+    }
+
     this.liveId = this.route.snapshot.paramMap.get('id') || '';
     if (!this.liveId) {
       this.message.error('无效的直播间');
@@ -113,6 +177,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     this.liveService.getLive(this.liveId).subscribe({
       next: (live) => {
+        if (this.destroyed) return; // 异步回调到达时组件已销毁，跳过
         const currentUser = this.configState.getDeep('currentUser') as any;
         const userId = currentUser?.id;
 
@@ -173,6 +238,14 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   ngOnDestroy() {
+    this.destroyed = true;
+    this.routerSub?.unsubscribe();
+    this.footerObserver?.disconnect();
+    window.removeEventListener('resize', this.updateMaxHeight);
+    // 清除 max-height 内联样式，避免影响其他路由
+    if (this.hostEl?.nativeElement) {
+      this.renderer.removeStyle(this.hostEl.nativeElement, 'max-height');
+    }
     this.liveService.disconnect();
   }
 
@@ -183,6 +256,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     this.liveService.getWebSocketToken(this.liveId).subscribe({
       next: (tokenRes) => {
+        if (this.destroyed) return;
         this.liveService.connect(
           this.liveId, tokenRes.token, tokenRes.wsUrl, this.myRole, userId, userName
         ).catch(err => this.message.error(err.message || '连接失败'));

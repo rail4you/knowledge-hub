@@ -1,11 +1,15 @@
-<!-- ===== 多人直播间 ===== -->
+<!-- ===== 多人直播间（融入学生端布局：logo+tab 在外层，footer 在外层） ===== -->
 <div class="live-room">
-  <!-- Top bar -->
+  <!-- Top bar（白底卡片，与学生端风格一致） -->
   <header class="live-topbar">
     <div class="topbar-left">
       <span class="topbar-brand" *ngIf="live">
-        <span *ngIf="myRole === 'teacher'">面试官 · {{ live.teacherName }}</span>
-        <span *ngIf="myRole === 'student'">面试直播间</span>
+        <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+        <span class="topbar-title-text">
+          <ng-container *ngIf="myRole === 'teacher'">面试官 · {{ live.teacherName }}</ng-container>
+          <ng-container *ngIf="myRole === 'student' && live.title">{{ live.title }}</ng-container>
+          <ng-container *ngIf="myRole === 'student' && !live.title">面试直播间</ng-container>
+        </span>
       </span>
     </div>
     <div class="topbar-center">
@@ -16,8 +20,9 @@
       }
     </div>
     <div class="topbar-right">
-      <button nz-button nzType="text" nzSize="small" class="btn-exit" (click)="goBack()">
-        <span nz-icon nzType="close" nzTheme="outline"></span>
+      <button type="button" class="btn-exit" (click)="goBack()" title="退出直播">
+        <span nz-icon nzType="logout" nzTheme="outline"></span>
+        <span>退出直播</span>
       </button>
     </div>
   </header>
@@ -109,6 +114,7 @@
     <!-- ── CHAT SIDEBAR ── -->
     <aside class="chat-sidebar" *ngIf="chatOpen()">
       <div class="chat-header">
+        <span nz-icon nzType="message" nzTheme="outline"></span>
         <span>聊天</span>
         <span class="chat-count" *ngIf="chatMessages().length > 0">{{ chatMessages().length }}</span>
       </div>
@@ -151,6 +157,7 @@
   <footer class="control-bar" *ngIf="liveState() !== 'idle' && liveState() !== 'ended'">
     <div class="control-row">
       <button
+        type="button"
         class="ctrl-btn"
         [class.off]="!micEnabled()"
         nz-tooltip [nzTooltipTitle]="micEnabled() ? '关闭麦克风' : '开启麦克风'"
@@ -160,6 +167,7 @@
       </button>
 
       <button
+        type="button"
         class="ctrl-btn"
         [class.off]="!camEnabled()"
         nz-tooltip [nzTooltipTitle]="camEnabled() ? '关闭摄像头' : '开启摄像头'"
@@ -169,6 +177,7 @@
       </button>
 
       <button
+        type="button"
         class="ctrl-btn ctrl-hangup"
         nz-tooltip nzTooltipTitle="退出直播"
         (click)="goBack()"
@@ -177,6 +186,7 @@
       </button>
 
       <button
+        type="button"
         class="ctrl-btn ctrl-end"
         *ngIf="myRole === 'teacher'"
         nz-tooltip nzTooltipTitle="结束直播（仅教师）"
@@ -187,6 +197,7 @@
       </button>
 
       <button
+        type="button"
         class="ctrl-btn"
         nz-tooltip nzTooltipTitle="切换摄像头"
         (click)="liveService.switchCamera()"
@@ -195,6 +206,7 @@
       </button>
 
       <button
+        type="button"
         class="ctrl-btn"
         [class.active]="chatOpen()"
         nz-tooltip nzTooltipTitle="聊天"
