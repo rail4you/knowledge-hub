@@ -90,6 +90,13 @@ public class MeiliSearchService : IMeiliSearchService
         }
 
         await UpdateIndexSettingsAsync();
+
+        // videos 索引也要在每次搜索时自愈：历史索引的 searchable-attributes
+        // 可能是通配符 "*"（命中 id/order/startTime 等隐藏字段），导致数字
+        // 查询 "1" 误召回全部视频且 _rankingScore=1.0 置顶。此前修复逻辑只
+        // 放在 VideoAnalysisAppService（仅视频入库时触发），线上存量索引
+        // 一直没被纠正，所以每次搜索都顺手强制同步一次。
+        await EnsureVideosIndexSettingsAsync();
     }
 
     private async Task UpdateIndexSettingsAsync()
@@ -131,6 +138,53 @@ public class MeiliSearchService : IMeiliSearchService
 
         // proximityPrecision 用 byAttribute：按属性而不是按字计算 proximity，召回更准
         await _httpClient.PutAsJsonAsync($"{index}/settings/proximity-precision", "byAttribute");
+    }
+
+    /// <summary>
+    /// 强制同步 videos 索引的 settings（不存在则创建）。与
+    /// VideoAnalysisAppService.EnsureVideosIndexExistsAsync 保持一致。
+    /// 最佳努力：失败不抛异常，不能拖垮 documents 侧的正常搜索。
+    /// </summary>
+    private async Task EnsureVideosIndexSettingsAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/indexes/{VideoIndexName}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = new { uid = VideoIndexName, primaryKey = "id" };
+                response = await _httpClient.PostAsJsonAsync("/indexes", content);
+                response.EnsureSuccessStatusCode();
+            }
+
+            var index = _httpClient.BaseAddress + $"/indexes/{VideoIndexName}";
+
+            // 关键：searchable 只保留业务文本字段。id/order/startTime/endTime
+            // 等一旦可搜，数字查询（如 "1"）就会误命中 GUID/序号/时间戳。
+            await _httpClient.PutAsJsonAsync($"{index}/settings/searchable-attributes",
+                new[] { "videoName", "eventDescription" });
+
+            await _httpClient.PutAsJsonAsync($"{index}/settings/filterable-attributes",
+                new[] { "resourceId", "videoId", "videoName", "indexedAt" });
+
+            await _httpClient.PutAsJsonAsync($"{index}/settings/sortable-attributes",
+                new[] { "order", "indexedAt", "startTime" });
+
+            // words 必须第一位：不含 query 词的文档直接剔除
+            await _httpClient.PutAsJsonAsync($"{index}/settings/ranking-rules", new[]
+            {
+                "words",
+                "typo",
+                "proximity",
+                "attribute",
+                "sort",
+                "exactness"
+            });
+        }
+        catch
+        {
+            // videos 索引自愈失败不影响 documents 搜索结果合并
+        }
     }
 
     public async Task<IndexTaskResultDto> IndexDocumentAsync(Guid resourceId)
@@ -321,6 +375,24 @@ public class MeiliSearchService : IMeiliSearchService
     public async Task<SearchResultDto> SearchAsync(SearchQueryDto query)
     {
         await EnsureIndexExistsAsync();
+
+        // 调用者明确指定了 IndexName（前端索引下拉框）则只走单边，
+        // 与 HybridSearchAsync 保持一致。之前这里忽略 IndexName 总是合并
+        // 双索引，导致选“文档”时视频结果仍以 1.0 满分置顶（如 ?q=1）。
+        if (!string.IsNullOrEmpty(query.IndexName))
+        {
+            var single = await ExecuteSingleIndexSearchAsync(
+                query.IndexName!, query,
+                applyDocumentFilters: string.Equals(query.IndexName, IndexName, StringComparison.OrdinalIgnoreCase),
+                hybrid: false);
+            return new SearchResultDto
+            {
+                Items = single.Items,
+                TotalCount = single.Total,
+                Query = query.Query,
+                Facets = new Dictionary<string, Dictionary<string, long>>()
+            };
+        }
 
         // 同时搜两个索引：documents（文档/PDF/PPT等） 和 videos（视频时间轴事件）。
         // 两套 schema 不同：videos 没有 status/tenantId/fileExtension/categoryId，
