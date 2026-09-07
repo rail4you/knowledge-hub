@@ -8,7 +8,8 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { AuthService } from '@abp/ng.core';
+import { AuthService, Rest, RestService } from '@abp/ng.core';
+import type { PagedResultDto } from '@abp/ng.core';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
@@ -68,6 +69,7 @@ interface HotCourse {
 })
 export class StudentCoursesComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
+  private readonly restService = inject(RestService);
   private readonly learningService = inject(LearningService);
   private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
@@ -94,6 +96,10 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     if (status === 'enrolled') {
       const myIds = new Set(this.myCourses().map(c => c.courseId));
       return this.courses().filter(c => myIds.has(c.id) || c.isEnrolled);
+    }
+    if (status === 'recommended') {
+      // 后端已按 isRecommended 过滤；此处再兜底一次，兼容旧数据/缓存
+      return this.courses().filter(c => (c as any).isRecommended);
     }
     return this.courses();
   });
@@ -167,32 +173,35 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   loadCourses(): void {
     this.loading.set(true);
     // 'enrolled' 是客户端基于 myCourses() 过滤，不发请求
-    // 'all' / 'recommended' 都是从 getPublished 拉取，由 selectedStatus() 触发
+    // 'recommended' 必须带上 isRecommended=true；注意不能走 CourseService.getPublished，
+    // 生成的代理只透传固定字段会把 isRecommended 丢掉，这里直接调 REST 接口。
     const status = this.selectedStatus();
-    const input: any = {
+    const params: any = {
       filter: this.filter() || undefined,
       majorId: this.selectedMajor() || undefined,
       difficulty: this.selectedDifficulty() ?? undefined,
       skipCount: 0,
       maxResultCount: 30,
     };
-    // 'recommended' 透传 status 字段；后端 PagedCourseRequestDto 支持 status 过滤；
-    // 未来若后端加专门的推荐接口，可在此处改为调用 getRecommendedCourses。
     if (status === 'recommended') {
-      // 暂不附加 status：让 API 返回所有已发布课程，再由前端按热度/进度等本地排序。
-      // 这样 'all' 与 'recommended' 至少都能响应点击、显示 loading、并刷新数据。
+      params.isRecommended = true;
     }
-    this.courseService.getPublished(input).subscribe({
-      next: result => {
-        this.courses.set(result.items || []);
-        this.loading.set(false);
-        this.syncMajorChips(result.items || []);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.message.error('课程加载失败');
-      },
-    });
+    this.restService
+      .request<any, PagedResultDto<CourseDto>>(
+        { method: 'GET', url: '/api/app/course/published', params },
+        { apiName: 'KnowledgeHub' } as Partial<Rest.Config>
+      )
+      .subscribe({
+        next: result => {
+          this.courses.set(result.items || []);
+          this.loading.set(false);
+          this.syncMajorChips(result.items || []);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.message.error('课程加载失败');
+        },
+      });
   }
 
   loadMyCourses(): void {
@@ -364,5 +373,9 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
 
   isEnrolled(courseId: string): boolean {
     return this.myCourses().some(c => c.courseId === courseId);
+  }
+
+  isRecommended(course: CourseDto): boolean {
+    return !!(course as any).isRecommended;
   }
 }

@@ -48,6 +48,7 @@ public class CourseResourceAppService : KnowledgeHubAppService, ICourseResourceA
                     ResourceId = cr.ResourceId,
                     DisplayName = cr.DisplayName,
                     SortOrder = cr.SortOrder,
+                    IsRecommended = cr.IsRecommended,
                     CreationTime = cr.CreationTime,
                     ResourceName = r != null ? r.Name : null,
                     Description = r != null ? r.Description : null,
@@ -86,6 +87,7 @@ public class CourseResourceAppService : KnowledgeHubAppService, ICourseResourceA
                     ResourceId = cr.ResourceId,
                     DisplayName = cr.DisplayName,
                     SortOrder = cr.SortOrder,
+                    IsRecommended = cr.IsRecommended,
                     CreationTime = cr.CreationTime,
                     ResourceName = r != null ? r.Name : null,
                     Description = r != null ? r.Description : null,
@@ -126,7 +128,8 @@ public class CourseResourceAppService : KnowledgeHubAppService, ICourseResourceA
             input.CourseId,
             input.ResourceId,
             input.DisplayName,
-            input.SortOrder
+            input.SortOrder,
+            input.IsRecommended
         );
 
         courseResource = await _courseResourceRepository.InsertAsync(courseResource);
@@ -138,6 +141,7 @@ public class CourseResourceAppService : KnowledgeHubAppService, ICourseResourceA
             ResourceId = courseResource.ResourceId,
             DisplayName = courseResource.DisplayName,
             SortOrder = courseResource.SortOrder,
+            IsRecommended = courseResource.IsRecommended,
             CreationTime = courseResource.CreationTime,
             ResourceName = resource.Name,
             Description = resource.Description,
@@ -148,6 +152,42 @@ public class CourseResourceAppService : KnowledgeHubAppService, ICourseResourceA
             FileSize = resource.FileSize,
             ResourceType = resource.ResourceType,
             IsDownloadable = resource.IsDownloadable,
+        };
+    }
+
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
+    public async Task<CourseResourceDto> UpdateAsync(Guid id, UpdateCourseResourceDto input)
+    {
+        var courseResource = await _courseResourceRepository.GetAsync(id);
+        courseResource.DisplayName = input.DisplayName;
+        courseResource.SortOrder = input.SortOrder;
+        courseResource.IsRecommended = input.IsRecommended;
+        await _courseResourceRepository.UpdateAsync(courseResource);
+
+        Resource? resource = null;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resource = await _resourceRepository.FindAsync(courseResource.ResourceId);
+        }
+
+        return new CourseResourceDto
+        {
+            Id = courseResource.Id,
+            CourseId = courseResource.CourseId,
+            ResourceId = courseResource.ResourceId,
+            DisplayName = courseResource.DisplayName,
+            SortOrder = courseResource.SortOrder,
+            IsRecommended = courseResource.IsRecommended,
+            CreationTime = courseResource.CreationTime,
+            ResourceName = resource?.Name,
+            Description = resource?.Description,
+            FilePath = resource?.FilePath,
+            Keywords = resource?.Keywords,
+            OriginalFileName = resource?.OriginalFileName,
+            FileExtension = resource?.FileExtension,
+            FileSize = resource?.FileSize,
+            ResourceType = resource?.ResourceType ?? Resources.Enums.ResourceType.Document,
+            IsDownloadable = resource?.IsDownloadable ?? false,
         };
     }
 

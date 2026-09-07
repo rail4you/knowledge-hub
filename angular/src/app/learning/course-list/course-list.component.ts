@@ -11,6 +11,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzGridModule } from 'ng-zorro-antd/grid';
@@ -38,6 +39,7 @@ import { OssUploadService, OssUploadResultDto } from '../../shared/oss-upload.se
     NzEmptyModule,
     NzTableModule,
     NzIconModule,
+    NzSwitchModule,
     NzModalModule,
     NzFormModule,
     NzGridModule,
@@ -97,8 +99,9 @@ export class CourseListComponent implements OnInit {
       semesterHours: undefined,
       difficulty: 1,
       categoryId: undefined,
-      status: CourseStatus.Draft
-    };
+      status: CourseStatus.Draft,
+      isRecommended: false,
+    } as CreateUpdateCourseDto;
   }
 
   ngOnInit() {
@@ -255,8 +258,9 @@ export class CourseListComponent implements OnInit {
       semesterHours: course.semesterHours ?? undefined,
       difficulty: course.difficulty ?? 1,
       categoryId: undefined,
-      status: course.status ?? CourseStatus.Draft
-    };
+      status: course.status ?? CourseStatus.Draft,
+      isRecommended: (course as any).isRecommended ?? false,
+    } as CreateUpdateCourseDto;
     this.coverFileList = [];
     this.isModalVisible = true;
   }
@@ -317,5 +321,48 @@ export class CourseListComponent implements OnInit {
         this.message.error(this.isEdit ? '更新失败' : '创建失败');
       }
     });
+  }
+
+  /** 表格内快捷开关：是否推荐课程（学生端「推荐课程」只显示开启的） */
+  toggleRecommend(course: CourseDto, checked: boolean) {
+    if (!course.id) return;
+    const body = {
+      title: course.title ?? '',
+      description: course.description ?? '',
+      coverImageUrl: course.coverImageUrl ?? '',
+      majorId: course.majorId ?? undefined,
+      semester: course.semester ?? '',
+      credits: course.credits ?? undefined,
+      semesterHours: course.semesterHours ?? undefined,
+      difficulty: course.difficulty ?? 1,
+      categoryId: course.categoryId ?? undefined,
+      status: course.status ?? CourseStatus.Draft,
+      isRecommended: checked,
+    } as CreateUpdateCourseDto;
+    this.courseService.update(course.id, body).subscribe({
+      next: () => {
+        this.courses.update(list =>
+          list.map(c => (c.id === course.id ? { ...c, isRecommended: checked } as CourseDto : c))
+        );
+        this.message.success(checked ? '已设为推荐课程' : '已取消推荐');
+      },
+      error: () => {
+        this.message.error('推荐状态更新失败');
+        this.loadCourses();
+      },
+    });
+  }
+
+  isRecommended(course: CourseDto): boolean {
+    return !!(course as any).isRecommended;
+  }
+
+  /** 弹窗内推荐开关的代理属性（模板语法不支持 as 强转） */
+  get formIsRecommended(): boolean {
+    return !!((this.formData as any).isRecommended);
+  }
+
+  set formIsRecommended(v: boolean) {
+    (this.formData as any).isRecommended = v;
   }
 }

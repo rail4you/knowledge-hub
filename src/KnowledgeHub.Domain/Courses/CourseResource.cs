@@ -19,14 +19,17 @@ public class CourseResource : Entity<Guid>, IMultiTenant, IHasCreationTime
     /// <summary>在课程内的显示名称，为空时使用 Resource.Name</summary>
     public string? DisplayName { get; set; }
     public int SortOrder { get; set; }
+    /// <summary>是否推荐该课程资源：用于课程内资源推荐展示</summary>
+    public bool IsRecommended { get; set; }
 
     private CourseResource() { }
 
-    public CourseResource(Guid id, Guid courseId, Guid resourceId, string? displayName = null, int sortOrder = 0) : base(id)
+    public CourseResource(Guid id, Guid courseId, Guid resourceId, string? displayName = null, int sortOrder = 0, bool isRecommended = false) : base(id)
     {
         CourseId = courseId;
         ResourceId = resourceId;
         DisplayName = displayName;
         SortOrder = sortOrder;
+        IsRecommended = isRecommended;
     }
 }

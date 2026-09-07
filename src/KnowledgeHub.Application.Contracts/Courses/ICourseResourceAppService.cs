@@ -16,6 +16,9 @@ public interface ICourseResourceAppService : IApplicationService
     /// <summary>将资源文件关联到课程</summary>
     Task<CourseResourceDto> CreateAsync(CreateCourseResourceDto input);
 
+    /// <summary>更新课程资源的显示名/排序/推荐开关</summary>
+    Task<CourseResourceDto> UpdateAsync(Guid id, UpdateCourseResourceDto input);
+
     /// <summary>取消资源与课程的关联</summary>
     Task DeleteAsync(Guid id);
 }

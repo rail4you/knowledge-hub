@@ -42,11 +42,24 @@
                     <nz-tag [nzColor]="getResourceTypeColor(resource.resourceType)">
                       {{ getResourceTypeLabel(resource.resourceType) }}
                     </nz-tag>
+                    @if (isRecommended(resource)) {
+                      <nz-tag nzColor="gold">推荐</nz-tag>
+                    }
                   </div>
                 </div>
-                <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkResource(resource)">
-                  取消关联
-                </button>
+                <div class="resource-item-actions">
+                  <nz-switch
+                    [ngModel]="isRecommended(resource)"
+                    (ngModelChange)="toggleRecommend(resource, $event)"
+                    nzCheckedChildren="推荐"
+                    nzUnCheckedChildren="普通"
+                    nzSize="small"
+                    [title]="isRecommended(resource) ? '已推荐，点击取消' : '设为推荐资源'"
+                  ></nz-switch>
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkResource(resource)">
+                    取消关联
+                  </button>
+                </div>
               </div>
             }
           </div>

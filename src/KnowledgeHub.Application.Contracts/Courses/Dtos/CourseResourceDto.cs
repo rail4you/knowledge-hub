@@ -11,6 +11,8 @@ public class CourseResourceDto : EntityDto<Guid>
     public Guid ResourceId { get; set; }
     public string? DisplayName { get; set; }
     public int SortOrder { get; set; }
+    /// <summary>是否推荐该课程资源</summary>
+    public bool IsRecommended { get; set; }
     public DateTime CreationTime { get; set; }
 
     // Resource 字段
@@ -38,4 +40,18 @@ public class CreateCourseResourceDto
     public string? DisplayName { get; set; }
 
     public int SortOrder { get; set; }
+
+    /// <summary>是否推荐该课程资源</summary>
+    public bool IsRecommended { get; set; }
+}
+
+public class UpdateCourseResourceDto
+{
+    [StringLength(256)]
+    public string? DisplayName { get; set; }
+
+    public int SortOrder { get; set; }
+
+    /// <summary>是否推荐该课程资源</summary>
+    public bool IsRecommended { get; set; }
 }

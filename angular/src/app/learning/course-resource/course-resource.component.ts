@@ -2,7 +2,7 @@ import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { LocalizationPipe } from '@abp/ng.core';
+import { LocalizationPipe, Rest, RestService } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -12,6 +12,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { CourseService } from '../../proxy/courses/course.service';
 import { CourseResourceService } from '../../proxy/courses/course-resource.service';
@@ -37,6 +38,7 @@ import type { ResourceDto } from '../../proxy/resources/models';
     NzEmptyModule,
     NzSelectModule,
     NzTableModule,
+    NzSwitchModule,
   ],
   templateUrl: './course-resource.component.html',
   styleUrls: ['./course-resource.component.scss'],
@@ -46,6 +48,7 @@ export class CourseResourceComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly courseResourceService = inject(CourseResourceService);
   private readonly resourceService = inject(ResourceService);
+  private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
 
   courses = signal<CourseDto[]>([]);
@@ -155,7 +158,8 @@ export class CourseResourceComponent implements OnInit {
       resourceId: resource.id,
       displayName: resource.name ?? '',
       sortOrder: 0,
-    }).subscribe({
+      isRecommended: false,
+    } as any).subscribe({
       next: () => {
         this.message.success('资源已关联到课程');
         this.clearSelection();
@@ -216,7 +220,8 @@ export class CourseResourceComponent implements OnInit {
         resourceId: id,
         displayName: resource?.name ?? '',
         sortOrder: 0,
-      });
+        isRecommended: false,
+      } as any);
     });
 
     forkJoin(tasks).subscribe({
@@ -235,6 +240,41 @@ export class CourseResourceComponent implements OnInit {
         this.loadCourseResources();
       },
     });
+  }
+
+  /** 课程资源推荐开关：不改代理文件，直接调 PUT（UpdateAsync 由 ABP 常规控制器暴露） */
+  toggleRecommend(courseResource: CourseResourceDto, checked: boolean) {
+    if (!courseResource.id) return;
+    const body = {
+      displayName: courseResource.displayName ?? '',
+      sortOrder: courseResource.sortOrder ?? 0,
+      isRecommended: checked,
+    };
+    this.restService
+      .request<any, CourseResourceDto>(
+        {
+          method: 'PUT',
+          url: `/api/app/course-resource/${courseResource.id}`,
+          body,
+        },
+        { apiName: 'KnowledgeHub' } as Partial<Rest.Config>
+      )
+      .subscribe({
+        next: () => {
+          this.courseResources.update(list =>
+            list.map(r => (r.id === courseResource.id ? { ...r, isRecommended: checked } : r))
+          );
+          this.message.success(checked ? '已设为推荐资源' : '已取消推荐');
+        },
+        error: () => {
+          this.message.error('推荐状态更新失败');
+          this.loadCourseResources();
+        },
+      });
+  }
+
+  isRecommended(courseResource: CourseResourceDto): boolean {
+    return !!(courseResource as any).isRecommended;
   }
 
   unlinkResource(courseResource: CourseResourceDto) {

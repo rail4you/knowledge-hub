@@ -77,6 +77,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         course.Difficulty = input.Difficulty;
         course.CategoryId = input.CategoryId;
         course.Status = input.Status;
+        course.IsRecommended = input.IsRecommended;
         course.TeacherId = _currentUser.Id;
 
         await _courseRepository.InsertAsync(course);
@@ -103,6 +104,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         course.Difficulty = input.Difficulty;
         course.CategoryId = input.CategoryId;
         course.Status = input.Status;
+        course.IsRecommended = input.IsRecommended;
 
         await _courseRepository.UpdateAsync(course);
 
@@ -136,7 +138,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
                          .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
                          .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
-                         .WhereIf(input.Status.HasValue, x => x.Status == input.Status);
+                         .WhereIf(input.Status.HasValue, x => x.Status == input.Status)
+                         .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value);
 
             totalCount = await query.CountAsync();
             courses = await query.OrderByDescending(x => x.CreationTime)
@@ -280,6 +283,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             SemesterHours = course.SemesterHours,
             Difficulty = course.Difficulty,
             Status = course.Status,
+            IsRecommended = course.IsRecommended,
             TeacherId = course.TeacherId,
             CategoryId = course.CategoryId,
             TeacherName = teacherName,
@@ -306,7 +310,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                          .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
                          .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
-                         .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId);
+                         .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
+                         .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value);
 
             totalCount = await query.CountAsync();
             courses = await query.OrderByDescending(x => x.CreationTime)
@@ -352,6 +357,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                 SemesterHours = c.SemesterHours,
                 Status = c.Status,
                 Difficulty = c.Difficulty,
+                IsRecommended = c.IsRecommended,
                 TeacherId = c.TeacherId,
                 CategoryId = c.CategoryId,
                 ChapterCount = chapterCountMap.GetValueOrDefault(c.Id, 0),
@@ -438,7 +444,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                          .WhereIf(filter.Difficulty.HasValue, x => x.Difficulty == filter.Difficulty)
                          .WhereIf(filter.CategoryId.HasValue, x => x.CategoryId == filter.CategoryId)
                          .WhereIf(filter.TeacherId.HasValue, x => x.TeacherId == filter.TeacherId)
-                         .WhereIf(filter.Status.HasValue, x => x.Status == filter.Status);
+                         .WhereIf(filter.Status.HasValue, x => x.Status == filter.Status)
+                         .WhereIf(filter.IsRecommended.HasValue, x => x.IsRecommended == filter.IsRecommended!.Value);
 
             courses = await query.OrderByDescending(x => x.CreationTime).ToListAsync();
         }
@@ -500,6 +507,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             SemesterHours = course.SemesterHours,
             Status = course.Status,
             Difficulty = course.Difficulty,
+            IsRecommended = course.IsRecommended,
             TeacherId = course.TeacherId,
             CategoryId = course.CategoryId,
             CreationTime = course.CreationTime,

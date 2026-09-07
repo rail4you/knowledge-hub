@@ -119,6 +119,12 @@
                     已选课
                   </span>
                 }
+                @if (isRecommended(course)) {
+                  <span class="course-card__badge course-card__badge--recommended">
+                    <span nz-icon nzType="star" nzTheme="fill"></span>
+                    推荐
+                  </span>
+                }
               </div>
 
               <!-- 信息 -->

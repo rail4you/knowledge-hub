@@ -18,6 +18,8 @@ public class CourseDto : FullAuditedEntityDto<Guid>
     public int? SemesterHours { get; set; }
     public CourseStatus Status { get; set; }
     public int Difficulty { get; set; }
+    /// <summary>是否推荐课程</summary>
+    public bool IsRecommended { get; set; }
     public Guid? TeacherId { get; set; }
     public Guid? CategoryId { get; set; }
     public string? TeacherName { get; set; }
@@ -44,6 +46,8 @@ public class CreateUpdateCourseDto
     public int Difficulty { get; set; } = 1;
     public Guid? CategoryId { get; set; }
     public CourseStatus Status { get; set; } = CourseStatus.Draft;
+    /// <summary>是否推荐课程</summary>
+    public bool IsRecommended { get; set; }
 }
 
 public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
@@ -54,6 +58,8 @@ public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
     public int? Difficulty { get; set; }
     public Guid? CategoryId { get; set; }
     public CourseStatus? Status { get; set; }
+    /// <summary>只返回推荐课程时传 true；null 表示不过滤</summary>
+    public bool? IsRecommended { get; set; }
     public Guid? TenantId { get; set; }
 }
 
@@ -66,6 +72,8 @@ public class CourseFilterDto
     public Guid? CategoryId { get; set; }
     public Guid? TeacherId { get; set; }
     public CourseStatus? Status { get; set; }
+    /// <summary>只返回推荐课程时传 true；null 表示不过滤</summary>
+    public bool? IsRecommended { get; set; }
     public Guid? TenantId { get; set; }
 }
 

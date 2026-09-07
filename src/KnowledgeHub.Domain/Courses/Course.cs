@@ -18,6 +18,8 @@ public class Course : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public int? SemesterHours { get; set; }
     public CourseStatus Status { get; set; } = CourseStatus.Draft;
     public int Difficulty { get; set; } = 1;
+    /// <summary>是否推荐课程：学生端「推荐课程」Tab 只显示开启此开关的已发布课程</summary>
+    public bool IsRecommended { get; set; }
     public Guid? TeacherId { get; set; }
     public Guid? CategoryId { get; set; }
     

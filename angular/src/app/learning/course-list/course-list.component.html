@@ -36,6 +36,7 @@
             <th style="width:8%">学时</th>
             <th style="width:10%">难度</th>
             <th style="width:13%">状态</th>
+            <th style="width:10%">推荐</th>
             <th style="width:18%">操作</th>
           </tr>
         </thead>
@@ -67,6 +68,15 @@
                 <span class="course-status" [class]="getStatusClass(course.status)">
                   {{ getStatusLabel(course.status) }}
                 </span>
+              </td>
+              <td>
+                <nz-switch
+                  [ngModel]="isRecommended(course)"
+                  (ngModelChange)="toggleRecommend(course, $event)"
+                  nzCheckedChildren="推荐"
+                  nzUnCheckedChildren="普通"
+                  [title]="isRecommended(course) ? '已推荐，点击取消' : '设为推荐课程'"
+                ></nz-switch>
               </td>
               <td>
                 <span class="op-links">
@@ -217,6 +227,18 @@
                 <nz-option [nzValue]="s.value" [nzLabel]="s.label"></nz-option>
               }
             </nz-select>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label>推荐课程</nz-form-label>
+          <nz-form-control nzExtra="开启后，该课程会出现在学生端「推荐课程」列表中">
+            <nz-switch
+              [(ngModel)]="formIsRecommended"
+              [ngModelOptions]="{ standalone: true }"
+              nzCheckedChildren="推荐"
+              nzUnCheckedChildren="普通"
+            ></nz-switch>
           </nz-form-control>
         </nz-form-item>
 

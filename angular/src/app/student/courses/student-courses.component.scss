@@ -310,6 +310,12 @@
   span[nz-icon] {
     font-size: 10px;
   }
+
+  &--recommended {
+    right: auto;
+    left: 8px;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+  }
 }
 
 .course-card__body {
