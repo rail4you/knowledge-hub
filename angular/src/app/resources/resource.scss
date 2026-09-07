@@ -343,16 +343,81 @@
       text-align: center;
     }
 
-    .th-name {
+    // 名称列左对齐，其他列一律居中
+    .th-name,
+    .td-name {
       text-align: left;
+      overflow: hidden;
+    }
+
+    .th-name {
       // 标题列占比 32%，避免过宽挤压其他列，已在 nzWidth 中声明，此处兜底
       max-width: 420px;
     }
 
-    // 让资源名称列的单元格允许文字截断而非撑开
-    .th-name,
-    .td-name {
-      overflow: hidden;
+    .th-type,
+    .th-version,
+    .th-status,
+    .th-creator,
+    .th-time,
+    .th-ops,
+    .td-type,
+    .td-status,
+    .td-creator,
+    .td-time,
+    .td-ops {
+      text-align: center;
+    }
+
+    // 状态 tag 背景强区分（覆盖 nz 预设浅色，保证草稿灰 vs 通过绿一眼可辨）
+    .status-tag {
+      margin: 0;
+      font-weight: 600;
+      border-radius: 6px;
+      border-width: 1px;
+      border-style: solid;
+
+      &.status-0 {
+        // 草稿：冷灰底 + 深灰字
+        background: #e8ebf0 !important;
+        border-color: #c9d1dc !important;
+        color: #434343 !important;
+      }
+
+      &.status-1 {
+        // 待审核：浅蓝底 + 深蓝字
+        background: #dbeafe !important;
+        border-color: #60a5fa !important;
+        color: #1d4ed8 !important;
+      }
+
+      &.status-2 {
+        // 院校审核通过：浅橙底 + 深橙字
+        background: #fef0d9 !important;
+        border-color: #f59e0b !important;
+        color: #b45309 !important;
+      }
+
+      &.status-3 {
+        // 联盟审核通过（终审）：实绿底 + 深绿字，与草稿灰拉开最大对比
+        background: #bbf7d0 !important;
+        border-color: #16a34a !important;
+        color: #14532d !important;
+      }
+
+      &.status-4 {
+        // 审核拒绝：浅红底 + 深红字
+        background: #fee2e2 !important;
+        border-color: #ef4444 !important;
+        color: #b91c1c !important;
+      }
+
+      &.status-5 {
+        // 已隐藏：浅紫底 + 深紫字
+        background: #ede9fe !important;
+        border-color: #8b5cf6 !important;
+        color: #5b21b6 !important;
+      }
     }
   }
 

@@ -135,6 +135,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     { value: 'yesterday', label: '昨天' },
     { value: 'last7days', label: '最近7天' },
     { value: 'last30days', label: '最近30天' },
+    { value: 'older', label: '30天以前' },
   ];
 
   pendingAudits = signal<ResourceDto[]>([]);
@@ -195,8 +196,8 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
   };
 
   private readonly resourceStatusNames: Record<string, Record<number, string>> = {
-    'zh-Hans': { 0: '草稿', 1: '待审核', 2: '院校审核通过', 3: '联盟审核通过', 4: '审核拒绝', 5: '已隐藏' },
-    'en': { 0: 'Draft', 1: 'Pending Review', 2: 'School Approved', 3: 'League Approved', 4: 'Rejected', 5: 'Hidden' }
+    'zh-Hans': { 0: '草稿', 1: '待审核', 2: '院校审核', 3: '联盟审核', 4: '审核拒绝', 5: '已隐藏' },
+    'en': { 0: 'Draft', 1: 'Pending Review', 2: 'School Audit', 3: 'League Audit', 4: 'Rejected', 5: 'Hidden' }
   };
 
   l(key: string): string {
@@ -685,14 +686,26 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
 
   getStatusColor(value?: number): string {
     switch (value) {
-      case 0: return 'default';
-      case 1: return 'processing';
-      case 2: return 'warning';
-      case 3: return 'success';
-      case 4: return 'error';
-      case 5: return 'default';
+      case 0: return 'default'; // 草稿：灰
+      case 1: return 'processing'; // 待审核：蓝
+      case 2: return 'warning'; // 院校审核通过：橙
+      case 3: return 'success'; // 联盟审核通过：绿
+      case 4: return 'error'; // 审核拒绝：红
+      case 5: return 'purple'; // 已隐藏：紫（与草稿灰区分）
       default: return 'default';
     }
+  }
+
+  /**
+   * 创建人显示清洗：去掉前后空白及尾部多余的分隔符
+   * （如 "wwq -"、"wwq-"、"wwq_"、"wwq " 等脏数据，只显示干净的人名）。
+   */
+  getCreatorName(name?: string | null): string {
+    if (!name) return '';
+    return name
+      .replace(/[\s\-_–—:：|/\\]+$/g, '')
+      .replace(/^[\s\-_–—:：|/\\]+/g, '')
+      .trim();
   }
 
   getAuditModalTitle(): string {
@@ -967,6 +980,14 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
         return {
           startDate: start30.toISOString(),
           endDate: endOfDay.toISOString()
+        };
+      }
+      case 'older': {
+        // 30天以前：结束时间为最近30天起点的前1秒，开始时间不限
+        const start30 = new Date(today);
+        start30.setDate(start30.getDate() - 29);
+        return {
+          endDate: new Date(start30.getTime() - 1000).toISOString()
         };
       }
       default:

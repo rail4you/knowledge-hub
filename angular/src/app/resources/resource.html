@@ -199,14 +199,14 @@
                     <span class="file-name-text" [title]="item.name">{{ item.name }}</span>
                   </span>
                 </td>
-                <td><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
+                <td class="td-type"><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
                 <td class="td-version">v{{ item.currentVersion }}</td>
-                <td>
-                  <nz-tag [nzColor]="getStatusColor(item.status)">
+                <td class="td-status">
+                  <nz-tag [nzColor]="getStatusColor(item.status)" class="status-tag status-{{ item.status }}">
                     {{ getStatusName(item.status) }}
                   </nz-tag>
                 </td>
-                <td class="td-creator" [title]="item.creatorName || ''">{{ item.creatorName }}</td>
+                <td class="td-creator" [title]="getCreatorName(item.creatorName)">{{ getCreatorName(item.creatorName) }}</td>
                 <td class="td-time">
                   <span
                     nz-tooltip
@@ -343,7 +343,7 @@
                 {{ item.status === 1 ? ('::NeedsSchoolAudit' | abpLocalization) : ('::NeedsLeagueAudit' | abpLocalization) }}
               </nz-tag>
             </td>
-            <td>{{ item.creatorName }}</td>
+            <td>{{ getCreatorName(item.creatorName) }}</td>
             <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
             <td>
               <button nz-button nzType="primary" nzSize="small" (click)="openAuditModal(item)">
@@ -485,7 +485,7 @@
             <h4 class="drawer-title">{{ selectedResource()!.name }}</h4>
             <span class="drawer-subtitle">
               <nz-tag>{{ getResourceTypeName(selectedResource()!.resourceType) }}</nz-tag>
-              <nz-tag [nzColor]="getStatusColor(selectedResource()!.status)">{{ getStatusName(selectedResource()!.status) }}</nz-tag>
+              <nz-tag [nzColor]="getStatusColor(selectedResource()!.status)" class="status-tag status-{{ selectedResource()!.status }}">{{ getStatusName(selectedResource()!.status) }}</nz-tag>
             </span>
           </div>
         </div>
@@ -560,7 +560,7 @@
                 </div>
                 <div class="detail-row">
                   <label>{{ '::Status' | abpLocalization }}</label>
-                  <span><nz-tag [nzColor]="getStatusColor(selectedResource()!.status)">{{ getStatusName(selectedResource()!.status) }}</nz-tag></span>
+                  <span><nz-tag [nzColor]="getStatusColor(selectedResource()!.status)" class="status-tag status-{{ selectedResource()!.status }}">{{ getStatusName(selectedResource()!.status) }}</nz-tag></span>
                 </div>
                 <div class="detail-row">
                   <label>{{ '::Version' | abpLocalization }}</label>
@@ -568,7 +568,7 @@
                 </div>
                 <div class="detail-row">
                   <label>{{ '::Creator' | abpLocalization }}</label>
-                  <span>{{ selectedResource()!.creatorName }}</span>
+                  <span>{{ getCreatorName(selectedResource()!.creatorName) }}</span>
                 </div>
                 <div class="detail-row">
                   <label>{{ '::CreationTime' | abpLocalization }}</label>
