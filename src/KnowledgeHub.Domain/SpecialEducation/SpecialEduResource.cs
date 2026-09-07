@@ -18,8 +18,13 @@ public class SpecialEduResource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public SpecialEduCategory Category { get; set; }
     public string Modality { get; set; } = SpecialEduResourceModality.Text;
     public string ContentJson { get; set; } = "{}";
+    /// <summary>盲文对照 pairs（text/pinyin/braille/note）：支持编辑回写，非盲文类型为空数组。</summary>
+    public string PairsJson { get; set; } = "[]";
     public string RawJson { get; set; } = string.Empty;
     public string SourceInputJson { get; set; } = "{}";
+
+    /// <summary>内容版本号：AI 生成为 v1，每次结构化编辑自动 +1。</summary>
+    public int VersionNumber { get; set; } = 1;
 
     public SpecialEduPlanStatus Status { get; set; } = SpecialEduPlanStatus.Draft;
     public string? ReviewComment { get; set; }

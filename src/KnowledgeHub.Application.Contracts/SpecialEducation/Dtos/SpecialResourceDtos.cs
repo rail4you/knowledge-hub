@@ -16,11 +16,22 @@ public class SpecialEduResourceDto : FullAuditedEntityDto<Guid>
     public Guid? IepPlanId { get; set; }
     public Guid? CourseId { get; set; }
     public string ContentText { get; set; } = string.Empty;
+    public List<string> Content { get; set; } = new();
+    public List<ResourcePairDto> Pairs { get; set; } = new();
     public string RawJson { get; set; } = string.Empty;
+    public int VersionNumber { get; set; } = 1;
     public SpecialEduPlanStatus Status { get; set; }
     public string? ReviewComment { get; set; }
     public Guid? ReviewerUserId { get; set; }
     public string? ReviewerName { get; set; }
+}
+
+public class ResourcePairDto
+{
+    public string Text { get; set; } = string.Empty;
+    public string Pinyin { get; set; } = string.Empty;
+    public string Braille { get; set; } = string.Empty;
+    public string Note { get; set; } = string.Empty;
 }
 
 public class GenerateSpecialResourceInputDto

@@ -38,6 +38,7 @@ public class SpecialTeachingDesignDto : FullAuditedEntityDto<Guid>
     public List<string> AssessmentTools { get; set; } = new();
     public string StandardBasis { get; set; } = string.Empty;
     public string RawJson { get; set; } = string.Empty;
+    public int VersionNumber { get; set; } = 1;
     public SpecialEduPlanStatus Status { get; set; }
     public string? ReviewComment { get; set; }
     public Guid? ReviewerUserId { get; set; }

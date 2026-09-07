@@ -38,6 +38,14 @@ public static class SpecialEduResourceModality
     };
 }
 
+/// <summary>结构化内容归属：版本历史表用此区分三类主体。</summary>
+public enum SpecialEduContentType
+{
+    TeachingDesign = 0,
+    Iep = 1,
+    Resource = 2
+}
+
 public static class SpecialEduCategoryNames
 {
     public static string ToDisplayName(SpecialEduCategory category) => category switch

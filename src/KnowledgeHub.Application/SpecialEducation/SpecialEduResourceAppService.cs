@@ -33,6 +33,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
     private readonly ICurrentUser _currentUser;
     private readonly IPermissionChecker _permissionChecker;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IRepository<SpecialEduContentVersion, Guid> _versionRepository;
 
     public SpecialEduResourceAppService(
         IRepository<SpecialEduResource, Guid> repository,
@@ -40,7 +41,8 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
         IConfiguration configuration,
         ICurrentUser currentUser,
         IPermissionChecker permissionChecker,
-        IRepository<IdentityUser, Guid> userRepository)
+        IRepository<IdentityUser, Guid> userRepository,
+        IRepository<SpecialEduContentVersion, Guid> versionRepository)
     {
         _repository = repository;
         _editionConfig = editionConfig;
@@ -48,6 +50,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
         _currentUser = currentUser;
         _permissionChecker = permissionChecker;
         _userRepository = userRepository;
+        _versionRepository = versionRepository;
     }
 
     protected async Task EnsureEnabledAsync()
@@ -85,10 +88,12 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
             throw new UserFriendlyException($"不支持的资源类型：{input.Modality}");
         var doc = ParseResult(input.ResultJson);
         SpecialEduResource entity;
+        bool isNew = !input.Id.HasValue;
         if (input.Id.HasValue) entity = await _repository.GetAsync(input.Id.Value);
         else
         {
             entity = new SpecialEduResource(Guid.NewGuid(), CurrentTenant.Id, _currentUser.GetId(), input.Category, input.Modality);
+            entity.VersionNumber = 1;
             await _repository.InsertAsync(entity);
         }
         entity.Title = string.IsNullOrWhiteSpace(input.Title) ? doc.Title : input.Title;
@@ -98,11 +103,101 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
         entity.IepPlanId = input.IepPlanId;
         entity.CourseId = input.CourseId;
         entity.ContentJson = JsonSerializer.Serialize(doc.Content);
+        entity.PairsJson = JsonSerializer.Serialize(doc.Pairs);
         entity.RawJson = input.ResultJson;
         entity.SourceInputJson = input.SourceInputJson ?? "{}";
         if (entity.Status != SpecialEduPlanStatus.Draft) entity.Status = SpecialEduPlanStatus.Draft;
         await _repository.UpdateAsync(entity);
+        if (isNew) await SnapshotAsync(entity, BuildSnapshotJson(entity));
         return await ToDtoAsync(entity);
+    }
+
+    /// <summary>
+    /// 结构化编辑：先留档当前版本（老数据补 v1），再应用新内容并自动 +1，新状态记为草稿待审。
+    /// </summary>
+    public async Task<SpecialEduResourceDto> UpdateContentAsync(UpdateResourceContentDto input)
+    {
+        await EnsureEnabledAsync();
+        var entity = await _repository.GetAsync(input.Id);
+        if (entity.VersionNumber < 1) entity.VersionNumber = 1;
+        await EnsureVersionSnapshotAsync(entity);
+        entity.Title = input.Title ?? "";
+        entity.ContentJson = JsonSerializer.Serialize(input.Content ?? new List<string>());
+        entity.PairsJson = JsonSerializer.Serialize((input.Pairs ?? new List<ResourcePairInputDto>())
+            .Select(p => new BraillePair { Text = p.Text ?? "", Pinyin = p.Pinyin ?? "", Braille = p.Braille ?? "", Note = p.Note ?? "" }).ToList());
+        entity.RawJson = string.IsNullOrWhiteSpace(input.ResultJson) ? entity.RawJson : input.ResultJson;
+        entity.VersionNumber++;
+        if (entity.Status != SpecialEduPlanStatus.Draft) entity.Status = SpecialEduPlanStatus.Draft;
+        await _repository.UpdateAsync(entity);
+        await SnapshotAsync(entity, entity.RawJson);
+        return await ToDtoAsync(entity);
+    }
+
+    public async Task<List<SpecialEduContentVersionDto>> GetVersionsAsync(Guid id)
+    {
+        await EnsureEnabledAsync();
+        var query = await _versionRepository.GetQueryableAsync();
+        var items = query.Where(v => v.ContentType == SpecialEduContentType.Resource && v.EntityId == id)
+            .OrderByDescending(v => v.VersionNumber).ToList();
+        var dtos = new List<SpecialEduContentVersionDto>();
+        foreach (var v in items) dtos.Add(await ToVersionDtoAsync(v));
+        return dtos;
+    }
+
+    private async Task EnsureVersionSnapshotAsync(SpecialEduResource entity)
+    {
+        var exists = await _versionRepository.FirstOrDefaultAsync(
+            v => v.ContentType == SpecialEduContentType.Resource && v.EntityId == entity.Id && v.VersionNumber == entity.VersionNumber);
+        if (exists == null) await SnapshotAsync(entity, BuildSnapshotJson(entity));
+    }
+
+    /// <summary>用结构化列拼 canonical 快照（camelCase），不依赖 RawJson 原文，保证按字段取历史一定有值。</summary>
+    private static string BuildSnapshotJson(SpecialEduResource e)
+    {
+        List<string> content = new();
+        try { content = JsonSerializer.Deserialize<List<string>>(e.ContentJson) ?? new(); } catch { }
+        List<BraillePair> pairs = new();
+        try
+        {
+            pairs = JsonSerializer.Deserialize<List<BraillePair>>(e.PairsJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+        }
+        catch { }
+        if (pairs.Count == 0 && !e.RawJson.IsNullOrWhiteSpace())
+        {
+            try { pairs = ParseResult(e.RawJson).Pairs; } catch { }
+        }
+        return JsonSerializer.Serialize(new
+        {
+            title = e.Title, content,
+            pairs = pairs.Select(p => new { text = p.Text, pinyin = p.Pinyin, braille = p.Braille, note = p.Note }).ToList()
+        });
+    }
+
+    private async Task SnapshotAsync(SpecialEduResource entity, string snapshotJson)
+    {
+        await _versionRepository.InsertAsync(new SpecialEduContentVersion(
+            Guid.NewGuid(), entity.TenantId, SpecialEduContentType.Resource, entity.Id, entity.VersionNumber)
+        {
+            Title = entity.Title,
+            SnapshotJson = string.IsNullOrWhiteSpace(snapshotJson) ? "{}" : snapshotJson
+        });
+    }
+
+    private async Task<SpecialEduContentVersionDto> ToVersionDtoAsync(SpecialEduContentVersion v)
+    {
+        string? creatorName = null;
+        if (v.CreatorId.HasValue)
+        {
+            var u = await _userRepository.FindAsync(v.CreatorId.Value);
+            if (u != null) creatorName = !u.Name.IsNullOrEmpty() ? u.Name : u.UserName;
+        }
+        return new SpecialEduContentVersionDto
+        {
+            Id = v.Id, ContentType = v.ContentType, EntityId = v.EntityId,
+            VersionNumber = v.VersionNumber, Title = v.Title, SnapshotJson = v.SnapshotJson,
+            CreatorId = v.CreatorId, CreatorName = creatorName, CreationTime = v.CreationTime
+        };
     }
 
     public async Task<SpecialEduResourceDto> SubmitForReviewAsync(SubmitSpecialResourceForReviewInputDto input)
@@ -222,8 +317,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
 
     internal static (string Title, List<string> Content, List<BraillePair> Pairs) ParseResult(string json)
     {
-        var clean = json.Trim();
-        if (clean.StartsWith("```")) { var idx = clean.IndexOf('\n'); if (idx >= 0) clean = clean[(idx + 1)..]; if (clean.EndsWith("```")) clean = clean[..^3].TrimEnd(); }
+        var clean = SpecialTeachingDesignAppService.ExtractJson(json);
         using var doc = JsonDocument.Parse(clean);
         var root = doc.RootElement;
         var title = root.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
@@ -262,6 +356,17 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
             content = JsonSerializer.Deserialize<List<string>>(e.ContentJson) ?? new();
         }
         catch { }
+        List<BraillePair> pairs = new();
+        try
+        {
+            pairs = JsonSerializer.Deserialize<List<BraillePair>>(e.PairsJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+        }
+        catch { }
+        if (pairs.Count == 0 && !e.RawJson.IsNullOrWhiteSpace())
+        {
+            try { pairs = ParseResult(e.RawJson).Pairs; } catch { }
+        }
         string? reviewerName = null;
         if (e.ReviewerUserId.HasValue)
         {
@@ -274,7 +379,9 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
             CategoryName = SpecialEduCategoryNames.ToDisplayName(e.Category),
             Modality = e.Modality, ModalityName = ModalityDisplayName(e.Modality),
             TeachingDesignId = e.TeachingDesignId, IepPlanId = e.IepPlanId, CourseId = e.CourseId,
-            ContentText = string.Join("\n", content), RawJson = e.RawJson,
+            ContentText = string.Join("\n", content), Content = content,
+            Pairs = pairs.Select(p => new ResourcePairDto { Text = p.Text, Pinyin = p.Pinyin, Braille = p.Braille, Note = p.Note }).ToList(),
+            RawJson = e.RawJson, VersionNumber = e.VersionNumber,
             Status = e.Status, ReviewComment = e.ReviewComment,
             ReviewerUserId = e.ReviewerUserId, ReviewerName = reviewerName,
             CreationTime = e.CreationTime, CreatorId = e.CreatorId

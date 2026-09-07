@@ -44,6 +44,10 @@ export class SpecialEduService {
       if (i >= 0) s = s.slice(i + 1);
       if (s.endsWith('```')) s = s.slice(0, -3).trim();
     }
+    // AI 输出常带开场白/结语，提取最外层 {…} 再解析
+    const start = s.indexOf('{');
+    const end = s.lastIndexOf('}');
+    if (start >= 0 && end > start) s = s.slice(start, end + 1);
     return s;
   }
 

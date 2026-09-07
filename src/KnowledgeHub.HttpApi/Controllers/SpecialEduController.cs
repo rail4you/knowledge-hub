@@ -54,6 +54,19 @@ public class SpecialEduController : AbpControllerBase
     [IgnoreAntiforgeryToken]
     public Task<SpecialTeachingDesignDto> SaveDesign([FromBody] SaveTeachingDesignInputDto input) => _designService.SaveAsync(input);
 
+    [HttpPost("teaching-designs/{id}/content")]
+    [Authorize(KnowledgeHubPermissions.SpecialEducation.TeachingDesign)]
+    [IgnoreAntiforgeryToken]
+    public Task<SpecialTeachingDesignDto> UpdateDesignContent(Guid id, [FromBody] UpdateTeachingDesignContentDto input)
+    {
+        input.Id = id;
+        return _designService.UpdateContentAsync(input);
+    }
+
+    [HttpGet("teaching-designs/{id}/versions")]
+    [Authorize(KnowledgeHubPermissions.SpecialEducation.TeachingDesign)]
+    public Task<List<SpecialEduContentVersionDto>> GetDesignVersions(Guid id) => _designService.GetVersionsAsync(id);
+
     [HttpPost("teaching-designs/{id}/submit")]
     [Authorize(KnowledgeHubPermissions.SpecialEducation.TeachingDesign)]
     [IgnoreAntiforgeryToken]
@@ -103,10 +116,18 @@ public class SpecialEduController : AbpControllerBase
     [IgnoreAntiforgeryToken]
     public Task<IepPlanDto> SaveIep([FromBody] SaveIepInputDto input) => _iepService.SaveAsync(input);
 
-    [HttpPost("ieps/{id}/revision")]
+    [HttpPost("ieps/{id}/content")]
     [Authorize(KnowledgeHubPermissions.SpecialEducation.IEP)]
     [IgnoreAntiforgeryToken]
-    public Task<IepPlanDto> CreateIepRevision(Guid id) => _iepService.CreateRevisionAsync(id);
+    public Task<IepPlanDto> UpdateIepContent(Guid id, [FromBody] UpdateIepContentDto input)
+    {
+        input.Id = id;
+        return _iepService.UpdateContentAsync(input);
+    }
+
+    [HttpGet("ieps/{id}/versions")]
+    [Authorize(KnowledgeHubPermissions.SpecialEducation.Default)]
+    public Task<List<SpecialEduContentVersionDto>> GetIepVersions(Guid id) => _iepService.GetVersionsAsync(id);
 
     [HttpPost("ieps/{id}/submit")]
     [Authorize(KnowledgeHubPermissions.SpecialEducation.IEP)]
@@ -154,6 +175,19 @@ public class SpecialEduController : AbpControllerBase
     [Authorize(KnowledgeHubPermissions.SpecialEducation.Resource)]
     [IgnoreAntiforgeryToken]
     public Task<SpecialEduResourceDto> SaveResource([FromBody] SaveSpecialResourceInputDto input) => _resourceService.SaveAsync(input);
+
+    [HttpPost("resources/{id}/content")]
+    [Authorize(KnowledgeHubPermissions.SpecialEducation.Resource)]
+    [IgnoreAntiforgeryToken]
+    public Task<SpecialEduResourceDto> UpdateResourceContent(Guid id, [FromBody] UpdateResourceContentDto input)
+    {
+        input.Id = id;
+        return _resourceService.UpdateContentAsync(input);
+    }
+
+    [HttpGet("resources/{id}/versions")]
+    [Authorize(KnowledgeHubPermissions.SpecialEducation.Default)]
+    public Task<List<SpecialEduContentVersionDto>> GetResourceVersions(Guid id) => _resourceService.GetVersionsAsync(id);
 
     [HttpDelete("resources/{id}")]
     [Authorize(KnowledgeHubPermissions.SpecialEducation.Resource)]

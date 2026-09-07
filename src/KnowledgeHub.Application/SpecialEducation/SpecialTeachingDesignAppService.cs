@@ -36,6 +36,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
     private readonly ICurrentUser _currentUser;
     private readonly IPermissionChecker _permissionChecker;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IRepository<SpecialEduContentVersion, Guid> _versionRepository;
 
     public SpecialTeachingDesignAppService(
         IRepository<SpecialTeachingDesign, Guid> repository,
@@ -45,7 +46,8 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
         IConfiguration configuration,
         ICurrentUser currentUser,
         IPermissionChecker permissionChecker,
-        IRepository<IdentityUser, Guid> userRepository)
+        IRepository<IdentityUser, Guid> userRepository,
+        IRepository<SpecialEduContentVersion, Guid> versionRepository)
     {
         _repository = repository;
         _courseRepository = courseRepository;
@@ -55,8 +57,8 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
         _currentUser = currentUser;
         _permissionChecker = permissionChecker;
         _userRepository = userRepository;
+        _versionRepository = versionRepository;
     }
-
     protected async Task EnsureEnabledAsync()
     {
         if (!await _editionConfig.IsSpecialEducationEnabledAsync())
@@ -92,6 +94,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
         await EnsureEnabledAsync();
         var doc = ParseResult(input.ResultJson);
         SpecialTeachingDesign entity;
+        bool isNew = !input.Id.HasValue;
         if (input.Id.HasValue)
         {
             entity = await _repository.GetAsync(input.Id.Value);
@@ -99,6 +102,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
         else
         {
             entity = new SpecialTeachingDesign(Guid.NewGuid(), CurrentTenant.Id, _currentUser.GetId(), input.Category);
+            entity.VersionNumber = 1;
             await _repository.InsertAsync(entity);
         }
         entity.Category = input.Category;
@@ -108,7 +112,108 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
         ApplyDoc(entity, doc, input.ResultJson);
         if (entity.Status != SpecialEduPlanStatus.Draft) entity.Status = SpecialEduPlanStatus.Draft;
         await _repository.UpdateAsync(entity);
+        if (isNew) await SnapshotAsync(entity, BuildSnapshotJson(entity));
         return await ToDtoAsync(entity);
+    }
+
+    /// <summary>
+    /// 结构化编辑：先留档当前版本（老数据补 v1），再应用新内容并自动 +1，新状态记为草稿待审。
+    /// </summary>
+    public async Task<SpecialTeachingDesignDto> UpdateContentAsync(UpdateTeachingDesignContentDto input)
+    {
+        await EnsureEnabledAsync();
+        var entity = await _repository.GetAsync(input.Id);
+        if (entity.VersionNumber < 1) entity.VersionNumber = 1;
+        await EnsureVersionSnapshotAsync(entity);
+        static string SJ(List<string> v) => JsonSerializer.Serialize(v ?? new List<string>());
+        entity.Title = input.Title;
+        entity.Subject = input.Subject;
+        entity.Grade = input.Grade;
+        entity.Duration = input.Duration;
+        entity.ObjectivesJson = SJ(input.Objectives);
+        entity.KeyPointsJson = SJ(input.KeyPoints);
+        entity.DifficultiesJson = SJ(input.Difficulties);
+        entity.SectionsJson = JsonSerializer.Serialize((input.Sections ?? new List<TeachingSectionInputDto>())
+            .Select(s => new TeachingSectionItemDto { Name = s.Name ?? "", Duration = s.Duration, Content = s.Content ?? "" }).ToList());
+        entity.MethodsJson = SJ(input.Methods);
+        entity.ResourcesJson = SJ(input.Resources);
+        entity.AssessmentJson = SJ(input.Assessment);
+        entity.HomeworkJson = SJ(input.Homework);
+        entity.BoardDesignJson = SJ(input.BoardDesign);
+        entity.SlidesOutlineJson = SJ(input.SlidesOutline);
+        entity.ActivitiesJson = SJ(input.Activities);
+        entity.AssessmentToolsJson = SJ(input.AssessmentTools);
+        entity.StandardBasis = input.StandardBasis ?? "";
+        entity.RawJson = string.IsNullOrWhiteSpace(input.ResultJson) ? entity.RawJson : input.ResultJson;
+        entity.VersionNumber++;
+        if (entity.Status != SpecialEduPlanStatus.Draft) entity.Status = SpecialEduPlanStatus.Draft;
+        await _repository.UpdateAsync(entity);
+        await SnapshotAsync(entity, entity.RawJson);
+        return await ToDtoAsync(entity);
+    }
+
+    public async Task<List<SpecialEduContentVersionDto>> GetVersionsAsync(Guid id)
+    {
+        await EnsureEnabledAsync();
+        var query = await _versionRepository.GetQueryableAsync();
+        var items = query.Where(v => v.ContentType == SpecialEduContentType.TeachingDesign && v.EntityId == id)
+            .OrderByDescending(v => v.VersionNumber).ToList();
+        var dtos = new List<SpecialEduContentVersionDto>();
+        foreach (var v in items) dtos.Add(await ToVersionDtoAsync(v));
+        return dtos;
+    }
+
+    private async Task EnsureVersionSnapshotAsync(SpecialTeachingDesign entity)
+    {
+        var exists = await _versionRepository.FirstOrDefaultAsync(
+            v => v.ContentType == SpecialEduContentType.TeachingDesign && v.EntityId == entity.Id && v.VersionNumber == entity.VersionNumber);
+        if (exists == null) await SnapshotAsync(entity, BuildSnapshotJson(entity));
+    }
+
+    /// <summary>用结构化列拼 canonical 快照（camelCase），不依赖 RawJson 原文，保证按字段取历史一定有值。</summary>
+    private static string BuildSnapshotJson(SpecialTeachingDesign e)
+    {
+        static List<string> J(string json) { try { return JsonSerializer.Deserialize<List<string>>(json) ?? new(); } catch { return new(); } }
+        static List<TeachingSectionItemDto> JS(string json)
+        {
+            try { return JsonSerializer.Deserialize<List<TeachingSectionItemDto>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new(); }
+            catch { return new(); }
+        }
+        return JsonSerializer.Serialize(new
+        {
+            title = e.Title, subject = e.Subject, grade = e.Grade, duration = e.Duration,
+            objectives = J(e.ObjectivesJson), keyPoints = J(e.KeyPointsJson), difficulties = J(e.DifficultiesJson),
+            sections = JS(e.SectionsJson).Select(s => new { name = s.Name, duration = s.Duration, content = s.Content, activities = s.Activities }).ToList(),
+            methods = J(e.MethodsJson), resources = J(e.ResourcesJson), assessment = J(e.AssessmentJson),
+            homework = J(e.HomeworkJson), boardDesign = J(e.BoardDesignJson), slidesOutline = J(e.SlidesOutlineJson),
+            activities = J(e.ActivitiesJson), assessmentTools = J(e.AssessmentToolsJson), standardBasis = e.StandardBasis
+        });
+    }
+
+    private async Task SnapshotAsync(SpecialTeachingDesign entity, string snapshotJson)
+    {
+        await _versionRepository.InsertAsync(new SpecialEduContentVersion(
+            Guid.NewGuid(), entity.TenantId, SpecialEduContentType.TeachingDesign, entity.Id, entity.VersionNumber)
+        {
+            Title = entity.Title,
+            SnapshotJson = string.IsNullOrWhiteSpace(snapshotJson) ? "{}" : snapshotJson
+        });
+    }
+
+    private async Task<SpecialEduContentVersionDto> ToVersionDtoAsync(SpecialEduContentVersion v)
+    {
+        string? creatorName = null;
+        if (v.CreatorId.HasValue)
+        {
+            var u = await _userRepository.FindAsync(v.CreatorId.Value);
+            if (u != null) creatorName = !u.Name.IsNullOrEmpty() ? u.Name : u.UserName;
+        }
+        return new SpecialEduContentVersionDto
+        {
+            Id = v.Id, ContentType = v.ContentType, EntityId = v.EntityId,
+            VersionNumber = v.VersionNumber, Title = v.Title, SnapshotJson = v.SnapshotJson,
+            CreatorId = v.CreatorId, CreatorName = creatorName, CreationTime = v.CreationTime
+        };
     }
 
     public async Task<SpecialTeachingDesignDto> SubmitForReviewAsync(SubmitTeachingDesignForReviewInputDto input)
@@ -220,13 +325,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
 
     private static SpecialTeachingDesignParseResult ParseResult(string json)
     {
-        var clean = json.Trim();
-        if (clean.StartsWith("```"))
-        {
-            var idx = clean.IndexOf('\n');
-            if (idx >= 0) clean = clean[(idx + 1)..];
-            if (clean.EndsWith("```")) clean = clean[..^3].TrimEnd();
-        }
+        var clean = ExtractJson(json);
         using var doc = JsonDocument.Parse(clean);
         var root = doc.RootElement;
         static List<string> StrArr(JsonElement r, string name)
@@ -263,6 +362,22 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
             AssessmentTools = StrArr(root, "assessmentTools"),
             StandardBasis = Str(root, "standardBasis"), Sections = sections
         };
+    }
+
+    /// <summary>AI 输出常带开场白/代码围栏，提取最外层 {…} 再解析。</summary>
+    internal static string ExtractJson(string json)
+    {
+        var clean = (json ?? "").Trim();
+        if (clean.StartsWith("```"))
+        {
+            var idx = clean.IndexOf('\n');
+            if (idx >= 0) clean = clean[(idx + 1)..];
+            if (clean.EndsWith("```")) clean = clean[..^3].TrimEnd();
+        }
+        var start = clean.IndexOf('{');
+        var end = clean.LastIndexOf('}');
+        if (start >= 0 && end > start) clean = clean[start..(end + 1)];
+        return clean;
     }
 
     private static void ApplyDoc(SpecialTeachingDesign entity, SpecialTeachingDesignParseResult doc, string rawJson)
@@ -304,7 +419,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
             Assessment = J(e.AssessmentJson), Homework = J(e.HomeworkJson), BoardDesign = J(e.BoardDesignJson),
             SlidesOutline = J(e.SlidesOutlineJson), Activities = J(e.ActivitiesJson), AssessmentTools = J(e.AssessmentToolsJson),
             StandardBasis = e.StandardBasis, RawJson = e.RawJson, Status = e.Status, ReviewComment = e.ReviewComment,
-            ReviewerUserId = e.ReviewerUserId, ReviewerName = reviewerName,
+            ReviewerUserId = e.ReviewerUserId, ReviewerName = reviewerName, VersionNumber = e.VersionNumber,
             CreationTime = e.CreationTime, CreatorId = e.CreatorId
         };
     }

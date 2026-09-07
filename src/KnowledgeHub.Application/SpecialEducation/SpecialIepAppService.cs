@@ -35,6 +35,7 @@ public class SpecialIepAppService : KnowledgeHubAppService, ISpecialIepAppServic
     private readonly ICurrentUser _currentUser;
     private readonly IPermissionChecker _permissionChecker;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
+    private readonly IRepository<SpecialEduContentVersion, Guid> _versionRepository;
 
     public SpecialIepAppService(
         IRepository<IepPlan, Guid> repository,
@@ -44,7 +45,8 @@ public class SpecialIepAppService : KnowledgeHubAppService, ISpecialIepAppServic
         IConfiguration configuration,
         ICurrentUser currentUser,
         IPermissionChecker permissionChecker,
-        IRepository<IdentityUser, Guid> userRepository)
+        IRepository<IdentityUser, Guid> userRepository,
+        IRepository<SpecialEduContentVersion, Guid> versionRepository)
     {
         _repository = repository;
         _courseRepository = courseRepository;
@@ -54,6 +56,7 @@ public class SpecialIepAppService : KnowledgeHubAppService, ISpecialIepAppServic
         _currentUser = currentUser;
         _permissionChecker = permissionChecker;
         _userRepository = userRepository;
+        _versionRepository = versionRepository;
     }
 
     protected async Task EnsureEnabledAsync()
@@ -101,6 +104,7 @@ public class SpecialIepAppService : KnowledgeHubAppService, ISpecialIepAppServic
         await EnsureEnabledAsync();
         var doc = ParseResult(input.ResultJson);
         IepPlan entity;
+        bool isNew = !input.Id.HasValue;
         if (input.Id.HasValue)
         {
             entity = await _repository.GetAsync(input.Id.Value);
@@ -108,6 +112,7 @@ public class SpecialIepAppService : KnowledgeHubAppService, ISpecialIepAppServic
         else
         {
             entity = new IepPlan(Guid.NewGuid(), CurrentTenant.Id, input.StudentUserId, input.Category);
+            entity.VersionNumber = 1;
             await _repository.InsertAsync(entity);
         }
         entity.StudentUserId = input.StudentUserId;
@@ -118,32 +123,94 @@ public class SpecialIepAppService : KnowledgeHubAppService, ISpecialIepAppServic
         ApplyDoc(entity, doc, input.ResultJson);
         if (entity.Status != SpecialEduPlanStatus.Draft) entity.Status = SpecialEduPlanStatus.Draft;
         await _repository.UpdateAsync(entity);
+        if (isNew) await SnapshotAsync(entity, BuildSnapshotJson(entity));
         return await ToDtoAsync(entity);
     }
 
-    public async Task<IepPlanDto> CreateRevisionAsync(Guid id)
+    /// <summary>
+    /// 结构化编辑：先留档当前版本（老数据补 v1），再应用新内容并自动 +1，新状态记为草稿待审。
+    /// </summary>
+    public async Task<IepPlanDto> UpdateContentAsync(UpdateIepContentDto input)
     {
         await EnsureEnabledAsync();
-        var src = await _repository.GetAsync(id);
-        var revision = new IepPlan(Guid.NewGuid(), src.TenantId, src.StudentUserId, src.Category)
+        var entity = await _repository.GetAsync(input.Id);
+        if (entity.VersionNumber < 1) entity.VersionNumber = 1;
+        await EnsureVersionSnapshotAsync(entity);
+        static string SJ(List<string> v) => JsonSerializer.Serialize(v ?? new List<string>());
+        entity.ProfileJson = JsonSerializer.Serialize(new { summary = input.ProfileSummary ?? "" });
+        entity.LongTermGoalsJson = SJ(input.LongTermGoals);
+        entity.ShortTermGoalsJson = SJ(input.ShortTermGoals);
+        entity.StrategiesJson = SJ(input.Strategies);
+        entity.EvaluationJson = SJ(input.Evaluation);
+        entity.HomeSchoolJson = SJ(input.HomeSchool);
+        entity.LegalBasis = input.LegalBasis ?? "";
+        entity.RawJson = string.IsNullOrWhiteSpace(input.ResultJson) ? entity.RawJson : input.ResultJson;
+        entity.VersionNumber++;
+        if (entity.Status != SpecialEduPlanStatus.Draft) entity.Status = SpecialEduPlanStatus.Draft;
+        await _repository.UpdateAsync(entity);
+        await SnapshotAsync(entity, entity.RawJson);
+        return await ToDtoAsync(entity);
+    }
+
+    public async Task<List<SpecialEduContentVersionDto>> GetVersionsAsync(Guid id)
+    {
+        await EnsureEnabledAsync();
+        var entity = await _repository.GetAsync(id);
+        if (IsStudent() && entity.StudentUserId != _currentUser.GetId())
+            throw new UserFriendlyException("只能查看自己的 IEP。");
+        var query = await _versionRepository.GetQueryableAsync();
+        var items = query.Where(v => v.ContentType == SpecialEduContentType.Iep && v.EntityId == id)
+            .OrderByDescending(v => v.VersionNumber).ToList();
+        var dtos = new List<SpecialEduContentVersionDto>();
+        foreach (var v in items) dtos.Add(await ToVersionDtoAsync(v));
+        return dtos;
+    }
+
+    private async Task EnsureVersionSnapshotAsync(IepPlan entity)
+    {
+        var exists = await _versionRepository.FirstOrDefaultAsync(
+            v => v.ContentType == SpecialEduContentType.Iep && v.EntityId == entity.Id && v.VersionNumber == entity.VersionNumber);
+        if (exists == null) await SnapshotAsync(entity, BuildSnapshotJson(entity));
+    }
+
+    /// <summary>用结构化列拼 canonical 快照（camelCase），不依赖 RawJson 原文，保证按字段取历史一定有值。</summary>
+    private static string BuildSnapshotJson(IepPlan e)
+    {
+        static List<string> J(string json) { try { return JsonSerializer.Deserialize<List<string>>(json) ?? new(); } catch { return new(); } }
+        string profile = e.ProfileJson;
+        try { using var d = JsonDocument.Parse(e.ProfileJson); if (d.RootElement.TryGetProperty("summary", out var s)) profile = s.GetString() ?? profile; } catch { }
+        return JsonSerializer.Serialize(new
         {
-            StudentName = src.StudentName,
-            CourseId = src.CourseId,
-            ProfileJson = src.ProfileJson,
-            LongTermGoalsJson = src.LongTermGoalsJson,
-            ShortTermGoalsJson = src.ShortTermGoalsJson,
-            StrategiesJson = src.StrategiesJson,
-            EvaluationJson = src.EvaluationJson,
-            HomeSchoolJson = src.HomeSchoolJson,
-            LegalBasis = src.LegalBasis,
-            RawJson = src.RawJson,
-            SourceInputJson = src.SourceInputJson,
-            VersionNumber = src.VersionNumber + 1,
-            ParentVersionId = src.Id,
-            Status = SpecialEduPlanStatus.Draft
+            profileSummary = profile, longTermGoals = J(e.LongTermGoalsJson), shortTermGoals = J(e.ShortTermGoalsJson),
+            strategies = J(e.StrategiesJson), evaluation = J(e.EvaluationJson), homeSchool = J(e.HomeSchoolJson),
+            legalBasis = e.LegalBasis
+        });
+    }
+
+    private async Task SnapshotAsync(IepPlan entity, string snapshotJson)
+    {
+        await _versionRepository.InsertAsync(new SpecialEduContentVersion(
+            Guid.NewGuid(), entity.TenantId, SpecialEduContentType.Iep, entity.Id, entity.VersionNumber)
+        {
+            Title = $"IEP-{entity.StudentName}",
+            SnapshotJson = string.IsNullOrWhiteSpace(snapshotJson) ? "{}" : snapshotJson
+        });
+    }
+
+    private async Task<SpecialEduContentVersionDto> ToVersionDtoAsync(SpecialEduContentVersion v)
+    {
+        string? creatorName = null;
+        if (v.CreatorId.HasValue)
+        {
+            var u = await _userRepository.FindAsync(v.CreatorId.Value);
+            if (u != null) creatorName = !u.Name.IsNullOrEmpty() ? u.Name : u.UserName;
+        }
+        return new SpecialEduContentVersionDto
+        {
+            Id = v.Id, ContentType = v.ContentType, EntityId = v.EntityId,
+            VersionNumber = v.VersionNumber, Title = v.Title, SnapshotJson = v.SnapshotJson,
+            CreatorId = v.CreatorId, CreatorName = creatorName, CreationTime = v.CreationTime
         };
-        await _repository.InsertAsync(revision);
-        return await ToDtoAsync(revision);
     }
 
     public async Task<IepPlanDto> SubmitForReviewAsync(SubmitIepForReviewInputDto input)
@@ -248,8 +315,7 @@ public class SpecialIepAppService : KnowledgeHubAppService, ISpecialIepAppServic
 
     public static IepParseResult ParseResult(string json)
     {
-        var clean = json.Trim();
-        if (clean.StartsWith("```")) { var idx = clean.IndexOf('\n'); if (idx >= 0) clean = clean[(idx + 1)..]; if (clean.EndsWith("```")) clean = clean[..^3].TrimEnd(); }
+        var clean = SpecialTeachingDesignAppService.ExtractJson(json);
         using var doc = JsonDocument.Parse(clean);
         var root = doc.RootElement;
         static List<string> Arr(JsonElement r, string name)

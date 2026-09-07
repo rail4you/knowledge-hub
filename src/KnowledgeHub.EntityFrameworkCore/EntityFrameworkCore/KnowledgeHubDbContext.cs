@@ -199,6 +199,7 @@ public DbSet<RecruitmentLiveParticipant> RecruitmentLiveParticipants { get; set;
     public DbSet<KnowledgeHub.SpecialEducation.SpecialTeachingDesign> SpecialTeachingDesigns { get; set; }
     public DbSet<KnowledgeHub.SpecialEducation.IepPlan> IepPlans { get; set; }
     public DbSet<KnowledgeHub.SpecialEducation.SpecialEduResource> SpecialEduResources { get; set; }
+    public DbSet<KnowledgeHub.SpecialEducation.SpecialEduContentVersion> SpecialEduContentVersions { get; set; }
 
     public KnowledgeHubDbContext(DbContextOptions<KnowledgeHubDbContext> options)
         : base(options)

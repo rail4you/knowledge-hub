@@ -36,6 +36,9 @@ public class SpecialTeachingDesign : FullAuditedAggregateRoot<Guid>, IMultiTenan
     public string RawJson { get; set; } = string.Empty;
     public string SourceInputJson { get; set; } = "{}";
 
+    /// <summary>内容版本号：AI 生成为 v1，每次结构化编辑自动 +1。</summary>
+    public int VersionNumber { get; set; } = 1;
+
     public SpecialEduPlanStatus Status { get; set; } = SpecialEduPlanStatus.Draft;
     public string? ReviewComment { get; set; }
     /// <summary>指派的审核教师（提交审核时指定）。</summary>

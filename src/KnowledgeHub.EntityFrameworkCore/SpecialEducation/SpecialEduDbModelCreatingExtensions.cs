@@ -44,10 +44,20 @@ public static class SpecialEduDbModelCreatingExtensions
             b.Property(x => x.Title).HasMaxLength(300).IsRequired();
             b.Property(x => x.Modality).HasMaxLength(50).IsRequired();
             b.Property(x => x.ContentJson).HasColumnType("text");
+            b.Property(x => x.PairsJson).HasColumnType("text");
             b.Property(x => x.RawJson).HasColumnType("text");
             b.HasIndex(x => new { x.TenantId, x.Category, x.Modality });
             b.HasIndex(x => x.TeachingDesignId);
             b.HasIndex(x => x.IepPlanId);
+        });
+
+        builder.Entity<SpecialEduContentVersion>(b =>
+        {
+            b.ToTable("SpecialEduContentVersions");
+            b.ConfigureByConvention();
+            b.Property(x => x.Title).HasMaxLength(300);
+            b.Property(x => x.SnapshotJson).HasColumnType("text");
+            b.HasIndex(x => new { x.TenantId, x.ContentType, x.EntityId, x.VersionNumber }).IsUnique();
         });
     }
 }
