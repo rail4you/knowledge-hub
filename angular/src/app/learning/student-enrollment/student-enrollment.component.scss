@@ -49,6 +49,33 @@
     gap: 4px;
     flex-wrap: nowrap;
   }
+
+  .progress-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 140px;
+    max-width: 220px;
+
+    nz-progress {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    &__value {
+      flex: 0 0 auto;
+      font-size: 12px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      color: rgba(0, 0, 0, 0.65);
+      min-width: 38px;
+      text-align: right;
+    }
+
+    &--done &__value {
+      color: #52c41a;
+    }
+  }
 }
 
 .add-modal-toolbar {

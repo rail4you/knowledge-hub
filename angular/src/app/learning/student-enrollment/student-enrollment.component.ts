@@ -17,6 +17,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { ConfigStateService, RestService } from '@abp/ng.core';
 import { CourseService } from '../../proxy/courses/course.service';
 import { StudentCourseService } from '../../proxy/courses/student-course.service';
@@ -53,6 +54,7 @@ interface TenantDto {
     NzCheckboxModule,
     NzProgressModule,
     NzDividerModule,
+    NzTooltipModule,
   ],
   templateUrl: './student-enrollment.component.html',
   styleUrls: ['./student-enrollment.component.scss'],

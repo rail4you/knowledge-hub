@@ -105,11 +105,23 @@
               </td>
               <td>{{ enrollment.enrolledAt | date:'yyyy-MM-dd HH:mm' }}</td>
               <td>
-                <nz-progress
-                  [nzPercent]="+(enrollment.progress || 0).toFixed(2)"
-                  nzSize="small"
-                  [nzStatus]="(enrollment.progress || 0) >= 100 ? 'success' : 'active'"
-                ></nz-progress>
+                @let p = enrollment.progress || 0;
+                <div class="progress-cell" [class.progress-cell--done]="p >= 100">
+                  <nz-progress
+                    [nzPercent]="p"
+                    [nzShowInfo]="false"
+                    [nzStrokeLinecap]="'round'"
+                    nzSize="small"
+                    [nzStatus]="p >= 100 ? 'success' : 'active'"
+                  ></nz-progress>
+                  <span
+                    class="progress-cell__value"
+                    nz-tooltip
+                    [nzTooltipTitle]="p.toFixed(2) + '%'"
+                  >
+                    {{ p | number:'1.0-1' }}%
+                  </span>
+                </div>
               </td>
               <td>
                 <button
