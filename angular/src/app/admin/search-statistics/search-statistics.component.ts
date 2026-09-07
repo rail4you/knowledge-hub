@@ -167,7 +167,7 @@ export class SearchStatisticsComponent implements OnInit, OnDestroy {
   getTrendHeight(count: number): number {
     const max = this.maxTrendSearchCount();
     if (max === 0) return 4;
-    return Math.max(4, (count / max) * 120);
+    return Math.max(4, (count / max) * 160);
   }
 
   async exportToExcel() {
