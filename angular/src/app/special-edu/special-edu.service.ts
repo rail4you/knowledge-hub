@@ -22,6 +22,7 @@ export const SPECIAL_RESOURCE_MODALITIES = [
   { value: 'SocialStory', label: '社交故事' },
   { value: 'VisualSupport', label: '视觉支持材料' },
   { value: 'BehaviorPlan', label: '行为干预方案' },
+  { value: 'BrailleParallel', label: '盲文对照' },
 ];
 
 @Injectable({ providedIn: 'root' })

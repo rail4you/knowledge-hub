@@ -61,13 +61,23 @@ public static class SpecialEduDocxGenerator
         return ms.ToArray();
     }
 
-    public static byte[] GenerateResource(string title, List<string> content, string modality)
+    public static byte[] GenerateResource(string title, List<string> content, string modality, List<SpecialEduResourceAppService.BraillePair>? pairs = null)
     {
         using var ms = new MemoryStream();
         var d = new XWPFDocument();
         AddTitle(d, $"{SpecialEduResourceAppService.ModalityDisplayName(modality)}：{title}");
         foreach (var c in content) AddBullet(d, c);
-        AddPara(d, "说明：本资源为 AI 辅助生成，需教师审核后使用。");
+        if (pairs != null)
+        {
+            foreach (var p in pairs)
+            {
+                AddSubHeading(d, $"明文：{p.Text}" + (string.IsNullOrWhiteSpace(p.Pinyin) ? "" : $"（{p.Pinyin}）"));
+                AddPara(d, $"盲文：{p.Braille}");
+                if (!string.IsNullOrWhiteSpace(p.Note)) AddPara(d, $"点位说明：{p.Note}");
+                d.CreateParagraph();
+            }
+        }
+        AddPara(d, "说明：本资源为 AI 辅助生成，盲文点位须经教师核对后使用。");
         d.Write(ms);
         return ms.ToArray();
     }

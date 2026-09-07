@@ -110,11 +110,7 @@ public class SpecialEducationAdminAppService : KnowledgeHubAppService, ISpecialE
     {
         var tenantId = _currentTenant.Id;
         var me = _currentUser.GetId();
-        var existing = await _designRepository.CountAsync();
-        if (existing > 0)
-        {
-            return new SeedMockDataResultDto { Message = "当前租户已有特教数据，跳过 seeding。" };
-        }
+        var added = new List<string>();
 
         // 1. 特教示范课程（幂等：按标题查找）
         const string mockCourseTitle = "生活语文·感知与表达（特教示范课程）";
@@ -144,95 +140,194 @@ public class SpecialEducationAdminAppService : KnowledgeHubAppService, ISpecialE
             }
         }
 
-        var d1 = new SpecialTeachingDesign(Guid.NewGuid(), tenantId, me, SpecialEduCategory.Peizhi)
-        {
-            Title = "《认识水果》——培智生活语文（示范）",
-            CourseId = mockCourse.Id,
-            Subject = "生活语文", Grade = "培智三年级", Duration = 40,
-            ObjectivesJson = JsonSerializer.Serialize(new[] { "能指认苹果、香蕉、橙子三种水果", "能在提示下说出水果颜色", "养成洗手后进食的卫生习惯" }),
-            KeyPointsJson = JsonSerializer.Serialize(new[] { "水果名称与颜色配对" }),
-            DifficultiesJson = JsonSerializer.Serialize(new[] { "从图片泛化到实物" }),
-            SectionsJson = JsonSerializer.Serialize(new[] { new { name = "导入", duration = 5, content = "实物展示+问候", activities = new[] { "指认水果" } } }),
-            BoardDesignJson = JsonSerializer.Serialize(new[] { "左侧：水果图片区", "右侧：颜色配对区" }),
-            StandardBasis = "依据培智学校义务教育课程标准（生活语文）：以生活化、直观化为原则。",
-            Status = SpecialEduPlanStatus.Published
-        };
-        var d2 = new SpecialTeachingDesign(Guid.NewGuid(), tenantId, me, SpecialEduCategory.Guzuzheng)
-        {
-            Title = "《轮流玩积木》——孤独症社交沟通（示范）",
-            Subject = "社交沟通", Grade = "孤独症支持班", Duration = 35,
-            ObjectivesJson = JsonSerializer.Serialize(new[] { "能用视觉卡表达“轮到我”", "等待时间达到1分钟", "成功完成2次轮流" }),
-            KeyPointsJson = JsonSerializer.Serialize(new[] { "轮流概念与表达" }),
-            DifficultiesJson = JsonSerializer.Serialize(new[] { "等待时的情绪调节" }),
-            SectionsJson = JsonSerializer.Serialize(new[] { new { name = "结构化练习", duration = 15, content = "视觉日程+计时器", activities = new[] { "轮流搭积木" } } }),
-            BoardDesignJson = JsonSerializer.Serialize(new[] { "视觉日程条", "轮流提示卡" }),
-            StandardBasis = "依据孤独症教育结构化教学规范：可预测流程+视觉支持。",
-            Status = SpecialEduPlanStatus.Published
-        };
-        await _designRepository.InsertManyAsync(new[] { d1, d2 });
+        // 3. 教案 / IEP / 资源包：按标题幂等补种（老租户重跑只补缺失项）
+        var d1Id = await EnsureDesignAsync(tenantId, me, mockCourse.Id,
+            "《认识水果》——培智生活语文（示范）", SpecialEduCategory.Peizhi, added,
+            subject: "生活语文", grade: "培智三年级",
+            objectives: new[] { "能指认苹果、香蕉、橙子三种水果", "能在提示下说出水果颜色", "养成洗手后进食的卫生习惯" },
+            keyPoints: new[] { "水果名称与颜色配对" }, difficulties: new[] { "从图片泛化到实物" },
+            board: new[] { "左侧：水果图片区", "右侧：颜色配对区" },
+            basis: "依据培智学校义务教育课程标准（生活语文）：以生活化、直观化为原则。");
+        var d2Id = await EnsureDesignAsync(tenantId, me, null,
+            "《轮流玩积木》——孤独症社交沟通（示范）", SpecialEduCategory.Guzuzheng, added,
+            subject: "社交沟通", grade: "孤独症支持班",
+            objectives: new[] { "能用视觉卡表达“轮到我”", "等待时间达到1分钟", "成功完成2次轮流" },
+            keyPoints: new[] { "轮流概念与表达" }, difficulties: new[] { "等待时的情绪调节" },
+            board: new[] { "视觉日程条", "轮流提示卡" },
+            basis: "依据孤独症教育结构化教学规范：可预测流程+视觉支持。");
 
         var studentId = zmq?.Id ?? me;
         var studentName = zmq != null ? (!zmq.Name.IsNullOrEmpty() ? zmq.Name! : "zmq") : "测试学生";
-        var iep1 = new IepPlan(Guid.NewGuid(), tenantId, studentId, SpecialEduCategory.TingZhang)
-        {
-            StudentName = zmq != null ? $"{studentName}（听障示范）" : "测试学生（听障示范）",
-            CourseId = mockCourse.Id,
-            ProfileJson = JsonSerializer.Serialize(new { summary = "听力损失60dB，视觉学习优势，已选《生活语文·感知与表达》课程。" }),
-            LongTermGoalsJson = JsonSerializer.Serialize(new[] { "本学期掌握50个常用书面词汇" }),
-            ShortTermGoalsJson = JsonSerializer.Serialize(new[] { "4周内指认20个水果/食物词汇（正确率≥80%）" }),
-            StrategiesJson = JsonSerializer.Serialize(new[] { "视觉卡+手语辅助", "小组配对练习" }),
-            EvaluationJson = JsonSerializer.Serialize(new[] { "每周词汇指认记录表" }),
-            HomeSchoolJson = JsonSerializer.Serialize(new[] { "家长每日15分钟卡片复习", "每周五沟通本反馈" }),
-            LegalBasis = "依据《残疾人教育条例》及 IEP 规范：评估—目标—策略—评估闭环，家长参与。",
-            Status = SpecialEduPlanStatus.Published
-        };
-        var iep2 = new IepPlan(Guid.NewGuid(), tenantId, studentId, SpecialEduCategory.ShiZhang)
-        {
-            StudentName = zmq != null ? $"{studentName}（视障示范）" : "测试学生（视障示范）",
-            CourseId = mockCourse.Id,
-            ProfileJson = JsonSerializer.Serialize(new { summary = "低视力，听觉触觉优势，已选《生活语文·感知与表达》课程，定向行走需支持。" }),
-            LongTermGoalsJson = JsonSerializer.Serialize(new[] { "独立完成校园定向行走" }),
-            ShortTermGoalsJson = JsonSerializer.Serialize(new[] { "4周内口述描述教室布局" }),
-            StrategiesJson = JsonSerializer.Serialize(new[] { "口述影像+触觉地图" }),
-            EvaluationJson = JsonSerializer.Serialize(new[] { "定向行走观察量表" }),
-            HomeSchoolJson = JsonSerializer.Serialize(new[] { "家庭触觉标识布置", "每日口述复述" }),
-            LegalBasis = "依据《残疾人教育条例》及盲校课程标准相关要求。",
-            Status = SpecialEduPlanStatus.Published
-        };
-        await _iepRepository.InsertManyAsync(new[] { iep1, iep2 });
+        var iep1Id = await EnsureIepAsync(tenantId, studentId,
+            zmq != null ? $"{studentName}（听障示范）" : "测试学生（听障示范）",
+            SpecialEduCategory.TingZhang, mockCourse.Id, added,
+            profile: "听力损失60dB，视觉学习优势，已选《生活语文·感知与表达》课程。",
+            longGoals: new[] { "本学期掌握50个常用书面词汇" },
+            shortGoals: new[] { "4周内指认20个水果/食物词汇（正确率≥80%）" },
+            strategies: new[] { "视觉卡+手语辅助", "小组配对练习" },
+            evaluation: new[] { "每周词汇指认记录表" },
+            homeSchool: new[] { "家长每日15分钟卡片复习", "每周五沟通本反馈" });
+        var iep2Id = await EnsureIepAsync(tenantId, studentId,
+            zmq != null ? $"{studentName}（视障示范）" : "测试学生（视障示范）",
+            SpecialEduCategory.ShiZhang, mockCourse.Id, added,
+            profile: "低视力，听觉触觉优势，已选《生活语文·感知与表达》课程，定向行走需支持。",
+            longGoals: new[] { "独立完成校园定向行走" },
+            shortGoals: new[] { "4周内口述描述教室布局" },
+            strategies: new[] { "口述影像+触觉地图" },
+            evaluation: new[] { "定向行走观察量表" },
+            homeSchool: new[] { "家庭触觉标识布置", "每日口述复述" });
 
-        var r1 = new SpecialEduResource(Guid.NewGuid(), tenantId, me, SpecialEduCategory.Guzuzheng, SpecialEduResourceModality.SocialStory)
-        {
-            Title = "社交故事：轮流玩（示范）",
-            ContentJson = JsonSerializer.Serialize(new[] { "今天我要和同学一起玩积木。", "轮到我时，我说“轮到我了”。", "等待时我可以数到10。" }),
-            TeachingDesignId = d2.Id
-        };
-        var r2 = new SpecialEduResource(Guid.NewGuid(), tenantId, me, SpecialEduCategory.Peizhi, SpecialEduResourceModality.VisualSupport)
-        {
-            Title = "视觉支持：洗手步骤卡（示范）",
-            ContentJson = JsonSerializer.Serialize(new[] { "1. 开水龙头", "2. 打肥皂", "3. 搓手20秒", "4. 冲洗擦干" }),
-            TeachingDesignId = d1.Id
-        };
-        var r3 = new SpecialEduResource(Guid.NewGuid(), tenantId, me, SpecialEduCategory.TingZhang, SpecialEduResourceModality.VideoScript)
-        {
-            Title = "视频脚本：水果词汇课（示范）",
-            ContentJson = JsonSerializer.Serialize(new[] { "分镜1：特写苹果+字幕+手语框（10s）", "分镜2：学生跟做指认（15s）" }),
-            TeachingDesignId = d1.Id
-        };
-        var r4 = new SpecialEduResource(Guid.NewGuid(), tenantId, me, SpecialEduCategory.ShiZhang, SpecialEduResourceModality.AudioScript)
-        {
-            Title = "音频脚本：教室定向口述（示范）",
-            ContentJson = JsonSerializer.Serialize(new[] { "旁白：从门口出发，向左三步是讲台……（慢速，重复2遍）" }),
-            IepPlanId = iep2.Id
-        };
-        await _resourceRepository.InsertManyAsync(new[] { r1, r2, r3, r4 });
+        await EnsureResourceAsync(tenantId, me, "社交故事：轮流玩（示范）",
+            SpecialEduCategory.Guzuzheng, SpecialEduResourceModality.SocialStory, d2Id, null,
+            new[] { "今天我要和同学一起玩积木。", "轮到我时，我说“轮到我了”。", "等待时我可以数到10。" }, added);
+        await EnsureResourceAsync(tenantId, me, "视觉支持：洗手步骤卡（示范）",
+            SpecialEduCategory.Peizhi, SpecialEduResourceModality.VisualSupport, d1Id, null,
+            new[] { "1. 开水龙头", "2. 打肥皂", "3. 搓手20秒", "4. 冲洗擦干" }, added);
+        await EnsureResourceAsync(tenantId, me, "视频脚本：水果词汇课（示范）",
+            SpecialEduCategory.TingZhang, SpecialEduResourceModality.VideoScript, d1Id, null,
+            new[] { "分镜1：特写苹果+字幕+手语框（10s）", "分镜2：学生跟做指认（15s）" }, added);
+        await EnsureResourceAsync(tenantId, me, "音频脚本：教室定向口述（示范）",
+            SpecialEduCategory.ShiZhang, SpecialEduResourceModality.AudioScript, null, iep2Id,
+            new[] { "旁白：从门口出发，向左三步是讲台……（慢速，重复2遍）" }, added);
+
+        // 4. 盲文对照 Mock（现行盲文·不标调，分词连写）：始终确保存在
+        await EnsureBrailleMockAsync(tenantId, me, mockCourse.Id, added);
 
         return new SeedMockDataResultDto
         {
-            TeachingDesignCount = 2, IepCount = 2, ResourceCount = 4,
-            Message = zmq != null
-                ? $"Mock 数据已写入：特教课程《{mockCourse.Title}》、2 教案 / 2 IEP / 4 资源，学生 zmq({studentName})已选课。"
-                : "Mock 数据已写入：1 特教课程、2 教案 / 2 IEP / 4 资源；未找到 zmq 用户，IEP 挂占位学生。"
+            TeachingDesignCount = await _designRepository.CountAsync(),
+            IepCount = await _iepRepository.CountAsync(),
+            ResourceCount = await _resourceRepository.CountAsync(),
+            Message = added.Count == 0
+                ? "Mock 数据均已存在，无需补种。"
+                : $"Mock 补种完成：{string.Join("、", added)}。"
         };
+    }
+
+    private async Task<Guid?> EnsureDesignAsync(Guid? tenantId, Guid creator, Guid? courseId,
+        string title, SpecialEduCategory category, List<string> added,
+        string subject = "生活语文", string grade = "特教支持班",
+        string[]? objectives = null, string[]? keyPoints = null, string[]? difficulties = null,
+        string[]? board = null, string? basis = null)
+    {
+        var existing = (await _designRepository.GetListAsync(x => x.Title == title)).FirstOrDefault();
+        if (existing != null) return existing.Id;
+        objectives ??= new[] { "示范目标1", "示范目标2" };
+        keyPoints ??= new[] { "示范重点" };
+        difficulties ??= new[] { "示范难点" };
+        board ??= new[] { "示范板书" };
+        var entity = new SpecialTeachingDesign(Guid.NewGuid(), tenantId, creator, category)
+        {
+            Title = title,
+            CourseId = courseId,
+            Subject = subject,
+            Grade = grade,
+            Duration = 40,
+            ObjectivesJson = JsonSerializer.Serialize(objectives),
+            KeyPointsJson = JsonSerializer.Serialize(keyPoints),
+            DifficultiesJson = JsonSerializer.Serialize(difficulties),
+            BoardDesignJson = JsonSerializer.Serialize(board),
+            StandardBasis = basis ?? "特教课程标准示范数据。",
+            RawJson = JsonSerializer.Serialize(new
+            {
+                title, subject, grade, duration = 40,
+                objectives, keyPoints, difficulties,
+                sections = new[] { new { name = "导入", duration = 5, content = "示范环节", activities = new[] { "示范活动" } } },
+                methods = new[] { "直观演示法" }, resources = new[] { "示范教具" },
+                assessment = new[] { "观察记录" }, homework = new[] { "家庭巩固练习" },
+                boardDesign = board, slidesOutline = new[] { "示范课件页" },
+                activities = new[] { "示范活动" }, assessmentTools = new[] { "示范评估表" },
+                standardBasis = basis ?? "特教课程标准示范数据。"
+            }),
+            Status = SpecialEduPlanStatus.Published
+        };
+        await _designRepository.InsertAsync(entity);
+        added.Add($"教案《{title}》");
+        return entity.Id;
+    }
+
+    private async Task<Guid?> EnsureIepAsync(Guid? tenantId, Guid studentId, string studentName,
+        SpecialEduCategory category, Guid? courseId, List<string> added,
+        string profile = "示范现状分析。",
+        string[]? longGoals = null, string[]? shortGoals = null, string[]? strategies = null,
+        string[]? evaluation = null, string[]? homeSchool = null)
+    {
+        var existing = (await _iepRepository.GetListAsync(x => x.StudentName == studentName)).FirstOrDefault();
+        if (existing != null) return existing.Id;
+        longGoals ??= new[] { "示范长期目标" };
+        shortGoals ??= new[] { "示范短期目标" };
+        strategies ??= new[] { "示范策略" };
+        evaluation ??= new[] { "示范评估" };
+        homeSchool ??= new[] { "示范家校协同" };
+        var entity = new IepPlan(Guid.NewGuid(), tenantId, studentId, category)
+        {
+            StudentName = studentName,
+            CourseId = courseId,
+            ProfileJson = JsonSerializer.Serialize(new { summary = profile }),
+            LongTermGoalsJson = JsonSerializer.Serialize(longGoals),
+            ShortTermGoalsJson = JsonSerializer.Serialize(shortGoals),
+            StrategiesJson = JsonSerializer.Serialize(strategies),
+            EvaluationJson = JsonSerializer.Serialize(evaluation),
+            HomeSchoolJson = JsonSerializer.Serialize(homeSchool),
+            LegalBasis = "依据《残疾人教育条例》示范数据。",
+            RawJson = JsonSerializer.Serialize(new
+            {
+                profileSummary = profile, longTermGoals = longGoals, shortTermGoals = shortGoals,
+                strategies, evaluation, homeSchool,
+                legalBasis = "依据《残疾人教育条例》示范数据。"
+            }),
+            Status = SpecialEduPlanStatus.Published
+        };
+        await _iepRepository.InsertAsync(entity);
+        added.Add($"IEP（{studentName}）");
+        return entity.Id;
+    }
+
+    private async Task EnsureResourceAsync(Guid? tenantId, Guid creator, string title,
+        SpecialEduCategory category, string modality, Guid? designId, Guid? iepId,
+        string[] content, List<string> added)
+    {
+        var existing = (await _resourceRepository.GetListAsync(x => x.Title == title)).FirstOrDefault();
+        if (existing != null) return;
+        await _resourceRepository.InsertAsync(new SpecialEduResource(Guid.NewGuid(), tenantId, creator, category, modality)
+        {
+            Title = title,
+            ContentJson = JsonSerializer.Serialize(content),
+            RawJson = JsonSerializer.Serialize(new { title, content }),
+            TeachingDesignId = designId,
+            IepPlanId = iepId,
+            Status = SpecialEduPlanStatus.Published
+        });
+        added.Add($"资源《{title}》");
+    }
+
+    /// <summary>
+    /// 盲文对照 Mock：现行盲文（原则不标调、分词连写、词间空一方）。
+    /// 点位依据《中国盲文》声韵表逐格核验：你=⠝⠊ 好=⠓⠖ 中=⠌⠲ 国=⠛⠢。
+    /// </summary>
+    private async Task EnsureBrailleMockAsync(Guid? tenantId, Guid creator, Guid courseId, List<string> added)
+    {
+        const string title = "盲文对照：你好中国（现行盲文示范）";
+        var existing = (await _resourceRepository.GetListAsync(
+            x => x.Modality == SpecialEduResourceModality.BrailleParallel)).FirstOrDefault();
+        if (existing != null) return;
+        var pairs = new[]
+        {
+            new { text = "你好", pinyin = "ni hao", braille = "⠝⠊⠓⠖", note = "你=n(1345⠝)+i(24⠊)；好=h(125⠓)+ao(235⠖)；现行盲文原则不标调" },
+            new { text = "中国", pinyin = "zhong guo", braille = "⠌⠲⠛⠢", note = "中=zh(34⠌)+ong(256⠲)；国=g(1245⠛)+o(26⠢，与e同形)" },
+            new { text = "你好中国", pinyin = "nihao zhongguo", braille = "⠝⠊⠓⠖⠀⠌⠲⠛⠢", note = "分词连写：你好/中国各成一词，词间空一方（⠀）" },
+            new { text = "HELLO", pinyin = "", braille = "⠓⠑⠇⠇⠕", note = "英语一级盲文对照：h(125)+e(15)+l(123)×2+o(135)" },
+        };
+        var rawJson = JsonSerializer.Serialize(new { title, pairs });
+        await _resourceRepository.InsertAsync(new SpecialEduResource(
+            Guid.NewGuid(), tenantId, creator, SpecialEduCategory.ShiZhang, SpecialEduResourceModality.BrailleParallel)
+        {
+            Title = title,
+            CourseId = courseId,
+            ContentJson = JsonSerializer.Serialize(pairs.Select(p => $"{p.text}｜{p.braille}").ToArray()),
+            RawJson = rawJson,
+            Status = SpecialEduPlanStatus.Published
+        });
+        added.Add($"盲文对照《{title}》");
     }
 }

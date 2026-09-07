@@ -13,51 +13,20 @@ import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { HttpClient } from '@angular/common/http';
+import { ActivatedRoute } from '@angular/router';
 import { SPECIAL_EDU_CATEGORIES, SPECIAL_RESOURCE_MODALITIES, SpecialEduService } from '../special-edu.service';
+import { BrailleViewerComponent } from '../braille-viewer/braille-viewer.component';
 
 @Component({
   selector: 'app-special-resources',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, NzCardModule, NzInputModule, NzSelectModule, NzButtonModule, NzSpinModule, NzDividerModule, NzTableModule, NzGridModule, NzTabsModule, NzModalModule, NzRadioModule],
+  imports: [CommonModule, FormsModule, NzCardModule, NzInputModule, NzSelectModule, NzButtonModule, NzSpinModule, NzDividerModule, NzTableModule, NzGridModule, NzTabsModule, NzModalModule, NzRadioModule, NzTooltipModule, BrailleViewerComponent],
   template: `
-  <nz-card nzTitle="多模态课程资源">
-    <nz-tabset [(nzSelectedIndex)]="activeTab">
-      <nz-tab nzTitle="录入/生成">
-        <div nz-row [nzGutter]="16" style="margin-top:12px">
-          <div nz-col [nzSpan]="9">
-            <p>类别</p>
-            <nz-select [(ngModel)]="input.category" style="width:100%">
-              @for (c of categories; track c.value) { <nz-option [nzValue]="c.value" [nzLabel]="c.label"></nz-option> }
-            </nz-select>
-            <p style="margin-top:8px">资源类型</p>
-            <nz-select [(ngModel)]="input.modality" style="width:100%">
-              @for (m of modalities; track m.value) { <nz-option [nzValue]="m.value" [nzLabel]="m.label"></nz-option> }
-            </nz-select>
-            <p style="margin-top:8px">主题</p>
-            <input nz-input [(ngModel)]="input.topic" placeholder="如：轮流玩积木 / 洗手步骤" />
-            <p style="margin-top:8px">学生特点</p>
-            <textarea nz-input rows="2" [(ngModel)]="input.studentTraits"></textarea>
-            <p style="margin-top:8px">定制要求</p>
-            <textarea nz-input rows="2" [(ngModel)]="input.customPrompt"></textarea>
-            <div style="margin-top:8px">
-              <button nz-button nzType="primary" (click)="generate()" [nzLoading]="generating()">生成（自动存为草稿）</button>
-            </div>
-          </div>
-          <div nz-col [nzSpan]="15">
-            <nz-spin [nzSpinning]="generating()">
-              @if (result(); as r) {
-                <h3>{{ r.title }}</h3>
-                @for (c of r.content; track c) { <p>• {{ c }}</p> }
-                <button nz-button (click)="exportDocx()">导出 Word</button>
-              } @else {
-                <p style="color:#999">支持文本 / 图片描述 / 音频脚本 / 视频脚本 / 社交故事 / 视觉支持 / 行为干预方案。生成后自动保存为草稿。</p>
-              }
-            </nz-spin>
-          </div>
-        </div>
-      </nz-tab>
+  <nz-card nzTitle="多模态课程资源" [nzExtra]="extraTpl">
+    <nz-tabs [(nzSelectedIndex)]="activeTab">
       <nz-tab nzTitle="资源列表">
         <nz-table [nzData]="list()" nzSize="small" style="margin-top:12px">
           <thead><tr><th>标题</th><th>类型</th><th>状态</th><th>审核教师</th><th>操作</th></tr></thead>
@@ -93,18 +62,83 @@ import { SPECIAL_EDU_CATEGORIES, SPECIAL_RESOURCE_MODALITIES, SpecialEduService 
           </tbody>
         </nz-table>
       </nz-tab>
-    </nz-tabset>
+    </nz-tabs>
   </nz-card>
+  <ng-template #extraTpl>
+    <button nz-button nzType="primary" nzSize="small" (click)="openCreate()">新建资源</button>
+  </ng-template>
+
+  <!-- 新建：弹出表单 -->
+  <nz-modal [(nzVisible)]="createVisible" nzTitle="新建多模态资源" nzWidth="800" (nzOnCancel)="createVisible = false" [nzFooter]="null">
+    <ng-container *nzModalContent>
+    <p>类别</p>
+    <nz-select [(ngModel)]="input.category" style="width:100%">
+      @for (c of categories; track c.value) { <nz-option [nzValue]="c.value" [nzLabel]="c.label"></nz-option> }
+    </nz-select>
+    <p style="margin-top:8px">资源类型</p>
+    <nz-select [(ngModel)]="input.modality" style="width:100%">
+      @for (m of modalities; track m.value) { <nz-option [nzValue]="m.value" [nzLabel]="m.label"></nz-option> }
+    </nz-select>
+    <p style="margin-top:8px">主题</p>
+    <input nz-input [(ngModel)]="input.topic" placeholder="如：轮流玩积木 / 洗手步骤" />
+    <p style="margin-top:8px">学生特点</p>
+    <textarea nz-input rows="2" [(ngModel)]="input.studentTraits"></textarea>
+    <p style="margin-top:8px">定制要求</p>
+    <textarea nz-input rows="2" [(ngModel)]="input.customPrompt"></textarea>
+    <div style="margin-top:12px">
+      <button nz-button nzType="primary" (click)="generate()" [nzLoading]="generating()">生成（自动存为草稿）</button>
+      <button nz-button nzShape="circle" nz-tooltip [nzTooltipTitle]="helpTpl" nzTooltipPlacement="right" style="margin-left:8px" aria-label="填写说明">?</button>
+      <ng-template #helpTpl>
+        <div>支持 8 种资源类型：文本 / 图片描述 / 音频脚本 / 视频脚本 / 社交故事 / 视觉支持材料 / 行为干预方案 / 盲文对照。</div>
+        <div>点击生成后自动保存为草稿，可在列表中提交审核、导出 Word。</div>
+        <div>中文盲文走现行盲文，AI 内容须经教师核对后用于教学。</div>
+      </ng-template>
+    </div>
+    <nz-spin [nzSpinning]="generating()" style="margin-top:12px">
+      @if (result(); as r) {
+        <nz-divider></nz-divider>
+        <h3>{{ r.title }}</h3>
+        @if (r.pairs?.length) {
+          <app-braille-viewer [pairs]="r.pairs"></app-braille-viewer>
+        } @else {
+          @for (c of r.content; track c) { <p>• {{ c }}</p> }
+        }
+        <button nz-button (click)="exportDocx()">导出 Word</button>
+      }
+    </nz-spin>
+
+    </ng-container>
+  </nz-modal>
+
+  <!-- 查看 -->
+  <nz-modal [(nzVisible)]="viewVisible" [nzTitle]="viewTarget?.title || '查看资源'" nzWidth="900" (nzOnCancel)="viewVisible = false" [nzFooter]="null">
+    <ng-container *nzModalContent>
+    <p style="color:#888">{{ viewTarget?.modalityName }} · {{ viewTarget?.categoryName }} · {{ statusName(viewTarget?.status) }}</p>
+    @if (viewPairs().length > 0) {
+      <app-braille-viewer [pairs]="viewPairs()"></app-braille-viewer>
+    } @else if (viewContent().length > 0) {
+      @for (c of viewContent(); track c) { <p>• {{ c }}</p> }
+    } @else {
+      <p style="color:#999">暂无可展示内容（历史数据缺少正文，可删除后重新生成）。</p>
+    }
+    @if (viewTarget?.reviewComment) { <p style="color:#c00">审核意见：{{ viewTarget.reviewComment }}</p> }
+
+    </ng-container>
+  </nz-modal>
 
   <nz-modal [(nzVisible)]="submitVisible" nzTitle="提交审核 — 指派审核教师" (nzOnCancel)="submitVisible = false" (nzOnOk)="confirmSubmit()">
+    <ng-container *nzModalContent>
     <p>资源：{{ submitTarget?.title }}</p>
     <p>审核教师（本租户）</p>
     <nz-select [(ngModel)]="submitReviewerId" nzAllowClear nzPlaceHolder="选择教师，可不选" style="width:100%">
       @for (t of teachers(); track t.id) { <nz-option [nzValue]="t.id" [nzLabel]="t.name + ' (' + t.userName + ' · ' + t.roleName + ')'"></nz-option> }
     </nz-select>
+  
+    </ng-container>
   </nz-modal>
 
   <nz-modal [(nzVisible)]="reviewVisible" nzTitle="审核资源" (nzOnCancel)="reviewVisible = false" (nzOnOk)="confirmReview()">
+    <ng-container *nzModalContent>
     <p>资源：{{ reviewTarget?.title }}</p>
     <nz-radio-group [(ngModel)]="reviewApproved">
       <label nz-radio [nzValue]="true">通过（发布）</label>
@@ -112,16 +146,20 @@ import { SPECIAL_EDU_CATEGORIES, SPECIAL_RESOURCE_MODALITIES, SpecialEduService 
     </nz-radio-group>
     <p style="margin-top:8px">审核意见</p>
     <textarea nz-input rows="3" [(ngModel)]="reviewComment"></textarea>
+  
+    </ng-container>
   </nz-modal>
   `,
 })
 export class SpecialResourcesComponent {
   svc = inject(SpecialEduService);
   private http = inject(HttpClient);
+  private route = inject(ActivatedRoute);
   private msg = inject(NzMessageService);
   private modal = inject(NzModalService);
   categories = SPECIAL_EDU_CATEGORIES;
-  modalities = SPECIAL_RESOURCE_MODALITIES;
+  // 多模态页不混入盲文对照（盲文有独立页面），下拉与列表均剔除。
+  modalities = SPECIAL_RESOURCE_MODALITIES.filter(m => m.value !== 'BrailleParallel');
   generating = signal(false);
   result = signal<any>(null);
   rawJson = signal('');
@@ -130,6 +168,11 @@ export class SpecialResourcesComponent {
   teachers = signal<any[]>([]);
   activeTab = 0;
   input: any = { category: 3, modality: 'SocialStory', topic: '', studentTraits: '', customPrompt: '' };
+  createVisible = false;
+  viewVisible = false;
+  viewTarget: any = null;
+  viewPairs = signal<any[]>([]);
+  viewContent = signal<string[]>([]);
   submitVisible = false;
   submitTarget: any = null;
   submitReviewerId: string | null = null;
@@ -141,6 +184,14 @@ export class SpecialResourcesComponent {
   constructor() {
     this.loadAll();
     this.loadTeachers();
+    // 从盲文对照页“新建盲文对照”跳转时，自动打开对应类型的新建弹窗。
+    this.route.queryParamMap.subscribe(params => {
+      const create = params.get('create');
+      if (create && this.modalities.some(m => m.value === create)) {
+        this.input.modality = create;
+        this.openCreate();
+      }
+    });
   }
 
   statusName(s: number): string {
@@ -148,15 +199,22 @@ export class SpecialResourcesComponent {
   }
 
   loadAll(): void {
-    this.http.get<any>('/api/learning/special-edu/resources', { params: { maxResultCount: '50' } as any })
+    const baseParams: any = { maxResultCount: '50', excludeModality: 'BrailleParallel' };
+    this.http.get<any>('/api/learning/special-edu/resources', { params: baseParams })
       .subscribe({ next: (r: any) => this.list.set(r?.items ?? []), error: () => {} });
-    this.http.get<any>('/api/learning/special-edu/resources', { params: { maxResultCount: '50', status: '1' } as any })
+    this.http.get<any>('/api/learning/special-edu/resources', { params: { ...baseParams, status: '1' } })
       .subscribe({ next: (r: any) => this.pending.set(r?.items ?? []), error: () => {} });
   }
 
   loadTeachers(): void {
     this.http.get<any[]>('/api/app/special-edu-option/teacher-options')
       .subscribe({ next: r => this.teachers.set(r ?? []), error: () => {} });
+  }
+
+  openCreate(): void {
+    this.result.set(null);
+    this.rawJson.set('');
+    this.createVisible = true;
   }
 
   async generate(): Promise<void> {
@@ -196,18 +254,24 @@ export class SpecialResourcesComponent {
       title: parsed?.title ?? this.input.topic, category: this.input.category, modality: this.input.modality,
       resultJson: this.rawJson(), sourceInputJson: JSON.stringify(this.input),
     }).subscribe({
-      next: () => { this.msg.success('已生成并自动保存为草稿'); this.loadAll(); },
+      next: () => { this.msg.success('已生成并自动保存为草稿'); this.createVisible = false; this.loadAll(); },
       error: () => this.msg.error('自动保存失败，请重试'),
     });
   }
 
   view(h: any): void {
-    const parsed = this.svc.tryParse<any>(h.rawJson ?? '');
-    if (parsed) {
-      this.result.set(parsed);
-      this.rawJson.set(h.rawJson);
-      this.activeTab = 0;
+    this.viewTarget = h;
+    try {
+      const raw = JSON.parse(h.rawJson ?? '{}');
+      this.viewPairs.set(Array.isArray(raw?.pairs) ? raw.pairs : []);
+      const content = Array.isArray(raw?.content) ? raw.content : [];
+      // 老数据 RawJson 为空时，用列表已有的正文兜底，保证查看有效果。
+      this.viewContent.set(content.length > 0 ? content : String(h.contentText ?? '').split('\n').filter((x: string) => x.trim()));
+    } catch {
+      this.viewPairs.set([]);
+      this.viewContent.set(String(h.contentText ?? '').split('\n').filter((x: string) => x.trim()));
     }
+    this.viewVisible = true;
   }
 
   openSubmit(h: any): void {

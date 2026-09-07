@@ -501,6 +501,7 @@
     "Permission:SpecialEducation.Review": "Review & Publish",
     "Permission:SpecialEducation.Manage": "SpecialEdu Management",
     "Features:SpecialEducation": "Special Education",
-    "Features:SpecialEducationDescription": "Per-tenant special education extension module"
+    "Features:SpecialEducationDescription": "Per-tenant special education extension module",
+    "Menu:BrailleStudy": "Braille Study"
   }
 }

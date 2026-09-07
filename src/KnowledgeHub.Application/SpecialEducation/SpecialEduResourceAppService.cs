@@ -62,6 +62,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
         var query = await _repository.GetQueryableAsync();
         if (input.Category.HasValue) query = query.Where(x => x.Category == input.Category.Value);
         if (!input.Modality.IsNullOrWhiteSpace()) query = query.Where(x => x.Modality == input.Modality);
+        if (!input.ExcludeModality.IsNullOrWhiteSpace()) query = query.Where(x => x.Modality != input.ExcludeModality);
         if (input.Status.HasValue) query = query.Where(x => x.Status == input.Status.Value);
         if (!input.Keyword.IsNullOrWhiteSpace()) query = query.Where(x => x.Title.Contains(input.Keyword!));
         var total = query.Count();
@@ -157,7 +158,11 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
         var baseUrl = _configuration["Qwen:BaseUrl"] ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-plus";
 
-        var userPrompt = $@"## 特殊教育类别：{SpecialEduCategoryNames.ToDisplayName(input.Category)}
+        var userPrompt = input.Modality == SpecialEduResourceModality.BrailleParallel
+            ? $@"## 对照文本：{input.Topic}
+## 转写要求：{(input.CustomPrompt.IsNullOrWhiteSpace() ? "无" : input.CustomPrompt)}
+请按 SystemPrompt JSON 结构输出 pairs。"
+            : $@"## 特殊教育类别：{SpecialEduCategoryNames.ToDisplayName(input.Category)}
 {SpecialEduPromptBuilder.CategoryAdaptation(input.Category)}
 ## 资源类型：{input.Modality}
 ## 主题：{input.Topic}
@@ -180,7 +185,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
     public byte[] ExportDocx(string resultJson, string modality)
     {
         var doc = ParseResult(resultJson);
-        return SpecialEduDocxGenerator.GenerateResource(doc.Title, doc.Content, modality);
+        return SpecialEduDocxGenerator.GenerateResource(doc.Title, doc.Content, modality, doc.Pairs);
     }
 
     public async Task<byte[]> BatchExportAsync(List<Guid> ids)
@@ -194,7 +199,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
                 var entity = await _repository.FindAsync(id);
                 if (entity == null) continue;
                 var doc = ParseResult(entity.RawJson);
-                var bytes = SpecialEduDocxGenerator.GenerateResource(doc.Title, doc.Content, entity.Modality);
+                var bytes = SpecialEduDocxGenerator.GenerateResource(doc.Title, doc.Content, entity.Modality, doc.Pairs);
                 var entry = zip.CreateEntry($"{entity.Modality}_{SafeFileName(entity.Title)}.docx");
                 using var s = entry.Open();
                 await s.WriteAsync(bytes);
@@ -215,7 +220,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
         await onChunk(new ChatMessageChunkDto { Content = "", ThreadId = threadId, IsComplete = true });
     }
 
-    internal static (string Title, List<string> Content) ParseResult(string json)
+    internal static (string Title, List<string> Content, List<BraillePair> Pairs) ParseResult(string json)
     {
         var clean = json.Trim();
         if (clean.StartsWith("```")) { var idx = clean.IndexOf('\n'); if (idx >= 0) clean = clean[(idx + 1)..]; if (clean.EndsWith("```")) clean = clean[..^3].TrimEnd(); }
@@ -225,7 +230,28 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
         var content = new List<string>();
         if (root.TryGetProperty("content", out var c) && c.ValueKind == JsonValueKind.Array)
             content = c.EnumerateArray().Select(e => e.ValueKind == JsonValueKind.String ? e.GetString()! : e.ToString()).ToList();
-        return (title, content);
+        var pairs = new List<BraillePair>();
+        if (root.TryGetProperty("pairs", out var p) && p.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var e in p.EnumerateArray())
+            {
+                static string Str(JsonElement r, string name) => r.TryGetProperty(name, out var v) ? v.GetString() ?? "" : "";
+                pairs.Add(new BraillePair
+                {
+                    Text = Str(e, "text"), Pinyin = Str(e, "pinyin"),
+                    Braille = Str(e, "braille"), Note = Str(e, "note")
+                });
+            }
+        }
+        return (title, content, pairs);
+    }
+
+    public class BraillePair
+    {
+        public string Text { get; set; } = "";
+        public string Pinyin { get; set; } = "";
+        public string Braille { get; set; } = "";
+        public string Note { get; set; } = "";
     }
 
     private async Task<SpecialEduResourceDto> ToDtoAsync(SpecialEduResource e)
@@ -264,6 +290,7 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
         SpecialEduResourceModality.SocialStory => "社交故事",
         SpecialEduResourceModality.VisualSupport => "视觉支持材料",
         SpecialEduResourceModality.BehaviorPlan => "行为干预方案",
+        SpecialEduResourceModality.BrailleParallel => "盲文对照",
         _ => modality
     };
 }

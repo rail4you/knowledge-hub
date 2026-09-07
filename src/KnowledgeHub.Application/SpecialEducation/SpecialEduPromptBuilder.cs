@@ -72,6 +72,7 @@ JSON 结构：
         SpecialEduResourceModality.SocialStory => @"你是特殊教育素材专家，生成社交故事：只输出合法 JSON {""title"":"""", ""content"": [""段落...""] }，第一人称、正面表述，配每段教学提示，适合目标障碍类别。",
         SpecialEduResourceModality.VisualSupport => @"你是特殊教育素材专家，生成视觉支持材料：只输出合法 JSON {""title"":"""", ""content"": [""步骤/卡片...""] }，步骤图文对应、可打印张贴，语言极简。",
         SpecialEduResourceModality.BehaviorPlan => @"你是特殊教育行为干预专家，生成行为干预方案：只输出合法 JSON {""title"":"""", ""content"": [""前因-行为-后果分析..."", ""干预策略..."", ""强化计划..."", ""数据记录表...""] }，正向行为支持导向。",
+        SpecialEduResourceModality.BrailleParallel => @"你是视障教育盲文专家，根据给定的""对照文本""与""转写要求""（盲文方案/声调/备注）生成盲文对照学习卡：只输出合法 JSON {""title"":"""", ""pairs"": [{""text"": ""明文分段"", ""pinyin"": ""拼音（中文必填）"", ""braille"": ""盲文Unicode方"", ""note"": ""点位与规则说明""}] }。规则：盲文方案为现行盲文时中文用现行盲文声韵拼合、按声调要求标调或不标调、分词连写词间空一方；为英语一级盲文时字母照表、数字前加数号；中文每对必须给拼音与点位说明；不确定的中文盲符宁可留空并在note中说明，切勿编造；末尾加一对完整例句。",
         SpecialEduResourceModality.ImageDesc => @"你是无障碍教学资源专家，生成图片描述：只输出合法 JSON {""title"":"""", ""content"": [""详细口述描述...""] }，视障可用，含触觉替代建议。",
         SpecialEduResourceModality.AudioScript => @"你是教学音频编导，生成音频脚本：只输出合法 JSON {""title"":"""", ""content"": [""旁白/停顿/音效提示...""] }，语速与重复策略适配障碍类别。",
         SpecialEduResourceModality.VideoScript => @"你是教学视频编导，生成视频脚本：只输出合法 JSON {""title"":"""", ""content"": [""分镜：画面+旁白+字幕+时长...""] }，含无障碍字幕与手语框提示。",

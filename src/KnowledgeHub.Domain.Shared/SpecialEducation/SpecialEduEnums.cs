@@ -29,10 +29,12 @@ public static class SpecialEduResourceModality
     public const string SocialStory = "SocialStory";
     public const string VisualSupport = "VisualSupport";
     public const string BehaviorPlan = "BehaviorPlan";
+    /// <summary>盲文对照：盲文点位显示 + 翻译对照（Unicode 盲文 + 点位图解 + 明文）。</summary>
+    public const string BrailleParallel = "BrailleParallel";
 
     public static readonly string[] All =
     {
-        Text, ImageDesc, AudioScript, VideoScript, SocialStory, VisualSupport, BehaviorPlan
+        Text, ImageDesc, AudioScript, VideoScript, SocialStory, VisualSupport, BehaviorPlan, BrailleParallel
     };
 }
 

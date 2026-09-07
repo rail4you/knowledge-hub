@@ -715,6 +715,7 @@
     "Permission:SpecialEducation.Review": "审核发布",
     "Permission:SpecialEducation.Manage": "特教全局管理",
     "Features:SpecialEducation": "特殊教育模块",
-    "Features:SpecialEducationDescription": "按租户开通的特殊教育扩展模块（教学设计/IEP/多模态资源）"
+    "Features:SpecialEducationDescription": "按租户开通的特殊教育扩展模块（教学设计/IEP/多模态资源）",
+    "Menu:BrailleStudy": "盲文对照"
   }
 }

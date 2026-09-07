@@ -52,6 +52,8 @@ public class GetSpecialResourceListInputDto : PagedAndSortedResultRequestDto
 {
     public SpecialEduCategory? Category { get; set; }
     public string? Modality { get; set; }
+    /// <summary>排除指定类型（多模态列表页排除盲文对照，盲文有独立页面）。</summary>
+    public string? ExcludeModality { get; set; }
     public SpecialEduPlanStatus? Status { get; set; }
     public string? Keyword { get; set; }
 }

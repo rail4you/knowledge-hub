@@ -6,12 +6,13 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { SPECIAL_EDU_CATEGORIES } from '../../special-edu/special-edu.service';
+import { BrailleViewerComponent } from '../../special-edu/braille-viewer/braille-viewer.component';
 
 @Component({
   selector: 'app-student-special-resources',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, NzCardModule, NzListModule, NzSelectModule],
+  imports: [CommonModule, FormsModule, NzCardModule, NzListModule, NzSelectModule, BrailleViewerComponent],
   template: `
   <nz-card nzTitle="特教适配资源">
     <nz-select [(ngModel)]="category" (ngModelChange)="load()" nzAllowClear nzPlaceHolder="全部类别" style="width:200px;margin-bottom:12px">
@@ -21,7 +22,11 @@ import { SPECIAL_EDU_CATEGORIES } from '../../special-edu/special-edu.service';
       <ng-template #itemTpl let-item>
         <nz-list-item>
           <nz-list-item-meta [nzTitle]="item.title" [nzDescription]="item.modalityName + ' · ' + item.categoryName"></nz-list-item-meta>
-          <div style="white-space:pre-wrap;max-width:60%">{{ item.contentText }}</div>
+          @if (pairsOf(item).length > 0) {
+            <div style="flex:1"><app-braille-viewer [pairs]="pairsOf(item)"></app-braille-viewer></div>
+          } @else {
+            <div style="white-space:pre-wrap;max-width:60%">{{ item.contentText }}</div>
+          }
         </nz-list-item>
       </ng-template>
     </nz-list>
@@ -36,6 +41,15 @@ export class StudentSpecialResourcesComponent {
 
   constructor() {
     this.load();
+  }
+
+  pairsOf(item: any): any[] {
+    try {
+      const raw = JSON.parse(item?.rawJson ?? '{}');
+      return Array.isArray(raw?.pairs) ? raw.pairs : [];
+    } catch {
+      return [];
+    }
   }
 
   load(): void {

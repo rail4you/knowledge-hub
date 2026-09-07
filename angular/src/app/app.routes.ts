@@ -479,6 +479,14 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'special-edu/braille',
+    loadComponent: () => import('./special-edu/braille/braille-study.component').then(c => c.BrailleStudyComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.SpecialEducation.Resource',
+    },
+  },
+  {
     path: 'admin/special-education',
     loadComponent: () => import('./special-edu/admin/special-edu-admin.component').then(c => c.SpecialEduAdminComponent),
     canActivate: [authGuard, permissionGuard],

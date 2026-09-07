@@ -13,7 +13,7 @@ import { HttpClient } from '@angular/common/http';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, NzCardModule, NzButtonModule, NzTableModule, NzSwitchModule],
   template: `
-  <nz-card nzTitle="特教模块开通管理（全局管理员）">
+  <nz-card nzTitle="特教模块开通管理（全局管理员）" [nzBordered]="false">
     <p style="color:#888">按租户整体开/关特教权限包（教学设计 / IEP / 多模态资源 / 审核）。开通后触发该租户角色权限自愈；关闭后前端分组隐藏、后端接口拦截。“写入Mock”向该租户写入特教示范课程 + zmq 选课 + 2教案/2IEP/4资源。</p>
     <nz-table [nzData]="tenants()" nzSize="small">
       <thead><tr><th>租户</th><th>开通状态</th><th>操作</th></tr></thead>

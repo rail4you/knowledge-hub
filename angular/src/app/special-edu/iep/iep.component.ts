@@ -15,6 +15,7 @@ import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { HttpClient } from '@angular/common/http';
 import { SPECIAL_EDU_CATEGORIES, SpecialEduService } from '../special-edu.service';
 
@@ -22,58 +23,10 @@ import { SPECIAL_EDU_CATEGORIES, SpecialEduService } from '../special-edu.servic
   selector: 'app-iep',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, NzCardModule, NzFormModule, NzInputModule, NzSelectModule, NzButtonModule, NzSpinModule, NzTagModule, NzDividerModule, NzTableModule, NzGridModule, NzTabsModule, NzModalModule, NzRadioModule],
+  imports: [CommonModule, FormsModule, NzCardModule, NzFormModule, NzInputModule, NzSelectModule, NzButtonModule, NzSpinModule, NzTagModule, NzDividerModule, NzTableModule, NzGridModule, NzTabsModule, NzModalModule, NzRadioModule, NzTooltipModule],
   template: `
   <nz-card nzTitle="IEP 教学实施方案" [nzExtra]="extraTpl">
-    <nz-tabset [(nzSelectedIndex)]="activeTab">
-      <nz-tab nzTitle="录入/生成">
-        <div nz-row [nzGutter]="16" style="margin-top:12px">
-          <div nz-col [nzSpan]="9">
-            <nz-form-item><nz-form-label>关联课程</nz-form-label>
-              <nz-select [(ngModel)]="input.courseId" (ngModelChange)="onCourseChange()" nzAllowClear nzPlaceHolder="选择课程（自动加载）" style="width:100%">
-                @for (c of courses(); track c.id) { <nz-option [nzValue]="c.id" [nzLabel]="c.title"></nz-option> }
-              </nz-select></nz-form-item>
-            <nz-form-item><nz-form-label>学生（自动加载本租户学生）</nz-form-label>
-              <nz-select [(ngModel)]="input.studentUserId" (ngModelChange)="onStudentChange()" nzShowSearch nzPlaceHolder="选择学生" style="width:100%">
-                @for (s of students(); track s.id) {
-                  <nz-option [nzValue]="s.id" [nzLabel]="s.name + ' (' + s.userName + ')' + (s.enrolledInSelectedCourse ? ' · 已选课' : '')"></nz-option>
-                }
-              </nz-select></nz-form-item>
-            <nz-form-item><nz-form-label>障碍类别</nz-form-label>
-              <nz-select [(ngModel)]="input.category" style="width:100%">
-                @for (c of categories; track c.value) { <nz-option [nzValue]="c.value" [nzLabel]="c.label"></nz-option> }
-              </nz-select></nz-form-item>
-            <nz-form-item><nz-form-label>评估数据（手动表单）</nz-form-label>
-              <textarea nz-input rows="3" [(ngModel)]="input.assessmentData" placeholder="如：听力损失60dB，词汇量30，精细动作弱"></textarea></nz-form-item>
-            <nz-form-item><nz-form-label>当前发展水平</nz-form-label>
-              <textarea nz-input rows="2" [(ngModel)]="input.currentLevel" placeholder="如：能指认20个常见词，等待能力约30秒"></textarea></nz-form-item>
-            <nz-form-item><nz-form-label>家庭需求 / 家校信息</nz-form-label>
-              <textarea nz-input rows="2" [(ngModel)]="input.familyNeeds" placeholder="如：家长每晚可配合15分钟"></textarea></nz-form-item>
-            <button nz-button nzType="primary" (click)="generate()" [nzLoading]="generating()">生成 IEP（自动存为草稿）</button>
-          </div>
-          <div nz-col [nzSpan]="15">
-            <nz-spin [nzSpinning]="generating()">
-              @if (result(); as r) {
-                <h3>现状分析</h3><p>{{ r.profileSummary }}</p>
-                <nz-divider nzText="长期目标"></nz-divider>
-                @for (g of r.longTermGoals; track g) { <p>• {{ g }}</p> }
-                <nz-divider nzText="短期目标"></nz-divider>
-                @for (g of r.shortTermGoals; track g) { <p>• {{ g }}</p> }
-                <nz-divider nzText="教学策略"></nz-divider>
-                @for (g of r.strategies; track g) { <p>• {{ g }}</p> }
-                <nz-divider nzText="评估方式"></nz-divider>
-                @for (g of r.evaluation; track g) { <p>• {{ g }}</p> }
-                <nz-divider nzText="家校协同"></nz-divider>
-                @for (g of r.homeSchool; track g) { <p>• {{ g }}</p> }
-                <p style="color:#888">法规依据：{{ r.legalBasis }}</p>
-                <button nz-button (click)="exportDocx()">导出 Word</button>
-              } @else {
-                <p style="color:#999">填写评估数据后生成，生成后自动保存为草稿，可在“IEP 列表”中提交审核。</p>
-              }
-            </nz-spin>
-          </div>
-        </div>
-      </nz-tab>
+    <nz-tabs [(nzSelectedIndex)]="activeTab">
       <nz-tab nzTitle="IEP 列表">
         <nz-table [nzData]="list()" nzSize="small" style="margin-top:12px">
           <thead><tr><th>学生</th><th>类别</th><th>版本</th><th>状态</th><th>审核教师</th><th>操作</th></tr></thead>
@@ -109,19 +62,102 @@ import { SPECIAL_EDU_CATEGORIES, SpecialEduService } from '../special-edu.servic
           </tbody>
         </nz-table>
       </nz-tab>
-    </nz-tabset>
+    </nz-tabs>
   </nz-card>
-  <ng-template #extraTpl><span style="color:#888">生成即存草稿 · 审核后发布 · 版本可迭代</span></ng-template>
+  <ng-template #extraTpl>
+    <button nz-button nzType="primary" nzSize="small" (click)="openCreate()">新建 IEP</button>
+  </ng-template>
+
+  <!-- 新建：弹出表单 -->
+  <nz-modal [(nzVisible)]="createVisible" nzTitle="新建 IEP 方案" nzWidth="800" (nzOnCancel)="createVisible = false" [nzFooter]="null">
+    <ng-container *nzModalContent>
+    <nz-form-item><nz-form-label>关联课程</nz-form-label>
+      <nz-select [(ngModel)]="input.courseId" (ngModelChange)="onCourseChange()" nzAllowClear nzPlaceHolder="选择课程（自动加载）" style="width:100%">
+        @for (c of courses(); track c.id) { <nz-option [nzValue]="c.id" [nzLabel]="c.title"></nz-option> }
+      </nz-select></nz-form-item>
+    <nz-form-item><nz-form-label>学生（自动加载本租户学生）</nz-form-label>
+      <nz-select [(ngModel)]="input.studentUserId" (ngModelChange)="onStudentChange()" nzShowSearch nzPlaceHolder="选择学生" style="width:100%">
+        @for (s of students(); track s.id) {
+          <nz-option [nzValue]="s.id" [nzLabel]="s.name + ' (' + s.userName + ')' + (s.enrolledInSelectedCourse ? ' · 已选课' : '')"></nz-option>
+        }
+      </nz-select></nz-form-item>
+    <nz-form-item><nz-form-label>障碍类别</nz-form-label>
+      <nz-select [(ngModel)]="input.category" style="width:100%">
+        @for (c of categories; track c.value) { <nz-option [nzValue]="c.value" [nzLabel]="c.label"></nz-option> }
+      </nz-select></nz-form-item>
+    <nz-form-item><nz-form-label>评估数据（手动表单）</nz-form-label>
+      <textarea nz-input rows="3" [(ngModel)]="input.assessmentData" placeholder="如：听力损失60dB，词汇量30，精细动作弱"></textarea></nz-form-item>
+    <nz-form-item><nz-form-label>当前发展水平</nz-form-label>
+      <textarea nz-input rows="2" [(ngModel)]="input.currentLevel" placeholder="如：能指认20个常见词，等待能力约30秒"></textarea></nz-form-item>
+    <nz-form-item><nz-form-label>家庭需求 / 家校信息</nz-form-label>
+      <textarea nz-input rows="2" [(ngModel)]="input.familyNeeds" placeholder="如：家长每晚可配合15分钟"></textarea></nz-form-item>
+    <div>
+      <button nz-button nzType="primary" (click)="generate()" [nzLoading]="generating()">生成 IEP（自动存为草稿）</button>
+      <button nz-button nzShape="circle" nz-tooltip [nzTooltipTitle]="helpTpl" nzTooltipPlacement="right" style="margin-left:8px" aria-label="填写说明">?</button>
+      <ng-template #helpTpl>
+        <div>选择课程与学生，填写评估数据与发展水平后生成 IEP。</div>
+        <div>包含学生现状分析、长期/短期目标、教学策略、评估方式、家校协同。</div>
+        <div>生成后自动保存为草稿，支持创建修订版迭代、提交审核、导出 Word。</div>
+      </ng-template>
+    </div>
+    <nz-spin [nzSpinning]="generating()" style="margin-top:12px">
+      @if (result(); as r) {
+        <nz-divider></nz-divider>
+        <h3>现状分析</h3><p>{{ r.profileSummary }}</p>
+        <nz-divider nzText="长期目标"></nz-divider>
+        @for (g of r.longTermGoals; track g) { <p>• {{ g }}</p> }
+        <nz-divider nzText="短期目标"></nz-divider>
+        @for (g of r.shortTermGoals; track g) { <p>• {{ g }}</p> }
+        <nz-divider nzText="教学策略"></nz-divider>
+        @for (g of r.strategies; track g) { <p>• {{ g }}</p> }
+        <nz-divider nzText="评估方式"></nz-divider>
+        @for (g of r.evaluation; track g) { <p>• {{ g }}</p> }
+        <nz-divider nzText="家校协同"></nz-divider>
+        @for (g of r.homeSchool; track g) { <p>• {{ g }}</p> }
+        <p style="color:#888">法规依据：{{ r.legalBasis }}</p>
+        <button nz-button (click)="exportDocx()">导出 Word</button>
+      }
+    </nz-spin>
+
+    </ng-container>
+  </nz-modal>
+
+  <!-- 查看 -->
+  <nz-modal [(nzVisible)]="viewVisible" [nzTitle]="'IEP：' + (viewTarget?.studentName || '')" nzWidth="900" (nzOnCancel)="viewVisible = false" [nzFooter]="null">
+    <ng-container *nzModalContent>
+    @if (viewResult(); as r) {
+      <p>{{ viewTarget?.categoryName }} · v{{ viewTarget?.versionNumber }} · {{ statusName(viewTarget?.status) }}</p>
+      <h3>现状分析</h3><p>{{ r.profileSummary }}</p>
+      <nz-divider nzText="长期目标"></nz-divider>
+      @for (g of r.longTermGoals; track g) { <p>• {{ g }}</p> }
+      <nz-divider nzText="短期目标"></nz-divider>
+      @for (g of r.shortTermGoals; track g) { <p>• {{ g }}</p> }
+      <nz-divider nzText="教学策略"></nz-divider>
+      @for (g of r.strategies; track g) { <p>• {{ g }}</p> }
+      <nz-divider nzText="评估方式"></nz-divider>
+      @for (g of r.evaluation; track g) { <p>• {{ g }}</p> }
+      <nz-divider nzText="家校协同"></nz-divider>
+      @for (g of r.homeSchool; track g) { <p>• {{ g }}</p> }
+      <p style="color:#888">法规依据：{{ r.legalBasis }}</p>
+      @if (viewTarget?.reviewComment) { <p style="color:#c00">审核意见：{{ viewTarget.reviewComment }}</p> }
+    }
+  
+    </ng-container>
+  </nz-modal>
 
   <nz-modal [(nzVisible)]="submitVisible" nzTitle="提交审核 — 指派审核教师" (nzOnCancel)="submitVisible = false" (nzOnOk)="confirmSubmit()">
+    <ng-container *nzModalContent>
     <p>学生：{{ submitTarget?.studentName }}</p>
     <p>审核教师（本租户）</p>
     <nz-select [(ngModel)]="submitReviewerId" nzAllowClear nzPlaceHolder="选择教师，可不选" style="width:100%">
       @for (t of teachers(); track t.id) { <nz-option [nzValue]="t.id" [nzLabel]="t.name + ' (' + t.userName + ' · ' + t.roleName + ')'"></nz-option> }
     </nz-select>
+  
+    </ng-container>
   </nz-modal>
 
   <nz-modal [(nzVisible)]="reviewVisible" nzTitle="审核 IEP" (nzOnCancel)="reviewVisible = false" (nzOnOk)="confirmReview()">
+    <ng-container *nzModalContent>
     <p>学生：{{ reviewTarget?.studentName }}</p>
     <nz-radio-group [(ngModel)]="reviewApproved">
       <label nz-radio [nzValue]="true">通过（发布）</label>
@@ -129,6 +165,8 @@ import { SPECIAL_EDU_CATEGORIES, SpecialEduService } from '../special-edu.servic
     </nz-radio-group>
     <p style="margin-top:8px">审核意见</p>
     <textarea nz-input rows="3" [(ngModel)]="reviewComment"></textarea>
+  
+    </ng-container>
   </nz-modal>
   `,
 })
@@ -146,9 +184,12 @@ export class IepComponent {
   courses = signal<any[]>([]);
   students = signal<any[]>([]);
   teachers = signal<any[]>([]);
-  savedId = signal<string | null>(null);
   activeTab = 0;
   input: any = { studentName: '', studentUserId: '', courseId: null, category: 0, assessmentData: '', currentLevel: '', familyNeeds: '', customPrompt: '' };
+  createVisible = false;
+  viewVisible = false;
+  viewTarget: any = null;
+  viewResult = signal<any>(null);
   submitVisible = false;
   submitTarget: any = null;
   submitReviewerId: string | null = null;
@@ -201,6 +242,12 @@ export class IepComponent {
     if (s) this.input.studentName = s.name;
   }
 
+  openCreate(): void {
+    this.result.set(null);
+    this.rawJson.set('');
+    this.createVisible = true;
+  }
+
   async generate(): Promise<void> {
     if (!this.input.assessmentData?.trim()) {
       this.msg.warning('请填写评估数据');
@@ -212,7 +259,6 @@ export class IepComponent {
     }
     this.generating.set(true);
     this.result.set(null);
-    this.savedId.set(null);
     let buf = '';
     try {
       const body = { ...this.input };
@@ -244,23 +290,15 @@ export class IepComponent {
       category: this.input.category, courseId: this.input.courseId || undefined,
       resultJson: this.rawJson(), sourceInputJson: JSON.stringify(this.input),
     }).subscribe({
-      next: r => { this.savedId.set(r.id); this.msg.success('已生成并自动保存为草稿'); this.loadAll(); },
+      next: () => { this.msg.success('已生成并自动保存为草稿'); this.createVisible = false; this.loadAll(); },
       error: () => this.msg.error('自动保存失败，请重试'),
     });
   }
 
   view(h: any): void {
-    this.savedId.set(h.id);
-    this.input.studentName = h.studentName;
-    this.input.studentUserId = h.studentUserId;
-    this.input.courseId = h.courseId ?? null;
-    this.loadStudents();
-    const parsed = this.svc.tryParse<any>(h.rawJson ?? '');
-    if (parsed) {
-      this.result.set(parsed);
-      this.rawJson.set(h.rawJson);
-      this.activeTab = 0;
-    }
+    this.viewTarget = h;
+    this.viewResult.set(this.svc.tryParse<any>(h.rawJson ?? ''));
+    this.viewVisible = true;
   }
 
   openSubmit(h: any): void {
