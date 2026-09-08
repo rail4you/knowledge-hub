@@ -46,7 +46,9 @@
   position: relative;
 
   // 老师端：固定视口高度，视频区撑满剩余空间
+  // 注意 flex:none：flex-basis:0% 会覆盖 height，必须关掉才能让定高生效
   &.is-teacher {
+    flex: none;
     height: calc(100vh - 220px);
     height: calc(100dvh - 220px);
     min-height: 560px;

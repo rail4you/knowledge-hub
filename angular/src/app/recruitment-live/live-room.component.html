@@ -35,7 +35,7 @@
     <div class="topbar-right">
       <button type="button" class="btn-icon" (click)="toggleFullscreen(roomEl)"
         [title]="isFullscreen() ? '退出全屏' : '全屏'">
-        <span nz-icon [nzType]="isFullscreen() ? 'compress' : 'expand'" nzTheme="outline"></span>
+        <span nz-icon [nzType]="isFullscreen() ? 'fullscreen-exit' : 'fullscreen'" nzTheme="outline"></span>
       </button>
       <button type="button" class="btn-exit" (click)="goBack()" title="退出直播：仅自己离开，直播继续">
         <span nz-icon nzType="logout" nzTheme="outline"></span>
