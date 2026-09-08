@@ -89,6 +89,11 @@ export class RecruitmentLiveService {
   readonly localStreamReady = signal(false);
   readonly micEnabled = signal(true);
   readonly camEnabled = signal(true);
+  /**
+   * 远端音频输出（扬声器）开关。
+   * 与 micEnabled 互不影响：关闭麦克风不会关闭扬声器，反之亦然。
+   */
+  readonly speakerEnabled = signal(true);
   readonly chatOpen = signal(false);
   readonly chatMessages = signal<ChatMessage[]>([]);
   readonly callDurationSec = signal(0);
@@ -114,6 +119,12 @@ export class RecruitmentLiveService {
   private currentFacingMode: 'user' | 'environment' = 'user';
   private liveId = '';
   private iceServers: RTCIceServer[] = [];
+  /**
+   * 在 PC 还未设置 remoteDescription 时缓存远端 ICE candidates，
+   * 等 setRemoteDescription 完成后再回放。
+   * 修复“ICE candidates 在 handshake 完成前到达被丢弃”导致的连接失败。
+   */
+  private pendingIceCandidates = new Map<string, RTCIceCandidate[]>();
 
   async connect(liveId: string, wsToken: string, wsUrl: string, role: 'teacher' | 'student', userId: string, userName: string): Promise<void> {
     this.liveId = liveId;
@@ -313,6 +324,8 @@ export class RecruitmentLiveService {
 
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(msg.data));
+      // 回放在此期间累积的 ICE candidates
+      await this.flushPendingIceCandidates(fromUserId, pc);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       this.sendWs({ type: 'answer', data: answer, targetUserId: fromUserId });
@@ -331,6 +344,8 @@ export class RecruitmentLiveService {
     if (pc) {
       try {
         await pc.setRemoteDescription(new RTCSessionDescription(msg.data));
+        // 回放在 setRemoteDescription 之前到达的 ICE candidates
+        await this.flushPendingIceCandidates(fromUserId, pc);
         console.log('[LiveWS] Remote description set from answer', fromUserId);
       } catch (e) {
         console.error('[LiveWS] Failed to set remote description from answer:', e);
@@ -342,11 +357,32 @@ export class RecruitmentLiveService {
     const fromUserId = msg.fromUserId;
     if (fromUserId === this.myUserId || !fromUserId) return;
     const pc = this.peerConnections.get(fromUserId);
-    if (pc && msg.data) {
+    if (!pc || !msg.data) return;
+    const candidate = new RTCIceCandidate(msg.data);
+    // 如果 PC 还未设置 remoteDescription，则暂存 candidates，避免被丢弃导致连接失败
+    if (!pc.remoteDescription) {
+      const queue = this.pendingIceCandidates.get(fromUserId) ?? [];
+      queue.push(candidate);
+      this.pendingIceCandidates.set(fromUserId, queue);
+      return;
+    }
+    try {
+      await pc.addIceCandidate(candidate);
+    } catch (e) {
+      console.warn('[LiveWS] Failed to add ICE candidate from', fromUserId, e);
+    }
+  }
+
+  /** 在 setRemoteDescription 完成后，回放缓存的 ICE candidates */
+  private async flushPendingIceCandidates(fromUserId: string, pc: RTCPeerConnection): Promise<void> {
+    const queue = this.pendingIceCandidates.get(fromUserId);
+    if (!queue || queue.length === 0) return;
+    this.pendingIceCandidates.delete(fromUserId);
+    for (const c of queue) {
       try {
-        await pc.addIceCandidate(new RTCIceCandidate(msg.data));
+        await pc.addIceCandidate(c);
       } catch (e) {
-        console.warn('[LiveWS] Failed to add ICE candidate from', fromUserId, e);
+        console.warn('[LiveWS] Failed to flush queued ICE candidate from', fromUserId, e);
       }
     }
   }
@@ -358,9 +394,21 @@ export class RecruitmentLiveService {
     const pc = new RTCPeerConnection({ iceServers: this.iceServers });
     this.peerConnections.set(remoteUserId, pc);
 
-    // 添加本地音视频轨
+    // 添加本地音视频轨（若有）。记录已发送的媒体类型，便于后续补齐 recvonly transceiver
+    const sentKinds = new Set<string>();
     if (this.localStream) {
-      this.localStream.getTracks().forEach(track => pc.addTrack(track, this.localStream!));
+      this.localStream.getTracks().forEach(track => {
+        pc.addTrack(track, this.localStream!);
+        sentKinds.add(track.kind);
+      });
+    }
+    // 若没有本地媒体，或本地缺少某种媒体，显式添加 recvonly transceiver，
+    // 确保 PC 在协商时能正确接收对方的音频/视频，避免“学生看不到教师”这类问题
+    if (!sentKinds.has('audio')) {
+      pc.addTransceiver('audio', { direction: 'recvonly' });
+    }
+    if (!sentKinds.has('video')) {
+      pc.addTransceiver('video', { direction: 'recvonly' });
     }
 
     pc.onicecandidate = (e) => {
@@ -371,10 +419,15 @@ export class RecruitmentLiveService {
 
     pc.ontrack = (e) => {
       console.log('[LiveWS] Received track from', remoteUserId, e.streams[0]);
+      const stream = e.streams[0];
+      // 同步扬声器状态：若用户已静音扬声器，新接收到的远端音频轨也应静音
+      if (stream) {
+        stream.getAudioTracks().forEach(t => (t.enabled = this.speakerEnabled()));
+      }
       this.remoteStreams.update(streams => {
         const existing = streams.find(s => s.userId === remoteUserId);
         if (existing) {
-          existing.stream = e.streams[0];
+          existing.stream = stream;
           existing.connectionState = 'connected';
           return [...streams];
         }
@@ -383,7 +436,7 @@ export class RecruitmentLiveService {
           userId: remoteUserId,
           userName: participant?.userName || remoteRole,
           role: participant?.role || remoteRole,
-          stream: e.streams[0],
+          stream,
           connectionState: 'connected',
         }];
       });
@@ -479,6 +532,20 @@ export class RecruitmentLiveService {
     this.localStream.getVideoTracks().forEach(t => (t.enabled = this.camEnabled()));
   }
 
+  /**
+   * 切换扬声器（远端音频输出）开关。
+   * 与 toggleMic 互不影响：关闭麦克风不会关闭扬声器，反之亦然。
+   * 仅控制远端媒体流的 audio track 的 enabled 状态，
+   * 不影响本地音频采集与发送，避免麦克风/扬声器互相干扰。
+   */
+  toggleSpeaker() {
+    this.speakerEnabled.update(v => !v);
+    const enabled = this.speakerEnabled();
+    for (const stream of this.remoteStreams()) {
+      stream.stream?.getAudioTracks().forEach(t => (t.enabled = enabled));
+    }
+  }
+
   async switchCamera() {
     if (!this.localStream) return;
     this.currentFacingMode = this.currentFacingMode === 'user' ? 'environment' : 'user';
@@ -546,6 +613,11 @@ export class RecruitmentLiveService {
     this.chatMessages.set([]);
     this.retryCount = 0;
     this.pendingMessages = [];
+    this.pendingIceCandidates.clear();
+    // 重置音视频状态，避免下次进入遗留上次的设置
+    this.micEnabled.set(true);
+    this.camEnabled.set(true);
+    this.speakerEnabled.set(true);
   }
 
   private handleConnectionFailure() {

@@ -205,6 +205,20 @@
   padding: 3px 10px;
   border-radius: 4px;
   backdrop-filter: blur(2px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.speaker-off-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  background: rgba(220, 38, 38, .85);
+  padding: 1px 6px;
+  border-radius: 4px;
+  span[nz-icon] { font-size: 12px; }
 }
 
 .video-placeholder {

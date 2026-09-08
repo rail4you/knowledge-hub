@@ -61,6 +61,7 @@
                 <video
                   [srcObject]="getStreamFor(p.userId)!"
                   autoplay playsinline
+                  [muted]="!speakerEnabled()"
                 ></video>
               } @else {
                 <div class="gallery-tile__placeholder">
@@ -85,9 +86,13 @@
               <video
                 [srcObject]="remoteStreams()[0].stream"
                 autoplay playsinline
+                [muted]="!speakerEnabled()"
               ></video>
               <div class="video-remote__label">
                 {{ remoteStreams()[0].userName }}
+                @if (!speakerEnabled()) {
+                  <span class="speaker-off-tag" title="扬声器已静音"><span nz-icon nzType="audio-muted" nzTheme="outline"></span></span>
+                }
               </div>
             </div>
           } @else {
@@ -164,6 +169,16 @@
         (click)="liveService.toggleMic()"
       >
         <span nz-icon [nzType]="micEnabled() ? 'audio' : 'audio-muted'" nzTheme="outline"></span>
+      </button>
+
+      <button
+        type="button"
+        class="ctrl-btn"
+        [class.off]="!speakerEnabled()"
+        nz-tooltip [nzTooltipTitle]="speakerEnabled() ? '关闭扬声器' : '开启扬声器'"
+        (click)="liveService.toggleSpeaker()"
+      >
+        <span nz-icon [nzType]="speakerEnabled() ? 'sound' : 'audio-muted'" nzTheme="outline"></span>
       </button>
 
       <button

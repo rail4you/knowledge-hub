@@ -50,6 +50,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   readonly liveState = this.liveService.liveState;
   readonly micEnabled = this.liveService.micEnabled;
   readonly camEnabled = this.liveService.camEnabled;
+  readonly speakerEnabled = this.liveService.speakerEnabled;
   readonly chatOpen = this.liveService.chatOpen;
   readonly chatMessages = this.liveService.chatMessages;
   readonly callDurationSec = this.liveService.callDurationSec;
