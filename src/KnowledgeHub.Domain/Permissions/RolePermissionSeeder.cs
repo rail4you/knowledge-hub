@@ -440,6 +440,17 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         // 同时授予 Review 权限以便教师之间可互审；学生绝不授予。
         await GrantAsync("Teacher", KnowledgeHubPermissions.SpecialEducation.Review);
 
+        // 租户信息管理页（/admin/tenant-info）是 host 全局页：后端 GetListAsync /
+        // SaveByTenantIdAsync 均要求宿主上下文。任何租户角色持有 TenantInfo 权限都会导致
+        // "菜单可见、点进去没权限"的死胡同，因此对所有租户角色显式收回（幂等自愈远端脏数据）。
+        // SchoolAdmin / LeagueAdmin 另有专属收回逻辑（见上/下），此处覆盖剩余租户角色。
+        await RevokeAsync("Teacher", KnowledgeHubPermissions.TenantInfo.Default);
+        await RevokeAsync("Teacher", KnowledgeHubPermissions.TenantInfo.Edit);
+        await RevokeAsync("Student", KnowledgeHubPermissions.TenantInfo.Default);
+        await RevokeAsync("Student", KnowledgeHubPermissions.TenantInfo.Edit);
+        await RevokeAsync("EnterpriseUser", KnowledgeHubPermissions.TenantInfo.Default);
+        await RevokeAsync("EnterpriseUser", KnowledgeHubPermissions.TenantInfo.Edit);
+
         // ── Student：学生（只读） ──
         await GrantAsync("Student", KnowledgeHubPermissions.Resources.Default);
         await GrantAsync("Student", KnowledgeHubPermissions.Resources.Download);

@@ -284,6 +284,8 @@ public class PermissionAdminController : AbpController
                     CoursesCreate = grants.Any(g => g.IsGranted && g.Name == KnowledgeHubPermissions.Courses.Create),
                     CoursesEdit = grants.Any(g => g.IsGranted && g.Name == KnowledgeHubPermissions.Courses.Edit),
                     CoursesDelete = grants.Any(g => g.IsGranted && g.Name == KnowledgeHubPermissions.Courses.Delete),
+                    TenantInfoDefault = grants.Any(g => g.IsGranted && g.Name == KnowledgeHubPermissions.TenantInfo.Default),
+                    TenantInfoEdit = grants.Any(g => g.IsGranted && g.Name == KnowledgeHubPermissions.TenantInfo.Edit),
                 });
             }
         }
@@ -366,4 +368,6 @@ public class RolePermissionDto
     public bool CoursesCreate { get; set; }
     public bool CoursesEdit { get; set; }
     public bool CoursesDelete { get; set; }
+    public bool TenantInfoDefault { get; set; }
+    public bool TenantInfoEdit { get; set; }
 }

@@ -5,6 +5,7 @@ import { installGuard } from './install/install.guard';
 import { STUDENT_ROUTES } from './student/student.routes';
 import { studentPortalGuard } from './student/student-portal.guard';
 import { nonStudentGuard } from './auth/non-student.guard';
+import { hostOnlyGuard } from './auth/host-only.guard';
 
 export const APP_ROUTES: Routes = [
   {
@@ -220,7 +221,9 @@ export const APP_ROUTES: Routes = [
   {
     path: 'admin/tenant-info',
     loadComponent: () => import('./admin/tenant-info/tenant-info-management.component').then(c => c.TenantInfoManagementComponent),
-    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    // host 全局页（后端要求宿主上下文）：hostOnlyGuard 兜底租户用户因历史脏权限闯入，
+    // 直接拦回首页而非落到"加载租户列表失败"的死胡同。
+    canActivate: [authGuard, nonStudentGuard, hostOnlyGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.TenantInfo.Edit',
     },
