@@ -395,9 +395,18 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
     });
   }
 
+  /**
+   * 后端 StudentName 是 "姓名 用户名" 拼串（如 "张梦倩 zmq"）。
+   * 展示时拆开：首段为姓名，其余为用户名（小标签展示）。
+   */
+  parseStudentName(full?: string | null): { name: string; userName: string } {
+    const parts = (full || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length <= 1) return { name: parts[0] || '-', userName: '' };
+    return { name: parts[0], userName: parts.slice(1).join(' ') };
+  }
+
   // 枚举 -> 中文
-  statusLabel(s: EmploymentOutcomeStatus): string {
-    const m: Record<number, string> = {
+  statusLabel(s: EmploymentOutcomeStatus): string {    const m: Record<number, string> = {
       [EmploymentOutcomeStatus.Intention]: '就业意向',
       [EmploymentOutcomeStatus.Signed]: '已签约',
       [EmploymentOutcomeStatus.Employed]: '已就业',

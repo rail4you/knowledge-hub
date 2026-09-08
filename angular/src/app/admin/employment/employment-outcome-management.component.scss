@@ -248,6 +248,20 @@
   white-space: nowrap;
   max-width: 140px;
 }
+// 用户名含蓄小标签
+.user-tag {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: #f5f6f8;
+  border: 1px solid var(--kh-line-2);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--kh-muted);
+  line-height: 1.7;
+  white-space: nowrap;
+}
 .primary-star {
   display: inline-flex;
   align-items: center;
