@@ -203,6 +203,23 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
         }
 
         List<IdentityUser> allStudents;
+        // 关键字也可匹配专业名：先按名找到专业 ID（租户隔离），再在内存里按 MajorId 匹配。
+        // （MajorId 存于 ExtraProperty，无法进 SQL，只能内存过滤；
+        //  SQL 阶段仅在无专业名命中时做文本预筛以减少加载量。）
+        HashSet<Guid> majorIdsByName = new();
+        if (!string.IsNullOrWhiteSpace(input.Filter))
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var majorQuery = await _majorRepository.GetQueryableAsync();
+                majorIdsByName = (await majorQuery
+                        .WhereIf(tenantFilter.HasValue, m => m.TenantId == tenantFilter!.Value)
+                        .Where(m => m.Name.Contains(input.Filter!))
+                        .Select(m => m.Id)
+                        .ToListAsync())
+                    .ToHashSet();
+            }
+        }
         using (DataFilter.Disable<IMultiTenant>())
         {
             var userQuery = await _userRepository.GetQueryableAsync();
@@ -212,7 +229,7 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
                 userQuery = userQuery.Where(u => u.TenantId == tenantFilter.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(input.Filter))
+            if (!string.IsNullOrWhiteSpace(input.Filter) && majorIdsByName.Count == 0)
             {
                 userQuery = userQuery.Where(u =>
                     u.UserName.Contains(input.Filter!) ||
@@ -246,6 +263,21 @@ public class StudentCourseAppService : KnowledgeHubAppService, IStudentCourseApp
         var studentsWithRole = allStudents
             .Where(u => studentUserIds.Contains(u.Id))
             .ToList();
+
+        // 有专业名命中时：SQL 阶段未做文本预筛，在此统一做内存过滤
+        // （用户名 / 姓名 / 邮箱 / 专业 Guid / 历史专业名称文本）。
+        if (!string.IsNullOrWhiteSpace(input.Filter) && majorIdsByName.Count > 0)
+        {
+            var keyword = input.Filter!;
+            studentsWithRole = studentsWithRole
+                .Where(u =>
+                    u.UserName.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+                    (u.Name != null && u.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
+                    (u.Email != null && u.Email.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
+                    (u.GetProperty<Guid?>("MajorId") is Guid userMajorId && majorIdsByName.Contains(userMajorId)) ||
+                    (u.GetProperty<string>("Major") is string majorText && majorText.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
 
         // Filter by MajorId (stored as ExtraProperty)
         if (input.MajorId.HasValue)
