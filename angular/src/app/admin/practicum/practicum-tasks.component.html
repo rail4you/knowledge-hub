@@ -1,15 +1,21 @@
-<div class="page">
-  <nz-card>
-    <div class="project-selector">
+<div class="page training-page">
+  <!-- 标题区（与实训项目列表页统一） -->
+  <div class="page-header">
+    <h1>实训任务管理</h1>
+    <p>选择实训项目，配置任务、查看提交评分与指导记录</p>
+  </div>
+
+  <!-- 数据容器：选择器 + 页签 + 表格同一卡片，占据页面剩余高度 -->
+  <div class="list-card">
+    <div class="project-selector-bar">
       <label class="selector-label">选择实训项目</label>
-      <nz-select [ngModel]="selectedProjectId" (ngModelChange)="onProjectChange($event)" nzPlaceHolder="请选择实训项目" style="width: 360px;">
+      <nz-select [ngModel]="selectedProjectId" (ngModelChange)="onProjectChange($event)" nzPlaceHolder="请选择实训项目" style="width: 360px; max-width: 100%;">
         <nz-option *ngFor="let p of projects()" [nzValue]="p.id" [nzLabel]="p.title"></nz-option>
       </nz-select>
       <span class="selector-hint" *ngIf="selectedProjectTitle">当前：{{ selectedProjectTitle }}</span>
     </div>
-  </nz-card>
 
-  <nz-card *ngIf="selectedProjectId">
+    <ng-container *ngIf="selectedProjectId; else noProjectTpl">
     <div class="tabs-bar">
       <button class="tab-btn" [class.active]="activeTab === 0" (click)="activeTab = 0">任务配置</button>
       <button class="tab-btn" [class.active]="activeTab === 1" (click)="activeTab = 1">评分</button>
@@ -18,16 +24,16 @@
 
     <div class="tab-content">
       <!-- Tab 0: 任务配置 -->
-      <div *ngIf="activeTab === 0">
-        <div class="sub-toolbar">
-          <span class="sub-count">已配置 {{ form.tasks.length }} 个任务</span>
+      <div *ngIf="activeTab === 0" class="tab-pane">
+        <div class="sub-toolbar left">
           <button nz-button nzType="primary" (click)="openAddTaskDrawer()">
             <span nz-icon nzType="plus"></span> 新增任务
           </button>
+          <span class="sub-count">已配置 {{ form.tasks.length }} 个任务</span>
         </div>
 
-        <div class="materials-table-wrap" *ngIf="form.tasks.length > 0">
-          <nz-table [nzData]="form.tasks" [nzShowPagination]="false" nzSize="middle" class="materials-table">
+        <div class="table-wrap" *ngIf="form.tasks.length > 0">
+          <nz-table #taskTable [nzData]="form.tasks" [nzFrontPagination]="true" [nzShowPagination]="true" [nzPageSize]="10" [nzShowSizeChanger]="true" [nzPageSizeOptions]="[10, 20, 50]" nzSize="middle" class="materials-table">
             <thead>
               <tr>
                 <th nzWidth="60px">序号</th>
@@ -40,8 +46,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let task of form.tasks; let i = index">
-                <td>{{ i + 1 }}</td>
+              <tr *ngFor="let task of taskTable.data">
+                <td>{{ form.tasks.indexOf(task) + 1 }}</td>
                 <td class="cell-title">{{ task.title || '（未命名）' }}</td>
                 <td class="cell-desc">{{ task.description || '—' }}</td>
                 <td class="cell-desc">{{ task.requirement || '—' }}</td>
@@ -51,25 +57,26 @@
                   <ng-template #noDue><span class="muted">未设置</span></ng-template>
                 </td>
                 <td>
-                  <a nz-button nzType="link" nzSize="small" (click)="openEditTaskDrawer(i)">编辑</a>
-                  <a nz-button nzType="link" nzSize="small" nzDanger (click)="removeTask(i)">删除</a>
+                  <a nz-button nzType="link" nzSize="small" (click)="openEditTaskDrawer(form.tasks.indexOf(task))">编辑</a>
+                  <a nz-button nzType="link" nzSize="small" nzDanger (click)="removeTask(form.tasks.indexOf(task))">删除</a>
                 </td>
               </tr>
             </tbody>
           </nz-table>
         </div>
         <div class="materials-empty" *ngIf="form.tasks.length === 0">
-          <nz-empty nzNotFoundContent="暂无任务，点击右上角「新增任务」添加"></nz-empty>
+          <nz-empty nzNotFoundContent="暂无任务，点击上方左侧「新增任务」添加"></nz-empty>
         </div>
       </div>
 
       <!-- Tab 1: 评分 -->
-      <div *ngIf="activeTab === 1">
-        <div class="section-header">
-          <h3>参与与评分</h3>
+      <div *ngIf="activeTab === 1" class="tab-pane">
+        <div class="section-header left">
           <button nz-button (click)="exportScores()">导出成绩</button>
+          <h3>参与与评分</h3>
         </div>
-        <nz-table [nzData]="scoreRows()" [nzFrontPagination]="false" nzSize="small">
+        <div class="table-wrap">
+        <nz-table #scoreTable [nzData]="scoreRows()" [nzFrontPagination]="true" [nzShowPagination]="true" [nzPageSize]="10" [nzShowSizeChanger]="true" [nzPageSizeOptions]="[10, 20, 50]" nzSize="small">
           <thead>
             <tr>
               <th>学生</th>
@@ -82,7 +89,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of scoreRows()">
+            <tr *ngFor="let row of scoreTable.data">
               <td>{{ row.enrollment.studentName || '学生' }}</td>
               <td>{{ enrollmentLabel(row.enrollment.status) }}</td>
               <td>{{ row.enrollment.progress }}%</td>
@@ -104,22 +111,21 @@
             </tr>
           </tbody>
         </nz-table>
+        </div>
       </div>
 
       <!-- Tab 2: 指导 -->
-      <div *ngIf="activeTab === 2">
-        <div class="section-header">
-          <div>
-            <h3>学生指导记录</h3>
-            <span class="hint-inline">点击"添加指导"选择学生填写意见</span>
-          </div>
+      <div *ngIf="activeTab === 2" class="tab-pane">
+        <div class="section-header left">
           <button nz-button nzType="primary" (click)="openAddGuidance()">
             <span nz-icon nzType="plus"></span> 添加指导
           </button>
+          <h3>学生指导记录</h3>
         </div>
         <div *ngIf="guidanceTabLoading()" class="guidance-tab-loading"><nz-spin nzSimple></nz-spin></div>
         <nz-empty *ngIf="!guidanceTabLoading() && !guidanceRows().length" nzNotFoundContent="暂无指导记录"></nz-empty>
-        <nz-table *ngIf="!guidanceTabLoading() && guidanceRows().length" [nzData]="guidanceRows()" [nzShowPagination]="false" nzSize="small">
+        <div class="table-wrap" *ngIf="!guidanceTabLoading() && guidanceRows().length">
+        <nz-table #guidanceTable [nzData]="guidanceRows()" [nzFrontPagination]="true" [nzShowPagination]="true" [nzPageSize]="10" [nzShowSizeChanger]="true" [nzPageSizeOptions]="[10, 20, 50]" nzSize="small">
           <thead>
             <tr>
               <th>学生</th>
@@ -132,7 +138,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of guidanceRows()">
+            <tr *ngFor="let row of guidanceTable.data">
               <td>{{ row.studentName }}</td>
               <td>{{ enrollmentLabel(row.status) }}</td>
               <td>{{ row.record.teacherName || '教师' }}</td>
@@ -145,9 +151,16 @@
             </tr>
           </tbody>
         </nz-table>
+        </div>
       </div>
     </div>
-  </nz-card>
+    </ng-container>
+    <ng-template #noProjectTpl>
+      <div class="project-empty">
+        <nz-empty nzNotFoundContent="请先选择实训项目"></nz-empty>
+      </div>
+    </ng-template>
+  </div>
 
   <!-- 任务编辑抽屉 -->
   <nz-modal

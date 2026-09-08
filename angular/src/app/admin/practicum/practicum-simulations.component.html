@@ -1,23 +1,28 @@
-<div class="page">
-  <nz-card>
-    <div class="project-selector">
+<div class="page training-page">
+  <!-- 标题区（与实训项目/任务页统一） -->
+  <div class="page-header">
+    <h1>仿真镜像管理</h1>
+    <p>上传 Unity WebGL 构建产物，并关联到实训项目</p>
+  </div>
+
+  <!-- 数据容器：选择器 + 内容同一卡片，占据页面剩余高度 -->
+  <div class="list-card">
+    <div class="project-selector-bar">
       <label class="selector-label">选择实训项目</label>
-      <nz-select [ngModel]="selectedProjectId" (ngModelChange)="onProjectChange($event)" nzPlaceHolder="请选择实训项目" style="width: 360px;">
+      <nz-select [ngModel]="selectedProjectId" (ngModelChange)="onProjectChange($event)" nzPlaceHolder="请选择实训项目" style="width: 360px; max-width: 100%;">
         <nz-option *ngFor="let p of projects()" [nzValue]="p.id" [nzLabel]="p.title"></nz-option>
       </nz-select>
       <span class="selector-hint" *ngIf="selectedProjectTitle">当前：{{ selectedProjectTitle }}</span>
     </div>
-  </nz-card>
 
-  <nz-card *ngIf="selectedProjectId">
-    <div class="section-header">
-      <div>
-        <h3>仿真镜像</h3>
-        <span class="hint">上传 Unity WebGL ZIP，并将镜像直接关联到当前实训项目。</span>
-      </div>
+    <ng-container *ngIf="selectedProjectId; else noProjectTpl">
+    <div class="content-body">
+    <div class="section-header left">
       <button nz-button nzType="primary" (click)="openAddSimulationModal()">
         <span nz-icon nzType="plus"></span> 新增镜像
       </button>
+      <h3>仿真镜像</h3>
+      <span class="sim-count" *ngIf="simulations().length">共 {{ simulations().length }} 个</span>
     </div>
 
     <div class="simulation-note">
@@ -52,12 +57,12 @@
       </div>
     </div>
 
-    <nz-table *ngIf="simulations().length" [nzData]="simulations()" [nzShowPagination]="false" nzSize="small">
+    <nz-table #simTable *ngIf="simulations().length" [nzData]="simulations()" [nzFrontPagination]="true" [nzShowPagination]="true" [nzPageSize]="10" [nzShowSizeChanger]="true" [nzPageSizeOptions]="[10, 20, 50]" nzSize="small">
       <thead>
         <tr><th>名称</th><th>Slug</th><th>状态</th><th>文件数</th><th>大小</th><th>操作</th></tr>
       </thead>
       <tbody>
-        <tr *ngFor="let sim of simulations()">
+        <tr *ngFor="let sim of simTable.data">
           <td>{{ sim.name }}</td>
           <td><code>{{ sim.slug }}</code></td>
           <td><nz-tag [nzColor]="simulationStatusColor(sim.status)">{{ simulationStatusLabel(sim.status) }}</nz-tag></td>
@@ -71,55 +76,82 @@
         </tr>
       </tbody>
     </nz-table>
-    <nz-empty *ngIf="!simulations().length" nzNotFoundContent="当前实训还没有仿真镜像"></nz-empty>
-  </nz-card>
+    <nz-empty *ngIf="!simulations().length" nzNotFoundContent="当前实训还没有仿真镜像，点击上方左侧「新增镜像」上传"></nz-empty>
+    </div>
+    </ng-container>
+    <ng-template #noProjectTpl>
+      <div class="project-empty">
+        <nz-empty nzNotFoundContent="请先选择实训项目"></nz-empty>
+      </div>
+    </ng-template>
+  </div>
 
   <!-- 仿真镜像弹窗 -->
   <nz-modal
     [nzVisible]="simulationModalVisible()"
     [nzTitle]="(simulationModalDraft()?.editingId ? '编辑镜像信息' : '上传新镜像')"
     [nzWidth]="560"
+    nzWrapClassName="practicum-modal-wrap"
     (nzOnCancel)="closeSimulationModal()"
     (nzVisibleChange)="simulationModalVisible.set($event)"
     [nzFooter]="simulationModalFooter">
     <div *nzModalContent>
       <ng-container *ngIf="simulationModalDraft() as draft">
-        <div class="form-grid">
-          <label>镜像名称</label>
-          <input nz-input [(ngModel)]="draft.name" placeholder="例如：小鼠解剖仿真实验" />
+        <div class="dh-modal">
+          <div class="dh-form">
+            <label class="field full">
+              <span class="label">镜像名称 <em>*</em></span>
+              <input nz-input [(ngModel)]="draft.name" placeholder="例如：小鼠解剖仿真实验" />
+            </label>
 
-          <label>描述</label>
-          <textarea nz-input rows="3" [(ngModel)]="draft.description" placeholder="仿真实训内容说明（可选）"></textarea>
+            <label class="field full">
+              <span class="label">描述</span>
+              <textarea nz-input [(ngModel)]="draft.description" rows="3" placeholder="仿真实训内容说明（可选）" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
+            </label>
 
-          <label>封面图片</label>
-          <div class="cover-upload-group">
-            <nz-upload
-              nzListType="picture-card"
-              [nzMultiple]="false"
-              [nzMaxCount]="1"
-              [nzBeforeUpload]="beforeSimulationCoverUpload"
-              [nzFileList]="draft.coverFileList"
-              [nzRemove]="removeSimulationCover"
-              [nzDisabled]="draft.coverUploading"
-              nzAccept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
-            >
-              @if (draft.coverFileList.length === 0) {
-                <div class="cover-upload-trigger">
-                  <span nz-icon nzType="plus"></span>
-                  <div style="margin-top: 8px">上传封面</div>
-                </div>
-              }
-            </nz-upload>
-          </div>
-
-          <ng-container *ngIf="!draft.editingId">
-            <label>仿真 ZIP</label>
-            <div>
-              <input type="file" accept=".zip,application/zip" (change)="onSimulationFileChange($event)" />
-              <div class="hint" *ngIf="draft.fileName">已选择：{{ draft.fileName }}</div>
-              <div class="hint" *ngIf="draft.uploading">上传进度：{{ draft.uploadProgress }}%</div>
+            <div class="field full">
+              <span class="label">封面图片</span>
+              <div class="cover-upload-group">
+                <nz-upload
+                  nzListType="picture-card"
+                  [nzMultiple]="false"
+                  [nzMaxCount]="1"
+                  [nzBeforeUpload]="beforeSimulationCoverUpload"
+                  [nzFileList]="draft.coverFileList"
+                  [nzRemove]="removeSimulationCover"
+                  [nzDisabled]="draft.coverUploading"
+                  nzAccept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+                >
+                  @if (draft.coverFileList.length === 0) {
+                    <div class="cover-upload-trigger">
+                      <span nz-icon nzType="plus"></span>
+                      <div style="margin-top: 8px">上传封面</div>
+                    </div>
+                  }
+                </nz-upload>
+              </div>
+              <span class="upload-hint">JPG / PNG / WebP / GIF / BMP，≤ 10MB（可选）</span>
             </div>
-          </ng-container>
+
+            <ng-container *ngIf="!draft.editingId">
+              <div class="field full">
+                <span class="label">仿真 ZIP <em>*</em></span>
+                <div class="zip-picker">
+                  <label class="zip-btn">
+                    <span nz-icon nzType="upload"></span>
+                    选择 ZIP 文件
+                    <input type="file" accept=".zip,application/zip" hidden (change)="onSimulationFileChange($event)" />
+                  </label>
+                  <span class="zip-name" [class.has-file]="!!draft.fileName">{{ draft.fileName || '未选择文件' }}</span>
+                </div>
+                <div class="upload-progress" *ngIf="draft.uploading">
+                  <i [style.width.%]="draft.uploadProgress"></i>
+                </div>
+                <span class="upload-hint" *ngIf="draft.uploading">正在上传：{{ draft.uploadProgress }}%</span>
+                <span class="upload-hint">Unity WebGL 构建产物压缩包，≤ 500MB</span>
+              </div>
+            </ng-container>
+          </div>
         </div>
       </ng-container>
     </div>

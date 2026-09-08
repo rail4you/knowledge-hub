@@ -1,15 +1,22 @@
-<div class="page">
-  <nz-card>
-    <div class="project-selector">
+<div class="page training-page">
+  <!-- 标题区（与实训项目/任务/镜像页统一） -->
+  <div class="page-header">
+    <h1>实训智能体聊天</h1>
+    <p>配置实训智能体，并在聊天室中与学生沟通指导</p>
+  </div>
+
+  <!-- 数据容器：选择器 + 页签同一卡片，占据页面剩余高度 -->
+  <div class="list-card">
+    <div class="project-selector-bar">
       <label class="selector-label">选择实训项目</label>
-      <nz-select [ngModel]="selectedProjectId" (ngModelChange)="onProjectChange($event)" nzPlaceHolder="请选择实训项目" style="width: 360px;">
+      <nz-select [ngModel]="selectedProjectId" (ngModelChange)="onProjectChange($event)" nzPlaceHolder="请选择实训项目" style="width: 360px; max-width: 100%;">
         <nz-option *ngFor="let p of projects()" [nzValue]="p.id" [nzLabel]="p.title"></nz-option>
       </nz-select>
       <span class="selector-hint" *ngIf="selectedProjectTitle">当前：{{ selectedProjectTitle }}</span>
     </div>
-  </nz-card>
 
-  <nz-card *ngIf="selectedProjectId">
+    <ng-container *ngIf="selectedProjectId; else noProjectTpl">
+    <div class="chat-tabs">
     <nz-tabs [(nzSelectedIndex)]="activeTabIndex">
       <nz-tab nzTitle="智能体配置">
         <div class="config-tab">
@@ -18,17 +25,44 @@
               <h3>实训智能体配置</h3>
               <span class="hint">学生可在聊天室中 @{{ agentDisplayName }} 进行提问</span>
             </div>
-            <button nz-button nzType="primary" [nzLoading]="agentSaving" (click)="saveAgentConfig()">保存智能体配置</button>
+            <div class="header-actions">
+              <button *ngIf="!agentEditing" nz-button (click)="startEditAgent()">
+                <span nz-icon nzType="edit"></span> 编辑
+              </button>
+              <ng-container *ngIf="agentEditing">
+                <button nz-button (click)="cancelEditAgent()">取消</button>
+                <button nz-button nzType="primary" [nzLoading]="agentSaving" (click)="saveAgentConfig()">保存</button>
+              </ng-container>
+            </div>
           </div>
-          <div class="form-grid agent-config-grid">
-            <label>智能体名称</label>
-            <input nz-input [(ngModel)]="agentConfigForm.agentName" placeholder="如：小智（默认）" />
 
-            <label>附加提示词</label>
-            <textarea nz-input
-                      [(ngModel)]="agentConfigForm.agentPrompt"
-                      rows="6"
-                      placeholder="自定义智能体行为。系统已自动注入项目描述和任务列表。&#10;&#10;例如：你是一个 Java 实训助教，专注于帮助学生理解 Spring Boot 的核心概念。"></textarea>
+          <!-- 展示态：直接显示当前配置 -->
+          <div class="agent-view" *ngIf="!agentEditing">
+            <div class="view-row">
+              <span class="view-label">智能体名称</span>
+              <span class="view-value">{{ agentConfigForm.agentName?.trim() || '小智（默认）' }}</span>
+            </div>
+            <div class="view-row">
+              <span class="view-label">附加提示词</span>
+              <span class="view-value pre-wrap" [class.muted]="!agentConfigForm.agentPrompt?.trim()">{{ agentConfigForm.agentPrompt?.trim() || '未设置（仅使用系统默认提示词）' }}</span>
+            </div>
+          </div>
+
+          <!-- 编辑态 -->
+          <div class="dh-form" *ngIf="agentEditing">
+            <label class="field full">
+              <span class="label">智能体名称</span>
+              <input nz-input [(ngModel)]="agentDraft.agentName" placeholder="如：小智（默认）" />
+            </label>
+
+            <label class="field full">
+              <span class="label">附加提示词</span>
+              <textarea nz-input
+                        [(ngModel)]="agentDraft.agentPrompt"
+                        rows="6"
+                        placeholder="自定义智能体行为。系统已自动注入项目描述和任务列表。&#10;&#10;例如：你是一个 Java 实训助教，专注于帮助学生理解 Spring Boot 的核心概念。"
+                        [nzAutosize]="{ minRows: 6, maxRows: 12 }"></textarea>
+            </label>
           </div>
         </div>
       </nz-tab>
@@ -38,5 +72,12 @@
         </div>
       </nz-tab>
     </nz-tabs>
-  </nz-card>
+    </div>
+    </ng-container>
+    <ng-template #noProjectTpl>
+      <div class="project-empty">
+        <nz-empty nzNotFoundContent="请先选择实训项目"></nz-empty>
+      </div>
+    </ng-template>
+  </div>
 </div>

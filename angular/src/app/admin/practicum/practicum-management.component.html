@@ -5,21 +5,22 @@
     <p>管理实训项目基础信息、关联资料与课程班级</p>
   </div>
 
-  <div class="search-bar">
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input type="text" placeholder="搜索项目名称" disabled />
-      <button class="search-btn" type="button" (click)="reload()">搜索</button>
-      <button class="reset-btn" type="button" (click)="reload()">重置</button>
+  <!-- 列表容器：工具栏 + 表格在同一个卡片内，占据页面剩余高度 -->
+  <div class="table-card list-card">
+    <div class="table-toolbar">
+      <button class="create-btn" type="button" (click)="openCreate()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        新建实训项目
+      </button>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" placeholder="搜索项目名称" disabled />
+        <button class="search-btn" type="button" (click)="reload()">搜索</button>
+        <button class="reset-btn" type="button" (click)="reload()">重置</button>
+      </div>
     </div>
-    <button class="create-btn" type="button" (click)="openCreate()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      新建实训项目
-    </button>
-  </div>
 
-  <!-- Table card -->
-  <div class="table-card">
+    <div class="table-wrap">
     <nz-table
       [nzData]="projects()"
       [nzFrontPagination]="false"
@@ -46,10 +47,11 @@
           <td class="course-name">{{ item.courseTitle || '—' }}</td>
           <td>
             <div class="status-tags">
-              <span class="status-tag" [ngClass]="item.status === statuses.Published ? 'published' : item.status === statuses.Archived ? 'ended' : 'draft'">
+              <!-- 已结束为终态：只显示“已结束”，不再叠加显示“已发布/草稿/已归档” -->
+              <span *ngIf="item.isExpired" class="status-tag ended">已结束</span>
+              <span *ngIf="!item.isExpired" class="status-tag" [ngClass]="item.status === statuses.Published ? 'published' : item.status === statuses.Archived ? 'ended' : 'draft'">
                 {{ statusLabel(item.status) }}
               </span>
-              <span *ngIf="item.isExpired" class="status-tag ended">已结束</span>
             </div>
           </td>
           <td class="num-cell"><a (click)="openEdit(item)">{{ item.taskCount }}</a></td>
@@ -68,7 +70,8 @@
 
     <div *ngIf="projects().length === 0" class="empty-tip">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span>暂无实训项目，点击右上角新建</span>
+      <span>暂无实训项目，点击上方左侧新建</span>
+    </div>
     </div>
 
     <div class="pagination">
