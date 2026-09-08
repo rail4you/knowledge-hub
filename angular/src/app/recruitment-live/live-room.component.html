@@ -1,5 +1,18 @@
 <!-- ===== 多人直播间（融入学生端布局：logo+tab 在外层，footer 在外层） ===== -->
-<div class="live-room">
+<div class="live-room" #roomEl [class.is-teacher]="myRole === 'teacher'">
+  <!-- 标题容器（仅老师/管理端）：标题 + 退出/结束说明 -->
+  @if (myRole === 'teacher') {
+    <section class="room-intro">
+      <div class="room-intro__main">
+        <h1>{{ live?.title || '直播间' }}</h1>
+        <p class="room-intro__sub">
+          <strong>退出直播</strong>：仅断开你自己的连接，他人可继续，可随时重新进入；
+          <strong class="danger">结束直播</strong>：解散整个直播间并标记结束，所有参与者断开。
+        </p>
+      </div>
+    </section>
+  }
+
   <!-- Top bar（白底卡片，与学生端风格一致） -->
   <header class="live-topbar">
     <div class="topbar-left">
@@ -20,7 +33,11 @@
       }
     </div>
     <div class="topbar-right">
-      <button type="button" class="btn-exit" (click)="goBack()" title="退出直播">
+      <button type="button" class="btn-icon" (click)="toggleFullscreen(roomEl)"
+        [title]="isFullscreen() ? '退出全屏' : '全屏'">
+        <span nz-icon [nzType]="isFullscreen() ? 'compress' : 'expand'" nzTheme="outline"></span>
+      </button>
+      <button type="button" class="btn-exit" (click)="goBack()" title="退出直播：仅自己离开，直播继续">
         <span nz-icon nzType="logout" nzTheme="outline"></span>
         <span>退出直播</span>
       </button>

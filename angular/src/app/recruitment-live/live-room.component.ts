@@ -1,6 +1,6 @@
 import {
   Component, OnInit, OnDestroy, AfterViewChecked, ChangeDetectionStrategy,
-  inject, signal, computed, ViewChild, ElementRef, HostListener, Renderer2
+  inject, signal, computed, ViewChild, ElementRef, HostBinding, HostListener, Renderer2
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule, NavigationStart } from '@angular/router';
@@ -46,6 +46,14 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   live: RecruitmentLiveDto | null = null;
   myRole: 'teacher' | 'student' = 'student';
   chatInput = '';
+
+  /** 老师端（管理后台进入）：标题容器 + 视口高度，不再受学生端布局限制 */
+  @HostBinding('class.is-teacher') get isTeacherHost(): boolean {
+    return this.myRole === 'teacher';
+  }
+
+  /** 全屏状态（监听 fullscreenchange 同步） */
+  readonly isFullscreen = signal(false);
 
   readonly liveState = this.liveService.liveState;
   readonly micEnabled = this.liveService.micEnabled;
@@ -161,6 +169,7 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
     // 延迟一帧确保 header / footer 已完成布局
     setTimeout(() => this.updateMaxHeight(), 0);
     window.addEventListener('resize', this.updateMaxHeight);
+    document.addEventListener('fullscreenchange', this.onFullscreenChange);
 
     const layoutEl = document.querySelector('app-student-layout');
     const footerEl = layoutEl?.querySelector('.app-footer') as HTMLElement | null;
@@ -243,6 +252,10 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.routerSub?.unsubscribe();
     this.footerObserver?.disconnect();
     window.removeEventListener('resize', this.updateMaxHeight);
+    document.removeEventListener('fullscreenchange', this.onFullscreenChange);
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => undefined);
+    }
     // 清除 max-height 内联样式，避免影响其他路由
     if (this.hostEl?.nativeElement) {
       this.renderer.removeStyle(this.hostEl.nativeElement, 'max-height');
@@ -264,6 +277,23 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
       },
       error: () => this.message.error('获取连接令牌失败'),
     });
+  }
+
+  /** 全屏变化同步按钮状态 */
+  private onFullscreenChange = () => {
+    if (this.destroyed) return;
+    this.isFullscreen.set(!!document.fullscreenElement);
+  };
+
+  /** 全屏 / 退出全屏（作用于整个房间，控件保留可见） */
+  toggleFullscreen(roomEl: HTMLElement): void {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => undefined);
+    } else if (roomEl.requestFullscreen) {
+      roomEl.requestFullscreen().catch(() => this.message.warning('当前浏览器不支持全屏'));
+    } else {
+      this.message.warning('当前浏览器不支持全屏');
+    }
   }
 
   goBack() {
