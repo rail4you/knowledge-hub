@@ -107,12 +107,12 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             mm.CourseCount = (int)await _microMajorCourseRepository.CountAsync(x => x.MicroMajorId == mm.Id);
         }
 
-        // Featured courses: only show published courses with IsRecommended = true (latest 8)
+        // Tenant courses: 该租户下所有已发布课程（"学历课程体系"展示用），
+        // 不再按 IsRecommended 过滤，否则租户刚建课（未标记推荐）时会看不到数据。
         var courseQuery = await _courseRepository.GetQueryableAsync();
         var rawCourses = courseQuery
             .Where(x => x.TenantId == tenantId
-                && x.Status == CourseStatus.Published
-                && x.IsRecommended)
+                && x.Status == CourseStatus.Published)
             .OrderByDescending(x => x.CreationTime)
             .Take(8)
             .ToList();
