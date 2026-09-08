@@ -42,16 +42,16 @@
           tabindex="0"
           (keyup.enter)="openDetail(resource)"
         >
-          <!-- 封面 -->
+          <!-- 封面（占位图垫底，与首页资源卡片同一套） -->
           <div class="resource-card__cover">
-            <div class="cover-decor" aria-hidden="true">
-              <span class="decor-line decor-line--1"></span>
-              <span class="decor-line decor-line--2"></span>
-              <span class="decor-circle"></span>
-            </div>
-            <div class="cover-icon">
-              <span nz-icon [nzType]="getResourceTypeIcon(resource.resourceType)" nzTheme="outline"></span>
-            </div>
+            <img
+              class="resource-card__cover-base"
+              src="assets/images/home/material-cover-placeholder.svg"
+              alt=""
+              loading="lazy"
+              aria-hidden="true"
+            />
+            <div class="resource-card__overlay" aria-hidden="true"></div>
             <span class="cover-type-badge" [ngClass]="'type-badge--' + (resource.resourceType || 0)">
               {{ getResourceTypeName(resource.resourceType) }}
             </span>
@@ -66,22 +66,18 @@
 
           <!-- 卡片内容 -->
           <div class="resource-card__body">
-            <div class="resource-card__top">
-              @if (resource.categoryName) {
+            @if (resource.categoryName) {
+              <div class="resource-card__top">
                 <span class="category-name" [title]="resource.categoryName">
                   <span nz-icon nzType="folder" nzTheme="outline"></span>
                   {{ resource.categoryName }}
                 </span>
-              }
-            </div>
+              </div>
+            }
 
             <h3 class="resource-card__title" [title]="resource.name || ''">
               {{ resource.name }}
             </h3>
-
-            <p class="resource-card__desc">
-              {{ resource.description || '该资源暂无简介描述' }}
-            </p>
 
             <div class="resource-card__meta">
               <span class="meta-item">
@@ -97,13 +93,23 @@
                 {{ resource.viewCount || 0 }}
               </span>
               @if (ratingSummaries()[resource.id!]; as summary) {
-                <span class="meta-item rating-inline">
-                  <span nz-icon nzType="star" nzTheme="fill"></span>
-                  {{ summary.averageRating | number:'1.1-1' }}
-                  <span class="rating-count">({{ summary.totalReviews }})</span>
-                </span>
+                @if (summary.totalReviews > 0) {
+                  <span class="meta-item meta-count" [title]="summary.totalReviews + '人评价'">
+                    {{ summary.totalReviews }}
+                  </span>
+                }
               }
             </div>
+            @if (ratingSummaries()[resource.id!]; as summary) {
+              <div class="resource-card__rating">
+                @for (s of ratingStars(summary.averageRating); track s) {
+                  <span nz-icon nzType="star" nzTheme="fill"></span>
+                } @empty {
+                  <span nz-icon nzType="star" nzTheme="outline" class="rating-star--empty"></span>
+                }
+                <span class="rating-score">{{ summary.averageRating | number:'1.1-1' }}</span>
+              </div>
+            }
           </div>
 
           <!-- 操作按钮 -->

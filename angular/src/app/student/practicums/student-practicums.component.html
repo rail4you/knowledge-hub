@@ -26,6 +26,7 @@
             <div class="cover-icon">
               <span nz-icon nzType="experiment" nzTheme="outline"></span>
             </div>
+            <div class="px-card__overlay" aria-hidden="true"></div>
             @if (item.major) { <span class="cover-badge">{{ item.major }}</span> }
             @if (item.isExpired) { <span class="cover-badge cover-badge--expired">已结束</span> }
           </div>

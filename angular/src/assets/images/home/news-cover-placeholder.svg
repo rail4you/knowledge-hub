@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" width="600" height="360" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <!-- 主背景：天空蓝（比课程/微专业更亮，与深青资源区分） -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="60%" stop-color="#075985"/>
+      <stop offset="100%" stop-color="#082f49"/>
+    </linearGradient>
+    <!-- 报纸底色：亮白纸 -->
+    <linearGradient id="paperGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e0f2fe"/>
+    </linearGradient>
+    <!-- 光晕：浅天蓝 -->
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.5"/>
+      <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0"/>
+    </radialGradient>
+    <!-- 光柱 -->
+    <linearGradient id="beamGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#bae6fd" stop-opacity="0"/>
+    </linearGradient>
+    <!-- 网格 -->
+    <pattern id="gridPattern" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#bae6fd" stroke-opacity="0.12" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="600" height="360" fill="url(#bgGrad)"/>
+  <rect width="600" height="360" fill="url(#gridPattern)"/>
+
+  <!-- 中心光晕 -->
+  <circle cx="300" cy="180" r="220" fill="url(#centerGlow)"/>
+
+  <!-- 装饰光柱 -->
+  <polygon points="0,360 180,360 60,160" fill="url(#beamGrad)" opacity="0.55"/>
+  <polygon points="450,360 600,360 540,160" fill="url(#beamGrad)" opacity="0.5"/>
+
+  <!-- 顶部光束 -->
+  <polygon points="280,0 320,0 310,180 290,180" fill="#e0f2fe" fill-opacity="0.14"/>
+
+  <!-- 虚线圆环 -->
+  <circle cx="300" cy="180" r="140" fill="none" stroke="#7dd3fc" stroke-opacity="0.4" stroke-width="1" stroke-dasharray="3 5"/>
+
+  <!-- 数据点装饰（浅蓝） -->
+  <circle cx="160" cy="80" r="2.5" fill="#e0f2fe" opacity="0.8"/>
+  <circle cx="450" cy="80" r="2" fill="#bae6fd" opacity="0.85"/>
+  <circle cx="120" cy="280" r="1.5" fill="#e0f2fe" opacity="0.65"/>
+  <circle cx="480" cy="280" r="2.5" fill="#bae6fd" opacity="0.75"/>
+
+  <!-- 报纸/资讯图标 -->
+  <g transform="translate(300 180)">
+    <!-- 报纸阴影 -->
+    <ellipse cx="0" cy="80" rx="120" ry="6" fill="#082f49" fill-opacity="0.45"/>
+
+    <!-- 报纸主体 -->
+    <g>
+      <!-- 主页面 -->
+      <rect x="-110" y="-80" width="220" height="160" rx="4" fill="url(#paperGrad)" stroke="#075985" stroke-width="1"/>
+
+      <!-- 顶部头条区域（深海军蓝） -->
+      <rect x="-100" y="-70" width="200" height="22" fill="#0c4a6e"/>
+      <text x="0" y="-55" text-anchor="middle" font-size="11" fill="#fbbf24" font-weight="800" letter-spacing="2">CAMPUS NEWS</text>
+
+      <!-- 头条大标题 -->
+      <rect x="-100" y="-42" width="120" height="6" rx="1" fill="#0c4a6e"/>
+      <rect x="-100" y="-32" width="90" height="6" rx="1" fill="#0c4a6e" opacity="0.7"/>
+
+      <!-- 文章内容（模拟文本块） -->
+      <!-- 左栏 -->
+      <line x1="-95" y1="-15" x2="-30" y2="-15" stroke="#475569" stroke-width="1.4" opacity="0.7"/>
+      <line x1="-95" y1="-7" x2="-35" y2="-7" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-95" y1="0" x2="-30" y2="0" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-95" y1="7" x2="-40" y2="7" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-95" y1="14" x2="-30" y2="14" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-95" y1="21" x2="-50" y2="21" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+
+      <!-- 右栏（图片占位：海军蓝） -->
+      <rect x="-15" y="-15" width="115" height="50" rx="2" fill="#0369a1" stroke="#075985" stroke-width="0.5"/>
+      <!-- 图片中的人物剪影 -->
+      <g transform="translate(42 10)">
+        <circle cx="0" cy="-6" r="5" fill="#e0f2fe"/>
+        <path d="M -8 6 Q -8 -2 0 -2 Q 8 -2 8 6 L 8 12 L -8 12 Z" fill="#e0f2fe"/>
+      </g>
+
+      <!-- 底部信息 -->
+      <line x1="-95" y1="45" x2="95" y2="45" stroke="#075985" stroke-width="0.8" opacity="0.4"/>
+      <text x="-95" y="60" font-size="9" fill="#075985" font-weight="700">NEWS · VOL.24</text>
+      <text x="95" y="60" text-anchor="end" font-size="9" fill="#075985" font-weight="700">2026.09</text>
+
+      <line x1="-95" y1="68" x2="-50" y2="68" stroke="#075985" stroke-width="1" opacity="0.5"/>
+      <line x1="-40" y1="68" x2="20" y2="68" stroke="#075985" stroke-width="1" opacity="0.5"/>
+      <line x1="30" y1="68" x2="95" y2="68" stroke="#075985" stroke-width="1" opacity="0.5"/>
+    </g>
+
+    <!-- 报纸折角（右上角） -->
+    <path d="M 95 -80 L 110 -65 L 95 -65 Z" fill="#075985"/>
+    <path d="M 95 -80 L 110 -65 L 95 -65 Z" fill="url(#paperGrad)" opacity="0.3"/>
+
+    <!-- 顶部小图标：铃铛（热点提醒，琥珀点缀） -->
+    <g transform="translate(85 -100)">
+      <circle cx="0" cy="0" r="16" fill="#fbbf24" opacity="0.95"/>
+      <path d="M -6 -4 Q -6 -10 0 -10 Q 6 -10 6 -4 L 6 2 L 7 5 L -7 5 L -6 2 Z" fill="#0c4a6e" stroke="#082f49" stroke-width="0.5"/>
+      <circle cx="0" cy="7" r="2" fill="#0c4a6e"/>
+      <circle cx="0" cy="-10" r="1.5" fill="#0c4a6e"/>
+    </g>
+
+    <!-- 热点标签（左上 HOT 角标） -->
+    <g transform="translate(-95 -92)">
+      <rect x="-22" y="-11" width="44" height="20" rx="4" fill="#f59e0b"/>
+      <text x="0" y="4" text-anchor="middle" font-size="11" fill="#ffffff" font-weight="900" letter-spacing="1">HOT</text>
+    </g>
+  </g>
+
+  <!-- 闪光点（亮白） -->
+  <g fill="#ffffff">
+    <circle cx="220" cy="80" r="1.2" opacity="0.8"/>
+    <circle cx="380" cy="100" r="1.5" opacity="0.9"/>
+    <circle cx="200" cy="290" r="1" opacity="0.6"/>
+    <circle cx="400" cy="290" r="1.2" opacity="0.75"/>
+    <circle cx="150" cy="160" r="0.9" opacity="0.55"/>
+    <circle cx="450" cy="200" r="1.1" opacity="0.7"/>
+  </g>
+
+  <!-- HUD 装饰：左上 -->
+  <g transform="translate(40 40)" fill="none" stroke="#7dd3fc" stroke-opacity="0.45" stroke-width="1">
+    <rect x="0" y="0" width="40" height="20"/>
+    <line x1="0" y1="6" x2="40" y2="6"/>
+    <line x1="0" y1="14" x2="40" y2="14"/>
+  </g>
+  <!-- HUD 装饰：右下 -->
+  <g transform="translate(520 300)" fill="none" stroke="#bae6fd" stroke-opacity="0.45" stroke-width="1">
+    <rect x="0" y="0" width="40" height="20"/>
+    <line x1="0" y1="6" x2="40" y2="6"/>
+    <line x1="0" y1="14" x2="40" y2="14"/>
+  </g>
+</svg>

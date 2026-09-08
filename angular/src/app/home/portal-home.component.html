@@ -116,6 +116,14 @@
           <span>个微专业</span>
         </div>
       </div>
+      <div class="stat__divider"></div>
+      <div class="stat">
+        <div class="stat__icon stat__icon--violet"><span nz-icon nzType="bank" nzTheme="outline"></span></div>
+        <div class="stat__body">
+          <strong>{{ (stats()?.tenantCount || 0) | number }}</strong>
+          <span>所合作院校</span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -172,38 +180,57 @@
         </div>
         <div class="course-grid">
           @for (c of globalFeaturedCourses(); track c.id; let i = $index) {
-            <a
-              class="course-card"
-              [routerLink]="['/student/courses', c.id]"
-              [style.--cover-color]="['#1e6ce8','#0ea5e9','#0891b2','#16a34a'][i % 4]"
-            >
+            <a class="course-card" [routerLink]="['/student/courses', c.id]">
               <div class="course-card__cover">
                 @if (c.coverImageUrl) {
                   <img [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" class="course-card__cover-img" />
                 } @else {
-                  <span nz-icon nzType="read" nzTheme="outline" class="course-card__cover-fallback"></span>
+                  <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
                 }
-                <span class="course-card__badge">精选</span>
-              </div>
-              <div class="course-card__body">
-                <div class="course-card__tags">
-                  @if (c.tenantName) { <span class="course-card__tag course-card__tag--tenant">{{ c.tenantName }}</span> }
-                  @if (c.majorName) { <span class="course-card__tag course-card__tag--major">{{ c.majorName }}</span> }
-                </div>
-                <h4>{{ c.title }}</h4>
-                <div class="course-card__stats">
-                  <span class="stat-pill"><span nz-icon nzType="team" nzTheme="outline"></span>{{ c.studentCount || 0 }} 人学习</span>
-                  @if (c.difficulty) { <span class="stat-pill"><span nz-icon nzType="thunderbolt" nzTheme="outline"></span>{{ ['入门','初级','中级','高级','专家'][(c.difficulty || 1) - 1] || '未设置' }}</span> }
-                </div>
-                <div class="course-card__meta">
-                  <span class="course-card__teacher">
-                    <span class="meta-avatar">{{ (c.teacherName || '专业教师').slice(0, 1) }}</span>
-                    {{ c.teacherName || '专业教师' }}
-                  </span>
-                  <span class="course-card__students"><span nz-icon nzType="team" nzTheme="outline"></span> {{ c.studentCount || 0 }} 人</span>
-                </div>
+                <div class="course-card__overlay" aria-hidden="true"></div>
+
+                <!-- 左上：精选徽章（金色渐变，替代"国家一流课程"位置） -->
+                <span class="course-card__badge course-card__badge--featured">
+                  <span nz-icon nzType="star" nzTheme="fill"></span>
+                  精选
+                </span>
+
+                <!-- 右下：学习人数（黑色玻璃胶囊） -->
+                <span class="course-card__students">
+                  <span nz-icon nzType="team" nzTheme="outline"></span>
+                  {{ c.studentCount || 0 }} 人学习
+                </span>
               </div>
 
+              <div class="course-card__body">
+                <h4 class="course-card__title" [title]="c.title">{{ c.title }}</h4>
+
+                <div class="course-card__meta">
+                  @if (c.tenantName) {
+                    <span class="course-card__org">
+                      <span nz-icon nzType="bank" nzTheme="outline"></span>
+                      {{ c.tenantName }}
+                    </span>
+                  }
+                  @if (c.teacherName) {
+                    <span class="course-card__sep">·</span>
+                    <span class="course-card__teacher-inline">
+                      <span class="course-card__teacher-prefix">教师：</span>
+                      <span class="course-card__teacher-name">{{ c.teacherName }}</span>
+                    </span>
+                  }
+                </div>
+
+                <div class="course-card__tags">
+                  @if (c.majorName) { <span class="course-card__tag">{{ c.majorName }}</span> }
+                  @if (c.difficulty) {
+                    <span class="course-card__tag course-card__tag--difficulty">
+                      <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
+                      {{ ['入门','初级','中级','高级','专家'][(c.difficulty || 1) - 1] || '未设置' }}
+                    </span>
+                  }
+                </div>
+              </div>
             </a>
           }
         </div>
@@ -223,24 +250,35 @@
         </div>
         <div class="mm-grid">
           @for (m of globalMicroMajors(); track m.id; let i = $index) {
-            <a
-              class="mm-card"
-              [routerLink]="['/student/micro-majors', m.id]"
-              [queryParams]="{ from: 'home' }"
-              [style.--mm-color]="['#1e6ce8','#0ea5e9','#0891b2','#16a34a'][i % 4]"
-            >
+            <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home' }">
               <div class="mm-card__cover">
                 @if (m.coverImageUrl) {
-                  <img [src]="m.coverImageUrl" [alt]="m.title" loading="lazy" />
+                  <img [src]="m.coverImageUrl" [alt]="m.title" loading="lazy" class="mm-card__cover-img" />
                 } @else {
-                  <span nz-icon nzType="trophy" nzTheme="outline" class="mm-card__cover-fallback"></span>
+                  <img src="assets/images/home/micro-major-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="mm-card__cover-img" />
                 }
+                <div class="mm-card__overlay" aria-hidden="true"></div>
+
+                <!-- 顶部徽章：课程数 -->
+                <span class="mm-card__badge">
+                  <span nz-icon nzType="book" nzTheme="outline"></span>
+                  {{ m.courseCount || 0 }} 门课程
+                </span>
               </div>
+
               <div class="mm-card__body">
-                <h4>{{ m.title }}</h4>
-                <p>{{ m.courseCount || 0 }} 门课程</p>
+                <h4 class="mm-card__title" [title]="m.title">
+                  <span class="mm-card__title-icon" nz-icon nzType="read" nzTheme="outline"></span>
+                  <span class="mm-card__title-text">{{ m.title }}</span>
+                </h4>
+
+                <p class="mm-card__desc">系统化课程体系，跨学科融合培养，由资深团队打造，助力专业能力全面进阶。</p>
+
+                <div class="mm-card__footer">
+                  <span class="mm-card__org-label">组织单位：</span>
+                  <span class="mm-card__org-name">{{ m.tenantName || '高校' }}</span>
+                </div>
               </div>
-              @if (m.tenantName) { <span class="mm-card__tag mm-card__tag--tenant">{{ m.tenantName }}</span> }
             </a>
           }
         </div>
@@ -324,15 +362,32 @@
           @for (n of globalLatestNews(); track n.id) {
             <a class="news-card" [routerLink]="['/student/news', n.id]">
               <div class="news-card__cover">
-                <span nz-icon nzType="file-text" nzTheme="outline" class="news-card__cover-fallback"></span>
-                <span class="news-card__date-badge">{{ n.publishedAt | date:'MM-dd' }}</span>
+                <img src="assets/images/home/news-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="news-card__cover-img" />
+                <div class="news-card__overlay" aria-hidden="true"></div>
+                <span class="news-card__badge news-card__badge--news">
+                  <span nz-icon nzType="sound" nzTheme="outline"></span>
+                  资讯
+                </span>
+                <span class="news-card__date">{{ n.publishedAt | date:'MM-dd' }}</span>
               </div>
               <div class="news-card__body">
-                @if (n.tenantName) { <span class="news-card__tenant">{{ n.tenantName }}</span> }
-                <h5>{{ n.title }}</h5>
+                <h5 class="news-card__title" [title]="n.title">{{ n.title }}</h5>
                 <div class="news-card__meta">
-                  <span class="news-card__date"><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ n.publishedAt | date:'yyyy-MM-dd' }}</span>
-                  <span class="news-card__more">阅读全文 <span nz-icon nzType="right" nzTheme="outline"></span></span>
+                  @if (n.tenantName) {
+                    <span class="news-card__org">
+                      <span nz-icon nzType="bank" nzTheme="outline"></span>
+                      {{ n.tenantName }}
+                    </span>
+                    <span class="news-card__sep">·</span>
+                  }
+                  <span class="news-card__fulldate">
+                    <span nz-icon nzType="calendar" nzTheme="outline"></span>
+                    {{ n.publishedAt | date:'yyyy-MM-dd' }}
+                  </span>
+                </div>
+                <div class="news-card__footer">
+                  <span>阅读全文</span>
+                  <span nz-icon nzType="right" nzTheme="outline"></span>
                 </div>
               </div>
             </a>
@@ -393,36 +448,44 @@
 
       @if (activeTab() === 'courses') {
         <div class="course-grid">
-          @for (c of browseCourses(); track c.id; let i = $index) {
-            <a class="course-card" [routerLink]="['/student/courses', c.id]" [style.--cover-color]="['#1e6ce8','#0ea5e9','#0891b2','#16a34a','#7c3aed','#d97706'][i % 6]">
+          @for (c of browseCourses(); track c.id) {
+            <a class="course-card" [routerLink]="['/student/courses', c.id]">
               <div class="course-card__cover">
                 @if (c.coverImageUrl) {
                   <img [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" class="course-card__cover-img" />
                 } @else {
-                  <span nz-icon nzType="read" nzTheme="outline" class="course-card__cover-fallback"></span>
+                  <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
                 }
+                <div class="course-card__overlay" aria-hidden="true"></div>
+                <span class="course-card__students">
+                  <span nz-icon nzType="team" nzTheme="outline"></span>
+                  {{ c.studentCount || 0 }} 人学习
+                </span>
               </div>
               <div class="course-card__body">
-                <div class="course-card__tags">
-                  @if (c.tenantName) { <span class="course-card__tag course-card__tag--tenant">{{ c.tenantName }}</span> }
-                  @if (c.majorName) { <span class="course-card__tag course-card__tag--major">{{ c.majorName }}</span> }
-                </div>
-                <h4>{{ c.title }}</h4>
-                @if (c.description) { <p class="course-card__desc">{{ c.description }}</p> }
-                <div class="course-card__stats">
-                  <span class="stat-pill"><span nz-icon nzType="team" nzTheme="outline"></span>{{ c.studentCount || 0 }} 人学习</span>
-                </div>
+                <h4 class="course-card__title" [title]="c.title">{{ c.title }}</h4>
                 <div class="course-card__meta">
-                  @if (c.teacherName) {
-                    <span class="course-card__teacher">
-                      <span class="meta-avatar">{{ c.teacherName.slice(0, 1) }}</span>
-                      {{ c.teacherName }}
+                  @if (c.tenantName) {
+                    <span class="course-card__org">
+                      <span nz-icon nzType="bank" nzTheme="outline"></span>
+                      {{ c.tenantName }}
                     </span>
                   }
-                  <span class="course-card__students"><span nz-icon nzType="team" nzTheme="outline"></span> {{ c.studentCount || 0 }} 人</span>
+                  @if (c.teacherName) {
+                    <span class="course-card__sep">·</span>
+                    <span class="course-card__teacher-inline">
+                      <span class="course-card__teacher-prefix">教师：</span>
+                      <span class="course-card__teacher-name">{{ c.teacherName }}</span>
+                    </span>
+                  }
                 </div>
+                @if (c.majorName) {
+                  <div class="course-card__tags">
+                    <span class="course-card__tag">{{ c.majorName }}</span>
+                  </div>
+                }
+                @if (c.description) { <p class="course-card__desc">{{ c.description }}</p> }
               </div>
-
             </a>
           } @empty {
             <div class="browse-empty">暂无课程数据</div>
@@ -438,20 +501,35 @@
                 @if (r.coverUrl) {
                   <img [src]="r.coverUrl" [alt]="r.name" loading="lazy" class="material-card__cover-img" />
                 } @else {
-                  <span class="material-card__cover-icon">
-                    <span nz-icon [nzType]="materialIcon(r.fileExtension)" nzTheme="outline"></span>
-                  </span>
+                  <img src="assets/images/home/material-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="material-card__cover-img" />
                 }
+                <div class="material-card__overlay" aria-hidden="true"></div>
                 <span class="material-card__type-badge">{{ r.fileExtension ? '.' + r.fileExtension : '文件' }}</span>
+                <span class="material-card__downloads">
+                  <span nz-icon nzType="download" nzTheme="outline"></span>
+                  {{ r.downloadCount || 0 }}
+                </span>
               </div>
               <div class="material-card__body">
-                <h5>{{ r.name }}</h5>
-                @if (r.tenantName) { <p class="material-card__desc">{{ r.tenantName }}</p> }
+                <h5 class="material-card__title" [title]="r.name">{{ r.name }}</h5>
                 <div class="material-card__meta">
-                  <span class="material-card__meta-item"><span nz-icon nzType="download" nzTheme="outline"></span> {{ r.downloadCount || 0 }} 下载</span>
-                  @if (r.fileSize) { <span class="material-card__meta-item">{{ formatFileSize(r.fileSize) }}</span> }
-                  @if (canPreview(r)) { <span class="material-card__meta-item"><span nz-icon nzType="eye" nzTheme="outline"></span> 预览</span> }
+                  @if (r.tenantName) {
+                    <span class="material-card__org">
+                      <span nz-icon nzType="bank" nzTheme="outline"></span>
+                      {{ r.tenantName }}
+                    </span>
+                  }
+                  @if (r.fileSize) {
+                    <span class="material-card__sep">·</span>
+                    <span class="material-card__size">{{ formatFileSize(r.fileSize) }}</span>
+                  }
                 </div>
+                @if (canPreview(r)) {
+                  <div class="material-card__footer">
+                    <span nz-icon nzType="eye" nzTheme="outline"></span>
+                    点击预览
+                  </div>
+                }
               </div>
             </div>
           } @empty {
@@ -462,19 +540,30 @@
 
       @if (activeTab() === 'microMajors') {
         <div class="mm-grid">
-          @for (m of browseMicroMajors(); track m.id; let i = $index) {
-            <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home' }" [style.--mm-color]="['#1e6ce8','#0ea5e9','#0891b2','#16a34a'][i % 4]">
+          @for (m of browseMicroMajors(); track m.id) {
+            <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home' }">
               <div class="mm-card__cover">
                 @if (m.coverImageUrl) {
-                  <img [src]="m.coverImageUrl" [alt]="m.title" loading="lazy" />
+                  <img [src]="m.coverImageUrl" [alt]="m.title" loading="lazy" class="mm-card__cover-img" />
                 } @else {
-                  <span nz-icon nzType="trophy" nzTheme="outline" class="mm-card__cover-fallback"></span>
+                  <img src="assets/images/home/micro-major-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="mm-card__cover-img" />
                 }
-                @if (m.tenantName) { <span class="mm-card__tag">{{ m.tenantName }}</span> }
+                <div class="mm-card__overlay" aria-hidden="true"></div>
+                <span class="mm-card__badge">
+                  <span nz-icon nzType="book" nzTheme="outline"></span>
+                  {{ m.courseCount || 0 }} 门课程
+                </span>
               </div>
               <div class="mm-card__body">
-                <h4>{{ m.title }}</h4>
-                <p>{{ m.courseCount || 0 }} 门课程</p>
+                <h4 class="mm-card__title" [title]="m.title">
+                  <span class="mm-card__title-icon" nz-icon nzType="read" nzTheme="outline"></span>
+                  <span class="mm-card__title-text">{{ m.title }}</span>
+                </h4>
+                <p class="mm-card__desc">系统化课程体系，跨学科融合培养，由资深团队打造，助力专业能力全面进阶。</p>
+                <div class="mm-card__footer">
+                  <span class="mm-card__org-label">组织单位：</span>
+                  <span class="mm-card__org-name">{{ m.tenantName || '高校' }}</span>
+                </div>
               </div>
             </a>
           } @empty {

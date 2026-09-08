@@ -95,11 +95,9 @@
               <!-- 封面 -->
               <div class="course-card__cover" [style.background]="courseGradient(course)">
                 @if (hasCover(course)) {
-                  <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" />
+                  <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" />
                 } @else {
-                  <div class="course-card__pattern" aria-hidden="true">
-                    <span nz-icon nzType="read" nzTheme="outline" class="course-card__cover-icon"></span>
-                  </div>
+                  <img class="course-card__cover-img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
                 }
                 <div class="course-card__overlay" aria-hidden="true"></div>
 

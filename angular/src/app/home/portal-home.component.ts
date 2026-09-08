@@ -105,11 +105,6 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
-  readonly rankedMaterials = () => {
-    const mats = this.globalLatestMaterials() || [];
-    return [...mats].sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0)).slice(0, 5);
-  };
-
   /** 最新资源榜：取前五项 */
   readonly latestResourcesTop5 = () => (this.globalLatestMaterials() || []).slice(0, 5);
 

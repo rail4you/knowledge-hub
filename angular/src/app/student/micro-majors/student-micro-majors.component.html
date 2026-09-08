@@ -44,11 +44,16 @@
               [style.background]="coverGradient(item)"
               aria-hidden="true"
             ></div>
+            @if (!hasCover(item)) {
+              <img
+                class="mm-card__cover-img"
+                src="assets/images/home/micro-major-cover-placeholder.svg"
+                alt=""
+                loading="lazy"
+                aria-hidden="true"
+              />
+            }
             <div class="mm-card__overlay" aria-hidden="true"></div>
-
-            <div class="cover-icon">
-              <span nz-icon nzType="trophy" nzTheme="outline"></span>
-            </div>
 
             @if (item.industryField) {
               <span class="cover-badge">

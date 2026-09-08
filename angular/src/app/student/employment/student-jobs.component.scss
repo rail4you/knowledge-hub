@@ -39,14 +39,16 @@
 // ====== GRID ======
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
 
-.card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;
-  cursor:pointer; outline:none; transition:.2s;
+.card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;
+  cursor:pointer; outline:none; transition:all .25s ease;
   box-shadow:0 1px 3px rgba(15,23,42,.04);
-  &:hover, &:focus-visible { box-shadow:0 8px 24px rgba(15,23,42,.1); transform:translateY(-2px); border-color:#bae6fd; }
+  &:hover, &:focus-visible { box-shadow:0 12px 28px rgba(37,99,235,.14); transform:translateY(-3px); border-color:rgba(37,99,235,.35); }
+  &:hover .card-title, &:focus-visible .card-title { color:ds.$student-primary; }
 }
 
 // cover
-.card-cover { position:relative; height:120px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.card-cover { position:relative; width:100%; aspect-ratio:16 / 10; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; }
+.cover-overlay { position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%); pointer-events:none; z-index:1; }
 .cover-decor { position:absolute; inset:0; pointer-events:none;
   .d1 { position:absolute; width:50px; height:2px; background:rgba(255,255,255,.2); top:14px; right:14px; transform:rotate(-12deg); border-radius:1px; }
   .d2 { position:absolute; width:24px; height:2px; background:rgba(255,255,255,.35); top:24px; right:44px; transform:rotate(-12deg); border-radius:1px; }
@@ -55,16 +57,16 @@
 .cover-icon { width:48px; height:48px; border-radius:12px; background:rgba(255,255,255,.18);
   border:1px solid rgba(255,255,255,.3); display:inline-flex; align-items:center; justify-content:center;
   span[nz-icon] { font-size:22px; color:#fff; } }
-.cover-type { position:absolute; top:10px; left:10px; height:22px; padding:0 8px; border-radius:99px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; }
-.cover-status { position:absolute; top:10px; right:10px; height:22px; padding:0 10px; border-radius:99px; font-size:11px; font-weight:700; color:#fff; display:inline-flex; align-items:center; gap:3px; }
+.cover-type { position:absolute; top:10px; left:10px; z-index:2; height:22px; padding:0 8px; border-radius:99px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; }
+.cover-status { position:absolute; top:10px; right:10px; z-index:2; height:22px; padding:0 10px; border-radius:99px; font-size:11px; font-weight:700; color:#fff; display:inline-flex; align-items:center; gap:3px; }
 
 // body
 .card-body { padding:14px 16px 10px; display:flex; flex-direction:column; gap:8px; }
-.card-title { margin:0; font-size:15px; font-weight:700; color:#0f172a; line-height:1.3;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.card-title { margin:0; font-size:15px; font-weight:700; color:#0f172a; line-height:1.3; letter-spacing:-.2px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:color .2s ease; }
 .card-co { margin:0; font-size:12px; color:#64748b; display:flex; align-items:center; gap:4px;
   .ind { display:inline-block; padding:1px 6px; border-radius:4px; background:#f1f5f9; font-size:11px; color:#94a3b8; } }
-.card-desc { margin:0; font-size:12px; color:#94a3b8; line-height:1.5;
+.card-desc { margin:0; padding:9px 11px; background:#f1f5f9; border-radius:8px; font-size:12px; color:#64748b; line-height:1.6;
   overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .card-tags { display:flex; gap:4px; flex-wrap:wrap; overflow:hidden; }
 .tag { height:20px; padding:0 8px; border-radius:4px; background:rgba(37,99,235,.1); font-size:11px; font-weight:600; color:ds.$student-primary;

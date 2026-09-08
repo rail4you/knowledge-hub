@@ -10,19 +10,20 @@
 
 .px-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(265px, 1fr)); gap: 18px; }
 .px-card { display: flex; flex-direction: column; border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius-lg; background: #fff; overflow: hidden; cursor: pointer; outline: none; transition: all .25s ease; box-shadow: 0 1px 2px rgba(15,23,42,.03);
-  &:hover, &:focus-visible { border-color: rgba(ds.$student-primary,.4); box-shadow: 0 16px 32px rgba(15,23,42,.08); transform: translateY(-3px); .cover-icon { transform: scale(1.06) rotate(-2deg); } }
+  &:hover, &:focus-visible { border-color: rgba(ds.$student-primary,.4); box-shadow: 0 16px 32px rgba(15,23,42,.08); transform: translateY(-3px); .cover-icon { transform: scale(1.06) rotate(-2deg); } .px-card__title { color: ds.$student-primary; } }
 }
-.px-card__cover { position: relative; height: 150px; display: flex; align-items: center; justify-content: center; color: #fff; overflow: hidden; flex-shrink: 0; }
+.px-card__cover { position: relative; width: 100%; aspect-ratio: 16 / 10; display: flex; align-items: center; justify-content: center; color: #fff; overflow: hidden; flex-shrink: 0; }
+.px-card__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%); pointer-events: none; z-index: 1; }
 .cover-decor { position: absolute; inset: 0; pointer-events: none; }
 .decor-line { position: absolute; background: rgba(255,255,255,.18); border-radius: 2px; &--1 { width: 60px; height: 3px; top: 18px; right: 24px; transform: rotate(-12deg); } &--2 { width: 30px; height: 3px; top: 32px; right: 60px; transform: rotate(-12deg); background: rgba(255,255,255,.32); } }
 .decor-circle { position: absolute; width: 50px; height: 50px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); bottom: 18px; left: 24px; }
 .cover-icon { width: 70px; height: 70px; border-radius: 16px; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.32); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); transition: transform .3s ease; span[nz-icon] { font-size: 32px; color: #fff; } }
-.cover-badge { position: absolute; top: 10px; left: 10px; height: 22px; padding: 0 8px; border-radius: 4px; background: rgba(0,0,0,.28); backdrop-filter: blur(6px); color: #fff; font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; }
+.cover-badge { position: absolute; top: 10px; left: 10px; z-index: 2; height: 22px; padding: 0 9px; border-radius: 4px; background: rgba(0,0,0,.28); backdrop-filter: blur(6px); color: #fff; font-size: 11px; font-weight: 600; line-height: 1; display: inline-flex; align-items: center; }
 .cover-badge--expired { left: auto; right: 12px; background: rgba(239,68,68,.9); }
 
 .px-card__body { padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
-.px-card__title { margin: 0; color: ds.$student-text; font-size: 15px; font-weight: 700; line-height: 1.45; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.px-card__desc { margin: 0; color: ds.$student-text-muted; font-size: 12px; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.px-card__title { margin: 0; color: ds.$student-text; font-size: 15px; font-weight: 700; line-height: 1.45; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .2s ease; }
+.px-card__desc { margin: 0; padding: 9px 11px; background: ds.$student-surface-soft; border-radius: ds.$student-radius; color: ds.$student-text-muted; font-size: 12px; line-height: 1.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .px-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: ds.$student-text-light; font-size: 11px; }
 .meta-item { display: inline-flex; align-items: center; gap: 3px; span[nz-icon] { font-size: 11px; } }
 

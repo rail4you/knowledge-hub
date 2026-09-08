@@ -51,6 +51,7 @@
               <span class="d1"></span><span class="d2"></span><span class="dc"></span>
             </div>
             <span class="cover-icon"><span nz-icon nzType="solution" nzTheme="outline"></span></span>
+            <div class="cover-overlay" aria-hidden="true"></div>
             <span class="cover-type" [style.background]="tc(item.jobType)+'22'" [style.color]="tc(item.jobType)">{{ tl(item.jobType) }}</span>
             @if (item.hasApplied) {
               <span class="cover-status" [style.background]="color(item.applicationStatus)">{{ label(item.applicationStatus) }}</span>

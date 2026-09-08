@@ -25,13 +25,18 @@
       <!-- 左：资源封面 -->
       <div class="detail-media">
         <div class="detail-media__stage" [class]="'media-type-' + (res.resourceType || 0)" (click)="preview()" role="button" tabindex="0" (keyup.enter)="preview()" aria-label="在线预览">
+          <img
+            class="detail-media__placeholder"
+            src="assets/images/home/material-cover-placeholder.svg"
+            alt=""
+            aria-hidden="true"
+          />
           <app-resource-cover
             [resourceId]="res.id!"
             [resourceType]="res.resourceType ?? 0"
             [fileName]="res.originalFileName || res.name || ''"
             [alt]="res.name || ''"
           >
-            <span class="detail-media__icon" nz-icon [nzType]="getResourceTypeIcon(res.resourceType)" nzTheme="outline"></span>
           </app-resource-cover>
           <span class="detail-media__type">{{ getResourceTypeName(res.resourceType) }}</span>
           <span class="detail-media__preview-hint">

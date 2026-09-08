@@ -134,8 +134,8 @@
     box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
     transform: translateY(-3px);
 
-    .cover-icon {
-      transform: scale(1.06) rotate(-2deg);
+    .resource-card__cover-base {
+      transform: scale(1.04);
     }
 
     .cover-favorite {
@@ -143,93 +143,52 @@
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
     }
   }
-
-  &.type-0 .resource-card__cover { background: #2563eb; }
-  &.type-1 .resource-card__cover { background: #0ea5e9; }
-  &.type-2 .resource-card__cover { background: #059669; }
-  &.type-3 .resource-card__cover { background: #10b981; }
-  &.type-4 .resource-card__cover { background: #0284c7; }
 }
 
 .resource-card__cover {
   position: relative;
-  height: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  display: block;
   color: #fff;
   overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0c4a6e 0%, #0f172a 100%);
 }
 
-.cover-decor {
+// 垫底占位图（与首页资源卡片同一套）
+.resource-card__cover-base {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .4s ease;
+}
+
+.resource-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%);
   pointer-events: none;
-}
-
-.decor-line {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 2px;
-
-  &--1 {
-    width: 60px;
-    height: 3px;
-    top: 18px;
-    right: 24px;
-    transform: rotate(-12deg);
-  }
-
-  &--2 {
-    width: 30px;
-    height: 3px;
-    top: 32px;
-    right: 60px;
-    transform: rotate(-12deg);
-    background: rgba(255, 255, 255, 0.32);
-  }
-}
-
-.decor-circle {
-  position: absolute;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.18);
-  bottom: 18px;
-  left: 24px;
-}
-
-.cover-icon {
-  width: 70px;
-  height: 70px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(6px);
-  transition: transform 0.3s ease;
-
-  span[nz-icon] {
-    font-size: 32px;
-    color: #fff;
-  }
+  z-index: 1;
 }
 
 .cover-type-badge {
   position: absolute;
   top: 10px;
   left: 10px;
+  z-index: 2;
   height: 22px;
-  padding: 0 8px;
+  padding: 0 9px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 1;
   color: #fff;
   backdrop-filter: blur(6px);
 
@@ -244,6 +203,7 @@
   position: absolute;
   top: 10px;
   right: 10px;
+  z-index: 2;
   width: 32px;
   height: 32px;
   border: 0;
@@ -272,7 +232,7 @@
 }
 
 .resource-card__body {
-  padding: 14px 16px 12px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -285,7 +245,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 22px;
 }
 
 .type-badge {
@@ -334,63 +293,57 @@
   font-weight: 700;
   line-height: 1.45;
   letter-spacing: -0.2px;
-  @include ds.line-clamp(2);
-  min-height: 44px;
+  transition: color .2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-.resource-card__desc {
-  margin: 0;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-  line-height: 1.6;
-  @include ds.line-clamp(2);
-  min-height: 38px;
+.resource-card:hover .resource-card__title {
+  color: ds.$student-primary;
 }
 
 .resource-card__meta {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 6px 12px;
+  gap: 4px 8px;
   color: ds.$student-text-light;
-  font-size: 11px;
+  font-size: 12px;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .meta-item {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   span[nz-icon] {
     font-size: 11px;
   }
 }
 
+// 评分独立行：星星数量与评分值对应 + 分数（零分显示一颗空星）
 .resource-card__rating {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 22px;
+  gap: 2px;
   font-size: 12px;
-  color: ds.$student-text-muted;
+  color: #fa8c16;
+  font-weight: 600;
 
-  ::ng-deep {
-    .ant-rate {
-      font-size: 13px;
-    }
-    .ant-rate-star {
-      margin-inline-end: 1px;
-    }
+  span[nz-icon] {
+    font-size: 12px;
+  }
+
+  .rating-star--empty {
+    color: #cbd5e1;
   }
 
   .rating-score {
-    color: #fa8c16;
-    font-weight: 700;
-    font-size: 13px;
-  }
-
-  .rating-count {
-    color: ds.$student-text-light;
+    margin-left: 3px;
   }
 }
 
@@ -398,7 +351,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  padding: 12px 14px 14px;
+  padding: 10px 12px 12px;
   border-top: 1px dashed ds.$student-border-soft;
 }
 
@@ -407,12 +360,12 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  height: 34px;
+  height: 30px;
   border: 0;
   border-radius: ds.$student-radius;
   background: ds.$student-surface-soft;
   color: ds.$student-text;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;

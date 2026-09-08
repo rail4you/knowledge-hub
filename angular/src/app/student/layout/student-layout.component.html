@@ -2,28 +2,14 @@
   <!-- 统一头部：Logo + Tab 导航 + 账户操作（MOOC 风格：单行 + 文本 tab） -->
   <header class="app-header" [class.open]="menuOpen()">
     <div class="app-header__inner">
-      <!-- 品牌区（Logo + 名称） -->
+      <!-- 品牌区（与首页一致的 lockup，文案为学生中心） -->
       <a routerLink="/student" class="brand" title="返回学生端首页">
-        <span class="brand__logo" aria-hidden="true">
-          <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="brandGrad" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#2563EB"/>
-                <stop offset="1" stop-color="#3B82F6"/>
-              </linearGradient>
-            </defs>
-            <rect width="44" height="44" rx="10" fill="url(#brandGrad)"/>
-            <path d="M12 14.5h20a1.5 1.5 0 011.5 1.5v9.4a1.5 1.5 0 01-1.5 1.5H21l-5.4 3.6a.5.5 0 01-.77-.42v-3.18H12a1.5 1.5 0 01-1.5-1.5V16a1.5 1.5 0 011.5-1.5z" fill="#fff" opacity=".95"/>
-            <circle cx="17.5" cy="20.7" r="1.4" fill="#2563EB"/>
-            <circle cx="22" cy="20.7" r="1.4" fill="#2563EB"/>
-            <circle cx="26.5" cy="20.7" r="1.4" fill="#2563EB"/>
-          </svg>
-        </span>
-        <span class="brand__text">
-          <span class="brand__title">易课通</span>
-          <span class="brand__divider" aria-hidden="true">·</span>
-          <span class="brand__subtitle">学生中心</span>
-        </span>
+        <svg width="26" height="26" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+          <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
+          <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
+        </svg>
+        <span class="brand__name">易课通</span>
+        <span class="brand__sub">学生中心</span>
       </a>
 
       <!-- Tab 导航（文本 tab + 可展开子菜单，溢出折入「更多」） -->
@@ -122,7 +108,7 @@
             nzTrigger="click"
             nzPlacement="bottomRight"
           >
-            <span class="user-chip__avatar" [style.background]="avatarGradient()">
+            <span class="user-chip__avatar">
               {{ userInitial }}
             </span>
             <span class="user-chip__name">{{ userName() }}</span>

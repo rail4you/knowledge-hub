@@ -228,19 +228,24 @@
                 (keyup.enter)="openArticle(article.id)"
               >
                 <div class="news-card__cover" [style.background]="coverGradient(article)">
-                  <img
-                    class="news-card__cover-img"
-                    [src]="article.coverImageUrl"
-                    [alt]="article.title"
-                    loading="lazy"
-                    (error)="onCoverError($event)"
-                    [class.is-hidden]="!hasCover(article)"
-                  />
-                  <div class="news-card__pattern">
-                    <span class="cover-icon">
-                      <span nz-icon nzType="file-text" nzTheme="outline"></span>
-                    </span>
-                  </div>
+                  @if (hasCover(article)) {
+                    <img
+                      class="news-card__cover-img"
+                      [src]="article.coverImageUrl"
+                      [alt]="article.title"
+                      loading="lazy"
+                      (error)="onCoverError($event)"
+                    />
+                  } @else {
+                    <img
+                      class="news-card__cover-img"
+                      src="assets/images/home/news-cover-placeholder.svg"
+                      alt=""
+                      loading="lazy"
+                      aria-hidden="true"
+                    />
+                  }
+                  <div class="news-card__overlay" aria-hidden="true"></div>
                   @if (article.isTop || article.isHot) {
                     <span class="news-card__badges">
                       @if (article.isTop) {

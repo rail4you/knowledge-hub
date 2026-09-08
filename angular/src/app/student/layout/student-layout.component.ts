@@ -227,24 +227,6 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     return `${name} · ${role}`;
   }
 
-  /** 头像渐变背景色（基于用户名稳定生成） */
-  avatarGradient(): string {
-    const name = this.userName() || 'U';
-    const palettes = [
-      '#1e6ce8',
-      '#0891b2',
-      '#059669',
-      '#10b981',
-      '#0284c7',
-      '#0c4cb8',
-    ];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = (hash * 31 + name.charCodeAt(i)) | 0;
-    }
-    return palettes[Math.abs(hash) % palettes.length];
-  }
-
   logout() {
     // ABP authService.logout() 会清除本地 token 并重定向到 IdP 的 end_session_endpoint
     // IdP 清除 session cookie 后会自动重定向回 postLogoutRedirectUri

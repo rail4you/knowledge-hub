@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" width="600" height="360" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <!-- 主背景：教育资料主题 - 深青绿色渐变 -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0c4a6e"/>
+      <stop offset="60%" stop-color="#0e7490"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <!-- 文档页 -->
+    <linearGradient id="docGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <!-- 光晕 -->
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.5"/>
+      <stop offset="60%" stop-color="#0891b2" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0e7490" stop-opacity="0"/>
+    </radialGradient>
+    <!-- 光柱 -->
+    <linearGradient id="beamGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </linearGradient>
+    <!-- 网格 -->
+    <pattern id="gridPattern" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#22d3ee" stroke-opacity="0.08" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="600" height="360" fill="url(#bgGrad)"/>
+  <rect width="600" height="360" fill="url(#gridPattern)"/>
+
+  <!-- 中心光晕 -->
+  <circle cx="300" cy="180" r="220" fill="url(#centerGlow)"/>
+
+  <!-- 装饰光柱 -->
+  <polygon points="0,360 180,360 60,160" fill="url(#beamGrad)" opacity="0.55"/>
+  <polygon points="450,360 600,360 540,160" fill="url(#beamGrad)" opacity="0.5"/>
+
+  <!-- 顶部光束 -->
+  <polygon points="280,0 320,0 310,180 290,180" fill="#22d3ee" fill-opacity="0.12"/>
+
+  <!-- 虚线圆环 -->
+  <circle cx="300" cy="180" r="140" fill="none" stroke="#22d3ee" stroke-opacity="0.3" stroke-width="1" stroke-dasharray="3 5"/>
+  <circle cx="300" cy="180" r="180" fill="none" stroke="#67e8f9" stroke-opacity="0.2" stroke-width="1" stroke-dasharray="2 8"/>
+
+  <!-- 数据点装饰 -->
+  <g fill="#22d3ee">
+    <circle cx="160" cy="80" r="2.5" opacity="0.8"/>
+    <circle cx="170" cy="105" r="1.5" opacity="0.6"/>
+    <circle cx="155" cy="130" r="2" opacity="0.7"/>
+    <circle cx="450" cy="80" r="2" opacity="0.7"/>
+    <circle cx="430" cy="105" r="2.5" opacity="0.85"/>
+    <circle cx="445" cy="130" r="1.5" opacity="0.6"/>
+  </g>
+
+  <!-- 中心：堆叠文档（资料） -->
+  <g transform="translate(300 180)">
+    <!-- 阴影 -->
+    <ellipse cx="0" cy="55" rx="120" ry="6" fill="#000000" fill-opacity="0.3"/>
+
+    <!-- 底部文档（橙黄色） -->
+    <g transform="translate(-30 25) rotate(-8)">
+      <rect x="-70" y="-45" width="140" height="100" rx="3" fill="#f59e0b"/>
+      <rect x="-70" y="-45" width="140" height="100" rx="3" fill="url(#docGrad)" fill-opacity="0.18"/>
+      <rect x="-65" y="-30" width="130" height="3" fill="#92400e" opacity="0.6"/>
+      <line x1="-60" y1="-20" x2="50" y2="-20" stroke="#92400e" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="-12" x2="40" y2="-12" stroke="#92400e" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="-4" x2="55" y2="-4" stroke="#92400e" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="4" x2="35" y2="4" stroke="#92400e" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="12" x2="50" y2="12" stroke="#92400e" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="20" x2="40" y2="20" stroke="#92400e" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="28" x2="55" y2="28" stroke="#92400e" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="36" x2="30" y2="36" stroke="#92400e" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="44" x2="50" y2="44" stroke="#92400e" stroke-width="1.2" opacity="0.5"/>
+    </g>
+
+    <!-- 中间文档（绿色） -->
+    <g transform="translate(30 -10) rotate(5)">
+      <rect x="-70" y="-45" width="140" height="100" rx="3" fill="#16a34a"/>
+      <rect x="-70" y="-45" width="140" height="100" rx="3" fill="url(#docGrad)" fill-opacity="0.18"/>
+      <rect x="-65" y="-30" width="130" height="3" fill="#14532d" opacity="0.6"/>
+      <line x1="-60" y1="-20" x2="50" y2="-20" stroke="#14532d" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="-12" x2="40" y2="-12" stroke="#14532d" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="-4" x2="55" y2="-4" stroke="#14532d" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="4" x2="35" y2="4" stroke="#14532d" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="12" x2="50" y2="12" stroke="#14532d" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="20" x2="40" y2="20" stroke="#14532d" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="28" x2="55" y2="28" stroke="#14532d" stroke-width="1.2" opacity="0.5"/>
+      <line x1="-60" y1="36" x2="30" y2="36" stroke="#14532d" stroke-width="1.2" opacity="0.5"/>
+    </g>
+
+    <!-- 顶部文档（PDF） -->
+    <g transform="translate(0 -55)">
+      <rect x="-70" y="-50" width="140" height="110" rx="3" fill="url(#docGrad)" stroke="#475569" stroke-width="1"/>
+      <!-- 顶部红色标签条 -->
+      <rect x="-70" y="-50" width="140" height="14" fill="#dc2626"/>
+      <text x="0" y="-40" text-anchor="middle" font-size="9" fill="#ffffff" font-weight="800" letter-spacing="3">PDF DOCUMENT</text>
+      <!-- 大标题占位 -->
+      <rect x="-55" y="-25" width="110" height="6" rx="1" fill="#1e40af"/>
+      <rect x="-55" y="-13" width="80" height="4" rx="1" fill="#3b82f6" opacity="0.7"/>
+      <!-- 内容行 -->
+      <line x1="-55" y1="0" x2="55" y2="0" stroke="#475569" stroke-width="1.4" opacity="0.7"/>
+      <line x1="-55" y1="8" x2="40" y2="8" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-55" y1="15" x2="55" y2="15" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-55" y1="22" x2="35" y2="22" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-55" y1="29" x2="50" y2="29" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-55" y1="36" x2="40" y2="36" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-55" y1="43" x2="55" y2="43" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+      <line x1="-55" y1="50" x2="30" y2="50" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+
+      <!-- 折角 -->
+      <path d="M 60 -50 L 70 -40 L 60 -40 Z" fill="#94a3b8"/>
+      <path d="M 60 -50 L 70 -40 L 70 -38 L 60 -38 Z" fill="#cbd5e1" opacity="0.7"/>
+    </g>
+
+    <!-- 装饰：下载箭头 -->
+    <g transform="translate(85 -90)">
+      <circle cx="0" cy="0" r="18" fill="#22d3ee" opacity="0.95"/>
+      <path d="M 0 -8 L 0 4 M -6 -2 L 0 4 L 6 -2 M -8 8 L 8 8" stroke="#0c4a6e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
+
+    <!-- 装饰：文件夹（左侧） -->
+    <g transform="translate(-100 60)">
+      <path d="M -20 -8 L -8 -8 L -4 -12 L 20 -12 L 20 12 L -20 12 Z" fill="#fbbf24" stroke="#92400e" stroke-width="1" stroke-linejoin="round"/>
+      <rect x="-20" y="-8" width="40" height="20" fill="#fbbf24" stroke="#92400e" stroke-width="1" stroke-linejoin="round"/>
+      <text x="0" y="3" text-anchor="middle" font-size="9" fill="#92400e" font-weight="700">RES</text>
+    </g>
+  </g>
+
+  <!-- 闪光点 -->
+  <g fill="#ffffff">
+    <circle cx="220" cy="80" r="1.2" opacity="0.75"/>
+    <circle cx="380" cy="100" r="1.5" opacity="0.85"/>
+    <circle cx="120" cy="280" r="1" opacity="0.55"/>
+    <circle cx="480" cy="290" r="1.2" opacity="0.7"/>
+    <circle cx="200" cy="310" r="0.9" opacity="0.5"/>
+    <circle cx="400" cy="60" r="1.1" opacity="0.65"/>
+  </g>
+
+  <!-- HUD 装饰 -->
+  <g transform="translate(40 40)" fill="none" stroke="#22d3ee" stroke-opacity="0.4" stroke-width="1">
+    <rect x="0" y="0" width="40" height="20"/>
+    <line x1="0" y1="6" x2="40" y2="6"/>
+    <line x1="0" y1="14" x2="40" y2="14"/>
+  </g>
+  <g transform="translate(520 300)" fill="none" stroke="#67e8f9" stroke-opacity="0.4" stroke-width="1">
+    <rect x="0" y="0" width="40" height="20"/>
+    <line x1="0" y1="6" x2="40" y2="6"/>
+    <line x1="0" y1="14" x2="40" y2="14"/>
+  </g>
+</svg>

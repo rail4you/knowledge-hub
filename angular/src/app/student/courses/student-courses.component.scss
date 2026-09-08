@@ -231,20 +231,26 @@
   flex-direction: column;
 
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
     box-shadow: ds.$student-shadow-hover;
 
-    .course-card__cover-img,
-    .course-card__pattern {
+    .course-card__cover-img {
       transform: scale(1.04);
+    }
+
+    .course-card__title {
+      color: ds.$student-primary;
     }
   }
 }
 
 .course-card__cover {
   position: relative;
-  height: 140px;
+  width: 100%;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0c1e3e 0%, #1e293b 100%);
 }
 
 .course-card__cover-img {
@@ -253,28 +259,16 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
   transition: transform 0.4s ease;
-}
-
-.course-card__pattern {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.4s ease;
-}
-
-.course-card__cover-icon {
-  font-size: 44px;
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .course-card__overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.12);
+  background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%);
   pointer-events: none;
+  z-index: 1;
 }
 
 .course-card__difficulty {
@@ -339,6 +333,8 @@
   font-weight: 700;
   color: ds.$student-text;
   line-height: 1.4;
+  letter-spacing: -.2px;
+  transition: color .2s ease;
   @include ds.line-clamp(2);
   flex: 1;
   min-width: 0;

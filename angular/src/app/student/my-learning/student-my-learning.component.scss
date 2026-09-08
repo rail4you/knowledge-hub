@@ -159,9 +159,13 @@
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: ds.$student-border;
-    box-shadow: ds.$student-shadow-soft;
-    transform: translateY(-1px);
+    border-color: rgba(ds.$student-primary, .35);
+    box-shadow: ds.$student-shadow-hover;
+    transform: translateY(-2px);
+
+    .course-progress__title {
+      color: ds.$student-primary;
+    }
   }
 
   &__cover {
@@ -217,6 +221,8 @@
     font-size: 14px;
     font-weight: 600;
     line-height: 1.4;
+    letter-spacing: -.2px;
+    transition: color .2s ease;
     @include ds.line-clamp(2);
   }
 

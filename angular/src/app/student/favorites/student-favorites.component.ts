@@ -194,17 +194,6 @@ export class StudentFavoritesComponent implements OnInit {
     }
   }
 
-  getResourceTypeIcon(type?: number): string {
-    const icons: Record<number, string> = {
-      [ResourceType.Document]: 'file-text',
-      [ResourceType.Video]: 'video-camera',
-      [ResourceType.Audio]: 'sound',
-      [ResourceType.Image]: 'picture',
-      [ResourceType.PPT]: 'file-ppt',
-    };
-    return icons[type ?? 0] || 'file-text';
-  }
-
   getResourceTypeName(type?: number): string {
     const names: Record<number, string> = {
       [ResourceType.Document]: '文档',
@@ -221,5 +210,11 @@ export class StudentFavoritesComponent implements OnInit {
     if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
     if (size >= 1024) return `${(size / 1024).toFixed(0)} KB`;
     return `${size} B`;
+  }
+
+  /** 评分对应的实心星星数量（0-5，四舍五入），用于卡片评分行展示 */
+  ratingStars(avg?: number | null): number[] {
+    const n = Math.max(0, Math.min(5, Math.round(avg || 0)));
+    return Array.from({ length: n }, (_, i) => i);
   }
 }

@@ -92,6 +92,16 @@ export class StudentResourcesComponent implements OnInit {
 
   recommendedResources = signal<RecommendedResourceDto[]>([]);
   recommendationsLoading = signal(false);
+  /** 为你推荐排序规则：评分值大的在前，评分相同则评价数量多的在前，取前 5 个展示，无需滚动 */
+  readonly topRecommendations = computed(() => {
+    const list = [...(this.recommendedResources() || [])];
+    list.sort((a, b) => {
+      const ratingDiff = (b.averageRating || 0) - (a.averageRating || 0);
+      if (ratingDiff !== 0) return ratingDiff;
+      return (b.totalReviews || 0) - (a.totalReviews || 0);
+    });
+    return list.slice(0, 5);
+  });
 
   readonly ResourceType = ResourceType;
 
@@ -410,17 +420,6 @@ export class StudentResourcesComponent implements OnInit {
     return !!resourceId && !!this.collectedResourceIds()[resourceId];
   }
 
-  getResourceTypeIcon(type?: number): string {
-    const icons: Record<number, string> = {
-      [ResourceType.Document]: 'file-text',
-      [ResourceType.Video]: 'video-camera',
-      [ResourceType.Audio]: 'sound',
-      [ResourceType.Image]: 'picture',
-      [ResourceType.PPT]: 'file-ppt',
-    };
-    return icons[type ?? 0] || 'file-text';
-  }
-
   getResourceTypeName(type?: number): string {
     const names: Record<number, string> = {
       [ResourceType.Document]: '文档',
@@ -437,6 +436,12 @@ export class StudentResourcesComponent implements OnInit {
     if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
     if (size >= 1024) return `${(size / 1024).toFixed(0)} KB`;
     return `${size} B`;
+  }
+
+  /** 评分对应的实心星星数量（0-5，四舍五入），用于卡片评分行展示 */
+  ratingStars(avg?: number | null): number[] {
+    const n = Math.max(0, Math.min(5, Math.round(avg || 0)));
+    return Array.from({ length: n }, (_, i) => i);
   }
 
   loadRecommendations() {

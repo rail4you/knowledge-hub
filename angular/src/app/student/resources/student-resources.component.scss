@@ -151,67 +151,88 @@
   }
 }
 
-.recommend-scroll {
+// 为你推荐：5 列专业卡片网格（占位图封面，无滚动）
+.recommend-grid {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 1fr);
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scroll-snap-type: x mandatory;
-
-  &::-webkit-scrollbar {
-    height: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: ds.$student-border-soft;
-  }
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
 }
 
-.recommend-card {
+.rec-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 76px;
-  padding: 12px;
+  flex-direction: column;
   border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius;
+  border-radius: ds.$student-radius-lg;
   background: #fff;
+  overflow: hidden;
   text-decoration: none;
   color: ds.$student-text;
   cursor: pointer;
-  scroll-snap-align: start;
-  transition: all 0.2s ease;
+  transition: all .25s ease;
 
   &:hover {
-    border-color: rgba(ds.$student-primary, 0.4);
-    background: #f8fbff;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+    border-color: rgba(ds.$student-primary, .35);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, .1);
+    transform: translateY(-3px);
 
-    .recommend-card__name {
+    .rec-card__cover-img {
+      transform: scale(1.04);
+    }
+
+    .rec-card__name {
       color: ds.$student-primary;
     }
   }
 
   &__cover {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #0c4a6e 0%, #0f172a 100%);
+  }
+
+  &__cover-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform .4s ease;
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,.45) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  &__type {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 4px;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
     color: #fff;
-    font-size: 18px;
-    flex-shrink: 0;
+    backdrop-filter: blur(4px);
 
-    &.rec-type-0 { background: #1e6ce8; }
-    &.rec-type-1 { background: #0891b2; }
-    &.rec-type-2 { background: #059669; }
-    &.rec-type-3 { background: #10b981; }
-    &.rec-type-4 { background: #0284c7; }
+    &.rec-type--0 { background: rgba(37, 99, 235, .88); }
+    &.rec-type--1 { background: rgba(14, 165, 233, .88); }
+    &.rec-type--2 { background: rgba(139, 92, 246, .88); }
+    &.rec-type--3 { background: rgba(16, 185, 129, .88); }
+    &.rec-type--4 { background: rgba(239, 68, 68, .88); }
   }
 
   &__body {
@@ -219,28 +240,38 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
+    padding: 10px 12px 12px;
   }
 
   &__name {
     color: ds.$student-text;
-    font-size: 14px;
-    font-weight: 600;
-    @include ds.line-clamp(1);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+    letter-spacing: -.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     transition: color 0.2s ease;
   }
 
   &__meta {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 8px;
     color: ds.$student-text-light;
-    font-size: 12px;
+    font-size: 11px;
+    min-width: 0;
   }
 
   &__reason {
-    @include ds.line-clamp(1);
-    max-width: 120px;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__rating {
@@ -249,6 +280,7 @@
     gap: 2px;
     color: #fa8c16;
     font-weight: 600;
+    flex-shrink: 0;
 
     span[nz-icon] {
       font-size: 10px;
@@ -567,10 +599,6 @@
     border-color: rgba(ds.$student-primary, 0.4);
     box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
     transform: translateY(-3px);
-
-    .cover-icon {
-      transform: scale(1.06) rotate(-2deg);
-    }
   }
 
   &.type-0 .resource-card__cover { background: #2563eb; }
@@ -582,43 +610,55 @@
 
 .resource-card__cover {
   position: relative;
-  height: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  display: block;
   color: #fff;
   overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #0c4a6e 0%, #0f172a 100%);
 }
 
-.cover-icon {
-  width: 70px;
-  height: 70px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.3s ease;
+// 垫底占位图（与首页资源卡片同一套）；有真实预览时被 app-resource-cover 盖住
+.resource-card__cover-base {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
-  span[nz-icon] {
-    font-size: 32px;
-    color: #fff;
-  }
+.resource-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+// 真实预览图 hover 轻微放大（与首页封面动效一致）
+.resource-card ::ng-deep .cover-media {
+  transition: transform .4s ease;
+}
+.resource-card:hover ::ng-deep .cover-media {
+  transform: scale(1.04);
 }
 
 .cover-type-badge {
   position: absolute;
   top: 10px;
   left: 10px;
+  z-index: 2;
   height: 22px;
-  padding: 0 8px;
+  padding: 0 9px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 1;
   color: #fff;
   backdrop-filter: blur(6px);
 
@@ -637,6 +677,7 @@
   position: absolute;
   top: 10px;
   right: 10px;
+  z-index: 2;
   width: 30px;
   height: 30px;
   border: 0;
@@ -672,7 +713,7 @@
 }
 
 .resource-card__body {
-  padding: 14px 16px 12px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -685,7 +726,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 22px;
 }
 
 .category-name {
@@ -711,45 +751,57 @@
   font-weight: 700;
   line-height: 1.45;
   letter-spacing: -0.2px;
-  @include ds.line-clamp(2);
-  min-height: 44px;
+  transition: color .2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-.resource-card__desc {
-  margin: 0;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-  line-height: 1.6;
-  @include ds.line-clamp(2);
-  min-height: 38px;
+.resource-card:hover .resource-card__title {
+  color: ds.$student-primary;
 }
 
 .resource-card__meta {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 6px 12px;
+  gap: 4px 8px;
   color: ds.$student-text-light;
-  font-size: 11px;
+  font-size: 12px;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .meta-item {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
 
   span[nz-icon] {
     font-size: 11px;
   }
 }
 
-.rating-inline {
+// 评分独立行：星星数量与评分值对应 + 分数（零分显示一颗空星）
+.resource-card__rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
   color: #fa8c16;
   font-weight: 600;
 
-  .rating-count {
-    color: ds.$student-text-light;
-    font-weight: 400;
+  span[nz-icon] {
+    font-size: 12px;
+  }
+
+  .rating-star--empty {
+    color: #cbd5e1;
+  }
+
+  .rating-score {
+    margin-left: 3px;
   }
 }
 
@@ -757,7 +809,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  padding: 12px 14px 14px;
+  padding: 10px 12px 12px;
   border-top: 1px dashed ds.$student-border-soft;
 }
 
@@ -766,12 +818,12 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  height: 34px;
+  height: 30px;
   border: 0;
   border-radius: ds.$student-radius;
   background: ds.$student-surface-soft;
   color: ds.$student-text;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -834,12 +886,21 @@
   .category-sidebar {
     position: static;
   }
+
+  .recommend-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
   .resources-page {
     padding-top: 16px;
     padding-bottom: 32px;
+  }
+
+  .recommend-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 
   .search-bar,
