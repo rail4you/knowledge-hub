@@ -102,7 +102,7 @@
   .time-cell { font-size: 13px; color: var(--kh-muted); line-height: 1.5; }
   .time-cell.empty { color: #bfbfbf; }
 
-  .op-links { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; justify-content: center; flex-wrap: wrap; }
+  .op-links { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; justify-content: flex-start; flex-wrap: wrap; }
   .op-link { cursor: pointer; font-weight: 500; text-decoration: none; transition: opacity .15s; }
   .op-link.enter { color: var(--kh-ok); &:hover { text-decoration: underline; } &.disabled { opacity: .45; cursor: not-allowed; text-decoration: none; } }
   .op-link.cancel { color: var(--kh-warn); &:hover { text-decoration: underline; } }
@@ -145,7 +145,7 @@
       font-size: 13.5px !important; font-weight: 650 !important;
       padding: 12px 14px !important;
       border-bottom: 1px solid var(--kh-line-2) !important;
-      text-align: center !important;
+      text-align: left !important;
       white-space: nowrap;
       &::before { display: none !important; }
     }
@@ -154,7 +154,7 @@
       font-size: 13.5px !important;
       color: var(--kh-ink-2) !important;
       border-bottom: 1px solid #f0f3f8 !important;
-      text-align: center;
+      text-align: left;
       vertical-align: middle;
     }
     .ant-table-tbody > tr:nth-child(even) > td { background: #fafbfd; }
