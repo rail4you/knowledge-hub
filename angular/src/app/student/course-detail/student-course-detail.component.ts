@@ -34,6 +34,7 @@ interface RelatedCourse {
   major?: string;
   studentCount: number;
   difficulty: number;
+  coverImageUrl?: string;
 }
 
 interface ResourceItem {
@@ -453,6 +454,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
             major: x.majorName,
             studentCount: x.studentCount || 0,
             difficulty: x.difficulty || 1,
+            coverImageUrl: (x as { coverImageUrl?: string }).coverImageUrl,
           }));
         this.related.set(items);
       },
@@ -614,7 +616,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     return palettes[Math.abs(hash) % palettes.length];
   }
 
-  hasCover(c: CourseDetailDto): boolean {
+  hasCover(c: CourseDetailDto | RelatedCourse): boolean {
     return !!c.coverImageUrl && c.coverImageUrl.trim().length > 0;
   }
 

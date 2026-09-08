@@ -24,20 +24,13 @@
       <!-- 左：岗位视觉 -->
       <div class="detail-media">
         <div class="detail-media__stage" [ngClass]="'media-type-' + (item.jobType ?? 0)">
+          <img class="detail-media__img" src="assets/images/home/job-cover-placeholder.svg" alt="" aria-hidden="true" />
           <div class="media-decor" aria-hidden="true">
             <span class="md md--ring"></span>
             <span class="md md--dot1"></span>
             <span class="md md--dot2"></span>
             <span class="md md--line1"></span>
             <span class="md md--line2"></span>
-          </div>
-          <div class="media-center">
-            <span class="media-logo">{{ item.companyName }}</span>
-            <span class="media-icon"><span nz-icon [nzType]="getTypeIcon(item.jobType)" nzTheme="outline"></span>{{ getTypeLabel(item.jobType) }}@if (item.industry) { · {{ item.industry }}}</span>
-            <div class="media-salary">
-              <span class="media-salary__val">{{ item.salaryRange || '薪资面议' }}</span>
-              <span class="media-salary__lbl">@if (item.recruitmentCount) {招 {{ item.recruitmentCount }} 人 ·} {{ item.location || '地点待定' }}</span>
-            </div>
           </div>
         </div>
       </div>

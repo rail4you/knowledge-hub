@@ -117,6 +117,15 @@
   &.media-type-3 { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
 }
 
+.detail-media__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .media-decor {
   position: absolute;
   inset: 0;

@@ -34,10 +34,9 @@
              tabindex="0"
              (keyup.enter)="c.isEnrolled ? startLearning() : enrollCourse()"
              [attr.aria-label]="c.isEnrolled ? '继续学习' : '选课学习'">
+          <img class="detail-media__img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
           @if (hasCover(c)) {
-            <img class="detail-media__img" [src]="c.coverImageUrl" [alt]="c.title" />
-          } @else {
-            <span class="detail-media__icon" nz-icon nzType="read" nzTheme="outline"></span>
+            <img class="detail-media__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
           }
           <div class="detail-media__shadow" aria-hidden="true"></div>
         </div>
@@ -369,26 +368,31 @@
             } @else {
               <div class="related-grid">
                 @for (r of related(); track r.id) {
-                  <article class="related-card" (click)="openRelated(r.id)">
-                    <div class="related-card__head" [style.background]="courseGradient(r)">
-                      <span class="related-card__icon" nz-icon nzType="read" nzTheme="outline"></span>
+                  <article class="course-card" (click)="openRelated(r.id)">
+                    <div class="course-card__cover" [style.background]="courseGradient(r)">
+                      <img class="course-card__cover-img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
+                      @if (hasCover(r)) {
+                        <img class="course-card__cover-img" [src]="r.coverImageUrl" [alt]="r.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
+                      }
+                      <div class="course-card__overlay" aria-hidden="true"></div>
+                      <span class="course-card__difficulty" [style.background]="difficultyColor(r.difficulty)">
+                        <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
+                        {{ difficultyLabel(r.difficulty) }}
+                      </span>
                     </div>
-                    <div class="related-card__body">
-                      <h4 class="related-card__title">{{ r.title }}</h4>
-                      <div class="related-card__meta">
+                    <div class="course-card__body">
+                      <div class="course-card__top">
+                        <h3 class="course-card__title" [title]="r.title">{{ r.title }}</h3>
                         @if (r.major) {
-                          <span class="meta-mini">
-                            <span nz-icon nzType="book" nzTheme="outline"></span>
-                            {{ r.major }}
-                          </span>
+                          <div class="course-card__tags">
+                            <span class="tag">{{ r.major }}</span>
+                          </div>
                         }
-                        <span class="meta-mini">
+                      </div>
+                      <div class="course-card__stats">
+                        <span class="stat-pill">
                           <span nz-icon nzType="team" nzTheme="outline"></span>
-                          {{ r.studentCount | number }}
-                        </span>
-                        <span class="meta-mini" [style.color]="difficultyColor(r.difficulty)">
-                          <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
-                          {{ difficultyLabel(r.difficulty) }}
+                          {{ r.studentCount | number }} 人学习
                         </span>
                       </div>
                     </div>

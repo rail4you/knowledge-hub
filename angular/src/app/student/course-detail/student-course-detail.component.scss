@@ -94,13 +94,12 @@
   }
 }
 .detail-media__img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-.detail-media__icon {
-  font-size: 84px;
-  color: rgba(255, 255, 255, 0.55);
+  display: block;
 }
 .detail-media__shadow {
   position: absolute;
@@ -474,6 +473,60 @@
   }
 }
 
+/* 表格扁平化：表头 / 行 hover / 分页（实心选中保证对比） */
+.content-card .ant-table {
+  border: 1px solid ds.$student-border-soft;
+  border-radius: 3px;
+}
+.content-card .ant-table-thead > tr > th {
+  background: #f1f5f9;
+  color: ds.$student-text;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 1px solid ds.$student-border;
+  border-radius: 0;
+}
+.content-card .ant-table-tbody > tr > td {
+  border-bottom: 1px solid ds.$student-border-soft;
+  font-size: 13px;
+}
+.content-card .ant-table-tbody > tr:hover > td {
+  background: rgba(43, 108, 212, 0.04);
+}
+.content-card .ant-pagination-item {
+  border-radius: 3px;
+  border-color: ds.$student-border;
+  font-variant-numeric: tabular-nums;
+
+  a {
+    color: ds.$student-text-muted;
+  }
+
+  &:hover {
+    border-color: ds.$student-primary;
+
+    a {
+      color: ds.$student-primary;
+    }
+  }
+}
+.content-card .ant-pagination-item-active {
+  background: ds.$student-primary;
+  border-color: ds.$student-primary;
+
+  a {
+    color: #fff;
+  }
+
+  &:hover a {
+    color: #fff;
+  }
+}
+.content-card .ant-pagination-prev .ant-pagination-item-link,
+.content-card .ant-pagination-next .ant-pagination-item-link {
+  border-radius: 3px;
+}
+
 /* 表格单元格（与就业指导页一致） */
 .cell-index {
   color: ds.$student-text-light;
@@ -581,56 +634,133 @@
   &.level-3 { background: #d1fae5; color: #059669; }
 }
 
-/* =================== 相关课程 =================== */
+/* =================== 相关课程（复用课程列表卡样式） =================== */
 .related-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
 }
-.related-card {
-  display: flex;
-  flex-direction: column;
+.related-grid .course-card {
+  background: #fff;
   border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius;
+  border-radius: ds.$student-radius-lg;
+  box-shadow: ds.$student-shadow-soft;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
 
   &:hover {
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-    transform: translateY(-2px);
+    transform: translateY(-3px);
+    box-shadow: ds.$student-shadow-hover;
+
+    .course-card__cover-img {
+      transform: scale(1.04);
+    }
+
+    .course-card__title {
+      color: ds.$student-primary;
+    }
   }
 }
-.related-card__head {
-  height: 92px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.related-grid .course-card__cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.related-grid .course-card__cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+.related-grid .course-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+.related-grid .course-card__difficulty {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 4px;
   color: #fff;
-}
-.related-card__icon { font-size: 36px; opacity: 0.9; }
-.related-card__body { padding: 12px 14px; }
-.related-card__title {
-  margin: 0 0 8px;
-  color: ds.$student-text;
-  font-size: 14px;
+  font-size: 10px;
   font-weight: 600;
-  line-height: 1.4;
-  @include ds.line-clamp(2);
-  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
-.related-card__meta {
+.related-grid .course-card__body {
+  padding: 12px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+.related-grid .course-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.related-grid .course-card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: ds.$student-text;
+  line-height: 1.4;
+  letter-spacing: -.2px;
+  transition: color .2s ease;
+  @include ds.line-clamp(2);
+  flex: 1;
+  min-width: 0;
+}
+.related-grid .course-card__tags {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.related-grid .tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: ds.$student-surface-soft;
+  color: ds.$student-text-muted;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+.related-grid .course-card__stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
+  padding-top: 2px;
   color: ds.$student-text-light;
-  font-size: 12px;
+  font-size: 11px;
 }
-.meta-mini {
+.related-grid .stat-pill {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  span { font-size: 11px; }
+
+  span[nz-icon] {
+    font-size: 11px;
+  }
 }
 
 /* =================== 侧栏样式（已移除，保留兼容占位） =================== */
