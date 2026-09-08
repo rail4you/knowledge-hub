@@ -13,13 +13,8 @@
   min-height: calc(100vh - 140px);
 }
 
-// ── page-header 卡片（h1 标题 + 副标题，右侧保留原有操作按钮） ──
+// ── page-header 卡片（仅标题 + 副标题） ──
 .page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
   background: var(--kh-panel);
   border: 1px solid var(--kh-line);
   border-radius: 12px;
@@ -42,41 +37,6 @@
     line-height: 1.5;
   }
 }
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--kh-line-2);
-  background: var(--kh-panel);
-  color: var(--kh-muted);
-  cursor: pointer;
-  transition: all 0.2s;
-  &:hover {
-    border-color: var(--kh-accent);
-    color: var(--kh-accent);
-  }
-  &.primary {
-    background: var(--kh-accent);
-    border-color: var(--kh-accent);
-    color: #fff;
-    &:hover {
-      background: var(--kh-accent-deep);
-      border-color: var(--kh-accent-deep);
-    }
-  }
-  svg { width: 14px; height: 14px; }
-}
-
 // ── 工具栏：新建按钮行首左对齐，搜索筛选靠右 ───────────────
 .table-toolbar {
   display: flex;
@@ -118,6 +78,30 @@
   }
   &:hover {
     background: var(--kh-accent-deep);
+  }
+}
+// 工具栏次按钮（导入 Excel）：与新建按钮同行左对齐
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--kh-line-2);
+  background: var(--kh-panel);
+  color: var(--kh-ink-2);
+  cursor: pointer;
+  transition: all 0.2s;
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+  &:hover {
+    border-color: var(--kh-accent);
+    color: var(--kh-accent);
   }
 }
 .search-box {

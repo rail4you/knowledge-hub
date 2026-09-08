@@ -1,23 +1,9 @@
 <div class="training-page">
-  <!-- 标题卡片：h1 标题 + 副标题，右侧保留原有操作按钮 -->
+  <!-- 标题卡片：仅标题 + 副标题，操作按钮在下方表格工具栏 -->
   <div class="page-header">
     <div class="page-title-block">
       <h1>岗位管理</h1>
       <p>管理岗位发布、审核状态与投递情况</p>
-    </div>
-    <div class="header-actions">
-      <button class="action-btn" type="button" (click)="downloadTemplate()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        下载模板
-      </button>
-      <button class="action-btn" type="button" (click)="openXlsxImport()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        导入Excel
-      </button>
-      <button class="action-btn primary" type="button" (click)="openCreate()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        新增岗位
-      </button>
     </div>
   </div>
 
@@ -27,6 +13,10 @@
       <button class="create-btn" type="button" (click)="openCreate()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         新增岗位
+      </button>
+      <button class="toolbar-btn" type="button" (click)="openXlsxImport()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        导入Excel
       </button>
       <div class="toolbar-filters">
     <div class="search-box">
