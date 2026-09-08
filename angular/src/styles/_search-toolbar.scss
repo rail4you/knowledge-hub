@@ -1,0 +1,122 @@
+/* ═══════════════════════════════════════════════════════════════
+   统一搜索工具栏样式（用于"表格 + 搜索"页面）
+
+   使用示例（HTML）：
+     <div class="search-bar">
+       <div class="search-box">
+         <svg class="search-icon" viewBox="0 0 24 24" ...>...</svg>
+         <input class="search-input" type="text" placeholder="..." [(ngModel)]="keyword" (keyup.enter)="reload()" />
+         <button class="search-btn" type="button" (click)="reload()">搜索</button>
+         <button class="reset-btn" type="button" (click)="resetSearch()">重置</button>
+       </div>
+       <div class="search-actions">
+         <span class="result-count">共 N 条</span>
+         <button class="create-btn" type="button" (click)="openCreate()">新建</button>
+       </div>
+     </div>
+
+   用法约定：
+   - search-bar / search-box / search-actions 三个容器
+   - search-input 必须用 [(ngModel)] 双向绑定关键字变量（如 keyword / filter）
+   - resetSearch() 由组件自身实现：清空 keyword + reload()
+   - 表格卡片不再用 min-height 强制撑高，单表格 + 搜索的页面统一让高度自适应
+   ═══════════════════════════════════════════════════════════════ */
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--kh-line-2);
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 360px;
+  max-width: 560px;
+  position: relative;
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 15px;
+    height: 15px;
+    color: #bfbfbf;
+    pointer-events: none;
+  }
+
+  .search-input {
+    flex: 1;
+    height: 38px;
+    padding: 0 12px 0 34px;
+    border: 1px solid var(--kh-line-2);
+    border-radius: 20px;
+    font-size: 13.5px;
+    color: var(--kh-ink);
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
+    &::placeholder { color: #9aa9ba; }
+
+    &:focus:not(:disabled) {
+      border-color: var(--kh-accent);
+      box-shadow: 0 0 0 3px var(--kh-accent-soft);
+    }
+
+    &:disabled {
+      background: #f5f7fa;
+      cursor: not-allowed;
+    }
+  }
+
+  .search-btn,
+  .reset-btn {
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    flex-shrink: 0;
+  }
+
+  .search-btn {
+    background: var(--kh-accent);
+    color: #fff;
+    border: none;
+
+    &:hover { background: var(--kh-accent-deep); }
+  }
+
+  .reset-btn {
+    border: 1px solid var(--kh-line-2);
+    background: var(--kh-panel);
+    color: var(--kh-ink-2);
+
+    &:hover {
+      border-color: var(--kh-accent);
+      color: var(--kh-accent);
+    }
+  }
+}
+
+.search-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  .result-count {
+    font-size: 13px;
+    color: var(--kh-muted);
+    white-space: nowrap;
+  }
+}
