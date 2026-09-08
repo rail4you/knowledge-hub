@@ -688,8 +688,8 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     switch (value) {
       case 0: return 'default'; // 草稿：灰
       case 1: return 'processing'; // 待审核：蓝
-      case 2: return 'warning'; // 院校审核通过：橙
-      case 3: return 'success'; // 联盟审核通过：绿
+      case 2: return 'success'; // 院校审核通过：绿（业务层级低，颜色更温和）
+      case 3: return 'processing'; // 联盟审核通过：蓝（终态，权威感）
       case 4: return 'error'; // 审核拒绝：红
       case 5: return 'purple'; // 已隐藏：紫（与草稿灰区分）
       default: return 'default';
