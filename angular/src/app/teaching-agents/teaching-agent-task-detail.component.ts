@@ -13,6 +13,7 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzOutletModule } from 'ng-zorro-antd/core/outlet';
 import { MarkdownComponent, MarkdownPipe, provideMarkdown } from 'ngx-markdown';
+import { fixCjkMarkdown } from '../shared/markdown-cjk-fix.util';
 import { AgentRunService } from './agent-run.service';
 import { ClassroomAgentTaskService } from './classroom-agent-task.service';
 import {
@@ -56,6 +57,9 @@ export class TeachingAgentTaskDetailComponent implements OnInit {
   private readonly classroomAgentTaskService = inject(ClassroomAgentTaskService);
   private readonly agentRunService = inject(AgentRunService);
   private readonly cdr = inject(ChangeDetectorRef);
+
+  /** CJK 毗邻加粗预处理（marked 原生不渲染 这是**文本?**测试 这类写法）。 */
+  readonly fixMarkdown = fixCjkMarkdown;
 
   readonly loading = signal(false);
   readonly transcriptLoading = signal(false);

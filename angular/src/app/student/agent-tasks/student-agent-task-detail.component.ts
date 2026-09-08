@@ -12,6 +12,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { MarkdownComponent, MarkdownPipe, provideMarkdown } from 'ngx-markdown';
+import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
 import { AgentRunService } from '../../teaching-agents/agent-run.service';
 import {
   AgentRunDetail,
@@ -54,6 +55,9 @@ export class StudentAgentTaskDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly agentRunService = inject(AgentRunService);
+
+  /** CJK 毗邻加粗预处理（marked 原生不渲染 这是**文本?**测试 这类写法）。 */
+  readonly fixMarkdown = fixCjkMarkdown;
 
   readonly loading = signal(false);
   readonly sending = signal(false);

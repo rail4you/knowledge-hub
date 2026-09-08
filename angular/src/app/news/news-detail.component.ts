@@ -10,6 +10,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { MarkdownComponent, MARKED_OPTIONS, provideMarkdown } from 'ngx-markdown';
 import { NewsArticleDto, NewsCommentDto, NewsService } from './news.service';
+import { fixCjkMarkdown } from '../shared/markdown-cjk-fix.util';
 
 @Component({
   selector: 'app-news-detail',
@@ -47,6 +48,9 @@ export class NewsDetailComponent implements OnInit {
   readonly article = signal<NewsArticleDto | null>(null);
   readonly comments = signal<NewsCommentDto[]>([]);
   readonly commentText = signal('');
+
+  /** CJK 毗邻加粗预处理（这是**文本?**测试 这类写法 marked 原生不渲染）。 */
+  readonly fixMarkdown = fixCjkMarkdown;
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');

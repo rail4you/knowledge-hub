@@ -241,7 +241,7 @@
                                       {{ message.role === 'assistant' ? '🤖 智能体' : '💬 学生' }}
                                     </div>
                                     @if (message.role === 'assistant') {
-                                      <div class="message-content markdown-body" markdown [data]="message.content"></div>
+                                      <div class="message-content markdown-body" markdown [data]="fixMarkdown(message.content)"></div>
                                     } @else {
                                       <div class="message-content">{{ message.content }}</div>
                                     }

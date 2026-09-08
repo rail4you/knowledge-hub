@@ -19,6 +19,7 @@ import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
 import { marked } from 'marked';
+import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
 import { ChatService, ResourceForChat, ChatThread } from '../services/chat.service';
 import { ResourceService } from '../../proxy/resources/resource.service';
 import type { ResourceCategoryDto } from '../../proxy/resources/models';
@@ -525,7 +526,7 @@ export class ChatComponent implements OnInit, OnDestroy {
 
   formatMessage(content: string): SafeHtml {
     if (!content) return '';
-    const cleaned = this.sanitizeAssistantContent(content);
+    const cleaned = fixCjkMarkdown(this.sanitizeAssistantContent(content));
     const html = marked.parse(cleaned, { async: false }) as string;
     return this.sanitizer.bypassSecurityTrustHtml(html);
   }

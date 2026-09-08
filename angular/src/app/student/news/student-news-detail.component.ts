@@ -10,6 +10,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { MarkdownComponent, MARKED_OPTIONS, provideMarkdown } from 'ngx-markdown';
 import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.service';
+import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
 
 @Component({
   selector: 'app-student-news-detail',
@@ -54,6 +55,9 @@ export class StudentNewsDetailComponent implements OnInit {
 
   /** 正在回复的目标评论；null 表示发表一级评论 */
   readonly replyTo = signal<NewsCommentDto | null>(null);
+
+  /** CJK 毗邻加粗预处理（这是**文本?**测试 这类写法 marked 原生不渲染）。 */
+  readonly fixMarkdown = fixCjkMarkdown;
 
   /** 评论 id → 评论（回复链查找与孤儿兜底用） */
   readonly commentMap = computed(() => new Map(this.comments().map(c => [c.id, c])));

@@ -40,7 +40,7 @@
       }
 
       @if (article.content?.trim()) {
-        <div class="content markdown-body" markdown [data]="article.content"></div>
+        <div class="content markdown-body" markdown [data]="fixMarkdown(article.content)"></div>
       } @else {
         <div class="content content--empty">该资讯暂无正文内容</div>
       }
