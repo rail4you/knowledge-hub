@@ -153,7 +153,7 @@
   <nz-modal
     [nzVisible]="drawerVisible()"
     [nzTitle]="drawerMode() === 'add' ? '新增任务' : '编辑任务'"
-    nzWidth="480"
+    [nzWidth]="520"
     nzWrapClassName="practicum-modal-wrap"
     [nzFooter]="taskEditorFooter"
     (nzOnCancel)="closeDrawer()"
@@ -199,7 +199,7 @@
   </nz-modal>
 
   <!-- Guidance modal -->
-  <nz-modal [(nzVisible)]="guidanceModalVisible" nzTitle="添加指导" [nzFooter]="null" (nzOnCancel)="guidanceModalVisible = false" nzWidth="420" nzWrapClassName="practicum-modal-wrap">
+  <nz-modal [(nzVisible)]="guidanceModalVisible" nzTitle="添加指导" [nzFooter]="null" (nzOnCancel)="guidanceModalVisible = false" [nzWidth]="420" nzWrapClassName="practicum-modal-wrap">
     <div *nzModalContent>
       <div class="dh-modal">
         <div class="dh-form">
@@ -227,7 +227,7 @@
   </nz-modal>
 
   <!-- Guidance edit modal -->
-  <nz-modal [(nzVisible)]="guidanceEditVisible" nzTitle="编辑指导记录" [nzFooter]="null" (nzOnCancel)="guidanceEditVisible = false" nzWidth="420" nzWrapClassName="practicum-modal-wrap">
+  <nz-modal [(nzVisible)]="guidanceEditVisible" nzTitle="编辑指导记录" [nzFooter]="null" (nzOnCancel)="guidanceEditVisible = false" [nzWidth]="420" nzWrapClassName="practicum-modal-wrap">
     <div *nzModalContent>
       <div class="dh-modal">
         <div class="dh-form">
@@ -249,7 +249,7 @@
   </nz-modal>
 
   <!-- Score modal -->
-  <nz-modal [(nzVisible)]="scoreVisible" [nzTitle]="scoreTitle" [nzFooter]="null" (nzOnCancel)="scoreVisible = false" nzWidth="420" nzWrapClassName="practicum-modal-wrap">
+  <nz-modal [(nzVisible)]="scoreVisible" [nzTitle]="scoreTitle" [nzFooter]="null" (nzOnCancel)="scoreVisible = false" [nzWidth]="420" nzWrapClassName="practicum-modal-wrap">
     <div *nzModalContent>
       <div class="dh-modal">
         <div class="dh-form">

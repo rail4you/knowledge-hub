@@ -25,6 +25,14 @@ import {
   PracticumService,
 } from '../../practicum/practicum.service';
 
+type MaterialDraft = {
+  title: string;
+  description: string;
+  materialType: number;
+  resourceUrl: string;
+  sortOrder: number;
+};
+
 @Component({
   selector: 'app-practicum-management',
   standalone: true,
@@ -68,13 +76,7 @@ export class PracticumManagementComponent implements OnInit {
   readonly drawerSaving = signal(false);
   readonly drawerUploading = signal(false);
 
-  readonly materialDraft = signal<{
-    title: string;
-    description: string;
-    materialType: number;
-    resourceUrl: string;
-    sortOrder: number;
-  } | null>(null);
+  readonly materialDraft = signal<MaterialDraft | null>(null);
 
   /** 基本信息 + 资料（同一 DTO，保存时一并提交）。 */
   form: CreateUpdatePracticumProjectDto = this.freshForm();
@@ -230,6 +232,18 @@ export class PracticumManagementComponent implements OnInit {
       this.materialDraft.set(null);
       this.drawerUploading.set(false);
     }, 200);
+  }
+
+  /**
+   * 用新对象替换当前 draft 的指定字段。
+   * 直接对 draft.materialType = X 之类的就地修改不会触发 signal-aware 的
+   * 变更检测，导致 *ngIf="draft.materialType === 3" 这类条件不重渲染、
+   * “资料类型”点完之后下一项该换不换。这里统一走 set + 新对象。
+   */
+  patchDraft(patch: Partial<MaterialDraft>): void {
+    const cur = this.materialDraft();
+    if (!cur) return;
+    this.materialDraft.set({ ...cur, ...patch });
   }
 
   saveDrawer(): void {

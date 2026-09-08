@@ -78,7 +78,7 @@
   <nz-modal
     [nzVisible]="simulationModalVisible()"
     [nzTitle]="(simulationModalDraft()?.editingId ? '编辑镜像信息' : '上传新镜像')"
-    nzWidth="560"
+    [nzWidth]="560"
     (nzOnCancel)="closeSimulationModal()"
     (nzVisibleChange)="simulationModalVisible.set($event)"
     [nzFooter]="simulationModalFooter">
