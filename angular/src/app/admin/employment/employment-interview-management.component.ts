@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
@@ -27,9 +26,10 @@ import {
   RecordInterviewResultDto,
 } from '../../employment/employment.service';
 
-interface ApplicationNode {
-  application: JobApplicationDto;
-  interviews: InterviewScheduleDto[];
+interface InterviewStudent {
+  id: string;
+  name: string;
+  count: number;
 }
 
 @Component({
@@ -37,7 +37,7 @@ interface ApplicationNode {
   standalone: true,
   imports: [
     CommonModule, DatePipe, FormsModule,
-    NzButtonModule, NzCardModule, NzInputModule, NzModalModule,
+    NzButtonModule, NzInputModule, NzModalModule,
     NzSelectModule, NzTableModule, NzTagModule, NzIconModule,
     NzTooltipModule, NzEmptyModule, NzSpinModule, NzPopconfirmModule,
   ],
@@ -60,12 +60,15 @@ export class EmploymentInterviewManagementComponent implements OnInit {
   readonly interviewerOptions = signal<InterviewerCandidateDto[]>([]);
   readonly loading = signal(false);
 
-  /** 层级结构：投递（父）→ 关联的面试记录（子） */
-  readonly tree = signal<ApplicationNode[]>([]);
-  readonly expanded = signal<Set<string>>(new Set());
+  /** 页签：0 投递管理，1 面试管理 */
+  activeTab = 0;
 
-  /** 顶层表格列数（展开单元格跨列用） */
-  readonly colSpan = 8;
+  /** 投递搜索（输入框 + 已应用的关键字） */
+  searchKeyword = '';
+  readonly appliedKeyword = signal('');
+
+  /** 面试管理：当前选中的学生 */
+  selectedStudentId: string | null = null;
 
   readonly appStatus = EmploymentApplicationStatus;
   readonly interviewResults = EmploymentInterviewResult;
@@ -119,36 +122,74 @@ export class EmploymentInterviewManagementComponent implements OnInit {
   reload(): void {
     this.loading.set(true);
     this.employmentService.getJobApplicationList({ skipCount: 0, maxResultCount: 200 }).subscribe({
-      next: result => { this.applications.set(result.items || []); this.loading.set(false); this.rebuildTree(); },
+      next: result => { this.applications.set(result.items || []); this.loading.set(false); },
       error: () => { this.message.error('加载投递列表失败'); this.loading.set(false); },
     });
     this.employmentService.getInterviewList({ skipCount: 0, maxResultCount: 200 }).subscribe({
-      next: result => { this.interviews.set(result.items || []); this.rebuildTree(); },
+      next: result => {
+        this.interviews.set(result.items || []);
+        // 保持选中学生有效，否则默认选中第一个有面试的学生
+        const ids = new Set((result.items || []).map(i => i.studentId));
+        if (!this.selectedStudentId || !ids.has(this.selectedStudentId)) {
+          this.selectedStudentId = result.items?.[0]?.studentId ?? null;
+        }
+      },
       error: () => this.message.error('加载面试记录失败'),
     });
   }
 
-  /** 按投递分组，把每条面试挂到对应投递下，组成层级结构 */
-  private rebuildTree(): void {
+  // ─── 投递管理：搜索 ───────────────────────
+
+  applySearch(): void {
+    this.appliedKeyword.set(this.searchKeyword.trim());
+  }
+
+  resetSearch(): void {
+    this.searchKeyword = '';
+    this.appliedKeyword.set('');
+  }
+
+  /** 按学生姓名 / 岗位 / 企业过滤投递 */
+  filteredApplications(): JobApplicationDto[] {
+    const kw = this.appliedKeyword().toLowerCase();
     const apps = this.applications();
-    const ints = this.interviews();
-    this.tree.set(apps.map(app => ({
-      application: app,
-      interviews: ints
-        .filter(i => i.applicationId === app.id)
-        .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()),
-    })));
+    if (!kw) return apps;
+    return apps.filter(a =>
+      (a.studentName || '').toLowerCase().includes(kw) ||
+      (a.jobTitle || '').toLowerCase().includes(kw) ||
+      (a.companyName || '').toLowerCase().includes(kw));
   }
 
-  isExpanded(applicationId: string): boolean {
-    return this.expanded().has(applicationId);
+  // ─── 面试管理：按学生分组 ─────────────────
+
+  /** 有面试记录的学生列表（去重 + 计数，按姓名排序） */
+  interviewStudents(): InterviewStudent[] {
+    const map = new Map<string, InterviewStudent>();
+    for (const i of this.interviews()) {
+      const key = i.studentId || i.studentName || '';
+      if (!key) continue;
+      const cur = map.get(key);
+      if (cur) { cur.count++; }
+      else { map.set(key, { id: i.studentId || key, name: i.studentName || '-', count: 1 }); }
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
   }
 
-  toggleExpand(applicationId: string, event?: Event): void {
-    event?.stopPropagation();
-    const next = new Set(this.expanded());
-    if (next.has(applicationId)) { next.delete(applicationId); } else { next.add(applicationId); }
-    this.expanded.set(next);
+  selectStudent(id: string): void {
+    this.selectedStudentId = id;
+  }
+
+  selectedStudent(): InterviewStudent | undefined {
+    if (!this.selectedStudentId) return undefined;
+    return this.interviewStudents().find(s => s.id === this.selectedStudentId);
+  }
+
+  /** 当前选中学生的面试记录（按时间正序） */
+  studentInterviews(): InterviewScheduleDto[] {
+    if (!this.selectedStudentId) return [];
+    return this.interviews()
+      .filter(i => i.studentId === this.selectedStudentId)
+      .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
   }
 
   loadInterviewerOptions(): void {
@@ -307,13 +348,6 @@ export class EmploymentInterviewManagementComponent implements OnInit {
     if (s === EmploymentApplicationStatus.Offered) return 'status-tag hired';
     if (s === EmploymentApplicationStatus.Rejected || s === EmploymentApplicationStatus.Withdrawn) return 'status-tag rejected';
     return 'status-tag pending';
-  }
-
-  getResultTagClass(r: EmploymentInterviewResult): string {
-    if (r === EmploymentInterviewResult.Passed) return 'record-result pass';
-    if (r === EmploymentInterviewResult.Failed) return 'record-result fail';
-    if (r === EmploymentInterviewResult.Deferred) return 'record-result pending';
-    return 'record-result pending';
   }
 
   getResultLabel(r: EmploymentInterviewResult): string {

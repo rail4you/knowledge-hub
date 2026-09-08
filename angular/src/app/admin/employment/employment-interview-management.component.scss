@@ -63,30 +63,165 @@
   flex-shrink: 0;
 }
 
-.create-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  background: var(--kh-accent);
-  color: #fff;
-  font-size: 13.5px;
-  font-weight: 600;
-  padding: 9px 20px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: background 0.2s;
-  box-shadow: 0 3px 10px -3px rgba(24, 144, 255, 0.45);
-  svg { width: 14px; height: 14px; }
-  &:hover { background: var(--kh-accent-deep); }
-}
-
 .table-wrap {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
 }
+
+// ───── 页签（与实训任务页统一） ─────
+.tabs-bar {
+  display: flex;
+  gap: 0;
+  padding: 0 16px;
+  border-bottom: 2px solid #e8e8e8;
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  padding: 10px 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+
+  &:hover { color: #1890ff; }
+  &.active { color: #1890ff; border-bottom-color: #1890ff; font-weight: 500; }
+}
+
+.tab-pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// ───── 工具栏搜索 ─────
+.search-box {
+  display: flex; align-items: center; gap: 8px;
+  flex: 1 1 280px; max-width: 480px; position: relative;
+  svg {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    width: 15px; height: 15px; color: #bfbfbf; pointer-events: none;
+  }
+  input {
+    flex: 1; height: 38px; padding: 0 12px 0 34px;
+    border: 1px solid var(--kh-line-2); border-radius: 20px;
+    font-size: 13.5px; color: var(--kh-ink); background: #fff;
+    outline: none; transition: border-color .2s, box-shadow .2s;
+    &::placeholder { color: #9aa9ba; }
+    &:focus { border-color: var(--kh-accent); box-shadow: 0 0 0 3px var(--kh-accent-soft); }
+  }
+}
+.search-btn {
+  height: 38px; padding: 0 16px;
+  background: var(--kh-accent); color: #fff; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: background .2s;
+  flex-shrink: 0;
+  &:hover { background: var(--kh-accent-deep); }
+}
+.reset-btn {
+  height: 38px; padding: 0 16px;
+  border: 1px solid var(--kh-line-2); border-radius: 8px;
+  background: var(--kh-panel); color: var(--kh-ink-2); font-size: 13px; cursor: pointer;
+  flex-shrink: 0;
+  &:hover { border-color: var(--kh-accent); color: var(--kh-accent); }
+}
+
+// ───── 面试管理两栏 ─────
+.split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  overflow: hidden;
+}
+.student-list {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+.student-list__title {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kh-ink);
+  border-bottom: 1px solid var(--kh-line-2);
+  flex-shrink: 0;
+}
+.student-list__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.student-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--kh-ink);
+  transition: background .15s, border-color .15s;
+  &:hover { background: #f5f7fa; }
+  &.active {
+    background: var(--kh-accent-ghost);
+    border-color: var(--kh-accent);
+    color: var(--kh-accent);
+    font-weight: 600;
+  }
+}
+.student-item__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.student-item__count {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--kh-muted);
+  .student-item.active & { color: var(--kh-accent); }
+}
+.interview-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--kh-line-2);
+  flex-shrink: 0;
+  strong { font-size: 14px; color: var(--kh-ink); }
+}
+.muted { color: #bfbfbf; font-size: 13px; }
 
 // ── card wrapper ──────────────────────────────────────────
 .table-card {
@@ -128,17 +263,10 @@
     text-align: center;
   }
   .ant-table-tbody > tr:nth-child(even) > td {
-    // nz-table striped via even app rows — skip expand rows handled separately
-  }
-  .ant-table-tbody > tr.app-row:nth-child(4n-2) > td,
-  .ant-table-tbody > tr.app-row:nth-child(4n) > td {
-    // fallback — prototype uses tbody tr:nth-child(even) but our DOM intermixes expand rows
+    background: #fafbfd !important;
   }
   .ant-table-tbody > tr:hover > td {
     background: #e6f7ff !important;
-  }
-  .ant-table-tbody > tr.expanded > td {
-    background: #f0f7ff !important;
   }
   .ant-table-pagination {
     padding: 12px 16px;
@@ -149,48 +277,7 @@
   }
 }
 
-// ── expand icon ───────────────────────────────────────────
-.expand-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  color: #999;
-  transition: color 0.2s;
-  user-select: none;
-  &:hover { color: var(--kh-accent); }
-  svg {
-    width: 12px;
-    height: 12px;
-    transition: transform 0.25s;
-  }
-}
-tr.expanded .expand-icon svg {
-  transform: rotate(90deg);
-}
-
-// ── student cell ──────────────────────────────────────────
-.student-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.student-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--kh-accent), #36cfc9);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-}
+// ── student name ──────────────────────────────────────────
 .student-name {
   font-size: 14px;
   font-weight: 600;
@@ -213,19 +300,6 @@ tr.expanded .expand-icon svg {
   &.hired { background: var(--kh-ok); }
   &.pending { background: var(--kh-accent); }
   &.rejected { background: var(--kh-bad); }
-}
-
-// ── interview count ───────────────────────────────────────
-.interview-count {
-  color: var(--kh-accent);
-  font-size: 13px;
-  cursor: pointer;
-  font-weight: 500;
-  &:hover { text-decoration: underline; }
-}
-.interview-none {
-  color: #bfbfbf;
-  font-size: 13px;
 }
 
 // ── op button ─────────────────────────────────────────────
@@ -255,20 +329,6 @@ tr.expanded .expand-icon svg {
   justify-content: center;
 }
 
-// ── expand row ────────────────────────────────────────────
-.expand-row {
-  display: none;
-  &.show { display: table-row; }
-}
-.expand-cell {
-  background: #f7f8fa !important;
-  padding: 0 !important;
-  border-bottom: 1px solid var(--kh-line-2) !important;
-  text-align: left !important;
-}
-.expand-content {
-  padding: 16px 20px;
-}
 .empty-tip {
   display: flex;
   flex-direction: column;
@@ -282,80 +342,7 @@ tr.expanded .expand-icon svg {
   font-size: 13px;
 }
 
-// ── timeline ──────────────────────────────────────────────
-.timeline {
-  position: relative;
-  padding-left: 24px;
-  &::before {
-    content: '';
-    position: absolute;
-    left: 7px;
-    top: 8px;
-    bottom: 8px;
-    width: 2px;
-    background: var(--kh-line-2);
-  }
-}
-.timeline-item {
-  position: relative;
-  padding-bottom: 16px;
-  &:last-child { padding-bottom: 0; }
-}
-.timeline-dot {
-  position: absolute;
-  left: -24px;
-  top: 4px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  border: 3px solid var(--kh-accent);
-  z-index: 1;
-}
-.timeline-item.completed .timeline-dot { border-color: var(--kh-ok); }
-.timeline-item.cancelled .timeline-dot { border-color: #bfbfbf; }
-
-// ── interview record card ─────────────────────────────────
-.interview-record {
-  background: var(--kh-panel);
-  border-radius: 8px;
-  padding: 12px 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f0f0;
-}
-.record-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.record-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.record-round {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--kh-ink);
-}
-.record-interviewer {
-  font-size: 13px;
-  color: var(--kh-muted);
-}
-.record-time {
-  font-size: 13px;
-  color: #8c8c8c;
-}
-.record-tags {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+// ── 面试状态/地点 ─────────────────────────────────────────
 .record-status {
   display: inline-block;
   padding: 2px 10px;
@@ -363,30 +350,9 @@ tr.expanded .expand-icon svg {
   font-size: 12px;
   font-weight: 600;
   color: #fff;
+  white-space: nowrap;
   &.completed { background: var(--kh-ok); }
   &.pending { background: var(--kh-accent); }
-  &.cancelled { background: #8c8c8c; }
-}
-.record-result {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-  &.pass { background: var(--kh-accent); }
-  &.fail { background: var(--kh-bad); }
-  &.pending { background: #faad14; }
-}
-.record-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.sub-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 .info-chip {
   display: inline-flex;
@@ -408,17 +374,11 @@ tr.expanded .expand-icon svg {
   text-decoration: none;
   &:hover { text-decoration: underline; }
 }
-.record-tip {
-  font-size: 13px;
-  color: #8c8c8c;
-  padding-top: 8px;
-  border-top: 1px dashed #f0f0f0;
-}
 .record-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  margin-top: 8px;
   flex-wrap: wrap;
 }
 .record-action {
@@ -428,24 +388,6 @@ tr.expanded .expand-icon svg {
   text-decoration: none;
   &:hover { text-decoration: underline; }
   &.delete { color: var(--kh-bad); }
-}
-
-.add-interview-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 12px;
-  background: transparent;
-  color: var(--kh-accent);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 6px 14px;
-  border-radius: 6px;
-  border: 1px dashed var(--kh-accent);
-  cursor: pointer;
-  transition: all 0.2s;
-  &:hover { background: var(--kh-accent-ghost); }
-  svg { width: 12px; height: 12px; }
 }
 
 // ── modal ─────────────────────────────────────────────────

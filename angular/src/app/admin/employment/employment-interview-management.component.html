@@ -1,164 +1,160 @@
 <div class="training-page">
   <div class="page-header">
-    <h1>面试管理</h1>
-    <p>共<b>{{ tree().length }}</b>份投递，点击展开行查看并操作为该投递安排的面试记录。</p>
+    <h1>岗位投递和面试管理</h1>
+    <p>共<b>{{ applications().length }}</b>份投递，<b>{{ interviews().length }}</b>场面试。</p>
   </div>
 
   <div class="table-card list-card">
-    <div class="table-toolbar">
-      <button class="create-btn" type="button" (click)="reload()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        刷新列表
-      </button>
+    <div class="tabs-bar">
+      <button class="tab-btn" [class.active]="activeTab === 0" (click)="activeTab = 0">投递管理</button>
+      <button class="tab-btn" [class.active]="activeTab === 1" (click)="activeTab = 1">面试管理</button>
     </div>
 
-    <div class="table-wrap">
-    @if (loading()) {
-      <div class="loading-wrap"><nz-spin nzSimple></nz-spin></div>
-    } @else if (tree().length === 0) {
-      <div class="empty-tip">
-        <nz-empty nzNotFoundImage="simple" nzNotFoundContent="暂无投递记录"></nz-empty>
+    <!-- Tab 0: 投递管理（按岗位的每份学生投递一行） -->
+    <div class="tab-pane" *ngIf="activeTab === 0">
+      <div class="table-toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" [(ngModel)]="searchKeyword" (keyup.enter)="applySearch()" placeholder="搜索学生 / 岗位 / 企业" />
+        </div>
+        <button class="search-btn" type="button" (click)="applySearch()">搜索</button>
+        <button class="reset-btn" type="button" (click)="resetSearch()">重置</button>
       </div>
-    } @else {
-      <nz-table [nzData]="tree()" [nzFrontPagination]="true" [nzPageSize]="10" nzSize="middle" class="interview-table">
-        <thead>
-          <tr>
-            <th nzWidth="40px"></th>
-            <th>学生</th>
-            <th>岗位</th>
-            <th>企业</th>
-            <th>投递时间</th>
-            <th>投递状态</th>
-            <th>面试情况</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (node of tree(); track node.application.id) {
-            <tr class="app-row" [class.expanded]="isExpanded(node.application.id)" (click)="toggleExpand(node.application.id)">
+
+      <div class="table-wrap">
+      @if (loading()) {
+        <div class="loading-wrap"><nz-spin nzSimple></nz-spin></div>
+      } @else if (filteredApplications().length === 0) {
+        <div class="empty-tip">
+          <nz-empty [nzNotFoundContent]="appliedKeyword() ? '未找到匹配的投递' : '暂无投递记录'"></nz-empty>
+        </div>
+      } @else {
+        <nz-table #appTable [nzData]="filteredApplications()" [nzFrontPagination]="true" [nzShowPagination]="true" [nzPageSize]="10" [nzShowSizeChanger]="true" [nzPageSizeOptions]="[10, 20, 50]" nzSize="middle" class="interview-table">
+          <thead>
+            <tr>
+              <th>学生</th>
+              <th>岗位</th>
+              <th>企业</th>
+              <th>投递时间</th>
+              <th>投递状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let app of appTable.data">
+              <td><span class="student-name">{{ app.studentName || '-' }}</span></td>
+              <td>{{ app.jobTitle || '-' }}</td>
+              <td>{{ app.companyName || '-' }}</td>
+              <td class="time-cell">{{ app.appliedAt | date:'yyyy-MM-dd HH:mm' }}</td>
               <td>
-                <span class="expand-icon" (click)="toggleExpand(node.application.id, $event)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-                </span>
+                <span class="status-tag" [class]="getAppStatusTagClass(app.status)">{{ getAppStatusLabel(app.status) }}</span>
               </td>
               <td>
-                <div class="student-cell">
-                  <div class="student-avatar">{{ (node.application.studentName || '-').charAt(0) }}</div>
-                  <span class="student-name">{{ node.application.studentName || '-' }}</span>
-                </div>
-              </td>
-              <td>{{ node.application.jobTitle || '-' }}</td>
-              <td>{{ node.application.companyName || '-' }}</td>
-              <td class="time-cell">{{ node.application.appliedAt | date:'yyyy-MM-dd HH:mm' }}</td>
-              <td>
-                <span class="status-tag" [class]="getAppStatusTagClass(node.application.status)">{{ getAppStatusLabel(node.application.status) }}</span>
-              </td>
-              <td>
-                @if (node.interviews.length > 0) {
-                  <span class="interview-count" (click)="toggleExpand(node.application.id, $event)">{{ node.interviews.length }}场面试</span>
-                } @else {
-                  <span class="interview-none">暂无</span>
-                }
-              </td>
-              <td>
-                <div class="action-group" (click)="$event.stopPropagation()">
-                  <button class="op-btn" type="button" (click)="openSchedule(node.application)"
-                    [disabled]="node.application.status === appStatus.Offered || node.application.status === appStatus.Rejected || node.application.status === appStatus.Withdrawn">
+                <div class="action-group">
+                  <button class="op-btn" type="button" (click)="openSchedule(app)"
+                    [disabled]="app.status === appStatus.Offered || app.status === appStatus.Rejected || app.status === appStatus.Withdrawn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
                     安排面试
                   </button>
                 </div>
               </td>
             </tr>
+          </tbody>
+        </nz-table>
+      }
+      </div>
+    </div>
 
-            <!-- expand row -->
-            <tr class="expand-row" [class.show]="isExpanded(node.application.id)">
-              <td colspan="8" class="expand-cell">
-                <div class="expand-content">
-                  @if (node.interviews.length === 0) {
-                    <div class="empty-tip">该投递暂未安排面试</div>
-                    <button class="add-interview-btn" type="button" (click)="openSchedule(node.application)">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                      新增面试
-                    </button>
-                  } @else {
-                    <div class="timeline">
-                      @for (item of node.interviews; track item.id) {
-                        <div class="timeline-item" [class.completed]="!!item.completedAt" [class.cancelled]="item.result === interviewResults.Failed">
-                          <div class="timeline-dot"></div>
-                          <div class="interview-record">
-                            <div class="record-header">
-                              <div class="record-title">
-                                <span class="record-round">{{ $index + 1 }}轮</span>
-                                <span class="record-interviewer">面试官：{{ item.interviewerName || '未指定' }}</span>
-                                <span class="record-time">{{ item.scheduledAt | date:'yyyy-MM-dd HH:mm' }}</span>
-                              </div>
-                              <div class="record-tags">
-                                @if (item.completedAt) {
-                                  <span class="record-status completed">已完成</span>
-                                } @else {
-                                  <span class="record-status pending">待完成</span>
-                                }
-                                <span class="record-result" [ngClass]="getResultTagClass(item.result)">{{ getResultLabel(item.result) }}</span>
-                              </div>
-                            </div>
-
-                            <div class="record-body">
-                              @if (item.location || item.meetingUrl) {
-                                <div class="sub-meta-row">
-                                  @if (item.location) {
-                                    <span class="info-chip">
-                                      <span nz-icon nzType="environment" nzTheme="outline"></span>
-                                      {{ item.location }}
-                                    </span>
-                                  }
-                                  @if (item.meetingUrl) {
-                                    <a class="info-chip info-chip--link" [href]="item.meetingUrl" target="_blank">
-                                      <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-                                      会议链接
-                                    </a>
-                                  }
-                                </div>
-                              }
-                              @if (item.note) {
-                                <div class="record-tip">备注：{{ item.note }}</div>
-                              }
-                              @if (item.completionMessage) {
-                                <div class="record-tip">后续提示：{{ item.completionMessage }}</div>
-                              }
-                              @if (item.summary || item.resultComment) {
-                                <div class="record-tip">结果说明：{{ item.summary }}{{ item.summary && item.resultComment ? ' —— ' : '' }}{{ item.resultComment }}</div>
-                              }
-                            </div>
-
-                            <div class="record-actions">
-                              @if (canComplete(item)) {
-                                <a class="record-action" (click)="openComplete(item)">完成</a>
-                              }
-                              <a class="record-action" (click)="openUpdate(item)">编辑面试记录</a>
-                              @if (canRecordResult(item)) {
-                                <a class="record-action" (click)="openResult(item)">回填结果</a>
-                              }
-                              <a class="record-action delete"
-                                nz-popconfirm nzPopconfirmTitle="确定删除该面试记录？关联的投递状态将恢复。"
-                                (nzOnConfirm)="deleteInterview(item)">删除</a>
-                            </div>
-                          </div>
-                        </div>
+    <!-- Tab 1: 面试管理（左学生列表 + 右面试表格） -->
+    <div class="tab-pane" *ngIf="activeTab === 1">
+      <div class="split">
+        <div class="student-list">
+          <div class="student-list__title">面试学生（{{ interviewStudents().length }}）</div>
+          <div class="student-list__body">
+            @for (s of interviewStudents(); track s.id) {
+              <button class="student-item" [class.active]="s.id === selectedStudentId" (click)="selectStudent(s.id)">
+                <span class="student-item__name">{{ s.name }}</span>
+                <span class="student-item__count">{{ s.count }}场</span>
+              </button>
+            } @empty {
+              <nz-empty nzNotFoundContent="暂无面试记录"></nz-empty>
+            }
+          </div>
+        </div>
+        <div class="interview-panel">
+          @if (selectedStudent(); as st) {
+            <div class="panel-header">
+              <strong>{{ st.name }}</strong>
+              <span class="muted">共 {{ studentInterviews().length }} 场面试</span>
+            </div>
+            <div class="table-wrap">
+              <nz-table #ivTable [nzData]="studentInterviews()" [nzFrontPagination]="true" [nzShowPagination]="true" [nzPageSize]="10" [nzShowSizeChanger]="true" [nzPageSizeOptions]="[10, 20, 50]" nzSize="middle" class="interview-table">
+                <thead>
+                  <tr>
+                    <th>岗位</th>
+                    <th>面试官</th>
+                    <th>面试时间</th>
+                    <th>地点 / 会议</th>
+                    <th>状态</th>
+                    <th>结果</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of ivTable.data">
+                    <td>{{ item.jobTitle || '-' }}</td>
+                    <td>{{ item.interviewerName || '未指定' }}</td>
+                    <td class="time-cell">{{ item.scheduledAt | date:'yyyy-MM-dd HH:mm' }}</td>
+                    <td>
+                      @if (item.location) {
+                        <span class="info-chip">
+                          <span nz-icon nzType="environment" nzTheme="outline"></span>
+                          {{ item.location }}
+                        </span>
                       }
-                    </div>
-                    <button class="add-interview-btn" type="button" (click)="openSchedule(node.application)">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                      新增面试
-                    </button>
-                  }
-                </div>
-              </td>
-            </tr>
+                      @if (item.meetingUrl) {
+                        <a class="info-chip info-chip--link" [href]="item.meetingUrl" target="_blank" rel="noopener noreferrer">
+                          <span nz-icon nzType="video-camera" nzTheme="outline"></span>
+                          会议链接
+                        </a>
+                      }
+                      @if (!item.location && !item.meetingUrl) {
+                        <span class="muted">—</span>
+                      }
+                    </td>
+                    <td>
+                      @if (item.completedAt) {
+                        <span class="record-status completed">已完成</span>
+                      } @else {
+                        <span class="record-status pending">待完成</span>
+                      }
+                    </td>
+                    <td><nz-tag [nzColor]="getResultColor(item.result)">{{ getResultLabel(item.result) }}</nz-tag></td>
+                    <td>
+                      <div class="record-actions">
+                        @if (canComplete(item)) {
+                          <a class="record-action" (click)="openComplete(item)">完成</a>
+                        }
+                        <a class="record-action" (click)="openUpdate(item)">编辑</a>
+                        @if (canRecordResult(item)) {
+                          <a class="record-action" (click)="openResult(item)">回填结果</a>
+                        }
+                        <a class="record-action delete"
+                          nz-popconfirm nzPopconfirmTitle="确定删除该面试记录？关联的投递状态将恢复。"
+                          (nzOnConfirm)="deleteInterview(item)">删除</a>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </nz-table>
+            </div>
+          } @else {
+            <div class="empty-tip">
+              <nz-empty nzNotFoundContent="暂无面试记录"></nz-empty>
+            </div>
           }
-        </tbody>
-      </nz-table>
-    }
+        </div>
+      </div>
     </div>
   </div>
 </div>
