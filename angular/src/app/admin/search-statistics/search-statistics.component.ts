@@ -181,10 +181,13 @@ export class SearchStatisticsComponent implements OnInit, OnDestroy {
       ['统计项', '数值'],
       ['全部检索次数', d.all.totalSearches],
       ['全部今日检索', d.all.todaySearches],
+      ['全部活跃用户', d.all.activeUsers],
       ['文档检索次数', d.document.totalSearches],
       ['文档今日检索', d.document.todaySearches],
+      ['文档活跃用户', d.document.activeUsers],
       ['视频检索次数', d.video.totalSearches],
-      ['视频今日检索', d.video.todaySearches]
+      ['视频今日检索', d.video.todaySearches],
+      ['视频活跃用户', d.video.activeUsers]
     ];
     XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(overview), '概览');
 
@@ -201,14 +204,14 @@ export class SearchStatisticsComponent implements OnInit, OnDestroy {
     XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(popular), '热门搜索');
 
     const resources = [
-      ['资源名称', '搜索次数'],
-      ...d.topResources.map(r => [r.resourceName, r.searchCount])
+      ['排名', '资源名称', '阅读量'],
+      ...d.topResources.map((r, i) => [i + 1, r.resourceName, r.viewCount])
     ];
     XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(resources), '热门资源');
 
     const rated = [
-      ['资源名称', '平均评分', '评价数'],
-      ...d.topRatedResources.map(r => [r.resourceName, r.averageRating, r.reviewCount])
+      ['排名', '资源名称', '平均评分', '评价数'],
+      ...d.topRatedResources.map((r, i) => [i + 1, r.resourceName, r.averageRating, r.reviewCount])
     ];
     XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(rated), '高评分资源');
 

@@ -1,14 +1,15 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NewsArticleDto, NewsCategoryDto, NewsService } from './news.service';
 
 @Component({
@@ -17,14 +18,15 @@ import { NewsArticleDto, NewsCategoryDto, NewsService } from './news.service';
   imports: [
     CommonModule,
     FormsModule,
-    RouterModule,
     NzCardModule,
     NzButtonModule,
     NzInputModule,
+    NzIconModule,
     NzSelectModule,
     NzTagModule,
     NzSpinModule,
     NzEmptyModule,
+    NzPaginationModule,
   ],
   templateUrl: './news-list.component.html',
   styleUrls: ['./news-list.component.scss'],
@@ -32,7 +34,6 @@ import { NewsArticleDto, NewsCategoryDto, NewsService } from './news.service';
 })
 export class NewsListComponent implements OnInit {
   private readonly newsService = inject(NewsService);
-  private readonly router = inject(Router);
 
   readonly loading = signal(false);
   readonly articles = signal<NewsArticleDto[]>([]);
@@ -40,6 +41,10 @@ export class NewsListComponent implements OnInit {
   readonly categories = signal<NewsCategoryDto[]>([]);
   readonly filter = signal('');
   readonly categoryId = signal<string | null>(null);
+  // 文章列表分页（服务端分页）
+  readonly total = signal(0);
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(10);
 
   ngOnInit(): void {
     this.loadCategories();
@@ -58,11 +63,12 @@ export class NewsListComponent implements OnInit {
     this.newsService.getPublishedArticles({
       filter: this.filter() || undefined,
       categoryId: this.categoryId() || undefined,
-      skipCount: 0,
-      maxResultCount: 30,
+      skipCount: (this.pageIndex() - 1) * this.pageSize(),
+      maxResultCount: this.pageSize(),
     }).subscribe({
       next: result => {
         this.articles.set(result.items || []);
+        this.total.set(result.totalCount || 0);
         this.loading.set(false);
       },
       error: () => {
@@ -71,14 +77,20 @@ export class NewsListComponent implements OnInit {
     });
   }
 
+  onPageIndexChange(index: number): void {
+    this.pageIndex.set(index);
+    this.loadArticles();
+  }
+
+  onFilterChange(): void {
+    this.pageIndex.set(1);
+    this.loadArticles();
+  }
+
   loadHotArticles(): void {
     this.newsService.getHotArticles().subscribe({
       next: items => this.hotArticles.set(items || []),
     });
-  }
-
-  openArticle(id: string): void {
-    this.router.navigate(['/news', id]);
   }
 
   categoryOptions(): NewsCategoryDto[] {

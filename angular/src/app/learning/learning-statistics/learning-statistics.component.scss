@@ -1,20 +1,384 @@
-.learning-statistics-container {
-  padding: 16px;
-}
-
-.filter-bar {
+.stats-container {
+  padding: 24px 32px;
+  max-width: 1440px;
+  margin: 0 auto;
   display: flex;
-  gap: 16px;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 24px;
+  background: #f5f7fa;
+  min-height: calc(100vh - 120px);
 }
 
-.overview-cards {
-  margin-top: 16px;
+.page-header {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
+  padding: 16px 20px;
+  flex-shrink: 0;
+
+  h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--kh-ink);
+  }
+  .subtitle {
+    margin: 4px 0 0;
+    color: var(--kh-muted);
+    font-size: 13px;
+  }
 }
 
 .loading-container {
   display: flex;
   justify-content: center;
-  padding: 60px;
+  padding: 80px 0;
+}
+
+// ===== Content Layout: left course list + right statistics =====
+// 右侧随页面自然撑开（页面级滚动），左侧课程面板粘性定位
+.content-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-height: calc(100vh - 300px);
+
+  &.no-selection {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+}
+
+// ===== Left Course Panel (sticky, 内部列表独立滚动) =====
+.course-panel {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 180px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::ng-deep .ant-card-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .course-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
+  }
+
+  .course-header-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .course-count {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    background: #f5f5f5;
+    padding: 1px 8px;
+    border-radius: 10px;
+  }
+
+  .course-search {
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  .course-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .course-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid transparent;
+
+    &:hover {
+      background: #f5f5f5;
+    }
+
+    &.active {
+      background: #e6f7ff;
+      border-color: #91caff;
+    }
+
+    .course-icon {
+      font-size: 18px;
+      color: #1890ff;
+      flex-shrink: 0;
+    }
+
+    .course-item-info {
+      flex: 1;
+      min-width: 0;
+
+      .course-item-name {
+        font-size: 14px;
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .course-item-meta {
+        font-size: 12px;
+        color: rgba(0, 0, 0, 0.45);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+.select-hint-panel {
+  min-height: calc(100vh - 300px);
+
+  ::ng-deep .ant-card-body {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+  }
+}
+
+// ===== Detail Column (right statistics, 占据页面高度自然撑开) =====
+.detail-column {
+  min-height: calc(100vh - 300px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// ===== Toolbar Card (buttons on top of right column) =====
+.toolbar-card {
+  border-radius: 12px;
+  flex-shrink: 0;
+
+  ::ng-deep .ant-card-body {
+    padding: 12px 20px;
+  }
+
+  .toolbar-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .toolbar-course-name {
+    font-size: 15px;
+    font-weight: 600;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .toolbar-hint {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    white-space: nowrap;
+  }
+}
+
+.export-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .export-course {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .export-label {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.65);
+  }
+}
+
+// ===== Summary grid (used inside student tab) =====
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.tab-summary-grid {
+  margin-bottom: 16px;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 12px;
+  border-right: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #fafafa;
+  }
+
+  &:nth-child(3) { border-right: none; }
+  &:nth-child(6) { border-right: none; }
+
+  .summary-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1677ff;
+    line-height: 1.1;
+  }
+
+  .summary-label {
+    font-size: 12px;
+    color: #8c8c8c;
+    white-space: nowrap;
+  }
+}
+
+// ===== Tabs Card =====
+.stats-tabs-card {
+  border-radius: 12px;
+
+  ::ng-deep .ant-card-body {
+    padding: 8px 20px 20px;
+  }
+
+  ::ng-deep .ant-tabs-nav {
+    margin-bottom: 16px;
+  }
+}
+
+// ===== Table Cards (legacy titled cards + tables inside tabs card) =====
+nz-card[nzTitle],
+.stats-tabs-card {
+  border-radius: 12px;
+
+  ::ng-deep .ant-card-head {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 0 20px;
+    min-height: 48px;
+
+    .ant-card-head-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a1a2e;
+      padding: 12px 0;
+    }
+  }
+
+  ::ng-deep .ant-card-body {
+    padding: 4px 20px 20px;
+  }
+
+  nz-table {
+    width: 100%;
+
+    ::ng-deep .ant-table {
+      width: 100%;
+    }
+
+    ::ng-deep .ant-table-container {
+      width: 100%;
+    }
+
+    ::ng-deep .ant-table-thead > tr > th {
+      background: #fafafa;
+      font-size: 13px;
+      font-weight: 600;
+      color: #595959;
+      padding: 10px 16px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    ::ng-deep .ant-table-tbody > tr > td {
+      padding: 10px 16px;
+      font-size: 13px;
+      color: #262626;
+    }
+
+    ::ng-deep .ant-table-tbody > tr:hover > td {
+      background: #f0f5ff !important;
+    }
+  }
+}
+
+@media (max-width: 1100px) {
+  .summary-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    .summary-item:nth-child(3) { border-right: 1px solid #f0f0f0 !important; }
+    .summary-item:nth-child(6) { border-right: none !important; }
+  }
+}
+
+@media (max-width: 1100px) {
+  .content-layout,
+  .content-layout.no-selection {
+    grid-template-columns: 1fr;
+  }
+
+  .course-panel {
+    position: static;
+    max-height: none;
+  }
+
+  .course-panel .course-list {
+    max-height: 320px;
+  }
+}
+
+@media (max-width: 700px) {
+  .stats-container {
+    padding: 16px;
+  }
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    .summary-item:nth-child(odd) { border-right: 1px solid #f0f0f0 !important; }
+    .summary-item:nth-child(even) { border-right: none !important; }
+  }
 }

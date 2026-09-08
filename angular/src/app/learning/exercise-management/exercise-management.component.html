@@ -57,7 +57,7 @@
         <label class="filter-label">题型</label>
         <nz-select
           [ngModel]="selectedType()"
-          (ngModelChange)="selectedType.set($event)"
+          (ngModelChange)="onTypeFilterChange($event)"
           nzPlaceHolder="全部题型"
           nzAllowClear
           class="filter-select"
@@ -129,7 +129,16 @@
       </nz-empty>
     } @else {
       <nz-table
-        [nzData]="filteredExercises()"
+        [nzData]="pagedExercises()"
+        [nzFrontPagination]="false"
+        [nzTotal]="filteredExercises().length"
+        [nzPageIndex]="pageIndex()"
+        [nzPageSize]="pageSize()"
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)"
+        [nzShowSizeChanger]="true"
+
+        [nzShowTotal]="totalTemplate"
         nzSize="middle"
         [nzScroll]="{ x: 880 }"
       >
@@ -153,7 +162,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (exercise of filteredExercises(); track exercise.id) {
+          @for (exercise of pagedExercises(); track exercise.id) {
             <tr>
               <td class="col-checkbox" (click)="$event.stopPropagation()">
                 <label
@@ -211,6 +220,8 @@
           }
         </tbody>
       </nz-table>
+
+      <ng-template #totalTemplate let-total>共 {{ total }} 条</ng-template>
     }
   </nz-card>
 

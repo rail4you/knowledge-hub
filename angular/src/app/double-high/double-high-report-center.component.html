@@ -1,6 +1,14 @@
 <div class="report-center-page">
-  <nz-card nzTitle="报表导出中心">
-    <nz-table [nzData]="projects()" [nzFrontPagination]="false">
+  <div class="page-header">
+    <h1>报表导出中心</h1>
+    <p>按项目导出双高评估报表，并查看最近导出记录。</p>
+  </div>
+
+  <nz-card class="list-card" nzTitle="项目报表">
+    <nz-table [nzData]="pagedProjects()" [nzFrontPagination]="false" [nzTotal]="projects().length"
+      [nzPageIndex]="projectPageIndex()" [nzPageSize]="projectPageSize()"
+      (nzPageIndexChange)="onProjectPageIndexChange($event)" (nzPageSizeChange)="onProjectPageSizeChange($event)"
+      [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl" [nzNoResult]="emptyProjectTpl">
       <thead>
         <tr>
           <th>项目</th>
@@ -10,20 +18,24 @@
         </tr>
       </thead>
       <tbody>
-        @for (item of projects(); track item.id) {
+        @for (item of pagedProjects(); track item.id) {
           <tr>
             <td>{{ item.title }}</td>
             <td>{{ item.batchCode }}</td>
             <td>{{ item.completionRate }}%</td>
-            <td><button nz-button nzType="primary" (click)="export(item.id)">导出报表</button></td>
+            <td><button nz-button nzType="primary" nzSize="small" (click)="export(item.id)">导出报表</button></td>
           </tr>
         }
       </tbody>
     </nz-table>
+    <ng-template #emptyProjectTpl><nz-empty nzNotFoundContent="暂无项目"></nz-empty></ng-template>
   </nz-card>
 
-  <nz-card nzTitle="最近导出记录">
-    <nz-table [nzData]="reports()" [nzFrontPagination]="false">
+  <nz-card class="list-card" nzTitle="最近导出记录">
+    <nz-table [nzData]="pagedReports()" [nzFrontPagination]="false" [nzTotal]="reports().length"
+      [nzPageIndex]="reportPageIndex()" [nzPageSize]="reportPageSize()"
+      (nzPageIndexChange)="onReportPageIndexChange($event)" (nzPageSizeChange)="onReportPageSizeChange($event)"
+      [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl" [nzNoResult]="emptyReportTpl">
       <thead>
         <tr>
           <th>项目</th>
@@ -33,7 +45,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (item of reports(); track item.id) {
+        @for (item of pagedReports(); track item.id) {
           <tr>
             <td>{{ item.projectTitle }}</td>
             <td>{{ item.reportName }}</td>
@@ -43,5 +55,7 @@
         }
       </tbody>
     </nz-table>
+    <ng-template #emptyReportTpl><nz-empty nzNotFoundContent="暂无导出记录"></nz-empty></ng-template>
   </nz-card>
+  <ng-template #totalTpl let-total>共 {{ total }} 条</ng-template>
 </div>

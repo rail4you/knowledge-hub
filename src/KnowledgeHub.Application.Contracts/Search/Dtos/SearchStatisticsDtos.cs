@@ -53,6 +53,8 @@ public class TopResourceStatsDto
     public int SearchCount { get; set; }
     public int ClickCount { get; set; }
     public double ClickRate { get; set; }
+    /// <summary>资源阅读量（热门资源排行依据）</summary>
+    public int ViewCount { get; set; }
 }
 
 public class TopRatedResourceDto

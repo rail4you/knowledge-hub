@@ -95,6 +95,30 @@ export class ExerciseManagementComponent implements OnInit {
     return list.filter(e => e.type === type);
   });
 
+  // 表格分页（前端分页：数据已全量加载，按页切片展示）
+  pageIndex = signal(1);
+  pageSize = signal(10);
+
+  pagedExercises = computed(() => {
+    const all = this.filteredExercises();
+    const start = (this.pageIndex() - 1) * this.pageSize();
+    return all.slice(start, start + this.pageSize());
+  });
+
+  onPageIndexChange(index: number) {
+    this.pageIndex.set(index);
+  }
+
+  onPageSizeChange(size: number) {
+    this.pageSize.set(size);
+    this.pageIndex.set(1);
+  }
+
+  onTypeFilterChange(type: ExerciseType | null) {
+    this.selectedType.set(type);
+    this.pageIndex.set(1);
+  }
+
   ngOnInit() {
     this.loadCourses();
   }
@@ -123,6 +147,8 @@ export class ExerciseManagementComponent implements OnInit {
 
   onCourseSelected(courseId: string) {
     this.selectedCourseId.set(courseId);
+    this.pageIndex.set(1);
+    this.checkedIds.set(new Set());
     this.loadExercises();
   }
 

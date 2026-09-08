@@ -4,13 +4,22 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 20px 24px 24px;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
   background: var(--kh-canvas);
-  min-height: 100%;
+  min-height: calc(100vh - 120px);
 
-  .page-hero {
+  .page-header {
+    background: var(--kh-panel);
+    border: 1px solid var(--kh-line);
+    border-radius: 12px;
+    box-shadow: var(--kh-shadow-card);
+    padding: 16px 20px;
+    flex-shrink: 0;
+
     h1 { font-size: 20px; font-weight: 700; color: var(--kh-ink); margin: 0 0 4px; line-height: 1.3; }
-    p { font-size: 13.5px; color: var(--kh-muted); margin: 0; line-height: 1.5; }
+    p { font-size: 13px; color: var(--kh-muted); margin: 0; line-height: 1.5; }
   }
 
   .search-bar {
@@ -61,6 +70,9 @@
     background: var(--kh-panel); border: 1px solid var(--kh-line);
     border-radius: var(--kh-r-shell); box-shadow: var(--kh-shadow-card);
     overflow: hidden;
+    min-height: calc(100vh - 360px);
+    display: flex;
+    flex-direction: column;
   }
 
   .name-cell { font-weight: 600; color: var(--kh-ink); text-align: left !important; }
@@ -86,35 +98,13 @@
   }
   .progress-text { font-size: 12px; color: var(--kh-muted); min-width: 36px; text-align: left; }
 
-  .op-links { display: inline-flex; align-items: center; gap: 0; justify-content: center; }
-  .op-link { font-size: 13px; font-weight: 500; cursor: pointer; padding: 0 8px; text-decoration: none; transition: opacity .15s;
-    &.edit { color: var(--kh-accent); }
-    &.delete { color: var(--kh-bad); }
-    &:hover { opacity: .75; text-decoration: underline; }
-  }
-  .op-sep { color: var(--kh-line-2); font-size: 12px; user-select: none; }
+  .op-links { display: inline-flex; align-items: center; justify-content: center; }
 
   .empty-tip {
     display: flex; flex-direction: column; align-items: center; gap: 10px;
     padding: 36px 16px; color: var(--kh-muted); font-size: 13px;
     svg { width: 32px; height: 32px; color: #d9d9d9; }
   }
-
-  .pagination {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 16px; background: var(--kh-panel); border-top: 1px solid var(--kh-line-2);
-  }
-  .page-info { font-size: 12.5px; color: var(--kh-muted); }
-  .page-controls { display: flex; align-items: center; gap: 8px; }
-  .page-btn {
-    width: 30px; height: 30px; border: 1px solid var(--kh-line-2); border-radius: 8px;
-    background: #fff; color: var(--kh-ink-2); font-size: 13px; cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center; transition: all .2s;
-    &:hover:not(:disabled) { border-color: var(--kh-accent); color: var(--kh-accent); }
-    &.active { background: var(--kh-accent); border-color: var(--kh-accent); color: #fff; font-weight: 600; }
-    &:disabled { opacity: .4; cursor: not-allowed; }
-  }
-  .page-size { height: 30px; padding: 0 8px; border: 1px solid var(--kh-line-2); border-radius: 8px; font-size: 13px; color: var(--kh-ink-2); background: #fff; }
 
   ::ng-deep .data-table-host {
     .ant-table { background: transparent; }

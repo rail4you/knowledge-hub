@@ -85,6 +85,30 @@ export class CourseResourceComponent implements OnInit {
 
   selectedCount = computed(() => this.selectedResourceIds().size);
 
+  // 资源库表格分页（前端分页：数据已全量加载，按页切片展示）
+  libPageIndex = signal(1);
+  libPageSize = signal(10);
+
+  pagedAvailableResources = computed(() => {
+    const all = this.availableResources();
+    const start = (this.libPageIndex() - 1) * this.libPageSize();
+    return all.slice(start, start + this.libPageSize());
+  });
+
+  onLibPageIndexChange(index: number) {
+    this.libPageIndex.set(index);
+  }
+
+  onLibPageSizeChange(size: number) {
+    this.libPageSize.set(size);
+    this.libPageIndex.set(1);
+  }
+
+  onSearchTextChange(text: string) {
+    this.searchText.set(text);
+    this.libPageIndex.set(1);
+  }
+
   isAllChecked = computed(() => {
     const avail = this.availableResources();
     return avail.length > 0 && avail.every(r => this.selectedResourceIds().has(r.id));
@@ -113,6 +137,7 @@ export class CourseResourceComponent implements OnInit {
     this.selectedCourseId.set(courseId);
     this.courseResources.set([]);
     this.searchText.set('');
+    this.libPageIndex.set(1);
     this.clearSelection();
     this.loadCourseResources();
     this.loadLibraryResources();

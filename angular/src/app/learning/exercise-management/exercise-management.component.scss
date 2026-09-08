@@ -151,10 +151,28 @@
   }
 }
 
-/* ── Table Card ── */
+/* ── Table Card（占满页面高度，无内容时空状态居中） ── */
 .table-card {
+  min-height: calc(100vh - 340px);
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
   ::ng-deep .ant-card-body {
-    padding: 4px 4px 16px;
+    padding: 16px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  nz-empty,
+  .loading-container {
+    margin: auto;
   }
 }
 

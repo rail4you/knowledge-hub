@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .enrollment-container {
-  padding: 0 24px 24px;
+  padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -28,12 +28,14 @@
   max-width: 100%;
 }
 
-/* ── Page Header（nz-page-header）── */
+/* ── Page Header（内收卡片，与下方筛选卡/表格卡左右对齐）── */
 .page-header {
-  margin: 0 -24px 16px;
-  padding: 16px 24px;
+  margin: 0 0 16px;
+  padding: 16px 20px;
   background: var(--kh-panel);
-  border-bottom: 1px solid var(--kh-line-2);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
 
   /* 标题内图标 + 文字 横排 + 整体不换行 */
   .title-wrap {
@@ -142,10 +144,52 @@
   width: 100%;
 }
 
-/* ── Table Card ── */
+/* ── Table Card（占满页面高度，无内容时空状态居中） ── */
 .table-card {
+  min-height: calc(100vh - 340px);
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
   ::ng-deep .ant-card-body {
-    padding: 4px 4px 16px;
+    padding: 16px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  nz-empty,
+  .loading-container {
+    margin: auto;
+  }
+}
+
+/* ── Table Toolbar（表格上方操作区） ── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+
+  .table-toolbar-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--kh-ink);
+    white-space: nowrap;
+  }
+
+  .table-count {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--kh-muted);
   }
 }
 
@@ -362,11 +406,11 @@
   }
 
   .enrollment-container {
-    padding: 0 12px 12px;
+    padding: 12px;
   }
 
   .page-header {
-    margin: 0 -12px 12px;
+    margin: 0 0 12px;
     padding: 12px;
   }
 }

@@ -1,5 +1,5 @@
 <div class="eval-page">
-  <div class="page-hero">
+  <div class="page-header">
     <h1>双高评估项目</h1>
     <p>配置双高建设评估指标、批次与数据来源</p>
   </div>
@@ -19,7 +19,11 @@
 
   <div class="eval-card">
     <div class="table-card">
-      <nz-table [nzData]="items()" [nzFrontPagination]="false" [nzShowPagination]="false" nzSize="middle" class="data-table-host" [nzNoResult]="emptyTpl">
+      <nz-table [nzData]="pagedItems()" [nzFrontPagination]="false" [nzTotal]="items().length"
+        [nzPageIndex]="pageIndex()" [nzPageSize]="pageSize()"
+        (nzPageIndexChange)="onPageIndexChange($event)" (nzPageSizeChange)="onPageSizeChange($event)"
+        [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl"
+        nzSize="middle" class="data-table-host" [nzNoResult]="emptyTpl">
         <thead>
           <tr>
             <th>项目</th>
@@ -31,7 +35,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (item of items(); track item.id) {
+          @for (item of pagedItems(); track item.id) {
             <tr>
               <td class="name-cell">{{ item.title }}</td>
               <td><span class="batch-tag">{{ item.batchCode }}</span></td>
@@ -49,31 +53,21 @@
               </td>
               <td>
                 <div class="op-links">
-                  <a class="op-link edit" (click)="openEdit(item)">编辑</a>
-                  <span class="op-sep">|</span>
-                  <a class="op-link delete" (click)="delete(item.id)">删除</a>
+                  <button nz-button nzType="link" nzSize="small" (click)="openEdit(item)">编辑</button>
+                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="delete(item.id)">删除</button>
                 </div>
               </td>
             </tr>
           }
         </tbody>
       </nz-table>
+      <ng-template #totalTpl let-total>共 {{ total }} 条</ng-template>
       <ng-template #emptyTpl>
         <div class="empty-tip">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          <span>暂无评估项目，点击右上角新建</span>
+          <span>暂无评估项目，点击上方新建</span>
         </div>
       </ng-template>
-
-      <div class="pagination">
-        <div class="page-info">共 {{ items().length }} 条</div>
-        <div class="page-controls">
-          <button class="page-btn" type="button" disabled>&lt;</button>
-          <button class="page-btn active" type="button">1</button>
-          <button class="page-btn" type="button" disabled>&gt;</button>
-          <select class="page-size" disabled><option>10 条/页</option></select>
-        </div>
-      </div>
     </div>
   </div>
 

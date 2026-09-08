@@ -36,13 +36,42 @@
   display: grid;
   grid-template-columns: 60% 40%;
   gap: 16px;
+  align-items: stretch;
+  // 两栏占满页面：顶栏 + 页头 + 课程选择卡 + 边距约 300px
+  height: calc(100vh - 300px);
+  min-height: 480px;
 }
 
 .tree-panel {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::ng-deep .ant-card-head {
+    flex-shrink: 0;
+  }
+
+  ::ng-deep .ant-card-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
   .tree-toolbar {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
     margin-bottom: 12px;
+    flex-shrink: 0;
   }
 
   .loading-container {
@@ -52,6 +81,9 @@
   }
 
   .tree-view {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     // CDK drag-drop styles
     .cdk-drag-preview {
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
@@ -181,6 +213,30 @@
 }
 
 .detail-panel {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::ng-deep .ant-card-head {
+    flex-shrink: 0;
+  }
+
+  ::ng-deep .ant-card-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
   .detail-content {
     .detail-field {
       margin-bottom: 16px;
@@ -247,6 +303,22 @@
   .mind-map-body {
     flex: 1;
     overflow: hidden;
+  }
+}
+
+@media (max-width: 1100px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .tree-panel,
+  .detail-panel {
+    height: auto;
+  }
+
+  .tree-panel .tree-view {
+    max-height: 420px;
   }
 }
 

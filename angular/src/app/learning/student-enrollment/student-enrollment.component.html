@@ -9,19 +9,6 @@
     <nz-page-header-subtitle>
       管理课程的学生选课名单，支持按课程、租户、状态筛选与跨页批量添加
     </nz-page-header-subtitle>
-    <nz-page-header-extra>
-      <button
-        nz-button
-        nzType="primary"
-        (click)="openAddModal()"
-        [disabled]="!selectedCourseId"
-        nz-tooltip
-        [nzTooltipTitle]="selectedCourseId ? '为当前课程批量添加学生' : '请先选择课程'"
-      >
-        <span nz-icon nzType="plus"></span>
-        添加学生
-      </button>
-    </nz-page-header-extra>
   </nz-page-header>
 
   <nz-card [nzBordered]="false" class="filter-card">
@@ -92,6 +79,25 @@
   </nz-card>
 
   <nz-card [nzBordered]="false" class="table-card">
+    <div class="table-toolbar">
+      <span class="table-toolbar-title">
+        选课名单
+        @if (selectedCourseId && total > 0) {
+          <span class="table-count">共 {{ total }} 人</span>
+        }
+      </span>
+      <button
+        nz-button
+        nzType="primary"
+        (click)="openAddModal()"
+        [disabled]="!selectedCourseId"
+        nz-tooltip
+        [nzTooltipTitle]="selectedCourseId ? '为当前课程批量添加学生' : '请先选择课程'"
+      >
+        <span nz-icon nzType="plus"></span>
+        添加学生
+      </button>
+    </div>
     @if (loading()) {
       <div class="loading-container">
         <nz-spin nzSimple nzSize="large"></nz-spin>
@@ -116,10 +122,12 @@
     } @else {
       <nz-table
         [nzData]="enrollments()"
+        [nzFrontPagination]="false"
         [nzTotal]="total"
         [nzPageSize]="pageSize"
         [nzPageIndex]="pageIndex"
         [nzShowSizeChanger]="true"
+
         [nzShowTotal]="totalTemplate"
         nzSize="middle"
         [nzScroll]="{ x: 720 }"

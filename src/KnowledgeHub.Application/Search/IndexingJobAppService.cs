@@ -164,6 +164,15 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         // Sort merged results by CreationTime descending
         allItems = allItems.OrderByDescending(x => x.CreationTime).ToList();
 
+        // 按资源名称模糊搜索（合并后过滤，资源名在内存中关联）
+        if (!string.IsNullOrWhiteSpace(input.Filter))
+        {
+            var keyword = input.Filter.Trim();
+            allItems = allItems
+                .Where(x => x.ResourceName != null && x.ResourceName.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
         var totalCount = allItems.Count;
         var pagedItems = allItems.Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
 

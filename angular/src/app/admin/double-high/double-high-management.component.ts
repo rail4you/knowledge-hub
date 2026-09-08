@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -30,6 +30,23 @@ export class DoubleHighManagementComponent implements OnInit {
 
   readonly items = signal<DoubleHighProjectDto[]>([]);
   readonly statuses = DoubleHighProjectStatus;
+  // 表格分页（前端分页：数据已全量加载，按页切片展示）
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(10);
+  readonly pagedItems = computed(() => {
+    const all = this.items();
+    const start = (this.pageIndex() - 1) * this.pageSize();
+    return all.slice(start, start + this.pageSize());
+  });
+
+  onPageIndexChange(index: number): void {
+    this.pageIndex.set(index);
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.pageIndex.set(1);
+  }
 
   // 关键修复：原实现是普通 boolean 属性，OnPush 组件在 subscribe 回调里
   // 改写它后不会触发变更检测，导致编辑弹窗永远不渲染（DOM 里 modal 元素
@@ -62,6 +79,7 @@ export class DoubleHighManagementComponent implements OnInit {
   }
 
   reload(): void {
+    this.pageIndex.set(1);
     this.doubleHighService.getList({
       filter: this.keyword?.trim() || undefined,
       skipCount: 0,

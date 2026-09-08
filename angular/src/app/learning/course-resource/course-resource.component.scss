@@ -42,7 +42,70 @@
   display: grid;
   grid-template-columns: 40% 60%;
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
+  // 两栏占满页面：顶栏 + 页头 + 课程选择卡 + 边距约 300px
+  height: calc(100vh - 300px);
+  min-height: 480px;
+}
+
+.linked-panel,
+.library-panel {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::ng-deep .ant-card-head {
+    flex-shrink: 0;
+  }
+
+  ::ng-deep .ant-card-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+// 左侧已关联列表：内容超长时内部滚动，空状态居中
+.linked-panel {
+  .linked-resources {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  nz-empty,
+  .loading-container {
+    margin: auto;
+  }
+}
+
+// 右侧资源库：卡内滚动，搜索栏吸顶
+.library-panel {
+  ::ng-deep .ant-card-body {
+    overflow-y: auto;
+  }
+
+  .add-section-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fff;
+    padding-bottom: 12px;
+    flex-shrink: 0;
+  }
+
+  nz-empty {
+    margin: auto;
+  }
 }
 
 .loading-container {
@@ -106,7 +169,6 @@
     align-items: center;
     gap: 12px;
     margin-bottom: 12px;
-
     .selection-actions {
       display: flex;
       align-items: center;
@@ -135,5 +197,21 @@
 
   .row-selected {
     background-color: #f0f7ff;
+  }
+}
+
+@media (max-width: 1100px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .linked-panel,
+  .library-panel {
+    height: auto;
+  }
+
+  .linked-panel .linked-resources {
+    max-height: 420px;
   }
 }

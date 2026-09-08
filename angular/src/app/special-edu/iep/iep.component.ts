@@ -16,6 +16,7 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { HttpClient } from '@angular/common/http';
 import { SPECIAL_EDU_CATEGORIES, SpecialEduService } from '../special-edu.service';
 import { ContentVersionFieldComponent } from '../content-version-field.component';
@@ -24,8 +25,17 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
   selector: 'app-iep',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, NzCardModule, NzFormModule, NzInputModule, NzSelectModule, NzButtonModule, NzSpinModule, NzTagModule, NzDividerModule, NzTableModule, NzGridModule, NzTabsModule, NzModalModule, NzRadioModule, NzTooltipModule, ContentVersionFieldComponent],
+  imports: [CommonModule, FormsModule, NzCardModule, NzFormModule, NzInputModule, NzSelectModule, NzButtonModule, NzSpinModule, NzTagModule, NzDividerModule, NzTableModule, NzGridModule, NzTabsModule, NzModalModule, NzRadioModule, NzTooltipModule, NzEmptyModule, ContentVersionFieldComponent],
   styles: [`
+    .spedu-container { padding: 24px; max-width: 1400px; margin: 0 auto; }
+    .spedu-header { background: var(--kh-panel); border: 1px solid var(--kh-line); border-radius: var(--kh-r-card); box-shadow: var(--kh-shadow-card); padding: 16px 20px; margin-bottom: 16px; }
+    .spedu-header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+    .spedu-header p { margin: 4px 0 0; color: #888; font-size: 13px; }
+    .spedu-card { min-height: calc(100vh - 320px); display: flex; flex-direction: column; }
+    .spedu-card ::ng-deep .ant-card { flex: 1; display: flex; flex-direction: column; }
+    .spedu-card ::ng-deep .ant-card-body { flex: 1; display: flex; flex-direction: column; }
+    .row-actions { white-space: nowrap; }
+    .table-toolbar { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 12px; flex-shrink: 0; }
     .dh-modal { display: flex; flex-direction: column; gap: 18px; max-height: 74vh; overflow-y: auto; padding: 2px 2px 0; }
     .dh-modal::-webkit-scrollbar { width: 5px; }
     .dh-modal::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
@@ -38,51 +48,69 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
     @media (max-width: 560px) { .dh-form { grid-template-columns: 1fr; } }
   `],
   template: `
-  <nz-card nzTitle="IEP 教学实施方案" [nzExtra]="extraTpl">
+  <div class="spedu-container">
+  <div class="spedu-header">
+    <h1>IEP 个别化教育计划</h1>
+    <p>为特殊学生制定个别化教育计划：现状分析、长期/短期目标、教学策略与家校协同，草稿可提交审核发布，支持版本追溯与 Word 导出。</p>
+  </div>
+  <nz-card class="spedu-card">
     <nz-tabs [(nzSelectedIndex)]="activeTab">
       <nz-tab nzTitle="IEP 列表">
-        <nz-table [nzData]="list()" nzSize="small" style="margin-top:12px">
+        <div class="table-toolbar">
+          <button nz-button nzType="primary" (click)="openCreate()">新建 IEP</button>
+        </div>
+        <nz-table [nzData]="pagedList()" [nzFrontPagination]="false" [nzTotal]="list().length"
+          [nzPageIndex]="listPageIndex()" [nzPageSize]="listPageSize()"
+          (nzPageIndexChange)="onListPageIndexChange($event)" (nzPageSizeChange)="onListPageSizeChange($event)"
+          [nzShowSizeChanger]="true" [nzShowQuickJumper]="true" [nzShowTotal]="totalTplList" [nzNoResult]="emptyTplList"
+          nzSize="small">
           <thead><tr><th>学生</th><th>类别</th><th>版本</th><th>状态</th><th>最后修改</th><th>审核教师</th><th>操作</th></tr></thead>
           <tbody>
-            @for (h of list(); track h.id) {
+            @for (h of pagedList(); track h.id) {
               <tr><td>{{ h.studentName }}</td><td>{{ h.categoryName }}</td><td>v{{ h.versionNumber }}</td>
               <td>{{ statusName(h.status) }}</td>
               <td>{{ (h.lastModificationTime || h.creationTime) | date:'yyyy-MM-dd HH:mm' }}</td>
               <td>{{ h.reviewerName || '—' }}</td>
-              <td>
-                <a (click)="view(h)">查看</a>
-                <a (click)="openEdit(h)" style="margin-left:8px">编辑</a>
+              <td class="row-actions">
+                <button nz-button nzType="link" nzSize="small" (click)="view(h)">查看</button>
+                <button nz-button nzType="link" nzSize="small" (click)="openEdit(h)">编辑</button>
                 @if (h.status === 0 || h.status === 2 || h.status === 3) {
-                  <a (click)="openSubmit(h)" style="margin-left:8px">提交审核</a>
+                  <button nz-button nzType="link" nzSize="small" (click)="openSubmit(h)">提交审核</button>
                 }
-                <a (click)="remove(h)" style="margin-left:8px;color:#ff4d4f">删除</a>
+                <button nz-button nzType="link" nzSize="small" nzDanger (click)="remove(h)">删除</button>
               </td></tr>
             }
           </tbody>
         </nz-table>
+        <ng-template #totalTplList let-total>共 {{ total }} 条</ng-template>
+        <ng-template #emptyTplList><nz-empty nzNotFoundContent="暂无 IEP 方案，点击上方新建"></nz-empty></ng-template>
       </nz-tab>
       <nz-tab [nzTitle]="'待审核 (' + pending().length + ')'">
-        <nz-table [nzData]="pending()" nzSize="small" style="margin-top:12px">
+        <nz-table [nzData]="pagedPending()" [nzFrontPagination]="false" [nzTotal]="pending().length"
+          [nzPageIndex]="pendingPageIndex()" [nzPageSize]="pendingPageSize()"
+          (nzPageIndexChange)="onPendingPageIndexChange($event)" (nzPageSizeChange)="onPendingPageSizeChange($event)"
+          [nzShowSizeChanger]="true" [nzShowQuickJumper]="true" [nzShowTotal]="totalTplPending" [nzNoResult]="emptyTplPending"
+          nzSize="small">
           <thead><tr><th>学生</th><th>类别</th><th>版本</th><th>指派审核教师</th><th>操作</th></tr></thead>
           <tbody>
-            @for (h of pending(); track h.id) {
+            @for (h of pagedPending(); track h.id) {
               <tr><td>{{ h.studentName }}</td><td>{{ h.categoryName }}</td><td>v{{ h.versionNumber }}</td>
               <td>{{ h.reviewerName || '未指派' }}</td>
-              <td>
-                <a (click)="view(h)">查看</a>
-                <a (click)="openEdit(h)" style="margin-left:8px">编辑</a>
-                <a (click)="openReview(h, true)" style="margin-left:8px">通过</a>
-                <a (click)="openReview(h, false)" style="margin-left:8px;color:#ff4d4f">驳回</a>
+              <td class="row-actions">
+                <button nz-button nzType="link" nzSize="small" (click)="view(h)">查看</button>
+                <button nz-button nzType="link" nzSize="small" (click)="openEdit(h)">编辑</button>
+                <button nz-button nzType="link" nzSize="small" (click)="openReview(h, true)">通过</button>
+                <button nz-button nzType="link" nzSize="small" nzDanger (click)="openReview(h, false)">驳回</button>
               </td></tr>
             }
           </tbody>
         </nz-table>
+        <ng-template #totalTplPending let-total>共 {{ total }} 条</ng-template>
+        <ng-template #emptyTplPending><nz-empty nzNotFoundContent="暂无待审核 IEP"></nz-empty></ng-template>
       </nz-tab>
     </nz-tabs>
   </nz-card>
-  <ng-template #extraTpl>
-    <button nz-button nzType="primary" nzSize="small" (click)="openCreate()">新建 IEP</button>
-  </ng-template>
+  </div>
 
   <!-- 新建：弹出表单 -->
   <nz-modal [(nzVisible)]="createVisible" nzTitle="新建 IEP 方案" [nzWidth]="640" (nzOnCancel)="createVisible = false" [nzFooter]="null">
@@ -283,6 +311,25 @@ export class IepComponent {
   rawJson = signal('');
   list = signal<any[]>([]);
   pending = signal<any[]>([]);
+  // 列表分页（前端分页：数据已全量加载，按页切片展示）
+  listPageIndex = signal(1);
+  listPageSize = signal(10);
+  pagedList = computed(() => {
+    const all = this.list();
+    const start = (this.listPageIndex() - 1) * this.listPageSize();
+    return all.slice(start, start + this.listPageSize());
+  });
+  pendingPageIndex = signal(1);
+  pendingPageSize = signal(10);
+  pagedPending = computed(() => {
+    const all = this.pending();
+    const start = (this.pendingPageIndex() - 1) * this.pendingPageSize();
+    return all.slice(start, start + this.pendingPageSize());
+  });
+  onListPageIndexChange(i: number): void { this.listPageIndex.set(i); }
+  onListPageSizeChange(s: number): void { this.listPageSize.set(s); this.listPageIndex.set(1); }
+  onPendingPageIndexChange(i: number): void { this.pendingPageIndex.set(i); }
+  onPendingPageSizeChange(s: number): void { this.pendingPageSize.set(s); this.pendingPageIndex.set(1); }
   courses = signal<any[]>([]);
   students = signal<any[]>([]);
   teachers = signal<any[]>([]);
@@ -320,6 +367,8 @@ export class IepComponent {
   }
 
   loadAll(): void {
+    this.listPageIndex.set(1);
+    this.pendingPageIndex.set(1);
     this.http.get<any>('/api/learning/special-edu/ieps', { params: { maxResultCount: '50' } as any })
       .subscribe({ next: (r: any) => this.list.set(r?.items ?? []), error: () => {} });
     this.http.get<any>('/api/learning/special-edu/ieps', { params: { maxResultCount: '50', status: '1' } as any })

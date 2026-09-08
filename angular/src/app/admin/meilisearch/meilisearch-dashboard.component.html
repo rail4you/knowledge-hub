@@ -1,22 +1,27 @@
 <div class="meilisearch-dashboard">
-  <div class="header">
-    <h2>{{ '::MeiliSearch:Dashboard' | abpLocalization }}</h2>
-    @if (isHost) {
-      <nz-select
-        style="width: 200px;"
-        [nzPlaceHolder]="'选择租户'"
-        [(ngModel)]="selectedTenantId"
-        (ngModelChange)="onTenantChange()"
-        [nzAllowClear]="true">
-        @for (tenant of tenants(); track tenant.id) {
-          <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name"></nz-option>
-        }
-      </nz-select>
-    }
-    <button nz-button nzType="primary" (click)="refresh()" [nzLoading]="loading()">
-      <span nz-icon nzType="reload"></span>
-      {{ '::MeiliSearch:Refresh' | abpLocalization }}
-    </button>
+  <div class="page-header">
+    <div class="page-header__text">
+      <h2>{{ '::MeiliSearch:Dashboard' | abpLocalization }}</h2>
+      <p>查看搜索引擎健康状态、索引文档分布与索引任务执行情况。</p>
+    </div>
+    <div class="page-header__actions">
+      @if (isHost) {
+        <nz-select
+          style="width: 200px;"
+          [nzPlaceHolder]="'选择租户'"
+          [(ngModel)]="selectedTenantId"
+          (ngModelChange)="onTenantChange()"
+          [nzAllowClear]="true">
+          @for (tenant of tenants(); track tenant.id) {
+            <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name"></nz-option>
+          }
+        </nz-select>
+      }
+      <button nz-button nzType="primary" (click)="refresh()" [nzLoading]="loading()">
+        <span nz-icon nzType="reload"></span>
+        {{ '::MeiliSearch:Refresh' | abpLocalization }}
+      </button>
+    </div>
   </div>
 
   <nz-spin [nzSpinning]="loading()">

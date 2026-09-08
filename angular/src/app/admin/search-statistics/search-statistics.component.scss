@@ -7,15 +7,33 @@
 .stats-page {
   display: flex;
   flex-direction: column;
-  gap: 36px;
-  padding: 16px 20px 32px;
+  gap: 16px;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: calc(100vh - 120px);
 }
 
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--kh-ink);
-  margin: 0;
+.page-header {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: 12px;
+  box-shadow: var(--kh-shadow-card);
+  padding: 16px 20px;
+  flex-shrink: 0;
+
+  h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--kh-ink);
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: #888;
+    font-size: 13px;
+  }
 }
 
 /* ── 筛选栏 ──────────────────────────────────── */
@@ -69,29 +87,38 @@
   letter-spacing: 0.01em;
   border-bottom: 1px solid var(--kh-line-2);
 }
-.stats-cards {
+/* ── 检索概览：按范围分组（总检索 / 今日检索 / 活跃用户） ── */
+.stats-groups {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0;
-  @media (max-width: 1280px) { grid-template-columns: repeat(3, 1fr); }
-  @media (max-width: 640px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
 }
-.stat-card {
-  padding: 20px 12px;
+.stat-group {
+  padding: 4px 0 0;
+  &:nth-child(2) {
+    border-left: 1px solid var(--kh-line-2);
+    border-right: 1px solid var(--kh-line-2);
+  }
+  @media (max-width: 900px) {
+    &:nth-child(2) { border-left: none; border-right: none; border-top: 1px solid var(--kh-line-2); }
+    &:nth-child(3) { border-top: 1px solid var(--kh-line-2); }
+  }
+}
+.stat-group__title {
   text-align: center;
-  border-bottom: 1px solid var(--kh-line-2);
-  border-right: 1px solid var(--kh-line-2);
-  &:nth-child(6) { border-right: none; }
-  &:nth-child(-n+6) { border-bottom: none; }
-  @media (max-width: 1280px) {
-    &:nth-child(3) { border-right: none; }
-    &:nth-child(-n+3) { border-bottom: 1px solid var(--kh-line-2); }
-    &:nth-child(4), &:nth-child(5) { border-bottom: 1px solid var(--kh-line-2); }
-  }
-  @media (max-width: 640px) {
-    &:nth-child(2) { border-right: none; }
-    &:nth-child(-n+4) { border-bottom: 1px solid var(--kh-line-2); }
-  }
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kh-ink-2);
+  padding: 12px 0 4px;
+}
+.stat-group__items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.stat-item {
+  padding: 12px 8px 20px;
+  text-align: center;
 }
 .stat-value {
   font-size: 28px;
@@ -100,6 +127,7 @@
   margin-bottom: 4px;
   &.accent { color: var(--kh-accent); }
   &.cyan { color: #13c2c2; }
+  &.indigo { color: #6366f1; }
   &.green { color: #52c41a; }
   &.green-light { color: #73d13d; }
   &.purple { color: #722ed1; }
@@ -269,6 +297,35 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--kh-ink-2);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ranking-card__sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: #8c8c8c;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #f0f2f5;
+  color: #8c8c8c;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+
+  &.top3 {
+    background: linear-gradient(135deg, #faad14, #ff7a45);
+    color: #fff;
+  }
 }
 
 /* ── 表格统一样式 ──────────────────────────── */
@@ -296,9 +353,24 @@
   }
   .ant-table-tbody > tr:last-child > td { border-bottom: none !important; }
   .ant-table-tbody > tr:hover > td { background: #f5f9ff !important; }
+  // 左对齐列：权重必须高于上面的居中规则（同处 ::ng-deep 作用域内）
+  .ant-table-thead > tr > th.cell-left,
+  .ant-table-tbody > tr > td.cell-left,
+  .ant-table-thead > tr > th.cell-rank,
+  .ant-table-tbody > tr > td.cell-rank {
+    text-align: left !important;
+  }
 }
 
-.cell-left { text-align: left !important; }
+/* 榜单名称列：单行省略 + 悬浮看全名（与选课/习题页同一模式） */
+.name-ellipsis {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-all;
+}
 
 /* ── 空状态 ──────────────────────────────────── */
 .empty-state {

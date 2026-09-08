@@ -5,6 +5,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { NzSelectModule } from 'ng-zorro-antd/select';
@@ -34,6 +35,7 @@ import { OssUploadService } from '../../shared/oss-upload.service';
     FormsModule,
     NzButtonModule,
     NzCardModule,
+    NzEmptyModule,
     NzInputModule,
     NzModalModule,
     NzResultModule,
@@ -56,6 +58,36 @@ export class NewsManagementComponent implements OnInit {
   readonly categories = signal<NewsCategoryDto[]>([]);
   readonly articles = signal<NewsArticleDto[]>([]);
   readonly comments = signal<NewsCommentDto[]>([]);
+
+  // 三张表分页（前端分页：数据已全量加载，按页切片展示）
+  private paged<T>(all: T[], pageIndex: number, pageSize: number): T[] {
+    const start = (pageIndex - 1) * pageSize;
+    return all.slice(start, start + pageSize);
+  }
+
+  categoryPageIndex = 1;
+  categoryPageSize = 10;
+  pagedCategories(): NewsCategoryDto[] {
+    return this.paged(this.categories(), this.categoryPageIndex, this.categoryPageSize);
+  }
+  onCategoryPageIndexChange(i: number): void { this.categoryPageIndex = i; }
+  onCategoryPageSizeChange(s: number): void { this.categoryPageSize = s; this.categoryPageIndex = 1; }
+
+  articlePageIndex = 1;
+  articlePageSize = 10;
+  pagedArticles(): NewsArticleDto[] {
+    return this.paged(this.articles(), this.articlePageIndex, this.articlePageSize);
+  }
+  onArticlePageIndexChange(i: number): void { this.articlePageIndex = i; }
+  onArticlePageSizeChange(s: number): void { this.articlePageSize = s; this.articlePageIndex = 1; }
+
+  commentPageIndex = 1;
+  commentPageSize = 10;
+  pagedComments(): NewsCommentDto[] {
+    return this.paged(this.comments(), this.commentPageIndex, this.commentPageSize);
+  }
+  onCommentPageIndexChange(i: number): void { this.commentPageIndex = i; }
+  onCommentPageSizeChange(s: number): void { this.commentPageSize = s; this.commentPageIndex = 1; }
 
   categoryModalVisible = false;
   editingCategoryId: string | null = null;
@@ -114,12 +146,14 @@ export class NewsManagementComponent implements OnInit {
   }
 
   loadCategories(): void {
+    this.categoryPageIndex = 1;
     this.newsService.getCategoryList().subscribe({
       next: result => this.categories.set(result.items || []),
     });
   }
 
   loadArticles(): void {
+    this.articlePageIndex = 1;
     this.newsService.getArticleList({
       skipCount: 0,
       maxResultCount: 100,
@@ -129,6 +163,7 @@ export class NewsManagementComponent implements OnInit {
   }
 
   loadComments(): void {
+    this.commentPageIndex = 1;
     this.newsService.getCommentList({
       skipCount: 0,
       maxResultCount: 100,

@@ -13,6 +13,7 @@ import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { interval, Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
@@ -34,20 +35,37 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
     NzDropDownModule,
     NzMenuModule,
     NzDatePickerModule,
-    NzIconModule
+    NzIconModule,
+    NzInputModule
   ],
   template: `
     <div class="indexing-jobs-container">
-      <div class="header">
-        <h2>索引任务</h2>
-        <div class="header-actions">
+      <div class="page-header">
+        <div class="page-header__text">
+          <h2>索引任务</h2>
+          <p>查看文档与视频资源的解析索引进度，支持按状态、时间与资源名称筛选，失败任务可重试。</p>
+        </div>
+        <div class="page-header__actions">
           <button nz-button nzType="default" (click)="refresh()">
             刷新
           </button>
         </div>
       </div>
 
+      <div class="filter-card">
       <div class="filters">
+        <nz-input-group [nzPrefix]="searchPrefix" class="filter-search">
+          <input
+            nz-input
+            placeholder="按资源名称搜索"
+            [ngModel]="keyword()"
+            (ngModelChange)="onKeywordChange($event)"
+            (keyup.enter)="onKeywordSearch()"
+          />
+        </nz-input-group>
+        <ng-template #searchPrefix>
+          <span nz-icon nzType="search"></span>
+        </ng-template>
         <nz-dropdown-menu #statusMenu="nzDropdownMenu">
           <ul nz-menu>
             <li nz-menu-item [nzSelected]="selectedStatus() === null" (click)="onStatusFilter(null)">
@@ -113,7 +131,9 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
           ></nz-range-picker>
         }
       </div>
+      </div>
 
+      <div class="table-card">
       <nz-spin [nzSpinning]="loading()">
         @if (jobs().length === 0 && !loading()) {
           <nz-empty nzNotFoundContent="暂无索引任务"></nz-empty>
@@ -219,29 +239,83 @@ import { SearchService, IndexingJobDto, IndexingJobStatus, PagedResultDto } from
           </nz-table>
         }
       </nz-spin>
+      </div>
     </div>
   `,
   styles: [`
     .indexing-jobs-container {
       padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      min-height: calc(100vh - 120px);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
 
-    .header {
+    .page-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      gap: 16px;
+      background: var(--kh-panel);
+      border: 1px solid var(--kh-line);
+      border-radius: 12px;
+      box-shadow: var(--kh-shadow-card);
+      padding: 16px 20px;
+      flex-shrink: 0;
     }
 
-    .header h2 {
+    .page-header h2 {
       margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .page-header p {
+      margin: 4px 0 0;
+      color: #888;
+      font-size: 13px;
+    }
+
+    .page-header__actions {
+      flex-shrink: 0;
+    }
+
+    .filter-card {
+      background: var(--kh-panel);
+      border: 1px solid var(--kh-line);
+      border-radius: 12px;
+      box-shadow: var(--kh-shadow-card);
+      padding: 16px 20px;
+      flex-shrink: 0;
+    }
+
+    .table-card {
+      background: var(--kh-panel);
+      border: 1px solid var(--kh-line);
+      border-radius: 12px;
+      box-shadow: var(--kh-shadow-card);
+      padding: 16px 20px;
+      min-height: calc(100vh - 420px);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .table-card nz-empty {
+      margin: auto;
     }
 
     .filters {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .filter-search {
+      width: 260px;
     }
 
     .resource-link {
@@ -263,11 +337,12 @@ export class IndexingJobsComponent implements OnInit, OnDestroy {
   totalCount = signal(0);
   loading = signal(false);
   pageIndex = 1;
-  pageSize = 20;
+  pageSize = 10;
 
   selectedStatus = signal<number | null>(null);
   selectedTimeRange = signal<string>('all');
   customDateRange: Date[] | null = null;
+  keyword = signal('');
 
   private refreshInterval?: Subscription;
   protected readonly IndexingJobStatus = IndexingJobStatus;
@@ -295,6 +370,10 @@ export class IndexingJobsComponent implements OnInit, OnDestroy {
     };
     if (this.selectedStatus() !== null) {
       input.status = this.selectedStatus();
+    }
+    const keyword = this.keyword().trim();
+    if (keyword) {
+      input.filter = keyword;
     }
     const range = this.getDateRange();
     if (range) {
@@ -369,6 +448,15 @@ export class IndexingJobsComponent implements OnInit, OnDestroy {
 
   onStatusFilter(status: number | null) {
     this.selectedStatus.set(status);
+    this.pageIndex = 1;
+    this.loadJobs();
+  }
+
+  onKeywordChange(value: string) {
+    this.keyword.set(value);
+  }
+
+  onKeywordSearch() {
     this.pageIndex = 1;
     this.loadJobs();
   }

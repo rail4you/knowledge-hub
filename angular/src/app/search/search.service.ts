@@ -138,6 +138,7 @@ export interface GetIndexingJobsInput {
   status?: IndexingJobStatus;
   startTime?: string;
   endTime?: string;
+  filter?: string;
   skipCount?: number;
   maxResultCount?: number;
 }
@@ -229,6 +230,7 @@ export class SearchService {
     if (input.status !== undefined) params.status = input.status;
     if (input.startTime) params.startTime = input.startTime;
     if (input.endTime) params.endTime = input.endTime;
+    if (input.filter) params.filter = input.filter;
 
     return this.restService.request({
       method: 'GET',

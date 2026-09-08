@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
@@ -55,9 +56,9 @@ public class SearchStatisticsAppService : KnowledgeHubAppService, ISearchStatist
         var dailyTrends = await GetDailyTrendsAsync(startDateStr, endDateStr, tenantFilter);
         var popularSearches = await GetPopularSearchesAsync(startDateStr, endDateStr, tenantFilter);
 
-        // 热门资源和高评分资源暂时返回空列表
-        var topResources = new List<TopResourceStatsDto>();
-        var topRated = new List<TopRatedResourceDto>();
+        // 热门资源（按阅读量 Top10）与高评分资源（按平均评分 Top10）
+        var topResources = await GetTopResourcesAsync(tenantId);
+        var topRated = await GetTopRatedResourcesAsync(tenantId);
 
         return new SearchDashboardDto
         {
@@ -139,8 +140,7 @@ public class SearchStatisticsAppService : KnowledgeHubAppService, ISearchStatist
         return results;
     }
 
-    private async Task<List<PopularSearchTermDto>> GetPopularSearchesAsync(string startDate, string endDate, string tenantFilter)
-    {
+    private async Task<List<PopularSearchTermDto>> GetPopularSearchesAsync(string startDate, string endDate, string tenantFilter)    {
         using var command = _dbContext.Database.GetDbConnection().CreateCommand();
         command.CommandText = $@"
             SELECT
@@ -168,5 +168,72 @@ public class SearchStatisticsAppService : KnowledgeHubAppService, ISearchStatist
             });
         }
         return results;
+    }
+
+    /// <summary>
+    /// 热门资源 Top10：按资源阅读量（ViewCount）倒序。
+    /// 租户隔离走 CurrentTenant 切换：租户用户只能看本租户，Host 不指定租户时看全局。
+    /// </summary>
+    private async Task<List<TopResourceStatsDto>> GetTopResourcesAsync(Guid? tenantId)
+    {
+        using (_currentTenant.Change(tenantId))
+        {
+            return await _dbContext.Resources
+                .AsNoTracking()
+                .OrderByDescending(r => r.ViewCount)
+                .Take(10)
+                .Select(r => new TopResourceStatsDto
+                {
+                    ResourceId = r.Id,
+                    ResourceName = r.Name,
+                    ViewCount = r.ViewCount,
+                    SearchCount = 0,
+                    ClickCount = 0,
+                    ClickRate = 0
+                })
+                .ToListAsync();
+        }
+    }
+
+    /// <summary>
+    /// 高评分资源 Top10：按评价平均分倒序（评价数多者优先）。
+    /// </summary>
+    private async Task<List<TopRatedResourceDto>> GetTopRatedResourcesAsync(Guid? tenantId)
+    {
+        using (_currentTenant.Change(tenantId))
+        {
+            var grouped = await _dbContext.ResourceReviews
+                .AsNoTracking()
+                .GroupBy(r => r.ResourceId)
+                .Select(g => new
+                {
+                    ResourceId = g.Key,
+                    AverageRating = g.Average(x => (double)x.Rating),
+                    ReviewCount = g.Count()
+                })
+                .OrderByDescending(x => x.AverageRating)
+                .ThenByDescending(x => x.ReviewCount)
+                .Take(10)
+                .ToListAsync();
+
+            if (grouped.Count == 0)
+            {
+                return new List<TopRatedResourceDto>();
+            }
+
+            var ids = grouped.Select(x => x.ResourceId).ToList();
+            var names = await _dbContext.Resources
+                .AsNoTracking()
+                .Where(r => ids.Contains(r.Id))
+                .ToDictionaryAsync(r => r.Id, r => r.Name);
+
+            return grouped.Select(x => new TopRatedResourceDto
+            {
+                ResourceId = x.ResourceId,
+                ResourceName = names.TryGetValue(x.ResourceId, out var name) ? name : "-",
+                AverageRating = Math.Round(x.AverageRating, 1),
+                ReviewCount = x.ReviewCount
+            }).ToList();
+        }
     }
 }

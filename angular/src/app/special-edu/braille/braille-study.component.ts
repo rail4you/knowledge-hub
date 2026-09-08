@@ -11,6 +11,7 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { HttpClient } from '@angular/common/http';
 import { SpecialEduService } from '../special-edu.service';
 import { BrailleViewerComponent } from '../braille-viewer/braille-viewer.component';
@@ -24,8 +25,17 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
   selector: 'app-braille-study',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, NzCardModule, NzButtonModule, NzInputModule, NzSelectModule, NzSpinModule, NzDividerModule, NzTableModule, NzModalModule, NzTooltipModule, BrailleViewerComponent, ContentVersionFieldComponent],
+  imports: [CommonModule, FormsModule, NzCardModule, NzButtonModule, NzInputModule, NzSelectModule, NzSpinModule, NzDividerModule, NzTableModule, NzModalModule, NzTooltipModule, NzEmptyModule, BrailleViewerComponent, ContentVersionFieldComponent],
   styles: [`
+    .spedu-container { padding: 24px; max-width: 1400px; margin: 0 auto; }
+    .spedu-header { background: var(--kh-panel); border: 1px solid var(--kh-line); border-radius: var(--kh-r-card); box-shadow: var(--kh-shadow-card); padding: 16px 20px; margin-bottom: 16px; }
+    .spedu-header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+    .spedu-header p { margin: 4px 0 0; color: #888; font-size: 13px; }
+    .spedu-card { min-height: calc(100vh - 320px); display: flex; flex-direction: column; }
+    .spedu-card ::ng-deep .ant-card { flex: 1; display: flex; flex-direction: column; }
+    .spedu-card ::ng-deep .ant-card-body { flex: 1; display: flex; flex-direction: column; }
+    .row-actions { white-space: nowrap; }
+    .table-toolbar { display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 12px; flex-shrink: 0; }
     .dh-modal { display: flex; flex-direction: column; gap: 18px; max-height: 74vh; overflow-y: auto; padding: 2px 2px 0; }
     .dh-modal::-webkit-scrollbar { width: 5px; }
     .dh-modal::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
@@ -38,26 +48,36 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
     @media (max-width: 560px) { .dh-form { grid-template-columns: 1fr; } }
   `],
   template: `
-  <nz-card nzTitle="盲文对照学习卡" [nzExtra]="extraTpl">
-    <p style="color:#888">点位显示 + 翻译对照。中文走现行盲文（原则不标调、分词连写），英文/数字走一级盲文；对照内容须经教师核对后用于教学。</p>
-    <nz-table [nzData]="list()" nzSize="small">
+  <div class="spedu-container">
+  <div class="spedu-header">
+    <h1>盲文对照学习卡</h1>
+    <p>点位显示 + 翻译对照。中文走现行盲文（原则不标调、分词连写），英文/数字走一级盲文；对照内容须经教师核对后用于教学。</p>
+  </div>
+  <nz-card class="spedu-card">
+    <div class="table-toolbar">
+      <button nz-button nzType="primary" (click)="openCreate()">新建盲文对照</button>
+    </div>
+    <nz-table [nzData]="pagedList()" [nzFrontPagination]="false" [nzTotal]="list().length"
+      [nzPageIndex]="pageIndex()" [nzPageSize]="pageSize()"
+      (nzPageIndexChange)="onPageIndexChange($event)" (nzPageSizeChange)="onPageSizeChange($event)"
+      [nzShowSizeChanger]="true" [nzShowQuickJumper]="true" [nzShowTotal]="totalTpl" [nzNoResult]="emptyTpl" nzSize="small">
       <thead><tr><th>标题</th><th>类别</th><th>版本</th><th>状态</th><th>最后修改</th><th>操作</th></tr></thead>
       <tbody>
-        @for (h of list(); track h.id) {
+        @for (h of pagedList(); track h.id) {
           <tr><td>{{ h.title }}</td><td>{{ h.categoryName }}</td><td>v{{ h.versionNumber ?? 1 }}</td><td>{{ statusName(h.status) }}</td>
           <td>{{ (h.lastModificationTime || h.creationTime) | date:'yyyy-MM-dd HH:mm' }}</td>
-          <td>
-            <a (click)="view(h)">查看对照</a>
-            <a (click)="openEdit(h)" style="margin-left:8px">编辑</a>
-            <a (click)="exportOne(h)" style="margin-left:8px">导出</a>
+          <td class="row-actions">
+            <button nz-button nzType="link" nzSize="small" (click)="view(h)">查看对照</button>
+            <button nz-button nzType="link" nzSize="small" (click)="openEdit(h)">编辑</button>
+            <button nz-button nzType="link" nzSize="small" (click)="exportOne(h)">导出</button>
           </td></tr>
         }
       </tbody>
     </nz-table>
+    <ng-template #totalTpl let-total>共 {{ total }} 条</ng-template>
+    <ng-template #emptyTpl><nz-empty nzNotFoundContent="暂无盲文对照卡，点击上方新建"></nz-empty></ng-template>
   </nz-card>
-  <ng-template #extraTpl>
-    <button nz-button nzType="primary" nzSize="small" (click)="openCreate()">新建盲文对照</button>
-  </ng-template>
+  </div>
 
   <nz-modal [(nzVisible)]="createVisible" nzTitle="新建盲文对照" [nzWidth]="640" (nzOnCancel)="createVisible = false" [nzFooter]="null">
     <ng-container *nzModalContent>
@@ -169,6 +189,16 @@ export class BrailleStudyComponent {
   private http = inject(HttpClient);
   private msg = inject(NzMessageService);
   list = signal<any[]>([]);
+  // 列表分页（前端分页：数据已全量加载，按页切片展示）
+  pageIndex = signal(1);
+  pageSize = signal(10);
+  pagedList = computed(() => {
+    const all = this.list();
+    const start = (this.pageIndex() - 1) * this.pageSize();
+    return all.slice(start, start + this.pageSize());
+  });
+  onPageIndexChange(i: number): void { this.pageIndex.set(i); }
+  onPageSizeChange(s: number): void { this.pageSize.set(s); this.pageIndex.set(1); }
   generating = signal(false);
   result = signal<any>(null);
   rawJson = signal('');
@@ -195,6 +225,7 @@ export class BrailleStudyComponent {
   }
 
   load(): void {
+    this.pageIndex.set(1);
     this.http.get<any>('/api/learning/special-edu/resources', { params: { maxResultCount: '50', modality: 'BrailleParallel' } as any })
       .subscribe({ next: (r: any) => this.list.set(r?.items ?? []), error: () => {} });
   }

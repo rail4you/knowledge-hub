@@ -1,5 +1,10 @@
 <div class="stats-page">
-  <div class="page-title">{{ '::Menu:SearchStatistics' | abpLocalization }}</div>
+  <div class="page-header">
+    <div>
+      <h1>{{ '::Menu:SearchStatistics' | abpLocalization }}</h1>
+      <p>查看检索量趋势、类型分布、热门搜索与资源排行，支持按时间与租户筛选并导出 Excel。</p>
+    </div>
+  </div>
 
   <!-- 筛选栏 -->
   <div class="filter-bar">
@@ -22,33 +27,60 @@
 
   <nz-spin [nzSpinning]="loading()">
     @if (dashboard(); as d) {
-      <!-- 统计卡片（容器内一行） -->
+      <!-- 统计卡片：按检索范围分组（总检索 / 今日检索 / 活跃用户） -->
       <div class="stats-panel">
         <div class="stats-panel__header">检索概览</div>
-        <div class="stats-cards">
-          <div class="stat-card">
-            <div class="stat-value accent">{{ d.all.totalSearches | number }}</div>
-            <div class="stat-label">总检索次数</div>
+        <div class="stats-groups">
+          <div class="stat-group">
+            <div class="stat-group__title">全部检索</div>
+            <div class="stat-group__items">
+              <div class="stat-item">
+                <div class="stat-value accent">{{ d.all.totalSearches | number }}</div>
+                <div class="stat-label">总检索次数</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value cyan">{{ d.all.todaySearches | number }}</div>
+                <div class="stat-label">今日检索</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value indigo">{{ d.all.activeUsers | number }}</div>
+                <div class="stat-label">活跃用户</div>
+              </div>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-value cyan">{{ d.all.todaySearches | number }}</div>
-            <div class="stat-label">今日检索</div>
+          <div class="stat-group">
+            <div class="stat-group__title">文档检索</div>
+            <div class="stat-group__items">
+              <div class="stat-item">
+                <div class="stat-value green">{{ d.document.totalSearches | number }}</div>
+                <div class="stat-label">总检索次数</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value green-light">{{ d.document.todaySearches | number }}</div>
+                <div class="stat-label">今日检索</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value indigo">{{ d.document.activeUsers | number }}</div>
+                <div class="stat-label">活跃用户</div>
+              </div>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-value green">{{ d.document.totalSearches | number }}</div>
-            <div class="stat-label">文档检索</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value green-light">{{ d.document.todaySearches | number }}</div>
-            <div class="stat-label">文档今日</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value purple">{{ d.video.totalSearches | number }}</div>
-            <div class="stat-label">视频检索</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value purple-light">{{ d.video.todaySearches | number }}</div>
-            <div class="stat-label">视频今日</div>
+          <div class="stat-group">
+            <div class="stat-group__title">视频检索</div>
+            <div class="stat-group__items">
+              <div class="stat-item">
+                <div class="stat-value purple">{{ d.video.totalSearches | number }}</div>
+                <div class="stat-label">总检索次数</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value purple-light">{{ d.video.todaySearches | number }}</div>
+                <div class="stat-label">今日检索</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-value indigo">{{ d.video.activeUsers | number }}</div>
+                <div class="stat-label">活跃用户</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -103,20 +135,20 @@
         <div class="tables-row">
           <div class="ranking-card">
             <div class="ranking-card__title">热门搜索</div>
-            <nz-table [nzData]="d.popularSearches" [nzPageSize]="10" nzSize="small" class="stats-table" [nzFrontPagination]="false">
+            <nz-table [nzData]="d.popularSearches" [nzPageSize]="10" nzSize="small" class="stats-table" [nzFrontPagination]="false" nzTableLayout="fixed">
               <thead>
                 <tr>
-                  <th>关键词</th>
-                  <th>次数</th>
-                  <th>类型</th>
+                  <th class="cell-left">关键词</th>
+                  <th nzWidth="80px" class="cell-left">次数</th>
+                  <th nzWidth="80px" class="cell-left">类型</th>
                 </tr>
               </thead>
               <tbody>
                 @for (item of d.popularSearches; track item.keyword + item.sourceType) {
                   <tr>
-                    <td class="cell-left">{{ item.keyword }}</td>
-                    <td><nz-tag nzColor="blue">{{ item.count }}</nz-tag></td>
-                    <td>
+                    <td class="cell-left"><span class="name-ellipsis" nz-tooltip [nzTooltipTitle]="item.keyword" nzTooltipPlacement="topLeft">{{ item.keyword }}</span></td>
+                    <td class="cell-left"><nz-tag nzColor="blue">{{ item.count }}</nz-tag></td>
+                    <td class="cell-left">
                       @if (item.sourceType === 'video') {
                         <nz-tag nzColor="purple">视频</nz-tag>
                       } @else if (item.sourceType === 'document') {
@@ -132,19 +164,21 @@
           </div>
 
           <div class="ranking-card">
-            <div class="ranking-card__title">热门资源</div>
-            <nz-table [nzData]="d.topResources" [nzPageSize]="10" nzSize="small" class="stats-table" [nzFrontPagination]="false">
+            <div class="ranking-card__title">热门资源<span class="ranking-card__sub">按阅读量 Top10</span></div>
+            <nz-table [nzData]="d.topResources" [nzPageSize]="10" nzSize="small" class="stats-table" [nzFrontPagination]="false" [nzNoResult]="emptyRankTpl" nzTableLayout="fixed">
               <thead>
                 <tr>
+                  <th nzWidth="64px" class="cell-rank">排名</th>
                   <th>资源名称</th>
-                  <th>搜索次数</th>
+                  <th nzWidth="90px">阅读量</th>
                 </tr>
               </thead>
               <tbody>
-                @for (item of d.topResources; track item.resourceId) {
+                @for (item of d.topResources; track item.resourceId; let i = $index) {
                   <tr>
-                    <td class="cell-left">{{ item.resourceName }}</td>
-                    <td>{{ item.searchCount }}</td>
+                    <td class="cell-rank"><span class="rank-badge" [class.top3]="i < 3">{{ i + 1 }}</span></td>
+                    <td class="cell-left"><span class="name-ellipsis" nz-tooltip [nzTooltipTitle]="item.resourceName" nzTooltipPlacement="topLeft">{{ item.resourceName }}</span></td>
+                    <td><nz-tag nzColor="blue">{{ item.viewCount | number }}</nz-tag></td>
                   </tr>
                 }
               </tbody>
@@ -152,25 +186,28 @@
           </div>
 
           <div class="ranking-card">
-            <div class="ranking-card__title">高评分资源</div>
-            <nz-table [nzData]="d.topRatedResources" [nzPageSize]="10" nzSize="small" class="stats-table" [nzFrontPagination]="false">
+            <div class="ranking-card__title">高评分资源<span class="ranking-card__sub">按平均评分 Top10</span></div>
+            <nz-table [nzData]="d.topRatedResources" [nzPageSize]="10" nzSize="small" class="stats-table" [nzFrontPagination]="false" [nzNoResult]="emptyRankTpl" nzTableLayout="fixed">
               <thead>
                 <tr>
+                  <th nzWidth="64px" class="cell-rank">排名</th>
                   <th>资源名称</th>
-                  <th>评分</th>
-                  <th>评价数</th>
+                  <th nzWidth="100px">评分</th>
+                  <th nzWidth="80px">评价数</th>
                 </tr>
               </thead>
               <tbody>
-                @for (item of d.topRatedResources; track item.resourceId) {
+                @for (item of d.topRatedResources; track item.resourceId; let i = $index) {
                   <tr>
-                    <td class="cell-left">{{ item.resourceName }}</td>
-                    <td>{{ item.averageRating }} / 5</td>
+                    <td class="cell-rank"><span class="rank-badge" [class.top3]="i < 3">{{ i + 1 }}</span></td>
+                    <td class="cell-left"><span class="name-ellipsis" nz-tooltip [nzTooltipTitle]="item.resourceName" nzTooltipPlacement="topLeft">{{ item.resourceName }}</span></td>
+                    <td><nz-tag nzColor="gold">{{ item.averageRating }} / 5</nz-tag></td>
                     <td>{{ item.reviewCount }}</td>
                   </tr>
                 }
               </tbody>
             </nz-table>
+            <ng-template #emptyRankTpl><nz-empty nzNotFoundContent="暂无数据"></nz-empty></ng-template>
           </div>
         </div>
       </div>

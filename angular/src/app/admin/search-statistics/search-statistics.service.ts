@@ -45,6 +45,7 @@ export interface TopResourceStatsDto {
   searchCount: number;
   clickCount: number;
   clickRate: number;
+  viewCount: number;
 }
 
 export interface TopRatedResourceDto {

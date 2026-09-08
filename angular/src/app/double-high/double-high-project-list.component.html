@@ -1,6 +1,7 @@
 <div class="mgmt-page">
-  <div class="mgmt-head">
+  <div class="page-header">
     <h2>双高评估项目</h2>
+    <p>查看双高建设评估项目、指标采集进度与佐证材料。</p>
   </div>
 
   <div class="table-card">
@@ -24,8 +25,7 @@
       </div>
     </div>
     <div class="table-scroll">
-      <table class="data-table fixed">
-        <colgroup>
+      <table class="data-table fixed">        <colgroup>
           <col style="width:30%" />
           <col style="width:11%" />
           <col style="width:9%" />
@@ -56,7 +56,7 @@
               </td>
             </tr>
           } @else {
-            @for (item of items(); track item.id) {
+            @for (item of pagedItems(); track item.id) {
               <tr>
                 <td>
                   <div class="cell-main">{{ item.title }}</div>
@@ -81,5 +81,17 @@
         </tbody>
       </table>
     </div>
+    @if (items().length > 0) {
+      <div class="table-pagination">
+        <nz-pagination
+          [nzTotal]="items().length"
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          (nzPageIndexChange)="onPageIndexChange($event)"
+          [nzShowTotal]="totalTpl"
+        ></nz-pagination>
+        <ng-template #totalTpl let-total>共 {{ total }} 条</ng-template>
+      </div>
+    }
   </div>
 </div>

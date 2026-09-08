@@ -35,6 +35,8 @@ public class GetIndexingJobsInput : PagedAndSortedResultRequestDto
     public IndexingJobStatus? Status { get; set; }
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
+    /// <summary>按资源名称模糊搜索</summary>
+    public string? Filter { get; set; }
 }
 
 public class CreateIndexingJobInput

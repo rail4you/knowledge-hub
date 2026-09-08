@@ -72,7 +72,7 @@
           <input
             nz-input
             [ngModel]="searchText()"
-            (ngModelChange)="searchText.set($event)"
+            (ngModelChange)="onSearchTextChange($event)"
             placeholder="搜索资源..."
             style="width: 220px"
           />
@@ -96,7 +96,19 @@
         } @else if (availableResources().length === 0) {
           <nz-empty nzNotFoundContent="没有可添加的资源（资源库中所有已审核资源都已关联到当前课程）"></nz-empty>
         } @else {
-          <nz-table [nzData]="availableResources()" [nzFrontPagination]="false" nzSize="small">
+          <nz-table
+            [nzData]="pagedAvailableResources()"
+            [nzFrontPagination]="false"
+            [nzTotal]="availableResources().length"
+            [nzPageIndex]="libPageIndex()"
+            [nzPageSize]="libPageSize()"
+            (nzPageIndexChange)="onLibPageIndexChange($event)"
+            (nzPageSizeChange)="onLibPageSizeChange($event)"
+            [nzShowSizeChanger]="true"
+
+            [nzShowTotal]="totalTemplate"
+            nzSize="small"
+          >
             <thead>
               <tr>
                 <th
@@ -112,7 +124,7 @@
               </tr>
             </thead>
             <tbody>
-              @for (resource of availableResources(); track resource.id) {
+              @for (resource of pagedAvailableResources(); track resource.id) {
                 <tr [class.row-selected]="isSelected(resource.id)">
                   <td
                     [nzShowCheckbox]="true"
@@ -137,6 +149,8 @@
               }
             </tbody>
           </nz-table>
+
+          <ng-template #totalTemplate let-total>共 {{ total }} 条</ng-template>
         }
       </nz-card>
     </div>
