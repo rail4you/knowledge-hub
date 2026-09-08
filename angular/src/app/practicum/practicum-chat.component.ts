@@ -31,7 +31,6 @@ export interface ChatContact {
   id: string;
   name: string;
   type: 'teacher' | 'student' | 'agent';
-  avatarColor: string;
   lastMessage?: string;
   lastTime?: string;
   unread?: number;
@@ -78,7 +77,7 @@ export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, Aft
   uploadingFile = signal(false);
   selectedContactId = signal<string>('all');
   showSidebar = signal(true);
-  /** 项目已过期且当前用户为学生：禁止发送消息 */
+  /** 项目已过期：所有人禁止发送消息 */
   isProjectLocked = signal(false);
 
   private destroy$ = new Subject<void>();
@@ -185,8 +184,8 @@ export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, Aft
     this.practicumService.getDetail(this.projectId).subscribe({
       next: detail => {
         this.projectDetail = detail;
-        // 已过期的项目：学生不能再参与沟通（教师仍可发送）
-        this.isProjectLocked.set(!!detail.isExpired && !this.isTeacherRoute());
+        // 已过期的项目：所有人都不再能发送消息
+        this.isProjectLocked.set(!!detail.isExpired);
         this.loadHistory();
       },
       error: () => this.message.error('加载实训项目详情失败'),
@@ -207,7 +206,7 @@ export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, Aft
     const seenIds = new Set<string>();
     const list: ChatContact[] = [];
 
-    list.push({ id: 'agent', name: agent, type: 'agent', avatarColor: 'linear-gradient(135deg, #6366f1, #8b5cf6)' });
+    list.push({ id: 'agent', name: agent, type: 'agent' });
     seenIds.add('agent');
 
     for (const msg of msgs) {
@@ -221,7 +220,6 @@ export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, Aft
         id: msg.senderId || key,
         name: isCurrentUser ? `${msg.senderName}（我）` : msg.senderName,
         type: msg.senderType === PracticumChatSenderType.Teacher ? 'teacher' : 'student',
-        avatarColor: msg.senderType === PracticumChatSenderType.Teacher ? '#1e6ce8' : '#10b981',
       });
     }
 
@@ -507,12 +505,5 @@ export class PracticumChatComponent implements OnInit, OnDestroy, OnChanges, Aft
     };
 
     setTimeout(doPoll, 3000);
-  }
-
-  getContactColor(senderId: string | undefined, senderType: PracticumChatSenderType): string {
-    if (senderType === PracticumChatSenderType.AIAgent) return 'linear-gradient(135deg, #6366f1, #8b5cf6)';
-    if (senderId === this.currentUserId) return '#2563eb';
-    const contact = this.contacts().find(c => c.id === senderId);
-    return contact?.avatarColor || '#64748b';
   }
 }

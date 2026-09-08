@@ -1,107 +1,191 @@
 <div class="training-page">
   <!-- Header -->
   <div class="page-header">
-    <h1>实训项目列表</h1>
-    <p>管理实训项目基础信息、关联资料与课程班级</p>
+    <h1>实训项目管理</h1>
+    <p>在「实训管理」中新建与编辑项目，在「实训资料」中按已有项目关联资料</p>
   </div>
 
-  <!-- 列表容器：工具栏 + 表格在同一个卡片内，占据页面剩余高度 -->
-  <div class="table-card list-card">
-    <div class="table-toolbar">
-      <button class="create-btn" type="button" (click)="openCreate()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        新建实训项目
-      </button>
-      <div class="search-box">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" placeholder="搜索项目名称" disabled />
-        <button class="search-btn" type="button" (click)="reload()">搜索</button>
-        <button class="reset-btn" type="button" (click)="reload()">重置</button>
+  <nz-tabs [nzSelectedIndex]="activeTab" (nzSelectedIndexChange)="onTabChange($event)" class="training-tabs">
+    <!-- ══════════ Tab 1：实训管理 ══════════ -->
+    <nz-tab nzTitle="实训管理">
+      <div class="table-card list-card">
+        <div class="table-toolbar">
+          <button class="create-btn" type="button" (click)="openCreate()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            新建实训项目
+          </button>
+          <nz-select
+            [(ngModel)]="statusFilter"
+            (ngModelChange)="onSearch()"
+            nzAllowClear
+            nzPlaceHolder="全部状态"
+            class="status-filter">
+            <nz-option [nzValue]="statuses.Draft" nzLabel="草稿"></nz-option>
+            <nz-option [nzValue]="statuses.Published" nzLabel="已发布"></nz-option>
+            <nz-option [nzValue]="statuses.Archived" nzLabel="已归档"></nz-option>
+          </nz-select>
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" [(ngModel)]="filter" (keyup.enter)="onSearch()" placeholder="搜索项目名称 / 简介 / 专业 / 班级" />
+            <button class="search-btn" type="button" (click)="onSearch()">搜索</button>
+            <button class="reset-btn" type="button" (click)="onReset()">重置</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <nz-table
+            [nzData]="projects()"
+            [nzFrontPagination]="false"
+            [nzTotal]="total"
+            [(nzPageIndex)]="pageIndex"
+            [(nzPageSize)]="pageSize"
+            (nzPageIndexChange)="onPageIndexChange($event)"
+            (nzPageSizeChange)="onPageSizeChange($event)"
+            [nzLoading]="listLoading"
+            [nzShowSizeChanger]="true"
+            [nzShowQuickJumper]="true"
+            [nzShowTotal]="totalTpl"
+            nzSize="small"
+            class="training-table-host"
+          >
+            <thead>
+              <tr>
+                <th class="col-title" style="width:26%">项目名称</th>
+                <th style="width:15%">课程</th>
+                <th style="width:11%">状态</th>
+                <th style="width:8%">任务</th>
+                <th style="width:8%">资料</th>
+                <th style="width:10%">参与人数</th>
+                <th style="width:22%">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of projects()" [class.selected]="item.id === selectedProjectId">
+                <td class="col-title project-name">
+                  <a class="project-link" (click)="openEdit(item)" [title]="item.title">{{ item.title }}</a>
+                </td>
+                <td class="course-name">{{ item.courseTitle || '—' }}</td>
+                <td>
+                  <div class="status-tags">
+                    <!-- 已结束为终态：只显示“已结束”，不再叠加显示“已发布/草稿/已归档” -->
+                    <span *ngIf="item.isExpired" class="status-tag ended">已结束</span>
+                    <span *ngIf="!item.isExpired" class="status-tag" [ngClass]="item.status === statuses.Published ? 'published' : item.status === statuses.Archived ? 'ended' : 'draft'">
+                      {{ statusLabel(item.status) }}
+                    </span>
+                  </div>
+                </td>
+                <td class="num-cell">{{ item.taskCount }}</td>
+                <td class="num-cell">{{ item.materialCount }}</td>
+                <td class="num-cell">{{ item.enrollmentCount || '—' }}</td>
+                <td>
+                  <div class="op-links">
+                    <a class="op-link edit" (click)="openEdit(item)">编辑</a>
+                    <span class="op-sep">|</span>
+                    <a class="op-link delete" (click)="confirmDeleteProject(item.id)">删除</a>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </nz-table>
+          <ng-template #totalTpl let-total>共 {{ total }} 条</ng-template>
+
+          <div *ngIf="!listLoading && projects().length === 0" class="empty-tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>{{ filter ? '没有匹配的实训项目，换个关键词试试' : '暂无实训项目' }}</span>
+            <button class="create-btn" type="button" (click)="openCreate()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              新建实训项目
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </nz-tab>
 
-    <div class="table-wrap">
-    <nz-table
-      [nzData]="projects()"
-      [nzFrontPagination]="false"
-      nzSize="small"
-      [nzShowPagination]="false"
-      class="training-table-host"
-    >
-      <thead>
-        <tr>
-          <th style="width:20%">项目名称</th>
-          <th style="width:15%">课程</th>
-          <th style="width:12%">状态</th>
-          <th style="width:10%">任务</th>
-          <th style="width:10%">资料</th>
-          <th style="width:10%">参与人数</th>
-          <th style="width:23%">操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of projects()" [class.selected]="item.id === selectedProjectId">
-          <td class="project-name">
-            <a class="project-link" (click)="openEdit(item)" [title]="item.title">{{ item.title }}</a>
-          </td>
-          <td class="course-name">{{ item.courseTitle || '—' }}</td>
-          <td>
-            <div class="status-tags">
-              <!-- 已结束为终态：只显示“已结束”，不再叠加显示“已发布/草稿/已归档” -->
-              <span *ngIf="item.isExpired" class="status-tag ended">已结束</span>
-              <span *ngIf="!item.isExpired" class="status-tag" [ngClass]="item.status === statuses.Published ? 'published' : item.status === statuses.Archived ? 'ended' : 'draft'">
-                {{ statusLabel(item.status) }}
-              </span>
-            </div>
-          </td>
-          <td class="num-cell"><a (click)="openEdit(item)">{{ item.taskCount }}</a></td>
-          <td class="num-cell"><a (click)="openEdit(item)">{{ item.materialCount }}</a></td>
-          <td class="num-cell">{{ item.enrollmentCount || '—' }}</td>
-          <td>
-            <div class="op-links">
-              <a class="op-link edit" (click)="openEdit(item)">编辑</a>
-              <span class="op-sep">|</span>
-              <a class="op-link delete" (click)="deleteProject(item.id)">删除</a>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </nz-table>
+    <!-- ══════════ Tab 2：实训资料 ══════════ -->
+    <nz-tab nzTitle="实训资料">
+      <div class="table-card list-card">
+        <div class="table-toolbar material-toolbar">
+          <button class="create-btn" type="button" (click)="openAddMaterialDrawer()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            添加资料
+          </button>
+          <div class="search-box material-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" [(ngModel)]="materialFilter" placeholder="搜索资料名称 / 说明 / 所属项目" />
+          </div>
+          <span class="material-count">共 {{ filteredAllMaterials().length }} 份资料</span>
+        </div>
 
-    <div *ngIf="projects().length === 0" class="empty-tip">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span>暂无实训项目</span>
-      <button class="create-btn" type="button" (click)="openCreate()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        新建实训项目
-      </button>
-    </div>
-    </div>
+        <div class="table-wrap">
+          <nz-table
+            [nzData]="filteredAllMaterials()"
+            [nzFrontPagination]="true"
+            [nzPageSize]="10"
+            [nzLoading]="materialLoading"
+            nzSize="small"
+            class="training-table-host material-table-host"
+          >
+            <thead>
+              <tr>
+                <th class="col-title" style="width:26%">资料名称</th>
+                <th style="width:10%">类型</th>
+                <th style="width:20%">所属项目</th>
+                <th style="width:10%">排序</th>
+                <th style="width:34%">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of filteredAllMaterials()">
+                <td class="col-title">
+                  <div class="material-cell">
+                    <span class="material-cell__title" [title]="row.material.title">{{ row.material.title || '（未命名）' }}</span>
+                  </div>
+                  <div *ngIf="row.material.description" class="material-cell__desc" [title]="row.material.description">{{ row.material.description }}</div>
+                </td>
+                <td><nz-tag [nzColor]="materialTypeColor(row.material.materialType)">{{ materialTypeLabel(row.material.materialType) }}</nz-tag></td>
+                <td class="course-name">{{ row.projectTitle }}</td>
+                <td class="num-cell">{{ row.material.sortOrder }}</td>
+                <td>
+                  <div class="op-links">
+                    <a *ngIf="row.material.resourceUrl" class="op-link download"
+                       [href]="row.material.resourceUrl" target="_blank" rel="noopener noreferrer"
+                       [title]="row.material.resourceUrl">
+                      <span nz-icon [nzType]="row.material.materialType === 3 ? 'link' : 'download'" nzTheme="outline"></span>
+                      {{ row.material.materialType === 3 ? '打开' : '下载' }}
+                    </a>
+                    <span *ngIf="row.material.resourceUrl" class="op-sep">|</span>
+                    <a class="op-link edit" (click)="openEditMaterialDrawer(row)">编辑</a>
+                    <span class="op-sep">|</span>
+                    <a class="op-link delete" (click)="deleteMaterialRow(row)">删除</a>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </nz-table>
 
-    <div class="pagination">
-      <div class="page-info">共 {{ projects().length }} 条</div>
-      <div class="page-controls">
-        <button class="page-btn" type="button" disabled>&lt;</button>
-        <button class="page-btn active" type="button">1</button>
-        <button class="page-btn" type="button" disabled>&gt;</button>
-        <select class="page-size" disabled><option>10 条/页</option></select>
+          <div *ngIf="!materialLoading && allMaterialRows().length === 0" class="empty-tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>尚未关联任何资料，点击左上“添加资料”，在表单里选择所属项目</span>
+          </div>
+          <div *ngIf="!materialLoading && allMaterialRows().length > 0 && filteredAllMaterials().length === 0" class="empty-tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>没有匹配的资料</span>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    </nz-tab>
+  </nz-tabs>
 
-  <!-- Inline edit form — styled as prototype training-modal form groups, but rendered inline -->
-  <div *ngIf="formVisible" class="table-card form-card">
-    <div class="form-card-header">
-      <h3>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-        {{ editingId ? '编辑实训项目' : '新建实训项目' }}
-      </h3>
-      <button class="close-icon" type="button" (click)="formVisible = false">
-        <span nz-icon nzType="close"></span>
-      </button>
-    </div>
-
-    <div class="form-body">
+  <!-- 项目表单弹窗（新建 / 编辑，仅基础信息） -->
+  <nz-modal
+    [nzVisible]="formVisible"
+    [nzTitle]="editingId ? '编辑实训项目' : '新建实训项目'"
+    [nzWidth]="760"
+    nzWrapClassName="practicum-modal-wrap project-modal-wrap"
+    [nzFooter]="projectFormFooter"
+    (nzOnCancel)="closeForm()"
+    (nzVisibleChange)="$event ? null : closeForm()">
+    <div *nzModalContent class="project-modal-body">
       <!-- Cover card -->
       <div class="cover-card">
         <div class="cover-card-label">
@@ -219,52 +303,13 @@
         </div>
       </div>
 
-      <!-- Materials -->
-      <div class="form-group">
-        <div class="material-section">
-          <div class="material-header">
-            <span class="title">关联资料</span>
-            <button class="add-material-btn" type="button" (click)="openAddMaterialDrawer()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-              添加资料
-            </button>
-          </div>
-          <div *ngIf="form.materials.length === 0" class="material-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <p>尚未添加资料，点击右上角“添加资料”开始配置。</p>
-          </div>
-          <div class="material-inline-list" *ngIf="form.materials.length > 0">
-            <div class="material-inline-item" *ngFor="let material of form.materials; let i = index">
-              <div class="material-inline-item__icon">
-                <span nz-icon [nzType]="material.materialType === 3 ? 'link' : 'file-text'" nzTheme="outline"></span>
-              </div>
-              <div class="material-inline-item__body">
-                <div class="material-inline-item__title">
-                  <span class="cell-title">{{ material.title || '（未命名）' }}</span>
-                  <nz-tag [nzColor]="materialTypeColor(material.materialType)" nzSize="small">{{ materialTypeLabel(material.materialType) }}</nz-tag>
-                </div>
-                <div class="material-inline-item__desc">{{ material.description || '—' }}</div>
-                <a *ngIf="material.resourceUrl" [href]="material.resourceUrl" target="_blank" rel="noopener noreferrer" class="material-inline-item__link">
-                  <span nz-icon nzType="link" nzTheme="outline"></span> {{ material.resourceUrl | slice:0:60 }}{{ material.resourceUrl.length > 60 ? '…' : '' }}
-                </a>
-              </div>
-              <div class="material-inline-item__actions">
-                <a class="op-link edit" (click)="openEditMaterialDrawer(i)">编辑</a>
-                <span class="op-sep">|</span>
-                <a class="op-link delete" (click)="removeMaterial(i)">删除</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <p class="modal-tip">资料关联请前往「实训资料」Tab，按项目统一维护。</p>
     </div>
-
-    <div class="form-actions">
-      <button nz-button (click)="formVisible = false">取消</button>
-      <button nz-button nzType="primary" (click)="saveForm()">保存</button>
-      <button nz-button nzDanger *ngIf="editingId" (click)="deleteProject(editingId)">删除实训项目</button>
-    </div>
-  </div>
+    <ng-template #projectFormFooter>
+      <button nz-button (click)="closeForm()">取消</button>
+      <button nz-button nzType="primary" (click)="saveForm()" [nzLoading]="formSaving">保存</button>
+    </ng-template>
+  </nz-modal>
 
   <!-- Material drawer modal (nz-modal, keep logic) -->
   <nz-modal
@@ -279,6 +324,13 @@
       <div class="dh-modal">
         <ng-container *ngIf="materialDraft() as draft">
           <div class="dh-form">
+            <div class="field full">
+              <span class="label">所属项目 <em>*</em></span>
+              <nz-select [ngModel]="draft.projectId" (ngModelChange)="patchDraft({ projectId: $event })"
+                nzShowSearch nzPlaceHolder="选择要关联的实训项目" style="width: 100%;">
+                <nz-option *ngFor="let p of materialProjects" [nzValue]="p.id" [nzLabel]="p.title"></nz-option>
+              </nz-select>
+            </div>
             <div class="field full">
               <span class="label">资料名称 <em>*</em></span>
               <input nz-input [ngModel]="draft.title" (ngModelChange)="patchDraft({ title: $event })" placeholder="例如：实验操作手册" />

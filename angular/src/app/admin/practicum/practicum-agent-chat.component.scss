@@ -6,8 +6,10 @@
   flex-direction: column;
   gap: 16px;
   background: var(--kh-canvas);
-  // 数据容器占据页面剩余高度
-  min-height: calc(100vh - 140px);
+  // 聊天页精确占满视口一屏：头部固定，超出的内容只在聊天区内部滚动
+  height: calc(100vh - 140px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 // ───── 标题区（与实训其他页统一） ─────
@@ -23,12 +25,12 @@
   p { font-size: 13.5px; color: var(--kh-muted); margin: 4px 0 0; line-height: 1.5; }
 }
 
-// ───── 数据容器：选择器 + 页签同一卡片 ─────
+// ───── 数据容器：选择器 + 页签同一卡片，收紧高度随页面伸缩 ─────
 .list-card {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  min-height: 560px;
   background: var(--kh-panel);
   border: 1px solid var(--kh-line);
   border-radius: var(--kh-r-shell);
@@ -90,8 +92,14 @@
   ::ng-deep .ant-tabs-tabpane {
     height: 100%;
     min-height: 0;
-    overflow-y: auto;
+    overflow: hidden;
     outline: none;
+  }
+  // 只让当前活动的面板参与 flex 布局：直接写在 tabpane 上 display:flex 会盖掉
+  // nz-tabs 对非活动面板的隐藏，导致两个 Tab 内容叠在一起显示
+  ::ng-deep .ant-tabs-tabpane.ant-tabs-tabpane-active {
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -178,18 +186,31 @@
 .config-tab {
   padding: 4px 0;
   min-height: 0;
+  overflow-y: auto;
 }
 
-// ───── 聊天页签：内嵌聊天室撑满剩余高度 ─────
+// ───── 聊天页签：内嵌聊天室填满剩余高度，滚动只发生在消息区 ─────
 .chat-tab {
+  flex: 1;
   height: 100%;
-  min-height: 480px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+
+  // 关键：组件宿主默认高度由内容撑开，会导致内部 height:100% 链失效、
+  // 消息区跟着内容长大而不滚动。这里把它锁成填满剩余空间的 flex 容器
+  ::ng-deep app-practicum-chat {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
   ::ng-deep .chat-page.chat-page--embedded {
     height: 100%;
-    min-height: 480px;
+    min-height: 0;
     flex: 1;
   }
 }

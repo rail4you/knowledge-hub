@@ -118,26 +118,34 @@
 
             <div class="field full">
               <span class="label">封面图片</span>
-              <div class="cover-upload-group">
-                <nz-upload
-                  nzListType="picture-card"
-                  [nzMultiple]="false"
-                  [nzMaxCount]="1"
-                  [nzBeforeUpload]="beforeSimulationCoverUpload"
-                  [nzFileList]="draft.coverFileList"
-                  [nzRemove]="removeSimulationCover"
-                  [nzDisabled]="draft.coverUploading"
-                  nzAccept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
-                >
-                  @if (draft.coverFileList.length === 0) {
-                    <div class="cover-upload-trigger">
-                      <span nz-icon nzType="plus"></span>
-                      <div style="margin-top: 8px">上传封面</div>
+              <div class="cover-card">
+                <div class="cover-uploader" [class.has-cover]="!!draft.coverUrl" [class.uploading]="draft.coverUploading">
+                  <ng-container *ngIf="draft.coverUrl; else simCoverEmpty">
+                    <a [href]="draft.coverUrl" target="_blank" rel="noopener noreferrer" title="点击在新标签页查看大图">
+                      <img [src]="draft.coverUrl" alt="镜像封面" class="cover-img" />
+                    </a>
+                  </ng-container>
+                  <ng-template #simCoverEmpty>
+                    <div class="cover-empty">
+                      <span nz-icon nzType="picture" class="cover-empty-icon"></span>
+                      <p class="cover-empty-title">暂无封面，点击下方按钮上传</p>
+                      <span class="cover-empty-hint">JPG / PNG / WebP / GIF / BMP，≤ 10MB（可选）</span>
                     </div>
-                  }
-                </nz-upload>
+                  </ng-template>
+                  <div class="cover-actions">
+                    <button type="button" nz-button class="cover-action-btn primary" (click)="simCoverInput.click()" [disabled]="draft.coverUploading">
+                      <span nz-icon [nzType]="draft.coverUrl ? 'reload' : 'upload'"></span>
+                      {{ draft.coverUrl ? '替换封面' : '上传封面' }}
+                    </button>
+                    <button *ngIf="draft.coverUrl" type="button" nz-button nzDanger class="cover-action-btn danger" (click)="removeSimulationCoverClick()" [disabled]="draft.coverUploading">
+                      <span nz-icon nzType="delete"></span> 移除
+                    </button>
+                  </div>
+                  <nz-spin *ngIf="draft.coverUploading" nzSimple class="cover-spin"></nz-spin>
+                  <input #simCoverInput type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/bmp" hidden (change)="onSimulationCoverFileChange($event)" />
+                </div>
               </div>
-              <span class="upload-hint">JPG / PNG / WebP / GIF / BMP，≤ 10MB（可选）</span>
+              <span class="upload-hint">建议 16:9，点击封面可在新标签页查看大图</span>
             </div>
 
             <ng-container *ngIf="!draft.editingId">

@@ -6,20 +6,25 @@ import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzUploadFile, NzUploadModule } from 'ng-zorro-antd/upload';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { CourseService } from '../../proxy/courses/course.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import { OssUploadService } from '../../shared/oss-upload.service';
 import {
+  CreateUpdatePracticumMaterialDto,
   CreateUpdatePracticumProjectDto,
+  CreateUpdatePracticumTaskDto,
   PracticumProjectDto,
   PracticumProjectStatus,
   PracticumService,
@@ -31,6 +36,15 @@ type MaterialDraft = {
   materialType: number;
   resourceUrl: string;
   sortOrder: number;
+  /** 资料所属项目（在新建 / 编辑表单里选择）。 */
+  projectId: string;
+};
+
+/** 资料 Tab 平铺行：资料 + 其所属项目。 */
+type MaterialRow = {
+  projectId: string;
+  projectTitle: string;
+  material: CreateUpdatePracticumMaterialDto;
 };
 
 @Component({
@@ -39,7 +53,7 @@ type MaterialDraft = {
   imports: [
     CommonModule, FormsModule,
     NzButtonModule, NzCardModule, NzEmptyModule, NzInputModule, NzModalModule, NzSelectModule,
-    NzSpinModule, NzSwitchModule, NzTableModule, NzTagModule, NzTooltipModule, NzIconModule, NzUploadModule,
+    NzSpinModule, NzSwitchModule, NzTableModule, NzTabsModule, NzTagModule, NzTooltipModule, NzIconModule, NzUploadModule,
   ],
   templateUrl: './practicum-management.component.html',
   styleUrls: ['./practicum-management.component.scss'],
@@ -50,24 +64,50 @@ export class PracticumManagementComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly ossUploadService = inject(OssUploadService);
   private readonly message = inject(NzMessageService);
+  private readonly modal = inject(NzModalService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   readonly projects = signal<PracticumProjectDto[]>([]);
   readonly courses = signal<CourseDto[]>([]);
   readonly statuses = PracticumProjectStatus;
 
+  /** 0 = 实训管理，1 = 实训资料 */
+  activeTab = 0;
+
+  // ===== 实训管理：搜索 + 分页 =====
+  filter = '';
+  statusFilter: PracticumProjectStatus | null = null;
+  pageIndex = 1;
+  pageSize = 10;
+  total = 0;
+  listLoading = false;
+
   selectedProjectId: string | null = null;
-  /** 是否显示内联编辑表单（新建或选中项目后显示）。 */
+
+  // ===== 项目表单（弹窗，新建 / 编辑，仅基础信息） =====
   formVisible = false;
+  formSaving = false;
   editingId: string | null = null;
   /** 编辑表单显示用:后端 detail 返回的关联课程名称(不是 ID)。 */
   selectedCourseTitle = '';
+  /** 编辑时暂存原始任务 / 资料，保存时原样回传，避免被清空。 */
+  private originalTasks: CreateUpdatePracticumTaskDto[] = [];
+  private originalMaterials: CreateUpdatePracticumMaterialDto[] = [];
 
   // ===== OSS 上传状态 =====
   coverUploading = false;
   coverFileList: NzUploadFile[] = [];
-  materialUploading: Record<number, boolean> = {};
   @ViewChild('coverFileInput') coverFileInputRef?: ElementRef<HTMLInputElement>;
+
+  // ===== 实训资料 Tab：全部资料平铺，归属项目在新建 / 编辑表单里选择 =====
+  /** 供表单选择的已有项目（id + title）。 */
+  materialProjects: { id: string; title: string }[] = [];
+  /** 各项目的 detail 缓存：保存时用原始字段回填，避免时间漂移。 */
+  private readonly projectBaseMap = new Map<string, { title: string; raw: any; materials: CreateUpdatePracticumMaterialDto[] }>();
+  readonly allMaterialRows = signal<MaterialRow[]>([]);
+  materialFilter = '';
+  materialLoading = false;
+  materialsLoaded = false;
 
   // ===== 资料抽屉(统一承载"查看 / 新增 / 编辑"资料) =====
   readonly drawerMode = signal<'add' | 'edit'>('add');
@@ -78,25 +118,26 @@ export class PracticumManagementComponent implements OnInit {
 
   readonly materialDraft = signal<MaterialDraft | null>(null);
 
-  /** 基本信息 + 资料（同一 DTO，保存时一并提交）。 */
+  /** 基本信息（资料与任务不在此表单维护）。 */
   form: CreateUpdatePracticumProjectDto = this.freshForm();
 
   ngOnInit(): void {
     this.loadCourses();
-    this.reload();
+    this.reload(true);
   }
 
   private freshForm(): CreateUpdatePracticumProjectDto {
     this.selectedCourseTitle = '';
     this.coverFileList = [];
-    this.materialUploading = {};
+    this.originalTasks = [];
+    this.originalMaterials = [];
     return { title: '', summary: '', description: '', coverImageUrl: '', courseId: undefined,
       major: '', className: '', status: PracticumProjectStatus.Draft,
       startTime: undefined, endTime: undefined, maxScore: 100, allowResubmission: true,
       tasks: [], materials: [] };
   }
 
-  /** 把后端 detail 填到 form + 设置 selectedCourseTitle。 */
+  /** 把后端 detail 填到 form + 缓存原始任务/资料以便保存时回传。 */
   private applyDetailToForm(detail: any): void {
     this.form = {
       title: detail.title,
@@ -111,15 +152,23 @@ export class PracticumManagementComponent implements OnInit {
       endTime: this.toDateTimeLocal(detail.endTime),
       maxScore: detail.maxScore,
       allowResubmission: detail.allowResubmission,
-      tasks: detail.tasks || [],
-      materials: (detail.materials || []).map((m: any) => ({
-        taskId: m.taskId, title: m.title, description: m.description || '',
-        materialType: m.materialType, resourceUrl: m.resourceUrl, sortOrder: m.sortOrder,
-      })),
+      tasks: [],
+      materials: [],
     };
+    this.originalTasks = (detail.tasks || []).map((t: any) => ({
+      title: t.title,
+      description: t.description || '',
+      requirement: t.requirement || '',
+      dueTime: t.dueTime ? this.toDateTimeLocal(t.dueTime) : undefined,
+      scoreWeight: t.scoreWeight,
+      sortOrder: t.sortOrder,
+    }));
+    this.originalMaterials = (detail.materials || []).map((m: any) => ({
+      taskId: m.taskId, title: m.title, description: m.description || '',
+      materialType: m.materialType, resourceUrl: m.resourceUrl, sortOrder: m.sortOrder,
+    }));
     this.selectedCourseTitle = detail.courseTitle || '';
     this.syncCoverFileList();
-    this.materialUploading = {};
     this.cdr.markForCheck();
   }
 
@@ -128,12 +177,66 @@ export class PracticumManagementComponent implements OnInit {
       .subscribe(r => { this.courses.set(r.items || []); this.cdr.markForCheck(); });
   }
 
-  reload(): void {
-    this.practicumService.getList({ skipCount: 0, maxResultCount: 100 })
-      .subscribe(r => { this.projects.set(r.items || []); this.cdr.markForCheck(); });
+  // ─── 列表：搜索 + 分页 ───────────────────
+
+  reload(resetPage = false): void {
+    if (resetPage) this.pageIndex = 1;
+    this.listLoading = true;
+    this.cdr.markForCheck();
+    const keyword = (this.filter || '').trim();
+    this.practicumService.getList({
+      filter: keyword || undefined,
+      status: this.statusFilter ?? undefined,
+      skipCount: (this.pageIndex - 1) * this.pageSize,
+      maxResultCount: this.pageSize,
+    } as any).subscribe({
+      next: r => {
+        this.projects.set(r.items || []);
+        this.total = r.totalCount ?? (r.items || []).length;
+        this.listLoading = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.listLoading = false;
+        this.message.error('加载实训项目失败');
+        this.cdr.markForCheck();
+      },
+    });
   }
 
-  // ─── 新建 / 编辑（内联表单） ───────────────────
+  onSearch(): void {
+    this.reload(true);
+  }
+
+  onReset(): void {
+    this.filter = '';
+    this.statusFilter = null;
+    this.reload(true);
+  }
+
+  onPageIndexChange(index: number): void {
+    this.pageIndex = index;
+    this.reload();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.reload(true);
+  }
+
+  onTabChange(index: number): void {
+    this.activeTab = index;
+    if (index === 1 && !this.materialsLoaded) this.loadAllMaterials();
+    this.cdr.markForCheck();
+  }
+
+  /** 从资料 Tab 跳回管理 Tab 并定位到指定项目。 */
+  gotoManageTab(projectId?: string): void {
+    if (projectId) this.selectedProjectId = projectId;
+    this.onTabChange(0);
+  }
+
+  // ─── 新建 / 编辑（弹窗表单，仅基础信息） ───────────────────
 
   openCreate(): void {
     this.editingId = null;
@@ -150,36 +253,74 @@ export class PracticumManagementComponent implements OnInit {
     this.formVisible = true;
     this.cdr.markForCheck();
 
-    this.practicumService.getDetail(p.id).subscribe(detail => {
-      this.applyDetailToForm(detail);
-      this.cdr.markForCheck();
+    this.practicumService.getDetail(p.id).subscribe({
+      next: detail => this.applyDetailToForm(detail),
+      error: () => this.message.error('加载项目详情失败'),
     });
   }
 
+  closeForm(): void {
+    this.formVisible = false;
+    this.formSaving = false;
+    this.cdr.markForCheck();
+  }
+
   saveForm(): void {
+    if (!(this.form.title || '').trim()) {
+      this.message.warning('请填写项目名称');
+      return;
+    }
     if (this.form.startTime && this.form.endTime && this.form.startTime > this.form.endTime) {
       this.message.error('开始时间不能晚于结束时间');
       return;
     }
-    const body = this.prepareFormPayload();
+    this.formSaving = true;
+    this.cdr.markForCheck();
+    // 编辑时把原始任务 / 资料原样回传，避免弹窗保存清空它们；
+    // 新建时任务与资料为空，后续去「实训资料」Tab 关联。
+    const tasks = (this.originalTasks || []).map(t => ({
+      ...t,
+      dueTime: t.dueTime ? this.fromDateTimeLocal(t.dueTime) : undefined,
+    }));
+    const materials = [...(this.originalMaterials || [])];
+    const body = {
+      ...this.prepareFormPayload(),
+      title: (this.form.title || '').trim(),
+      tasks,
+      materials,
+    };
     const obs = this.editingId
       ? this.practicumService.update(this.editingId, body)
       : this.practicumService.create(body);
 
     obs.subscribe({
       next: r => {
+        this.formSaving = false;
         this.message.success('实训项目已保存');
         this.selectedProjectId = r.id;
         this.editingId = r.id;
-        this.formVisible = true;
+        this.formVisible = false;
+        this.reload();
+        // 资料 Tab 已加载过则同步刷新（项目改名 / 增删会影响资料表）
+        if (this.materialsLoaded) this.loadAllMaterials();
         this.cdr.markForCheck();
-        this.practicumService.getDetail(r.id).subscribe(detail => {
-          this.applyDetailToForm(detail);
-          this.reload();
-          this.cdr.markForCheck();
-        });
       },
-      error: () => this.message.error('保存失败'),
+      error: () => {
+        this.formSaving = false;
+        this.message.error('保存失败');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  confirmDeleteProject(id: string): void {
+    this.modal.confirm({
+      nzTitle: '确认删除该实训项目？',
+      nzContent: '删除后不可恢复，已有学生参与的项目不允许删除。',
+      nzOkText: '删除',
+      nzOkDanger: true,
+      nzCancelText: '取消',
+      nzOnOk: () => this.deleteProject(id),
     });
   }
 
@@ -187,39 +328,188 @@ export class PracticumManagementComponent implements OnInit {
     this.practicumService.delete(id).subscribe({
       next: () => {
         this.message.success('实训项目已删除');
-        this.selectedProjectId = null;
-        this.editingId = null;
-        this.formVisible = false;
-        this.form = this.freshForm();
+        if (this.selectedProjectId === id) {
+          this.selectedProjectId = null;
+          this.editingId = null;
+        }
+        if (this.materialsLoaded) this.loadAllMaterials();
         this.reload();
         this.cdr.markForCheck();
       },
-      error: () => this.message.error('删除失败'),
+      error: () => this.message.error('删除失败（可能已有学生参与）'),
     });
   }
 
-  // ─── 资料抽屉 ─────────────────────────────────────
+  // ─── 实训资料 Tab：全部资料平铺 + 即时持久化 ───────────────────
+
+  loadAllMaterials(): void {
+    this.materialLoading = true;
+    this.cdr.markForCheck();
+    this.practicumService.getList({ skipCount: 0, maxResultCount: 200 } as any).subscribe({
+      next: list => {
+        const items = list.items || [];
+        this.materialProjects = items.map(p => ({ id: p.id, title: p.title }));
+        if (items.length === 0) {
+          this.projectBaseMap.clear();
+          this.rebuildMaterialRows();
+          this.materialLoading = false;
+          this.materialsLoaded = true;
+          this.cdr.markForCheck();
+          return;
+        }
+        forkJoin(items.map(p => this.practicumService.getDetail(p.id).pipe(catchError(() => of(null))))).subscribe({
+          next: details => {
+            this.projectBaseMap.clear();
+            details.forEach((d: any, idx: number) => {
+              if (!d) return;
+              const mats: CreateUpdatePracticumMaterialDto[] = (d.materials || []).map((m: any) => ({
+                taskId: m.taskId, title: m.title, description: m.description || '',
+                materialType: m.materialType, resourceUrl: m.resourceUrl, sortOrder: m.sortOrder,
+              }));
+              mats.forEach((m, i) => m.sortOrder = i + 1);
+              this.projectBaseMap.set(items[idx].id, { title: d.title, raw: d, materials: mats });
+            });
+            this.rebuildMaterialRows();
+            this.materialLoading = false;
+            this.materialsLoaded = true;
+            this.cdr.markForCheck();
+          },
+          error: () => {
+            this.materialLoading = false;
+            this.message.error('加载项目资料失败');
+            this.cdr.markForCheck();
+          },
+        });
+      },
+      error: () => {
+        this.materialLoading = false;
+        this.message.error('加载实训项目失败');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  private rebuildMaterialRows(): void {
+    const rows: MaterialRow[] = [];
+    this.projectBaseMap.forEach((v, k) => {
+      v.materials.forEach(m => rows.push({ projectId: k, projectTitle: v.title, material: m }));
+    });
+    this.allMaterialRows.set(rows);
+  }
+
+  filteredAllMaterials(): MaterialRow[] {
+    const keyword = (this.materialFilter || '').trim().toLowerCase();
+    const rows = this.allMaterialRows();
+    if (!keyword) return rows;
+    return rows.filter(r =>
+      (r.material.title || '').toLowerCase().includes(keyword) ||
+      (r.material.description || '').toLowerCase().includes(keyword) ||
+      (r.projectTitle || '').toLowerCase().includes(keyword));
+  }
+
+  /** 把某项目的当前资料数组持久化（其余字段用缓存 detail 回填）。 */
+  private persistMaterials(projectId: string) {
+    const entry = this.projectBaseMap.get(projectId)!;
+    const base = entry.raw;
+    entry.materials.forEach((m, idx) => m.sortOrder = idx + 1);
+    const body: CreateUpdatePracticumProjectDto = {
+      title: base.title,
+      summary: base.summary || '',
+      description: base.description || '',
+      coverImageUrl: base.coverImageUrl || '',
+      courseId: base.courseId,
+      major: base.major || '',
+      className: base.className || '',
+      status: base.status,
+      startTime: base.startTime,
+      endTime: base.endTime,
+      maxScore: base.maxScore,
+      allowResubmission: base.allowResubmission,
+      tasks: (base.tasks || []).map((t: any) => ({
+        title: t.title,
+        description: t.description || '',
+        requirement: t.requirement || '',
+        dueTime: t.dueTime,
+        scoreWeight: t.scoreWeight,
+        sortOrder: t.sortOrder,
+      })),
+      materials: entry.materials.map((m, idx) => ({ ...m, sortOrder: idx + 1 })),
+    };
+    return this.practicumService.update(projectId, body);
+  }
+
+  private afterMaterialsPersisted(projectIds: string[], detailByProject: Map<string, any>): void {
+    projectIds.forEach(pid => {
+      const entry = this.projectBaseMap.get(pid);
+      const detail = detailByProject.get(pid);
+      if (entry && detail) {
+        entry.raw = detail;
+        entry.title = detail.title;
+      }
+    });
+    this.rebuildMaterialRows();
+    this.reload();
+    this.cdr.markForCheck();
+  }
+
+  deleteMaterialRow(row: MaterialRow): void {
+    const entry = this.projectBaseMap.get(row.projectId);
+    if (!entry) return;
+    const idx = entry.materials.indexOf(row.material);
+    if (idx < 0) return;
+    const [removed] = entry.materials.splice(idx, 1);
+    entry.materials.forEach((m, i) => m.sortOrder = i + 1);
+    this.rebuildMaterialRows();
+    this.persistMaterials(row.projectId).subscribe({
+      next: detail => {
+        this.message.success('资料已删除');
+        this.afterMaterialsPersisted([row.projectId], new Map([[row.projectId, detail]]));
+      },
+      error: () => {
+        // 回滚
+        entry.materials.splice(idx, 0, removed);
+        entry.materials.forEach((m, i) => m.sortOrder = i + 1);
+        this.rebuildMaterialRows();
+        this.message.error('删除失败');
+        this.cdr.markForCheck();
+      },
+    });
+  }
+
+  // ─── 资料抽屉（服务于「实训资料」Tab，保存时即时持久化） ─────────────────────────────────────
+
+  /** 编辑态正在编辑的行（新增时为 null）。 */
+  private editingRow: MaterialRow | null = null;
 
   openAddMaterialDrawer(): void {
+    if (this.materialProjects.length === 0) {
+      this.message.warning('暂无实训项目，请先在「实训管理」中新建项目');
+      return;
+    }
     this.drawerMode.set('add');
     this.drawerIndex.set(-1);
+    this.editingRow = null;
     this.materialDraft.set({
       title: '', description: '', materialType: 0, resourceUrl: '',
-      sortOrder: this.form.materials.length + 1,
+      sortOrder: 1,
+      projectId: this.materialProjects[0].id,
     });
     this.drawerUploading.set(false);
     this.drawerVisible.set(true);
   }
 
-  openEditMaterialDrawer(i: number): void {
-    const src = this.form.materials[i];
-    if (!src) return;
+  openEditMaterialDrawer(row: MaterialRow): void {
+    const entry = this.projectBaseMap.get(row.projectId);
+    if (!entry) return;
     this.drawerMode.set('edit');
-    this.drawerIndex.set(i);
+    this.drawerIndex.set(entry.materials.indexOf(row.material));
+    this.editingRow = row;
+    const src = row.material;
     this.materialDraft.set({
       title: src.title ?? '', description: src.description ?? '',
       materialType: src.materialType ?? 0, resourceUrl: src.resourceUrl ?? '',
-      sortOrder: src.sortOrder ?? (i + 1),
+      sortOrder: src.sortOrder ?? 1,
+      projectId: row.projectId,
     });
     this.drawerUploading.set(false);
     this.drawerVisible.set(true);
@@ -248,29 +538,138 @@ export class PracticumManagementComponent implements OnInit {
 
   saveDrawer(): void {
     if (!this.validateMaterialDraft()) return;
-    this.applyMaterialDraft();
-    // 内联表单模式：资料先写入本地表单，由页面"保存"按钮统一提交
-    this.message.success(this.drawerMode() === 'add' ? '已添加，点击"保存"生效' : '已更新，点击"保存"生效');
-    this.closeDrawer();
+    const draft = this.materialDraft()!;
+    const targetEntry = this.projectBaseMap.get(draft.projectId);
+    if (!targetEntry) {
+      this.message.warning('请选择所属项目');
+      return;
+    }
+    const next: CreateUpdatePracticumMaterialDto = {
+      title: (draft.title || '').trim(),
+      description: (draft.description || '').trim(),
+      materialType: draft.materialType,
+      resourceUrl: (draft.resourceUrl || '').trim(),
+      sortOrder: 1,
+    };
+    this.drawerSaving.set(true);
+    this.cdr.markForCheck();
+
+    if (this.drawerMode() === 'add') {
+      targetEntry.materials.push(next);
+      this.persistMaterials(draft.projectId).subscribe({
+        next: detail => {
+          this.drawerSaving.set(false);
+          this.message.success('资料已添加');
+          this.afterMaterialsPersisted([draft.projectId], new Map([[draft.projectId, detail]]));
+          this.closeDrawer();
+        },
+        error: () => {
+          this.drawerSaving.set(false);
+          this.message.error('添加失败，已恢复');
+          this.loadAllMaterials();
+        },
+      });
+      return;
+    }
+
+    // 编辑：所属项目不变则原位替换，变更则从旧项目移到新项目
+    const orig = this.editingRow;
+    if (!orig) {
+      this.drawerSaving.set(false);
+      return;
+    }
+    const oldEntry = this.projectBaseMap.get(orig.projectId);
+    if (!oldEntry) {
+      this.drawerSaving.set(false);
+      return;
+    }
+    const oldIdx = oldEntry.materials.indexOf(orig.material);
+    if (oldIdx < 0) {
+      this.drawerSaving.set(false);
+      return;
+    }
+    if (orig.projectId === draft.projectId) {
+      oldEntry.materials[oldIdx] = next;
+      this.persistMaterials(draft.projectId).subscribe({
+        next: detail => {
+          this.drawerSaving.set(false);
+          this.message.success('资料已更新');
+          this.afterMaterialsPersisted([draft.projectId], new Map([[draft.projectId, detail]]));
+          this.closeDrawer();
+        },
+        error: () => {
+          this.drawerSaving.set(false);
+          this.message.error('更新失败，已恢复');
+          this.loadAllMaterials();
+        },
+      });
+    } else {
+      oldEntry.materials.splice(oldIdx, 1);
+      targetEntry.materials.push(next);
+      forkJoin([
+        this.persistMaterials(orig.projectId).pipe(catchError(() => of(null))),
+        this.persistMaterials(draft.projectId).pipe(catchError(() => of(null))),
+      ]).subscribe({
+        next: ([oldDetail, newDetail]) => {
+          this.drawerSaving.set(false);
+          if (!oldDetail || !newDetail) {
+            this.message.error('移动失败，已恢复');
+            this.loadAllMaterials();
+            return;
+          }
+          this.message.success('资料已更新');
+          this.afterMaterialsPersisted(
+            [orig.projectId, draft.projectId],
+            new Map([[orig.projectId, oldDetail], [draft.projectId, newDetail]]));
+          this.closeDrawer();
+        },
+        error: () => {
+          this.drawerSaving.set(false);
+          this.message.error('更新失败，已恢复');
+          this.loadAllMaterials();
+        },
+      });
+    }
   }
 
   deleteFromDrawer(): void {
-    const i = this.drawerIndex();
-    if (i < 0) return;
-    this.removeMaterial(i);
-    this.message.success('已删除，点击"保存"生效');
-    this.closeDrawer();
+    const orig = this.editingRow;
+    if (!orig) return;
+    const entry = this.projectBaseMap.get(orig.projectId);
+    if (!entry) return;
+    const idx = entry.materials.indexOf(orig.material);
+    if (idx < 0) return;
+    entry.materials.splice(idx, 1);
+    this.drawerSaving.set(true);
+    this.persistMaterials(orig.projectId).subscribe({
+      next: detail => {
+        this.drawerSaving.set(false);
+        this.message.success('资料已删除');
+        this.afterMaterialsPersisted([orig.projectId], new Map([[orig.projectId, detail]]));
+        this.closeDrawer();
+      },
+      error: () => {
+        this.drawerSaving.set(false);
+        this.message.error('删除失败，已恢复');
+        this.loadAllMaterials();
+        this.closeDrawer();
+      },
+    });
   }
 
   addMaterial(): void { this.openAddMaterialDrawer(); }
   openAddMaterial(): void { this.openAddMaterialDrawer(); }
-  openEditMaterial(i: number): void { this.openEditMaterialDrawer(i); }
-  openMaterialDrawer(i: number): void { this.openEditMaterialDrawer(i); }
+  openEditMaterial(row: MaterialRow): void { this.openEditMaterialDrawer(row); }
+  openMaterialDrawer(row: MaterialRow): void { this.openEditMaterialDrawer(row); }
   editFromDrawer(): void { /* no-op: 抽屉本身就是编辑态 */ }
 
   private validateMaterialDraft(): boolean {
     const draft = this.materialDraft();
     if (!draft) return false;
+    if (!draft.projectId || !this.projectBaseMap.has(draft.projectId)) {
+      this.message.warning('请选择所属项目');
+      return false;
+    }
     if (!(draft.title || '').trim()) {
       this.message.warning('请填写资料名称');
       return false;
@@ -286,25 +685,6 @@ export class PracticumManagementComponent implements OnInit {
       return false;
     }
     return true;
-  }
-
-  private applyMaterialDraft(): void {
-    const draft = this.materialDraft()!;
-    const next = {
-      title: (draft.title || '').trim(),
-      description: (draft.description || '').trim(),
-      materialType: draft.materialType,
-      resourceUrl: (draft.resourceUrl || '').trim(),
-      sortOrder: draft.sortOrder ?? 1,
-    };
-    if (this.drawerMode() === 'add') {
-      this.form.materials.push(next);
-    } else {
-      const i = this.drawerIndex();
-      if (this.form.materials[i]) this.form.materials[i] = next;
-    }
-    this.form.materials.forEach((m, idx) => m.sortOrder = idx + 1);
-    this.cdr.markForCheck();
   }
 
   private toDateTimeLocal(value: string | Date | undefined | null): string {
@@ -324,20 +704,10 @@ export class PracticumManagementComponent implements OnInit {
 
   private prepareFormPayload() {
     const payload = { ...this.form };
-    payload.tasks = (payload.tasks || []).map(t => ({
-      ...t,
-      dueTime: t.dueTime ? this.fromDateTimeLocal(t.dueTime) : undefined,
-    }));
     // datetime-local 输入 → 后端 ISO(UTC)
     payload.startTime = this.fromDateTimeLocal(this.form.startTime);
     payload.endTime = this.fromDateTimeLocal(this.form.endTime);
     return payload;
-  }
-
-  removeMaterial(i: number): void {
-    this.form.materials.splice(i, 1);
-    this.form.materials.forEach((m, idx) => m.sortOrder = idx + 1);
-    this.cdr.markForCheck();
   }
 
   materialTypeLabel(t: number | undefined): string {
@@ -435,41 +805,6 @@ export class PracticumManagementComponent implements OnInit {
     this.coverFileList = [];
     this.cdr.markForCheck();
   }
-
-  beforeMaterialUpload = (index: number) => (file: NzUploadFile): boolean => {
-    const rawFile = file as any as File;
-    if (rawFile.size > 50 * 1024 * 1024) {
-      this.message.error('资料文件不能超过 50MB');
-      return false;
-    }
-    this.materialUploading = { ...this.materialUploading, [index]: true };
-    this.cdr.markForCheck();
-    this.ossUploadService.uploadFile(rawFile).subscribe({
-      next: (res) => {
-        const m = this.form.materials[index];
-        if (m) {
-          m.resourceUrl = res.url;
-          if (!m.title) m.title = res.originalFileName;
-        }
-        this.materialUploading = { ...this.materialUploading, [index]: false };
-        this.message.success(`资料上传成功:${res.originalFileName}`);
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.materialUploading = { ...this.materialUploading, [index]: false };
-        this.message.error('资料上传失败');
-        this.cdr.markForCheck();
-      },
-    });
-    return false;
-  };
-
-  removeMaterialFile = (index: number) => (): boolean => {
-    const m = this.form.materials[index];
-    if (m) m.resourceUrl = '';
-    this.cdr.markForCheck();
-    return true;
-  };
 
   beforeMaterialUploadInDrawer = (): ((file: NzUploadFile) => boolean) => {
     return (file: NzUploadFile): boolean => {

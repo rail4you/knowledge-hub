@@ -17,7 +17,7 @@
 
     <ng-container *ngIf="selectedProjectId; else noProjectTpl">
     <div class="chat-tabs">
-    <nz-tabs [(nzSelectedIndex)]="activeTabIndex">
+    <nz-tabs [(nzSelectedIndex)]="activeTabIndex" [nzAnimated]="false">
       <nz-tab nzTitle="智能体配置">
         <div class="config-tab">
           <div class="section-header">

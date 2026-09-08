@@ -8,9 +8,6 @@
           <span nz-icon nzType="team" nzTheme="outline"></span>
           <span>讨论组成员</span>
         </div>
-        <div class="sidebar-subtitle">
-          {{ projectDetail?.title || '实训聊天' }}
-        </div>
       </div>
 
       <div class="sidebar-contacts">
@@ -18,9 +15,6 @@
         <button class="contact-item"
                 [class.active]="selectedContactId() === 'all'"
                 (click)="selectContact('all')">
-          <div class="contact-avatar contact-avatar--all">
-            <span nz-icon nzType="message" nzTheme="outline"></span>
-          </div>
           <div class="contact-info">
             <div class="contact-name">全部消息</div>
             <div class="contact-count">{{ messages().length }} 条消息</div>
@@ -31,14 +25,6 @@
           <button class="contact-item"
                   [class.active]="selectedContactId() === contact.id"
                   (click)="selectContact(contact.id)">
-            <div class="contact-avatar"
-                 [style.background]="contact.avatarColor">
-              @if (contact.type === 'agent') {
-                <span nz-icon nzType="robot" nzTheme="outline"></span>
-              } @else {
-                <span>{{ contact.name.charAt(0) }}</span>
-              }
-            </div>
             <div class="contact-info">
               <div class="contact-name">{{ contact.name }}</div>
               <div class="contact-type-tag"
@@ -56,37 +42,33 @@
     <!-- ─── Main Chat Area ─── -->
     <div class="chat-main">
 
-      <!-- Top Navigation Bar -->
-      <div class="chat-topbar">
-        <button class="topbar-back" (click)="goBack()" *ngIf="!embedded">
+      <!-- Top Navigation Bar（仅独立页面展示，内嵌时隐藏以节省高度） -->
+      <div class="chat-topbar" *ngIf="!embedded">
+        <button class="topbar-back" (click)="goBack()">
           <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
           <span>返回实训</span>
         </button>
       </div>
 
-      <!-- Header -->
+      <!-- Header（单行紧凑：联系人/全部消息 + 计数，实训名不在此显示） -->
       <header class="chat-header">
-        <div class="chat-header-left">
-          <button class="sidebar-toggle" (click)="toggleSidebar()" nz-tooltip nzTooltipTitle="切换侧栏">
-            <span nz-icon [nzType]="showSidebar() ? 'menu-fold' : 'menu-unfold'" nzTheme="outline"></span>
-          </button>
-          <div class="chat-header__info">
-            <h2 class="chat-header__title">
-              @if (selectedContact(); as contact) {
-                {{ contact.name }}
-              } @else {
-                {{ projectDetail?.title || '实训聊天' }}
-              }
-            </h2>
-            <span class="chat-header__subtitle">
-              @if (selectedContactId() !== 'all') {
-                {{ selectedContact()?.type === 'agent' ? 'AI 智能助手，输入 @' + agentName() + ' 召唤' : '与 ' + selectedContact()?.name + ' 的对话' }}
-              } @else {
-                {{ filteredMessages().length }} 条消息 · {{ contacts().length }} 位成员
-              }
-            </span>
-          </div>
-        </div>
+        <button class="sidebar-toggle" (click)="toggleSidebar()" nz-tooltip nzTooltipTitle="切换侧栏">
+          <span nz-icon [nzType]="showSidebar() ? 'menu-fold' : 'menu-unfold'" nzTheme="outline"></span>
+        </button>
+        <h2 class="chat-header__title">
+          @if (selectedContact(); as contact) {
+            {{ contact.name }}
+          } @else {
+            全部消息
+          }
+        </h2>
+        <span class="chat-header__meta">
+          @if (selectedContactId() !== 'all') {
+            {{ selectedContact()?.type === 'agent' ? '输入 @' + agentName() + ' 召唤智能助手' : '' }}
+          } @else {
+            {{ filteredMessages().length }} 条消息 · {{ contacts().length }} 位成员
+          }
+        </span>
 
         <div class="chat-header-right">
           @if (isConnecting()) {
@@ -141,11 +123,6 @@
             <!-- Text Message -->
             @if (msg.senderType === senderTypes.AIAgent) {
               <div class="msg-row">
-                <div class="msg-avatar msg-avatar--agent"
-                     [style.background]="getContactColor(msg.senderId, msg.senderType)"
-                     (click)="selectContact('agent')">
-                  <span nz-icon nzType="robot" nzTheme="outline"></span>
-                </div>
                 <div class="msg-content">
                   <div class="msg-sender-row">
                     <span class="msg-sender" (click)="selectContact('agent')">{{ agentName() }}</span>
@@ -171,11 +148,6 @@
               </div>
             } @else {
               <div class="msg-row">
-                <div class="msg-avatar msg-avatar--other"
-                     [style.background]="getContactColor(msg.senderId, msg.senderType)"
-                     (click)="selectContact(msg.senderId || '')">
-                  <span>{{ msg.senderName.charAt(0) }}</span>
-                </div>
                 <div class="msg-content">
                   <div class="msg-sender-row">
                     <span class="msg-sender" (click)="selectContact(msg.senderId || '')">{{ msg.senderName }}</span>
@@ -191,12 +163,6 @@
           } @else {
             <!-- File Message -->
             <div class="msg-row" [class.msg-row--mine]="isOwnMessage(msg)">
-              @if (!isOwnMessage(msg)) {
-                <div class="msg-avatar msg-avatar--other"
-                     [style.background]="getContactColor(msg.senderId, msg.senderType)">
-                  <span>{{ msg.senderName.charAt(0) }}</span>
-                </div>
-              }
               <div class="msg-content">
                 <div class="msg-sender-row">
                   <span class="msg-time">{{ msg.creationTime | date:'MM/dd HH:mm' }}</span>
@@ -226,10 +192,6 @@
         <!-- AI Typing -->
         @if (isAgentReplying()) {
           <div class="msg-row">
-            <div class="msg-avatar msg-avatar--agent"
-                 [style.background]="'linear-gradient(135deg, #6366f1, #8b5cf6)'">
-              <span nz-icon nzType="robot" nzTheme="outline"></span>
-            </div>
             <div class="msg-content">
               <div class="msg-sender-row">
                 <span class="msg-sender">{{ agentName() }}</span>
@@ -248,8 +210,7 @@
       <!-- ─── Input Area ─── -->
       @if (isProjectLocked()) {
         <div class="chat-locked-banner">
-          <span nz-icon nzType="lock" nzTheme="filled"></span>
-          实训项目已结束，仅教师可继续发送消息。
+          实训项目已结束
         </div>
       }
       <div class="chat-input-area">
@@ -288,13 +249,13 @@
               <span class="mention-label">@{{ agentName() }}</span>
             </button>
             <button nz-button nzType="primary"
-                    class="send-btn"
+                    class="send-btn send-btn--flat"
                     (click)="sendMessage()"
                     [disabled]="isProjectLocked() || !inputContent().trim() || isLoading()">
               @if (isLoading()) {
                 <nz-spin nzSize="small"></nz-spin>
               } @else {
-                <span nz-icon nzType="send" nzTheme="outline"></span>
+                发送
               }
             </button>
           </div>

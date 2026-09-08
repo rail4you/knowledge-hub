@@ -9,6 +9,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { FormsModule } from '@angular/forms';
 import { RecruitmentLiveService, LiveState } from './recruitment-live.service';
 import { RecruitmentLiveDto, RemoteParticipantStream, ParticipantBriefDto } from './recruitment-live.models';
@@ -27,6 +28,7 @@ import { filter } from 'rxjs/operators';
     NzTagModule,
     NzTooltipModule,
     NzInputModule,
+    NzModalModule,
     FormsModule,
   ],
   templateUrl: './live-room.component.html',

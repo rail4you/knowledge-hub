@@ -270,24 +270,62 @@
   }
 }
 
-.cover-upload-group {
-  display: flex;
-  align-items: flex-start;
+/* ── 镜像封面（大预览 + 替换/移除按钮 + 上传遮罩，与实训项目页一致） ── */
+.cover-card {
+  border: 1px solid var(--kh-line-2); border-radius: 10px;
+  background: #fafbfc; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.cover-uploader {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%;
+  min-height: 168px;
+  border: 1px dashed var(--kh-line-2); border-radius: 8px;
+  background: #fff; overflow: hidden;
+  transition: border-color .2s, background .2s;
 
-  ::ng-deep .ant-upload.ant-upload-select-picture-card {
-    width: 120px;
-    height: 120px;
-    margin: 0;
+  &.has-cover { border-style: solid; border-color: var(--kh-line); background: #f5f7fa; }
+
+  &.uploading::after {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(255,255,255,.55); backdrop-filter: blur(2px);
+    z-index: 2;
   }
 
-  .cover-upload-trigger {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: #999;
-    font-size: 13px;
+  a { display: flex; justify-content: center; width: 100%; }
+}
+.cover-img {
+  display: block; max-width: 100%; max-height: 260px; width: auto; height: auto;
+  object-fit: contain; cursor: zoom-in;
+}
+.cover-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 24px 16px;
+  color: var(--kh-muted);
+}
+.cover-empty-icon { font-size: 36px; color: #d9d9d9; line-height: 1; }
+.cover-empty-title { font-size: 13.5px; color: var(--kh-ink-2); margin: 0; }
+.cover-empty-hint { font-size: 12px; color: var(--kh-muted); }
+
+.cover-actions {
+  position: absolute; right: 12px; bottom: 12px;
+  display: flex; gap: 8px; z-index: 3;
+}
+.cover-action-btn {
+  height: 30px; padding: 0 12px; font-size: 12.5px; border-radius: 6px;
+  backdrop-filter: blur(6px);
+  &.primary {
+    background: rgba(24,144,255,.92); color: #fff; border-color: rgba(24,144,255,.92);
+    &:hover:not([disabled]) { background: var(--kh-accent-deep); border-color: var(--kh-accent-deep); color: #fff; }
   }
+  &.danger {
+    background: rgba(255,255,255,.92); border-color: rgba(255,77,79,.6); color: #ff4d4f;
+    &:hover:not([disabled]) { background: #ff4d4f; color: #fff; border-color: #ff4d4f; }
+  }
+}
+.cover-spin {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 4;
 }
 
 /* 弹窗样式统一（与其他实训页一致） */

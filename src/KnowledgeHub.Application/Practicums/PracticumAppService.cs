@@ -600,7 +600,7 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
             var row = i + 2;
             worksheet.Cell(row, 1).Value = dtos[i].ProjectTitle;
             worksheet.Cell(row, 2).Value = dtos[i].StudentName;
-            worksheet.Cell(row, 3).Value = dtos[i].Status.ToString();
+            worksheet.Cell(row, 3).Value = GetEnrollmentStatusLabel(dtos[i].Status);
             worksheet.Cell(row, 4).Value = dtos[i].Progress;
             worksheet.Cell(row, 5).Value = dtos[i].FinalScore;
             worksheet.Cell(row, 6).Value = dtos[i].LastSubmittedAt?.ToString("yyyy-MM-dd HH:mm") ?? string.Empty;
@@ -616,6 +616,21 @@ public class PracticumAppService : KnowledgeHubAppService, IPracticumAppService
             stream,
             $"实训成绩_{DateTime.Now:yyyyMMddHHmmss}.xlsx",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    /** 导出 Excel 用：参与状态枚举 → 中文（与前端实训任务页文案保持一致）。 */
+    private static string GetEnrollmentStatusLabel(PracticumEnrollmentStatus status)
+    {
+        return status switch
+        {
+            PracticumEnrollmentStatus.Enrolled => "已参与",
+            PracticumEnrollmentStatus.InProgress => "进行中",
+            PracticumEnrollmentStatus.Submitted => "待评阅",
+            PracticumEnrollmentStatus.Reviewed => "已评阅",
+            PracticumEnrollmentStatus.Completed => "已完成",
+            PracticumEnrollmentStatus.Cancelled => "已取消",
+            _ => "未知",
+        };
     }
 
     private async Task ValidateProjectInputAsync(CreateUpdatePracticumProjectDto input)

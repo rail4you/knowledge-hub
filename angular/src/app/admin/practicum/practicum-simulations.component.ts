@@ -13,7 +13,8 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzUploadFile } from 'ng-zorro-antd/upload';
 import { ChunkUploadService } from '../../proxy/controllers/chunk-upload.service';
 import type { CompleteUploadResultDto } from '../../proxy/resources/models';
 import { OssUploadService } from '../../shared/oss-upload.service';
@@ -22,13 +23,27 @@ import { PracticumSimulationService } from '../../proxy/practicums/simulations/p
 import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
 import { PracticumSimulationStatus } from '../../proxy/practicums/simulations/enums/practicum-simulation-status.enum';
 
+type SimulationModalDraft = {
+  editingId: string | null;
+  name: string;
+  description: string;
+  coverUrl: string;
+  coverFileList: NzUploadFile[];
+  coverUploading: boolean;
+  file: File | null;
+  fileName: string;
+  uploading: boolean;
+  saving: boolean;
+  uploadProgress: number;
+};
+
 @Component({
   selector: 'app-practicum-simulations',
   standalone: true,
   imports: [
     CommonModule, FormsModule,
     NzButtonModule, NzCardModule, NzEmptyModule, NzInputModule, NzModalModule, NzSelectModule,
-    NzTableModule, NzTagModule, NzIconModule, NzUploadModule,
+    NzTableModule, NzTagModule, NzIconModule, NzSpinModule,
   ],
   templateUrl: './practicum-simulations.component.html',
   styleUrls: ['./practicum-simulations.component.scss'],
@@ -54,19 +69,7 @@ export class PracticumSimulationsComponent implements OnInit {
   readonly simulations = signal<PracticumSimulationDto[]>([]);
 
   readonly simulationModalVisible = signal(false);
-  readonly simulationModalDraft = signal<{
-    editingId: string | null;
-    name: string;
-    description: string;
-    coverUrl: string;
-    coverFileList: NzUploadFile[];
-    coverUploading: boolean;
-    file: File | null;
-    fileName: string;
-    uploading: boolean;
-    saving: boolean;
-    uploadProgress: number;
-  } | null>(null);
+  readonly simulationModalDraft = signal<SimulationModalDraft | null>(null);
 
   ngOnInit(): void {
     this.loadProjects();
@@ -161,47 +164,46 @@ export class PracticumSimulationsComponent implements OnInit {
     if (draft) this.simulationModalDraft.set({ ...draft, file, fileName: file.name });
   }
 
-  beforeSimulationCoverUpload = (file: NzUploadFile): boolean => {
-    const rawFile = file as any as File;
+  private patchSimulationDraft(patch: Partial<SimulationModalDraft>): void {
+    const draft = this.simulationModalDraft();
+    if (draft) this.simulationModalDraft.set({ ...draft, ...patch });
+  }
+
+  /** 点击“上传/替换封面”后选中本地文件，走 OSS 上传。 */
+  onSimulationCoverFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const rawFile = input.files?.[0];
+    input.value = '';
+    if (!rawFile) return;
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
     if (!allowed.includes(rawFile.type)) {
       this.message.error('封面仅支持 JPG/PNG/GIF/WebP/BMP 格式');
-      return false;
+      return;
     }
     if (rawFile.size > 10 * 1024 * 1024) {
       this.message.error('封面大小不能超过 10MB');
-      return false;
+      return;
     }
-    const draft = this.simulationModalDraft();
-    if (!draft) return false;
-    this.simulationModalDraft.set({ ...draft, coverUploading: true });
+    this.patchSimulationDraft({ coverUploading: true });
     this.ossUploadService.uploadImage(rawFile).subscribe({
       next: (res) => {
-        const d = this.simulationModalDraft();
-        if (d) {
-          this.simulationModalDraft.set({
-            ...d,
-            coverUploading: false,
-            coverUrl: res.url,
-            coverFileList: [{ uid: res.objectKey, name: res.originalFileName, status: 'done', url: res.url }],
-          });
-        }
+        this.patchSimulationDraft({
+          coverUploading: false,
+          coverUrl: res.url,
+          coverFileList: [{ uid: res.objectKey, name: res.originalFileName, status: 'done', url: res.url }],
+        });
         this.message.success('封面上传成功');
       },
       error: () => {
-        const d = this.simulationModalDraft();
-        if (d) this.simulationModalDraft.set({ ...d, coverUploading: false, coverFileList: [] });
+        this.patchSimulationDraft({ coverUploading: false });
         this.message.error('封面上传失败');
       },
     });
-    return false;
-  };
+  }
 
-  removeSimulationCover = (): boolean => {
-    const draft = this.simulationModalDraft();
-    if (draft) this.simulationModalDraft.set({ ...draft, coverUrl: '', coverFileList: [] });
-    return true;
-  };
+  removeSimulationCoverClick(): void {
+    this.patchSimulationDraft({ coverUrl: '', coverFileList: [] });
+  }
 
   async saveSimulationModal(): Promise<void> {
     const draft = this.simulationModalDraft();
