@@ -303,7 +303,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     return Math.max(320, Math.min(neededHeight, 640));
   });
 
-  /** 大图谱（>60 节点）默认只展开到二级（课程根 + 一级 + 二级），深层点节点再看 */
+  /**
+   * 大图谱（>60 节点）默认展开到二级（课程根 + 一级 + 二级），
+   * 三级及更深层级折叠，用户点击二级节点可展开三级。
+   * 配合 620px 固定高度，可见节点约 35 个。
+   * 小图谱（≤60 节点）保留全展开（initialTreeDepth=-1），避免内容过少。
+   */
   private defaultInitialDepth(): number {
     return this.countChapters(this.chapters) > 60 ? 2 : -1;
   }
@@ -861,7 +866,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           subChapters: chapter.children || [],
           subtitle: '章节',
         },
-        collapsed: isCollapsed,
+        // ⚠️ 注意：不要无条件设置 `collapsed: false`！
+        // ECharts 源码：node.isExpand = item && item.collapsed != null ? !item.collapsed : node.depth <= initialTreeDepth
+        // 只要 collapsed 字段存在（即使是 false），就会走 !collapsed 分支，永远展开，
+        // 完全覆盖 initialTreeDepth 的初始展开控制。
+        // 只在用户主动折叠时才设 true，其他情况不写这个字段。
+        ...(isCollapsed ? { collapsed: true } : {}),
         itemStyle: {
           color,
           borderColor: isHighlighted ? '#f59e0b' : '#fff',
