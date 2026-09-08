@@ -1,7 +1,17 @@
 import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { ResourceType } from '../../resources/enums/resource-type.enum';
 import type { CourseStatus } from '../enums/course-status.enum';
 import type { StudentCourseStatus } from '../../learning/enums/student-course-status.enum';
-import type { ResourceType } from '../../resources/enums/resource-type.enum';
+
+export interface AuditCourseDto {
+  approved?: boolean;
+  comment?: string | null;
+}
+
+export interface AuditResultDto {
+  success?: boolean;
+  message?: string | null;
+}
 
 export interface BatchEnrollDto {
   studentIds?: string[];
@@ -25,6 +35,11 @@ export interface ChapterImportResultDto {
   errors?: string[];
 }
 
+export interface ChapterOrderDto {
+  chapterId?: string;
+  sortOrder?: number;
+}
+
 export interface ChapterResourceDto extends EntityDto<string> {
   chapterId?: string;
   resourceId?: string;
@@ -34,20 +49,8 @@ export interface ChapterResourceDto extends EntityDto<string> {
   originalFileName?: string | null;
   fileExtension?: string | null;
   fileSize?: number | null;
-  resourceType?: number;
+  resourceType?: ResourceType;
   isDownloadable?: boolean;
-}
-
-export interface CreateChapterResourceDto {
-  chapterId?: string;
-  resourceId?: string;
-  displayName?: string | null;
-  sortOrder?: number;
-}
-
-export interface ChapterOrderDto {
-  chapterId?: string;
-  sortOrder?: number;
 }
 
 export interface CourseDetailDto extends CourseDto {
@@ -65,6 +68,7 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   semesterHours?: number | null;
   status?: CourseStatus;
   difficulty?: number;
+  isRecommended?: boolean;
   teacherId?: string | null;
   categoryId?: string | null;
   teacherName?: string | null;
@@ -82,12 +86,8 @@ export interface CourseFilterDto {
   categoryId?: string | null;
   teacherId?: string | null;
   status?: CourseStatus | null;
+  isRecommended?: boolean | null;
   tenantId?: string | null;
-}
-
-export interface CreateStudentCourseDto {
-  studentId?: string;
-  courseId?: string;
 }
 
 export interface CourseResourceDto extends EntityDto<string> {
@@ -95,6 +95,7 @@ export interface CourseResourceDto extends EntityDto<string> {
   resourceId?: string;
   displayName?: string | null;
   sortOrder?: number;
+  isRecommended?: boolean;
   creationTime?: string;
   resourceName?: string | null;
   description?: string | null;
@@ -107,11 +108,24 @@ export interface CourseResourceDto extends EntityDto<string> {
   isDownloadable?: boolean;
 }
 
+export interface CreateChapterResourceDto {
+  chapterId: string;
+  resourceId: string;
+  displayName?: string | null;
+  sortOrder?: number;
+}
+
 export interface CreateCourseResourceDto {
   courseId: string;
   resourceId: string;
   displayName?: string | null;
   sortOrder?: number;
+  isRecommended?: boolean;
+}
+
+export interface CreateStudentCourseDto {
+  studentId?: string;
+  courseId?: string;
 }
 
 export interface CreateUpdateChapterDto {
@@ -133,6 +147,7 @@ export interface CreateUpdateCourseDto {
   difficulty?: number;
   categoryId?: string | null;
   status?: CourseStatus;
+  isRecommended?: boolean;
 }
 
 export interface CreateUpdateKnowledgeResourceDto {
@@ -189,6 +204,7 @@ export interface PagedCourseRequestDto extends PagedAndSortedResultRequestDto {
   difficulty?: number | null;
   categoryId?: string | null;
   status?: CourseStatus | null;
+  isRecommended?: boolean | null;
   tenantId?: string | null;
 }
 
@@ -217,4 +233,10 @@ export interface StudentCourseDto extends FullAuditedEntityDto<string> {
   status?: StudentCourseStatus;
   enrolledAt?: string;
   progress?: number;
+}
+
+export interface UpdateCourseResourceDto {
+  displayName?: string | null;
+  sortOrder?: number;
+  isRecommended?: boolean;
 }

@@ -38,20 +38,20 @@ export class StudentCourseService {
     { apiName: this.apiName,...config });
   
 
+  getAllAvailableStudentIds = (input: GetAvailableStudentsInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, string[]>({
+      method: 'GET',
+      url: '/api/app/student-course/available-student-ids',
+      params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter, majorId: input.majorId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
   getAvailableStudents = (input: GetAvailableStudentsInput, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<TenantUserDto>>({
       method: 'GET',
       url: '/api/app/student-course/available-students',
-      params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
-    },
-    { apiName: this.apiName,...config });
-
-  /** P1-10：跨页全选 — 一次性返回当前筛选下所有可加入学生 ID */
-  getAllAvailableStudentIds = (input: GetAvailableStudentsInput, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, string[]>({
-      method: 'GET',
-      url: '/api/app/student-course/all-available-student-ids',
-      params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter },
+      params: { courseId: input.courseId, tenantId: input.tenantId, filter: input.filter, majorId: input.majorId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
