@@ -318,8 +318,11 @@ export class IdentityRolesComponent implements OnInit {
     const groupMap = new Map<string, PermissionGroup>();
 
     knowledgeHubPermissions.forEach((p: any) => {
+      // KnowledgeHub.Resources.Create -> Resources 组；
+      // KnowledgeHub.Resources（模块父权限本身）-> Resources 组（而非 Other），
+      // 之前用 parts.length > 1 判断会把全部 20+ 个父权限都丢进"其他"。
       const parts = p.name.replace('KnowledgeHub.', '').split('.');
-      const groupName = parts.length > 1 ? parts[0] : 'Other';
+      const groupName = parts[0] || 'Other';
       const displayName = this.getGroupDisplayName(groupName);
 
       if (!groupMap.has(groupName)) {
@@ -437,8 +440,21 @@ export class IdentityRolesComponent implements OnInit {
       'Search': '搜索管理',
       'Courses': '课程管理',
       'AI': '智能助手',
+      'TeachingAgents': '教学智能体',
       'Alliance': '联盟管理',
       'Learning': '学习记录',
+      'News': '资讯中心',
+      'MicroMajors': '微专业',
+      'Majors': '专业',
+      'Practicum': '实训管理',
+      'DoubleHigh': '双高评估支撑',
+      'Employment': '就业服务',
+      'RecruitmentLive': '招聘直播',
+      'TenantInfo': '租户信息',
+      'AccountValidity': '账号有效期管理',
+      'Branding': '品牌设置',
+      'SpecialEducation': '特殊教育',
+      'VoiceAssistant': '语音助手',
       'Other': '其他',
     };
     return nameMap[groupName] || groupName;

@@ -25,17 +25,16 @@ small {
   border: 1px solid #eceef2;
   border-radius: 10px;
   overflow: hidden;
+  // 关键：父容器 .permission-container 是纵向 flex + max-height 限高，
+  // overflow:hidden 会使 flex item 自动最小尺寸失效而被压缩成细条，
+  // 必须禁止收缩，否则卡片被压扁、内容被裁剪成“空白描边条”。
+  flex-shrink: 0;
 }
 
-:host ::ng-deep .permission-group-card.perm-level-1 .ant-card-head {
-  background: #fbfcfe;
-  border-bottom: 1px solid #eef0f3;
-  font-weight: 600;
-}
-
-:host ::ng-deep .permission-group-card.perm-level-1 .ant-card-body {
-  padding: 0 16px 14px;
-}
+// 注意：权限弹窗内容渲染在 body 下的 cdk-overlay 容器里，不在组件宿主元素下，
+// 因此 `:host ::ng-deep` 选择器够不到 nz-card 内部结构（head/body）。
+// nz-card 头部/内容的覆盖样式统一放在全局 styles/_ngzorro-overrides.scss，
+// 以 .permission-group-card.perm-level-1 为作用域限定，避免污染其他卡片。
 
 // 层级2：无边框、无背景，平铺的分组总控
 .perm-level-2 {

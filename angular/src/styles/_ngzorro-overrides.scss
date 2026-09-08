@@ -24,6 +24,24 @@
   padding: 18px 20px;
 }
 
+/* ── 角色权限弹窗：分组卡片（overlay 渲染到 body 下，组件内 :host ::ng-deep 够不到，
+    故覆盖样式收敛在这里，以 .permission-group-card 限定作用域）── */
+.permission-group-card.perm-level-1 > .ant-card-head {
+  background: #fbfcfe;
+  border-bottom: 1px solid #eef0f3;
+  /* 压窄标题区：分组一多（20+ 组），默认 16px 20px + 15.5px 大标题太占纵向空间 */
+  min-height: 0;
+  padding: 7px 16px;
+}
+.permission-group-card.perm-level-1 > .ant-card-head .ant-card-head-title {
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.permission-group-card.perm-level-1 > .ant-card-body {
+  padding: 0 16px 12px;
+}
+
 /* ── 按钮 ── */
 .ant-btn {
   border-radius: var(--kh-r-control);

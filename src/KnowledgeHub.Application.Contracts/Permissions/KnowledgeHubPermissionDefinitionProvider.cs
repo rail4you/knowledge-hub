@@ -1,6 +1,7 @@
 using KnowledgeHub.Localization;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Localization;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Permissions;
 
@@ -151,10 +152,18 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         tenantInfoPermission.AddChild(KnowledgeHubPermissions.TenantInfo.Edit, L("Permission:TenantInfo.Edit"));
 
         // AccountValidity permissions (账号有效期/多校协同 — 仅 host 全局管理员)
-        myGroup.AddPermission(KnowledgeHubPermissions.AccountValidity.Default, L("Permission:AccountValidity"));
+        // Host-only：租户侧运行时鉴权自动返回 false（PermissionChecker 按 MultiTenancySide 过滤），
+        // 租户角色授权弹窗也不再展示（TenantPermissionService 按目标租户过滤）。
+        myGroup.AddPermission(
+            KnowledgeHubPermissions.AccountValidity.Default,
+            L("Permission:AccountValidity"),
+            multiTenancySide: MultiTenancySides.Host);
 
         // Branding permissions (站点品牌设置 — 仅 host 全局管理员)
-        myGroup.AddPermission(KnowledgeHubPermissions.Branding.Default, L("Permission:Branding"));
+        myGroup.AddPermission(
+            KnowledgeHubPermissions.Branding.Default,
+            L("Permission:Branding"),
+            multiTenancySide: MultiTenancySides.Host);
 
         // SpecialEducation permissions（特教扩展模块 — 整体式权限，插件式开关）
         var specialEduPermission = myGroup.AddPermission(KnowledgeHubPermissions.SpecialEducation.Default, L("Permission:SpecialEducation"));
@@ -162,11 +171,23 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.IEP, L("Permission:SpecialEducation.IEP"));
         specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.Resource, L("Permission:SpecialEducation.Resource"));
         specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.Review, L("Permission:SpecialEducation.Review"));
-        specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.Manage, L("Permission:SpecialEducation.Manage"));
+        // Manage（特教开通管理 /admin/special-education）是 host 按租户开通的运营能力，
+        // 仅 host 可见、可授予；其余教学侧权限保持租户可用。
+        specialEduPermission.AddChild(
+            KnowledgeHubPermissions.SpecialEducation.Manage,
+            L("Permission:SpecialEducation.Manage"),
+            multiTenancySide: MultiTenancySides.Host);
 
-        // VoiceAssistant permissions（学生端语音助手 — 仅 host 全局管理员按租户开关）
-        var voiceAssistantPermission = myGroup.AddPermission(KnowledgeHubPermissions.VoiceAssistant.Default, L("Permission:VoiceAssistant"));
-        voiceAssistantPermission.AddChild(KnowledgeHubPermissions.VoiceAssistant.Manage, L("Permission:VoiceAssistant.Manage"));
+        // VoiceAssistant permissions（学生端语音助手 — 仅 host 全局管理员按租户开关，
+        // 管理页与后端 AppService 均为 host 侧能力，租户角色不可见、不可授予）
+        var voiceAssistantPermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.VoiceAssistant.Default,
+            L("Permission:VoiceAssistant"),
+            multiTenancySide: MultiTenancySides.Host);
+        voiceAssistantPermission.AddChild(
+            KnowledgeHubPermissions.VoiceAssistant.Manage,
+            L("Permission:VoiceAssistant.Manage"),
+            multiTenancySide: MultiTenancySides.Host);
     }
 
     private static LocalizableString L(string name)
