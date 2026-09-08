@@ -1,210 +1,425 @@
-<section class="page-shell">
-  <!-- Header -->
+<section class="agent-page">
   <header class="page-header">
-    <div class="header-left">
-      <div class="header-icon">
-        <span nz-icon nzType="robot" nzTheme="outline"></span>
-      </div>
-      <div class="header-text">
-        <h1>教师智能体工作台</h1>
-        <p class="subtitle">配置智能体模板，按课程、资源或习题集分发课堂交互任务</p>
-      </div>
-    </div>
-    <div class="header-actions">
-      <button nz-button nzType="default" routerLink="/teaching/agent-tasks" class="action-btn">
-        <span nz-icon nzType="deployment-unit"></span>
-        课堂任务
-      </button>
-      <button nz-button nzType="primary" routerLink="/teaching/agents/new" class="action-btn">
-        <span nz-icon nzType="plus"></span>
-        新建智能体
-      </button>
+    <div class="header-text">
+      <h1>教师智能体工作台</h1>
+      <p class="subtitle">配置智能体模板，按课程、资源或习题集分发课堂交互任务</p>
     </div>
   </header>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <label class="search-box">
-      <span nz-icon nzType="search" class="search-icon"></span>
-      <input
-        nz-input
-        [ngModel]="filter()"
-        (ngModelChange)="onSearchInput($event)"
-        placeholder="搜索智能体名称或说明…"
-      />
-    </label>
-    <button nz-button nzType="default" nzShape="circle" (click)="load()" class="refresh-btn">
-      <span nz-icon nzType="reload"></span>
-    </button>
+  <div class="table-card">
+    <div class="search-bar">
+      <div class="search-actions">
+        <span class="result-count">共 {{ agents().length }} 条</span>
+        <button class="create-btn" type="button" (click)="openCreateModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          新建智能体
+        </button>
+      </div>
+      <div class="search-area">
+        <div class="search-input-wrap">
+          <input
+            class="search-input"
+            type="text"
+            placeholder="搜索智能体名称或说明"
+            [ngModel]="filter()"
+            (ngModelChange)="filter.set($event)"
+            (keyup.enter)="reload()"
+          />
+        </div>
+        <button class="search-btn" type="button" (click)="reload()">搜索</button>
+        <button class="reset-btn" type="button" (click)="resetSearch()">重置</button>
+      </div>
+    </div>
+
+    <nz-spin [nzSpinning]="loading()">
+      @if (agents().length === 0) {
+        <div class="empty-state">
+          <nz-empty nzNotFoundContent="暂无智能体，点击上方「新建智能体」开始">
+            <nz-empty-footer>
+              <button nz-button nzType="primary" (click)="openCreateModal()">
+                <span nz-icon nzType="plus"></span>
+                新建智能体
+              </button>
+            </nz-empty-footer>
+          </nz-empty>
+        </div>
+      } @else {
+        <nz-table
+          [nzData]="pagedAgents()"
+          [nzFrontPagination]="false"
+          [nzTotal]="agents().length"
+          [nzPageIndex]="pageIndex()"
+          [nzPageSize]="pageSize()"
+          (nzPageIndexChange)="onPageIndexChange($event)"
+          (nzPageSizeChange)="onPageSizeChange($event)"
+          [nzShowSizeChanger]="true"
+          [nzShowTotal]="totalTpl"
+          nzSize="middle"
+          class="agent-table"
+          [nzNoResult]="emptyTpl"
+        >
+          <thead>
+            <tr>
+              <th nzWidth="200px">名称</th>
+              <th>说明</th>
+              <th nzWidth="100px">状态</th>
+              <th nzWidth="100px">所有者</th>
+              <th nzWidth="140px">可见范围</th>
+              <th nzWidth="60px">版本</th>
+              <th nzWidth="180px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (agent of pagedAgents(); track trackById($index, agent)) {
+              <tr>
+                <td>
+                  <span class="agent-name">{{ agent.name }}</span>
+                </td>
+                <td><span class="desc-text">{{ agent.description || '—' }}</span></td>
+                <td>
+                  <nz-tag
+                    [nzColor]="agent.status === 1 ? 'success' : agent.status === 2 ? 'default' : 'warning'"
+                    class="status-tag"
+                  >
+                    {{ statusLabel(agent.status) }}
+                  </nz-tag>
+                </td>
+                <td>{{ agent.ownerUserName }}</td>
+                <td>
+                  <span class="visibility-badge" [class.is-private]="agent.visibility === 0" [class.is-school]="agent.visibility === 1" [class.is-public]="agent.visibility === 2">
+                    {{ visibilityText(agent.visibility) }}
+                  </span>
+                </td>
+                <td>
+                  <span class="version-badge">v{{ agent.draftVersion?.versionNumber || 1 }}</span>
+                </td>
+                <td>
+                  <div class="row-actions">
+                    <a nz-button nzType="link" nzSize="small" (click)="openEditModal(agent)">编辑</a>
+                    @if (agent.status !== 1) {
+                      <a nz-button nzType="link" nzSize="small" (click)="openPublishModal(agent)">发布</a>
+                    }
+                    @if (agent.status === 1) {
+                      <a nz-button nzType="link" nzSize="small" nzDanger (click)="unpublishAgent(agent)">下架</a>
+                    }
+                    <a nz-button nzType="link" nzSize="small" [routerLink]="['/teaching/agent-tasks']">分发任务</a>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+        <ng-template #totalTpl let-total>共 {{ total }} 条</ng-template>
+        <ng-template #emptyTpl>
+          <div class="empty-tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <span>暂无智能体，点击上方新建</span>
+          </div>
+        </ng-template>
+      }
+    </nz-spin>
   </div>
 
-  <!-- Main Content -->
-  <nz-spin [nzSpinning]="loading()">
-    <div class="tabs-container">
-      <nz-tabs
-        [(nzSelectedIndex)]="activeTabIndex"
-        nzSize="default"
-        nzTabPosition="top"
-        [nzAnimated]="true"
-      >
-        <!-- Tab 1: 智能体模板 -->
-        <nz-tab nzTitle="智能体模板">
-          <ng-template nz-tab>
-            <div class="tab-panel">
-              @if (filteredPresets().length === 0 && filter().trim()) {
-                <div class="empty-state">
-                  <nz-empty nzNotFoundContent="没有匹配的模板"></nz-empty>
-                </div>
-              } @else if (filteredPresets().length === 0) {
-                <div class="empty-state">
-                  <nz-empty nzNotFoundContent="暂无可用模板"></nz-empty>
-                </div>
-              } @else {
-                <nz-table
-                  [nzData]="filteredPresets()"
-                  [nzPageSize]="20"
-                  [nzShowPagination]="filteredPresets().length > 20"
-                  nzSize="middle"
-                  class="agent-table"
-                  [nzBordered]="false"
+  <!-- Create Agent Modal -->
+  <nz-modal
+    [(nzVisible)]="createModalVisible"
+    nzTitle="新建智能体"
+    nzWidth="920px"
+    [nzOkLoading]="creating()"
+    nzOkText="创建草稿"
+    nzCancelText="取消"
+    (nzOnOk)="confirmCreate()"
+    (nzOnCancel)="closeCreateModal()"
+    [nzBodyStyle]="{ padding: '0' }"
+  >
+    <ng-container *nzModalContent>
+      <div class="create-modal-body">
+        <aside class="template-picker">
+          <div class="picker-head">
+            <h3>选择模板</h3>
+            <span class="picker-hint">点选即可填充右侧表单</span>
+          </div>
+          @if (presets().length === 0) {
+            <div class="picker-empty">
+              <nz-spin [nzSpinning]="presetsLoading()">
+                <nz-empty nzNotFoundContent="暂无可用模板"></nz-empty>
+              </nz-spin>
+            </div>
+          } @else {
+            <div class="template-list">
+              @for (preset of presets(); track preset.code) {
+                <button
+                  type="button"
+                  class="template-card"
+                  [class.is-selected]="selectedPresetCode() === preset.code"
+                  (click)="selectPreset(preset.code)"
                 >
-                  <thead>
-                    <tr>
-                      <th nzWidth="180px">模板名称</th>
-                      <th>说明</th>
-                      <th nzWidth="240px">包含技能</th>
-                      <th nzWidth="120px" nzAlign="center">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (preset of filteredPresets(); track preset.code) {
-                      <tr>
-                        <td>
-                          <div class="preset-name">
-                            <span class="preset-icon"><span nz-icon nzType="file-text" nzTheme="outline"></span></span>
-                            <strong>{{ preset.name }}</strong>
-                          </div>
-                        </td>
-                        <td><span class="desc-text">{{ preset.description }}</span></td>
-                        <td>
-                          <div class="skill-tags">
-                            @for (skill of preset.skills; track skill.code) {
-                              <nz-tag nzColor="processing" class="skill-tag">{{ skill.name }}</nz-tag>
-                            }
-                          </div>
-                        </td>
-                        <td nzAlign="center">
-                          <a
-                            nz-button
-                            nzType="link"
-                            nzSize="small"
-                            [routerLink]="['/teaching/agents/new']"
-                            [queryParams]="{ preset: preset.code }"
-                          >
-                            <span nz-icon nzType="copy" nzTheme="outline"></span>
-                            使用模板
-                          </a>
-                        </td>
-                      </tr>
+                  <div class="template-card-head">
+                    <span class="template-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <path d="M14 2v6h6"/>
+                      </svg>
+                    </span>
+                    <strong>{{ preset.name }}</strong>
+                    @if (selectedPresetCode() === preset.code) {
+                      <span class="template-check">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                          <path d="M20 6L9 17l-5-5"/>
+                        </svg>
+                      </span>
                     }
-                  </tbody>
-                </nz-table>
+                  </div>
+                  <p>{{ preset.description }}</p>
+                </button>
               }
             </div>
-          </ng-template>
-        </nz-tab>
+          }
+        </aside>
 
-        <!-- Tab 2: 我的智能体 -->
-        <nz-tab nzTitle="我的智能体">
-          <ng-template nz-tab>
-            <div class="tab-panel">
-              @if (agents().length === 0) {
-                <div class="empty-state">
-                  <nz-empty nzNotFoundContent="暂无智能体，请先创建或从模板生成">
-                    <nz-empty-footer>
-                      <a nz-button nzType="primary" [routerLink]="['/teaching/agents/new']">
-                        <span nz-icon nzType="plus"></span>
-                        新建智能体
-                      </a>
-                    </nz-empty-footer>
-                  </nz-empty>
-                </div>
-              } @else {
-                <nz-table
-                  [nzData]="agents()"
-                  [nzPageSize]="20"
-                  [nzShowPagination]="agents().length > 20"
-                  nzSize="middle"
-                  class="agent-table"
-                  [nzBordered]="false"
-                >
-                  <thead>
-                    <tr>
-                      <th nzWidth="160px">名称</th>
-                      <th>说明</th>
-                      <th nzWidth="100px" nzAlign="center">状态</th>
-                      <th nzWidth="100px">所有者</th>
-                      <th nzWidth="100px" nzAlign="center">可见范围</th>
-                      <th nzWidth="60px" nzAlign="center">版本</th>
-                      <th nzWidth="200px">技能</th>
-                      <th nzWidth="180px" nzAlign="center">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (agent of agents(); track trackById($index, agent)) {
-                      <tr>
-                        <td>
-                          <a class="agent-name-link" [routerLink]="['/teaching/agents', agent.id]">
-                            {{ agent.name }}
-                          </a>
-                        </td>
-                        <td><span class="desc-text">{{ agent.description || '—' }}</span></td>
-                        <td nzAlign="center">
-                          <nz-tag
-                            [nzColor]="agent.status === 1 ? 'success' : agent.status === 2 ? 'default' : 'warning'"
-                            class="status-tag"
-                          >
-                            {{ statusLabel(agent.status) }}
-                          </nz-tag>
-                        </td>
-                        <td>{{ agent.ownerUserName }}</td>
-                        <td nzAlign="center">
-                          <span class="visibility-badge" [class.is-private]="agent.visibility === 0" [class.is-school]="agent.visibility === 1" [class.is-public]="agent.visibility === 2">
-                            {{ visibilityText(agent.visibility) }}
-                          </span>
-                        </td>
-                        <td nzAlign="center">
-                          <span class="version-badge">v{{ agent.draftVersion?.versionNumber || 1 }}</span>
-                        </td>
-                        <td>
-                          <div class="skill-tags">
-                            @for (skill of enabledSkills(agent); track skill.code) {
-                              <nz-tag nzColor="processing" class="skill-tag">{{ skill.name }}</nz-tag>
-                            }
-                            @if (enabledSkills(agent).length === 0) {
-                              <span class="no-skills">—</span>
-                            }
-                          </div>
-                        </td>
-                        <td nzAlign="center">
-                          <div class="row-actions">
-                            <a nz-button nzType="link" nzSize="small" [routerLink]="['/teaching/agents', agent.id]">
-                              编辑
-                            </a>
-                            <a nz-button nzType="link" nzSize="small" [routerLink]="['/teaching/agent-tasks']">
-                              分发任务
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </nz-table>
-              }
+        <section class="create-form">
+          @if (selectedPresetCode(); as code) {
+            <div class="form-banner">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 16v-4M12 8h.01"/>
+              </svg>
+              已应用模板 <strong>{{ selectedPresetName() }}</strong>，可继续修改下方字段
             </div>
-          </ng-template>
-        </nz-tab>
-      </nz-tabs>
-    </div>
-  </nz-spin>
+          } @else {
+            <div class="form-banner is-hint">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.7.6 1 1.5 1 2.3v1h6v-1c0-.8.3-1.7 1-2.3A7 7 0 0 0 12 2z"/>
+              </svg>
+              从左侧选择模板可一键填充，或直接填写下方表单从零开始
+            </div>
+          }
+
+          <div class="form-fields">
+            <div class="field">
+              <label>名称 <em>*</em></label>
+              <input
+                nz-input
+                [ngModel]="form().name"
+                (ngModelChange)="setFormField('name', $event)"
+                placeholder="例：课堂讨论引导助手"
+              />
+            </div>
+
+            <div class="field">
+              <label>可见范围</label>
+              <nz-select
+                [ngModel]="form().visibility"
+                (ngModelChange)="setFormField('visibility', $event)"
+                style="width: 100%"
+              >
+                <nz-option [nzValue]="0" nzLabel="仅自己可见"></nz-option>
+                <nz-option [nzValue]="1" nzLabel="校内共享"></nz-option>
+                <nz-option [nzValue]="2" nzLabel="全局公开"></nz-option>
+              </nz-select>
+            </div>
+
+            <div class="field full-width">
+              <label>说明</label>
+              <textarea
+                nz-input
+                rows="2"
+                [ngModel]="form().description"
+                (ngModelChange)="setFormField('description', $event)"
+                placeholder="描述这个智能体适合什么教学场景"
+              ></textarea>
+            </div>
+
+            <div class="field full-width">
+              <label>系统提示词 <em>*</em></label>
+              <textarea
+                nz-input
+                rows="6"
+                [ngModel]="form().systemPrompt"
+                (ngModelChange)="setFormField('systemPrompt', $event)"
+                placeholder="定义课堂任务规则、回答边界和工具使用原则"
+              ></textarea>
+            </div>
+
+            <div class="field full-width">
+              <label>欢迎语</label>
+              <textarea
+                nz-input
+                rows="3"
+                [ngModel]="form().welcomeMessage"
+                (ngModelChange)="setFormField('welcomeMessage', $event)"
+                placeholder="学生进入任务页时看到的首条引导"
+              ></textarea>
+            </div>
+
+            <div class="field full-width">
+              <label>版本备注</label>
+              <textarea
+                nz-input
+                rows="2"
+                [ngModel]="publishNote()"
+                (ngModelChange)="publishNote.set($event)"
+                placeholder="记录本次创建或草稿修改重点"
+              ></textarea>
+            </div>
+          </div>
+        </section>
+      </div>
+    </ng-container>
+  </nz-modal>
+
+  <!-- Edit Agent Modal -->
+  <nz-modal
+    [(nzVisible)]="editModalVisible"
+    nzTitle="编辑智能体"
+    nzWidth="720px"
+    [nzOkLoading]="updating()"
+    nzOkText="保存草稿"
+    nzCancelText="取消"
+    (nzOnOk)="confirmUpdate()"
+    (nzOnCancel)="closeEditModal()"
+  >
+    <ng-container *nzModalContent>
+      <nz-spin [nzSpinning]="editLoading()">
+        @if (editingAgent(); as agent) {
+          <div class="edit-banner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 16v-4M12 8h.01"/>
+            </svg>
+            <span class="edit-banner-text">
+              当前 <strong>{{ agent.name }}</strong> · 状态 <strong>{{ statusLabel(agent.status) }}</strong> · 可见 <strong>{{ visibilityText(agent.visibility) }}</strong>
+            </span>
+            @if (agent.status === 1) {
+              <button class="unpublish-btn" type="button" (click)="unpublishAgent(agent, true)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                转草稿
+              </button>
+            }
+          </div>
+          <div class="form-fields">
+            <div class="field">
+              <label>名称 <em>*</em></label>
+              <input
+                nz-input
+                [ngModel]="form().name"
+                (ngModelChange)="setFormField('name', $event)"
+              />
+            </div>
+
+            <div class="field">
+              <label>可见范围</label>
+              <nz-select
+                [ngModel]="form().visibility"
+                (ngModelChange)="setFormField('visibility', $event)"
+                style="width: 100%"
+              >
+                <nz-option [nzValue]="0" nzLabel="仅自己可见"></nz-option>
+                <nz-option [nzValue]="1" nzLabel="校内共享"></nz-option>
+                <nz-option [nzValue]="2" nzLabel="全局公开"></nz-option>
+              </nz-select>
+            </div>
+
+            <div class="field full-width">
+              <label>说明</label>
+              <textarea
+                nz-input
+                rows="2"
+                [ngModel]="form().description"
+                (ngModelChange)="setFormField('description', $event)"
+                placeholder="描述这个智能体适合什么教学场景"
+              ></textarea>
+            </div>
+
+            <div class="field full-width">
+              <label>系统提示词 <em>*</em></label>
+              <textarea
+                nz-input
+                rows="6"
+                [ngModel]="form().systemPrompt"
+                (ngModelChange)="setFormField('systemPrompt', $event)"
+                placeholder="定义课堂任务规则、回答边界和工具使用原则"
+              ></textarea>
+            </div>
+
+            <div class="field full-width">
+              <label>欢迎语</label>
+              <textarea
+                nz-input
+                rows="3"
+                [ngModel]="form().welcomeMessage"
+                (ngModelChange)="setFormField('welcomeMessage', $event)"
+                placeholder="学生进入任务页时看到的首条引导"
+              ></textarea>
+            </div>
+
+            <div class="field full-width">
+              <label>版本备注</label>
+              <textarea
+                nz-input
+                rows="2"
+                [ngModel]="publishNote()"
+                (ngModelChange)="publishNote.set($event)"
+                placeholder="记录本次草稿修改重点"
+              ></textarea>
+            </div>
+          </div>
+        } @else {
+          <div class="edit-empty">
+            <nz-spin nzSimple></nz-spin>
+          </div>
+        }
+      </nz-spin>
+    </ng-container>
+  </nz-modal>
+
+  <!-- Publish Modal -->
+  <nz-modal
+    [(nzVisible)]="publishModalVisible"
+    nzTitle="发布智能体"
+    nzWidth="520px"
+    [nzOkLoading]="publishing()"
+    nzOkText="确认发布"
+    nzCancelText="取消"
+    (nzOnOk)="confirmPublish()"
+    (nzOnCancel)="closePublishModal()"
+  >
+    <ng-container *nzModalContent>
+      @if (publishingAgent(); as agent) {
+        <div class="publish-body">
+          <div class="publish-summary">
+            <div class="publish-name">{{ agent.name }}</div>
+            <div class="publish-meta">
+              <span>当前状态：<strong>{{ statusLabel(agent.status) }}</strong></span>
+              <span>当前版本：<strong>v{{ agent.draftVersion?.versionNumber || 1 }}</strong></span>
+            </div>
+          </div>
+          <div class="field">
+            <label>版本备注</label>
+            <textarea
+              nz-input
+              rows="3"
+              [ngModel]="publishNote()"
+              (ngModelChange)="publishNote.set($event)"
+              placeholder="本次发布做了什么改动（可选）"
+            ></textarea>
+          </div>
+          <div class="publish-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 8v4M12 16h.01"/>
+            </svg>
+            <span>发布后学生端可立即看到该版本的智能体。</span>
+          </div>
+        </div>
+      }
+    </ng-container>
+  </nz-modal>
 </section>

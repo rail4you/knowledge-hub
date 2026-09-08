@@ -56,6 +56,12 @@ public class TeachingAgentController : AbpControllerBase
         return _teachingAgentAppService.PublishVersionAsync(id, input);
     }
 
+    [HttpPost("{id:guid}/unpublish")]
+    public Task<TeachingAgentDto> UnpublishAsync(Guid id)
+    {
+        return _teachingAgentAppService.UnpublishAsync(id);
+    }
+
     [HttpPost("from-preset")]
     public Task<TeachingAgentDto> CloneFromPresetAsync([FromBody] CloneTeachingAgentFromPresetDto input)
     {

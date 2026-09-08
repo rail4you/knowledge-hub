@@ -59,6 +59,13 @@ export class TeachingAgentService {
     }, { apiName: this.apiName, ...config });
   }
 
+  unpublish(id: string, config?: Partial<Rest.Config>) {
+    return this.restService.request<any, TeachingAgent>({
+      method: 'POST',
+      url: `/api/teaching-agents/${id}/unpublish`,
+    }, { apiName: this.apiName, ...config });
+  }
+
   cloneFromPreset(input: { presetCode: string; name: string; visibility: number }, config?: Partial<Rest.Config>) {
     return this.restService.request<any, TeachingAgent>({
       method: 'POST',

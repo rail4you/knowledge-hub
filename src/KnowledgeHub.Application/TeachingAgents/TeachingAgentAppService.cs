@@ -113,6 +113,33 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
     }
 
     [Authorize(KnowledgeHubPermissions.TeachingAgents.Manage)]
+    public async Task<TeachingAgentDto> UnpublishAsync(Guid id)
+    {
+        var agent = await _teachingAgentRepository.GetAsync(id);
+        await EnsureCanManageAgentAsync(agent);
+
+        if (!agent.PublishedVersionId.HasValue)
+        {
+            throw new UserFriendlyException("该智能体尚未发布，无需下架。");
+        }
+
+        var versions = await GetVersionsAsync(agent.Id);
+        var publishedVersion = versions.FirstOrDefault(x => x.Id == agent.PublishedVersionId);
+        if (publishedVersion != null)
+        {
+            publishedVersion.IsPublished = false;
+            await _teachingAgentVersionRepository.UpdateAsync(publishedVersion, autoSave: true);
+        }
+
+        agent.PublishedVersionId = null;
+        agent.Status = TeachingAgentStatus.Draft;
+
+        await _teachingAgentRepository.UpdateAsync(agent, autoSave: true);
+        versions = await GetVersionsAsync(agent.Id);
+        return await MapAgentAsync(agent, versions);
+    }
+
+    [Authorize(KnowledgeHubPermissions.TeachingAgents.Manage)]
     public async Task<TeachingAgentDto> PublishVersionAsync(Guid id, PublishTeachingAgentVersionDto input)
     {
         var agent = await _teachingAgentRepository.GetAsync(id);

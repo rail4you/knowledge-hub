@@ -518,22 +518,6 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
-    path: 'teaching/agents/new',
-    loadComponent: () => import('./teaching-agents/teaching-agent-editor.component').then(c => c.TeachingAgentEditorComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.TeachingAgents.Manage',
-    },
-  },
-  {
-    path: 'teaching/agents/:id',
-    loadComponent: () => import('./teaching-agents/teaching-agent-editor.component').then(c => c.TeachingAgentEditorComponent),
-    canActivate: [authGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.TeachingAgents.Manage',
-    },
-  },
-  {
     path: 'teaching/agent-tasks',
     loadComponent: () => import('./teaching-agents/teaching-agent-task-list.component').then(c => c.TeachingAgentTaskListComponent),
     canActivate: [authGuard, permissionGuard],
