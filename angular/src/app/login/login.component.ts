@@ -81,7 +81,12 @@ export class LoginComponent implements OnInit {
       // 同时写 __host_login 标记：OAuth 跳转到后端 /Account/Login 时 query 会丢失，
       // 后端靠此标记（且无租户 cookie）识别宿主模式，避免渲染租户页拦截 admin。
       this.clearTenantCookie();
-      this.document.cookie = `__host_login=1; path=/; SameSite=Lax`;
+      // 关键：同步清除 ABP 会话级租户（内存）。
+      // SPA 的 SessionState.tenant 在应用启动时已由 application-configuration 种下
+      // （残留 __tenant cookie 会让匿名配置请求也解析出租户），只清 cookie 不够；
+      // password-flow 的 token 请求会把该值当 __tenant header 发出，导致宿主 admin
+      // 被签发成租户 token，登录后掉进租户上下文、打不开 host 专属管理页。
+      this.sessionState.setTenant(null);
       this.currentTenantId.set(null);
       this.currentTenantName.set(null);
     } else {
@@ -266,6 +271,15 @@ export class LoginComponent implements OnInit {
   onSubmit() {
     if (this.form.invalid) return;
 
+    const userName = (this.form.value.username || '').trim();
+    // 租户通道拒绝保留账号 admin（与后端 KnowledgeHubLoginModel 守卫一致）：
+    // admin 只属于宿主，租户上下文登录必然失败；直接指引到专用通道，
+    // 落实“/admin-login 只负责系统管理员账户”。
+    if (!this.isHostLogin() && userName.toLowerCase() === 'admin') {
+      this.toasterService.error('系统管理员请使用专用通道 /admin-login 登录');
+      return;
+    }
+
     this.inProgress = true;
     const { username, password, rememberMe } = this.form.value;
     const redirectUrl = this.isHostLogin()
@@ -275,6 +289,12 @@ export class LoginComponent implements OnInit {
 
     // 登录前再次清除可能的残留 session
     this.clearSession();
+    if (this.isHostLogin()) {
+      // 宿主登录提交瞬间再清一次会话租户（防初始化后被意外重设），
+      // 确保 password-flow 不带 __tenant header，后端签发宿主 token。
+      this.clearTenantCookie();
+      this.sessionState.setTenant(null);
+    }
 
     this.authService
       .login({ username, password, rememberMe, redirectUrl })
