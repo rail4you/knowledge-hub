@@ -62,7 +62,7 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
   readonly heroStats = computed(() => {
     const s = this.summary();
     return [
-      { label: '参与实训', value: s.total, suffix: '个', icon: 'experiment', color: '#1e6ce8' },
+      { label: '参与实训', value: s.total, suffix: '个', icon: 'experiment', color: '#2b6cd4' },
       { label: '已完成', value: s.completed, suffix: '个', icon: 'check-circle', color: '#10b981' },
       { label: '平均进度', value: s.avgProgress, suffix: '%', icon: 'line-chart', color: '#0891b2' },
       { label: '进行中', value: s.inProgress, suffix: '个', icon: 'play-circle', color: '#f59e0b' },
@@ -172,9 +172,9 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
         smooth: true,
         symbolSize: 7,
         data: values,
-        lineStyle: { width: 3, color: '#2563eb' },
-        itemStyle: { color: '#2563eb' },
-        areaStyle: { color: 'rgba(37,99,235,0.12)' },
+        lineStyle: { width: 3, color: '#2b6cd4' },
+        itemStyle: { color: '#2b6cd4' },
+        areaStyle: { color: 'rgba(43, 108, 212,0.12)' },
         label: { show: true, formatter: '{c}%' },
       }],
     });
@@ -248,10 +248,10 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
   /** 封面渐变（与实训主列表页一致） */
   coverGradient(item: PracticumEnrollmentDto): string {
     const palettes = [
-      '#2563eb',
-      '#1d4ed8',
-      '#3b82f6',
-      '#0ea5e9',
+      '#2b6cd4',
+      '#1f56ad',
+      '#5b93db',
+      '#5b93db',
     ];
     const key = item.projectTitle || item.projectId || item.id || '';
     let hash = 0;

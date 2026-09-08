@@ -61,10 +61,15 @@
             *{ transition: none !important; animation: none !important; }
         }
 
+        /* 主体容器：与首页一致，两侧各留 80px（平板 40px / 手机 20px），两栏带边框、中间留白 */
         .screen{
             display:flex;
-            min-height:100vh;
-            width:100%;
+            gap:24px;
+            width:min(100%, 1760px);
+            margin:0 auto;
+            box-sizing:border-box;
+            padding:24px 80px 48px;
+            min-height:calc(100vh - 56px);
         }
 
         /* ---------- header ---------- */
@@ -72,7 +77,7 @@
             display:flex;
             align-items:center;
             gap:24px;
-            padding:0 2rem;
+            padding:0 80px;
             height:56px;
             background:var(--paper-card);
             border-bottom:1px solid var(--border);
@@ -180,11 +185,13 @@
             flex: 0 0 44%;
             background: linear-gradient(160deg, var(--ink) 0%, var(--ink-deep) 100%);
             color: #fff;
-            padding: 4.2rem 4rem;
+            padding: 2.5rem 3.5rem;
             display:flex;
             flex-direction:column;
-            justify-content:space-between;
+            justify-content:flex-start;
             overflow:hidden;
+            border:1px solid var(--border);
+            border-radius:14px;
         }
 
         .brand-panel::before{
@@ -216,14 +223,14 @@
             letter-spacing:0.02em;
         }
 
-        .brand-hero{ position:relative; z-index:1; }
+        .brand-hero{ position:relative; z-index:1; margin-top:1.6rem; }
 
         .brand-hero h1{
             font-family:"Noto Serif SC", "Songti SC", serif;
             font-weight:700;
             font-size: clamp(2rem, 3.4vw, 2.6rem);
             line-height:1.35;
-            margin: 2.4rem 0 0.9rem;
+            margin: 0 0 0.6rem;
             color:#fff;
         }
 
@@ -239,14 +246,14 @@
             width:44px;
             height:2px;
             background: var(--gold);
-            margin: 2.1rem 0 1.9rem;
+            margin: 1.2rem 0 1.1rem;
             position:relative;
             z-index:1;
         }
 
         .feature-list{
             list-style:none;
-            margin:0 0 2.2rem;
+            margin:0;
             padding:0;
             position:relative;
             z-index:1;
@@ -255,7 +262,7 @@
         .feature-list li{
             display:flex;
             gap:0.85rem;
-            padding: 0.85rem 0;
+            padding: 0.6rem 0;
             border-top:1px solid rgba(255,255,255,0.1);
         }
         .feature-list li:first-child{ border-top:none; }
@@ -290,7 +297,9 @@
             align-items:center;
             justify-content:center;
             padding: 3rem 2rem;
-            background: var(--paper);
+            background: var(--paper-card);
+            border:1px solid var(--border);
+            border-radius:14px;
         }
 
         .form-card{
@@ -528,6 +537,10 @@
         .validation-summary ul{ margin:0; padding-left:1.1rem; }
 
         /* ---------- responsive ---------- */
+        @@media (max-width: 1247px){
+            .topbar{ padding:0 40px; }
+            .screen{ padding:20px 40px 40px; }
+        }
         @@media (max-width: 900px){
             .topbar{ padding:0 1.25rem; gap:12px; }
             .topbar nav{ display:none; }
@@ -535,12 +548,13 @@
             .site-footer{ padding:24px 1.5rem 0; }
             .site-footer__inner{ grid-template-columns:1fr; gap:20px; }
             .site-footer__grid{ grid-template-columns:1fr 1fr; }
-            .screen{ flex-direction:column; }
+            .screen{ flex-direction:column; padding:16px 20px 32px; }
             .brand-panel{
                 flex:none;
                 padding: 2.2rem 1.75rem;
             }
-            .brand-hero h1{ font-size:1.5rem; margin-top:1.4rem; }
+            .brand-hero{ margin-top:1.2rem; }
+            .brand-hero h1{ font-size:1.5rem; }
             .brand-hero p.lede{ max-width:none; }
             .feature-list{ display:none; }
             .gold-rule{ margin: 1.5rem 0; }

@@ -40,8 +40,8 @@ export class StudentJobsComponent implements OnInit {
       x.applicationStatus === EmploymentApplicationStatus.InterviewCompleted
     ).length;
     return [
-      { label: '在招岗位', value: this.totalCount(), suffix: '个', color: '#1e6ce8', icon: 'solution' },
-      { label: '已投递', value: applied, suffix: '份', color: '#0c4cb8', icon: 'send' },
+      { label: '在招岗位', value: this.totalCount(), suffix: '个', color: '#2b6cd4', icon: 'solution' },
+      { label: '已投递', value: applied, suffix: '份', color: '#1f56ad', icon: 'send' },
       { label: '面试邀请', value: interview, suffix: '份', color: '#0891b2', icon: 'calendar' },
     ];
   });
@@ -71,13 +71,13 @@ export class StudentJobsComponent implements OnInit {
     return m[s??-1] ?? '已投递';
   }
   color(s?: EmploymentApplicationStatus): string {
-    const m: Record<number,string> = {0:'#1e6ce8',1:'#6366f1',2:'#0891b2',3:'#10b981',4:'#ef4444',5:'#94a3b8',6:'#7c3aed'};
-    return m[s??-1] ?? '#1e6ce8';
+    const m: Record<number,string> = {0:'#2b6cd4',1:'#6366f1',2:'#0891b2',3:'#10b981',4:'#ef4444',5:'#94a3b8',6:'#7c3aed'};
+    return m[s??-1] ?? '#2b6cd4';
   }
 
   // ---- 类型 ----
   tl(t: EmploymentJobType) { const m: Record<number,string> = {0:'全职',1:'实习',2:'兼职',3:'学徒'}; return m[t]||'其他'; }
-  tc(t: EmploymentJobType) { const m: Record<number,string> = {0:'#1e6ce8',1:'#00b7ff',2:'#10b981',3:'#f59e0b'}; return m[t]||'#6b7280'; }
+  tc(t: EmploymentJobType) { const m: Record<number,string> = {0:'#2b6cd4',1:'#5b93db',2:'#10b981',3:'#f59e0b'}; return m[t]||'#6b7280'; }
 
   tags(item: JobPostingDto): string[] {
     if (!item.skillTags) return [];

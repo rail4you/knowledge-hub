@@ -33,7 +33,7 @@
   height: 36px;
   padding: 0 14px;
   border: 1px solid ds.$student-border;
-  border-radius: 999px;
+  border-radius: 3px;
   background: #fff;
   color: ds.$student-text-muted;
   font-size: 13px;
@@ -43,7 +43,7 @@
   &:hover {
     color: ds.$student-primary;
     border-color: rgba(ds.$student-primary, 0.4);
-    background: #f0f6ff;
+    background: #e9f0fa;
   }
 }
 
@@ -91,7 +91,7 @@
 }
 
 .progress-pill {
-  background: #1e6ce8;
+  background: #2b6cd4;
   color: #fff;
 }
 
@@ -134,7 +134,7 @@
   height: 20px;
   padding: 0 6px;
   border-radius: 10px;
-  background: #1e6ce8;
+  background: #2b6cd4;
   color: #fff;
   font-size: 11px;
   font-weight: 600;
@@ -207,10 +207,10 @@
   }
 
   &.is-active {
-    background: #1e6ce8;
+    background: #2b6cd4;
     color: #fff;
     border-color: transparent;
-    box-shadow: 0 4px 10px rgba(30, 108, 232, 0.24);
+    box-shadow: 0 4px 10px rgba(43, 108, 212, 0.24);
   }
 
   &__icon {
@@ -396,11 +396,11 @@
       bottom: 0;
       height: 3px;
       border-radius: 3px 3px 0 0;
-      background: #1e6ce8;
+      background: #2b6cd4;
     }
 
     .learn-tab__count {
-      background: #e8f0fe;
+      background: #e4ebf6;
       color: ds.$student-primary;
     }
   }
@@ -439,7 +439,7 @@
     height: 22px;
     padding: 0 8px;
     border-radius: 11px;
-    background: #1e6ce8;
+    background: #2b6cd4;
     color: #fff;
     font-size: 12px;
     font-weight: 600;
@@ -580,7 +580,7 @@
     height: 22px;
     padding: 0 8px;
     border-radius: 11px;
-    background: #1e6ce8;
+    background: #2b6cd4;
     color: #fff;
     font-size: 12px;
     font-weight: 600;
@@ -663,8 +663,8 @@
 
   &.is-active {
     border-color: ds.$student-primary;
-    background: #f0f6ff;
-    box-shadow: 0 4px 10px rgba(30, 108, 232, 0.12);
+    background: #e9f0fa;
+    box-shadow: 0 4px 10px rgba(43, 108, 212, 0.12);
   }
 
   &__head {
@@ -823,7 +823,7 @@
     width: 36px;
     height: 36px;
     border-radius: 8px;
-    background: #f0f6ff;
+    background: #e9f0fa;
     color: ds.$student-primary;
     display: inline-flex;
     align-items: center;
@@ -894,11 +894,11 @@
   }
 
   &--preview {
-    background: #f0f6ff;
+    background: #e9f0fa;
     color: ds.$student-primary;
 
     &:hover {
-      background: #1e6ce8;
+      background: #2b6cd4;
       color: #fff;
     }
   }
@@ -955,8 +955,8 @@
 
   &.is-active {
     border-color: ds.$student-primary;
-    background: #f0f6ff;
-    box-shadow: 0 4px 10px rgba(30, 108, 232, 0.12);
+    background: #e9f0fa;
+    box-shadow: 0 4px 10px rgba(43, 108, 212, 0.12);
   }
 
   &__num {
@@ -973,7 +973,7 @@
     flex-shrink: 0;
 
     .is-active & {
-      background: #1e6ce8;
+      background: #2b6cd4;
       color: #fff;
     }
   }
@@ -1009,7 +1009,7 @@
   height: 18px;
   padding: 0 6px;
   border-radius: 4px;
-  background: #f0f6ff;
+  background: #e9f0fa;
   color: ds.$student-primary;
   font-weight: 600;
 }
@@ -1032,7 +1032,7 @@
     height: 22px;
     padding: 0 8px;
     border-radius: 4px;
-    background: #f0f6ff;
+    background: #e9f0fa;
     color: ds.$student-primary;
     font-size: 11.5px;
     font-weight: 600;
@@ -1120,13 +1120,13 @@
   height: 40px;
   padding: 0 24px;
   border: 0;
-  border-radius: 999px;
-  background: #1e6ce8;
+  border-radius: 3px;
+  background: #2b6cd4;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(30, 108, 232, 0.24);
+  box-shadow: 0 4px 12px rgba(43, 108, 212, 0.24);
   transition: all 0.2s ease;
 
   span[nz-icon] {
@@ -1135,7 +1135,7 @@
 
   &:hover:not([disabled]) {
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(30, 108, 232, 0.32);
+    box-shadow: 0 6px 16px rgba(43, 108, 212, 0.32);
   }
 
   &[disabled] {
@@ -1151,7 +1151,7 @@
   height: 36px;
   padding: 0 16px;
   border: 1px solid ds.$student-border;
-  border-radius: 999px;
+  border-radius: 3px;
   background: #fff;
   color: ds.$student-text;
   font-size: 13px;
@@ -1208,7 +1208,7 @@
 .answer-block {
   padding: 12px 14px;
   border-radius: ds.$student-radius;
-  background: #f0f6ff;
+  background: #e9f0fa;
   border-left: 3px solid ds.$student-primary;
   color: ds.$student-text;
   font-size: 13px;
@@ -1257,7 +1257,7 @@
   height: 30px;
   padding: 0 12px;
   border: 1px solid ds.$student-border;
-  border-radius: 999px;
+  border-radius: 3px;
   background: #fff;
   color: ds.$student-text-muted;
   font-size: 12px;
@@ -1270,7 +1270,7 @@
   }
 
   &.is-active {
-    background: #1e6ce8;
+    background: #2b6cd4;
     color: #fff;
     border-color: transparent;
   }
@@ -1320,7 +1320,7 @@
     }
 
     &.is-wrong {
-      background: #0284c7;
+      background: #2b6cd4;
       color: #fff;
     }
   }

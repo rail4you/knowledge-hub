@@ -5,8 +5,8 @@
 
 // ====== BREADCRUMB ======
 .breadcrumb { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
-.back-btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 14px; border:1px solid ds.$student-border; border-radius:999px; background:#fff; color:ds.$student-text-muted; font-size:13px; cursor:pointer; transition:.2s; text-decoration:none;
-  &:hover { color:ds.$student-primary; border-color:rgba(ds.$student-primary,.4); background:#f0f6ff; } }
+.back-btn { display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 14px; border:1px solid ds.$student-border; border-radius:3px; background:#fff; color:ds.$student-text-muted; font-size:13px; cursor:pointer; transition:.2s; text-decoration:none;
+  &:hover { color:ds.$student-primary; border-color:rgba(ds.$student-primary,.4); background:#e9f0fa; } }
 
 // ====== HERO ======
 .hero { position:relative; border-radius:ds.$student-radius-lg; background:#fff; color:ds.$student-text; border:1px solid ds.$student-border-soft; box-shadow:ds.$student-shadow-soft; }
@@ -32,7 +32,7 @@
 
 .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(15,23,42,.04); transition:.2s;
   &:hover { box-shadow:0 6px 20px rgba(15,23,42,.08); }
-  &--interview { border-color:#bae6fd; }
+  &--interview { border-color:#b3c9e8; }
   &--done { border-color:#ddd6fe; } }
 
 // card head
@@ -57,11 +57,11 @@
   &.on { background:ds.$student-primary; } }
 
 // interview box
-.iv-box { margin:0 22px 14px; padding:14px 18px; border-radius:10px; background:#f0f9ff; border:1px solid #bae6fd;
+.iv-box { margin:0 22px 14px; padding:14px 18px; border-radius:10px; background:#e9f0fa; border:1px solid #b3c9e8;
   .card--done & { background:#f5f3ff; border-color:#ddd6fe; } }
 .iv-box__head { display:flex; align-items:center; gap:7px; margin-bottom:12px;
   span[nz-icon] { font-size:15px; color:#0891b2; .card--done &{color:#7c3aed;} }
-  strong { font-size:14px; color:#0c4a6e; .card--done &{color:#4c1d95;} } }
+  strong { font-size:14px; color:#21598c; .card--done &{color:#4c1d95;} } }
 .iv-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 18px; }
 .iv-f { display:flex; flex-direction:column; gap:2px; &--w{grid-column:1/-1;} }
 .iv-k { font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.3px; }
@@ -75,7 +75,7 @@
   p { margin:0; font-size:12px; color:#475569; line-height:1.5; white-space:pre-wrap; } }
 
 // employer remark
-.remark { margin:0 22px 12px; padding:8px 12px; background:#f8fafc; border-left:3px solid #2563eb; border-radius:0 6px 6px 0; font-size:12px; color:#475569;
+.remark { margin:0 22px 12px; padding:8px 12px; background:#f8fafc; border-left:3px solid #2b6cd4; border-radius:0 6px 6px 0; font-size:12px; color:#475569;
   b { color:ds.$student-primary; } }
 
 // card foot
@@ -83,7 +83,7 @@
   &__spacer { flex:1; }
   &__link { cursor:pointer; background:none; border:none; color:ds.$student-primary; font-weight:700; font-size:12px; display:inline-flex; align-items:center; gap:3px; padding:2px 0;
     &:hover { text-decoration:underline; }
-    &--primary { color:#0f766e; background:#f0fdfa; border:1px solid #a7f3d0; padding:5px 12px; border-radius:999px;
+    &--primary { color:#0f766e; background:#f0fdfa; border:1px solid #a7f3d0; padding:5px 12px; border-radius:3px;
       &:hover { background:#ccfbf1; text-decoration:none; } } } }
 
 // misc
@@ -91,7 +91,7 @@
   h3 { margin:0; color:#334155; } p { color:#94a3b8; margin:0; } }
 .empty-icon { width:72px; height:72px; border-radius:50%; background:#f1f5f9; display:inline-flex; align-items:center; justify-content:center; font-size:32px; color:#cbd5e1; }
 .btn { display:inline-flex; align-items:center; gap:4px; height:36px; padding:0 18px; border-radius:8px; background:ds.$student-primary; color:#fff; font-weight:700; font-size:13px; text-decoration:none; cursor:pointer; transition:.15s;
-  &:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(37,99,235,.3); } }
+  &:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(43, 108, 212,.3); } }
 .pager { display:flex; justify-content:center; padding-top:4px; }
 
 @media (max-width:640px) {

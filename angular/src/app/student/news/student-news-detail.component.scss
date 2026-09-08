@@ -288,7 +288,7 @@
   height: 24px;
   padding: 0 9px;
   border-radius: 6px;
-  background: #f0f6ff;
+  background: #e9f0fa;
   color: ds.$student-primary;
   font-size: 12px;
 }
@@ -322,13 +322,13 @@
   }
 
   &--primary {
-    background: #1e6ce8;
+    background: #2b6cd4;
     border-color: transparent;
     color: #fff;
-    box-shadow: 0 4px 12px rgba(30, 108, 232, 0.24);
+    box-shadow: 0 4px 12px rgba(43, 108, 212, 0.24);
 
     &:hover:not([disabled]) {
-      background: #0c4cb8;
+      background: #1f56ad;
       color: #fff;
     }
   }
@@ -587,7 +587,7 @@
 
     &:focus {
       border-color: ds.$student-primary;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+      box-shadow: 0 0 0 3px rgba(43, 108, 212, 0.08);
     }
   }
 
@@ -739,7 +739,7 @@
   height: 28px;
   padding: 0 10px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 3px;
   background: transparent;
   color: ds.$student-text-light;
   font-size: 12px;
@@ -821,7 +821,7 @@
   height: 28px;
   padding: 0 10px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 3px;
   background: transparent;
   color: ds.$student-text-light;
   font-size: 12px;
@@ -834,7 +834,7 @@
 
   &:hover {
     color: ds.$student-primary;
-    background: #eff6ff;
+    background: #e9f0fa;
   }
 }
 
@@ -1069,17 +1069,17 @@
   flex-shrink: 0;
 
   &--1 {
-    background: #2563eb;
+    background: #2b6cd4;
     color: #fff;
   }
 
   &--2 {
-    background: #3b82f6;
+    background: #5b93db;
     color: #fff;
   }
 
   &--3 {
-    background: #0ea5e9;
+    background: #5b93db;
     color: #fff;
   }
 }

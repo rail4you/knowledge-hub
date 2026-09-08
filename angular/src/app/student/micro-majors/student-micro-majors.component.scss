@@ -96,11 +96,11 @@
   width: 100%; height: 36px; border: 0; border-radius: ds.$student-radius;
   font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s ease;
   span[nz-icon] { font-size: 14px; }
-  &--enroll { background: #1e6ce8; color: #fff; box-shadow: 0 4px 10px rgba(30,108,232,.22); }
+  &--enroll { background: #2b6cd4; color: #fff; box-shadow: 0 4px 10px rgba(43, 108, 212,.22); }
   &--view { background: ds.$student-surface-soft; color: ds.$student-text; border: 1px solid ds.$student-border-soft; }
   &:hover { transform: translateY(-1px); }
-  &--enroll:hover { box-shadow: 0 8px 18px rgba(30,108,232,.34); }
-  &--view:hover { background: #e8f0fe; color: ds.$student-primary; border-color: rgba(ds.$student-primary,.35); }
+  &--enroll:hover { box-shadow: 0 8px 18px rgba(43, 108, 212,.34); }
+  &--view:hover { background: #e4ebf6; color: ds.$student-primary; border-color: rgba(ds.$student-primary,.35); }
 }
 
 .status-badge {

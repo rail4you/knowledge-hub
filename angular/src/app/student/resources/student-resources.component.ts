@@ -113,16 +113,16 @@ export class StudentResourcesComponent implements OnInit {
     this.portalService.getPublicHomeStats().subscribe({
       next: data => {
         this.stats.set([
-          { label: '课程数', value: data.totalCourseCount ?? 0, suffix: '门', icon: 'book', color: '#1e6ce8' },
-          { label: '资源数', value: data.totalResourceCount ?? 0, suffix: '份', icon: 'play-circle', color: '#00b7ff' },
+          { label: '课程数', value: data.totalCourseCount ?? 0, suffix: '门', icon: 'book', color: '#2b6cd4' },
+          { label: '资源数', value: data.totalResourceCount ?? 0, suffix: '份', icon: 'play-circle', color: '#5b93db' },
           { label: '入驻租户', value: data.tenantCount ?? 0, suffix: '家', icon: 'team', color: '#f59e0b' },
         ]);
       },
       error: () => {
         // 静默失败时显示 0 占位
         this.stats.set([
-          { label: '课程数', value: 0, suffix: '门', icon: 'book', color: '#1e6ce8' },
-          { label: '资源数', value: 0, suffix: '份', icon: 'play-circle', color: '#00b7ff' },
+          { label: '课程数', value: 0, suffix: '门', icon: 'book', color: '#2b6cd4' },
+          { label: '资源数', value: 0, suffix: '份', icon: 'play-circle', color: '#5b93db' },
           { label: '入驻租户', value: 0, suffix: '家', icon: 'team', color: '#f59e0b' },
         ]);
       },

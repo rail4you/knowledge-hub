@@ -72,15 +72,15 @@
   flex-direction: column;
   min-width: 0;
   background: #fff;
-  border: 1px solid rgba(30, 108, 232, 0.12);
+  border: 1px solid rgba(43, 108, 212, 0.12);
   border-radius: ds.$student-radius-lg;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(30, 108, 232, 0.06);
+  box-shadow: 0 2px 8px rgba(43, 108, 212, 0.06);
   transition: all 0.25s ease;
 
   &:hover {
     border-color: rgba(ds.$student-primary, 0.35);
-    box-shadow: 0 16px 32px rgba(30, 108, 232, 0.10);
+    box-shadow: 0 16px 32px rgba(43, 108, 212, 0.10);
     transform: translateY(-3px);
     .resume-card__cover-img {
       transform: scale(1.04);
@@ -88,7 +88,7 @@
   }
 
   &.is-default {
-    border-color: rgba(30, 108, 232, 0.35);
+    border-color: rgba(43, 108, 212, 0.35);
   }
 }
 
@@ -100,7 +100,7 @@
   display: block;
   overflow: hidden;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #0284c7 0%, #082f49 100%);
+  background: linear-gradient(135deg, #2b6cd4 0%, #082f49 100%);
 }
 
 .resume-card__cover-img {
@@ -133,7 +133,7 @@
   max-width: calc(55% - 14px);
   padding: 0 10px;
   border-radius: 999px;
-  background: rgba(37, 99, 235, .88);
+  background: rgba(43, 108, 212, .88);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -347,16 +347,16 @@
   padding: 0 22px;
   border: 0;
   border-radius: ds.$student-radius;
-  background: #2563eb;
+  background: #2b6cd4;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 10px rgba(30, 108, 232, 0.25);
+  box-shadow: 0 4px 10px rgba(43, 108, 212, 0.25);
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(30, 108, 232, 0.34);
+    box-shadow: 0 8px 18px rgba(43, 108, 212, 0.34);
   }
 }
 
@@ -543,7 +543,7 @@
 }
 
 .default-toggle input:checked + .default-toggle__box {
-  background: #2563eb;
+  background: #2b6cd4;
   border-color: transparent;
 
   &::after {

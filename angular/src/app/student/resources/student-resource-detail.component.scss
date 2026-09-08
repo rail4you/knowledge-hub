@@ -112,10 +112,10 @@
   cursor: pointer;
   color: #fff;
 
-  &.media-type-0 { background: linear-gradient(135deg, #1e6ce8, #0c4cb8); }
-  &.media-type-1 { background: linear-gradient(135deg, #1e6ce8, #00b7ff); }
+  &.media-type-0 { background: linear-gradient(135deg, #2b6cd4, #1f56ad); }
+  &.media-type-1 { background: linear-gradient(135deg, #2b6cd4, #5b93db); }
   &.media-type-2 { background: linear-gradient(135deg, #059669, #10b981); }
-  &.media-type-3 { background: linear-gradient(135deg, #0284c7, #38bdf8); }
+  &.media-type-3 { background: linear-gradient(135deg, #2b6cd4, #82b2e2); }
   &.media-type-4 { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
 
   &:focus-visible {
@@ -322,7 +322,7 @@
   }
 
   &--on {
-    background: #eef4ff;
+    background: #e9f0fa;
     color: ds.$student-primary;
 
     .status-dot {
@@ -368,13 +368,13 @@
   }
 
   &--primary {
-    background: #1e6ce8;
+    background: #2b6cd4;
     border-color: transparent;
     color: #fff;
-    box-shadow: 0 4px 12px rgba(30, 108, 232, 0.24);
+    box-shadow: 0 4px 12px rgba(43, 108, 212, 0.24);
 
     &:hover:not([disabled]) {
-      background: #0c4cb8;
+      background: #1f56ad;
       color: #fff;
     }
   }
@@ -517,7 +517,7 @@
   height: 26px;
   padding: 0 10px;
   border-radius: 6px;
-  background: #f0f6ff;
+  background: #e9f0fa;
   color: ds.$student-primary;
   font-size: 12px;
 }
@@ -651,11 +651,11 @@
     font-size: 15px;
     flex-shrink: 0;
 
-    &.rec-type-0 { background: #1e6ce8; }
+    &.rec-type-0 { background: #2b6cd4; }
     &.rec-type-1 { background: #0891b2; }
     &.rec-type-2 { background: #059669; }
     &.rec-type-3 { background: #10b981; }
-    &.rec-type-4 { background: #0284c7; }
+    &.rec-type-4 { background: #2b6cd4; }
   }
 
   &__body {

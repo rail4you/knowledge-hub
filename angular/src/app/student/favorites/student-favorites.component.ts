@@ -56,7 +56,7 @@ export class StudentFavoritesComponent implements OnInit {
     const rated = items.filter(r => (this.ratingSummaries()[r.id!]?.averageRating || 0) > 0).length;
     return [
       { label: '已收藏', value: total, suffix: '个', icon: 'heart', color: '#ef4444' },
-      { label: '当前页', value: items.length, suffix: '个', icon: 'appstore', color: '#1e6ce8' },
+      { label: '当前页', value: items.length, suffix: '个', icon: 'appstore', color: '#2b6cd4' },
       { label: '已评分', value: rated, suffix: '个', icon: 'star', color: '#f59e0b' },
       { label: '平均评分', value: this.avgRating(), suffix: '分', icon: 'like', color: '#10b981' },
     ];

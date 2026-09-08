@@ -191,7 +191,7 @@
     aspect-ratio: 16 / 10;
     overflow: hidden;
     flex-shrink: 0;
-    background: linear-gradient(135deg, #0c4a6e 0%, #0f172a 100%);
+    background: linear-gradient(135deg, #21598c 0%, #0f172a 100%);
   }
 
   &__cover-img {
@@ -228,7 +228,7 @@
     color: #fff;
     backdrop-filter: blur(4px);
 
-    &.rec-type--0 { background: rgba(37, 99, 235, .88); }
+    &.rec-type--0 { background: rgba(43, 108, 212, .88); }
     &.rec-type--1 { background: rgba(14, 165, 233, .88); }
     &.rec-type--2 { background: rgba(139, 92, 246, .88); }
     &.rec-type--3 { background: rgba(16, 185, 129, .88); }
@@ -374,7 +374,7 @@
   }
 
   &.is-active {
-    background: #1e6ce8;
+    background: #2b6cd4;
     color: #fff;
   }
 }
@@ -503,7 +503,7 @@
       width: 4px;
       height: 18px;
       border-radius: 3px;
-      background: #1e6ce8;
+      background: #2b6cd4;
     }
   }
 
@@ -526,7 +526,7 @@
   gap: 2px;
   padding: 2px 8px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 3px;
   background: #fff7e6;
   color: #d46b08;
   font-size: 12px;
@@ -601,8 +601,8 @@
     transform: translateY(-3px);
   }
 
-  &.type-0 .resource-card__cover { background: #2563eb; }
-  &.type-1 .resource-card__cover { background: #0ea5e9; }
+  &.type-0 .resource-card__cover { background: #2b6cd4; }
+  &.type-1 .resource-card__cover { background: #5b93db; }
   &.type-2 .resource-card__cover { background: #7c3aed; }
   &.type-3 .resource-card__cover { background: #10b981; }
   &.type-4 .resource-card__cover { background: #ef4444; }
@@ -616,7 +616,7 @@
   color: #fff;
   overflow: hidden;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #0c4a6e 0%, #0f172a 100%);
+  background: linear-gradient(135deg, #21598c 0%, #0f172a 100%);
 }
 
 // 垫底占位图（与首页资源卡片同一套）；有真实预览时被 app-resource-cover 盖住
@@ -666,7 +666,7 @@
     font-size: 11px;
   }
 
-  &.type-badge--0 { background: rgba(37, 99, 235, 0.85); }  /* 文档 - 蓝 */
+  &.type-badge--0 { background: rgba(43, 108, 212, 0.85); }  /* 文档 - 蓝 */
   &.type-badge--1 { background: rgba(14, 165, 233, 0.85); }  /* 视频 - 天蓝 */
   &.type-badge--2 { background: rgba(139, 92, 246, 0.85); }  /* 音频 - 紫 */
   &.type-badge--3 { background: rgba(16, 185, 129, 0.85); }  /* 图片 - 绿 */
@@ -833,7 +833,7 @@
   }
 
   &:hover {
-    background: #e8f0fe;
+    background: #e4ebf6;
     color: ds.$student-primary;
   }
 
@@ -843,7 +843,7 @@
   }
 
   &--download:hover {
-    background: #eef2ff;
+    background: #e9f0fa;
     color: #4338ca;
   }
 

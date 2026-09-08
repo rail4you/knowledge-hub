@@ -5,12 +5,12 @@
   height: 100%;
 
   // 学生端主题覆盖：app-chat 内部大量使用教师端 --kh-* 蓝色令牌
-  // （#1890ff 系）及硬编码渐变蓝，在此统一收敛到学生端蓝色系
-  // （主色 #2563eb），教师端 /ai/chat 不受影响。
+  // 及硬编码渐变蓝，在此统一收敛到学生端深海军蓝系
+  // （主色与 ds.$student-primary 同步），教师端 /ai/chat 不受影响。
   --kh-accent: #{ds.$student-primary};
   --kh-accent-deep: #{ds.$student-primary-dark};
-  --kh-accent-soft: rgba(37, 99, 235, 0.1);
-  --kh-accent-ghost: rgba(37, 99, 235, 0.06);
+  --kh-accent-soft: rgba(43, 108, 212, 0.1);
+  --kh-accent-ghost: rgba(43, 108, 212, 0.06);
   --kh-blue-ink: #{ds.$student-primary-dark};
   --kh-line: #{ds.$student-border-soft};
   --kh-line-2: #{ds.$student-border};
@@ -118,14 +118,14 @@
   }
   ::ng-deep .qa-chat-head .dicon {
     background: ds.$student-primary;
-    box-shadow: 0 4px 12px -4px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 4px 12px -4px rgba(43, 108, 212, 0.4);
   }
   ::ng-deep .qa-msg.user .avatar {
     background: ds.$student-primary;
   }
   ::ng-deep .qa-msg.user .bubble {
     background: ds.$student-primary;
-    box-shadow: 0 4px 12px -4px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 4px 12px -4px rgba(43, 108, 212, 0.4);
   }
   ::ng-deep .qa-msg.ai .avatar {
     background: ds.$student-success;
@@ -135,13 +135,13 @@
   }
   ::ng-deep .qa-send {
     background: ds.$student-primary;
-    box-shadow: 0 4px 12px -4px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 4px 12px -4px rgba(43, 108, 212, 0.4);
   }
   ::ng-deep .qa-msgs {
     background: ds.$student-bg;
   }
   ::ng-deep .qa-doc-item .dic {
-    background: rgba(37, 99, 235, 0.1);
+    background: rgba(43, 108, 212, 0.1);
     color: ds.$student-primary;
   }
   ::ng-deep .qa-doc-item.on .dn {
@@ -149,10 +149,10 @@
   }
   ::ng-deep .suggestion-chips .chip:hover:not(:disabled),
   ::ng-deep .hot-word-tag:hover {
-    border-color: rgba(37, 99, 235, 0.4);
+    border-color: rgba(43, 108, 212, 0.4);
   }
   ::ng-deep .hot-word-tag:hover .hot-word-tag__freq {
-    background: rgba(37, 99, 235, 0.12);
+    background: rgba(43, 108, 212, 0.12);
     color: ds.$student-primary-dark;
   }
   ::ng-deep .qa-input-wrap textarea {
@@ -160,7 +160,7 @@
   }
   ::ng-deep .qa-input-wrap textarea:focus {
     border-color: ds.$student-primary;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    box-shadow: 0 0 0 3px rgba(43, 108, 212, 0.1);
   }
 }
 

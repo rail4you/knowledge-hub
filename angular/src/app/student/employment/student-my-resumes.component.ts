@@ -39,7 +39,7 @@ export class StudentMyResumesComponent implements OnInit {
     const items = this.items();
     const def = items.find(x => x.isDefault);
     return [
-      { label: '简历总数', value: items.length, suffix: '份', icon: 'file-text', color: '#1e6ce8' },
+      { label: '简历总数', value: items.length, suffix: '份', icon: 'file-text', color: '#2b6cd4' },
       { label: '已设默认', value: def ? 1 : 0, suffix: '份', icon: 'star', color: '#f59e0b' },
     ];
   });

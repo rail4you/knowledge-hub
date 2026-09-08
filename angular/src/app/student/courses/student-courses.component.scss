@@ -127,7 +127,7 @@
   align-items: center;
   gap: 4px;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: 3px;
   background: #fff;
   box-shadow: ds.$student-shadow-soft;
   align-self: flex-start;
@@ -140,7 +140,7 @@
   height: 32px;
   padding: 0 16px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 3px;
   background: transparent;
   color: ds.$student-text-muted;
   font-size: 13px;
@@ -159,7 +159,7 @@
   &.is-active {
     background: ds.$student-primary;
     color: #fff;
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.24);
+    box-shadow: 0 4px 10px rgba(43, 108, 212, 0.24);
   }
 }
 
@@ -174,7 +174,7 @@
   height: 30px;
   padding: 0 12px;
   border: 1px solid ds.$student-border;
-  border-radius: 6px;
+  border-radius: 3px;
   background: #fff;
   color: ds.$student-text-muted;
   font-size: 12px;

@@ -118,33 +118,32 @@
             <ul nz-menu class="user-menu">
               <li nz-menu-group [nzTitle]="userMenuTitle()">
                 <ul>
-                  <li nz-menu-item routerLink="/student/my-learning">
-                    <span nz-icon nzType="line-chart" nzTheme="outline"></span>
-                    <span>我的学习</span>
-                  </li>
-                  <li nz-menu-item routerLink="/student/favorites">
-                    <span nz-icon nzType="star" nzTheme="outline"></span>
-                    <span>我的收藏</span>
-                  </li>
                   <li nz-menu-item routerLink="/student/my-micro-majors">
                     <span nz-icon nzType="trophy" nzTheme="outline"></span>
                     <span>我的微专业</span>
                   </li>
+                  <li nz-menu-item routerLink="/student/my-learning">
+                    <span nz-icon nzType="line-chart" nzTheme="outline"></span>
+                    <span>我的学习</span>
+                  </li>
+                  <li nz-menu-item routerLink="/student/employment/my-resumes">
+                    <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                    <span>我的简历</span>
+                  </li>
+                  <li nz-menu-item routerLink="/student/employment/my-applications">
+                    <span nz-icon nzType="send" nzTheme="outline"></span>
+                    <span>我的投递</span>
+                  </li>
+                  <li nz-menu-item routerLink="/student/employment/my-outcomes">
+                    <span nz-icon nzType="compass" nzTheme="outline"></span>
+                    <span>我的就业去向</span>
+                  </li>
+                  <li nz-menu-divider></li>
+                  <li nz-menu-item class="user-menu__logout" (click)="logout()">
+                    <span nz-icon nzType="logout" nzTheme="outline"></span>
+                    <span>退出登录</span>
+                  </li>
                 </ul>
-              </li>
-              <li nz-menu-divider></li>
-              <li nz-menu-item routerLink="/student/info/help">
-                <span nz-icon nzType="question-circle" nzTheme="outline"></span>
-                <span>帮助中心</span>
-              </li>
-              <li nz-menu-item routerLink="/student/info/about">
-                <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-                <span>关于我们</span>
-              </li>
-              <li nz-menu-divider></li>
-              <li nz-menu-item (click)="logout()">
-                <span nz-icon nzType="logout" nzTheme="outline"></span>
-                <span>退出登录</span>
               </li>
             </ul>
           </nz-dropdown-menu>

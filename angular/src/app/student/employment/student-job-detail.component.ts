@@ -161,7 +161,7 @@ export class StudentJobDetailComponent implements OnInit {
 
   getStatusColor(s: EmploymentApplicationStatus): string {
     const m: Record<number, string> = {
-      [EmploymentApplicationStatus.Submitted]: '#1e6ce8', [EmploymentApplicationStatus.Viewed]: '#6366f1',
+      [EmploymentApplicationStatus.Submitted]: '#2b6cd4', [EmploymentApplicationStatus.Viewed]: '#6366f1',
       [EmploymentApplicationStatus.InterviewScheduled]: '#0891b2', [EmploymentApplicationStatus.InterviewCompleted]: '#7c3aed',
       [EmploymentApplicationStatus.Offered]: '#10b981', [EmploymentApplicationStatus.Rejected]: '#ef4444', [EmploymentApplicationStatus.Withdrawn]: '#94a3b8',
     };
@@ -174,7 +174,7 @@ export class StudentJobDetailComponent implements OnInit {
   }
 
   getTypeColor(t: EmploymentJobType): string {
-    const m: Record<number, string> = { [EmploymentJobType.FullTime]: '#1e6ce8', [EmploymentJobType.Internship]: '#00b7ff', [EmploymentJobType.PartTime]: '#10b981', [EmploymentJobType.Apprenticeship]: '#f59e0b' };
+    const m: Record<number, string> = { [EmploymentJobType.FullTime]: '#2b6cd4', [EmploymentJobType.Internship]: '#5b93db', [EmploymentJobType.PartTime]: '#10b981', [EmploymentJobType.Apprenticeship]: '#f59e0b' };
     return m[t] || '#6b7280';
   }
 
@@ -189,7 +189,7 @@ export class StudentJobDetailComponent implements OnInit {
   }
 
   coverGradient(item: JobPostingDto): string {
-    const p = ['#1e6ce8', '#0c4cb8', '#1d4ed8', '#2563eb'];
+    const p = ['#2b6cd4', '#1f56ad', '#1f56ad', '#2b6cd4'];
     const key = item.id || '';
     let h = 0; for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
     return p[Math.abs(h) % p.length];

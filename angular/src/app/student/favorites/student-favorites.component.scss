@@ -153,7 +153,7 @@
   color: #fff;
   overflow: hidden;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #0c4a6e 0%, #0f172a 100%);
+  background: linear-gradient(135deg, #21598c 0%, #0f172a 100%);
 }
 
 // 垫底占位图（与首页资源卡片同一套）
@@ -192,7 +192,7 @@
   color: #fff;
   backdrop-filter: blur(6px);
 
-  &.type-badge--0 { background: rgba(37, 99, 235, 0.85); }  /* 文档 - 蓝 */
+  &.type-badge--0 { background: rgba(43, 108, 212, 0.85); }  /* 文档 - 蓝 */
   &.type-badge--1 { background: rgba(14, 165, 233, 0.85); }  /* 视频 - 天蓝 */
   &.type-badge--2 { background: rgba(139, 92, 246, 0.85); }  /* 音频 - 紫 */
   &.type-badge--3 { background: rgba(16, 185, 129, 0.85); }  /* 图片 - 绿 */
@@ -256,7 +256,7 @@
   border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
-  background: rgba(30, 108, 232, 0.1);
+  background: rgba(43, 108, 212, 0.1);
   color: ds.$student-primary;
 
   span[nz-icon] {
@@ -385,7 +385,7 @@
   }
 
   &--download:hover {
-    background: #eef2ff;
+    background: #e9f0fa;
     color: #4338ca;
   }
 

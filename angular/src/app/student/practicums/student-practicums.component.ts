@@ -39,8 +39,8 @@ export class StudentPracticumsComponent implements OnInit {
     const totalEnroll = items.reduce((s, x) => s + (x.enrollmentCount || 0), 0);
     const activeCount = items.filter(x => !x.isExpired).length;
     return [
-      { label: '实训总数', value: this.totalCount(), suffix: '个', icon: 'experiment', color: '#1e6ce8' },
-      { label: '当前页', value: items.length, suffix: '个', icon: 'appstore', color: '#0ea5e9' },
+      { label: '实训总数', value: this.totalCount(), suffix: '个', icon: 'experiment', color: '#2b6cd4' },
+      { label: '当前页', value: items.length, suffix: '个', icon: 'appstore', color: '#5b93db' },
       { label: '进行中', value: activeCount, suffix: '个', icon: 'play-circle', color: '#10b981' },
       { label: '总报名', value: totalEnroll, suffix: '人次', icon: 'team', color: '#f59e0b' },
     ];
@@ -91,10 +91,10 @@ export class StudentPracticumsComponent implements OnInit {
 
   coverGradient(item: PracticumProjectDto): string {
     const palettes = [
-      '#2563eb',
-      '#1d4ed8',
-      '#3b82f6',
-      '#0ea5e9',
+      '#2b6cd4',
+      '#1f56ad',
+      '#5b93db',
+      '#5b93db',
     ];
     const key = item.title || item.id || '';
     let hash = 0;

@@ -208,10 +208,10 @@ export class StudentPracticumDetailComponent implements OnInit {
   /** 封面渐变（与实训主列表页一致） */
   coverGradient(d: PracticumProjectDetailDto): string {
     const palettes = [
-      '#2563eb',
-      '#1d4ed8',
-      '#3b82f6',
-      '#0ea5e9',
+      '#2b6cd4',
+      '#1f56ad',
+      '#5b93db',
+      '#5b93db',
     ];
     const key = d.title || d.id || '';
     let hash = 0;

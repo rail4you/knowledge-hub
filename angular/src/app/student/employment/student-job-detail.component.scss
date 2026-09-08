@@ -111,8 +111,8 @@
   overflow: hidden;
   color: #fff;
 
-  &.media-type-0 { background: linear-gradient(135deg, #1e6ce8, #0c4cb8); }
-  &.media-type-1 { background: linear-gradient(135deg, #0ea5e9, #0369a1); }
+  &.media-type-0 { background: linear-gradient(135deg, #2b6cd4, #1f56ad); }
+  &.media-type-1 { background: linear-gradient(135deg, #5b93db, #2b6cd4); }
   &.media-type-2 { background: linear-gradient(135deg, #059669, #047857); }
   &.media-type-3 { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
 }
@@ -481,13 +481,13 @@
   }
 
   &--primary {
-    background: #1e6ce8;
+    background: #2b6cd4;
     border-color: transparent;
     color: #fff;
-    box-shadow: 0 4px 12px rgba(30, 108, 232, 0.24);
+    box-shadow: 0 4px 12px rgba(43, 108, 212, 0.24);
 
     &:hover:not([disabled]) {
-      background: #0c4cb8;
+      background: #1f56ad;
       color: #fff;
     }
   }
@@ -676,12 +676,12 @@
 .summary-callout {
   margin: 0 0 14px;
   padding: 12px 16px;
-  background: #f0f6ff;
+  background: #e9f0fa;
   border-radius: ds.$student-radius;
   border-left: 3px solid ds.$student-primary;
   font-size: 14px;
   font-weight: 500;
-  color: #1e3a5f;
+  color: #2b6cd4;
   line-height: 1.7;
   display: flex;
   gap: 8px;
@@ -749,8 +749,8 @@
   min-height: 28px;
   padding: 4px 12px;
   border-radius: 6px;
-  background: #eff6ff;
-  border: 1px solid #dbeafe;
+  background: #e9f0fa;
+  border: 1px solid #d9e5f6;
   font-size: 13px;
   font-weight: 600;
   color: ds.$student-primary;
@@ -795,7 +795,7 @@
 
 /* ============ 面试 section（字体排版优化） ============ */
 .interview-section {
-  border-color: #bae6fd;
+  border-color: #b3c9e8;
 
   &--done {
     border-color: #ddd6fe;
@@ -844,8 +844,8 @@
   gap: 18px;
   padding: 16px 18px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #bae6fd;
+  background: linear-gradient(135deg, #e9f0fa 0%, #dae6f6 100%);
+  border: 1px solid #b3c9e8;
   margin-bottom: 6px;
 
   .interview-section--done & {
@@ -916,7 +916,7 @@
 .iv-hero__title {
   font-size: 17px;
   font-weight: 800;
-  color: #0c4a6e;
+  color: #21598c;
   letter-spacing: -0.2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1193,8 +1193,8 @@
     font-family: inherit;
 
     &:focus {
-      border-color: #93c5fd;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      border-color: #7fb0dd;
+      box-shadow: 0 0 0 3px rgba(43, 108, 212, 0.1);
     }
   }
 
@@ -1273,7 +1273,7 @@
 
   &.on {
     border-color: ds.$student-primary;
-    background: #eff6ff;
+    background: #e9f0fa;
 
     .r-opt__dot {
       border-color: ds.$student-primary;

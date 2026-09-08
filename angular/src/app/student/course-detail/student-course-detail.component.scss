@@ -209,7 +209,7 @@
   height: 24px;
   padding: 0 10px;
   border-radius: 999px;
-  background: #eef4ff;
+  background: #e9f0fa;
   color: ds.$student-primary;
   font-size: 12px;
   font-weight: 600;
@@ -270,13 +270,13 @@
   }
 
   &--primary {
-    background: #1e6ce8;
+    background: #2b6cd4;
     border-color: transparent;
     color: #fff;
-    box-shadow: 0 4px 12px rgba(30, 108, 232, 0.24);
+    box-shadow: 0 4px 12px rgba(43, 108, 212, 0.24);
 
     &:hover:not([disabled]) {
-      background: #0c4cb8;
+      background: #1f56ad;
       color: #fff;
       transform: translateY(-1px);
     }
@@ -343,7 +343,7 @@
       bottom: 0;
       height: 3px;
       border-radius: 3px 3px 0 0;
-      background: #1e6ce8;
+      background: #2b6cd4;
     }
   }
 }
@@ -576,7 +576,7 @@
   align-items: center;
   white-space: nowrap;
   &.level-0 { background: #f1f5f9; color: #64748b; }
-  &.level-1 { background: #eef4ff; color: #1e6ce8; }
+  &.level-1 { background: #e9f0fa; color: #2b6cd4; }
   &.level-2 { background: #e0f5fa; color: #0891b2; }
   &.level-3 { background: #d1fae5; color: #059669; }
 }

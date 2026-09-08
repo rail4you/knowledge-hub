@@ -849,12 +849,20 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   min-width: 0;
 }
 
-// 资源库卡片封面
+// 资源库卡片封面（与课程卡片同几何：16/10 + relative，否则无封面时高度坍缩、徽章定位基准错误）
 .tenant-card__cover {
-  img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
-  &:hover img { transform: scale(1.05); }
-  // 无封面时用原型深色 visual（渐变 + 星点）
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  display: block;
+  flex-shrink: 0;
+  &:hover .tenant-card__cover-img { transform: scale(1.05); }
+  // 无封面时用原型深色 visual（渐变 + 星点），真图绝对覆盖其上，坏链隐藏后回落到占位
   &--placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: linear-gradient(155deg, $brand-ink 0%, $brand-ink-deep 100%);
     font-size: 42px;
     color: rgba(124, 196, 255, .85);
@@ -868,8 +876,18 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
         radial-gradient(1px 1px at 80% 70%, rgba(124, 196, 255, .35) 0, transparent 60%);
       pointer-events: none;
     }
-    .anticon { position: relative; z-index: 1; }
+    .anticon { position: relative; z-index: 0; }
   }
+}
+.tenant-card__cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .3s;
+  z-index: 1;
 }
 .tenant-card__type-badge {
   position: absolute;

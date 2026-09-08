@@ -114,8 +114,8 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
       return !isNaN(d.getTime()) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     }).length;
     return [
-      { label: '指导记录', value: items.length, suffix: '条', icon: 'compass', color: '#1e6ce8' },
-      { label: '本月新增', value: monthCount, suffix: '条', icon: 'calendar', color: '#2563eb' },
+      { label: '指导记录', value: items.length, suffix: '条', icon: 'compass', color: '#2b6cd4' },
+      { label: '本月新增', value: monthCount, suffix: '条', icon: 'calendar', color: '#2b6cd4' },
     ];
   });
 

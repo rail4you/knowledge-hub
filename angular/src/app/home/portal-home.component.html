@@ -140,17 +140,13 @@
         <div class="tenant-grid">
           @for (t of tenants(); track t.id) {
             <a class="tenant-card" [routerLink]="['/tenant', t.id]">
-              @if (t.coverImage) {
-                <div class="tenant-card__cover">
-                  <img [src]="t.coverImage" [alt]="t.tenantName || t.name" loading="lazy" />
-                  <div class="tenant-card__type-badge">{{ (t.tenantType === 1 ? '项目' : '专业') + '园地' }}</div>
-                </div>
-              } @else {
-                <div class="tenant-card__cover tenant-card__cover--placeholder">
-                  <div class="tenant-card__type-badge">{{ (t.tenantType === 1 ? '项目' : '专业') + '园地' }}</div>
-                  <span nz-icon nzType="bank" nzTheme="outline"></span>
-                </div>
-              }
+              <div class="tenant-card__cover tenant-card__cover--placeholder">
+                <div class="tenant-card__type-badge">{{ (t.tenantType === 1 ? '项目' : '专业') + '园地' }}</div>
+                <span nz-icon nzType="bank" nzTheme="outline"></span>
+                @if (t.coverImage) {
+                  <img [src]="t.coverImage" [alt]="t.tenantName || t.name" loading="lazy" class="tenant-card__cover-img" (error)="$any($event.target).style.display='none'" />
+                }
+              </div>
               <div class="tenant-card__body">
                 <h3>{{ t.tenantName || t.name }}</h3>
                 <div class="tenant-card__stats">

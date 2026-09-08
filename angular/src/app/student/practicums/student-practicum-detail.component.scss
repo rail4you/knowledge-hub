@@ -17,7 +17,7 @@
 /* =================== 头部（封面 + 标题/统计/操作，与资讯/资源详情对齐） =================== */
 .detail-head { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 0; background: #fff; border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius-lg; overflow: hidden; box-shadow: ds.$student-shadow-soft; }
 .detail-media { position: relative; background: #fff; min-height: 100%; }
-.detail-media__stage { position: relative; height: 100%; min-height: 300px; display: block; overflow: hidden; color: #fff; background: linear-gradient(135deg, #eff6ff 0%, #bfdbff 100%); }
+.detail-media__stage { position: relative; height: 100%; min-height: 300px; display: block; overflow: hidden; color: #fff; background: linear-gradient(135deg, #e9f0fa 0%, #b3c9e8 100%); }
 .detail-media__placeholder { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .detail-media__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,.35) 100%); pointer-events: none; z-index: 1; }
 .detail-media__type { position: absolute; top: 18px; left: 18px; z-index: 2; display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 999px; background: rgba(13, 27, 48, .45); backdrop-filter: blur(8px); color: #fff; font-size: 12px; font-weight: 500; }
@@ -32,8 +32,8 @@
 .info-stat { display: flex; flex-direction: column; gap: 2px; strong { font-size: 22px; font-weight: 700; color: ds.$student-text; font-variant-numeric: tabular-nums; } span { font-size: 12px; color: ds.$student-text-light; } }
 .info-sep { width: 1px; height: 28px; background: ds.$student-border-soft; }
 .detail-info__action { display: flex; align-items: center; }
-.enroll-btn { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 24px; border: 0; border-radius: ds.$student-radius; background: #2563eb; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px rgba(37,99,235,.28); transition: all .2s ease; &:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(37,99,235,.36); } }
-.enrolled-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #eff6ff; color: #2563eb; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
+.enroll-btn { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 24px; border: 0; border-radius: ds.$student-radius; background: #2b6cd4; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 14px rgba(43, 108, 212,.28); transition: all .2s ease; &:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(43, 108, 212,.36); } }
+.enrolled-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #e9f0fa; color: #2b6cd4; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
 .expired-badge { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 999px; background: #fef2f2; color: #dc2626; font-size: 14px; font-weight: 600; span[nz-icon] { font-size: 16px; } }
 
 /* =================== Expired banner =================== */
@@ -45,7 +45,7 @@
 /* =================== My progress & score =================== */
 .detail-progress { background: #fff; border-radius: ds.$student-radius-lg; padding: 20px 24px; box-shadow: ds.$student-shadow-soft; border: 1px solid ds.$student-border-soft;
   &__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; h2 { margin: 0; display: flex; align-items: center; gap: 8px; color: ds.$student-text; font-size: 16px; font-weight: 700; } }
-  &__score { color: ds.$student-text-muted; font-size: 14px; strong { color: #2563eb; font-size: 22px; font-weight: 700; } small { color: ds.$student-text-light; font-size: 12px; } &--pending { color: ds.$student-text-light; font-size: 14px; } }
+  &__score { color: ds.$student-text-muted; font-size: 14px; strong { color: #2b6cd4; font-size: 22px; font-weight: 700; } small { color: ds.$student-text-light; font-size: 12px; } &--pending { color: ds.$student-text-light; font-size: 14px; } }
   &__row { margin-bottom: 10px; }
   &__comment { margin: 0 0 8px; display: flex; align-items: flex-start; gap: 6px; color: ds.$student-text-muted; font-size: 13px; line-height: 1.6; span[nz-icon] { margin-top: 2px; } }
   &__meta { display: flex; flex-wrap: wrap; gap: 16px; color: ds.$student-text-light; font-size: 12px; }
@@ -75,14 +75,14 @@
 }
 .task-card__body { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
 .task-card__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.task-card__num { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: #eff6ff; color: #2563eb; font-size: 11px; font-weight: 700; }
+.task-card__num { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: #e9f0fa; color: #2b6cd4; font-size: 11px; font-weight: 700; }
 .task-score { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; background: #fef3c7; color: #d97706; font-size: 11px; font-weight: 600; flex-shrink: 0; }
 .task-card__title { margin: 0; color: ds.$student-text; font-size: 15px; font-weight: 700; line-height: 1.45; @include ds.line-clamp(2); min-height: 44px; }
 .task-card__desc { margin: 0; color: ds.$student-text-muted; font-size: 13px; line-height: 1.6; @include ds.line-clamp(2); }
 .task-card__req { margin: 0; color: #d97706; font-size: 12px; line-height: 1.6; display: flex; align-items: flex-start; gap: 4px; @include ds.line-clamp(2); span[nz-icon] { font-size: 13px; margin-top: 2px; flex-shrink: 0; } }
 .task-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: auto; padding-top: 4px; color: ds.$student-text-light; font-size: 12px; span { display: inline-flex; align-items: center; gap: 3px; } span[nz-icon] { font-size: 12px; } }
 .task-card__actions { padding: 12px 14px 14px; border-top: 1px dashed ds.$student-border-soft; }
-.submit-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; border: 0; border-radius: ds.$student-radius; background: #2563eb; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(37,99,235,.22); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(37,99,235,.34); } }
+.submit-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; border: 0; border-radius: ds.$student-radius; background: #2b6cd4; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(43, 108, 212,.22); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(43, 108, 212,.34); } }
 
 /* =================== Materials（与任务卡片同风格） =================== */
 .materials-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
@@ -92,11 +92,11 @@
 .material-card__body { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
 .material-card__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .material-card__icon { width: 34px; height: 34px; border-radius: 10px; background: ds.$student-surface-soft; display: flex; align-items: center; justify-content: center; color: ds.$student-primary; font-size: 17px; flex-shrink: 0; }
-.material-type { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: #eff6ff; color: #2563eb; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.material-type { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: #e9f0fa; color: #2b6cd4; font-size: 11px; font-weight: 700; flex-shrink: 0; }
 .material-card__title { margin: 0; color: ds.$student-text; font-size: 15px; font-weight: 700; line-height: 1.45; @include ds.line-clamp(2); min-height: 44px; }
 .material-card__desc { margin: 0; color: ds.$student-text-muted; font-size: 13px; line-height: 1.6; @include ds.line-clamp(2); &--empty { color: ds.$student-text-light; } }
 .material-card__actions { padding: 12px 14px 14px; border-top: 1px dashed ds.$student-border-soft; }
-.download-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; border: 0; border-radius: ds.$student-radius; background: #2563eb; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(37,99,235,.22); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(37,99,235,.34); } }
+.download-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 36px; border: 0; border-radius: ds.$student-radius; background: #2b6cd4; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(43, 108, 212,.22); transition: all .2s; &:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(43, 108, 212,.34); } }
 
 .empty-small { text-align: center; padding: 40px 0; color: ds.$student-text-light; font-size: 14px; }
 .modal-desc { margin: 0 0 4px; color: ds.$student-text-muted; font-size: 14px; }
@@ -116,7 +116,7 @@
 .sim-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 
 .sim-card { display: flex; flex-direction: column; background: #fff; border-radius: ds.$student-radius-lg; border: 1px solid ds.$student-border-soft; overflow: hidden; text-decoration: none; transition: all .25s ease; box-shadow: 0 2px 8px rgba(15,23,42,.04); cursor: pointer;
-  &:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(15,23,42,.10); border-color: rgba(ds.$student-primary,.3); .sim-card__cta { background: #2563eb; color: #fff; } }
+  &:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(15,23,42,.10); border-color: rgba(ds.$student-primary,.3); .sim-card__cta { background: #2b6cd4; color: #fff; } }
 }
 
 .sim-card__cover { position: relative; width: 100%; aspect-ratio: 16 / 9; background: ds.$student-surface-soft; overflow: hidden;

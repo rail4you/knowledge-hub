@@ -106,7 +106,7 @@
   }
 
   &:hover {
-    border-color: rgba(37, 99, 235, 0.4);
+    border-color: rgba(43, 108, 212, 0.4);
     box-shadow: ds.$student-shadow-hover;
     transform: translateY(-3px);
 
@@ -133,7 +133,7 @@
   display: block;
   overflow: hidden;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #0284c7 0%, #082f49 100%);
+  background: linear-gradient(135deg, #2b6cd4 0%, #082f49 100%);
 }
 
 .live-card__cover-img {
@@ -334,7 +334,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(43, 108, 212, 0.3);
 
   span[nz-icon] { font-size: 15px; flex-shrink: 0; }
 
@@ -347,7 +347,7 @@
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 6px 18px rgba(43, 108, 212, 0.4);
   }
 
   &.is-disabled {
@@ -375,7 +375,7 @@
   height: 32px;
   padding: 0 16px;
   border: 1px solid ds.$student-border;
-  border-radius: 999px;
+  border-radius: 3px;
   background: #fff;
   color: ds.$student-text-muted;
   font-size: 13px;
@@ -392,7 +392,7 @@
     border-color: ds.$student-primary;
     background: ds.$student-primary;
     color: #fff;
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.24);
+    box-shadow: 0 4px 10px rgba(43, 108, 212, 0.24);
   }
 }
 

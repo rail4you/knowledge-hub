@@ -140,7 +140,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     { rank: 2, title: '高等数学（上）', students: 2654, color: '#0d5e56' },
     { rank: 3, title: '大学英语（一）', students: 2320, color: '#14b8a6' },
     { rank: 4, title: '计算机网络原理', students: 1987, color: '#16a34a' },
-    { rank: 5, title: '机械制图与 CAD', students: 1854, color: '#0ea5e9' },
+    { rank: 5, title: '机械制图与 CAD', students: 1854, color: '#5b93db' },
   ]);
 
   ngOnInit(): void {
@@ -256,7 +256,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
         map.set(c.majorName, c.majorId);
       }
     });
-    const colorPalette = ['#0f766e', '#14b8a6', '#0d5e56', '#16a34a', '#0ea5e9', '#8b5cf6'];
+    const colorPalette = ['#0f766e', '#14b8a6', '#0d5e56', '#16a34a', '#5b93db', '#8b5cf6'];
     const chips: MajorChip[] = [{ id: null, name: '全部专业', icon: 'appstore', color: '#0f766e' }];
     let i = 0;
     Array.from(map.entries()).slice(0, 6).forEach(([name, id]) => {
@@ -339,7 +339,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       '#0d5e56',
       '#14b8a6',
       '#16a34a',
-      '#0ea5e9',
+      '#5b93db',
       '#059669',
       '#0d9488',
       '#d97706',

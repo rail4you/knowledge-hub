@@ -43,7 +43,7 @@
 
   &:hover {
     color: ds.$student-primary;
-    background: #f0f6ff;
+    background: #e9f0fa;
   }
 }
 
@@ -386,10 +386,10 @@
 
 .timeline-reply {
   margin-top: 8px;
-  background: #eff6ff;
+  background: #e9f0fa;
   border-radius: ds.$student-radius;
   padding: 10px 14px;
-  border: 1px solid #dbeafe;
+  border: 1px solid #d9e5f6;
 
   p {
     margin: 0;
@@ -557,11 +557,11 @@
     border-radius: ds.$student-radius;
     height: 36px;
     font-weight: 600;
-    box-shadow: 0 4px 10px rgba(30, 108, 232, 0.18);
+    box-shadow: 0 4px 10px rgba(43, 108, 212, 0.18);
 
     &:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 14px rgba(30, 108, 232, 0.26);
+      box-shadow: 0 6px 14px rgba(43, 108, 212, 0.26);
     }
   }
 }

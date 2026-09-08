@@ -767,10 +767,10 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     const map: Record<string, string> = {
       core: '#ef4444',
       important: '#f59e0b',
-      normal: '#1e6ce8',
+      normal: '#2b6cd4',
       extended: '#10b981',
     };
-    return map[level || 'normal'] || '#1e6ce8';
+    return map[level || 'normal'] || '#2b6cd4';
   }
 
   exerciseTypeLabel(t?: ExerciseType): string {

@@ -1,11 +1,12 @@
 // ═══════════════════════════════════════════
-// 学生端设计系统 - v2（蓝色主题，简洁教育风格）
+// 学生端设计系统 - v3（学院蓝主题，沉稳扁平风格）
+// 主色取自首页 Logo 墨蓝的精神：明朗的学院蓝，专业沉稳
 // ═══════════════════════════════════════════
 
-// 主色：蓝色系 — 纯净、专业、教育感
-$student-primary: #2563eb;
-$student-primary-dark: #1d4ed8;
-$student-primary-light: #3b82f6;
+// 主色：学院蓝系 — 明朗、专业、教育感
+$student-primary: #2b6cd4;
+$student-primary-dark: #1f56ad;
+$student-primary-light: #5b93db;
 // 强调色
 $student-accent: #f59e0b;
 $student-warm: #d97706;
@@ -21,10 +22,10 @@ $student-text-muted: #64748b;
 $student-text-light: #94a3b8;
 // 阴影
 $student-shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
-$student-shadow-hover: 0 12px 28px rgba(37, 99, 235, 0.14);
+$student-shadow-hover: 0 12px 28px rgba(43, 108, 212, 0.16);
 $student-shadow-card: 0 6px 20px rgba(15, 23, 42, 0.06);
-// 圆角
-$student-radius: 8px;
+// 圆角：按钮 / 输入 / 小元素统一扁平小圆角（3px），卡片仍用 radius-lg 保持层级
+$student-radius: 3px;
 $student-radius-lg: 14px;
 $student-radius-xl: 20px;
 $student-container: 1760px;

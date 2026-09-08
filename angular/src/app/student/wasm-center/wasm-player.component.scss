@@ -28,9 +28,9 @@
   border: 1px solid ds.$student-border-soft;
   transition: all .2s ease; cursor: pointer;
   span[nz-icon] { font-size: 14px; }
-  &:hover { color: ds.$student-primary; background: #f0f6ff; border-color: rgba(ds.$student-primary,.3); }
+  &:hover { color: ds.$student-primary; background: #e9f0fa; border-color: rgba(ds.$student-primary,.3); }
 }
-.toolbar-btn--back { background: transparent; border-color: transparent; &:hover { background: #f0f6ff; border-color: rgba(ds.$student-primary,.2); } }
+.toolbar-btn--back { background: transparent; border-color: transparent; &:hover { background: #e9f0fa; border-color: rgba(ds.$student-primary,.2); } }
 
 .toolbar-info {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
@@ -73,7 +73,7 @@
     height: 40px; padding: 0 20px; border-radius: ds.$student-radius;
     background: ds.$student-primary; color: #fff; font-size: 14px; font-weight: 600;
     text-decoration: none; margin-top: 16px;
-    box-shadow: 0 4px 10px rgba(30,108,232,.25);
+    box-shadow: 0 4px 10px rgba(43, 108, 212,.25);
   }
 }
 

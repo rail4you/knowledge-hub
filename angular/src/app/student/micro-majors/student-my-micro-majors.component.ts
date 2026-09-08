@@ -40,7 +40,7 @@ export class StudentMyMicroMajorsComponent implements OnInit {
     const countOf = (s: MicroMajorEnrollmentStatus) =>
       items.filter(i => i.enrollmentStatus === s).length;
     return [
-      { label: '已报名', value: items.length, suffix: '个', icon: 'appstore', color: '#1e6ce8' },
+      { label: '已报名', value: items.length, suffix: '个', icon: 'appstore', color: '#2b6cd4' },
       { label: '学习中', value: countOf(MicroMajorEnrollmentStatus.InProgress), suffix: '个', icon: 'play-circle', color: '#06b6d4' },
       { label: '已完成', value: countOf(MicroMajorEnrollmentStatus.Completed), suffix: '个', icon: 'check-circle', color: '#10b981' },
       { label: '已获证书', value: countOf(MicroMajorEnrollmentStatus.Certified), suffix: '个', icon: 'safety-certificate', color: '#f59e0b' },
@@ -96,7 +96,7 @@ export class StudentMyMicroMajorsComponent implements OnInit {
   }
 
   coverGradient(item: MyMicroMajorDto): string {
-    const palettes = ['#1e6ce8', '#0c4cb8', '#2563eb', '#0284c7', '#0891b2'];
+    const palettes = ['#2b6cd4', '#1f56ad', '#2b6cd4', '#2b6cd4', '#0891b2'];
     const key = item.title || item.id || '';
     let hash = 0;
     for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;

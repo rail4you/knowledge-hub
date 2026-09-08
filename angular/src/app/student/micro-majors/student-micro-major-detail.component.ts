@@ -166,7 +166,7 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   /** 课程封面渐变（与课程列表同调色板） */
   courseGradient(course: CourseDto): string {
     const palettes = [
-      '#0f766e', '#0d5e56', '#14b8a6', '#16a34a', '#0ea5e9', '#059669', '#0d9488', '#d97706',
+      '#0f766e', '#0d5e56', '#14b8a6', '#16a34a', '#5b93db', '#059669', '#0d9488', '#d97706',
     ];
     const key = (course.title || course.id || 'x') + (course.majorName || '');
     let hash = 0;

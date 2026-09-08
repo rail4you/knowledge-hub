@@ -63,3 +63,75 @@ lpx-navbar-item:has(> .lpx-menu-item-submenu):last-child {
   margin-bottom: 0;
   padding-bottom: 0;
 }
+
+/* ═══════════════════════════════════════════════════
+   学生端 ng-zorro 主题收敛：深海军蓝 + 扁平（3px）
+   仅作用于学生端（body:has(.student-layout) 限定，含 cdk 弹窗 overlay）
+   教师端 / 管理后台不受影响
+   ═══════════════════════════════════════════════════ */
+body:has(.student-layout) {
+  .ant-btn { border-radius: 3px; }
+  .ant-btn-primary {
+    background: #2b6cd4;
+    border-color: #2b6cd4;
+    box-shadow: none;
+    &:hover, &:focus { background: #3570c8; border-color: #3570c8; }
+    &:active { background: #1f56ad; border-color: #1f56ad; }
+  }
+  .ant-btn-link, .ant-btn-link > span { color: #2b6cd4; }
+
+  .ant-input, .ant-input-affix-wrapper,
+  .ant-select:not(.ant-select-customize-input) .ant-select-selector,
+  .ant-picker, .ant-input-number {
+    border-radius: 3px;
+  }
+
+  .ant-pagination-item-active {
+    border-color: #2b6cd4;
+    a { color: #2b6cd4; }
+  }
+  .ant-pagination-item:hover {
+    border-color: #2b6cd4;
+    a { color: #2b6cd4; }
+  }
+
+  .ant-progress-bg, .ant-progress-success-bg { background-color: #2b6cd4; }
+  .ant-progress-text { color: #2b6cd4; }
+
+  .ant-spin-dot-item { background-color: #2b6cd4; }
+
+  .ant-menu-item-selected, .ant-menu-submenu-selected > .ant-menu-submenu-title {
+    color: #2b6cd4;
+  }
+  .ant-menu-vertical .ant-menu-item::after,
+  .ant-menu-inline .ant-menu-item::after {
+    border-color: #2b6cd4;
+  }
+  .ant-dropdown-menu-item-selected {
+    color: #2b6cd4;
+    background: #e9f0fa;
+  }
+
+  .ant-radio-checked .ant-radio-inner { border-color: #2b6cd4; }
+  .ant-radio-inner::after { background-color: #2b6cd4; }
+  .ant-switch-checked { background: #2b6cd4; }
+  .ant-checkbox-checked .ant-checkbox-inner {
+    background-color: #2b6cd4;
+    border-color: #2b6cd4;
+  }
+
+  .ant-tag-blue {
+    color: #2b6cd4;
+    background: #e9f0fa;
+    border-color: #b3c9e8;
+  }
+
+  .ant-tabs-ink-bar { background: #2b6cd4; }
+  .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn { color: #2b6cd4; }
+  .ant-tabs-tab:hover { color: #2b6cd4; }
+
+  .ant-table-column-sorter-up.active,
+  .ant-table-column-sorter-down.active {
+    color: #2b6cd4;
+  }
+}
