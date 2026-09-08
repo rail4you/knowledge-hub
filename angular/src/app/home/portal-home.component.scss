@@ -690,6 +690,7 @@ $pad:           16px;
   padding: 1px 6px;
   border-radius: 4px;
   font-weight: 500;
+  &--tenant { background: #fef3c7; color: #92400e; }
 }
 
 .course-card__meta {
@@ -838,6 +839,16 @@ $pad:           16px;
   display: flex;
   flex-direction: column;
   flex: 1;
+}
+.news-card__tenant {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 1px 8px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 4px;
 }
 .news-card__body h5 {
   margin: 0 0 8px;
@@ -1063,6 +1074,18 @@ $pad:           16px;
 .rank-row:hover .rank-row__body h5 { color: $blue; }
 .rank-row__meta { font-size: 11px; color: $ink-subtle; display: inline-flex; align-items: center; gap: 5px; }
 .rank-row__dot { width: 3px; height: 3px; border-radius: 50%; background: $ink-faint; }
+.rank-row__tenant {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 4px;
+  vertical-align: middle;
+  line-height: 1.5;
+}
 
 // ============================================================
 //  BROWSE

@@ -8,14 +8,35 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { hasRole } from '../auth/current-user.utils';
 import { PortalService } from '../proxy/portal/portal.service';
-import type { PublicHomeStatsDto, PortalHomeDataDto, TenantResourceSummaryDto, PublicBrowseDto, PublicCourseDto, PublicResourceDto, PublicMicroMajorDto, PublicBrowseFilterOption, MaterialBriefDto } from '../proxy/portal/models';
+import type { PublicHomeStatsDto, TenantResourceSummaryDto, PublicBrowseDto, PublicCourseDto, PublicResourceDto, PublicMicroMajorDto, PublicBrowseFilterOption, MaterialBriefDto, CourseBriefDto, MicroMajorBriefDto, NewsBriefDto } from '../proxy/portal/models';
 import { FilePreviewComponent } from '../shared/preview/file-preview.component';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 interface HeroSlide {
   title: string;
   highlight: string;
   desc: string;
   accent: string;
+}
+
+/** 首页跨租户聚合的课程（带 TenantName 标识，便于"全景展示"） */
+interface GlobalCourseItem extends CourseBriefDto {
+  tenantId: string;
+  tenantName: string;
+}
+/** 首页跨租户聚合的微专业 */
+interface GlobalMicroMajorItem extends MicroMajorBriefDto {
+  tenantId: string;
+  tenantName: string;
+}
+/** 首页跨租户聚合的资源 */
+interface GlobalMaterialItem extends MaterialBriefDto {
+  tenantName: string;
+}
+/** 首页跨租户聚合的资讯 */
+interface GlobalNewsItem extends NewsBriefDto {
+  tenantName: string;
 }
 
 @Component({
@@ -34,12 +55,23 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   private portal = inject(PortalService);
 
   readonly stats = signal<PublicHomeStatsDto | null>(null);
-  readonly homeData = signal<PortalHomeDataDto | null>(null);
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
   readonly browseData = signal<PublicBrowseDto | null>(null);
   readonly userName = signal('');
   /** 资源排行榜：下载量最高的资源（跨所有租户） */
   readonly topResources = signal<MaterialBriefDto[]>([]);
+
+  // ── 首页跨租户聚合内容（全景展示） ──
+  /** 精选课程：所有租户 IsRecommended=true 的已发布课程 */
+  readonly globalFeaturedCourses = signal<GlobalCourseItem[]>([]);
+  /** 微专业：所有租户 Status=Published 的微专业 */
+  readonly globalMicroMajors = signal<GlobalMicroMajorItem[]>([]);
+  /** 最新资源：跨租户取最新若干 */
+  readonly globalLatestMaterials = signal<GlobalMaterialItem[]>([]);
+  /** 最新资讯：跨租户取最新若干 */
+  readonly globalLatestNews = signal<GlobalNewsItem[]>([]);
+  /** 加载态 */
+  readonly loadingHome = signal(false);
 
   // Browse filters
   readonly activeTab = signal<'courses' | 'resources' | 'microMajors'>('courses');
@@ -74,17 +106,17 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
   readonly rankedMaterials = () => {
-    const mats = this.homeData()?.latestMaterials || [];
+    const mats = this.globalLatestMaterials() || [];
     return [...mats].sort((a, b) => (b.downloadCount || 0) - (a.downloadCount || 0)).slice(0, 5);
   };
 
   /** 最新资源榜：取前五项 */
-  readonly latestResourcesTop5 = () => (this.homeData()?.latestMaterials || []).slice(0, 5);
+  readonly latestResourcesTop5 = () => (this.globalLatestMaterials() || []).slice(0, 5);
 
   /** 资源排行版：取前五项 */
   readonly topResourcesTop5 = () => (this.topResources() || []).slice(0, 5);
 
-  previewMaterial(m: MaterialBriefDto | PublicResourceDto): void {
+  previewMaterial(m: MaterialBriefDto | GlobalMaterialItem | PublicResourceDto): void {
     if (!m.id) return;
     // 没有文件时直接跳过（无实际文件上传的资源无法预览）
     if (!m.fileExtension && !m.originalFileName && !m.fileSize) {
@@ -104,7 +136,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     );
   }
 
-  canPreview(m: MaterialBriefDto | PublicResourceDto): boolean {
+  canPreview(m: MaterialBriefDto | GlobalMaterialItem | PublicResourceDto): boolean {
     // 有扩展名或原文件名，或文件大小 > 0（说明确实有文件）即可预览。
     // 早期 bug 曾把 FileExtension/OriginalFileName 清空，仅靠 fileSize 也能兜底。
     return !!(m.id && (m.fileExtension || (m.originalFileName && m.originalFileName.includes('.')) || m.fileSize > 0));
@@ -149,8 +181,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     this.portal.getPublicHomeStats().subscribe(d => this.stats.set(d));
     this.portal.getPublicTenantList().subscribe(ts => {
       this.tenants.set(ts || []);
-      const id = ts?.[0]?.id;
-      if (id) this.portal.getHomeData(id).subscribe(d => this.homeData.set(d));
+      this.loadGlobalHomeData(ts || []);
     });
 
     // 资源排行榜：跨所有租户取下载量最高的前 5 项
@@ -158,6 +189,75 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
 
     this.loadBrowseData();
     this.startHeroAutoplay();
+  }
+
+  /**
+   * 首页全景展示：拉取所有有数据租户的首页数据，合并精选课程/微专业/最新资源/最新资讯。
+   * 只跳过课程+资源+微专业都为 0 的空租户，避免对无人租户发起无意义的请求。
+   */
+  loadGlobalHomeData(tenants: TenantResourceSummaryDto[]): void {
+    const activeTenants = (tenants || []).filter(
+      t => (t.courseCount || 0) + (t.resourceCount || 0) + (t.microMajorCount || 0) > 0
+    );
+    if (activeTenants.length === 0) {
+      this.loadingHome.set(false);
+      return;
+    }
+
+    this.loadingHome.set(true);
+
+    // 为每个租户构建一个 tenantName 映射（沿用 TenantResourceSummary 的展示名）
+    const tenantNames = new Map<string, string>();
+    for (const t of activeTenants) {
+      tenantNames.set(t.id, t.tenantName || t.name);
+    }
+
+    const requests = activeTenants.map(t =>
+      this.portal.getHomeData(t.id).pipe(
+        map(home => ({ tenantId: t.id, tenantName: tenantNames.get(t.id) || t.name, home })),
+        catchError(() => of({ tenantId: t.id, tenantName: tenantNames.get(t.id) || t.name, home: null }))
+      )
+    );
+
+    forkJoin(requests).subscribe(results => {
+      const courses: GlobalCourseItem[] = [];
+      const microMajors: GlobalMicroMajorItem[] = [];
+      const materials: GlobalMaterialItem[] = [];
+      const news: GlobalNewsItem[] = [];
+
+      for (const r of results) {
+        const h = r.home as any;
+        if (!h) continue;
+        const tn = r.tenantName;
+        const tid = r.tenantId;
+        for (const c of (h.featuredCourses || [])) {
+          courses.push({ ...c, tenantId: tid, tenantName: tn });
+        }
+        for (const m of (h.microMajors || [])) {
+          microMajors.push({ ...m, tenantId: tid, tenantName: tn });
+        }
+        for (const mat of (h.latestMaterials || [])) {
+          materials.push({ ...mat, tenantName: tn });
+        }
+        for (const n of (h.latestNews || [])) {
+          news.push({ ...n, tenantName: tn });
+        }
+      }
+
+      // 跨租户拼接：后端每个租户的 latestMaterials/latestNews 内部已按时间倒序，
+      // 跨租户拼接时按 activeTenants 顺序保持稳定即可，避免依赖未在 DTO 中的 CreationTime 字段。
+      news.sort((a, b) => {
+        const ta = a.publishedAt ? Date.parse(a.publishedAt as any) : 0;
+        const tb = b.publishedAt ? Date.parse(b.publishedAt as any) : 0;
+        return tb - ta;
+      });
+
+      this.globalFeaturedCourses.set(courses.slice(0, 12));
+      this.globalMicroMajors.set(microMajors.slice(0, 8));
+      this.globalLatestMaterials.set(materials.slice(0, 8));
+      this.globalLatestNews.set(news.slice(0, 5));
+      this.loadingHome.set(false);
+    });
   }
 
   loadBrowseData(): void {

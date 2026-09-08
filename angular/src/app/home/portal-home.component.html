@@ -161,7 +161,7 @@
   }
 
   <!-- ===== 精选课程 ===== -->
-  @if (homeData()?.featuredCourses?.length) {
+  @if (globalFeaturedCourses().length) {
     <section class="section">
       <div class="section__inner">
         <div class="section__head">
@@ -171,7 +171,7 @@
           <a routerLink="/student/courses" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
         </div>
         <div class="course-grid">
-          @for (c of homeData()?.featuredCourses; track c.id; let i = $index) {
+          @for (c of globalFeaturedCourses(); track c.id; let i = $index) {
             <a
               class="course-card"
               [routerLink]="['/student/courses', c.id]"
@@ -187,6 +187,7 @@
               </div>
               <div class="course-card__body">
                 <div class="course-card__tags">
+                  @if (c.tenantName) { <span class="course-card__tag course-card__tag--tenant">{{ c.tenantName }}</span> }
                   @if (c.majorName) { <span class="course-card__tag course-card__tag--major">{{ c.majorName }}</span> }
                 </div>
                 <h4>{{ c.title }}</h4>
@@ -211,7 +212,7 @@
   }
 
   <!-- ===== 微专业 ===== -->
-  @if (homeData()?.microMajors?.length) {
+  @if (globalMicroMajors().length) {
     <section class="section">
       <div class="section__inner">
         <div class="section__head">
@@ -221,7 +222,7 @@
           <a routerLink="/student/micro-majors" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
         </div>
         <div class="mm-grid">
-          @for (m of homeData()?.microMajors; track m.id; let i = $index) {
+          @for (m of globalMicroMajors(); track m.id; let i = $index) {
             <a
               class="mm-card"
               [routerLink]="['/student/micro-majors', m.id]"
@@ -239,6 +240,7 @@
                 <h4>{{ m.title }}</h4>
                 <p>{{ m.courseCount || 0 }} 门课程</p>
               </div>
+              @if (m.tenantName) { <span class="mm-card__tag mm-card__tag--tenant">{{ m.tenantName }}</span> }
             </a>
           }
         </div>
@@ -247,10 +249,10 @@
   }
 
   <!-- ===== 最新资源 + 资源排行（同一容器，两栏榜单，各前五） ===== -->
-  @if (homeData()?.latestMaterials?.length || topResources().length) {
+  @if (globalLatestMaterials().length || topResources().length) {
     <section class="section dual-section">
       <div class="dual-section__inner">
-        @if (homeData()?.latestMaterials?.length) {
+        @if (globalLatestMaterials().length) {
           <div class="rank-panel">
             <div class="rank-panel__head">
               <h3><span nz-icon nzType="file-text" nzTheme="outline"></span>最新资源</h3>
@@ -261,7 +263,10 @@
                 <div class="rank-row" [class.rank-row--clickable]="canPreview(m)" [class.rank-row--top3]="i < 3" (click)="canPreview(m) && previewMaterial(m)">
                   <span class="rank-row__num">{{ i + 1 }}</span>
                   <div class="rank-row__body">
-                    <h5>{{ m.name }}</h5>
+                    <h5>
+                      {{ m.name }}
+                      @if (m.tenantName) { <span class="rank-row__tenant">{{ m.tenantName }}</span> }
+                    </h5>
                     <span class="rank-row__meta">
                       <span>{{ m.downloadCount || 0 }} 次下载</span>
                       @if (canPreview(m)) {
@@ -306,7 +311,7 @@
   }
 
   <!-- ===== 最新资讯 ===== -->
-  @if (homeData()?.latestNews?.length) {
+  @if (globalLatestNews().length) {
     <section class="section">
       <div class="section__inner">
         <div class="section__head">
@@ -316,13 +321,14 @@
           <a routerLink="/student/news" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
         </div>
         <div class="news-grid">
-          @for (n of homeData()?.latestNews; track n.id) {
+          @for (n of globalLatestNews(); track n.id) {
             <a class="news-card" [routerLink]="['/student/news', n.id]">
               <div class="news-card__cover">
                 <span nz-icon nzType="file-text" nzTheme="outline" class="news-card__cover-fallback"></span>
                 <span class="news-card__date-badge">{{ n.publishedAt | date:'MM-dd' }}</span>
               </div>
               <div class="news-card__body">
+                @if (n.tenantName) { <span class="news-card__tenant">{{ n.tenantName }}</span> }
                 <h5>{{ n.title }}</h5>
                 <div class="news-card__meta">
                   <span class="news-card__date"><span nz-icon nzType="calendar" nzTheme="outline"></span> {{ n.publishedAt | date:'yyyy-MM-dd' }}</span>
