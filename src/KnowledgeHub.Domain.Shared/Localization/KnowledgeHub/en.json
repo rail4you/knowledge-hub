@@ -443,6 +443,7 @@
     "SearchHistory:Query": "Query",
     "SearchHistory:Results": "Results",
     "SearchHistory:Time": "Time",
+    "ClearFilter": "Clear Filter",
     "DownloadFile": "Download",
     "Permission:Employment": "Employment",
     "Permission:Employment.PublishJob": "Publish Jobs",

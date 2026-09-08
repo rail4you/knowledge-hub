@@ -602,6 +602,7 @@
     "SearchHistory:Query": "搜索词",
     "SearchHistory:Results": "结果数",
     "SearchHistory:Time": "搜索时间",
+    "ClearFilter": "清除筛选",
     "PreviewLoading": "正在加载预览...",
     "PreviewFailed": "预览加载失败",
     "PreviewNotSupported": "此文件类型不支持预览",
