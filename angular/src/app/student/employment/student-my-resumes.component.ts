@@ -301,6 +301,14 @@ export class StudentMyResumesComponent implements OnInit {
     return name.length > 20 ? '' : name;
   }
 
+  /** 联系方式行文本：手机 · 邮箱，双无时返回“暂无” */
+  contactText(item: StudentResumeDto): string {
+    const p = (item.phoneNumber || '').trim();
+    const e = (item.email || '').trim();
+    if (p && e) return `${p} · ${e}`;
+    return p || e || '暂无';
+  }
+
   getSkillTags(skillString?: string): string[] {
     if (!skillString) return [];
     return skillString

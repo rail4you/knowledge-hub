@@ -50,6 +50,20 @@
 
 .empty-state {
   gap: 8px;
+  &__img {
+    width: 230px;
+    max-width: 70%;
+    height: auto;
+    display: block;
+    margin-top: 8px;
+    &.is-small {
+      width: 170px;
+    }
+  }
+  &.is-filtered {
+    min-height: 300px;
+    grid-column: 1 / -1;
+  }
   &__art {
     width: 88px;
     height: 88px;
@@ -79,6 +93,7 @@
 .live-card {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   background: #fff;
   border: 1px solid ds.$student-border-soft;
   border-radius: ds.$student-radius-lg;
@@ -148,6 +163,7 @@
   align-items: center;
   gap: 6px;
   height: 22px;
+  max-width: calc(100% - 20px);
   padding: 0 10px;
   border-radius: 999px;
   background: rgba(0, 0, 0, .42);
@@ -156,6 +172,8 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
 
   &.is-live {
     background: rgba(16, 185, 129, .88);
@@ -183,6 +201,7 @@
   align-items: center;
   gap: 4px;
   height: 22px;
+  max-width: calc(100% - 20px);
   padding: 0 10px;
   border-radius: 999px;
   background: rgba(0, 0, 0, .42);
@@ -191,12 +210,22 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
-  span[nz-icon] { font-size: 11px; }
+  white-space: nowrap;
+  overflow: hidden;
+  span[nz-icon] { font-size: 11px; flex-shrink: 0; }
 }
 
-/* Card body */
+/* 封面徽章文字：单行省略，防止长文本撑破卡片 */
+.cover-badge__text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Card body（标题 / 描述固定占位，缺数据也对齐） */
 .live-card__body {
-  padding: 14px 16px;
+  padding: 14px 16px 6px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -204,18 +233,57 @@
   min-width: 0;
 }
 
+.live-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 22px;
+  overflow: hidden;
+}
+
 .live-card__title {
   margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 15px;
   font-weight: 700;
   color: ds.$student-text;
   line-height: 1.4;
   letter-spacing: -.2px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
   transition: color .2s ease;
+
+  &.is-empty {
+    color: ds.$student-text-light;
+    font-weight: 500;
+  }
+}
+
+.live-card__teacher {
+  flex: 0 1 auto;
+  min-width: 34px;
+  max-width: 38%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 500;
+  color: ds.$student-text-muted;
+  background: ds.$student-surface-soft;
+  border-radius: 999px;
+  padding: 2px 10px;
+  line-height: 1.6;
+
+  &.is-empty {
+    color: ds.$student-text-light;
+    border: 1px dashed ds.$student-border;
+    background: transparent;
+  }
 }
 
 .live-card__desc {
@@ -226,67 +294,28 @@
   font-size: 12px;
   color: ds.$student-text-muted;
   line-height: 1.6;
+  min-height: calc(1.6em * 2 + 16px);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
+  overflow-wrap: anywhere;
+  word-break: break-word;
 
-.live-card__info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: auto;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.info-item__icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: ds.$student-surface-soft;
-  color: ds.$student-text-muted;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  span[nz-icon] { font-size: 14px; }
-}
-
-.info-item__text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.info-item__label {
-  font-size: 11px;
-  color: ds.$student-text-light;
-}
-
-.info-item__value {
-  font-size: 13px;
-  color: ds.$student-text;
-  font-weight: 500;
-
-  &--mono {
-    font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
-    font-size: 12px;
-    letter-spacing: 1px;
-    color: ds.$student-primary;
+  &.is-empty {
+    color: ds.$student-text-light;
+    border: 1px dashed ds.$student-border;
+    background: transparent;
+    display: flex;
+    align-items: center;
   }
 }
 
-/* Card action */
+/* Card action（所有状态统一高度，禁用态保持同尺寸） */
 .live-card__action {
-  padding: 12px 16px;
-  border-top: 1px dashed ds.$student-border-soft;
+  padding: 12px 16px 14px;
+  margin-top: auto;
+  min-width: 0;
 }
 
 .enter-btn {
@@ -295,6 +324,7 @@
   justify-content: center;
   gap: 6px;
   width: 100%;
+  max-width: 100%;
   height: 38px;
   border: 0;
   border-radius: ds.$student-radius;
@@ -306,7 +336,14 @@
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 
-  span[nz-icon] { font-size: 15px; }
+  span[nz-icon] { font-size: 15px; flex-shrink: 0; }
+
+  .enter-btn__label {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   &:hover {
     transform: translateY(-1px);
@@ -357,18 +394,6 @@
     color: #fff;
     box-shadow: 0 4px 10px rgba(37, 99, 235, 0.24);
   }
-}
-
-.live-card__footer-end {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px 16px;
-  border-top: 1px solid ds.$student-border-soft;
-  font-size: 12px;
-  color: ds.$student-text-muted;
-  span[nz-icon] { font-size: 13px; color: ds.$student-success; }
 }
 
 /* =================== Responsive =================== */

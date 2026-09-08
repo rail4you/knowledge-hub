@@ -21,9 +21,12 @@
     </div>
   } @else if (items().length === 0) {
     <div class="empty-state">
-      <div class="empty-state__art">
-        <span nz-icon nzType="file-text" nzTheme="outline"></span>
-      </div>
+      <img
+        class="empty-state__img"
+        src="assets/images/home/resume-empty-placeholder.svg"
+        alt=""
+        aria-hidden="true"
+      />
       <h3>还没有简历</h3>
       <p>上传第一份简历，开启您的求职之旅</p>
       <button class="empty-btn" (click)="openCreate()">
@@ -35,52 +38,58 @@
     <div class="resume-grid">
       @for (item of items(); track item.id) {
         <article class="resume-card" [class.is-default]="item.isDefault">
-          <div class="resume-card__head">
-            <div class="resume-card__icon">
-              <span nz-icon nzType="file-text" nzTheme="outline"></span>
-            </div>
-            <div class="resume-card__head-text">
-              <h3 class="resume-card__title">{{ item.title }}</h3>
-              <p class="resume-card__sub">
-                v{{ item.versionNo }} ·
-                @if (item.lastUsedAt) {
-                  最近使用 {{ item.lastUsedAt | date:'yyyy-MM-dd' }}
-                } @else {
-                  尚未使用
-                }
-              </p>
-            </div>
+          <!-- 封面（统一占位图 + 状态徽章，与课程/岗位卡片一致） -->
+          <div class="resume-card__cover">
+            <img
+              class="resume-card__cover-img"
+              src="assets/images/home/resume-cover-placeholder.svg"
+              alt=""
+              loading="lazy"
+              aria-hidden="true"
+            />
+            <div class="resume-card__overlay" aria-hidden="true"></div>
             @if (item.isDefault) {
-              <span class="default-tag">
+              <span class="cover-badge">
                 <span nz-icon nzType="star" nzTheme="fill"></span>
-                默认
+                <span class="cover-badge__text">默认</span>
               </span>
             }
+            @if (item.attachmentUrl) {
+              <span class="cover-badge cover-badge--right">
+                <span nz-icon nzType="paper-clip" nzTheme="outline"></span>
+                <span class="cover-badge__text">附件</span>
+              </span>
+            }
+          </div>
+          <div class="resume-card__head">
+            <div class="resume-card__head-text">
+              <h3 class="resume-card__title" [class.is-empty]="!item.title" [title]="item.title || '暂无标题'">
+                {{ item.title || '暂无标题' }}
+              </h3>
+            </div>
           </div>
 
           <div class="resume-card__body">
             <div class="info-row">
               <span class="info-row__label">姓名</span>
-              <span class="info-row__value">{{ item.fullName }}</span>
+              <span class="info-row__value" [class.is-empty]="!item.fullName" [title]="item.fullName || '暂无'">
+                {{ item.fullName || '暂无' }}
+              </span>
             </div>
-            @if (item.phoneNumber || item.email) {
-              <div class="info-row">
-                <span class="info-row__label">联系方式</span>
-                <span class="info-row__value">
-                  {{ item.phoneNumber || '-' }}
-                  @if (item.email) {
-                    <span class="info-row__divider">·</span>
-                    {{ item.email }}
-                  }
-                </span>
-              </div>
-            }
-            @if (item.schoolName) {
-              <div class="info-row">
-                <span class="info-row__label">学校</span>
-                <span class="info-row__value">{{ item.schoolName }}</span>
-              </div>
-            }
+            <div class="info-row">
+              <span class="info-row__label">联系方式</span>
+              <span
+                class="info-row__value"
+                [class.is-empty]="!(item.phoneNumber || item.email)"
+                [title]="contactText(item)"
+              >{{ contactText(item) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-row__label">使用时间</span>
+              <span class="info-row__value" [class.is-empty]="!item.lastUsedAt" [title]="(item.lastUsedAt | date:'yyyy-MM-dd') || '暂无'">
+                {{ (item.lastUsedAt | date:'yyyy-MM-dd') || '暂无' }}
+              </span>
+            </div>
           </div>
 
           <div class="resume-card__actions">
@@ -92,6 +101,11 @@
               <button class="action-btn" (click)="setDefault(item)">
                 <span nz-icon nzType="star" nzTheme="outline"></span>
                 设为默认
+              </button>
+            } @else {
+              <button class="action-btn is-disabled" disabled>
+                <span nz-icon nzType="star" nzTheme="fill"></span>
+                已默认
               </button>
             }
             <button class="action-btn action-btn--danger" (click)="delete(item)">

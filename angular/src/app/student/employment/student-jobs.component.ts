@@ -84,9 +84,4 @@ export class StudentJobsComponent implements OnInit {
     return item.skillTags.split(/[,,;;\n]/).map(s=>s.trim()).filter(Boolean).slice(0,4);
   }
 
-  cg(item: JobPostingDto): string {
-    const p=['#1e6ce8','#0c4cb8','#1d4ed8','#2563eb','#0284c7'];
-    let h=0; for(let i=0;i<(item.id||'').length;i++)h=(h*31+(item.id||'').charCodeAt(i))|0;
-    return p[Math.abs(h)%p.length];
-  }
 }

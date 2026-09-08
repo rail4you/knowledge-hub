@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" width="600" height="360" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="jbBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="60%" stop-color="#075985"/>
+      <stop offset="100%" stop-color="#082f49"/>
+    </linearGradient>
+    <radialGradient id="jbGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="jbBeam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#bae6fd" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="jbGrid" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#bae6fd" stroke-opacity="0.12" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="600" height="360" fill="url(#jbBg)"/>
+  <rect width="600" height="360" fill="url(#jbGrid)"/>
+  <circle cx="300" cy="180" r="220" fill="url(#jbGlow)"/>
+
+  <!-- 光柱 -->
+  <polygon points="0,360 180,360 60,160" fill="url(#jbBeam)" opacity="0.55"/>
+  <polygon points="450,360 600,360 540,160" fill="url(#jbBeam)" opacity="0.5"/>
+  <polygon points="280,0 320,0 310,180 290,180" fill="#60a5fa" fill-opacity="0.12"/>
+
+  <!-- 虚线圆环 -->
+  <circle cx="300" cy="180" r="140" fill="none" stroke="#22d3ee" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="3 5"/>
+  <circle cx="300" cy="180" r="180" fill="none" stroke="#60a5fa" stroke-opacity="0.2" stroke-width="1" stroke-dasharray="2 8"/>
+
+  <!-- 数据波形 -->
+  <path d="M 60 230 L 100 220 L 120 240 L 160 210 L 200 235" fill="none" stroke="#22d3ee" stroke-opacity="0.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 400 235 L 440 215 L 480 240 L 520 220 L 540 235" fill="none" stroke="#60a5fa" stroke-opacity="0.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 数据点 -->
+  <g fill="#60a5fa">
+    <circle cx="160" cy="80" r="2.5" opacity="0.8"/>
+    <circle cx="170" cy="105" r="1.5" opacity="0.6"/>
+    <circle cx="155" cy="130" r="2" opacity="0.7"/>
+    <circle cx="450" cy="80" r="2" opacity="0.7"/>
+    <circle cx="430" cy="105" r="2.5" opacity="0.85"/>
+    <circle cx="445" cy="130" r="1.5" opacity="0.6"/>
+  </g>
+
+  <!-- 公文包 + 简历 -->
+  <g transform="translate(300 182)">
+    <ellipse cx="0" cy="58" rx="80" ry="6" fill="#000000" fill-opacity="0.3"/>
+    <!-- 简历纸（右侧后方） -->
+    <g transform="translate(58 -8) rotate(8)">
+      <rect x="-28" y="-46" width="56" height="88" rx="6" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1.2"/>
+      <line x1="-18" y1="-30" x2="18" y2="-30" stroke="#0284c7" stroke-width="2" opacity="0.55" stroke-linecap="round"/>
+      <line x1="-18" y1="-20" x2="18" y2="-20" stroke="#0284c7" stroke-width="2" opacity="0.4" stroke-linecap="round"/>
+      <line x1="-18" y1="-10" x2="8" y2="-10" stroke="#0284c7" stroke-width="2" opacity="0.4" stroke-linecap="round"/>
+      <line x1="-18" y1="0" x2="12" y2="0" stroke="#0284c7" stroke-width="2" opacity="0.3" stroke-linecap="round"/>
+    </g>
+    <!-- 包体 -->
+    <rect x="-74" y="-28" width="148" height="92" rx="10" fill="#0c4a6e" stroke="#7dd3fc" stroke-width="1.5"/>
+    <rect x="-74" y="-28" width="148" height="92" rx="10" fill="url(#jbGlow)" opacity="0.25"/>
+    <line x1="-74" y1="0" x2="74" y2="0" stroke="#7dd3fc" stroke-width="1" opacity="0.5"/>
+    <!-- 提手 -->
+    <path d="M -28 -28 v -10 c 0 -8 6 -13 14 -13 h 28 c 8 0 14 5 14 13 v 10" fill="none" stroke="#bae6fd" stroke-width="7" stroke-linecap="round"/>
+    <rect x="-34" y="-32" width="12" height="8" rx="2" fill="#38bdf8"/>
+    <rect x="22" y="-32" width="12" height="8" rx="2" fill="#38bdf8"/>
+    <!-- 锁扣 -->
+    <rect x="-11" y="-9" width="22" height="22" rx="5" fill="#38bdf8" stroke="#e0f2fe" stroke-width="1.2"/>
+    <circle cx="0" cy="2" r="2.5" fill="#0c4a6e"/>
+    <!-- 录用徽章 -->
+    <circle cx="66" cy="50" r="17" fill="#10b981" stroke="#ffffff" stroke-width="2.5"/>
+    <path d="M 58 50 l 6 6 l 11 -12" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- 六边形点缀 -->
+  <g fill="none" stroke="#60a5fa" stroke-opacity="0.45" stroke-width="1.2">
+    <polygon points="120,150 132,143 144,150 144,164 132,171 120,164"/>
+    <polygon points="480,150 492,143 504,150 504,164 492,171 480,164"/>
+    <polygon points="100,220 110,214 120,220 120,232 110,238 100,232"/>
+    <polygon points="500,220 510,214 520,220 520,232 510,238 500,232"/>
+  </g>
+
+  <!-- 闪光点 -->
+  <g fill="#ffffff">
+    <circle cx="220" cy="80" r="1.2" opacity="0.75"/>
+    <circle cx="380" cy="100" r="1.5" opacity="0.85"/>
+    <circle cx="120" cy="280" r="1" opacity="0.55"/>
+    <circle cx="480" cy="290" r="1.2" opacity="0.7"/>
+  </g>
+
+  <!-- HUD 装饰 -->
+  <g transform="translate(40 40)" fill="none" stroke="#22d3ee" stroke-opacity="0.4" stroke-width="1">
+    <rect x="0" y="0" width="40" height="20"/>
+    <line x1="0" y1="6" x2="40" y2="6"/>
+    <line x1="0" y1="14" x2="40" y2="14"/>
+  </g>
+  <g transform="translate(520 300)" fill="none" stroke="#60a5fa" stroke-opacity="0.4" stroke-width="1">
+    <rect x="0" y="0" width="40" height="20"/>
+    <line x1="0" y1="6" x2="40" y2="6"/>
+    <line x1="0" y1="14" x2="40" y2="14"/>
+  </g>
+</svg>

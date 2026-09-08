@@ -37,7 +37,12 @@
     <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中…</p></div>
   } @else if (jobs().length===0) {
     <div class="center">
-      <div class="empty-icon"><span nz-icon nzType="solution" nzTheme="outline"></span></div>
+      <img
+        class="empty-img"
+        src="assets/images/home/job-empty-placeholder.svg"
+        alt=""
+        aria-hidden="true"
+      />
       <h3>暂无岗位</h3><p>调整筛选条件试试</p>
       <button class="btn" (click)="reset()">重置筛选</button>
     </div>
@@ -45,43 +50,77 @@
     <div class="grid">
       @for (item of jobs(); track item.id) {
         <article class="card" (click)="go(item)" (keyup.enter)="go(item)" tabindex="0">
-          <!-- 封面 -->
-          <div class="card-cover" [style.background]="cg(item)">
-            <div class="cover-decor">
-              <span class="d1"></span><span class="d2"></span><span class="dc"></span>
-            </div>
-            <span class="cover-icon"><span nz-icon nzType="solution" nzTheme="outline"></span></span>
+          <!-- 封面（统一占位图 + 类型/状态徽章） -->
+          <div class="card-cover">
+            <img
+              class="card-cover__img"
+              src="assets/images/home/job-cover-placeholder.svg"
+              alt=""
+              loading="lazy"
+              aria-hidden="true"
+            />
             <div class="cover-overlay" aria-hidden="true"></div>
-            <span class="cover-type" [style.background]="tc(item.jobType)+'22'" [style.color]="tc(item.jobType)">{{ tl(item.jobType) }}</span>
+            <span class="cover-type">
+              <span class="cover-type__dot" [style.background]="tc(item.jobType)"></span>
+              <span class="cover-badge__text">{{ tl(item.jobType) }}</span>
+            </span>
             @if (item.hasApplied) {
               <span class="cover-status" [style.background]="color(item.applicationStatus)">{{ label(item.applicationStatus) }}</span>
             }
           </div>
-          <!-- 内容 -->
+          <!-- 内容（各行固定占位，缺数据写暂无，保证卡片等高） -->
           <div class="card-body">
-            <h3 class="card-title">{{ item.title }}</h3>
-            <p class="card-co"><span nz-icon nzType="bank" nzTheme="outline"></span>{{ item.companyName }} @if(item.industry){<span class="ind">{{ item.industry }}</span>}</p>
-            <p class="card-desc">{{ item.summary || item.description }}</p>
+            <h3 class="card-title" [class.is-empty]="!item.title" [title]="item.title || '暂无标题'">
+              {{ item.title || '暂无标题' }}
+            </h3>
+            <p class="card-co">
+              <span nz-icon nzType="bank" nzTheme="outline"></span>
+              <span class="co-name" [title]="item.companyName || '暂无企业'">{{ item.companyName || '暂无企业' }}</span>
+              @if (item.industry) {
+                <span class="ind" [title]="item.industry">{{ item.industry }}</span>
+              }
+            </p>
+            <p class="card-desc" [class.is-empty]="!(item.summary || item.description)" [title]="item.summary || item.description || '暂无简介'">
+              {{ item.summary || item.description || '暂无简介' }}
+            </p>
 
-            @if (tags(item).length) {
-              <div class="card-tags">@for (t of tags(item); track t) {<span class="tag">{{ t }}</span>}</div>
-            }
+            <div class="card-tags">
+              @for (t of tags(item); track t) {
+                <span class="tag" [title]="t">{{ t }}</span>
+              } @empty {
+                <span class="tag is-empty">暂无标签</span>
+              }
+            </div>
 
             <div class="card-meta">
-              <span><span nz-icon nzType="environment" nzTheme="outline"></span>{{ item.location || '待定' }}</span>
-              <span class="salary"><span nz-icon nzType="red-envelope" nzTheme="outline"></span>{{ item.salaryRange || '面议' }}</span>
+              <span class="meta-item" [title]="item.location || '暂无'">
+                <span nz-icon nzType="environment" nzTheme="outline"></span>
+                <span class="meta-text">{{ item.location || '暂无' }}</span>
+              </span>
+              <span class="meta-item salary" [title]="item.salaryRange || '面议'">
+                <span nz-icon nzType="red-envelope" nzTheme="outline"></span>
+                <span class="meta-text">{{ item.salaryRange || '面议' }}</span>
+              </span>
+              <span class="meta-item" [title]="(item.recruitmentCount ?? 0) + '人 · ' + (item.applicationCount ?? 0) + '投递'">
+                <span nz-icon nzType="team" nzTheme="outline"></span>
+                <span class="meta-text">{{ item.recruitmentCount ?? 0 }}人 · {{ item.applicationCount ?? 0 }}投递</span>
+              </span>
             </div>
-            <div class="card-foot">
-              <span>{{ item.recruitmentCount }}人 · {{ item.applicationCount }}投递</span>
-              @if (item.deadline) {<span class="deadline">截止 {{ item.deadline | date:'MM-dd' }}</span>}
+            <div class="card-deadline" [class.is-empty]="!item.deadline">
+              <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+              @if (item.deadline) {
+                <span class="deadline-text">截止 {{ item.deadline | date:'MM-dd' }}</span>
+              } @else {
+                <span class="deadline-text">截止时间暂无</span>
+              }
             </div>
           </div>
-          <!-- 按钮 -->
+          <!-- 按钮（所有卡片统一双按钮，防溢出） -->
           <div class="card-actions">
-            <span class="act act-view"><span nz-icon nzType="eye" nzTheme="outline"></span>详情</span>
+            <span class="act act-view"><span nz-icon nzType="eye" nzTheme="outline"></span><span class="act__label">详情</span></span>
             <span class="act" [class.act--applied]="item.hasApplied" [class.act--apply]="!item.hasApplied">
               <span nz-icon [nzType]="item.hasApplied?'check':'send'" nzTheme="outline"></span>
-              {{ item.hasApplied ? label(item.applicationStatus) : '立即应聘' }}
+              <span class="act__label">{{ item.hasApplied ? label(item.applicationStatus) : '立即应聘' }}</span>
             </span>
           </div>
         </article>

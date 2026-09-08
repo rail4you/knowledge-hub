@@ -100,11 +100,6 @@ export class StudentRecruitmentLiveComponent implements OnInit {
       && new Date(live.scheduledEndAt) < new Date();
   }
 
-  /** 是否展示“进入/回到直播间”按钮（等待中 / 进行中） */
-  showEnterAction(live: RecruitmentLiveDto): boolean {
-    return live.status === RecruitmentLiveStatus.Waiting || live.status === RecruitmentLiveStatus.Active;
-  }
-
   /** 是否可进入：进行中始终可进；等待中仅在未过期时可进 */
   canEnter(live: RecruitmentLiveDto): boolean {
     if (live.status === RecruitmentLiveStatus.Active) return true;
@@ -112,8 +107,24 @@ export class StudentRecruitmentLiveComponent implements OnInit {
     return false;
   }
 
-  enterButtonText(live: RecruitmentLiveDto): string {
-    return live.status === RecruitmentLiveStatus.Active ? '回到直播间' : '进入直播间';
+  /** 操作区按钮文本：所有状态统一展示按钮，不可进入时禁用 */
+  actionButtonText(live: RecruitmentLiveDto): string {
+    if (live.status === RecruitmentLiveStatus.Active) return '回到直播间';
+    if (live.status === RecruitmentLiveStatus.Waiting) {
+      return this.isExpired(live) ? '直播已过期' : '进入直播间';
+    }
+    if (live.status === RecruitmentLiveStatus.Ended) return '直播已结束';
+    if (live.status === RecruitmentLiveStatus.Cancelled) return '直播已取消';
+    return '进入直播间';
+  }
+
+  /** 操作区按钮图标：可进入用视频图标，不可进入用对应状态图标 */
+  actionIcon(live: RecruitmentLiveDto): string {
+    if (this.canEnter(live)) return 'video-camera';
+    if (live.status === RecruitmentLiveStatus.Ended) return 'check-circle';
+    if (live.status === RecruitmentLiveStatus.Cancelled) return 'close-circle';
+    if (this.isExpired(live)) return 'clock-circle';
+    return 'video-camera';
   }
 
   /** 格式化计划时间范围，如“2026-08-01 09:00 ~ 12:00” */

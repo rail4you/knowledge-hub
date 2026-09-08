@@ -16,9 +16,12 @@
   <!-- =================== EMPTY =================== -->
   @else if (lives().length === 0) {
     <div class="empty-state">
-      <div class="empty-state__art">
-        <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-      </div>
+      <img
+        class="empty-state__img"
+        src="assets/images/home/live-empty-placeholder.svg"
+        alt=""
+        aria-hidden="true"
+      />
       <h3>暂无直播安排</h3>
       <p>您的老师还没有为您创建招聘直播，请耐心等待</p>
     </div>
@@ -80,61 +83,54 @@
             <div class="live-card__overlay" aria-hidden="true"></div>
             <span class="live-card__cover-status" [class.is-live]="live.status === 1">
               <span class="live-dot" [class.pulse]="live.status === 1"></span>
-              {{ statusText(live) }}
+              <span class="cover-badge__text">{{ statusText(live) }}</span>
             </span>
             @if (live.scheduledAt) {
               <span class="live-card__cover-time">
                 <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                {{ scheduleText(live) }}
+                <span class="cover-badge__text">{{ scheduleText(live) }}</span>
               </span>
             }
           </div>
 
-          <!-- 内容区 -->
+          <!-- 内容区（标题 + 人名同行，描述固定占位，保证卡片等高对齐） -->
           <div class="live-card__body">
-            <h3 class="live-card__title">{{ live.title }}</h3>
-            @if (live.description) {
-              <p class="live-card__desc">{{ live.description }}</p>
-            }
-
-            <div class="live-card__info">
-              <div class="info-item">
-                <span class="info-item__icon">
-                  <span nz-icon nzType="user" nzTheme="outline"></span>
-                </span>
-                <div class="info-item__text">
-                  <span class="info-item__label">面试官</span>
-                  <span class="info-item__value">{{ live.teacherName }}</span>
-                </div>
-              </div>
+            <div class="live-card__title-row">
+              <h3 class="live-card__title" [class.is-empty]="!live.title" [title]="live.title || '暂无标题'">
+                {{ live.title || '暂无标题' }}
+              </h3>
+              @if (live.teacherName) {
+                <span class="live-card__teacher" [title]="live.teacherName">{{ live.teacherName }}</span>
+              } @else {
+                <span class="live-card__teacher is-empty">暂无</span>
+              }
             </div>
+            <p class="live-card__desc" [class.is-empty]="!live.description" [title]="live.description || '暂无简介'">
+              {{ live.description || '暂无简介' }}
+            </p>
           </div>
 
-          <!-- 操作区 -->
-          @if (showEnterAction(live)) {
-            <div class="live-card__action">
-              <button
-                class="enter-btn"
-                [class.is-disabled]="!canEnter(live)"
-                [disabled]="!canEnter(live)"
-                (click)="canEnter(live) && enterLive(live)"
-              >
-                <span nz-icon nzType="video-camera" nzTheme="outline"></span>
-                {{ enterButtonText(live) }}
-              </button>
-            </div>
-          } @else if (live.status === 2) {
-            <div class="live-card__footer-end">
-              <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-              直播已结束 · 通话 {{ live.durationSeconds | number: '1.0-0' }}秒
-            </div>
-          }
+          <!-- 操作区（所有状态统一展示按钮，不可进入时禁用，保证对齐） -->
+          <div class="live-card__action">
+            <button
+              class="enter-btn"
+              [class.is-disabled]="!canEnter(live)"
+              [disabled]="!canEnter(live)"
+              (click)="$event.stopPropagation(); canEnter(live) && enterLive(live)"
+            >
+              <span nz-icon [nzType]="actionIcon(live)" nzTheme="outline"></span>
+              <span class="enter-btn__label">{{ actionButtonText(live) }}</span>
+            </button>
+          </div>
         </article>
       } @empty {
-        <div class="empty-state">
-          <div class="empty-state__art">
-            <span nz-icon nzType="inbox" nzTheme="outline"></span>
-          </div>
+        <div class="empty-state is-filtered">
+          <img
+            class="empty-state__img is-small"
+            src="assets/images/home/live-empty-placeholder.svg"
+            alt=""
+            aria-hidden="true"
+          />
           <h3>暂无该状态的直播</h3>
         </div>
       }

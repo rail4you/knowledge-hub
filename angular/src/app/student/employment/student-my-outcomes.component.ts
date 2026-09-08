@@ -78,20 +78,7 @@ export class StudentMyOutcomesComponent implements OnInit {
 
   /** 岗位行完整文本（长文本截断时供悬停显示全部） */
   jobFullText(item: EmploymentOutcomeDto): string {
-    const t = item.jobTitle || '未填写岗位';
+    const t = item.jobTitle || '暂无岗位';
     return item.employmentType ? `${t} · ${item.employmentType}` : t;
-  }
-
-  /** 去向状态对应的封面图标（均为已注册图标） */
-  statusIcon(s: EmploymentOutcomeStatus): string {
-    switch (s) {
-      case EmploymentOutcomeStatus.Intention: return 'compass';
-      case EmploymentOutcomeStatus.Signed: return 'safety-certificate';
-      case EmploymentOutcomeStatus.Employed: return 'bank';
-      case EmploymentOutcomeStatus.FurtherStudy: return 'read';
-      case EmploymentOutcomeStatus.Entrepreneurship: return 'bulb';
-      case EmploymentOutcomeStatus.Unemployed: return 'clock-circle';
-      default: return 'bank';
-    }
   }
 }
