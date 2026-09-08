@@ -16,7 +16,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
         <input type="text" [ngModel]="filter()" (ngModelChange)="filter.set($event)" (keyup.enter)="search()" placeholder="搜索直播标题" />
         <button class="search-btn" type="button" (click)="search()">搜索</button>
-        <button class="reset-btn" type="button" (click)="filter.set(''); search()">重置</button>
       </div>
     </div>
 

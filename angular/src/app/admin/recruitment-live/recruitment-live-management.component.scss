@@ -46,11 +46,12 @@
     min-height: 480px;
   }
   .table-toolbar {
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 12px; flex-wrap: nowrap;
     padding: 14px 16px;
     border-bottom: 1px solid var(--kh-line-2);
     background: var(--kh-panel);
     flex-shrink: 0;
+    @media (max-width: 720px) { flex-wrap: wrap; }
   }
   .table-wrap {
     flex: 1;
@@ -59,7 +60,7 @@
   }
   .search-box {
     display: flex; align-items: center; gap: 8px;
-    position: relative; flex: 1 1 260px; max-width: 560px; min-width: 0;
+    position: relative; flex: 1 1 auto; max-width: 560px; min-width: 0;
     margin-left: auto;
     svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: #bfbfbf; pointer-events: none; }
     input {
@@ -76,14 +77,8 @@
     background: var(--kh-accent); color: #fff; border: none; border-radius: var(--kh-r-control);
     font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background .2s;
     flex-shrink: 0;
+    white-space: nowrap;
     &:hover { background: var(--kh-accent-deep); }
-  }
-  .reset-btn {
-    height: 38px; padding: 0 18px;
-    border: 1px solid var(--kh-line-2); border-radius: var(--kh-r-control);
-    background: var(--kh-panel); color: var(--kh-ink-2); font-size: 13.5px; cursor: pointer; transition: all .2s;
-    flex-shrink: 0;
-    &:hover { border-color: var(--kh-accent); color: var(--kh-accent); background: var(--kh-accent-ghost); }
   }
 
   .table-card {
