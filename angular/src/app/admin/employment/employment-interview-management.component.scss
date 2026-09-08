@@ -191,6 +191,13 @@
     font-weight: 600;
   }
 }
+.student-item__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .student-item__name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -278,10 +285,28 @@
 }
 
 // ── student name ──────────────────────────────────────────
+.student-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .student-name {
   font-size: 14px;
   font-weight: 600;
   color: var(--kh-ink);
+}
+// 用户名含蓄小标签
+.user-tag {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: #f5f6f8;
+  border: 1px solid var(--kh-line-2);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--kh-muted);
+  line-height: 1.7;
+  white-space: nowrap;
 }
 .time-cell {
   font-size: 13px !important;

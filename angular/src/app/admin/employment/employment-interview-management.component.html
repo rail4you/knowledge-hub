@@ -42,7 +42,14 @@
           </thead>
           <tbody>
             <tr *ngFor="let app of appTable.data">
-              <td><span class="student-name">{{ app.studentName || '-' }}</span></td>
+              <td>
+                <span class="student-cell">
+                  <span class="student-name">{{ parseStudentName(app.studentName).name }}</span>
+                  @if (parseStudentName(app.studentName).userName) {
+                    <span class="user-tag">{{ parseStudentName(app.studentName).userName }}</span>
+                  }
+                </span>
+              </td>
               <td>{{ app.jobTitle || '-' }}</td>
               <td>{{ app.companyName || '-' }}</td>
               <td class="time-cell">{{ app.appliedAt | date:'yyyy-MM-dd HH:mm' }}</td>
@@ -73,7 +80,12 @@
           <div class="student-list__body">
             @for (s of interviewStudents(); track s.id) {
               <button class="student-item" [class.active]="s.id === selectedStudentId" (click)="selectStudent(s.id)">
-                <span class="student-item__name">{{ s.name }}</span>
+                <span class="student-item__main">
+                  <span class="student-item__name">{{ s.name }}</span>
+                  @if (s.userName) {
+                    <span class="user-tag">{{ s.userName }}</span>
+                  }
+                </span>
                 <span class="student-item__count">{{ s.count }}场</span>
               </button>
             } @empty {
@@ -165,7 +177,11 @@
   <div *nzModalContent class="modal-body">
     <div class="context-row">
       <nz-tag nzColor="blue">岗位</nz-tag> <strong>{{ selectedApplication?.jobTitle || '-' }}</strong>
-      <nz-tag nzColor="green">学生</nz-tag> <strong>{{ selectedApplication?.studentName || '-' }}</strong>
+      <nz-tag nzColor="green">学生</nz-tag>
+      <strong>{{ parseStudentName(selectedApplication?.studentName).name }}</strong>
+      @if (parseStudentName(selectedApplication?.studentName).userName) {
+        <span class="user-tag">{{ parseStudentName(selectedApplication?.studentName).userName }}</span>
+      }
       @if (selectedApplication?.companyName) {
         <nz-tag nzColor="purple">企业</nz-tag> <strong>{{ selectedApplication?.companyName }}</strong>
       }
@@ -255,7 +271,11 @@
   [nzOkText]="'确认完成'" [nzCancelText]="'取消'" [nzWidth]="500">
   <div *nzModalContent class="modal-body">
     <div class="context-row">
-      <nz-tag nzColor="green">学生</nz-tag> <strong>{{ completeTarget?.studentName || '-' }}</strong>
+      <nz-tag nzColor="green">学生</nz-tag>
+      <strong>{{ parseStudentName(completeTarget?.studentName).name }}</strong>
+      @if (parseStudentName(completeTarget?.studentName).userName) {
+        <span class="user-tag">{{ parseStudentName(completeTarget?.studentName).userName }}</span>
+      }
       <nz-tag nzColor="blue">岗位</nz-tag> <strong>{{ completeTarget?.jobTitle || '-' }}</strong>
     </div>
     <p class="hint-text">确认该学生已按时完成面试后，请填写后续提示信息。学生将在投递详情中看到此信息。</p>
@@ -273,7 +293,11 @@
   [nzOkText]="'保存结果'" [nzCancelText]="'取消'">
   <div *nzModalContent class="modal-body">
     <div class="context-row">
-      <nz-tag nzColor="green">学生</nz-tag> <strong>{{ resultTarget?.studentName || '-' }}</strong>
+      <nz-tag nzColor="green">学生</nz-tag>
+      <strong>{{ parseStudentName(resultTarget?.studentName).name }}</strong>
+      @if (parseStudentName(resultTarget?.studentName).userName) {
+        <span class="user-tag">{{ parseStudentName(resultTarget?.studentName).userName }}</span>
+      }
     </div>
     <div class="form-item">
       <label class="form-label">面试结果</label>

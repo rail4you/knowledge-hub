@@ -29,6 +29,7 @@ import {
 interface InterviewStudent {
   id: string;
   name: string;
+  userName: string;
   count: number;
 }
 
@@ -162,6 +163,16 @@ export class EmploymentInterviewManagementComponent implements OnInit {
 
   // ─── 面试管理：按学生分组 ─────────────────
 
+  /**
+   * 后端 StudentName 是 "姓名 用户名" 拼串（如 "张梦倩 zmq"）。
+   * 展示时拆开：首段为姓名，其余为用户名（小标签展示）。
+   */
+  parseStudentName(full?: string | null): { name: string; userName: string } {
+    const parts = (full || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length <= 1) return { name: parts[0] || '-', userName: '' };
+    return { name: parts[0], userName: parts.slice(1).join(' ') };
+  }
+
   /** 有面试记录的学生列表（去重 + 计数，按姓名排序） */
   interviewStudents(): InterviewStudent[] {
     const map = new Map<string, InterviewStudent>();
@@ -170,7 +181,10 @@ export class EmploymentInterviewManagementComponent implements OnInit {
       if (!key) continue;
       const cur = map.get(key);
       if (cur) { cur.count++; }
-      else { map.set(key, { id: i.studentId || key, name: i.studentName || '-', count: 1 }); }
+      else {
+        const parsed = this.parseStudentName(i.studentName);
+        map.set(key, { id: i.studentId || key, name: parsed.name, userName: parsed.userName, count: 1 });
+      }
     }
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
   }
