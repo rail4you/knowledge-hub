@@ -32,6 +32,7 @@ export interface AccountValidityListParams {
   maxResultCount: number;
 }
 
+@Injectable({ providedIn: 'root' })
 export class AccountValidityService {
   private readonly rest = inject(RestService);
 

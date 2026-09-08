@@ -60,6 +60,7 @@ import {
   ClockCircleOutline,
   QuestionOutline,
   RollbackOutline,
+  ScheduleOutline,
   // 学生端 tab 图标
   HomeOutline,
   ReadOutline,
@@ -191,6 +192,7 @@ const icons = [
   ClockCircleOutline,
   QuestionOutline,
   RollbackOutline,
+  ScheduleOutline,
   // 学生端 tab 图标
   HomeOutline,
   ReadOutline,

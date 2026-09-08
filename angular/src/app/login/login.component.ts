@@ -81,6 +81,7 @@ export class LoginComponent implements OnInit {
       // 同时写 __host_login 标记：OAuth 跳转到后端 /Account/Login 时 query 会丢失，
       // 后端靠此标记（且无租户 cookie）识别宿主模式，避免渲染租户页拦截 admin。
       this.clearTenantCookie();
+      this.document.cookie = `__host_login=1; path=/; SameSite=Lax`;
       // 关键：同步清除 ABP 会话级租户（内存）。
       // SPA 的 SessionState.tenant 在应用启动时已由 application-configuration 种下
       // （残留 __tenant cookie 会让匿名配置请求也解析出租户），只清 cookie 不够；

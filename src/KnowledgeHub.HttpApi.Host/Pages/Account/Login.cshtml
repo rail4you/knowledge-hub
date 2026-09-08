@@ -876,6 +876,46 @@
         if (HOST_MODE) {
             // 系统管理员专用通道：强制宿主上下文，不拉取租户列表
             clearTenantCookie();
+
+            // SPA /admin-login 经 OAuth 跳转到此处时，账号密码嵌在 URL-encoded 的
+            // ReturnUrl 里（username=、password=），而非直接挂在 /Account/Login 上。
+            // 让用户再敲一次既冗余也容易输错，这里从 ReturnUrl 中解码提取并
+            // 回填表单 + 自动提交，保持单次点击体验。
+            var urlParams = new URLSearchParams(window.location.search);
+            var returnUrlStr = urlParams.get('ReturnUrl');
+            var qsUser = null, qsPass = null, qsRemember = null;
+            if (returnUrlStr) {
+                try {
+                    var decoded = decodeURIComponent(returnUrlStr);
+                    var qIdx = decoded.indexOf('?');
+                    if (qIdx >= 0) {
+                        var inner = new URLSearchParams(decoded.substring(qIdx + 1));
+                        qsUser = inner.get('username') || inner.get('Username');
+                        qsPass = inner.get('password') || inner.get('Password');
+                        qsRemember = inner.get('rememberMe');
+                    }
+                } catch (e) { /* ignore malformed ReturnUrl */ }
+            }
+            if (qsUser != null || qsPass != null) {
+                var userInput = document.querySelector('input[name="LoginInput.UserNameOrEmailAddress"]');
+                var pwInput = document.querySelector('input[name="LoginInput.Password"]');
+                if (userInput && qsUser != null) userInput.value = qsUser;
+                if (pwInput && qsPass != null) pwInput.value = qsPass;
+                var rememberInput = document.querySelector('input[name="LoginInput.RememberMe"]');
+                if (rememberInput && qsRemember != null) {
+                    if (qsRemember === 'true' || qsRemember === '1') {
+                        rememberInput.checked = true;
+                        rememberInput.value = 'true';
+                    } else {
+                        rememberInput.checked = false;
+                        rememberInput.value = 'false';
+                    }
+                }
+                if (qsUser && qsPass) {
+                    var form = document.getElementById('localLoginForm');
+                    if (form) form.submit();
+                }
+            }
             return;
         }
         if (!tenantSelect || !tenantMenu) return;
