@@ -198,8 +198,8 @@ export class SearchStatisticsComponent implements OnInit, OnDestroy {
     XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(trends), '每日趋势');
 
     const popular = [
-      ['关键词', '次数', '类型'],
-      ...d.popularSearches.map(p => [p.keyword, p.count, p.sourceType === 'video' ? '视频' : p.sourceType === 'document' ? '文档' : '全部'])
+      ['排名', '关键词', '次数', '类型'],
+      ...d.popularSearches.map((p, i) => [i + 1, p.keyword, p.count, p.sourceType === 'video' ? '视频' : p.sourceType === 'document' ? '文档' : '全部'])
     ];
     XLSW.utils.book_append_sheet(wb, XLSW.utils.aoa_to_sheet(popular), '热门搜索');
 

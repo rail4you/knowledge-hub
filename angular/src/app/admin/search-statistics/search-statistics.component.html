@@ -138,14 +138,16 @@
             <nz-table [nzData]="d.popularSearches" [nzPageSize]="10" nzSize="small" class="stats-table" [nzFrontPagination]="false" nzTableLayout="fixed">
               <thead>
                 <tr>
+                  <th nzWidth="64px" class="cell-rank">排名</th>
                   <th class="cell-left">关键词</th>
                   <th nzWidth="80px" class="cell-left">次数</th>
                   <th nzWidth="80px" class="cell-left">类型</th>
                 </tr>
               </thead>
               <tbody>
-                @for (item of d.popularSearches; track item.keyword + item.sourceType) {
+                @for (item of d.popularSearches; track item.keyword + item.sourceType; let i = $index) {
                   <tr>
+                    <td class="cell-rank"><span class="rank-badge" [class.top3]="i < 3">{{ i + 1 }}</span></td>
                     <td class="cell-left"><span class="name-ellipsis" nz-tooltip [nzTooltipTitle]="item.keyword" nzTooltipPlacement="topLeft">{{ item.keyword }}</span></td>
                     <td class="cell-left"><nz-tag nzColor="blue">{{ item.count }}</nz-tag></td>
                     <td class="cell-left">
