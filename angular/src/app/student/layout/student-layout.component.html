@@ -4,12 +4,7 @@
     <div class="app-header__inner">
       <!-- 品牌区（与首页一致的 lockup，文案为学生中心） -->
       <a routerLink="/student" class="brand" title="返回学生端首页">
-        <svg width="26" height="26" viewBox="0 0 30 30" fill="none" aria-hidden="true">
-          <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
-          <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
-        </svg>
-        <span class="brand__name">易课通</span>
-        <span class="brand__sub">学生中心</span>
+        <app-site-brand sub="学生中心"></app-site-brand>
       </a>
 
       <!-- Tab 导航（文本 tab + 可展开子菜单，溢出折入「更多」） -->
@@ -173,16 +168,5 @@
     <app-voice-panel></app-voice-panel>
   }
 
-  <footer class="app-footer">
-    <div class="footer-container">
-      <div class="footer-links">
-        <a routerLink="/student/info/about">关于我们</a>
-        <a routerLink="/student/info/help">帮助中心</a>
-        <a routerLink="/student/info/privacy">隐私政策</a>
-      </div>
-      <div class="footer-copyright">
-        &copy; 2026 易课通在线教学资源库 · 让学习更简单
-      </div>
-    </div>
-  </footer>
+  <app-site-footer></app-site-footer>
 </div>

@@ -8,6 +8,8 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
+import { SiteBrandComponent } from '../../shared/branding/site-brand.component';
+import { SiteFooterComponent } from '../../shared/branding/site-footer.component';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { TenantInfoService } from '../../proxy/tenant-infos/tenant-info.service';
 import { PortalService } from '../../proxy/portal/portal.service';
@@ -64,6 +66,8 @@ interface NavCard {
     NzSpinModule,
     NzDrawerModule,
     NzAlertModule,
+    SiteBrandComponent,
+    SiteFooterComponent,
   ],
   templateUrl: './tenant-homepage.component.html',
   styleUrls: ['./tenant-homepage.component.scss'],

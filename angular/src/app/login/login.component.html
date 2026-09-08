@@ -1,11 +1,6 @@
 <header class="topbar">
   <a routerLink="/" class="brand">
-    <svg width="26" height="26" viewBox="0 0 30 30" fill="none">
-      <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
-      <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
-    </svg>
-    <span class="brand-name">易课通</span>
-    <span class="brand-sub">教学资源库</span>
+    <app-site-brand></app-site-brand>
   </a>
   <nav>
     <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">首页</a>
@@ -195,41 +190,5 @@
 </div>
 
 <footer class="site-footer">
-  <div class="site-footer__inner">
-    <div>
-      <div class="site-footer__brand-top">
-        <svg width="34" height="34" viewBox="0 0 30 30" fill="none">
-          <rect width="30" height="30" rx="8" fill="#13233A" stroke="#1890FF" stroke-width="1.2"/>
-          <text x="15" y="21" text-anchor="middle" font-size="15" font-weight="700" fill="#7EC8FF" font-family="PingFang SC, Microsoft YaHei, sans-serif">易</text>
-        </svg>
-        <div>
-          <strong>易课通 · 资源库</strong>
-          <p>教学资源库</p>
-        </div>
-      </div>
-      <p class="site-footer__tagline">汇聚课程、资源、实训，服务院校教学</p>
-    </div>
-    <div class="site-footer__grid">
-      <div>
-        <h5>学习中心</h5>
-        <a routerLink="/student/courses">课程中心</a>
-        <a routerLink="/student/resources">资源库</a>
-        <a routerLink="/student/micro-majors">微专业</a>
-        <a routerLink="/student/practicums">实训项目</a>
-      </div>
-      <div>
-        <h5>智能应用</h5>
-        <a routerLink="/ai/chat">AI 助手</a>
-        <a routerLink="/ai/lesson-plan">智能备课</a>
-        <a routerLink="/search">智能搜索</a>
-      </div>
-      <div>
-        <h5>关于</h5>
-        <a routerLink="/">平台介绍</a>
-        <a routerLink="/">帮助中心</a>
-        <a routerLink="/">联系我们</a>
-      </div>
-    </div>
-  </div>
-  <div class="site-footer__copy">&copy; 2026 易课通 · 资源库</div>
+  <app-site-footer></app-site-footer>
 </footer>

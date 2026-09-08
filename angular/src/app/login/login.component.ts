@@ -12,6 +12,8 @@ import {
   AbpTenantService,
 } from '@abp/ng.core';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { SiteBrandComponent } from '../shared/branding/site-brand.component';
+import { SiteFooterComponent } from '../shared/branding/site-footer.component';
 import { TenantListService } from '../proxy/controllers/tenant-list.service';
 import { ToasterService } from '@abp/ng.theme.shared';
 import { DOCUMENT } from '@angular/common';
@@ -22,7 +24,7 @@ import { throwError } from 'rxjs';
   selector: 'app-login',
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, RouterLinkActive, LocalizationPipe, NzIconModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, RouterLinkActive, LocalizationPipe, NzIconModule, SiteBrandComponent, SiteFooterComponent],
 })
 export class LoginComponent implements OnInit {
   private readonly fb = inject(UntypedFormBuilder);

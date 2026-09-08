@@ -104,6 +104,15 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 品牌设置（全局管理员专属）：标题/副标题/页脚/Logo，全局唯一。
+    path: 'admin/branding',
+    loadComponent: () => import('./admin/branding/branding-management.component').then(c => c.BrandingManagementComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Branding',
+    },
+  },
+  {
     path: 'resources',
     loadComponent: () => import('./resources/resource').then(c => c.ResourceComponent),
     canActivate: [authGuard, nonStudentGuard],

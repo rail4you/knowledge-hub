@@ -171,6 +171,16 @@ public static class KnowledgeHubPermissions
     }
 
     /// <summary>
+    /// 站点品牌设置（标题/副标题/页脚/Logo）：仅 host「admin」全局管理员可被授予。
+    /// 与 AccountValidity 同模式：不加入 GrantAllPoliciesMiddleware 注入列表，
+    /// 后端 Update 额外校验宿主上下文，防止租户管理员越权修改全局品牌。
+    /// </summary>
+    public static class Branding
+    {
+        public const string Default = GroupName + ".Branding";
+    }
+
+    /// <summary>
     /// 账号有效期（多校协同）：仅 host「admin」全局管理员可被授予。
     /// 用于多校协同菜单 / 账号有效期配置页的可见性，以及 AccountValidityAppService 的后端鉴权。
     /// 注意：不要复用 KnowledgeHub.Users —— 它是租户用户管理权限（TenantUserAppService 依赖），

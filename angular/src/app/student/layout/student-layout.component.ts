@@ -7,6 +7,8 @@ import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { hasRole } from '../../auth/current-user.utils';
 import { AuthErrorModalComponent } from '../../core/auth/auth-error-modal.component';
 import { VoicePanelComponent } from '../voice/voice-panel.component';
+import { SiteBrandComponent } from '../../shared/branding/site-brand.component';
+import { SiteFooterComponent } from '../../shared/branding/site-footer.component';
 import { Subscription, filter } from 'rxjs';
 
 interface StudentNavEntry {
@@ -28,6 +30,8 @@ interface StudentNavEntry {
     NzDropDownModule,
     AuthErrorModalComponent,
     VoicePanelComponent,
+    SiteBrandComponent,
+    SiteFooterComponent,
   ],
   templateUrl: './student-layout.component.html',
   styleUrls: ['./student-layout.component.scss'],

@@ -611,6 +611,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
             // 语音助手总开关管理：仅 host 全局管理员（按租户开/关 Feature）。
             await GrantAsync("admin", KnowledgeHubPermissions.VoiceAssistant.Default);
             await GrantAsync("admin", KnowledgeHubPermissions.VoiceAssistant.Manage);
+
+            // 站点品牌设置：仅 host 全局管理员（三端统一标题/副标题/页脚/Logo）。
+            await GrantAsync("admin", KnowledgeHubPermissions.Branding.Default);
         }
     }
 

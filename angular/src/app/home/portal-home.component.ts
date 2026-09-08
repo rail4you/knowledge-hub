@@ -10,6 +10,8 @@ import { hasRole } from '../auth/current-user.utils';
 import { PortalService } from '../proxy/portal/portal.service';
 import type { PublicHomeStatsDto, TenantResourceSummaryDto, PublicBrowseDto, PublicCourseDto, PublicResourceDto, PublicMicroMajorDto, PublicBrowseFilterOption, MaterialBriefDto, CourseBriefDto, MicroMajorBriefDto, NewsBriefDto } from '../proxy/portal/models';
 import { FilePreviewComponent } from '../shared/preview/file-preview.component';
+import { SiteBrandComponent } from '../shared/branding/site-brand.component';
+import { SiteFooterComponent } from '../shared/branding/site-footer.component';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
@@ -42,7 +44,7 @@ interface GlobalNewsItem extends NewsBriefDto {
 @Component({
   selector: 'app-portal-home',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, FormsModule, RouterModule, NzIconModule, NzSelectModule, NzInputModule, FilePreviewComponent],
+  imports: [CommonModule, DecimalPipe, FormsModule, RouterModule, NzIconModule, NzSelectModule, NzInputModule, FilePreviewComponent, SiteBrandComponent, SiteFooterComponent],
   templateUrl: './portal-home.component.html',
   styleUrls: ['./portal-home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

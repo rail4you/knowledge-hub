@@ -153,6 +153,9 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         // AccountValidity permissions (账号有效期/多校协同 — 仅 host 全局管理员)
         myGroup.AddPermission(KnowledgeHubPermissions.AccountValidity.Default, L("Permission:AccountValidity"));
 
+        // Branding permissions (站点品牌设置 — 仅 host 全局管理员)
+        myGroup.AddPermission(KnowledgeHubPermissions.Branding.Default, L("Permission:Branding"));
+
         // SpecialEducation permissions（特教扩展模块 — 整体式权限，插件式开关）
         var specialEduPermission = myGroup.AddPermission(KnowledgeHubPermissions.SpecialEducation.Default, L("Permission:SpecialEducation"));
         specialEduPermission.AddChild(KnowledgeHubPermissions.SpecialEducation.TeachingDesign, L("Permission:SpecialEducation.TeachingDesign"));

@@ -500,6 +500,16 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.AccountValidity',
     },
+    {
+      // 品牌设置：与多校协同同属全局管理员专属区，独立权限 KnowledgeHub.Branding。
+      path: '/admin/branding',
+      name: '::Menu:Branding',
+      iconClass: 'fas fa-palette',
+      parentName: '::Menu:MultiSchool',
+      order: 20,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Branding',
+    },
     // ══════════════════════════════════════════════════════════
     //  隐藏 / 特殊路由（不显示在侧边栏）
     // ══════════════════════════════════════════════════════════
