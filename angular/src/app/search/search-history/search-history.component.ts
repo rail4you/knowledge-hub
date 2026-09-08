@@ -5,11 +5,11 @@ import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Router } from '@angular/router';
 import { SearchService, SearchHistoryDto } from '../search.service';
@@ -24,11 +24,11 @@ import { SearchService, SearchHistoryDto } from '../search.service';
     NzSpinModule,
     NzTableModule,
     NzTagModule,
-    NzPaginationModule,
     NzEmptyModule,
     NzButtonModule,
+    NzIconModule,
+    NzTooltipModule,
     NzPopconfirmModule,
-    NzDividerModule,
   ],
   template: `
     <div class="search-history-container">
@@ -71,9 +71,9 @@ import { SearchService, SearchHistoryDto } from '../search.service';
               <thead>
                 <tr>
                   <th>搜索关键词</th>
-                  <th>结果数量</th>
-                  <th>搜索时间</th>
-                  <th>操作</th>
+                  <th nzAlign="center">结果数量</th>
+                  <th nzAlign="center">搜索时间</th>
+                  <th nzAlign="center">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -82,37 +82,49 @@ import { SearchService, SearchHistoryDto } from '../search.service';
                     <td>
                       <span class="query-text">{{ item.queryText }}</span>
                     </td>
-                    <td>
+                    <td nzAlign="center">
                       <nz-tag [nzColor]="item.resultCount > 0 ? 'blue' : 'default'">
                         {{ item.resultCount }} 条结果
                       </nz-tag>
                     </td>
-                    <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
-                    <td>
-                      <a (click)="reSearch(item.queryText)">重新搜索</a>
-                      <nz-divider nzType="vertical"></nz-divider>
-                      <a
-                        nz-popconfirm
-                        nzPopconfirmTitle="确认删除这条搜索记录？"
-                        nzOkText="删除"
-                        nzCancelText="取消"
-                        (nzOnConfirm)="deleteHistoryItem(item.id)"
-                        class="delete-link"
-                      >删除</a>
+                    <td nzAlign="center">{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+                    <td nzAlign="center">
+                      <div class="row-actions">
+                        <button
+                          nz-button
+                          nzType="text"
+                          nzSize="small"
+                          nz-tooltip
+                          nzTooltipTitle="重新搜索"
+                          (click)="reSearch(item.queryText)"
+                          class="action-btn"
+                          aria-label="重新搜索"
+                        >
+                          <span nz-icon nzType="redo" nzTheme="outline"></span>
+                        </button>
+                        <span nz-tooltip nzTooltipTitle="删除">
+                          <button
+                            nz-button
+                            nzType="text"
+                            nzSize="small"
+                            nzDanger
+                            nz-popconfirm
+                            nzPopconfirmTitle="确认删除这条搜索记录？"
+                            nzOkText="删除"
+                            nzCancelText="取消"
+                            (nzOnConfirm)="deleteHistoryItem(item.id)"
+                            class="action-btn"
+                            aria-label="删除"
+                          >
+                            <span nz-icon nzType="delete" nzTheme="outline"></span>
+                          </button>
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 }
               </tbody>
             </nz-table>
-
-            <div class="pagination-wrapper">
-              <nz-pagination
-                [(nzPageIndex)]="pageIndex"
-                [nzTotal]="totalCount()"
-                [nzPageSize]="pageSize"
-                (nzPageIndexChange)="onPageChange($event)"
-              ></nz-pagination>
-            </div>
           }
         </nz-spin>
       </nz-card>
@@ -128,17 +140,16 @@ import { SearchService, SearchHistoryDto } from '../search.service';
       color: #333;
     }
 
-    .delete-link {
-      color: #ff4d4f;
-    }
-
-    .delete-link:hover {
-      color: #ff7875;
-    }
-
-    .pagination-wrapper {
-      margin-top: 16px;
+    .row-actions {
       display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
       justify-content: center;
     }
   `],

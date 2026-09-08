@@ -17,6 +17,8 @@ import { NzTimelineModule } from 'ng-zorro-antd/timeline';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
 import { ChatService } from '../services/chat.service';
@@ -97,7 +99,9 @@ interface ParsedRecord {
     NzTimelineModule,
     NzIconModule,
     NzEmptyModule,
-    NzTabsModule
+    NzTabsModule,
+    NzTooltipModule,
+    NzModalModule
   ],
   templateUrl: './career-guidance.component.html',
   styleUrls: ['./career-guidance.component.scss'],
@@ -141,7 +145,8 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   readonly allRecords = signal<ParsedRecord[]>([]);
   readonly allRecordsLoading = signal(false);
   readonly allRecordsLoaded = signal(false);
-  readonly expandedAllRecordId = signal<string | null>(null);
+  readonly selectedRecord = signal<ParsedRecord | null>(null);
+  readonly recordDetailVisible = signal(false);
 
   // ============= 生成区 =============
   careerGoal = signal('');
@@ -225,8 +230,13 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
       });
   }
 
-  toggleAllRecord(recordId: string): void {
-    this.expandedAllRecordId.set(this.expandedAllRecordId() === recordId ? null : recordId);
+  openRecordDetail(record: ParsedRecord): void {
+    this.selectedRecord.set(record);
+    this.recordDetailVisible.set(true);
+  }
+
+  closeRecordDetail(): void {
+    this.recordDetailVisible.set(false);
   }
 
   /** 将 StudentResumeDto 构建为 AI 提示用的文本 */

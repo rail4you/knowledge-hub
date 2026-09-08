@@ -4,6 +4,7 @@
   flex-direction: column;
   gap: 16px;
   padding: 20px 24px;
+  height: 100%;
   min-height: 0;
   overflow-y: auto;
   background: var(--kh-canvas);
@@ -20,12 +21,37 @@
   }
 }
 
+/* ── Full-height：表格容器占满页面剩余高度，超长时表内滚动 ── */
+.page-head,
+.stat-line {
+  flex-shrink: 0;
+}
+
+.task-page > nz-spin {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-spin-nested-loading,
+  ::ng-deep .ant-spin-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.list-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 /* ── Header as white card ── */
 .page-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
   background: var(--kh-panel);
   border: 1px solid var(--kh-line);
   border-radius: var(--kh-r-card);
@@ -33,17 +59,8 @@
   padding: 16px 20px;
 }
 
-.eyebrow {
-  margin: 0;
-  color: var(--kh-accent);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  font-size: 11px;
-}
-
 .page-head h1 {
-  margin: 0.35rem 0 0;
+  margin: 0;
   color: var(--kh-ink);
   font-size: 20px;
   font-weight: 700;
@@ -57,135 +74,154 @@
   line-height: 1.5;
 }
 
-.head-actions {
+/* ── Stat line — 单行文字统计，同一容器 ── */
+.stat-line {
   display: flex;
-  gap: 0.5rem;
-  flex-shrink: 0;
   align-items: center;
-}
-
-/* ── Summary strip — 4 white stat cards ── */
-.summary-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.summary-strip article {
+  flex-wrap: wrap;
+  gap: 6px 12px;
   background: var(--kh-panel);
   border: 1px solid var(--kh-line);
   border-radius: var(--kh-r-card);
-  padding: 16px 12px;
   box-shadow: var(--kh-shadow-card);
-  text-align: center;
-  transition: box-shadow 0.2s, transform 0.2s;
-
-  &:hover {
-    box-shadow: var(--kh-shadow-pop);
-  }
-}
-
-.summary-strip strong {
-  display: block;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--kh-ink);
-  line-height: 1.1;
-}
-
-.summary-strip span {
-  display: block;
-  margin-top: 4px;
-  color: var(--kh-muted);
+  padding: 12px 20px;
   font-size: 13px;
-}
+  color: var(--kh-muted);
 
-/* 待介入 — needs-help uses warning semantic tokens */
-.summary-strip article.summary-needs-help {
+  i {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #c9d4e2;
+    flex-shrink: 0;
+  }
+
   span {
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: baseline;
+  }
+
+  strong {
+    color: var(--kh-accent);
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 2px;
+  }
+
+  .needs-help.has-alerts {
     color: var(--kh-warn-ink);
     font-weight: 600;
-  }
-
-  &.has-alerts {
-    background: #fff7ed;
-    border-color: rgba(232, 135, 26, 0.32);
-    box-shadow: 0 1px 2px rgba(14, 27, 46, 0.04), 0 10px 30px -12px rgba(232, 135, 26, 0.22);
 
     strong {
       color: var(--kh-warn-ink);
-      font-weight: 700;
-    }
-
-    span {
-      color: var(--kh-warn-ink);
-      font-weight: 700;
     }
   }
 }
 
-/* ── Task table — white table card ── */
-.task-table-shell {
+/* ── Table card — 工具条 + 表格同一容器 ── */
+.table-card {
   background: var(--kh-panel);
   border: 1px solid var(--kh-line);
   border-radius: var(--kh-r-card);
   box-shadow: var(--kh-shadow-card);
   overflow: hidden;
-  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 
-  &::-webkit-scrollbar {
-    height: 6px;
-  }
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--kh-line-2);
+  flex-shrink: 0;
+}
 
-  &::-webkit-scrollbar-thumb {
-    background: #d4dde8;
-    border-radius: 3px;
+.table-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kh-ink);
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.empty-state {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+/* ── Task table — 与智能体列表页统一的 nz-table 效果 ── */
+.task-table {
+  ::ng-deep {
+    .ant-table {
+      background: transparent;
+    }
+
+    .ant-table-thead > tr > th {
+      background: #fafafa;
+      color: var(--kh-ink-2);
+      font-weight: 600;
+      font-size: 13px;
+      border-bottom: 1px solid var(--kh-line-2);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+
+      &::before {
+        display: none !important;
+      }
+    }
+
+    .ant-table-tbody > tr {
+      transition: background-color 0.2s;
+
+      &:hover > td {
+        background: var(--kh-accent-ghost);
+      }
+
+      > td {
+        border-bottom: 1px solid #f5f5f5;
+        font-size: 13px;
+        color: var(--kh-ink-2);
+      }
+    }
+
+    .ant-table-tbody > tr:last-child > td {
+      border-bottom: none;
+    }
+
+    .ant-spin-nested-loading,
+    .ant-spin-container {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ant-table {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
   }
 }
 
 .task-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.task-table th,
-.task-table td {
-  padding: 12px 14px;
-  vertical-align: middle;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.task-table th {
-  text-align: left;
-  color: var(--kh-ink-2);
-  font-size: 13px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  background: #f7f9fc;
-  border-bottom: 1px solid var(--kh-line-2);
-  white-space: nowrap;
-}
-
-.task-table td {
-  font-size: 13.5px;
-  color: var(--kh-ink-2);
-  border-bottom: 1px solid #f5f7fa;
-  line-height: 1.4;
-}
-
-.task-table tbody tr:nth-child(even) {
-  background: #fafbfd;
-}
-
-.task-table tbody tr:hover {
-  background: var(--kh-accent-ghost);
-}
-
-.task-table tbody tr:last-child td {
-  border-bottom: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .task-table td strong,
@@ -214,7 +250,7 @@
 }
 
 .progress-cell,
-.table-actions {
+.row-actions {
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
@@ -430,13 +466,13 @@
     padding: 16px;
   }
 
-  .page-head {
+  .table-toolbar {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
-  .summary-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .toolbar-actions {
+    justify-content: flex-end;
   }
 
   .field-row {

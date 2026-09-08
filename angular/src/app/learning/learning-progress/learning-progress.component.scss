@@ -10,33 +10,23 @@
 }
 
 .page-header {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px 28px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
+  padding: 16px 20px;
+  flex-shrink: 0;
 
   h1 {
-    margin: 0 0 6px;
-    font-size: 22px;
+    margin: 0;
+    font-size: 20px;
     font-weight: 700;
-    color: #1a1a2e;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    &::before {
-      content: '';
-      display: inline-block;
-      width: 4px;
-      height: 22px;
-      background: linear-gradient(180deg, #1677ff, #69b1ff);
-      border-radius: 2px;
-    }
+    color: var(--kh-ink);
   }
   .subtitle {
-    margin: 0 0 0 14px;
-    color: #8c8c8c;
-    font-size: 14px;
+    margin: 4px 0 0;
+    color: var(--kh-muted);
+    font-size: 13px;
   }
 }
 
@@ -46,109 +36,147 @@
   padding: 80px 0;
 }
 
-// ===== Course Grid =====
-.course-grid {
+// ===== Content Layout: left course list + right statistics =====
+.content-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 16px;
+  align-items: stretch;
+  // 左右分栏占满页面：顶栏 + 页头卡 + 边距约 300px
+  height: calc(100vh - 300px);
+  min-height: 500px;
+
+  &.no-selection {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
 }
 
-.course-card {
-  cursor: pointer;
-  border-radius: 12px;
-  border: 1.5px solid #e8e8e8;
-  transition: all 0.25s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+// ===== Left Course Panel =====
+.course-panel {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 
-  &:hover {
-    border-color: #1677ff;
-    box-shadow: 0 4px 16px rgba(22, 119, 255, 0.12);
-    transform: translateY(-2px);
-  }
-
-  &.selected {
-    border-color: #1677ff;
-    background: linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%);
-    box-shadow: 0 4px 16px rgba(22, 119, 255, 0.15);
-  }
-
-  .course-card-header {
+  ::ng-deep .ant-card {
+    flex: 1;
+    min-height: 0;
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  ::ng-deep .ant-card-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .course-header {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 16px;
-
-    .course-title {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 600;
-      color: #1a1a2e;
-      line-height: 1.4;
-      flex: 1;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
   }
 
-  .course-card-stats {
+  .course-header-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .course-count {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    background: #f5f5f5;
+    padding: 1px 8px;
+    border-radius: 10px;
+  }
+
+  .course-search {
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  .course-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .course-item {
     display: flex;
-    gap: 0;
-    margin: 0 -4px 12px;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid transparent;
 
-    .stat-item {
+    &:hover {
+      background: #f5f5f5;
+    }
+
+    &.active {
+      background: #e6f7ff;
+      border-color: #91caff;
+    }
+
+    .course-icon {
+      font-size: 18px;
+      color: #1890ff;
+      flex-shrink: 0;
+    }
+
+    .course-item-info {
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      padding: 8px 4px;
-      border-radius: 8px;
-      background: #fafafa;
-      margin: 0 4px;
+      min-width: 0;
 
-      .stat-value {
-        font-size: 20px;
-        font-weight: 700;
-        color: #1677ff;
-        line-height: 1.2;
+      .course-item-name {
+        font-size: 14px;
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
-      .stat-label {
-        font-size: 11px;
-        color: #8c8c8c;
+      .course-item-meta {
+        font-size: 12px;
+        color: rgba(0, 0, 0, 0.45);
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
       }
     }
   }
+}
 
-  .course-card-footer {
+.select-hint-panel {
+  height: 100%;
+
+  ::ng-deep .ant-card-body {
+    height: 100%;
     display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #8c8c8c;
-    padding-top: 10px;
-    border-top: 1px solid #f0f0f0;
-
-    .rate-item {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      span {
-        font-weight: 600;
-        font-size: 13px;
-      }
-    }
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
   }
 }
 
-// ===== Detail Section =====
-.detail-section {
+// ===== Detail Column (right statistics, internal scroll) =====
+.detail-column {
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 // ===== Summary Card =====
@@ -318,12 +346,28 @@ nz-card[nzTitle] {
   }
 }
 
+@media (max-width: 1100px) {
+  .content-layout,
+  .content-layout.no-selection {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .course-panel,
+  .detail-column,
+  .select-hint-panel {
+    height: auto;
+    overflow: visible;
+  }
+
+  .course-panel .course-list {
+    max-height: 320px;
+  }
+}
+
 @media (max-width: 700px) {
   .stats-container {
     padding: 16px;
-  }
-  .course-grid {
-    grid-template-columns: 1fr;
   }
   .summary-grid {
     grid-template-columns: repeat(2, 1fr) !important;

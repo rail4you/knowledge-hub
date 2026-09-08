@@ -5,11 +5,17 @@
 }
 
 .page-header {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
+  padding: 16px 20px;
   margin-bottom: 16px;
 
   h1 {
     margin: 0;
-    font-size: 24px;
+    font-size: 20px;
+    font-weight: 700;
   }
 
   .page-hint {
@@ -19,39 +25,235 @@
   }
 }
 
-.selector-card {
+.stat-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
+  padding: 12px 20px;
   margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--kh-muted);
 
-  .course-selector {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  i {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #c9d4e2;
+    flex-shrink: 0;
+  }
 
-    label {
-      font-weight: 500;
-      white-space: nowrap;
-    }
+  span {
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: baseline;
+  }
 
-    .course-select {
-      min-width: 300px;
-    }
+  strong {
+    color: var(--kh-accent);
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 2px;
+  }
+
+  .stat-course {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--kh-ink);
   }
 }
 
 .content-layout {
   display: grid;
-  grid-template-columns: 30% 70%;
+  grid-template-columns: 240px minmax(0, 1fr) minmax(0, 1.8fr);
   gap: 16px;
+  align-items: stretch;
+  // 三栏占满页面：顶栏 + 页头卡 + 统计条 + 边距约 320px
+  height: calc(100vh - 320px);
+  min-height: 480px;
+
+  &.no-selection {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
 }
 
-// Tree panel
-.tree-panel {
-  .tree-filter {
+// Course panel — 左侧课程列表，占满分栏高度，课程多时内部滚动
+.course-panel {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::ng-deep .ant-card-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .course-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
+  }
+
+  .course-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .course-count {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    background: #f5f5f5;
+    padding: 1px 8px;
+    border-radius: 10px;
+  }
+
+  .course-search {
     margin-bottom: 8px;
-    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .course-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .course-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid transparent;
+
+    &:hover {
+      background: #f5f5f5;
+    }
+
+    &.active {
+      background: #e6f7ff;
+      border-color: #91caff;
+    }
+
+    .course-icon {
+      font-size: 18px;
+      color: #1890ff;
+      flex-shrink: 0;
+    }
+
+    .course-item-info {
+      flex: 1;
+      min-width: 0;
+
+      .course-item-name {
+        font-size: 14px;
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .course-item-meta {
+        font-size: 12px;
+        color: rgba(0, 0, 0, 0.45);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+.select-hint-panel {
+  height: 100%;
+
+  ::ng-deep .ant-card-body {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+  }
+}
+
+// Tree panel — 中间章节树占满分栏高度，章节多时内部滚动
+.tree-panel {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::ng-deep .ant-card-head {
+    flex-shrink: 0;
+  }
+
+  ::ng-deep .ant-card-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tree-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
+  }
+
+  .tree-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .tree-filter-check {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .tree-search {
+    margin-bottom: 8px;
+    flex-shrink: 0;
   }
 
   .tree-view {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     .tree-node {
       .tree-node-content {
         display: flex;
@@ -94,6 +296,37 @@
       }
     }
   }
+}
+
+// Resource panel — 右侧同样占满分栏高度，内容超长时卡内滚动
+.resource-panel {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::ng-deep .ant-card-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+}
+
+.resource-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
 }
 
 // Resource panel
@@ -205,5 +438,25 @@
 
   .row-selected {
     background-color: #f0f7ff;
+  }
+}
+
+@media (max-width: 1100px) {
+  .content-layout,
+  .content-layout.no-selection {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .course-panel,
+  .tree-panel,
+  .resource-panel,
+  .select-hint-panel {
+    height: auto;
+  }
+
+  .course-panel .course-list,
+  .tree-panel .tree-view {
+    max-height: 320px;
   }
 }

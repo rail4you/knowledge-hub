@@ -13,55 +13,52 @@
   } @else if (courses().length === 0) {
     <nz-empty nzNotFoundContent="暂无课程数据"></nz-empty>
   } @else {
-    <!-- Course overview cards -->
-    <div class="course-grid">
-      @for (course of courses(); track course.id) {
-        @let overview = courseOverviewMap()[course.id ?? ''];
-        <nz-card
-          class="course-card"
-          [class.selected]="selectedCourseId() === course.id"
-          (click)="selectCourse(course.id ?? '')"
-          nzHoverable
-        >
-          <div class="course-card-header">
-            <h4 class="course-title">{{ course.title }}</h4>
-            <nz-tag nzColor="blue">{{ course.majorName || '通用' }}</nz-tag>
-          </div>
-          <div class="course-card-stats">
-            <div class="stat-item">
-              <span class="stat-value">{{ overview?.totalStudents ?? '-' }}</span>
-              <span class="stat-label">学习人数</span>
+    <div class="content-layout" [class.no-selection]="!selectedCourseId()">
+      <!-- Left: course list -->
+      <nz-card class="course-panel">
+        <div class="course-header">
+          <span class="course-header-title">课程列表</span>
+          <span class="course-count">{{ filteredCourses().length }}</span>
+        </div>
+        <div class="course-search">
+          <nz-input-group [nzPrefix]="courseSearchPrefix">
+            <input
+              nz-input
+              placeholder="搜索课程名称"
+              [ngModel]="courseSearchText()"
+              (ngModelChange)="courseSearchText.set($event)"
+            />
+          </nz-input-group>
+          <ng-template #courseSearchPrefix>
+            <span nz-icon nzType="search"></span>
+          </ng-template>
+        </div>
+        <div class="course-list">
+          @for (course of filteredCourses(); track course.id) {
+            @let overview = courseOverviewMap()[course.id ?? ''];
+            <div
+              class="course-item"
+              [class.active]="selectedCourseId() === course.id"
+              (click)="selectCourse(course.id ?? '')"
+            >
+              <span nz-icon nzType="book" nzTheme="outline" class="course-icon"></span>
+              <div class="course-item-info">
+                <div class="course-item-name">{{ course.title }}</div>
+                <div class="course-item-meta">
+                  {{ course.majorName || '通用' }}
+                  @if (overview) {
+                    <span> · 完成率 {{ overview.averageCompletionRate ?? 0 }}%</span>
+                  }
+                </div>
+              </div>
             </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ overview?.totalExercises ?? '-' }}</span>
-              <span class="stat-label">总习题</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ overview?.totalLearningMinutes ?? 0 | number:'1.0-0' }}</span>
-              <span class="stat-label">学习时长(分钟)</span>
-            </div>
-          </div>
-          <div class="course-card-footer">
-            <span class="rate-item">
-              完成率
-              <span [style.color]="getScoreColor(overview?.averageCompletionRate ?? 0)">
-                {{ overview?.averageCompletionRate ?? 0 }}%
-              </span>
-            </span>
-            <span class="rate-item">
-              正确率
-              <span [style.color]="getScoreColor(overview?.averageCorrectRate ?? 0)">
-                {{ overview?.averageCorrectRate ?? 0 }}%
-              </span>
-            </span>
-          </div>
-        </nz-card>
-      }
-    </div>
+          }
+        </div>
+      </nz-card>
 
-    <!-- Detail section for selected course -->
-    @if (selectedOverview(); as overview) {
-      <div class="detail-section">
+      <!-- Right: statistics for selected course -->
+      @if (selectedOverview(); as overview) {
+        <div class="detail-column">
         <!-- Summary statistics grid -->
         <nz-card class="summary-card">
           <div class="summary-grid">
@@ -204,7 +201,18 @@
             </nz-table>
           }
         </nz-card>
-      </div>
-    }
+        </div>
+      } @else if (selectedCourseId()) {
+        <nz-card class="select-hint-panel">
+          <div class="loading-container">
+            <nz-spin nzSimple></nz-spin>
+          </div>
+        </nz-card>
+      } @else {
+        <nz-card class="select-hint-panel">
+          <nz-empty nzNotFoundContent="请从左侧选择课程查看统计"></nz-empty>
+        </nz-card>
+      }
+    </div>
   }
 </div>

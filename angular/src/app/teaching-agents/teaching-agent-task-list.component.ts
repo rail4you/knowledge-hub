@@ -7,6 +7,7 @@ import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzSelectModule } from 'ng-zorro-antd/select';
@@ -60,6 +61,7 @@ const initialForm: TaskFormState = {
     NzDatePickerModule,
     NzEmptyModule,
     NzInputModule,
+    NzIconModule,
     NzModalModule,
     NzPopconfirmModule,
     NzSelectModule,

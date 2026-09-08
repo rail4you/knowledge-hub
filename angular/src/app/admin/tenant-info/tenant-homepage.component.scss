@@ -160,15 +160,21 @@ $card-radius: 12px;
   background: #f4f7fb;
 }
 
-// ═══════ HERO — 租户封面横幅（与首页租户卡片同一张背景 + 深色罩保证文字可读） ═══════
+// ═══════ HERO — 圆角卡片，外框与下方 .panel 外框对齐（同为 container 内容宽） ═══════
 .hero {
   position: relative;
   overflow: hidden;
   margin: 12px auto 0;
-  max-width: calc(1760px - 32px);
-  width: calc(100% - 32px);
+  box-sizing: border-box;
+  width: min(calc(100% - 160px), calc(1760px - 160px));
   border-radius: 20px;
   background: linear-gradient(115deg, #0a1836 0%, #0c2450 60%, #123064 100%);
+  @media (max-width: 1247px) {
+    width: calc(100% - 80px);
+  }
+  @media (max-width: 860px) {
+    width: calc(100% - 40px);
+  }
 }
 .hero__bg {
   position: absolute;
@@ -185,9 +191,10 @@ $card-radius: 12px;
 .hero__inner {
   position: relative;
   z-index: 1;
-  max-width: 1760px;
+  box-sizing: border-box;
+  width: 100%;
   margin: 0 auto;
-  padding: 44px 16px 44px;
+  padding: 44px 20px 44px;
   min-height: 260px;
   display: flex;
   flex-direction: column;
@@ -1063,8 +1070,8 @@ $card-radius: 12px;
 @media (max-width: 640px) {
   .nav__inner { height: 56px; gap: 12px; }
   .brand__sub { display: none; }
-  .hero { width: calc(100% - 24px); border-radius: 14px; }
-  .hero__inner { padding: 28px 16px 24px; min-height: 0; }
+  .hero { width: calc(100% - 40px); border-radius: 14px; }
+  .hero__inner { padding: 28px 14px 24px; min-height: 0; }
   .hero__title { font-size: 21px; }
   .hero__desc { font-size: 12.5px; }
   .hero-nav { grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }

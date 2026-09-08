@@ -1,53 +1,59 @@
 <section class="task-page">
   <header class="page-head">
     <div>
-      <p class="eyebrow">Distribution</p>
       <h1>课堂智能体任务</h1>
       <p>把已发布智能体绑定到课程、资源或习题集，再批量分发给学生。</p>
-    </div>
-    <div class="head-actions">
-      <button nz-button nzType="primary" (click)="openCreateModal()">
-        创建任务
-      </button>
-      <a nz-button nzType="default" routerLink="/teaching/agents">返回智能体</a>
     </div>
   </header>
 
   <nz-spin [nzSpinning]="loading()">
     <section class="list-section">
-      <div class="summary-strip">
-        <article>
-          <strong>{{ summary().totalTasks }}</strong>
-          <span>任务总数</span>
-        </article>
-        <article>
-          <strong>{{ summary().publishedTasks }}</strong>
-          <span>已发布</span>
-        </article>
-        <article>
-          <strong>{{ summary().assignmentCount }}</strong>
-          <span>分发人数</span>
-        </article>
-        <article class="summary-needs-help" [class.has-alerts]="summary().needsHelpCount > 0">
-          <strong>{{ summary().needsHelpCount }}</strong>
-          <span>待介入</span>
-        </article>
+      <div class="stat-line">
+        <span>共 <strong>{{ summary().totalTasks }}</strong> 个任务</span>
+        <i></i>
+        <span>已发布 <strong>{{ summary().publishedTasks }}</strong></span>
+        <i></i>
+        <span>累计分发 <strong>{{ summary().assignmentCount }}</strong> 人次</span>
+        <i></i>
+        <span class="needs-help" [class.has-alerts]="summary().needsHelpCount > 0">待介入 <strong>{{ summary().needsHelpCount }}</strong></span>
       </div>
 
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="table-title">任务列表</span>
+          <div class="toolbar-actions">
+            <a nz-button nzType="default" routerLink="/teaching/agents">
+              <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+              返回智能体列表
+            </a>
+            <button nz-button nzType="primary" (click)="openCreateModal()">
+              <span nz-icon nzType="plus" nzTheme="outline"></span>
+              创建任务
+            </button>
+          </div>
+        </div>
       @if (tasks().length === 0) {
-        <nz-empty nzNotFoundContent="暂无课堂任务，点击「创建任务」开始"></nz-empty>
+        <div class="empty-state">
+          <nz-empty nzNotFoundContent="暂无课堂任务，点击「创建任务」开始"></nz-empty>
+        </div>
       } @else {
-        <div class="task-table-shell">
-          <table class="task-table">
+          <nz-table
+            [nzData]="tasks()"
+            [nzFrontPagination]="false"
+            [nzShowPagination]="false"
+            nzSize="middle"
+            class="task-table"
+            [nzBordered]="false"
+          >
             <thead>
               <tr>
-                <th style="width: 24%">任务</th>
-                <th style="width: 14%">智能体</th>
-                <th style="width: 12%">对象</th>
-                <th style="width: 14%">进度</th>
-                <th style="width: 12%">截止时间</th>
-                <th style="width: 8%">状态</th>
-                <th style="width: 16%">操作</th>
+                <th>任务</th>
+                <th>智能体</th>
+                <th nzAlign="center">对象</th>
+                <th>进度</th>
+                <th nzAlign="center">截止时间</th>
+                <th nzAlign="center">状态</th>
+                <th nzAlign="center">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -61,7 +67,7 @@
                     <strong>{{ task.teachingAgentName }}</strong>
                     <span>v{{ task.teachingAgentVersionNumber }}</span>
                   </td>
-                  <td>
+                  <td nzAlign="center">
                     <strong>{{ targetText(task.targetType) }}</strong>
                     <span>{{ task.assignmentCount }} 名学生</span>
                   </td>
@@ -71,37 +77,39 @@
                       <span class="progress-needs-help" [class.has-alerts]="task.needsHelpCount > 0">待介入 {{ task.needsHelpCount }}</span>
                     </div>
                   </td>
-                  <td>{{ formatDate(task.dueTime) }}</td>
-                  <td>
+                  <td nzAlign="center">{{ formatDate(task.dueTime) }}</td>
+                  <td nzAlign="center">
                     <nz-tag [nzColor]="task.publishStatus === publishStatus.published ? 'green' : 'gold'">
                       {{ publishText(task.publishStatus) }}
                     </nz-tag>
                   </td>
-                  <td>
-                    <div class="table-actions">
-                      <a nz-button nzSize="small" nzType="default" [routerLink]="['/teaching/agent-tasks', task.id]">详情</a>
+                  <td nzAlign="center">
+                    <div class="row-actions">
+                      <a nz-button nzType="link" nzSize="small" [routerLink]="['/teaching/agent-tasks', task.id]">详情</a>
                       @if (task.publishStatus === publishStatus.draft) {
-                        <button nz-button nzSize="small" nzType="primary" (click)="publishTask(task.id)">发布</button>
+                        <a nz-button nzType="link" nzSize="small" (click)="publishTask(task.id)">发布</a>
                       }
-                      <button
+                      <a
                         nz-button
+                        nzType="link"
                         nzSize="small"
-                        nzType="default"
                         nzDanger
                         nz-popconfirm
                         nzPopconfirmTitle="删除后学生端将无法再看到该任务，确认删除？"
+                        nzOkText="删除"
+                        nzCancelText="取消"
                         (nzOnConfirm)="deleteTask(task.id)"
                       >
                         删除
-                      </button>
+                      </a>
                     </div>
                   </td>
                 </tr>
               }
             </tbody>
-          </table>
-        </div>
+          </nz-table>
       }
+      </div>
     </section>
   </nz-spin>
 

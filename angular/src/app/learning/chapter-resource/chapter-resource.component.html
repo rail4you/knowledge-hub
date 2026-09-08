@@ -4,37 +4,91 @@
     <p class="page-hint">从课程资源池（先在「课程资源」页为课程挑选资源）选择资源关联到章节</p>
   </div>
 
-  <!-- Course selector -->
-  <nz-card class="selector-card">
-    <div class="course-selector">
-      <label>选择课程：</label>
-      <nz-select
-        [ngModel]="selectedCourseId()"
-        (ngModelChange)="onCourseSelected($event)"
-        nzPlaceHolder="请选择课程"
-        nzAllowClear
-        class="course-select"
-      >
-        @for (course of courses(); track course.id) {
-          <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
-        }
-      </nz-select>
-    </div>
-  </nz-card>
-
   @if (selectedCourseId()) {
-    <div class="content-layout">
-      <!-- Left: Chapter tree (30%) -->
-      <nz-card class="tree-panel" nzTitle="章节列表">
-        <div class="tree-filter">
-          <label nz-checkbox [ngModel]="onlyWithResources()" (ngModelChange)="onOnlyWithResourcesChange($event)">
+    <div class="stat-line">
+      <span class="stat-course">{{ selectedCourse()?.title }}</span>
+      <i></i>
+      <span>章节 <strong>{{ courseStats().chapterCount }}</strong> 个</span>
+      <i></i>
+      <span>已关联章节 <strong>{{ courseStats().linkedChapterCount }}</strong> 个</span>
+      <i></i>
+      <span>已关联资源 <strong>{{ courseStats().linkedResourceCount }}</strong> 个</span>
+      <i></i>
+      <span>资源池 <strong>{{ courseStats().poolCount }}</strong> 个</span>
+    </div>
+  }
+
+    <div class="content-layout" [class.no-selection]="!selectedCourseId()">
+      <!-- Left: Course list -->
+      <nz-card class="course-panel">
+        <div class="course-header">
+          <span class="course-title">课程列表</span>
+          <span class="course-count">{{ filteredCourses().length }}</span>
+        </div>
+        <div class="course-search">
+          <nz-input-group [nzPrefix]="courseSearchPrefix">
+            <input
+              nz-input
+              placeholder="搜索课程名称"
+              [ngModel]="courseSearchText()"
+              (ngModelChange)="courseSearchText.set($event)"
+            />
+          </nz-input-group>
+          <ng-template #courseSearchPrefix>
+            <span nz-icon nzType="search"></span>
+          </ng-template>
+        </div>
+        <div class="course-list">
+          @if (courses().length === 0) {
+            <nz-empty nzNotFoundContent="暂无课程"></nz-empty>
+          } @else if (filteredCourses().length === 0) {
+            <nz-empty nzNotFoundContent="没有匹配的课程"></nz-empty>
+          } @else {
+            @for (course of filteredCourses(); track course.id) {
+              <div
+                class="course-item"
+                [class.active]="selectedCourseId() === course.id"
+                (click)="onCourseSelected(course.id!)"
+              >
+                <span nz-icon nzType="book" nzTheme="outline" class="course-icon"></span>
+                <div class="course-item-info">
+                  <div class="course-item-name">{{ course.title }}</div>
+                  @if (course.majorName) {
+                    <div class="course-item-meta">{{ course.majorName }}</div>
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </nz-card>
+
+    @if (selectedCourseId()) {
+      <!-- Middle: Chapter tree -->
+      <nz-card class="tree-panel">
+        <div class="tree-header">
+          <span class="tree-title">章节列表</span>
+          <label nz-checkbox [ngModel]="onlyWithResources()" (ngModelChange)="onOnlyWithResourcesChange($event)" class="tree-filter-check">
             只显示有关联资源的章节
           </label>
+        </div>
+        <div class="tree-search">
+          <nz-input-group [nzPrefix]="treeSearchPrefix">
+            <input
+              nz-input
+              placeholder="搜索章节标题"
+              [ngModel]="chapterSearchText()"
+              (ngModelChange)="chapterSearchText.set($event)"
+            />
+          </nz-input-group>
+          <ng-template #treeSearchPrefix>
+            <span nz-icon nzType="search"></span>
+          </ng-template>
         </div>
         @if (chapters().length === 0) {
           <nz-empty nzNotFoundContent="暂无章节"></nz-empty>
         } @else if (visibleChapters().length === 0) {
-          <nz-empty nzNotFoundContent="没有有关联资源的章节"></nz-empty>
+          <nz-empty [nzNotFoundContent]="chapterSearchText().trim() ? '没有匹配的章节' : '没有有关联资源的章节'"></nz-empty>
         } @else {
           <div class="tree-view">
             <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: visibleChapters(), depth: 0 }"></ng-container>
@@ -149,16 +203,22 @@
             }
           </div>
         } @else {
-          <nz-empty nzNotFoundContent="请选择左侧章节查看关联资源"></nz-empty>
+          <div class="resource-empty">
+            <nz-empty nzNotFoundContent="请选择章节查看关联资源"></nz-empty>
+          </div>
         }
       </nz-card>
+    } @else {
+      <nz-card class="select-hint-panel">
+        <nz-empty nzNotFoundContent="请从左侧选择课程"></nz-empty>
+      </nz-card>
+    }
     </div>
-  }
 
   <!-- Recursive tree template -->
   <ng-template #treeNode let-nodes let-depth="depth">
     @for (node of nodes; track node.id) {
-      <div class="tree-node" [style.padding-left.px]="depth * 20">
+      <div class="tree-node" [style.padding-left.px]="depth === 0 ? 0 : 20">
         <div
           class="tree-node-content"
           [class.selected]="selectedChapterId() === node.id"
@@ -173,7 +233,7 @@
           }
           <span class="node-title">{{ node.title }}</span>
         </div>
-        @if (hasChildren(node) && isExpanded(node.id!)) {
+        @if (hasChildren(node) && (isExpanded(node.id!) || chapterSearchText().trim())) {
           <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
         }
       </div>

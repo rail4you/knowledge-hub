@@ -10,7 +10,6 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -36,7 +35,6 @@ import type { CreateUpdateKnowledgeResourceDto, KnowledgeResourceDto, CourseReso
     NzIconModule,
     NzSpinModule,
     NzEmptyModule,
-    NzSelectModule,
     NzCheckboxModule,
     NzTableModule,
   ],
@@ -61,20 +59,66 @@ export class ChapterResourceComponent implements OnInit {
   chapterResources = signal<KnowledgeResourceDto[]>([]);
   // 当前课程已关联的资源（课程资源池）
   libraryResources = signal<CourseResourceDto[]>([]);
+  // 左侧课程列表搜索关键字
+  courseSearchText = signal('');
+
+  readonly filteredCourses = computed(() => {
+    const kw = this.courseSearchText().trim().toLowerCase();
+    const all = this.courses();
+    if (!kw) return all;
+    return all.filter(c =>
+      (c.title ?? '').toLowerCase().includes(kw) ||
+      (c.majorName ?? '').toLowerCase().includes(kw));
+  });
+
+  readonly selectedCourse = computed(() =>
+    this.courses().find(c => c.id === this.selectedCourseId()) ?? null);
+
+  // 选中课程的统计：章节总数 / 已关联章节 / 已关联资源 / 资源池资源
+  readonly courseStats = computed(() => {
+    let chapterCount = 0;
+    let linkedChapterCount = 0;
+    let linkedResourceCount = 0;
+    const walk = (nodes: ChapterDto[]) => {
+      for (const n of nodes) {
+        chapterCount++;
+        const c = n.knowledgeResources?.length ?? 0;
+        if (c > 0) {
+          linkedChapterCount++;
+          linkedResourceCount += c;
+        }
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(this.chapters());
+    return {
+      chapterCount,
+      linkedChapterCount,
+      linkedResourceCount,
+      poolCount: this.libraryResources().length,
+    };
+  });
+
   loading = signal(false);
   libraryLoading = signal(false);
   searchText = signal('');
 
   // 只显示有关联资源的章节
   onlyWithResources = signal(false);
+  // 左侧章节树搜索关键字
+  chapterSearchText = signal('');
 
   // 勾选待添加到章节的资源（键为课程资源池条目 id）
   selectedResourceIds = signal<Set<string>>(new Set());
 
-  // 根据开关过滤章节树，保留树状结构
+  // 根据开关与搜索关键字过滤章节树，保留树状结构（含匹配节点的祖先链）
   visibleChapters = computed(() => {
-    if (!this.onlyWithResources()) return this.chapters();
-    return this.filterTreeWithResources(this.chapters());
+    const base = this.onlyWithResources()
+      ? this.filterTreeWithResources(this.chapters())
+      : this.chapters();
+    const kw = this.chapterSearchText().trim().toLowerCase();
+    if (!kw) return base;
+    return this.filterTreeByKeyword(base, kw);
   });
 
   onOnlyWithResourcesChange(checked: boolean) {
@@ -130,11 +174,13 @@ export class ChapterResourceComponent implements OnInit {
   }
 
   onCourseSelected(courseId: string) {
+    if (!courseId) return;
     this.selectedCourseId.set(courseId);
     this.selectedChapterId.set(null);
     this.selectedChapterTitle.set('');
     this.chapterResources.set([]);
     this.searchText.set('');
+    this.chapterSearchText.set('');
     this.clearSelection();
     this.loadChapterTree();
     this.loadLibraryResources();
@@ -176,6 +222,17 @@ export class ChapterResourceComponent implements OnInit {
       if (node.id) set.add(node.id);
       if (node.children?.length) this.collectNodeIds(node.children, set);
     }
+  }
+
+  private filterTreeByKeyword(nodes: ChapterDto[], keyword: string): ChapterDto[] {
+    const result: ChapterDto[] = [];
+    for (const node of nodes) {
+      const children = this.filterTreeByKeyword(node.children ?? [], keyword);
+      if ((node.title ?? '').toLowerCase().includes(keyword) || children.length > 0) {
+        result.push({ ...node, children });
+      }
+    }
+    return result;
   }
 
   private filterTreeWithResources(nodes: ChapterDto[]): ChapterDto[] {
@@ -257,7 +314,7 @@ export class ChapterResourceComponent implements OnInit {
         this.message.success('资源已关联到章节');
         this.clearSelection();
         this.loadChapterResources();
-        if (this.onlyWithResources()) this.loadChapterTree();
+        this.loadChapterTree();
       },
       error: (err) => {
         const detail =
@@ -333,7 +390,7 @@ export class ChapterResourceComponent implements OnInit {
         this.message.success(`已关联 ${tasks.length} 个资源到章节`);
         this.clearSelection();
         this.loadChapterResources();
-        if (this.onlyWithResources()) this.loadChapterTree();
+        this.loadChapterTree();
       },
       error: (err) => {
         const detail =
@@ -367,7 +424,7 @@ export class ChapterResourceComponent implements OnInit {
       next: () => {
         this.message.success('已取消关联');
         this.loadChapterResources();
-        if (this.onlyWithResources()) this.loadChapterTree();
+        this.loadChapterTree();
       },
       error: (err) => {
         const detail =

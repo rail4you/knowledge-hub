@@ -1,5 +1,6 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
@@ -7,6 +8,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzTableModule } from 'ng-zorro-antd/table';
 
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -20,6 +22,7 @@ import type { CourseLearningOverviewDto, StudentLearningStatisticsDto, StudentEx
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     NzCardModule,
     NzButtonModule,
     NzProgressModule,
@@ -27,6 +30,7 @@ import type { CourseLearningOverviewDto, StudentLearningStatisticsDto, StudentEx
     NzSpinModule,
     NzTagModule,
     NzEmptyModule,
+    NzInputModule,
     NzTableModule,
   ],
   templateUrl: './learning-progress.component.html',
@@ -42,6 +46,16 @@ export class LearningProgressComponent implements OnInit {
   loadingCourses = signal(false);
   courses = signal<CourseDto[]>([]);
   courseOverviewMap = signal<Record<string, CourseLearningOverviewDto>>({});
+  courseSearchText = signal('');
+
+  readonly filteredCourses = computed(() => {
+    const kw = this.courseSearchText().trim().toLowerCase();
+    const all = this.courses();
+    if (!kw) return all;
+    return all.filter(c =>
+      (c.title ?? '').toLowerCase().includes(kw) ||
+      (c.majorName ?? '').toLowerCase().includes(kw));
+  });
 
   // Selected course detail
   selectedCourseId = signal<string | null>(null);
