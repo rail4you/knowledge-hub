@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.Json;
+using KnowledgeHub.Courses.Enums;
 using KnowledgeHub.Learning;
 using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.MicroMajors;
@@ -106,10 +107,12 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             mm.CourseCount = (int)await _microMajorCourseRepository.CountAsync(x => x.MicroMajorId == mm.Id);
         }
 
-        // Featured courses (latest 8 published) - populate real teacher/major names
+        // Featured courses: only show published courses with IsRecommended = true (latest 8)
         var courseQuery = await _courseRepository.GetQueryableAsync();
         var rawCourses = courseQuery
-            .Where(x => x.TenantId == tenantId)
+            .Where(x => x.TenantId == tenantId
+                && x.Status == CourseStatus.Published
+                && x.IsRecommended)
             .OrderByDescending(x => x.CreationTime)
             .Take(8)
             .ToList();
