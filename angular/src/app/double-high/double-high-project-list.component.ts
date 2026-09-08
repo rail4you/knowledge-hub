@@ -51,6 +51,12 @@ export class DoubleHighProjectListComponent implements OnInit {
     }).subscribe(result => this.items.set(result.items || []));
   }
 
+  /** 重置搜索：清空关键字并重新加载 */
+  resetSearch(): void {
+    this.keyword = '';
+    this.reload();
+  }
+
   getStatusLabel(status: DoubleHighProjectStatus): string {
     const labels: Record<number, string> = {
       [DoubleHighProjectStatus.Draft]: '草稿',

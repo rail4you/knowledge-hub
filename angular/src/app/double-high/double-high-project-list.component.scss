@@ -34,16 +34,13 @@
   }
 }
 
-/* ─── 表格卡片 + 工具条（与微专业管理页一致） ─── */
+/* ─── 表格卡片（高度自适应，不强制撑满） ─── */
 .table-card {
   background: var(--kh-panel);
   border: 1px solid var(--kh-line);
   border-radius: 12px;
   box-shadow: var(--kh-shadow-card);
   overflow: hidden;
-  min-height: calc(100vh - 340px);
-  display: flex;
-  flex-direction: column;
 }
 
 .table-pagination {
@@ -51,44 +48,6 @@
   justify-content: flex-end;
   padding: 12px 22px;
   border-top: 1px solid var(--kh-line-2);
-  margin-top: auto;
-}
-
-.table-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 22px;
-  border-bottom: 1px solid var(--kh-line-2);
-  flex-wrap: wrap;
-
-  .toolbar-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .toolbar-search { width: 280px; }
-
-  .search-icon {
-    cursor: pointer;
-    color: #bfbfbf;
-    &:hover { color: var(--kh-accent); }
-  }
-
-  .toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .toolbar-total {
-    font-size: 13px;
-    color: var(--kh-muted);
-    white-space: nowrap;
-  }
 }
 
 /* ─── 数据表格 ──────────────────────────── */

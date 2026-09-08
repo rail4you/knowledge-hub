@@ -22,39 +22,7 @@
     p { font-size: 13px; color: var(--kh-muted); margin: 0; line-height: 1.5; }
   }
 
-  .search-bar {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  }
-  .search-box {
-    display: flex; align-items: center; gap: 8px;
-    flex: 1 1 360px; max-width: 560px;
-    position: relative;
-    svg {
-      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-      width: 15px; height: 15px; color: #bfbfbf; pointer-events: none;
-    }
-    input {
-      flex: 1; height: 38px; padding: 0 12px 0 34px;
-      border: 1px solid var(--kh-line-2); border-radius: 20px;
-      font-size: 13.5px; color: var(--kh-ink); background: #fff;
-      outline: none; transition: border-color .2s, box-shadow .2s;
-      &::placeholder { color: #9aa9ba; }
-      &:focus:not(:disabled) { border-color: var(--kh-accent); box-shadow: 0 0 0 3px var(--kh-accent-soft); }
-      &:disabled { background: #f5f7fa; cursor: not-allowed; }
-    }
-    .search-btn {
-      height: 38px; padding: 0 16px;
-      background: var(--kh-accent); color: #fff; border: none; border-radius: 8px;
-      font-size: 13px; font-weight: 600; cursor: pointer; transition: background .2s;
-      &:hover { background: var(--kh-accent-deep); }
-    }
-    .reset-btn {
-      height: 38px; padding: 0 16px;
-      border: 1px solid var(--kh-line-2); border-radius: 8px;
-      background: var(--kh-panel); color: var(--kh-ink-2); font-size: 13px; cursor: pointer;
-      &:hover { border-color: var(--kh-accent); color: var(--kh-accent); }
-    }
-  }
+  // 创建按钮（页面特有，其他页面可能样式不同，所以不抽到共享样式）
   .create-btn {
     display: inline-flex; align-items: center; gap: 6px;
     background: var(--kh-accent); color: #fff;
@@ -65,14 +33,10 @@
     &:hover { background: var(--kh-accent-deep); }
   }
 
-  .eval-card { display: flex; flex-direction: column; gap: 0; }
   .table-card {
     background: var(--kh-panel); border: 1px solid var(--kh-line);
     border-radius: var(--kh-r-shell); box-shadow: var(--kh-shadow-card);
     overflow: hidden;
-    min-height: calc(100vh - 360px);
-    display: flex;
-    flex-direction: column;
   }
 
   .name-cell { font-weight: 600; color: var(--kh-ink); text-align: left !important; }
@@ -117,6 +81,8 @@
       text-align: center !important;
       white-space: nowrap;
       &::before { display: none !important; }
+      // “项目”列（首个 th）与其他列不同：该列标题与项目名都左对齐，符合阅读习惯
+      &:first-child { text-align: left !important; }
     }
     .ant-table-tbody > tr > td {
       padding: 12px 16px !important;

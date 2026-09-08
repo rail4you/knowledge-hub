@@ -4,71 +4,72 @@
     <p>配置双高建设评估指标、批次与数据来源</p>
   </div>
 
-  <div class="search-bar">
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input type="text" placeholder="搜索项目名称" [(ngModel)]="keyword" (keyup.enter)="reload()" />
-      <button class="search-btn" type="button" (click)="reload()">搜索</button>
-      <button class="reset-btn" type="button" (click)="resetSearch()">重置</button>
+  <div class="table-card">
+    <div class="search-bar">
+      <div class="search-actions">
+        <span class="result-count">共 {{ items().length }} 条</span>
+        <button class="create-btn" type="button" (click)="openCreate()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          新建项目
+        </button>
+      </div>
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input class="search-input" type="text" placeholder="搜索项目名称" [(ngModel)]="keyword" (keyup.enter)="reload()" />
+        <button class="search-btn" type="button" (click)="reload()">搜索</button>
+        <button class="reset-btn" type="button" (click)="resetSearch()">重置</button>
+      </div>
     </div>
-    <button class="create-btn" type="button" (click)="openCreate()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      新建项目
-    </button>
-  </div>
 
-  <div class="eval-card">
-    <div class="table-card">
-      <nz-table [nzData]="pagedItems()" [nzFrontPagination]="false" [nzTotal]="items().length"
-        [nzPageIndex]="pageIndex()" [nzPageSize]="pageSize()"
-        (nzPageIndexChange)="onPageIndexChange($event)" (nzPageSizeChange)="onPageSizeChange($event)"
-        [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl"
-        nzSize="middle" class="data-table-host" [nzNoResult]="emptyTpl">
-        <thead>
+    <nz-table [nzData]="pagedItems()" [nzFrontPagination]="false" [nzTotal]="items().length"
+      [nzPageIndex]="pageIndex()" [nzPageSize]="pageSize()"
+      (nzPageIndexChange)="onPageIndexChange($event)" (nzPageSizeChange)="onPageSizeChange($event)"
+      [nzShowSizeChanger]="true" [nzShowTotal]="totalTpl"
+      nzSize="middle" class="data-table-host" [nzNoResult]="emptyTpl">
+      <thead>
+        <tr>
+          <th>项目</th>
+          <th>批次</th>
+          <th>状态</th>
+          <th>指标数</th>
+          <th>完成率</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of pagedItems(); track item.id) {
           <tr>
-            <th>项目</th>
-            <th>批次</th>
-            <th>状态</th>
-            <th>指标数</th>
-            <th>完成率</th>
-            <th>操作</th>
+            <td class="name-cell">{{ item.title }}</td>
+            <td><span class="batch-tag">{{ item.batchCode }}</span></td>
+            <td>
+              <span class="st-tag" [ngClass]="item.status === statuses.Active ? 'running' : item.status === statuses.Closed ? 'ended' : 'draft'">
+                {{ getStatusLabel(item.status) }}
+              </span>
+            </td>
+            <td class="num-cell">{{ item.indicatorCount }}</td>
+            <td>
+              <div class="progress-wrap">
+                <div class="progress-bar"><div class="fill" [style.width.%]="item.completionRate"></div></div>
+                <span class="progress-text">{{ item.completionRate }}%</span>
+              </div>
+            </td>
+            <td>
+              <div class="op-links">
+                <button nz-button nzType="link" nzSize="small" (click)="openEdit(item)">编辑</button>
+                <button nz-button nzType="link" nzSize="small" nzDanger (click)="delete(item.id)">删除</button>
+              </div>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          @for (item of pagedItems(); track item.id) {
-            <tr>
-              <td class="name-cell">{{ item.title }}</td>
-              <td><span class="batch-tag">{{ item.batchCode }}</span></td>
-              <td>
-                <span class="st-tag" [ngClass]="item.status === statuses.Active ? 'running' : item.status === statuses.Closed ? 'ended' : 'draft'">
-                  {{ getStatusLabel(item.status) }}
-                </span>
-              </td>
-              <td class="num-cell">{{ item.indicatorCount }}</td>
-              <td>
-                <div class="progress-wrap">
-                  <div class="progress-bar"><div class="fill" [style.width.%]="item.completionRate"></div></div>
-                  <span class="progress-text">{{ item.completionRate }}%</span>
-                </div>
-              </td>
-              <td>
-                <div class="op-links">
-                  <button nz-button nzType="link" nzSize="small" (click)="openEdit(item)">编辑</button>
-                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="delete(item.id)">删除</button>
-                </div>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </nz-table>
-      <ng-template #totalTpl let-total>共 {{ total }} 条</ng-template>
-      <ng-template #emptyTpl>
-        <div class="empty-tip">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          <span>暂无评估项目，点击上方新建</span>
-        </div>
-      </ng-template>
-    </div>
+        }
+      </tbody>
+    </nz-table>
+    <ng-template #totalTpl let-total>共 {{ total }} 条</ng-template>
+    <ng-template #emptyTpl>
+      <div class="empty-tip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <span>暂无评估项目，点击上方新建</span>
+      </div>
+    </ng-template>
   </div>
 
   <nz-modal

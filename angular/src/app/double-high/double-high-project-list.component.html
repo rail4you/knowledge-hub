@@ -5,23 +5,15 @@
   </div>
 
   <div class="table-card">
-    <div class="table-toolbar">
-      <div class="toolbar-left">
-        <nz-input-group [nzSuffix]="searchSuffix" class="toolbar-search">
-          <input
-            nz-input
-            placeholder="搜索项目名称 / 批次编码"
-            [(ngModel)]="keyword"
-            (keyup.enter)="reload()"
-          />
-        </nz-input-group>
-        <ng-template #searchSuffix>
-          <span nz-icon nzType="search" class="search-icon" (click)="reload()"></span>
-        </ng-template>
-        <button nz-button nzType="primary" (click)="reload()">搜索</button>
+    <div class="search-bar">
+      <div class="search-actions">
+        <span class="result-count">共 {{ items().length }} 条</span>
       </div>
-      <div class="toolbar-right">
-        <span class="toolbar-total">共 {{ items().length }} 条</span>
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input class="search-input" type="text" placeholder="搜索项目名称 / 批次编码" [(ngModel)]="keyword" (keyup.enter)="reload()" />
+        <button class="search-btn" type="button" (click)="reload()">搜索</button>
+        <button class="reset-btn" type="button" (click)="resetSearch()">重置</button>
       </div>
     </div>
     <div class="table-scroll">
