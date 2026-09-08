@@ -31,12 +31,20 @@
         >
           <!-- 封面（较高，展示背景图） -->
           <div class="mm-card__cover">
+            <img
+              class="mm-card__cover-img"
+              src="assets/images/home/micro-major-cover-placeholder.svg"
+              alt=""
+              loading="lazy"
+              aria-hidden="true"
+            />
             @if (hasCover(item)) {
               <img
                 class="mm-card__cover-img"
                 [src]="item.coverImageUrl"
                 [alt]="item.title"
                 loading="lazy"
+                (error)="$any($event.target).style.display='none'"
               />
             }
             <div
@@ -44,15 +52,6 @@
               [style.background]="coverGradient(item)"
               aria-hidden="true"
             ></div>
-            @if (!hasCover(item)) {
-              <img
-                class="mm-card__cover-img"
-                src="assets/images/home/micro-major-cover-placeholder.svg"
-                alt=""
-                loading="lazy"
-                aria-hidden="true"
-              />
-            }
             <div class="mm-card__overlay" aria-hidden="true"></div>
 
             @if (item.industryField) {

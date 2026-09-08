@@ -329,7 +329,7 @@ export class StudentNewsDetailComponent implements OnInit {
     return !!article.coverImageUrl && article.coverImageUrl.trim().length > 0;
   }
 
-  /** 头图加载失败（脏数据/坏链）→ 降级为渐变封面 */
+  /** 头图加载失败（脏数据/坏链）→ 降级显示占位图 */
   onCoverError(): void {
     this.coverImgOk.set(false);
   }

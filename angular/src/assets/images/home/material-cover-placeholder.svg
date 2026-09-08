@@ -2,9 +2,9 @@
   <defs>
     <!-- 主背景：教育资料主题 - 深青绿色渐变 -->
     <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0c4a6e"/>
-      <stop offset="60%" stop-color="#0e7490"/>
-      <stop offset="100%" stop-color="#0f172a"/>
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="60%" stop-color="#075985"/>
+      <stop offset="100%" stop-color="#082f49"/>
     </linearGradient>
     <!-- 文档页 -->
     <linearGradient id="docGrad" x1="0" y1="0" x2="0" y2="1">
@@ -13,18 +13,18 @@
     </linearGradient>
     <!-- 光晕 -->
     <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.5"/>
-      <stop offset="60%" stop-color="#0891b2" stop-opacity="0.15"/>
-      <stop offset="100%" stop-color="#0e7490" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0"/>
     </radialGradient>
     <!-- 光柱 -->
     <linearGradient id="beamGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.35"/>
-      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#bae6fd" stop-opacity="0"/>
     </linearGradient>
     <!-- 网格 -->
     <pattern id="gridPattern" x="0" y="0" width="50" height="50" patternUnits="userSpaceOnUse">
-      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#22d3ee" stroke-opacity="0.08" stroke-width="1"/>
+      <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#bae6fd" stroke-opacity="0.12" stroke-width="1"/>
     </pattern>
   </defs>
 

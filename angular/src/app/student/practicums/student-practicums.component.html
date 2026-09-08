@@ -18,14 +18,13 @@
       @for (item of items(); track item.id) {
         <article class="px-card" (click)="openDetail(item)" tabindex="0" (keyup.enter)="openDetail(item)">
           <div class="px-card__cover" [style.background]="coverGradient(item)">
-            <div class="cover-decor" aria-hidden="true">
-              <span class="decor-line decor-line--1"></span>
-              <span class="decor-line decor-line--2"></span>
-              <span class="decor-circle"></span>
-            </div>
-            <div class="cover-icon">
-              <span nz-icon nzType="experiment" nzTheme="outline"></span>
-            </div>
+            <img
+              class="px-card__cover-img"
+              src="assets/images/home/practicum-cover-placeholder.svg"
+              alt=""
+              loading="lazy"
+              aria-hidden="true"
+            />
             <div class="px-card__overlay" aria-hidden="true"></div>
             @if (item.major) { <span class="cover-badge">{{ item.major }}</span> }
             @if (item.isExpired) { <span class="cover-badge cover-badge--expired">已结束</span> }

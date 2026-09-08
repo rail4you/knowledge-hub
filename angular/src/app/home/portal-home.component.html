@@ -182,10 +182,9 @@
           @for (c of globalFeaturedCourses(); track c.id; let i = $index) {
             <a class="course-card" [routerLink]="['/student/courses', c.id]">
               <div class="course-card__cover">
+                <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
                 @if (c.coverImageUrl) {
-                  <img [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" class="course-card__cover-img" />
-                } @else {
-                  <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
+                  <img [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" class="course-card__cover-img" (error)="$any($event.target).style.display='none'" />
                 }
                 <div class="course-card__overlay" aria-hidden="true"></div>
 
@@ -451,10 +450,9 @@
           @for (c of browseCourses(); track c.id) {
             <a class="course-card" [routerLink]="['/student/courses', c.id]">
               <div class="course-card__cover">
+                <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
                 @if (c.coverImageUrl) {
-                  <img [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" class="course-card__cover-img" />
-                } @else {
-                  <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
+                  <img [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" class="course-card__cover-img" (error)="$any($event.target).style.display='none'" />
                 }
                 <div class="course-card__overlay" aria-hidden="true"></div>
                 <span class="course-card__students">
@@ -498,10 +496,9 @@
           @for (r of browseResources(); track r.id) {
             <div class="material-card" [class.material-card--clickable]="canPreview(r)" (click)="canPreview(r) && previewMaterial(r)">
               <div class="material-card__cover">
+                <img src="assets/images/home/material-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="material-card__cover-img" />
                 @if (r.coverUrl) {
-                  <img [src]="r.coverUrl" [alt]="r.name" loading="lazy" class="material-card__cover-img" />
-                } @else {
-                  <img src="assets/images/home/material-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="material-card__cover-img" />
+                  <img [src]="r.coverUrl" [alt]="r.name" loading="lazy" class="material-card__cover-img" (error)="$any($event.target).style.display='none'" />
                 }
                 <div class="material-card__overlay" aria-hidden="true"></div>
                 <span class="material-card__type-badge">{{ r.fileExtension ? '.' + r.fileExtension : '文件' }}</span>

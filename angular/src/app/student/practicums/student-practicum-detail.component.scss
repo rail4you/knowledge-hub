@@ -17,12 +17,10 @@
 /* =================== 头部（封面 + 标题/统计/操作，与资讯/资源详情对齐） =================== */
 .detail-head { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 0; background: #fff; border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius-lg; overflow: hidden; box-shadow: ds.$student-shadow-soft; }
 .detail-media { position: relative; background: #fff; min-height: 100%; }
-.detail-media__stage { position: relative; height: 100%; min-height: 300px; display: flex; align-items: center; justify-content: center; overflow: hidden; color: #fff; }
-.cover-decor { position: absolute; inset: 0; pointer-events: none; }
-.decor-line { position: absolute; background: rgba(255,255,255,.18); border-radius: 2px; &--1 { width: 80px; height: 3px; top: 24px; right: 32px; transform: rotate(-12deg); } &--2 { width: 40px; height: 3px; top: 42px; right: 78px; transform: rotate(-12deg); background: rgba(255,255,255,.32); } }
-.decor-circle { position: absolute; width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); bottom: 24px; left: 32px; }
-.detail-media__icon { font-size: 72px; color: rgba(255, 255, 255, 0.9); }
-.detail-media__type { position: absolute; top: 18px; left: 18px; display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); backdrop-filter: blur(8px); font-size: 12px; font-weight: 500; }
+.detail-media__stage { position: relative; height: 100%; min-height: 300px; display: block; overflow: hidden; color: #fff; background: linear-gradient(135deg, #eff6ff 0%, #bfdbff 100%); }
+.detail-media__placeholder { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.detail-media__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,.35) 100%); pointer-events: none; z-index: 1; }
+.detail-media__type { position: absolute; top: 18px; left: 18px; z-index: 2; display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 999px; background: rgba(13, 27, 48, .45); backdrop-filter: blur(8px); color: #fff; font-size: 12px; font-weight: 500; }
 
 /* ---- 右：信息面板 ---- */
 .detail-info { padding: 28px 28px 24px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }

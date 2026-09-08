@@ -68,17 +68,25 @@
           [class.is-clickable]="canEnter(live)"
           (click)="canEnter(live) && enterLive(live)"
         >
-          <!-- 顶部状态条 -->
-          <div class="live-card__banner" [class.is-live]="live.status === 1">
-            <div class="live-card__status">
+          <!-- 封面（占位图垫底，与全站同一套） -->
+          <div class="live-card__cover">
+            <img
+              class="live-card__cover-img"
+              src="assets/images/home/live-cover-placeholder.svg"
+              alt=""
+              loading="lazy"
+              aria-hidden="true"
+            />
+            <div class="live-card__overlay" aria-hidden="true"></div>
+            <span class="live-card__cover-status" [class.is-live]="live.status === 1">
               <span class="live-dot" [class.pulse]="live.status === 1"></span>
               {{ statusText(live) }}
-            </div>
+            </span>
             @if (live.scheduledAt) {
-              <div class="live-card__time">
+              <span class="live-card__cover-time">
                 <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
                 {{ scheduleText(live) }}
-              </div>
+              </span>
             }
           </div>
 

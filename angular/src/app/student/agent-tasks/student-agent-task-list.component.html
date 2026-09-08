@@ -24,16 +24,16 @@
           tabindex="0"
           (keyup.enter)="openTask(task.assignmentId)"
         >
-          <!-- 封面区域 -->
+          <!-- 封面区域（占位图垫底，与全站同一套） -->
           <div class="task-card__cover" [style.background]="coverGradient(task)">
-            <div class="cover-decor" aria-hidden="true">
-              <span class="decor-line decor-line--1"></span>
-              <span class="decor-line decor-line--2"></span>
-              <span class="decor-circle"></span>
-            </div>
-            <div class="cover-icon">
-              <span nz-icon nzType="robot" nzTheme="outline"></span>
-            </div>
+            <img
+              class="task-card__cover-img"
+              src="assets/images/home/agent-cover-placeholder.svg"
+              alt=""
+              loading="lazy"
+              aria-hidden="true"
+            />
+            <div class="task-card__overlay" aria-hidden="true"></div>
             <span class="cover-status" [class]="'status--' + (task.status || 0)">
               {{ statusText(task.status) }}
             </span>

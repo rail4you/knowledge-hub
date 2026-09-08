@@ -228,21 +228,20 @@
                 (keyup.enter)="openArticle(article.id)"
               >
                 <div class="news-card__cover" [style.background]="coverGradient(article)">
+                  <img
+                    class="news-card__cover-img news-card__cover-base"
+                    src="assets/images/home/news-cover-placeholder.svg"
+                    alt=""
+                    loading="lazy"
+                    aria-hidden="true"
+                  />
                   @if (hasCover(article)) {
                     <img
-                      class="news-card__cover-img"
+                      class="news-card__cover-img news-card__cover-real"
                       [src]="article.coverImageUrl"
                       [alt]="article.title"
                       loading="lazy"
                       (error)="onCoverError($event)"
-                    />
-                  } @else {
-                    <img
-                      class="news-card__cover-img"
-                      src="assets/images/home/news-cover-placeholder.svg"
-                      alt=""
-                      loading="lazy"
-                      aria-hidden="true"
                     />
                   }
                   <div class="news-card__overlay" aria-hidden="true"></div>
@@ -271,10 +270,6 @@
                   <h3 class="news-card__title" [title]="article.title">
                     {{ article.title }}
                   </h3>
-
-                  @if (article.summary) {
-                    <p class="news-card__summary" [title]="article.summary">{{ article.summary }}</p>
-                  }
 
                   <div class="news-card__tags">
                     @for (tag of parseTags(article.tags); track tag) {

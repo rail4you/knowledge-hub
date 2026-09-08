@@ -372,7 +372,7 @@
   }
 
   &__body {
-    padding: 14px 16px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -403,19 +403,6 @@
 
   &:hover &__title {
     color: ds.$student-primary;
-  }
-
-  &__summary {
-    margin: 0;
-    padding: 9px 11px;
-    background: ds.$student-surface-soft;
-    border-radius: ds.$student-radius;
-    color: ds.$student-text-muted;
-    font-size: 12px;
-    line-height: 1.6;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   &__tags {

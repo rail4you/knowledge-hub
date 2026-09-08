@@ -24,6 +24,12 @@
       <!-- 左：资讯封面 -->
       <div class="detail-media">
         <div class="detail-media__stage" [style.background]="coverGradient(article)">
+          <img
+            class="detail-media__placeholder"
+            src="assets/images/home/news-cover-placeholder.svg"
+            alt=""
+            aria-hidden="true"
+          />
           @if (showCover(article)) {
             <img
               class="detail-media__img"
@@ -31,9 +37,8 @@
               [alt]="article.title"
               (error)="onCoverError()"
             />
-          } @else {
-            <span class="detail-media__icon" nz-icon nzType="file-text" nzTheme="outline"></span>
           }
+          <div class="detail-media__overlay" aria-hidden="true"></div>
           @if (article.categoryName) {
             <span class="detail-media__type">{{ article.categoryName }}</span>
           }
@@ -270,10 +275,17 @@
                         class="related-item__img"
                         [src]="r.coverImageUrl"
                         [alt]="r.title"
+                        loading="lazy"
                         (error)="onRelatedCoverError(r.id)"
                       />
                     } @else {
-                      <span nz-icon nzType="file-text" nzTheme="outline"></span>
+                      <img
+                        class="related-item__img"
+                        src="assets/images/home/news-cover-placeholder.svg"
+                        alt=""
+                        loading="lazy"
+                        aria-hidden="true"
+                      />
                     }
                   </span>
                   <div class="related-item__body">

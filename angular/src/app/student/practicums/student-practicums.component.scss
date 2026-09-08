@@ -8,16 +8,14 @@
   display: flex; flex-direction: column; gap: 24px;
 }
 
-.px-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(265px, 1fr)); gap: 18px; }
+.px-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
 .px-card { display: flex; flex-direction: column; border: 1px solid ds.$student-border-soft; border-radius: ds.$student-radius-lg; background: #fff; overflow: hidden; cursor: pointer; outline: none; transition: all .25s ease; box-shadow: 0 1px 2px rgba(15,23,42,.03);
-  &:hover, &:focus-visible { border-color: rgba(ds.$student-primary,.4); box-shadow: 0 16px 32px rgba(15,23,42,.08); transform: translateY(-3px); .cover-icon { transform: scale(1.06) rotate(-2deg); } .px-card__title { color: ds.$student-primary; } }
+  &:hover, &:focus-visible { border-color: rgba(ds.$student-primary,.4); box-shadow: 0 16px 32px rgba(15,23,42,.08); transform: translateY(-3px); .px-card__title { color: ds.$student-primary; } }
 }
-.px-card__cover { position: relative; width: 100%; aspect-ratio: 16 / 10; display: flex; align-items: center; justify-content: center; color: #fff; overflow: hidden; flex-shrink: 0; }
+.px-card__cover { position: relative; width: 100%; aspect-ratio: 16 / 10; display: block; color: #fff; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, #065f46 0%, #022c22 100%); }
+.px-card__cover-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s ease; }
+.px-card:hover .px-card__cover-img { transform: scale(1.04); }
 .px-card__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,.42) 100%); pointer-events: none; z-index: 1; }
-.cover-decor { position: absolute; inset: 0; pointer-events: none; }
-.decor-line { position: absolute; background: rgba(255,255,255,.18); border-radius: 2px; &--1 { width: 60px; height: 3px; top: 18px; right: 24px; transform: rotate(-12deg); } &--2 { width: 30px; height: 3px; top: 32px; right: 60px; transform: rotate(-12deg); background: rgba(255,255,255,.32); } }
-.decor-circle { position: absolute; width: 50px; height: 50px; border-radius: 50%; border: 2px solid rgba(255,255,255,.18); bottom: 18px; left: 24px; }
-.cover-icon { width: 70px; height: 70px; border-radius: 16px; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.32); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); transition: transform .3s ease; span[nz-icon] { font-size: 32px; color: #fff; } }
 .cover-badge { position: absolute; top: 10px; left: 10px; z-index: 2; height: 22px; padding: 0 9px; border-radius: 4px; background: rgba(0,0,0,.28); backdrop-filter: blur(6px); color: #fff; font-size: 11px; font-weight: 600; line-height: 1; display: inline-flex; align-items: center; }
 .cover-badge--expired { left: auto; right: 12px; background: rgba(239,68,68,.9); }
 

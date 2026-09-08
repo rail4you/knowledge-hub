@@ -22,12 +22,13 @@
       <!-- 左：实训封面 -->
       <div class="detail-media">
         <div class="detail-media__stage" [style.background]="coverGradient(d)">
-          <div class="cover-decor" aria-hidden="true">
-            <span class="decor-line decor-line--1"></span>
-            <span class="decor-line decor-line--2"></span>
-            <span class="decor-circle"></span>
-          </div>
-          <span class="detail-media__icon" nz-icon nzType="experiment" nzTheme="outline"></span>
+          <img
+            class="detail-media__placeholder"
+            src="assets/images/home/practicum-cover-placeholder.svg"
+            alt=""
+            aria-hidden="true"
+          />
+          <div class="detail-media__overlay" aria-hidden="true"></div>
           @if (d.major) {
             <span class="detail-media__type">{{ d.major }}</span>
           }

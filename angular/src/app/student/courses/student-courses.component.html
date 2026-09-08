@@ -94,10 +94,9 @@
             <article class="course-card" (click)="openCourse(course.id!)">
               <!-- 封面 -->
               <div class="course-card__cover" [style.background]="courseGradient(course)">
+                <img class="course-card__cover-img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
                 @if (hasCover(course)) {
-                  <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" />
-                } @else {
-                  <img class="course-card__cover-img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
+                  <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
                 }
                 <div class="course-card__overlay" aria-hidden="true"></div>
 
