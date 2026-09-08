@@ -610,6 +610,14 @@
   .anticon { font-size: 15px; }
 }
 
+// ── 结束直播确认 ──
+.end-confirm-text {
+  margin: 0;
+  font-size: 14px;
+  color: ds.$student-text;
+  line-height: 1.7;
+}
+
 // ── ENDED HERO（轻量卡片） ──
 .ended-hero {
   flex: 1;

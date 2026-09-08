@@ -55,6 +55,10 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   /** 全屏状态（监听 fullscreenchange 同步） */
   readonly isFullscreen = signal(false);
 
+  /** 结束直播确认弹窗 / 主动结束中（用于跳过 ended 提示页） */
+  endConfirmVisible = false;
+  endingLive = false;
+
   readonly liveState = this.liveService.liveState;
   readonly micEnabled = this.liveService.micEnabled;
   readonly camEnabled = this.liveService.camEnabled;
@@ -304,11 +308,22 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   stopLive() {
+    // 兼容保留：实际结束走 confirmEndLive（带确认弹窗）
+    this.confirmEndLive();
+  }
+
+  /** 确认结束直播：解散房间 + 直接回列表，不展示“已结束”提示页 */
+  confirmEndLive(): void {
+    this.endConfirmVisible = false;
+    // 先标记，压住 hangUp() 同步触发的 ended 提示页，直接跳列表
+    this.endingLive = true;
     this.liveService.hangUp();
     this.liveService.endLive(this.liveId).subscribe({
       error: () => console.warn('[LiveRoom] endLive failed'),
     });
-    this.router.navigate(['/admin/recruitment-live']);
+    this.router.navigate(this.myRole === 'teacher'
+      ? ['/admin/recruitment-live']
+      : ['/student/recruitment-live']);
   }
 
   sendChatMessage() {

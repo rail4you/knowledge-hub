@@ -45,7 +45,7 @@
   </header>
 
   <!-- ────────── LIVE BODY ────────── -->
-  <div class="live-body" *ngIf="liveState() !== 'ended'">
+  <div class="live-body" *ngIf="liveState() !== 'ended' || endingLive">
 
     <!-- VIDEO STAGE: 多人 Gallery 视图 -->
     <div class="video-stage" [class.is-gallery]="isGroupCall()">
@@ -163,8 +163,8 @@
     </aside>
   </div>
 
-  <!-- ────────── ENDED ────────── -->
-  <section class="ended-hero" *ngIf="liveState() === 'ended'">
+  <!-- ────────── ENDED（对方结束时展示；自己主动结束直接回列表，不经过这里） ────────── -->
+  <section class="ended-hero" *ngIf="liveState() === 'ended' && !endingLive">
     <div class="ended-card">
       <div class="ended-icon">
         <span nz-icon nzType="check-circle" nzTheme="outline"></span>
@@ -176,7 +176,7 @@
   </section>
 
   <!-- ────────── BOTTOM CONTROLS ────────── -->
-  <footer class="control-bar" *ngIf="liveState() !== 'idle' && liveState() !== 'ended'">
+  <footer class="control-bar" *ngIf="liveState() !== 'idle' && liveState() !== 'ended' && !endingLive">
     <div class="control-row">
       <button
         type="button"
@@ -221,8 +221,8 @@
         type="button"
         class="ctrl-btn ctrl-end"
         *ngIf="myRole === 'teacher'"
-        nz-tooltip nzTooltipTitle="结束直播（仅教师）"
-        (click)="stopLive()"
+        nz-tooltip nzTooltipTitle="结束直播（仅教师）：解散整个直播间"
+        (click)="endConfirmVisible = true"
       >
         <span nz-icon nzType="poweroff" nzTheme="outline"></span>
         <span class="ctrl-end__label">结束直播</span>
@@ -248,4 +248,19 @@
       </button>
     </div>
   </footer>
+
+  <!-- ────────── 结束直播确认 ────────── -->
+  <nz-modal
+    [(nzVisible)]="endConfirmVisible"
+    nzTitle="结束直播"
+    nzOkText="确认结束"
+    nzCancelText="取消"
+    nzOkDanger
+    (nzOnCancel)="endConfirmVisible = false"
+    (nzOnOk)="confirmEndLive()"
+  >
+    <p *nzModalContent class="end-confirm-text">
+      结束后将解散整个直播间，所有参与者断开，直播状态更新为“已结束”，确定继续吗？
+    </p>
+  </nz-modal>
 </div>
