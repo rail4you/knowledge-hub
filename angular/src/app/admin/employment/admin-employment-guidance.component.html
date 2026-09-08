@@ -1,32 +1,39 @@
-<div class="admin-guidance-page">
+<div class="training-page">
   <div class="page-header">
-    <h2>就业指导记录</h2>
-    <p class="subtitle">查看本租户下所有学生生成的 AI 就业指导记录，按学生分组展示</p>
+    <h1>就业指导记录</h1>
+    <p>查看本租户下所有学生生成的 AI 就业指导记录，按学生分组展示</p>
   </div>
 
-  <!-- 搜索 -->
-  <div class="search-bar">
-    <input
-      nz-input
-      [ngModel]="searchText()"
-      (ngModelChange)="searchText.set($event)"
-      placeholder="搜索学生姓名或规划标题..."
-    />
-  </div>
+  <div class="table-card list-card">
+    <div class="table-toolbar">
+      <button class="create-btn" type="button" (click)="loadAll()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        刷新列表
+      </button>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input
+          nz-input
+          [ngModel]="searchText()"
+          (ngModelChange)="searchText.set($event)"
+          placeholder="搜索学生姓名或规划标题..."
+        />
+        <button class="reset-btn" type="button" (click)="searchText.set('')">重置</button>
+      </div>
+    </div>
 
-  <!-- 加载中 -->
-  @if (loading()) {
-    <nz-card>
+    <div class="content-body">
+    <!-- 加载中 -->
+    @if (loading()) {
       <div class="loading-state">
         <nz-spin nzSimple nzSize="large"></nz-spin>
         <p>加载就业指导记录...</p>
       </div>
-    </nz-card>
-  } @else if (groups().length === 0) {
-    <nz-card>
-      <nz-empty [nzNotFoundContent]="searchText() ? '未找到匹配的记录' : '暂无就业指导记录'"></nz-empty>
-    </nz-card>
-  } @else {
+    } @else if (groups().length === 0) {
+      <div class="empty-tip">
+        <nz-empty [nzNotFoundContent]="searchText() ? '未找到匹配的记录' : '暂无就业指导记录'"></nz-empty>
+      </div>
+    } @else {
     <!-- 学生分组列表 -->
     @for (group of groups(); track group.studentId) {
       <nz-card class="student-group-card">
@@ -208,5 +215,7 @@
         }
       </nz-card>
     }
-  }
+    }
+    </div>
+  </div>
 </div>

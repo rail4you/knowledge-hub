@@ -1,7 +1,10 @@
-<div class="job-page">
-  <!-- 标题 + 操作按钮（原型 page-header） -->
+<div class="training-page">
+  <!-- 标题卡片：h1 标题 + 副标题，右侧保留原有操作按钮 -->
   <div class="page-header">
-    <div class="page-title">岗位管理</div>
+    <div class="page-title-block">
+      <h1>岗位管理</h1>
+      <p>管理岗位发布、审核状态与投递情况</p>
+    </div>
     <div class="header-actions">
       <button class="action-btn" type="button" (click)="downloadTemplate()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -18,8 +21,14 @@
     </div>
   </div>
 
-  <!-- 搜索筛选栏（原型 filter-bar） -->
-  <div class="filter-bar">
+  <!-- 搜索筛选 + 表格在同一个 list-card 内 -->
+  <div class="table-card list-card">
+    <div class="table-toolbar">
+      <button class="create-btn" type="button" (click)="openCreate()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        新增岗位
+      </button>
+      <div class="toolbar-filters">
     <div class="search-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
       <input type="text" [(ngModel)]="keyword" placeholder="搜索岗位 / 企业 / 技能" (keyup.enter)="search()" />
@@ -51,14 +60,15 @@
     </nz-select>
     <button class="search-btn" type="button" (click)="search()">搜索</button>
     <button class="reset-btn" type="button" (click)="resetFilter()">重置</button>
-  </div>
+      </div>
+    </div>
 
-  <!-- 表格（原型 table-card + job-table） -->
-  <div class="table-card">
+    <div class="table-wrap">
     <nz-table
       #jobTable
       [nzData]="items()"
       [nzFrontPagination]="false"
+      [nzNoResult]="jobEmptyTpl"
       [nzLoading]="loading()"
       [nzTotal]="totalCount()"
       [nzPageSize]="pageSize"
@@ -125,6 +135,15 @@
         }
       </tbody>
     </nz-table>
+
+      <ng-template #jobEmptyTpl>
+        <div class="empty-tip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>暂无岗位，点击上方左侧新建岗位</span>
+          <button class="create-btn" type="button" (click)="openCreate()">新增岗位</button>
+        </div>
+      </ng-template>
+    </div>
   </div>
 </div>
 

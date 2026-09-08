@@ -1,166 +1,178 @@
-<div class="dest-page">
-  <!-- 标题 + 操作按钮（原型 page-header） -->
+<div class="training-page dest-page">
+  <!-- 标题卡片 -->
   <div class="page-header">
-    <div class="page-title">就业去向管理</div>
-    <div class="header-actions">
-      <button class="action-btn" type="button" (click)="downloadTemplate()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        下载模板
-      </button>
+    <h1>就业去向管理</h1>
+    <p>维护学生就业去向记录，支持筛选、批量导入与设为主要去向</p>
+  </div>
+
+  <!-- 内容单容器：工具栏 + 筛选 + 表格同一卡片，占满页面高度 -->
+  <div class="table-card list-card">
+    <div class="table-toolbar">
       <button class="action-btn primary" type="button" (click)="openCreate()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         新增去向
+      </button>
+      <button class="action-btn" type="button" (click)="downloadTemplate()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        下载模板
       </button>
       <button class="action-btn" type="button" (click)="openXlsxImport()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         导入Excel
       </button>
     </div>
-  </div>
 
-  <!-- 搜索筛选栏（原型 filter-bar） -->
-  <div class="filter-bar">
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input type="text" [(ngModel)]="keyword" placeholder="搜索学生 / 单位 / 岗位" (keyup.enter)="search()" />
-    </div>
-    <nz-select
-      class="filter-select"
-      [(ngModel)]="studentFilter"
-      nzAllowClear
-      nzPlaceHolder="选择学生"
-      (ngModelChange)="onFilterChange()"
-    >
-      @for (s of students(); track s.id) {
-        <nz-option [nzValue]="s.id" [nzLabel]="s.name"></nz-option>
-      }
-    </nz-select>
-    <nz-select
-      class="filter-select"
-      [(ngModel)]="statusFilter"
-      nzAllowClear
-      nzPlaceHolder="去向状态"
-      (ngModelChange)="onFilterChange()"
-    >
-      <nz-option [nzValue]="statuses.Intention" nzLabel="就业意向"></nz-option>
-      <nz-option [nzValue]="statuses.Signed" nzLabel="已签约"></nz-option>
-      <nz-option [nzValue]="statuses.Employed" nzLabel="已就业"></nz-option>
-      <nz-option [nzValue]="statuses.FurtherStudy" nzLabel="升学"></nz-option>
-      <nz-option [nzValue]="statuses.Entrepreneurship" nzLabel="创业"></nz-option>
-      <nz-option [nzValue]="statuses.Unemployed" nzLabel="待就业"></nz-option>
-    </nz-select>
-    <button class="reset-btn" type="button" (click)="resetFilter()">重置</button>
-  </div>
-
-  <!-- 表格（原型 table-card + dest-table） -->
-  <div class="table-card">
-    <nz-table
-      #outcomeTable
-      [nzData]="filteredItems()"
-      [nzFrontPagination]="false"
-      [nzLoading]="loading()"
-      [nzTotal]="totalCount()"
-      [nzPageSize]="pageSize"
-      [nzPageIndex]="pageIndex"
-      [nzShowSizeChanger]="true"
-      [nzPageSizeOptions]="[10, 20, 50, 100]"
-      (nzPageIndexChange)="onPageIndexChange($event)"
-      (nzPageSizeChange)="onPageSizeChange($event)"
-      class="dest-table"
-    >
-      <thead>
-        <tr>
-          <th class="col-student">学生</th>
-          <th>去向单位</th>
-          <th>岗位</th>
-          <th>状态</th>
-          <th>就业信息</th>
-          <th>时间</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of filteredItems(); track item.id) {
-          <tr>
-            <!-- 学生：左对齐，带主要去向小星标（优化替代文字标签） -->
-            <td class="col-student">
-              <div class="student-name">
-                <span class="student-name-text" [title]="item.studentName || '-'">{{ item.studentName || '-' }}</span>
-                @if (item.isPrimary) {
-                  <span class="primary-star" nz-tooltip nzTooltipTitle="主要去向">
-                    <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                  </span>
-                }
-                @if (item.applicationId) {
-                  <span class="from-dot" nz-tooltip nzTooltipTitle="来自投递"></span>
-                }
-              </div>
-            </td>
-            <!-- 去向单位：独立列，溢出省略 -->
-            <td>
-              <span class="employer-name" [title]="item.employerName">{{ item.employerName || '-' }}</span>
-            </td>
-            <!-- 岗位：独立列 -->
-            <td>
-              <span class="job-title-cell" [title]="item.jobTitle || '-'">{{ item.jobTitle || '-' }}</span>
-            </td>
-            <td>
-              <span class="status-tag" [ngClass]="getOutcomeStatusClass(item.status)">{{ statusLabel(item.status) }}</span>
-            </td>
-            <!-- 就业信息：仅显示薪资为主，悬停展示 方式/地点/薪资/备注 -->
-            <td>
-              <span
-                class="meta-main"
-                nz-tooltip
-                [nzTooltipTitle]="metaTpl"
-                nzTooltipPlacement="top"
-              >
-                {{ item.salaryRange || item.employmentType || item.region || '-' }}
-              </span>
-              <ng-template #metaTpl>
-                <div class="tooltip-detail">
-                  <div>方式：{{ item.employmentType || '-' }}</div>
-                  <div>地点：{{ item.region || '-' }}</div>
-                  <div>薪资：{{ item.salaryRange || '-' }}</div>
-                  @if (item.remark) { <div>备注：{{ item.remark }}</div> }
-                </div>
-              </ng-template>
-            </td>
-            <!-- 时间：仅显示入职时间为主，悬停展示 入职/确认 -->
-            <td>
-              <span
-                class="time-main"
-                nz-tooltip
-                [nzTooltipTitle]="timeTpl"
-                nzTooltipPlacement="top"
-              >
-                {{ item.startDate ? (item.startDate | date:'yyyy-MM-dd') : '-' }}
-              </span>
-              <ng-template #timeTpl>
-                <div class="tooltip-detail">
-                  <div>入职：{{ item.startDate ? (item.startDate | date:'yyyy-MM-dd') : '未填写' }}</div>
-                  <div>确认：{{ item.confirmedAt | date:'yyyy-MM-dd' }}</div>
-                </div>
-              </ng-template>
-            </td>
-            <td>
-              <div class="op-links">
-                <a class="op-link" (click)="openEdit(item)">编辑</a>
-                <span class="op-sep">|</span>
-                <a
-                  class="op-link"
-                  [class.disabled]="item.isPrimary"
-                  [class.main-active]="!item.isPrimary"
-                  (click)="item.isPrimary ? null : setPrimary(item)"
-                >设为主要</a>
-                <span class="op-sep">|</span>
-                <a class="op-link delete" nz-popconfirm nzPopconfirmTitle="确认删除该就业去向？" nzPopconfirmDescription="删除后无法恢复" (nzOnConfirm)="delete(item)">删除</a>
-              </div>
-            </td>
-          </tr>
+    <!-- 搜索筛选栏（原型 filter-bar） -->
+    <div class="filter-row">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" [(ngModel)]="keyword" placeholder="搜索学生 / 单位 / 岗位" (keyup.enter)="search()" />
+      </div>
+      <nz-select
+        class="filter-select"
+        [(ngModel)]="studentFilter"
+        nzAllowClear
+        nzPlaceHolder="选择学生"
+        (ngModelChange)="onFilterChange()"
+      >
+        @for (s of students(); track s.id) {
+          <nz-option [nzValue]="s.id" [nzLabel]="s.name"></nz-option>
         }
-      </tbody>
-    </nz-table>
+      </nz-select>
+      <nz-select
+        class="filter-select"
+        [(ngModel)]="statusFilter"
+        nzAllowClear
+        nzPlaceHolder="去向状态"
+        (ngModelChange)="onFilterChange()"
+      >
+        <nz-option [nzValue]="statuses.Intention" nzLabel="就业意向"></nz-option>
+        <nz-option [nzValue]="statuses.Signed" nzLabel="已签约"></nz-option>
+        <nz-option [nzValue]="statuses.Employed" nzLabel="已就业"></nz-option>
+        <nz-option [nzValue]="statuses.FurtherStudy" nzLabel="升学"></nz-option>
+        <nz-option [nzValue]="statuses.Entrepreneurship" nzLabel="创业"></nz-option>
+        <nz-option [nzValue]="statuses.Unemployed" nzLabel="待就业"></nz-option>
+      </nz-select>
+      <button class="reset-btn" type="button" (click)="resetFilter()">重置</button>
+    </div>
+
+    <!-- 表格（原型 table-card + dest-table） -->
+    <div class="table-wrap">
+      <nz-table
+        #outcomeTable
+        [nzData]="filteredItems()"
+        [nzFrontPagination]="false"
+        [nzLoading]="loading()"
+        [nzTotal]="totalCount()"
+        [nzPageSize]="pageSize"
+        [nzPageIndex]="pageIndex"
+        [nzShowSizeChanger]="true"
+        [nzPageSizeOptions]="[10, 20, 50, 100]"
+        [nzNoResult]="emptyTpl"
+        (nzPageIndexChange)="onPageIndexChange($event)"
+        (nzPageSizeChange)="onPageSizeChange($event)"
+        class="dest-table"
+      >
+        <thead>
+          <tr>
+            <th class="col-student">学生</th>
+            <th>去向单位</th>
+            <th>岗位</th>
+            <th>状态</th>
+            <th>就业信息</th>
+            <th>时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of filteredItems(); track item.id) {
+            <tr>
+              <!-- 学生：左对齐，带主要去向小星标（优化替代文字标签） -->
+              <td class="col-student">
+                <div class="student-name">
+                  <span class="student-name-text" [title]="item.studentName || '-'">{{ item.studentName || '-' }}</span>
+                  @if (item.isPrimary) {
+                    <span class="primary-star" nz-tooltip nzTooltipTitle="主要去向">
+                      <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </span>
+                  }
+                  @if (item.applicationId) {
+                    <span class="from-dot" nz-tooltip nzTooltipTitle="来自投递"></span>
+                  }
+                </div>
+              </td>
+              <!-- 去向单位：独立列，溢出省略 -->
+              <td>
+                <span class="employer-name" [title]="item.employerName">{{ item.employerName || '-' }}</span>
+              </td>
+              <!-- 岗位：独立列 -->
+              <td>
+                <span class="job-title-cell" [title]="item.jobTitle || '-'">{{ item.jobTitle || '-' }}</span>
+              </td>
+              <td>
+                <span class="status-tag" [ngClass]="getOutcomeStatusClass(item.status)">{{ statusLabel(item.status) }}</span>
+              </td>
+              <!-- 就业信息：仅显示薪资为主，悬停展示 方式/地点/薪资/备注 -->
+              <td>
+                <span
+                  class="meta-main"
+                  nz-tooltip
+                  [nzTooltipTitle]="metaTpl"
+                  nzTooltipPlacement="top"
+                >
+                  {{ item.salaryRange || item.employmentType || item.region || '-' }}
+                </span>
+                <ng-template #metaTpl>
+                  <div class="tooltip-detail">
+                    <div>方式：{{ item.employmentType || '-' }}</div>
+                    <div>地点：{{ item.region || '-' }}</div>
+                    <div>薪资：{{ item.salaryRange || '-' }}</div>
+                    @if (item.remark) { <div>备注：{{ item.remark }}</div> }
+                  </div>
+                </ng-template>
+              </td>
+              <!-- 时间：仅显示入职时间为主，悬停展示 入职/确认 -->
+              <td>
+                <span
+                  class="time-main"
+                  nz-tooltip
+                  [nzTooltipTitle]="timeTpl"
+                  nzTooltipPlacement="top"
+                >
+                  {{ item.startDate ? (item.startDate | date:'yyyy-MM-dd') : '-' }}
+                </span>
+                <ng-template #timeTpl>
+                  <div class="tooltip-detail">
+                    <div>入职：{{ item.startDate ? (item.startDate | date:'yyyy-MM-dd') : '未填写' }}</div>
+                    <div>确认：{{ item.confirmedAt | date:'yyyy-MM-dd' }}</div>
+                  </div>
+                </ng-template>
+              </td>
+              <td>
+                <div class="op-links">
+                  <a class="op-link" (click)="openEdit(item)">编辑</a>
+                  <span class="op-sep">|</span>
+                  <a
+                    class="op-link"
+                    [class.disabled]="item.isPrimary"
+                    [class.main-active]="!item.isPrimary"
+                    (click)="item.isPrimary ? null : setPrimary(item)"
+                  >设为主要</a>
+                  <span class="op-sep">|</span>
+                  <a class="op-link delete" nz-popconfirm nzPopconfirmTitle="确认删除该就业去向？" nzPopconfirmDescription="删除后无法恢复" (nzOnConfirm)="delete(item)">删除</a>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+      <ng-template #emptyTpl>
+        <div class="empty-tip">
+          <nz-empty nzNotFoundContent="暂无就业去向记录"></nz-empty>
+          <button nz-button nzType="primary" type="button" (click)="openCreate()">新增去向</button>
+        </div>
+      </ng-template>
+    </div>
   </div>
 </div>
 
@@ -264,7 +276,9 @@
         <p>加载已录用投递...</p>
       </div>
     } @else if (!offeredApps().length) {
-      <nz-empty nzNotFoundContent="该学生暂无已录用的投递记录"></nz-empty>
+      <div class="empty-tip">
+        <nz-empty nzNotFoundContent="该学生暂无已录用的投递记录"></nz-empty>
+      </div>
     } @else {
       <p class="import-hint">选择一份已录用的投递，将自动带入企业名称与岗位。</p>
       <div class="app-list">

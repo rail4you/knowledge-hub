@@ -65,7 +65,12 @@
           </nz-table>
         </div>
         <div class="materials-empty" *ngIf="form.tasks.length === 0">
-          <nz-empty nzNotFoundContent="暂无任务，点击上方左侧「新增任务」添加"></nz-empty>
+          <nz-empty nzNotFoundContent="暂无任务"></nz-empty>
+          <div class="empty-action">
+            <button nz-button nzType="primary" (click)="openAddTaskDrawer()">
+              <span nz-icon nzType="plus"></span> 新增任务
+            </button>
+          </div>
         </div>
       </div>
 
@@ -123,7 +128,14 @@
           <h3>学生指导记录</h3>
         </div>
         <div *ngIf="guidanceTabLoading()" class="guidance-tab-loading"><nz-spin nzSimple></nz-spin></div>
-        <nz-empty *ngIf="!guidanceTabLoading() && !guidanceRows().length" nzNotFoundContent="暂无指导记录"></nz-empty>
+        <div class="guidance-empty" *ngIf="!guidanceTabLoading() && !guidanceRows().length">
+          <nz-empty nzNotFoundContent="暂无指导记录"></nz-empty>
+          <div class="empty-action">
+            <button nz-button nzType="primary" (click)="openAddGuidance()">
+              <span nz-icon nzType="plus"></span> 添加指导
+            </button>
+          </div>
+        </div>
         <div class="table-wrap" *ngIf="!guidanceTabLoading() && guidanceRows().length">
         <nz-table #guidanceTable [nzData]="guidanceRows()" [nzFrontPagination]="true" [nzShowPagination]="true" [nzPageSize]="10" [nzShowSizeChanger]="true" [nzPageSizeOptions]="[10, 20, 50]" nzSize="small">
           <thead>

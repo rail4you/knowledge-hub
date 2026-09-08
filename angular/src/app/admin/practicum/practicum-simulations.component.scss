@@ -80,6 +80,16 @@
   h3 { margin: 0; font-size: 15px; }
 }
 
+.sim-empty {
+  padding: 32px 0;
+  text-align: center;
+}
+
+.empty-action {
+  margin-top: 12px;
+  text-align: center;
+}
+
 .sim-count {
   font-size: 13px;
   color: var(--kh-muted);

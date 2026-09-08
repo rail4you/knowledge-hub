@@ -4,17 +4,61 @@
   min-height: 100%;
 }
 
-.stats-page {
+.training-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px 20px 24px;
+  padding: 20px 24px 24px;
+  background: var(--kh-canvas);
+  min-height: calc(100vh - 140px);
 }
 
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--kh-ink);
+.list-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-shell);
+  box-shadow: var(--kh-shadow-card);
+  overflow: hidden;
+}
+
+.content-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stats-page {
+  .page-header {
+    background: var(--kh-panel);
+    border: 1px solid var(--kh-line);
+    border-radius: 12px;
+    box-shadow: var(--kh-shadow-card);
+    padding: 16px 20px;
+    flex-shrink: 0;
+
+    h1 { font-size: 20px; font-weight: 700; color: var(--kh-ink); margin: 0; line-height: 1.3; }
+    p { font-size: 13.5px; color: var(--kh-muted); margin: 4px 0 0; line-height: 1.5; }
+  }
+
+  // ── 工具栏：导出主按钮行首左对齐 ──
+  .table-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--kh-line-2);
+    background: var(--kh-panel);
+    flex-shrink: 0;
+  }
 }
 
 // ── stats-cards (prototype) ───────────────────────────────
@@ -22,6 +66,7 @@
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 16px;
+  flex-shrink: 0;
   @media (max-width: 1280px) { grid-template-columns: repeat(3, 1fr); }
   @media (max-width: 640px) { grid-template-columns: repeat(2, 1fr); }
 }
@@ -62,23 +107,11 @@
   }
 }
 
-// ── filter-bar (prototype) ────────────────────────────────
-.filter-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--kh-panel);
-  border-radius: var(--kh-r-card);
-  box-shadow: var(--kh-shadow-card);
-  border: 1px solid var(--kh-line);
-  padding: 12px 20px;
-  flex-wrap: wrap;
-  gap: 12px;
-}
 .tabs {
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-left: auto;
 }
 .tab-btn {
   padding: 8px 20px;
@@ -110,6 +143,7 @@
   border: none;
   cursor: pointer;
   transition: background 0.2s;
+  flex-shrink: 0;
   &:hover { background: var(--kh-accent-deep); }
   svg { width: 14px; height: 14px; }
 }
@@ -119,6 +153,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  flex-shrink: 0;
   @media (max-width: 900px) { grid-template-columns: 1fr; }
 }
 .chart-card {
@@ -141,6 +176,11 @@
   align-items: center;
   justify-content: center;
 }
+.chart-empty {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 12px;
+}
 
 // ── table-card + stats-table (prototype) ──────────────────
 .table-card {
@@ -149,6 +189,7 @@
   box-shadow: var(--kh-shadow-card);
   border: 1px solid var(--kh-line);
   overflow: hidden;
+  flex-shrink: 0;
 }
 .table-card__header {
   padding: 14px 20px;
@@ -217,9 +258,6 @@
   font-weight: 600;
   color: #fff;
   background: #8c8c8c;
-  // map by content — fallback colors via attribute if possible, else use JS classes
-  // we style via nth approach: use known labels? Instead color by status via generic
-  // For employed/signed/intention distinct we keep default tag colors via small overrides
 }
 
 .main-star {
@@ -318,5 +356,7 @@
   padding: 48px 0;
 }
 .empty-wrap {
-  padding: 24px 0;
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
 }

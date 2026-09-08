@@ -1,12 +1,24 @@
-<div class="interview-page">
-  <div class="page-title">面试管理</div>
-  <div class="page-tip">共<b>{{ tree().length }}</b>份投递。点击展开行查看并操作为该投递安排的面试记录。</div>
+<div class="training-page">
+  <div class="page-header">
+    <h1>面试管理</h1>
+    <p>共<b>{{ tree().length }}</b>份投递，点击展开行查看并操作为该投递安排的面试记录。</p>
+  </div>
 
-  <div class="table-card">
+  <div class="table-card list-card">
+    <div class="table-toolbar">
+      <button class="create-btn" type="button" (click)="reload()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        刷新列表
+      </button>
+    </div>
+
+    <div class="table-wrap">
     @if (loading()) {
       <div class="loading-wrap"><nz-spin nzSimple></nz-spin></div>
     } @else if (tree().length === 0) {
-      <nz-empty nzNotFoundImage="simple" nzNotFoundContent="暂无投递记录"></nz-empty>
+      <div class="empty-tip">
+        <nz-empty nzNotFoundImage="simple" nzNotFoundContent="暂无投递记录"></nz-empty>
+      </div>
     } @else {
       <nz-table [nzData]="tree()" [nzFrontPagination]="true" [nzPageSize]="10" nzSize="middle" class="interview-table">
         <thead>
@@ -147,6 +159,7 @@
         </tbody>
       </nz-table>
     }
+    </div>
   </div>
 </div>
 

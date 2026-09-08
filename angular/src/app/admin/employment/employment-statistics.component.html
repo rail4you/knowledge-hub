@@ -1,141 +1,154 @@
-<div class="stats-page">
-  <div class="page-title">就业统计</div>
-
-  <!-- 统计卡片：对齐原型 stats-cards，扩展为 6 项时自动换行 -->
-  <div class="stats-cards">
-    <div class="stat-card">
-      <div class="stat-value">{{ totalStudents() }}</div>
-      <div class="stat-label">投递学生总数</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value">{{ totalApplications() }}</div>
-      <div class="stat-label">投递次数</div>
-    </div>
-    <div class="stat-card employed">
-      <div class="stat-value">{{ outcomeTotal() }}</div>
-      <div class="stat-label">就业去向总数</div>
-    </div>
-    <div class="stat-card employed">
-      <div class="stat-value">{{ outcomeEmployed() }}</div>
-      <div class="stat-label">已就业</div>
-    </div>
-    <div class="stat-card signed">
-      <div class="stat-value">{{ outcomeSigned() }}</div>
-      <div class="stat-label">已签约</div>
-    </div>
-    <div class="stat-card rate">
-      <div class="stat-value">{{ outcomeRate() }}%</div>
-      <div class="stat-label">就业率<small>（签约+就业）</small></div>
-    </div>
+<div class="training-page stats-page">
+  <div class="page-header">
+    <h1>就业统计</h1>
+    <p>投递与就业去向统计、状态分布与明细榜单</p>
   </div>
 
-  <!-- 筛选栏：原型 filter-bar 含 tabs + 导出 -->
-  <div class="filter-bar">
-    <div class="tabs">
-      <button class="tab-btn" [class.active]="days() === 7" type="button" (click)="setDays(7)">近7天</button>
-      <button class="tab-btn" [class.active]="days() === 30" type="button" (click)="setDays(30)">近30天</button>
-      <button class="tab-btn" [class.active]="days() === null" type="button" (click)="setDays(null)">全部</button>
+  <!-- 主要内容：同一 list-card 卡片内，占据页面剩余高度 -->
+  <div class="list-card">
+    <div class="table-toolbar">
+      <button class="export-btn" type="button" (click)="export()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        导出Excel
+      </button>
+      <div class="tabs">
+        <button class="tab-btn" [class.active]="days() === 7" type="button" (click)="setDays(7)">近7天</button>
+        <button class="tab-btn" [class.active]="days() === 30" type="button" (click)="setDays(30)">近30天</button>
+        <button class="tab-btn" [class.active]="days() === null" type="button" (click)="setDays(null)">全部</button>
+      </div>
     </div>
-    <button class="export-btn" type="button" (click)="export()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      导出Excel
-    </button>
-  </div>
 
-  <!-- 图表区：原型 charts-row -->
-  <div class="charts-row">
-    <div class="chart-card">
-      <div class="chart-title">就业去向状态分布</div>
-      <div class="chart-box" #outcomeChart></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">投递状态分布</div>
-      <div class="chart-box" #applicationChart></div>
-    </div>
-  </div>
+    <div class="content-body">
+      <!-- 统计卡片：对齐原型 stats-cards，扩展为 6 项时自动换行 -->
+      <div class="stats-cards">
+        <div class="stat-card">
+          <div class="stat-value">{{ totalStudents() }}</div>
+          <div class="stat-label">投递学生总数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ totalApplications() }}</div>
+          <div class="stat-label">投递次数</div>
+        </div>
+        <div class="stat-card employed">
+          <div class="stat-value">{{ outcomeTotal() }}</div>
+          <div class="stat-label">就业去向总数</div>
+        </div>
+        <div class="stat-card employed">
+          <div class="stat-value">{{ outcomeEmployed() }}</div>
+          <div class="stat-label">已就业</div>
+        </div>
+        <div class="stat-card signed">
+          <div class="stat-value">{{ outcomeSigned() }}</div>
+          <div class="stat-label">已签约</div>
+        </div>
+        <div class="stat-card rate">
+          <div class="stat-value">{{ outcomeRate() }}%</div>
+          <div class="stat-label">就业率<small>（签约+就业）</small></div>
+        </div>
+      </div>
 
-  <!-- 就业去向表格：原型 table-card + stats-table -->
-  <div class="table-card">
-    <div class="table-card__header">就业去向</div>
-    @if (outcomeLoading()) {
-      <div class="loading-state"><nz-spin nzSimple></nz-spin></div>
-    } @else if (outcomes().length === 0) {
-      <div class="empty-wrap"><nz-empty nzNotFoundContent="暂无就业去向记录"></nz-empty></div>
-    } @else {
-      <nz-table [nzData]="outcomes()" [nzFrontPagination]="false" nzSize="small" class="stats-table">
-        <thead>
-          <tr>
-            <th>就业去向</th>
-            <th>学生</th>
-            <th>单位 / 岗位</th>
-            <th>状态</th>
-            <th>方式 / 地点 / 薪资</th>
-            <th>入职时间</th>
-            <th>主要</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (o of outcomes(); track o.id) {
-            <tr>
-              <td>{{ outcomeStatusLabel(o.status) }}</td>
-              <td>{{ o.studentName || '-' }}</td>
-              <td>
-                <div class="company-name">{{ o.employerName }}</div>
-                <div class="job-name">{{ o.jobTitle || '未填写岗位' }}</div>
-              </td>
-              <td><span class="status-tag" [attr.data-status]="o.status">{{ outcomeStatusLabel(o.status) }}</span></td>
-              <td class="info-cell">
-                {{ o.employmentType || '-' }}
-                @if (o.region) { <span class="dot">·</span> {{ o.region }} }
-                @if (o.salaryRange) { <span class="dot">·</span> {{ o.salaryRange }} }
-              </td>
-              <td>{{ o.startDate ? (o.startDate | date:'yyyy-MM-dd') : '—' }}</td>
-              <td>@if (o.isPrimary) { <span class="main-star">★</span> } @else { <span class="main-star empty">—</span> }</td>
-            </tr>
+      <!-- 图表区：原型 charts-row -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">就业去向状态分布</div>
+          <div class="chart-box" #outcomeChart></div>
+          @if (!outcomeLoading() && outcomes().length === 0) {
+            <div class="chart-empty"><nz-empty nzNotFoundContent="暂无就业去向状态数据"></nz-empty></div>
           }
-        </tbody>
-      </nz-table>
-    }
-  </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">投递状态分布</div>
+          <div class="chart-box" #applicationChart></div>
+          @if (!loading() && items().length === 0) {
+            <div class="chart-empty"><nz-empty nzNotFoundContent="暂无投递状态数据"></nz-empty></div>
+          }
+        </div>
+      </div>
 
-  <!-- 投递明细：保留原有按学生分组列表，用同一卡片风格 -->
-  @if (loading()) {
-    <div class="table-card">
-      <div class="loading-state"><nz-spin nzSimple></nz-spin></div>
-    </div>
-  } @else if (items().length === 0) {
-    <div class="table-card">
-      <div class="empty-wrap"><nz-empty nzNotFoundContent="暂无投递数据"></nz-empty></div>
-    </div>
-  } @else {
-    <div class="group-list">
-      @for (group of groups(); track group.studentId) {
-        <div class="group-card table-card">
-          <div class="group-header">
-            <span class="group-header__name">
-              <span nz-icon nzType="user" nzTheme="outline"></span>
-              {{ group.studentName }}
-            </span>
-            <span class="count-tag">{{ group.items.length }} 次投递</span>
-          </div>
-          <div class="group-items">
-            @for (item of group.items; track item.jobTitle + item.appliedAt) {
-              <div class="app-item">
-                <div class="app-item__left">
-                  <span class="app-item__job">{{ item.jobTitle }}</span>
-                  @if (item.companyName) {
-                    <span class="app-item__company">{{ item.companyName }}</span>
-                  }
-                </div>
-                <div class="app-item__right">
-                  <span class="app-item__time">{{ item.appliedAt | date:'MM-dd HH:mm' }}</span>
-                  <nz-tag [nzColor]="statusColor(item.status)">{{ statusLabel(item.status) }}</nz-tag>
-                </div>
+      <!-- 就业去向表格：原型 table-card + stats-table -->
+      <div class="table-card">
+        <div class="table-card__header">就业去向</div>
+        @if (outcomeLoading()) {
+          <div class="loading-state"><nz-spin nzSimple></nz-spin></div>
+        } @else if (outcomes().length === 0) {
+          <div class="empty-wrap"><nz-empty nzNotFoundContent="暂无就业去向记录"></nz-empty></div>
+        } @else {
+          <nz-table [nzData]="outcomes()" [nzFrontPagination]="false" nzSize="small" class="stats-table">
+            <thead>
+              <tr>
+                <th>就业去向</th>
+                <th>学生</th>
+                <th>单位 / 岗位</th>
+                <th>状态</th>
+                <th>方式 / 地点 / 薪资</th>
+                <th>入职时间</th>
+                <th>主要</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (o of outcomes(); track o.id) {
+                <tr>
+                  <td>{{ outcomeStatusLabel(o.status) }}</td>
+                  <td>{{ o.studentName || '-' }}</td>
+                  <td>
+                    <div class="company-name">{{ o.employerName }}</div>
+                    <div class="job-name">{{ o.jobTitle || '未填写岗位' }}</div>
+                  </td>
+                  <td><span class="status-tag" [attr.data-status]="o.status">{{ outcomeStatusLabel(o.status) }}</span></td>
+                  <td class="info-cell">
+                    {{ o.employmentType || '-' }}
+                    @if (o.region) { <span class="dot">·</span> {{ o.region }} }
+                    @if (o.salaryRange) { <span class="dot">·</span> {{ o.salaryRange }} }
+                  </td>
+                  <td>{{ o.startDate ? (o.startDate | date:'yyyy-MM-dd') : '—' }}</td>
+                  <td>@if (o.isPrimary) { <span class="main-star">★</span> } @else { <span class="main-star empty">—</span> }</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        }
+      </div>
+
+      <!-- 投递明细：保留原有按学生分组列表，用同一卡片风格 -->
+      @if (loading()) {
+        <div class="table-card">
+          <div class="loading-state"><nz-spin nzSimple></nz-spin></div>
+        </div>
+      } @else if (items().length === 0) {
+        <div class="table-card">
+          <div class="empty-wrap"><nz-empty nzNotFoundContent="暂无投递数据"></nz-empty></div>
+        </div>
+      } @else {
+        <div class="group-list">
+          @for (group of groups(); track group.studentId) {
+            <div class="group-card table-card">
+              <div class="group-header">
+                <span class="group-header__name">
+                  <span nz-icon nzType="user" nzTheme="outline"></span>
+                  {{ group.studentName }}
+                </span>
+                <span class="count-tag">{{ group.items.length }} 次投递</span>
               </div>
-            }
-          </div>
+              <div class="group-items">
+                @for (item of group.items; track item.jobTitle + item.appliedAt) {
+                  <div class="app-item">
+                    <div class="app-item__left">
+                      <span class="app-item__job">{{ item.jobTitle }}</span>
+                      @if (item.companyName) {
+                        <span class="app-item__company">{{ item.companyName }}</span>
+                      }
+                    </div>
+                    <div class="app-item__right">
+                      <span class="app-item__time">{{ item.appliedAt | date:'MM-dd HH:mm' }}</span>
+                      <nz-tag [nzColor]="statusColor(item.status)">{{ statusLabel(item.status) }}</nz-tag>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
         </div>
       }
     </div>
-  }
+  </div>
 </div>

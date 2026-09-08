@@ -76,7 +76,14 @@
         </tr>
       </tbody>
     </nz-table>
-    <nz-empty *ngIf="!simulations().length" nzNotFoundContent="当前实训还没有仿真镜像，点击上方左侧「新增镜像」上传"></nz-empty>
+    <div class="sim-empty" *ngIf="!simulations().length">
+      <nz-empty nzNotFoundContent="当前实训还没有仿真镜像"></nz-empty>
+      <div class="empty-action">
+        <button nz-button nzType="primary" (click)="openAddSimulationModal()">
+          <span nz-icon nzType="plus"></span> 新增镜像
+        </button>
+      </div>
+    </div>
     </div>
     </ng-container>
     <ng-template #noProjectTpl>

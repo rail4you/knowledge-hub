@@ -1,22 +1,26 @@
-<div class="live-page">
+<div class="live-page training-page">
+  <!-- 标题区（与其他管理页统一） -->
   <div class="page-header">
-    <div class="page-title">我的直播</div>
-    <button class="create-btn" type="button" (click)="openCreateModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      创建直播
-    </button>
+    <h1>我的直播</h1>
+    <p>创建与管理招聘直播，邀请学生进入直播间</p>
   </div>
 
-  <div class="filter-bar">
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <input type="text" [ngModel]="filter()" (ngModelChange)="filter.set($event)" (keyup.enter)="search()" placeholder="搜索直播标题" />
+  <!-- 内容容器：工具栏 + 表格同一卡片，占据页面剩余高度 -->
+  <div class="table-card list-card">
+    <div class="table-toolbar">
+      <button class="create-btn" type="button" (click)="openCreateModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        创建直播
+      </button>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" [ngModel]="filter()" (ngModelChange)="filter.set($event)" (keyup.enter)="search()" placeholder="搜索直播标题" />
+        <button class="search-btn" type="button" (click)="search()">搜索</button>
+        <button class="reset-btn" type="button" (click)="filter.set(''); search()">重置</button>
+      </div>
     </div>
-    <button class="search-btn" type="button" (click)="search()">搜索</button>
-    <button class="reset-btn" type="button" (click)="filter.set(''); search()">重置</button>
-  </div>
 
-  <div class="table-card">
+    <div class="table-wrap">
     <nz-table
       #table
       [nzData]="lives()"
@@ -85,7 +89,12 @@
 
     <div *ngIf="!loading() && lives().length === 0" class="empty-tip">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      <span>暂无直播，点击右上角创建</span>
+      <span>暂无直播</span>
+      <button class="create-btn" type="button" (click)="openCreateModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        创建直播
+      </button>
+    </div>
     </div>
 
     <div class="pagination">
