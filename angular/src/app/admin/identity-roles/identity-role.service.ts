@@ -21,12 +21,13 @@ export class IdentityRoleService {
     this.restService.request<any, PagedResultDto<IdentityRoleDto>>({
       method: 'GET',
       url: '/api/app/tenant-role',
-      params: { 
-        filter: input.filter, 
-        sorting: input.sorting, 
-        skipCount: input.skipCount, 
+      params: {
+        filter: input.filter,
+        sorting: input.sorting,
+        skipCount: input.skipCount,
         maxResultCount: input.maxResultCount,
-        tenantId: input.tenantId
+        tenantId: input.tenantId,
+        onlyHost: input.onlyHost,
       },
     },
     { apiName: this.apiName, ...config });

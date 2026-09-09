@@ -102,8 +102,13 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             // Filter by tenant - ensure tenant isolation
             if (_currentTenant.Id.HasValue)
             {
-                // Non-host users: always restrict to own tenant, ignore input.TenantId
+                // Non-host users: always restrict to own tenant, ignore input.TenantId/OnlyHost
                 queryable = queryable.Where(u => u.TenantId == _currentTenant.Id.Value);
+            }
+            else if (input.OnlyHost == true)
+            {
+                // Host users: “全局”只看 host 用户
+                queryable = queryable.Where(u => u.TenantId == null);
             }
             else if (input.TenantId.HasValue)
             {

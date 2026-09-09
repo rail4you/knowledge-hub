@@ -10,16 +10,16 @@
     </div>
     <div class="flex gap-2 items-center">
       <span class="text-sm text-gray-500">按租户筛选：</span>
-      <nz-select 
-        [(ngModel)]="selectedTenantId" 
+      <nz-select
+        [(ngModel)]="tenantFilter"
         (ngModelChange)="onTenantFilterChange($event)"
         [nzDisabled]="!isHostAdmin"
-        [nzAllowClear]="isHostAdmin"
-        [nzPlaceHolder]="isHostAdmin ? '全部租户' : (getTenantName(currentTenantId) || '当前租户')"
+        [nzAllowClear]="false"
+        [nzPlaceHolder]="isHostAdmin ? '全局' : (getTenantName(currentTenantId) || '当前租户')"
         style="width: 180px;"
       >
         @if (isHostAdmin) {
-          <nz-option [nzValue]="null" [nzLabel]="'全部租户'"></nz-option>
+          <nz-option [nzValue]="globalOptionValue" [nzLabel]="'全局'"></nz-option>
         }
         @for (tenant of tenants; track tenant.id) {
           <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || '未命名'"></nz-option>

@@ -9,12 +9,13 @@ export interface IdentityRoleDto {
   isStatic?: boolean;
 }
 
- export interface GetIdentityRolesInput {
+  export interface GetIdentityRolesInput {
   filter?: string;
     sorting?: string;
     skipCount?: number;
     maxResultCount?: number;
     tenantId?: string;
+    onlyHost?: boolean;
 }
 
 export interface IdentityRoleCreateDto {

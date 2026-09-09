@@ -1,11 +1,10 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { 
+import {
   ConfigStateService,
-  ListService, 
-  LocalizationService, 
-  LocalizationPipe, 
-  PermissionDirective, 
-  RestService 
+  LocalizationService,
+  LocalizationPipe,
+  PermissionDirective,
+  RestService
 } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { TenantUserService } from '../../proxy/application/identity/tenant-user.service';
@@ -112,7 +111,7 @@ interface IdentityUserDto {
     PermissionManagementComponent,
     FormsModule,
   ],
-  providers: [ListService],
+  providers: [],
   templateUrl: './identity-users.component.html',
   styleUrls: ['./identity-users.component.scss'],
 })
@@ -124,9 +123,12 @@ export class IdentityUsersComponent implements OnInit {
   selectedUser = {} as IdentityUserDto;
   pageIndex = 1;
   pageSize = 10;
-  
+
+  /** 租户筛选：'__global__' 表示全局，其余为租户 Id。去掉“全部”，只能二选一。 */
+  readonly globalOptionValue = '__global__';
+  tenantFilter: string = this.globalOptionValue;
+  private usersRequestSeq = 0;
   tenants: TenantDto[] = [];
-  selectedTenantId: string | null = null;
   tenantNames: Record<string, string> = {};
 
   /** 当前登录用户所属租户 ID；null 表示 host 全局管理员。 */
@@ -142,7 +144,6 @@ export class IdentityUsersComponent implements OnInit {
   permissionProviderKey = '';
   formError = '';
 
-  private readonly list = inject(ListService);
   private readonly restService = inject(RestService);
   private readonly localization = inject(LocalizationService);
   private readonly fb = inject(FormBuilder);
@@ -174,7 +175,10 @@ export class IdentityUsersComponent implements OnInit {
     this.isHostAdmin = !this.currentTenantId;
 
     if (!this.isHostAdmin) {
-      this.selectedTenantId = this.currentTenantId;
+      this.tenantFilter = this.currentTenantId ?? this.globalOptionValue;
+    } else {
+      // 超级管理员默认看全局，下拉只有“全局 + 各租户”，无“全部”。
+      this.tenantFilter = this.globalOptionValue;
     }
 
     this.loadTenants();
@@ -202,24 +206,28 @@ export class IdentityUsersComponent implements OnInit {
   }
 
   loadUsers() {
-    const effectiveTenantId = this.isHostAdmin ? this.selectedTenantId : this.currentTenantId;
-    const userStreamCreator = (query: any) =>
-      this.restService.request<any, PagedResultDto<IdentityUserDto>>({
-        method: 'GET',
-        url: '/api/app/tenant-user',
-        params: {
-          ...query,
-          maxResultCount: this.pageSize,
-          skipCount: (this.pageIndex - 1) * this.pageSize,
-          tenantId: effectiveTenantId || undefined,
-        },
-      });
+    // 直接请求 + 序号 guard：避免 ListService 重复 hookToQuery 导致多路并发、后返回覆盖先返回（切换错乱）。
+    const seq = ++this.usersRequestSeq;
+    const isGlobal = this.tenantFilter === this.globalOptionValue;
+    const effectiveTenantId = this.isHostAdmin
+      ? (isGlobal ? undefined : this.tenantFilter)
+      : this.currentTenantId;
+    const onlyHost = this.isHostAdmin && isGlobal ? true : undefined;
 
-    this.list.hookToQuery(userStreamCreator).subscribe((response) => {
+    this.restService.request<any, PagedResultDto<IdentityUserDto>>({
+      method: 'GET',
+      url: '/api/app/tenant-user',
+      params: {
+        maxResultCount: this.pageSize,
+        skipCount: (this.pageIndex - 1) * this.pageSize,
+        tenantId: effectiveTenantId || undefined,
+        onlyHost,
+      },
+    }).subscribe((response) => {
+      if (seq !== this.usersRequestSeq) return;
       this.users = response;
       this.loadUsersRoles();
     });
-    this.list.get();
   }
 
   loadUsersRoles() {
@@ -243,15 +251,21 @@ export class IdentityUsersComponent implements OnInit {
   }
 
   getTenantName(tenantId: string | undefined | null): string {
-    if (!tenantId) return 'Host';
+    if (!tenantId) return '全局';
     if (this.tenantNames[tenantId]) return this.tenantNames[tenantId];
     const tenant = this.tenants.find(t => t.id === tenantId);
     return tenant?.name || tenantId;
   }
 
+  /** 当前筛选对应的租户 Id：全局返回 null。 */
+  get selectedTenantId(): string | null {
+    return this.tenantFilter === this.globalOptionValue ? null : this.tenantFilter;
+  }
+
   buildForm() {
+    const filterTenantId = this.selectedTenantId;
     const tenantIdForForm = this.isHostAdmin
-      ? (this.selectedUser.tenantId || this.selectedTenantId || null)
+      ? (this.selectedUser.tenantId || filterTenantId || null)
       : this.currentTenantId;
     this.form = this.fb.group({
       userName: [this.selectedUser.userName || '', Validators.required],
@@ -295,9 +309,10 @@ export class IdentityUsersComponent implements OnInit {
     this.restService.request<any, { items: RoleDto[] }>({
       method: 'GET',
       url: '/api/app/tenant-role',
-      params: { 
+      params: {
         maxResultCount: 1000,
-        tenantId: effectiveTenantId || undefined
+        tenantId: effectiveTenantId || undefined,
+        onlyHost: this.isHostAdmin && !effectiveTenantId ? true : undefined,
       }
     }).subscribe((response) => {
       const items = response.items || [];
@@ -319,22 +334,21 @@ export class IdentityUsersComponent implements OnInit {
   createUser() {
     this.selectedUser = {} as IdentityUserDto;
     this.selectedUserRole = null;
-    if (this.isHostAdmin) {
-      this.selectedTenantId = null;
-    } else {
-      this.selectedTenantId = this.currentTenantId;
+    if (!this.isHostAdmin) {
       // 确保新建用户的 tenantId 锁定为当前租户
       this.selectedUser.tenantId = this.currentTenantId ?? undefined;
+    } else {
+      // host 按当前筛选预填：选中某租户时新建用户默认归属该租户，选中全局则为全局用户。不改动列表筛选。
+      this.selectedUser.tenantId = this.selectedTenantId ?? undefined;
     }
     this.buildForm();
-    const effectiveTenantId = this.isHostAdmin ? this.selectedTenantId : this.currentTenantId;
-    this.loadRolesForTenant(effectiveTenantId);
+    this.loadRolesForTenant(this.isHostAdmin ? this.selectedUser.tenantId ?? null : this.currentTenantId);
     this.isModalOpen = true;
   }
 
   editUser(user: IdentityUserDto) {
     this.selectedUser = user;
-    this.selectedTenantId = this.isHostAdmin ? (user.tenantId || null) : this.currentTenantId;
+    // 不改动列表筛选 tenantFilter，只按用户自身租户加载角色。
     this.buildForm();
     
     this.restService.request<any, string[]>({
@@ -343,7 +357,7 @@ export class IdentityUsersComponent implements OnInit {
     }).subscribe((roles) => {
       this.selectedUserRole = roles?.[0] || null;
       this.form.patchValue({ roleName: this.selectedUserRole }, { emitEvent: false });
-      this.loadRolesForTenant(this.selectedTenantId);
+      this.loadRolesForTenant(this.isHostAdmin ? (user.tenantId || null) : this.currentTenantId);
       this.isModalOpen = true;
     });
   }
@@ -393,7 +407,7 @@ export class IdentityUsersComponent implements OnInit {
           this.isLoading.set(false);
           this.isModalOpen = false;
           this.formError = '';
-          this.list.get();
+          this.loadUsers();
         }
       });
     } else {
@@ -422,7 +436,7 @@ export class IdentityUsersComponent implements OnInit {
           this.isLoading.set(false);
           this.isModalOpen = false;
           this.formError = '';
-          this.list.get();
+          this.loadUsers();
         }
       });
     }
@@ -437,19 +451,19 @@ export class IdentityUsersComponent implements OnInit {
         this.restService.request<any, void>({
           method: 'DELETE',
           url: `/api/app/tenant-user/${id}`,
-        }).subscribe(() => this.list.get());
+        }).subscribe(() => this.loadUsers());
       }
     });
   }
 
-  onTenantFilterChange(tenantId: string | null): void {
-    if (!this.isHostAdmin && tenantId !== this.currentTenantId) {
-      this.selectedTenantId = this.currentTenantId;
-      this.pageIndex = 1;
-      this.loadUsers();
+  onTenantFilterChange(value: string | null): void {
+    const next = value || this.globalOptionValue;
+    if (!this.isHostAdmin && next !== this.currentTenantId) {
+      // 租户管理员锁定本租户，不允许切换。
+      this.tenantFilter = this.currentTenantId ?? this.globalOptionValue;
       return;
     }
-    this.selectedTenantId = tenantId;
+    this.tenantFilter = next;
     this.pageIndex = 1;
     this.loadUsers();
   }

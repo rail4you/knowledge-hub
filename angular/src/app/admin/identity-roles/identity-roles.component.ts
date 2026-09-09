@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { ConfigStateService, ListService, LocalizationService, LocalizationPipe, PermissionDirective, RestService } from '@abp/ng.core';
+import { ConfigStateService, LocalizationService, LocalizationPipe, PermissionDirective, RestService } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { IdentityRoleService } from './identity-role.service';
 import type { IdentityRoleDto, IdentityRoleCreateDto, IdentityRoleUpdateDto } from './models';
@@ -68,7 +68,7 @@ interface PermissionGroup {
     NzDividerModule,
     NzEmptyModule,
   ],
-  providers: [ListService],
+  providers: [],
   templateUrl: './identity-roles.component.html',
   styleUrls: ['./identity-roles.component.scss'],
 })
@@ -86,7 +86,10 @@ export class IdentityRolesComponent implements OnInit {
   readonly presetRoleNames = ['admin', 'LeagueAdmin', 'SchoolAdmin', 'Teacher', 'Student', 'EnterpriseUser'] as const;
 
   tenants: TenantDto[] = [];
-  selectedTenantId: string | null = null;
+  /** 租户筛选：'__global__' 表示全局，其余为租户 Id。去掉“全部”，只能二选一。 */
+  readonly globalOptionValue = '__global__';
+  tenantFilter: string = this.globalOptionValue;
+  private rolesRequestSeq = 0;
   tenantNames: Record<string, string> = {};
 
   /** 当前登录用户所属租户 ID；null 表示 host 全局管理员。 */
@@ -102,7 +105,6 @@ export class IdentityRolesComponent implements OnInit {
   permissionLoading = signal(false);
   permissionSaving = signal(false);
 
-  private readonly list = inject(ListService);
   private readonly roleService = inject(IdentityRoleService);
   private readonly localization = inject(LocalizationService);
   private readonly fb = inject(FormBuilder);
@@ -127,6 +129,11 @@ export class IdentityRolesComponent implements OnInit {
     return this.tenantNames[tenantId] || tenantId;
   }
 
+  /** 当前筛选对应的租户 Id：全局返回 null。 */
+  get selectedTenantId(): string | null {
+    return this.tenantFilter === this.globalOptionValue ? null : this.tenantFilter;
+  }
+
   ngOnInit(): void {
     // 识别当前用户租户身份：null 表示 host 全局管理员。
     const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
@@ -134,9 +141,11 @@ export class IdentityRolesComponent implements OnInit {
     this.currentTenantId = (tenantId as string | null | undefined) ?? null;
     this.isHostAdmin = !this.currentTenantId;
 
-    // 租户管理员默认只能查看本租户角色，直接锁定选中。
+    // 租户管理员默认只能查看本租户角色，直接锁定选中。超级管理员默认看全局。
     if (!this.isHostAdmin) {
-      this.selectedTenantId = this.currentTenantId;
+      this.tenantFilter = this.currentTenantId ?? this.globalOptionValue;
+    } else {
+      this.tenantFilter = this.globalOptionValue;
     }
 
     this.loadTenants();
@@ -162,32 +171,34 @@ export class IdentityRolesComponent implements OnInit {
   }
 
   loadRoles() {
-    const roleStreamCreator = (query: any) =>
-      this.roleService.getList({
-        ...query,
-        maxResultCount: this.pageSize,
-        skipCount: (this.pageIndex - 1) * this.pageSize,
-        // 租户管理员：只请求本租户角色。
-        tenantId: this.isHostAdmin
-          ? (this.selectedTenantId || undefined)
-          : this.currentTenantId!,
-      });
+    // 直接请求 + 序号 guard：避免 ListService 重复 hookToQuery 导致多路并发、后返回覆盖先返回（切换错乱）。
+    const seq = ++this.rolesRequestSeq;
+    const isGlobal = this.tenantFilter === this.globalOptionValue;
+    const tenantId = this.isHostAdmin
+      ? (isGlobal ? undefined : this.tenantFilter)
+      : this.currentTenantId!;
+    const onlyHost = this.isHostAdmin && isGlobal ? true : undefined;
 
-    this.list.hookToQuery(roleStreamCreator).subscribe((response) => {
+    this.roleService.getList({
+      maxResultCount: this.pageSize,
+      skipCount: (this.pageIndex - 1) * this.pageSize,
+      // 租户管理员：只请求本租户角色。
+      tenantId,
+      onlyHost,
+    }).subscribe((response) => {
+      if (seq !== this.rolesRequestSeq) return;
       this.roles = response;
     });
-    this.list.get();
   }
 
-  onTenantFilterChange(tenantId: string | null) {
+  onTenantFilterChange(value: string | null) {
+    const next = value || this.globalOptionValue;
     // 租户管理员：不允许选择其他租户。host 全局管理员不受限。
-    if (!this.isHostAdmin && tenantId !== this.currentTenantId) {
-      this.selectedTenantId = this.currentTenantId;
-      this.pageIndex = 1;
-      this.loadRoles();
+    if (!this.isHostAdmin && next !== this.currentTenantId) {
+      this.tenantFilter = this.currentTenantId ?? this.globalOptionValue;
       return;
     }
-    this.selectedTenantId = tenantId;
+    this.tenantFilter = next;
     this.pageIndex = 1;
     this.loadRoles();
   }
@@ -236,7 +247,7 @@ export class IdentityRolesComponent implements OnInit {
         next: () => {
           this.isLoading.set(false);
           this.isModalOpen = false;
-          this.list.get();
+          this.loadRoles();
         },
         error: () => {
           this.isLoading.set(false);
@@ -247,7 +258,7 @@ export class IdentityRolesComponent implements OnInit {
         next: () => {
           this.isLoading.set(false);
           this.isModalOpen = false;
-          this.list.get();
+          this.loadRoles();
         },
         error: () => {
           this.isLoading.set(false);
@@ -260,7 +271,7 @@ export class IdentityRolesComponent implements OnInit {
     const displayName = this.getRoleDisplayName(roleName);
     this.confirmation.warn(this.l('::RoleDeletionConfirmationMessage').replace('{0}', displayName), this.l('::AreYouSure')).subscribe((status) => {
       if (status === Confirmation.Status.confirm) {
-        this.roleService.delete(id).subscribe(() => this.list.get());
+        this.roleService.delete(id).subscribe(() => this.loadRoles());
       }
     });
   }

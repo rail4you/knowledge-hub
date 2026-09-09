@@ -51,7 +51,11 @@ public class TenantRoleAppService : KnowledgeHubAppService, ITenantRoleAppServic
             // 列表中隐藏租户级 LeagueAdmin 副本，仅保留全局的。
             queryable = queryable.Where(r => r.TenantId == null || r.Name != "LeagueAdmin");
 
-            if (input.TenantId.HasValue)
+            if (input.OnlyHost == true)
+            {
+                queryable = queryable.Where(r => r.TenantId == null);
+            }
+            else if (input.TenantId.HasValue)
             {
                 queryable = queryable.Where(r => r.TenantId == input.TenantId);
             }

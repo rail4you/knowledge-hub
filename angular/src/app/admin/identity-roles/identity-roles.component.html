@@ -8,16 +8,16 @@
     </button>
     
     <nz-select
-      [(ngModel)]="selectedTenantId"
+      [(ngModel)]="tenantFilter"
       (ngModelChange)="onTenantFilterChange($event)"
       [ngModelOptions]="{standalone: true}"
-      nzAllowClear
+      [nzAllowClear]="false"
       [nzDisabled]="!isHostAdmin"
       [nzPlaceHolder]="'::FilterByTenant' | abpLocalization"
       style="width: 200px;"
     >
       @if (isHostAdmin) {
-        <nz-option [nzValue]="null" [nzLabel]="'::All' | abpLocalization"></nz-option>
+        <nz-option [nzValue]="globalOptionValue" [nzLabel]="'::Global' | abpLocalization"></nz-option>
       }
       @for (tenant of tenants; track tenant.id) {
         <nz-option [nzValue]="tenant.id" [nzLabel]="tenant.name || ''"></nz-option>
