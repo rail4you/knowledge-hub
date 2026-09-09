@@ -785,3 +785,85 @@
     }
   }
 }
+
+/* =================== 审核状态 banner + 状态徽章 =================== */
+// 待审核/驳回 banner：在资源详情头部上方展示显眼提示
+.audit-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid;
+  background: #fff;
+
+  &__icon {
+    flex: 0 0 auto;
+    font-size: 22px;
+    line-height: 1.4;
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  &__desc {
+    font-size: 13px;
+    line-height: 1.5;
+    opacity: 0.85;
+  }
+
+  &--pending {
+    border-color: rgba(250, 173, 20, 0.35);
+    background: linear-gradient(135deg, #fffbe6 0%, #fff7d6 100%);
+
+    .audit-banner__icon,
+    .audit-banner__title {
+      color: #d48806;
+    }
+
+    .audit-banner__desc {
+      color: #874d00;
+    }
+  }
+
+  &--rejected {
+    border-color: rgba(255, 77, 79, 0.3);
+    background: linear-gradient(135deg, #fff1f0 0%, #ffe7e5 100%);
+
+    .audit-banner__icon,
+    .audit-banner__title {
+      color: #cf1322;
+    }
+
+    .audit-banner__desc {
+      color: #820014;
+    }
+  }
+}
+
+// 状态徽章（标题上方的小 chip）
+.kicker-chip--status {
+  font-weight: 500;
+
+  &.kicker-chip--pending {
+    color: #d48806;
+    background: rgba(250, 173, 20, 0.12);
+    border: 1px solid rgba(250, 173, 20, 0.35);
+  }
+
+  &.kicker-chip--rejected {
+    color: #cf1322;
+    background: rgba(255, 77, 79, 0.1);
+    border: 1px solid rgba(255, 77, 79, 0.3);
+  }
+}

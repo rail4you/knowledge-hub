@@ -11,6 +11,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { ResourceService } from '../../proxy/resources/resource.service';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
+import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum';
 import type { ResourceDto } from '../../proxy/resources/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { ResourceCoverComponent } from '../../shared/resource-cover/resource-cover.component';
@@ -162,6 +163,11 @@ export class StudentResourceDetailComponent implements OnInit {
       this.message.warning('该资源不允许下载，仅支持在线预览');
       return;
     }
+    if (!this.isApproved()) {
+      // 提示与按钮 title 一致，避免点击后看到无变化
+      this.message.warning(this.getDownloadTitle() || '资源不可下载');
+      return;
+    }
     const url = `/api/resource-file/${r.id}/download`;
     const a = document.createElement('a');
     a.href = url;
@@ -239,6 +245,59 @@ export class StudentResourceDetailComponent implements OnInit {
       [ResourceType.PPT]: 'file-ppt',
     };
     return icons[type ?? 0] || 'file-text';
+  }
+
+  /** 资源是否处于待审核状态 */
+  isPendingReview(): boolean {
+    return this.resource()?.status === ResourceStatus.PendingReview;
+  }
+
+  /** 资源是否被驳回 */
+  isRejected(): boolean {
+    return this.resource()?.status === ResourceStatus.Rejected;
+  }
+
+  /** 资源是否处于草稿/隐藏状态（对学生不可见） */
+  isInvisible(): boolean {
+    const s = this.resource()?.status;
+    return s === ResourceStatus.Draft || s === ResourceStatus.Hidden;
+  }
+
+  /** 资源是否已通过审核（任一审核层级） */
+  isApproved(): boolean {
+    const s = this.resource()?.status;
+    return s === ResourceStatus.SchoolApproved || s === ResourceStatus.LeagueApproved;
+  }
+
+  /** 下载按钮是否应该禁用（不允许下载 / 待审核 / 驳回 / 草稿 / 隐藏） */
+  isDownloadDisabled(): boolean {
+    if (!this.resource()?.isDownloadable) return true;
+    const s = this.resource()?.status;
+    return s !== ResourceStatus.SchoolApproved && s !== ResourceStatus.LeagueApproved;
+  }
+
+  /** 下载按钮的 title 提示 */
+  getDownloadTitle(): string {
+    const r = this.resource();
+    if (!r) return '';
+    if (!r.isDownloadable) return '该资源不允许下载，仅支持在线预览';
+    const s = r.status;
+    if (s === ResourceStatus.PendingReview) return '资源审核中，审核通过后开放下载';
+    if (s === ResourceStatus.Rejected) return '资源未通过审核，暂不可下载';
+    if (s === ResourceStatus.Draft || s === ResourceStatus.Hidden) return '资源暂未发布，暂不可下载';
+    return '';
+  }
+
+  /** 下载按钮文案 */
+  getDownloadButtonText(): string {
+    const r = this.resource();
+    if (!r) return '下载资源';
+    if (!r.isDownloadable) return '不允许下载';
+    const s = r.status;
+    if (s === ResourceStatus.PendingReview) return '审核中，暂不可下载';
+    if (s === ResourceStatus.Rejected) return '未通过审核';
+    if (s === ResourceStatus.Draft || s === ResourceStatus.Hidden) return '暂未发布';
+    return '下载资源';
   }
 
   getResourceTypeName(type?: number): string {

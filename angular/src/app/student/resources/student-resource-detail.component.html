@@ -20,6 +20,26 @@
     </div>
   } @else if (resource()) {
     @let res = resource()!;
+
+    <!-- 审核中提示 banner：上传新版本后资源会被重置为待审核 -->
+    @if (isPendingReview()) {
+      <div class="audit-banner audit-banner--pending" role="status">
+        <span class="audit-banner__icon" nz-icon nzType="clock-circle" nzTheme="outline"></span>
+        <div class="audit-banner__body">
+          <strong class="audit-banner__title">资源审核中</strong>
+          <span class="audit-banner__desc">资源或新版本正在等待审核，审核通过后将开放下载。在此期间你可以在线预览。</span>
+        </div>
+      </div>
+    } @else if (isRejected()) {
+      <div class="audit-banner audit-banner--rejected" role="status">
+        <span class="audit-banner__icon" nz-icon nzType="close-circle" nzTheme="outline"></span>
+        <div class="audit-banner__body">
+          <strong class="audit-banner__title">资源未通过审核</strong>
+          <span class="audit-banner__desc">请联系资源上传者或管理员了解详情。</span>
+        </div>
+      </div>
+    }
+
     <!-- ═══════════ 头部：封面 + 标题/统计/操作 ═══════════ -->
     <section class="detail-head">
       <!-- 左：资源封面 -->
@@ -68,6 +88,18 @@
                 {{ r.averageRating | number:'1.1-1' }} · {{ r.totalReviews }} 人评价
               </span>
             }
+          }
+          <!-- 资源状态徽章 -->
+          @if (isPendingReview()) {
+            <span class="kicker-chip kicker-chip--status kicker-chip--pending">
+              <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
+              审核中
+            </span>
+          } @else if (isRejected()) {
+            <span class="kicker-chip kicker-chip--status kicker-chip--rejected">
+              <span nz-icon nzType="close-circle" nzTheme="outline"></span>
+              未通过审核
+            </span>
           }
         </div>
 
@@ -120,9 +152,9 @@
           <li>
             <span class="info-row__label">下载权限</span>
             <span class="info-row__value">
-              <span class="status-tag" [class.status-tag--on]="res.isDownloadable">
+              <span class="status-tag" [class.status-tag--on]="isApproved() && res.isDownloadable">
                 <span class="status-dot"></span>
-                {{ res.isDownloadable ? '允许下载' : '仅在线预览' }}
+                {{ isApproved() ? (res.isDownloadable ? '允许下载' : '仅在线预览') : '审核中暂不可下载' }}
               </span>
             </span>
           </li>
@@ -135,11 +167,11 @@
             <span>在线预览</span>
           </button>
           <button class="action-btn"
-            [disabled]="!res.isDownloadable"
-            [title]="res.isDownloadable ? '' : '该资源不允许下载，仅支持在线预览'"
+            [disabled]="isDownloadDisabled()"
+            [title]="getDownloadTitle()"
             (click)="download()">
             <span nz-icon nzType="download" nzTheme="outline"></span>
-            <span>{{ res.isDownloadable ? '下载资源' : '不允许下载' }}</span>
+            <span>{{ getDownloadButtonText() }}</span>
           </button>
           <button class="action-btn" [class.action-btn--collected]="isCollected()" (click)="toggleCollection()">
             <span nz-icon nzType="star" [nzTheme]="isCollected() ? 'fill' : 'outline'"></span>
@@ -211,9 +243,9 @@
             <div class="info-cell">
               <span class="info-cell__label">是否可下载</span>
               <span class="info-cell__value">
-                <span class="status-tag" [class.status-tag--on]="res.isDownloadable">
+                <span class="status-tag" [class.status-tag--on]="isApproved() && res.isDownloadable">
                   <span class="status-dot"></span>
-                  {{ res.isDownloadable ? '允许下载' : '仅在线预览' }}
+                  {{ isApproved() ? (res.isDownloadable ? '允许下载' : '仅在线预览') : '审核中暂不可下载' }}
                 </span>
               </span>
             </div>
