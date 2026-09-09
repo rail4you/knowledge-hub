@@ -1,0 +1,211 @@
+@use '../styles/student-design' as ds;
+
+::ng-deep .ant-modal-body {
+  max-height: 76vh;
+  overflow-y: auto;
+  padding: 24px 24px;
+}
+
+.jd-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.loading-state {
+  min-height: 280px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+// ===== 头部 =====
+.head {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 26px 32px 24px;
+  display: flex; flex-direction: column; gap: 14px;
+
+  &__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  &__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  &__title {
+    margin: 0; font-size: 20px; font-weight: 700; color: ds.$student-text; line-height: 1.5;
+  }
+  &__company {
+    margin: 0; display: flex; align-items: baseline; gap: 8px;
+    font-size: 13px; color: ds.$student-text-muted;
+    b { color: ds.$student-text; font-size: 14px; font-weight: 600; }
+    .addr { color: ds.$student-text-light; font-size: 12px; }
+  }
+  &__stats {
+    display: flex; align-items: center; gap: 22px;
+    padding: 10px 0 6px;
+    border-top: 1px solid #e8eef5;
+  }
+  &__rows {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 10px;
+    li {
+      display: flex; align-items: center; gap: 16px;
+      font-size: 13px; min-height: 22px;
+    }
+  }
+}
+
+.chip {
+  display: inline-flex; align-items: center; height: 24px; padding: 0 10px;
+  border-radius: 999px; background: #eef2f7; color: ds.$student-text-muted;
+  font-size: 12px; font-weight: 500;
+  &--status { color: #fff; }
+}
+
+.stat {
+  display: flex; flex-direction: column; gap: 2px; line-height: 1.2;
+  strong {
+    font-size: 16px; color: ds.$student-text; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  span { font-size: 11px; color: ds.$student-text-light; }
+  &.warn strong { color: #dc2626; }
+}
+
+.sep { width: 1px; height: 24px; background: #e2e8f0; flex-shrink: 0; }
+
+// 统一的 label / value 列宽：固定 80px 让所有行的值列起点对齐
+.k {
+  color: ds.$student-text-light; flex-shrink: 0;
+  width: 80px; font-size: 13px;
+}
+.v {
+  color: ds.$student-text; font-weight: 500;
+  flex: 1; min-width: 0;
+  &--salary { color: #059669; font-weight: 700; font-size: 15px; }
+}
+
+// ===== 通用卡片 =====
+.jd-card {
+  border: 1px solid #edf1f6;
+  border-radius: 12px;
+  padding: 28px 32px 26px;
+  background: #fff;
+
+  &__head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin: 0 0 22px;
+    padding: 0 0 18px;
+    border-bottom: 1px solid #eef2f7;
+    h3 {
+      margin: 0; font-size: 17px; font-weight: 700; color: ds.$student-text;
+      letter-spacing: .2px;
+    }
+    .now { font-size: 12px; color: ds.$student-text-muted; font-weight: 500; }
+  }
+}
+
+.summary {
+  margin: 0 0 14px; padding: 12px 14px;
+  background: #f4f6fa; border-radius: 8px;
+  font-size: 13px; color: #334155; line-height: 1.7;
+}
+.desc {
+  margin: 0; font-size: 13px; color: #334155;
+  line-height: 1.85; white-space: pre-wrap;
+}
+.sub {
+  margin: 18px 0 10px;
+  font-size: 13px; font-weight: 600; color: ds.$student-text;
+}
+.tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag {
+  padding: 4px 10px; border-radius: 4px;
+  background: #eef4fc; color: ds.$student-primary;
+  font-size: 12px; font-weight: 500;
+}
+.bens {
+  margin: 0; padding: 0; list-style: none;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  li {
+    padding: 10px 14px; background: #f8fafc; border-radius: 8px;
+    font-size: 12px; color: #475569; line-height: 1.6;
+  }
+}
+
+// ===== 进度 =====
+.flow {
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 6px 12px 2px;
+}
+.step {
+  display: flex; align-items: center; gap: 8px; opacity: .45;
+  &.passed, &.current { opacity: 1; }
+  .dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #f1f5f9; border: 1px solid #e2e8f0;
+    color: #94a3b8;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+  }
+  &.passed .dot { background: ds.$student-primary; border-color: ds.$student-primary; color: #fff; }
+  &.current .dot { background: #0891b2; border-color: #0891b2; color: #fff; box-shadow: 0 0 0 4px rgba(8,145,178,.14); }
+  b { font-size: 12px; color: ds.$student-text; white-space: nowrap; }
+}
+.line {
+  flex: 1; min-width: 28px; height: 2px;
+  margin: 13px 10px 0; background: #e2e8f0; border-radius: 99px;
+  &.on { background: ds.$student-primary; }
+}
+
+// ===== 面试 =====
+.iv {
+  margin: 0; padding: 0;
+  display: flex; flex-direction: column;
+  border: 1px solid #eef2f7; border-radius: 8px; overflow: hidden;
+  div {
+    margin: 0;
+    display: grid; grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center; min-height: 40px;
+    & + div { border-top: 1px solid #f1f5f9; }
+  }
+  dt {
+    padding: 9px 14px; background: #f8fafc;
+    font-size: 12px; color: #64748b;
+    height: 100%; display: flex; align-items: center;
+  }
+  dd {
+    margin: 0; padding: 9px 14px;
+    font-size: 13px; font-weight: 500;
+    color: ds.$student-text; word-break: break-all;
+  }
+  &__time { color: #0e7490; }
+  &__note { font-weight: 400; color: #475569; }
+}
+.iv-msg {
+  margin-top: 14px; padding: 12px 14px;
+  border-radius: 8px; background: #f5f3ff;
+  b { display: block; font-size: 13px; color: #4c1d95; margin-bottom: 4px; font-weight: 600; }
+  p { margin: 0; font-size: 12px; color: #475569; line-height: 1.7; }
+}
+
+// ===== 联系方式 =====
+.contact {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column;
+  li {
+    display: flex; align-items: center; gap: 16px;
+    padding: 11px 0; min-height: 22px;
+    & + li { border-top: 1px solid #f1f5f9; }
+  }
+  .ck {
+    width: 80px; flex-shrink: 0;
+    font-size: 13px; color: ds.$student-text-light;
+  }
+  b {
+    font-size: 13px; color: ds.$student-text;
+    font-weight: 500; flex: 1; min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .head, .jd-card { padding-left: 22px; padding-right: 22px; }
+  .bens { grid-template-columns: 1fr; }
+  .k, .contact .ck { width: 72px; }
+  .iv div { grid-template-columns: 88px minmax(0, 1fr); }
+}

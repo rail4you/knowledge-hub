@@ -49,7 +49,7 @@
   } @else {
     <div class="grid">
       @for (item of jobs(); track item.id) {
-        <article class="card" (click)="go(item)" (keyup.enter)="go(item)" tabindex="0">
+        <article class="card" (click)="openDetail(item)" (keyup.enter)="openDetail(item)" tabindex="0">
           <!-- 封面（统一占位图 + 类型/状态徽章） -->
           <div class="card-cover">
             <img
@@ -131,3 +131,9 @@
     }
   }
 </div>
+
+<!-- 详情弹窗：不跳转页面 -->
+<app-student-job-detail-modal
+  [jobId]="selectedJobId()"
+  (closed)="closeDetail()"
+/>

@@ -126,3 +126,9 @@
     }
   }
 </div>
+
+<!-- 岗位详情弹窗：不跳转页面 -->
+<app-student-job-detail-modal
+  [jobId]="selectedJobId()"
+  (closed)="closeDetail()"
+/>

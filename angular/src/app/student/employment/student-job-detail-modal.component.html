@@ -1,0 +1,125 @@
+<nz-modal
+  [nzVisible]="!!jobId()"
+  [nzTitle]="modalTitle()"
+  [nzFooter]="null"
+  [nzWidth]="960"
+  [nzMaskClosable]="true"
+  (nzOnCancel)="onCancel()"
+>
+  <ng-container *nzModalContent>
+    <div class="jd-body">
+      @if (loading()) {
+        <div class="loading-state"><nz-spin nzTip="正在加载岗位详情..." nzSize="large"></nz-spin></div>
+      } @else if (job(); as item) {
+        <!-- ===== 头部 ===== -->
+        <section class="head">
+          <div class="head__top">
+            <div class="head__chips">
+              <span class="chip chip--type" [style.background]="getTypeColor(item.jobType) + '1a'" [style.color]="getTypeColor(item.jobType)">
+                {{ getTypeLabel(item.jobType) }}
+              </span>
+              @if (item.industry) { <span class="chip">{{ item.industry }}</span> }
+              @if (item.educationRequirement) { <span class="chip">{{ item.educationRequirement }}</span> }
+              @if (item.location) { <span class="chip">{{ item.location }}</span> }
+              @if (item.hasApplied && item.applicationStatus != null) {
+                <span class="chip chip--status" [style.background]="getStatusColor(item.applicationStatus)">
+                  {{ getStatusLabel(item.applicationStatus) }}
+                </span>
+              }
+            </div>
+          </div>
+          <h2 class="head__title">{{ item.title }}</h2>
+          <p class="head__company">
+            <b>{{ item.companyName }}</b>
+            @if (item.address && item.address !== item.location) { <span class="addr">· {{ item.address }}</span> }
+          </p>
+          <div class="head__stats">
+            <span class="stat"><strong>{{ item.viewCount || 0 }}</strong><span>浏览</span></span>
+            <span class="sep"></span>
+            <span class="stat"><strong>{{ item.applicationCount || 0 }}</strong><span>投递</span></span>
+            <span class="sep"></span>
+            <span class="stat"><strong>{{ item.recruitmentCount || 0 }}</strong><span>招聘</span></span>
+            <span class="sep"></span>
+            <span class="stat" [class.warn]="isExpired(item)">
+              <strong>{{ item.deadline ? (item.deadline | date:'MM-dd') : '长期' }}</strong><span>截止</span>
+            </span>
+          </div>
+          <ul class="head__rows">
+            <li><span class="k">薪资待遇</span><span class="v v--salary">{{ item.salaryRange || '面议' }}</span></li>
+            <li><span class="k">学历要求</span><span class="v">{{ item.educationRequirement || '不限' }}</span></li>
+            <li><span class="k">工作地点</span><span class="v">{{ item.location || '待定' }}@if (item.address && item.address !== item.location) { · {{ item.address }}}</span></li>
+            <li>
+              <span class="k">发布 / 截止</span>
+              <span class="v">{{ item.publishedAt ? (item.publishedAt | date:'yyyy-MM-dd') : (item.creationTime | date:'yyyy-MM-dd') }} 发布 · {{ deadlineHint(item) }}</span>
+            </li>
+          </ul>
+        </section>
+
+        <!-- ===== 求职进度 ===== -->
+        @if (item.hasApplied && stage() !== 0) {
+          <section class="jd-card">
+            <header class="jd-card__head"><h3>我的求职进度</h3><span class="now">当前：{{ getStatusLabel(item.applicationStatus!) }}</span></header>
+            <div class="flow">
+              @for (s of [{n:1,l:'已投递'},{n:2,l:'面试安排'},{n:3,l:'面试完成'},{n:4,l:'录用结果'}]; track s.n) {
+                <div class="step" [class.passed]="stage() > s.n" [class.current]="stage() === s.n">
+                  <span class="dot">@if (stage() > s.n) { <span nz-icon nzType="check" nzTheme="outline"></span> } @else { {{ s.n }} }</span>
+                  <b>{{ s.l }}</b>
+                </div>
+                @if (s.n < 4) { <span class="line" [class.on]="stage() > s.n"></span> }
+              }
+            </div>
+          </section>
+        }
+
+        <!-- ===== 面试安排 ===== -->
+        @if (item.hasApplied && interview(); as iv) {
+          <section class="jd-card">
+            <header class="jd-card__head">
+              <h3>面试安排</h3>
+              @if (item.applicationStatus === appStatus.InterviewCompleted) { <nz-tag nzColor="purple">已完成</nz-tag> }
+              @else { <nz-tag nzColor="cyan">等待面试</nz-tag> }
+            </header>
+            <dl class="iv">
+              <div><dt>面试时间</dt><dd class="iv__time">{{ iv.scheduledAt | date:'yyyy年MM月dd日 HH:mm' }}</dd></div>
+              <div><dt>面试官</dt><dd>{{ iv.interviewerName || '待定' }}</dd></div>
+              @if (iv.interviewerPhone) { <div><dt>联系电话</dt><dd><a [href]="'tel:' + iv.interviewerPhone">{{ iv.interviewerPhone }}</a></dd></div> }
+              @if (item.contactEmail) { <div><dt>联系邮箱</dt><dd><a [href]="'mailto:' + item.contactEmail">{{ item.contactEmail }}</a></dd></div> }
+              @if (iv.location) { <div><dt>面试地点</dt><dd>{{ iv.location }}</dd></div> }
+              @if (iv.meetingUrl) { <div><dt>会议链接</dt><dd><a [href]="iv.meetingUrl" target="_blank" rel="noopener">加入会议</a></dd></div> }
+              @if (iv.note) { <div><dt>面试须知</dt><dd class="iv__note">{{ iv.note }}</dd></div> }
+            </dl>
+            @if (iv.completionMessage) {
+              <div class="iv-msg"><b>面试已完成 · 后续提示</b><p>{{ iv.completionMessage }}</p></div>
+            }
+          </section>
+        }
+
+        <!-- ===== 岗位描述 ===== -->
+        <section class="jd-card">
+          <header class="jd-card__head"><h3>岗位描述</h3></header>
+          @if (item.summary) { <p class="summary">{{ item.summary }}</p> }
+          <p class="desc">{{ getDescription(item) || '暂无详细描述' }}</p>
+          @if (getSkillTags(item).length) {
+            <h4 class="sub">技能要求</h4>
+            <div class="tags">@for (t of getSkillTags(item); track t) { <span class="tag">{{ t }}</span> }</div>
+          }
+          @if (getBenefitItems(item).length) {
+            <h4 class="sub">福利待遇</h4>
+            <ul class="bens">@for (b of getBenefitItems(item); track b) { <li>{{ b }}</li> }</ul>
+          }
+        </section>
+
+        <!-- ===== 联系方式 ===== -->
+        <section class="jd-card">
+          <header class="jd-card__head"><h3>联系方式</h3></header>
+          <ul class="contact">
+            <li><span class="ck">联系人</span><b>{{ item.contactName || '待补充' }}</b></li>
+            <li><span class="ck">联系电话</span><b>{{ item.contactPhone || '待补充' }}</b></li>
+            <li><span class="ck">联系邮箱</span><b>{{ item.contactEmail || '待补充' }}</b></li>
+            @if (item.address) { <li><span class="ck">详细地址</span><b>{{ item.address }}</b></li> }
+          </ul>
+        </section>
+      }
+    </div>
+  </ng-container>
+</nz-modal>

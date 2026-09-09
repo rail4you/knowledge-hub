@@ -1,24 +1,25 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { EmploymentApplicationStatus, EmploymentJobType, EmploymentService, JobPostingDto } from '../../employment/employment.service';
+import { StudentJobDetailModalComponent } from './student-job-detail-modal.component';
 
 @Component({
   selector: 'app-student-jobs',
   standalone: true,
-  imports: [CommonModule, DatePipe, DecimalPipe, FormsModule, NzIconModule, NzSpinModule, NzEmptyModule, RouterLink],
+  imports: [CommonModule, DatePipe, DecimalPipe, FormsModule, NzIconModule, NzSpinModule, NzEmptyModule, NzPaginationModule, NzModalModule, StudentJobDetailModalComponent],
   templateUrl: './student-jobs.component.html',
   styleUrls: ['./student-jobs.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentJobsComponent implements OnInit {
   private readonly svc = inject(EmploymentService);
-  private readonly router = inject(Router);
   private readonly msg = inject(NzMessageService);
 
   readonly jobs = signal<JobPostingDto[]>([]);
@@ -31,6 +32,8 @@ export class StudentJobsComponent implements OnInit {
   readonly pageSize = signal(12);
   readonly jobTypes = EmploymentJobType;
   readonly as = EmploymentApplicationStatus;
+  /** 选中的岗位 id：有值时弹出详情弹窗，不做路由跳转 */
+  readonly selectedJobId = signal<string | null>(null);
 
   readonly stats = computed(() => {
     const all = this.jobs();
@@ -63,7 +66,9 @@ export class StudentJobsComponent implements OnInit {
   onSearch() { this.pageIndex.set(1); this.load(); }
   onPage(p: number) { this.pageIndex.set(p); this.load(); }
   reset() { this.keyword.set(''); this.location.set(''); this.jobType.set(null); this.pageIndex.set(1); this.load(); }
-  go(item: JobPostingDto) { this.router.navigate(['/student/employment/jobs', item.id]); }
+  /** 详情用弹窗展示，不跳转页面（路由 jobs/:id 保留给深链/复制链接） */
+  openDetail(item: JobPostingDto) { if (item?.id) this.selectedJobId.set(item.id); }
+  closeDetail() { this.selectedJobId.set(null); }
 
   // ---- 状态显示 ----
   label(s?: EmploymentApplicationStatus): string {

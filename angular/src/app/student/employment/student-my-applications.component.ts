@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import {
   EmploymentApplicationStatus,
   EmploymentInterviewResult,
@@ -15,13 +16,15 @@ import {
   InterviewScheduleDto,
   JobApplicationDto,
 } from '../../employment/employment.service';
+import { StudentJobDetailModalComponent } from './student-job-detail-modal.component';
 
 @Component({
   selector: 'app-student-my-applications',
   standalone: true,
   imports: [
     CommonModule, DatePipe, DecimalPipe, FormsModule, RouterLink,
-    NzIconModule, NzSpinModule, NzEmptyModule, NzPaginationModule, NzTagModule,
+    NzIconModule, NzSpinModule, NzEmptyModule, NzPaginationModule, NzTagModule, NzModalModule,
+    StudentJobDetailModalComponent,
   ],
   templateUrl: './student-my-applications.component.html',
   styleUrls: ['./student-my-applications.component.scss'],
@@ -29,7 +32,6 @@ import {
 })
 export class StudentMyApplicationsComponent implements OnInit {
   private readonly employmentService = inject(EmploymentService);
-  private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
 
   readonly items = signal<JobApplicationDto[]>([]);
@@ -42,6 +44,8 @@ export class StudentMyApplicationsComponent implements OnInit {
 
   /** applicationId → 该投递关联的最新面试记录 */
   readonly interviewMap = signal<Record<string, InterviewScheduleDto>>({});
+  /** 选中的岗位 id：有值时弹出详情弹窗，不跳转页面 */
+  readonly selectedJobId = signal<string | null>(null);
 
   readonly stats = computed(() => {
     const items = this.items();
@@ -112,10 +116,12 @@ export class StudentMyApplicationsComponent implements OnInit {
     this.loadItems();
   }
 
-  /** 跳转到岗位详情 */
+  /** 岗位详情用弹窗展示，不跳转页面 */
   goJob(item: JobApplicationDto): void {
-    this.router.navigate(['/student/employment/jobs', item.jobPostingId]);
+    if (item?.jobPostingId) this.selectedJobId.set(item.jobPostingId);
   }
+
+  closeDetail(): void { this.selectedJobId.set(null); }
 
   getStatusLabel(s: EmploymentApplicationStatus): string {
     const m: Record<number, string> = {
