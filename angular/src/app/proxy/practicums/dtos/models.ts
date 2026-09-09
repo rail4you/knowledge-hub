@@ -1,8 +1,10 @@
 import type { PracticumMaterialType } from '../enums/practicum-material-type.enum';
 import type { PracticumProjectStatus } from '../enums/practicum-project-status.enum';
-import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { EntityDto, FullAuditedEntityDto, LimitedResultRequestDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
 import type { PracticumEnrollmentStatus } from '../enums/practicum-enrollment-status.enum';
 import type { PracticumSubmissionStatus } from '../enums/practicum-submission-status.enum';
+import type { PracticumChatSenderType } from '../enums/practicum-chat-sender-type.enum';
+import type { PracticumChatMessageType } from '../enums/practicum-chat-message-type.enum';
 
 export interface CreatePracticumAssessmentDto {
   submissionId?: string | null;
@@ -50,6 +52,8 @@ export interface CreateUpdatePracticumProjectDto {
   endTime?: string | null;
   maxScore?: number;
   allowResubmission?: boolean;
+  agentName?: string | null;
+  agentPrompt?: string | null;
   tasks?: CreateUpdatePracticumTaskDto[];
   materials?: CreateUpdatePracticumMaterialDto[];
 }
@@ -61,6 +65,11 @@ export interface CreateUpdatePracticumTaskDto {
   dueTime?: string | null;
   scoreWeight?: number;
   sortOrder?: number;
+}
+
+export interface GetPracticumChatMessagesDto extends LimitedResultRequestDto {
+  projectId?: string;
+  beforeId?: string | null;
 }
 
 export interface GetPracticumEnrollmentsInput extends PagedAndSortedResultRequestDto {
@@ -83,6 +92,11 @@ export interface PagedPracticumProjectRequestDto extends PagedAndSortedResultReq
   status?: PracticumProjectStatus | null;
 }
 
+export interface PracticumAgentConfigDto {
+  agentName?: string | null;
+  agentPrompt?: string | null;
+}
+
 export interface PracticumAssessmentDto extends FullAuditedEntityDto<string> {
   projectId?: string;
   enrollmentId?: string;
@@ -94,6 +108,20 @@ export interface PracticumAssessmentDto extends FullAuditedEntityDto<string> {
   comment?: string | null;
   rubricJson?: string | null;
   assessedAt?: string;
+}
+
+export interface PracticumChatMessageDto extends EntityDto<string> {
+  projectId?: string;
+  senderId?: string | null;
+  senderType?: PracticumChatSenderType;
+  senderName?: string;
+  content?: string;
+  messageType?: PracticumChatMessageType;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentSize?: number | null;
+  isAgentReply?: boolean;
+  creationTime?: string;
 }
 
 export interface PracticumEnrollmentDto extends FullAuditedEntityDto<string> {
@@ -158,6 +186,8 @@ export interface PracticumProjectDto extends FullAuditedEntityDto<string> {
   isCurrentUserEnrolled?: boolean;
   currentUserEnrollmentId?: string | null;
   currentUserProgress?: number | null;
+  agentName?: string | null;
+  agentPrompt?: string | null;
 }
 
 export interface PracticumSubmissionDto extends FullAuditedEntityDto<string> {
@@ -197,4 +227,23 @@ export interface PracticumTimelineItemDto {
   operatorName?: string | null;
   time?: string;
   metadata?: Record<string, string>;
+}
+
+export interface SendPracticumChatMessageDto {
+  projectId?: string;
+  content?: string;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
+  attachmentSize?: number | null;
+  messageType?: PracticumChatMessageType;
+}
+
+export interface UpdatePracticumAgentConfigDto {
+  agentName?: string | null;
+  agentPrompt?: string | null;
+}
+
+export interface UpdatePracticumGuidanceRecordDto {
+  content?: string;
+  isVisibleToStudent?: boolean;
 }

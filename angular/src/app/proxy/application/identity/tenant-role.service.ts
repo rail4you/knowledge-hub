@@ -40,7 +40,7 @@ export class TenantRoleService {
     this.restService.request<any, PagedResultDto<TenantRoleDto>>({
       method: 'GET',
       url: '/api/app/tenant-role',
-      params: { tenantId: input.tenantId, filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { tenantId: input.tenantId, onlyHost: input.onlyHost, filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

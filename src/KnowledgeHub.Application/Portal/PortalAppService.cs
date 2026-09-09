@@ -110,18 +110,31 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             mm.CourseCount = (int)await _microMajorCourseRepository.CountAsync(x => x.MicroMajorId == mm.Id);
         }
 
-        // Tenant courses: 该租户下所有已发布课程（"学历课程体系"展示用），
-        // 不再按 IsRecommended 过滤，否则租户刚建课（未标记推荐）时会看不到数据。
+        // 首页"精选课程"：仅展示已发布且标记为推荐的课程，
+        // 与 Domain 层注释"学生端推荐课程 Tab 只显示开启此开关的已发布课程"保持一致。
         var courseQuery = await _courseRepository.GetQueryableAsync();
-        var rawCourses = courseQuery
+        var rawFeaturedCourses = courseQuery
+            .Where(x => x.TenantId == tenantId
+                && x.Status == CourseStatus.Published
+                && x.IsRecommended)
+            .OrderByDescending(x => x.CreationTime)
+            .Take(8)
+            .ToList();
+
+        // 租户首页"学历课程体系"：取该租户下所有已发布课程（含未标记推荐的），
+        // 不按 IsRecommended 过滤，否则租户刚建课（未标记推荐）时该区域会一片空白。
+        var rawPublishedCourses = courseQuery
             .Where(x => x.TenantId == tenantId
                 && x.Status == CourseStatus.Published)
             .OrderByDescending(x => x.CreationTime)
             .Take(8)
             .ToList();
 
-        // Batch query student counts (cross-tenant)
-        var courseIds = rawCourses.Select(c => c.Id).ToList();
+        // Batch query student counts (cross-tenant) — 两份课程合在一起一次查询，避免重复
+        var courseIds = rawFeaturedCourses.Select(c => c.Id)
+            .Concat(rawPublishedCourses.Select(c => c.Id))
+            .Distinct()
+            .ToList();
         Dictionary<Guid, int> studentCountMap;
         using (_dataFilter.Disable<IMultiTenant>())
         {
@@ -145,40 +158,11 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             totalStudentCount = distinctStudentIds.Count;
         }
 
-        var featuredCourses = new List<CourseBriefDto>();
-        foreach (var c in rawCourses)
-        {
-            var teacherName = string.Empty;
-            if (c.TeacherId.HasValue)
-            {
-                try
-                {
-                    var user = await _identityUserRepository.FindAsync(c.TeacherId.Value);
-                    teacherName = user?.Name ?? user?.UserName ?? string.Empty;
-                }
-                catch { /* user not found */ }
-            }
-            var majorName = string.Empty;
-            if (c.MajorId.HasValue)
-            {
-                try
-                {
-                    var major = await _majorRepository.FindAsync(c.MajorId.Value);
-                    majorName = major?.Name ?? string.Empty;
-                }
-                catch { /* major not found */ }
-            }
-            featuredCourses.Add(new CourseBriefDto
-            {
-                Id = c.Id,
-                Title = c.Title,
-                CoverImageUrl = c.CoverImageUrl,
-                TeacherName = teacherName,
-                MajorName = majorName,
-                StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0),
-                Difficulty = c.Difficulty
-            });
-        }
+        // 填充两份课程的展示信息（teacher / major / studentCount），缓存避免重复查 identity/major
+        var teacherNameCache = new Dictionary<Guid, string>();
+        var majorNameCache = new Dictionary<Guid, string>();
+        var featuredCourses = await BuildCourseBriefListAsync(rawFeaturedCourses, studentCountMap, teacherNameCache, majorNameCache);
+        var publishedCourses = await BuildCourseBriefListAsync(rawPublishedCourses, studentCountMap, teacherNameCache, majorNameCache);
 
         // Latest materials (latest 8)
         var resourceQuery = await _resourceRepository.GetQueryableAsync();
@@ -224,10 +208,66 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             },
             MicroMajors = microMajors,
             FeaturedCourses = featuredCourses,
+            PublishedCourses = publishedCourses,
             LatestMaterials = latestMaterials,
             LatestNews = latestNews,
             Partners = new List<PartnerBriefDto>()
         };
+    }
+
+    /// <summary>
+    /// 填充课程摘要列表的展示信息（teacherName / majorName / studentCount / difficulty），
+    /// 使用缓存避免对同一 teacher/major 重复查库。
+    /// </summary>
+    private async Task<List<CourseBriefDto>> BuildCourseBriefListAsync(
+        List<Courses.Course> courses,
+        Dictionary<Guid, int> studentCountMap,
+        Dictionary<Guid, string> teacherNameCache,
+        Dictionary<Guid, string> majorNameCache)
+    {
+        var result = new List<CourseBriefDto>(courses.Count);
+        foreach (var c in courses)
+        {
+            var teacherName = string.Empty;
+            if (c.TeacherId.HasValue)
+            {
+                if (!teacherNameCache.TryGetValue(c.TeacherId.Value, out teacherName))
+                {
+                    try
+                    {
+                        var u = await _identityUserRepository.FindAsync(c.TeacherId.Value);
+                        teacherName = u?.Name ?? u?.UserName ?? string.Empty;
+                    }
+                    catch { /* user not found */ }
+                    teacherNameCache[c.TeacherId.Value] = teacherName;
+                }
+            }
+            var majorName = string.Empty;
+            if (c.MajorId.HasValue)
+            {
+                if (!majorNameCache.TryGetValue(c.MajorId.Value, out majorName))
+                {
+                    try
+                    {
+                        var m = await _majorRepository.FindAsync(c.MajorId.Value);
+                        majorName = m?.Name ?? string.Empty;
+                    }
+                    catch { /* major not found */ }
+                    majorNameCache[c.MajorId.Value] = majorName;
+                }
+            }
+            result.Add(new CourseBriefDto
+            {
+                Id = c.Id,
+                Title = c.Title,
+                CoverImageUrl = c.CoverImageUrl,
+                TeacherName = teacherName,
+                MajorName = majorName,
+                StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0),
+                Difficulty = c.Difficulty,
+            });
+        }
+        return result;
     }
 
     /// <summary>

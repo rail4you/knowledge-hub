@@ -22,11 +22,13 @@ export interface CreateTenantUserDto {
 
 export interface GetTenantRolesInput extends PagedAndSortedResultRequestDto {
   tenantId?: string | null;
+  onlyHost?: boolean | null;
   filter?: string | null;
 }
 
 export interface GetTenantUsersInput extends GetIdentityUsersInput {
   tenantId?: string | null;
+  onlyHost?: boolean | null;
 }
 
 export interface TenantRoleDto extends EntityDto<string> {

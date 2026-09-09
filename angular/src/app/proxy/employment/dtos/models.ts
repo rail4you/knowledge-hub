@@ -220,6 +220,11 @@ export interface ImportEmploymentOutcomesInput {
   fileName?: string | null;
 }
 
+export interface ImportJobsInput {
+  fileBase64?: string;
+  fileName?: string | null;
+}
+
 export interface InterviewScheduleDto extends FullAuditedEntityDto<string> {
   applicationId?: string;
   jobPostingId?: string;
@@ -260,6 +265,19 @@ export interface JobApplicationDto extends FullAuditedEntityDto<string> {
   appliedAt?: string;
   reviewedAt?: string | null;
   employerRemark?: string | null;
+}
+
+export interface JobImportFailItemDto {
+  rowNumber?: number;
+  jobTitle?: string | null;
+  reason?: string;
+}
+
+export interface JobImportResultDto {
+  totalCount?: number;
+  successCount?: number;
+  failCount?: number;
+  failItems?: JobImportFailItemDto[];
 }
 
 export interface JobPostingDto extends FullAuditedEntityDto<string> {

@@ -1,4 +1,4 @@
-import type { CareerGuidanceStudentDto, CompleteInterviewDto, CreateEmploymentGuidanceRecordDto, CreateJobApplicationDto, CreateMyAIGuidanceRecordDto, CreateStudentCareerGuidanceRecordDto, CreateUpdateEmploymentOutcomeDto, CreateUpdateInterviewScheduleDto, CreateUpdateJobPostingDto, CreateUpdateStudentResumeDto, EmployerProfileDto, EmploymentGuidanceRecordDto, EmploymentOutcomeDto, EmploymentOutcomeImportResultDto, EmploymentOutcomeStudentDto, EmploymentStatisticsInput, EmploymentStatisticsRowDto, GetEmploymentGuidanceRecordsInput, GetEmploymentOutcomeListInput, GetInterviewSchedulesInput, GetJobApplicationsInput, GetManageJobsInput, ImportEmploymentOutcomesInput, InterviewScheduleDto, InterviewerCandidateDto, JobApplicationDto, JobPostingDto, PagedJobPostingRequestDto, RecordInterviewResultDto, ReviewJobPostingDto, StudentApplicationStatDto, StudentResumeDto, UpdateEmployerProfileDto, UpdateJobApplicationStatusDto } from './dtos/models';
+import type { CareerGuidanceStudentDto, CompleteInterviewDto, CreateEmploymentGuidanceRecordDto, CreateJobApplicationDto, CreateMyAIGuidanceRecordDto, CreateStudentCareerGuidanceRecordDto, CreateUpdateEmploymentOutcomeDto, CreateUpdateInterviewScheduleDto, CreateUpdateJobPostingDto, CreateUpdateStudentResumeDto, EmployerProfileDto, EmploymentGuidanceRecordDto, EmploymentOutcomeDto, EmploymentOutcomeImportResultDto, EmploymentOutcomeStudentDto, EmploymentStatisticsInput, EmploymentStatisticsRowDto, GetEmploymentGuidanceRecordsInput, GetEmploymentOutcomeListInput, GetInterviewSchedulesInput, GetJobApplicationsInput, GetManageJobsInput, ImportEmploymentOutcomesInput, ImportJobsInput, InterviewScheduleDto, InterviewerCandidateDto, JobApplicationDto, JobImportResultDto, JobPostingDto, PagedJobPostingRequestDto, RecordInterviewResultDto, ReviewJobPostingDto, StudentApplicationStatDto, StudentResumeDto, UpdateEmployerProfileDto, UpdateJobApplicationStatusDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -184,6 +184,15 @@ export class EmploymentService {
     { apiName: this.apiName,...config });
   
 
+  getJobImportTemplate = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, Blob>({
+      method: 'GET',
+      responseType: 'blob',
+      url: '/api/app/employment/job-import-template',
+    },
+    { apiName: this.apiName,...config });
+  
+
   getManageJobList = (input: GetManageJobsInput, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<JobPostingDto>>({
       method: 'GET',
@@ -267,6 +276,15 @@ export class EmploymentService {
       method: 'GET',
       url: '/api/app/employment/statistics',
       params: { major: input.major, grade: input.grade, status: input.status, days: input.days },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  importJobs = (input: ImportJobsInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, JobImportResultDto>({
+      method: 'POST',
+      url: '/api/app/employment/import-jobs',
+      body: input,
     },
     { apiName: this.apiName,...config });
   

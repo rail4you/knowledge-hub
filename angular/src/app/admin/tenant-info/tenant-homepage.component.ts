@@ -129,13 +129,13 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   ];
   readonly difficultyFilter = signal(0);
   readonly filteredCourses = computed<CourseBriefDto[]>(() => {
-    const courses = this.portalData()?.featuredCourses || [];
+    const courses = this.portalData()?.publishedCourses || [];
     const diff = this.difficultyFilter();
     return diff === 0 ? courses : courses.filter(c => (c.difficulty ?? 1) === diff);
   });
 
   getDifficultyCount(diff: number): number {
-    const courses = this.portalData()?.featuredCourses || [];
+    const courses = this.portalData()?.publishedCourses || [];
     return diff === 0 ? courses.length : courses.filter(c => (c.difficulty ?? 1) === diff).length;
   }
 

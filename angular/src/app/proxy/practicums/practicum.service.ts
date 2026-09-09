@@ -1,4 +1,4 @@
-import type { CreatePracticumAssessmentDto, CreatePracticumGuidanceRecordDto, CreatePracticumSubmissionDto, CreateUpdatePracticumProjectDto, GetPracticumEnrollmentsInput, GetPracticumSubmissionsInput, PagedPracticumProjectRequestDto, PracticumAssessmentDto, PracticumEnrollmentDto, PracticumGuidanceRecordDto, PracticumProjectDetailDto, PracticumProjectDto, PracticumSubmissionDto, PracticumTimelineItemDto } from './dtos/models';
+import type { CreatePracticumAssessmentDto, CreatePracticumGuidanceRecordDto, CreatePracticumSubmissionDto, CreateUpdatePracticumProjectDto, GetPracticumEnrollmentsInput, GetPracticumSubmissionsInput, PagedPracticumProjectRequestDto, PracticumAgentConfigDto, PracticumAssessmentDto, PracticumEnrollmentDto, PracticumGuidanceRecordDto, PracticumProjectDetailDto, PracticumProjectDto, PracticumSubmissionDto, PracticumTimelineItemDto, UpdatePracticumAgentConfigDto, UpdatePracticumGuidanceRecordDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -67,6 +67,14 @@ export class PracticumService {
     this.restService.request<any, PracticumProjectDto>({
       method: 'GET',
       url: `/api/app/practicum/${id}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getAgentConfig = (projectId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PracticumAgentConfigDto>({
+      method: 'GET',
+      url: `/api/app/practicum/agent-config/${projectId}`,
     },
     { apiName: this.apiName,...config });
   
@@ -152,6 +160,24 @@ export class PracticumService {
     this.restService.request<any, PracticumProjectDto>({
       method: 'PUT',
       url: `/api/app/practicum/${id}`,
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  updateAgentConfig = (projectId: string, input: UpdatePracticumAgentConfigDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'PUT',
+      url: `/api/app/practicum/agent-config/${projectId}`,
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  updateGuidance = (id: string, input: UpdatePracticumGuidanceRecordDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, PracticumGuidanceRecordDto>({
+      method: 'PUT',
+      url: `/api/app/practicum/${id}/guidance`,
       body: input,
     },
     { apiName: this.apiName,...config });

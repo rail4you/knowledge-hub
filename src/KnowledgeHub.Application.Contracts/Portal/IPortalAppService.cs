@@ -35,7 +35,15 @@ public class PortalHomeDataDto
     public TenantBriefDto TenantInfo { get; set; } = new();
     public PortalStatsDto Stats { get; set; } = new();
     public List<MicroMajorBriefDto> MicroMajors { get; set; } = new();
+    /// <summary>
+    /// 首页"精选课程"：仅展示已发布且标记为推荐的课程（IsRecommended=true）
+    /// </summary>
     public List<CourseBriefDto> FeaturedCourses { get; set; } = new();
+    /// <summary>
+    /// 租户首页"学历课程体系"：该租户下所有已发布课程（含未标记推荐的），
+    /// 与 FeaturedCourses 分开，避免新租户/未勾推荐时该区域空白。
+    /// </summary>
+    public List<CourseBriefDto> PublishedCourses { get; set; } = new();
     public List<MaterialBriefDto> LatestMaterials { get; set; } = new();
     public List<NewsBriefDto> LatestNews { get; set; } = new();
     public List<PartnerBriefDto> Partners { get; set; } = new();

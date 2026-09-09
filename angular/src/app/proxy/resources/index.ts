@@ -1,5 +1,6 @@
+import * as Conversion from './conversion';
 import * as Enums from './enums';
 export * from './models';
-export * from './resource.service';
 export * from './resource-share.service';
-export { Enums };
+export * from './resource.service';
+export { Conversion, Enums };

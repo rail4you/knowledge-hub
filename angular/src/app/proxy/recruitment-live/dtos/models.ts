@@ -4,8 +4,9 @@ import type { RecruitmentLiveStatus } from '../recruitment-live-status.enum';
 export interface CreateRecruitmentLiveDto {
   title?: string;
   description?: string | null;
-  studentId?: string | null;
+  studentIds?: string[] | null;
   scheduledAt?: string | null;
+  scheduledEndAt?: string | null;
 }
 
 export interface IceServerDto {
@@ -19,6 +20,18 @@ export interface PagedRecruitmentLiveRequestDto extends PagedAndSortedResultRequ
   status?: RecruitmentLiveStatus | null;
 }
 
+export interface ParticipantBriefDto {
+  userId?: string;
+  userName?: string;
+  role?: string;
+}
+
+export interface RecruitmentLiveChatMessageDto {
+  senderRole?: string;
+  content?: string;
+  sentAt?: string;
+}
+
 export interface RecruitmentLiveDto extends FullAuditedEntityDto<string> {
   title?: string;
   description?: string | null;
@@ -28,10 +41,12 @@ export interface RecruitmentLiveDto extends FullAuditedEntityDto<string> {
   studentId?: string | null;
   studentName?: string | null;
   studentUserName?: string | null;
+  participants?: ParticipantBriefDto[];
   roomCode?: string;
   status?: RecruitmentLiveStatus;
   statusText?: string;
   scheduledAt?: string | null;
+  scheduledEndAt?: string | null;
   startedAt?: string | null;
   endedAt?: string | null;
   durationSeconds?: number;
@@ -39,11 +54,16 @@ export interface RecruitmentLiveDto extends FullAuditedEntityDto<string> {
   isParticipant?: boolean;
 }
 
+export interface SaveChatMessageInputDto {
+  content?: string;
+}
+
 export interface UpdateRecruitmentLiveDto {
   title?: string;
   description?: string | null;
   studentId?: string | null;
   scheduledAt?: string | null;
+  scheduledEndAt?: string | null;
 }
 
 export interface UserBriefDto {

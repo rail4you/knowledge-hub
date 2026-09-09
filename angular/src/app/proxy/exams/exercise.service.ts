@@ -1,4 +1,4 @@
-import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto, GenerateExerciseInput, GradeEssayInput, GradingResultDto, AiAnalyzeExerciseInput, AiAnalyzeExerciseResultDto } from './dtos/models';
+import type { AiAnalyzeExerciseInput, AiAnalyzeExerciseResultDto, CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto, GenerateExerciseInput, GradeEssayInput, GradingResultDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedAndSortedResultRequestDto, PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -10,6 +10,24 @@ import type { IFormFile } from '../microsoft/asp-net-core/http/models';
 export class ExerciseService {
   private restService = inject(RestService);
   apiName = 'KnowledgeHub';
+  
+
+  aiAnalyze = (input: AiAnalyzeExerciseInput, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, AiAnalyzeExerciseResultDto>({
+      method: 'POST',
+      url: '/api/app/exercise/ai-analyze',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  batchRemove = (ids: string[], config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: '/api/app/exercise/batch-remove',
+      body: ids,
+    },
+    { apiName: this.apiName,...config });
   
 
   create = (input: CreateUpdateExerciseDto, config?: Partial<Rest.Config>) =>
@@ -93,14 +111,6 @@ export class ExerciseService {
     this.restService.request<any, ExerciseDto>({
       method: 'PUT',
       url: `/api/app/exercise/${id}`,
-      body: input,
-    },
-    { apiName: this.apiName,...config });
-
-  aiAnalyze = (input: AiAnalyzeExerciseInput, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, AiAnalyzeExerciseResultDto>({
-      method: 'POST',
-      url: '/api/app/exercise/ai-analyze',
       body: input,
     },
     { apiName: this.apiName,...config });

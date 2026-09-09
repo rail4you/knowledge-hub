@@ -40,7 +40,7 @@ export class TenantUserService {
     this.restService.request<any, PagedResultDto<TenantUserDto>>({
       method: 'GET',
       url: '/api/app/tenant-user',
-      params: { tenantId: input.tenantId, filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount, extraProperties: input.extraProperties },
+      params: { tenantId: input.tenantId, onlyHost: input.onlyHost, filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount, extraProperties: input.extraProperties },
     },
     { apiName: this.apiName,...config });
   

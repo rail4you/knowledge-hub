@@ -4,6 +4,7 @@ export interface EditionDto {
   maxTenantCount?: number;
   isAllianceEnabled?: boolean;
   isTwoLevelApprovalEnabled?: boolean;
+  isSpecialEducationEnabled?: boolean;
 }
 
 export interface EditionUpgradeInputDto {

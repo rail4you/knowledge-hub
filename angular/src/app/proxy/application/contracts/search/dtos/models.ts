@@ -2,6 +2,22 @@ import type { ResourceType } from '../../../../resources/enums/resource-type.enu
 import type { EntityDto } from '@abp/ng.core';
 import type { IndexingJobStatus } from '../../../../domain/search/indexing-job-status.enum';
 
+export interface BatchGenerateSummaryInputDto {
+  batchSize?: number;
+  skipExisting?: boolean;
+  onlyApproved?: boolean;
+  resourceIds?: string[] | null;
+  resourceType?: ResourceType | null;
+}
+
+export interface BatchGenerateSummaryResultDto {
+  enqueuedCount?: number;
+  skippedCount?: number;
+  enqueuedResourceIds?: string[];
+  skippedResourceIds?: string[];
+  message?: string;
+}
+
 export interface CreateResourceReviewDto {
   resourceId?: string;
   rating?: number;
@@ -35,6 +51,16 @@ export interface DocumentSearchResultDto {
   startTime?: string | null;
   endTime?: string | null;
   eventDescription?: string | null;
+}
+
+export interface GenerateSummaryInputDto {
+  resourceId?: string;
+}
+
+export interface GenerateSummaryResultDto {
+  enqueuedCount?: number;
+  skippedCount?: number;
+  jobIds?: string[];
 }
 
 export interface HybridSearchQueryDto extends SearchQueryDto {
@@ -164,30 +190,6 @@ export interface MeiliVersionDto {
   pkgVersion?: string;
 }
 
-export interface PageIndexListItemDto {
-  id?: string;
-  resourceName?: string;
-  resourceId?: string;
-  versionNumber?: number;
-  tenantId?: string | null;
-  sourceFormat?: string | null;
-  model?: string | null;
-  nodeCount?: number;
-  docDescription?: string | null;
-  createdAt?: string;
-}
-
-export interface PageIndexSearchResultDto {
-  resourceId?: string;
-  resourceName?: string | null;
-  nodeTitle?: string | null;
-  nodeSummary?: string | null;
-  nodeId?: string;
-  startIndex?: number;
-  endIndex?: number;
-  docDescription?: string | null;
-}
-
 export interface PopularSearchDto {
   query?: string;
   count?: number;
@@ -217,16 +219,6 @@ export interface RecommendedResourceDto {
   recommendationScore?: number;
   recommendationReason?: string;
   creationTime?: string;
-}
-
-export interface ResourcePageIndexDto {
-  id?: string;
-  resourceId?: string;
-  resourceVersionId?: string;
-  pageIndexJson?: string;
-  sourceFormat?: string | null;
-  model?: string | null;
-  nodeCount?: number;
 }
 
 export interface ResourceRatingSummaryDto {
@@ -295,6 +287,7 @@ export interface SearchQueryDto {
   sorting?: string;
   indexName?: string | null;
   statusFilter?: string | null;
+  resourceId?: string | null;
 }
 
 export interface SearchResultDto {
@@ -351,6 +344,7 @@ export interface TopResourceStatsDto {
   searchCount?: number;
   clickCount?: number;
   clickRate?: number;
+  viewCount?: number;
 }
 
 export interface UpdateResourceReviewDto {

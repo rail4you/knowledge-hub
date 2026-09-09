@@ -63,6 +63,14 @@ export class TeachingAgentService {
     { apiName: this.apiName,...config });
   
 
+  unpublish = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, TeachingAgentDto>({
+      method: 'POST',
+      url: `/api/app/teaching-agent/${id}/unpublish`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   updateDraft = (id: string, input: CreateUpdateTeachingAgentDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, TeachingAgentDto>({
       method: 'PUT',

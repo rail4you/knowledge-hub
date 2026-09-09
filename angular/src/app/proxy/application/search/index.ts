@@ -1,13 +1,12 @@
+import * as LiteParse from './lite-parse';
 export * from './embedding.service';
 export * from './indexing-job.service';
 export * from './meili-search-admin.service';
-export * from './meili-search.service';
-export * from './models';
-export * from './open-data-loader.service';
-export * from './page-index.service';
 export * from './resource-recommendation.service';
 export * from './resource-review.service';
 export * from './search-analytics.service';
 export * from './search-statistics.service';
 export * from './search.service';
+export * from './summary-generation.service';
 export * from './video-analysis.service';
+export { LiteParse };

@@ -3,6 +3,28 @@ import type { EntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } 
 import type { MicroMajorEnrollmentStatus } from '../enums/micro-major-enrollment-status.enum';
 import type { MicroMajorCertificateStatus } from '../enums/micro-major-certificate-status.enum';
 
+export interface CertificateTemplateLayerDto {
+  id?: string;
+  fieldType?: string;
+  label?: string;
+  customFieldName?: string | null;
+  x?: number;
+  y?: number;
+  fontSize?: number;
+  color?: string;
+  fontWeight?: number;
+  center?: boolean;
+  fontFamily?: string | null;
+}
+
+export interface CreateUpdateMicroMajorCertificateTemplateDto {
+  microMajorId?: string;
+  name?: string;
+  imageUrl?: string;
+  sortOrder?: number;
+  layers?: CertificateTemplateLayerDto[] | null;
+}
+
 export interface CreateUpdateMicroMajorCourseDto {
   courseId?: string;
   sortOrder?: number;
@@ -26,6 +48,28 @@ export interface GetMicroMajorEnrollmentsInput extends PagedAndSortedResultReque
   microMajorId?: string | null;
   studentId?: string | null;
   status?: MicroMajorEnrollmentStatus | null;
+  filter?: string | null;
+}
+
+export interface IssueCertificateDefaultsDto {
+  enrollmentId?: string;
+  microMajorId?: string;
+  microMajorTitle?: string | null;
+  studentName?: string | null;
+  studentNo?: string | null;
+  suggestedCertificateNo?: string;
+  issueDate?: string;
+}
+
+export interface IssueCertificateInputDto {
+  enrollmentId?: string;
+  certificateTemplateId?: string | null;
+  studentNo?: string | null;
+  advisor?: string | null;
+  issueDate?: string | null;
+  validUntil?: string | null;
+  certificateNo?: string | null;
+  compositeImageUrl?: string | null;
 }
 
 export interface MicroMajorCertificateDto extends FullAuditedEntityDto<string> {
@@ -36,8 +80,22 @@ export interface MicroMajorCertificateDto extends FullAuditedEntityDto<string> {
   studentName?: string | null;
   certificateNo?: string;
   verifyCode?: string;
+  certificateImageUrl?: string | null;
   status?: MicroMajorCertificateStatus;
   issuedAt?: string;
+  studentNo?: string | null;
+  advisor?: string | null;
+  issueDate?: string | null;
+  validUntil?: string | null;
+  layers?: CertificateTemplateLayerDto[];
+}
+
+export interface MicroMajorCertificateTemplateDto extends FullAuditedEntityDto<string> {
+  microMajorId?: string;
+  name?: string;
+  imageUrl?: string;
+  sortOrder?: number;
+  layers?: CertificateTemplateLayerDto[];
 }
 
 export interface MicroMajorCourseDto extends EntityDto<string> {
@@ -82,6 +140,7 @@ export interface MicroMajorEnrollmentDto extends FullAuditedEntityDto<string> {
   enrolledAt?: string;
   completedAt?: string | null;
   certificateIssuedAt?: string | null;
+  certificateImageUrl?: string | null;
 }
 
 export interface MicroMajorResourceDto {
@@ -93,6 +152,17 @@ export interface MicroMajorResourceDto {
   downloadCount?: number;
   sortOrder?: number;
   description?: string | null;
+}
+
+export interface MyMicroMajorDto extends MicroMajorDto {
+  enrollmentId?: string;
+  enrollmentStatus?: MicroMajorEnrollmentStatus;
+  progress?: number;
+  enrolledAt?: string;
+  completedAt?: string | null;
+  certificateIssuedAt?: string | null;
+  certificateImageUrl?: string | null;
+  courses?: MicroMajorCourseDto[];
 }
 
 export interface PagedMicroMajorRequestDto extends PagedAndSortedResultRequestDto {

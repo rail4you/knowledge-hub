@@ -28,6 +28,12 @@ export interface CreatePhysicalDeleteRequestDto {
   reason?: string;
 }
 
+export interface CreateResourceShareDto {
+  resourceId?: string;
+  targetTenantIds?: string[];
+  note?: string | null;
+}
+
 export interface CreateUpdateResourceCategoryDto {
   name?: string;
   parentId?: string | null;
@@ -150,7 +156,6 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   status?: ResourceStatus;
   currentVersion?: number;
   keywords?: string | null;
-  /** AI 生成的资源摘要（由 DocumentSummaryBackgroundJob 写入）。 */
   summary?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
@@ -182,40 +187,6 @@ export interface ResourceSearchQueryDto extends PagedAndSortedResultRequestDto {
   endDate?: string | null;
 }
 
-export interface ResourceVersionDto extends EntityDto<string> {
-  resourceId?: string;
-  version?: number;
-  filePath?: string;
-  fileSize?: number;
-  updateContent?: string | null;
-  isCurrentVersion?: boolean;
-  creationTime?: string;
-  creatorId?: string;
-  creatorName?: string | null;
-}
-
-export interface UploadChunkDto {
-  uploadId?: string;
-  fileName?: string;
-  chunkNumber?: number;
-  isLastChunk?: boolean;
-}
-
-export interface UploadVersionDto {
-  resourceId?: string;
-  updateContent?: string | null;
-  filePath?: string | null;
-  fileSize?: number | null;
-  fileExtension?: string | null;
-  originalFileName?: string | null;
-}
-
-export interface CreateResourceShareDto {
-  resourceId?: string;
-  targetTenantIds?: string[];
-  note?: string | null;
-}
-
 export interface ResourceShareDto extends EntityDto<string> {
   resourceId?: string;
   resourceName?: string | null;
@@ -227,6 +198,18 @@ export interface ResourceShareDto extends EntityDto<string> {
   sharedByUserName?: string | null;
   sharedAt?: string;
   note?: string | null;
+}
+
+export interface ResourceVersionDto extends EntityDto<string> {
+  resourceId?: string;
+  version?: number;
+  filePath?: string;
+  fileSize?: number;
+  updateContent?: string | null;
+  isCurrentVersion?: boolean;
+  creationTime?: string;
+  creatorId?: string;
+  creatorName?: string | null;
 }
 
 export interface SharedResourceDto extends EntityDto<string> {
@@ -253,7 +236,23 @@ export interface SharedResourceDto extends EntityDto<string> {
 
 export interface SharedResourceListQueryDto extends PagedAndSortedResultRequestDto {
   filter?: string | null;
-  resourceType?: ResourceType;
+  resourceType?: ResourceType | null;
   categoryId?: string | null;
   majorId?: string | null;
+}
+
+export interface UploadChunkDto {
+  uploadId?: string;
+  fileName?: string;
+  chunkNumber?: number;
+  isLastChunk?: boolean;
+}
+
+export interface UploadVersionDto {
+  resourceId?: string;
+  updateContent?: string | null;
+  filePath?: string | null;
+  fileSize?: number | null;
+  fileExtension?: string | null;
+  originalFileName?: string | null;
 }

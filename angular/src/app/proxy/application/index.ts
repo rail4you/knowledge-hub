@@ -5,4 +5,6 @@ import * as Edition from './edition';
 import * as Identity from './identity';
 import * as Install from './install';
 import * as Search from './search';
-export { Ai, Alliance, Contracts, Edition, Identity, Install, Search };
+import * as SpecialEducation from './special-education';
+import * as VoiceAssistant from './voice-assistant';
+export { Ai, Alliance, Contracts, Edition, Identity, Install, Search, SpecialEducation, VoiceAssistant };

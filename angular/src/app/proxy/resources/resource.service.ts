@@ -111,10 +111,11 @@ export class ResourceService {
     { apiName: this.apiName,...config });
   
 
-  getCategories = (config?: Partial<Rest.Config>) =>
+  getCategories = (majorId?: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, ResourceCategoryDto[]>({
       method: 'GET',
       url: '/api/app/resource/categories',
+      params: { majorId },
     },
     { apiName: this.apiName,...config });
   

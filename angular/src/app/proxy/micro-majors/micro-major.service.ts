@@ -1,4 +1,4 @@
-import type { CreateUpdateMicroMajorDto, GetMicroMajorEnrollmentsInput, MicroMajorCertificateDto, MicroMajorDetailDto, MicroMajorDto, MicroMajorEnrollmentDto, MicroMajorResourceDto, PagedMicroMajorRequestDto } from './dtos/models';
+import type { CreateUpdateMicroMajorCertificateTemplateDto, CreateUpdateMicroMajorDto, GetMicroMajorEnrollmentsInput, IssueCertificateDefaultsDto, IssueCertificateInputDto, MicroMajorCertificateDto, MicroMajorCertificateTemplateDto, MicroMajorDetailDto, MicroMajorDto, MicroMajorEnrollmentDto, MicroMajorResourceDto, MyMicroMajorDto, PagedMicroMajorRequestDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -28,10 +28,27 @@ export class MicroMajorService {
     { apiName: this.apiName,...config });
   
 
+  createCertificateTemplate = (input: CreateUpdateMicroMajorCertificateTemplateDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MicroMajorCertificateTemplateDto>({
+      method: 'POST',
+      url: '/api/app/micro-major/certificate-template',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
   delete = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'DELETE',
       url: `/api/app/micro-major/${id}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  deleteCertificateTemplate = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/micro-major/${id}/certificate-template`,
     },
     { apiName: this.apiName,...config });
   
@@ -52,6 +69,14 @@ export class MicroMajorService {
     { apiName: this.apiName,...config });
   
 
+  getCertificateTemplates = (microMajorId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MicroMajorCertificateTemplateDto[]>({
+      method: 'GET',
+      url: `/api/app/micro-major/certificate-templates/${microMajorId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   getDetail = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, MicroMajorDetailDto>({
       method: 'GET',
@@ -64,7 +89,15 @@ export class MicroMajorService {
     this.restService.request<any, PagedResultDto<MicroMajorEnrollmentDto>>({
       method: 'GET',
       url: '/api/app/micro-major/enrollment-list',
-      params: { microMajorId: input.microMajorId, studentId: input.studentId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { microMajorId: input.microMajorId, studentId: input.studentId, status: input.status, filter: input.filter, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getIssueCertificateDefaults = (enrollmentId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, IssueCertificateDefaultsDto>({
+      method: 'GET',
+      url: `/api/app/micro-major/issue-certificate-defaults/${enrollmentId}`,
     },
     { apiName: this.apiName,...config });
   
@@ -94,6 +127,14 @@ export class MicroMajorService {
     { apiName: this.apiName,...config });
   
 
+  getMyMicroMajors = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MyMicroMajorDto[]>({
+      method: 'GET',
+      url: '/api/app/micro-major/my-micro-majors',
+    },
+    { apiName: this.apiName,...config });
+  
+
   getPublished = (input: PagedMicroMajorRequestDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<MicroMajorDto>>({
       method: 'GET',
@@ -111,10 +152,19 @@ export class MicroMajorService {
     { apiName: this.apiName,...config });
   
 
-  issueCertificate = (enrollmentId: string, config?: Partial<Rest.Config>) =>
+  issueCertificate = (input: IssueCertificateInputDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, MicroMajorCertificateDto>({
       method: 'POST',
-      url: `/api/app/micro-major/issue-certificate/${enrollmentId}`,
+      url: '/api/app/micro-major/issue-certificate',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  markAsCompleted = (enrollmentId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/micro-major/mark-as-completed/${enrollmentId}`,
     },
     { apiName: this.apiName,...config });
   
@@ -131,6 +181,15 @@ export class MicroMajorService {
     this.restService.request<any, MicroMajorDto>({
       method: 'PUT',
       url: `/api/app/micro-major/${id}`,
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  updateCertificateTemplate = (id: string, input: CreateUpdateMicroMajorCertificateTemplateDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, MicroMajorCertificateTemplateDto>({
+      method: 'PUT',
+      url: `/api/app/micro-major/${id}/certificate-template`,
       body: input,
     },
     { apiName: this.apiName,...config });

@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { CreateRecruitmentLiveDto, IceServerDto, PagedRecruitmentLiveRequestDto, RecruitmentLiveDto, UpdateRecruitmentLiveDto, UserBriefDto, WsTokenDto } from '../recruitment-live/dtos/models';
+import type { CreateRecruitmentLiveDto, IceServerDto, PagedRecruitmentLiveRequestDto, RecruitmentLiveChatMessageDto, RecruitmentLiveDto, SaveChatMessageInputDto, UpdateRecruitmentLiveDto, UserBriefDto, WsTokenDto } from '../recruitment-live/dtos/models';
 
 @Injectable({
   providedIn: 'root',
@@ -20,7 +20,7 @@ export class RecruitmentLiveService {
   
 
   createLive = (input: CreateRecruitmentLiveDto, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, RecruitmentLiveDto>({
+    this.restService.request<any, RecruitmentLiveDto[]>({
       method: 'POST',
       url: '/api/app/recruitment-live/live',
       body: input,
@@ -32,6 +32,22 @@ export class RecruitmentLiveService {
     this.restService.request<any, void>({
       method: 'DELETE',
       url: `/api/app/recruitment-live/${id}/live`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  endLive = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/recruitment-live/${id}/end-live`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getChatMessages = (liveId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, RecruitmentLiveChatMessageDto[]>({
+      method: 'GET',
+      url: `/api/app/recruitment-live/chat-messages/${liveId}`,
     },
     { apiName: this.apiName,...config });
   
@@ -83,6 +99,15 @@ export class RecruitmentLiveService {
     this.restService.request<any, WsTokenDto>({
       method: 'GET',
       url: `/api/app/recruitment-live/web-socket-token/${liveId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  saveChatMessage = (liveId: string, input: SaveChatMessageInputDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/recruitment-live/save-chat-message/${liveId}`,
+      body: input,
     },
     { apiName: this.apiName,...config });
   

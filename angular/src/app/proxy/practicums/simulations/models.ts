@@ -1,5 +1,5 @@
-import type { PracticumSimulationStatus } from '../enums/practicum-simulation-status.enum';
 import type { EntityDto } from '@abp/ng.core';
+import type { PracticumSimulationStatus } from '../enums/practicum-simulation-status.enum';
 
 export interface CreatePracticumSimulationDto {
   projectId?: string;

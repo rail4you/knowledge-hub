@@ -65,19 +65,19 @@ export class StudentExerciseRecordService {
     { apiName: this.apiName,...config });
   
 
-  getStudentRecords = (input: GetStudentExerciseRecordsInput, studentId: string, config?: Partial<Rest.Config>) =>
+  getRecordsByCourse = (input: GetStudentExerciseRecordsInput, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<StudentExerciseRecordDto>>({
       method: 'GET',
-      url: `/api/app/student-exercise-record/student-records/${studentId}`,
+      url: '/api/app/student-exercise-record/records-by-course',
       params: { courseId: input.courseId, chapterId: input.chapterId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
 
-  getRecordsByCourse = (input: GetStudentExerciseRecordsInput, config?: Partial<Rest.Config>) =>
+  getStudentRecords = (input: GetStudentExerciseRecordsInput, studentId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<StudentExerciseRecordDto>>({
       method: 'GET',
-      url: '/api/app/student-exercise-record/records-by-course',
+      url: `/api/app/student-exercise-record/student-records/${studentId}`,
       params: { courseId: input.courseId, chapterId: input.chapterId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });

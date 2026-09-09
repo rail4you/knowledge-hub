@@ -1,6 +1,16 @@
 import type { ExerciseType } from '../enums/exercise-type.enum';
 import type { FullAuditedEntityDto } from '@abp/ng.core';
 
+export interface AiAnalyzeExerciseInput {
+  exerciseIds?: string[];
+}
+
+export interface AiAnalyzeExerciseResultDto {
+  updatedCount?: number;
+  totalCount?: number;
+  errors?: string[];
+}
+
 export interface CreateUpdateExerciseDto {
   courseId?: string;
   chapterId?: string | null;
@@ -59,14 +69,4 @@ export interface GradingResultDto {
   score?: number;
   feedback?: string | null;
   isCorrect?: boolean;
-}
-
-export interface AiAnalyzeExerciseInput {
-  exerciseIds?: string[];
-}
-
-export interface AiAnalyzeExerciseResultDto {
-  updatedCount?: number;
-  totalCount?: number;
-  errors?: string[];
 }

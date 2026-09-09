@@ -18,9 +18,9 @@ export interface CourseLearningOverviewDto {
   totalStudents?: number;
   activeStudents?: number;
   totalExercises?: number;
-  totalLearningMinutes?: number;
   averageCompletionRate?: number;
   averageCorrectRate?: number;
+  totalLearningMinutes?: number;
   chapterProgress?: ChapterProgressDto[];
 }
 

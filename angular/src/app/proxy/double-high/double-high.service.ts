@@ -1,4 +1,5 @@
-import type { CreateDoubleHighEvidenceDto, CreateUpdateDoubleHighProjectDto, DoubleHighDashboardDto, DoubleHighEvidenceDto, DoubleHighIndicatorValueSnapshotDto, DoubleHighProjectDetailDto, DoubleHighProjectDto, DoubleHighReportDto, GetDoubleHighReportsInput, PagedDoubleHighProjectRequestDto, SaveDoubleHighIndicatorValueDto } from './dtos/models';
+import type { CreateDoubleHighEvidenceDto, CreateUpdateDoubleHighIndicatorDto, CreateUpdateDoubleHighProjectDto, DoubleHighDashboardDto, DoubleHighEvidenceDto, DoubleHighIndicatorDto, DoubleHighIndicatorValueSnapshotDto, DoubleHighProjectDetailDto, DoubleHighProjectDto, DoubleHighReportDto, GetDoubleHighReportsInput, PagedDoubleHighProjectRequestDto, SaveDoubleHighIndicatorValueDto } from './dtos/models';
+import type { DoubleHighDataSourceType } from './enums/double-high-data-source-type.enum';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -15,6 +16,15 @@ export class DoubleHighService {
     this.restService.request<any, DoubleHighEvidenceDto>({
       method: 'POST',
       url: '/api/app/double-high/evidence',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  addIndicator = (projectId: string, input: CreateUpdateDoubleHighIndicatorDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, DoubleHighIndicatorDto>({
+      method: 'POST',
+      url: `/api/app/double-high/indicator/${projectId}`,
       body: input,
     },
     { apiName: this.apiName,...config });
@@ -53,6 +63,23 @@ export class DoubleHighService {
     { apiName: this.apiName,...config });
   
 
+  deleteIndicator = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/double-high/${id}/indicator`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  downloadReport = (reportId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, Blob>({
+      method: 'POST',
+      responseType: 'blob',
+      url: `/api/app/double-high/download-report/${reportId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   exportReport = (projectId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, Blob>({
       method: 'POST',
@@ -66,6 +93,15 @@ export class DoubleHighService {
     this.restService.request<any, DoubleHighProjectDto>({
       method: 'GET',
       url: `/api/app/double-high/${id}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getDataSourcePreview = (dataSourceType: DoubleHighDataSourceType, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, number>({
+      method: 'GET',
+      url: '/api/app/double-high/data-source-preview',
+      params: { dataSourceType },
     },
     { apiName: this.apiName,...config });
   
@@ -109,6 +145,24 @@ export class DoubleHighService {
     this.restService.request<any, DoubleHighProjectDto>({
       method: 'PUT',
       url: `/api/app/double-high/${id}`,
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  updateEvidence = (id: string, input: CreateDoubleHighEvidenceDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, DoubleHighEvidenceDto>({
+      method: 'PUT',
+      url: `/api/app/double-high/${id}/evidence`,
+      body: input,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  updateIndicator = (id: string, input: CreateUpdateDoubleHighIndicatorDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, DoubleHighIndicatorDto>({
+      method: 'PUT',
+      url: `/api/app/double-high/${id}/indicator`,
       body: input,
     },
     { apiName: this.apiName,...config });

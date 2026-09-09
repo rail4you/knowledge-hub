@@ -65,6 +65,8 @@ export interface NewsCommentDto extends FullAuditedEntityDto<string> {
   userName?: string | null;
   content?: string;
   status?: NewsCommentStatus;
+  likeCount?: number;
+  userHasLiked?: boolean;
 }
 
 export interface NewsImportFailItemDto {
@@ -84,6 +86,10 @@ export interface PagedNewsArticleRequestDto extends PagedAndSortedResultRequestD
   filter?: string | null;
   categoryId?: string | null;
   status?: NewsArticleStatus | null;
+  isTop?: boolean | null;
+  isHot?: boolean | null;
+  publishedAfter?: string | null;
+  publishedBefore?: string | null;
 }
 
 export interface PagedNewsCommentRequestDto extends PagedAndSortedResultRequestDto {

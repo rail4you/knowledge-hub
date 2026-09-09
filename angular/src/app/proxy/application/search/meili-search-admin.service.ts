@@ -1,6 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { MeiliDashboardDto, MeiliDocumentGroupDto, MeiliEmbedderDto, MeiliIndexDto, MeiliIndexStatsDto, MeiliTaskDto, PageIndexListItemDto } from '../contracts/search/dtos/models';
+import type { MeiliDashboardDto, MeiliDocumentGroupDto, MeiliEmbedderDto, MeiliIndexDto, MeiliIndexStatsDto, MeiliTaskDto } from '../contracts/search/dtos/models';
+import type { HotWordDto } from '../contracts/search/models';
 
 @Injectable({
   providedIn: 'root',
@@ -28,6 +29,15 @@ export class MeiliSearchAdminService {
     { apiName: this.apiName,...config });
   
 
+  getHotWords = (resourceId: string, count: number = 30, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, HotWordDto[]>({
+      method: 'GET',
+      url: `/api/app/meili-search-admin/hot-words/${resourceId}`,
+      params: { count },
+    },
+    { apiName: this.apiName,...config });
+  
+
   getIndexDocuments = (indexUid: string, limit: number = 200, tenantId?: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, MeiliDocumentGroupDto[]>({
       method: 'GET',
@@ -50,15 +60,6 @@ export class MeiliSearchAdminService {
     this.restService.request<any, MeiliIndexDto[]>({
       method: 'GET',
       url: '/api/app/meili-search-admin/indexes',
-    },
-    { apiName: this.apiName,...config });
-  
-
-  getPageIndexList = (tenantId?: string, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, PageIndexListItemDto[]>({
-      method: 'GET',
-      url: '/api/app/meili-search-admin/page-index-list',
-      params: { tenantId },
     },
     { apiName: this.apiName,...config });
   

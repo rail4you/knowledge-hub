@@ -1,12 +1,12 @@
-import type { OpenDataLoaderResultDto } from './models';
+import type { LiteParseExtractionResult } from './models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { PageContentDto } from '../contracts/search/models';
+import type { PageContentDto } from '../../contracts/search/models';
 
 @Injectable({
   providedIn: 'root',
 })
-export class OpenDataLoaderService {
+export class LiteParseDocumentExtractionService {
   private restService = inject(RestService);
   apiName = 'KnowledgeHub';
   
@@ -14,16 +14,15 @@ export class OpenDataLoaderService {
   extractPages = (resourceId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PageContentDto[]>({
       method: 'POST',
-      url: `/api/app/open-data-loader/extract-pages/${resourceId}`,
+      url: `/api/app/lite-parse-document-extraction/extract-pages/${resourceId}`,
     },
     { apiName: this.apiName,...config });
   
 
-  parseDocument = (filePath: string, ct?: any, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, OpenDataLoaderResultDto>({
+  extractWithLayout = (resourceId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, LiteParseExtractionResult>({
       method: 'POST',
-      url: '/api/app/open-data-loader/parse-document',
-      params: { filePath },
+      url: `/api/app/lite-parse-document-extraction/extract-with-layout/${resourceId}`,
     },
     { apiName: this.apiName,...config });
 }

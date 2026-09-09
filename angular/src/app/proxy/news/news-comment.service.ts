@@ -45,6 +45,14 @@ export class NewsCommentService {
     { apiName: this.apiName,...config });
   
 
+  like = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, NewsCommentDto>({
+      method: 'POST',
+      url: `/api/app/news-comment/${id}/like`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   review = (id: string, input: ReviewNewsCommentDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, NewsCommentDto>({
       method: 'POST',

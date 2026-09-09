@@ -58,7 +58,7 @@ export class NewsArticleService {
     this.restService.request<any, PagedResultDto<NewsArticleDto>>({
       method: 'GET',
       url: '/api/app/news-article',
-      params: { filter: input.filter, categoryId: input.categoryId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, categoryId: input.categoryId, status: input.status, isTop: input.isTop, isHot: input.isHot, publishedAfter: input.publishedAfter, publishedBefore: input.publishedBefore, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -67,7 +67,7 @@ export class NewsArticleService {
     this.restService.request<any, PagedResultDto<NewsArticleDto>>({
       method: 'GET',
       url: '/api/app/news-article/published-list',
-      params: { filter: input.filter, categoryId: input.categoryId, status: input.status, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, categoryId: input.categoryId, status: input.status, isTop: input.isTop, isHot: input.isHot, publishedAfter: input.publishedAfter, publishedBefore: input.publishedBefore, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

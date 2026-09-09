@@ -1,6 +1,6 @@
 import { RestService, Rest } from '@abp/ng.core';
-import { Injectable, inject } from '@angular/core';
 import type { PagedResultDto } from '@abp/ng.core';
+import { Injectable, inject } from '@angular/core';
 import type { LogViewDto, PopularSearchDto, SearchHistoryDto, SearchStatsDto, TopResourceDto } from '../contracts/search/dtos/models';
 
 @Injectable({
@@ -9,6 +9,22 @@ import type { LogViewDto, PopularSearchDto, SearchHistoryDto, SearchStatsDto, To
 export class SearchAnalyticsService {
   private restService = inject(RestService);
   apiName = 'KnowledgeHub';
+  
+
+  clearUserSearchHistory = (userId: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/search-analytics/clear-user-search-history/${userId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  deleteSearchHistory = (userId: string, id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/search-analytics/${id}/search-history/${userId}`,
+    },
+    { apiName: this.apiName,...config });
   
 
   getPopularSearches = (count: number = 10, config?: Partial<Rest.Config>) =>

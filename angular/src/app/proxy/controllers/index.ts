@@ -1,4 +1,6 @@
 export * from './chunk-upload.service';
+export * from './http-proxy.service';
+export * from './image-proxy.service';
 export * from './logout.service';
 export * from './models';
 export * from './oss-upload.service';
