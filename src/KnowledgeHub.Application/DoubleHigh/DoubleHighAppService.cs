@@ -211,6 +211,10 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             throw new UserFriendlyException($"指标编码 {code} 已存在。");
         }
 
+        // 权重语义：0~1 的小数，所有指标权重之和不超过 1（如 0.3 + 0.5 + 0.2 = 1）
+        ValidateIndicatorWeight(input.Weight);
+        await ValidateWeightSumAsync(projectId, input.Weight);
+
         var maxSortOrder = (await _indicatorRepository.GetListAsync(x => x.ProjectId == projectId))
             .DefaultIfEmpty()
             .Max(x => x?.SortOrder ?? 0);
@@ -228,7 +232,7 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             Unit = input.Unit?.Trim(),
             DataSourceType = input.DataSourceType,
             TargetValue = input.TargetValue,
-            Weight = input.Weight == 0 ? 1 : input.Weight,
+            Weight = input.Weight,
             SortOrder = input.SortOrder > 0 ? input.SortOrder : maxSortOrder + 1
         };
 
@@ -256,6 +260,10 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             throw new UserFriendlyException($"指标编码 {code} 已存在。");
         }
 
+        // 权重语义：0~1 的小数，所有指标权重之和不超过 1（更新时排除自身）
+        ValidateIndicatorWeight(input.Weight);
+        await ValidateWeightSumAsync(entity.ProjectId, input.Weight, id);
+
         entity.ParentId = input.ParentId;
         entity.CategoryName = categoryName;
         entity.IndicatorCode = code;
@@ -264,7 +272,7 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         entity.Unit = input.Unit?.Trim();
         entity.DataSourceType = input.DataSourceType;
         entity.TargetValue = input.TargetValue;
-        entity.Weight = input.Weight == 0 ? 1 : input.Weight;
+        entity.Weight = input.Weight;
         entity.SortOrder = input.SortOrder > 0 ? input.SortOrder : entity.SortOrder;
 
         await _indicatorRepository.UpdateAsync(entity, autoSave: true);
@@ -598,6 +606,17 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
 
     private async Task ReplaceIndicatorsAsync(Guid projectId, List<CreateUpdateDoubleHighIndicatorDto> inputs)
     {
+        // 权重语义：0~1 的小数，同一项目下所有指标权重之和不超过 1
+        foreach (var input in inputs)
+        {
+            ValidateIndicatorWeight(input.Weight);
+        }
+        var batchSum = inputs.Sum(x => x.Weight);
+        if (batchSum - 1 > 0.000001m)
+        {
+            throw new UserFriendlyException($"指标权重之和不能超过 1，当前为 {batchSum}。");
+        }
+
         // 关键修复：原实现用 _indicatorRepository.DeleteAsync 一条条删，
         // EF 把删除和后续插入都挂在当前 UoW 上，最后一次 SaveChanges 时
         // EF 按 "insert → update → delete" 顺序执行（delete 故意放最后，
@@ -665,6 +684,34 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
                 SortOrder = input.SortOrder
             };
             await _indicatorRepository.InsertAsync(entity);
+        }
+    }
+
+    private static void ValidateIndicatorWeight(decimal weight)
+    {
+        // 权重语义：0~1 的小数（如 0.3），所有指标权重之和为 1；0 表示暂未分配
+        if (weight < 0 || weight > 1)
+        {
+            throw new UserFriendlyException($"指标权重必须在 0~1 之间，当前为 {weight}。");
+        }
+    }
+
+    private async Task ValidateWeightSumAsync(Guid projectId, decimal newWeight, Guid? excludeIndicatorId = null)
+    {
+        var query = await _indicatorRepository.GetQueryableAsync();
+        var otherSum = await query
+            .Where(x => x.ProjectId == projectId && (!excludeIndicatorId.HasValue || x.Id != excludeIndicatorId.Value))
+            .SumAsync(x => (decimal?)x.Weight) ?? 0;
+        var total = otherSum + newWeight;
+        if (total - 1 > 0.000001m)
+        {
+            var maxAllowed = 1 - otherSum;
+            if (maxAllowed < 0)
+            {
+                maxAllowed = 0;
+            }
+            throw new UserFriendlyException(
+                $"指标权重之和不能超过 1：已有权重合计 {otherSum}，本次最多可填 {maxAllowed}，当前合计将为 {total}。");
         }
     }
 

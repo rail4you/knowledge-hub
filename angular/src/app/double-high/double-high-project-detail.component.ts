@@ -116,7 +116,7 @@ export class DoubleHighProjectDetailComponent implements OnInit {
       unit: '',
       dataSourceType: DoubleHighDataSourceType.Manual,
       targetValue: undefined,
-      weight: 1,
+      weight: 0,
       sortOrder: 0,
     };
   }
@@ -144,6 +144,9 @@ export class DoubleHighProjectDetailComponent implements OnInit {
   openCreateIndicator(): void {
     this.editingIndicatorId = null;
     this.indicatorForm = this.createEmptyIndicatorForm();
+    // 权重语义：0~1 小数，合计不超过 1；新建默认填剩余可用权重，方便用户直接保存
+    const remaining = this.getRemainingWeight();
+    this.indicatorForm.weight = remaining > 0 ? this.round2(remaining) : 0;
     this.latestValueDraft = null;
     this.latestNoteDraft = '';
     this.dataSourcePreview.set(null);
@@ -184,7 +187,7 @@ export class DoubleHighProjectDetailComponent implements OnInit {
       unit: item.unit || '',
       dataSourceType: item.dataSourceType,
       targetValue: item.targetValue,
-      weight: item.weight || 1,
+      weight: item.weight ?? 0,
       sortOrder: item.sortOrder,
     };
     this.latestValueDraft = item.latestValue?.value ?? null;
@@ -203,6 +206,21 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     if (!project) {
       return;
     }
+
+    // 权重语义：0~1 小数（如 0.3），所有指标权重之和不超过 1（0 表示暂未分配）
+    const weight = Number(this.indicatorForm.weight);
+    if (!Number.isFinite(weight) || weight < 0 || weight > 1) {
+      this.message.warning('权重必须在 0~1 之间，如 0.3');
+      return;
+    }
+    const maxAllowed = this.getMaxWeightForForm();
+    if (weight - maxAllowed > 0.000001) {
+      this.message.warning(
+        `权重超出范围：已有权重合计 ${this.formatWeight(this.getTotalWeightExcludingSelf())}，本次最多可填 ${this.formatWeight(maxAllowed)}`
+      );
+      return;
+    }
+    this.indicatorForm.weight = weight;
 
     const request = this.editingIndicatorId
       ? this.doubleHighService.updateIndicator(this.editingIndicatorId, this.indicatorForm)
@@ -525,6 +543,68 @@ export class DoubleHighProjectDetailComponent implements OnInit {
       return false;
     }
     return !this.project()?.indicators.some(x => x.id === item.indicatorId);
+  }
+
+  /** 全部指标权重合计（0~1 语义，总和不超过 1） */
+  getTotalWeight(): number {
+    const list = this.project()?.indicators ?? [];
+    return list.reduce((sum, x) => sum + (Number(x.weight) || 0), 0);
+  }
+
+  /** 排除当前编辑指标后的权重合计，用于计算本次最大可填值 */
+  getTotalWeightExcludingSelf(): number {
+    const list = this.project()?.indicators ?? [];
+    return list
+      .filter(x => x.id !== this.editingIndicatorId)
+      .reduce((sum, x) => sum + (Number(x.weight) || 0), 0);
+  }
+
+  /** 新建时剩余可用权重；编辑时为“排除自身后的剩余”，即本次最大可填值（仅弹窗内使用） */
+  getRemainingWeight(): number {
+    return Math.max(0, 1 - this.getTotalWeightExcludingSelf());
+  }
+
+  /** 工具条展示用：真实剩余 = 1 - 全部合计，不受编辑状态影响 */
+  getTrueRemainingWeight(): number {
+    return Math.max(0, 1 - this.getTotalWeight());
+  }
+
+  getMaxWeightForForm(): number {
+    return this.round2(this.getRemainingWeight());
+  }
+
+  /** 弹窗内实时预览：排除自身合计 + 当前表单值，随输入同步变化 */
+  getLiveTotalWeight(): number {
+    const v = Number(this.indicatorForm.weight);
+    return this.getTotalWeightExcludingSelf() + (Number.isFinite(v) ? v : 0);
+  }
+
+  getLiveRemainingWeight(): number {
+    return 1 - this.getLiveTotalWeight();
+  }
+
+  onWeightInputChange(): void {
+    const max = this.getMaxWeightForForm();
+    let v = Number(this.indicatorForm.weight);
+    if (!Number.isFinite(v)) {
+      return;
+    }
+    if (v < 0) {
+      v = 0;
+    }
+    if (v - max > 0) {
+      v = max;
+      this.message.warning(`权重不能超过剩余可用值 ${this.formatWeight(max)}`);
+    }
+    this.indicatorForm.weight = this.round2(v);
+  }
+
+  formatWeight(v: number): string {
+    return (Math.round(v * 100) / 100).toString();
+  }
+
+  private round2(v: number): number {
+    return Math.round(v * 100) / 100;
   }
   private showApiError(err: any, fallback: string): void {
     const detail =

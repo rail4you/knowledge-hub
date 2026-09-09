@@ -95,6 +95,7 @@
           <div class="toolbar-left">
             <span class="toolbar-title">指标数据</span>
             <span class="count-badge">{{ project.indicators.length }} 项</span>
+            <span class="weight-sum" [class.over]="getTotalWeight() - 1 > 0.000001">权重合计 {{ formatWeight(getTotalWeight()) }} / 1，剩余 {{ formatWeight(getTrueRemainingWeight()) }}</span>
           </div>
           <div class="toolbar-right">
             <button class="toolbar-new-btn" (click)="openCreateIndicator()">
@@ -105,11 +106,12 @@
       <div class="table-scroll">
         <table class="data-table fixed">
           <colgroup>
-            <col style="width:30%" />
-            <col style="width:11%" />
+            <col style="width:26%" />
             <col style="width:10%" />
-            <col style="width:21%" />
-            <col style="width:13%" />
+            <col style="width:9%" />
+            <col style="width:9%" />
+            <col style="width:19%" />
+            <col style="width:12%" />
             <col style="width:15%" />
           </colgroup>
           <thead>
@@ -117,6 +119,7 @@
               <th>指标</th>
               <th>数据来源</th>
               <th class="center">目标值</th>
+              <th class="center">权重</th>
               <th>最新值</th>
               <th>完成度</th>
               <th class="center">操作</th>
@@ -125,7 +128,7 @@
           <tbody>
             @if (project.indicators.length === 0) {
               <tr>
-                <td colspan="6">
+                <td colspan="7">
                   <div class="empty-state">
                     <span nz-icon nzType="inbox" nzTheme="outline" style="font-size:36px;color:#d9d9d9"></span>
                     <p>暂无指标，点击右上方"新建指标"开始配置</p>
@@ -145,6 +148,9 @@
                     @if (item.targetValue !== null && item.targetValue !== undefined) {
                       <span class="unit">{{ item.unit || '' }}</span>
                     }
+                  </td>
+                  <td class="center">
+                    <span class="weight-val">{{ formatWeight(item.weight) }}</span>
                   </td>
                   <td>
                     @if (item.latestValue) {
@@ -379,8 +385,12 @@
       <label>最新值备注</label>
       <input nz-input [(ngModel)]="latestNoteDraft" placeholder="备注，可为空" />
 
-      <label>权重</label>
-      <input nz-input type="number" [(ngModel)]="indicatorForm.weight" placeholder="权重，默认为 1" />
+      <label>权重（0~1）</label>
+      <div>
+        <input nz-input type="number" [(ngModel)]="indicatorForm.weight" (ngModelChange)="onWeightInputChange()"
+          min="0" [max]="getMaxWeightForForm()" step="0.01" placeholder="如 0.3，合计不超过 1" />
+        <div class="weight-hint">保存后合计 {{ formatWeight(getLiveTotalWeight()) }} / 1，剩余 {{ formatWeight(getLiveRemainingWeight()) }}（本次最多可填 {{ formatWeight(getMaxWeightForForm()) }}）</div>
+      </div>
 
       <label>排序</label>
       <input nz-input type="number" [(ngModel)]="indicatorForm.sortOrder" placeholder="排序，数字越小越靠前" />
