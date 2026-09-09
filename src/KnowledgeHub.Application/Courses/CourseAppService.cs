@@ -127,7 +127,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         {
             return null;
         }
-        return await MapToDtoAsync(course);
+        var dto = await MapToDtoAsync(course);
+        await FillCourseCountsAsync(new List<CourseDto> { dto });
+        return dto;
     }
 
     public async Task<PagedResultDto<CourseDto>> GetListAsync(PagedCourseRequestDto input)
@@ -167,6 +169,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
         var dtos = courses.Select(MapToDto).ToList();
         await AttachMajorsBatchAsync(dtos);
+        await FillCourseCountsAsync(dtos);
 
         return new PagedResultDto<CourseDto>(totalCount, dtos);
     }
@@ -341,35 +344,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                                .ToListAsync();
         }
 
-        // 批量查询章节数和选课人数
-        var courseIds = courses.Select(c => c.Id).ToList();
-        var chapterQuery = await _chapterRepository.GetQueryableAsync();
-        var chapterCounts = await AsyncExecuter.ToListAsync(
-            chapterQuery.Where(ch => courseIds.Contains(ch.CourseId))
-                .GroupBy(ch => ch.CourseId)
-                .Select(g => new { CourseId = g.Key, Count = g.Count() }));
-
-        Dictionary<Guid, int> studentCountMap;
-        using (DataFilter.Disable<IMultiTenant>())
-        {
-            var studentQuery = await _studentCourseRepository.GetQueryableAsync();
-            var studentCounts = await AsyncExecuter.ToListAsync(
-                studentQuery.Where(sc => courseIds.Contains(sc.CourseId) && sc.Status != StudentCourseStatus.Dropped)
-                    .GroupBy(sc => sc.CourseId)
-                    .Select(g => new { CourseId = g.Key, Count = g.Count() }));
-            studentCountMap = studentCounts.ToDictionary(x => x.CourseId, x => x.Count);
-        }
-
-        var chapterCountMap = chapterCounts.ToDictionary(x => x.CourseId, x => x.Count);
-
-        var dtos = courses.Select(c =>
-        {
-            var dto = MapToDto(c);
-            dto.ChapterCount = chapterCountMap.GetValueOrDefault(c.Id, 0);
-            dto.StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0);
-            return dto;
-        }).ToList();
+        var dtos = courses.Select(MapToDto).ToList();
         await AttachMajorsBatchAsync(dtos);
+        await FillCourseCountsAsync(dtos);
 
         return new PagedResultDto<CourseDto>(totalCount, dtos);
     }
@@ -429,6 +406,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
         var dtos = courses.Select(MapToDto).ToList();
         await AttachMajorsBatchAsync(dtos);
+        await FillCourseCountsAsync(dtos);
         return new PagedResultDto<CourseDto>(courses.Count, dtos);
     }
 
@@ -454,6 +432,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         }
         var dtos = courses.Select(MapToDto).ToList();
         await AttachMajorsBatchAsync(dtos);
+        await FillCourseCountsAsync(dtos);
 
         return new PagedResultDto<CourseDto>(courses.Count, dtos);
     }
@@ -523,6 +502,43 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         var dto = MapToDto(course);
         await AttachMajorsAsync(dto);
         return dto;
+    }
+
+    /// <summary>
+    /// 批量填充 ChapterCount / StudentCount。
+    /// Chapter 无租户隔离，直接统计；StudentCourse 按租户隔离需跨租户统计（与 GetDetail/GetPublished 一致，排除已退课）。
+    /// </summary>
+    private async Task FillCourseCountsAsync(List<CourseDto> dtos)
+    {
+        if (dtos.Count == 0)
+        {
+            return;
+        }
+        var courseIds = dtos.Select(c => c.Id).ToList();
+
+        var chapterQuery = await _chapterRepository.GetQueryableAsync();
+        var chapterCounts = await AsyncExecuter.ToListAsync(
+            chapterQuery.Where(ch => courseIds.Contains(ch.CourseId))
+                .GroupBy(ch => ch.CourseId)
+                .Select(g => new { CourseId = g.Key, Count = g.Count() }));
+        var chapterCountMap = chapterCounts.ToDictionary(x => x.CourseId, x => x.Count);
+
+        Dictionary<Guid, int> studentCountMap;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var studentQuery = await _studentCourseRepository.GetQueryableAsync();
+            var studentCounts = await AsyncExecuter.ToListAsync(
+                studentQuery.Where(sc => courseIds.Contains(sc.CourseId) && sc.Status != StudentCourseStatus.Dropped)
+                    .GroupBy(sc => sc.CourseId)
+                    .Select(g => new { CourseId = g.Key, Count = g.Count() }));
+            studentCountMap = studentCounts.ToDictionary(x => x.CourseId, x => x.Count);
+        }
+
+        foreach (var dto in dtos)
+        {
+            dto.ChapterCount = chapterCountMap.GetValueOrDefault(dto.Id, 0);
+            dto.StudentCount = studentCountMap.GetValueOrDefault(dto.Id, 0);
+        }
     }
 
     // ═══ 主从专业（多专业） helpers ═══
