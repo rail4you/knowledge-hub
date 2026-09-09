@@ -97,7 +97,8 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     "KnowledgeHub.RecruitmentLive", "KnowledgeHub.RecruitmentLive.Create", "KnowledgeHub.RecruitmentLive.Manage",
                     "KnowledgeHub.Documents", "KnowledgeHub.Documents.Create", "KnowledgeHub.Documents.Edit", "KnowledgeHub.Documents.Delete",
                     "KnowledgeHub.Majors", "KnowledgeHub.Majors.Create", "KnowledgeHub.Majors.Edit", "KnowledgeHub.Majors.Delete",
-                    "KnowledgeHub.Alliance", "KnowledgeHub.Alliance.Create", "KnowledgeHub.Alliance.Update", "KnowledgeHub.Alliance.Delete", "KnowledgeHub.Alliance.ManageMembers",
+                    // 注意：Alliance.*（联盟管理）是 host 全局能力，仅 host 用户注入，见下方；
+                    // 租户管理员（SchoolAdmin）不得持有，避免越权。LeagueAudit 同理不注入，依赖数据库授权。
                     "KnowledgeHub.Learning", "KnowledgeHub.Learning.ViewStatistics", "KnowledgeHub.Learning.ExportData",
                     "KnowledgeHub.Users", "KnowledgeHub.Users.Create", "KnowledgeHub.Users.Edit", "KnowledgeHub.Users.Delete", "KnowledgeHub.Users.Import",
                     "AbpIdentity.Roles", "AbpIdentity.Roles.Create", "AbpIdentity.Roles.Update", "AbpIdentity.Roles.Delete", "AbpIdentity.Roles.ManagePermissions",
@@ -108,6 +109,24 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                 foreach (var perm in allPerms)
                 {
                     newPolicies[perm] = true;
+                }
+
+                // 联盟管理（全局能力）：仅 host 用户（全局 admin / 联盟管理员）注入；
+                // 租户用户（SchoolAdmin 等）剥离，菜单自动隐藏，后端鉴权亦为 false（Host-only 权限）。
+                var alliancePerms = new[] { "KnowledgeHub.Alliance", "KnowledgeHub.Alliance.Create", "KnowledgeHub.Alliance.Update", "KnowledgeHub.Alliance.Delete", "KnowledgeHub.Alliance.ManageMembers" };
+                if (IsHostUser(root))
+                {
+                    foreach (var ap in alliancePerms)
+                    {
+                        newPolicies[ap] = true;
+                    }
+                }
+                else
+                {
+                    foreach (var ap in alliancePerms)
+                    {
+                        newPolicies.Remove(ap);
+                    }
                 }
 
                 // 租户管理（新建租户）菜单：仅 host 全局 admin 可见。

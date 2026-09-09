@@ -327,10 +327,26 @@ export class IdentityRolesComponent implements OnInit {
   private buildPermissionGroups(permissions: any[]): PermissionGroup[] {
     const knowledgeHubPermissions = permissions.filter((p: any) => p.name && p.name.startsWith('KnowledgeHub.'));
 
+    // 租户角色（如院校管理员 SchoolAdmin）：隐藏联盟终审与联盟管理（全局能力，仅全局管理员/联盟管理员持有）。
+    // 后端已将二者标为 Host-only（TenantPermissionService 自动过滤），此处再做前端兜底，
+    // 避免后端未重启或缓存导致“看得到、点得上”的越权错觉。
+    const isTenantRole = this.permissionTenantId != null;
+    const tenantHiddenPermissions = new Set([
+      'KnowledgeHub.Resources.LeagueAudit',
+      'KnowledgeHub.Alliance',
+      'KnowledgeHub.Alliance.Create',
+      'KnowledgeHub.Alliance.Update',
+      'KnowledgeHub.Alliance.Delete',
+      'KnowledgeHub.Alliance.ManageMembers',
+    ]);
+    const visiblePermissions = isTenantRole
+      ? knowledgeHubPermissions.filter((p: any) => !tenantHiddenPermissions.has(p.name))
+      : knowledgeHubPermissions;
+
     const groups: PermissionGroup[] = [];
     const groupMap = new Map<string, PermissionGroup>();
 
-    knowledgeHubPermissions.forEach((p: any) => {
+    visiblePermissions.forEach((p: any) => {
       // KnowledgeHub.Resources.Create -> Resources 组；
       // KnowledgeHub.Resources（模块父权限本身）-> Resources 组（而非 Other），
       // 之前用 parts.length > 1 判断会把全部 20+ 个父权限都丢进"其他"。

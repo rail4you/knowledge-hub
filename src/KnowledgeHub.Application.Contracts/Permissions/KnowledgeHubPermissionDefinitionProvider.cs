@@ -27,7 +27,13 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.Delete, L("Permission:Resources.Delete"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.Download, L("Permission:Resources.Download"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.SchoolAudit, L("Permission:Resources.SchoolAudit"));
-        resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.LeagueAudit, L("Permission:Resources.LeagueAudit"));
+        // 联盟终审：仅 host 全局管理员 / 联盟管理员（LeagueAdmin，全局角色）可用。
+        // Host-only 后租户侧运行时鉴权恒为 false，且租户角色授权弹窗自动隐藏
+        //（TenantPermissionService 按 MultiTenancySide 过滤），院校管理员无法再被授予。
+        resourcesPermission.AddChild(
+            KnowledgeHubPermissions.Resources.LeagueAudit,
+            L("Permission:Resources.LeagueAudit"),
+            multiTenancySide: MultiTenancySides.Host);
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.ManageCategory, L("Permission:Resources.ManageCategory"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.RequestDelete, L("Permission:Resources.RequestDelete"));
         resourcesPermission.AddChild(KnowledgeHubPermissions.Resources.PhysicalDelete, L("Permission:Resources.PhysicalDelete"));
@@ -76,12 +82,28 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         teachingAgentsPermission.AddChild(KnowledgeHubPermissions.TeachingAgents.Execute, L("Permission:TeachingAgents.Execute"));
         teachingAgentsPermission.AddChild(KnowledgeHubPermissions.TeachingAgents.Review, L("Permission:TeachingAgents.Review"));
 
-        //Alliance permissions
-        var alliancePermission = myGroup.AddPermission(KnowledgeHubPermissions.Alliance.Default, L("Permission:Alliance"));
-        alliancePermission.AddChild(KnowledgeHubPermissions.Alliance.Create, L("Permission:Alliance.Create"));
-        alliancePermission.AddChild(KnowledgeHubPermissions.Alliance.Update, L("Permission:Alliance.Update"));
-        alliancePermission.AddChild(KnowledgeHubPermissions.Alliance.Delete, L("Permission:Alliance.Delete"));
-        alliancePermission.AddChild(KnowledgeHubPermissions.Alliance.ManageMembers, L("Permission:Alliance.ManageMembers"));
+        //Alliance permissions（联盟管理 — 仅 host 全局管理员 / 联盟管理员，全局能力）
+        // Host-only：租户角色（院校管理员等）授权弹窗自动隐藏，后端鉴权恒为 false。
+        var alliancePermission = myGroup.AddPermission(
+            KnowledgeHubPermissions.Alliance.Default,
+            L("Permission:Alliance"),
+            multiTenancySide: MultiTenancySides.Host);
+        alliancePermission.AddChild(
+            KnowledgeHubPermissions.Alliance.Create,
+            L("Permission:Alliance.Create"),
+            multiTenancySide: MultiTenancySides.Host);
+        alliancePermission.AddChild(
+            KnowledgeHubPermissions.Alliance.Update,
+            L("Permission:Alliance.Update"),
+            multiTenancySide: MultiTenancySides.Host);
+        alliancePermission.AddChild(
+            KnowledgeHubPermissions.Alliance.Delete,
+            L("Permission:Alliance.Delete"),
+            multiTenancySide: MultiTenancySides.Host);
+        alliancePermission.AddChild(
+            KnowledgeHubPermissions.Alliance.ManageMembers,
+            L("Permission:Alliance.ManageMembers"),
+            multiTenancySide: MultiTenancySides.Host);
 
         //Learning permissions
         var learningPermission = myGroup.AddPermission(KnowledgeHubPermissions.Learning.Default, L("Permission:Learning"));

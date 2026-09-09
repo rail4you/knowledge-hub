@@ -52,7 +52,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 
     /// <summary>
     /// LeagueAdmin 是"联盟审核员"角色：两级审核的第二级，跨租户审核院校已通过的资源。
-    /// 除资源浏览/预览/联盟审核外不授予任何管理权限，避免越权做院校审核或后台管理。
+    /// 除资源浏览/预览/联盟审核外，仅额外持有联盟管理（全局能力），避免越权做院校审核或后台管理。
     /// </summary>
     private static readonly HashSet<string> LeagueAdminPermissions = new()
     {
@@ -60,16 +60,26 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         KnowledgeHubPermissions.Resources.LeagueAudit,
         KnowledgeHubPermissions.Resources.Download,
         KnowledgeHubPermissions.Resources.ViewRecommendation,
+        KnowledgeHubPermissions.Alliance.Default,
+        KnowledgeHubPermissions.Alliance.Create,
+        KnowledgeHubPermissions.Alliance.Update,
+        KnowledgeHubPermissions.Alliance.Delete,
+        KnowledgeHubPermissions.Alliance.ManageMembers,
     };
 
     /// <summary>
-    /// 联盟独有权限：SchoolAdmin（院校管理员）不得拥有，避免院校审核员越权做联盟审核/直播管理。
+    /// 联盟独有权限：SchoolAdmin（院校管理员）不得拥有，避免院校审核员越权做联盟审核/联盟管理/直播管理。
     /// 注意：PhysicalDelete 已从此列表移除 —— 租户管理员需审批本租户内用户（包括老师）的资源删除申请，
     /// 因此 SchoolAdmin 必须持有 PhysicalDelete 权限；审批时后端会按租户隔离，只能处理本租户资源。
     /// </summary>
     private static readonly string[] SchoolAdminForbiddenPermissions =
     {
         KnowledgeHubPermissions.Resources.LeagueAudit,
+        KnowledgeHubPermissions.Alliance.Default,
+        KnowledgeHubPermissions.Alliance.Create,
+        KnowledgeHubPermissions.Alliance.Update,
+        KnowledgeHubPermissions.Alliance.Delete,
+        KnowledgeHubPermissions.Alliance.ManageMembers,
         KnowledgeHubPermissions.RecruitmentLive.Manage,
     };
 
@@ -383,11 +393,25 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
 
-        // 收回历史遗留的"联盟独有"权限（LeagueAudit / PhysicalDelete / RecruitmentLive.Manage）
-        // 院校管理员只做第一级院校审核，不能做第二级联盟审核。
+        // 收回历史遗留的"联盟独有"权限（LeagueAudit / Alliance.* / RecruitmentLive.Manage）
+        // 院校管理员只做第一级院校审核，不能做第二级联盟审核，也不能做联盟管理（全局能力）。
         foreach (var forbidden in SchoolAdminForbiddenPermissions)
         {
             await RevokeAsync("SchoolAdmin", forbidden);
+            await RevokeByDeleteAsync("SchoolAdmin", forbidden);
+        }
+
+        // 租户角色（Teacher / Student / EnterpriseUser）同样绝不持有联盟终审与联盟管理：
+        // 直接删除授权行，清理历史脏授权。LeagueAdmin 由 SyncLeagueAdminPermissionsAsync
+        // 权威式收紧（allowlist 之内，含联盟管理），无需在此处理。
+        foreach (var roleName in new[] { "Teacher", "Student", "EnterpriseUser" })
+        {
+            await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Resources.LeagueAudit);
+            await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.Default);
+            await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.Create);
+            await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.Update);
+            await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.Delete);
+            await RevokeByDeleteAsync(roleName, KnowledgeHubPermissions.Alliance.ManageMembers);
         }
 
         // ── Teacher：教师（修复：补齐缺失的 Courses.Delete） ──
@@ -589,6 +613,25 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.Majors.Create);
         await GrantAsync("admin", KnowledgeHubPermissions.Majors.Edit);
         await GrantAsync("admin", KnowledgeHubPermissions.Majors.Delete);
+
+        // 联盟管理：仅 host「admin」全局管理员可用（全局能力）。
+        // host 上下文授予；租户上下文（含租户级 admin）显式收回，防止租户管理员越权管理联盟。
+        if (_currentTenant.Id == null)
+        {
+            await GrantAsync("admin", KnowledgeHubPermissions.Alliance.Default);
+            await GrantAsync("admin", KnowledgeHubPermissions.Alliance.Create);
+            await GrantAsync("admin", KnowledgeHubPermissions.Alliance.Update);
+            await GrantAsync("admin", KnowledgeHubPermissions.Alliance.Delete);
+            await GrantAsync("admin", KnowledgeHubPermissions.Alliance.ManageMembers);
+        }
+        else
+        {
+            await RevokeByDeleteAsync("admin", KnowledgeHubPermissions.Alliance.Default);
+            await RevokeByDeleteAsync("admin", KnowledgeHubPermissions.Alliance.Create);
+            await RevokeByDeleteAsync("admin", KnowledgeHubPermissions.Alliance.Update);
+            await RevokeByDeleteAsync("admin", KnowledgeHubPermissions.Alliance.Delete);
+            await RevokeByDeleteAsync("admin", KnowledgeHubPermissions.Alliance.ManageMembers);
+        }
 
         // 租户信息管理：仅 host「admin」全局管理员可用（GetListAsync / SaveByTenantIdAsync 均要求宿主上下文）。
         // 租户上下文绝不授予，且显式收回历史遗留授权，防止租户级 admin 看到/修改其它租户的信息。
