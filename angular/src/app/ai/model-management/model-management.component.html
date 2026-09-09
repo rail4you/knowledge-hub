@@ -1,8 +1,8 @@
 <div class="model-management-container">
-  <div class="page-header">
-    <h2>AI 模型管理</h2>
-    <p class="subtitle">管理系统中的 AI 模型，查看模型状态和性能</p>
-  </div>
+  <header class="page-header">
+    <h1>AI 模型管理</h1>
+    <p class="page-desc">管理系统中的 AI 模型，查看模型状态和性能</p>
+  </header>
 
   <nz-card class="stats-card">
     <div nz-row [nzGutter]="16">
@@ -57,32 +57,32 @@
     >
       <thead>
         <tr>
-          <th>模型名称</th>
-          <th>版本</th>
-          <th>类型</th>
-          <th>状态</th>
-          <th>准确率</th>
-          <th>训练日期</th>
-          <th>操作</th>
+          <th class="col-title">模型名称</th>
+          <th nzAlign="center">版本</th>
+          <th nzAlign="center">类型</th>
+          <th nzAlign="center">状态</th>
+          <th nzAlign="center">准确率</th>
+          <th nzAlign="center">训练日期</th>
+          <th nzAlign="center">操作</th>
         </tr>
       </thead>
       <tbody>
         @for (model of models(); track model.id) {
           <tr>
-            <td>
-              <strong>{{ model.name }}</strong>
+            <td class="col-title">
+              <span class="title-text">{{ model.name }}</span>
               <p class="model-desc">{{ model.description }}</p>
             </td>
-            <td>v{{ model.version }}</td>
-            <td>
+            <td nzAlign="center">v{{ model.version }}</td>
+            <td nzAlign="center">
               <nz-tag>{{ model.type }}</nz-tag>
             </td>
-            <td>
+            <td nzAlign="center">
               <nz-tag [nzColor]="getStatusColor(model.status)">
                 {{ getStatusText(model.status) }}
               </nz-tag>
             </td>
-            <td>
+            <td nzAlign="center">
               <nz-progress
                 [nzPercent]="model.accuracy"
                 [nzStatus]="getAccuracyStatus(model.accuracy)"
@@ -90,73 +90,29 @@
                 nzSize="small"
               ></nz-progress>
             </td>
-            <td>{{ model.trainedOn }}</td>
-            <td>
-              <button
-                nz-button
-                nzType="link"
-                nzSize="small"
-                (click)="showDetail(model)"
-                nz-tooltip="查看详情"
-              >
-                <span nz-icon nzType="eye"></span>
-              </button>
-              <button
+            <td nzAlign="center">{{ model.trainedOn }}</td>
+            <td nzAlign="center" class="ops-cell">
+              <a
                 nz-button
                 nzType="link"
                 nzSize="small"
                 (click)="toggleStatus(model)"
-                nz-tooltip="{{ model.status === 'active' ? '停止模型' : '启动模型' }}"
-              >
-                <span nz-icon="{{ model.status === 'active' ? 'pause-circle' : 'play-circle' }}"></span>
-              </button>
-              <button
+              >{{ model.status === 'active' ? '停止' : '启动' }}</a>
+              <a
                 nz-button
                 nzType="link"
                 nzSize="small"
                 nzDanger
-                (click)="deleteModel(model)"
-                nz-tooltip="删除模型"
-              >
-                <span nz-icon nzType="delete"></span>
-              </button>
+                nz-popconfirm
+                nzPopconfirmTitle="确认删除该模型？"
+                nzOkText="删除"
+                nzCancelText="取消"
+                (nzOnConfirm)="deleteModel(model)"
+              >删除</a>
             </td>
           </tr>
         }
       </tbody>
     </nz-table>
   </nz-card>
-
-  <nz-modal
-    [nzVisible]="isModalVisible()"
-    nzTitle="模型详情"
-    [nzFooter]="null"
-    (nzOnCancel)="isModalVisible.set(false)"
-    nzWidth="600"
-  >
-    @if (selectedModel(); as model) {
-      <ng-container>
-        <nz-descriptions nzBordered [nzColumn]="2">
-          <nz-descriptions-item nzTitle="模型名称">{{ model.name }}</nz-descriptions-item>
-          <nz-descriptions-item nzTitle="版本">v{{ model.version }}</nz-descriptions-item>
-          <nz-descriptions-item nzTitle="模型类型">{{ model.type }}</nz-descriptions-item>
-          <nz-descriptions-item nzTitle="状态">
-            <nz-tag [nzColor]="getStatusColor(model.status)">
-              {{ getStatusText(model.status) }}
-            </nz-tag>
-          </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="准确率">
-            <nz-progress
-              [nzPercent]="model.accuracy"
-              [nzStatus]="getAccuracyStatus(model.accuracy)"
-            ></nz-progress>
-          </nz-descriptions-item>
-          <nz-descriptions-item nzTitle="训练日期">{{ model.trainedOn }}</nz-descriptions-item>
-          <nz-descriptions-item nzTitle="模型描述" [nzSpan]="2">
-            {{ model.description }}
-          </nz-descriptions-item>
-        </nz-descriptions>
-      </ng-container>
-    }
-  </nz-modal>
 </div>

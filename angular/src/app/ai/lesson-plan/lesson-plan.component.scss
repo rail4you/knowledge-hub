@@ -13,13 +13,26 @@
   overflow: visible;
 }
 
-// ---------- Page header ----------
+// 列表模式：标题 + 表单 + 表格同一外层容器，仅一个边框/阴影
+.lesson-shell {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// ---------- Page header — 顶部栏，不需单独边框 ----------
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--kh-line-2);
 
   .page-header-left {
     display: flex;
@@ -36,6 +49,7 @@
   .page-desc {
     font-size: 13px;
     color: var(--kh-muted);
+    margin: 0;
   }
 }
 
@@ -77,62 +91,21 @@
   }
 }
 
-// ---------- Generate panel (expandable form) ----------
-.generate-panel {
-  background: var(--kh-panel);
-  border: 1px solid var(--kh-line);
-  border-radius: var(--kh-r-shell);
-  box-shadow: var(--kh-shadow-card);
-  overflow: hidden;
-  animation: slideDown 0.22s ease;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.panel-head {
+// ---------- Generate modal form ----------
+.modal-form {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--kh-line-2);
-  background: #fafbfd;
-  position: relative;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 4px 4px 8px;
 
-  b {
-    font-size: 14.5px;
-    font-weight: 700;
-    color: var(--kh-ink);
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    .anticon { color: var(--kh-accent); }
-  }
-  .panel-hint {
-    font-size: 12.5px;
-    color: var(--kh-muted);
-    margin-left: 4px;
-  }
-  .panel-close {
-    margin-left: auto;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    border: 1px solid transparent;
-    background: transparent;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    color: var(--kh-muted);
-    transition: all 0.15s;
-    &:hover { background: #eef2f7; color: var(--kh-ink); border-color: var(--kh-line-2); }
-  }
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
 }
 
 .panel-section {
-  padding: 18px 20px;
+  padding: 12px 0;
 }
 
 .section-label {
@@ -173,41 +146,46 @@
   }
 }
 
-.doc-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 10px;
-  max-height: 280px;
+.doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 260px;
   overflow-y: auto;
-  padding-right: 4px;
+  border: 1px solid var(--kh-line-2);
+  border-radius: var(--kh-r-control);
+  background: var(--kh-panel);
 
   &::-webkit-scrollbar { width: 5px; height: 5px; }
   &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
 }
 
-// reuse res-item
-.res-item {
+// 列表行：单行高，radio + 名称 + meta + 状态，与表格行同样紧凑
+.doc-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 13px;
-  border: 1.5px solid var(--kh-line-2);
-  border-radius: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--kh-line-2);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.12s ease;
   background: var(--kh-panel);
 
-  &:hover { border-color: rgba(24, 144, 255, 0.4); background: var(--kh-accent-ghost, #f0f7ff); }
-  &.on {
-    border-color: var(--kh-accent);
-    background: var(--kh-accent-soft, #e6f4ff);
-    box-shadow: 0 0 0 3px var(--kh-accent-soft, #e6f4ff);
+  &:last-child {
+    border-bottom: none;
   }
-  &.disabled { opacity: 0.55; cursor: not-allowed; }
+
+  &:hover {
+    background: var(--kh-accent-ghost);
+  }
+
+  &.on {
+    background: var(--kh-accent-soft);
+  }
 
   .radio {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     border: 2px solid #c3ccd8;
     flex: none;
@@ -215,6 +193,7 @@
     place-items: center;
     transition: all 0.15s;
   }
+
   &.on .radio {
     border-color: var(--kh-accent);
     &::after {
@@ -225,45 +204,50 @@
       background: var(--kh-accent);
     }
   }
-  .ricon {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    display: grid;
-    place-items: center;
-    flex: none;
-    background: var(--kh-accent-soft, #e6f4ff);
-    color: var(--kh-accent);
-    .anticon { font-size: 16px; }
-  }
-  .rinfo {
+
+  .doc-name {
     flex: 1;
     min-width: 0;
-    b {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--kh-ink);
-      display: block;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--kh-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .doc-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+
+    .meta-chip {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: var(--kh-r-pill);
+      background: #f1f5f9;
+      color: var(--kh-ink-2);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.7;
     }
-    span {
+
+    .meta-text {
       font-size: 11.5px;
       color: var(--kh-muted);
-      margin-top: 2px;
-      display: block;
-      .meta-text { font-size: 11.5px; color: var(--kh-muted); margin-left: 4px; }
+      white-space: nowrap;
     }
-    nz-tag { margin-inline-end: 0; margin-right: 6px; }
   }
+
   .rtag {
     font-size: 11px;
     font-weight: 500;
-    padding: 3px 9px;
+    padding: 2px 8px;
     border-radius: 999px;
     white-space: nowrap;
     flex: none;
+    margin-left: 8px;
     &.ok { background: rgba(82, 196, 26, 0.14); color: #2f7d0e; }
     &.no { background: #f0f2f5; color: #8c8c8c; }
   }
@@ -343,96 +327,101 @@
   .anticon { color: #ff4d4f; margin-top: 2px; flex: none; }
 }
 
-.panel-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--kh-line-2);
-  background: #fafbfd;
-}
-
-.generating-strip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
-  background: #e6f4ff;
-  border-top: 1px solid #91d5ff;
-  color: #0958d9;
-  font-size: 13px;
-}
-
-// ---------- Table card ----------
+// ---------- Table card — 表格区，不需额外边框 ----------
 .table-card {
-  background: var(--kh-panel);
-  border: 1px solid var(--kh-line);
-  border-radius: var(--kh-r-shell);
-  box-shadow: var(--kh-shadow-card);
-  overflow: hidden;
-
-  .table-card-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--kh-line-2);
-    background: #fafbfd;
-
-    b {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--kh-ink);
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      .anticon { color: var(--kh-accent); }
-    }
-    .head-count {
-      font-size: 12px;
-      color: var(--kh-muted);
-      background: #f0f2f5;
-      padding: 2px 8px;
-      border-radius: 999px;
-    }
-  }
-
-  nz-table {
-    padding: 0;
-  }
-
   ::ng-deep .ant-table {
-    border-radius: 0 0 var(--kh-r-shell) var(--kh-r-shell);
+    border-radius: 0;
   }
 
   ::ng-deep .ant-table-container {
     overflow-x: auto;
   }
 
-  .ops-cell {
-    white-space: nowrap;
+  // 页面内特有的「生成教案」按钮——与其他表的 create-btn 风格统一
+  .create-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--kh-accent);
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 9px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+    box-shadow: 0 3px 10px -3px rgba(24, 144, 255, 0.45);
+
+    svg { width: 14px; height: 14px; }
+
+    &:hover { background: var(--kh-accent-deep); }
   }
 }
 
-.title-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 100%;
-  min-width: 0;
-  flex: 1;
-  .title-icon { color: var(--kh-accent); flex: none; }
-  .title-text {
-    font-weight: 600;
-    color: var(--kh-ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 560px;
-    display: inline-block;
+.lesson-table {
+  ::ng-deep {
+    .ant-table-thead > tr > th {
+      background: #fafafa;
+      color: var(--kh-ink-2);
+      font-weight: 600;
+      font-size: 13px;
+      border-bottom: 1px solid var(--kh-line-2);
+
+      &::before { display: none !important; }
+    }
+
+    .ant-table-tbody > tr {
+      transition: background-color 0.15s ease;
+
+      &:hover > td {
+        background: var(--kh-accent-ghost);
+      }
+
+      > td {
+        border-bottom: 1px solid #f5f5f5;
+        font-size: 13px;
+        color: var(--kh-ink-2);
+        padding: 12px;
+        vertical-align: middle;
+      }
+
+      > td.col-index {
+        text-align: center;
+        color: var(--kh-muted);
+      }
+
+      > td.col-title {
+        text-align: left !important;
+        padding-left: 20px;
+      }
+
+      &:last-child > td {
+        border-bottom: none;
+      }
+    }
   }
 }
+
+.title-text {
+  font-weight: 600;
+  color: var(--kh-ink);
+  font-size: 14px;
+  display: inline-block;
+  max-width: 560px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
 .muted { color: var(--kh-muted); font-size: 12.5px; }
+
+.col-index { color: var(--kh-muted); }
+
+.ops-cell {
+  white-space: nowrap;
+}
 
 // ---------- Preview ----------
 .preview-shell {
@@ -583,10 +572,17 @@
 
 // responsive
 @media (max-width: 1180px) {
-  .title-cell .title-text { max-width: 380px; }
+  .title-text { max-width: 380px; }
 }
 @media (max-width: 900px) {
   .lp-form { grid-template-columns: 1fr; }
-  .doc-grid { grid-template-columns: 1fr; }
-  .title-cell .title-text { max-width: 220px; }
+  .title-text { max-width: 220px; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+}
+
+// 弹窗底部 footer：调整按钮样式
+::ng-deep .ant-modal-footer {
+  .lp-btn {
+    &.ghost { margin-right: 8px; }
+  }
 }

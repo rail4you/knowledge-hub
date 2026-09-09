@@ -1,10 +1,10 @@
 <div class="career-guidance-container">
-  <div class="page-header">
-    <h2>职业规划指导</h2>
-    <p class="subtitle">选择学生并基于简历生成就业指导，或查看本租户所有学生的就业指导历史记录</p>
-  </div>
+  <header class="page-header">
+    <h1>职业规划指导</h1>
+    <p class="page-desc">选择学生并基于简历生成就业指导，或查看本租户所有学生的就业指导历史记录</p>
+  </header>
 
-  <nz-tabs (nzSelectedIndexChange)="onTabChange($event)" [nzAnimated]="false">
+  <nz-tabs (nzSelectedIndexChange)="onTabChange($event)" [nzAnimated]="false" class="main-tabs">
     <nz-tab nzTitle="生成就业指导">
       <div class="cg-layout">
     <!-- 左侧：学生列表 -->
@@ -162,7 +162,7 @@
                   <h4 class="section-heading">个人能力评估</h4>
                   <nz-descriptions nzBordered [nzColumn]="2" nzSize="small">
                     <nz-descriptions-item nzTitle="职业匹配度" [nzSpan]="2">
-                      <nz-progress [nzPercent]="r.assessment.careerMatchScore" [nzStatus]="r.assessment.careerMatchScore >= 70 ? 'success' : 'normal'"></nz-progress>
+                      <nz-progress [nzPercent]="normalizeScore(r.assessment.careerMatchScore)" [nzStatus]="normalizeScore(r.assessment.careerMatchScore) >= 70 ? 'success' : 'normal'"></nz-progress>
                     </nz-descriptions-item>
                     <nz-descriptions-item nzTitle="综合评估" [nzSpan]="2">{{ r.assessment.summary }}</nz-descriptions-item>
                     <nz-descriptions-item nzTitle="核心优势">
@@ -233,7 +233,7 @@
                   <h4 class="section-heading">推荐职业路径</h4>
                   <nz-collapse>
                     @for (path of r.recommendedPaths; track path.title) {
-                      <nz-collapse-panel [nzHeader]="path.title + ' (匹配度: ' + path.matchScore + '%)'">
+                      <nz-collapse-panel [nzHeader]="path.title + ' (匹配度: ' + normalizeScore(path.matchScore) + '%)'">
                         <p>{{ path.description }}</p>
                         <nz-descriptions [nzColumn]="2" nzSize="small">
                           <nz-descriptions-item nzTitle="薪资范围">{{ path.salaryRange }}</nz-descriptions-item>
@@ -306,174 +306,146 @@
     </nz-tab>
 
     <nz-tab nzTitle="就业指导历史记录">
-      <nz-card class="history-card">
-        <div class="history-toolbar">
-          <span class="history-title">
-            <span class="history-icon">
-              <span nz-icon nzType="history" nzTheme="outline"></span>
-            </span>
-            <span>就业指导历史记录</span>
-          </span>
-          @if (allRecords().length) {
-            <nz-tag>{{ allRecords().length }} 条</nz-tag>
-          }
-        </div>
-
-        @if (allRecordsLoading()) {
-          <div class="loading-container">
-            <nz-spin nzSimple></nz-spin>
+      <div class="history-card">
+        @if (previewItem(); as record) {
+          <!-- 预览模式（与案例分析一致的内联预览） -->
+          <div class="preview-topbar">
+            <button class="back-btn" (click)="backToList()">
+              <span nz-icon nzType="arrow-left"></span>
+              返回列表
+            </button>
+            <button nz-button nzType="primary" (click)="downloadHistoryDocx(record)" [nzLoading]="isExporting()">
+              <span nz-icon nzType="download"></span>
+              下载 DOCX
+            </button>
           </div>
-        } @else if (allRecords().length === 0) {
-          <nz-empty nzNotFoundContent="本租户暂无就业指导历史记录"></nz-empty>
-        } @else {
-          <nz-table
-            #historyTable
-            [nzData]="allRecords()"
-            [nzPageSize]="10"
-            nzSize="middle"
-            class="history-table"
-            [nzBordered]="false"
-          >
-            <thead>
-              <tr>
-                <th nzWidth="140px">学生</th>
-                <th nzAlign="center">指导主题</th>
-                <th nzAlign="center">职业目标</th>
-                <th nzWidth="160px" nzAlign="center">指导时间</th>
-                <th nzWidth="170px" nzAlign="center">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (record of historyTable.data; track record.id) {
-                <tr>
-                  <td>{{ record.studentName || '未知学生' }}</td>
-                  <td nzAlign="center" class="title-cell">{{ record.title }}</td>
-                  <td nzAlign="center" class="goal-cell">{{ record.careerGoal || '—' }}</td>
-                  <td nzAlign="center">{{ record.guidedAt | date:'yyyy-MM-dd HH:mm' }}</td>
-                  <td nzAlign="center">
-                    <div class="row-actions">
-                      <button
-                        nz-button
-                        nzType="text"
-                        nzSize="small"
-                        nz-tooltip
-                        nzTooltipTitle="查看详情"
-                        (click)="openRecordDetail(record)"
-                        class="action-btn"
-                        aria-label="查看详情"
-                      >
-                        <span nz-icon nzType="eye" nzTheme="outline"></span>
-                      </button>
-                      <button
-                        nz-button
-                        nzType="text"
-                        nzSize="small"
-                        nz-tooltip
-                        nzTooltipTitle="下载 DOCX"
-                        (click)="downloadHistoryDocx(record)"
-                        class="action-btn"
-                        aria-label="下载 DOCX"
-                      >
-                        <span nz-icon nzType="download" nzTheme="outline"></span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </nz-table>
-        }
-      </nz-card>
-    </nz-tab>
-  </nz-tabs>
-
-  <!-- 历史记录详情弹窗 -->
-  <nz-modal
-    [(nzVisible)]="recordDetailVisible"
-    [nzTitle]="selectedRecord()?.title || '就业指导详情'"
-    nzWidth="800px"
-    [nzFooter]="null"
-    (nzOnCancel)="closeRecordDetail()"
-  >
-    <ng-container *nzModalContent>
-      @if (selectedRecord(); as record) {
-        <div class="history-record-actions">
-          <span class="record-meta">{{ record.studentName || '未知学生' }} · {{ record.guidedAt | date:'yyyy-MM-dd HH:mm' }}</span>
-          <button nz-button nzSize="small" nzType="default" (click)="downloadHistoryDocx(record)">
-            <span nz-icon nzType="download"></span>
-            下载 DOCX
-          </button>
-        </div>
-        @if (record.parsed; as r) {
-          <div class="result-content compact">
-            <h3 class="plan-title">{{ r.title }}</h3>
-            <div class="section-block">
-              <h4 class="section-heading">个人能力评估</h4>
-              <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
-                <nz-descriptions-item nzTitle="职业匹配度">
-                  <nz-progress [nzPercent]="r.assessment.careerMatchScore" [nzStatus]="r.assessment.careerMatchScore >= 70 ? 'success' : 'normal'"></nz-progress>
-                </nz-descriptions-item>
-                <nz-descriptions-item nzTitle="综合评估">{{ r.assessment.summary }}</nz-descriptions-item>
-                <nz-descriptions-item nzTitle="核心优势">
-                  @for (s of r.assessment.strengths; track s) {
-                    <nz-tag nzColor="green">{{ s }}</nz-tag>
-                  }
-                </nz-descriptions-item>
-                <nz-descriptions-item nzTitle="待提升领域">
-                  @for (a of r.assessment.areasForImprovement; track a) {
-                    <nz-tag nzColor="orange">{{ a }}</nz-tag>
-                  }
-                </nz-descriptions-item>
-              </nz-descriptions>
+          <div class="preview-card">
+            <div class="preview-meta-head">
+              <h2 class="plan-title">{{ record.title }}</h2>
+              <p class="plan-subtitle">
+                学生：{{ record.studentName || '未知学生' }} · 指导时间：{{ record.guidedAt | date:'yyyy-MM-dd HH:mm' }}
+                @if (record.careerGoal) { · 职业目标：{{ record.careerGoal }} }
+              </p>
             </div>
-
-            @if (r.recommendedPaths?.length) {
-              <div class="section-block">
-                <h4 class="section-heading">推荐职业路径</h4>
-                @for (path of r.recommendedPaths; track path.title) {
-                  <div class="path-item">
-                    <strong>{{ path.title }}（匹配度 {{ path.matchScore }}%）</strong>
-                    <p>{{ path.description }}</p>
-                    <div>
-                      @for (skill of path.requiredSkills; track skill) {
-                        <nz-tag>{{ skill }}</nz-tag>
+            @if (record.parsed; as r) {
+              <div class="result-content">
+                <div class="section-block">
+                  <h4 class="section-heading">个人能力评估</h4>
+                  <nz-descriptions nzBordered [nzColumn]="1" nzSize="small">
+                    <nz-descriptions-item nzTitle="职业匹配度">
+                      <nz-progress [nzPercent]="normalizeScore(r.assessment.careerMatchScore)" [nzStatus]="normalizeScore(r.assessment.careerMatchScore) >= 70 ? 'success' : 'normal'"></nz-progress>
+                    </nz-descriptions-item>
+                    <nz-descriptions-item nzTitle="综合评估">{{ r.assessment.summary }}</nz-descriptions-item>
+                    <nz-descriptions-item nzTitle="核心优势">
+                      @for (s of r.assessment.strengths; track s) {
+                        <nz-tag nzColor="green">{{ s }}</nz-tag>
                       }
-                    </div>
+                    </nz-descriptions-item>
+                    <nz-descriptions-item nzTitle="待提升领域">
+                      @for (a of r.assessment.areasForImprovement; track a) {
+                        <nz-tag nzColor="orange">{{ a }}</nz-tag>
+                      }
+                    </nz-descriptions-item>
+                  </nz-descriptions>
+                </div>
+
+                @if (r.recommendedPaths?.length) {
+                  <div class="section-block">
+                    <h4 class="section-heading">推荐职业路径</h4>
+                    @for (path of r.recommendedPaths; track path.title) {
+                      <div class="path-item">
+                        <strong>{{ path.title }}（匹配度 {{ normalizeScore(path.matchScore) }}%）</strong>
+                        <p>{{ path.description }}</p>
+                        <div>
+                          @for (skill of path.requiredSkills; track skill) {
+                            <nz-tag>{{ skill }}</nz-tag>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (r.actionPlan?.length) {
+                  <div class="section-block">
+                    <h4 class="section-heading">行动计划</h4>
+                    <nz-timeline>
+                      @for (action of r.actionPlan; track action.id) {
+                        <nz-timeline-item [nzColor]="getPriorityColor(action.priority)">
+                          <h4>{{ action.title }}</h4>
+                          <p>{{ action.description }}</p>
+                          <small>时间线: {{ action.timeline }} | 优先级: {{ action.priority }}</small>
+                        </nz-timeline-item>
+                      }
+                    </nz-timeline>
+                  </div>
+                }
+
+                @if (r.nextSteps?.length) {
+                  <div class="section-block">
+                    <h4 class="section-heading">下一步行动</h4>
+                    <ul class="item-list">
+                      @for (step of r.nextSteps; track step) {
+                        <li>{{ step }}</li>
+                      }
+                    </ul>
                   </div>
                 }
               </div>
-            }
-
-            @if (r.actionPlan?.length) {
-              <div class="section-block">
-                <h4 class="section-heading">行动计划</h4>
-                <nz-timeline>
-                  @for (action of r.actionPlan; track action.id) {
-                    <nz-timeline-item [nzColor]="getPriorityColor(action.priority)">
-                      <h4>{{ action.title }}</h4>
-                      <p>{{ action.description }}</p>
-                      <small>时间线: {{ action.timeline }} | 优先级: {{ action.priority }}</small>
-                    </nz-timeline-item>
-                  }
-                </nz-timeline>
-              </div>
-            }
-
-            @if (r.nextSteps?.length) {
-              <div class="section-block">
-                <h4 class="section-heading">下一步行动</h4>
-                <ul class="item-list">
-                  @for (step of r.nextSteps; track step) {
-                    <li>{{ step }}</li>
-                  }
-                </ul>
-              </div>
+            } @else {
+              <p class="raw-content">{{ record.content }}</p>
             }
           </div>
         } @else {
-          <p class="raw-content">{{ record.content }}</p>
+          <!-- 列表模式 -->
+          @if (allRecordsLoading()) {
+            <div class="loading-container">
+              <nz-spin nzSimple></nz-spin>
+            </div>
+          } @else if (allRecords().length === 0) {
+            <div class="history-empty">
+              <nz-empty nzNotFoundContent="本租户暂无就业指导历史记录"></nz-empty>
+            </div>
+          } @else {
+            <nz-table
+              #historyTable
+              [nzData]="allRecords()"
+              [nzPageSize]="10"
+              nzSize="middle"
+              class="history-table"
+              [nzBordered]="false"
+            >
+              <thead>
+                <tr>
+                  <th class="col-title">指导主题</th>
+                  <th nzWidth="140px">学生</th>
+                  <th nzWidth="180px">职业目标</th>
+                  <th nzWidth="160px" nzAlign="center">指导时间</th>
+                  <th nzWidth="170px" nzAlign="center">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (record of historyTable.data; track record.id) {
+                  <tr>
+                    <td class="col-title">
+                      <span class="title-text" [title]="record.title">{{ record.title }}</span>
+                    </td>
+                    <td>{{ record.studentName || '未知学生' }}</td>
+                    <td class="goal-cell muted" [title]="record.careerGoal">{{ record.careerGoal || '—' }}</td>
+                    <td nzAlign="center">{{ record.guidedAt | date:'yyyy-MM-dd HH:mm' }}</td>
+                    <td nzAlign="center">
+                      <div class="row-actions">
+                        <a nz-button nzType="link" nzSize="small" (click)="openRecordDetail(record)">预览</a>
+                        <a nz-button nzType="link" nzSize="small" (click)="downloadHistoryDocx(record)" [nzLoading]="isExporting()">下载</a>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+          }
         }
-      }
-    </ng-container>
-  </nz-modal>
+      </div>
+    </nz-tab>
+  </nz-tabs>
 </div>

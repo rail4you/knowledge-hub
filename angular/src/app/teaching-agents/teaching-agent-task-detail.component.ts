@@ -1,17 +1,14 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
-import { NzOutletModule } from 'ng-zorro-antd/core/outlet';
 import { MarkdownComponent, MarkdownPipe, provideMarkdown } from 'ngx-markdown';
 import { fixCjkMarkdown } from '../shared/markdown-cjk-fix.util';
 import { AgentRunService } from './agent-run.service';
@@ -36,13 +33,10 @@ import {
     NzButtonModule,
     NzCardModule,
     NzEmptyModule,
-    NzFormModule,
     NzInputModule,
-    NzPopconfirmModule,
     NzSpinModule,
     NzTagModule,
     NzTabsModule,
-    NzOutletModule,
     MarkdownComponent,
     MarkdownPipe,
   ],
@@ -53,7 +47,6 @@ import {
 })
 export class TeachingAgentTaskDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly classroomAgentTaskService = inject(ClassroomAgentTaskService);
   private readonly agentRunService = inject(AgentRunService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -123,21 +116,6 @@ export class TeachingAgentTaskDetailComponent implements OnInit {
   onResponseInput(value: string): void {
     this.teacherResponseText = value;
     this.cdr.markForCheck();
-  }
-
-  async deleteTask(): Promise<void> {
-    const currentTask = this.task();
-    if (!currentTask) {
-      return;
-    }
-
-    await this.classroomAgentTaskService.delete(currentTask.id).toPromise();
-    await this.router.navigate(['/teaching/agent-tasks']);
-  }
-
-  getInitial(name: string): string {
-    if (!name) return '?';
-    return name.charAt(0).toUpperCase();
   }
 
   statusColor(status: number): string {

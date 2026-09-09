@@ -319,6 +319,22 @@ export class TeachingAgentTaskListComponent implements OnInit {
     return targetTypeLabel(targetType);
   }
 
+  // 从 targetSnapshot 解析具体对象名（课程标题 / 资源名），
+  // 没有快照时回退到通用占位，避免列里出现空白单元格。
+  targetName(task: ClassroomAgentTask): string {
+    const snapshot = task.targetSnapshot;
+    if (!snapshot) {
+      return '—';
+    }
+    if (snapshot.course?.title) {
+      return snapshot.course.title;
+    }
+    if (snapshot.resource?.name) {
+      return snapshot.resource.name;
+    }
+    return '—';
+  }
+
   formatDate(value?: string): string {
     return formatDateTime(value);
   }

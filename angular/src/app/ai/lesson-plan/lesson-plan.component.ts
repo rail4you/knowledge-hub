@@ -8,6 +8,7 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -15,6 +16,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
@@ -76,6 +78,7 @@ interface LessonPlanHistoryItem {
     NzSelectModule,
     NzInputNumberModule,
     NzDividerModule,
+    NzModalModule,
     NzCollapseModule,
     NzDescriptionsModule,
     NzTagModule,
@@ -83,6 +86,7 @@ interface LessonPlanHistoryItem {
     NzIconModule,
     NzEmptyModule,
     NzTableModule,
+    NzPopconfirmModule,
     NzTooltipModule
   ],
   templateUrl: './lesson-plan.component.html',
@@ -124,7 +128,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   });
 
   // ui state per spec
-  showForm = signal(false);
+  formModalVisible = signal(false);
   viewMode = signal<'list' | 'preview'>('list');
 
   // generation
@@ -136,6 +140,27 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   // history table
   history = signal<LessonPlanHistoryItem[]>([]);
   previewItem = signal<LessonPlanHistoryItem | null>(null);
+
+  // 搜索关键字 + 过滤后的列表（与双高表格一致）
+  readonly keyword = signal('');
+  readonly filteredHistory = computed(() => {
+    const kw = this.keyword().trim().toLowerCase();
+    const list = this.history();
+    if (!kw) return list;
+    return list.filter(item =>
+      (item.title || '').toLowerCase().includes(kw) ||
+      (item.resourceName || '').toLowerCase().includes(kw),
+    );
+  });
+
+  // 前端分页：基于 filteredHistory 切片
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(8);
+  readonly pagedHistory = computed(() => {
+    const all = this.filteredHistory();
+    const start = (this.pageIndex() - 1) * this.pageSize();
+    return all.slice(start, start + this.pageSize());
+  });
 
   canGenerate = computed(() => {
     const i = this.input();
@@ -206,13 +231,13 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   }
 
   toggleForm() {
-    this.showForm.update(v => !v);
+    this.formModalVisible.update(v => !v);
   }
   openForm() {
-    this.showForm.set(true);
+    this.formModalVisible.set(true);
   }
   cancelForm() {
-    this.showForm.set(false);
+    this.formModalVisible.set(false);
   }
 
   // ---------- generate ----------
@@ -273,7 +298,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
             this.saveHistory();
             this.previewItem.set(item);
             this.viewMode.set('preview');
-            this.showForm.set(false);
+            this.formModalVisible.set(false);
             this.messageService.success('教案已生成');
           } else if (fullResponse) {
             // parsing failed but still show preview with raw
@@ -372,6 +397,26 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       this.viewMode.set('list');
     }
     this.messageService.success('已删除');
+  }
+
+  // 分页：仅切页/切大小时同步信号
+  onPageIndexChange(index: number): void {
+    this.pageIndex.set(index);
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.pageIndex.set(1);
+  }
+
+  // 搜索：reset 时回到第一页
+  reload(): void {
+    this.pageIndex.set(1);
+  }
+
+  resetSearch(): void {
+    this.keyword.set('');
+    this.reload();
   }
 
   formatDate(iso: string): string {

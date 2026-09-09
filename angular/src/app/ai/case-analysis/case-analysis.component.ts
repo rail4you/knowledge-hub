@@ -12,6 +12,10 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
 import { ChatService, ResourceForChat } from '../services/chat.service';
@@ -43,6 +47,17 @@ interface CaseAnalysisResult {
   recommendations: string[];
 }
 
+interface CaseAnalysisHistoryItem {
+  id: string;
+  title: string;
+  resourceId: string;
+  resourceName: string;
+  focusArea: string;
+  result: CaseAnalysisResult;
+  rawJson: string;
+  createdAt: string;
+}
+
 @Component({
   selector: 'app-case-analysis',
   standalone: true,
@@ -59,7 +74,11 @@ interface CaseAnalysisResult {
     NzTagModule,
     NzSpinModule,
     NzIconModule,
-    NzEmptyModule
+    NzEmptyModule,
+    NzTabsModule,
+    NzTableModule,
+    NzPopconfirmModule,
+    NzModalModule,
   ],
   templateUrl: './case-analysis.component.html',
   styleUrls: ['./case-analysis.component.scss'],
@@ -69,9 +88,12 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
   private readonly messageService = inject(NzMessageService);
   private readonly destroy$ = new Subject<void>();
+  private readonly HISTORY_KEY = 'kh-case-analysis-history';
 
+  // 资源列表（左侧）
   resources = signal<ResourceForChat[]>([]);
   resourcesLoading = signal(false);
+  resourceFilter = signal('');
   selectedResourceId = signal<string | null>(null);
 
   selectedResource = computed(() => {
@@ -80,6 +102,18 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
     return this.resources().find(r => r.id === id) ?? null;
   });
 
+  // 只展示「已生成摘要」的资源，支持按名称 / 格式搜索
+  filteredResources = computed(() => {
+    const kw = this.resourceFilter().trim().toLowerCase();
+    const list = this.resources().filter(r => r.hasSummary === true);
+    if (!kw) return list;
+    return list.filter(r =>
+      (r.name || '').toLowerCase().includes(kw) ||
+      (r.sourceFormat ?? '').toLowerCase().includes(kw),
+    );
+  });
+
+  // 表单输入
   focusArea = signal('');
   result = signal<CaseAnalysisResult | null>(null);
   rawJson = signal('');
@@ -91,7 +125,30 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
     return !!r && r.hasSummary === true && !this.isLoading();
   });
 
+  // 历史记录
+  history = signal<CaseAnalysisHistoryItem[]>([]);
+  previewItem = signal<CaseAnalysisHistoryItem | null>(null);
+  readonly activeTabIndex = signal(0);
+
+  // 前端分页（历史 tab 表格）
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(8);
+  readonly pagedHistory = computed(() => {
+    const start = (this.pageIndex() - 1) * this.pageSize();
+    return this.history().slice(start, start + this.pageSize());
+  });
+
+  onPageIndexChange(index: number): void {
+    this.pageIndex.set(index);
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.pageIndex.set(1);
+  }
+
   ngOnInit() {
+    this.loadHistory();
     this.loadResources();
   }
 
@@ -100,6 +157,24 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  // ---------- history persistence ----------
+  private loadHistory() {
+    try {
+      const raw = localStorage.getItem(this.HISTORY_KEY);
+      if (raw) {
+        const parsed: CaseAnalysisHistoryItem[] = JSON.parse(raw);
+        if (Array.isArray(parsed)) this.history.set(parsed);
+      }
+    } catch { /* ignore */ }
+  }
+
+  private saveHistory() {
+    try {
+      localStorage.setItem(this.HISTORY_KEY, JSON.stringify(this.history().slice(0, 50)));
+    } catch { /* ignore */ }
+  }
+
+  // ---------- resources ----------
   private loadResources() {
     this.resourcesLoading.set(true);
     this.chatService.getResources()
@@ -117,6 +192,7 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
       });
   }
 
+  // ---------- generate ----------
   generate() {
     const resource = this.selectedResource();
     if (!resource || !resource.hasSummary) return;
@@ -150,6 +226,31 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
           if (fullResponse && !this.result()) {
             this.tryParseResult(fullResponse, true);
           }
+          const parsed = this.result();
+          const json = this.rawJson();
+          if (parsed && json) {
+            const item: CaseAnalysisHistoryItem = {
+              id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+              title: parsed.title || resource.name || '未命名案例分析',
+              resourceId: resource.id,
+              resourceName: resource.name,
+              focusArea: this.focusArea(),
+              result: parsed,
+              rawJson: json,
+              createdAt: new Date().toISOString(),
+            };
+            this.history.update(list => [item, ...list].slice(0, 50));
+            this.saveHistory();
+
+            // 生成成功后清空当前预览、直接跳到历史记录 tab
+            this.result.set(null);
+            this.rawJson.set('');
+            this.activeTabIndex.set(1);
+            this.pageIndex.set(1);
+            this.messageService.success('案例分析已生成，已保存到历史记录');
+          } else if (fullResponse) {
+            this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
+          }
         }
       });
   }
@@ -170,6 +271,46 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
       if (final) {
         this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
       }
+    }
+  }
+
+  // ---------- table actions ----------
+  previewHistory(item: CaseAnalysisHistoryItem) {
+    this.previewItem.set(item);
+  }
+
+  backToList() {
+    this.previewItem.set(null);
+  }
+
+  removeHistory(item: CaseAnalysisHistoryItem) {
+    this.history.update(list => list.filter(x => x.id !== item.id));
+    this.saveHistory();
+    if (this.previewItem()?.id === item.id) {
+      this.previewItem.set(null);
+    }
+    this.messageService.success('已删除');
+  }
+
+  async downloadHistory(item: CaseAnalysisHistoryItem) {
+    if (!item.rawJson) return;
+    this.isExporting.set(true);
+    try {
+      const blob = await this.chatService.exportCaseAnalysisDocx(item.rawJson);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${item.title || '案例分析'}_${item.createdAt.slice(0, 10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      this.messageService.success('案例分析已下载');
+    } catch (err) {
+      console.error('Failed to export docx:', err);
+      this.messageService.error('导出失败，请重试');
+    } finally {
+      this.isExporting.set(false);
     }
   }
 
@@ -204,6 +345,13 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
     this.rawJson.set('');
   }
 
+  selectResource(id: string): void {
+    this.selectedResourceId.set(id);
+    // 切换资源时清掉上一次结果，避免显示错位
+    this.result.set(null);
+    this.rawJson.set('');
+  }
+
   getSeverityColor(severity: string): string {
     switch (severity) {
       case '高': return 'red';
@@ -211,5 +359,16 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
       case '低': return 'green';
       default: return 'default';
     }
+  }
+
+  formatDate(iso: string): string {
+    try {
+      const d = new Date(iso);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    } catch { return iso; }
+  }
+
+  trackByHistoryId(_: number, item: CaseAnalysisHistoryItem): string {
+    return item.id;
   }
 }

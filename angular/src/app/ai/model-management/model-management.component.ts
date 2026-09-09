@@ -8,10 +8,9 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzUploadModule, NzUploadChangeParam } from 'ng-zorro-antd/upload';
-import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
+import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 
 interface AIModel {
@@ -38,10 +37,9 @@ interface AIModel {
     NzTagModule,
     NzIconModule,
     NzUploadModule,
-    NzModalModule,
-    NzTooltipModule,
     NzProgressModule,
-    NzBadgeModule
+    NzPopconfirmModule,
+    NzBadgeModule,
   ],
   templateUrl: './model-management.component.html',
   styleUrls: ['./model-management.component.scss'],
@@ -95,8 +93,6 @@ export class ModelManagementComponent {
   ]);
 
   isLoading = signal(false);
-  selectedModel = signal<AIModel | null>(null);
-  isModalVisible = signal(false);
 
   handleUpload = (info: NzUploadChangeParam): void => {
     const file = info.file;
@@ -126,11 +122,6 @@ export class ModelManagementComponent {
       .finally(() => {
         this.isLoading.set(false);
       });
-  }
-
-  showDetail(model: AIModel): void {
-    this.selectedModel.set(model);
-    this.isModalVisible.set(true);
   }
 
   toggleStatus(model: AIModel): void {

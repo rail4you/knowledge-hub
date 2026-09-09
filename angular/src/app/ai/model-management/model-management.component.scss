@@ -1,25 +1,39 @@
 .model-management-container {
-  padding: 24px;
+  padding: 20px 24px;
   max-width: 1400px;
   margin: 0 auto;
+  background: var(--kh-canvas);
+  min-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 
   .page-header {
-    text-align: center;
-    margin-bottom: 24px;
+    background: var(--kh-panel);
+    border: 1px solid var(--kh-line);
+    border-radius: var(--kh-r-card);
+    box-shadow: var(--kh-shadow-card);
+    padding: 16px 20px;
+    flex-shrink: 0;
 
-    h2 {
-      margin: 0 0 8px 0;
-      color: #333;
+    h1 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--kh-ink);
+      line-height: 1.3;
     }
 
-    .subtitle {
-      color: #666;
+    .page-desc {
+      color: var(--kh-muted);
+      font-size: 13px;
       margin: 0;
+      line-height: 1.5;
     }
   }
 
   .stats-card {
-    margin-bottom: 24px;
+    margin-bottom: 0;
 
     .stat-item {
       display: flex;
@@ -27,30 +41,82 @@
       gap: 12px;
 
       .stat-count {
-        font-size: 24px;
-        font-weight: bold;
-        color: #333;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--kh-ink);
       }
 
       .stat-label {
-        color: #666;
-        font-size: 14px;
+        color: var(--kh-muted);
+        font-size: 13px;
       }
     }
   }
 
   nz-card {
-    margin-bottom: 24px;
+    margin-bottom: 0;
   }
 
   .model-desc {
     margin: 4px 0 0 0;
     font-size: 12px;
-    color: #999;
-    max-width: 200px;
+    color: var(--kh-muted);
+    max-width: 320px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .title-text {
+    font-weight: 600;
+    color: var(--kh-ink);
+    font-size: 14px;
+  }
+
+  .ops-cell {
+    white-space: nowrap;
+  }
+
+  ::ng-deep .ant-table {
+    .ant-table-thead > tr > th {
+      background: #fafafa;
+      color: var(--kh-ink-2);
+      font-weight: 600;
+      font-size: 13px;
+      border-bottom: 1px solid var(--kh-line-2);
+
+      &::before { display: none !important; }
+
+      &.col-title {
+        text-align: left !important;
+        padding-left: 20px;
+      }
+    }
+
+    .ant-table-tbody > tr {
+      transition: background-color 0.15s ease;
+
+      &:hover > td {
+        background: var(--kh-accent-ghost);
+      }
+
+      > td {
+        border-bottom: 1px solid #f5f5f5;
+        font-size: 13px;
+        color: var(--kh-ink-2);
+        padding: 12px;
+        vertical-align: middle;
+      }
+
+      > td.col-title {
+        text-align: left !important;
+        padding-left: 20px;
+      }
+
+      &:last-child > td {
+        border-bottom: none;
+      }
+    }
   }
 
   button[nz-button][nzType="link"] {
@@ -59,11 +125,5 @@
 
   nz-progress {
     width: 120px;
-  }
-
-  nz-modal {
-    nz-descriptions {
-      margin-top: 16px;
-    }
   }
 }

@@ -47,10 +47,14 @@
           >
             <thead>
               <tr>
-                <th>任务</th>
-                <th>智能体</th>
+                <th class="col-title">任务名称</th>
+                <th nzAlign="center">描述</th>
+                <th nzAlign="center">智能体</th>
+                <th nzAlign="center">版本</th>
                 <th nzAlign="center">对象</th>
-                <th>进度</th>
+                <th nzAlign="center">学生数</th>
+                <th nzAlign="center">已提交</th>
+                <th nzAlign="center">待介入</th>
                 <th nzAlign="center">截止时间</th>
                 <th nzAlign="center">状态</th>
                 <th nzAlign="center">操作</th>
@@ -59,25 +63,44 @@
             <tbody>
               @for (task of tasks(); track trackByTaskId($index, task)) {
                 <tr>
-                  <td class="title-cell">
-                    <strong>{{ task.title }}</strong>
-                    <p>{{ task.description || task.taskPrompt }}</p>
+                  <td class="col-title">
+                    <span class="title-text">{{ task.title }}</span>
                   </td>
-                  <td>
-                    <strong>{{ task.teachingAgentName }}</strong>
-                    <span>v{{ task.teachingAgentVersionNumber }}</span>
+                  <td nzAlign="center" class="col-desc">
+                    <span class="desc-text" [title]="task.description || task.taskPrompt">
+                      {{ task.description || task.taskPrompt || '—' }}
+                    </span>
                   </td>
                   <td nzAlign="center">
-                    <strong>{{ targetText(task.targetType) }}</strong>
-                    <span>{{ task.assignmentCount }} 名学生</span>
+                    <span class="agent-text">{{ task.teachingAgentName }}</span>
                   </td>
-                  <td>
-                    <div class="progress-cell">
-                      <span class="progress-submitted">提交 {{ task.completedCount }}</span>
-                      <span class="progress-needs-help" [class.has-alerts]="task.needsHelpCount > 0">待介入 {{ task.needsHelpCount }}</span>
+                  <td nzAlign="center">
+                    <span class="version-tag">v{{ task.teachingAgentVersionNumber }}</span>
+                  </td>
+                  <td nzAlign="center">
+                    <div class="target-cell">
+                      <span class="target-type">{{ targetText(task.targetType) }}</span>
+                      <span class="target-name">{{ targetName(task) }}</span>
                     </div>
                   </td>
-                  <td nzAlign="center">{{ formatDate(task.dueTime) }}</td>
+                  <td nzAlign="center">
+                    <span class="metric">{{ task.assignmentCount }}</span>
+                    <span class="metric-unit">人</span>
+                  </td>
+                  <td nzAlign="center">
+                    <span class="metric submitted">{{ task.completedCount }}</span>
+                  </td>
+                  <td nzAlign="center">
+                    <span
+                      class="metric needs-help"
+                      [class.has-alerts]="task.needsHelpCount > 0"
+                    >
+                      {{ task.needsHelpCount }}
+                    </span>
+                  </td>
+                  <td nzAlign="center">
+                    <span class="due-text">{{ formatDate(task.dueTime) }}</span>
+                  </td>
                   <td nzAlign="center">
                     <nz-tag [nzColor]="task.publishStatus === publishStatus.published ? 'green' : 'gold'">
                       {{ publishText(task.publishStatus) }}

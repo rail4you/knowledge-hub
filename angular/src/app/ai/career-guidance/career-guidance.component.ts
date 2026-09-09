@@ -17,8 +17,6 @@ import { NzTimelineModule } from 'ng-zorro-antd/timeline';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
 import { ChatService } from '../services/chat.service';
@@ -100,8 +98,7 @@ interface ParsedRecord {
     NzIconModule,
     NzEmptyModule,
     NzTabsModule,
-    NzTooltipModule,
-    NzModalModule
+    NzEmptyModule,
   ],
   templateUrl: './career-guidance.component.html',
   styleUrls: ['./career-guidance.component.scss'],
@@ -145,8 +142,7 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   readonly allRecords = signal<ParsedRecord[]>([]);
   readonly allRecordsLoading = signal(false);
   readonly allRecordsLoaded = signal(false);
-  readonly selectedRecord = signal<ParsedRecord | null>(null);
-  readonly recordDetailVisible = signal(false);
+  readonly previewItem = signal<ParsedRecord | null>(null);
 
   // ============= 生成区 =============
   careerGoal = signal('');
@@ -231,12 +227,28 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   }
 
   openRecordDetail(record: ParsedRecord): void {
-    this.selectedRecord.set(record);
-    this.recordDetailVisible.set(true);
+    this.previewItem.set(record);
   }
 
   closeRecordDetail(): void {
-    this.recordDetailVisible.set(false);
+    this.previewItem.set(null);
+  }
+
+  backToList(): void {
+    this.previewItem.set(null);
+  }
+
+  /**
+   * 归一化职业匹配度分数（0-100 整数）。
+   * AI 返回的可能是数字、字符串、或者 0-1 的小数，统一处理避免 NaN。
+   */
+  normalizeScore(value: unknown): number {
+    if (value == null) return 0;
+    let n = typeof value === 'number' ? value : parseFloat(String(value));
+    if (!Number.isFinite(n)) return 0;
+    // 如果 AI 给的是 0-1 小数（如 0.72），乘以 100
+    if (n > 0 && n <= 1) n = n * 100;
+    return Math.max(0, Math.min(100, Math.round(n)));
   }
 
   /** 将 StudentResumeDto 构建为 AI 提示用的文本 */
