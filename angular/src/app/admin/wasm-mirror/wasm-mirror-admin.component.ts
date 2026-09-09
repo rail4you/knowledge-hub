@@ -8,9 +8,9 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import { PracticumSimulationService } from '../../proxy/practicums/simulations/practicum-simulation.service';
-import { PracticumSimulationStatus } from '../../proxy/practicums/simulations/enums/practicum-simulation-status.enum';
-import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
+import { PracticumSimulationService } from '../../proxy/practicums/practicum-simulation.service';
+import { PracticumSimulationStatus } from '../../proxy/practicums/enums/practicum-simulation-status.enum';
+import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/models';
 
 @Component({
   selector: 'app-wasm-mirror-admin',

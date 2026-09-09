@@ -19,9 +19,9 @@ import { ChunkUploadService } from '../../proxy/controllers/chunk-upload.service
 import type { CompleteUploadResultDto } from '../../proxy/resources/models';
 import { OssUploadService } from '../../shared/oss-upload.service';
 import { PracticumService, PracticumProjectDto } from '../../practicum/practicum.service';
-import { PracticumSimulationService } from '../../proxy/practicums/simulations/practicum-simulation.service';
-import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
-import { PracticumSimulationStatus } from '../../proxy/practicums/simulations/enums/practicum-simulation-status.enum';
+import { PracticumSimulationService } from '../../proxy/practicums/practicum-simulation.service';
+import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/models';
+import { PracticumSimulationStatus } from '../../proxy/practicums/enums/practicum-simulation-status.enum';
 
 type SimulationModalDraft = {
   editingId: string | null;

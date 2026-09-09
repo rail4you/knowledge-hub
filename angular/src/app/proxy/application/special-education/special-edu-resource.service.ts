@@ -37,7 +37,7 @@ export class SpecialEduResourceService {
     { apiName: this.apiName,...config });
   
 
-  generateStreaming = (input: GenerateSpecialResourceInputDto, onChunk: any<ChatMessageChunkDto, any>, config?: Partial<Rest.Config>) =>
+  generateStreaming = (input: GenerateSpecialResourceInputDto, onChunk: any, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',
       url: '/api/app/special-edu-resource/generate-streaming',

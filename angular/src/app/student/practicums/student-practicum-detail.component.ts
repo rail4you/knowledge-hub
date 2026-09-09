@@ -14,9 +14,9 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { forkJoin } from 'rxjs';
 import { PracticumService } from '../../proxy/practicums/practicum.service';
-import { PracticumSimulationService } from '../../proxy/practicums/simulations/practicum-simulation.service';
+import { PracticumSimulationService } from '../../proxy/practicums/practicum-simulation.service';
 import type { PracticumProjectDetailDto, PracticumMaterialDto, PracticumGuidanceRecordDto, PracticumEnrollmentDto } from '../../proxy/practicums/dtos/models';
-import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
+import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/models';
 import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
 import { OssUploadService } from '../../shared/oss-upload.service';
 

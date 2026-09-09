@@ -7,9 +7,9 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
-import { PracticumSimulationService } from '../../proxy/practicums/simulations/practicum-simulation.service';
-import { PracticumSimulationStatus } from '../../proxy/practicums/simulations/enums/practicum-simulation-status.enum';
-import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/dtos/models';
+import { PracticumSimulationService } from '../../proxy/practicums/practicum-simulation.service';
+import { PracticumSimulationStatus } from '../../proxy/practicums/enums/practicum-simulation-status.enum';
+import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/models';
 
 @Component({
   selector: 'app-wasm-player',

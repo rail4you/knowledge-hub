@@ -28,7 +28,7 @@ export class SpecialIepService {
     { apiName: this.apiName,...config });
   
 
-  generateStreaming = (input: GenerateIepInputDto, onChunk: any<ChatMessageChunkDto, any>, config?: Partial<Rest.Config>) =>
+  generateStreaming = (input: GenerateIepInputDto, onChunk: any, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',
       url: '/api/app/special-iep/generate-streaming',

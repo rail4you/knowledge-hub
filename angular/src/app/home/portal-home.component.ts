@@ -259,13 +259,13 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   }
 
   loadBrowseData(): void {
-    this.portal.getPublicBrowse({
-      tenantId: this.filterTenantId() || undefined,
-      majorId: this.filterMajorId() || undefined,
-      search: this.filterSearch() || undefined,
-      skipCount: 0,
-      maxResultCount: 50,
-    }).subscribe(d => this.browseData.set(d));
+    this.portal.getPublicBrowse(
+      this.filterTenantId() || undefined,
+      this.filterMajorId() || undefined,
+      this.filterSearch() || undefined,
+      0,
+      50,
+    ).subscribe(d => this.browseData.set(d));
   }
 
   setTab(tab: 'courses' | 'resources' | 'microMajors'): void {
