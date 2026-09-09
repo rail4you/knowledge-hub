@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Entities;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.PermissionManagement;
@@ -72,7 +73,23 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         KnowledgeHubPermissions.RecruitmentLive.Manage,
     };
 
+    /// <summary>
+    /// 租户管理（新建租户）权限：仅 host「admin」全局管理员持有。
+    /// 前端 ABP 租户管理菜单（Administration → Tenant Management）的显隐依赖该权限。
+    /// 租户上下文（SchoolAdmin/Teacher/Student/EnterpriseUser/租户级 admin）绝不授予。
+    /// </summary>
+    private static readonly string[] TenantManagementPermissions =
+    {
+        "AbpTenantManagement.Tenants",
+        "AbpTenantManagement.Tenants.Create",
+        "AbpTenantManagement.Tenants.Update",
+        "AbpTenantManagement.Tenants.Delete",
+        "AbpTenantManagement.Tenants.ManageFeatures",
+        "AbpTenantManagement.Tenants.ManageConnectionStrings",
+    };
+
     private readonly IPermissionManager _permissionManager;
+    private readonly IRepository<PermissionGrant, Guid> _permissionGrantRepository;
     private readonly ITenantRepository _tenantRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IIdentityRoleRepository _roleRepository;
@@ -84,6 +101,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 
     public RolePermissionSeeder(
         IPermissionManager permissionManager,
+        IRepository<PermissionGrant, Guid> permissionGrantRepository,
         ITenantRepository tenantRepository,
         ICurrentTenant currentTenant,
         IIdentityRoleRepository roleRepository,
@@ -94,6 +112,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         ILogger<RolePermissionSeeder> logger)
     {
         _permissionManager = permissionManager;
+        _permissionGrantRepository = permissionGrantRepository;
         _tenantRepository = tenantRepository;
         _currentTenant = currentTenant;
         _roleRepository = roleRepository;
@@ -575,6 +594,35 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
             await RevokeAsync("admin", KnowledgeHubPermissions.TenantInfo.Edit);
         }
 
+        // 租户管理（新建租户）：仅 host「admin」全局管理员可用。
+        // host 上下文授予；租户上下文（含租户级 admin）显式收回，保证教师端/租户管理员
+        // 看不到租户管理菜单（Administration → Tenant Management）。
+        if (_currentTenant.Id == null)
+        {
+            foreach (var permission in TenantManagementPermissions)
+            {
+                await GrantAsync("admin", permission);
+            }
+        }
+        else
+        {
+            foreach (var permission in TenantManagementPermissions)
+            {
+                await RevokeByDeleteAsync("admin", permission);
+            }
+        }
+
+        // 租户角色（SchoolAdmin/Teacher/Student/EnterpriseUser）绝不持有租户管理权限：
+        // 直接删除授权行。LeagueAdmin 由 SyncLeagueAdminPermissionsAsync
+        // 权威式收紧（allowlist 之外全部收回），无需在此处理。
+        foreach (var roleName in new[] { "SchoolAdmin", "Teacher", "Student", "EnterpriseUser" })
+        {
+            foreach (var permission in TenantManagementPermissions)
+            {
+                await RevokeByDeleteAsync(roleName, permission);
+            }
+        }
+
         await GrantAsync("admin", KnowledgeHubPermissions.DoubleHigh.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.DoubleHigh.ManageProject);
         await GrantAsync("admin", KnowledgeHubPermissions.DoubleHigh.ManageIndicator);
@@ -767,6 +815,27 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         try
         {
             await _permissionManager.SetAsync(permissionName, "R", roleName, false);
+        }
+        catch (Exception)
+        {
+            // 角色不存在等情况 — 静默跳过。
+        }
+    }
+
+    /// <summary>
+    /// 直接删除授权行（幂等，无匹配行时不报错）。
+    /// <see cref="IPermissionManager"/>.SetAsync(..., false) 对部分历史脏数据静默无操作，
+    /// 收回租户管理这类"必须消失"的权限时用仓储删除，确保真正生效。
+    /// 注意：调用方须处于目标租户上下文（PermissionGrant 按租户隔离）。
+    /// </summary>
+    private async Task RevokeByDeleteAsync(string roleName, string permissionName)
+    {
+        try
+        {
+            await _permissionGrantRepository.DeleteAsync(
+                x => x.Name == permissionName &&
+                     x.ProviderName == "R" &&
+                     x.ProviderKey == roleName);
         }
         catch (Exception)
         {

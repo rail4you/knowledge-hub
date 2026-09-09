@@ -102,7 +102,7 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     "KnowledgeHub.Users", "KnowledgeHub.Users.Create", "KnowledgeHub.Users.Edit", "KnowledgeHub.Users.Delete", "KnowledgeHub.Users.Import",
                     "AbpIdentity.Roles", "AbpIdentity.Roles.Create", "AbpIdentity.Roles.Update", "AbpIdentity.Roles.Delete", "AbpIdentity.Roles.ManagePermissions",
                     "AbpIdentity.Users", "AbpIdentity.Users.Create", "AbpIdentity.Users.Update", "AbpIdentity.Users.Delete", "AbpIdentity.Users.ManagePermissions", "AbpIdentity.Users.Update.ManageRoles",
-                    // AbpTenantManagement.Tenants 不给非 host admin（从已有数据库权限获取）
+                    // AbpTenantManagement.Tenants 的处理见下方：仅 host 全局 admin 注入，其余剥离。
                 };
 
                 foreach (var perm in allPerms)
@@ -110,11 +110,25 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     newPolicies[perm] = true;
                 }
 
-                // 移除租户管理权限（非 host admin 不应该看到）
+                // 租户管理（新建租户）菜单：仅 host 全局 admin 可见。
+                // host 与否以 application-configuration 中 currentUser.tenantId 为准
+                //（与前端 hostOnlyGuard / 身份页用的是同一信号）：
+                // host admin 注入，确保超级管理员菜单恢复；
+                // 租户用户（教师端/租户管理员）剥离，菜单自动隐藏。
                 var tenantPerms = new[] { "AbpTenantManagement.Tenants", "AbpTenantManagement.Tenants.Create", "AbpTenantManagement.Tenants.Update", "AbpTenantManagement.Tenants.Delete", "AbpTenantManagement.Tenants.ManageFeatures", "AbpTenantManagement.Tenants.ManageConnectionStrings" };
-                foreach (var tp in tenantPerms)
+                if (IsHostUser(root) && context.User.IsInRole("admin"))
                 {
-                    newPolicies.Remove(tp);
+                    foreach (var tp in tenantPerms)
+                    {
+                        newPolicies[tp] = true;
+                    }
+                }
+                else
+                {
+                    foreach (var tp in tenantPerms)
+                    {
+                        newPolicies.Remove(tp);
+                    }
                 }
                 }
 
@@ -145,6 +159,30 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
         }
 
         return !NonLeagueOnlyRoles.Any(user.IsInRole);
+    }
+
+    /// <summary>
+    /// 以 application-configuration 中的 currentUser.tenantId 判断是否为 host 全局用户。
+    /// 缺失或为 null 即 host（与前端 hostOnlyGuard / 身份页用的是同一信号）。
+    /// 用 JSON 而不用 ICurrentTenant：本中间件在 UseMultiTenancy 之前执行，
+    /// next() 返回后租户 scope 可能已释放，ICurrentTenant 不可靠。
+    /// </summary>
+    private static bool IsHostUser(JsonElement root)
+    {
+        if (root.TryGetProperty("currentUser", out var currentUser) &&
+            currentUser.ValueKind == JsonValueKind.Object &&
+            currentUser.TryGetProperty("tenantId", out var tenantId))
+        {
+            if (tenantId.ValueKind == JsonValueKind.Null || tenantId.ValueKind == JsonValueKind.Undefined)
+            {
+                return true;
+            }
+            var tenantIdString = tenantId.ValueKind == JsonValueKind.String
+                ? tenantId.GetString()
+                : tenantId.ToString();
+            return string.IsNullOrEmpty(tenantIdString);
+        }
+        return true;
     }
 
     private static void WriteJsonWithInjectedPolicies(JsonElement root, Dictionary<string, object> newPolicies, Utf8JsonWriter writer)
