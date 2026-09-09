@@ -306,22 +306,18 @@
     <div class="audit-container full-height">
       <h3>{{ '::PendingAudit' | abpLocalization }}</h3>
 
-      <nz-steps [nzCurrent]="0" nzSize="small" class="audit-workflow">
-        <nz-step nzTitle="{{ '::PendingReview' | abpLocalization }}"></nz-step>
-        <nz-step nzTitle="{{ '::SchoolAudit' | abpLocalization }}"></nz-step>
-        <nz-step nzTitle="{{ '::LeagueAudit' | abpLocalization }}"></nz-step>
-      </nz-steps>
       <div class="audit-workflow-legend">
-        <span class="legend-item"><nz-tag nzColor="blue">●</nz-tag> {{ '::PendingReview' | abpLocalization }}</span>
+        <span class="legend-item"><span class="flow-dot dot-pending"></span> {{ '::PendingReview' | abpLocalization }}</span>
         <span class="legend-arrow">→</span>
-        <span class="legend-item"><nz-tag nzColor="processing">●</nz-tag> {{ '::SchoolAudit' | abpLocalization }}（{{ '::FirstStep' | abpLocalization }}）</span>
+        <span class="legend-item"><span class="flow-dot dot-school"></span> {{ '::SchoolAudit' | abpLocalization }}</span>
         <span class="legend-arrow">→</span>
-        <span class="legend-item"><nz-tag nzColor="warning">●</nz-tag> {{ '::LeagueAudit' | abpLocalization }}（{{ '::SecondStep' | abpLocalization }}）</span>
+        <span class="legend-item"><span class="flow-dot dot-league"></span> {{ '::LeagueAudit' | abpLocalization }}</span>
       </div>
 
       <nz-table
         [nzData]="pendingAudits()"
         [nzFrontPagination]="false"
+        [nzNoResult]="auditEmptyTpl"
         [nzScroll]="{ y: 'calc(100vh - 280px)' }"
       >
         <thead>
@@ -331,7 +327,7 @@
             <th>{{ '::AuditStatus' | abpLocalization }}</th>
             <th>{{ '::Creator' | abpLocalization }}</th>
             <th>{{ '::CreationTime' | abpLocalization }}</th>
-            <th>{{ '::Actions' | abpLocalization }}</th>
+            <th *ngIf="hasAuditPermission()">{{ '::Actions' | abpLocalization }}</th>
           </tr>
         </thead>
         <tbody>
@@ -339,21 +335,24 @@
             <td>{{ item.name }}</td>
             <td><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
             <td>
-              <nz-tag [nzColor]="item.status === 1 ? 'blue' : 'orange'">
+              <nz-tag [nzColor]="getStatusColor(item.status)" class="audit-status-tag status-{{ item.status }}">
                 {{ item.status === 1 ? ('::NeedsSchoolAudit' | abpLocalization) : ('::NeedsLeagueAudit' | abpLocalization) }}
               </nz-tag>
             </td>
             <td>{{ getCreatorName(item.creatorName) }}</td>
             <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
-            <td>
-              <button nz-button nzType="primary" nzSize="small" (click)="openAuditModal(item)">
+            <td *ngIf="hasAuditPermission()">
+              <button nz-button nzType="primary" nzSize="small" *ngIf="canAuditResource(item)" (click)="openAuditModal(item)">
                 {{ '::Audit' | abpLocalization }}
               </button>
+              <span *ngIf="!canAuditResource(item)" class="no-permission">—</span>
             </td>
           </tr>
         </tbody>
       </nz-table>
 
+      <!-- 表格自带空提示已通过 nzNoResult 置空，只保留下方自定义空提示，避免重复 -->
+      <ng-template #auditEmptyTpl></ng-template>
       <nz-empty *ngIf="pendingAudits().length === 0" [nzNotFoundContent]="'::NoPendingAudits' | abpLocalization"></nz-empty>
     </div>
     </ng-container>
@@ -366,6 +365,7 @@
       <nz-table
         [nzData]="physicalDeleteRequests()"
         [nzFrontPagination]="false"
+        [nzNoResult]="deleteEmptyTpl"
         [nzScroll]="{ y: 'calc(100vh - 280px)' }"
       >
         <thead>
@@ -395,6 +395,8 @@
         </tbody>
       </nz-table>
 
+      <!-- 表格自带空提示已通过 nzNoResult 置空，只保留下方自定义空提示，避免重复 -->
+      <ng-template #deleteEmptyTpl></ng-template>
       <nz-empty *ngIf="physicalDeleteRequests().length === 0" [nzNotFoundContent]="'::NoDeleteRequests' | abpLocalization"></nz-empty>
     </div>
     </ng-container>

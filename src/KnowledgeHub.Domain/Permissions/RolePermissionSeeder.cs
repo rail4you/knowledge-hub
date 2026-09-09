@@ -397,8 +397,18 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.Download);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.ViewRecommendation);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.RequestDelete);
+        // 教师可管理分类、查看资源统计：明确纳入 Teacher 基线（之前只靠历史脏授权，新租户会缺失）
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.ManageCategory);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.Resources.ViewStatistics);
         // 教师仅可申请删除，不能审批物理删除
         await RevokeAsync("Teacher", KnowledgeHubPermissions.Resources.PhysicalDelete);
+        // 教师不能直接删除资源（删除走“申请删除 → 审批”流程）：收回历史遗留的 Delete 授权
+        await RevokeByDeleteAsync("Teacher", KnowledgeHubPermissions.Resources.Delete);
+        // 教师不得持有两级审核权限：历史数据里 Teacher 角色被授予过
+        // SchoolAudit / LeagueAudit，导致教师端出现待审核 Tab 与审核按钮。
+        // 直接删除授权行（幂等），API 每次启动的自愈流程会自动清理所有租户。
+        await RevokeByDeleteAsync("Teacher", KnowledgeHubPermissions.Resources.SchoolAudit);
+        await RevokeByDeleteAsync("Teacher", KnowledgeHubPermissions.Resources.LeagueAudit);
 
         await GrantAsync("Teacher", KnowledgeHubPermissions.Search.Default);
         await GrantAsync("Teacher", KnowledgeHubPermissions.Search.ManageIndex);

@@ -127,6 +127,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         EnsureFileMetadata(dto);
         EnsureFileMetadataFromCurrentVersion(resource, dto);
         dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
+        await FillCreatorNamesAsync(new List<ResourceDto> { dto });
         return dto;
     }
 
@@ -215,6 +216,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
         EnsureFileMetadata(dto);
         EnsureFileMetadataFromCurrentVersion(resource, dto);
+        await FillCreatorNamesAsync(new List<ResourceDto> { dto });
         return dto;
     }
 
@@ -1062,9 +1064,15 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             return;
         }
 
-        var query = await UserRepository.GetQueryableAsync();
-        var users = await AsyncExecuter.ToListAsync(
-            query.Where(u => ids.Contains(u.Id)));
+        // 创建人跨租户查询：联盟审核员查看的是其它租户的资源，
+        // 用户查询必须同样关闭多租户过滤，否则 CreatorName 查不到（待审核表创建人为空）。
+        List<IdentityUser> users;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await UserRepository.GetQueryableAsync();
+            users = await AsyncExecuter.ToListAsync(
+                query.Where(u => ids.Contains(u.Id)));
+        }
 
         var userMap = users.ToDictionary(u => u.Id, u => ResolveUserDisplayName(u));
         foreach (var dto in dtos)
@@ -1238,6 +1246,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(resources);
             EnsureFileMetadata(dtos);
             await EnsureFileMetadataFromCurrentVersionAsync(resources, dtos);
+            await FillCreatorNamesAsync(dtos);
             return new PagedResultDto<ResourceDto>(totalCount, dtos);
         }
     }

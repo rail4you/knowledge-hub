@@ -30,7 +30,6 @@ import {NzEmptyModule} from 'ng-zorro-antd/empty';
 import {NzSpinModule} from 'ng-zorro-antd/spin';
 import {NzProgressModule} from 'ng-zorro-antd/progress';
 import {NzTabsModule} from 'ng-zorro-antd/tabs';
-import {NzStepsModule} from 'ng-zorro-antd/steps';
 import {NzTreeModule} from 'ng-zorro-antd/tree';
 import {NzTreeSelectModule} from 'ng-zorro-antd/tree-select';
 import {NzInputNumberModule} from 'ng-zorro-antd/input-number';
@@ -76,7 +75,6 @@ import {buildDownloadFileName} from '../shared/download/download-file.util';
     NzSpinModule,
     NzProgressModule,
     NzTabsModule,
-    NzStepsModule,
     NzTreeModule,
     NzTreeSelectModule,
     NzInputNumberModule,
@@ -186,8 +184,10 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
 
   // 两级审核的角色区分：院校审核员（SchoolAudit）只做第一级；
   // 纯联盟审核员（只有 LeagueAudit，无 SchoolAudit）只做第二级，页面只保留审核 Tab。
+  // 教师等无任何审核权限的角色：待审核表不展示操作列。
   isLeagueAuditor = false;
   hasSchoolAudit = false;
+  hasLeagueAudit = false;
 
   
   private readonly resourceTypeNames: Record<string, Record<number, string>> = {
@@ -206,8 +206,8 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
 
   ngOnInit() {
     this.hasSchoolAudit = this.permissionService.getGrantedPolicy('KnowledgeHub.Resources.SchoolAudit');
-    const hasLeagueAudit = this.permissionService.getGrantedPolicy('KnowledgeHub.Resources.LeagueAudit');
-    this.isLeagueAuditor = hasLeagueAudit && !this.hasSchoolAudit;
+    this.hasLeagueAudit = this.permissionService.getGrantedPolicy('KnowledgeHub.Resources.LeagueAudit');
+    this.isLeagueAuditor = this.hasLeagueAudit && !this.hasSchoolAudit;
 
     this.buildForm();
     this.loadCategories();
@@ -441,9 +441,33 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
   }
 
   openAuditModal(resource: ResourceDto) {
+    // 无对应审核权限（如教师端）禁止打开审核弹窗，按钮层已隐藏，此处兜底。
+    if (!this.canAuditResource(resource)) {
+      return;
+    }
     this.selectedAuditResource = resource;
     this.auditComment = '';
     this.isAuditModalOpen = true;
+  }
+
+  /**
+   * 待审核表的操作列显隐：只有持有任一审核权限（院校/联盟管理员）才展示，
+   * 教师等无审核权限角色不展示操作列。
+   */
+  hasAuditPermission(): boolean {
+    return this.hasSchoolAudit || this.hasLeagueAudit;
+  }
+
+  /**
+   * 行级审核按钮权限：
+   * - 待院校审核（status=1）仅院校审核员（SchoolAudit）可审；
+   * - 待联盟审核（status=2）仅联盟管理员（LeagueAudit）可审。
+   */
+  canAuditResource(item: ResourceDto | null | undefined): boolean {
+    if (!item) return false;
+    if (item.status === 1) return this.hasSchoolAudit;
+    if (item.status === 2) return this.hasLeagueAudit;
+    return false;
   }
 
   auditResource(status: number) {

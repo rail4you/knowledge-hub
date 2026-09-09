@@ -974,13 +974,6 @@
   }
 }
 
-.audit-workflow {
-  margin-bottom: 12px;
-  padding: 12px 16px;
-  background: #f7fafd;
-  border-radius: 10px;
-}
-
 .audit-workflow-legend {
   display: flex;
   align-items: center;
@@ -989,16 +982,81 @@
   font-size: 12px;
   color: var(--kh-muted);
   margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #f7fafd;
+  border-radius: 10px;
 
   .legend-item {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
   }
 
   .legend-arrow {
     color: var(--kh-muted);
     font-weight: bold;
+  }
+
+  // 流程示意图圆点：颜色与资源列表状态 tag 保持一致
+  // 待审核(status-1, 蓝) → 院校审核(status-2, 绿) → 联盟审核(status-3, 深蓝)
+  .flow-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.dot-pending { background: #1890ff; }
+    &.dot-school { background: #52c41a; }
+    &.dot-league { background: #096dd9; }
+  }
+}
+
+.audit-container {
+  // 待审核表的状态 tag：与资源列表 .status-tag 同一套颜色
+  .audit-status-tag {
+    position: relative;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    padding: 0 10px 0 20px !important;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 22px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-style: solid;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    &.status-1 {
+      background: #e6f7ff !important;
+      border-color: #91d5ff !important;
+      color: #1890ff !important;
+      &::before { background: #1890ff; }
+    }
+
+    &.status-2 {
+      background: #f6ffed !important;
+      border-color: #b7eb8f !important;
+      color: #389e0d !important;
+      &::before { background: #52c41a; }
+    }
+  }
+
+  .no-permission {
+    color: var(--kh-muted);
   }
 }
 
