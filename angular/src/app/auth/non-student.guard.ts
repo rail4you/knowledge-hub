@@ -2,9 +2,10 @@ import { inject } from '@angular/core';
 import { CanActivateFn, CanMatchFn, Router } from '@angular/router';
 import { ConfigStateService } from '@abp/ng.core';
 import { hasAnyRole } from './current-user.utils';
+import { ADMIN_ROLES } from './admin-roles';
 
 /**
- * 仅允许"非学生"角色（Teacher / SchoolAdmin / LeagueAdmin / EnterpriseUser / admin）通过。
+ * 仅允许管理端角色（见 ADMIN_ROLES）通过。
  *
  * 设计：
  * - 安全（fail-closed）：只有明确具备某个非学生管理角色才放行进入后台；
@@ -12,8 +13,6 @@ import { hasAnyRole } from './current-user.utils';
  *   避免无角色/学生账号被错误地当成管理员进入后台；
  * - 未登录的情况由前置的 `authGuard` 处理，本守卫只关心角色。
  */
-const ADMIN_ROLES = ['Teacher', 'SchoolAdmin', 'LeagueAdmin', 'EnterpriseUser', 'admin'];
-
 export const nonStudentGuard: CanActivateFn = () => {
   const configState = inject(ConfigStateService);
   const router = inject(Router);

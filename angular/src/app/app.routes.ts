@@ -4,6 +4,7 @@ import { identityUserCreateFormPropContributors, identityUserEntityPropContribut
 import { installGuard } from './install/install.guard';
 import { STUDENT_ROUTES } from './student/student.routes';
 import { studentPortalGuard } from './student/student-portal.guard';
+import { portalHomeGuard } from './home/portal-home.guard';
 import { nonStudentGuard } from './auth/non-student.guard';
 
 export const APP_ROUTES: Routes = [
@@ -21,6 +22,9 @@ export const APP_ROUTES: Routes = [
     path: '',
     pathMatch: 'full',
     loadComponent: () => import('./home/portal-home.component').then(c => c.PortalHomeComponent),
+    // 根本性修复：管理端身份在路由层即时跳到 /resources，组件永远不会被实例化，
+    // 不存在"先看到首页再跳走"的时间窗口。之前靠组件 ngOnInit 延迟跳转是根因。
+    canActivate: [portalHomeGuard],
     data: {
       layout: eLayoutType.empty
     }
@@ -241,6 +245,8 @@ export const APP_ROUTES: Routes = [
   {
     path: 'tenant/:id',
     loadComponent: () => import('./admin/tenant-info/tenant-homepage.component').then(c => c.TenantHomepageComponent),
+    // 与 `/` 同理：租户主页也是学生端公开浏览页，管理端身份直接去 /resources。
+    canActivate: [portalHomeGuard],
   },
 
   {

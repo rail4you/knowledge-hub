@@ -115,8 +115,6 @@ export class StudentFavoritesComponent implements OnInit {
 
   openDetail(resource: ResourceDto) {
     if (!resource.id) return;
-    // 关键修复 P1-12：原实现硬编码 /student/resources 前缀，
-    // 教师端被复用时点进去会触发 studentPortalGuard 把教师踢到登录页。
     // 教师端没有 /resources/:id 详情页，回退到教师资源列表 /resources（至少能正常加载）。
     const url = this.router.url;
     if (url.startsWith('/student')) {

@@ -6,7 +6,8 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
-import { hasRole } from '../auth/current-user.utils';
+import { hasAnyRole, hasRole } from '../auth/current-user.utils';
+import { ADMIN_ROLES } from '../auth/admin-roles';
 import { PortalService } from '../proxy/portal/portal.service';
 import type { PublicHomeStatsDto, TenantResourceSummaryDto, PublicBrowseDto, PublicCourseDto, PublicResourceDto, PublicMicroMajorDto, PublicBrowseFilterOption, MaterialBriefDto, CourseBriefDto, MicroMajorBriefDto, NewsBriefDto } from '../proxy/portal/models';
 import { FilePreviewComponent } from '../shared/preview/file-preview.component';
@@ -153,12 +154,12 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     return this.knownStudents.has((cu?.['userName'] as string) || '');
   }
   get isTeacher(): boolean {
-    return !this.isStudent && this.isLoggedIn;
+    return this.isLoggedIn && hasAnyRole(this.config, ADMIN_ROLES);
   }
 
   ngOnInit() {
-    // 已登录的非学生用户（教师/学校管理员等）直接进入资源库管理后台，
-    // 不再停留在门户首页。与 HomeComponent 对学生角色的处理对称。
+    // 第二道防线（第一道是路由层的 portalHomeGuard，组件通常不会被实例化）。
+    // 保留此处兜底：若守卫执行时角色声明尚未就绪，组件内再次拦截。
     if (this.isLoggedIn && this.isTeacher) {
       const returnUrl = this.route.snapshot.queryParams['returnUrl'];
       if (!returnUrl) this.router.navigate(['/resources']);

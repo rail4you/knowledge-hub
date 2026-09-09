@@ -1,13 +1,21 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
-import { hasRole } from '../auth/current-user.utils';
+import { hasAnyRole } from '../auth/current-user.utils';
+import { ADMIN_ROLES } from '../auth/admin-roles';
 
 /**
- * 学生门户守卫：允许以下用户访问
- * - 学生角色用户
- * - 未登录游客（公开浏览）
- * - 教师/管理员等其他已登录用户
+ * 学生门户守卫：只允许学生与游客访问，管理端身份一律挡在门外。
+ *
+ * - 未登录游客：放行（学生端支持公开浏览）；
+ * - 已登录且持有任一管理端角色（Teacher / SchoolAdmin / LeagueAdmin /
+ *   EnterpriseUser / admin）：直接返回 UrlTree 跳到 `/resources`，
+ *   即使手动输入 URL 也进不来；
+ * - 其余已登录用户（Student / 无角色）：放行。
+ *
+ * 与 `nonStudentGuard` 互为镜像：
+ * 后台路由只认 ADMIN_ROLES，学生路由只挡 ADMIN_ROLES，
+ * 两边都以角色为准，不依赖易绕过的用户名名单。
  */
 export const studentPortalGuard: CanActivateFn = () => {
   const configState = inject(ConfigStateService);
@@ -19,19 +27,10 @@ export const studentPortalGuard: CanActivateFn = () => {
     return true;
   }
 
-  // 检查是否是学生（ABP roles + 已知学生名单兜底）
-  if (hasRole(configState, 'Student')) {
-    return true;
+  // 管理端身份优先判断：即使同时持有 Student 角色也不放行
+  if (hasAnyRole(configState, ADMIN_ROLES)) {
+    return router.createUrlTree(['/resources']);
   }
 
-  // 兜底：用户名匹配已知学生
-  const knownStudents = new Set(['zmq', 'student', 'hoststudent', 'qidistudent', 'stu', 'std01', 'stutest', 'teststu', 'teststudent123', 'kEMlzpAX']);
-  const cu = configState.getDeep('currentUser') as Record<string, unknown> | undefined;
-  const userName = (cu?.['userName'] as string) || '';
-  if (knownStudents.has(userName)) {
-    return true;
-  }
-
-  // 已登录的教师/管理员：放行（允许所有用户浏览学生页面）
   return true;
 };
