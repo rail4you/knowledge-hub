@@ -1,88 +1,82 @@
 <div class="review-container">
+  <!-- 评分汇总卡片：简化版（去掉条状分布 UI） -->
   @if (summary(); as s) {
-    <div class="rating-summary">
-      <div class="overall-rating">
-        <div class="big-rating">{{ s.averageRating | number:'1.1-1' }}</div>
+    <div class="rating-summary-card">
+      <div class="rating-summary-inline">
+        <span class="rating-summary-value">{{ s.averageRating | number:'1.1-1' }}</span>
         <nz-rate [ngModel]="s.averageRating" [nzDisabled]="true" nzAllowHalf></nz-rate>
-        <div class="total-reviews">{{ s.totalReviews }} 条评价 · 综合评分</div>
+        <span class="rating-summary-text">综合评分</span>
+        <span class="rating-summary-divider"></span>
+        <span class="rating-summary-text">{{ s.totalReviews }} 条评价</span>
       </div>
-      <div class="rating-distribution">
-        @for (star of [5, 4, 3, 2, 1]; track star) {
-          <div class="distribution-row">
-            <span class="star-label">{{ star }} 星</span>
-            <div class="distribution-bar-bg">
-              <div class="distribution-bar" [style.width.%]="getRatingPercent(star)"></div>
-            </div>
-            <span class="distribution-count">{{ s.ratingDistribution[star - 1] }}</span>
+    </div>
+
+    @if (!displayOnly) {
+      <div class="review-form-card">
+        <div class="review-form-header">
+          <span class="review-form-title">
+            @if (singleEvaluation && hasReviewed()) {
+              我的评价
+            } @else if (editingReviewId() && !singleEvaluation) {
+              编辑评价
+            } @else {
+              发表评价
+            }
+          </span>
+        </div>
+        <div class="review-form-body">
+          <div class="form-rating">
+            <span class="form-label">评分：</span>
+            <nz-rate [ngModel]="myRating()" (ngModelChange)="myRating.set($event)" [nzDisabled]="singleEvaluation && hasReviewed()"></nz-rate>
           </div>
-        }
+          <textarea #reviewInput nz-input [ngModel]="myContent()" (ngModelChange)="myContent.set($event)" placeholder="请输入评价内容..." [nzAutosize]="{ minRows: 3, maxRows: 5 }" [disabled]="singleEvaluation && hasReviewed()"></textarea>
+          <div class="form-actions">
+            @if (singleEvaluation && hasReviewed()) {
+              <button nz-button nzType="primary" disabled>已评价</button>
+              <span class="form-hint">每人只能评价一次，感谢您的反馈</span>
+            } @else {
+              <button nz-button nzType="primary" (click)="submitReview()" [nzLoading]="submitting()" [disabled]="myRating() === 0">
+                {{ editingReviewId() && !singleEvaluation ? '更新评价' : '提交评价' }}
+              </button>
+              @if (editingReviewId() && !singleEvaluation) {
+                <button nz-button nzDanger (click)="deleteReview(editingReviewId()!)">删除评价</button>
+              }
+            }
+          </div>
+        </div>
       </div>
-    </div>
-
-    <nz-divider></nz-divider>
-
-    <div class="review-form">
-      <h4>
-        <span nz-icon nzType="edit" nzTheme="outline"></span>
-        @if (singleEvaluation && hasReviewed()) {
-          我的评价
-        } @else if (editingReviewId() && !singleEvaluation) {
-          编辑评价
-        } @else {
-          发表评价
-        }
-      </h4>
-      <div class="form-rating">
-        <span>评分：</span>
-        <nz-rate [ngModel]="myRating()" (ngModelChange)="myRating.set($event)" [nzDisabled]="singleEvaluation && hasReviewed()"></nz-rate>
-      </div>
-      <textarea #reviewInput nz-input [ngModel]="myContent()" (ngModelChange)="myContent.set($event)" placeholder="请输入评价内容..." [nzAutosize]="{ minRows: 3, maxRows: 5 }" [disabled]="singleEvaluation && hasReviewed()"></textarea>
-      <div class="form-actions">
-        @if (singleEvaluation && hasReviewed()) {
-          <button nz-button nzType="primary" disabled>已评价</button>
-          <span class="form-hint">每人只能评价一次，感谢您的反馈</span>
-        } @else {
-          <button nz-button nzType="primary" (click)="submitReview()" [nzLoading]="submitting()" [disabled]="myRating() === 0">
-            {{ editingReviewId() && !singleEvaluation ? '更新评价' : '提交评价' }}
-          </button>
-          @if (editingReviewId() && !singleEvaluation) {
-            <button nz-button nzDanger (click)="deleteReview(editingReviewId()!)">删除评价</button>
-          }
-        }
-      </div>
-    </div>
-
-    <nz-divider></nz-divider>
+    }
   }
 
-  <div class="reviews-list">
-    <div class="reviews-list__title">全部评价（{{ reviews().length }}）</div>
-    <nz-spin [nzSpinning]="loading()">
-      @if (reviews().length === 0 && !loading()) {
-        <nz-empty nzNotFoundContent="暂无评价，快来发表第一条吧"></nz-empty>
-      } @else {
-        <nz-list [nzDataSource]="reviews()" [nzRenderItem]="reviewItem">
-          <ng-template #reviewItem let-item>
-            <nz-list-item>
-              <nz-list-item-meta
-                [nzAvatar]="avatarTpl"
-                [nzTitle]="titleTpl"
-                [nzDescription]="item.content || ''">
-              </nz-list-item-meta>
-              <ng-template #avatarTpl>
-                <nz-avatar [nzText]="item.userName?.charAt(0) || '?'"></nz-avatar>
-              </ng-template>
-              <ng-template #titleTpl>
-                <div class="review-header">
-                  <span class="reviewer-name">{{ item.userName }}</span>
-                  <nz-rate [ngModel]="item.rating" [nzDisabled]="true" nzSize="small"></nz-rate>
-                  <span class="review-time">{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+  <!-- 全部评价列表 -->
+  <div class="reviews-list-card">
+    <div class="reviews-list-header">
+      <span class="reviews-list-title">全部评价</span>
+      <span class="reviews-list-count">{{ reviews().length }} 条</span>
+    </div>
+    <div class="reviews-list-body">
+      <nz-spin [nzSpinning]="loading()">
+        @if (reviews().length === 0 && !loading()) {
+          <nz-empty [nzNotFoundContent]="displayOnly ? '暂无评价' : '暂无评价，快来发表第一条吧'"></nz-empty>
+        } @else {
+          <ul class="review-items">
+            @for (item of reviews(); track item.id) {
+              <li class="review-item">
+                <div class="review-avatar">{{ item.userName?.charAt(0) || '?' }}</div>
+                <div class="review-body">
+                  <div class="review-meta">
+                    <span class="reviewer-name">{{ item.userName }}</span>
+                    <nz-rate [ngModel]="item.rating" [nzDisabled]="true" nzSize="small"></nz-rate>
+                    <span class="review-time">{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+                  </div>
+                  <div class="review-content" *ngIf="item.content">{{ item.content }}</div>
+                  <div class="review-content muted" *ngIf="!item.content">用户未填写评价内容</div>
                 </div>
-              </ng-template>
-            </nz-list-item>
-          </ng-template>
-        </nz-list>
-      }
-    </nz-spin>
+              </li>
+            }
+          </ul>
+        }
+      </nz-spin>
+    </div>
   </div>
 </div>

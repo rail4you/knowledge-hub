@@ -1,469 +1,490 @@
 <div class="resource-page">
-  <!-- Modern Underline Tab Navigation -->
-  <nav class="tab-nav">
-    <div class="tab-nav-list">
-      <button
-        class="tab-nav-item"
-        [class.active]="selectedTabIndex === 0"
-        (click)="onTabChange(0)"
-        *ngIf="!isLeagueAuditor"
-      >
-        <span nz-icon nzType="file-text" class="tab-icon"></span>
-        <span>{{ '::Resources' | abpLocalization }}</span>
-      </button>
-      <button
-        class="tab-nav-item"
-        [class.active]="selectedTabIndex === 1"
-        (click)="onTabChange(1)"
-        *ngIf="!isLeagueAuditor"
-      >
-        <span nz-icon nzType="folder" class="tab-icon"></span>
-        <span>{{ '::Categories' | abpLocalization }}</span>
-      </button>
-      <button
-        class="tab-nav-item"
-        [class.active]="selectedTabIndex === 2"
-        (click)="onTabChange(2)"
-        *abpPermission="'KnowledgeHub.Resources.SchoolAudit || KnowledgeHub.Resources.LeagueAudit'"
-      >
-        <span nz-icon nzType="audit" class="tab-icon"></span>
-        <span>{{ '::PendingAudit' | abpLocalization }}</span>
-      </button>
-      <button
-        class="tab-nav-item"
-        [class.active]="selectedTabIndex === 3"
-        (click)="onTabChange(3)"
-        *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'"
-      >
-        <span nz-icon nzType="delete" class="tab-icon"></span>
-        <span>{{ '::PhysicalDeleteRequests' | abpLocalization }}</span>
-      </button>
-      <button
-        class="tab-nav-item"
-        [class.active]="selectedTabIndex === 4"
-        (click)="onTabChange(5)"
-        *abpPermission="'KnowledgeHub.Resources.Share'"
-      >
-        <span nz-icon nzType="export" class="tab-icon"></span>
-        <span>{{ '::SharedByMe' | abpLocalization }}</span>
-      </button>
+  <!-- 标题卡片（与管理员页面对齐：仅标题 + 副标题，无左侧图标） -->
+  <div class="page-header">
+    <h1>{{ '::Resources' | abpLocalization }}</h1>
+    <p>管理资源、分类、待审核数据与共享记录</p>
+  </div>
 
-    </div>
-  </nav>
-
-  <div class="tab-content">
-    <!-- Resources Tab - Explorer Layout -->
-    <div *ngIf="selectedTabIndex === 0" class="explorer-layout">
-      <!-- Left Sidebar: Category Tree -->
-      <div class="sidebar-left" [class.collapsed]="!leftPanelVisible()">
-        <div *ngIf="leftPanelVisible()" class="sidebar-inner">
-          <div class="sidebar-header">
-            <h4>{{ '::Categories' | abpLocalization }}</h4>
-            <button nz-button nzType="text" nzSize="small" (click)="toggleSidebar()">
-              <span nz-icon nzType="menu-fold"></span>
-            </button>
-          </div>
-          <div class="category-filter">
-            <div class="category-filter-item" [class.active]="!selectedCategoryId()" (click)="clearCategoryFilter()">
-              <span nz-icon nzType="appstore" class="filter-icon"></span>
-              <span>{{ '::AllResources' | abpLocalization }}</span>
+  <!-- 主卡片：Tabs 与内容在同一卡片内，视觉一体化 -->
+  <div class="main-panel">
+    <nz-tabs
+      [nzSelectedIndex]="selectedTabIndex"
+      (nzSelectedIndexChange)="onTabChange($event)"
+      class="resource-tabs"
+    >
+      <!-- ══════════ Tab 1：资源 ══════════ -->
+      <nz-tab nzTitle="{{ '::Resources' | abpLocalization }}" *ngIf="!isLeagueAuditor">
+        <div class="explorer-layout">
+          <!-- Left Sidebar: Category Tree -->
+          <aside class="sidebar-left" [class.collapsed]="!leftPanelVisible()">
+            <div *ngIf="leftPanelVisible()" class="sidebar-inner">
+              <div class="sidebar-section">
+                <div class="sidebar-section-header">
+                  <span class="sidebar-section-title">{{ '::Categories' | abpLocalization }}</span>
+                  <button class="sidebar-toggle" type="button" (click)="toggleSidebar()" nz-tooltip [nzTooltipTitle]="'::Collapse' | abpLocalization">
+                    <span nz-icon nzType="menu-fold"></span>
+                  </button>
+                </div>
+                <div class="sidebar-quick-filter">
+                  <div class="quick-filter-item" [class.active]="!selectedCategoryId()" (click)="clearCategoryFilter()">
+                    <span class="quick-filter-dot dot-all"></span>
+                    <span>{{ '::AllResources' | abpLocalization }}</span>
+                  </div>
+                </div>
+                <div class="sidebar-tree">
+                  <nz-tree
+                    [nzData]="categoryTreeNodes()"
+                    [nzDraggable]="false"
+                    nzBlockNode
+                    nzShowExpand
+                    nzShowIcon
+                    [nzSelectedKeys]="selectedTreeKeys()"
+                    (nzClick)="onCategoryClick($event)"
+                  ></nz-tree>
+                  <nz-empty *ngIf="categoryTreeNodes().length === 0" nzNotFoundContent=""></nz-empty>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="sidebar-tree">
-            <nz-tree
-              [nzData]="categoryTreeNodes()"
-              [nzDraggable]="false"
-              nzBlockNode
-              nzShowExpand
-              nzShowIcon
-              [nzSelectedKeys]="selectedTreeKeys()"
-              (nzClick)="onCategoryClick($event)"
-            ></nz-tree>
-            <nz-empty *ngIf="categoryTreeNodes().length === 0" nzNotFoundContent=""></nz-empty>
-          </div>
-        </div>
-        <div *ngIf="!leftPanelVisible()" class="sidebar-collapsed-bar" (click)="toggleSidebar()">
-          <span nz-icon nzType="menu-unfold"></span>
-        </div>
-      </div>
+            <div *ngIf="!leftPanelVisible()" class="sidebar-collapsed-bar" (click)="toggleSidebar()" nz-tooltip [nzTooltipTitle]="'::Expand' | abpLocalization">
+              <span nz-icon nzType="menu-unfold"></span>
+            </div>
+          </aside>
 
-      <!-- Center: Document Table -->
-      <div class="main-content">
-        <div class="toolbar">
-          <div class="toolbar-left">
-            <button nz-button nzType="primary" (click)="createResource()">
-              <span nz-icon nzType="plus"></span>
-              {{ '::NewResource' | abpLocalization }}
+          <!-- Center: Document Table -->
+          <section class="main-content">
+            <div class="table-toolbar">
+              <button class="create-btn" type="button" (click)="createResource()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                {{ '::NewResource' | abpLocalization }}
+              </button>
+              <span class="breadcrumb" *ngIf="selectedCategoryName()">
+                <span nz-icon nzType="folder"></span>
+                {{ selectedCategoryName() }}
+              </span>
+              <div class="toolbar-filters">
+                <div class="search-box">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                  <input
+                    type="text"
+                    [ngModel]="keywordFilter()"
+                    (ngModelChange)="onKeywordChange($event)"
+                    (keyup.enter)="onKeywordChange(keywordFilter())"
+                    [placeholder]="'::SearchResources' | abpLocalization"
+                  />
+                  <button *ngIf="keywordFilter()" class="search-clear" type="button" (click)="onKeywordChange('')" aria-label="清除">
+                    ×
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+              <div class="filter-left">
+                <nz-select
+                  [ngModel]="timeFilter()"
+                  (ngModelChange)="onTimeFilterChange($event)"
+                  nzSize="small"
+                  nzPlaceHolder="时间"
+                  style="width: 120px;"
+                >
+                  <nz-option *ngFor="let opt of timeFilterOptions" [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
+                </nz-select>
+                <nz-select
+                  [ngModel]="selectedMajorId()"
+                  (ngModelChange)="onMajorFilterChange($event)"
+                  nzSize="small"
+                  nzPlaceHolder="专业"
+                  nzAllowClear
+                  style="width: 140px;"
+                >
+                  <nz-option *ngFor="let major of majors()" [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
+                </nz-select>
+                <nz-select
+                  [ngModel]="statusFilter()"
+                  (ngModelChange)="onStatusFilterChange($event)"
+                  nzSize="small"
+                  nzPlaceHolder="状态"
+                  nzAllowClear
+                  style="width: 140px;"
+                >
+                  <nz-option *ngFor="let opt of resourceStatuses" [nzValue]="opt.value" [nzLabel]="getStatusName(opt.value)"></nz-option>
+                </nz-select>
+                <button class="toolbar-btn" *ngIf="hasActiveFilters()" (click)="clearAllFilters()">
+                  {{ '::ClearFilter' | abpLocalization }}
+                </button>
+              </div>
+              <div class="filter-right">
+                <span class="result-count">共 {{ resources.totalCount }} 条</span>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <nz-table
+                nzTableLayout="fixed"
+                [nzData]="resources.items"
+                [nzTotal]="resources.totalCount"
+                [nzPageIndex]="pageIndex"
+                [nzPageSize]="pageSize"
+                [nzFrontPagination]="false"
+                (nzPageIndexChange)="onPageIndexChange($event)"
+                nzSize="middle"
+                class="training-table-host"
+              >
+                <thead>
+                  <tr>
+                    <th nzWidth="38%" class="th-name">{{ '::ResourceName' | abpLocalization }}</th>
+                    <th nzWidth="92px" class="th-type">{{ '::ResourceType' | abpLocalization }}</th>
+                    <th nzWidth="64px" class="th-version">{{ '::Version' | abpLocalization }}</th>
+                    <th nzWidth="120px" class="th-status">{{ '::Status' | abpLocalization }}</th>
+                    <th nzWidth="100px" class="th-creator">{{ '::Creator' | abpLocalization }}</th>
+                    <th nzWidth="110px" class="th-time">{{ '::CreationTime' | abpLocalization }}</th>
+                    <th nzWidth="112px" class="th-ops">{{ '::Actions' | abpLocalization }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of resources.items"
+                      (click)="selectResource(item)"
+                      [class.selected]="selectedResource()?.id === item.id">
+                    <td class="td-name">
+                      <span class="file-name-cell">
+                        <span class="file-name-text" [title]="item.name">{{ item.name }}</span>
+                      </span>
+                    </td>
+                    <td class="td-type"><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
+                    <td class="td-version">v{{ item.currentVersion }}</td>
+                    <td class="td-status">
+                      <nz-tag [nzColor]="getStatusColor(item.status)" class="status-tag status-{{ item.status }}">
+                        {{ getStatusName(item.status) }}
+                      </nz-tag>
+                    </td>
+                    <td class="td-creator" [title]="getCreatorName(item.creatorName)">{{ getCreatorName(item.creatorName) }}</td>
+                    <td class="td-time">
+                      <span
+                        nz-tooltip
+                        [nzTooltipTitle]="(item.creationTime | date:'yyyy-MM-dd HH:mm:ss') || ''"
+                      >{{ item.creationTime | date:'yyyy-MM-dd' }}</span>
+                    </td>
+                    <td class="td-ops" (click)="$event.stopPropagation()">
+                      <div class="row-icon-ops">
+                        <button
+                          type="button"
+                          class="row-icon-btn preview"
+                          (click)="selectResource(item)"
+                          nz-tooltip
+                          [nzTooltipTitle]="'::Preview' | abpLocalization"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                        </button>
+                        <button
+                          *abpPermission="'KnowledgeHub.Resources.Edit'"
+                          type="button"
+                          class="row-icon-btn edit"
+                          (click)="editResource(item.id)"
+                          nz-tooltip
+                          [nzTooltipTitle]="'::Edit' | abpLocalization"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <path d="M12 20h9"/>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                          </svg>
+                        </button>
+                        <button
+                          *abpPermission="'KnowledgeHub.Resources.RequestDelete'"
+                          type="button"
+                          class="row-icon-btn delete"
+                          (click)="openDeleteModalForResource(item)"
+                          nz-tooltip
+                          [nzTooltipTitle]="'::RequestDelete' | abpLocalization"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                            <path d="M10 11v6M14 11v6"/>
+                            <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </nz-table>
+
+              <div *ngIf="!isLoading && resources.items.length === 0" class="empty-tip">
+                <div class="empty-tip-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                </div>
+                <span>暂无资源</span>
+                <button class="create-btn" type="button" (click)="createResource()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14"/>
+                  </svg>
+                  {{ '::NewResource' | abpLocalization }}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </nz-tab>
+
+      <!-- ══════════ Tab 2：分类 ══════════ -->
+      <nz-tab nzTitle="{{ '::Categories' | abpLocalization }}" *ngIf="!isLeagueAuditor">
+        <div class="tab-page">
+          <div class="table-toolbar">
+            <button class="create-btn" type="button" (click)="createCategory()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              {{ '::NewCategory' | abpLocalization }}
             </button>
-            <span class="breadcrumb" *ngIf="selectedCategoryName()">
-              <span nz-icon nzType="folder"></span>
-              {{ selectedCategoryName() }}
+          </div>
+          <div class="table-wrap">
+            <nz-table
+              [nzData]="flatCategories()"
+              [nzFrontPagination]="false"
+              nzSize="middle"
+              class="training-table-host"
+            >
+              <thead>
+                <tr>
+                  <th nzWidth="60%" class="col-title">{{ '::CategoryName' | abpLocalization }}</th>
+                  <th nzWidth="25%">{{ '::ParentCategory' | abpLocalization }}</th>
+                  <th nzWidth="15%">{{ '::Actions' | abpLocalization }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let cat of flatCategories()">
+                  <td class="col-title">
+                    <span [style.padding-left.px]="cat._level * 24">
+                      <span *ngIf="cat.children && cat.children.length > 0" nz-icon nzType="folder" style="margin-right: 4px;"></span>
+                      <span *ngIf="!cat.children || cat.children.length === 0" nz-icon nzType="file" style="margin-right: 4px;"></span>
+                      {{ cat.name }}
+                    </span>
+                  </td>
+                  <td>{{ cat.parentName || '—' }}</td>
+                  <td>
+                    <div class="row-icon-ops">
+                      <button class="row-icon-btn edit" type="button" (click)="editCategory(cat)" nz-tooltip [nzTooltipTitle]="'::Edit' | abpLocalization">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                          <path d="M12 20h9"/>
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                        </svg>
+                      </button>
+                      <button class="row-icon-btn delete" type="button" (click)="deleteCategory(cat.id!)" nz-tooltip [nzTooltipTitle]="'::Delete' | abpLocalization">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                          <polyline points="3 6 5 6 21 6"/>
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </nz-table>
+
+            <nz-empty *ngIf="flatCategories().length === 0" [nzNotFoundContent]="'::NoCategories' | abpLocalization"></nz-empty>
+          </div>
+        </div>
+      </nz-tab>
+
+      <!-- ══════════ Tab 3：待审核 ══════════ -->
+      <nz-tab nzTitle="{{ '::PendingAudit' | abpLocalization }}" *abpPermission="'KnowledgeHub.Resources.SchoolAudit || KnowledgeHub.Resources.LeagueAudit'">
+        <div class="tab-page">
+          <div class="audit-workflow-legend">
+            <span class="legend-item">
+              <span class="legend-dot dot-pending"></span>
+              {{ '::PendingReview' | abpLocalization }}
+            </span>
+            <span class="legend-arrow">→</span>
+            <span class="legend-item">
+              <span class="legend-dot dot-school"></span>
+              {{ '::SchoolAudit' | abpLocalization }}
+            </span>
+            <span class="legend-arrow">→</span>
+            <span class="legend-item">
+              <span class="legend-dot dot-league"></span>
+              {{ '::LeagueAudit' | abpLocalization }}
             </span>
           </div>
-          <div class="toolbar-right">
-            <nz-input-group [nzPrefix]="tableSearchPrefix" [nzSuffix]="tableSearchSuffix" class="toolbar-search">
+          <div class="table-wrap">
+            <nz-table
+              [nzData]="pendingAudits()"
+              [nzFrontPagination]="false"
+              [nzNoResult]="auditEmptyTpl"
+              class="training-table-host"
+            >
+              <thead>
+                <tr>
+                  <th class="col-title">{{ '::ResourceName' | abpLocalization }}</th>
+                  <th>{{ '::ResourceType' | abpLocalization }}</th>
+                  <th>{{ '::AuditStatus' | abpLocalization }}</th>
+                  <th>{{ '::Creator' | abpLocalization }}</th>
+                  <th>{{ '::CreationTime' | abpLocalization }}</th>
+                  <th *ngIf="hasAuditPermission()">{{ '::Actions' | abpLocalization }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of pendingAudits()">
+                  <td class="col-title">{{ item.name }}</td>
+                  <td><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
+                  <td>
+                    <nz-tag [nzColor]="getStatusColor(item.status)" class="audit-status-tag status-{{ item.status }}">
+                      {{ item.status === 1 ? ('::NeedsSchoolAudit' | abpLocalization) : ('::NeedsLeagueAudit' | abpLocalization) }}
+                    </nz-tag>
+                  </td>
+                  <td>{{ getCreatorName(item.creatorName) }}</td>
+                  <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+                  <td *ngIf="hasAuditPermission()">
+                    <div class="row-icon-ops">
+                      <button *ngIf="canAuditResource(item)" type="button" class="row-icon-btn edit" (click)="openAuditModal(item)" nz-tooltip [nzTooltipTitle]="'::Audit' | abpLocalization">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                          <polyline points="9 11 12 14 22 4"/>
+                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                        </svg>
+                      </button>
+                      <span *ngIf="!canAuditResource(item)" class="no-permission">—</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </nz-table>
+            <ng-template #auditEmptyTpl></ng-template>
+            <div *ngIf="pendingAudits().length === 0" class="empty-tip">
+              <span>{{ '::NoPendingAudits' | abpLocalization }}</span>
+            </div>
+          </div>
+        </div>
+      </nz-tab>
+
+      <!-- ══════════ Tab 4：删除请求 ══════════ -->
+      <nz-tab nzTitle="{{ '::PhysicalDeleteRequests' | abpLocalization }}" *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'">
+        <div class="tab-page">
+          <div class="table-wrap">
+            <nz-table
+              [nzData]="physicalDeleteRequests()"
+              [nzFrontPagination]="false"
+              [nzNoResult]="deleteEmptyTpl"
+              class="training-table-host"
+            >
+              <thead>
+                <tr>
+                  <th class="col-title">{{ '::ResourceName' | abpLocalization }}</th>
+                  <th>{{ '::Reason' | abpLocalization }}</th>
+                  <th>{{ '::Requester' | abpLocalization }}</th>
+                  <th>{{ '::RequestTime' | abpLocalization }}</th>
+                  <th>{{ '::Actions' | abpLocalization }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of physicalDeleteRequests()">
+                  <td class="col-title">{{ item.resourceName }}</td>
+                  <td>{{ item.reason }}</td>
+                  <td>{{ item.requesterName }}</td>
+                  <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
+                  <td>
+                    <div class="row-icon-ops">
+                      <button *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'" type="button" class="row-icon-btn success" (click)="approvePhysicalDelete(item.id)" nz-tooltip [nzTooltipTitle]="'::Approve' | abpLocalization">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      </button>
+                      <button *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'" type="button" class="row-icon-btn delete" (click)="rejectPhysicalDelete(item.id)" nz-tooltip [nzTooltipTitle]="'::Reject' | abpLocalization">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                          <line x1="18" y1="6" x2="6" y2="18"/>
+                          <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </nz-table>
+            <ng-template #deleteEmptyTpl></ng-template>
+            <div *ngIf="physicalDeleteRequests().length === 0" class="empty-tip">
+              <span>{{ '::NoDeleteRequests' | abpLocalization }}</span>
+            </div>
+          </div>
+        </div>
+      </nz-tab>
+
+      <!-- ══════════ Tab 5：我共享的 ══════════ -->
+      <nz-tab nzTitle="{{ '::SharedByMe' | abpLocalization }}" *abpPermission="'KnowledgeHub.Resources.Share'">
+        <div class="tab-page">
+          <div class="table-toolbar">
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
               <input
                 type="text"
-                nz-input
-                nzSize="small"
-                [placeholder]="'::SearchResources' | abpLocalization"
-                [ngModel]="keywordFilter()"
-                (ngModelChange)="onKeywordChange($event)"
-                (keyup.enter)="onKeywordChange(keywordFilter())"
+                [ngModel]="sharedFilter()"
+                (ngModelChange)="onSharedFilterChange($event)"
+                [placeholder]="'::Filter' | abpLocalization"
               />
-            </nz-input-group>
-            <ng-template #tableSearchPrefix><span nz-icon nzType="search"></span></ng-template>
-            <ng-template #tableSearchSuffix>
-              <span
-                *ngIf="keywordFilter()"
-                nz-icon
-                nzType="close-circle"
-                class="toolbar-search__clear"
-                (click)="onKeywordChange('')"
-              ></span>
-            </ng-template>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <nz-table
+              [nzData]="sharedByMeList().items"
+              [nzFrontPagination]="false"
+              [nzShowPagination]="true"
+              [nzPageIndex]="sharedPageIndex"
+              [nzPageSize]="sharedPageSize"
+              [nzTotal]="sharedByMeList().totalCount"
+              (nzPageIndexChange)="onSharedPageChange($event)"
+              class="training-table-host"
+            >
+              <thead>
+                <tr>
+                  <th class="col-title" nzWidth="50%">{{ '::ResourceName' | abpLocalization }}</th>
+                  <th nzWidth="20%">{{ '::Tenants' | abpLocalization }}</th>
+                  <th nzWidth="30%">{{ '::Actions' | abpLocalization }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of sharedByMeList().items">
+                  <td class="col-title">
+                    <a class="project-link" (click)="selectResource(item)">{{ item.name }}</a>
+                  </td>
+                  <td>
+                    <a class="op-link edit" (click)="manageShares(item)">{{ '::Manage' | abpLocalization }}</a>
+                  </td>
+                  <td>
+                    <div class="row-icon-ops">
+                      <button type="button" class="row-icon-btn preview" (click)="selectResource(item)" nz-tooltip [nzTooltipTitle]="'::Preview' | abpLocalization">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                          <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      </button>
+                      <button type="button" class="row-icon-btn edit" (click)="manageShares(item)" nz-tooltip [nzTooltipTitle]="'::Manage' | abpLocalization">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                          <circle cx="12" cy="12" r="3"/>
+                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </nz-table>
+            <div *ngIf="sharedByMeList().totalCount === 0" class="empty-tip">
+              <span>{{ '::NoSharedByMeResources' | abpLocalization }}</span>
+            </div>
           </div>
         </div>
-
-        <!-- Filter Bar -->
-        <div class="filter-bar">
-          <div class="filter-left">
-            <nz-select
-              [ngModel]="timeFilter()"
-              (ngModelChange)="onTimeFilterChange($event)"
-              nzSize="small"
-              nzPlaceHolder="时间"
-              style="width: 120px;"
-            >
-              <nz-option *ngFor="let opt of timeFilterOptions" [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
-            </nz-select>
-            <nz-select
-              [ngModel]="selectedMajorId()"
-              (ngModelChange)="onMajorFilterChange($event)"
-              nzSize="small"
-              nzPlaceHolder="专业"
-              nzAllowClear
-              style="width: 140px;"
-            >
-              <nz-option *ngFor="let major of majors()" [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
-            </nz-select>
-            <nz-select
-              [ngModel]="statusFilter()"
-              (ngModelChange)="onStatusFilterChange($event)"
-              nzSize="small"
-              nzPlaceHolder="状态"
-              nzAllowClear
-              style="width: 140px;"
-            >
-              <nz-option *ngFor="let opt of resourceStatuses" [nzValue]="opt.value" [nzLabel]="getStatusName(opt.value)"></nz-option>
-            </nz-select>
-          </div>
-          <div class="filter-right">
-            <button nz-button nzType="link" nzSize="small" (click)="clearAllFilters()" *ngIf="hasActiveFilters()">
-              {{ '::ClearFilter' | abpLocalization }}
-            </button>
-          </div>
-        </div>
-
-        <div class="table-wrapper">
-          <nz-table
-            nzTableLayout="fixed"
-            [nzData]="resources.items"
-            [nzTotal]="resources.totalCount"
-            [nzPageIndex]="pageIndex"
-            [nzPageSize]="pageSize"
-            [nzFrontPagination]="false"
-            (nzPageIndexChange)="onPageIndexChange($event)"
-            nzSize="middle"
-            [nzScroll]="{ x: '780px', y: 'calc(100vh - 280px)' }"
-          >
-            <thead>
-              <tr>
-                <th nzWidth="32%" class="th-name">{{ '::ResourceName' | abpLocalization }}</th>
-                <th nzWidth="82px" class="th-type">{{ '::ResourceType' | abpLocalization }}</th>
-                <th nzWidth="62px" class="th-version">{{ '::Version' | abpLocalization }}</th>
-                <th nzWidth="112px" class="th-status">{{ '::Status' | abpLocalization }}</th>
-                <th nzWidth="98px" class="th-creator">{{ '::Creator' | abpLocalization }}</th>
-                <th nzWidth="106px" class="th-time">{{ '::CreationTime' | abpLocalization }}</th>
-                <th nzWidth="110px" class="th-ops">{{ '::Actions' | abpLocalization }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of resources.items"
-                  (click)="selectResource(item)"
-                  [class.selected]="selectedResource()?.id === item.id"
-                  style="cursor: pointer;">
-                <td class="td-name">
-                  <span class="file-name-cell">
-                    <span nz-icon [nzType]="getResourceIcon(item.resourceType)" class="file-icon"></span>
-                    <span class="file-name-text" [title]="item.name">{{ item.name }}</span>
-                  </span>
-                </td>
-                <td class="td-type"><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
-                <td class="td-version">v{{ item.currentVersion }}</td>
-                <td class="td-status">
-                  <nz-tag [nzColor]="getStatusColor(item.status)" class="status-tag status-{{ item.status }}">
-                    {{ getStatusName(item.status) }}
-                  </nz-tag>
-                </td>
-                <td class="td-creator" [title]="getCreatorName(item.creatorName)">{{ getCreatorName(item.creatorName) }}</td>
-                <td class="td-time">
-                  <span
-                    nz-tooltip
-                    [nzTooltipTitle]="(item.creationTime | date:'yyyy-MM-dd HH:mm:ss') || ''"
-                  >{{ item.creationTime | date:'yyyy-MM-dd' }}</span>
-                </td>
-                <td class="td-ops" (click)="$event.stopPropagation()">
-                  <span class="row-ops">
-                    <button
-                      nz-button nzType="link" nzSize="small" class="row-op"
-                      (click)="selectResource(item)"
-                      nz-tooltip nzTooltipTitle="{{ '::Preview' | abpLocalization }}"
-                    >
-                      <span nz-icon nzType="eye"></span>
-                    </button>
-                    <button
-                      nz-button nzType="link" nzSize="small" class="row-op"
-                      *abpPermission="'KnowledgeHub.Resources.Edit'"
-                      (click)="editResource(item.id)"
-                      nz-tooltip nzTooltipTitle="{{ '::Edit' | abpLocalization }}"
-                    >
-                      <span nz-icon nzType="edit"></span>
-                    </button>
-                    <button
-                      nz-button nzType="link" nzSize="small" class="row-op row-op-danger"
-                      *abpPermission="'KnowledgeHub.Resources.RequestDelete'"
-                      (click)="openDeleteModalForResource(item)"
-                      nz-tooltip nzTooltipTitle="{{ '::RequestDelete' | abpLocalization }}"
-                    >
-                      <span nz-icon nzType="delete"></span>
-                    </button>
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </nz-table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Categories Tab -->
-    <div *ngIf="selectedTabIndex === 1" class="category-container full-height">
-      <div class="category-header">
-        <h3>{{ '::Categories' | abpLocalization }}</h3>
-        <button nz-button nzType="primary" (click)="createCategory()">
-          <span nz-icon nzType="plus"></span>
-          {{ '::NewCategory' | abpLocalization }}
-        </button>
-      </div>
-
-      <nz-table
-        [nzData]="flatCategories()"
-        [nzFrontPagination]="false"
-        [nzScroll]="{ y: 'calc(100vh - 280px)' }"
-        nzSize="middle"
-      >
-        <thead>
-          <tr>
-            <th>{{ '::CategoryName' | abpLocalization }}</th>
-            <th>{{ '::ParentCategory' | abpLocalization }}</th>
-            <th>{{ '::Actions' | abpLocalization }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let cat of flatCategories()">
-            <td>
-              <span [style.padding-left.px]="cat._level * 24">
-                <span *ngIf="cat.children && cat.children.length > 0" nz-icon nzType="folder" style="margin-right: 4px;"></span>
-                <span *ngIf="!cat.children || cat.children.length === 0" nz-icon nzType="file" style="margin-right: 4px;"></span>
-                {{ cat.name }}
-              </span>
-            </td>
-            <td>{{ cat.parentName || '-' }}</td>
-            <td>
-              <button nz-button nzType="link" nzSize="small" (click)="moveCategoryUp(cat)" nz-tooltip nzTooltipTitle="{{ '::MoveUp' | abpLocalization }}">
-                <span nz-icon nzType="arrow-up"></span>
-              </button>
-              <button nz-button nzType="link" nzSize="small" (click)="moveCategoryDown(cat)" nz-tooltip nzTooltipTitle="{{ '::MoveDown' | abpLocalization }}">
-                <span nz-icon nzType="arrow-down"></span>
-              </button>
-              <button nz-button nzType="link" nzSize="small" (click)="editCategory(cat)" nz-tooltip nzTooltipTitle="{{ '::Edit' | abpLocalization }}">
-                <span nz-icon nzType="edit"></span>
-              </button>
-              <button nz-button nzType="link" nzSize="small" nzDanger (click)="deleteCategory(cat.id!)" nz-tooltip nzTooltipTitle="{{ '::Delete' | abpLocalization }}">
-                <span nz-icon nzType="delete"></span>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </nz-table>
-
-      <nz-empty *ngIf="flatCategories().length === 0" [nzNotFoundContent]="'::NoCategories' | abpLocalization"></nz-empty>
-    </div>
-
-    <!-- Pending Audit Tab -->
-    <ng-container *ngIf="selectedTabIndex === 2">
-    <div class="audit-container full-height">
-      <h3>{{ '::PendingAudit' | abpLocalization }}</h3>
-
-      <div class="audit-workflow-legend">
-        <span class="legend-item"><span class="flow-dot dot-pending"></span> {{ '::PendingReview' | abpLocalization }}</span>
-        <span class="legend-arrow">→</span>
-        <span class="legend-item"><span class="flow-dot dot-school"></span> {{ '::SchoolAudit' | abpLocalization }}</span>
-        <span class="legend-arrow">→</span>
-        <span class="legend-item"><span class="flow-dot dot-league"></span> {{ '::LeagueAudit' | abpLocalization }}</span>
-      </div>
-
-      <nz-table
-        [nzData]="pendingAudits()"
-        [nzFrontPagination]="false"
-        [nzNoResult]="auditEmptyTpl"
-        [nzScroll]="{ y: 'calc(100vh - 280px)' }"
-      >
-        <thead>
-          <tr>
-            <th>{{ '::ResourceName' | abpLocalization }}</th>
-            <th>{{ '::ResourceType' | abpLocalization }}</th>
-            <th>{{ '::AuditStatus' | abpLocalization }}</th>
-            <th>{{ '::Creator' | abpLocalization }}</th>
-            <th>{{ '::CreationTime' | abpLocalization }}</th>
-            <th *ngIf="hasAuditPermission()">{{ '::Actions' | abpLocalization }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of pendingAudits()">
-            <td>{{ item.name }}</td>
-            <td><nz-tag>{{ getResourceTypeName(item.resourceType) }}</nz-tag></td>
-            <td>
-              <nz-tag [nzColor]="getStatusColor(item.status)" class="audit-status-tag status-{{ item.status }}">
-                {{ item.status === 1 ? ('::NeedsSchoolAudit' | abpLocalization) : ('::NeedsLeagueAudit' | abpLocalization) }}
-              </nz-tag>
-            </td>
-            <td>{{ getCreatorName(item.creatorName) }}</td>
-            <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
-            <td *ngIf="hasAuditPermission()">
-              <button nz-button nzType="primary" nzSize="small" *ngIf="canAuditResource(item)" (click)="openAuditModal(item)">
-                {{ '::Audit' | abpLocalization }}
-              </button>
-              <span *ngIf="!canAuditResource(item)" class="no-permission">—</span>
-            </td>
-          </tr>
-        </tbody>
-      </nz-table>
-
-      <!-- 表格自带空提示已通过 nzNoResult 置空，只保留下方自定义空提示，避免重复 -->
-      <ng-template #auditEmptyTpl></ng-template>
-      <nz-empty *ngIf="pendingAudits().length === 0" [nzNotFoundContent]="'::NoPendingAudits' | abpLocalization"></nz-empty>
-    </div>
-    </ng-container>
-
-    <!-- Physical Delete Requests Tab -->
-    <ng-container *ngIf="selectedTabIndex === 3">
-    <div class="audit-container full-height">
-      <h3>{{ '::PhysicalDeleteRequests' | abpLocalization }}</h3>
-
-      <nz-table
-        [nzData]="physicalDeleteRequests()"
-        [nzFrontPagination]="false"
-        [nzNoResult]="deleteEmptyTpl"
-        [nzScroll]="{ y: 'calc(100vh - 280px)' }"
-      >
-        <thead>
-          <tr>
-            <th>{{ '::ResourceName' | abpLocalization }}</th>
-            <th>{{ '::Reason' | abpLocalization }}</th>
-            <th>{{ '::Requester' | abpLocalization }}</th>
-            <th>{{ '::RequestTime' | abpLocalization }}</th>
-            <th>{{ '::Actions' | abpLocalization }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of physicalDeleteRequests()">
-            <td>{{ item.resourceName }}</td>
-            <td>{{ item.reason }}</td>
-            <td>{{ item.requesterName }}</td>
-            <td>{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
-            <td>
-              <button nz-button nzType="primary" nzSize="small" *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'" (click)="approvePhysicalDelete(item.id)">
-                {{ '::Approve' | abpLocalization }}
-              </button>
-              <button nz-button nzType="danger" nzSize="small" *abpPermission="'KnowledgeHub.Resources.PhysicalDelete'" (click)="rejectPhysicalDelete(item.id)" style="margin-left: 8px;">
-                {{ '::Reject' | abpLocalization }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </nz-table>
-
-      <!-- 表格自带空提示已通过 nzNoResult 置空，只保留下方自定义空提示，避免重复 -->
-      <ng-template #deleteEmptyTpl></ng-template>
-      <nz-empty *ngIf="physicalDeleteRequests().length === 0" [nzNotFoundContent]="'::NoDeleteRequests' | abpLocalization"></nz-empty>
-    </div>
-    </ng-container>
-    <!-- Shared By Me Tab -->
-    <ng-container *ngIf="selectedTabIndex === 4">
-      <div class="audit-container full-height">
-        <h3>{{ '::SharedByMe' | abpLocalization }}</h3>
-
-        <div class="filter-bar" style="margin-bottom: 16px;">
-          <nz-input-group [nzPrefix]="searchIconTemplate" style="max-width: 320px;">
-            <input
-              type="text"
-              nz-input
-              [placeholder]="'::Filter' | abpLocalization"
-              [ngModel]="sharedFilter()"
-              (ngModelChange)="onSharedFilterChange($event)"
-            />
-          </nz-input-group>
-          <ng-template #searchIconTemplate><span nz-icon nzType="search"></span></ng-template>
-        </div>
-
-        <nz-table
-          [nzData]="sharedByMeList().items"
-          [nzFrontPagination]="false"
-          [nzShowPagination]="true"
-          [nzPageIndex]="sharedPageIndex"
-          [nzPageSize]="sharedPageSize"
-          [nzTotal]="sharedByMeList().totalCount"
-          (nzPageIndexChange)="onSharedPageChange($event)"
-          [nzScroll]="{ y: 'calc(100vh - 320px)' }"
-        >
-          <thead>
-            <tr>
-              <th nzWidth="50%">{{ '::ResourceName' | abpLocalization }}</th>
-              <th nzWidth="20%">{{ '::Tenants' | abpLocalization }}</th>
-              <th nzWidth="30%">{{ '::Actions' | abpLocalization }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let item of sharedByMeList().items">
-              <td>
-                <a (click)="selectResource(item)" class="resource-link">
-                  <span nz-icon [nzType]="getResourceIcon(item.resourceType)"></span>
-                  {{ item.name }}
-                </a>
-              </td>
-              <td>
-                <a (click)="manageShares(item)">{{ '::Manage' | abpLocalization }}</a>
-              </td>
-              <td>
-                <button nz-button nzType="primary" nzSize="small" (click)="selectResource(item)">
-                  <span nz-icon nzType="eye"></span>
-                  {{ '::Preview' | abpLocalization }}
-                </button>
-                <button nz-button nzSize="small" (click)="manageShares(item)" style="margin-left: 8px;">
-                  <span nz-icon nzType="setting"></span>
-                  {{ '::Manage' | abpLocalization }}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </nz-table>
-
-        <nz-empty *ngIf="sharedByMeList().totalCount === 0" [nzNotFoundContent]="'::NoSharedByMeResources' | abpLocalization"></nz-empty>
-      </div>
-    </ng-container>
-
+      </nz-tab>
+    </nz-tabs>
   </div>
 </div>
 
@@ -472,63 +493,89 @@
   [nzVisible]="drawerVisible()"
   [nzTitle]="null"
   nzPlacement="right"
-  [nzWidth]="420"
+  [nzWidth]="540"
   (nzOnClose)="closeDrawer()"
   [nzClosable]="false"
   nzBodyStyle="padding: 0;"
 >
   <ng-container *nzDrawerContent>
     <div class="drawer-content" *ngIf="selectedResource()?.id">
-      <!-- Drawer Header -->
+      <!-- Drawer Header: 卡片化设计 -->
       <div class="drawer-header">
-        <div class="drawer-title-row">
-          <span nz-icon [nzType]="getResourceIcon(selectedResource()!.resourceType)" class="drawer-file-icon"></span>
-          <div class="drawer-title-info">
-            <h4 class="drawer-title">{{ selectedResource()!.name }}</h4>
-            <span class="drawer-subtitle">
-              <nz-tag>{{ getResourceTypeName(selectedResource()!.resourceType) }}</nz-tag>
-              <nz-tag [nzColor]="getStatusColor(selectedResource()!.status)" class="status-tag status-{{ selectedResource()!.status }}">{{ getStatusName(selectedResource()!.status) }}</nz-tag>
-            </span>
+        <div class="drawer-header-main">
+          <div class="drawer-title-meta">
+            <nz-tag>{{ getResourceTypeName(selectedResource()!.resourceType) }}</nz-tag>
+            <nz-tag [nzColor]="getStatusColor(selectedResource()!.status)" class="status-tag status-{{ selectedResource()!.status }}">{{ getStatusName(selectedResource()!.status) }}</nz-tag>
+          </div>
+          <h2 class="drawer-title">{{ selectedResource()!.name }}</h2>
+          <div class="drawer-subtitle" *ngIf="selectedResource()!.creationTime">
+            创建于 {{ selectedResource()!.creationTime | date:'yyyy-MM-dd HH:mm' }}
           </div>
         </div>
-        <button nz-button nzType="text" nzSize="small" (click)="closeDrawer()" class="drawer-close-btn">
-          <span nz-icon nzType="close"></span>
+        <button type="button" class="drawer-close-btn" (click)="closeDrawer()" aria-label="关闭">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
         </button>
       </div>
 
-      <!-- Action Toolbar -->
+      <!-- Action Toolbar: 卡片化操作区 -->
       <div class="drawer-actions">
-        <div class="action-group">
-          <button nz-button nzType="primary" nzSize="small" (click)="previewFile()"
-            [disabled]="!selectedResource()!.id || !selectedResource()!.filePath">
-            <span nz-icon nzType="eye"></span>
-            {{ '::Preview' | abpLocalization }}
-          </button>
-          <button nz-button nzSize="small" (click)="download()" [disabled]="!selectedResource()!.isDownloadable">
-            <span nz-icon nzType="download"></span>
-            {{ '::Download' | abpLocalization }}
-          </button>
-          <button nz-button nzSize="small" (click)="toggleCollect()">
-            <span nz-icon nzType="star" [nzTheme]="isCollected() ? 'fill' : 'outline'"></span>
-            {{ isCollected() ? ('::Uncollect' | abpLocalization) : ('::Collect' | abpLocalization) }}
-          </button>
-        </div>
-        <div class="action-group">
-          <button nz-button nzSize="small" (click)="editResource(selectedResource()!.id!)">
-            <span nz-icon nzType="edit"></span>
-            {{ '::Edit' | abpLocalization }}
-          </button>
-          <button nz-button nzSize="small" (click)="submitForReview(selectedResource()!.id!)"
-            *ngIf="selectedResource()!.status === 0 || selectedResource()!.status === 4">
-            <span nz-icon nzType="send"></span>
-            {{ '::SubmitForReview' | abpLocalization }}
-          </button>
-          <button nz-button nzSize="small" (click)="openShareDialog()"
-            *abpPermission="'KnowledgeHub.Resources.Share'">
-            <span nz-icon nzType="share-alt"></span>
-            {{ '::ShareResource' | abpLocalization }}
-          </button>
-        </div>
+        <button class="action-card" type="button"
+          [disabled]="!selectedResource()!.id || !selectedResource()!.filePath"
+          (click)="previewFile()">
+          <span class="action-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </span>
+          <span class="action-card-label">{{ '::Preview' | abpLocalization }}</span>
+        </button>
+        <button class="action-card" type="button" [disabled]="!selectedResource()!.isDownloadable" (click)="download()">
+          <span class="action-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </span>
+          <span class="action-card-label">{{ '::Download' | abpLocalization }}</span>
+        </button>
+        <button class="action-card" type="button" (click)="toggleCollect()">
+          <span class="action-card-icon">
+            <svg viewBox="0 0 24 24" [attr.fill]="isCollected() ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </span>
+          <span class="action-card-label">{{ isCollected() ? ('::Uncollect' | abpLocalization) : ('::Collect' | abpLocalization) }}</span>
+        </button>
+        <button class="action-card cta" type="button"
+          *ngIf="selectedResource()!.status === 0 || selectedResource()!.status === 4"
+          (click)="submitForReview(selectedResource()!.id!)">
+          <span class="action-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </span>
+          <span class="action-card-label">{{ '::SubmitForReview' | abpLocalization }}</span>
+        </button>
+        <button class="action-card" type="button"
+          *abpPermission="'KnowledgeHub.Resources.Share'"
+          (click)="openShareDialog()">
+          <span class="action-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="18" cy="5" r="3"/>
+              <circle cx="6" cy="12" r="3"/>
+              <circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </span>
+          <span class="action-card-label">{{ '::ShareResource' | abpLocalization }}</span>
+        </button>
       </div>
 
       <!-- Drawer Tab Navigation -->
@@ -536,7 +583,10 @@
         <button class="drawer-tab-item" [class.active]="drawerTabIndex() === 0" (click)="drawerTabIndex.set(0)">
           {{ '::Details' | abpLocalization }}
         </button>
-        <button class="drawer-tab-item" [class.active]="drawerTabIndex() === 1" (click)="drawerTabIndex.set(1)">
+        <button class="drawer-tab-item" [class.active]="drawerTabIndex() === 1" (click)="drawerTabIndex.set(1)" *abpPermission="'KnowledgeHub.Resources.ViewStatistics'">
+          {{ '::ResourceStatistics' | abpLocalization }}
+        </button>
+        <button class="drawer-tab-item" [class.active]="drawerTabIndex() === 2" (click)="drawerTabIndex.set(2)">
           {{ '::ResourceReviews' | abpLocalization }}
         </button>
       </div>
@@ -544,81 +594,80 @@
       <!-- Drawer Tab Body -->
       <div class="drawer-body">
         <!-- Details Tab -->
-        <div *ngIf="drawerTabIndex() === 0">
-          <nz-collapse [nzBordered]="false" nzGhost>
-            <nz-collapse-panel [nzHeader]="'::FileInfo' | abpLocalization" [nzActive]="true">
-              <div class="detail-info">
-                <div class="detail-row">
-                  <label>{{ '::FileName' | abpLocalization }}</label>
-                  <span>{{ selectedResource()!.originalFileName }}</span>
+        <div *ngIf="drawerTabIndex() === 0" class="drawer-tab-body">
+          <!-- 文件信息卡片 -->
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">文件信息</span>
+            </div>
+            <div class="info-card-body">
+              <div class="info-grid">
+                <div class="info-row">
+                  <span class="info-label">{{ '::FileName' | abpLocalization }}</span>
+                  <span class="info-value" [title]="selectedResource()!.originalFileName">{{ selectedResource()!.originalFileName }}</span>
                 </div>
-                <div class="detail-row">
-                  <label>{{ '::FileSize' | abpLocalization }}</label>
-                  <span>{{ formatFileSize(selectedResource()!.fileSize) }}</span>
+                <div class="info-row">
+                  <span class="info-label">{{ '::FileSize' | abpLocalization }}</span>
+                  <span class="info-value">{{ formatFileSize(selectedResource()!.fileSize) }}</span>
                 </div>
-                <div class="detail-row">
-                  <label>{{ '::ResourceType' | abpLocalization }}</label>
-                  <span><nz-tag>{{ getResourceTypeName(selectedResource()!.resourceType) }}</nz-tag></span>
+                <div class="info-row">
+                  <span class="info-label">{{ '::Version' | abpLocalization }}</span>
+                  <span class="info-value">v{{ selectedResource()!.currentVersion }}</span>
                 </div>
-                <div class="detail-row">
-                  <label>{{ '::Status' | abpLocalization }}</label>
-                  <span><nz-tag [nzColor]="getStatusColor(selectedResource()!.status)" class="status-tag status-{{ selectedResource()!.status }}">{{ getStatusName(selectedResource()!.status) }}</nz-tag></span>
+                <div class="info-row">
+                  <span class="info-label">{{ '::Creator' | abpLocalization }}</span>
+                  <span class="info-value">{{ getCreatorName(selectedResource()!.creatorName) }}</span>
                 </div>
-                <div class="detail-row">
-                  <label>{{ '::Version' | abpLocalization }}</label>
-                  <span>v{{ selectedResource()!.currentVersion }}</span>
+                <div class="info-row">
+                  <span class="info-label">{{ '::CreationTime' | abpLocalization }}</span>
+                  <span class="info-value">{{ selectedResource()!.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
                 </div>
-                <div class="detail-row">
-                  <label>{{ '::Creator' | abpLocalization }}</label>
-                  <span>{{ getCreatorName(selectedResource()!.creatorName) }}</span>
-                </div>
-                <div class="detail-row">
-                  <label>{{ '::CreationTime' | abpLocalization }}</label>
-                  <span>{{ selectedResource()!.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
-                </div>
-                <div class="detail-row" *ngIf="selectedResource()!.keywords">
-                  <label>{{ '::Keywords' | abpLocalization }}</label>
-                  <span>{{ selectedResource()!.keywords }}</span>
-                </div>
-                <div class="detail-row full" *ngIf="selectedResource()!.summary">
-                  <label>{{ '::Summary' | abpLocalization }}</label>
-                  <span class="summary-text"
-                    nz-tooltip
-                    [nzTooltipTitle]="selectedResource()!.summary!"
-                    nzTooltipPlacement="topLeft"
-                    nzTooltipOverlayClassName="resource-summary-tooltip">
-                    {{ truncateSummary(selectedResource()!.summary, 80) }}
-                  </span>
-                </div>
-                <div class="detail-row full" *ngIf="selectedResource()!.description">
-                  <label>{{ '::Description' | abpLocalization }}</label>
-                  <span class="description-text">{{ selectedResource()!.description }}</span>
+                <div class="info-row" *ngIf="selectedResource()!.keywords">
+                  <span class="info-label">{{ '::Keywords' | abpLocalization }}</span>
+                  <span class="info-value">{{ selectedResource()!.keywords }}</span>
                 </div>
               </div>
-            </nz-collapse-panel>
+              <div class="info-block" *ngIf="selectedResource()!.summary">
+                <div class="info-block-label">{{ '::Summary' | abpLocalization }}</div>
+                <div class="info-block-content summary">{{ truncateSummary(selectedResource()!.summary, 200) }}</div>
+              </div>
+              <div class="info-block" *ngIf="selectedResource()!.description">
+                <div class="info-block-label">{{ '::Description' | abpLocalization }}</div>
+                <div class="info-block-content description">{{ selectedResource()!.description }}</div>
+              </div>
+            </div>
+          </div>
 
-            <nz-collapse-panel [nzHeader]="'::VersionHistory' | abpLocalization" [nzActive]="true">
+          <!-- 版本历史卡片 -->
+          <div class="info-card">
+            <div class="info-card-header">
+              <span class="info-card-title">版本历史</span>
+              <span class="info-card-meta">{{ versions().length }} 个版本</span>
+            </div>
+            <div class="info-card-body">
               <div class="version-list">
-                <div *ngFor="let version of versions()" class="version-item">
-                  <div class="version-header">
-                    <span class="version-dot" [class.current]="version.isCurrentVersion"></span>
-                    <span class="version-number">v{{ version.version }}</span>
-                    <nz-tag *ngIf="version.isCurrentVersion" nzColor="blue" nzSize="small">
-                      {{ '::CurrentVersion' | abpLocalization }}
-                    </nz-tag>
+                <div *ngFor="let version of versions()" class="version-item" [class.current]="version.isCurrentVersion">
+                  <div class="version-rail">
+                    <span class="version-marker"></span>
                   </div>
-                  <div class="version-time">{{ version.creationTime | date:'yyyy-MM-dd HH:mm' }}</div>
-                  <div class="version-content" *ngIf="version.updateContent">{{ version.updateContent }}</div>
-                  <div class="version-actions">
-                    <button nz-button nzSize="small" nzType="link" [disabled]="version.isCurrentVersion" (click)="rollbackVersion(version.id!)">
-                      {{ '::RollbackVersion' | abpLocalization }}
-                    </button>
+                  <div class="version-content">
+                    <div class="version-header">
+                      <span class="version-number">v{{ version.version }}</span>
+                      <nz-tag *ngIf="version.isCurrentVersion" class="version-current-tag">
+                        {{ '::CurrentVersion' | abpLocalization }}
+                      </nz-tag>
+                      <span class="version-time">{{ version.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+                    </div>
+                    <div class="version-detail" *ngIf="version.updateContent">{{ version.updateContent }}</div>
+                    <div class="version-actions" *ngIf="!version.isCurrentVersion">
+                      <button type="button" class="version-action-btn" (click)="rollbackVersion(version.id!)">
+                        {{ '::RollbackVersion' | abpLocalization }}
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <nz-empty *ngIf="versions().length === 0" nzNotFoundContent=""></nz-empty>
               </div>
-
-              <nz-divider></nz-divider>
 
               <div class="upload-section">
                 <nz-upload nzType="drag" [nzMultiple]="false" [nzBeforeUpload]="beforeUploadVersion.bind(this)" class="compact-upload">
@@ -632,101 +681,139 @@
                 <div *ngIf="versionUploadedFileInfo && !isVersionUploading()" class="uploaded-file-info">
                   <span>{{ versionUploadedFileInfo.originalFileName }} ({{ formatFileSize(versionUploadedFileInfo.fileSize!) }})</span>
                 </div>
-                <!--
-                  手动按钮已移除：分块上传成功后会自动调用 uploadNewVersion() 创建新版本
-                  并 enqueue 文档索引任务，用户无需任何额外点击。
-                  失败时 nz-message 会显示错误，文件保留 versionUploadedFileInfo，
-                  用户可再次拖拽文件重试。
-                -->
               </div>
-            </nz-collapse-panel>
+            </div>
+          </div>
+        </div>
 
-            <!-- Resource Statistics Panel -->
-            <nz-collapse-panel [nzHeader]="'::ResourceStatistics' | abpLocalization" *abpPermission="'KnowledgeHub.Resources.ViewStatistics'">
-              @if (statisticsLoading()) {
-                <div style="text-align: center; padding: 20px;">
-                  <nz-spin nzSimple nzSize="small"></nz-spin>
+        <!-- Statistics Tab: 卡片化分组 -->
+        <div *ngIf="drawerTabIndex() === 1" class="drawer-tab-body">
+          @if (statisticsLoading()) {
+            <div class="stats-loading">
+              <nz-spin nzSimple nzSize="small"></nz-spin>
+            </div>
+          } @else if (resourceStatistics(); as stats) {
+            <!-- 基础数据 -->
+            <div class="info-card">
+              <div class="info-card-header">
+                <span class="info-card-title">基础数据</span>
+              </div>
+              <div class="info-card-body">
+                <div class="stats-card-grid stats-grid-3">
+                  <div class="stat-tile">
+                    <div class="stat-tile-value">{{ stats.totalViews }}</div>
+                    <div class="stat-tile-label">总浏览量</div>
+                  </div>
+                  <div class="stat-tile">
+                    <div class="stat-tile-value">{{ stats.uniqueViewers }}</div>
+                    <div class="stat-tile-label">独立访客</div>
+                  </div>
+                  <div class="stat-tile">
+                    <div class="stat-tile-value">{{ stats.totalCollections }}</div>
+                    <div class="stat-tile-label">收藏数</div>
+                  </div>
+                  <div class="stat-tile">
+                    <div class="stat-tile-value">{{ stats.collectionRate | number:'1.1-1' }}%</div>
+                    <div class="stat-tile-label">收藏率</div>
+                  </div>
+                  <div class="stat-tile">
+                    <div class="stat-tile-value">{{ stats.totalDownloads }}</div>
+                    <div class="stat-tile-label">下载数</div>
+                  </div>
+                  <div class="stat-tile">
+                    <div class="stat-tile-value">{{ stats.averageRating | number:'1.1-1' }}</div>
+                    <div class="stat-tile-label">平均评分</div>
+                  </div>
                 </div>
-              } @else if (resourceStatistics(); as stats) {
-                <div class="stats-grid">
-                  <div class="stats-card">
-                    <div class="stats-value">{{ stats.totalViews }}</div>
-                    <div class="stats-label">总浏览量</div>
-                  </div>
-                  <div class="stats-card">
-                    <div class="stats-value">{{ stats.uniqueViewers }}</div>
-                    <div class="stats-label">独立访客</div>
-                  </div>
-                  <div class="stats-card">
-                    <div class="stats-value">{{ stats.totalCollections }}</div>
-                    <div class="stats-label">收藏数</div>
-                  </div>
-                  <div class="stats-card">
-                    <div class="stats-value">{{ stats.collectionRate | number:'1.1-1' }}%</div>
-                    <div class="stats-label">收藏率</div>
-                  </div>
-                  <div class="stats-card">
-                    <div class="stats-value">{{ stats.totalDownloads }}</div>
-                    <div class="stats-label">下载数</div>
-                  </div>
-                  <div class="stats-card">
-                    <div class="stats-value">{{ stats.averageRating | number:'1.1-1' }}</div>
-                    <div class="stats-label">平均评分</div>
-                  </div>
-                </div>
+              </div>
+            </div>
 
-                <!-- View Trend -->
-                <div class="stats-section" style="margin-top: 12px;">
-                  <div class="stats-section-title">浏览趋势 (30天)</div>
-                  <div class="stats-trend">
-                    <span>近30天: <strong>{{ stats.viewsLast30Days }}</strong></span>
-                    <span>前30天: <strong>{{ stats.viewsPrevious30Days }}</strong></span>
-                    <span [class]="stats.viewTrendPercentage >= 0 ? 'trend-up' : 'trend-down'">
-                      {{ stats.viewTrendPercentage >= 0 ? '↑' : '↓' }}
+            <!-- 浏览趋势 -->
+            <div class="info-card">
+              <div class="info-card-header">
+                <span class="info-card-title">浏览趋势</span>
+                <span class="info-card-meta">最近 30 天</span>
+              </div>
+              <div class="info-card-body">
+                <div class="trend-row">
+                  <div class="trend-cell">
+                    <div class="trend-label">近 30 天浏览</div>
+                    <div class="trend-value">{{ stats.viewsLast30Days }}</div>
+                  </div>
+                  <div class="trend-cell">
+                    <div class="trend-label">前 30 天浏览</div>
+                    <div class="trend-value">{{ stats.viewsPrevious30Days }}</div>
+                  </div>
+                  <div class="trend-cell">
+                    <div class="trend-label">环比变化</div>
+                    <div class="trend-value" [class.up]="stats.viewTrendPercentage >= 0" [class.down]="stats.viewTrendPercentage < 0">
+                      <span class="trend-arrow">{{ stats.viewTrendPercentage >= 0 ? '↑' : '↓' }}</span>
                       {{ stats.viewTrendPercentage >= 0 ? stats.viewTrendPercentage : -stats.viewTrendPercentage }}%
-                    </span>
+                    </div>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                <!-- Rating Distribution -->
-                @if (stats.totalReviews > 0) {
-                  <div class="stats-section" style="margin-top: 12px;">
-                    <div class="stats-section-title">评分分布 (共{{ stats.totalReviews }}条)</div>
-                    <div class="rating-bars">
-                      @for (rating of [5, 4, 3, 2, 1]; track rating) {
-                        <div class="rating-bar-row">
-                          <span class="rating-bar-label">{{ rating }}星</span>
-                          <div class="rating-bar-track">
-                            <div class="rating-bar-fill" [style.width.%]="stats.totalReviews > 0 ? (stats.ratingDistribution[rating - 1] / stats.totalReviews * 100) : 0"></div>
-                          </div>
-                          <span class="rating-bar-count">{{ stats.ratingDistribution[rating - 1] }}</span>
+            <!-- 评分分布 -->
+            @if (stats.totalReviews > 0) {
+              <div class="info-card">
+                <div class="info-card-header">
+                  <span class="info-card-title">评分分布</span>
+                  <span class="info-card-meta">共 {{ stats.totalReviews }} 条评价</span>
+                </div>
+                <div class="info-card-body">
+                  <div class="rating-bars">
+                    @for (rating of [5, 4, 3, 2, 1]; track rating) {
+                      <div class="rating-bar-row">
+                        <span class="rating-bar-label">{{ rating }} 星</span>
+                        <div class="rating-bar-track">
+                          <div class="rating-bar-fill" [style.width.%]="stats.totalReviews > 0 ? (stats.ratingDistribution[rating - 1] / stats.totalReviews * 100) : 0"></div>
                         </div>
-                      }
-                    </div>
+                        <span class="rating-bar-count">{{ stats.ratingDistribution[rating - 1] }}</span>
+                      </div>
+                    }
                   </div>
-                }
+                </div>
+              </div>
+            }
 
-                <!-- Search CTR -->
-                @if (stats.timesInSearchResults > 0) {
-                  <div class="stats-section" style="margin-top: 12px;">
-                    <div class="stats-section-title">搜索曝光</div>
-                    <div class="stats-trend">
-                      <span>搜索结果出现: <strong>{{ stats.timesInSearchResults }}</strong>次</span>
-                      <span>点击: <strong>{{ stats.timesClickedFromSearch }}</strong>次</span>
-                      <span>CTR: <strong>{{ stats.clickThroughRate }}%</strong></span>
+            <!-- 搜索曝光 -->
+            @if (stats.timesInSearchResults > 0) {
+              <div class="info-card">
+                <div class="info-card-header">
+                  <span class="info-card-title">搜索曝光</span>
+                </div>
+                <div class="info-card-body">
+                  <div class="trend-row">
+                    <div class="trend-cell">
+                      <div class="trend-label">搜索结果出现次数</div>
+                      <div class="trend-value">{{ stats.timesInSearchResults }}</div>
+                    </div>
+                    <div class="trend-cell">
+                      <div class="trend-label">搜索结果点击次数</div>
+                      <div class="trend-value">{{ stats.timesClickedFromSearch }}</div>
+                    </div>
+                    <div class="trend-cell">
+                      <div class="trend-label">点击率（CTR）</div>
+                      <div class="trend-value">{{ stats.clickThroughRate }}%</div>
                     </div>
                   </div>
-                }
-              } @else {
+                </div>
+              </div>
+            }
+          } @else {
+            <div class="info-card">
+              <div class="info-card-body">
                 <nz-empty nzNotFoundContent="暂无统计数据"></nz-empty>
-              }
-            </nz-collapse-panel>
-          </nz-collapse>
+              </div>
+            </div>
+          }
         </div>
 
         <!-- Review Tab -->
-        <div *ngIf="drawerTabIndex() === 1">
-          <app-resource-review [resourceId]="selectedResource()!.id!"></app-resource-review>
+        <div *ngIf="drawerTabIndex() === 2" class="drawer-tab-body">
+          <app-resource-review [resourceId]="selectedResource()!.id!" [displayOnly]="true"></app-resource-review>
         </div>
       </div>
     </div>
@@ -743,79 +830,125 @@
   [nzTitle]="selectedResource()?.id ? ('::Edit' | abpLocalization) : ('::NewResource' | abpLocalization)"
   (nzOnCancel)="isModalOpen = false"
   [nzFooter]="modalFooter"
+  [nzWidth]="560"
+  [nzBodyStyle]="{ padding: '0' }"
 >
   <ng-container *nzModalContent>
-    <form [formGroup]="form" nz-form>
-      <nz-form-item>
-        <nz-form-label [nzRequired]="true">{{ '::ResourceName' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
-          <input nz-input formControlName="name" />
-        </nz-form-control>
-      </nz-form-item>
+    <form [formGroup]="form" class="resource-form">
+      <!-- 基本信息 -->
+      <section class="form-section">
+        <header class="form-section-header">
+          <span class="form-section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </span>
+          <span class="form-section-title">基本信息</span>
+        </header>
+        <div class="form-rows">
+          <div class="form-row">
+            <label class="form-label">
+              <span class="required-mark">*</span>
+              {{ '::ResourceName' | abpLocalization }}
+            </label>
+            <input nz-input formControlName="name" placeholder="请输入资源名称" />
+          </div>
 
-      <nz-form-item>
-        <nz-form-label [nzRequired]="true">{{ '::ResourceType' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
-          <nz-select formControlName="resourceType" (ngModelChange)="onResourceTypeChange($event)">
-            <nz-option [nzValue]="0" [nzLabel]="getResourceTypeName(0)"></nz-option>
-            <nz-option [nzValue]="1" [nzLabel]="getResourceTypeName(1)"></nz-option>
-          </nz-select>
-        </nz-form-control>
-      </nz-form-item>
+          <div class="form-row">
+            <label class="form-label">
+              <span class="required-mark">*</span>
+              {{ '::ResourceType' | abpLocalization }}
+            </label>
+            <nz-select formControlName="resourceType" (ngModelChange)="onResourceTypeChange($event)" nzPlaceHolder="请选择资源类型">
+              <nz-option [nzValue]="0" [nzLabel]="getResourceTypeName(0)"></nz-option>
+              <nz-option [nzValue]="1" [nzLabel]="getResourceTypeName(1)"></nz-option>
+            </nz-select>
+          </div>
 
-      <nz-form-item>
-        <nz-form-label>{{ '::Category' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
-          <nz-tree-select
-            formControlName="categoryId"
-            [nzNodes]="categoryTreeNodes()"
-            nzPlaceHolder="{{ '::SelectParentCategory' | abpLocalization }}"
-            [nzAllowClear]="true"
-            [nzShowIcon]="true"
-          ></nz-tree-select>
-        </nz-form-control>
-      </nz-form-item>
+          <div class="form-row">
+            <label class="form-label">
+              <span class="required-mark">*</span>
+              {{ '::Category' | abpLocalization }}
+            </label>
+            <nz-tree-select
+              formControlName="categoryId"
+              [nzNodes]="categoryTreeNodes()"
+              nzPlaceHolder="{{ '::SelectParentCategory' | abpLocalization }}"
+              [nzAllowClear]="true"
+              [nzShowIcon]="true"
+            ></nz-tree-select>
+          </div>
 
-      <nz-form-item>
-        <nz-form-label>专业</nz-form-label>
-        <nz-form-control>
-          <nz-select
-            formControlName="majorId"
-            nzPlaceHolder="请选择专业"
-            nzAllowClear
-          >
-            @for (major of majors(); track major.id) {
-              <nz-option [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
-            }
-          </nz-select>
-        </nz-form-control>
-      </nz-form-item>
+          <div class="form-row">
+            <label class="form-label">专业</label>
+            <nz-select
+              formControlName="majorId"
+              nzPlaceHolder="请选择专业"
+              nzAllowClear
+            >
+              @for (major of majors(); track major.id) {
+                <nz-option [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
+              }
+            </nz-select>
+          </div>
 
-      <nz-form-item>
-        <nz-form-label>{{ '::Keywords' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
-          <input nz-input formControlName="keywords" />
-        </nz-form-control>
-      </nz-form-item>
+          <div class="form-row">
+            <label class="form-label">允许下载</label>
+            <label nz-checkbox formControlName="isDownloadable" class="switch-line">
+              <span class="switch-text">允许用户下载此资源</span>
+            </label>
+          </div>
+        </div>
+      </section>
 
-      <nz-form-item>
-        <nz-form-label>{{ '::CopyrightInfo' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
-          <input nz-input formControlName="copyrightInfo" />
-        </nz-form-control>
-      </nz-form-item>
+      <!-- 附加信息 -->
+      <section class="form-section">
+        <header class="form-section-header">
+          <span class="form-section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </span>
+          <span class="form-section-title">附加信息</span>
+        </header>
+        <div class="form-rows">
+          <div class="form-row">
+            <label class="form-label">{{ '::Keywords' | abpLocalization }}</label>
+            <input nz-input formControlName="keywords" placeholder="关键词之间用空格或逗号分隔" />
+          </div>
 
-      <nz-form-item>
-        <nz-form-label>{{ '::IsDownloadable' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
-          <label nz-checkbox formControlName="isDownloadable"></label>
-        </nz-form-control>
-      </nz-form-item>
+          <div class="form-row">
+            <label class="form-label">{{ '::CopyrightInfo' | abpLocalization }}</label>
+            <input nz-input formControlName="copyrightInfo" placeholder="如：CC-BY-SA 4.0" />
+          </div>
 
-      <!-- File Upload Area - only for new resources -->
-      <nz-form-item *ngIf="!selectedResource()?.id">
-        <nz-form-label [nzRequired]="true">{{ '::UploadFile' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
+          <div class="form-row align-top">
+            <label class="form-label">{{ '::Description' | abpLocalization }}</label>
+            <textarea nz-input formControlName="description" [nzAutosize]="{ minRows: 3, maxRows: 6 }" placeholder="请输入资源描述"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- 文件上传：仅新建时显示 -->
+      <section class="form-section" *ngIf="!selectedResource()?.id">
+        <header class="form-section-header">
+          <span class="form-section-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </span>
+          <span class="form-section-title">{{ '::UploadFile' | abpLocalization }}</span>
+          <span class="required-mark">*</span>
+        </header>
+        <div class="form-upload">
           <nz-upload
             nzType="drag"
             [nzMultiple]="false"
@@ -827,25 +960,18 @@
             class="resource-upload"
           >
             <p class="ant-upload-drag-icon">
-              <span nz-icon nzType="cloud-upload" style="font-size: 40px; color: #1890ff;"></span>
+              <span nz-icon nzType="cloud-upload" style="font-size: 28px; color: #1890ff;"></span>
             </p>
-            <p class="ant-upload-text" style="font-size: 15px; font-weight: 500; color: #333;">
+            <p class="ant-upload-text" style="font-size: 13.5px; font-weight: 500; color: #1c2733;">
               {{ '::ClickOrDragToUpload' | abpLocalization }}
             </p>
-            <p class="ant-upload-hint" style="font-size: 13px; color: #999;">
+            <p class="ant-upload-hint" style="font-size: 12.5px; color: #5f6f81;">
               {{ getResourceTypeHint() }}
             </p>
           </nz-upload>
-          <nz-progress *ngIf="isUploading()" [nzPercent]="uploadProgress()" nzSize="small" nzStatus="active" style="margin-top: 8px;"></nz-progress>
-        </nz-form-control>
-      </nz-form-item>
-
-      <nz-form-item>
-        <nz-form-label>{{ '::Description' | abpLocalization }}</nz-form-label>
-        <nz-form-control>
-          <textarea nz-input formControlName="description" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
-        </nz-form-control>
-      </nz-form-item>
+          <nz-progress *ngIf="isUploading()" [nzPercent]="uploadProgress()" nzSize="small" nzStatus="active" style="margin-top: 10px;"></nz-progress>
+        </div>
+      </section>
     </form>
   </ng-container>
 

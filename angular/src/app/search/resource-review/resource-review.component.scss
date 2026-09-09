@@ -1,195 +1,258 @@
-@use '../../student/styles/student-design' as ds;
-
 .review-container {
-  padding: 4px 0;
-}
-
-.rating-summary {
   display: flex;
-  gap: 32px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+}
+
+// ─────────────────────────────────────────────
+// 评分汇总卡片（简化版：单行紧凑布局）
+// ─────────────────────────────────────────────
+.rating-summary-card {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line-2);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(14, 27, 46, 0.03);
+  overflow: hidden;
+}
+
+.rating-summary-inline {
+  display: flex;
   align-items: center;
-  padding: 20px 22px;
-  border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius;
-  background: ds.$student-surface-soft;
+  gap: 10px;
+  padding: 12px 16px;
+  flex-wrap: wrap;
+}
 
-  .overall-rating {
-    text-align: center;
-    min-width: 130px;
+.rating-summary-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--kh-ink);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
 
-    .big-rating {
-      font-size: 40px;
-      font-weight: 700;
-      color: #fa8c16;
-      line-height: 1.2;
-      font-variant-numeric: tabular-nums;
-    }
+.rating-summary-text {
+  font-size: 13px;
+  color: var(--kh-muted);
+  font-weight: 500;
+}
 
-    .total-reviews {
-      font-size: 12px;
-      color: ds.$student-text-light;
-      margin-top: 6px;
-    }
-  }
+.rating-summary-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--kh-line-2);
+  margin: 0 2px;
+}
 
-  .rating-distribution {
-    flex: 1;
-    min-width: 0;
-  }
+// ─────────────────────────────────────────────
+// 发表评价表单卡片
+// ─────────────────────────────────────────────
+.review-form-card {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line-2);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(14, 27, 46, 0.03);
+  overflow: hidden;
+}
 
-  .distribution-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 6px;
+.review-form-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--kh-line-2);
+  background: linear-gradient(180deg, #fafbfd, #fff);
+}
 
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
+.review-form-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--kh-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
 
-  .star-label {
-    font-size: 12px;
-    color: ds.$student-text-muted;
-    min-width: 36px;
-  }
+.review-form-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
-  .distribution-bar-bg {
-    flex: 1;
-    height: 8px;
-    background: #e8eef5;
-    border-radius: 4px;
-    overflow: hidden;
-  }
+.form-rating {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 
-  .distribution-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #faad14, #fa8c16);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-  }
-
-  .distribution-count {
-    font-size: 12px;
-    color: ds.$student-text-light;
-    min-width: 24px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
+  .form-label {
+    color: var(--kh-ink-2);
+    font-size: 13px;
+    font-weight: 500;
   }
 }
 
-.review-form {
-  h4 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 14px;
-    font-size: 15px;
-    font-weight: 700;
-    color: ds.$student-text;
+textarea {
+  border-radius: 8px;
+  border-color: var(--kh-line-2);
+  font-size: 13.5px;
 
-    span[nz-icon] {
-      color: ds.$student-primary;
-    }
-  }
-
-  .form-rating {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    color: ds.$student-text-muted;
-    font-size: 13px;
-  }
-
-  textarea {
-    margin-bottom: 12px;
-    border-radius: ds.$student-radius;
-
-    &:focus,
-    &:focus-within {
-      border-color: ds.$student-primary;
-    }
-  }
-
-  .form-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    ::ng-deep {
-      .ant-btn-primary {
-        background: #1e6ce8;
-        border-color: #1e6ce8;
-        border-radius: ds.$student-radius;
-        height: 38px;
-        padding: 0 22px;
-        font-weight: 600;
-
-        &:hover:not([disabled]) {
-          background: #0c4cb8;
-          border-color: #0c4cb8;
-        }
-      }
-
-      .ant-btn-dangerous {
-        border-radius: ds.$student-radius;
-        height: 38px;
-      }
-    }
-  }
-  .form-hint {
-    color: ds.$student-text-light;
-    font-size: 12px;
+  &:focus,
+  &:focus-within {
+    border-color: var(--kh-accent);
   }
 }
 
-.reviews-list {
-  .reviews-list__title {
-    margin: 0 0 4px;
-    color: ds.$student-text;
-    font-size: 14px;
-    font-weight: 700;
-  }
-  .review-header {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .reviewer-name {
-    font-weight: 600;
-    color: ds.$student-text;
-    font-size: 13px;
-  }
-
-  .review-time {
-    font-size: 12px;
-    color: ds.$student-text-light;
-  }
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
 
   ::ng-deep {
-    .ant-list-item {
-      padding: 14px 4px;
-      border-bottom: 1px solid ds.$student-border-soft;
+    .ant-btn-primary {
+      background: var(--kh-accent);
+      border-color: var(--kh-accent);
+      border-radius: 8px;
+      height: 36px;
+      padding: 0 20px;
+      font-weight: 600;
+
+      &:hover:not([disabled]) {
+        background: var(--kh-accent-deep);
+        border-color: var(--kh-accent-deep);
+      }
     }
 
-    .ant-avatar {
-      background: ds.$student-primary;
+    .ant-btn-dangerous {
+      border-radius: 8px;
+      height: 36px;
     }
+  }
+}
 
-    .ant-list-item-meta-description {
-      color: ds.$student-text-muted;
-      font-size: 13px;
-      line-height: 1.7;
-    }
+.form-hint {
+  color: var(--kh-muted);
+  font-size: 12px;
+}
+
+// ─────────────────────────────────────────────
+// 全部评价列表卡片
+// ─────────────────────────────────────────────
+.reviews-list-card {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line-2);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(14, 27, 46, 0.03);
+  overflow: hidden;
+}
+
+.reviews-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--kh-line-2);
+  background: linear-gradient(180deg, #fafbfd, #fff);
+}
+
+.reviews-list-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--kh-ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reviews-list-count {
+  font-size: 12px;
+  color: var(--kh-muted);
+  font-weight: 500;
+}
+
+.reviews-list-body {
+  padding: 4px 16px 16px;
+}
+
+.review-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.review-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--kh-line-2);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.review-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--kh-accent), var(--kh-accent-deep));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px -2px rgba(24, 144, 255, 0.4);
+}
+
+.review-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.review-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.reviewer-name {
+  font-weight: 600;
+  color: var(--kh-ink);
+  font-size: 13.5px;
+}
+
+.review-time {
+  font-size: 12px;
+  color: var(--kh-muted);
+  margin-left: auto;
+}
+
+.review-content {
+  font-size: 13px;
+  color: var(--kh-ink-2);
+  line-height: 1.7;
+  word-break: break-word;
+
+  &.muted {
+    color: var(--kh-muted);
+    font-style: italic;
   }
 }
 
 @media (max-width: 768px) {
-  .rating-summary {
+  .rating-summary-body {
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
+  }
+
+  .rating-summary-left {
+    padding-right: 0;
+    padding-bottom: 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--kh-line-2);
+    min-width: 0;
   }
 }

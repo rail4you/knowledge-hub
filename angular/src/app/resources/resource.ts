@@ -369,54 +369,6 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     });
   }
 
-  moveCategoryUp(category: ResourceCategoryDto) {
-    this.reorderCategory(category, -1);
-  }
-
-  moveCategoryDown(category: ResourceCategoryDto) {
-    this.reorderCategory(category, 1);
-  }
-
-  private getSiblings(category: ResourceCategoryDto): ResourceCategoryDto[] {
-    const all = this.categories();
-    if (category.parentId) {
-      const findChildren = (cats: ResourceCategoryDto[]): ResourceCategoryDto[] | null => {
-        for (const cat of cats) {
-          if (cat.id === category.parentId) return cat.children || [];
-          if (cat.children) {
-            const found = findChildren(cat.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-      return findChildren(all) || [];
-    }
-    return all;
-  }
-
-  private reorderCategory(category: ResourceCategoryDto, direction: number) {
-    const siblings = this.getSiblings(category);
-    const idx = siblings.findIndex(s => s.id === category.id);
-    if (idx < 0) return;
-    const newIdx = idx + direction;
-    if (newIdx < 0 || newIdx >= siblings.length) return;
-
-    const swapWith = siblings[newIdx];
-    const input1 = { name: category.name, parentId: category.parentId, code: category.code || '', sortOrder: swapWith.sortOrder, isActive: category.isActive } as CreateUpdateResourceCategoryDto;
-    const input2 = { name: swapWith.name, parentId: swapWith.parentId, code: swapWith.code || '', sortOrder: category.sortOrder, isActive: swapWith.isActive } as CreateUpdateResourceCategoryDto;
-
-    this.resourceService.updateCategory(category.id!, input1).subscribe({
-      next: () => {
-        this.resourceService.updateCategory(swapWith.id!, input2).subscribe({
-          next: () => this.loadCategories(),
-          error: () => this.message.error(this.l('OperationFailed'))
-        });
-      },
-      error: () => this.message.error(this.l('OperationFailed'))
-    });
-  }
-
   loadPendingAudits() {
     this.resourceService.getPendingAuditList({
       maxResultCount: this.pageSize,
@@ -960,13 +912,17 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
   clearAllFilters(): void {
     this.timeFilter.set('all');
     this.statusFilter.set(null);
+    this.selectedMajorId.set(null);
     this.keywordFilter.set('');
     this.pageIndex = 1;
     this.loadResources();
   }
 
   hasActiveFilters(): boolean {
-    return this.timeFilter() !== 'all' || this.statusFilter() !== null || this.keywordFilter().trim() !== '';
+    return this.timeFilter() !== 'all'
+      || this.statusFilter() !== null
+      || this.selectedMajorId() !== null
+      || this.keywordFilter().trim() !== '';
   }
 
   private getDateRangeFromFilter(filter: string): { startDate?: string; endDate?: string } {

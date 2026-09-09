@@ -32,6 +32,11 @@ export class ResourceReviewComponent implements OnInit, OnChanges {
    * 不提供编辑/删除入口。资源评分为全部用户评分的平均值。
    */
   @Input() singleEvaluation = false;
+  /**
+   * 仅展示模式（资源管理后台/教师端）：完全隐藏发表评价表单，
+   * 只展示评分汇总与全部评价列表。优先级高于 singleEvaluation。
+   */
+  @Input() displayOnly = false;
   @Output() reviewChanged = new EventEmitter<void>();
 
   private readonly reviewService = inject(ResourceReviewService);
@@ -200,11 +205,5 @@ export class ResourceReviewComponent implements OnInit, OnChanges {
       },
       error: (err) => this.message.error(err?.error?.error?.message || '删除失败')
     });
-  }
-
-  getRatingPercent(star: number): number {
-    const s = this.summary();
-    if (!s || s.totalReviews === 0) return 0;
-    return Math.round((s.ratingDistribution[star - 1] / s.totalReviews) * 100);
   }
 }
