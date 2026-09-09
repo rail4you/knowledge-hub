@@ -378,10 +378,10 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", "AbpIdentity.Users.ManagePermissions");
         await GrantAsync("SchoolAdmin", "AbpIdentity.Users.Update.ManageRoles");
 
-        // 租户信息管理：仅 host「admin」全局管理员使用。SchoolAdmin 绝不授予，
-        // 且显式收回历史遗留授权，防止租户级 SchoolAdmin 看到/修改其它租户的信息。
-        await RevokeAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Default);
-        await RevokeAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
+        // 资源库管理（租户展示信息）：host「admin」管理所有租户，SchoolAdmin 管理自己所在租户。
+        // 后端 GetListAsync / SaveByTenantIdAsync 已按 CurrentTenant.Id 隔离，租户管理员只能看到/修改本租户。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
 
         // 收回历史遗留的"联盟独有"权限（LeagueAudit / PhysicalDelete / RecruitmentLive.Manage）
         // 院校管理员只做第一级院校审核，不能做第二级联盟审核。
@@ -459,10 +459,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         // 同时授予 Review 权限以便教师之间可互审；学生绝不授予。
         await GrantAsync("Teacher", KnowledgeHubPermissions.SpecialEducation.Review);
 
-        // 租户信息管理页（/admin/tenant-info）是 host 全局页：后端 GetListAsync /
-        // SaveByTenantIdAsync 均要求宿主上下文。任何租户角色持有 TenantInfo 权限都会导致
-        // "菜单可见、点进去没权限"的死胡同，因此对所有租户角色显式收回（幂等自愈远端脏数据）。
-        // SchoolAdmin / LeagueAdmin 另有专属收回逻辑（见上/下），此处覆盖剩余租户角色。
+        // 资源库管理页（/admin/tenant-info）：后端已按租户隔离，SchoolAdmin 可管理本租户。
+        // Teacher / Student / EnterpriseUser 不授予，显式收回历史遗留授权。
+        // LeagueAdmin 由 SyncLeagueAdminPermissionsAsync 权威式收紧，此处覆盖剩余租户角色。
         await RevokeAsync("Teacher", KnowledgeHubPermissions.TenantInfo.Default);
         await RevokeAsync("Teacher", KnowledgeHubPermissions.TenantInfo.Edit);
         await RevokeAsync("Student", KnowledgeHubPermissions.TenantInfo.Default);

@@ -435,7 +435,8 @@ function configureRoutes() {
     },
 
     // ══════════════════════════════════════════════════════════
-    //  搜索和租户管理
+    //  搜索和资源库管理（::Menu:SearchAndTenantManagement / ::Menu:TenantInfo）
+    //  资源库管理页 /admin/tenant-info：host 管理所有租户，SchoolAdmin 仅管理本租户（后端已隔离）。
     // ══════════════════════════════════════════════════════════
     {
       path: '/admin-search-tenant',

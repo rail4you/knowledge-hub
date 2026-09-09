@@ -99,7 +99,7 @@ export class TenantInfoManagementComponent implements OnInit {
       },
       error: () => {
         this.listLoading.set(false);
-        this.message.error('加载租户列表失败');
+        this.message.error('加载资源库列表失败');
       },
     });
   }
@@ -122,7 +122,7 @@ export class TenantInfoManagementComponent implements OnInit {
       },
       error: () => {
         this.detailLoading.set(false);
-        this.message.error('加载租户详细信息失败');
+        this.message.error('加载资源库详细信息失败');
       },
     });
   }
@@ -183,11 +183,11 @@ export class TenantInfoManagementComponent implements OnInit {
     this.form.coverImageList = newImages;
   }
 
-  // ── 保存当前租户的信息 ──
+  // ── 保存当前资源库（租户）的信息：全局管理员可保存任意租户，租户管理员仅可保存本租户 ──
   save(): void {
     const tenantId = this.selected()?.tenantId;
     if (!tenantId) {
-      this.message.warning('请先选择一个租户');
+      this.message.warning('请先选择一个资源库');
       return;
     }
     if (!this.form.name?.trim()) {
@@ -201,7 +201,7 @@ export class TenantInfoManagementComponent implements OnInit {
     this.tenantInfoService.saveByTenantId(tenantId, this.form).subscribe({
       next: () => {
         this.saving.set(false);
-        this.message.success(`「${this.selected()?.name || ''}」的租户信息已保存`);
+        this.message.success(`「${this.selected()?.name || ''}」的资源库信息已保存`);
         this.editModalVisible.set(false);
         this.loadTenants();
       },

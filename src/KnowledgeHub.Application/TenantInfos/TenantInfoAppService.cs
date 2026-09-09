@@ -45,11 +45,34 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
     [Authorize(KnowledgeHubPermissions.TenantInfo.Default)]
     public async Task<List<TenantInfoListItemDto>> GetListAsync()
     {
-        // 仅 host 全局管理员可统查所有租户；租户级管理员（如租户 admin/SchoolAdmin）
-        // 即使持有该权限也不能查看其它租户的信息。
+        // host 全局管理员：返回所有租户；租户级管理员（SchoolAdmin 等持有该权限）：
+        // 仅返回自己所在租户的单条数据，用于“资源库管理”页管理本租户展示配置。
         if (CurrentTenant.Id != null)
         {
-            throw new AbpAuthorizationException("仅全局管理员可查看所有租户信息。");
+            var ownTenantId = CurrentTenant.Id.Value;
+            var ownTenant = await _tenantRepository.FindAsync(ownTenantId);
+            if (ownTenant == null)
+            {
+                return new List<TenantInfoListItemDto>();
+            }
+
+            var ownInfo = await _tenantInfoRepository.FindByTenantIdAsync(ownTenantId);
+            return new List<TenantInfoListItemDto>
+            {
+                new TenantInfoListItemDto
+                {
+                    TenantId = ownTenant.Id,
+                    TenantName = ownTenant.Name,
+                    HasInfo = ownInfo != null,
+                    Type = ownInfo?.Type ?? TenantType.Professional,
+                    Name = ownInfo?.Name ?? ownTenant.Name,
+                    Description = ownInfo?.Description,
+                    CoverImageCount = CountJsonItems(ownInfo?.CoverImages),
+                    SpecialProjectCount = CountJsonItems(ownInfo?.SpecialProjects),
+                    MajorCount = await CountMajorsAsync(ownTenantId),
+                    CourseCount = await CountCoursesAsync(ownTenantId),
+                }
+            };
         }
 
         var tenants = await _tenantRepository.GetListAsync();
@@ -143,11 +166,11 @@ public class TenantInfoAppService : KnowledgeHubAppService, ITenantInfoAppServic
     [Authorize(KnowledgeHubPermissions.TenantInfo.Edit)]
     public async Task<TenantInfoDto> SaveByTenantIdAsync(Guid tenantId, CreateUpdateTenantInfoDto input)
     {
-        // 仅 host 全局管理员可修改指定租户的信息；
-        // 租户级管理员只能通过 SaveCurrentAsync 修改自己所在租户的信息。
-        if (CurrentTenant.Id != null)
+        // host 全局管理员可修改任意租户；租户级管理员（SchoolAdmin）仅可修改自己所在租户，
+        // 用于“资源库管理”页管理本租户展示配置。
+        if (CurrentTenant.Id != null && CurrentTenant.Id.Value != tenantId)
         {
-            throw new AbpAuthorizationException("仅全局管理员可修改租户信息。");
+            throw new AbpAuthorizationException("仅可管理自己所在租户的资源库信息。");
         }
         return await SaveTenantInfoInternalAsync(tenantId, input);
     }

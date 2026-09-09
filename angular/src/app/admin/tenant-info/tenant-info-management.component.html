@@ -1,18 +1,18 @@
 <div class="page-container">
-  <h2 class="page-title">租户信息管理</h2>
+  <h2 class="page-title">资源库管理</h2>
   <p class="page-desc">
-    管理的是<b>与各租户一一关联的展示信息数据</b>（资源库名称、类型、封面、专业建设内容、特色项目等），用于各租户自己的资源库页面展示。
+    管理的是<b>与各租户一一关联的资源库展示信息</b>（资源库名称、类型、封面、专业建设内容、特色项目等），用于各租户自己的资源库页面展示。租户管理员仅可见自己所在租户的数据。
   </p>
 
   <nz-alert
     class="concept-alert"
     nzType="info"
     nzShowIcon
-    nzMessage="这里的每一条信息都归属于某个具体租户。请先选择要编辑的租户，再修改其关联信息；保存后仅影响该租户的资源库展示页。"
+    nzMessage="每一条资源库信息都归属于某个具体租户。全局管理员可选择任意租户进行配置，租户管理员仅可管理本租户；保存后仅影响该租户的资源库展示页。"
   ></nz-alert>
 
   <!-- 租户列表表格 -->
-  <nz-card class="mgmt-card panel-card" nzTitle="选择租户">
+  <nz-card class="mgmt-card panel-card" nzTitle="选择资源库（租户）">
     <nz-table
       [nzData]="tenants()"
       [nzLoading]="listLoading()"
@@ -69,7 +69,7 @@
   <!-- 编辑表单（点击「编辑」弹出） -->
   <nz-modal
     [(nzVisible)]="editModalVisible"
-    nzTitle="编辑租户关联信息"
+    nzTitle="编辑资源库信息"
     [nzWidth]="760"
     nzMaskClosable="false"
     (nzOnCancel)="editModalVisible.set(false)"
@@ -77,7 +77,7 @@
     <ng-container *nzModalContent>
       @if (selected(); as sel) {
         <div class="edit-tenant-badge">
-          <span>正在编辑租户的关联信息：</span>
+          <span>正在编辑资源库信息：</span>
           <nz-tag nzColor="geekblue">{{ sel.name || sel.tenantName }}</nz-tag>
         </div>
 
