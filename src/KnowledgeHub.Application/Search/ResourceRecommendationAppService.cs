@@ -461,7 +461,10 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
     public async Task<ResourceStatisticsDto> GetResourceStatisticsAsync(Guid resourceId)
     {
         var connection = _dbContext.Database.GetDbConnection();
-        await connection.OpenAsync();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
 
         try
         {
@@ -471,19 +474,19 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                     -- View stats
                     COALESCE(v.total_views, 0) as TotalViews,
                     COALESCE(v.unique_viewers, 0) as UniqueViewers,
-                    COALESCE(v.avg_duration, 0) as AvgViewDurationSeconds,
+                    COALESCE(v.avg_duration, 0)::float8 as AvgViewDurationSeconds,
                     -- Download & Collection stats
                     r.""DownloadCount"" as TotalDownloads,
                     r.""CollectionCount"" as TotalCollections,
-                    -- Rates
+                    -- Rates (::float8 让 Npgsql 以 double 返回，避免 numeric/decimal 导致 GetDouble 抛 InvalidCastException 变 500)
                     CASE WHEN r.""ViewCount"" > 0
-                        THEN (r.""CollectionCount""::numeric / r.""ViewCount"") * 100
-                        ELSE 0 END as CollectionRate,
+                        THEN ((r.""CollectionCount""::numeric / r.""ViewCount"") * 100)::float8
+                        ELSE 0::float8 END as CollectionRate,
                     CASE WHEN r.""ViewCount"" > 0
-                        THEN (r.""DownloadCount""::numeric / r.""ViewCount"") * 100
-                        ELSE 0 END as DownloadRate,
+                        THEN ((r.""DownloadCount""::numeric / r.""ViewCount"") * 100)::float8
+                        ELSE 0::float8 END as DownloadRate,
                     -- Rating stats
-                    COALESCE(rv.avg_rating, 0) as AverageRating,
+                    COALESCE(rv.avg_rating, 0)::float8 as AverageRating,
                     COALESCE(rv.total_reviews, 0) as TotalReviews,
                     COALESCE(rv.r1, 0) as R1,
                     COALESCE(rv.r2, 0) as R2,
@@ -502,7 +505,7 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                         ""ResourceId"",
                         COUNT(*)::int as total_views,
                         COUNT(DISTINCT ""UserId"")::int as unique_viewers,
-                        COALESCE(AVG(""ViewDurationSeconds""), 0) as avg_duration
+                        COALESCE(AVG(""ViewDurationSeconds""), 0)::float8 as avg_duration
                     FROM ""KhResourceViewLogs""
                     WHERE ""ResourceId"" = '{resourceId}'
                     GROUP BY ""ResourceId""
@@ -553,14 +556,14 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
             using var reader = await command.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
-                var viewsLast30 = reader.GetInt32(reader.GetOrdinal("ViewsLast30Days"));
-                var viewsPrev30 = reader.GetInt32(reader.GetOrdinal("ViewsPrevious30Days"));
+                var viewsLast30 = GetInt32(reader, "ViewsLast30Days");
+                var viewsPrev30 = GetInt32(reader, "ViewsPrevious30Days");
                 var trendPct = viewsPrev30 > 0
                     ? Math.Round(((double)(viewsLast30 - viewsPrev30) / viewsPrev30) * 100, 1)
                     : (viewsLast30 > 0 ? 100.0 : 0.0);
 
-                var timesInResults = reader.GetInt32(reader.GetOrdinal("TimesInSearchResults"));
-                var timesClicked = reader.GetInt32(reader.GetOrdinal("TimesClickedFromSearch"));
+                var timesInResults = GetInt32(reader, "TimesInSearchResults");
+                var timesClicked = GetInt32(reader, "TimesClickedFromSearch");
                 var ctr = timesInResults > 0
                     ? Math.Round(((double)timesClicked / timesInResults) * 100, 1)
                     : 0.0;
@@ -568,22 +571,22 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                 return new ResourceStatisticsDto
                 {
                     ResourceId = resourceId,
-                    TotalViews = reader.GetInt32(reader.GetOrdinal("TotalViews")),
-                    UniqueViewers = reader.GetInt32(reader.GetOrdinal("UniqueViewers")),
-                    AvgViewDurationSeconds = Math.Round(reader.GetDouble(reader.GetOrdinal("AvgViewDurationSeconds")), 1),
-                    TotalDownloads = reader.GetInt32(reader.GetOrdinal("TotalDownloads")),
-                    TotalCollections = reader.GetInt32(reader.GetOrdinal("TotalCollections")),
-                    CollectionRate = Math.Round(reader.GetDouble(reader.GetOrdinal("CollectionRate")), 1),
-                    DownloadRate = Math.Round(reader.GetDouble(reader.GetOrdinal("DownloadRate")), 1),
-                    AverageRating = Math.Round(reader.GetDouble(reader.GetOrdinal("AverageRating")), 1),
-                    TotalReviews = reader.GetInt32(reader.GetOrdinal("TotalReviews")),
+                    TotalViews = GetInt32(reader, "TotalViews"),
+                    UniqueViewers = GetInt32(reader, "UniqueViewers"),
+                    AvgViewDurationSeconds = Math.Round(GetDouble(reader, "AvgViewDurationSeconds"), 1),
+                    TotalDownloads = GetInt32(reader, "TotalDownloads"),
+                    TotalCollections = GetInt32(reader, "TotalCollections"),
+                    CollectionRate = Math.Round(GetDouble(reader, "CollectionRate"), 1),
+                    DownloadRate = Math.Round(GetDouble(reader, "DownloadRate"), 1),
+                    AverageRating = Math.Round(GetDouble(reader, "AverageRating"), 1),
+                    TotalReviews = GetInt32(reader, "TotalReviews"),
                     RatingDistribution = new[]
                     {
-                        reader.GetInt32(reader.GetOrdinal("R1")),
-                        reader.GetInt32(reader.GetOrdinal("R2")),
-                        reader.GetInt32(reader.GetOrdinal("R3")),
-                        reader.GetInt32(reader.GetOrdinal("R4")),
-                        reader.GetInt32(reader.GetOrdinal("R5"))
+                        GetInt32(reader, "R1"),
+                        GetInt32(reader, "R2"),
+                        GetInt32(reader, "R3"),
+                        GetInt32(reader, "R4"),
+                        GetInt32(reader, "R5")
                     },
                     ViewsLast30Days = viewsLast30,
                     ViewsPrevious30Days = viewsPrev30,
@@ -602,27 +605,51 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
         }
     }
 
+    /// <summary>
+    /// 容错读取：Postgres numeric/decimal/int8 等类型在 Npgsql 下不是 double/int，
+    /// 直接 GetDouble/GetInt32 会抛 InvalidCastException（前端看到 500）。
+    /// 统一经 Convert 转换，DBNull/NULL 返回 0。
+    /// </summary>
+    private static int GetInt32(System.Data.Common.DbDataReader reader, string column)
+    {
+        var value = reader[column];
+        if (value == null || value == DBNull.Value) return 0;
+        return Convert.ToInt32(value);
+    }
+
+    private static double GetDouble(System.Data.Common.DbDataReader reader, string column)
+    {
+        var value = reader[column];
+        if (value == null || value == DBNull.Value) return 0;
+        return Convert.ToDouble(value);
+    }
+
+    private static long GetInt64(System.Data.Common.DbDataReader reader, string column)
+    {
+        var value = reader[column];
+        if (value == null || value == DBNull.Value) return 0;
+        return Convert.ToInt64(value);
+    }
+
     private RecommendedResourceDto MapReaderToRecommended(System.Data.Common.DbDataReader reader, string defaultReason)
     {
-        var scoreOrdinal = reader.GetOrdinal("Score");
-        var avgRatingOrdinal = reader.GetOrdinal("AvgRating");
         return new RecommendedResourceDto
         {
             ResourceId = reader.GetGuid(reader.GetOrdinal("Id")),
             ResourceName = reader.GetString(reader.GetOrdinal("Name")),
             Description = reader.IsDBNull(reader.GetOrdinal("Description")) ? null : reader.GetString(reader.GetOrdinal("Description")),
-            ResourceType = reader.GetInt32(reader.GetOrdinal("ResourceType")),
+            ResourceType = GetInt32(reader, "ResourceType"),
             CategoryId = reader.IsDBNull(reader.GetOrdinal("CategoryId")) ? null : reader.GetGuid(reader.GetOrdinal("CategoryId")),
             CategoryName = reader.IsDBNull(reader.GetOrdinal("CategoryName")) ? null : reader.GetString(reader.GetOrdinal("CategoryName")),
             Keywords = reader.IsDBNull(reader.GetOrdinal("Keywords")) ? null : reader.GetString(reader.GetOrdinal("Keywords")),
             FileExtension = reader.IsDBNull(reader.GetOrdinal("FileExtension")) ? null : reader.GetString(reader.GetOrdinal("FileExtension")),
-            FileSize = reader.IsDBNull(reader.GetOrdinal("FileSize")) ? null : reader.GetInt64(reader.GetOrdinal("FileSize")),
-            ViewCount = reader.GetInt32(reader.GetOrdinal("ViewCount")),
-            CollectionCount = reader.GetInt32(reader.GetOrdinal("CollectionCount")),
-            DownloadCount = reader.GetInt32(reader.GetOrdinal("DownloadCount")),
-            AverageRating = reader.IsDBNull(avgRatingOrdinal) ? 0 : Math.Round(reader.GetDouble(avgRatingOrdinal), 1),
-            TotalReviews = reader.GetInt32(reader.GetOrdinal("TotalReviews")),
-            RecommendationScore = reader.IsDBNull(scoreOrdinal) ? 0 : Math.Round(reader.GetDouble(scoreOrdinal), 4),
+            FileSize = reader.IsDBNull(reader.GetOrdinal("FileSize")) ? null : GetInt64(reader, "FileSize"),
+            ViewCount = GetInt32(reader, "ViewCount"),
+            CollectionCount = GetInt32(reader, "CollectionCount"),
+            DownloadCount = GetInt32(reader, "DownloadCount"),
+            AverageRating = reader.IsDBNull(reader.GetOrdinal("AvgRating")) ? 0 : Math.Round(GetDouble(reader, "AvgRating"), 1),
+            TotalReviews = GetInt32(reader, "TotalReviews"),
+            RecommendationScore = reader.IsDBNull(reader.GetOrdinal("Score")) ? 0 : Math.Round(GetDouble(reader, "Score"), 4),
             RecommendationReason = defaultReason,
             CreationTime = reader.GetDateTime(reader.GetOrdinal("CreationTime"))
         };

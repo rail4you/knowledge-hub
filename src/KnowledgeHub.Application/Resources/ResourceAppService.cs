@@ -397,6 +397,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
         dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
+        await FillCreatorNamesAsync(new List<ResourceDto> { dto });
         return dto;
     }
 
@@ -556,6 +557,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await Repository.UpdateAsync(resource);
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
         dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
+        await FillCreatorNamesAsync(new List<ResourceDto> { dto });
         return dto;
     }
 
@@ -1055,8 +1057,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     private async Task FillCreatorNamesAsync(List<ResourceDto> dtos)
     {
         var ids = dtos
-            .Where(x => x.CreatorId != Guid.Empty)
-            .Select(x => x.CreatorId)
+            .Where(x => x.CreatorId.HasValue && x.CreatorId.Value != Guid.Empty)
+            .Select(x => x.CreatorId!.Value)
             .Distinct()
             .ToList();
         if (ids.Count == 0)
@@ -1066,8 +1068,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         // 创建人跨租户查询：联盟审核员查看的是其它租户的资源，
         // 用户查询必须同样关闭多租户过滤，否则 CreatorName 查不到（待审核表创建人为空）。
+        // 同时关闭软删除过滤：创建人账号被删除后仍要显示名字，而不是空。
         List<IdentityUser> users;
         using (DataFilter.Disable<IMultiTenant>())
+        using (DataFilter.Disable<ISoftDelete>())
         {
             var query = await UserRepository.GetQueryableAsync();
             users = await AsyncExecuter.ToListAsync(
@@ -1077,7 +1081,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var userMap = users.ToDictionary(u => u.Id, u => ResolveUserDisplayName(u));
         foreach (var dto in dtos)
         {
-            if (dto.CreatorId != Guid.Empty && userMap.TryGetValue(dto.CreatorId, out var name))
+            if (dto.CreatorId.HasValue
+                && dto.CreatorId.Value != Guid.Empty
+                && userMap.TryGetValue(dto.CreatorId.Value, out var name))
             {
                 dto.CreatorName = name;
             }

@@ -30,7 +30,10 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     public int ViewCount { get; set; }
     public Guid? OrganizationId { get; set; }
     public string? OrganizationName { get; set; }
-    public Guid CreatorId { get; set; }
+    // CreatorId 复用基类 FullAuditedEntityDto<Guid>.CreatorId（Guid?）。
+    // 此前这里曾用 `public Guid CreatorId` 隐藏基类（CS0108），导致 Mapperly 在
+    // Guid? -> Guid 映射时处理脆弱、历史数据的 NULL 变成 Guid.Empty，
+    // FillCreatorNamesAsync 按 Guid.Empty 过滤后直接返回，列表创建人全空。
     public string? CreatorName { get; set; }
 }
 
@@ -43,7 +46,8 @@ public class ResourceVersionDto : EntityDto<Guid>
     public string? UpdateContent { get; set; }
     public bool IsCurrentVersion { get; set; }
     public DateTime CreationTime { get; set; }
-    public Guid CreatorId { get; set; }
+    // 与源实体 AuditedEntity<Guid>.CreatorId（Guid?）保持一致，避免 Guid? -> Guid 映射问题。
+    public Guid? CreatorId { get; set; }
     public string? CreatorName { get; set; }
 }
 
