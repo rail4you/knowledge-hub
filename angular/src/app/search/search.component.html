@@ -1,4 +1,12 @@
 <div class="search-container">
+  <!-- 搜索标题区 -->
+  <div class="search-title-bar">
+    <div class="search-title-text">
+      <h1 class="search-title">智能搜索</h1>
+      <p class="search-subtitle">在教学资源库中查找文档、视频、图片等内容</p>
+    </div>
+  </div>
+
   <div class="search-panel">
     <!-- 顶部大搜索栏 -->
     <div class="hero-search">
@@ -12,6 +20,40 @@
           (keyup.enter)="search()"
         />
       </div>
+
+      <!-- 历史记录按钮 + 下拉面板 -->
+      <div class="hs-history-wrap" [class.open]="historyOpen()">
+        <button
+          type="button"
+          class="hs-icon-btn"
+          nz-tooltip="搜索历史"
+          (click)="toggleHistory($event)"
+        >
+          <span nz-icon nzType="history"></span>
+        </button>
+
+        @if (historyOpen()) {
+          <div class="hs-history-panel" (click)="$event.stopPropagation()">
+            @if (historyLoading()) {
+              <div class="hs-history-loading">
+                <span nz-icon nzType="loading" nzTheme="outline"></span>
+                <span>加载中…</span>
+              </div>
+            } @else if (recentHistory().length === 0) {
+              <div class="hs-history-empty">暂无搜索历史</div>
+            } @else {
+              <div class="hs-history-list">
+                @for (h of recentHistory(); track h.id) {
+                  <button type="button" class="hs-history-item" (click)="applyHistory(h.queryText)">
+                    <span class="hs-history-item-query">{{ h.queryText }}</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
       <button class="hs-btn" (click)="search()" [disabled]="loading()">
         <span nz-icon nzType="search"></span>
         搜索
@@ -60,46 +102,57 @@
   <div class="search-content">
     <nz-spin [nzSpinning]="loading()">
       @if (results().length === 0 && !loading() && searchQuery) {
-        <nz-empty nzNotFoundContent="未找到搜索结果"></nz-empty>
+        <div class="results-shell empty-shell">
+          <nz-empty nzNotFoundContent="未找到搜索结果"></nz-empty>
+        </div>
       } @else if (results().length === 0 && !loading()) {
-        <div class="search-empty-hint">
-          <div class="hint-icon">
-            <span nz-icon nzType="search"></span>
+        <div class="results-shell empty-shell">
+          <div class="search-empty-hint">
+            <div class="hint-icon">
+              <span nz-icon nzType="search"></span>
+            </div>
+            <b>输入关键词开始搜索文档</b>
+            <p>支持按文档标题、内容关键词、专业分类等多维度检索，可结合上方筛选条件精确查找所需教学资源。</p>
           </div>
-          <b>输入关键词开始搜索文档</b>
-          <p>支持按文档标题、内容关键词、专业分类等多维度检索，可结合上方筛选条件精确查找所需教学资源。</p>
         </div>
       } @else {
-        <div class="results-toolbar">
-          <span class="results-count">找到 <strong>{{ renderedResults().length }}</strong> 个结果@if (hiddenCount() > 0) {<span class="results-hidden">（已折叠 {{ hiddenCount() }} 条同名匹配）</span>}</span>
-          <nz-divider nzType="vertical"></nz-divider>
-          <div class="ext-filter">
-            <span class="ext-filter-label">按类型筛选：</span>
-            <nz-tag
-              class="ext-tag"
-              [nzColor]="selectedFileExtension() === '' ? 'blue' : ''"
-              (click)="selectedFileExtension.set('')"
-            >全部</nz-tag>
-            @for (ext of availableExtensions(); track ext) {
+        <div class="results-shell">
+          <div class="results-toolbar">
+            <span class="results-count">找到 <strong>{{ renderedResults().length }}</strong> 个结果@if (hiddenCount() > 0) {<span class="results-hidden">（已折叠 {{ hiddenCount() }} 条同名匹配）</span>}</span>
+            <nz-divider nzType="vertical"></nz-divider>
+            <div class="ext-filter">
+              <span class="ext-filter-label">按类型筛选：</span>
               <nz-tag
                 class="ext-tag"
-                [nzColor]="selectedFileExtension() === ext ? 'blue' : ''"
-                (click)="selectedFileExtension.set(ext)"
-              >{{ ext }}</nz-tag>
-            }
+                [nzColor]="selectedFileExtension() === '' ? 'blue' : ''"
+                (click)="selectedFileExtension.set('')"
+              >全部</nz-tag>
+              @for (ext of availableExtensions(); track ext) {
+                <nz-tag
+                  class="ext-tag"
+                  [nzColor]="selectedFileExtension() === ext ? 'blue' : ''"
+                  (click)="selectedFileExtension.set(ext)"
+                >{{ ext }}</nz-tag>
+              }
+            </div>
           </div>
-        </div>
 
-        <div class="search-results">
+          <div class="search-results">
           @for (result of renderedResults(); track result.resourceId + '-' + result.pageNumber) {
             <div class="result-card" [class.match-name]="result._match.type === 'name'" [class.match-fuzzy]="result._match.type === 'fuzzy'" (click)="viewDocument(result)">
               <div class="result-header">
                 <div class="result-title">
                   <span nz-icon [nzType]="result.sourceType === 'video' ? 'video-camera' : getFileIcon(result.fileExtension)" class="result-icon"></span>
                   <span class="result-name" [innerHTML]="result._match.highlightedName"></span>
-                  <nz-tag class="result-match-tag" [nzColor]="matchColor(result._match.type)">
+                  <span
+                    class="result-match-tag"
+                    [class.match-content]="result._match.type === 'content'"
+                    [class.match-name]="result._match.type === 'name'"
+                    [class.match-fuzzy]="result._match.type === 'fuzzy'"
+                  >
+                    <span nz-icon [nzType]="matchIcon(result._match.type)" class="match-tag-icon"></span>
                     {{ matchLabel(result._match.type) }}
-                  </nz-tag>
+                  </span>
                   @if (result.sourceType === 'video') {
                     <nz-tag class="result-page-tag" nzColor="purple">
                       {{ result.startTime || '' }}
@@ -128,6 +181,17 @@
                 <p class="preview-text" [innerHTML]="previewText(result)"></p>
               </div>
               <div class="result-footer">
+                @if (result.resourceId) {
+                  <button
+                    type="button"
+                    class="enter-btn ghost-btn"
+                    nz-tooltip="查看该资源在资源库中的详情"
+                    (click)="goToResource(result, $event)"
+                  >
+                    <span nz-icon nzType="rollback" class="enter-icon"></span>
+                    <span>返回资源</span>
+                  </button>
+                }
                 <button
                   type="button"
                   class="enter-btn"
@@ -149,6 +213,7 @@
             [nzPageSize]="pageSize"
             (nzPageIndexChange)="onPageChange()">
           </nz-pagination>
+        </div>
         </div>
       }
     </nz-spin>

@@ -1,8 +1,40 @@
 .search-container {
-  padding: 20px 24px;
+  padding: 16px 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
+  min-height: calc(100vh - 48px);
+  box-sizing: border-box;
+}
+
+// ============================================
+// 搜索标题区（纯文字，无容器、无背景、无边框）
+// ============================================
+.search-title-bar {
+  padding: 0 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.search-title-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.search-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--kh-ink);
+  line-height: 1.3;
+}
+
+.search-subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--kh-muted);
+  line-height: 1.5;
 }
 
 // ============================================
@@ -13,7 +45,9 @@
   border: 1px solid var(--kh-line);
   border-radius: var(--kh-r-shell);
   box-shadow: var(--kh-shadow-card);
-  overflow: hidden;
+  // 注意：不能用 overflow: hidden，否则搜索历史下拉面板会被裁掉。
+  // 圆角改由首尾子元素各自承担。
+  overflow: visible;
 }
 
 // 顶部搜索栏 — 扁平化：40px 高、小圆角、无阴影
@@ -24,6 +58,7 @@
   padding: 16px 20px;
   border-bottom: 1px solid var(--kh-line-2);
   background: #fff;
+  border-radius: var(--kh-r-shell) var(--kh-r-shell) 0 0;
 
   .hs-wrap {
     position: relative;
@@ -67,6 +102,153 @@
       box-shadow: none;
     }
   }
+}
+
+// ============================================
+// 搜索历史按钮 + 下拉面板
+// ============================================
+.hs-history-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.hs-icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 8px;
+  background: #fff;
+  color: #5b6b80;
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: var(--kh-accent);
+    color: var(--kh-accent);
+    background: var(--kh-accent-ghost);
+  }
+}
+
+.hs-history-wrap.open .hs-icon-btn {
+  border-color: var(--kh-accent);
+  color: var(--kh-accent);
+  background: var(--kh-accent-ghost);
+}
+
+.hs-history-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  max-height: 300px;
+  background: #fff;
+  border: 1px solid var(--kh-line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(14, 27, 46, 0.12);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hs-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.hs-history-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.hs-history-clear {
+  background: transparent;
+  border: none;
+  color: var(--kh-accent);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: var(--kh-accent-deep);
+  }
+}
+
+.hs-history-loading,
+.hs-history-empty {
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #8c8c8c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.hs-history-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.hs-history-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--kh-accent-ghost);
+  }
+}
+
+.hs-history-item-icon {
+  color: #93a3b6;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.hs-history-item:hover .hs-history-item-icon {
+  color: var(--kh-accent);
+}
+
+.hs-history-item-query {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  color: #1f1f1f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hs-history-item-meta {
+  flex-shrink: 0;
+}
+
+.hs-history-item-count {
+  font-size: 11px;
+  margin-inline-end: 0;
+  line-height: 16px;
+  padding: 0 6px;
 }
 
 .hs-btn {
@@ -113,6 +295,7 @@
   align-items: flex-end;
   gap: 16px;
   padding: 14px 20px 16px;
+  border-radius: 0 0 var(--kh-r-shell) var(--kh-r-shell);
 }
 
 .filter-group {
@@ -166,6 +349,28 @@
 // ============================================
 .search-content {
   margin-top: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 结果外壳：有背景的容器，工具栏与卡片列表都包在里面 */
+.results-shell {
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-shell);
+  box-shadow: var(--kh-shadow-card);
+  padding: 18px 22px 22px;
+  flex: 1;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+}
+
+.results-shell.empty-shell {
+  align-items: center;
+  justify-content: center;
 }
 
 .search-empty-hint {
@@ -255,7 +460,7 @@
   border-radius: var(--kh-r-card);
   padding: 18px 22px;
   box-shadow: 0 1px 2px rgba(14, 27, 46, 0.04);
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background-color 0.2s;
 
   &:hover {
     border-color: rgba(24, 144, 255, 0.4);
@@ -303,12 +508,39 @@
   }
 }
 
+// 匹配类型标签：纯背景色 + 字体颜色，取代 nz-tag 默认样式
 .result-match-tag {
   font-size: 11.5px;
   margin-inline-end: 0;
-  line-height: 18px;
-  padding: 0 6px;
+  line-height: 20px;
+  padding: 0 8px;
   flex-shrink: 0;
+  font-weight: 600;
+  border: none !important;
+  border-radius: 4px;
+
+  .match-tag-icon {
+    font-size: 11px;
+    margin-inline-end: 3px;
+  }
+
+  // 正文命中：绿色背景 + 深绿字
+  &.match-content {
+    background-color: #f6ffed !important;
+    color: #389e0d !important;
+  }
+
+  // 文件名命中：蓝色背景 + 深蓝字
+  &.match-name {
+    background-color: #e6f7ff !important;
+    color: #096dd9 !important;
+  }
+
+  // 模糊匹配：极淡灰背景 + 浅灰字
+  &.match-fuzzy {
+    background-color: #fafafa !important;
+    color: #8c8c8c !important;
+  }
 }
 
 .result-page-tag {
@@ -339,6 +571,7 @@
 .result-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px dashed var(--kh-line-2);
@@ -377,6 +610,20 @@
 
   &:active {
     transform: translateY(1px);
+  }
+
+  // 次级按钮：返回资源（描边幽灵样式，与主按钮区分）
+  &.ghost-btn {
+    background: transparent;
+    border-color: var(--kh-line-2);
+    color: var(--kh-ink-2);
+
+    &:hover {
+      background: var(--kh-accent-ghost);
+      border-color: var(--kh-accent);
+      color: var(--kh-accent);
+      box-shadow: none;
+    }
   }
 }
 

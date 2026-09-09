@@ -11,6 +11,7 @@ import {ChunkUploadService} from '../proxy/controllers';
 import {FormGroup, FormBuilder, Validators, ReactiveFormsModule} from '@angular/forms';
 import {AsyncPipe, DatePipe, CommonModule} from "@angular/common";
 import {FormsModule} from "@angular/forms";
+import {ActivatedRoute} from '@angular/router';
 import {Confirmation, ConfirmationService} from "@abp/ng.theme.shared";
 import {NzTableModule} from 'ng-zorro-antd/table';
 import {NzCardModule} from 'ng-zorro-antd/card';
@@ -181,6 +182,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
   private readonly environmentService = inject(EnvironmentService);
   private readonly recommendationService = inject(RecommendationService);
   private readonly permissionService = inject(PermissionService);
+  private readonly route = inject(ActivatedRoute);
 
   // 两级审核的角色区分：院校审核员（SchoolAudit）只做第一级；
   // 纯联盟审核员（只有 LeagueAudit，无 SchoolAudit）只做第二级，页面只保留审核 Tab。
@@ -219,10 +221,28 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     if (this.isLeagueAuditor) {
       this.selectedTabIndex = 2;
       this.loadPendingAudits();
+      this.openResourceFromDeepLink();
       return;
     }
 
     this.loadResources();
+    this.openResourceFromDeepLink();
+  }
+
+  /**
+   * 深链：从搜索页「返回资源」带 resourceId 跳过来时，
+   * 自动拉取该资源并打开右侧详情抽屉。
+   */
+  private openResourceFromDeepLink() {
+    const state = history.state as { resourceId?: string } | undefined;
+    const id = this.route.snapshot.queryParamMap.get('resourceId') || state?.resourceId;
+    if (!id) return;
+    this.resourceService.get(id).subscribe({
+      next: res => {
+        if (res?.id) this.selectResource(res);
+      },
+      error: () => { /* 无效 id 则忽略，保持列表页 */ }
+    });
   }
 
   loadResources() {

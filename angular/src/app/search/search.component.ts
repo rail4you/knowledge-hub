@@ -20,6 +20,7 @@ import { ConfigStateService, EnvironmentService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
 import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/meilisearch-admin.service';
 import { stripUuids, foldByResourceName, getMatchInfo, MatchType } from './search.util';
+import { HostListener } from '@angular/core';
 
 @Component({
   selector: 'app-search',
@@ -119,6 +120,65 @@ export class SearchComponent implements OnInit {
     if (type === 'content') return 'green';
     if (type === 'name') return 'blue';
     return 'orange';
+  }
+
+  /** 匹配类型对应的图标 */
+  matchIcon(type: MatchType): string {
+    if (type === 'content') return 'highlight';
+    if (type === 'name') return 'file-text';
+    return 'question-circle';
+  }
+
+  // ──────────── 搜索历史 ────────────
+  historyOpen = signal(false);
+  historyLoading = signal(false);
+  recentHistory = signal<SearchHistoryDto[]>([]);
+
+  toggleHistory(event: MouseEvent) {
+    event.stopPropagation();
+    if (this.historyOpen()) {
+      this.historyOpen.set(false);
+    } else {
+      this.historyOpen.set(true);
+      this.loadRecentHistory();
+    }
+  }
+
+  loadRecentHistory() {
+    this.historyLoading.set(true);
+    this.searchService.getMySearchHistory(0, 5).subscribe({
+      next: data => {
+        // 按搜索时间倒序，取前 5 条
+        const sorted = [...(data.items || [])].sort(
+          (a, b) => new Date(b.creationTime).getTime() - new Date(a.creationTime).getTime()
+        );
+        this.recentHistory.set(sorted.slice(0, 5));
+        this.historyLoading.set(false);
+      },
+      error: () => {
+        this.recentHistory.set([]);
+        this.historyLoading.set(false);
+      }
+    });
+  }
+
+  applyHistory(query: string) {
+    if (!query) return;
+    this.searchQuery = query;
+    this.historyOpen.set(false);
+    this.search();
+  }
+
+  goToHistoryPage() {
+    this.historyOpen.set(false);
+    this.router.navigate(['/my/search-history']);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick() {
+    if (this.historyOpen()) {
+      this.historyOpen.set(false);
+    }
   }
 
   isVideoModalOpen = signal(false);
@@ -360,6 +420,21 @@ export class SearchComponent implements OnInit {
         }
       }
     });
+  }
+
+  /** 跳到资源库中该资源的详情（资源表格右侧边栏） */
+  goToResource(result: DocumentSearchResultDto, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (!result.resourceId) return;
+    if (this.router.url.startsWith('/student')) {
+      this.router.navigate(['/student/resources', result.resourceId]);
+    } else {
+      this.router.navigate(['/resources'], {
+        queryParams: { resourceId: result.resourceId }
+      });
+    }
   }
 
   viewDocument(result: DocumentSearchResultDto) {
