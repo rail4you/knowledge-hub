@@ -47,23 +47,23 @@
         </div>
       </div>
 
-      <!-- 图表区：原型 charts-row -->
-      <div class="charts-row">
-        <div class="chart-card">
-          <div class="chart-title">就业去向状态分布</div>
-          <div class="chart-box" #outcomeChart></div>
-          @if (!outcomeLoading() && outcomes().length === 0) {
-            <div class="chart-empty"><nz-empty nzNotFoundContent="暂无就业去向状态数据"></nz-empty></div>
+      <!-- 图表区：原型 charts-row —— 数据为空时整张卡片不渲染 -->
+      @if (hasAnyChartData()) {
+        <div class="charts-row" [class.single]="hasOutcomeData() !== hasApplicationData()">
+          @if (hasOutcomeData()) {
+            <div class="chart-card">
+              <div class="chart-title">就业去向状态分布</div>
+              <div class="chart-box" #outcomeChart></div>
+            </div>
+          }
+          @if (hasApplicationData()) {
+            <div class="chart-card">
+              <div class="chart-title">投递状态分布</div>
+              <div class="chart-box" #applicationChart></div>
+            </div>
           }
         </div>
-        <div class="chart-card">
-          <div class="chart-title">投递状态分布</div>
-          <div class="chart-box" #applicationChart></div>
-          @if (!loading() && items().length === 0) {
-            <div class="chart-empty"><nz-empty nzNotFoundContent="暂无投递状态数据"></nz-empty></div>
-          }
-        </div>
-      </div>
+      }
 
       <!-- 就业去向表格：原型 table-card + stats-table -->
       <div class="table-card">

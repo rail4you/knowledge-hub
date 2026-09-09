@@ -83,6 +83,11 @@ export class EmploymentStatisticsComponent implements OnInit, OnDestroy {
     return Math.round(((this.outcomeEmployed() + this.outcomeSigned()) / total) * 100);
   });
 
+  /** 图表可见性：数据为空时整个 chart-card 不渲染，避免空骨架 */
+  readonly hasOutcomeData = computed(() => this.outcomes().length > 0);
+  readonly hasApplicationData = computed(() => this.items().length > 0);
+  readonly hasAnyChartData = computed(() => this.hasOutcomeData() || this.hasApplicationData());
+
   /** 按学生分组 */
   readonly groups = computed<StudentGroup[]>(() => {
     const map = new Map<string, StudentGroup>();
