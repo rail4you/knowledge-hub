@@ -11,9 +11,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Router } from '@angular/router';
 import { SearchService, SearchHistoryDto } from '../search.service';
-
 @Component({
   selector: 'app-search-history',
   standalone: true,
@@ -32,31 +30,36 @@ import { SearchService, SearchHistoryDto } from '../search.service';
   ],
   template: `
     <div class="search-history-container">
-      <nz-card
-        nzTitle="搜索历史"
-        [nzExtra]="historyToolbar"
-      >
-        <ng-template #historyToolbar>
-          @if (history().length > 0) {
-            <button
-              nz-button
-              nzSize="small"
-              nzType="default"
-              nzDanger
-              nz-popconfirm
-              nzPopconfirmTitle="确认清空全部搜索历史？"
-              nzOkText="清空"
-              nzCancelText="取消"
-              (nzOnConfirm)="clearHistory()"
-            >
-              清空全部
-            </button>
-          }
-        </ng-template>
+      <!-- 标题区（与其他页面一致的标题卡片） -->
+      <div class="search-history-title-bar">
+        <div class="search-history-title-text">
+          <h1 class="search-history-title">搜索历史</h1>
+          <p class="search-history-subtitle">查看和管理过往的搜索记录</p>
+        </div>
+      </div>
+
+      <nz-card>
         <nz-spin [nzSpinning]="loading()">
           @if (history().length === 0 && !loading()) {
             <nz-empty nzNotFoundContent="暂无搜索历史"></nz-empty>
           } @else {
+            @if (history().length > 0) {
+              <div class="table-toolbar">
+                <button
+                  nz-button
+                  nzSize="small"
+                  nzType="text"
+                  nz-popconfirm
+                  nzPopconfirmTitle="确认清空全部搜索历史？"
+                  nzOkText="清空"
+                  nzCancelText="取消"
+                  (nzOnConfirm)="clearHistory()"
+                  class="flat-btn"
+                >
+                  <span>清空全部</span>
+                </button>
+              </div>
+            }
             <nz-table
               #basicTable
               [nzData]="history()"
@@ -90,18 +93,6 @@ import { SearchService, SearchHistoryDto } from '../search.service';
                     <td nzAlign="center">{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
                     <td nzAlign="center">
                       <div class="row-actions">
-                        <button
-                          nz-button
-                          nzType="text"
-                          nzSize="small"
-                          nz-tooltip
-                          nzTooltipTitle="重新搜索"
-                          (click)="reSearch(item.queryText)"
-                          class="action-btn"
-                          aria-label="重新搜索"
-                        >
-                          <span nz-icon nzType="redo" nzTheme="outline"></span>
-                        </button>
                         <span nz-tooltip nzTooltipTitle="删除">
                           <button
                             nz-button
@@ -131,8 +122,64 @@ import { SearchService, SearchHistoryDto } from '../search.service';
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      background: var(--kh-canvas);
+      min-height: 100%;
+    }
+
     .search-history-container {
-      padding: 24px;
+      padding: 16px 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-height: calc(100vh - 48px);
+      box-sizing: border-box;
+      background: var(--kh-canvas);
+    }
+
+    .search-history-title-bar {
+      background: var(--kh-panel);
+      border: 1px solid var(--kh-line-2);
+      border-radius: var(--kh-r-shell);
+      box-shadow: var(--kh-shadow-card);
+      padding: 18px 22px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .search-history-title-text {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .search-history-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--kh-ink);
+      line-height: 1.3;
+    }
+
+    .search-history-subtitle {
+      margin: 6px 0 0;
+      font-size: 13.5px;
+      color: var(--kh-muted);
+      line-height: 1.5;
+    }
+
+    .table-toolbar {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .flat-btn {
+      padding-left: 0;
+      padding-right: 0;
+      color: var(--kh-muted);
     }
 
     .query-text {
@@ -158,7 +205,6 @@ import { SearchService, SearchHistoryDto } from '../search.service';
 export class SearchHistoryComponent implements OnInit {
   private readonly searchService = inject(SearchService);
   private readonly message = inject(NzMessageService);
-  private readonly router = inject(Router);
 
   readonly history = signal<SearchHistoryDto[]>([]);
   readonly loading = signal(false);
@@ -218,11 +264,4 @@ export class SearchHistoryComponent implements OnInit {
     });
   }
 
-  reSearch(queryText: string) {
-    if (!queryText.trim()) return;
-    const target = this.router.url.startsWith('/student') ? '/student/search' : '/search';
-    this.router.navigate([target], {
-      queryParams: { q: queryText },
-    });
-  }
 }

@@ -18,6 +18,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { DocumentSearchResultDto } from '../search.service';
 import { getFileIcon, getScoreColor, stripUuids } from '../search.util';
@@ -56,7 +57,8 @@ interface HitMatch {
     NzSpinModule,
     NzEmptyModule,
     NzTooltipModule,
-    NzBreadCrumbModule
+    NzBreadCrumbModule,
+    NzDividerModule
   ],
   templateUrl: './search-detail.component.html',
   styleUrl: './search-detail.component.scss'

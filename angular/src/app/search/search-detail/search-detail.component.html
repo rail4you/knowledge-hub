@@ -1,7 +1,12 @@
 <div class="search-detail">
-  <!-- 顶部面包屑 -->
+  <!-- 顶部导航栏：返回按钮 + 面包屑（卡片容器） -->
   <nav class="detail-breadcrumb">
-    <nz-breadcrumb>
+    <button nz-button nzType="default" class="back-btn" (click)="backToSearch()">
+      <span nz-icon nzType="left"></span>
+      <span>返回搜索结果</span>
+    </button>
+    <nz-divider nzType="vertical" class="nav-divider"></nz-divider>
+    <nz-breadcrumb class="crumb-trail">
       <nz-breadcrumb-item>
         <a (click)="backToSearch()" class="crumb-link">
           <span nz-icon nzType="search"></span>
