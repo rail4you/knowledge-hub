@@ -157,11 +157,13 @@ export class IdentityRolesComponent implements OnInit {
       method: 'GET',
       url: '/api/public/tenants'
     }).subscribe((tenants) => {
+      // /api/public/tenants 首项是 Id=null 的“全局”伪租户，下拉已有独立全局选项，此处过滤掉，避免重复显示。
       // 租户管理员只展示本租户；host 全局管理员可看全部。
+      const realTenants = (tenants || []).filter(t => t.id != null);
       this.tenants = this.isHostAdmin
-        ? tenants
-        : (tenants || []).filter(t => t.id === this.currentTenantId);
-      tenants.forEach(t => {
+        ? realTenants
+        : realTenants.filter(t => t.id === this.currentTenantId);
+      (tenants || []).forEach(t => {
         if (t.id && t.name) {
           this.tenantNames[t.id] = t.name;
         }
