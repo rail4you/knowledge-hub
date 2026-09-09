@@ -27,7 +27,7 @@
             </nz-tag>
             @if (course()!.majorName) {
               <nz-tag nzColor="blue">{{ course()!.majorName }}</nz-tag>
-              @for (name of ((course()! as any).majorNames ?? []).slice(1); track name) {
+              @for (name of getExtraMajorNames(); track name) {
                 <nz-tag nzColor="cyan">{{ name }}</nz-tag>
               }
             } @else {

@@ -56,16 +56,31 @@
   }
 }
 
+.course-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .course-search {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .major-filter {
+    width: 220px;
+    flex: none;
+  }
+}
+
 .course-search {
   display: flex;
   align-items: center;
   gap: 0;
   background: var(--kh-panel);
   border: 1px solid var(--kh-line);
-  border-radius: 20px;
-  padding: 4px 4px 4px 18px;
+  border-radius: 8px;
+  padding: 0 8px 0 12px;
   box-shadow: var(--kh-shadow-card);
-  max-width: 380px;
 
   &:focus-within {
     border-color: var(--kh-accent);
@@ -73,7 +88,7 @@
   }
 
   .mag {
-    font-size: 16px;
+    font-size: 14px;
     color: var(--kh-muted);
     flex: none;
   }
@@ -83,9 +98,9 @@
     border: 0;
     outline: none;
     background: transparent;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--kh-ink);
-    padding: 8px 10px;
+    padding: 5px 8px;
     min-width: 0;
     box-shadow: none !important;
 
@@ -110,7 +125,7 @@
   border: 1px solid var(--kh-line);
   border-radius: 12px;
   box-shadow: var(--kh-shadow-card);
-  overflow: hidden;
+  overflow-x: auto;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -118,6 +133,7 @@
 
 .course-table {
   width: 100%;
+  min-width: 980px;
   border-collapse: collapse;
   table-layout: fixed;
 
@@ -205,6 +221,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .major-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+    align-items: center;
   }
 
   .course-term {

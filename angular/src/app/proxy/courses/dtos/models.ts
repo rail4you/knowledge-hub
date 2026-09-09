@@ -63,6 +63,8 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
   coverImageUrl?: string | null;
   majorId?: string | null;
   majorName?: string | null;
+  majorIds?: string[];
+  majorNames?: string[];
   semester?: string | null;
   credits?: number | null;
   semesterHours?: number | null;
@@ -81,6 +83,7 @@ export interface CourseDto extends FullAuditedEntityDto<string> {
 export interface CourseFilterDto {
   filter?: string | null;
   majorId?: string | null;
+  majorIds?: string[] | null;
   semester?: string | null;
   difficulty?: number | null;
   categoryId?: string | null;
@@ -141,6 +144,7 @@ export interface CreateUpdateCourseDto {
   description?: string | null;
   coverImageUrl?: string | null;
   majorId?: string | null;
+  majorIds?: string[];
   semester?: string | null;
   credits?: number | null;
   semesterHours?: number | null;
@@ -200,6 +204,8 @@ export interface KnowledgeResourceDto extends FullAuditedEntityDto<string> {
 export interface PagedCourseRequestDto extends PagedAndSortedResultRequestDto {
   filter?: string | null;
   majorId?: string | null;
+  majorIds?: string[] | null;
+  onlyPublicCourses?: boolean | null;
   semester?: string | null;
   difficulty?: number | null;
   categoryId?: string | null;

@@ -1,4 +1,4 @@
-import type { CourseDetailDto, CourseDto, CourseFilterDto, CreateUpdateCourseDto, PagedCourseRequestDto } from './dtos/models';
+import type { AuditCourseDto, AuditResultDto, CourseDetailDto, CourseDto, CourseFilterDto, CreateUpdateCourseDto, PagedCourseRequestDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
@@ -9,6 +9,15 @@ import { Injectable, inject } from '@angular/core';
 export class CourseService {
   private restService = inject(RestService);
   apiName = 'KnowledgeHub';
+  
+
+  audit = (courseId: string, input: AuditCourseDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, AuditResultDto>({
+      method: 'POST',
+      url: `/api/app/course/audit/${courseId}`,
+      body: input,
+    },
+    { apiName: this.apiName,...config });
   
 
   create = (input: CreateUpdateCourseDto, config?: Partial<Rest.Config>) =>
@@ -56,7 +65,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course/by-filter',
-      params: { filter: filter.filter, majorId: filter.majorId, semester: filter.semester, difficulty: filter.difficulty, categoryId: filter.categoryId, teacherId: filter.teacherId, status: filter.status, tenantId: filter.tenantId },
+      params: { filter: filter.filter, majorId: filter.majorId, majorIds: filter.majorIds, semester: filter.semester, difficulty: filter.difficulty, categoryId: filter.categoryId, teacherId: filter.teacherId, status: filter.status, isRecommended: filter.isRecommended, tenantId: filter.tenantId },
     },
     { apiName: this.apiName,...config });
   
@@ -73,7 +82,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course',
-      params: { filter: input.filter, majorId: input.majorId, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, tenantId: input.tenantId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, majorId: input.majorId, majorIds: input.majorIds, onlyPublicCourses: input.onlyPublicCourses, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, isRecommended: input.isRecommended, tenantId: input.tenantId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -82,7 +91,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course/my-courses',
-      params: { filter: input.filter, majorId: input.majorId, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, tenantId: input.tenantId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, majorId: input.majorId, majorIds: input.majorIds, onlyPublicCourses: input.onlyPublicCourses, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, isRecommended: input.isRecommended, tenantId: input.tenantId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   
@@ -91,7 +100,7 @@ export class CourseService {
     this.restService.request<any, PagedResultDto<CourseDto>>({
       method: 'GET',
       url: '/api/app/course/published',
-      params: { filter: input.filter, majorId: input.majorId, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, tenantId: input.tenantId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, majorId: input.majorId, majorIds: input.majorIds, onlyPublicCourses: input.onlyPublicCourses, semester: input.semester, difficulty: input.difficulty, categoryId: input.categoryId, status: input.status, isRecommended: input.isRecommended, tenantId: input.tenantId, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

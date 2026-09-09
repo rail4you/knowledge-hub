@@ -7,15 +7,31 @@
     </button>
   </div>
 
-  <div class="course-search">
-    <span nz-icon nzType="search" class="mag"></span>
-    <input
-      type="text"
-      placeholder="搜索课程名称"
-      [ngModel]="filterText()"
-      (ngModelChange)="filterText.set($event); loadCourses()"
-      (keyup.enter)="loadCourses()"
-    />
+  <div class="course-toolbar">
+    <div class="course-search">
+      <span nz-icon nzType="search" class="mag"></span>
+      <input
+        type="text"
+        placeholder="搜索课程名称"
+        [ngModel]="filterText()"
+        (ngModelChange)="filterText.set($event); loadCourses()"
+        (keyup.enter)="loadCourses()"
+      />
+    </div>
+    <nz-select
+      class="major-filter"
+      [ngModel]="majorFilter()"
+      (ngModelChange)="onMajorFilterChange($event)"
+      nzPlaceHolder="全部专业"
+      nzAllowClear
+      title="指定专业仅显示其课程（含兼属）；公共课可独立筛选"
+    >
+      <nz-option [nzValue]="null" nzLabel="全部"></nz-option>
+      <nz-option [nzValue]="PUBLIC_FILTER_VALUE" nzLabel="公共课"></nz-option>
+      @for (major of majors(); track major.id) {
+        <nz-option [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
+      }
+    </nz-select>
   </div>
 
   @if (loading()) {
@@ -23,21 +39,22 @@
       <nz-spin nzSimple nzSize="large"></nz-spin>
     </div>
   } @else if (courses().length === 0) {
-    <nz-empty nzNotFoundContent="暂无课程"></nz-empty>
+    <nz-empty [nzNotFoundContent]="getEmptyText()"></nz-empty>
   } @else {
     <div class="course-card">
       <table class="course-table">
         <thead>
           <tr>
             <th style="width:92px">封面</th>
-            <th style="width:35%">课程名称</th>
-            <th style="width:8%">学期</th>
-            <th style="width:8%">学分</th>
-            <th style="width:8%">学时</th>
-            <th style="width:10%">难度</th>
-            <th style="width:13%">状态</th>
-            <th style="width:10%">推荐</th>
-            <th style="width:18%">操作</th>
+            <th style="width:20%">课程名称</th>
+            <th style="width:15%">专业</th>
+            <th style="width:7%">学期</th>
+            <th style="width:5%">学分</th>
+            <th style="width:5%">学时</th>
+            <th style="width:8%">难度</th>
+            <th style="width:9%">状态</th>
+            <th style="width:8%">推荐</th>
+            <th style="width:13%">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -54,11 +71,16 @@
               </td>
               <td>
                 <div class="course-name">{{ course.title }}</div>
-                <div class="course-major">
+              </td>
+              <td>
+                <div class="major-cell">
                   @if (isPublicCourse(course)) {
                     <nz-tag nzColor="blue">公共课</nz-tag>
                   } @else {
-                    {{ getMajorDisplay(course) }}
+                    <nz-tag nzColor="blue">{{ course.majorName || getMajorName(course.majorId) }}</nz-tag>
+                    @for (name of getExtraMajorNames(course); track name) {
+                      <nz-tag nzColor="cyan">{{ name }}</nz-tag>
+                    }
                   }
                 </div>
               </td>

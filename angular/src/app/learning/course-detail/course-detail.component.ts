@@ -106,6 +106,12 @@ export class CourseDetailComponent implements OnInit {
     const labels = ['入门', '初级', '中级', '高级', '专家'];
     return labels[difficulty - 1] || '未知';
   }
+
+  /** 兼属专业名（跳过主专业，模板内不支持复杂表达式故放 TS） */
+  getExtraMajorNames(): string[] {
+    const names = (this.course() as any)?.majorNames as string[] | undefined;
+    return names?.length ? names.slice(1) : [];
+  }
   
   goBack() {
     this.router.navigate([this.isStudentView() ? '/student/courses' : '/']);

@@ -63,6 +63,9 @@ export class CourseListComponent implements OnInit {
   courses = signal<CourseDto[]>([]);
   loading = signal(false);
   filterText = signal('');
+  /** 专业筛选：null=全部，majorId=指定专业（严格，不含公共课），'__public__'=仅公共课 */
+  majorFilter = signal<string | null>(null);
+  readonly PUBLIC_FILTER_VALUE = '__public__';
   readonly majors = signal<MajorLookupDto[]>([]);
 
   // Modal state
@@ -120,8 +123,11 @@ export class CourseListComponent implements OnInit {
     if (this.courses().length === 0) {
       this.loading.set(true);
     }
+    const mf = this.majorFilter();
     this.courseService.getList({
       filter: this.filterText() || undefined,
+      majorId: mf && mf !== this.PUBLIC_FILTER_VALUE ? mf : undefined,
+      onlyPublicCourses: mf === this.PUBLIC_FILTER_VALUE ? true : undefined,
       maxResultCount: 100,
       skipCount: 0
     } as any).subscribe({
@@ -321,6 +327,37 @@ export class CourseListComponent implements OnInit {
       return '-';
     }
     return this.majors().find((m) => m.id === id)?.name || '-';
+  }
+
+  /** 专业筛选变化：null=全部，指定专业=严格匹配（含兼属，不含公共课），公共课选项=仅公共课 */
+  onMajorFilterChange(v: string | null) {
+    this.majorFilter.set(v || null);
+    this.loadCourses();
+  }
+
+  getEmptyText(): string {
+    const mf = this.majorFilter();
+    if (mf === this.PUBLIC_FILTER_VALUE) {
+      return '暂无公共课';
+    }
+    return mf ? '该专业暂无课程' : '暂无课程';
+  }
+
+  /** 兼属专业名（跳过主专业） */
+  getExtraMajorNames(course: CourseDto): string[] {
+    const names = (course as any).majorNames as string[] | undefined;
+    if (names?.length) {
+      return names.slice(1);
+    }
+    const ids = (course as any).majorIds as string[] | undefined;
+    const primary = course.majorId;
+    if (ids?.length) {
+      return ids
+        .filter(id => id !== primary)
+        .map(id => this.getMajorName(id))
+        .filter(n => n !== '-');
+    }
+    return [];
   }
 
   /** 是否公共课：无任何专业归属 */

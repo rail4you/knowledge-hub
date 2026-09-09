@@ -65,6 +65,8 @@ public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
     public Guid? MajorId { get; set; }
     /// <summary>按多个专业筛选：命中任一专业（含兼属）或公共课</summary>
     public List<Guid>? MajorIds { get; set; }
+    /// <summary>只返回公共课（无任何专业归属）时传 true；与 MajorId/MajorIds 互斥且优先</summary>
+    public bool? OnlyPublicCourses { get; set; }
     public string? Semester { get; set; }
     public int? Difficulty { get; set; }
     public Guid? CategoryId { get; set; }

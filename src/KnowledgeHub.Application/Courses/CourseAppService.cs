@@ -147,7 +147,16 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                          .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
                          .WhereIf(input.Status.HasValue, x => x.Status == input.Status)
                          .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value);
-            query = await ApplyMajorFilterAsync(query, CollectTargetMajors(input.MajorId, input.MajorIds), tenantFilter);
+            if (input.OnlyPublicCourses == true)
+            {
+                // 管理端“公共课”独立筛选：只返回无任何专业归属的课程
+                query = await ApplyPublicOnlyFilterAsync(query, tenantFilter);
+            }
+            else
+            {
+                // 管理端按专业严格筛选：只命中该专业（含兼属），不含公共课
+                query = await ApplyMajorFilterAsync(query, CollectTargetMajors(input.MajorId, input.MajorIds), tenantFilter, includePublic: false);
+            }
 
             totalCount = await query.CountAsync();
             courses = await query.OrderByDescending(x => x.CreationTime)
@@ -551,11 +560,12 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     }
 
     /// <summary>
-    /// 按专业筛选：命中目标专业（含兼属、主从都算）或公共课（无任何专业归属）。
-    /// 无筛选条件时返回原查询。tenantFilter 有值时在禁用租户过滤的上下文中手动隔离关联表。
+    /// 按专业筛选：命中目标专业（含兼属、主从都算）；includePublic 为 true 时同时含公共课
+    /// （无任何专业归属）。无筛选条件时返回原查询。tenantFilter 有值时在禁用租户过滤的
+    /// 上下文中手动隔离关联表。
     /// </summary>
     private async Task<IQueryable<Course>> ApplyMajorFilterAsync(
-        IQueryable<Course> query, List<Guid> targetMajorIds, Guid? tenantFilter)
+        IQueryable<Course> query, List<Guid> targetMajorIds, Guid? tenantFilter, bool includePublic = true)
     {
         if (targetMajorIds.Count == 0)
         {
@@ -571,6 +581,12 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             .Select(x => x.CourseId)
             .Distinct()
             .ToListAsync();
+        if (!includePublic)
+        {
+            return query.Where(x =>
+                (x.MajorId.HasValue && targetMajorIds.Contains(x.MajorId.Value)) ||
+                linkedMatched.Contains(x.Id));
+        }
         var linkedAny = await linkQuery
             .Select(x => x.CourseId)
             .Distinct()
@@ -579,6 +595,21 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             (x.MajorId.HasValue && targetMajorIds.Contains(x.MajorId.Value)) ||
             linkedMatched.Contains(x.Id) ||
             !linkedAny.Contains(x.Id));
+    }
+
+    /// <summary>只返回公共课（无任何专业归属）。</summary>
+    private async Task<IQueryable<Course>> ApplyPublicOnlyFilterAsync(IQueryable<Course> query, Guid? tenantFilter)
+    {
+        var linkQuery = await _courseMajorRepository.GetQueryableAsync();
+        if (tenantFilter.HasValue)
+        {
+            linkQuery = linkQuery.Where(x => x.TenantId == tenantFilter.Value);
+        }
+        var linkedAny = await linkQuery
+            .Select(x => x.CourseId)
+            .Distinct()
+            .ToListAsync();
+        return query.Where(x => !linkedAny.Contains(x.Id));
     }
 
     /// <summary>

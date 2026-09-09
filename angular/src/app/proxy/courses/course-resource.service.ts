@@ -1,4 +1,4 @@
-import type { CourseResourceDto, CreateCourseResourceDto } from './dtos/models';
+import type { CourseResourceDto, CreateCourseResourceDto, UpdateCourseResourceDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -39,6 +39,15 @@ export class CourseResourceService {
     this.restService.request<any, CourseResourceDto[]>({
       method: 'GET',
       url: `/api/app/course-resource/by-resource/${resourceId}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
+  update = (id: string, input: UpdateCourseResourceDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, CourseResourceDto>({
+      method: 'PUT',
+      url: `/api/app/course-resource/${id}`,
+      body: input,
     },
     { apiName: this.apiName,...config });
 }
