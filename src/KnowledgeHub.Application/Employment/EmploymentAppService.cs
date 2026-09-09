@@ -100,6 +100,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             entity = await _jobPostingRepository.GetAsync(id);
         }
 
+        // 全隔离：租户用户仅可访问本租户岗位，host（TenantId 为空）可跨租户查看。
+        if (CurrentTenant.Id.HasValue && entity.TenantId != CurrentTenant.Id.Value)
+        {
+            throw new AbpAuthorizationException();
+        }
+
         if (entity.Status != EmploymentJobStatus.Published
             && !await CanReviewJobsAsync()
             && entity.EmployerUserId != CurrentUser.Id)
@@ -121,6 +127,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _jobPostingRepository.GetQueryableAsync();
+            // 全隔离：租户上下文强制按 TenantId 过滤，仅 host 可跨租户查看。
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                query = query.Where(x => x.TenantId == tenantId);
+            }
             query = query.Where(x => x.Status == EmploymentJobStatus.Published);
             query = ApplyJobFilters(query, input.Filter, input.Location, input.JobType);
             totalCount = await query.LongCountAsync();
@@ -145,6 +157,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _jobPostingRepository.GetQueryableAsync();
+            // 全隔离：租户上下文强制按 TenantId 过滤，仅 host 可跨租户查看。
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                query = query.Where(x => x.TenantId == tenantId);
+            }
             query = ApplyJobFilters(query, input.Filter, input.Location, input.JobType);
 
             if (input.Status.HasValue)
@@ -282,6 +300,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         using (DataFilter.Disable<IMultiTenant>())
         {
             entity = await _jobPostingRepository.GetAsync(id);
+        }
+
+        // 全隔离：租户用户仅可审核本租户岗位。
+        if (CurrentTenant.Id.HasValue && entity.TenantId != CurrentTenant.Id.Value)
+        {
+            throw new AbpAuthorizationException();
         }
 
         entity.Status = input.Status;
@@ -753,6 +777,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             jobPosting = await _jobPostingRepository.GetAsync(input.JobPostingId);
         }
 
+        // 全隔离：租户用户仅可投递本租户岗位。
+        if (CurrentTenant.Id.HasValue && jobPosting.TenantId != CurrentTenant.Id.Value)
+        {
+            throw new UserFriendlyException("当前岗位不可投递。");
+        }
+
         if (jobPosting.Status != EmploymentJobStatus.Published)
         {
             throw new UserFriendlyException("当前岗位不可投递。");
@@ -788,6 +818,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         {
             var query = await _applicationRepository.GetQueryableAsync();
             query = query.Where(x => x.StudentId == studentId);
+            // 全隔离：我的投递也按本租户过滤，避免跨租户串数据。
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                query = query.Where(x => x.TenantId == tenantId);
+            }
             if (input.Status.HasValue)
             {
                 query = query.Where(x => x.Status == input.Status.Value);
@@ -1328,11 +1364,19 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
 
         var studentMap = await BuildOutcomeImportStudentMapAsync();
 
-        // 与页面列表保持一致：跨租户处理去重的主要去向（页面 GetOutcomeListAsync 也禁用了租户过滤）
+        // 与页面列表保持一致：仅处理本租户的主要去向去重（host 才跨租户）。
         List<EmploymentOutcome> primaryOfStudent;
         using (DataFilter.Disable<IMultiTenant>())
         {
-            primaryOfStudent = await _outcomeRepository.GetListAsync(x => x.IsPrimary);
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                primaryOfStudent = await _outcomeRepository.GetListAsync(x => x.IsPrimary && x.TenantId == tenantId);
+            }
+            else
+            {
+                primaryOfStudent = await _outcomeRepository.GetListAsync(x => x.IsPrimary);
+            }
         }
 
         var primaryByStudent = primaryOfStudent
@@ -1732,6 +1776,13 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         {
             var query = await _outcomeRepository.GetQueryableAsync();
 
+            // 全隔离：租户上下文强制按 TenantId 过滤，仅 host 可跨租户查看。
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                query = query.Where(x => x.TenantId == tenantId);
+            }
+
             if (input.StudentId.HasValue)
             {
                 query = query.Where(x => x.StudentId == input.StudentId.Value);
@@ -1891,8 +1942,13 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
-            // 查询学生投递的岗位申请（JobApplication），而非就业去向（EmploymentOutcome）
+            // 全隔离：租户上下文仅统计本租户投递，仅 host 可跨租户统计。
             var applications = await _applicationRepository.GetListAsync();
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                applications = applications.Where(x => x.TenantId == tenantId).ToList();
+            }
 
             if (input.Status.HasValue)
             {
@@ -1944,6 +2000,13 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _applicationRepository.GetQueryableAsync();
+
+            // 全隔离：租户上下文强制按 TenantId 过滤，仅 host 可跨租户查看。
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                query = query.Where(x => x.TenantId == tenantId);
+            }
 
             if (input.Days.HasValue)
             {
@@ -2010,7 +2073,17 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
-            var applications = await _applicationRepository.GetListAsync();
+            // 全隔离：仅返回本租户的投递（host 可跨租户）。
+            List<JobApplication> applications;
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                applications = await _applicationRepository.GetListAsync(x => x.TenantId == tenantId);
+            }
+            else
+            {
+                applications = await _applicationRepository.GetListAsync();
+            }
 
             if (applications.Count == 0)
             {
@@ -2072,6 +2145,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
             if (student == null)
             {
                 throw new UserFriendlyException($"不存在学生: {input.StudentId}");
+            }
+
+            // 全隔离：仅可为本租户学生创建指导记录。
+            if (CurrentTenant.Id.HasValue && student.TenantId != CurrentTenant.Id.Value)
+            {
+                throw new AbpAuthorizationException();
             }
         }
 
@@ -2176,7 +2255,17 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
-            var outcomes = await _outcomeRepository.GetListAsync();
+            // 全隔离：导出仅含本租户去向，仅 host 可导出全平台。
+            List<EmploymentOutcome> outcomes;
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                outcomes = await _outcomeRepository.GetListAsync(x => x.TenantId == tenantId);
+            }
+            else
+            {
+                outcomes = await _outcomeRepository.GetListAsync();
+            }
             return await MapOutcomeDtosAsync(outcomes
                 .OrderByDescending(x => x.ConfirmedAt)
                 .ToList());
@@ -2551,6 +2640,12 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         using (DataFilter.Disable<IMultiTenant>())
         {
             entity = await _jobPostingRepository.GetAsync(id);
+        }
+
+        // 全隔离：租户用户仅可操作本租户岗位，跨租户一律拒绝。
+        if (CurrentTenant.Id.HasValue && entity.TenantId != CurrentTenant.Id.Value)
+        {
+            throw new AbpAuthorizationException();
         }
 
         if (!await CanReviewJobsAsync() && entity.EmployerUserId != CurrentUser.Id)
