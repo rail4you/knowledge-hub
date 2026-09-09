@@ -122,7 +122,7 @@
       </div>
       <div class="news-list">
         @for (news of homeData()?.latestNews; track news.id) {
-          <a class="news-item" [routerLink]="['/student/news', news.id]">
+          <a class="news-item" [routerLink]="['/student/news', news.id]" [queryParams]="{ from: 'home' }">
             <span class="news-item__dot"></span>
             <span class="news-item__title">{{ news.title }}</span>
             <span class="news-item__date">{{ news.publishedAt | date:'MM-dd' }}</span>

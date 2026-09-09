@@ -156,7 +156,7 @@
         </div>
         <div class="course-grid">
           @for (c of globalFeaturedCourses(); track c.id; let i = $index) {
-            <a class="course-card" [routerLink]="['/student/courses', c.id]">
+            <a class="course-card" [routerLink]="['/student/courses', c.id]" [queryParams]="{ from: 'home' }">
               <div class="course-card__cover">
                 <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
                 @if (c.coverImageUrl) {
@@ -335,7 +335,7 @@
         </div>
         <div class="news-grid">
           @for (n of globalLatestNews(); track n.id) {
-            <a class="news-card" [routerLink]="['/student/news', n.id]">
+            <a class="news-card" [routerLink]="['/student/news', n.id]" [queryParams]="{ from: 'home' }">
               <div class="news-card__cover">
                 <img src="assets/images/home/news-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="news-card__cover-img" />
                 <div class="news-card__overlay" aria-hidden="true"></div>
@@ -424,7 +424,7 @@
       @if (activeTab() === 'courses') {
         <div class="course-grid">
           @for (c of browseCourses(); track c.id) {
-            <a class="course-card" [routerLink]="['/student/courses', c.id]">
+            <a class="course-card" [routerLink]="['/student/courses', c.id]" [queryParams]="{ from: 'home' }">
               <div class="course-card__cover">
                 <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
                 @if (c.coverImageUrl) {

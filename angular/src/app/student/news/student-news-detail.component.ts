@@ -78,6 +78,12 @@ export class StudentNewsDetailComponent implements OnInit {
   readonly coverImgOk = signal(true);
   readonly coverFailedIds = signal<Set<string>>(new Set());
 
+  /** 从门户首页（PortalHome）的最新资讯卡片进入时为 true；返回按钮显示“返回首页”并跳 `/` */
+  readonly backToHome = signal<boolean>(false);
+
+  /** 返回按钮文案：从门户首页进入时为“返回首页”，否则为“返回资讯列表” */
+  readonly backLabel = computed(() => this.backToHome() ? '返回首页' : '返回资讯列表');
+
   modalVisible = false;
   submitting = false;
 
@@ -93,6 +99,8 @@ export class StudentNewsDetailComponent implements OnInit {
         this.router.navigate(['/student/news']);
         return;
       }
+      // 从门户首页（最新资讯卡片）进入时返回按钮回到门户首页
+      this.backToHome.set(this.route.snapshot.queryParamMap.get('from') === 'home');
       this.loadArticle(id);
       this.loadComments(id);
       this.loadHot();
@@ -154,6 +162,11 @@ export class StudentNewsDetailComponent implements OnInit {
   }
 
   goBack(): void {
+    // 从门户首页（最新资讯卡片）进入：直接返回门户首页 `/`
+    if (this.backToHome()) {
+      this.router.navigate(['/']);
+      return;
+    }
     this.router.navigate(['/student/news']);
   }
 

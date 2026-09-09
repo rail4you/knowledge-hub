@@ -6,14 +6,19 @@
       <span>{{ backLabel() }}</span>
     </button>
     <nav class="breadcrumb" aria-label="breadcrumb">
-      <a routerLink="/student">首页</a>
-      <span class="breadcrumb__sep">/</span>
-      @if (backToTenant(); as tid) {
-        <a [routerLink]="['/tenant', tid]">资源库</a>
+      @if (backToHome()) {
+        <a routerLink="/">门户首页</a>
+        <span class="breadcrumb__sep">/</span>
       } @else {
-        <a routerLink="/student/courses">课程中心</a>
+        <a routerLink="/student">首页</a>
+        <span class="breadcrumb__sep">/</span>
+        @if (backToTenant(); as tid) {
+          <a [routerLink]="['/tenant', tid]">资源库</a>
+        } @else {
+          <a routerLink="/student/courses">课程中心</a>
+        }
+        <span class="breadcrumb__sep">/</span>
       }
-      <span class="breadcrumb__sep">/</span>
       <span class="breadcrumb__current">课程详情</span>
     </nav>
   </div>

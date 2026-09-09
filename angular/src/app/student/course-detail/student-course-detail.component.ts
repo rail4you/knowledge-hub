@@ -165,8 +165,12 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   /** 微专业页透传的原始 from 参数（home / my-micro-majors / my-micro-majors-list），用于还原本页 URL */
   readonly microMajorFrom = signal<string | null>(null);
 
-  /** 返回按钮文案：租户资源库 > 微专业上下文 > 相关课程上下文 > 默认课程中心 */
+  /** 从门户首页（PortalHome）的精品课程卡片进入时为 true；返回按钮显示“返回首页”并跳 `/` */
+  readonly backToHome = signal<boolean>(false);
+
+  /** 返回按钮文案：门户首页 > 租户资源库 > 微专业上下文 > 相关课程上下文 > 默认课程中心 */
   readonly backLabel = computed(() => {
+    if (this.backToHome()) return '返回首页';
     if (this.backToTenant()) return '返回资源库';
     if (this.backToMicroMajor()) {
       return this.microMajorFrom() === 'my-micro-majors-list' ? '返回我的微专业' : '返回微专业';
@@ -234,6 +238,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       this.recentExerciseLoading.set(true);
       this.expandedNodes.set(new Set());
       this.backToCourse.set(fromCourse || null);
+      // 门户首页上下文：从 `/` 的精品课程卡片进入时，返回按钮回到门户首页
+      this.backToHome.set(qp.get('from') === 'home');
       // 租户资源库上下文：从租户页进入时，返回按钮回到租户页（/tenant/:id）
       this.backToTenant.set(qp.get('tenantId') || null);
       // 微专业上下文：从微专业课程进入时，返回按钮回到微专业页（保留 from 参数还原原 URL）
@@ -496,6 +502,11 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   }
 
   goBack() {
+    // 从门户首页（精品课程卡片）进入：直接返回门户首页 `/`
+    if (this.backToHome()) {
+      this.router.navigate(['/']);
+      return;
+    }
     // 从租户资源库进入：直接返回对应的租户页
     const tenantId = this.backToTenant();
     if (tenantId) {
