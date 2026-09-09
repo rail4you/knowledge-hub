@@ -11,8 +11,13 @@ public class CourseDto : FullAuditedEntityDto<Guid>
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? CoverImageUrl { get; set; }
+    /// <summary>主专业（兼容老字段；为空表示公共课）</summary>
     public Guid? MajorId { get; set; }
     public string? MajorName { get; set; }
+    /// <summary>归属的全部专业（含主专业），为空表示公共课</summary>
+    public List<Guid> MajorIds { get; set; } = new();
+    /// <summary>与 MajorIds 一一对应的专业名（主专业排第一）</summary>
+    public List<string> MajorNames { get; set; } = new();
     public string? Semester { get; set; }
     public int? Credits { get; set; }
     public int? SemesterHours { get; set; }
@@ -39,7 +44,10 @@ public class CreateUpdateCourseDto
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? CoverImageUrl { get; set; }
+    /// <summary>主专业（兼容老字段；传 MajorIds 时以后端归一化结果为准）</summary>
     public Guid? MajorId { get; set; }
+    /// <summary>归属的全部专业，主专业必须包含在内；空列表表示公共课</summary>
+    public List<Guid> MajorIds { get; set; } = new();
     public string? Semester { get; set; }
     public int? Credits { get; set; }
     public int? SemesterHours { get; set; }
@@ -53,7 +61,10 @@ public class CreateUpdateCourseDto
 public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
 {
     public string? Filter { get; set; }
+    /// <summary>按专业筛选：命中该专业（含兼属）或公共课（无归属专业）</summary>
     public Guid? MajorId { get; set; }
+    /// <summary>按多个专业筛选：命中任一专业（含兼属）或公共课</summary>
+    public List<Guid>? MajorIds { get; set; }
     public string? Semester { get; set; }
     public int? Difficulty { get; set; }
     public Guid? CategoryId { get; set; }
@@ -66,7 +77,10 @@ public class PagedCourseRequestDto : PagedAndSortedResultRequestDto
 public class CourseFilterDto
 {
     public string? Filter { get; set; }
+    /// <summary>按专业筛选：命中该专业（含兼属）或公共课（无归属专业）</summary>
     public Guid? MajorId { get; set; }
+    /// <summary>按多个专业筛选：命中任一专业（含兼属）或公共课</summary>
+    public List<Guid>? MajorIds { get; set; }
     public string? Semester { get; set; }
     public int? Difficulty { get; set; }
     public Guid? CategoryId { get; set; }

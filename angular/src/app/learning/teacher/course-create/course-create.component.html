@@ -99,12 +99,13 @@
             <div class="form-section">
               <h3>课程详细信息</h3>
               <nz-form-item>
-                <nz-form-label [nzSpan]="4" nzRequired>专业</nz-form-label>
-                <nz-form-control [nzSpan]="20">
+                <nz-form-label [nzSpan]="4">所属专业</nz-form-label>
+                <nz-form-control [nzSpan]="20" nzExtra="可多选；留空表示公共课（所有专业可见）">
                   <nz-select
-                    [ngModel]="formData().majorId"
-                    (ngModelChange)="updateField('majorId', $event)"
-                    nzPlaceHolder="请选择专业"
+                    [ngModel]="formData().majorIds ?? []"
+                    (ngModelChange)="onMajorsChange($event)"
+                    nzMode="multiple"
+                    nzPlaceHolder="请选择专业（留空=公共课）"
                     nzAllowClear
                     class="full-width"
                   >
@@ -114,6 +115,24 @@
                   </nz-select>
                 </nz-form-control>
               </nz-form-item>
+
+              @if ((formData().majorIds ?? []).length > 1) {
+                <nz-form-item>
+                  <nz-form-label [nzSpan]="4">主专业</nz-form-label>
+                  <nz-form-control [nzSpan]="20" nzExtra="主专业用于统计、证书与展示排序">
+                    <nz-select
+                      [ngModel]="formData().majorId"
+                      (ngModelChange)="updateField('majorId', $event)"
+                      nzPlaceHolder="请选择主专业"
+                      class="full-width"
+                    >
+                      @for (id of (formData().majorIds ?? []); track id) {
+                        <nz-option [nzValue]="id" [nzLabel]="(majors() | findMajorName: id) || ''"></nz-option>
+                      }
+                    </nz-select>
+                  </nz-form-control>
+                </nz-form-item>
+              }
 
               <nz-form-item>
                 <nz-form-label [nzSpan]="4" nzRequired>学期</nz-form-label>
@@ -195,8 +214,13 @@
                 <nz-descriptions-item nzTitle="课程名称">{{ formData().title }}</nz-descriptions-item>
                 <nz-descriptions-item nzTitle="课程描述">{{ formData().description || '无' }}</nz-descriptions-item>
                 <nz-descriptions-item nzTitle="专业">
-                  {{ (majors() | findMajorName: formData().majorId) || '未选择' }}
+                  {{ getMajorNamesText() }}
                 </nz-descriptions-item>
+                @if ((formData().majorIds ?? []).length > 1) {
+                  <nz-descriptions-item nzTitle="主专业">
+                    {{ (majors() | findMajorName: formData().majorId) || '未选择' }}
+                  </nz-descriptions-item>
+                }
                 <nz-descriptions-item nzTitle="学期">{{ formData().semester || '未选择' }}</nz-descriptions-item>
                 <nz-descriptions-item nzTitle="学分">{{ formData().credits }}</nz-descriptions-item>
                 <nz-descriptions-item nzTitle="课时">{{ formData().semesterHours }}</nz-descriptions-item>

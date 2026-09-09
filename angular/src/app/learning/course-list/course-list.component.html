@@ -54,7 +54,13 @@
               </td>
               <td>
                 <div class="course-name">{{ course.title }}</div>
-                <div class="course-major">{{ course.majorName || getMajorName(course.majorId) }}</div>
+                <div class="course-major">
+                  @if (isPublicCourse(course)) {
+                    <nz-tag nzColor="blue">公共课</nz-tag>
+                  } @else {
+                    {{ getMajorDisplay(course) }}
+                  }
+                </div>
               </td>
               <td class="course-term">{{ course.semester || '—' }}</td>
               <td class="course-num">{{ course.credits ?? '-' }}</td>
@@ -137,12 +143,14 @@
         <div nz-row [nzGutter]="16">
           <div nz-col [nzSpan]="12">
             <nz-form-item>
-              <nz-form-label>专业</nz-form-label>
-              <nz-form-control>
+              <nz-form-label>所属专业</nz-form-label>
+              <nz-form-control nzExtra="可多选；留空表示公共课（所有专业可见）">
                 <nz-select
-                  [(ngModel)]="formData.majorId"
+                  [ngModel]="formData.majorIds ?? []"
+                  (ngModelChange)="onMajorsChange($event)"
                   [ngModelOptions]="{ standalone: true }"
-                  nzPlaceHolder="请选择专业"
+                  nzMode="multiple"
+                  nzPlaceHolder="请选择专业（留空=公共课）"
                   nzAllowClear
                 >
                   @for (major of majors(); track major.id) {
@@ -166,6 +174,23 @@
             </nz-form-item>
           </div>
         </div>
+
+        @if ((formData.majorIds ?? []).length > 1) {
+          <nz-form-item>
+            <nz-form-label>主专业</nz-form-label>
+            <nz-form-control nzExtra="主专业用于统计、证书与展示排序">
+              <nz-select
+                [(ngModel)]="formData.majorId"
+                [ngModelOptions]="{ standalone: true }"
+                nzPlaceHolder="请选择主专业"
+              >
+                @for (id of (formData.majorIds ?? []); track id) {
+                  <nz-option [nzValue]="id" [nzLabel]="getMajorName(id)"></nz-option>
+                }
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+        }
 
         <div nz-row [nzGutter]="16">
           <div nz-col [nzSpan]="12">

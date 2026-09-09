@@ -107,6 +107,7 @@ public class KnowledgeHubDbContext :
     public DbSet<KnowledgeHub.Courses.KnowledgeResource> KnowledgeResources { get; set; }
     public DbSet<KnowledgeHub.Courses.ChapterResource> ChapterResources { get; set; }
     public DbSet<KnowledgeHub.Courses.CourseResource> CourseResources { get; set; }
+    public DbSet<KnowledgeHub.Courses.CourseMajor> CourseMajors { get; set; }
 
     // Learning entities
     public DbSet<KnowledgeHub.Learning.StudentCourse> StudentCourses { get; set; }

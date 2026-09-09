@@ -34,6 +34,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     private readonly ITenantInfoRepository _tenantInfoRepository;
     private readonly Volo.Abp.Identity.IIdentityUserRepository _identityUserRepository;
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
+    private readonly IRepository<Courses.CourseMajor, Guid> _courseMajorRepository;
     private readonly IDataFilter _dataFilter;
 
     public PortalAppService(
@@ -48,6 +49,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         ITenantInfoRepository tenantInfoRepository,
         Volo.Abp.Identity.IIdentityUserRepository identityUserRepository,
         IRepository<StudentCourse, Guid> studentCourseRepository,
+        IRepository<Courses.CourseMajor, Guid> courseMajorRepository,
         IDataFilter dataFilter)
     {
         _courseRepository = courseRepository;
@@ -58,6 +60,7 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         _tenantInfoRepository = tenantInfoRepository;
         _identityUserRepository = identityUserRepository;
         _studentCourseRepository = studentCourseRepository;
+        _courseMajorRepository = courseMajorRepository;
         _dataFilter = dataFilter;
         _microMajorRepository = microMajorRepository;
         _microMajorCourseRepository = microMajorCourseRepository;
@@ -308,7 +311,16 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         if (tenantId.HasValue)
             coursesFiltered = coursesFiltered.Where(c => c.TenantId == tenantId.Value);
         if (majorId.HasValue)
-            coursesFiltered = coursesFiltered.Where(c => c.MajorId == majorId.Value);
+        {
+            // 多专业语义：命中该专业（含兼属）或公共课（无任何专业归属）
+            var linkQuery = await _courseMajorRepository.GetQueryableAsync();
+            var linkedMatched = linkQuery.Where(x => x.MajorId == majorId.Value).Select(x => x.CourseId).ToHashSet();
+            var linkedAny = linkQuery.Select(x => x.CourseId).ToHashSet();
+            coursesFiltered = coursesFiltered.Where(c =>
+                (c.MajorId.HasValue && c.MajorId.Value == majorId.Value) ||
+                linkedMatched.Contains(c.Id) ||
+                !linkedAny.Contains(c.Id));
+        }
         if (!string.IsNullOrWhiteSpace(search))
             coursesFiltered = coursesFiltered.Where(c => (c.Title ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
                 || (c.Description ?? "").Contains(search, StringComparison.OrdinalIgnoreCase));

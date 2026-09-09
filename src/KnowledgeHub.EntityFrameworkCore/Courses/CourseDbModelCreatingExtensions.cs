@@ -32,6 +32,17 @@ public static class CourseDbModelCreatingExtensions
 
             b.HasMany(x => x.Chapters).WithOne().HasForeignKey(x => x.CourseId);
         });
+
+        builder.Entity<CourseMajor>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "CourseMajors", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.HasIndex(x => x.CourseId);
+            b.HasIndex(x => x.MajorId);
+            b.HasIndex(x => new { x.CourseId, x.MajorId }).IsUnique();
+            b.HasIndex(x => x.TenantId);
+        });
         
         builder.Entity<Chapter>(b =>
         {

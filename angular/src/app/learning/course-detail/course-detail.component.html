@@ -27,6 +27,11 @@
             </nz-tag>
             @if (course()!.majorName) {
               <nz-tag nzColor="blue">{{ course()!.majorName }}</nz-tag>
+              @for (name of ((course()! as any).majorNames ?? []).slice(1); track name) {
+                <nz-tag nzColor="cyan">{{ name }}</nz-tag>
+              }
+            } @else {
+              <nz-tag nzColor="blue">公共课</nz-tag>
             }
             @if (course()!.credits) {
               <nz-tag nzColor="purple">{{ course()!.credits }} 学分</nz-tag>

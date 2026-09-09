@@ -21,6 +21,9 @@ import type { MajorLookupDto } from '../../../proxy/majors/dtos/models';
 import { OssUploadService, OssUploadResultDto } from '../../../shared/oss-upload.service';
 import { FindMajorNamePipe } from '../../../shared/find-major-name.pipe';
 
+/** 本地表单类型：proxy 重新生成前（abp generate-proxy -t ng）用交叉类型承载新增的多专业字段 */
+type CourseCreateForm = CreateUpdateCourseDto & { majorIds?: string[] };
+
 @Component({
   selector: 'app-course-create',
   standalone: true,
@@ -73,11 +76,12 @@ export class CourseCreateComponent {
     { label: '高级', value: 4 }
   ];
 
-  formData = signal<CreateUpdateCourseDto>({
+  formData = signal<CourseCreateForm>({
     title: '',
     description: '',
     coverImageUrl: '',
     majorId: undefined,
+    majorIds: [],
     semester: '',
     credits: 3,
     semesterHours: 48,
@@ -85,14 +89,34 @@ export class CourseCreateComponent {
     categoryId: undefined
   });
 
-  constructor() {
-    this.majorService.getLookupList().subscribe({
-      next: (list) => this.majors.set(list || []),
-    });
+  updateField(field: string, value: any) {
+    this.formData.update(data => ({ ...data, [field]: value }));
   }
 
-  updateField<K extends keyof CreateUpdateCourseDto>(field: K, value: CreateUpdateCourseDto[K]) {
-    this.formData.update(data => ({ ...data, [field]: value }));
+  /** 多选专业变化时同步主专业：清空=公共课；主专业被移除则取第一个 */
+  onMajorsChange(ids: string[]) {
+    const list = ids ?? [];
+    this.formData.update(data => ({
+      ...data,
+      majorIds: list,
+      majorId: list.length === 0
+        ? undefined
+        : data.majorId && list.includes(data.majorId)
+          ? data.majorId
+          : list[0],
+    }));
+  }
+
+  /** 专业展示文本：主专业排第一；空=公共课 */
+  getMajorNamesText(): string {
+    const ids = this.formData().majorIds ?? [];
+    if (ids.length === 0) {
+      return '公共课（所有专业可见）';
+    }
+    const names = ids
+      .map(id => this.majors().find(m => m.id === id)?.name ?? '')
+      .filter(n => !!n);
+    return names.length ? names.join('、') : '未选择';
   }
 
   // ═══ Cover upload ═══
@@ -173,8 +197,15 @@ export class CourseCreateComponent {
       return;
     }
 
+    const majorIds = this.formData().majorIds ?? [];
+    const payload = {
+      ...this.formData(),
+      majorIds,
+      majorId: majorIds.length ? (this.formData().majorId ?? majorIds[0]) : undefined,
+    } as unknown as CreateUpdateCourseDto;
+
     this.loading.set(true);
-    this.courseService.create(this.formData()).subscribe({
+    this.courseService.create(payload).subscribe({
       next: () => {
         this.loading.set(false);
         this.message.success('课程创建成功');

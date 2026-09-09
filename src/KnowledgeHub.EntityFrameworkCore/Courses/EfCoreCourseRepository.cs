@@ -91,7 +91,21 @@ public class EfCoreCourseRepository : EfCoreRepository<KnowledgeHubDbContext, Co
 
         if (majorId.HasValue)
         {
-            query = query.Where(c => c.MajorId == majorId.Value);
+            // 多专业语义：命中该专业（含兼属、主从都算）或公共课（无任何专业归属）
+            var dbContext = await GetDbContextAsync();
+            var linkedMatched = await dbContext.Set<CourseMajor>()
+                .Where(x => x.MajorId == majorId.Value)
+                .Select(x => x.CourseId)
+                .Distinct()
+                .ToListAsync();
+            var linkedAny = await dbContext.Set<CourseMajor>()
+                .Select(x => x.CourseId)
+                .Distinct()
+                .ToListAsync();
+            query = query.Where(c =>
+                (c.MajorId.HasValue && c.MajorId.Value == majorId.Value) ||
+                linkedMatched.Contains(c.Id) ||
+                !linkedAny.Contains(c.Id));
         }
 
         if (!string.IsNullOrWhiteSpace(semester))

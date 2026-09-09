@@ -24,6 +24,9 @@ import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { OssUploadService, OssUploadResultDto } from '../../shared/oss-upload.service';
 
+/** 本地表单类型：proxy 重新生成前（abp generate-proxy -t ng）用交叉类型承载新增的多专业字段 */
+type CourseForm = CreateUpdateCourseDto & { majorIds?: string[] };
+
 @Component({
   selector: 'app-course-list',
   standalone: true,
@@ -74,7 +77,7 @@ export class CourseListComponent implements OnInit {
 
   // Plain object - not a signal. ngModel mutates this directly,
   // which works reliably inside nz-modal with OnPush.
-  formData: CreateUpdateCourseDto = this.emptyForm();
+  formData: CourseForm = this.emptyForm();
 
   difficulties = [
     { label: '入门', value: 1 },
@@ -88,12 +91,13 @@ export class CourseListComponent implements OnInit {
     { label: '已发布', value: CourseStatus.Published }
   ];
 
-  private emptyForm(): CreateUpdateCourseDto {
+  private emptyForm(): CourseForm {
     return {
       title: '',
       description: '',
       coverImageUrl: '',
       majorId: undefined,
+      majorIds: [],
       semester: '',
       credits: undefined,
       semesterHours: undefined,
@@ -101,7 +105,7 @@ export class CourseListComponent implements OnInit {
       categoryId: undefined,
       status: CourseStatus.Draft,
       isRecommended: false,
-    } as CreateUpdateCourseDto;
+    } as CourseForm;
   }
 
   ngOnInit() {
@@ -248,11 +252,16 @@ export class CourseListComponent implements OnInit {
   openEditModal(course: CourseDto) {
     this.isEdit = true;
     this.editId = course.id ?? null;
+    // 后端已返回 majorIds（主专业排第一）；老数据只有 majorId 时兜底单元素数组
+    const majorIds = ((course as any).majorIds as string[] | undefined)?.length
+      ? [...(course as any).majorIds]
+      : course.majorId ? [course.majorId] : [];
     this.formData = {
       title: course.title ?? '',
       description: course.description ?? '',
       coverImageUrl: course.coverImageUrl ?? '',
-      majorId: course.majorId ?? undefined,
+      majorId: course.majorId ?? majorIds[0] ?? undefined,
+      majorIds,
       semester: course.semester ?? '',
       credits: course.credits ?? undefined,
       semesterHours: course.semesterHours ?? undefined,
@@ -260,9 +269,51 @@ export class CourseListComponent implements OnInit {
       categoryId: undefined,
       status: course.status ?? CourseStatus.Draft,
       isRecommended: (course as any).isRecommended ?? false,
-    } as CreateUpdateCourseDto;
+    } as CourseForm;
     this.coverFileList = [];
     this.isModalVisible = true;
+  }
+
+  /** 多选专业变化时同步主专业：清空=公共课；主专业被移除则取第一个 */
+  onMajorsChange(ids: string[]) {
+    this.formData.majorIds = ids ?? [];
+    if (this.formData.majorIds.length === 0) {
+      this.formData.majorId = undefined;
+    } else if (!this.formData.majorId || !this.formData.majorIds.includes(this.formData.majorId)) {
+      this.formData.majorId = this.formData.majorIds[0];
+    }
+  }
+
+  /** 发往后端的载荷：majorId=主专业，majorIds=全量归属（空=公共课） */
+  private buildPayload(): CreateUpdateCourseDto {
+    const majorIds = this.formData.majorIds ?? [];
+    return {
+      ...this.formData,
+      majorIds,
+      majorId: majorIds.length ? (this.formData.majorId ?? majorIds[0]) : undefined,
+    } as unknown as CreateUpdateCourseDto;
+  }
+
+  /** 从已有课程构造载荷（用于推荐开关等局部更新，避免丢副专业） */
+  private payloadFromCourse(course: CourseDto, patch: Partial<CreateUpdateCourseDto>): CreateUpdateCourseDto {
+    const majorIds = ((course as any).majorIds as string[] | undefined)?.length
+      ? [...(course as any).majorIds]
+      : course.majorId ? [course.majorId] : [];
+    return {
+      title: course.title ?? '',
+      description: course.description ?? '',
+      coverImageUrl: course.coverImageUrl ?? '',
+      majorId: course.majorId ?? majorIds[0] ?? undefined,
+      semester: course.semester ?? '',
+      credits: course.credits ?? undefined,
+      semesterHours: course.semesterHours ?? undefined,
+      difficulty: course.difficulty ?? 1,
+      categoryId: course.categoryId ?? undefined,
+      status: course.status ?? CourseStatus.Draft,
+      isRecommended: (course as any).isRecommended ?? false,
+      ...patch,
+      majorIds: (patch as any).majorIds ?? majorIds,
+    } as unknown as CreateUpdateCourseDto;
   }
 
   getMajorName(id?: string | null): string {
@@ -270,6 +321,28 @@ export class CourseListComponent implements OnInit {
       return '-';
     }
     return this.majors().find((m) => m.id === id)?.name || '-';
+  }
+
+  /** 是否公共课：无任何专业归属 */
+  isPublicCourse(course: CourseDto): boolean {
+    const ids = (course as any).majorIds as string[] | undefined;
+    if (ids) {
+      return ids.length === 0;
+    }
+    return !course.majorId;
+  }
+
+  /** 专业展示：主专业排第一用"、"连接；公共课返回空（模板渲染 tag） */
+  getMajorDisplay(course: CourseDto): string {
+    const names = (course as any).majorNames as string[] | undefined;
+    if (names?.length) {
+      return names.join('、');
+    }
+    const ids = (course as any).majorIds as string[] | undefined;
+    if (ids?.length) {
+      return ids.map((id) => this.getMajorName(id)).join('、');
+    }
+    return course.majorName || this.getMajorName(course.majorId);
   }
 
   deleteCourse(course: CourseDto) {
@@ -306,8 +379,8 @@ export class CourseListComponent implements OnInit {
 
     this.saving = true;
     const request = this.isEdit && this.editId
-      ? this.courseService.update(this.editId, this.formData)
-      : this.courseService.create(this.formData);
+      ? this.courseService.update(this.editId, this.buildPayload())
+      : this.courseService.create(this.buildPayload());
 
     request.subscribe({
       next: () => {
@@ -326,19 +399,8 @@ export class CourseListComponent implements OnInit {
   /** 表格内快捷开关：是否推荐课程（学生端「推荐课程」只显示开启的） */
   toggleRecommend(course: CourseDto, checked: boolean) {
     if (!course.id) return;
-    const body = {
-      title: course.title ?? '',
-      description: course.description ?? '',
-      coverImageUrl: course.coverImageUrl ?? '',
-      majorId: course.majorId ?? undefined,
-      semester: course.semester ?? '',
-      credits: course.credits ?? undefined,
-      semesterHours: course.semesterHours ?? undefined,
-      difficulty: course.difficulty ?? 1,
-      categoryId: course.categoryId ?? undefined,
-      status: course.status ?? CourseStatus.Draft,
-      isRecommended: checked,
-    } as CreateUpdateCourseDto;
+    // 必须带上原有专业归属，否则局部更新会把副专业清空
+    const body = this.payloadFromCourse(course, { isRecommended: checked });
     this.courseService.update(course.id, body).subscribe({
       next: () => {
         this.courses.update(list =>

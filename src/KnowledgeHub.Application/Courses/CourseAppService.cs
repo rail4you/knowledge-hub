@@ -31,6 +31,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     private readonly IRepository<StudentCourse, Guid> _studentCourseRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IRepository<Major, Guid> _majorRepository;
+    private readonly IRepository<CourseMajor, Guid> _courseMajorRepository;
     private readonly ICurrentUser _currentUser;
     private readonly ILogger<CourseAppService> _logger;
 
@@ -41,6 +42,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         IRepository<StudentCourse, Guid> studentCourseRepository,
         IRepository<IdentityUser, Guid> userRepository,
         IRepository<Major, Guid> majorRepository,
+        IRepository<CourseMajor, Guid> courseMajorRepository,
         ICurrentUser currentUser,
         ILogger<CourseAppService> logger)
     {
@@ -50,6 +52,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         _studentCourseRepository = studentCourseRepository;
         _userRepository = userRepository;
         _majorRepository = majorRepository;
+        _courseMajorRepository = courseMajorRepository;
         _currentUser = currentUser;
         _logger = logger;
     }
@@ -70,7 +73,6 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         };
         course.Description = input.Description;
         course.CoverImageUrl = input.CoverImageUrl;
-        course.MajorId = input.MajorId;
         course.Semester = input.Semester;
         course.Credits = input.Credits;
         course.SemesterHours = input.SemesterHours;
@@ -81,6 +83,11 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         course.TeacherId = _currentUser.Id;
 
         await _courseRepository.InsertAsync(course);
+
+        // 主从专业双写：MajorIds 为空即公共课
+        NormalizeMajorInput(input, out var majorIds, out var primaryMajorId);
+        await SyncCourseMajorsAsync(course, majorIds, primaryMajorId);
+        await _courseRepository.UpdateAsync(course);
 
         return await MapToDtoAsync(course);
     }
@@ -97,7 +104,6 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         course.Title = input.Title;
         course.Description = input.Description;
         course.CoverImageUrl = input.CoverImageUrl;
-        course.MajorId = input.MajorId;
         course.Semester = input.Semester;
         course.Credits = input.Credits;
         course.SemesterHours = input.SemesterHours;
@@ -105,6 +111,9 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         course.CategoryId = input.CategoryId;
         course.Status = input.Status;
         course.IsRecommended = input.IsRecommended;
+
+        NormalizeMajorInput(input, out var majorIds, out var primaryMajorId);
+        await SyncCourseMajorsAsync(course, majorIds, primaryMajorId);
 
         await _courseRepository.UpdateAsync(course);
 
@@ -127,38 +136,40 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
         List<Course> courses;
         int totalCount;
-        Dictionary<Guid, string> majorNames;
 
         using (DataFilter.Disable<IMultiTenant>())
         {
             var query = await _courseRepository.GetQueryableAsync();
             query = query.WhereIf(tenantFilter.HasValue, x => x.TenantId == tenantFilter.Value)
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
-                         .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
                          .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
                          .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
                          .WhereIf(input.Status.HasValue, x => x.Status == input.Status)
                          .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value);
+            query = await ApplyMajorFilterAsync(query, CollectTargetMajors(input.MajorId, input.MajorIds), tenantFilter);
 
             totalCount = await query.CountAsync();
             courses = await query.OrderByDescending(x => x.CreationTime)
                                .Skip(input.SkipCount)
                                .Take(input.MaxResultCount)
                                .ToListAsync();
-
-            majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
         }
 
-        return new PagedResultDto<CourseDto>(
-            totalCount,
-            courses.Select(x => MapToDtoWithMajor(x, majorNames)).ToList()
-        );
+        var dtos = courses.Select(MapToDto).ToList();
+        await AttachMajorsBatchAsync(dtos);
+
+        return new PagedResultDto<CourseDto>(totalCount, dtos);
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.Delete)]
     public async Task DeleteAsync(Guid id)
     {
+        var links = await _courseMajorRepository.GetListAsync(x => x.CourseId == id);
+        foreach (var link in links)
+        {
+            await _courseMajorRepository.DeleteAsync(link);
+        }
         await _courseRepository.DeleteAsync(id);
     }
 
@@ -270,14 +281,13 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         // Organize flat chapter list into a tree based on ParentId
         var chapterTree = BuildChapterTree(chapterDtos);
 
-        return new CourseDetailDto
+        var detail = new CourseDetailDto
         {
             Id = course.Id,
             Title = course.Title,
             Description = course.Description,
             CoverImageUrl = course.CoverImageUrl,
             MajorId = course.MajorId,
-            MajorName = await ResolveMajorNameAsync(course.MajorId),
             Semester = course.Semester,
             Credits = course.Credits,
             SemesterHours = course.SemesterHours,
@@ -293,6 +303,8 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             Progress = enrollment?.Progress ?? 0,
             Chapters = chapterTree
         };
+        await AttachMajorsAsync(detail);
+        return detail;
     }
 
     public async Task<PagedResultDto<CourseDto>> GetPublishedAsync(PagedCourseRequestDto input)
@@ -307,11 +319,11 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             query = query.WhereIf(tenantFilter.HasValue, x => x.TenantId == tenantFilter.Value)
                          .Where(x => x.Status == CourseStatus.Published)
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
-                         .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
                          .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
                          .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
                          .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
                          .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value);
+            query = await ApplyMajorFilterAsync(query, CollectTargetMajors(input.MajorId, input.MajorIds), tenantFilter);
 
             totalCount = await query.CountAsync();
             courses = await query.OrderByDescending(x => x.CreationTime)
@@ -340,34 +352,17 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         }
 
         var chapterCountMap = chapterCounts.ToDictionary(x => x.CourseId, x => x.Count);
-        var majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
 
-        return new PagedResultDto<CourseDto>(
-            totalCount,
-            courses.Select(c => new CourseDto
-            {
-                Id = c.Id,
-                Title = c.Title,
-                Description = c.Description,
-                CoverImageUrl = c.CoverImageUrl,
-                MajorId = c.MajorId,
-                MajorName = majorNames.GetValueOrDefault(c.MajorId ?? Guid.Empty),
-                Semester = c.Semester,
-                Credits = c.Credits,
-                SemesterHours = c.SemesterHours,
-                Status = c.Status,
-                Difficulty = c.Difficulty,
-                IsRecommended = c.IsRecommended,
-                TeacherId = c.TeacherId,
-                CategoryId = c.CategoryId,
-                ChapterCount = chapterCountMap.GetValueOrDefault(c.Id, 0),
-                StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0),
-                CreationTime = c.CreationTime,
-                CreatorId = c.CreatorId,
-                LastModificationTime = c.LastModificationTime,
-                LastModifierId = c.LastModifierId
-            }).ToList()
-        );
+        var dtos = courses.Select(c =>
+        {
+            var dto = MapToDto(c);
+            dto.ChapterCount = chapterCountMap.GetValueOrDefault(c.Id, 0);
+            dto.StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0);
+            return dto;
+        }).ToList();
+        await AttachMajorsBatchAsync(dtos);
+
+        return new PagedResultDto<CourseDto>(totalCount, dtos);
     }
 
     [Authorize(KnowledgeHubPermissions.Courses.Enroll)]
@@ -414,19 +409,18 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
         var courseIds = studentCourses.Select(x => x.CourseId).ToList();
         var coursesQuery = await _courseRepository.GetQueryableAsync();
-        var courses = coursesQuery.Where(x => courseIds.Contains(x.Id))
+        var coursesBaseQuery = coursesQuery.Where(x => courseIds.Contains(x.Id))
                                   .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
-                                  .WhereIf(input.MajorId.HasValue, x => x.MajorId == input.MajorId.Value)
                                   .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
                                   .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
-                                  .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
-                                  .ToList();
+                                  .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId);
+        // 我的课程走当前租户上下文，关联表同样走环境租户过滤
+        var coursesFilteredQuery = await ApplyMajorFilterAsync(coursesBaseQuery, CollectTargetMajors(input.MajorId, input.MajorIds), null);
+        var courses = coursesFilteredQuery.ToList();
 
-        var majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
-        return new PagedResultDto<CourseDto>(
-            courses.Count,
-            courses.Select(x => MapToDtoWithMajor(x, majorNames)).ToList()
-        );
+        var dtos = courses.Select(MapToDto).ToList();
+        await AttachMajorsBatchAsync(dtos);
+        return new PagedResultDto<CourseDto>(courses.Count, dtos);
     }
 
     [Authorize]
@@ -439,22 +433,20 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             var query = await _courseRepository.GetQueryableAsync();
             query = query.WhereIf(tenantFilter.HasValue, x => x.TenantId == tenantFilter.Value)
                          .WhereIf(!string.IsNullOrWhiteSpace(filter.Filter), x => x.Title.Contains(filter.Filter))
-                         .WhereIf(filter.MajorId.HasValue, x => x.MajorId == filter.MajorId.Value)
                          .WhereIf(!string.IsNullOrWhiteSpace(filter.Semester), x => x.Semester == filter.Semester)
                          .WhereIf(filter.Difficulty.HasValue, x => x.Difficulty == filter.Difficulty)
                          .WhereIf(filter.CategoryId.HasValue, x => x.CategoryId == filter.CategoryId)
                          .WhereIf(filter.TeacherId.HasValue, x => x.TeacherId == filter.TeacherId)
                          .WhereIf(filter.Status.HasValue, x => x.Status == filter.Status)
                          .WhereIf(filter.IsRecommended.HasValue, x => x.IsRecommended == filter.IsRecommended!.Value);
+            query = await ApplyMajorFilterAsync(query, CollectTargetMajors(filter.MajorId, filter.MajorIds), tenantFilter);
 
             courses = await query.OrderByDescending(x => x.CreationTime).ToListAsync();
         }
-        var majorNames = await ResolveMajorNamesAsync(courses.Select(x => x.MajorId));
+        var dtos = courses.Select(MapToDto).ToList();
+        await AttachMajorsBatchAsync(dtos);
 
-        return new PagedResultDto<CourseDto>(
-            courses.Count,
-            courses.Select(x => MapToDtoWithMajor(x, majorNames)).ToList()
-        );
+        return new PagedResultDto<CourseDto>(courses.Count, dtos);
     }
 
     public async Task<List<string>> GetSemestersAsync()
@@ -520,44 +512,173 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     private async Task<CourseDto> MapToDtoAsync(Course course)
     {
         var dto = MapToDto(course);
-        dto.MajorName = await ResolveMajorNameAsync(course.MajorId);
+        await AttachMajorsAsync(dto);
         return dto;
     }
 
-    private CourseDto MapToDtoWithMajor(Course course, Dictionary<Guid, string> majorNames)
+    // ═══ 主从专业（多专业） helpers ═══
+
+    /// <summary>
+    /// 归一化写入输入：MajorId（老字段）视为主专业；MajorIds 为全量归属，空即公共课。
+    /// 老客户端只传 MajorId 时退化为单专业行为。
+    /// </summary>
+    private static void NormalizeMajorInput(CreateUpdateCourseDto input, out List<Guid> majorIds, out Guid? primaryMajorId)
     {
-        var dto = MapToDto(course);
-        if (course.MajorId.HasValue && majorNames.TryGetValue(course.MajorId.Value, out var name))
+        majorIds = (input.MajorIds ?? new List<Guid>()).Where(x => x != Guid.Empty).Distinct().ToList();
+        if (input.MajorId.HasValue && input.MajorId.Value != Guid.Empty && !majorIds.Contains(input.MajorId.Value))
         {
-            dto.MajorName = name;
+            majorIds.Insert(0, input.MajorId.Value);
         }
-        return dto;
+        if (majorIds.Count == 0)
+        {
+            primaryMajorId = null;
+            return;
+        }
+        primaryMajorId = input.MajorId.HasValue && majorIds.Contains(input.MajorId.Value)
+            ? input.MajorId.Value
+            : majorIds[0];
     }
 
-    private async Task<Dictionary<Guid, string>> ResolveMajorNamesAsync(IEnumerable<Guid?> majorIds)
+    /// <summary>合并单选 + 多选筛选条件。</summary>
+    private static List<Guid> CollectTargetMajors(Guid? majorId, List<Guid>? majorIds)
     {
-        var ids = majorIds
-            .Where(x => x.HasValue)
-            .Select(x => x!.Value)
+        var list = (majorIds ?? new List<Guid>()).Where(x => x != Guid.Empty).Distinct().ToList();
+        if (majorId.HasValue && majorId.Value != Guid.Empty && !list.Contains(majorId.Value))
+        {
+            list.Add(majorId.Value);
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// 按专业筛选：命中目标专业（含兼属、主从都算）或公共课（无任何专业归属）。
+    /// 无筛选条件时返回原查询。tenantFilter 有值时在禁用租户过滤的上下文中手动隔离关联表。
+    /// </summary>
+    private async Task<IQueryable<Course>> ApplyMajorFilterAsync(
+        IQueryable<Course> query, List<Guid> targetMajorIds, Guid? tenantFilter)
+    {
+        if (targetMajorIds.Count == 0)
+        {
+            return query;
+        }
+        var linkQuery = await _courseMajorRepository.GetQueryableAsync();
+        if (tenantFilter.HasValue)
+        {
+            linkQuery = linkQuery.Where(x => x.TenantId == tenantFilter.Value);
+        }
+        var linkedMatched = await linkQuery
+            .Where(x => targetMajorIds.Contains(x.MajorId))
+            .Select(x => x.CourseId)
             .Distinct()
-            .ToList();
-        if (ids.Count == 0)
-        {
-            return new Dictionary<Guid, string>();
-        }
-        var query = await _majorRepository.GetQueryableAsync();
-        return await query
-            .Where(x => ids.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, x => x.Name);
+            .ToListAsync();
+        var linkedAny = await linkQuery
+            .Select(x => x.CourseId)
+            .Distinct()
+            .ToListAsync();
+        return query.Where(x =>
+            (x.MajorId.HasValue && targetMajorIds.Contains(x.MajorId.Value)) ||
+            linkedMatched.Contains(x.Id) ||
+            !linkedAny.Contains(x.Id));
     }
 
-    private async Task<string?> ResolveMajorNameAsync(Guid? majorId)
+    /// <summary>
+    /// 双写关联表 + 回写主专业。majorIds 为空即公共课（清关联、主专业置空）。
+    /// </summary>
+    private async Task SyncCourseMajorsAsync(Course course, List<Guid> majorIds, Guid? primaryMajorId)
     {
-        if (!majorId.HasValue)
+        course.MajorId = primaryMajorId;
+
+        using (DataFilter.Disable<IMultiTenant>())
         {
-            return null;
+            var existing = (await _courseMajorRepository.GetQueryableAsync())
+                .Where(x => x.CourseId == course.Id)
+                .WhereIf(course.TenantId.HasValue, x => x.TenantId == course.TenantId!.Value)
+                .WhereIf(!course.TenantId.HasValue, x => x.TenantId == null)
+                .ToList();
+
+            foreach (var stale in existing.Where(x => !majorIds.Contains(x.MajorId)))
+            {
+                await _courseMajorRepository.DeleteAsync(stale);
+            }
+
+            foreach (var mid in majorIds)
+            {
+                var isPrimary = primaryMajorId.HasValue && mid == primaryMajorId.Value;
+                var link = existing.FirstOrDefault(x => x.MajorId == mid);
+                if (link == null)
+                {
+                    await _courseMajorRepository.InsertAsync(
+                        new CourseMajor(GuidGenerator.Create(), course.Id, mid, isPrimary)
+                        {
+                            TenantId = course.TenantId
+                        });
+                }
+                else if (link.IsPrimary != isPrimary)
+                {
+                    link.IsPrimary = isPrimary;
+                    await _courseMajorRepository.UpdateAsync(link);
+                }
+            }
         }
-        var major = await _majorRepository.FindAsync(majorId.Value);
-        return major?.Name;
+    }
+
+    private async Task AttachMajorsAsync(CourseDto dto)
+    {
+        var dtos = new List<CourseDto> { dto };
+        await AttachMajorsBatchAsync(dtos);
+    }
+
+    /// <summary>
+    /// 批量填充 MajorIds/MajorNames（主专业排第一）并回填 MajorId/MajorName 兼容字段。
+    /// </summary>
+    private async Task AttachMajorsBatchAsync(List<CourseDto> dtos)
+    {
+        if (dtos.Count == 0)
+        {
+            return;
+        }
+        var courseIds = dtos.Select(x => x.Id).Distinct().ToList();
+
+        List<CourseMajor> links;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            links = (await _courseMajorRepository.GetQueryableAsync())
+                .Where(x => courseIds.Contains(x.CourseId))
+                .ToList();
+        }
+
+        var majorIds = links.Select(x => x.MajorId).Distinct().ToList();
+        Dictionary<Guid, string> names = new();
+        if (majorIds.Count > 0)
+        {
+            var majorQuery = await _majorRepository.GetQueryableAsync();
+            names = await majorQuery
+                .Where(x => majorIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Name);
+        }
+
+        var linksByCourse = links
+            .GroupBy(x => x.CourseId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.IsPrimary).ThenBy(x => x.CreationTime).ToList());
+
+        foreach (var dto in dtos)
+        {
+            if (!linksByCourse.TryGetValue(dto.Id, out var courseLinks) || courseLinks.Count == 0)
+            {
+                // 公共课：无归属专业
+                dto.MajorId = null;
+                dto.MajorName = null;
+                dto.MajorIds = new List<Guid>();
+                dto.MajorNames = new List<string>();
+                continue;
+            }
+            var orderedIds = courseLinks.Select(x => x.MajorId).Distinct().ToList();
+            dto.MajorIds = orderedIds;
+            dto.MajorNames = orderedIds.Select(id => names.GetValueOrDefault(id)).Where(n => n != null).Cast<string>().ToList();
+            dto.MajorId = orderedIds[0];
+            dto.MajorName = names.GetValueOrDefault(orderedIds[0]);
+        }
     }
 }
