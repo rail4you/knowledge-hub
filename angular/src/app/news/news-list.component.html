@@ -42,6 +42,9 @@
           @for (article of articles(); track article.id) {
             <article
               class="news-card"
+              (click)="openArticle(article.id)"
+              (keyup.enter)="openArticle(article.id)"
+              tabindex="0"
             >
               @if (article.coverImageUrl) {
                 <div class="news-card__cover">
@@ -134,7 +137,7 @@
         } @else {
           <div class="hot-list">
             @for (article of hotArticles(); track article.id) {
-              <div class="hot-item">
+              <div class="hot-item" (click)="openArticle(article.id)" (keyup.enter)="openArticle(article.id)" tabindex="0">
                 <span>{{ article.title }}</span>
                 <small>{{ article.viewCount }} 浏览</small>
               </div>

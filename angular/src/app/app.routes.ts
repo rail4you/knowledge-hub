@@ -196,6 +196,14 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'news/:id',
+    loadComponent: () => import('./news/news-detail.component').then(c => c.NewsDetailComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.News',
+    },
+  },
+  {
     path: 'micro-majors',
     loadComponent: () => import('./micro-majors/micro-major-list.component').then(c => c.MicroMajorListComponent),
     canActivate: [authGuard, permissionGuard],

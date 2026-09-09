@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -18,6 +19,7 @@ import { NewsArticleDto, NewsCategoryDto, NewsService } from './news.service';
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     NzCardModule,
     NzButtonModule,
     NzInputModule,
@@ -34,6 +36,7 @@ import { NewsArticleDto, NewsCategoryDto, NewsService } from './news.service';
 })
 export class NewsListComponent implements OnInit {
   private readonly newsService = inject(NewsService);
+  private readonly router = inject(Router);
 
   readonly loading = signal(false);
   readonly articles = signal<NewsArticleDto[]>([]);
@@ -91,6 +94,10 @@ export class NewsListComponent implements OnInit {
     this.newsService.getHotArticles().subscribe({
       next: items => this.hotArticles.set(items || []),
     });
+  }
+
+  openArticle(id: string): void {
+    this.router.navigate(['/news', id]);
   }
 
   categoryOptions(): NewsCategoryDto[] {
