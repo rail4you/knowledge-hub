@@ -2,8 +2,10 @@ import {
   ChangeDetectionStrategy, Component, OnInit, inject, signal, computed, AfterViewInit, OnDestroy,
 } from '@angular/core';
 import { CommonModule, ViewportScroller } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
@@ -61,8 +63,10 @@ interface NavCard {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     RouterModule,
     NzIconModule,
+    NzSelectModule,
     NzSpinModule,
     NzDrawerModule,
     NzAlertModule,

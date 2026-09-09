@@ -35,6 +35,9 @@ $card-radius: 12px;
   gap: 10px;
   text-decoration: none;
   flex-shrink: 0;
+  // a 标签默认链色会把品牌标题染成蓝色，强制继承正文色（与首页一致）
+  color: $c-text;
+  &:hover { color: $c-text; }
 }
 .brand__mark {
   width: 34px;
@@ -95,6 +98,7 @@ $card-radius: 12px;
 .nav__end {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
   flex-shrink: 0;
 }
@@ -450,36 +454,19 @@ $card-radius: 12px;
   p { font-size: 12.5px; color: $c-light; line-height: 1.6; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 }
 
-// ── Courses（内容在统一 panel 内） ──
-.course-categories {
+// ── Courses 难度筛选（下拉列表） ──
+.course-filter {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.cat-tag {
-  display: inline-flex;
   align-items: center;
-  padding: 5px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-  font-family: inherit;
-  color: $c-light;
-  background: #fff;
-  border: 1px solid $c-border;
-  cursor: pointer;
-  transition: all 0.2s;
-  &:hover {
-    border-color: rgba(30,108,232,0.25);
-    color: $c-primary;
-  }
-  &.active {
-    background: $c-primary;
-    color: #fff;
-    border-color: $c-primary;
-    font-weight: 600;
-  }
+  gap: 8px;
+  flex-shrink: 0;
 }
+.course-filter__label {
+  font-size: 12.5px;
+  color: $c-light;
+  white-space: nowrap;
+}
+.course-filter__select { width: 150px; }
 .course-empty {
   padding: 48px 20px;
   text-align: center;
@@ -489,169 +476,98 @@ $card-radius: 12px;
   border: 1px dashed $c-border;
   border-radius: 14px;
 }
-.course-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  align-items: stretch;
-}
-.course-card {
-  background: #f8fafd;
+// ── Courses 列表（行式选择：缩略图 + 标题/元信息 + 操作，当前预览项高亮） ──
+.course-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
   border: 1px solid $c-border;
   border-radius: 8px;
   overflow: hidden;
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-  cursor: pointer;
-  transition: border-color 0.2s;
-  user-select: none;
-  &:hover {
-    border-color: rgba(30,108,232,0.35);
-    .course-img { transform: scale(1.04); }
-    .course-cover__hover { opacity: 1; }
-    .course-cta { color: $c-primary; }
-  }
-  &:focus-visible {
-    outline: 2px solid rgba(30, 108, 232, 0.5);
-    outline-offset: 2px;
-  }
+  background: #fff;
+  > li { margin: 0; padding: 0; }
+  > li + li { border-top: 1px solid #eef1f6; }
 }
-.course-cover {
-  width: 190px;
+.course-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  background: #fff;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.15s;
+  &:hover { background: #f6faff; .course-row__action { color: $c-primary; } }
+  &:focus-visible { outline: 2px solid rgba(30, 108, 232, 0.5); outline-offset: -2px; }
+  &.is-selected { background: #eef4ff; box-shadow: inset 3px 0 0 $c-primary; }
+}
+.course-row__thumb {
+  width: 64px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
   flex-shrink: 0;
-  align-self: stretch;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
-  min-height: 148px;
   background: #e8eef5;
-
-  &__hover {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(0, 15, 40, 0.55), rgba(0, 40, 100, 0.4));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  &__preview-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 22px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.95);
-    color: $c-primary;
-    font-weight: 600;
-    font-size: 14px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-    span[nz-icon] { font-size: 16px; }
-  }
-}
-.course-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s;
-}
-.course-emoji {
-  font-size: 44px;
   color: #9db1c7;
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
 }
-.course-enrolled-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 2;
+.course-row__emoji { font-size: 20px; line-height: 1; }
+.course-row__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.course-row__title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.course-row__title-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: $c-text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.course-row:hover .course-row__title-text { color: $c-primary; }
+.course-row__badge {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 10px;
+  padding: 1px 8px;
   border-radius: 999px;
   background: #16a34a;
   color: #fff;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  line-height: 1.5;
-  span[nz-icon] { font-size: 11px; }
+  line-height: 1.6;
+  white-space: nowrap;
 }
-.course-body {
-  flex: 1;
-  padding: 14px 16px 12px;
+.course-row__meta {
   display: flex;
-  flex-direction: column;
-  min-width: 0;
-  h4 {
-    font-size: 15px;
-    font-weight: 700;
-    color: $c-text;
-    margin: 0 0 8px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    line-height: 1.4;
-    min-height: calc(1.4em * 2);
-  }
-}
-.course-tags {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  min-height: 22px;
-  margin-bottom: 8px;
-}
-.course-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 500;
-}
-.major-tag {
-  background: #eef5ff;
-  color: $c-primary;
-  border: 1px solid rgba(30,108,232,0.15);
-}
-.teacher-tag {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid rgba(22,163,74,0.15);
-}
-.course-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
-  margin-top: auto;
-}
-.course-students {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   font-size: 12px;
   color: $c-light;
-  nz-icon { font-size: 12px; }
+  min-width: 0;
+  span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  i { width: 3px; height: 3px; border-radius: 50%; background: $c-faint; flex-shrink: 0; }
 }
-.course-cta {
+.course-row__action {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
+  gap: 2px;
+  font-size: 12.5px;
   font-weight: 600;
   color: $c-muted;
-  transition: color 0.3s;
-  span[nz-icon] { font-size: 12px; transition: transform 0.3s; }
-  &.enrolled { color: #16a34a; }
+  white-space: nowrap;
+  transition: color 0.15s;
+  span[nz-icon] { font-size: 12px; }
 }
+.course-row.is-enrolled .course-row__action { color: #16a34a; }
 
 // ── Graph（内容在统一 panel 内，画布扁平浅底） ──
 .graph-chart {
@@ -706,7 +622,8 @@ $card-radius: 12px;
 }
 
 // ═══════ COURSE PREVIEW DRAWER ═══════
-:host ::ng-deep .ant-drawer-body { padding: 0 !important; background: #f8fafd; }
+// 注意：抽屉 DOM 挂在 body 全局浮层下，组件内 :host 选择器够不着，
+// 抽屉容器级样式（body padding / 移动端全幅）统一放在 styles/_ngzorro-overrides.scss。
 
 .preview-drawer {
   display: flex;
@@ -716,7 +633,7 @@ $card-radius: 12px;
 }
 .preview-hero {
   position: relative;
-  padding: 32px 28px 28px;
+  padding: 22px 20px 20px;
   color: #fff;
   overflow: hidden;
 
@@ -728,12 +645,12 @@ $card-radius: 12px;
     object-fit: cover;
     opacity: 0.5;
   }
-  &__emoji {
+  &__icon {
     position: absolute;
-    right: 28px;
-    bottom: 18px;
-    font-size: 120px;
-    opacity: 0.18;
+    right: 20px;
+    bottom: 12px;
+    font-size: 72px;
+    opacity: 0.16;
     line-height: 1;
   }
   &__overlay {
@@ -743,11 +660,11 @@ $card-radius: 12px;
 }
 .preview-close {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 12px;
+  right: 12px;
   z-index: 2;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.18);
@@ -756,7 +673,7 @@ $card-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 15px;
   backdrop-filter: blur(8px);
   transition: all 0.2s;
   &:hover {
@@ -766,13 +683,14 @@ $card-radius: 12px;
 }
 .preview-tags {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .preview-tag {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   padding: 4px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.18);
@@ -781,13 +699,16 @@ $card-radius: 12px;
   font-weight: 500;
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.15);
+  span[nz-icon], .anticon { font-size: 12px; }
 }
 .preview-title {
-  font-size: 24px;
+  font-size: 21px;
   font-weight: 800;
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   letter-spacing: 0.2px;
   line-height: 1.35;
+  // h2 会被全局重置样式染成黑色，必须显式声明（继承会被直接规则覆盖）
+  color: #fff;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 .preview-meta {
@@ -805,50 +726,60 @@ $card-radius: 12px;
 .preview-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 28px 40px;
+  padding: 14px 14px 24px;
 }
 .preview-loading {
   display: flex;
   justify-content: center;
-  padding: 40px 0;
+  padding: 32px 0;
 }
 .preview-section {
   background: #fff;
-  border-radius: 12px;
-  padding: 22px 24px;
-  margin-bottom: 18px;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
   border: 1px solid $c-border;
 
   &__title {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     color: $c-text;
-    margin: 0 0 14px;
+    margin: 0 0 10px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
-  &__bar {
-    width: 4px;
-    height: 16px;
-    background: linear-gradient(135deg, $c-primary, #00b7ff);
-    border-radius: 2px;
+}
+// 课程介绍标题行右侧内联统计（n 章节 · n 学时 · n 学分，单行）
+.preview-title-stats {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: $c-light;
+  white-space: nowrap;
+  flex-shrink: 0;
+  strong {
+    font-size: 13px;
+    font-weight: 700;
+    color: $c-primary;
+    margin-right: 1px;
   }
-  &__count {
-    margin-left: auto;
-    font-size: 12px;
-    font-weight: 500;
-    color: $c-light;
-    background: #f0f5ff;
-    padding: 3px 10px;
-    border-radius: 999px;
+  i {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: $c-faint;
+    flex-shrink: 0;
   }
 }
 .preview-desc {
   font-size: 13px;
-  line-height: 1.85;
+  line-height: 1.7;
   color: $c-muted;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
 
   &--placeholder {
     color: $c-light;
@@ -859,167 +790,31 @@ $card-radius: 12px;
     border-left: 3px solid rgba(30, 108, 232, 0.2);
   }
 }
-.preview-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  border-top: 1px dashed $c-border;
-  padding-top: 16px;
-}
-.preview-stat {
-  text-align: center;
-  &__num {
-    display: block;
-    font-size: 20px;
-    font-weight: 800;
-    color: $c-primary;
-    line-height: 1.1;
-  }
-  &__label {
-    display: block;
-    font-size: 11px;
-    color: $c-light;
-    margin-top: 4px;
-  }
-}
 
-// ── 章节大纲 — 层级树形（无序号，纯视觉层级） ──
-//
-// 用 flexbox 三栏布局：
-//   [indicator 24px][content 1fr]
-// indicator 列里有：贯穿上下的细线 + 圆点 + 水平短连线（指向 content）
-// 通过 :last-child 自动隐藏最后一项的下半段连线。
+// ── 章节大纲 — 扁平行列表（细分隔线 + 层级缩进，无连接线/圆点） ──
 .chapter-tree {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .chapter-node {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  gap: 12px;
-  padding: 8px 0 8px calc(var(--depth-indent, 0px) + 0px);
-  --depth-indent: 0px;
+  padding: 7px 0;
+  border-bottom: 1px solid #f1f5f9;
+  &:last-child { border-bottom: 0; }
 
-  &[data-depth="0"] { --depth-indent: 0px; }
-  &[data-depth="1"] { --depth-indent: 18px; }
-  &[data-depth="2"] { --depth-indent: 36px; }
-  &[data-depth="3"] { --depth-indent: 54px; }
-
-  &__indicator {
-    position: relative;
-    flex-shrink: 0;
-    width: 22px;
-    align-self: stretch;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 6px;
-
-    // 垂直贯穿线：从 indicator 顶部到底部
-    &::before {
-      content: '';
-      position: absolute;
-      left: 50%;
-      top: 0;
-      bottom: 0;
-      width: 1.5px;
-      background: $c-border;
-      transform: translateX(-50%);
-    }
-
-    // 水平连接线：从圆点指向 content
-    &::after {
-      content: '';
-      position: absolute;
-      left: 50%;
-      top: 14px;
-      width: 12px;
-      height: 1.5px;
-      background: $c-border;
-      transform: translateY(-50%);
-    }
-  }
-
-  // 最后一项：下半段连线隐藏
-  &:last-child .chapter-node__indicator::before {
-    bottom: calc(100% - 14px);
-  }
-
-  // 子层级用虚线连接表示更细的归属关系
-  &[data-depth="2"] .chapter-node__indicator::before,
-  &[data-depth="3"] .chapter-node__indicator::before {
-    background-image: linear-gradient(
-      to bottom,
-      $c-border 0,
-      $c-border 4px,
-      transparent 4px,
-      transparent 8px
-    );
-    background-size: 1.5px 8px;
-    background-repeat: repeat-y;
-    background-color: transparent;
-  }
-  &[data-depth="2"] .chapter-node__indicator::after,
-  &[data-depth="3"] .chapter-node__indicator::after {
-    background-image: linear-gradient(
-      to right,
-      $c-border 0,
-      $c-border 4px,
-      transparent 4px,
-      transparent 8px
-    );
-    background-size: 8px 1.5px;
-    background-repeat: repeat-x;
-    background-color: transparent;
-  }
-
-  // 节点圆点
-  &__dot {
-    position: relative;
-    z-index: 1;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid $c-primary;
-    box-shadow: 0 0 0 2px #fff;
-  }
-
-  // 各层级圆点样式
-  &[data-depth="0"] .chapter-node__dot {
-    background: $c-primary;
-    border-color: $c-primary;
-    width: 12px;
-    height: 12px;
-  }
-  &[data-depth="1"] .chapter-node__dot {
-    border-color: #00b7ff;
-  }
-  &[data-depth="2"] .chapter-node__dot {
-    border-color: $c-light;
-    border-style: dashed;
-    width: 8px;
-    height: 8px;
-  }
-  &[data-depth="3"] .chapter-node__dot {
-    border-color: $c-faint;
-    width: 7px;
-    height: 7px;
-  }
+  &[data-depth="1"] { padding-left: 14px; }
+  &[data-depth="2"] { padding-left: 28px; }
+  &[data-depth="3"] { padding-left: 42px; }
 
   &__content {
-    flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 2px 0 6px;
+    gap: 1px;
   }
   &__title {
-    font-size: 13.5px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 500;
     color: $c-text;
     line-height: 1.5;
     word-break: break-word;
@@ -1027,27 +822,19 @@ $card-radius: 12px;
   &__desc {
     font-size: 12px;
     color: $c-light;
-    line-height: 1.55;
+    line-height: 1.5;
     word-break: break-word;
   }
 }
 
-// 按层级差异化标题样式
+// 顶层章节加粗突出，深层逐级弱化
 .chapter-node[data-depth="0"] .chapter-node__title {
-  font-size: 14.5px;
+  font-size: 13.5px;
   font-weight: 700;
-  color: $c-text;
-}
-.chapter-node[data-depth="1"] .chapter-node__title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #344054;
 }
 .chapter-node[data-depth="2"] .chapter-node__title,
 .chapter-node[data-depth="3"] .chapter-node__title {
   color: $c-muted;
-  font-weight: 500;
-  font-size: 13px;
 }
 
 // ═══════════════════ RESPONSIVE ═══════════════════
@@ -1058,18 +845,30 @@ $card-radius: 12px;
 @media (max-width: 1024px) {
   .hero-nav { grid-template-columns: repeat(2, 1fr); }
   .construction-grid { grid-template-columns: 1fr; }
-  .course-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
-  .course-card { flex-direction: column; }
-  .course-cover { width: 100%; min-height: 150px; }
+  // 课程列表移动端再收紧（桌面端行高约 64px，这里约 54px）
+  .course-row { gap: 10px; padding: 8px 10px; }
+  .course-row__thumb { width: 52px; height: 38px; border-radius: 5px; }
+  .course-row__emoji { font-size: 16px; }
+  .course-row__title-text { font-size: 13px; }
+  .course-row__meta { font-size: 11px; }
+  .course-row__action { font-size: 12px; }
 }
 @media (max-width: 860px) {
   .nav__links { display: none; }
+  // links 隐藏后靠此把账户区推到最右
+  .nav__end { margin-left: auto; gap: 8px; }
+  .nav__username { display: none; }
+  .nav__user { gap: 0; }
+  .nav__avatar { width: 26px; height: 26px; font-size: 12px; }
+  .nav__logout-btn { height: 30px; padding: 0 10px; font-size: 12px; }
+  // SiteBrand 内部副标题在移动端隐藏（.brand__sub 命中不到组件内部样式）
+  app-site-brand .sb__sub { display: none; }
+  app-site-brand .sb__name { font-size: 15px; }
 }
 @media (max-width: 640px) {
   .nav__inner { height: 56px; gap: 12px; }
-  .brand__sub { display: none; }
   .hero { width: calc(100% - 40px); border-radius: 14px; }
   .hero__inner { padding: 28px 14px 24px; min-height: 0; }
   .hero__title { font-size: 21px; }
@@ -1088,8 +887,15 @@ $card-radius: 12px;
   .construct-card { padding: 14px 14px 12px; }
   .graph-chart { height: 340px; }
   .footer__inner { grid-template-columns: 1fr; gap: 20px; }
-  .preview-body { padding: 16px; }
-  .preview-stats { grid-template-columns: repeat(2, 1fr); }
+  // 预览抽屉移动端：全幅 + 压缩留白
+  .preview-hero { padding: 18px 14px 16px; }
+  .preview-hero__icon { font-size: 54px; right: 14px; bottom: 10px; }
+  .preview-title { font-size: 19px; margin-bottom: 8px; }
+  .preview-tags { margin-bottom: 8px; }
+  .preview-body { padding: 12px 12px 20px; }
+  .preview-section { padding: 12px 12px; margin-bottom: 10px; }
+  .preview-title-stats { font-size: 11px; gap: 5px; }
+  .preview-title-stats strong { font-size: 12px; }
 }
 @media (max-width: 400px) {
   .hero-nav { grid-template-columns: 1fr; }

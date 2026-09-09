@@ -15,9 +15,9 @@
       @if (isLoggedIn) {
         <span class="nav__user">
           <span class="nav__avatar">{{ (userName() || '用').slice(0, 1) }}</span>
-          <span>{{ userName() }}</span>
+          <span class="nav__username">{{ userName() }}</span>
         </span>
-        <button class="btn btn--sm btn--ghost" (click)="logout()">退出</button>
+        <button class="btn btn--sm btn--ghost nav__logout-btn" (click)="logout()">退出</button>
       } @else {
         <button class="btn btn--sm" (click)="login()">登录</button>
       }
@@ -162,19 +162,21 @@
               <div class="panel__head">
                 <div class="panel__title-wrap">
                   <h2 class="section-heading">学历课程体系</h2>
-                  <p class="panel__sub">点击卡片查看课程详情与章节大纲</p>
+                  <p class="panel__sub">点击课程查看详情与章节大纲</p>
                 </div>
-                <div class="course-categories">
-                  <button type="button" class="cat-tag" [class.active]="difficultyFilter() === 0"
-                          (click)="setDifficultyFilter(0)">
-                    全部 ({{ getDifficultyCount(0) }})
-                  </button>
-                  @for (opt of difficultyOptions; track opt.value) {
-                    <button type="button" class="cat-tag" [class.active]="difficultyFilter() === opt.value"
-                            (click)="setDifficultyFilter(opt.value)">
-                      {{ opt.label }} ({{ getDifficultyCount(opt.value) }})
-                    </button>
-                  }
+                <div class="course-filter">
+                  <span class="course-filter__label">难度</span>
+                  <nz-select
+                    class="course-filter__select"
+                    [ngModel]="difficultyFilter()"
+                    (ngModelChange)="setDifficultyFilter($event)"
+                    nzSize="default"
+                  >
+                    <nz-option [nzValue]="0" [nzLabel]="'全部 (' + getDifficultyCount(0) + ')'"></nz-option>
+                    @for (opt of difficultyOptions; track opt.value) {
+                      <nz-option [nzValue]="opt.value" [nzLabel]="opt.label + ' (' + getDifficultyCount(opt.value) + ')'"></nz-option>
+                    }
+                  </nz-select>
                 </div>
               </div>
               <div class="panel__body">
@@ -182,58 +184,44 @@
             @if (filteredCourses().length === 0) {
               <div class="course-empty">该难度暂无课程</div>
             } @else {
-              <div class="course-grid">
+              <ul class="course-list">
                 @for (c of filteredCourses(); track c.id; let i = $index) {
-                <article class="course-card" (click)="handleCourseClick(c)" tabindex="0"
-                         (keydown.enter)="handleCourseClick(c)" role="button"
-                         [attr.aria-label]="(isEnrolled(c.id) ? '进入课程：' : '预览课程：') + (c.title || '')">
-                  <div class="course-cover">
-                    @if (isEnrolled(c.id)) {
-                      <span class="course-enrolled-badge">
-                        <span nz-icon nzType="check-circle" nzTheme="fill"></span>已选课
-                      </span>
-                    }
-                    @if (c.coverImageUrl) {
-                      <img [src]="c.coverImageUrl" class="course-img" [alt]="c.title" />
-                    } @else {
-                      <span class="course-emoji">{{ courseEmojis[i % courseEmojis.length] }}</span>
-                    }
-                    <div class="course-cover__hover">
-                      <span class="course-cover__preview-btn">
-                        @if (isEnrolled(c.id)) {
-                          <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
-                          <span>进入课程</span>
+                  <li>
+                    <button type="button" class="course-row"
+                            [class.is-selected]="previewCourse()?.id === c.id"
+                            [class.is-enrolled]="isEnrolled(c.id)"
+                            (click)="handleCourseClick(c)"
+                            [attr.aria-label]="(isEnrolled(c.id) ? '进入课程：' : '预览课程：') + (c.title || '')">
+                      <span class="course-row__thumb">
+                        @if (c.coverImageUrl) {
+                          <img [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" />
                         } @else {
-                          <span nz-icon nzType="eye" nzTheme="outline"></span>
-                          <span>预览详情</span>
+                          <span class="course-row__emoji">{{ courseEmojis[i % courseEmojis.length] }}</span>
                         }
                       </span>
-                    </div>
-                  </div>
-                  <div class="course-body">
-                    <h4>{{ c.title }}</h4>
-                    <div class="course-tags">
-                      @if (c.majorName) { <span class="course-tag major-tag">{{ c.majorName }}</span> }
-                      @if (c.teacherName) { <span class="course-tag teacher-tag">👨‍🏫 {{ c.teacherName }}</span> }
-                    </div>
-                    <div class="course-footer">
-                      <span class="course-students">
-                        <span nz-icon nzType="user" nzTheme="outline"></span>
-                        <span>{{ c.studentCount || 0 }} 学员</span>
+                      <span class="course-row__main">
+                        <span class="course-row__title">
+                          <span class="course-row__title-text">{{ c.title }}</span>
+                          @if (isEnrolled(c.id)) {
+                            <span class="course-row__badge">已选课</span>
+                          }
+                        </span>
+                        <span class="course-row__meta">
+                          @if (c.majorName) { <span>{{ c.majorName }}</span> }
+                          @if (c.majorName && c.teacherName) { <i></i> }
+                          @if (c.teacherName) { <span>{{ c.teacherName }}</span> }
+                          @if ((c.majorName || c.teacherName)) { <i></i> }
+                          <span>{{ c.studentCount || 0 }} 学员</span>
+                        </span>
                       </span>
-                      <span class="course-cta" [class.enrolled]="isEnrolled(c.id)">
-                        @if (isEnrolled(c.id)) {
-                          <span>查看</span>
-                        } @else {
-                          <span>预览课程</span>
-                        }
-                        <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+                      <span class="course-row__action">
+                        @if (isEnrolled(c.id)) { <span>进入</span> } @else { <span>预览</span> }
+                        <span nz-icon nzType="right" nzTheme="outline"></span>
                       </span>
-                    </div>
-                  </div>
-                </article>
+                    </button>
+                  </li>
                 }
-              </div>
+              </ul>
             }
               </div>
             </div>
@@ -278,8 +266,10 @@
   [nzPlacement]="'right'"
   [nzWidth]="520"
   [nzTitle]="null"
+  [nzClosable]="false"
   [nzMask]="true"
   [nzMaskClosable]="true"
+  [nzWrapClassName]="'tenant-course-preview'"
   (nzOnClose)="closeCoursePreview()"
 >
   <ng-container *nzDrawerContent>
@@ -293,16 +283,16 @@
           @if (c.coverImageUrl) {
             <img [src]="c.coverImageUrl" class="preview-hero__img" [alt]="c.title" />
           } @else {
-            <span class="preview-hero__emoji">📖</span>
+            <span class="preview-hero__icon" nz-icon nzType="read" nzTheme="outline"></span>
           }
           <div class="preview-hero__overlay">
             <div class="preview-tags">
               @if (c.majorName) { <span class="preview-tag">{{ c.majorName }}</span> }
-              @if (c.teacherName) { <span class="preview-tag">👨‍🏫 {{ c.teacherName }}</span> }
+              @if (c.teacherName) { <span class="preview-tag"><span nz-icon nzType="idcard" nzTheme="outline"></span>{{ c.teacherName }}</span> }
             </div>
             <h2 class="preview-title">{{ c.title }}</h2>
             <div class="preview-meta">
-              <span><span nz-icon nzType="user" nzTheme="outline"></span> {{ c.studentCount || 0 }} 学员</span>
+              <span><span nz-icon nzType="team" nzTheme="outline"></span> {{ c.studentCount || 0 }} 学员</span>
             </div>
           </div>
         </div>
@@ -315,7 +305,18 @@
           } @else if (previewDetail(); as d) {
             <section class="preview-section">
               <h3 class="preview-section__title">
-                <span class="preview-section__bar"></span>课程介绍
+                课程介绍
+                <span class="preview-title-stats">
+                  <span class="preview-title-stat"><strong>{{ d.chapterCount || d.chapters?.length || 0 }}</strong>章节</span>
+                  @if (d.semesterHours) {
+                    <i></i>
+                    <span class="preview-title-stat"><strong>{{ d.semesterHours }}</strong>学时</span>
+                  }
+                  @if (d.credits) {
+                    <i></i>
+                    <span class="preview-title-stat"><strong>{{ d.credits }}</strong>学分</span>
+                  }
+                </span>
               </h3>
               @if (d.description) {
                 <p class="preview-desc">{{ d.description }}</p>
@@ -324,38 +325,16 @@
                   本课程系统讲解核心概念、方法与实践，配合案例与项目演练，帮助学员构建完整的知识体系。
                 </p>
               }
-              <div class="preview-stats">
-                <div class="preview-stat">
-                  <span class="preview-stat__num">{{ d.chapterCount || d.chapters?.length || 0 }}</span>
-                  <span class="preview-stat__label">章节</span>
-                </div>
-                @if (d.semesterHours) {
-                  <div class="preview-stat">
-                    <span class="preview-stat__num">{{ d.semesterHours }}</span>
-                    <span class="preview-stat__label">学时</span>
-                  </div>
-                }
-                @if (d.credits) {
-                  <div class="preview-stat">
-                    <span class="preview-stat__num">{{ d.credits }}</span>
-                    <span class="preview-stat__label">学分</span>
-                  </div>
-                }
-              </div>
             </section>
 
             <section class="preview-section">
               <h3 class="preview-section__title">
-                <span class="preview-section__bar"></span>章节大纲
-                <span class="preview-section__count">{{ flattenChapters(d.chapters).length }} 节</span>
+                章节大纲
               </h3>
               @if (d.chapters && d.chapters.length > 0) {
                 <ul class="chapter-tree">
                   @for (ch of flattenChapters(d.chapters); track ch.id) {
                     <li class="chapter-node" [attr.data-depth]="ch.depth">
-                      <span class="chapter-node__indicator" aria-hidden="true">
-                        <span class="chapter-node__dot"></span>
-                      </span>
                       <div class="chapter-node__content">
                         <div class="chapter-node__title">{{ ch.title }}</div>
                         @if (ch.description) {

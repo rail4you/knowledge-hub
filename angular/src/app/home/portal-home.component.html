@@ -17,14 +17,14 @@
         @if (isLoggedIn) {
           <span class="nav__user">
             <span class="nav__avatar">{{ (userName() || '用').slice(0, 1) }}</span>
-            <span>{{ userName() }}</span>
+            <span class="nav__username">{{ userName() }}</span>
           </span>
           @if (isStudent) {
-            <a routerLink="/student" class="btn btn--sm">学生门户</a>
+            <a routerLink="/student" class="btn btn--sm nav__portal-btn">学生门户</a>
           } @else {
-            <a routerLink="/resources" class="btn btn--sm">管理后台</a>
+            <a routerLink="/resources" class="btn btn--sm nav__portal-btn">管理后台</a>
           }
-          <button class="btn btn--sm btn--ghost" (click)="logout()">退出</button>
+          <button class="btn btn--sm btn--ghost nav__logout-btn" (click)="logout()">退出</button>
         } @else {
           <button class="btn btn--sm btn--ink" (click)="login()">登录</button>
         }
@@ -71,6 +71,28 @@
         }
       </div>
 
+      <div class="hero__stats">
+        <div class="hero__stat">
+          <strong>{{ (stats()?.totalCourseCount || 0) | number }}</strong>
+          <span>精品课程</span>
+        </div>
+        <i class="hero__stat-divider"></i>
+        <div class="hero__stat">
+          <strong>{{ (stats()?.totalResourceCount || 0) | number }}</strong>
+          <span>教学资源</span>
+        </div>
+        <i class="hero__stat-divider"></i>
+        <div class="hero__stat">
+          <strong>{{ (stats()?.totalMicroMajorCount || 0) | number }}</strong>
+          <span>微专业</span>
+        </div>
+        <i class="hero__stat-divider"></i>
+        <div class="hero__stat">
+          <strong>{{ (stats()?.tenantCount || 0) | number }}</strong>
+          <span>合作院校</span>
+        </div>
+      </div>
+
       <div class="hero__dots" role="tablist">
         @for (s of heroSlides; track $index) {
           <button
@@ -81,43 +103,6 @@
             [attr.aria-label]="'切换到第' + ($index + 1) + '张：' + s.title"
           ></button>
         }
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== 统计条 ===== -->
-  <section class="stats">
-    <div class="stats__inner">
-      <div class="stat">
-        <div class="stat__icon stat__icon--blue"><span nz-icon nzType="read" nzTheme="outline"></span></div>
-        <div class="stat__body">
-          <strong>{{ (stats()?.totalCourseCount || 0) | number }}</strong>
-          <span>门精品课程</span>
-        </div>
-      </div>
-      <div class="stat__divider"></div>
-      <div class="stat">
-        <div class="stat__icon stat__icon--sky"><span nz-icon nzType="folder-open" nzTheme="outline"></span></div>
-        <div class="stat__body">
-          <strong>{{ (stats()?.totalResourceCount || 0) | number }}</strong>
-          <span>份教学资源</span>
-        </div>
-      </div>
-      <div class="stat__divider"></div>
-      <div class="stat">
-        <div class="stat__icon stat__icon--cyan"><span nz-icon nzType="trophy" nzTheme="outline"></span></div>
-        <div class="stat__body">
-          <strong>{{ (stats()?.totalMicroMajorCount || 0) | number }}</strong>
-          <span>个微专业</span>
-        </div>
-      </div>
-      <div class="stat__divider"></div>
-      <div class="stat">
-        <div class="stat__icon stat__icon--violet"><span nz-icon nzType="bank" nzTheme="outline"></span></div>
-        <div class="stat__body">
-          <strong>{{ (stats()?.tenantCount || 0) | number }}</strong>
-          <span>所合作院校</span>
-        </div>
       </div>
     </div>
   </section>

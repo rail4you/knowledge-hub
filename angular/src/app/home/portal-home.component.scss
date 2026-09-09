@@ -154,8 +154,10 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
 .nav__end {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 .nav__user {
   display: inline-flex;
@@ -268,8 +270,9 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   z-index: 1;
   max-width: $max-w;
   margin: 0 auto;
-  padding: 70px $pad-desktop 104px;
+  padding: 28px $pad-desktop 40px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
@@ -278,7 +281,7 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   flex: none;
   width: 100%;
   max-width: 780px;
-  min-height: 220px;
+  min-height: 148px;
   color: #fff;
   text-align: center;
 }
@@ -302,11 +305,11 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   }
 }
 .hero__title {
-  margin: 0 0 18px;
+  margin: 0 0 8px;
   font-family: $serif;
-  font-size: clamp(2rem, 3.6vw, 2.7rem);
+  font-size: clamp(1.6rem, 2.8vw, 2.1rem);
   font-weight: 700;
-  line-height: 1.4;
+  line-height: 1.28;
   color: #fff;
 }
 .hero__title-line { display: block; }
@@ -314,13 +317,13 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
 .hero__desc {
   margin: 0 auto;
   max-width: 560px;
-  font-size: 16px;
-  line-height: 1.75;
+  font-size: 14px;
+  line-height: 1.6;
   color: rgba(255, 255, 255, .62);
 }
 .hero__dots {
   position: absolute;
-  bottom: -40px;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -342,60 +345,43 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
 }
 
 // ============================================================
-//  STATS（home 原型：白色卡片压住 hero 底部 + 衬线数字）
+//  HERO STATS（数据直接放在 hero 深色区，无独立卡片）
 // ============================================================
-.stats { padding: 0 $pad-desktop; }
-.stats__inner {
-  max-width: $max-w;
-  margin: -40px auto 0;
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: stretch;
-  background: #fff;
-  border: 1px solid $border-soft;
-  border-radius: $radius-lg;
-  padding: 22px 6px;
-  box-shadow: 0 24px 60px -30px rgba(13, 27, 48, .28);
-}
-.stat {
+.hero__stats {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 4px 32px;
-  flex: 1;
-  min-width: 0;
-  border-left: 1px solid $border-soft;
-  &:first-child { border-left: 0; }
+  justify-content: center;
+  gap: 28px;
+  margin-top: 10px;
+  position: relative;
+  z-index: 2;
 }
-.stat__icon {
-  font-size: 40px;
-  flex-shrink: 0;
-  display: inline-flex;
-  line-height: 1;
-}
-.stat__icon--blue { color: #1e6ce8; }
-.stat__icon--sky { color: #0284c7; }
-.stat__icon--cyan { color: #0d9488; }
-.stat__icon--violet { color: #7c3aed; }
-.stat__body {
+.hero__stat {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  line-height: 1.2;
+  align-items: center;
+  gap: 0;
   min-width: 0;
+  strong {
+    font-family: $serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  span {
+    font-size: 12px;
+    color: rgba(255, 255, 255, .6);
+    white-space: nowrap;
+  }
 }
-.stat__body strong {
-  font-family: $serif;
-  font-size: 30px;
-  font-weight: 700;
-  color: $ink;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
+.hero__stat-divider {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(255, 255, 255, .16);
 }
-.stat__body span { font-size: 13px; color: $ink-subtle; white-space: nowrap; }
-.stat__divider { display: none; }
 
 // ============================================================
 //  SECTION
@@ -1425,42 +1411,125 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
 }
 
 @media (max-width: 1247px) {
-  .hero__inner { padding: 60px $pad-tablet 96px; }
-  .hero__content { min-height: 280px; }
-  .stats { padding: 0 $pad-tablet; }
+  .hero__inner { padding: 26px $pad-tablet 38px; }
+  .hero__content { min-height: 144px; }
   .section__inner { padding: 0 $pad-tablet; }
   .dual-section__inner { padding: 0 $pad-tablet; }
   .footer__inner { padding: 0 $pad-tablet; }
   .footer__copy { padding: 14px $pad-tablet; }
-  .stat { padding: 4px 20px; gap: 12px; }
-  .stat__icon { font-size: 34px; }
-  .stat__body strong { font-size: 26px; }
 }
 
 @media (max-width: 860px) {
+  // ── 导航：隐藏次要信息，账户区右对齐 ──
   .nav__links { display: none; }
-  .nav__inner { gap: 12px; padding: 0 20px; }
-  .brand__sub { display: none; }
-  .hero__inner { padding: 48px 20px 76px; }
-  .hero__content { min-height: 230px; }
-  .hero__title { font-size: 1.5rem; }
-  .hero__desc { font-size: 13px; }
+  .nav__inner { gap: 10px; padding: 0 16px; }
+  .brand { min-width: 0; }
+  // SiteBrand 内部副标题在移动端隐藏（桌面端保留）
+  app-site-brand .sb__sub { display: none; }
+  app-site-brand .sb__name { font-size: 15px; }
+  .nav__end { gap: 8px; }
+  .nav__username { display: none; }
+  .nav__user { gap: 0; }
+  .nav__avatar { width: 26px; height: 26px; font-size: 12px; border-radius: 6px; }
+  .nav__portal-btn, .nav__logout-btn { height: 30px; padding: 0 10px; font-size: 12px; }
+
+  // ── Hero：压缩高度，统计行收进深色区 ──
+  .hero__inner { padding: 20px 16px 36px; }
+  .hero__content { min-height: 104px; }
+  .hero__title { font-size: 1.25rem; line-height: 1.28; margin-bottom: 6px; }
+  .hero__desc { font-size: 12px; line-height: 1.5; }
   .hero__deco { display: none; }
-  .hero__dots { bottom: -34px; }
-  .stats { padding: 0 20px; }
-  .stats__inner { flex-direction: column; align-items: stretch; margin-top: -38px; padding: 6px 0; }
-  .stat { border-left: 0; border-top: 1px solid $border-soft; padding: 18px 26px; &:first-child { border-top: 0; } }
-  .section { padding: 12px 0; }
-  .section__inner { padding: 0 20px; }
-  .dual-section__inner { grid-template-columns: 1fr; gap: 16px; padding: 0 20px; }
-  .footer__inner { padding: 0 20px; }
-  .footer__copy { padding: 14px 20px; }
-  .section__head { flex-direction: column; align-items: flex-start; gap: 6px; }
-  .section__head-left { flex-wrap: wrap; gap: 6px; }
+  .hero__dots { bottom: 10px; }
+  .hero__stats { gap: 16px; margin-top: 8px; }
+  .hero__stat strong { font-size: 20px; }
+  .hero__stat span { font-size: 11px; }
+
+  // ── Section：压缩间距与标题 ──
+  .section { padding: 10px 0; }
+  .section__inner { padding: 0 16px; }
+  .dual-section__inner { grid-template-columns: 1fr; gap: 12px; padding: 0 16px; }
+  .footer__inner { padding: 0 16px; }
+  .footer__copy { padding: 12px 16px; }
+  .section__head { flex-direction: row; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .section__head-left { flex-wrap: wrap; gap: 8px; row-gap: 4px; }
+  .section__head-left h2 { font-size: 19px; }
+  .section__head-left p { font-size: 12px; }
+  .section__tabs { padding-left: 0; }
+  .section-tab { height: 24px; padding: 0 10px; font-size: 11px; }
+
+  // ── 卡片网格：双列紧凑（内容不变，仅压缩） ──
+  .course-grid, .tenant-grid, .news-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .mm-grid, .material-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+  // 课程卡：压缩 body，隐藏描述与标签行
+  .course-card__body { padding: 10px 10px 12px; gap: 6px; }
+  .course-card__title { font-size: 13px; }
+  .course-card__meta { font-size: 11px; }
+  .course-card__teacher-prefix { display: none; }
+  .course-card__tags, .course-card__desc { display: none; }
+  .course-card__badge { top: 8px; left: 8px; height: 20px; padding: 0 7px; font-size: 10px; }
+  .course-card__students { bottom: 8px; right: 8px; height: 20px; padding: 0 8px; font-size: 10px; }
+
+  // 微专业卡：隐藏固定文案描述（每卡省 ~60px），压缩 body
+  .mm-card__body { padding: 10px 10px 12px; gap: 6px; }
+  .mm-card__title { font-size: 13px; }
+  .mm-card__desc { display: none; }
+  .mm-card__footer { font-size: 11px; }
+  .mm-card__title-icon { font-size: 14px; }
+  .mm-card__badge { top: 8px; left: 8px; height: 20px; padding: 0 8px; font-size: 10px; }
+
+  // 资源 / 资讯卡：隐藏底部行动行，压缩 body
+  .material-card__body { padding: 10px 10px 12px; gap: 6px; }
+  .material-card__title { font-size: 13px; }
+  .material-card__meta { font-size: 11px; }
+  .material-card__footer { display: none; }
+  .material-card__type-badge { top: 8px; left: 8px; height: 20px; padding: 0 7px; font-size: 10px; }
+  .material-card__downloads { bottom: 8px; right: 8px; height: 20px; padding: 0 8px; font-size: 10px; }
+  .news-card__body { padding: 10px 10px 12px; gap: 6px; }
+  .news-card__title { font-size: 13px; }
+  .news-card__meta { font-size: 11px; }
+  .news-card__footer { display: none; }
+  .news-card__badge { top: 8px; left: 8px; height: 20px; padding: 0 7px; font-size: 10px; }
+  .news-card__date { bottom: 8px; right: 8px; height: 20px; padding: 0 8px; font-size: 10px; }
+
+  // 资源库卡：标题压缩，统计换行防溢出
+  .tenant-card__body { padding: 10px 12px; gap: 4px; }
+  .tenant-card__body h3 { font-size: 15px; min-height: 0; }
+  .tenant-card__stats { flex-wrap: wrap; gap: 4px 8px; padding-top: 6px; }
+  .tenant-card__type-badge { top: 8px; right: 8px; padding: 4px 9px; font-size: 10px; }
+
+  // 榜单：压缩行距
+  .rank-panel { padding: 12px 12px 8px; }
+  .rank-row { padding: 7px 2px; gap: 8px; }
+  .rank-row__num { min-width: 22px; font-size: 15px; }
+  .rank-row__body h5 { font-size: 12px; }
+
+  // 浏览筛选：搜索框占满整行
+  .browse-filters { gap: 8px; }
+  .browse-filter { width: 118px; flex-shrink: 0; }
+  .browse-search { flex: 1 1 100%; width: 100%; }
+  .browse-empty { padding: 24px 12px; }
+
   .footer__inner { grid-template-columns: 1fr; gap: 20px; }
 }
 
 @media (max-width: 560px) {
+  .nav__inner { padding: 0 12px; }
+  .hero__inner { padding: 18px 12px 34px; }
+  .hero__content { min-height: 100px; }
+  .hero__title { font-size: 1.2rem; }
+  .hero__stats { gap: 14px; margin-top: 18px; }
+  .hero__stat strong { font-size: 18px; }
+  .section__inner { padding: 0 12px; }
+  .dual-section__inner { padding: 0 12px; }
+  .footer__inner { padding: 0 12px; }
+  .footer__copy { padding: 12px; }
   .footer__grid { grid-template-columns: 1fr 1fr; }
-  .material-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  // 超小屏保持双列（内容不变），进一步收紧间距与字号
+  .course-grid, .tenant-grid, .news-grid,
+  .mm-grid, .material-grid { gap: 8px; }
+  .course-card__body, .mm-card__body,
+  .material-card__body, .news-card__body { padding: 8px 8px 10px; }
+  .course-card__title, .mm-card__title,
+  .material-card__title, .news-card__title { font-size: 12px; }
 }
