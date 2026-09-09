@@ -1,0 +1,144 @@
+<div class="search-detail">
+  <!-- 顶部面包屑 -->
+  <nav class="detail-breadcrumb">
+    <nz-breadcrumb>
+      <nz-breadcrumb-item>
+        <a (click)="backToSearch()" class="crumb-link">
+          <span nz-icon nzType="search"></span>
+          <span>搜索</span>
+        </a>
+      </nz-breadcrumb-item>
+      @if (breadcrumb().hasQuery) {
+        <nz-breadcrumb-item>
+          <a (click)="backToSearch()" class="crumb-link">“{{ breadcrumb().query }}” 的结果</a>
+        </nz-breadcrumb-item>
+      }
+      <nz-breadcrumb-item>
+        <span class="crumb-current">{{ result()?.resourceName || '搜索详情' }}</span>
+      </nz-breadcrumb-item>
+    </nz-breadcrumb>
+  </nav>
+
+  <nz-spin [nzSpinning]="loading()">
+    @if (!hasPayload()) {
+      <div class="empty-wrap">
+        <nz-empty
+          nzNotFoundContent="未找到搜索详情"
+          [nzNotFoundImage]="'simple'">
+        </nz-empty>
+        <button nz-button nzType="primary" (click)="backToSearch()">
+          <span nz-icon nzType="left"></span>
+          返回搜索
+        </button>
+      </div>
+    } @else {
+      <div class="detail-layout">
+        <!-- 左侧：匹配高亮导航（撑满页面高度，可独立滚动） -->
+        <aside class="list-pane">
+          <div class="list-pane-header">
+            <span class="list-pane-title">
+              <span nz-icon nzType="highlight"></span>
+              匹配高亮
+            </span>
+            <span class="list-pane-count">
+              共 {{ hits().length }} 处
+            </span>
+          </div>
+
+          @if (hits().length === 0) {
+            <div class="list-empty">
+              <span nz-icon nzType="info-circle"></span>
+              <span>该文档中未发现关键词高亮</span>
+            </div>
+          } @else {
+            <div class="list-pane-scroll">
+              @for (hit of hits(); track trackByHit($index, hit)) {
+                <button
+                  type="button"
+                  class="hit-nav-item"
+                  [class.active]="activeHit() === hit.id"
+                  (click)="scrollToHit(hit.id)"
+                >
+                  <span class="hit-nav-index">{{ hit.id }}</span>
+                  <span class="hit-nav-sentence">{{ hit.sentence }}</span>
+                </button>
+              }
+            </div>
+          }
+        </aside>
+
+        <!-- 右侧：详情主体 -->
+        <section class="detail-pane">
+          @if (result(); as r) {
+            <!-- 顶部信息（固定） -->
+            <header class="detail-header">
+              <div class="detail-header-row1">
+                <h2 class="detail-header-title">{{ r.resourceName }}</h2>
+                <div class="detail-header-actions">
+                  <button nz-button nzSize="small" (click)="copySummary()" nz-tooltip="复制资源摘要到剪贴板">
+                    <span nz-icon nzType="copy"></span>
+                    复制摘要
+                  </button>
+                  <button nz-button nzSize="small" (click)="backToSearch()" nz-tooltip="返回搜索结果列表">
+                    <span nz-icon nzType="left"></span>
+                    返回搜索
+                  </button>
+                </div>
+              </div>
+
+              <!-- 元数据：纯文字排版 -->
+              <div class="detail-meta">
+                <span class="meta-text">类型：<b>{{ isVideo() ? '视频' : '文档' }}</b></span>
+                @if (!isVideo()) {
+                  <span class="meta-text">页码：<b>第 {{ r.pageNumber }} 页</b></span>
+                  <span class="meta-text">格式：<b>{{ r.fileExtension || '-' }}</b></span>
+                } @else {
+                  <span class="meta-text">时间范围：<b>{{ r.startTime || '-' }} ~ {{ r.endTime || '-' }}</b></span>
+                  @if (r.videoName) {
+                    <span class="meta-text">视频名称：<b>{{ r.videoName }}</b></span>
+                  }
+                }
+                @if (r.categoryName) {
+                  <span class="meta-text">分类：<b>{{ r.categoryName }}</b></span>
+                }
+                <span class="meta-text">相关度：<b class="meta-score" [class]="'score-' + scoreColor()">{{ scorePercent() }} / 100</b></span>
+                @if (r.uploadDate) {
+                  <span class="meta-text">上传时间：<b>{{ r.uploadDate | date:'yyyy-MM-dd HH:mm' }}</b></span>
+                }
+              </div>
+            </header>
+
+            <!-- 下方：文档内容（独立滚动，撑满剩余高度） -->
+            <div class="doc-pane-scroll" #docPane>
+              @if (isVideo()) {
+                <div class="doc-text">
+                  @if (r.eventDescription) {
+                    <h3 class="doc-pane-section-title">
+                      <span nz-icon nzType="play-circle"></span>
+                      事件描述
+                    </h3>
+                    <p>{{ r.eventDescription }}</p>
+                  }
+                  @if (r.startTime && r.endTime) {
+                    <h3 class="doc-pane-section-title">
+                      <span nz-icon nzType="clock-circle"></span>
+                      时间范围
+                    </h3>
+                    <p>{{ r.startTime }} - {{ r.endTime }}</p>
+                  }
+                  @if (!r.eventDescription && !r.startTime) {
+                    <p class="doc-pane-empty">该视频无附加描述。</p>
+                  }
+                </div>
+              } @else if (documentHtml()) {
+                <div class="doc-text" [innerHTML]="documentHtml()"></div>
+              } @else {
+                <p class="doc-pane-empty">该文档无预览内容。</p>
+              }
+            </div>
+          }
+        </section>
+      </div>
+    }
+  </nz-spin>
+</div>

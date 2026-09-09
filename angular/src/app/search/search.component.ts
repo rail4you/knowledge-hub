@@ -16,11 +16,10 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzModalModule } from 'ng-zorro-antd/modal';
-import { NzRateModule } from 'ng-zorro-antd/rate';
 import { ConfigStateService, EnvironmentService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
 import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/meilisearch-admin.service';
-import { ResourceReviewComponent } from './resource-review/resource-review.component';
+import { stripUuids } from './search.util';
 
 @Component({
   selector: 'app-search',
@@ -40,9 +39,7 @@ import { ResourceReviewComponent } from './resource-review/resource-review.compo
     NzDatePickerModule,
     NzTooltipModule,
     NzDividerModule,
-    NzModalModule,
-    NzRateModule,
-    ResourceReviewComponent
+    NzModalModule
   ],
   templateUrl: './search.component.html',
   styleUrl: './search.component.scss',
@@ -92,10 +89,6 @@ export class SearchComponent implements OnInit {
   currentVideoName = signal('');
   currentVideoEventDescription = signal('');
 
-  isReviewModalOpen = signal(false);
-  reviewResourceId = signal('');
-  reviewResourceName = signal('');
-
   getIndexLabel(indexUid: string | null | undefined): string {
     const normalized = (indexUid || '').toLowerCase();
     if (normalized === 'documents') {
@@ -136,6 +129,24 @@ export class SearchComponent implements OnInit {
     if (score >= 0.5) return 'blue';
     if (score >= 0.3) return 'orange';
     return 'red';
+  }
+
+  /**
+   * 获取卡片预览文本：优先 Meili 高亮，否则显示精简的正文片段。
+   * 高亮内容里可能含原始资源 ID（UUID），统一清理。
+   */
+  previewText(result: DocumentSearchResultDto): string {
+    const raw =
+      result.highlightedContent ||
+      result.eventDescription ||
+      this.truncateContent(result.content);
+    return stripUuids(raw);
+  }
+
+  private truncateContent(content: string | null | undefined, maxLen = 240): string {
+    if (!content) return '';
+    const clean = content.replace(/\s+/g, ' ').trim();
+    return clean.length > maxLen ? clean.slice(0, maxLen) + '…' : clean;
   }
 
   ngOnInit() {
@@ -253,17 +264,6 @@ export class SearchComponent implements OnInit {
     this.closeVideoModal();
   }
 
-  openReviewModal(resourceId: string, resourceName: string, event: Event) {
-    event.stopPropagation();
-    this.reviewResourceId.set(resourceId);
-    this.reviewResourceName.set(resourceName);
-    this.isReviewModalOpen.set(true);
-  }
-
-  closeReviewModal() {
-    this.isReviewModalOpen.set(false);
-  }
-
   formatTimeToSeconds(time: string): number {
     if (!time) return 0;
     const parts = time.split(':').map(Number);
@@ -280,6 +280,38 @@ export class SearchComponent implements OnInit {
     if (startSeconds > 0 && startSeconds < videoPlayer.duration) {
       videoPlayer.currentTime = startSeconds;
     }
+  }
+
+  enterDetail(result: DocumentSearchResultDto, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    // 视频：没有搜索详情页，保留原弹窗行为
+    if (result.sourceType === 'video') {
+      this.viewDocument(result);
+      return;
+    }
+
+    // 文档：跳转到独立全屏搜索详情页 /search/detail/:id
+    this.router.navigate(['/search/detail', result.resourceId], {
+      state: {
+        detail: {
+          result,
+          searchState: {
+            query: this.searchQuery,
+            results: this.results(),
+            totalCount: this.totalCount(),
+            pageIndex: this.pageIndex,
+            selectedFileExtension: this.selectedFileExtension(),
+            searchType: this.searchType,
+            selectedIndex: this.selectedIndex,
+            startDate: this.startDate ? this.startDate.toISOString() : null,
+            endDate: this.endDate ? this.endDate.toISOString() : null,
+          }
+        }
+      }
+    });
   }
 
   viewDocument(result: DocumentSearchResultDto) {
@@ -300,23 +332,8 @@ export class SearchComponent implements OnInit {
       // 学生端：跳转到资源详情页
       this.router.navigate(['/student/resources', result.resourceId]);
     } else {
-      this.router.navigate(['/document-viewer', result.resourceId], {
-        queryParams: { page: result.pageNumber },
-        state: {
-          content: result.highlightedContent || result.content,
-          searchState: {
-            query: this.searchQuery,
-            results: this.results(),
-            totalCount: this.totalCount(),
-            pageIndex: this.pageIndex,
-            selectedFileExtension: this.selectedFileExtension(),
-            searchType: this.searchType,
-            selectedIndex: this.selectedIndex,
-            startDate: this.startDate ? this.startDate.toISOString() : null,
-            endDate: this.endDate ? this.endDate.toISOString() : null,
-          }
-        }
-      });
+      // 教师/管理员端：进入搜索详情独立全屏页
+      this.enterDetail(result);
     }
   }
 

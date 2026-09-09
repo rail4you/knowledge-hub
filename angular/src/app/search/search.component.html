@@ -119,15 +119,21 @@
                   } @else {
                     <span class="file-ext-badge">{{ result.fileExtension }}</span>
                   }
-                  <button nz-button nzSize="small" nzType="text" class="review-btn"
-                    nz-tooltip="查看评价"
-                    (click)="openReviewModal(result.resourceId, result.resourceName, $event)">
-                    <span nz-icon nzType="star" nzTheme="outline"></span>
-                  </button>
                 </div>
               </div>
               <div class="result-content">
-                <p class="preview-text" [innerHTML]="result.highlightedContent || result.eventDescription || result.content"></p>
+                <p class="preview-text" [innerHTML]="previewText(result)"></p>
+              </div>
+              <div class="result-footer">
+                <button
+                  type="button"
+                  class="enter-btn"
+                  nz-tooltip="查看搜索结果详情"
+                  (click)="enterDetail(result, $event)"
+                >
+                  <span>搜索详情</span>
+                  <span nz-icon nzType="arrow-right" class="enter-icon"></span>
+                </button>
               </div>
             </div>
           }
@@ -190,16 +196,3 @@
   </ng-template>
 </nz-modal>
 
-<nz-modal
-  [nzVisible]="isReviewModalOpen()"
-  [nzTitle]="'评价 - ' + reviewResourceName()"
-  [nzWidth]="600"
-  [nzFooter]="null"
-  (nzOnCancel)="closeReviewModal()"
->
-  <ng-container *nzModalContent>
-    @if (reviewResourceId()) {
-      <app-resource-review [resourceId]="reviewResourceId()"></app-resource-review>
-    }
-  </ng-container>
-</nz-modal>

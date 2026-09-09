@@ -141,6 +141,17 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 搜索详情：与 /document-viewer/:id 一致的独立全屏页（empty layout），
+    // 左侧匹配列表 + 右侧详情，整页占满。
+    path: 'search/detail/:id',
+    loadComponent: () => import('./search/search-detail/search-detail.component').then(c => c.SearchDetailComponent),
+    canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Search',
+      layout: eLayoutType.empty,
+    },
+  },
+  {
     path: 'admin/indexing-jobs',
     loadComponent: () => import('./admin/indexing-jobs/indexing-jobs.component').then(c => c.IndexingJobsComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
