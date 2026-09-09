@@ -291,26 +291,55 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     return maxCount;
   });
 
-  /** 图谱画布高度：大图谱固定 620px + 默认只展开两级，避免巨页。
-   * 旧逻辑 total*52 在 101 节点时撑出 5000px 高画布，再配合居中缩放，
-   * 内容缩向画布中部，顶部留下约一屏空白（本 issue 现象）。
+  /** 数据实际的最大层级深度（不含课程根）：
+   * 1 = 只有顶层；2 = 顶层+叶子；3+ = 还有更深的层级需要折叠。
+   * 用于决定默认展开到哪一级、画布该多高。
+   */
+  dataDepth = computed(() => {
+    let maxDepth = 1;
+    const walk = (nodes: ChapterDto[] | undefined, d: number) => {
+      if (!nodes) return;
+      nodes.forEach(n => {
+        maxDepth = Math.max(maxDepth, d);
+        if (n.children) walk(n.children, d + 1);
+      });
+    };
+    walk(this.chapters, 1);
+    return maxDepth;
+  });
+
+  /** 图谱画布高度：
+   * - 数据深度≥3 或 节点>60 → 固定 620px（配合默认折叠，避免巨页/空白）
+   * - 节点>30 → 560px
+   * - 2 级图谱 → 按"最大同层节点数 × 50 + 80"动态算，
+   *   既能让叶子多的 2 级图谱填满画布，又避免节点少时被压扁。
+   * - 1 级图谱 → 360px 起步（单行布局，无需太高）
    */
   chartMinHeight = computed(() => {
     const total = this.countChapters(this.chapters);
-    if (total > 60) return 620;
+    const dataDepth = this.dataDepth();
+    const maxSiblings = this.maxSiblingCount();
+
+    if (dataDepth >= 3 || total > 60) return 620;
     if (total > 30) return 560;
-    const neededHeight = total * 44;
-    return Math.max(320, Math.min(neededHeight, 640));
+
+    // 2 级图谱：所有叶子纵向排列，需要按最多同级节点数撑高
+    // 每个叶子 symbolSize=36 + 间距 ≈ 50px，上下各留 40px 呼吸空间
+    const neededForLeaves = maxSiblings * 50 + 80;
+    return Math.max(360, Math.min(neededForLeaves, 640));
   });
 
   /**
-   * 大图谱（>60 节点）默认展开到二级（课程根 + 一级 + 二级），
-   * 三级及更深层级折叠，用户点击二级节点可展开三级。
-   * 配合 620px 固定高度，可见节点约 35 个。
-   * 小图谱（≤60 节点）保留全展开（initialTreeDepth=-1），避免内容过少。
+   * 默认展开深度（核心策略）：
+   * - 数据本身只有 ≤2 级 → 全展开（-1），因为再折叠没有意义
+   * - 数据有 ≥3 级 → 默认折叠到 2 级，深层节点按需展开
+   *
+   * 与原"total>60 才折叠"相比，本策略基于**层级深度**判断：
+   * 即使只有 30 个节点，只要层级 ≥3，最后一级节点在密集渲染时也容易看不清，
+   * 此时主动默认折叠到 2 级，用户点哪一级再展开哪一级，体验更稳。
    */
   private defaultInitialDepth(): number {
-    return this.countChapters(this.chapters) > 60 ? 2 : -1;
+    return this.dataDepth() <= 2 ? -1 : 2;
   }
   /** 用户点过“展开全部”后保持全展开，不再被默认折叠覆盖 */
   private forceExpandAll = false;
@@ -702,10 +731,14 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   private applyOption(treeData: any[]) {
     if (!this.chart) return;
     const total = this.chapterCount();
-    const isLarge = total > 60;
-    // 大图谱节点小一号，标签小一号，减少拥挤
-    const symbolSize = isLarge ? 28 : 36;
-    const fontSize = isLarge ? 12 : 13;
+    const dataDepth = this.dataDepth();
+    const maxSiblings = this.maxSiblingCount();
+    const isLarge = total > 60 || dataDepth >= 3;
+    // 2 级图谱叶子特别多时也按"密集"处理，避免互相挤压
+    const isFlatDense = dataDepth <= 2 && maxSiblings > 20;
+    // 大图谱 / 2 级密集图谱：节点小一号，标签小一号，减少拥挤
+    const symbolSize = isLarge || isFlatDense ? 28 : 36;
+    const fontSize = isLarge || isFlatDense ? 12 : 13;
     const option: echarts.EChartsCoreOption = {
       tooltip: {
         trigger: 'item',
