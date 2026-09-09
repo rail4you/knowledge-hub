@@ -148,6 +148,22 @@
     <!-- ═══════════ 主体（Tabs） ═══════════ -->
     <div class="detail-grid">
       <main class="detail-main">
+        <!-- 移动端：下拉切换 Tab（节省横向空间） -->
+        <label class="tab-select-mobile">
+          <span nz-icon nzType="appstore" nzTheme="outline" class="tab-select-mobile__icon"></span>
+          <select
+            class="tab-select-mobile__input"
+            [ngModel]="activeTab()"
+            (ngModelChange)="setTab($event)"
+            aria-label="选择详情板块"
+          >
+            <option value="chapters">课程大纲（{{ countChapters(chapters()) }}）</option>
+            <option value="graph">知识图谱</option>
+            <option value="progress">学习进度</option>
+            <option value="related">相关课程（{{ related().length }}）</option>
+          </select>
+          <span nz-icon nzType="down" nzTheme="outline" class="tab-select-mobile__caret"></span>
+        </label>
         <nav class="detail-tabs" role="tablist">
           <button
             class="tab-item"

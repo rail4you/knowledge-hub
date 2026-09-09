@@ -31,6 +31,21 @@
     <!-- 左侧：状态切换 + 课程列表 -->
     <main class="content-main">
       <div class="status-row">
+        <!-- 移动端：下拉选择课程类别（节省横向空间） -->
+        <label class="status-select-mobile">
+          <span nz-icon nzType="appstore" nzTheme="outline" class="status-select-mobile__icon"></span>
+          <select
+            class="status-select-mobile__input"
+            [ngModel]="selectedStatus()"
+            (ngModelChange)="selectStatus($event)"
+            aria-label="选择课程类别"
+          >
+            @for (s of statusFilters; track s.value) {
+              <option [value]="s.value">{{ s.label }}</option>
+            }
+          </select>
+          <span nz-icon nzType="down" nzTheme="outline" class="status-select-mobile__caret"></span>
+        </label>
         <div class="status-tabs" role="tablist">
           @for (s of statusFilters; track s.value) {
             <button

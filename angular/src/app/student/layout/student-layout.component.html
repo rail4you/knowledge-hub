@@ -149,13 +149,141 @@
           </button>
         }
 
-        <!-- 移动端汉堡按钮 -->
-        <button class="menu-toggle" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-label="导航菜单">
-          <span nz-icon [nzType]="menuOpen() ? 'close' : 'menu'" nzTheme="outline"></span>
+        <!-- 移动端汉堡按钮（三横线，展开时变叉） -->
+        <button class="menu-toggle" [class.open]="menuOpen()" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()" aria-label="导航菜单">
+          <span class="burger" aria-hidden="true"><i></i><i></i><i></i></span>
         </button>
       </div>
     </div>
   </header>
+
+  <!-- 移动端右侧抽屉：导航 + 账户统一入口 -->
+  @if (menuOpen()) {
+    <div class="mobile-scrim" (click)="closeMenu()" aria-hidden="true"></div>
+  }
+  <aside class="mobile-drawer" [class.open]="menuOpen()" aria-label="移动端菜单" [attr.aria-hidden]="!menuOpen()">
+    <div class="mobile-drawer__head">
+      @if (isLoggedIn) {
+        <div class="mobile-user">
+          <span class="mobile-user__avatar">{{ userInitial }}</span>
+          <div class="mobile-user__meta">
+            <strong>{{ userName() }}</strong>
+            <span>{{ userRoleLabel() }}</span>
+          </div>
+        </div>
+      } @else {
+        <div class="mobile-user mobile-user--guest">
+          <span class="mobile-user__avatar">游</span>
+          <div class="mobile-user__meta">
+            <strong>未登录</strong>
+            <span>登录后同步学习进度</span>
+          </div>
+        </div>
+      }
+      <button class="mobile-drawer__close" (click)="closeMenu()" aria-label="关闭菜单">
+        <span nz-icon nzType="close" nzTheme="outline"></span>
+      </button>
+    </div>
+
+    <div class="mobile-drawer__body">
+      @if (mobileChildEntry(); as child) {
+        <!-- 子菜单层：返回 + 子项列表 -->
+        <div class="mobile-subview">
+          <button class="mobile-back" (click)="closeMobileChild()" aria-label="返回全部菜单">
+            <span nz-icon nzType="left" nzTheme="outline"></span>
+            <span>全部菜单</span>
+          </button>
+          <div class="mobile-childhead">
+            <span nz-icon [nzType]="child.icon" nzTheme="outline"></span>
+            <div class="mobile-childhead__meta">
+              <strong>{{ child.label }}</strong>
+              <span>{{ child.children?.length || 0 }} 个功能</span>
+            </div>
+          </div>
+          @for (sub of child.children; track sub.key) {
+            <a class="mobile-link" [routerLink]="sub.route" (click)="closeOnNavigate()">
+              <span nz-icon [nzType]="sub.icon" nzTheme="outline"></span>
+              <span class="mobile-link__text">{{ sub.label }}</span>
+              <span nz-icon nzType="right" nzTheme="outline" class="mobile-link__go"></span>
+            </a>
+          }
+        </div>
+      } @else {
+      <!-- 账户快捷操作 -->
+      <div class="mobile-section">
+        <p class="mobile-section__title">账户</p>
+        @if (isLoggedIn) {
+          <a class="mobile-link" routerLink="/student/my-micro-majors" (click)="closeOnNavigate()">
+            <span nz-icon nzType="trophy" nzTheme="outline"></span><span>我的微专业</span>
+            <span nz-icon nzType="right" nzTheme="outline" class="mobile-link__go"></span>
+          </a>
+          <a class="mobile-link" routerLink="/student/my-learning" (click)="closeOnNavigate()">
+            <span nz-icon nzType="line-chart" nzTheme="outline"></span><span>我的学习</span>
+            <span nz-icon nzType="right" nzTheme="outline" class="mobile-link__go"></span>
+          </a>
+          <a class="mobile-link" routerLink="/student/employment/my-resumes" (click)="closeOnNavigate()">
+            <span nz-icon nzType="file-text" nzTheme="outline"></span><span>我的简历</span>
+            <span nz-icon nzType="right" nzTheme="outline" class="mobile-link__go"></span>
+          </a>
+          <a class="mobile-link" routerLink="/student/employment/my-applications" (click)="closeOnNavigate()">
+            <span nz-icon nzType="send" nzTheme="outline"></span><span>我的投递</span>
+            <span nz-icon nzType="right" nzTheme="outline" class="mobile-link__go"></span>
+          </a>
+          <a class="mobile-link" routerLink="/student/employment/my-outcomes" (click)="closeOnNavigate()">
+            <span nz-icon nzType="compass" nzTheme="outline"></span><span>我的就业去向</span>
+            <span nz-icon nzType="right" nzTheme="outline" class="mobile-link__go"></span>
+          </a>
+        } @else {
+          <button class="mobile-login" (click)="login()">
+            <span nz-icon nzType="user" nzTheme="outline"></span>
+            <span>登录 / 注册</span>
+          </button>
+        }
+      </div>
+
+      <!-- 主导航（点击父项进入子菜单层） -->
+      <div class="mobile-section">
+        <p class="mobile-section__title">功能导航</p>
+        @for (item of allItemsForMobile(); track item.key) {
+          @if (item.children && item.children.length) {
+            <button
+              class="mobile-link"
+              [class.active]="isActive(item)"
+              (click)="openMobileChild(item.key)"
+            >
+              <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
+              <span class="mobile-link__text">{{ item.label }}<small>{{ mobileChildHint(item) }}</small></span>
+              <span nz-icon nzType="right" nzTheme="outline" class="mobile-link__go"></span>
+            </button>
+          } @else {
+            <a
+              class="mobile-link"
+              [routerLink]="item.route"
+              routerLinkActive="active"
+              (click)="closeOnNavigate()"
+            >
+              <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
+              <span class="mobile-link__text">{{ item.label }}</span>
+              <span nz-icon nzType="right" nzTheme="outline" class="mobile-link__go"></span>
+            </a>
+          }
+        }
+      </div>
+
+      <div class="mobile-section">
+        <a class="mobile-link" routerLink="/" (click)="closeOnNavigate()">
+          <span nz-icon nzType="home" nzTheme="outline"></span><span>返回主站首页</span>
+          <span nz-icon nzType="right" nzTheme="outline" class="mobile-link__go"></span>
+        </a>
+        @if (isLoggedIn) {
+          <button class="mobile-link mobile-link--logout" (click)="logout()">
+            <span nz-icon nzType="logout" nzTheme="outline"></span><span class="mobile-link__text">退出登录</span>
+          </button>
+        }
+      </div>
+      }
+    </div>
+  </aside>
 
   <main class="main-content">
     <router-outlet></router-outlet>

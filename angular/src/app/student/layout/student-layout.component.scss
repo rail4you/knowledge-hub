@@ -456,24 +456,53 @@
 
 /* ============ Responsive ============ */
 
-/* 移动端菜单按钮（默认隐藏） */
+/* 移动端菜单按钮（默认隐藏）：常见三横线汉堡样式 */
 .menu-toggle {
   display: none;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1px solid ds.$student-border-soft;
-  background: #fff;
-  color: ds.$student-text;
-  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
   cursor: pointer;
   flex-shrink: 0;
   transition: background .15s;
 
   &:hover {
     background: ds.$student-surface-soft;
+  }
+
+  &:active {
+    background: rgba(15, 23, 42, 0.08);
+  }
+
+  .burger {
+    position: relative;
+    display: block;
+    width: 20px;
+    height: 14px;
+
+    i {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      border-radius: 2px;
+      background: #1f2d3d;
+      transition: transform .25s ease, opacity .2s ease, top .25s ease;
+
+      &:nth-child(1) { top: 0; }
+      &:nth-child(2) { top: 6px; }
+      &:nth-child(3) { top: 12px; }
+    }
+  }
+
+  &.open .burger i {
+    &:nth-child(1) { top: 6px; transform: rotate(45deg); }
+    &:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    &:nth-child(3) { top: 6px; transform: rotate(-45deg); }
   }
 }
 
@@ -506,7 +535,13 @@
   }
 }
 
-/* 移动端（手机）：tab 改为抽屉下拉 */
+/* 移动端右侧抽屉 + 遮罩（默认隐藏，桌面端永不显示） */
+.mobile-scrim,
+.mobile-drawer {
+  display: none;
+}
+
+/* 移动端（手机）：隐藏顶部 tab，改用右侧抽屉 */
 @media (max-width: 768px) {
   .app-header__inner {
     height: 56px;
@@ -520,11 +555,22 @@
   }
 
   .brand__name {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .brand__sub {
     display: none;
+  }
+
+  /* 顶部 tab 在移动端完全隐藏，统一收进右侧抽屉 */
+  .app-nav {
+    display: none;
+  }
+
+  /* 桌面端靠 .app-nav 的 flex:1 把操作区顶到右侧；隐藏后需 margin-left:auto 保持右对齐 */
+  .app-header__actions {
+    margin-left: auto;
+    gap: 4px;
   }
 
   .menu-toggle {
@@ -535,20 +581,20 @@
     display: none;
   }
 
+  /* 顶栏只保留头像 Logo 化展示，点击头像同样打开抽屉 */
   .user-chip {
     height: 36px;
-    padding: 0 8px 0 4px;
+    padding: 0;
+    max-width: 36px;
+    justify-content: center;
 
     &__avatar {
-      width: 26px;
-      height: 26px;
-      font-size: 11px;
+      width: 28px;
+      height: 28px;
+      font-size: 12px;
     }
 
-    &__name {
-      display: none;
-    }
-
+    &__name,
     &__caret {
       display: none;
     }
@@ -556,89 +602,325 @@
 
   .header-login {
     height: 34px;
-    padding: 0 14px;
+    padding: 0 12px;
     font-size: 13px;
   }
 
-  /* 移动端：tab 抽屉 */
-  .app-nav {
+  /* 全屏菜单不再需要遮罩 */
+  .mobile-scrim {
+    display: none;
+  }
+
+  /* 全屏菜单：从右侧滑入，覆盖整个视口宽度 */
+  .mobile-drawer {
+    display: flex;
+    flex-direction: column;
     position: fixed;
     top: 56px;
     left: 0;
     right: 0;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
+    bottom: 0;
+    background: ds.$student-bg;
+    z-index: 400;
+    transform: translateX(102%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0.35, 1);
+    visibility: hidden;
+
+    &.open {
+      transform: translateX(0);
+      visibility: visible;
+    }
+  }
+
+  .mobile-drawer__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
     background: #fff;
     border-bottom: 1px solid ds.$student-border-soft;
-    height: auto;
-    max-height: 0;
-    overflow: hidden;
-    overflow-y: auto;
-    z-index: 300;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-    transition: max-height 0.25s ease;
+    flex-shrink: 0;
   }
 
-  .app-header.open .app-nav {
-    max-height: calc(100vh - 56px);
+  .mobile-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+
+    &__avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: #13233a;
+      border: 1px solid rgba(43, 108, 212, 0.45);
+      color: #7ec8ff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    &__meta {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      line-height: 1.4;
+
+      strong {
+        font-size: 14px;
+        color: ds.$student-text;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      span {
+        font-size: 11px;
+        color: ds.$student-text-light;
+      }
+    }
   }
 
-  .nav-item {
-    width: 100%;
-    height: 44px;
-    padding: 0 16px;
-    border-radius: 0;
+  .mobile-drawer__close {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid ds.$student-border-soft;
+    background: #fff;
+    color: ds.$student-text-muted;
     font-size: 15px;
-    border-bottom: 1px solid ds.$student-border-soft;
-    justify-content: flex-start;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-drawer__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px calc(24px + env(safe-area-inset-bottom));
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 分组白卡 */
+  .mobile-section {
+    background: #fff;
+    border: 1px solid ds.$student-border-soft;
+    border-radius: 16px;
+    padding: 6px;
+    box-shadow: ds.$student-shadow-soft;
+
+    & + .mobile-section {
+      margin-top: 12px;
+    }
+  }
+
+  .mobile-section__title {
+    margin: 0;
+    padding: 8px 12px 4px;
+    font-size: 12px;
+    font-weight: 700;
+    color: ds.$student-text-light;
+  }
+
+  /* 列表行：图标磁贴 + 文本左对齐 + 箭头贴右缘 */
+  .mobile-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 54px;
+    padding: 7px 8px 7px 7px;
+    border-radius: 12px;
+    color: ds.$student-text;
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    width: 100%;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+
+    /* 首图标统一为圆角磁贴，视觉收拢在左侧 */
+    > span[nz-icon]:first-child {
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      background: rgba(43, 108, 212, 0.09);
+      color: ds.$student-primary;
+      font-size: 17px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* 文本占据中间全部空间，副标题另起一行 */
+    > span:nth-child(2),
+    .mobile-link__text {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+
+      small {
+        display: block;
+        margin-top: 1px;
+        font-size: 11.5px;
+        font-weight: 400;
+        color: ds.$student-text-light;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
 
     &.active {
-      background: rgba(43, 108, 212, 0.06);
-      &::after { display: none; }
+      background: rgba(43, 108, 212, 0.08);
+      color: ds.$student-primary;
     }
 
-    &:last-child {
-      border-bottom: none;
+    &:active {
+      background: ds.$student-surface-soft;
     }
 
-    &:first-child {
-      padding-left: 16px;
+    &--logout {
+      color: #b45454;
+
+      > span[nz-icon]:first-child {
+        background: rgba(180, 84, 84, 0.1);
+        color: #b45454;
+      }
     }
   }
 
-  .nav-item--dropdown {
-    flex-direction: column;
-    align-items: stretch;
-    height: auto;
+  /* 直达页面的行（a 标签）：去掉箭头，整行可点即是 affordance */
+  a.mobile-link .mobile-link__go {
+    display: none;
+  }
 
-    > .nav-item__label {
-      display: flex;
-      align-items: center;
+  /* 进入下级的行（button）：圆形进入钮，与直达行明显区分 */
+  button.mobile-link .mobile-link__go {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(43, 108, 212, 0.1);
+    color: ds.$student-primary !important;
+    font-size: 13px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  button.mobile-link.active .mobile-link__go {
+    background: ds.$student-primary;
+    color: #fff !important;
+  }
+
+  .mobile-login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 44px;
+    border: 0;
+    border-radius: 10px;
+    background: #13233a;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  /* 子菜单层：从右滑入 */
+  .mobile-subview {
+    animation: mobile-sub-in 0.24s ease;
+  }
+
+  @keyframes mobile-sub-in {
+    from { opacity: 0; transform: translateX(48px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .mobile-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 36px;
+    padding: 0 14px 0 8px;
+    margin: 2px 0 10px;
+    border: 1px solid ds.$student-border-soft;
+    border-radius: 999px;
+    background: #fff;
+    color: ds.$student-primary;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: ds.$student-shadow-soft;
+  }
+
+  .mobile-childhead {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid ds.$student-border-soft;
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: ds.$student-shadow-soft;
+
+    > span[nz-icon]:first-child {
+      width: 44px;
       height: 44px;
-      padding: 0 16px;
-      width: 100%;
-      color: ds.$student-text;
-      cursor: pointer;
-
-      .nav-item__caret {
-        margin-left: auto;
-      }
+      border-radius: 13px;
+      background: #13233a;
+      color: #7ec8ff;
+      font-size: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     }
 
-    .nav-menu {
-      display: block;
-      padding: 4px 12px 8px 36px;
-      box-shadow: none;
-      border-radius: 0;
-      background: ds.$student-surface-soft;
+    &__meta {
+      display: flex;
+      flex-direction: column;
       min-width: 0;
+      line-height: 1.4;
 
-      li[nz-menu-item] {
-        height: 38px;
-        font-size: 14px;
-        border-radius: 6px;
+      strong {
+        font-size: 17px;
+        color: ds.$student-text;
       }
+
+      span {
+        margin-top: 2px;
+        font-size: 12px;
+        color: ds.$student-text-light;
+      }
+    }
+  }
+
+  /* 子菜单项装进白卡 */
+  .mobile-subview .mobile-link {
+    background: #fff;
+    border: 1px solid ds.$student-border-soft;
+    box-shadow: ds.$student-shadow-soft;
+
+    & + .mobile-link {
+      margin-top: 8px;
     }
   }
 

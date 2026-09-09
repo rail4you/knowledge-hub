@@ -300,7 +300,10 @@
   box-shadow: ds.$student-shadow-soft;
 }
 
-/* ---- Tabs（下划线式，对齐参考站） ---- */
+/* ---- Tabs（下划线式，对齐参考站；移动端下拉默认隐藏） ---- */
+.tab-select-mobile {
+  display: none;
+}
 .detail-tabs {
   display: flex;
   align-items: center;
@@ -801,10 +804,76 @@
 }
 
 @media (max-width: 768px) {
-  .course-detail { padding-left: 16px; padding-right: 16px; }
-  .detail-info { padding: 20px 18px; }
-  .detail-info__title { font-size: 22px; }
+  .course-detail {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 12px;
+    padding-bottom: 32px;
+    gap: 12px;
+  }
+  .detail-breadcrumb {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .breadcrumb {
+    font-size: 12px;
+    gap: 6px;
+  }
+  .back-btn {
+    height: 32px;
+    font-size: 12px;
+  }
+  .detail-info { padding: 18px 14px; gap: 12px; }
+  .detail-info__title { font-size: 19px; }
+  .detail-info__desc { font-size: 13px; }
+
+  /* Tab：隐藏横排 tab，改用全宽下拉，避免四个 tab 挤不下 */
+  .detail-tabs {
+    display: none;
+  }
+  .tab-select-mobile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 12px 0;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid ds.$student-border;
+    border-radius: 10px;
+    background: ds.$student-surface-soft;
+
+    &__icon {
+      color: ds.$student-primary;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    &__input {
+      flex: 1;
+      height: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: ds.$student-text;
+      font-size: 14px;
+      font-weight: 600;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    &__caret {
+      color: ds.$student-text-light;
+      font-size: 12px;
+      flex-shrink: 0;
+      pointer-events: none;
+    }
+  }
+  .content-card { padding: 14px 12px 18px; }
+  .detail-info__stats { flex-wrap: wrap; gap: 12px; }
+  .info-stat strong { font-size: 18px; }
   .mastery-layout { grid-template-columns: 1fr; }
-  .detail-info__stats { flex-wrap: wrap; gap: 14px; }
   .stat-tags { gap: 8px 16px; }
+  .related-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .related-grid .course-card__body { padding: 10px 10px 8px; }
+  .related-grid .course-card__title { font-size: 13px; }
 }

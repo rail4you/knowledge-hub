@@ -94,6 +94,8 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
 
   /** 当前显示在导航栏的项 */
   readonly visibleItems = signal<StudentNavEntry[]>(this.allItems);
+  /** 移动抽屉用的全量导航（不受桌面端溢出折叠影响） */
+  allItemsForMobile(): StudentNavEntry[] { return this.allItems; }
   /** 折叠进「更多」的项 */
   readonly overflowItems = signal<StudentNavEntry[]>([]);
 
@@ -135,7 +137,12 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   ngAfterViewInit(): void {
     this.routerSub = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe(() => this.scheduleReflow());
+      .subscribe(() => {
+        this.scheduleReflow();
+        // 路由跳转后自动关闭移动抽屉
+        this.closeMenu();
+        this.mobileChildKey.set(null);
+      });
     this.resizeObserver = new ResizeObserver(() => this.scheduleReflow());
     if (this.tabTabsEl) {
       this.resizeObserver.observe(this.tabTabsEl.nativeElement);
@@ -224,11 +231,45 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     return this.userName()?.charAt(0)?.toUpperCase() || 'U';
   }
 
-  /** 用户下拉菜单顶部标题：「用户名 · 角色」 */
   userMenuTitle(): string {
     const name = this.userName() || '用户';
     const role = this.userRoleLabel() || '学生';
     return `${name} · ${role}`;
+  }
+
+  /** 移动端全屏菜单：当前钻取进入的子菜单 key（null = 根级列表） */
+  readonly mobileChildKey = signal<string | null>(null);
+
+  /** 当前钻取的子菜单项 */
+  mobileChildEntry(): StudentNavEntry | null {
+    const key = this.mobileChildKey();
+    if (!key) return null;
+    return this.allItems.find(i => i.key === key) ?? null;
+  }
+
+  /** 进入子菜单层 */
+  openMobileChild(key: string) {
+    this.mobileChildKey.set(key);
+  }
+
+  /** 返回根级列表 */
+  closeMobileChild() {
+    this.mobileChildKey.set(null);
+    this.scrollMobileMenuToActive();
+  }
+
+  /** 父项副标题：前两个子项名 + 数量，如「招聘直播 · 就业大厅等6项」 */
+  mobileChildHint(item: StudentNavEntry): string {
+    const kids = item.children ?? [];
+    if (!kids.length) return '';
+    const names = kids.slice(0, 2).map(k => k.label).join(' · ');
+    return kids.length > 2 ? `${names}等${kids.length}项` : names;
+  }
+
+  /** 移动抽屉内点击任意路由后关闭 */
+  closeOnNavigate() {
+    this.closeMenu();
+    this.mobileChildKey.set(null);
   }
 
   logout() {
@@ -241,10 +282,31 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   login() { this.authService.navigateToLogin(); }
 
   toggleMenu() {
-    this.menuOpen.update(v => !v);
+    const next = !this.menuOpen();
+    this.menuOpen.set(next);
+    if (!next) {
+      this.mobileChildKey.set(null);
+    } else {
+      this.scrollMobileMenuToActive();
+    }
   }
 
   closeMenu() {
     this.menuOpen.set(false);
+    this.mobileChildKey.set(null);
+  }
+
+  /** 菜单打开 / 返回根级时，把高亮项滚到可见位置（只滚菜单内部，不动背后页面） */
+  private scrollMobileMenuToActive(): void {
+    setTimeout(() => {
+      const body = document.querySelector('.mobile-drawer__body');
+      const el = document.querySelector('.mobile-drawer .mobile-link.active');
+      if (!body || !el) return;
+      const r = el.getBoundingClientRect();
+      const br = body.getBoundingClientRect();
+      if (r.top < br.top || r.bottom > br.bottom) {
+        body.scrollTo({ top: body.scrollTop + (r.top - br.top) - 72, behavior: 'smooth' });
+      }
+    }, 90);
   }
 }

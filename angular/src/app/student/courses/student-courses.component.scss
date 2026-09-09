@@ -195,6 +195,11 @@
   }
 }
 
+/* 移动端课程类别下拉（默认隐藏，移动端显示） */
+.status-select-mobile {
+  display: none;
+}
+
 .section-header {
   display: flex;
   align-items: center;
@@ -721,17 +726,97 @@
 
 @media (max-width: 768px) {
   .courses-page {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 12px;
+    padding-bottom: 32px;
+    gap: 14px;
   }
 
   .search-bar {
-    height: 38px;
+    height: 40px;
     padding: 0 6px 0 12px;
+  }
+
+  .search-bar__btn {
+    height: 30px;
+    padding: 0 12px;
+  }
+
+  /* 类别切换：隐藏三段 tab，改用全宽下拉 */
+  .status-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .status-tabs {
+    display: none;
+  }
+
+  .status-select-mobile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid ds.$student-border;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: ds.$student-shadow-soft;
+
+    &__icon {
+      color: ds.$student-primary;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    &__input {
+      flex: 1;
+      height: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: ds.$student-text;
+      font-size: 14px;
+      font-weight: 600;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    &__caret {
+      color: ds.$student-text-light;
+      font-size: 12px;
+      flex-shrink: 0;
+      pointer-events: none;
+    }
+  }
+
+  /* 专业筛选：单行横滑，不换行挤占空间 */
+  .major-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -12px;
+    padding: 2px 12px 4px;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .major-chip {
+    flex-shrink: 0;
+    height: 32px;
+  }
+
+  .section-header__title {
+    font-size: 16px;
   }
 
   .course-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .content-aside {
