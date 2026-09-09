@@ -491,14 +491,6 @@
         .remember input:checked::before{ transform:scale(1); }
         .remember input:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
 
-        .forgot{
-            font-size:0.85rem;
-            color: var(--ink);
-            text-decoration:none;
-            border-bottom:1px solid var(--gold);
-        }
-        .forgot:hover{ color: var(--gold); }
-
         .submit-btn{
             position:relative;
             width:100%;
@@ -717,7 +709,6 @@
                                     <input asp-for="LoginInput.RememberMe" />
                                     <span>@L["RememberMe"]</span>
                                 </label>
-                                <a href="@Url.Page("./ForgotPassword", new {returnUrl = Model.ReturnUrl, returnUrlHash = Model.ReturnUrlHash})" class="forgot">@L["ForgotPassword"]</a>
                             </div>
 
                             <button type="submit" name="Action" value="Login" class="submit-btn">@L["Login"]</button>
