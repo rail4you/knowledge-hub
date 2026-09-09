@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, effect, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -19,7 +19,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { ConfigStateService, EnvironmentService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
 import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/meilisearch-admin.service';
-import { stripUuids } from './search.util';
+import { stripUuids, foldByResourceName, getMatchInfo, MatchType } from './search.util';
 
 @Component({
   selector: 'app-search',
@@ -82,6 +82,45 @@ export class SearchComponent implements OnInit {
     return all.filter(r => r.fileExtension === ext);
   });
 
+  /**
+   * 用于渲染的最终结果：
+   * 1. 按资源名（同 resourceId）折叠，保留最早 / pageNumber 最小的一条
+   * 2. 叠加类型扩展前：折叠后仍需带来源信息，所以这里返回带 matchType 的副本
+   */
+  renderedResults = computed(() => {
+    const base = this.filteredResults();
+    const { folded } = foldByResourceName(base);
+    const q = this.searchQuery;
+    return folded.map(r => ({
+      ...r,
+      _match: getMatchInfo(r.resourceName, r.highlightedContent, r.eventDescription, q)
+    }));
+  });
+
+  hiddenCount = signal(0);
+
+  constructor() {
+    // 同步折叠数（不能放在 computed 里写 signal）
+    effect(() => {
+      const { hiddenCount } = foldByResourceName(this.filteredResults());
+      this.hiddenCount.set(hiddenCount);
+    });
+  }
+
+  /** 匹配类型中文标签 */
+  matchLabel(type: MatchType): string {
+    if (type === 'content') return '正文命中';
+    if (type === 'name') return '文件名命中';
+    return '可能相关';
+  }
+
+  /** 匹配类型对应的小色标 */
+  matchColor(type: MatchType): string {
+    if (type === 'content') return 'green';
+    if (type === 'name') return 'blue';
+    return 'orange';
+  }
+
   isVideoModalOpen = signal(false);
   currentVideoUrl = signal('');
   currentVideoStartTime = signal('00:00:00');
@@ -129,6 +168,15 @@ export class SearchComponent implements OnInit {
     if (score >= 0.5) return 'blue';
     if (score >= 0.3) return 'orange';
     return 'red';
+  }
+
+  /**
+   * 后端搜索结果中 CategoryName 字段实际上存的是 CategoryId（UUID）。
+   * 当值是 UUID 形式时，直接判定为未填充，不渲染分类。
+   */
+  isCategoryId(value: string | null | undefined): boolean {
+    if (!value) return true;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
   }
 
   /**

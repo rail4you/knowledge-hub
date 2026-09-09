@@ -74,16 +74,6 @@
             <header class="detail-header">
               <div class="detail-header-row1">
                 <h2 class="detail-header-title">{{ r.resourceName }}</h2>
-                <div class="detail-header-actions">
-                  <button nz-button nzSize="small" (click)="copySummary()" nz-tooltip="复制资源摘要到剪贴板">
-                    <span nz-icon nzType="copy"></span>
-                    复制摘要
-                  </button>
-                  <button nz-button nzSize="small" (click)="backToSearch()" nz-tooltip="返回搜索结果列表">
-                    <span nz-icon nzType="left"></span>
-                    返回搜索
-                  </button>
-                </div>
               </div>
 
               <!-- 元数据：纯文字排版 -->
@@ -98,9 +88,7 @@
                     <span class="meta-text">视频名称：<b>{{ r.videoName }}</b></span>
                   }
                 }
-                @if (r.categoryName) {
-                  <span class="meta-text">分类：<b>{{ r.categoryName }}</b></span>
-                }
+                <!-- 搜索结果中分类字段存的是 categoryId（UUID），暂不展示分类 -->
                 <span class="meta-text">相关度：<b class="meta-score" [class]="'score-' + scoreColor()">{{ scorePercent() }} / 100</b></span>
                 @if (r.uploadDate) {
                   <span class="meta-text">上传时间：<b>{{ r.uploadDate | date:'yyyy-MM-dd HH:mm' }}</b></span>

@@ -71,7 +71,7 @@
         </div>
       } @else {
         <div class="results-toolbar">
-          <span class="results-count">找到 <strong>{{ filteredResults().length }}</strong> 个结果</span>
+          <span class="results-count">找到 <strong>{{ renderedResults().length }}</strong> 个结果@if (hiddenCount() > 0) {<span class="results-hidden">（已折叠 {{ hiddenCount() }} 条同名匹配）</span>}</span>
           <nz-divider nzType="vertical"></nz-divider>
           <div class="ext-filter">
             <span class="ext-filter-label">按类型筛选：</span>
@@ -91,12 +91,15 @@
         </div>
 
         <div class="search-results">
-          @for (result of filteredResults(); track result.resourceId + '-' + result.pageNumber) {
-            <div class="result-card" (click)="viewDocument(result)">
+          @for (result of renderedResults(); track result.resourceId + '-' + result.pageNumber) {
+            <div class="result-card" [class.match-name]="result._match.type === 'name'" [class.match-fuzzy]="result._match.type === 'fuzzy'" (click)="viewDocument(result)">
               <div class="result-header">
                 <div class="result-title">
                   <span nz-icon [nzType]="result.sourceType === 'video' ? 'video-camera' : getFileIcon(result.fileExtension)" class="result-icon"></span>
-                  <span class="result-name">{{ result.resourceName }}</span>
+                  <span class="result-name" [innerHTML]="result._match.highlightedName"></span>
+                  <nz-tag class="result-match-tag" [nzColor]="matchColor(result._match.type)">
+                    {{ matchLabel(result._match.type) }}
+                  </nz-tag>
                   @if (result.sourceType === 'video') {
                     <nz-tag class="result-page-tag" nzColor="purple">
                       {{ result.startTime || '' }}
@@ -108,7 +111,7 @@
                   }
                 </div>
                 <div class="result-meta">
-                  @if (result.categoryName) {
+                  @if (result.categoryName && !isCategoryId(result.categoryName)) {
                     <nz-tag nzColor="blue">{{ result.categoryName }}</nz-tag>
                   }
                   <nz-tag [nzColor]="getScoreColor(result.relevanceScore)">
@@ -142,7 +145,7 @@
         <div class="pagination">
           <nz-pagination
             [(nzPageIndex)]="pageIndex"
-            [nzTotal]="filteredResults().length"
+            [nzTotal]="renderedResults().length"
             [nzPageSize]="pageSize"
             (nzPageIndexChange)="onPageChange()">
           </nz-pagination>

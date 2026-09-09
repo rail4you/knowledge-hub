@@ -291,7 +291,24 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    ::ng-deep em {
+      background: #fff3cd;
+      color: #ad6800;
+      font-style: normal;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
   }
+}
+
+.result-match-tag {
+  font-size: 11.5px;
+  margin-inline-end: 0;
+  line-height: 18px;
+  padding: 0 6px;
+  flex-shrink: 0;
 }
 
 .result-page-tag {
