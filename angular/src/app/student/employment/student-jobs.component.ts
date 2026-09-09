@@ -9,11 +9,12 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { EmploymentApplicationStatus, EmploymentJobType, EmploymentService, JobPostingDto } from '../../employment/employment.service';
 import { StudentJobDetailModalComponent } from './student-job-detail-modal.component';
+import { StudentJobApplyModalComponent } from './student-job-apply-modal.component';
 
 @Component({
   selector: 'app-student-jobs',
   standalone: true,
-  imports: [CommonModule, DatePipe, DecimalPipe, FormsModule, NzIconModule, NzSpinModule, NzEmptyModule, NzPaginationModule, NzModalModule, StudentJobDetailModalComponent],
+  imports: [CommonModule, DatePipe, DecimalPipe, FormsModule, NzIconModule, NzSpinModule, NzEmptyModule, NzPaginationModule, NzModalModule, StudentJobDetailModalComponent, StudentJobApplyModalComponent],
   templateUrl: './student-jobs.component.html',
   styleUrls: ['./student-jobs.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +35,8 @@ export class StudentJobsComponent implements OnInit {
   readonly as = EmploymentApplicationStatus;
   /** 选中的岗位 id：有值时弹出详情弹窗，不做路由跳转 */
   readonly selectedJobId = signal<string | null>(null);
+  /** 待投递的岗位 id：有值时弹出独立投递弹窗 */
+  readonly applyJobId = signal<string | null>(null);
 
   readonly stats = computed(() => {
     const all = this.jobs();
@@ -69,6 +72,13 @@ export class StudentJobsComponent implements OnInit {
   /** 详情用弹窗展示，不跳转页面（路由 jobs/:id 保留给深链/复制链接） */
   openDetail(item: JobPostingDto) { if (item?.id) this.selectedJobId.set(item.id); }
   closeDetail() { this.selectedJobId.set(null); }
+  /** 「立即应聘」：已投递的卡片仍进详情；未投递的直接弹独立投递表单，不进详情 */
+  openApply(item: JobPostingDto, ev?: Event) {
+    if (!item?.id || item.hasApplied) return;
+    ev?.stopPropagation();
+    this.applyJobId.set(item.id);
+  }
+  closeApply() { this.applyJobId.set(null); }
 
   // ---- 状态显示 ----
   label(s?: EmploymentApplicationStatus): string {

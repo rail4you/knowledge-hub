@@ -5,6 +5,7 @@ import { RestService } from '@abp/ng.core';
 export interface ResourceReviewDto {
   id: string;
   resourceId: string;
+  parentId?: string | null;
   userId: string;
   userName: string;
   rating: number;
@@ -14,6 +15,7 @@ export interface ResourceReviewDto {
 
 export interface CreateResourceReviewInput {
   resourceId: string;
+  parentId?: string;
   rating: number;
   content?: string;
 }

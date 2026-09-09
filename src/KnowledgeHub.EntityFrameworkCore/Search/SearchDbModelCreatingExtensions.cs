@@ -109,7 +109,9 @@ public static class SearchDbModelCreatingExtensions
             b.ToTable("KhResourceReviews");
             b.ConfigureByConvention();
 
-            b.HasIndex(x => new { x.ResourceId, x.UserId }).IsUnique();
+            // 一级评价每人一条（ParentId 为空时唯一）；回复（ParentId 非空）不受此限制
+            b.HasIndex(x => new { x.ResourceId, x.UserId }).IsUnique().HasFilter("\"ParentId\" IS NULL");
+            b.HasIndex(x => x.ParentId);
 
             b.Property(x => x.Content).HasMaxLength(2000);
 

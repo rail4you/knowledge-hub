@@ -6,6 +6,7 @@ public class ResourceReviewDto
 {
     public Guid Id { get; set; }
     public Guid ResourceId { get; set; }
+    public Guid? ParentId { get; set; }
     public Guid UserId { get; set; }
     public string UserName { get; set; } = string.Empty;
     public int Rating { get; set; }
@@ -16,6 +17,7 @@ public class ResourceReviewDto
 public class CreateResourceReviewDto
 {
     public Guid ResourceId { get; set; }
+    public Guid? ParentId { get; set; }
     public int Rating { get; set; }
     public string? Content { get; set; }
 }

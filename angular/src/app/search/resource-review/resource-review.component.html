@@ -60,7 +60,7 @@
           <nz-empty [nzNotFoundContent]="displayOnly ? '暂无评价' : '暂无评价，快来发表第一条吧'"></nz-empty>
         } @else {
           <ul class="review-items">
-            @for (item of reviews(); track item.id) {
+            @for (item of rootReviews(); track item.id) {
               <li class="review-item">
                 <div class="review-avatar">{{ item.userName?.charAt(0) || '?' }}</div>
                 <div class="review-body">
@@ -71,6 +71,33 @@
                   </div>
                   <div class="review-content" *ngIf="item.content">{{ item.content }}</div>
                   <div class="review-content muted" *ngIf="!item.content">用户未填写评价内容</div>
+                  @if (!displayOnly) {
+                    <div class="review-footer">
+                      <button type="button" class="review-reply-btn" (click)="openReplyModal(item)" [title]="'回复 ' + (item.userName || '该用户')">
+                        <span nz-icon nzType="message" nzTheme="outline"></span>
+                        <span>回复</span>
+                      </button>
+                    </div>
+                  }
+                  @if (repliesOf(item.id); as replies) {
+                    @if (replies.length > 0) {
+                      <div class="review-replies">
+                        @for (r of replies; track r.id) {
+                          <div class="review-reply">
+                            <div class="review-avatar review-avatar--sm">{{ r.userName?.charAt(0) || '?' }}</div>
+                            <div class="review-body">
+                              <div class="review-meta">
+                                <span class="reviewer-name">{{ r.userName }}</span>
+                                <span class="review-time">{{ r.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
+                              </div>
+                              <div class="review-content" *ngIf="r.content">{{ r.content }}</div>
+                              <div class="review-content muted" *ngIf="!r.content">用户未填写回复内容</div>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  }
                 </div>
               </li>
             }
@@ -79,4 +106,47 @@
       </nz-spin>
     </div>
   </div>
+
+  <!-- 回复弹窗（参考资讯评论回复） -->
+  @if (!displayOnly) {
+    <nz-modal
+      [nzVisible]="replyModalVisible()"
+      [nzTitle]="replyTo() ? '回复 @' + (replyTo()?.userName || '匿名用户') : '回复评价'"
+      [nzWidth]="560"
+      [nzMaskClosable]="false"
+      [nzOkLoading]="replySubmitting()"
+      [nzOkText]="replySubmitting() ? '发表中...' : '发表回复'"
+      [nzOkDisabled]="!replyContent().trim()"
+      nzCancelText="取消"
+      (nzOnCancel)="closeReplyModal()"
+      (nzOnOk)="submitReply()"
+    >
+      <ng-container *nzModalContent>
+        <div class="reply-modal">
+          @if (replyTo(); as rt) {
+            <div class="reply-modal__target">
+              <span nz-icon nzType="message" nzTheme="outline"></span>
+              <span class="reply-modal__target-title" [title]="rt.content">{{ rt.content || '用户未填写评价内容' }}</span>
+            </div>
+          }
+          <textarea
+            nz-input
+            [ngModel]="replyContent()"
+            (ngModelChange)="replyContent.set($event)"
+            rows="5"
+            maxlength="500"
+            [placeholder]="replyTo() ? '回复 @' + (replyTo()?.userName || '') + '：' : '写下你的回复...'"
+            class="reply-modal__textarea"
+          ></textarea>
+          <div class="reply-modal__footer">
+            <span class="reply-modal__count">{{ replyContent().length }} / 500</span>
+            <span class="reply-modal__hint">
+              <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+              文明发言，友善交流
+            </span>
+          </div>
+        </div>
+      </ng-container>
+    </nz-modal>
+  }
 </div>

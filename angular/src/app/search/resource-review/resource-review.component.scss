@@ -203,6 +203,12 @@ textarea {
   font-weight: 600;
   flex-shrink: 0;
   box-shadow: 0 2px 6px -2px rgba(24, 144, 255, 0.4);
+
+  &--sm {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
 }
 
 .review-body {
@@ -239,6 +245,124 @@ textarea {
   &.muted {
     color: var(--kh-muted);
     font-style: italic;
+  }
+}
+
+// ─────────────────────────────────────────────
+// 回复（参考资讯评论回复：行内回复按钮 + 嵌套楼层）
+// ─────────────────────────────────────────────
+.review-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.review-reply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--kh-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--kh-accent);
+    background: #e9f0fa;
+  }
+}
+
+.review-replies {
+  margin-top: 12px;
+  padding-left: 14px;
+  border-left: 2px solid var(--kh-line-2);
+  display: flex;
+  flex-direction: column;
+}
+
+.review-reply {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px dashed var(--kh-line-2);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 4px;
+  }
+}
+
+.review-reply-tag {
+  color: var(--kh-accent);
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+// ─────────────────────────────────────────────
+// 回复弹窗
+// ─────────────────────────────────────────────
+.reply-modal {
+  padding: 4px 0;
+
+  &__target {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--kh-accent);
+    background: #f6f8fb;
+    color: var(--kh-muted);
+    font-size: 12px;
+
+    span[nz-icon] {
+      font-size: 13px;
+      color: var(--kh-accent);
+      flex-shrink: 0;
+    }
+  }
+
+  &__target-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__textarea {
+    width: 100%;
+    border-radius: 8px;
+    font-size: 13.5px;
+    line-height: 1.7;
+    resize: vertical;
+    min-height: 120px;
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+
+  &__count {
+    color: var(--kh-muted);
+    font-size: 12px;
+  }
+
+  &__hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--kh-muted);
+    font-size: 12px;
   }
 }
 

@@ -56,7 +56,10 @@ export class HomeComponent implements OnInit {
       next: tenants => {
         this.tenants.set(tenants || []);
         this.loadingTenants.set(false);
-        const firstId = tenants?.[0]?.id;
+        // 租户列表顺序不稳定（后端 GetListAsync 无排序），不要盲取 [0]：
+        // 优先选课程最多的租户，保证首页"精选课程"有内容（如 qidi，而非空数据的 guozhou）
+        const sorted = [...(tenants || [])].sort((a, b) => (b.courseCount || 0) - (a.courseCount || 0));
+        const firstId = sorted[0]?.id;
         if (firstId) this.loadHomeData(firstId);
       },
       error: () => {
@@ -93,5 +96,9 @@ export class HomeComponent implements OnInit {
   coverGradient(index: number): string {
     const p = ['#1e6ce8,#00b7ff', '#0c4cb8,#3b82f6', '#2563eb,#1e6ce8', '#0284c7,#0ea5e9', '#1d4ed8,#6366f1'];
     return `linear-gradient(135deg, ${p[index % p.length]})`;
+  }
+
+  hasCover(item: { coverImageUrl?: string | null }): boolean {
+    return !!item?.coverImageUrl && item.coverImageUrl.trim().length > 0;
   }
 }

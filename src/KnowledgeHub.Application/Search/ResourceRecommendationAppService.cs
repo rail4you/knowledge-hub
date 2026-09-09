@@ -73,6 +73,7 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                 LEFT JOIN (
                     SELECT ""ResourceId"", AVG(""Rating"")::numeric as avg_rating, COUNT(*)::int as review_count
                     FROM ""KhResourceReviews""
+                    WHERE ""ParentId"" IS NULL
                     GROUP BY ""ResourceId""
                 ) rv ON r.""Id"" = rv.""ResourceId""
                 LEFT JOIN (
@@ -153,6 +154,7 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                 LEFT JOIN (
                     SELECT ""ResourceId"", AVG(""Rating"")::numeric as avg_rating, COUNT(*)::int as review_count
                     FROM ""KhResourceReviews""
+                    WHERE ""ParentId"" IS NULL
                     GROUP BY ""ResourceId""
                 ) rv ON r.""Id"" = rv.""ResourceId""
                 WHERE r.""IsDeleted"" = false {statusFilter} {tenantFilter}
@@ -278,6 +280,7 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                     LEFT JOIN (
                         SELECT ""ResourceId"", AVG(""Rating"")::numeric as avg_rating
                         FROM ""KhResourceReviews""
+                        WHERE ""ParentId"" IS NULL
                         GROUP BY ""ResourceId""
                     ) rv ON r.""Id"" = rv.""ResourceId""
                     WHERE r.""IsDeleted"" = false {statusFilter} {tenantFilter}
@@ -315,6 +318,7 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                 LEFT JOIN (
                     SELECT ""ResourceId"", AVG(""Rating"")::numeric as avg_rating, COUNT(*)::int as review_count
                     FROM ""KhResourceReviews""
+                    WHERE ""ParentId"" IS NULL
                     GROUP BY ""ResourceId""
                 ) rv ON r.""Id"" = rv.""ResourceId""
                 ORDER BY Score DESC
@@ -396,12 +400,13 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                     LEFT JOIN (
                         SELECT ""ResourceId"", AVG(""Rating"")::numeric as avg_rating
                         FROM ""KhResourceReviews""
+                        WHERE ""ParentId"" IS NULL
                         GROUP BY ""ResourceId""
                     ) rv ON r.""Id"" = rv.""ResourceId""
                     CROSS JOIN (
                         SELECT AVG(""Rating"")::numeric as avg_rating
                         FROM ""KhResourceReviews""
-                        WHERE ""ResourceId"" = '{resourceId}'
+                        WHERE ""ResourceId"" = '{resourceId}' AND ""ParentId"" IS NULL
                     ) rv_self
                     WHERE r.""IsDeleted"" = false {statusFilter} {tenantFilter}
                         AND r.""Id"" != '{resourceId}'
@@ -426,6 +431,7 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                 LEFT JOIN (
                     SELECT ""ResourceId"", AVG(""Rating"")::numeric as avg_rating, COUNT(*)::int as review_count
                     FROM ""KhResourceReviews""
+                    WHERE ""ParentId"" IS NULL
                     GROUP BY ""ResourceId""
                 ) rv ON r.""Id"" = rv.""ResourceId""
                 ORDER BY Score DESC
@@ -512,7 +518,7 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                         COUNT(CASE WHEN ""Rating"" = 4 THEN 1 END)::int as r4,
                         COUNT(CASE WHEN ""Rating"" = 5 THEN 1 END)::int as r5
                     FROM ""KhResourceReviews""
-                    WHERE ""ResourceId"" = '{resourceId}'
+                    WHERE ""ResourceId"" = '{resourceId}' AND ""ParentId"" IS NULL
                     GROUP BY ""ResourceId""
                 ) rv ON r.""Id"" = rv.""ResourceId""
                 LEFT JOIN (

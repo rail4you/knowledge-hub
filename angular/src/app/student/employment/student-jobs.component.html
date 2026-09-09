@@ -118,7 +118,7 @@
           <!-- 按钮（所有卡片统一双按钮，防溢出） -->
           <div class="card-actions">
             <span class="act act-view"><span nz-icon nzType="eye" nzTheme="outline"></span><span class="act__label">详情</span></span>
-            <span class="act" [class.act--applied]="item.hasApplied" [class.act--apply]="!item.hasApplied">
+            <span class="act" [class.act--applied]="item.hasApplied" [class.act--apply]="!item.hasApplied" (click)="openApply(item, $event)">
               <span nz-icon [nzType]="item.hasApplied?'check':'send'" nzTheme="outline"></span>
               <span class="act__label">{{ item.hasApplied ? label(item.applicationStatus) : '立即应聘' }}</span>
             </span>
@@ -136,4 +136,11 @@
 <app-student-job-detail-modal
   [jobId]="selectedJobId()"
   (closed)="closeDetail()"
+/>
+
+<!-- 独立投递弹窗：只做选简历 + 确认投递；成功后刷新列表 -->
+<app-student-job-apply-modal
+  [jobId]="applyJobId()"
+  (closed)="closeApply()"
+  (applied)="load()"
 />

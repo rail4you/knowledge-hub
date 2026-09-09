@@ -56,7 +56,11 @@
         @for (course of homeData()?.featuredCourses; track course.id; let i = $index) {
           <a class="course-card" [routerLink]="['/student/courses', course.id]">
             <div class="course-card__cover" [style.background]="coverGradient(i)">
-              <span class="course-card__icon"><span nz-icon nzType="read" nzTheme="outline"></span></span>
+              @if (hasCover(course)) {
+                <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
+              } @else {
+                <span class="course-card__icon"><span nz-icon nzType="read" nzTheme="outline"></span></span>
+              }
             </div>
             <div class="course-card__body">
               <h4>{{ course.title }}</h4>
@@ -78,6 +82,9 @@
       <div class="mm-grid">
         @for (mm of homeData()?.microMajors; track mm.id; let i = $index) {
           <a class="mm-card" [routerLink]="['/student/micro-majors', mm.id]" [style.background]="coverGradient(i)">
+            @if (hasCover(mm)) {
+              <img class="mm-card__cover-img" [src]="mm.coverImageUrl" [alt]="mm.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
+            }
             <span class="mm-card__icon"><span nz-icon nzType="trophy" nzTheme="outline"></span></span>
             <h4>{{ mm.title }}</h4>
             <span class="mm-card__count">{{ mm.courseCount || 0 }} 门课程</span>

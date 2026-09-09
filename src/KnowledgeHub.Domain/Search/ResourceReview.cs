@@ -8,6 +8,7 @@ namespace KnowledgeHub.Domain.Search;
 public class ResourceReview : FullAuditedAggregateRoot<Guid>, IMultiTenant
 {
     public Guid ResourceId { get; set; }
+    public Guid? ParentId { get; set; }
     public Guid UserId { get; set; }
     public int Rating { get; set; }
     public string? Content { get; set; }

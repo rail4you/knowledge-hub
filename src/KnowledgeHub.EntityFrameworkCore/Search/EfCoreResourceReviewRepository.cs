@@ -20,7 +20,8 @@ public class EfCoreResourceReviewRepository : EfCoreRepository<KnowledgeHubDbCon
     public async Task<ResourceReview?> GetByUserAndResourceAsync(Guid userId, Guid resourceId, CancellationToken cancellationToken = default)
     {
         var dbSet = await GetDbSetAsync();
-        return await dbSet.FirstOrDefaultAsync(r => r.UserId == userId && r.ResourceId == resourceId, cancellationToken);
+        // 仅返回一级评价；回复（ParentId 非空）不计入“我的评价”
+        return await dbSet.FirstOrDefaultAsync(r => r.UserId == userId && r.ResourceId == resourceId && r.ParentId == null, cancellationToken);
     }
 
     public async Task<List<ResourceReview>> GetByResourceIdAsync(Guid resourceId, int skipCount, int maxResultCount, CancellationToken cancellationToken = default)

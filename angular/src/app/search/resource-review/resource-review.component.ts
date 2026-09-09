@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject, signal, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal, computed, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -11,6 +11,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { ResourceReviewService, ResourceReviewDto, ResourceRatingSummaryDto, CreateResourceReviewInput, UpdateResourceReviewInput } from './resource-review.service';
 
 @Component({
@@ -19,7 +20,7 @@ import { ResourceReviewService, ResourceReviewDto, ResourceRatingSummaryDto, Cre
   imports: [
     CommonModule, FormsModule, NzSpinModule, NzRateModule,
     NzInputModule, NzButtonModule, NzListModule, NzAvatarModule, NzEmptyModule,
-    NzDividerModule, NzIconModule
+    NzDividerModule, NzIconModule, NzModalModule
   ],
   templateUrl: './resource-review.component.html',
   styleUrls: ['./resource-review.component.scss'],
@@ -51,6 +52,22 @@ export class ResourceReviewComponent implements OnInit, OnChanges {
   myRating = signal(0);
   myContent = signal('');
   editingReviewId = signal<string | null>(null);
+
+  // ── 回复状态（参考资讯评论回复） ──
+  /** 正在回复的目标评价；null 表示不在回复流程中 */
+  replyTo = signal<ResourceReviewDto | null>(null);
+  replyContent = signal('');
+  replySubmitting = signal(false);
+  replyModalVisible = signal(false);
+
+  /** 评价 id → 评价（回复链查找与孤儿兜底用） */
+  readonly reviewMap = computed(() => new Map(this.reviews().map(r => [r.id, r])));
+
+  /** 一级评价：无 parentId，或父评价不在列表中（脏数据兜底为一级展示） */
+  readonly rootReviews = computed(() => {
+    const map = this.reviewMap();
+    return this.reviews().filter(r => !r.parentId || !map.has(r.parentId));
+  });
 
   private loadedForResourceId = '';
 
@@ -96,6 +113,9 @@ export class ResourceReviewComponent implements OnInit, OnChanges {
     this.editingReviewId.set(null);
     this.summary.set(null);
     this.reviews.set([]);
+    this.replyTo.set(null);
+    this.replyContent.set('');
+    this.replyModalVisible.set(false);
   }
 
   private refresh() {
@@ -204,6 +224,73 @@ export class ResourceReviewComponent implements OnInit, OnChanges {
         this.refresh();
       },
       error: (err) => this.message.error(err?.error?.error?.message || '删除失败')
+    });
+  }
+
+  // ── 回复（参考资讯评论回复：嵌套展示 + 弹窗发表） ──
+
+  /** 某一级评价下的全部回复（含楼中楼，统一挂根下按时间正序展示） */
+  repliesOf(rootId: string): ResourceReviewDto[] {
+    const map = this.reviewMap();
+    const isDescendant = (r: ResourceReviewDto): boolean => {
+      let pid = r.parentId;
+      const seen = new Set<string>([r.id]);
+      while (pid) {
+        if (pid === rootId) return true;
+        if (seen.has(pid)) return false;
+        seen.add(pid);
+        pid = map.get(pid)?.parentId ?? null;
+      }
+      return false;
+    };
+    return this.reviews()
+      .filter(r => r.id !== rootId && !!r.parentId && isDescendant(r))
+      .sort((a, b) => +new Date(a.creationTime) - +new Date(b.creationTime));
+  }
+
+  /** 回复直接 @ 的人名（父评价作者；父为根时模板不展示） */
+  replyTargetName(reply: ResourceReviewDto): string {
+    if (!reply.parentId) return '';
+    return this.reviewMap().get(reply.parentId)?.userName || '';
+  }
+
+  /** 打开回复弹窗：目标为被回复的评价（可为一级或楼中回复） */
+  openReplyModal(review: ResourceReviewDto) {
+    this.replyTo.set(review);
+    this.replyContent.set('');
+    this.replyModalVisible.set(true);
+  }
+
+  closeReplyModal() {
+    if (this.replySubmitting()) return;
+    this.replyModalVisible.set(false);
+    this.replyContent.set('');
+    this.replyTo.set(null);
+  }
+
+  submitReply() {
+    const target = this.replyTo();
+    const content = this.replyContent().trim();
+    if (!target || !content || this.replySubmitting()) return;
+    this.replySubmitting.set(true);
+    this.reviewService.create({
+      resourceId: this.resourceId,
+      parentId: target.id,
+      rating: 0,
+      content,
+    }).subscribe({
+      next: () => {
+        this.replySubmitting.set(false);
+        this.replyModalVisible.set(false);
+        this.replyContent.set('');
+        this.replyTo.set(null);
+        this.message.success('回复已发布');
+        this.refresh();
+      },
+      error: (err) => {
+        this.replySubmitting.set(false);
+        this.message.error(err?.error?.error?.message || '回复提交失败');
+      }
     });
   }
 }
