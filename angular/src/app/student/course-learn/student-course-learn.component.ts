@@ -222,6 +222,13 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   loadCourse(id: string) {
     this.courseService.getDetail(id).subscribe({
       next: result => {
+        // 未选课（含跨租户无选课可能的课程）禁止进入学习页：明确提示后退回详情
+        if (result && !result.isEnrolled) {
+          this.loading.set(false);
+          this.message.error('未选课，不能访问该课程学习页');
+          this.router.navigate(['/student/courses', id], { queryParamsHandling: 'preserve' });
+          return;
+        }
         this.course.set(result);
         // 若选中章节时课程尚未就绪导致记录被跳过，此处补加载
         const currentChapterId = this.currentChapterId();

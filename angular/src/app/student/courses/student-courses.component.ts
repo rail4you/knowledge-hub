@@ -301,22 +301,9 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   }
 
   enroll(course: CourseDto, event: Event) {
+    // 学生端不允许自助选课：选课只能由老师分配。此处仅提示，不调用后端。
     event.stopPropagation();
-    if (this.enrolling()) return;
-    this.enrolling.set(course.id);
-    this.courseService.enroll(course.id).subscribe({
-      next: () => {
-        this.enrolling.set(null);
-        this.message.success('选课成功，已添加到我的课程');
-        // 标记为已选
-        this.courses.update(list => list.map(c => c.id === course.id ? { ...c, isEnrolled: true } : c));
-        this.loadMyCourses();
-      },
-      error: () => {
-        this.enrolling.set(null);
-        this.message.error('选课失败');
-      },
-    });
+    this.message.warning('未选课，请联系老师分配课程');
   }
 
   startLearning(course: CourseDto | StudentCourseDto, event: Event) {

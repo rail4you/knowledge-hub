@@ -69,6 +69,19 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
     {
         var studentId = CurrentUser.GetId();
 
+        // 退课/未选课禁止提交习题：有退课情况肯定不能进入学习，直接拦截写操作
+        StudentCourse? enrollment;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var scQuery = await _studentCourseRepository.GetQueryableAsync();
+            enrollment = await scQuery.FirstOrDefaultAsync(
+                x => x.StudentId == studentId && x.CourseId == input.CourseId && x.Status != StudentCourseStatus.Dropped);
+        }
+        if (enrollment == null)
+        {
+            throw new UserFriendlyException("未选课，不能访问该课程学习页");
+        }
+
         // Find existing record
         StudentExerciseRecord? record;
         using (DataFilter.Disable<IMultiTenant>())

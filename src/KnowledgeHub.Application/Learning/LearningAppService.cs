@@ -8,6 +8,7 @@ using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.Majors;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
@@ -46,7 +47,10 @@ public class LearningAppService : ApplicationService, ILearningAppService
     {
         var studentId = _currentUser.Id ?? throw new Volo.Abp.AbpException("User not found");
         
-        var studentCourses = await _studentCourseRepository.GetListAsync(x => x.StudentId == studentId);
+        // 已退课不计入仪表盘（与详情页 IsEnrolled 口径一致：Dropped 视为未选课）
+        var studentCourses = (await _studentCourseRepository.GetListAsync(x => x.StudentId == studentId))
+            .Where(x => x.Status != StudentCourseStatus.Dropped)
+            .ToList();
         
         // 从 LearningProgress 表计算真实学习时长（分钟）
         var allProgress = await _progressRepository.GetListAsync(x => x.StudentId == studentId);
@@ -135,11 +139,17 @@ public class LearningAppService : ApplicationService, ILearningAppService
     {
         var studentId = _currentUser.Id ?? throw new Volo.Abp.AbpException("User not found");
 
-        var studentCourses = await _studentCourseRepository.GetListAsync(x => x.StudentId == studentId);
+        // 已退课不属于“我的课程”（与详情页 IsEnrolled 口径一致）
+        var studentCourses = (await _studentCourseRepository.GetListAsync(x => x.StudentId == studentId))
+            .Where(x => x.Status != StudentCourseStatus.Dropped)
+            .ToList();
 
         var result = new List<StudentCourseListItemDto>();
 
         var majorIds = new HashSet<Guid>();
+        // 课程查询禁用租户过滤器：历史跨租户选课的课程仍需解析，否则“我的课程”会丢数据
+        using (DataFilter.Disable<Volo.Abp.MultiTenancy.IMultiTenant>())
+        {
         foreach (var sc in studentCourses)
         {
             var course = await _courseRepository.FindAsync(sc.CourseId);
@@ -147,6 +157,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
             {
                 majorIds.Add(mid);
             }
+        }
         }
 
         var majorMap = new Dictionary<Guid, string>();
@@ -163,7 +174,11 @@ public class LearningAppService : ApplicationService, ILearningAppService
 
         foreach (var sc in studentCourses)
         {
-            var course = await _courseRepository.FindAsync(sc.CourseId);
+            Courses.Course? course;
+            using (DataFilter.Disable<Volo.Abp.MultiTenancy.IMultiTenant>())
+            {
+                course = await _courseRepository.FindAsync(sc.CourseId);
+            }
             if (course != null)
             {
                 string? majorName = null;
@@ -220,6 +235,14 @@ public class LearningAppService : ApplicationService, ILearningAppService
     public async Task<LearningProgressDto> RecordProgressAsync(RecordProgressInput input)
     {
         var studentId = _currentUser.Id ?? throw new Volo.Abp.AbpException("User not found");
+
+        // 退课/未选课禁止上报学习进度：有退课情况肯定不能进入学习，直接拦截写操作
+        var enrollment = await _studentCourseRepository.FirstOrDefaultAsync(
+            x => x.StudentId == studentId && x.CourseId == input.CourseId && x.Status != StudentCourseStatus.Dropped);
+        if (enrollment == null)
+        {
+            throw new Volo.Abp.UserFriendlyException("未选课，不能访问该课程学习页");
+        }
         
         var progress = await _progressRepository.FirstOrDefaultAsync(
             x => x.StudentId == studentId 

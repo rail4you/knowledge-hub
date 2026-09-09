@@ -179,6 +179,12 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
 
     public async Task<List<ExerciseDto>> GetByChapterAsync(Guid chapterId)
     {
+        // 与 GetByCourseAsync 对齐：禁用多租户过滤器后按 ChapterId 精确匹配，
+        // 避免课程与其习题分属不同租户（历史跨租户选课）时章节习题查不到。
+        // 未选课的访问控制由前端学习页选课校验承担（提示后退回详情），此处只保证已选课的数据一致性。
+        List<Exercise> exercises;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
         // P2-4：原本只查 Exercise.ChapterId == chapterId；现在扩展为：
         //   (Exercise.ChapterId == chapterId) OR (ChapterExercise.ChapterId == chapterId)
         var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
@@ -189,10 +195,11 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
             .Select(x => x.ExerciseId)
             .ToList();
 
-        var exercises = exerciseQuery
+        exercises = exerciseQuery
             .Where(x => x.ChapterId == chapterId || matchedChapterExerciseIds.Contains(x.Id))
             .OrderBy(x => x.Difficulty)
             .ToList();
+        }
 
         var chapterMap = await GetChapterIdsBatchAsync(exercises.Select(e => e.Id).ToList());
         return exercises

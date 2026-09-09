@@ -34,11 +34,11 @@
       <div class="detail-media">
         <div class="detail-media__stage"
              [style.background]="courseGradient(c)"
-             (click)="c.isEnrolled ? startLearning() : enrollCourse()"
+             (click)="c.isEnrolled ? startLearning() : notifyNotEnrolled()"
              role="button"
              tabindex="0"
-             (keyup.enter)="c.isEnrolled ? startLearning() : enrollCourse()"
-             [attr.aria-label]="c.isEnrolled ? '继续学习' : '选课学习'">
+             (keyup.enter)="c.isEnrolled ? startLearning() : notifyNotEnrolled()"
+             [attr.aria-label]="c.isEnrolled ? '继续学习' : '未选课'">
           <img class="detail-media__img" src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" />
           @if (hasCover(c)) {
             <img class="detail-media__img" [src]="c.coverImageUrl" [alt]="c.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
@@ -133,7 +133,8 @@
           </div>
         }
 
-        <!-- 主操作按钮（右侧底部全宽） -->
+        <!-- 主操作按钮（右侧底部全宽）：仅已选课（老师已分配）可继续学习；
+             未选课不允许学生自助选课，按钮禁用并提示联系老师 -->
         <div class="intro-action">
             @if (c.isEnrolled) {
               <button class="action-btn action-btn--primary action-btn--full" (click)="startLearning()">
@@ -141,9 +142,10 @@
                 <span>继续学习</span>
               </button>
             } @else {
-              <button class="action-btn action-btn--primary action-btn--full" [disabled]="enrolling()" (click)="enrollCourse()">
-                <span nz-icon [nzType]="enrolling() ? 'loading' : 'plus'" nzTheme="outline"></span>
-                <span>{{ enrolling() ? '选课中...' : '立即选课' }}</span>
+              <button class="action-btn action-btn--full" disabled
+                nz-tooltip nzTooltipTitle="未选课，请联系老师分配课程">
+                <span nz-icon nzType="lock" nzTheme="outline"></span>
+                <span>未选课</span>
               </button>
             }
           </div>

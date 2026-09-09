@@ -542,26 +542,23 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   }
 
   enrollCourse() {
-    if (!this.authService.isAuthenticated) return;
-    const c = this.course();
-    if (!c?.id || this.enrolling()) return;
-    this.enrolling.set(true);
-    this.courseService.enroll(c.id).subscribe({
-      next: () => {
-        this.enrolling.set(false);
-        this.message.success('选课成功');
-        this.course.set({ ...c, isEnrolled: true });
-      },
-      error: () => {
-        this.enrolling.set(false);
-        this.message.error('选课失败');
-      },
-    });
+    // 学生端不允许自助选课：选课只能由老师分配。
+    // 保留方法以兼容模板引用，统一提示后返回，不再调用后端 enroll 接口。
+    this.message.warning('未选课，请联系老师分配课程');
+  }
+
+  notifyNotEnrolled() {
+    this.message.warning('未选课，请联系老师分配课程');
   }
 
   startLearning() {
     const c = this.course();
     if (!c?.id) return;
+    // 未选课（或跨租户无选课可能）禁止进入学习页，给出明确提示而非静默跳转
+    if (!c.isEnrolled) {
+      this.message.error('未选课，不能访问该课程学习页');
+      return;
+    }
     // 保留 fromMicroMajor 等来源参数，学习页返回课程详情时仍能回到来源微专业
     this.router.navigate(['/student/courses', c.id, 'learn'], { queryParamsHandling: 'preserve' });
   }

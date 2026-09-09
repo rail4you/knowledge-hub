@@ -241,7 +241,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                 .Count();
         }
 
-        // Get current user's enrollment status
+        // Get current user's enrollment status（已退课 Dropped 视为未选课，与选课人数统计及老师分配口径一致）
         var currentUserId = _currentUser.Id;
         StudentCourse? enrollment = null;
         if (currentUserId.HasValue)
@@ -249,7 +249,7 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
             using (DataFilter.Disable<IMultiTenant>())
             {
                 enrollment = await _studentCourseRepository
-                    .FirstOrDefaultAsync(sc => sc.CourseId == id && sc.StudentId == currentUserId.Value);
+                    .FirstOrDefaultAsync(sc => sc.CourseId == id && sc.StudentId == currentUserId.Value && sc.Status != StudentCourseStatus.Dropped);
             }
         }
 
@@ -355,10 +355,35 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
     public async Task EnrollAsync(Guid courseId)
     {
         var studentId = _currentUser.Id ?? throw new Volo.Abp.UserFriendlyException("用户未登录");
-        
+
+        // 跨租户选课拦截：选课只可能是本租户的，其他租户的课程没有选课的可能。
+        // Course 启用多租户隔离，这里禁用过滤器后按 Id 精确查找，避免本租户上下文查不到跨租户课程而误报“课程不存在”。
+        Course? course;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            course = await _courseRepository.FindAsync(courseId);
+        }
+        if (course == null)
+        {
+            throw new Volo.Abp.UserFriendlyException("课程不存在");
+        }
+        if (course.TenantId != CurrentTenant.Id)
+        {
+            throw new Volo.Abp.UserFriendlyException("不能跨租户选课，该课程属于其他院校");
+        }
+
         var existing = await _studentCourseRepository.FirstOrDefaultAsync(x => x.StudentId == studentId && x.CourseId == courseId);
         if (existing != null)
         {
+            // 已退课允许重新选课（复用原记录，与老师分配 EnrollStudentAsync 口径一致）
+            if (existing.Status == StudentCourseStatus.Dropped)
+            {
+                existing.Status = StudentCourseStatus.Enrolled;
+                existing.EnrolledAt = DateTime.UtcNow;
+                existing.Progress = 0;
+                await _studentCourseRepository.UpdateAsync(existing);
+                return;
+            }
             throw new Volo.Abp.UserFriendlyException("已经选修该课程");
         }
         
@@ -387,22 +412,29 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
         var studentId = _currentUser.Id ?? throw new Volo.Abp.UserFriendlyException("用户未登录");
         
         var query = await _studentCourseRepository.GetQueryableAsync();
-        query = query.Where(x => x.StudentId == studentId);
+        // 已退课不属于“我的课程”，直接过滤（与详情页 IsEnrolled 口径一致）
+        query = query.Where(x => x.StudentId == studentId && x.Status != StudentCourseStatus.Dropped);
 
         var studentCourses = query.Skip(input.SkipCount)
                                    .Take(input.MaxResultCount)
                                    .ToList();
 
         var courseIds = studentCourses.Select(x => x.CourseId).ToList();
-        var coursesQuery = await _courseRepository.GetQueryableAsync();
-        var coursesBaseQuery = coursesQuery.Where(x => courseIds.Contains(x.Id))
-                                  .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
-                                  .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
-                                  .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
-                                  .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId);
-        // 我的课程走当前租户上下文，关联表同样走环境租户过滤
-        var coursesFilteredQuery = await ApplyMajorFilterAsync(coursesBaseQuery, CollectTargetMajors(input.MajorId, input.MajorIds), null);
-        var courses = coursesFilteredQuery.ToList();
+        // 我的课程按选课记录定位课程：课程查询禁用租户过滤器，
+        // 否则历史上已选的跨租户课程会被租户过滤器丢掉，导致“已选课”在我的课程里消失。
+        List<Course> courses;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var coursesQuery = await _courseRepository.GetQueryableAsync();
+            var coursesBaseQuery = coursesQuery.Where(x => courseIds.Contains(x.Id))
+                                      .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
+                                      .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
+                                      .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
+                                      .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId);
+            // 我的课程走选课记录定位，关联表不过滤租户（历史跨租户选课仍可见）
+            var coursesFilteredQuery = await ApplyMajorFilterAsync(coursesBaseQuery, CollectTargetMajors(input.MajorId, input.MajorIds), null);
+            courses = coursesFilteredQuery.ToList();
+        }
 
         var dtos = courses.Select(MapToDto).ToList();
         await AttachMajorsBatchAsync(dtos);
