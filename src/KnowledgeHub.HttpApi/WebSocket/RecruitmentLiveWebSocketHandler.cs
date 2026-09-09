@@ -284,6 +284,7 @@ public class RecruitmentLiveWebSocketHandler
             case "offer":
             case "answer":
             case "ice-candidate":
+            case "request-offer":
                 // 转发给指定目标用户
                 var targetUserId = json?.TryGetProperty("targetUserId", out var target) == true
                     ? target.GetString()
@@ -346,6 +347,16 @@ public class RecruitmentLiveWebSocketHandler
     {
         _logger.LogInformation("用户 {UserId}({Role}) 离开直播间 {LiveId}", userId, role, liveId);
 
+        // 同一用户已快速重进（存量连接是另一条 open 的 WS）：旧连接的断开
+        // 不得广播 user-left（否则对端会拆掉刚建好的 PC），也不得删除新连接
+        var current = room.GetByUserId(userId);
+        if (current?.Ws != ws && current?.Ws is { State: WebSocketState.Open })
+        {
+            _logger.LogInformation("用户 {UserId} 已重连，忽略旧连接的离开广播", userId);
+            await TryCloseWebSocket(ws, null);
+            return;
+        }
+
         // 广播 user-left
         var others = room.GetOthers(ws);
         foreach (var other in others)
@@ -356,8 +367,8 @@ public class RecruitmentLiveWebSocketHandler
             }
         }
 
-        // 清理房间引用
-        room.RemoveParticipant(userId);
+        // 清理房间引用（仅当断开的正是存量连接时，重连的新连接不受影响）
+        room.RemoveParticipant(userId, ws);
 
         // 如果房间空了，清理房间缓存
         if (!room.HasAnyone)

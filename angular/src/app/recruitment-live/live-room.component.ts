@@ -211,7 +211,12 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
         }
 
         this.live = live;
-        this.myRole = live.teacherId === userId ? 'teacher' : 'student';
+        // 角色以后端参与者表为准（兼容 admin 代管等 teacherId 不一致的场景），
+        // 取不到时回退到 teacherId 比对。角色不一致会导致双方都不发 offer
+        const selfParticipant = (live.participants || []).find(p => p.userId === userId);
+        this.myRole = selfParticipant?.role === 'teacher' || live.teacherId === userId
+          ? 'teacher'
+          : 'student';
 
         if (live.status === 2 || live.status === 3) {
           this.message.warning('该直播已结束或已取消');
@@ -337,6 +342,12 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
 
   onChatKeydown(event: KeyboardEvent) {
     if (event.key === 'Enter') this.sendChatMessage();
+  }
+
+  /** 切换摄像头：失败时给提示（如设备只有一个摄像头或被占用） */
+  async onSwitchCamera(): Promise<void> {
+    const ok = await this.liveService.switchCamera();
+    if (!ok) this.message.warning('切换摄像头失败，当前设备可能只有一个摄像头');
   }
 
   /** 获取指定参与者的流 */

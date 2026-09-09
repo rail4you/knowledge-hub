@@ -41,6 +41,23 @@ internal class LiveRoom
         _participants.TryRemove(userId, out _);
     }
 
+    /// <summary>
+    /// 移除参与者（仅当存量连接就是断开的这条 WS 时才删）。
+    /// 用户快速重进时，旧连接的断开清理不得删除新连接，否则新会话收不到后续信令。
+    /// </summary>
+    public void RemoveParticipant(string userId, WebSocket? ws)
+    {
+        if (ws == null)
+        {
+            _participants.TryRemove(userId, out _);
+            return;
+        }
+        if (_participants.TryGetValue(userId, out var p) && p.Ws == ws)
+        {
+            _participants.TryRemove(userId, out _);
+        }
+    }
+
     /// <summary>根据 WebSocket 查找参与者信息</summary>
     public ParticipantConnection? GetParticipantByWs(WebSocket ws)
     {
