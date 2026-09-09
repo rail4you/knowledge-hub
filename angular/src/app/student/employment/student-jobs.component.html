@@ -81,7 +81,7 @@
               }
             </p>
             <p class="card-desc" [class.is-empty]="!(item.summary || item.description)" [title]="item.summary || item.description || '暂无简介'">
-              {{ item.summary || item.description || '暂无简介' }}
+              <span class="card-desc__clamp">{{ item.summary || item.description || '暂无简介' }}</span>
             </p>
 
             <div class="card-tags">

@@ -72,13 +72,13 @@
   .co-name { flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .ind { flex:0 1 auto; min-width:0; max-width:40%; display:inline-block; padding:1px 6px; border-radius:4px;
     background:#f1f5f9; font-size:11px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } }
-.card-desc { margin:0; padding:9px 11px; box-sizing:border-box; background:#f1f5f9; border-radius:8px; font-size:12px; color:#64748b;
-  /* 两行定高（20px 整数行高 × 2 + 上下 padding 18px = 58px）：line-clamp 负责省略号，定高 + overflow 做硬裁剪兜底，
-     即使 clamp 失效或出现亚像素舍入，第三行也 render 不出来 */
-  line-height:20px; height:58px; overflow:hidden;
-  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2;
-  overflow-wrap:anywhere;
+/* 描述盒：只负责背景/padding/定高 + 外层裁剪；省略逻辑在内层（无 padding），
+   避免 padding-bottom 成为透出第三行的窗口 */
+.card-desc { margin:0; padding:9px 11px; box-sizing:border-box; height:58px; overflow:hidden;
+  background:#f1f5f9; border-radius:8px; font-size:12px; color:#64748b; line-height:20px;
   &.is-empty { color:#94a3b8; border:1px dashed #cbd5e1; background:transparent; display:flex; align-items:center; } }
+.card-desc__clamp { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2;
+  max-height:40px; overflow:hidden; overflow-wrap:anywhere; }
 .card-tags { display:flex; gap:4px; flex-wrap:nowrap; overflow:hidden; min-height:20px; }
 .tag { height:20px; line-height:20px; padding:0 8px; border-radius:4px; background:rgba(43, 108, 212,.1); font-size:11px; font-weight:600; color:ds.$student-primary;
   flex:0 1 auto; min-width:0; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
