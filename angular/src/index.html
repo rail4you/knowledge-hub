@@ -8,6 +8,40 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
   </head>
   <body>
-    <app-root></app-root>
+    <app-root>
+      <!-- 登录/退出回跳冷启动时的品牌闪屏：Angular 接管并完成首次导航后由 AppComponent 移除。
+        避免弱网下用户先看到无样式菜单壳 / 空白内容区。纯内联 CSS，无外部依赖。 -->
+      <div id="boot-splash">
+        <div class="boot-splash-inner">
+          <div class="boot-splash-logo">易</div>
+          <div class="boot-splash-name">易课通 · 知识资源库</div>
+          <div class="boot-splash-spinner"></div>
+          <div class="boot-splash-tip">正在加载，请稍候…</div>
+        </div>
+      </div>
+      <style>
+        #boot-splash {
+          position: fixed; inset: 0; z-index: 9999;
+          display: flex; align-items: center; justify-content: center;
+          background: #0b1220;
+        }
+        #boot-splash .boot-splash-inner { text-align: center; }
+        #boot-splash .boot-splash-logo {
+          width: 56px; height: 56px; margin: 0 auto 12px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 28px; font-weight: 700; color: #fff;
+          background: linear-gradient(135deg, #2f6bff, #6aa1ff);
+          border-radius: 14px;
+        }
+        #boot-splash .boot-splash-name { color: #dbe4f3; font-size: 15px; margin-bottom: 18px; }
+        #boot-splash .boot-splash-spinner {
+          width: 32px; height: 32px; margin: 0 auto 12px;
+          border: 3px solid rgba(255,255,255,.2); border-top-color: #6aa1ff;
+          border-radius: 50%; animation: boot-spin 0.8s linear infinite;
+        }
+        #boot-splash .boot-splash-tip { color: #8b98ad; font-size: 12px; }
+        @keyframes boot-spin { to { transform: rotate(360deg); } }
+      </style>
+    </app-root>
   </body>
 </html>

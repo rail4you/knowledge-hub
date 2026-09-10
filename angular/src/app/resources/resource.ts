@@ -104,7 +104,9 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
 
   isModalOpen = false;
   isCategoryModalOpen = false;
-  isLoading = signal(false);
+  // 列表加载态：初始 true，避免首屏数据未返回时闪现"暂无资源"空态；
+  // loadResources 内每次请求都会重新置 true，返回后置 false。
+  isLoading = signal(true);
 
   pageIndex = 1;
   pageSize = 10;
@@ -220,6 +222,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     // 纯联盟审核员：页面只做联盟审核，默认定位到审核 Tab
     if (this.isLeagueAuditor) {
       this.selectedTabIndex = 2;
+      this.isLoading.set(false);
       this.loadPendingAudits();
       this.openResourceFromDeepLink();
       return;
@@ -247,6 +250,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
 
   loadResources() {
     const dateRange = this.getDateRangeFromFilter(this.timeFilter());
+    this.isLoading.set(true);
     this.resourceService.getFilteredList({
       maxResultCount: this.pageSize,
       skipCount: (this.pageIndex - 1) * this.pageSize,
@@ -256,8 +260,14 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
       filter: this.keywordFilter()?.trim() || undefined,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate
-    }).subscribe((response) => {
-      this.resources = response;
+    }).subscribe({
+      next: (response) => {
+        this.resources = response;
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+      },
     });
   }
 

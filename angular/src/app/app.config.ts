@@ -13,7 +13,7 @@ import { provideThemeLeptonX } from '@abp/ng.theme.lepton-x';
 import { LPX_LAYOUT_PROVIDER, provideSideMenuLayout } from '@abp/ng.theme.lepton-x/layouts';
 import { provideLogo, withEnvironmentOptions } from "@abp/ng.theme.shared";
 import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideHttpClient } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
@@ -148,7 +148,6 @@ import { LOGIN_PROVIDER } from './login/login.config';
 import { IdentityUserService } from '@abp/ng.identity/proxy';
 import { CustomIdentityUserService } from './custom-identity-user.service';
 import { checkInstallStatus } from './install/install.initializer';
-import { authErrorInterceptor } from './core/auth/auth-error.interceptor';
 
 const icons = [
   PlusOutline,
@@ -271,9 +270,10 @@ const icons = [
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(APP_ROUTES),
-    provideHttpClient(
-      withInterceptors([authErrorInterceptor])
-    ),
+    // 注：core/auth/auth-error.interceptor 之前是无操作的透传拦截器（仅 inject + next，
+    // 无任何错误处理逻辑），已移除注册以减少每个请求的开销；401/403 统一处理见
+    // AuthErrorService + app-auth-error-modal，相关页面直接调用 handleAuthError。
+    provideHttpClient(),
     APP_ROUTE_PROVIDER,
     ALLIANCE_ROUTE_PROVIDER,
     SPECIAL_EDU_ROUTE_PROVIDER,

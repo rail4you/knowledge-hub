@@ -127,6 +127,7 @@
               <nz-table
                 nzTableLayout="fixed"
                 [nzData]="resources.items"
+                [nzLoading]="isLoading()"
                 [nzTotal]="resources.totalCount"
                 [nzPageIndex]="pageIndex"
                 [nzPageSize]="pageSize"
