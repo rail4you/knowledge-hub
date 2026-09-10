@@ -122,7 +122,13 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
 
     public async Task<CourseDto> GetAsync(Guid id)
     {
-        var course = await _courseRepository.FindAsync(id);
+        // 跨租户可读：微专业详情页会并行拉取其下所有课程（含其他租户课程），
+        // 需禁用租户过滤器后按 Id 精确查找（与 GetDetailAsync 口径一致）。
+        Course? course;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            course = await _courseRepository.FindAsync(id);
+        }
         if (course == null)
         {
             return null;

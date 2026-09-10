@@ -113,7 +113,10 @@ export class StudentMicroMajorsComponent implements OnInit {
         // 立即更新状态映射，不等异步返回
         this.enrollmentStatusMap.update(m => ({ ...m, [item.id!]: MicroMajorEnrollmentStatus.Pending }));
       },
-      error: () => this.message.error('报名失败'),
+      error: (err: any) => {
+        const msg = err?.error?.error?.message || err?.error?.message;
+        this.message.error(msg || '报名失败');
+      },
     });
   }
 

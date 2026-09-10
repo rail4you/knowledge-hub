@@ -82,8 +82,9 @@ export class MicroMajorDetailComponent implements OnInit {
         this.message.success('报名成功');
         this.loadDetail(detail.id);
       },
-      error: () => {
-        this.message.error('报名失败');
+      error: (err: any) => {
+        const msg = err?.error?.error?.message || err?.error?.message;
+        this.message.error(msg || '报名失败');
       },
     });
   }

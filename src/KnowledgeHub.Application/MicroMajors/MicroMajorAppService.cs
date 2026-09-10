@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
@@ -71,13 +72,31 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
 
     public async Task<MicroMajorDto> GetAsync(Guid id)
     {
-        var entity = await _microMajorRepository.GetAsync(id);
+        // 跨租户可浏览：首页聚合了所有租户的微专业，学生点击其他租户的微专业时
+        // 仍需返回基础信息（与 CourseAppService.GetDetailAsync 跨租户可读口径一致）。
+        MicroMajor? entity;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            entity = await _microMajorRepository.FindAsync(id);
+        }
+        if (entity == null)
+        {
+            throw new EntityNotFoundException(typeof(MicroMajor), id);
+        }
         return await MapToDtoAsync(entity);
     }
 
     public async Task<MicroMajorDetailDto> GetDetailAsync(Guid id)
     {
-        var entity = await _microMajorRepository.GetAsync(id);
+        MicroMajor? entity;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            entity = await _microMajorRepository.FindAsync(id);
+        }
+        if (entity == null)
+        {
+            throw new EntityNotFoundException(typeof(MicroMajor), id);
+        }
         var dto = new MicroMajorDetailDto();
         CopyDto(await MapToDtoAsync(entity), dto);
         dto.Courses = await GetCourseDtosAsync(id);
@@ -325,7 +344,20 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             throw new UserFriendlyException("仅学生用户可报名微专业。");
         }
 
-        var entity = await _microMajorRepository.GetAsync(microMajorId);
+        MicroMajor? entity;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            entity = await _microMajorRepository.FindAsync(microMajorId);
+        }
+        if (entity == null)
+        {
+            throw new EntityNotFoundException(typeof(MicroMajor), microMajorId);
+        }
+        // 跨租户仅可浏览，不可报名/学习（与 CourseAppService.EnrollAsync 跨租户拦截口径一致）。
+        if (entity.TenantId != CurrentTenant.Id)
+        {
+            throw new UserFriendlyException("不能跨院校报名微专业，该微专业属于其他院校，仅支持浏览。");
+        }
         if (entity.Status != MicroMajorStatus.Published)
         {
             throw new UserFriendlyException("当前微专业未发布。");
@@ -748,8 +780,15 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         }
 
         var ids = items.Select(x => x.Id).ToList();
-        var links = await _microMajorCourseRepository.GetListAsync(x => ids.Contains(x.MicroMajorId));
-        var enrollments = await _microMajorEnrollmentRepository.GetListAsync(x => ids.Contains(x.MicroMajorId));
+        // 跨租户浏览时，关联的 MicroMajorCourse / Enrollment 与当前租户不同，
+        // 需禁用租户过滤器后按 MicroMajorId 精确过滤（与 Course 统计口径一致）。
+        List<MicroMajorCourse> links;
+        List<MicroMajorEnrollment> enrollments;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            links = await _microMajorCourseRepository.GetListAsync(x => ids.Contains(x.MicroMajorId));
+            enrollments = await _microMajorEnrollmentRepository.GetListAsync(x => ids.Contains(x.MicroMajorId));
+        }
         var currentUserId = _currentUser.Id;
 
         Dictionary<Guid, MicroMajorEnrollment> currentUserEnrollments = new();
@@ -805,9 +844,17 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
 
     private async Task<List<MicroMajorCourseDto>> GetCourseDtosAsync(Guid microMajorId)
     {
-        var links = await _microMajorCourseRepository.GetListAsync(x => x.MicroMajorId == microMajorId);
-        var courseIds = links.Select(x => x.CourseId).Distinct().ToList();
-        var courses = await _courseRepository.GetListAsync(x => courseIds.Contains(x.Id));
+        // 跨租户可读：微专业与其课程可能归属其他租户，禁用过滤器后按 Id 精确查找。
+        List<MicroMajorCourse> links;
+        List<Course> courses;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            links = await _microMajorCourseRepository.GetListAsync(x => x.MicroMajorId == microMajorId);
+            var courseIds = links.Select(x => x.CourseId).Distinct().ToList();
+            courses = courseIds.Count == 0
+                ? new List<Course>()
+                : await _courseRepository.GetListAsync(x => courseIds.Contains(x.Id));
+        }
         var courseMap = courses.ToDictionary(x => x.Id);
 
         var majorIds = courses
@@ -819,11 +866,14 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         if (majorIds.Count > 0)
         {
             var majorRepo = LazyServiceProvider.LazyGetRequiredService<IRepository<KnowledgeHub.Majors.Major, Guid>>();
-            var queryable = await majorRepo.GetQueryableAsync();
-            var majorList = await AsyncExecuter.ToListAsync(queryable.Where(m => majorIds.Contains(m.Id)));
-            foreach (var m in majorList)
+            using (DataFilter.Disable<IMultiTenant>())
             {
-                majorMap[m.Id] = m.Name;
+                var queryable = await majorRepo.GetQueryableAsync();
+                var majorList = await AsyncExecuter.ToListAsync(queryable.Where(m => majorIds.Contains(m.Id)));
+                foreach (var m in majorList)
+                {
+                    majorMap[m.Id] = m.Name;
+                }
             }
         }
 
@@ -1016,15 +1066,24 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
     [AllowAnonymous]
     public async Task<List<MicroMajorResourceDto>> GetResourcesAsync(Guid microMajorId)
     {
-        var query = await _microMajorResourceRepository.GetQueryableAsync();
-        var bridges = query.Where(x => x.MicroMajorId == microMajorId)
-            .OrderBy(x => x.SortOrder)
-            .ToList();
+        // 跨租户可读：浏览其他租户微专业时仍可查看学习资料列表。
+        List<MicroMajorResource> bridges;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _microMajorResourceRepository.GetQueryableAsync();
+            bridges = query.Where(x => x.MicroMajorId == microMajorId)
+                .OrderBy(x => x.SortOrder)
+                .ToList();
+        }
 
         var result = new List<MicroMajorResourceDto>();
         foreach (var b in bridges)
         {
-            var resource = await _resourceRepository.FindAsync(b.ResourceId);
+            Resources.Resource? resource;
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                resource = await _resourceRepository.FindAsync(b.ResourceId);
+            }
             result.Add(new MicroMajorResourceDto
             {
                 Id = b.Id,

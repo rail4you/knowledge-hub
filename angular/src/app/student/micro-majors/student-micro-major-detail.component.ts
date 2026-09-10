@@ -97,7 +97,11 @@ export class StudentMicroMajorDetailComponent implements OnInit {
         this.loadCourseDetails(courseIds);
         this.loading.set(false);
       },
-      error: () => { this.loading.set(false); this.message.error('加载微专业详情失败'); },
+      error: (err: any) => {
+        this.loading.set(false);
+        const msg = err?.error?.error?.message || err?.error?.message;
+        this.message.error(msg || '加载微专业详情失败');
+      },
     });
   }
 
@@ -209,9 +213,11 @@ export class StudentMicroMajorDetailComponent implements OnInit {
         this.message.success('选课成功');
         this.loadMyCourses();
       },
-      error: () => {
+      error: (err: any) => {
         this.enrolling.set(null);
-        this.message.error('选课失败');
+        // 跨租户课程后端会返回“不能跨租户选课”，直接展示服务端信息
+        const msg = err?.error?.error?.message || err?.error?.message;
+        this.message.error(msg || '选课失败');
       },
     });
   }
@@ -222,7 +228,11 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     if (!id) return;
     this.microMajorService.enroll(id).subscribe({
       next: () => { this.message.success('报名成功'); this.loadDetail(id); },
-      error: () => this.message.error('报名失败'),
+      error: (err: any) => {
+        // 跨租户微专业后端会返回“不能跨院校报名…仅支持浏览”，直接展示服务端信息
+        const msg = err?.error?.error?.message || err?.error?.message;
+        this.message.error(msg || '报名失败');
+      },
     });
   }
 
