@@ -35,6 +35,32 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     // Guid? -> Guid 映射时处理脆弱、历史数据的 NULL 变成 Guid.Empty，
     // FillCreatorNamesAsync 按 Guid.Empty 过滤后直接返回，列表创建人全空。
     public string? CreatorName { get; set; }
+
+    /// <summary>
+    /// 是否来自其他租户的共享资源。
+    /// true：资源属于其他租户，由该租户共享给当前租户；
+    /// false：资源属于当前租户（自己创建的或本租户内他人创建的）。
+    /// 前端资源列表据此显示「共享者」列和详情「共享信息」块。
+    /// </summary>
+    public bool IsShared { get; set; }
+
+    /// <summary>源租户 Id（仅 IsShared=true 时有意义）。</summary>
+    public Guid? SourceTenantId { get; set; }
+
+    /// <summary>源租户名称（仅 IsShared=true 时有意义）。</summary>
+    public string? SourceTenantName { get; set; }
+
+    /// <summary>共享时间（仅 IsShared=true 时有意义）。</summary>
+    public DateTime? SharedAt { get; set; }
+
+    /// <summary>共享人用户 Id（仅 IsShared=true 时有意义）。</summary>
+    public Guid? SharedByUserId { get; set; }
+
+    /// <summary>共享人显示名（仅 IsShared=true 时有意义）。</summary>
+    public string? SharedByUserName { get; set; }
+
+    /// <summary>共享备注（仅 IsShared=true 时有意义）。</summary>
+    public string? ShareNote { get; set; }
 }
 
 public class ResourceVersionDto : EntityDto<Guid>

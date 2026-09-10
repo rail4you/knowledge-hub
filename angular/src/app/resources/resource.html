@@ -138,13 +138,14 @@
               >
                 <thead>
                   <tr>
-                    <th nzWidth="38%" class="th-name">{{ '::ResourceName' | abpLocalization }}</th>
-                    <th nzWidth="92px" class="th-type">{{ '::ResourceType' | abpLocalization }}</th>
-                    <th nzWidth="64px" class="th-version">{{ '::Version' | abpLocalization }}</th>
-                    <th nzWidth="120px" class="th-status">{{ '::Status' | abpLocalization }}</th>
-                    <th nzWidth="100px" class="th-creator">{{ '::Creator' | abpLocalization }}</th>
-                    <th nzWidth="110px" class="th-time">{{ '::CreationTime' | abpLocalization }}</th>
-                    <th nzWidth="112px" class="th-ops">{{ '::Actions' | abpLocalization }}</th>
+                    <th nzWidth="30%" class="th-name">{{ '::ResourceName' | abpLocalization }}</th>
+                    <th nzWidth="84px" class="th-type">{{ '::ResourceType' | abpLocalization }}</th>
+                    <th nzWidth="56px" class="th-version">{{ '::Version' | abpLocalization }}</th>
+                    <th nzWidth="110px" class="th-status">{{ '::Status' | abpLocalization }}</th>
+                    <th nzWidth="88px" class="th-creator">{{ '::Creator' | abpLocalization }}</th>
+                    <th nzWidth="100px" class="th-time">{{ '::CreationTime' | abpLocalization }}</th>
+                    <th nzWidth="120px" class="th-shared-by">{{ '::SharedBy' | abpLocalization }}</th>
+                    <th nzWidth="100px" class="th-ops">{{ '::Actions' | abpLocalization }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -169,6 +170,21 @@
                         nz-tooltip
                         [nzTooltipTitle]="(item.creationTime | date:'yyyy-MM-dd HH:mm:ss') || ''"
                       >{{ item.creationTime | date:'yyyy-MM-dd' }}</span>
+                    </td>
+                    <td class="td-shared-by" (click)="$event.stopPropagation()">
+                      <ng-container *ngIf="item.isShared; else notShared">
+                        <span
+                          class="shared-tenant-badge"
+                          nz-tooltip
+                          [nzTooltipTitle]="(item.sharedAt ? (item.sharedAt | date:'yyyy-MM-dd HH:mm') : '') + (item.sharedByUserName ? ' · ' + item.sharedByUserName : '')"
+                        >
+                          <span nz-icon nzType="link" class="shared-icon"></span>
+                          <span class="shared-tenant-name" [title]="item.sourceTenantName">{{ item.sourceTenantName }}</span>
+                        </span>
+                      </ng-container>
+                      <ng-template #notShared>
+                        <span class="muted">—</span>
+                      </ng-template>
                     </td>
                     <td class="td-ops" (click)="$event.stopPropagation()">
                       <div class="row-icon-ops">
@@ -417,74 +433,6 @@
           </div>
         </div>
       </nz-tab>
-
-      <!-- ══════════ Tab 5：我共享的 ══════════ -->
-      <nz-tab nzTitle="{{ '::SharedByMe' | abpLocalization }}" *abpPermission="'KnowledgeHub.Resources.Share'">
-        <div class="tab-page">
-          <div class="table-toolbar">
-            <div class="search-box">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-              </svg>
-              <input
-                type="text"
-                [ngModel]="sharedFilter()"
-                (ngModelChange)="onSharedFilterChange($event)"
-                [placeholder]="'::Filter' | abpLocalization"
-              />
-            </div>
-          </div>
-          <div class="table-wrap">
-            <nz-table
-              [nzData]="sharedByMeList().items"
-              [nzFrontPagination]="false"
-              [nzShowPagination]="true"
-              [nzPageIndex]="sharedPageIndex"
-              [nzPageSize]="sharedPageSize"
-              [nzTotal]="sharedByMeList().totalCount"
-              (nzPageIndexChange)="onSharedPageChange($event)"
-              class="training-table-host"
-            >
-              <thead>
-                <tr>
-                  <th class="col-title" nzWidth="50%">{{ '::ResourceName' | abpLocalization }}</th>
-                  <th nzWidth="20%">{{ '::Tenants' | abpLocalization }}</th>
-                  <th nzWidth="30%">{{ '::Actions' | abpLocalization }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let item of sharedByMeList().items">
-                  <td class="col-title">
-                    <a class="project-link" (click)="selectResource(item)">{{ item.name }}</a>
-                  </td>
-                  <td>
-                    <a class="op-link edit" (click)="manageShares(item)">{{ '::Manage' | abpLocalization }}</a>
-                  </td>
-                  <td>
-                    <div class="row-icon-ops">
-                      <button type="button" class="row-icon-btn preview" (click)="selectResource(item)" nz-tooltip [nzTooltipTitle]="'::Preview' | abpLocalization">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                          <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                      </button>
-                      <button type="button" class="row-icon-btn edit" (click)="manageShares(item)" nz-tooltip [nzTooltipTitle]="'::Manage' | abpLocalization">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                          <circle cx="12" cy="12" r="3"/>
-                          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </nz-table>
-            <div *ngIf="sharedByMeList().totalCount === 0" class="empty-tip">
-              <span>{{ '::NoSharedByMeResources' | abpLocalization }}</span>
-            </div>
-          </div>
-        </div>
-      </nz-tab>
     </nz-tabs>
   </div>
 </div>
@@ -635,6 +583,39 @@
               <div class="info-block" *ngIf="selectedResource()!.description">
                 <div class="info-block-label">{{ '::Description' | abpLocalization }}</div>
                 <div class="info-block-content description">{{ selectedResource()!.description }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 共享信息卡片（仅共享资源展示） -->
+          <div class="info-card" *ngIf="selectedResource()!.isShared">
+            <div class="info-card-header">
+              <span class="info-card-title">{{ '::ShareInfo' | abpLocalization }}</span>
+              <span class="info-card-meta">{{ '::SharedFromOtherTenant' | abpLocalization }}</span>
+            </div>
+            <div class="info-card-body">
+              <div class="info-grid">
+                <div class="info-row">
+                  <span class="info-label">{{ '::SourceTenant' | abpLocalization }}</span>
+                  <span class="info-value">
+                    <span class="shared-tenant-badge">
+                      <span nz-icon nzType="link" class="shared-icon"></span>
+                      <span class="shared-tenant-name">{{ selectedResource()!.sourceTenantName || ('::Unknown' | abpLocalization) }}</span>
+                    </span>
+                  </span>
+                </div>
+                <div class="info-row" *ngIf="selectedResource()!.sharedByUserName">
+                  <span class="info-label">{{ '::SharedBy' | abpLocalization }}</span>
+                  <span class="info-value">{{ selectedResource()!.sharedByUserName }}</span>
+                </div>
+                <div class="info-row" *ngIf="selectedResource()!.sharedAt">
+                  <span class="info-label">{{ '::SharedAt' | abpLocalization }}</span>
+                  <span class="info-value">{{ selectedResource()!.sharedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+                </div>
+                <div class="info-row" *ngIf="selectedResource()!.shareNote">
+                  <span class="info-label">{{ '::Note' | abpLocalization }}</span>
+                  <span class="info-value">{{ selectedResource()!.shareNote }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1088,7 +1069,7 @@
   [nzTitle]="'::ShareResource' | abpLocalization"
   (nzOnCancel)="closeShareDialog()"
   [nzFooter]="null"
-  nzWidth="640"
+  [nzWidth]="shareModalWidth"
 >
   <ng-container *nzModalContent>
     <div class="share-modal-content">
@@ -1156,36 +1137,5 @@
         </button>
       </div>
     </div>
-  </ng-container>
-</nz-modal>
-
-<!-- Manage Shares Modal -->
-<nz-modal
-  [(nzVisible)]="isManageSharesModalOpen"
-  [nzTitle]="'::ManageShare' | abpLocalization"
-  (nzOnCancel)="closeManageSharesDialog()"
-  [nzFooter]="null"
-  nzWidth="560"
->
-  <ng-container *nzModalContent>
-    <nz-list>
-      <nz-list-item *ngFor="let s of currentShares()">
-        <span nz-list-item-meta-title>
-          {{ s.targetTenantName }}
-        </span>
-        <span nz-list-item-meta-description>
-          {{ '::SharedAt' | abpLocalization }}: {{ s.sharedAt | date:'yyyy-MM-dd HH:mm' }}
-          · {{ '::SharedBy' | abpLocalization }}: {{ s.sharedByUserName }}
-        </span>
-        <ul nz-list-item-actions>
-          <nz-list-item-action>
-            <button nz-button nzDanger nzSize="small" (click)="unshareTenant(s.targetTenantId)">
-              {{ '::Unshare' | abpLocalization }}
-            </button>
-          </nz-list-item-action>
-        </ul>
-      </nz-list-item>
-    </nz-list>
-    <nz-empty *ngIf="currentShares().length === 0" [nzNotFoundContent]="'::NoSharedResources' | abpLocalization"></nz-empty>
   </ng-container>
 </nz-modal>

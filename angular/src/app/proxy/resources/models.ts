@@ -165,6 +165,20 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   organizationId?: string | null;
   organizationName?: string | null;
   creatorName?: string | null;
+  /** 是否来自其他租户的共享资源 */
+  isShared?: boolean;
+  /** 源租户 Id（仅 isShared=true 时有意义） */
+  sourceTenantId?: string | null;
+  /** 源租户名称（仅 isShared=true 时有意义） */
+  sourceTenantName?: string | null;
+  /** 共享时间（仅 isShared=true 时有意义） */
+  sharedAt?: string | null;
+  /** 共享人用户 Id */
+  sharedByUserId?: string | null;
+  /** 共享人显示名 */
+  sharedByUserName?: string | null;
+  /** 共享备注 */
+  shareNote?: string | null;
 }
 
 export interface ResourceListQueryDto extends PagedAndSortedResultRequestDto {

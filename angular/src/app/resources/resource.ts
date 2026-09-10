@@ -617,8 +617,6 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
       this.loadPendingAudits();
     } else if (index === 3) {
       this.loadPhysicalDeleteRequests();
-    } else if (index === 4) {
-      this.loadSharedByMe();
     }
   }
 

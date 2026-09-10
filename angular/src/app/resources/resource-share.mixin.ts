@@ -3,7 +3,6 @@ import type { PagedResultDto } from '@abp/ng.core';
 import {
   ResourceShareService,
   type ResourceShareDto,
-  type SharedResourceDto,
   type CreateResourceShareDto,
 } from '../proxy/resources';
 import { PortalService, type TenantResourceSummaryDto } from '../proxy/portal';
@@ -13,10 +12,12 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 /**
  * 资源共享 UI 逻辑混入（通过 ts-mixins 模式挂载到 ResourceComponent）。
  *
- * 这里集中处理：
- * - "共享给我的"/"我共享的"两个 Tab 的列表加载与筛选
- * - 共享/取消共享操作（弹窗）
- * - "管理共享" 弹窗（查看已经共享给哪些租户并可撤销）
+ * 简化版（v2）：
+ * - 资源库主列表已合并「共享给我的」资源（在共享资源上展示来源租户 + 共享信息），
+ *   不再单独维护「共享给我的」Tab。
+ * - 「我共享的」资源也已直接展示在主列表里（通过 isShared 标记和「共享者」列反查），
+ *   共享管理在资源详情 drawer 通过「共享」按钮操作。
+ * - 本 mixin 只保留共享弹窗的最小逻辑：选择目标租户、确认共享、撤销共享、查看已共享列表。
  */
 export class ResourceShareMixin {
   // 由宿主组件注入或外部注入
@@ -25,46 +26,23 @@ export class ResourceShareMixin {
   shareLocalization = inject(LocalizationService);
   shareMessage = inject(NzMessageService);
 
-  sharedToMeList = signal<PagedResultDto<SharedResourceDto>>({ items: [], totalCount: 0 } as any);
-  sharedByMeList = signal<PagedResultDto<SharedResourceDto>>({ items: [], totalCount: 0 } as any);
-  sharedFilter = signal<string>('');
-  sharedPageIndex = 1;
-  sharedPageSize = 10;
-
   isShareModalOpen = false;
-  isManageSharesModalOpen = false;
   sharing = signal(false);
   shareNote = signal<string>('');
   selectedShareTargetIds = signal<string[]>([]);
   currentShares = signal<ResourceShareDto[]>([]);
   availableTenants = signal<TenantResourceSummaryDto[]>([]);
 
-  loadSharedToMe(): void {
-    this.shareService.getSharedToMe({
-      filter: this.sharedFilter() || undefined,
-      sorting: 'sharedAt DESC',
-      skipCount: (this.sharedPageIndex - 1) * this.sharedPageSize,
-      maxResultCount: this.sharedPageSize,
-    } as any).subscribe({
-      next: (res) => this.sharedToMeList.set(res),
-      error: () => this.sharedToMeList.set({ items: [], totalCount: 0 } as any),
-    });
-  }
-
-  loadSharedByMe(): void {
-    this.shareService.getSharedByMe({
-      filter: this.sharedFilter() || undefined,
-      sorting: 'creationTime DESC',
-      skipCount: (this.sharedPageIndex - 1) * this.sharedPageSize,
-      maxResultCount: this.sharedPageSize,
-    } as any).subscribe({
-      next: (res) => {
-        // 扩充 sharedTargetCount（占位：后端目前未返回，由前端从 currentShares 推断）
-        this.sharedByMeList.set(res);
-      },
-      error: () => this.sharedByMeList.set({ items: [], totalCount: 0 } as any),
-    });
-  }
+  /**
+   * 共享资源弹窗宽度：响应式配置，避免窄屏占满全屏。
+   * ng-zorro nz-modal 的 [nzWidth] 接受字符串或 NzBreakpointKey 响应式对象。
+   */
+  shareModalWidth: string | { xs?: string; sm?: string; md?: string; lg?: string; xl?: string; xxl?: string } = {
+    xs: '92%',
+    sm: '560px',
+    md: '640px',
+    lg: '720px',
+  };
 
   loadAvailableTenants(): void {
     this.portalService.getPublicTenantList().subscribe({
@@ -77,7 +55,7 @@ export class ResourceShareMixin {
     this.shareService.getShares(resourceId).subscribe({
       next: (list) => {
         this.currentShares.set(list || []);
-        // 已共享的默认不再出现在可选列表（避免误重复共享）
+        // 已共享的目标租户默认不再出现在可选列表（避免误重复共享）
         const sharedIds = new Set((list || []).map(s => s.targetTenantId));
         this.availableTenants.set(
           this.availableTenants().filter(t => !sharedIds.has(t.id!))
@@ -119,7 +97,8 @@ export class ResourceShareMixin {
         this.isShareModalOpen = false;
         this.shareMessage.success(this.shareLocalization.instant('::SharedResources'));
         this.loadCurrentShares(resource.id);
-        if ((this as any).selectedTabIndex === 5) this.loadSharedByMe();
+        // 共享成功后刷新主列表，让「共享者」列显示给本租户
+        (this as any).loadResources?.();
       },
       error: (err) => {
         this.sharing.set(false);
@@ -136,63 +115,10 @@ export class ResourceShareMixin {
       next: () => {
         this.shareMessage.success(this.shareLocalization.instant('::Unshare'));
         this.loadCurrentShares(resource.id);
-        if ((this as any).selectedTabIndex === 4) this.loadSharedToMe();
-        if ((this as any).selectedTabIndex === 5) this.loadSharedByMe();
+        // 撤销后刷新主列表（当前资源 isShared 可能变 false）
+        (this as any).loadResources?.();
       },
       error: () => this.shareMessage.error(this.shareLocalization.instant('::Unshare') + ' ❌'),
     });
-  }
-
-  manageShares(resource: SharedResourceDto): void {
-    // 用 ResourceDto 的方式打开抽屉
-    (this as any).selectedResource?.set?.({ ...resource, id: resource.id });
-    (this as any).drawerVisible?.set?.(true);
-    this.loadCurrentShares(resource.id!);
-  }
-
-  showSharedTargets(_resource: SharedResourceDto): void {
-    // 切换到管理弹窗（重用 currentShares）
-    this.isManageSharesModalOpen = true;
-    this.loadCurrentShares(_resource.id!);
-  }
-
-  closeManageSharesDialog(): void {
-    this.isManageSharesModalOpen = false;
-  }
-
-  onSharedFilterChange(value: string): void {
-    this.sharedFilter.set(value);
-    this.sharedPageIndex = 1;
-    if ((this as any).selectedTabIndex === 4) this.loadSharedToMe();
-    if ((this as any).selectedTabIndex === 5) this.loadSharedByMe();
-  }
-
-  onSharedPageChange(pageIndex: number): void {
-    this.sharedPageIndex = pageIndex;
-    if ((this as any).selectedTabIndex === 4) this.loadSharedToMe();
-    if ((this as any).selectedTabIndex === 5) this.loadSharedByMe();
-  }
-
-  viewSharedResource(item: SharedResourceDto): void {
-    // 共享资源：先调用 GetAsync 加载完整 ResourceDto（包含 filePath/originalFileName 等下载所需字段），
-    // 然后打开抽屉。后端 GetAsync 已对共享资源禁用多租户过滤器。
-    const resourceSvc = (this as any).resourceService;
-    if (resourceSvc?.get) {
-      resourceSvc.get(item.id!).subscribe({
-        next: (full: any) => {
-          (this as any).selectedResource?.set?.(full);
-          (this as any).drawerVisible?.set?.(true);
-          (this as any).loadVersions?.(item.id!);
-        },
-        error: () => {
-          // fallback：仅用 SharedResourceDto 展示基本信息
-          (this as any).selectedResource?.set?.({ ...item } as any);
-          (this as any).drawerVisible?.set?.(true);
-        },
-      });
-    } else {
-      (this as any).selectedResource?.set?.({ ...item } as any);
-      (this as any).drawerVisible?.set?.(true);
-    }
   }
 }
