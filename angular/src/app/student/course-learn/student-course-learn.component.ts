@@ -15,7 +15,6 @@ import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
-import { RestService } from '@abp/ng.core';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { CourseService } from '../../proxy/courses/course.service';
@@ -84,7 +83,6 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   private readonly learningService = inject(LearningService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly recordService = inject(StudentExerciseRecordService);
-  private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
   private readonly voiceContext = inject(VoiceContextService);
 
@@ -518,39 +516,33 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
   downloadResource(r: KnowledgeResourceDto) {
     if (!r.resourceId) return;
+    // 与资源界面保持一致：直接用 <a href> 触发浏览器原生下载，
+    // 由浏览器接管下载进度条 / 取消 / 断点续传。
+    // 之前用 RestService 取 blob 再 createObjectURL 的做法：
+    // 1) 整个文件先进入 JS 内存，大文件卡死；
+    // 2) 下载完成前浏览器无任何提示，也无法取消。
+    const url = `/api/resource-file/${r.resourceId}/download`;
+    const a = document.createElement('a');
+    a.href = url;
+    // 只在前端能拼出带扩展名的文件名时才覆盖，否则交给服务器 Content-Disposition
+    const downloadName = buildDownloadFileName(r.originalFileName, r.name, r.fileExtension);
+    if (downloadName) a.download = downloadName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    this.message.success('下载已开始');
+    // 记录学习进度（下载已触发即记录，无需等待完成）
     const course = this.course();
     const chapter = this.currentChapter();
-    // 使用 RestService 下载（带 auth header + blob 响应）
-    this.restService.request<any, Blob>({
-      method: 'GET',
-      url: `/api/resource-file/${r.resourceId}/download`,
-      responseType: 'blob',
-    }, { apiName: 'KnowledgeHub' }).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = buildDownloadFileName(r.originalFileName, r.name, r.fileExtension) || 'download';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        // 记录学习进度
-        if (course?.id) {
-          this.learningService.recordProgress({
-            courseId: course.id,
-            chapterId: chapter?.id,
-            resourceId: r.resourceId,
-            progress: this.courseProgress(),
-            additionalMinutes: 2,
-          } as any).subscribe();
-          this.message.success('已记录学习数据');
-        }
-      },
-      error: () => {
-        this.message.error('下载失败，请稍后重试');
-      },
-    });
+    if (course?.id) {
+      this.learningService.recordProgress({
+        courseId: course.id,
+        chapterId: chapter?.id,
+        resourceId: r.resourceId,
+        progress: this.courseProgress(),
+        additionalMinutes: 2,
+      } as any).subscribe();
+    }
   }
 
   // 分页辅助

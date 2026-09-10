@@ -245,43 +245,27 @@ export class FilePreviewComponent {
 
   /**
    * 下载原始文件。
-   * 用 fetch 校验响应：后端对未审核/无权限资源返回 JSON 403，
-   * 直接 <a href> 会跟随 302 到 AccessDenied 页面，把 HTML 保存成 "4KB 错误文件"。
-   * 仅当响应确实是文件内容时才触发浏览器下载。
+   * 与资源界面 / 学习页列表保持一致：直接用 <a href> 触发浏览器原生下载，
+   * 由浏览器接管下载进度条 / 取消 / 断点续传（后端 PhysicalFile 已支持 Range）。
+   * 之前用 fetch 取 blob 再 createObjectURL 的做法：
+   * 1) 整个文件先进入 JS 内存，大文件卡死；
+   * 2) 下载完成前浏览器无任何提示，也无法取消。
    */
-  async download() {
+  download() {
     if (!this.resourceId()) return;
     if (!this.isDownloadable()) {
       this.loadError.set('该资源不允许下载，仅支持在线预览');
       return;
     }
     const url = `/api/resource-file/${this.resourceId()}/download`;
-    try {
-      const resp = await fetch(url);
-      if (!resp.ok) {
-        let msg = `下载失败（${resp.status}）`;
-        try {
-          const body = await resp.json();
-          if (body?.message) msg = body.message;
-        } catch {
-          // 非 JSON 响应（如重定向后的 HTML），保持默认提示
-        }
-        this.loadError.set(msg);
-        return;
-      }
-
-      const blob = await resp.blob();
-      const a = document.createElement('a');
-      const objectUrl = URL.createObjectURL(blob);
-      a.href = objectUrl;
-      a.download = this.fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-    } catch {
-      this.loadError.set('下载失败，请稍后重试');
-    }
+    const a = document.createElement('a');
+    a.href = url;
+    // fileName getter 已保证带扩展名；若为空则交给服务器 Content-Disposition
+    const name = this.fileName;
+    if (name) a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   private loadFile() {
