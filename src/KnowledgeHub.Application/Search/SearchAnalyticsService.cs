@@ -7,6 +7,7 @@ using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Domain.Search.Enums;
 using KnowledgeHub.EntityFrameworkCore;
+using KnowledgeHub.Resources;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -30,6 +31,7 @@ public class SearchAnalyticsService : ISearchAnalyticsService
     private readonly ICurrentUser _currentUser;
     private readonly IAsyncQueryableExecuter _asyncExecuter;
     private readonly IMeiliSearchService _meiliSearchService;
+    private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly ILogger<SearchAnalyticsService> _logger;
     private readonly KnowledgeHubDbContext _dbContext;
     private readonly IDataFilter<IMultiTenant> _dataFilter;
@@ -43,6 +45,7 @@ public class SearchAnalyticsService : ISearchAnalyticsService
         ICurrentUser currentUser,
         IAsyncQueryableExecuter asyncExecuter,
         IMeiliSearchService meiliSearchService,
+        IRepository<Resource, Guid> resourceRepository,
         ILogger<SearchAnalyticsService> logger,
         KnowledgeHubDbContext dbContext,
         IDataFilter<IMultiTenant> dataFilter)
@@ -55,6 +58,7 @@ public class SearchAnalyticsService : ISearchAnalyticsService
         _currentUser = currentUser;
         _asyncExecuter = asyncExecuter;
         _meiliSearchService = meiliSearchService;
+        _resourceRepository = resourceRepository;
         _logger = logger;
         _dbContext = dbContext;
         _dataFilter = dataFilter;
@@ -80,6 +84,20 @@ public class SearchAnalyticsService : ISearchAnalyticsService
 
     public async Task LogResourceViewAsync(LogViewDto input)
     {
+        // 搜索索引可能残留已删除资源的文档（删除时 Meili 不可用、DB 重建等）。
+        // KhResourceViewLogs / KhResourceExposures 对 AppResources 有外键，
+        // 直接写入会 FK 冲突 500。资源已不存在时跳过（仅记一条警告）。
+        Resource? resource;
+        using (_dataFilter.Disable())
+        {
+            resource = await _resourceRepository.FindAsync(input.ResourceId);
+        }
+        if (resource == null)
+        {
+            _logger.LogWarning("Skipping view log for missing resource {ResourceId}", input.ResourceId);
+            return;
+        }
+
         var viewLog = new ResourceViewLog
         {
             ResourceId = input.ResourceId,

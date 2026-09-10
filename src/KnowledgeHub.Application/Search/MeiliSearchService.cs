@@ -603,7 +603,46 @@ public class MeiliSearchService : IMeiliSearchService
             }
         }
 
-        return (items, (int)(result?.EstimatedTotalHits ?? 0));
+        // Meili 索引可能残留已删除资源的文档（删除时 Meili 不可用、DB 重建等），
+        // 其 resourceId 在 AppResources 中已不存在。继续返回会导致前端
+        // “返回资源” 404（不存在 id=... 的实体 Resource!），以及 log-view
+        // 写入 KhResourceViewLogs/KhResourceExposures 时外键冲突 500。
+        // 这里批量校验存在性，直接丢弃幽灵命中。
+        var rawCount = items.Count;
+        items = await FilterStaleResourceHitsAsync(items);
+        var total = (int)(result?.EstimatedTotalHits ?? 0) - (rawCount - items.Count);
+
+        return (items, Math.Max(total, 0));
+    }
+
+    /// <summary>
+    /// 丢弃 resourceId 在数据库中已不存在的命中。
+    /// 必须禁用多租户过滤器：Host 公共资源（TenantId 为空）也会被租户用户搜到，
+    /// 带租户过滤校验会误杀；Meili 侧的 tenantId 过滤已做过租户隔离。
+    /// </summary>
+    private async Task<List<DocumentSearchResultDto>> FilterStaleResourceHitsAsync(List<DocumentSearchResultDto> items)
+    {
+        if (items.Count == 0) return items;
+
+        var ids = items
+            .Select(x => x.ResourceId)
+            .Where(s => Guid.TryParse(s, out _))
+            .Select(Guid.Parse)
+            .Distinct()
+            .ToList();
+
+        if (ids.Count == 0) return new List<DocumentSearchResultDto>();
+
+        List<Resource> existing;
+        using (_dataFilter.Disable<IMultiTenant>())
+        {
+            existing = await _resourceRepository.GetListAsync(x => ids.Contains(x.Id));
+        }
+
+        var alive = new HashSet<Guid>(existing.Select(r => r.Id));
+        return items
+            .Where(x => Guid.TryParse(x.ResourceId, out var g) && alive.Contains(g))
+            .ToList();
     }
 
     public async Task DeleteDocumentAsync(Guid resourceId)
