@@ -169,11 +169,21 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     const cu = this.config.getDeep('currentUser') as Record<string, unknown> | undefined;
     if (typeof cu?.['userName'] === 'string') this.userName.set(cu['userName'] as string);
 
-    // 从微专业详情页“返回首页”时携带 tab=microMajors，回到“全部资源”的微专业选择部分
-    const browseTab = this.route.snapshot.queryParamMap.get('tab');
-    if (browseTab === 'courses' || browseTab === 'resources' || browseTab === 'microMajors') {
-      this.activeTab.set(browseTab);
-      this.scrollToBrowse();
+    // 从微专业详情页“返回首页”时携带 section=microMajors，回到首页的“微专业”模块位置。
+    // 兼容旧链接 ?tab=microMajors：同样定位到“微专业”模块（不再去底部的“全部资源”）。
+    const section = this.route.snapshot.queryParamMap.get('section');
+    if (section === 'microMajors') {
+      this.scrollToSection('micro-majors');
+    } else {
+      const browseTab = this.route.snapshot.queryParamMap.get('tab');
+      if (browseTab === 'courses' || browseTab === 'resources' || browseTab === 'microMajors') {
+        this.activeTab.set(browseTab);
+        if (browseTab === 'microMajors') {
+          this.scrollToSection('micro-majors');
+        } else {
+          this.scrollToBrowse();
+        }
+      }
     }
 
     this.portal.getPublicHomeStats().subscribe(d => this.stats.set(d));
@@ -285,7 +295,19 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   private restartHeroAutoplay() { this.stopHeroAutoplay(); this.startHeroAutoplay(); }
 
   /**
-   * 滚动到“全部资源”区域（微专业详情页返回首页时定位到微专业选择部分）。
+   * 滚动到首页指定模块（微专业详情页返回首页时定位到“微专业”模块）。
+   * 微专业模块是异步加载的（@if 满足才渲染），位置可能较晚才出现，
+   * 因此多次重试以确保内容加载完成后仍能定位。
+   */
+  private scrollToSection(elementId: string): void {
+    const jump = () => document.getElementById(elementId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    for (const delay of [100, 500, 1200, 2500]) {
+      window.setTimeout(jump, delay);
+    }
+  }
+
+  /**
+   * 滚动到“全部资源”区域（课程/资源 tab 返回时定位）。
    * 由于上方各 section 的卡片是异步加载的（高度会变化），平滑滚动执行两次以修正位置。
    */
   private scrollToBrowse(): void {

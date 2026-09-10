@@ -46,7 +46,7 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   /** 选课进行中状态 */
   readonly enrolling = signal<string | null>(null);
 
-  /** 从首页“全部资源/微专业”进入时，返回首页对应位置（原路返回） */
+  /** 从首页微专业模块进入时，返回首页对应模块位置（原路返回） */
   readonly fromHome = signal(false);
   /** 从“我的微专业”进入时，返回我的微专业 */
   readonly fromMyMicroMajors = signal(false);
@@ -63,7 +63,7 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     return '/student/micro-majors';
   });
   readonly backQueryParams = computed(() => {
-    if (this.fromHome()) return { tab: 'microMajors' };
+    if (this.fromHome()) return { section: 'microMajors' };
     return {};
   });
   readonly backLabel = computed(() => {
