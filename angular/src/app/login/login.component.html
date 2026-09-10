@@ -182,8 +182,24 @@
           </div>
         }
       </form>
-      @if (!isHostLogin() && canShowForm()) {
-        <p class="helper-text">没有账号？请联系机构管理员开通</p>
+      @if (!isHostLogin()) {
+        @if (canShowForm()) {
+          <p class="helper-text">没有账号？请联系机构管理员开通</p>
+        }
+        <div class="channel-switch">
+          <button type="button" class="switch-channel-btn" routerLink="/admin-login">
+            <i class="fa fa-shield"></i>
+            <span>系统管理员登录</span>
+          </button>
+        </div>
+      }
+      @if (isHostLogin()) {
+        <div class="channel-switch">
+          <button type="button" class="switch-channel-btn back" routerLink="/account/login">
+            <i class="fa fa-arrow-left"></i>
+            <span>返回租户登录</span>
+          </button>
+        </div>
       }
     </div>
   </div>

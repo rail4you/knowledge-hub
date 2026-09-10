@@ -8,8 +8,8 @@
     Layout = null;
     var returnUrl = Model.ReturnUrl;
     var returnUrlHash = Model.ReturnUrlHash;
-    // 系统管理员专用通道：仅通过隐藏网址 /Account/Login?host=true 进入，
-    // 页面上不显示任何入口。普通登录页此值为 false。
+    // 系统管理员专用通道：通过 /Account/Login?host=true 进入（租户登录页底部
+    // 有“系统管理员登录”切换入口），宿主模式下提供“返回租户登录”。
     // Angular /admin-login 经 OAuth 跳转到此处时 query 会丢失，改由 __host_login
     // 标记 cookie 透传（Angular 宿主页写入、普通页清除；仅无租户 cookie 时生效，
     // 因此租户流程不受陈旧标记影响，登录失败重渲也能保持宿主模式）。
@@ -522,6 +522,38 @@
             margin-bottom:1.3rem;
         }
 
+        /* 租户登录 ↔ 系统管理员登录切换入口 */
+        .channel-switch{
+            display:flex;
+            justify-content:center;
+            margin-top:1rem;
+        }
+        .switch-channel-btn{
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding:0.5rem 1rem;
+            border:1px solid var(--border);
+            border-radius:999px;
+            background:var(--paper-card);
+            color:var(--text-muted);
+            font-size:0.83rem;
+            text-decoration:none;
+            cursor:pointer;
+            transition:all 0.15s;
+        }
+        .switch-channel-btn:hover{
+            border-color:var(--gold);
+            color:var(--gold);
+            background:var(--gold-soft);
+            text-decoration:none;
+        }
+        .switch-channel-btn.back:hover{
+            border-color:var(--ink);
+            color:var(--ink);
+            background:rgba(19,35,58,0.05);
+        }
+
         .validation-summary{
             font-size:0.85rem;
             margin-bottom:1.1rem;
@@ -721,6 +753,15 @@
                     @if (!hostMode)
                     {
                         <p class="helper-text">没有账号？请联系机构管理员开通</p>
+                        <div class="channel-switch">
+                            <a class="switch-channel-btn" id="goHostLogin" href="/Account/Login?host=true">系统管理员登录</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="channel-switch">
+                            <a class="switch-channel-btn back" id="backToTenant" href="/Account/Login">返回租户登录</a>
+                        </div>
                     }
                 }
 
@@ -864,6 +905,30 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        // 租户登录 ↔ 系统管理员登录切换：保留 ReturnUrl 等参数，仅改写 host 标记 + cookie，
+        // 避免 OAuth 流程中跳转回来后丢失返回地址。
+        var goHost = document.getElementById('goHostLogin');
+        if (goHost) {
+            goHost.addEventListener('click', function(e) {
+                e.preventDefault();
+                clearTenantCookie();
+                document.cookie = '__host_login=1; path=/; SameSite=Lax';
+                var params = new URLSearchParams(window.location.search);
+                params.set('host', 'true');
+                window.location.href = window.location.pathname + '?' + params.toString();
+            });
+        }
+        var backTenant = document.getElementById('backToTenant');
+        if (backTenant) {
+            backTenant.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.cookie = '__host_login=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+                var params = new URLSearchParams(window.location.search);
+                params.delete('host');
+                var qs = params.toString();
+                window.location.href = window.location.pathname + (qs ? ('?' + qs) : '');
+            });
+        }
         if (HOST_MODE) {
             // 系统管理员专用通道：强制宿主上下文，不拉取租户列表
             clearTenantCookie();

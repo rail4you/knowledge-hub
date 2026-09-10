@@ -52,8 +52,8 @@ export class LoginComponent implements OnInit {
   tenantsLoadError = signal(false);
   currentTenantName = signal<string | null>(null);
   currentTenantId = signal<string | null>(null);
-  // 宿主管理员专用通道：通过隐藏网址 /admin-login（或 /account/login?host=true）进入，
-  // 页面上不显示任何入口。普通登录页此值为 false。
+  // 宿主管理员专用通道：通过 /admin-login（或 /account/login?host=true）进入，
+  // 租户登录页底部提供“系统管理员登录”切换入口。
   isHostLogin = signal(false);
   // 是否展示账号密码登录表单：
   // - 宿主通道：始终展示
