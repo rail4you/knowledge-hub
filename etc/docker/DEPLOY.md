@@ -437,7 +437,7 @@ docker buildx build --platform linux/amd64 \
 
 ### 2. Meilisearch 报版本不兼容
 
-**原因**：数据目录由更高版本的 Meilisearch 创建，与当前镜像版本不兼容。
+**原因**：数据目录由别的 Meilisearch 版本创建，与当前镜像版本不兼容（升级、降级均可能触发）。
 
 **解决**：清除数据目录并重建索引：
 
@@ -448,6 +448,15 @@ sudo rm -rf meilisearch_data/*
 docker-compose up -d meilisearch
 # 然后通过 API 触发索引重建
 ```
+
+### 2.1 中文搜索出现同音字误召回（搜「肺」命中「痱」）
+
+**原因**：Meilisearch < v1.8 内置的 charabia 中文分词器默认开启**拼音归一化**，
+会把「肺(fèi)」「痱(fèi)」归一成同一个拼音 token，导致同音字互相召回；
+且正文高亮会把「痱」标成命中词。
+
+**解决**：`docker-compose.yml` 中 Meilisearch 镜像必须 >= v1.8（本项目统一使用 `v1.39.0`）。
+从 v1.6.x 直接升级到 v1.39.0 **无法原地迁移**，需按第 2 节清空 `meilisearch_data/` 并重建索引。
 
 ### 3. OAuth 登录失败
 

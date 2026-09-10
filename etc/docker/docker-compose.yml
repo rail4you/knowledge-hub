@@ -158,7 +158,9 @@ services:
   # Meilisearch — 全文搜索引擎
   # ----------------------------------------------------------
   meilisearch:
-    image: getmeili/meilisearch:v1.6
+    # v1.8.0 起 charabia 默认关闭中文拼音归一化；< v1.8 会把「肺/痱」等同音字
+    # 归一为同一拼音 token，导致同音字互相召回。不要降回 v1.6。
+    image: getmeili/meilisearch:v1.39.0
     container_name: meilisearch
     hostname: meilisearch
     platform: linux/amd64
