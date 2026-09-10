@@ -91,7 +91,10 @@ interface ChapterDto {
           <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="展开全部" (click)="expandAll()">
             <span nz-icon nzType="expand" nzTheme="outline"></span>
           </button>
-          <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="只看两级目录" (click)="collapseToLevel2()">
+          <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="展开到二级目录" (click)="expandToLevel2()">
+            <span nz-icon nzType="apartment" nzTheme="outline"></span>
+          </button>
+          <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="只看一级目录" (click)="collapseToLevel1()">
             <span nz-icon nzType="compress" nzTheme="outline"></span>
           </button>
           <button class="kg-icon-btn" nz-tooltip nzTooltipTitle="放大" (click)="zoomIn()">
@@ -309,18 +312,25 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   });
 
   /** 图谱画布高度：
-   * - 数据深度≥3 或 节点>60 → 固定 620px（配合默认折叠，避免巨页/空白）
+   * 默认已收起到一级（只显示课程根 + 一级章节），所以深层数据的高度
+   * 按“顶层节点数”给，避免 620px 大空白；用户点开深层后靠滚轮缩放/拖拽查看。
+   * - 数据深度≥3 → 按顶层数动态算（360~560px）
+   * - 纯扁平但节点>60 → 固定 620px
    * - 节点>30 → 560px
-   * - 2 级图谱 → 按"最大同层节点数 × 50 + 80"动态算，
-   *   既能让叶子多的 2 级图谱填满画布，又避免节点少时被压扁。
-   * - 1 级图谱 → 360px 起步（单行布局，无需太高）
+   * - 2 级图谱 → 按"最大同层节点数 × 50 + 80"动态算
+   * - 1 级图谱 → 360px 起步
    */
   chartMinHeight = computed(() => {
     const total = this.countChapters(this.chapters);
     const dataDepth = this.dataDepth();
     const maxSiblings = this.maxSiblingCount();
+    const topCount = (this.chapters?.length || 0) + (this.courseName ? 1 : 0);
 
-    if (dataDepth >= 3 || total > 60) return 620;
+    // 深层数据默认只展示两层视觉节点（根+一级），高度按顶层数给即可
+    if (dataDepth >= 3) {
+      return Math.max(360, Math.min(topCount * 54 + 120, 560));
+    }
+    if (total > 60) return 620;
     if (total > 30) return 560;
 
     // 2 级图谱：所有叶子纵向排列，需要按最多同级节点数撑高
@@ -330,16 +340,18 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   });
 
   /**
-   * 默认展开深度（核心策略）：
-   * - 数据本身只有 ≤2 级 → 全展开（-1），因为再折叠没有意义
-   * - 数据有 ≥3 级 → 默认折叠到 2 级，深层节点按需展开
-   *
-   * 与原"total>60 才折叠"相比，本策略基于**层级深度**判断：
-   * 即使只有 30 个节点，只要层级 ≥3，最后一级节点在密集渲染时也容易看不清，
-   * 此时主动默认折叠到 2 级，用户点哪一级再展开哪一级，体验更稳。
+   * 默认展开深度（核心策略，按**视觉层级**算，课程根占第 0 层）：
+   * - 节点很少（≤15）且数据本身只有 ≤2 级 → 全展开（-1），小图一眼看完
+   * - 其余情况 → 只展开到 1 级：
+   *   有课程根时 = 课程根 + 一级章节（视觉 2 层）；
+   *   无课程根时 = 一级 + 二级（视觉 2 层）。
+   * 深层节点默认折叠，用户点节点/工具栏按需展开，避免第三级节点
+   * 默认全部铺开导致挤在一起看不清。
    */
   private defaultInitialDepth(): number {
-    return this.dataDepth() <= 2 ? -1 : 2;
+    const total = this.countChapters(this.chapters);
+    if (total <= 15 && this.dataDepth() <= 2) return -1;
+    return 1;
   }
   /** 用户点过“展开全部”后保持全展开，不再被默认折叠覆盖 */
   private forceExpandAll = false;
@@ -602,24 +614,47 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     this.updateChart();
   }
 
-  /** 大图谱默认态：只展开到二级（课程根 + 一级 + 二级），深层折叠 */
-  collapseToLevel2() {
+  /** 默认态：只展开到一级（课程根 + 一级章节），深层全部折叠 */
+  collapseToLevel1() {
     this.collapsedSet.clear();
     this.forceExpandAll = false;
     const collect = (nodes: ChapterDto[], depth: number) => {
       nodes.forEach(n => {
-        // depth 与 processChapter 一致：chapters=0，其子=1，孙=2。
-        // ECharts 深度 = 此 depth + 1（含课程根）。折叠 depth>=1 的非叶子节点，
-        // 与 initialTreeDepth=2 对齐（只展示课程根 + 一级 + 二级）。
+        // depth 与 processChapter 一致：顶层 chapters=0。
+        // 折叠所有带子节点的顶层章节（depth>=0），与 initialTreeDepth=1 对齐
+        // （只展示课程根 + 一级，视觉 2 层）。
+        if (depth >= 0 && n.children && n.children.length > 0) {
+          this.collapsedSet.add(n.id!);
+        }
+        if (n.children) collect(n.children, depth + 1);
+      });
+    };
+    collect(this.chapters, 0);
+    this.updateChart();
+  }
+
+  /** 按需展开到二级（课程根 + 一级 + 二级）：折叠第三级及更深的节点 */
+  expandToLevel2() {
+    this.collapsedSet.clear();
+    this.forceExpandAll = false;
+    const collect = (nodes: ChapterDto[], depth: number) => {
+      nodes.forEach(n => {
+        // 只折叠 depth>=1 的非叶子节点（即二级章节的子树），与旧“只看两级”一致。
         if (depth >= 1 && n.children && n.children.length > 0) {
           this.collapsedSet.add(n.id!);
         }
         if (n.children) collect(n.children, depth + 1);
       });
     };
-    // chapters 本身是第 1 级（含课程根时视觉上是第 2 级，initialDepth=2 刚好对应）
-    collect(this.chapters, 1);
+    collect(this.chapters, 0);
+    // 如果数据本身只有 ≤2 级，无需折叠，直接全展开
+    if (this.dataDepth() <= 2) this.collapsedSet.clear();
     this.updateChart();
+  }
+
+  /** 兼容旧模板/调用：等价于收起到一级 */
+  collapseToLevel2() {
+    this.collapseToLevel1();
   }
 
   collapseAll() {
@@ -777,9 +812,10 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           nodeScaleRatio: 1,
           nodeDraggable: false,
           expandAndCollapse: true,
-          // 大图谱默认只展开到二级（initialDepth=2），配合 620px 固定高度：
-          // 可见节点约 35 个，排布紧凑且从顶部铺开，无顶部空白。
-          // 小图谱才全展开。用户点“展开全部”后 forceExpandAll=true 保持全展开。
+          // 默认只展开到 1 级（课程根 + 一级章节，视觉 2 层），深层折叠：
+          // 可见节点少、排布稀疏；用户点节点或工具栏按需展开。
+          // 只有节点很少（≤15）的小图谱才全展开。用户点“展开全部”后
+          // forceExpandAll=true 保持全展开。
           initialTreeDepth: this.forceExpandAll ? -1 : this.defaultInitialDepth(),
           animationDuration: 600,
           animationDurationUpdate: 500,
