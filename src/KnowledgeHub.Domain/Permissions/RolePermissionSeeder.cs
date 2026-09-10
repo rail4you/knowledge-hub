@@ -307,6 +307,9 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.PhysicalDelete);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ViewStatistics);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ViewRecommendation);
+        // 院校管理员可共享本租户资源给其他租户，并可取消共享。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.Share);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Resources.ManageShare);
 
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Search.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Search.ManageIndex);

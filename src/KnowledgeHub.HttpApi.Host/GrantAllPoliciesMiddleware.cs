@@ -92,6 +92,9 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     "KnowledgeHub.Resources", "KnowledgeHub.Resources.Create", "KnowledgeHub.Resources.Edit", "KnowledgeHub.Resources.Delete", "KnowledgeHub.Resources.Download",
                     "KnowledgeHub.Resources.ManageCategory",
                     "KnowledgeHub.Resources.RequestDelete", "KnowledgeHub.Resources.ViewStatistics", "KnowledgeHub.Resources.ViewRecommendation",
+                    // 资源共享：让所有非学生管理角色（SchoolAdmin/Teacher 等）在前端能看到"共享资源"按钮和"我共享的"Tab，
+                    // 后端 ResourceShareAppService.ShareAsync/UnshareAsync 会按 [Authorize] 二次校验真实授权，避免越权。
+                    "KnowledgeHub.Resources.Share", "KnowledgeHub.Resources.ManageShare",
                     "KnowledgeHub.Search", "KnowledgeHub.Search.ManageIndex", "KnowledgeHub.Search.ViewStatistics", "KnowledgeHub.Search.ReviewResource",
                     "KnowledgeHub.Courses", "KnowledgeHub.Courses.Create", "KnowledgeHub.Courses.Edit", "KnowledgeHub.Courses.Delete", "KnowledgeHub.Courses.Enroll", "KnowledgeHub.Courses.ManageEnrollment",
                     "KnowledgeHub.AI", "KnowledgeHub.AI.Chat", "KnowledgeHub.AI.LessonPlan", "KnowledgeHub.AI.CaseAnalysis", "KnowledgeHub.AI.CareerGuidance",
