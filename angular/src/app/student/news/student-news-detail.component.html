@@ -163,7 +163,7 @@
                     </div>
                     <p class="comment-item__content">{{ comment.content }}</p>
                     <div class="comment-item__footer">
-                      <ng-container *ngTemplateOutlet="commentActions; context: { $implicit: comment }"></ng-container>
+                      <ng-container *ngTemplateOutlet="commentActions; context: { $implicit: comment, showReply: true }"></ng-container>
                     </div>
                     @if (repliesOf(comment.id); as replies) {
                       @if (replies.length > 0) {
@@ -188,7 +188,7 @@
                                   {{ r.content }}
                                 </p>
                                 <div class="comment-item__footer">
-                                  <ng-container *ngTemplateOutlet="commentActions; context: { $implicit: r }"></ng-container>
+                                  <ng-container *ngTemplateOutlet="commentActions; context: { $implicit: r, showReply: false }"></ng-container>
                                 </div>
                               </div>
                             </div>
@@ -202,8 +202,8 @@
             }
           </div>
 
-          <!-- 评论操作（点赞 + 回复）：一级与嵌套回复共用 -->
-          <ng-template #commentActions let-c>
+          <!-- 评论操作：一级评论显示点赞 + 回复，嵌套回复仅显示点赞（只支持一级回复） -->
+          <ng-template #commentActions let-c let-showReply="showReply">
             <button
               type="button"
               class="comment-like"
@@ -220,7 +220,7 @@
               ></span>
               <span class="comment-like__count">{{ c.likeCount || 0 }}</span>
             </button>
-            @if (article.allowComments) {
+            @if (article.allowComments && showReply) {
               <button
                 type="button"
                 class="comment-reply-btn"

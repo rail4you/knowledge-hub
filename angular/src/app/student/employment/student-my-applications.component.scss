@@ -21,11 +21,16 @@
   &__val { b{font-size:20px;color:ds.$student-text;} small{font-size:12px;color:ds.$student-text-muted;margin-left:2px;} }
   &__lbl { font-size:11px; color:ds.$student-text-light; margin-top:1px; } }
 
-// ====== FILTER ======
-.filters { display:flex; gap:6px; flex-wrap:wrap; }
-.chip { height:30px; padding:0 14px; border-radius:99px; border:1px solid ds.$student-border; background:#fff; font-size:12px; font-weight:600; color:ds.$student-text-muted; cursor:pointer; transition:.15s;
-  &:hover { border-color:ds.$student-primary-light; color:ds.$student-primary; }
-  &.on { background:ds.$student-primary; color:#fff; border-color:ds.$student-primary; } }
+// ====== FILTER + CONTENT 主卡（与课程详情 detail-main 对齐） ======
+.detail-main { min-width:0; background:#fff; border:1px solid ds.$student-border-soft; border-radius:ds.$student-radius-lg; overflow:hidden; box-shadow:ds.$student-shadow-soft; }
+.content-card { padding:22px 24px; }
+@media (max-width:768px) { .content-card { padding:16px; } }
+.filters { display:flex; align-items:center; gap:4px; padding:0 12px; border-bottom:1px solid ds.$student-border-soft; overflow-x:auto; scrollbar-width:none;
+  &::-webkit-scrollbar { display:none; } }
+.chip { position:relative; flex-shrink:0; display:inline-flex; align-items:center; height:48px; padding:0 16px; border:0; background:transparent; color:ds.$student-text-muted; font-size:14px; font-weight:500; cursor:pointer; transition:color .2s ease; white-space:nowrap;
+  &:hover { color:ds.$student-primary; }
+  &.on { color:ds.$student-primary; font-weight:600;
+    &::after { content:''; position:absolute; left:12px; right:12px; bottom:0; height:3px; border-radius:3px 3px 0 0; background:#2b6cd4; } } }
 
 // ====== LIST ======
 .list { display:flex; flex-direction:column; gap:14px; }

@@ -30,6 +30,8 @@
   border-radius: ds.$student-radius;
   background: #fff;
   transition: border-color 0.2s ease;
+  // 收窄：与下方内容左对齐，不再通栏拉满
+  max-width: 560px;
 
   &:focus-within {
     border-color: ds.$student-primary;
@@ -736,6 +738,8 @@
   .search-bar {
     height: 40px;
     padding: 0 6px 0 12px;
+    // 移动端恢复全宽，方便触控输入
+    max-width: none;
   }
 
   .search-bar__btn {

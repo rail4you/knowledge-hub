@@ -83,7 +83,7 @@
 /* =================== OUTCOME GRID（资源卡片布局） =================== */
 .outcome-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 18px;
 }
 
@@ -178,22 +178,22 @@
 
 .outcome-card__body {
   flex: 1;
-  padding: 12px 14px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
 .outcome-card__title {
   margin: 0;
   color: ds.$student-text;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  line-height: 1.45;
+  line-height: 1.5;
   letter-spacing: -0.2px;
   @include ds.line-clamp(2);
-  min-height: 44px;
+  min-height: 48px;
   overflow-wrap: anywhere;
   &.is-empty {
     color: ds.$student-text-light;
@@ -204,7 +204,7 @@
 .outcome-card__job {
   margin: 0;
   color: ds.$student-text-muted;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
   min-height: calc(1.6em);
   display: flex;
@@ -212,7 +212,7 @@
   gap: 4px;
   min-width: 0;
   overflow: hidden;
-  span[nz-icon] { color: ds.$student-primary; font-size: 12px; flex-shrink: 0; }
+  span[nz-icon] { color: ds.$student-primary; font-size: 13px; flex-shrink: 0; }
   .job-text {
     flex: 1;
     min-width: 0;
@@ -227,10 +227,10 @@
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   color: ds.$student-text-light;
-  font-size: 11px;
-  min-height: 16px;
+  font-size: 12px;
+  min-height: 17px;
   overflow: hidden;
 }
 
@@ -239,12 +239,12 @@
   min-width: 0;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   white-space: nowrap;
   overflow: hidden;
 
   span[nz-icon] {
-    font-size: 11px;
+    font-size: 12px;
     flex-shrink: 0;
   }
 
@@ -265,13 +265,13 @@
 .outcome-card__confirm {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   color: ds.$student-text-light;
-  font-size: 11px;
-  min-height: 16px;
+  font-size: 12px;
+  min-height: 17px;
   overflow: hidden;
   span[nz-icon] {
-    font-size: 11px;
+    font-size: 12px;
     flex-shrink: 0;
   }
   .confirm-text {
@@ -287,13 +287,13 @@
 
 .outcome-card__remark {
   margin: 0;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: ds.$student-radius;
   background: ds.$student-surface-soft;
   color: ds.$student-text-muted;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
-  min-height: 38px;
+  min-height: 62px;
   @include ds.line-clamp(2);
   .remark-text {
     min-width: 0;

@@ -24,13 +24,15 @@
     </div>
   </header>
 
-  <!-- ===== FILTER ===== -->
-  <nav class="filters">
+  <!-- ===== FILTER + CONTENT（同一白卡容器，与课程详情 detail-main 对齐） ===== -->
+  <div class="detail-main">
+  <nav class="filters" role="tablist">
     @for (opt of [{s:null,t:'全部'},{s:statuses.Submitted,t:'已投递'},{s:statuses.Viewed,t:'已查看'},{s:statuses.InterviewScheduled,t:'等待面试'},{s:statuses.InterviewCompleted,t:'面试完成'},{s:statuses.Offered,t:'已录用'},{s:statuses.Rejected,t:'未通过'}]; track opt.t) {
-      <button class="chip" [class.on]="statusFilter()===opt.s" (click)="statusFilter.set(opt.s); onFilterChange()">{{ opt.t }}</button>
+      <button class="chip" role="tab" [class.on]="statusFilter()===opt.s" (click)="statusFilter.set(opt.s); onFilterChange()">{{ opt.t }}</button>
     }
   </nav>
 
+  <div class="content-card">
   <!-- ===== CONTENT ===== -->
   @if (loading()) {
     <div class="center"><nz-spin nzSimple nzSize="large"></nz-spin><p>加载中…</p></div>
@@ -125,6 +127,8 @@
       <div class="pager"><nz-pagination [nzPageIndex]="pageIndex()" [nzPageSize]="pageSize()" [nzTotal]="totalCount()" (nzPageIndexChange)="onPageChange($event)" nzAlign="center"></nz-pagination></div>
     }
   }
+  </div>
+  </div>
 </div>
 
 <!-- 岗位详情弹窗：不跳转页面 -->

@@ -233,7 +233,7 @@ export class StudentNewsDetailComponent implements OnInit {
     }, 150);
   }
 
-  /** 打开回复弹窗：目标为被回复的评论（可为一级或回复） */
+  /** 打开回复弹窗：目标为被回复的一级评论（嵌套回复不再提供回复入口，只支持一级回复） */
   openReplyModal(comment: NewsCommentDto): void {
     this.replyTo.set(comment);
     this.modalVisible = true;

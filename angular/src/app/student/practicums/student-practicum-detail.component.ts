@@ -8,7 +8,6 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -25,7 +24,7 @@ import { OssUploadService } from '../../shared/oss-upload.service';
   standalone: true,
   imports: [
     CommonModule, DatePipe, DecimalPipe, FormsModule, RouterModule,
-    NzButtonModule, NzIconModule, NzSpinModule, NzTabsModule, NzInputModule, NzModalModule, NzProgressModule, NzEmptyModule, NzUploadModule,
+    NzButtonModule, NzIconModule, NzSpinModule, NzTabsModule, NzInputModule, NzModalModule, NzEmptyModule, NzUploadModule,
     SafeResourceUrlPipe,
   ],
   templateUrl: './student-practicum-detail.component.html',
