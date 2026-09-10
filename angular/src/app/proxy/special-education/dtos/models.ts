@@ -1,49 +1,7 @@
-import type { SpecialEduCategory } from '../special-edu-category.enum';
 import type { CreationAuditedEntityDto, FullAuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.core';
+import type { SpecialEduCategory } from '../special-edu-category.enum';
 import type { SpecialEduPlanStatus } from '../special-edu-plan-status.enum';
 import type { SpecialEduContentType } from '../special-edu-content-type.enum';
-
-export interface ChatMessageChunkDto {
-  content?: string;
-  threadId?: string;
-  isComplete?: boolean;
-}
-
-export interface GenerateIepInputDto {
-  studentUserId?: string;
-  studentName?: string;
-  category?: SpecialEduCategory;
-  courseId?: string | null;
-  assessmentData?: string;
-  currentLevel?: string;
-  familyNeeds?: string;
-  customPrompt?: string | null;
-}
-
-export interface GenerateSpecialResourceInputDto {
-  category?: SpecialEduCategory;
-  modality?: string;
-  teachingDesignId?: string | null;
-  iepPlanId?: string | null;
-  courseId?: string | null;
-  topic?: string;
-  studentTraits?: string;
-  customPrompt?: string | null;
-}
-
-export interface GenerateTeachingDesignInputDto {
-  category?: SpecialEduCategory;
-  courseId?: string | null;
-  resourceId?: string | null;
-  subject?: string;
-  grade?: string;
-  duration?: number;
-  objectives?: string;
-  studentTraits?: string;
-  conditions?: string;
-  topic?: string;
-  customPrompt?: string | null;
-}
 
 export interface GetIepListInputDto extends PagedAndSortedResultRequestDto {
   category?: SpecialEduCategory | null;

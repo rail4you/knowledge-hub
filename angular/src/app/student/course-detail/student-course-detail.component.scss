@@ -241,8 +241,7 @@
 /* ---------- 右侧底部主操作按钮（push 到面板底部） ---------- */
 .intro-action {
   margin-top: auto;
-  // 面板内容不足时，按钮与上方教师条之间保留呼吸间距
-  padding-top: 10px;
+  padding-top: 0;
 }
 .action-btn--full {
   width: 100%;
@@ -250,20 +249,7 @@
   font-size: 15px;
 }
 
-/* ---------- 主讲教师：去背景文本行，延续上方参数表的分隔线节奏 ---------- */
-.intro-teacher {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 11px 2px 0;
-  border-top: 1px solid ds.$student-border-soft;
-}
-.intro-teacher__name {
-  color: ds.$student-text;
-  font-size: 13px;
-  font-weight: 600;
-}
+/* ---------- 主讲教师已并入上方参数表（li），无独立样式 ---------- */
 
 .action-btn {
   display: inline-flex;
@@ -660,8 +646,14 @@
 /* =================== 相关课程（复用课程列表卡样式） =================== */
 .related-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  // 5 张卡从左往右按学习人数顺序排列；窄屏自动回落
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
+}
+@media (max-width: 1400px) {
+  .related-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
 }
 .related-grid .course-card {
   background: #fff;
@@ -733,10 +725,17 @@
   flex: 1;
 }
 .related-grid .course-card__top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+  display: block;
+  min-width: 0;
+}
+.related-grid .course-card__major {
+  color: ds.$student-text-muted;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .related-grid .course-card__title {
   margin: 0;
@@ -746,7 +745,10 @@
   line-height: 1.4;
   letter-spacing: -.2px;
   transition: color .2s ease;
-  @include ds.line-clamp(2);
+  // 标题只占一行，溢出截短
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   flex: 1;
   min-width: 0;
 }

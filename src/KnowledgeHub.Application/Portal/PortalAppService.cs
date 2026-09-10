@@ -225,6 +225,29 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         Dictionary<Guid, string> teacherNameCache,
         Dictionary<Guid, string> majorNameCache)
     {
+        // 批量加载课程→专业关联（主专业排第一），一次查出全部专业名
+        var courseIds = courses.Select(c => c.Id).Distinct().ToList();
+        var linksByCourse = new Dictionary<Guid, List<Courses.CourseMajor>>();
+        var majorNamesById = new Dictionary<Guid, string>();
+        if (courseIds.Count > 0)
+        {
+            var linkQuery = await _courseMajorRepository.GetQueryableAsync();
+            var links = linkQuery.Where(x => courseIds.Contains(x.CourseId)).ToList();
+            linksByCourse = links
+                .GroupBy(x => x.CourseId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.IsPrimary).ThenBy(x => x.CreationTime).ToList());
+            var majorIds = links.Select(x => x.MajorId).Distinct().ToList();
+            if (majorIds.Count > 0)
+            {
+                var majorQuery = await _majorRepository.GetQueryableAsync();
+                majorNamesById = majorQuery
+                    .Where(x => majorIds.Contains(x.Id))
+                    .ToDictionary(x => x.Id, x => x.Name);
+            }
+        }
+
         var result = new List<CourseBriefDto>(courses.Count);
         foreach (var c in courses)
         {
@@ -242,20 +265,42 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                     teacherNameCache[c.TeacherId.Value] = teacherName;
                 }
             }
-            var majorName = string.Empty;
-            if (c.MajorId.HasValue)
+            List<Guid> orderedMajorIds;
+            if (linksByCourse.TryGetValue(c.Id, out var courseLinks) && courseLinks.Count > 0)
             {
-                if (!majorNameCache.TryGetValue(c.MajorId.Value, out majorName))
+                orderedMajorIds = courseLinks.Select(x => x.MajorId).Distinct().ToList();
+            }
+            else if (c.MajorId.HasValue)
+            {
+                // 兼容老数据：关联表无记录时回退到课程主专业字段
+                orderedMajorIds = new List<Guid> { c.MajorId.Value };
+            }
+            else
+            {
+                orderedMajorIds = new List<Guid>();
+            }
+            var orderedMajorNames = new List<string>();
+            foreach (var mid in orderedMajorIds)
+            {
+                if (majorNamesById.TryGetValue(mid, out var nm) && !string.IsNullOrWhiteSpace(nm))
+                {
+                    orderedMajorNames.Add(nm);
+                    continue;
+                }
+                // 回退到原单查缓存口径
+                if (!majorNameCache.TryGetValue(mid, out var cached))
                 {
                     try
                     {
-                        var m = await _majorRepository.FindAsync(c.MajorId.Value);
-                        majorName = m?.Name ?? string.Empty;
+                        var m = await _majorRepository.FindAsync(mid);
+                        cached = m?.Name ?? string.Empty;
                     }
-                    catch { /* major not found */ }
-                    majorNameCache[c.MajorId.Value] = majorName;
+                    catch { cached = string.Empty; }
+                    majorNameCache[mid] = cached;
                 }
+                if (!string.IsNullOrWhiteSpace(cached)) orderedMajorNames.Add(cached);
             }
+            var majorName = orderedMajorNames.Count > 0 ? orderedMajorNames[0] : string.Empty;
             result.Add(new CourseBriefDto
             {
                 Id = c.Id,
@@ -263,6 +308,8 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
                 CoverImageUrl = c.CoverImageUrl,
                 TeacherName = teacherName,
                 MajorName = majorName,
+                MajorNames = orderedMajorNames,
+                MajorIds = orderedMajorIds,
                 StudentCount = studentCountMap.GetValueOrDefault(c.Id, 0),
                 Difficulty = c.Difficulty,
             });
@@ -329,17 +376,17 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
     /// 公开浏览数据：所有租户的课程/资源/微专业，游客可见，支持筛选
     /// </summary>
     [AllowAnonymous]
-    public async Task<PublicBrowseDto> GetPublicBrowseAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount)
+    public async Task<PublicBrowseDto> GetPublicBrowseAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount, bool? onlyPublicCourses = null)
     {
         // Disable multi-tenancy filter for the entire method -
         // we manually filter by tenantId below.
         using (_dataFilter.Disable<IMultiTenant>())
         {
-            return await BuildBrowseDataAsync(tenantId, majorId, search, skipCount, maxResultCount);
+            return await BuildBrowseDataAsync(tenantId, majorId, search, skipCount, maxResultCount, onlyPublicCourses);
         }
     }
 
-    private async Task<PublicBrowseDto> BuildBrowseDataAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount)
+    private async Task<PublicBrowseDto> BuildBrowseDataAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount, bool? onlyPublicCourses = null)
     {
         var tenants = await _tenantRepository.GetListAsync();
         var tenantInfos = (await _tenantInfoRepository.GetListAsync()).ToDictionary(ti => ti.TenantId, ti => ti.Name);
@@ -350,16 +397,21 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         var coursesFiltered = courseQuery.AsEnumerable();
         if (tenantId.HasValue)
             coursesFiltered = coursesFiltered.Where(c => c.TenantId == tenantId.Value);
-        if (majorId.HasValue)
+        var browseLinkQuery = await _courseMajorRepository.GetQueryableAsync();
+        var browseLinkedAny = browseLinkQuery.Select(x => x.CourseId).ToHashSet();
+        if (onlyPublicCourses == true)
+        {
+            // 只看公共课（无任何专业归属）
+            coursesFiltered = coursesFiltered.Where(c => !browseLinkedAny.Contains(c.Id));
+        }
+        else if (majorId.HasValue)
         {
             // 多专业语义：命中该专业（含兼属）或公共课（无任何专业归属）
-            var linkQuery = await _courseMajorRepository.GetQueryableAsync();
-            var linkedMatched = linkQuery.Where(x => x.MajorId == majorId.Value).Select(x => x.CourseId).ToHashSet();
-            var linkedAny = linkQuery.Select(x => x.CourseId).ToHashSet();
+            var linkedMatched = browseLinkQuery.Where(x => x.MajorId == majorId.Value).Select(x => x.CourseId).ToHashSet();
             coursesFiltered = coursesFiltered.Where(c =>
                 (c.MajorId.HasValue && c.MajorId.Value == majorId.Value) ||
                 linkedMatched.Contains(c.Id) ||
-                !linkedAny.Contains(c.Id));
+                !browseLinkedAny.Contains(c.Id));
         }
         if (!string.IsNullOrWhiteSpace(search))
             coursesFiltered = coursesFiltered.Where(c => (c.Title ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
@@ -376,19 +428,72 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
             browseStudentCountMap = scCounts.ToDictionary(x => x.CourseId, x => x.Count);
         }
 
-        var courses = coursesFiltered
+        var pagedCourses = coursesFiltered
             .OrderByDescending(c => c.CreationTime)
             .Skip(skipCount)
             .Take(maxResultCount)
-            .Select(c => new PublicCourseDto
+            .ToList();
+        // 批量解析本页课程的专业归属（主专业排第一）与教师名，供卡片展示
+        var pagedCourseIds = pagedCourses.Select(c => c.Id).Distinct().ToList();
+        var majorLinksByCourse = new Dictionary<Guid, List<Guid>>();
+        var browseMajorNames = new Dictionary<Guid, string>();
+        if (pagedCourseIds.Count > 0)
+        {
+            var pagedLinks = browseLinkQuery.Where(x => pagedCourseIds.Contains(x.CourseId)).ToList();
+            majorLinksByCourse = pagedLinks
+                .GroupBy(x => x.CourseId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.IsPrimary).ThenBy(x => x.CreationTime).Select(x => x.MajorId).Distinct().ToList());
+            var pagedMajorIds = pagedLinks.Select(x => x.MajorId).Distinct().ToList();
+            if (pagedMajorIds.Count > 0)
             {
-                Id = c.Id,
-                Title = c.Title,
-                CoverImageUrl = c.CoverImageUrl,
-                MajorId = c.MajorId,
-                TenantId = c.TenantId ?? Guid.Empty,
-                TenantName = c.TenantId.HasValue && tenantNames.ContainsKey(c.TenantId.Value) ? tenantNames[c.TenantId.Value] : null,
-                StudentCount = browseStudentCountMap.GetValueOrDefault(c.Id, 0),
+                var browseMajorQuery = await _majorRepository.GetQueryableAsync();
+                browseMajorNames = browseMajorQuery
+                    .Where(x => pagedMajorIds.Contains(x.Id))
+                    .ToDictionary(x => x.Id, x => x.Name);
+            }
+        }
+        var browseTeacherNames = new Dictionary<Guid, string>();
+        foreach (var tid in pagedCourses.Where(c => c.TeacherId.HasValue).Select(c => c.TeacherId!.Value).Distinct().ToList())
+        {
+            try
+            {
+                var u = await _identityUserRepository.FindAsync(tid);
+                browseTeacherNames[tid] = u?.Name ?? u?.UserName ?? string.Empty;
+            }
+            catch { browseTeacherNames[tid] = string.Empty; }
+        }
+        var courses = pagedCourses
+            .Select(c => {
+                List<Guid> orderedIds;
+                if (majorLinksByCourse.TryGetValue(c.Id, out var courseLinks) && courseLinks.Count > 0)
+                    orderedIds = courseLinks;
+                else if (c.MajorId.HasValue)
+                    orderedIds = new List<Guid> { c.MajorId.Value };
+                else
+                    orderedIds = new List<Guid>();
+                var orderedNames = orderedIds
+                    .Select(id => browseMajorNames.GetValueOrDefault(id))
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Cast<string>()
+                    .ToList();
+                var primaryId = orderedIds.Count > 0 ? orderedIds[0] : c.MajorId;
+                return new PublicCourseDto
+                {
+                    Id = c.Id,
+                    Title = c.Title,
+                    CoverImageUrl = c.CoverImageUrl,
+                    Description = c.Description,
+                    TeacherName = c.TeacherId.HasValue ? browseTeacherNames.GetValueOrDefault(c.TeacherId.Value, string.Empty) : null,
+                    MajorId = primaryId,
+                    MajorName = orderedNames.Count > 0 ? orderedNames[0] : null,
+                    MajorIds = orderedIds,
+                    MajorNames = orderedNames,
+                    TenantId = c.TenantId ?? Guid.Empty,
+                    TenantName = c.TenantId.HasValue && tenantNames.ContainsKey(c.TenantId.Value) ? tenantNames[c.TenantId.Value] : null,
+                    StudentCount = browseStudentCountMap.GetValueOrDefault(c.Id, 0),
+                };
             }).ToList();
         var totalCourseCount = coursesFiltered.LongCount();
 

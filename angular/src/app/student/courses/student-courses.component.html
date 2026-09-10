@@ -6,24 +6,44 @@
     [stats]="stats()"
   ></app-student-hero>
 
-  <!-- =================== 搜索栏 =================== -->
-  <div class="search-bar">
-    <span nz-icon nzType="search" nzTheme="outline" class="search-bar__icon"></span>
-    <input
-      type="text"
-      [ngModel]="filter()"
-      (ngModelChange)="filter.set($event)"
-      (keyup.enter)="onSearch()"
-      placeholder="搜索课程名称、关键词或专业..."
-      class="search-bar__input"
-      aria-label="搜索课程"
-    />
-    @if (filter()) {
-      <button class="search-bar__clear" (click)="filter.set('')" aria-label="清空">
-        <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
+  <!-- =================== 搜索栏 + 专业选择 =================== -->
+  <div class="search-row">
+    <div class="search-bar">
+      <span nz-icon nzType="search" nzTheme="outline" class="search-bar__icon"></span>
+      <input
+        type="text"
+        [ngModel]="filter()"
+        (ngModelChange)="filter.set($event)"
+        (keyup.enter)="onSearch()"
+        placeholder="搜索课程名称、关键词或专业..."
+        class="search-bar__input"
+        aria-label="搜索课程"
+      />
+      @if (filter()) {
+        <button class="search-bar__clear" (click)="filter.set('')" aria-label="清空">
+          <span nz-icon nzType="close-circle-fill" nzTheme="fill"></span>
+        </button>
+      }
+      <button class="search-bar__btn" (click)="onSearch()">搜索</button>
+    </div>
+    <nz-select
+      class="search-major"
+      [ngModel]="selectedMajor()"
+      (ngModelChange)="selectMajor($event)"
+      nzPlaceHolder="全部专业"
+      nzAllowClear
+      aria-label="按专业筛选"
+    >
+      @for (m of majors(); track m.id) {
+        <nz-option [nzValue]="m.id" [nzLabel]="m.name"></nz-option>
+      }
+    </nz-select>
+    @if (hasActiveFilters()) {
+      <button type="button" class="search-clear" (click)="onReset()">
+        <span nz-icon nzType="clear" nzTheme="outline"></span>
+        <span>清除筛选</span>
       </button>
     }
-    <button class="search-bar__btn" (click)="onSearch()">搜索</button>
   </div>
 
   <!-- =================== 主体两栏 =================== -->
@@ -60,17 +80,6 @@
           }
         </div>
 
-        <div class="major-chips">
-          @for (m of majors(); track m.id) {
-            <button
-              class="major-chip"
-              [class.is-active]="selectedMajor() === m.id"
-              (click)="selectMajor(m.id)"
-            >
-              {{ m.name }}
-            </button>
-          }
-        </div>
       </div>
 
       <div class="section-header">
@@ -144,9 +153,7 @@
                 <div class="course-card__top">
                   <h3 class="course-card__title" [title]="course.title">{{ course.title }}</h3>
                   <div class="course-card__tags">
-                    @if (course.major) {
-                      <span class="tag">{{ course.major }}</span>
-                    }
+                    <span class="tag" [title]="courseMajorText(course)">{{ courseMajorText(course) }}</span>
                     @if (course.semester) {
                       <span class="tag">{{ course.semester }}</span>
                     }

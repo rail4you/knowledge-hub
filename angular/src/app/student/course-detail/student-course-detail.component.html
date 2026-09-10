@@ -87,10 +87,10 @@
         </div>
 
         <ul class="detail-info__list">
-          @if (c.major) {
+          @if (courseMajorText(c)) {
             <li>
               <span class="info-row__label">所属专业</span>
-              <span class="info-row__value">{{ c.major }}</span>
+              <span class="info-row__value">{{ courseMajorText(c) }}</span>
             </li>
           }
           @if (c.semester) {
@@ -101,31 +101,19 @@
           }
           <li>
             <span class="info-row__label">学习难度</span>
-            <span class="info-row__value">
-              <span class="difficulty-tag" [style.background]="difficultyColor(c.difficulty) + '22'" [style.color]="difficultyColor(c.difficulty)">
-                <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
-                {{ difficultyLabel(c.difficulty) }}
-              </span>
-            </span>
+            <span class="info-row__value">{{ difficultyLabel(c.difficulty) }}</span>
           </li>
           <li>
             <span class="info-row__label">课程状态</span>
-            <span class="info-row__value">
-              <span class="status-tag">
-                <span class="status-dot"></span>
-                {{ statusLabel(c.status) }}
-              </span>
-            </span>
+            <span class="info-row__value">{{ statusLabel(c.status) }}</span>
           </li>
+          @if (c.teacherName) {
+            <li>
+              <span class="info-row__label">主讲教师</span>
+              <span class="info-row__value">{{ c.teacherName }}</span>
+            </li>
+          }
         </ul>
-
-        <!-- 主讲教师：文本风格，与上方参数表同列 -->
-        @if (c.teacherName) {
-          <div class="intro-teacher">
-            <span class="info-row__label">主讲教师</span>
-            <strong class="intro-teacher__name">{{ c.teacherName }}</strong>
-          </div>
-        }
 
         <!-- 主操作按钮（右侧底部全宽）：仅已选课（老师已分配）可继续学习；
              未选课不允许学生自助选课，按钮禁用并提示联系老师 -->
@@ -400,12 +388,8 @@
                     <div class="course-card__body">
                       <div class="course-card__top">
                         <h3 class="course-card__title" [title]="r.title">{{ r.title }}</h3>
-                        @if (r.major) {
-                          <div class="course-card__tags">
-                            <span class="tag">{{ r.major }}</span>
-                          </div>
-                        }
                       </div>
+                      <div class="course-card__major" [title]="relatedMajorText(r) || '公共课'">{{ relatedMajorText(r) || '公共课' }}</div>
                       <div class="course-card__stats">
                         <span class="stat-pill">
                           <span nz-icon nzType="team" nzTheme="outline"></span>

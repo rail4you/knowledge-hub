@@ -31,7 +31,9 @@ type TabKey = 'chapters' | 'graph' | 'progress' | 'related';
 interface RelatedCourse {
   id: string;
   title: string;
-  major?: string;
+  majorName?: string;
+  majorNames?: string[];
+  majorIds?: string[];
   studentCount: number;
   difficulty: number;
   coverImageUrl?: string;
@@ -196,14 +198,15 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
         }
       };
       walk(chapters, 0);
-      const count = this.countChapters(chapters);
+        const count = this.countChapters(chapters);
+      const majorText = this.courseMajorText(c);
       return {
         key: 'course-detail',
         route: this.router.url,
         title: `《${c.title || '未命名'}》课程详情`,
         summary:
           `课程《${c.title || '未命名'}》${c.teacherName ? `，主讲${c.teacherName}` : ''}` +
-          `${c.majorName ? `，所属${c.majorName}` : ''}，共${count}个章节` +
+          `${majorText ? `，所属${majorText}` : ''}，共${count}个章节` +
           `${c.description ? `。简介：${c.description.slice(0, 300)}` : ''}` +
           `${flat.length ? `。章节有：${flat.join('；')}` : ''}` +
           `${c.isEnrolled ? '。你已选本课程，可说“开始学习”进入学习页。' : '。你尚未选课。'}`,
@@ -261,8 +264,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       next: result => {
         this.course.set(result);
         this.loading.set(false);
-        // 课程加载完成后再加载相关推荐（需要 majorId）
-        this.loadRelated(result?.majorId);
+        // 课程加载完成后再加载相关推荐（需要专业归属，多专业时按全部专业找相关）
+        this.loadRelated(result?.majorIds, result?.majorId);
         // 默认展开一级章节
         const initial = new Set<string>();
         (result.chapters || []).forEach(c => c.id && initial.add(c.id));
@@ -437,27 +440,61 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     return 'is-neutral';
   }
 
-  loadRelated(majorId?: string | null) {
-    if (!majorId) {
-      this.related.set([]);
-      return;
-    }
-    this.courseService.getPublished({
-      majorId: majorId,
+  /** 主课程的专业文本：多专业用“、”连接，无归属时返回空（模板隐藏该行） */
+  courseMajorText(c: CourseDetailDto | null | undefined): string {
+    if (!c) return '';
+    const names = (c.majorNames || []).filter(n => !!n && n.trim().length > 0);
+    if (names.length > 0) return names.join('、');
+    return (c.majorName || '').trim();
+  }
+
+  /** 相关课程的专业文本：多专业用“、”连接 */
+  relatedMajorText(r: RelatedCourse | null | undefined): string {
+    if (!r) return '';
+    const names = (r.majorNames || []).filter(n => !!n && n.trim().length > 0);
+    if (names.length > 0) return names.join('、');
+    return (r.majorName || '').trim();
+  }
+
+  loadRelated(majorIds?: string[] | null, majorId?: string | null) {
+    const ids = (majorIds || []).filter(x => !!x);
+    const singleId = majorId || ids[0] || null;
+    // 当前课程无专业归属 → 按公共课找相关（无归属的课程）；有专业 → 严格同专业（含兼属）
+    const currentIsPublic = ids.length === 0 && !singleId;
+    // 多拉取候选再在前端按“严格同专业”过滤 + 按学习人数排序（后端 GetPublished 按创建时间排序且含公共课）
+    const input: Record<string, unknown> = {
       skipCount: 0,
-      maxResultCount: 20,
-    } as any).subscribe({
+      maxResultCount: 50,
+    };
+    if (ids.length > 1) input['majorIds'] = ids;
+    else if (singleId) input['majorId'] = singleId;
+    this.courseService.getPublished(input as any).subscribe({
       next: result => {
         const currentId = this.course()?.id;
+        const wanted = new Set(ids);
+        if (singleId) wanted.add(singleId);
         const items = (result.items || [])
           .filter(x => x.id !== currentId)
-          // 按选课人数降序排列
+          .filter(x => {
+            const xIds = ((x.majorIds || []) as string[]).filter(v => !!v);
+            if (x.majorId && !xIds.includes(x.majorId)) xIds.push(x.majorId);
+            if (currentIsPublic) return xIds.length === 0; // 公共课只配公共课
+            if (wanted.size === 0) return true;
+            return xIds.some(v => wanted.has(v)); // 严格同专业：至少命中一个相同专业
+          })
+          // 按学习人数降序排列，从左往右按顺序显示
           .sort((a, b) => (b.studentCount || 0) - (a.studentCount || 0))
-          .slice(0, 4)
+          .slice(0, 5)
           .map(x => ({
             id: x.id!,
             title: x.title || '未命名课程',
-            major: x.majorName,
+            majorName: x.majorName || undefined,
+            majorNames: (x.majorNames || []).filter(n => !!n),
+            majorIds: (() => {
+              const list = ((x.majorIds || []) as string[]).filter(v => !!v);
+              if (x.majorId && !list.includes(x.majorId)) list.push(x.majorId);
+              return list;
+            })(),
             studentCount: x.studentCount || 0,
             difficulty: x.difficulty || 1,
             coverImageUrl: (x as { coverImageUrl?: string }).coverImageUrl,

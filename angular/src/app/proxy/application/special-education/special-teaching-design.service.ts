@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { ChatMessageChunkDto, GenerateTeachingDesignInputDto, GetTeachingDesignListInputDto, ReviewTeachingDesignInputDto, SaveTeachingDesignInputDto, SpecialEduContentVersionDto, SpecialTeachingDesignDto, SubmitTeachingDesignForReviewInputDto, UpdateTeachingDesignContentDto } from '../../special-education/dtos/models';
+import type { GetTeachingDesignListInputDto, ReviewTeachingDesignInputDto, SaveTeachingDesignInputDto, SpecialEduContentVersionDto, SpecialTeachingDesignDto, SubmitTeachingDesignForReviewInputDto, UpdateTeachingDesignContentDto } from '../../special-education/dtos/models';
 
 @Injectable({
   providedIn: 'root',
@@ -24,15 +24,6 @@ export class SpecialTeachingDesignService {
       method: 'POST',
       url: '/api/app/special-teaching-design/export-docx',
       params: { resultJson },
-    },
-    { apiName: this.apiName,...config });
-  
-
-  generateStreaming = (input: GenerateTeachingDesignInputDto, onChunk: any, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, void>({
-      method: 'POST',
-      url: '/api/app/special-teaching-design/generate-streaming',
-      body: onChunk,
     },
     { apiName: this.apiName,...config });
   

@@ -341,7 +341,15 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                          .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)
                          .WhereIf(input.CategoryId.HasValue, x => x.CategoryId == input.CategoryId)
                          .WhereIf(input.IsRecommended.HasValue, x => x.IsRecommended == input.IsRecommended!.Value);
-            query = await ApplyMajorFilterAsync(query, CollectTargetMajors(input.MajorId, input.MajorIds), tenantFilter);
+            if (input.OnlyPublicCourses == true)
+            {
+                // 学生端“公共课”筛选：只返回无任何专业归属的课程
+                query = await ApplyPublicOnlyFilterAsync(query, tenantFilter);
+            }
+            else
+            {
+                query = await ApplyMajorFilterAsync(query, CollectTargetMajors(input.MajorId, input.MajorIds), tenantFilter);
+            }
 
             totalCount = await query.CountAsync();
             courses = await query.OrderByDescending(x => x.CreationTime)

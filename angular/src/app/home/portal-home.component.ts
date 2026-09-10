@@ -119,6 +119,8 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly filterTenantId = signal<string | null>(null);
   readonly filterMajorId = signal<string | null>(null);
   readonly filterSearch = signal('');
+  /** 专业下拉中的“公共课”哨兵值（后端无归属专业的课程） */
+  readonly majorPublicOnlyValue = '__public__';
 
   // ── 全部资源：课程 / 资源 / 微专业各 tab 独立分页 ──
   readonly browsePageSize = 10;
@@ -323,13 +325,36 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
         ? this.browseResourcePage()
         : this.browseMicroPage();
     const skipCount = (page - 1) * this.browsePageSize;
+    const majorSel = this.filterMajorId();
+    const publicOnly = majorSel === this.majorPublicOnlyValue;
     this.portal.getPublicBrowse(
       this.filterTenantId() || undefined,
-      this.filterMajorId() || undefined,
+      !publicOnly ? majorSel || undefined : undefined,
       this.filterSearch() || undefined,
       skipCount,
       this.browsePageSize,
+      publicOnly ? true : undefined,
     ).subscribe(d => this.browseData.set(d));
+  }
+
+  /** 是否有生效中的筛选（租户 / 专业 / 搜索任一非空） */
+  readonly hasActiveFilters = (): boolean =>
+    !!(this.filterTenantId() || this.filterMajorId() || this.filterSearch());
+
+  /** 一键清除全部筛选并回到第一页 */
+  clearFilters(): void {
+    this.filterTenantId.set(null);
+    this.filterMajorId.set(null);
+    this.filterSearch.set('');
+    this.onFilterChange();
+  }
+
+  /** 课程卡片的专业文本：多专业用“、”连接，无归属显示“公共课” */
+  courseMajorText(c: { majorNames?: string[] | null; majorName?: string | null } | null | undefined): string {
+    const names = (c?.majorNames || []).filter(n => !!n);
+    if (names.length > 0) return names.join('、');
+    const single = (c?.majorName || '').trim();
+    return single || '公共课';
   }
 
   setTab(tab: 'courses' | 'resources' | 'microMajors'): void {

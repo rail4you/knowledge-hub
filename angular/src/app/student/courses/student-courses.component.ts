@@ -8,10 +8,12 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { AuthService, Rest, RestService } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { CourseService } from '../../proxy/courses/course.service';
+import { MajorService } from '../../proxy/majors/major.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 import type { CourseDto, StudentCourseDto } from '../../proxy/courses/dtos/models';
@@ -61,6 +63,7 @@ interface HotCourse {
     NzProgressModule,
     NzEmptyModule,
     NzTooltipModule,
+    NzSelectModule,
     StudentHeroComponent,
   ],
   templateUrl: './student-courses.component.html',
@@ -69,6 +72,7 @@ interface HotCourse {
 })
 export class StudentCoursesComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
+  private readonly majorService = inject(MajorService);
   private readonly restService = inject(RestService);
   private readonly learningService = inject(LearningService);
   private readonly authService = inject(AuthService);
@@ -118,7 +122,11 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
 
   readonly majors = signal<MajorChip[]>([
     { id: null, name: '全部专业', icon: 'appstore', color: '#0f766e' },
+    { id: '__public__', name: '公共课', icon: 'bank', color: '#5b93db' },
   ]);
+
+  /** 专业下拉哨兵值：选中表示只看公共课（无专业归属） */
+  readonly majorPublicOnlyValue = '__public__';
 
   readonly difficulties: DifficultyChip[] = [
     { value: null, label: '全部难度', icon: 'appstore' },
@@ -149,7 +157,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       const stats = this.stats();
       const head = list.slice(0, 10);
       const lines = head.map(
-        (c, i) => `第${i + 1}门：${c.title || '未命名'}，${c.majorName || '专业未知'}，${this.getMyProgress(c.id!) > 0 ? `进度${Math.round(this.getMyProgress(c.id!))}%` : this.isEnrolled(c.id!) ? '已选课未开始' : '未选课'}。`
+        (c, i) => `第${i + 1}门：${c.title || '未命名'}，${this.courseMajorText(c)}，${this.getMyProgress(c.id!) > 0 ? `进度${Math.round(this.getMyProgress(c.id!))}%` : this.isEnrolled(c.id!) ? '已选课未开始' : '未选课'}。`
       );
       return {
         key: 'courses',
@@ -162,6 +170,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       };
     });
     this.loadCourses();
+    this.loadMajors();
     this.loadMyCourses();
     this.loadDashboard();
   }
@@ -176,13 +185,18 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     // 'recommended' 必须带上 isRecommended=true；注意不能走 CourseService.getPublished，
     // 生成的代理只透传固定字段会把 isRecommended 丢掉，这里直接调 REST 接口。
     const status = this.selectedStatus();
+    const majorSel = this.selectedMajor();
     const params: any = {
       filter: this.filter() || undefined,
-      majorId: this.selectedMajor() || undefined,
       difficulty: this.selectedDifficulty() ?? undefined,
       skipCount: 0,
       maxResultCount: 30,
     };
+    if (majorSel === this.majorPublicOnlyValue) {
+      params.onlyPublicCourses = true;
+    } else if (majorSel) {
+      params.majorId = majorSel;
+    }
     if (status === 'recommended') {
       params.isRecommended = true;
     }
@@ -195,7 +209,6 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
         next: result => {
           this.courses.set(result.items || []);
           this.loading.set(false);
-          this.syncMajorChips(result.items || []);
         },
         error: () => {
           this.loading.set(false);
@@ -249,21 +262,42 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     ]);
   }
 
-  private syncMajorChips(items: CourseDto[]) {
-    const map = new Map<string, string>(); // majorName → majorId
-    items.forEach(c => {
-      if (c.majorName && c.majorId && !map.has(c.majorName)) {
-        map.set(c.majorName, c.majorId);
-      }
+  /** 专业下拉选项：全量专业字典（不受当前课程列表影响），前面保留“全部专业/公共课” */
+  loadMajors(): void {
+    this.majorService.getLookupList().subscribe({
+      next: list => {
+        const colorPalette = ['#0f766e', '#14b8a6', '#0d5e56', '#16a34a', '#5b93db', '#8b5cf6'];
+        const chips: MajorChip[] = [
+          { id: null, name: '全部专业', icon: 'appstore', color: '#0f766e' },
+          { id: this.majorPublicOnlyValue, name: '公共课', icon: 'bank', color: '#5b93db' },
+        ];
+        (list || []).forEach((m, i) => {
+          if (!m?.id) return;
+          chips.push({ id: m.id, name: m.name || '未命名专业', icon: 'book', color: colorPalette[i % colorPalette.length] });
+        });
+        this.majors.set(chips);
+        // 当前选中的专业若已不在字典中（如被删除），回落到全部
+        const sel = this.selectedMajor();
+        if (sel && sel !== this.majorPublicOnlyValue && !chips.some(c => c.id === sel)) {
+          this.selectedMajor.set(null);
+        }
+      },
+      error: () => {
+        // 字典加载失败时保留默认两项，不影响主流程
+      },
     });
-    const colorPalette = ['#0f766e', '#14b8a6', '#0d5e56', '#16a34a', '#5b93db', '#8b5cf6'];
-    const chips: MajorChip[] = [{ id: null, name: '全部专业', icon: 'appstore', color: '#0f766e' }];
-    let i = 0;
-    Array.from(map.entries()).slice(0, 6).forEach(([name, id]) => {
-      chips.push({ id, name, icon: 'book', color: colorPalette[i % colorPalette.length] });
-      i++;
-    });
-    this.majors.set(chips);
+  }
+
+  /** 课程卡片的专业文本：多专业用“、”连接，无归属显示“公共课” */
+  courseMajorText(c: CourseDto | null | undefined): string {
+    const names = (c?.majorNames || []).filter(n => !!n);
+    if (names.length > 0) return names.join('、');
+    return (c?.majorName || '').trim() || '公共课';
+  }
+
+  /** 是否有生效中的筛选（搜索 / 专业 / 难度任一非默认） */
+  hasActiveFilters(): boolean {
+    return !!(this.filter() || this.selectedMajor() || this.selectedDifficulty() !== null);
   }
 
   selectMajor(id: string | null) {

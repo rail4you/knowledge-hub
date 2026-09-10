@@ -1,7 +1,7 @@
 import { RestService, Rest } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { ChatMessageChunkDto, GenerateIepInputDto, GetIepListInputDto, IepPlanDto, ReviewIepInputDto, SaveIepInputDto, SpecialEduContentVersionDto, SubmitIepForReviewInputDto, UpdateIepContentDto } from '../../special-education/dtos/models';
+import type { GetIepListInputDto, IepPlanDto, ReviewIepInputDto, SaveIepInputDto, SpecialEduContentVersionDto, SubmitIepForReviewInputDto, UpdateIepContentDto } from '../../special-education/dtos/models';
 
 @Injectable({
   providedIn: 'root',
@@ -24,15 +24,6 @@ export class SpecialIepService {
       method: 'POST',
       url: '/api/app/special-iep/export-docx',
       params: { resultJson, studentName },
-    },
-    { apiName: this.apiName,...config });
-  
-
-  generateStreaming = (input: GenerateIepInputDto, onChunk: any, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, void>({
-      method: 'POST',
-      url: '/api/app/special-iep/generate-streaming',
-      body: onChunk,
     },
     { apiName: this.apiName,...config });
   

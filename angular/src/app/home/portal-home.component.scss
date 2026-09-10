@@ -705,6 +705,7 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   align-items: center;
   gap: 3px;
   height: 20px;
+  max-width: 100%;
   padding: 0 7px;
   border-radius: 4px;
   background: $surface-soft;
@@ -712,9 +713,13 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   &--difficulty {
     background: #fef3c7;
     color: #92400e;
+    flex-shrink: 0;
     span[nz-icon] { font-size: 10px; color: #d97706; }
   }
 }
@@ -1353,6 +1358,21 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   align-items: center;
   justify-content: center;
   &:hover { background: $blue-dark; }
+}
+.browse-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: #fff;
+  color: $ink-muted;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .2s ease;
+  &:hover { color: $blue; border-color: $blue; }
 }
 .browse-empty {
   grid-column: 1 / -1;

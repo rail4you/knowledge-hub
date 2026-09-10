@@ -1,4 +1,3 @@
-import type { CareerGuidanceGenerationInputDto, ChatMessageChunkDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -15,15 +14,6 @@ export class CareerGuidanceService {
       method: 'POST',
       url: '/api/app/career-guidance/export-docx',
       params: { careerGuidanceJson },
-    },
-    { apiName: this.apiName,...config });
-  
-
-  generateStreaming = (input: CareerGuidanceGenerationInputDto, onChunk: any, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, void>({
-      method: 'POST',
-      url: '/api/app/career-guidance/generate-streaming',
-      body: onChunk,
     },
     { apiName: this.apiName,...config });
 }

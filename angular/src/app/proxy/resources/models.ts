@@ -164,7 +164,6 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   viewCount?: number;
   organizationId?: string | null;
   organizationName?: string | null;
-  creatorId?: string;
   creatorName?: string | null;
 }
 
@@ -208,7 +207,7 @@ export interface ResourceVersionDto extends EntityDto<string> {
   updateContent?: string | null;
   isCurrentVersion?: boolean;
   creationTime?: string;
-  creatorId?: string;
+  creatorId?: string | null;
   creatorName?: string | null;
 }
 

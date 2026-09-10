@@ -1,4 +1,4 @@
-import type { ChatInputDto, ChatMessageChunkDto, ChatMessageDto, ChatThreadDto, ResourceForChatDto } from './dtos/models';
+import type { ChatMessageDto, ChatThreadDto, ResourceForChatDto } from './dtos/models';
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
 
@@ -8,15 +8,6 @@ import { Injectable, inject } from '@angular/core';
 export class ChatService {
   private restService = inject(RestService);
   apiName = 'KnowledgeHub';
-  
-
-  chatStreaming = (input: ChatInputDto, onChunk: any, config?: Partial<Rest.Config>) =>
-    this.restService.request<any, void>({
-      method: 'POST',
-      url: '/api/app/chat/chat-streaming',
-      body: onChunk,
-    },
-    { apiName: this.apiName,...config });
   
 
   clearAllThreads = (config?: Partial<Rest.Config>) =>

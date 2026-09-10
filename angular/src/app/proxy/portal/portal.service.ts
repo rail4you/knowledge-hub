@@ -18,11 +18,11 @@ export class PortalService {
     { apiName: this.apiName,...config });
   
 
-  getPublicBrowse = (tenantId: string, majorId: string, search: string, skipCount: number, maxResultCount: number, config?: Partial<Rest.Config>) =>
+  getPublicBrowse = (tenantId: string, majorId: string, search: string, skipCount: number, maxResultCount: number, onlyPublicCourses?: boolean, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PublicBrowseDto>({
       method: 'GET',
       url: '/api/app/portal/public-browse',
-      params: { tenantId, majorId, search, skipCount, maxResultCount },
+      params: { tenantId, majorId, search, skipCount, maxResultCount, onlyPublicCourses },
     },
     { apiName: this.apiName,...config });
   

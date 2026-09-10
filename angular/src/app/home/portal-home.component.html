@@ -202,7 +202,7 @@
                 </div>
 
                 <div class="course-card__tags">
-                  @if (c.majorName) { <span class="course-card__tag">{{ c.majorName }}</span> }
+                  <span class="course-card__tag" [title]="courseMajorText(c)">{{ courseMajorText(c) }}</span>
                   @if (c.difficulty) {
                     <span class="course-card__tag course-card__tag--difficulty">
                       <span nz-icon nzType="thunderbolt" nzTheme="fill"></span>
@@ -438,6 +438,7 @@
             nzAllowClear
             nzSize="default"
           >
+            <nz-option [nzValue]="majorPublicOnlyValue" nzLabel="公共课"></nz-option>
             @for (m of browseMajors(); track m.id) {
               <nz-option [nzValue]="m.id" [nzLabel]="m.name"></nz-option>
             }
@@ -449,6 +450,12 @@
             <span nz-icon nzType="search" nzTheme="outline"></span>
           </button>
         </div>
+        @if (hasActiveFilters()) {
+          <button type="button" class="browse-clear" (click)="clearFilters()">
+            <span nz-icon nzType="clear" nzTheme="outline"></span>
+            清除筛选
+          </button>
+        }
       </div>
 
       @if (activeTab() === 'courses') {
@@ -483,12 +490,10 @@
                     </span>
                   }
                 </div>
-                @if (c.majorName) {
-                  <div class="course-card__tags">
-                    <span class="course-card__tag">{{ c.majorName }}</span>
-                  </div>
-                }
                 @if (c.description) { <p class="course-card__desc">{{ c.description }}</p> }
+                <div class="course-card__tags">
+                  <span class="course-card__tag" [title]="courseMajorText(c)">{{ courseMajorText(c) }}</span>
+                </div>
               </div>
             </a>
           } @empty {

@@ -20,6 +20,7 @@ export interface BatchGenerateSummaryResultDto {
 
 export interface CreateResourceReviewDto {
   resourceId?: string;
+  parentId?: string | null;
   rating?: number;
   content?: string | null;
 }
@@ -232,6 +233,7 @@ export interface ResourceRatingSummaryDto {
 export interface ResourceReviewDto {
   id?: string;
   resourceId?: string;
+  parentId?: string | null;
   userId?: string;
   userName?: string;
   rating?: number;

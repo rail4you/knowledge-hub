@@ -92,6 +92,70 @@
   }
 }
 
+/* =================== 搜索行：搜索栏 + 右侧专业下拉 =================== */
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.search-row .search-bar {
+  flex: 1 1 320px;
+}
+.search-major {
+  width: 200px;
+  flex-shrink: 0;
+}
+/* 专业下拉与搜索栏统一：同高 42px、同边框圆角 */
+.search-major.ant-select-single:not(.ant-select-customize-input) .ant-select-selector {
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid ds.$student-border;
+  border-radius: ds.$student-radius;
+  background: #fff;
+  font-size: 14px;
+  color: ds.$student-text;
+}
+.search-major.ant-select-single .ant-select-selection-search-input {
+  height: 40px;
+}
+.search-major.ant-select-single .ant-select-selection-item,
+.search-major.ant-select-single .ant-select-selection-placeholder {
+  line-height: 40px;
+  font-size: 14px;
+}
+.search-major.ant-select-single .ant-select-selection-placeholder {
+  color: ds.$student-text-light;
+}
+.search-major.ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+  border-color: ds.$student-primary;
+}
+.search-major.ant-select-focused:not(.ant-select-disabled).ant-select:not(.ant-select-customize-input) .ant-select-selector {
+  border-color: ds.$student-primary;
+  box-shadow: none;
+}
+.search-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid ds.$student-border;
+  border-radius: ds.$student-radius;
+  background: #fff;
+  color: ds.$student-text-muted;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    color: ds.$student-primary;
+    border-color: ds.$student-primary;
+  }
+}
+
 /* =================== 内容单栏 =================== */
 .content-grid {
   display: grid;
@@ -165,37 +229,7 @@
   }
 }
 
-.major-chips {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.major-chip {
-  height: 30px;
-  padding: 0 12px;
-  border: 1px solid ds.$student-border;
-  border-radius: 3px;
-  background: #fff;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-
-  &:hover {
-    border-color: ds.$student-primary;
-    color: ds.$student-primary;
-  }
-
-  &.is-active {
-    background: ds.$student-primary;
-    color: #fff;
-    border-color: ds.$student-primary;
-  }
-}
+/* ===== 状态切换行（专业筛选已移至搜索栏右侧下拉） ===== */
 
 /* 移动端课程类别下拉（默认隐藏，移动端显示） */
 .status-select-mobile {
@@ -357,6 +391,7 @@
 
 .tag {
   display: inline-block;
+  max-width: 100%;
   padding: 1px 6px;
   border-radius: 3px;
   background: ds.$student-surface-soft;
@@ -365,6 +400,8 @@
   font-weight: 500;
   line-height: 1.7;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .course-card__desc {
@@ -796,22 +833,17 @@
     }
   }
 
-  /* 专业筛选：单行横滑，不换行挤占空间 */
-  .major-chips {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    margin: 0 -12px;
-    padding: 2px 12px 4px;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
+  /* 搜索行：移动端搜索栏与专业下拉上下堆叠 */
+  .search-row {
+    gap: 8px;
   }
-
-  .major-chip {
-    flex-shrink: 0;
-    height: 32px;
+  .search-row .search-bar {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .search-major {
+    flex: 1 1 auto;
+    width: auto;
   }
 
   .section-header__title {

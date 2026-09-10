@@ -13,7 +13,7 @@ export interface CreateTenantUserDto {
   userName: string;
   emailAddress: string;
   password: string;
-  name?: string;
+  name: string;
   surname?: string;
   isActive?: boolean;
   majorId?: string | null;
@@ -56,7 +56,7 @@ export interface UpdateTenantUserDto {
   tenantId?: string | null;
   userName: string;
   email: string;
-  name?: string;
+  name: string;
   surname?: string;
   emailConfirmed?: boolean;
   phoneNumber?: string | null;

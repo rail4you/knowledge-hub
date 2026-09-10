@@ -5,6 +5,8 @@ export interface CourseBriefDto {
   coverImageUrl?: string | null;
   teacherName?: string | null;
   majorName?: string | null;
+  majorNames?: string[];
+  majorIds?: string[];
   studentCount?: number;
   difficulty?: number;
 }
@@ -78,6 +80,8 @@ export interface PublicCourseDto {
   teacherName?: string | null;
   majorName?: string | null;
   majorId?: string | null;
+  majorNames?: string[];
+  majorIds?: string[];
   tenantName?: string | null;
   tenantId?: string;
   studentCount?: number;

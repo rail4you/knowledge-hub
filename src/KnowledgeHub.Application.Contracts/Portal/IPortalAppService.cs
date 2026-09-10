@@ -12,7 +12,7 @@ public interface IPortalAppService : IApplicationService
     /// <summary>
     /// 获取所有租户的公开浏览数据（游客可见）：课程、资源、微专业 + 租户/专业筛选列表
     /// </summary>
-    Task<PublicBrowseDto> GetPublicBrowseAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount);
+    Task<PublicBrowseDto> GetPublicBrowseAsync(Guid? tenantId, Guid? majorId, string? search, int skipCount, int maxResultCount, bool? onlyPublicCourses = null);
 
     /// <summary>
     /// 获取所有租户的资源库摘要列表（公开访问）
@@ -117,6 +117,10 @@ public class CourseBriefDto
     public string? CoverImageUrl { get; set; }
     public string? TeacherName { get; set; }
     public string? MajorName { get; set; }
+    /// <summary>归属的全部专业名（主专业排第一），为空表示公共课</summary>
+    public List<string> MajorNames { get; set; } = new();
+    /// <summary>归属的全部专业 Id（主专业排第一），为空表示公共课</summary>
+    public List<Guid> MajorIds { get; set; } = new();
     public int StudentCount { get; set; }
     public int Difficulty { get; set; }
 }
@@ -164,6 +168,10 @@ public class PublicCourseDto
     public string? TeacherName { get; set; }
     public string? MajorName { get; set; }
     public Guid? MajorId { get; set; }
+    /// <summary>归属的全部专业名（主专业排第一），为空表示公共课</summary>
+    public List<string> MajorNames { get; set; } = new();
+    /// <summary>归属的全部专业 Id（主专业排第一），为空表示公共课</summary>
+    public List<Guid> MajorIds { get; set; } = new();
     public string? TenantName { get; set; }
     public Guid TenantId { get; set; }
     public int StudentCount { get; set; }
