@@ -117,19 +117,13 @@
               </span>
             </span>
           </li>
-          <li>
-            <span class="info-row__label">更新时间</span>
-            <span class="info-row__value">{{ c.lastModificationTime | date:'yyyy-MM-dd' }}</span>
-          </li>
         </ul>
 
-        <!-- 主讲教师 -->
+        <!-- 主讲教师：文本风格，与上方参数表同列 -->
         @if (c.teacherName) {
           <div class="intro-teacher">
-            <div class="intro-teacher__body">
-              <strong>{{ c.teacherName }}</strong>
-              <span>主讲教师</span>
-            </div>
+            <span class="info-row__label">主讲教师</span>
+            <strong class="intro-teacher__name">{{ c.teacherName }}</strong>
           </div>
         }
 

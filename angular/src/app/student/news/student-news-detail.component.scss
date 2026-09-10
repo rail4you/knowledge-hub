@@ -83,32 +83,40 @@
   box-shadow: ds.$student-shadow-soft;
 }
 
-/* =================== 头部（封面 + 标题/统计/操作，与资源详情对齐） =================== */
+/* =================== 头部（封面 + 标题/统计，与课程详情对齐） =================== */
 .detail-head {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 0;
-  background: #fff;
-  border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius-lg;
-  overflow: hidden;
-  box-shadow: ds.$student-shadow-soft;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 20px;
+  // 双卡片布局（与课程/资源详情一致）：媒体与信息各自成卡，中间留白呼吸
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
 }
 
 .detail-media {
   position: relative;
   background: #fff;
+  border: 1px solid ds.$student-border-soft;
+  border-radius: ds.$student-radius-lg;
+  box-shadow: ds.$student-shadow-soft;
+  // 画框式内边距 + 纵向撑满整行
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
   min-height: 100%;
 }
 
 .detail-media__stage {
   position: relative;
-  height: 100%;
+  flex: 1 0 auto;
   min-height: 340px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  border-radius: 10px;
   color: #fff;
 }
 
@@ -157,34 +165,15 @@
 
 /* ---- 右：信息面板 ---- */
 .detail-info {
-  padding: 28px 28px 24px;
+  background: #fff;
+  border: 1px solid ds.$student-border-soft;
+  border-radius: ds.$student-radius-lg;
+  box-shadow: ds.$student-shadow-soft;
+  padding: 32px 32px 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   min-width: 0;
-}
-
-.detail-info__kicker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.kicker-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: ds.$student-surface-soft;
-  color: ds.$student-text-muted;
-  font-size: 12px;
-
-  span[nz-icon] {
-    color: ds.$student-text-light;
-    font-size: 12px;
-  }
 }
 
 .detail-info__title {
@@ -246,16 +235,20 @@
 .detail-info__list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 2px 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
 
   li {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    // 参数表式行距（与课程/资源详情一致）：行内留白 + 分隔线
+    padding: 11px 2px;
+  }
+  li + li {
+    border-top: 1px solid ds.$student-border-soft;
   }
 }
 
@@ -1097,6 +1090,15 @@
 @media (max-width: 1100px) {
   .detail-head {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .detail-media {
+    padding: 10px;
+  }
+
+  .detail-info {
+    padding: 24px 20px;
   }
 
   .detail-media__stage {

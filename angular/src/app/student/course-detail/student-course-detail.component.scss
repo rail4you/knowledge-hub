@@ -65,27 +65,38 @@
 /* =================== 头部（媒体 + 信息） =================== */
 .detail-head {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 0;
-  background: #fff;
-  border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius-lg;
-  overflow: hidden;
-  box-shadow: ds.$student-shadow-soft;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 20px;
+  // 双卡片布局：媒体与信息各自成卡，中间留白呼吸
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
 }
 
 /* ---- 左：封面 / 演示区 ---- */
 .detail-media {
   position: relative;
   background: #fff;
+  border: 1px solid ds.$student-border-soft;
+  border-radius: ds.$student-radius-lg;
+  box-shadow: ds.$student-shadow-soft;
+  // 画框式内边距：封面不再贴边，悬浮于卡片内
+  padding: 14px;
+  // 纵向撑满整行：stage 随右侧面板拉高，封面始终填满、无底部空白
+  display: flex;
+  flex-direction: column;
 }
 .detail-media__stage {
   position: relative;
   aspect-ratio: 16 / 9;
+  // 有 16/9 保底高度；右侧更高时自动拉伸填满（内图 absolute + cover 自适应裁剪）
+  flex: 1 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  border-radius: 10px;
   cursor: pointer;
 
   &:focus-visible {
@@ -109,10 +120,14 @@
 }
 /* ---- 右：信息面板 ---- */
 .detail-info {
-  padding: 28px 28px 24px;
+  background: #fff;
+  border: 1px solid ds.$student-border-soft;
+  border-radius: ds.$student-radius-lg;
+  box-shadow: ds.$student-shadow-soft;
+  padding: 32px 32px 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 .detail-info__title {
   margin: 0;
@@ -163,16 +178,20 @@
 .detail-info__list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 2px 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
 
   li {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    // 参数表式行距：行内留白 + 分隔线，替代原来的裸堆叠
+    padding: 11px 2px;
+  }
+  li + li {
+    border-top: 1px solid ds.$student-border-soft;
   }
 }
 .info-row__label {
@@ -190,28 +209,27 @@
   gap: 4px;
   min-width: 0;
 }
-.difficulty-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 24px;
-  padding: 0 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  span { font-size: 11px; }
-}
+/* ---------- 状态标签：难度 / 发布状态共用同一套几何与扁平配色 ---------- */
+.difficulty-tag,
 .status-tag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   height: 24px;
   padding: 0 10px;
-  border-radius: 999px;
-  background: #e9f0fa;
-  color: ds.$student-primary;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.difficulty-tag {
+  // 背景与文字色由模板按难度色传入（浅底 + 实色字，扁平）
+  span { font-size: 11px; }
+}
+.status-tag {
+  background: #e9f0fa;
+  color: ds.$student-primary;
 }
 .status-dot {
   width: 6px;
@@ -223,7 +241,8 @@
 /* ---------- 右侧底部主操作按钮（push 到面板底部） ---------- */
 .intro-action {
   margin-top: auto;
-  padding-top: 4px;
+  // 面板内容不足时，按钮与上方教师条之间保留呼吸间距
+  padding-top: 10px;
 }
 .action-btn--full {
   width: 100%;
@@ -231,18 +250,19 @@
   font-size: 15px;
 }
 
-/* ---------- 主讲教师（课程介绍区，文本风格） ---------- */
+/* ---------- 主讲教师：去背景文本行，延续上方参数表的分隔线节奏 ---------- */
 .intro-teacher {
-  padding: 10px 14px;
-  border: 1px solid ds.$student-border-soft;
-  border-radius: ds.$student-radius;
-  background: ds.$student-surface-soft;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 2px 0;
+  border-top: 1px solid ds.$student-border-soft;
 }
-.intro-teacher__body {
-  display: flex; align-items: baseline; gap: 10px; min-width: 0;
-  flex-wrap: wrap;
-  strong { color: ds.$student-text; font-size: 14px; font-weight: 600; }
-  span { color: ds.$student-text-light; font-size: 12px; }
+.intro-teacher__name {
+  color: ds.$student-text;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .action-btn {
@@ -798,7 +818,9 @@
 
 /* =================== 响应式 =================== */
 @media (max-width: 1100px) {
-  .detail-head { grid-template-columns: 1fr; }
+  .detail-head { grid-template-columns: 1fr; gap: 16px; }
+  .detail-media { padding: 10px; }
+  .detail-info { padding: 24px 20px; }
   .detail-media__stage { aspect-ratio: 16 / 8; }
   .detail-grid { grid-template-columns: 1fr; }
 }

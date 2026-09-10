@@ -75,20 +75,6 @@
               {{ res.categoryName }}
             </span>
           }
-          @if (res.fileExtension) {
-            <span class="kicker-chip">
-              <span nz-icon nzType="file" nzTheme="outline"></span>
-              {{ (res.fileExtension || '').toUpperCase() }} 格式
-            </span>
-          }
-          @if (ratingSummary(); as r) {
-            @if (r.totalReviews > 0) {
-              <span class="kicker-chip kicker-chip--rating">
-                <span nz-icon nzType="star" nzTheme="fill"></span>
-                {{ r.averageRating | number:'1.1-1' }} · {{ r.totalReviews }} 人评价
-              </span>
-            }
-          }
           <!-- 资源状态徽章 -->
           @if (isPendingReview()) {
             <span class="kicker-chip kicker-chip--status kicker-chip--pending">
@@ -137,6 +123,10 @@
         </div>
 
         <ul class="detail-info__list">
+          <li>
+            <span class="info-row__label">文件格式</span>
+            <span class="info-row__value">{{ (res.fileExtension || '').toUpperCase() || '未知' }}</span>
+          </li>
           <li>
             <span class="info-row__label">文件大小</span>
             <span class="info-row__value">{{ formatFileSize(res.fileSize) }}</span>

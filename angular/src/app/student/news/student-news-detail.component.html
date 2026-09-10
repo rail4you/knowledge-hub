@@ -50,27 +50,8 @@
         </div>
       </div>
 
-      <!-- 右：标题 + 统计 + 操作 -->
+      <!-- 右：标题 + 统计 -->
       <div class="detail-info">
-        <div class="detail-info__kicker">
-          @if (article.categoryName) {
-            <span class="kicker-chip">
-              <span nz-icon nzType="folder" nzTheme="outline"></span>
-              {{ article.categoryName }}
-            </span>
-          }
-          <span class="kicker-chip">
-            <span nz-icon nzType="calendar" nzTheme="outline"></span>
-            {{ article.publishedAt || article.creationTime | date:'yyyy年MM月dd日' }}
-          </span>
-          @if (article.authorName) {
-            <span class="kicker-chip">
-              <span nz-icon nzType="user" nzTheme="outline"></span>
-              {{ article.authorName }}
-            </span>
-          }
-        </div>
-
         <h1 class="detail-info__title">{{ article.title }}</h1>
 
         @if (article.summary) {
@@ -98,6 +79,10 @@
         </div>
 
         <ul class="detail-info__list">
+          <li>
+            <span class="info-row__label">资讯分类</span>
+            <span class="info-row__value">{{ article.categoryName || '未分类' }}</span>
+          </li>
           <li>
             <span class="info-row__label">发布者</span>
             <span class="info-row__value">{{ article.authorName || '系统发布' }}</span>
