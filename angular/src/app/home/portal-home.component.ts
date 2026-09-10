@@ -121,7 +121,7 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   readonly filterSearch = signal('');
 
   // ── 全部资源：课程 / 资源 / 微专业各 tab 独立分页 ──
-  readonly browsePageSize = 12;
+  readonly browsePageSize = 10;
   readonly browseCoursePage = signal(1);
   readonly browseResourcePage = signal(1);
   readonly browseMicroPage = signal(1);
