@@ -1,242 +1,400 @@
 <div class="chapter-resource-container">
-  <div class="page-header">
-    <h1>{{ '::Menu:ChapterResource' | abpLocalization }}</h1>
-    <p class="page-hint">从课程资源池（先在「课程资源」页为课程挑选资源）选择资源关联到章节</p>
-  </div>
+  <!-- 顶部标题区 -->
+  <header class="page-hero">
+    <div class="page-hero__main">
+      <h1 class="page-hero__title">{{ '::Menu:ChapterResource' | abpLocalization }}</h1>
+      <p class="page-hero__desc">从课程资源池（先在「课程资源」页为课程挑选资源）中勾选资源关联到指定章节；支持搜索、筛选与批量关联</p>
+    </div>
+  </header>
+
+  <!-- 课程选择 + 统计 -->
+  <nz-card [nzBordered]="false" class="selector-card">
+    <div class="course-selector">
+      <label class="filter-label">选择课程</label>
+      <nz-select
+        [ngModel]="selectedCourseId()"
+        (ngModelChange)="onCourseSelected($event)"
+        nzPlaceHolder="请选择课程"
+        nzAllowClear
+        class="course-select"
+      >
+        @for (course of courses(); track course.id) {
+          <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+        }
+      </nz-select>
+
+      @if (selectedCourseId()) {
+        <span class="stat-divider"></span>
+        <span class="stat-chip">
+          <span nz-icon nzType="branches" nzTheme="outline"></span>
+          章节 <strong>{{ chapters().length }}</strong>
+        </span>
+        <span class="stat-chip">
+          <span nz-icon nzType="folder" nzTheme="outline"></span>
+          资源池 <strong>{{ poolCount() }}</strong>
+        </span>
+        <span class="stat-chip">
+          <span nz-icon nzType="link" nzTheme="outline"></span>
+          已关联资源 <strong>{{ linkedResourceCount() }}</strong>
+        </span>
+        <span class="stat-chip">
+          <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+          已关联 <strong>{{ linkedChapterCount() }}</strong> 个章节
+        </span>
+      }
+    </div>
+  </nz-card>
 
   @if (selectedCourseId()) {
-    <div class="stat-line">
-      <span class="stat-course">{{ selectedCourse()?.title }}</span>
-      <i></i>
-      <span>章节 <strong>{{ courseStats().chapterCount }}</strong> 个</span>
-      <i></i>
-      <span>已关联章节 <strong>{{ courseStats().linkedChapterCount }}</strong> 个</span>
-      <i></i>
-      <span>已关联资源 <strong>{{ courseStats().linkedResourceCount }}</strong> 个</span>
-      <i></i>
-      <span>资源池 <strong>{{ courseStats().poolCount }}</strong> 个</span>
-    </div>
-  }
-
-    <div class="content-layout" [class.no-selection]="!selectedCourseId()">
-      <!-- Left: Course list -->
-      <nz-card class="course-panel">
-        <div class="course-header">
-          <span class="course-title">课程列表</span>
-          <span class="course-count">{{ filteredCourses().length }}</span>
+    <div class="content-layout">
+      <!-- 左侧：章节树 -->
+      <nz-card [nzBordered]="false" class="tree-panel">
+        <div class="sidebar-card__title">
+          <span class="sidebar-card__bar"></span>
+          章节列表
+          <span class="sidebar-card__count">{{ chapters().length }}</span>
         </div>
-        <div class="course-search">
-          <nz-input-group [nzPrefix]="courseSearchPrefix">
+
+        <div class="sidebar-tools">
+          <nz-input-group [nzPrefix]="treeSearchPrefix" class="sidebar-search">
             <input
               nz-input
-              placeholder="搜索课程名称"
-              [ngModel]="courseSearchText()"
-              (ngModelChange)="courseSearchText.set($event)"
-            />
-          </nz-input-group>
-          <ng-template #courseSearchPrefix>
-            <span nz-icon nzType="search"></span>
-          </ng-template>
-        </div>
-        <div class="course-list">
-          @if (courses().length === 0) {
-            <nz-empty nzNotFoundContent="暂无课程"></nz-empty>
-          } @else if (filteredCourses().length === 0) {
-            <nz-empty nzNotFoundContent="没有匹配的课程"></nz-empty>
-          } @else {
-            @for (course of filteredCourses(); track course.id) {
-              <div
-                class="course-item"
-                [class.active]="selectedCourseId() === course.id"
-                (click)="onCourseSelected(course.id!)"
-              >
-                <span nz-icon nzType="book" nzTheme="outline" class="course-icon"></span>
-                <div class="course-item-info">
-                  <div class="course-item-name">{{ course.title }}</div>
-                  @if (course.majorName) {
-                    <div class="course-item-meta">{{ course.majorName }}</div>
-                  }
-                </div>
-              </div>
-            }
-          }
-        </div>
-      </nz-card>
-
-    @if (selectedCourseId()) {
-      <!-- Middle: Chapter tree -->
-      <nz-card class="tree-panel">
-        <div class="tree-header">
-          <span class="tree-title">章节列表</span>
-          <label nz-checkbox [ngModel]="onlyWithResources()" (ngModelChange)="onOnlyWithResourcesChange($event)" class="tree-filter-check">
-            只显示有关联资源的章节
-          </label>
-        </div>
-        <div class="tree-search">
-          <nz-input-group [nzPrefix]="treeSearchPrefix">
-            <input
-              nz-input
-              placeholder="搜索章节标题"
-              [ngModel]="chapterSearchText()"
-              (ngModelChange)="chapterSearchText.set($event)"
+              placeholder="搜索章节"
+              [ngModel]="chapterKeyword()"
+              (ngModelChange)="chapterKeyword.set($event)"
             />
           </nz-input-group>
           <ng-template #treeSearchPrefix>
-            <span nz-icon nzType="search"></span>
+            <span nz-icon nzType="search" nzTheme="outline"></span>
           </ng-template>
+
+          <label
+            nz-checkbox
+            [ngModel]="onlyWithLinked()"
+            (ngModelChange)="onlyWithLinked.set($event)"
+            class="sidebar-filter"
+            nz-tooltip
+            nzTooltipTitle="仅显示至少挂载了一个资源的章节"
+          >
+            仅显示有关联的章节（{{ linkedChapterCount() }}）
+          </label>
         </div>
+
         @if (chapters().length === 0) {
-          <nz-empty nzNotFoundContent="暂无章节"></nz-empty>
+          <div class="sidebar-empty">
+            <span nz-icon nzType="inbox" nzTheme="outline"></span>
+            <p>暂无章节</p>
+          </div>
         } @else if (visibleChapters().length === 0) {
-          <nz-empty [nzNotFoundContent]="chapterSearchText().trim() ? '没有匹配的章节' : '没有有关联资源的章节'"></nz-empty>
+          <div class="sidebar-empty">
+            <span nz-icon nzType="search" nzTheme="outline"></span>
+            <p>没有匹配的章节</p>
+            <button class="ghost-btn ghost-btn--small" (click)="clearChapterFilter()">
+              清除筛选
+            </button>
+          </div>
         } @else {
-          <div class="tree-view">
-            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: visibleChapters(), depth: 0 }"></ng-container>
+          <div class="chapter-tree">
+            <ng-container
+              *ngTemplateOutlet="chapterNode; context: { $implicit: visibleChapters(), depth: 0 }"
+            ></ng-container>
           </div>
         }
       </nz-card>
 
-      <!-- Right: Resource management (70%) -->
-      <nz-card class="resource-panel">
-        @if (selectedChapterId()) {
-          <div class="resource-panel-header">
-            <h3>{{ selectedChapterTitle() }} - 已关联资源 ({{ chapterResources().length }})</h3>
+      <!-- 右侧：资源管理 -->
+      <nz-card [nzBordered]="false" class="resource-panel">
+        @if (selectedChapterId(); as cid) {
+          <div class="chapter-header">
+            <div class="chapter-header__left">
+              <h2 class="chapter-header__title">{{ selectedChapterTitle() }}</h2>
+              <p class="chapter-header__meta">
+                当前章节已关联 <strong>{{ chapterResources().length }}</strong> 个资源
+              </p>
+            </div>
+            <div class="chapter-header__actions">
+              <button class="primary-btn" (click)="openLinkModal()">
+                <span nz-icon nzType="plus" nzTheme="outline"></span>
+                <span>关联资源</span>
+              </button>
+            </div>
           </div>
 
-          @if (loading()) {
-            <div class="loading-container">
-              <nz-spin nzSimple nzSize="large"></nz-spin>
-            </div>
-          } @else if (chapterResources().length === 0) {
-            <nz-empty nzNotFoundContent="暂无关联资源，可从下方添加"></nz-empty>
-          } @else {
-            <div class="linked-resources">
-              @for (resource of chapterResources(); track resource.id) {
-                <div class="resource-item">
-                  <div class="resource-item-left">
-                    <div class="resource-item-title">
-                      {{ resource.name }}
-                    </div>
-                    @if (resource.description) {
-                      <div class="resource-item-content">{{ resource.description }}</div>
-                    }
-                  </div>
-                  <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkResource(resource)">
-                    取消关联
-                  </button>
-                </div>
-              }
-            </div>
-          }
-
-          <!-- Add from course resource pool -->
-          <div class="add-section">
-            <div class="add-section-header">
-              <h4>从课程资源池中添加</h4>
-              <div class="selection-actions">
-                <input
-                  nz-input
-                  [ngModel]="searchText()"
-                  (ngModelChange)="searchText.set($event)"
-                  placeholder="搜索资源..."
-                  style="width: 200px"
-                />
-                <button
-                  nz-button
-                  nzType="primary"
-                  [disabled]="selectedCount() === 0"
-                  (click)="linkSelected()"
-                >
-                  <span nz-icon nzType="plus"></span>
-                  添加选中 ({{ selectedCount() }})
+          <div class="resource-card">
+            @if (linkedLoading()) {
+              <div class="loading-state loading-state--small">
+                <nz-spin nzSimple nzSize="default" nzTip="资源加载中..."></nz-spin>
+              </div>
+            } @else if (chapterResources().length === 0) {
+              <div class="empty-state">
+                <span nz-icon nzType="folder" nzTheme="outline" class="empty-icon"></span>
+                <p class="empty-title">本章尚未关联资源</p>
+                <p class="empty-hint">点击右上角"关联资源"，从课程资源池中勾选需要加入本章的资源</p>
+                <button class="primary-btn" (click)="openLinkModal()">
+                  <span nz-icon nzType="plus" nzTheme="outline"></span>
+                  <span>立即关联</span>
                 </button>
               </div>
-            </div>
-            @if (libraryLoading()) {
-              <div class="loading-container">
-                <nz-spin nzSimple nzSize="small"></nz-spin>
-              </div>
-            } @else if (availableResources().length === 0) {
-              <nz-empty nzNotFoundContent="没有可添加的资源（课程资源池中的资源都已关联到当前章节，或课程尚未关联任何资源）"></nz-empty>
             } @else {
-              <nz-table [nzData]="availableResources()" [nzFrontPagination]="false" nzSize="small">
+              <nz-table
+                #linkedTbl
+                [nzData]="pagedChapterResources()"
+                [nzFrontPagination]="false"
+                [nzShowPagination]="false"
+                nzSize="middle"
+                [nzScroll]="{ x: '760px' }"
+              >
                 <thead>
                   <tr>
-                    <th
-                      [nzShowCheckbox]="true"
-                      [nzChecked]="isAllChecked()"
-                      [nzIndeterminate]="isIndeterminate()"
-                      (nzCheckedChange)="onAllChecked($event)"
-                    ></th>
-                    <th>资源名称</th>
-                    <th>类型</th>
-                    <th>说明</th>
-                    <th class="col-actions">操作</th>
+                    <th nzWidth="56px">序号</th>
+                    <th>资源</th>
+                    <th nzWidth="110px">类型</th>
+                    <th nzWidth="100px">大小</th>
+                    <th nzWidth="110px" nzRight>操作</th>
                   </tr>
                 </thead>
                 <tbody>
-                  @for (resource of availableResources(); track resource.id) {
-                    <tr [class.row-selected]="isSelected(resource.id)">
-                      <td
-                        [nzShowCheckbox]="true"
-                        [nzChecked]="isSelected(resource.id)"
-                        (nzCheckedChange)="onItemChecked(resource.id, $event)"
-                      ></td>
-                      <td>{{ resource.resourceName ?? resource.originalFileName ?? '未命名资源' }}</td>
+                  @for (r of linkedTbl.data; track trackResource($index, r); let i = $index) {
+                    <tr>
+                      <td class="cell-index">
+                        {{ (linkedPage() - 1) * linkedPageSize() + i + 1 }}
+                      </td>
                       <td>
-                        <nz-tag [nzColor]="getResourceTypeColor(resource.resourceType)">
-                          {{ getResourceTypeLabel(resource.resourceType) }}
+                        <span class="cell-title" [title]="r.name || '未命名资源'">{{
+                          r.name || '未命名资源'
+                        }}</span>
+                        @if (r.description) {
+                          <span class="cell-sub text-ellipsis">{{ r.description }}</span>
+                        }
+                      </td>
+                      <td>
+                        <nz-tag [nzColor]="getResourceTypeColor(r.fileExtension)" class="meta-tag">
+                          {{ getResourceTypeLabel(r.fileExtension) }}
                         </nz-tag>
                       </td>
-                      <td class="desc-cell">
-                        {{ resource.description || '-' }}
-                      </td>
-                      <td class="col-actions">
-                        <button nz-button nzType="link" nzSize="small" (click)="linkResource(resource)">
-                          添加
+                      <td class="cell-num">{{ formatFileSize(r.fileSize) }}</td>
+                      <td nzRight>
+                        <button
+                          class="link-btn link-btn--danger"
+                          nz-tooltip
+                          nzTooltipTitle="从当前章节移除该资源（不会删除资源本身）"
+                          (click)="unlinkResource(r)"
+                        >
+                          取消关联
                         </button>
                       </td>
                     </tr>
                   }
                 </tbody>
               </nz-table>
+
+              @if (chapterResources().length > linkedPageSize()) {
+                <div class="linked-pagination">
+                  <nz-pagination
+                    [nzPageIndex]="linkedPage()"
+                    [nzPageSize]="linkedPageSize()"
+                    [nzTotal]="chapterResources().length"
+                    [nzShowSizeChanger]="false"
+                    [nzSize]="'small'"
+                    (nzPageIndexChange)="onLinkedPageChange($event)"
+                  ></nz-pagination>
+                </div>
+              }
             }
           </div>
         } @else {
-          <div class="resource-empty">
-            <nz-empty nzNotFoundContent="请选择章节查看关联资源"></nz-empty>
+          <div class="empty-state empty-state--lg">
+            <span nz-icon nzType="folder-open" nzTheme="outline" class="empty-icon"></span>
+            <p class="empty-title">请从左侧选择一个章节</p>
+            <p class="empty-hint">选中章节后，将在这里展示已关联的资源，并可批量添加或移除</p>
           </div>
         }
       </nz-card>
-    } @else {
-      <nz-card class="select-hint-panel">
-        <nz-empty nzNotFoundContent="请从左侧选择课程"></nz-empty>
-      </nz-card>
-    }
     </div>
+  }
 
-  <!-- Recursive tree template -->
-  <ng-template #treeNode let-nodes let-depth="depth">
-    @for (node of nodes; track node.id) {
-      <div class="tree-node" [style.padding-left.px]="depth === 0 ? 0 : 20">
-        <div
-          class="tree-node-content"
-          [class.selected]="selectedChapterId() === node.id"
-          (click)="selectChapter(node)"
+  <!-- 递归章节树：与 chapter-exercise 保持一致 ────────────────── -->
+  <ng-template #chapterNode let-nodes let-depth="depth">
+    @for (node of nodes; track trackChapter($index, node)) {
+      <div class="chapter-node">
+        <button
+          class="chapter-item"
+          [class.is-active]="selectedChapterId() === node.id"
+          [class.is-parent]="hasChildren(node)"
+          [style.padding-left.px]="depth * 16 + 12"
+          (click)="onChapterItemClick(node)"
         >
           @if (hasChildren(node)) {
-            <span class="toggle-icon" (click)="toggleNode(node.id!); $event.stopPropagation()">
-              <span nz-icon [nzType]="isExpanded(node.id!) ? 'down' : 'right'"></span>
-            </span>
+            <span
+              class="chapter-item__caret"
+              nz-icon
+              [nzType]="isExpanded(node.id!) ? 'caret-down' : 'caret-right'"
+              nzTheme="outline"
+              (click)="toggleChapter($event, node.id!)"
+            ></span>
           } @else {
-            <span class="toggle-icon placeholder"></span>
+            <span class="chapter-item__caret chapter-item__caret--placeholder"></span>
           }
-          <span class="node-title">{{ node.title }}</span>
-        </div>
-        @if (hasChildren(node) && (isExpanded(node.id!) || chapterSearchText().trim())) {
-          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+          <span
+            class="chapter-item__icon"
+            nz-icon
+            [nzType]="hasChildren(node) ? 'folder' : 'file-text'"
+            nzTheme="outline"
+          ></span>
+          <span class="chapter-item__title">{{ node.title || '未命名章节' }}</span>
+          @if ((chapterResourceCountMap().get(node.id || '') || 0) > 0) {
+            <span class="chapter-item__badge">
+              {{ chapterResourceCountMap().get(node.id || '') }}
+            </span>
+          }
+        </button>
+        @if (hasChildren(node) && (isExpanded(node.id!) || isChapterFiltering())) {
+          <div class="chapter-node__children">
+            <ng-container
+              *ngTemplateOutlet="chapterNode; context: { $implicit: node.children, depth: depth + 1 }"
+            ></ng-container>
+          </div>
         }
       </div>
     }
   </ng-template>
+
+  <!-- 关联资源弹窗 ──────────────────────────────────────────────── -->
+  <nz-modal
+    [nzVisible]="linkModalVisible()"
+    nzTitle="关联资源到当前章节"
+    [nzWidth]="880"
+    [nzOkLoading]="linkModalSubmitting()"
+    nzOkText="确定"
+    nzCancelText="取消"
+    (nzOnOk)="confirmLinkResources()"
+    (nzOnCancel)="closeLinkModal()"
+    [nzOkDisabled]="linkModalEffectiveCount() === 0"
+  >
+    <ng-container *nzModalContent>
+      <div class="link-modal__hint">
+        <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+        <span>默认仅展示课程资源池中尚未关联到当前章节的资源；如需一并查看已关联的资源，可打开右侧开关。</span>
+      </div>
+
+      <div class="link-modal__toolbar">
+        <nz-input-group [nzPrefix]="linkSearchPrefix" class="toolbar-search">
+          <input
+            nz-input
+            placeholder="搜索名称 / 描述"
+            [ngModel]="linkModalKeyword()"
+            (ngModelChange)="onLinkKeywordChange($event)"
+          />
+        </nz-input-group>
+        <ng-template #linkSearchPrefix>
+          <span nz-icon nzType="search" nzTheme="outline"></span>
+        </ng-template>
+        <label
+          class="toolbar-switch"
+          nz-tooltip
+          nzTooltipTitle="打开后会一并展示已关联的资源，便于查看上下文"
+        >
+          <nz-switch
+            [ngModel]="showLinkedInModal()"
+            (ngModelChange)="onShowLinkedChange($event)"
+            nzCheckedChildren="显示已关联"
+            nzUnCheckedChildren="隐藏已关联"
+          ></nz-switch>
+        </label>
+      </div>
+
+      @if (linkCandidates().length === 0) {
+        <div class="empty-state empty-state--small">
+          <span nz-icon nzType="search" nzTheme="outline" class="empty-icon"></span>
+          <p>没有匹配的资源</p>
+        </div>
+      } @else {
+        <nz-table
+          #linkTbl
+          [nzData]="pagedLinkCandidates()"
+          [nzFrontPagination]="false"
+          [nzShowPagination]="false"
+          nzSize="middle"
+          [nzScroll]="{ x: '780px', y: '420px' }"
+        >
+          <thead>
+            <tr>
+              <th nzWidth="48px" class="col-checkbox">
+                <label
+                  nz-checkbox
+                  [nzChecked]="linkModalAllChecked()"
+                  [nzIndeterminate]="linkModalIndeterminate()"
+                  (nzCheckedChange)="toggleLinkAll($event)"
+                  [nzDisabled]="selectableOnPageIds().length === 0"
+                ></label>
+              </th>
+              <th nzWidth="48px">序号</th>
+              <th>资源</th>
+              <th nzWidth="110px">类型</th>
+              <th nzWidth="100px">大小</th>
+              <th nzWidth="110px">状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of linkTbl.data; track trackCourseResource($index, r); let i = $index) {
+              <tr
+                [class.row-disabled]="isAlreadyLinked(r.resourceId)"
+                [class.row-selected]="isLinkSelected(r.resourceId)"
+              >
+                <td class="col-checkbox" (click)="$event.stopPropagation()">
+                  <label
+                    nz-checkbox
+                    [nzChecked]="isLinkSelected(r.resourceId)"
+                    [nzDisabled]="isAlreadyLinked(r.resourceId)"
+                    (nzCheckedChange)="toggleLinkOne(r.resourceId, $event)"
+                  ></label>
+                </td>
+                <td class="cell-index">
+                  {{ (linkModalPage() - 1) * linkModalPageSize() + i + 1 }}
+                </td>
+                <td>
+                  <span
+                    class="cell-title"
+                    [title]="r.resourceName ?? r.originalFileName ?? '未命名资源'"
+                  >{{ r.resourceName ?? r.originalFileName ?? '未命名资源' }}</span>
+                  @if (r.description) {
+                    <span class="cell-sub text-ellipsis">{{ r.description }}</span>
+                  }
+                </td>
+                <td>
+                  <nz-tag
+                    [nzColor]="getResourceTypeColor(r.fileExtension)"
+                    class="meta-tag"
+                  >
+                    {{ getResourceTypeLabel(r.fileExtension) }}
+                  </nz-tag>
+                </td>
+                <td class="cell-num">{{ formatFileSize(r.fileSize) }}</td>
+                <td>
+                  @if (isAlreadyLinked(r.resourceId)) {
+                    <span class="cell-status is-done">已关联</span>
+                  } @else {
+                    <span class="cell-status">可选</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+
+        @if (linkCandidates().length > linkModalPageSize()) {
+          <div class="linked-pagination">
+            <nz-pagination
+              [nzPageIndex]="linkModalPage()"
+              [nzPageSize]="linkModalPageSize()"
+              [nzTotal]="linkCandidates().length"
+              [nzShowSizeChanger]="false"
+              [nzSize]="'small'"
+              (nzPageIndexChange)="onLinkPageChange($event)"
+            ></nz-pagination>
+          </div>
+        }
+      }
+    </ng-container>
+  </nz-modal>
 </div>

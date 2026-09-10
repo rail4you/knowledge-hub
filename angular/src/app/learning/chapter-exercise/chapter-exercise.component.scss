@@ -1,261 +1,715 @@
+/* ═══════════════════════════════════════════════════════════════
+   章节习题关联 —— 视觉层（与教师端高保真原型对齐）
+   —— 仅改样式，不动组件结构 — ────────────────────────────
+   ═══════════════════════════════════════════════════════════════ */
+
 .chapter-exercise-container {
-  padding: 24px;
+  padding: 0 24px 24px;
   max-width: 1400px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.page-header {
-  margin-bottom: 16px;
+/* ═══════ 顶部标题区（与课程详情页 hero 区一致） ═══════ */
+.page-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--kh-panel);
+  border: 1px solid var(--kh-line);
+  border-radius: var(--kh-r-card);
+  box-shadow: var(--kh-shadow-card);
+  padding: 18px 22px;
+  flex-wrap: wrap;
 
-  h1 {
+  &__main {
+    min-width: 0;
+    flex: 1 1 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__title {
     margin: 0;
-    font-size: 24px;
+    color: var(--kh-ink);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    line-height: 1.3;
+  }
+
+  &__desc {
+    margin: 4px 0 0;
+    color: var(--kh-muted);
+    font-size: 13px;
+    line-height: 1.7;
+    max-width: 80ch;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
   }
 }
 
+/* ═══════ 课程选择器 + 统计条 ═══════ */
 .selector-card {
-  margin-bottom: 16px;
+  ::ng-deep .ant-card-body {
+    padding: 14px 20px;
+  }
 
   .course-selector {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
 
-    label {
-      font-weight: 500;
-      white-space: nowrap;
+  .filter-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kh-ink);
+    white-space: nowrap;
+  }
+
+  .course-select {
+    min-width: 280px;
+    max-width: 360px;
+  }
+
+  .stat-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--kh-line-2);
+  }
+
+  .stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(24, 144, 255, 0.06);
+    color: var(--kh-muted);
+    font-size: 12.5px;
+    white-space: nowrap;
+
+    span[nz-icon] {
+      color: var(--kh-accent);
+      font-size: 12px;
     }
 
-    .course-select {
-      min-width: 300px;
+    strong {
+      color: var(--kh-ink);
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin-left: 2px;
     }
   }
 }
 
+/* ═══════ 两栏布局 ═══════ */
 .content-layout {
   display: grid;
-  grid-template-columns: 30% 70%;
+  grid-template-columns: 320px minmax(0, 1fr);
   gap: 16px;
-  height: calc(100vh - 240px);
-  min-height: 0;
+  align-items: stretch;
+  height: calc(100vh - 280px);
+  min-height: 520px;
 }
 
-// Tree panel
+@media (max-width: 1100px) {
+  .content-layout {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+}
+
+/* ═══════ 左侧章节树 ═══════ */
 .tree-panel {
-  position: relative;
+  height: 100%;
   min-height: 0;
-  max-height: 100%;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+
+  ::ng-deep .ant-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
 
   ::ng-deep .ant-card-body {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    padding: 16px 24px;
-  }
-
-  .tree-view {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: 4px;
-
-    .tree-node {
-      .tree-node-content {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 6px 8px;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-
-        &:hover {
-          background-color: #f5f5f5;
-        }
-
-        &.selected {
-          background-color: #e6f4ff;
-          border-left: 3px solid #1677ff;
-        }
-
-        .toggle-icon {
-          width: 20px;
-          height: 20px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          flex-shrink: 0;
-
-          &.placeholder {
-            visibility: hidden;
-          }
-        }
-
-        .node-title {
-          flex: 1;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-      }
-    }
+    padding: 16px 18px;
   }
 }
 
-// Exercise panel - flex layout so content scrolls independently
-.exercise-panel {
-  position: relative;
-  min-height: 0;
-  max-height: 100%;
-  overflow: hidden;
+.sidebar-card__title {
   display: flex;
-  flex-direction: column;
-
-  ::ng-deep .ant-card-body {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 16px 24px;
-  }
-
-  .exercise-panel-header {
-    flex-shrink: 0;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f0f0f0;
-    margin-bottom: 0;
-
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    h3 {
-      margin: 0;
-      font-size: 16px;
-    }
-  }
-
-  .scrollable-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: 4px;
-    padding-top: 16px;
-  }
-}
-
-.loading-container {
-  display: flex;
-  justify-content: center;
-  padding: 48px;
-}
-
-.linked-exercises, .available-exercises {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.exercise-item {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
-  border: 1px solid #f0f0f0;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--kh-ink);
+  font-size: 14px;
+  font-weight: 700;
+
+  .sidebar-card__bar {
+    display: inline-block;
+    width: 3px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--kh-accent);
+  }
+
+  .sidebar-card__count {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: var(--kh-accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+  }
+}
+
+.sidebar-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.sidebar-search {
+  width: 100%;
+}
+
+.sidebar-filter {
+  color: var(--kh-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.sidebar-empty {
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 12px;
+  color: var(--kh-muted);
+  font-size: 12px;
+  text-align: center;
+  background: rgba(24, 144, 255, 0.04);
+  border-radius: 8px;
+
+  span[nz-icon] {
+    font-size: 22px;
+    color: #c9d4e2;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+/* 章节树（递归） */
+.chapter-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.chapter-node {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  &__children {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+}
+
+.chapter-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
   border-radius: 6px;
-  transition: background-color 0.2s;
+  background: transparent;
+  color: var(--kh-ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  width: 100%;
 
   &:hover {
-    background-color: #fafafa;
+    background: rgba(24, 144, 255, 0.06);
   }
 
-  .exercise-item-left {
+  &.is-active {
+    background: var(--kh-accent);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 10px rgba(24, 144, 255, 0.24);
+
+    .chapter-item__icon,
+    .chapter-item__caret {
+      color: #fff;
+    }
+
+    .chapter-item__badge {
+      background: rgba(255, 255, 255, 0.22);
+      color: #fff;
+    }
+  }
+
+  &__icon {
+    color: var(--kh-accent);
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  &__title {
     flex: 1;
     min-width: 0;
-
-    .exercise-item-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 4px;
-      font-weight: 500;
-
-      .type-tag {
-        font-size: 12px;
-      }
-
-      .score-badge {
-        color: #888;
-        font-size: 12px;
-      }
-    }
-
-    .exercise-item-content {
-      color: #666;
-      font-size: 13px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-}
 
-.add-section {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
-
-  .add-section-header {
-    display: flex;
-    justify-content: space-between;
+  /* 章节直接关联的习题数 */
+  &__badge {
+    display: inline-flex;
     align-items: center;
-    margin-bottom: 12px;
+    justify-content: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 10px;
+    background: rgba(24, 144, 255, 0.08);
+    color: var(--kh-accent);
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+    cursor: default;
+  }
 
-    h4 {
-      margin: 0;
-      font-size: 15px;
-      color: #555;
+  &__caret {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--kh-muted);
+    flex-shrink: 0;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--kh-accent);
     }
+
+    &--placeholder {
+      cursor: default;
+      pointer-events: none;
+      visibility: hidden;
+    }
+  }
+
+  &.is-parent .chapter-item__title {
+    font-weight: 600;
   }
 }
 
-// Modal styles
-.options-form {
+/* ═══════ 右侧章节详情卡 ═══════ */
+.exercise-panel {
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 
-  .option-row {
+  ::ng-deep .ant-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::ng-deep .ant-card-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 22px;
+    overflow: hidden;
+  }
+}
+
+.chapter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--kh-line-2);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+
+  &__left {
+    min-width: 0;
+    flex: 1 1 240px;
+  }
+
+  &__title {
+    margin: 0;
+    color: var(--kh-ink);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
     display: flex;
     align-items: center;
     gap: 8px;
+    line-height: 1.4;
+  }
 
-    input {
-      flex: 1;
+  &__meta {
+    margin: 4px 0 0;
+    color: var(--kh-muted);
+    font-size: 12.5px;
+
+    strong {
+      color: var(--kh-accent);
+      font-weight: 700;
+      margin: 0 2px;
+    }
+  }
+
+  &__actions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.exercise-card {
+  flex: 1;
+  min-height: 0;
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ═══════ 表格单元格 ═══════ */
+.cell-index {
+  color: var(--kh-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-title {
+  font-weight: 600;
+  color: var(--kh-ink);
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--kh-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-ellipsis {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-all;
+}
+
+.cell-num {
+  color: var(--kh-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.meta-tag {
+  font-size: 11.5px;
+  margin: 0;
+}
+
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--kh-accent);
+  font-size: 12.5px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &--danger {
+    color: #ef4444;
+
+    &:hover {
+      color: #b91c1c;
     }
   }
 }
 
-.form-row {
-  display: flex;
-  gap: 16px;
+.cell-status {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(24, 144, 255, 0.06);
+  color: var(--kh-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.is-done {
+    background: #ecfdf5;
+    color: #047857;
+  }
 }
 
-.multi-answer-checkboxes {
-  display: flex;
-  gap: 16px;
+.col-checkbox {
+  text-align: center;
+}
 
-  label {
-    display: flex;
+.row-disabled {
+  background: rgba(0, 0, 0, 0.02);
+  color: #a3a3a3;
+
+  .cell-title {
+    color: #a3a3a3;
+  }
+
+  td {
+    cursor: not-allowed;
+  }
+}
+
+.row-selected {
+  background: rgba(24, 144, 255, 0.04);
+}
+
+/* 分页 */
+.linked-pagination {
+  display: flex;
+  justify-content: center;
+  padding: 14px 0 4px;
+  flex-shrink: 0;
+}
+
+/* ═══════ 按钮 ═══════ */
+.primary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--kh-accent);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.22);
+  transition: all 0.2s ease;
+
+  span[nz-icon] {
+    font-size: 13px;
+  }
+
+  &:hover:not([disabled]) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(24, 144, 255, 0.32);
+  }
+
+  &[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--kh-ink);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--kh-accent);
+    color: var(--kh-accent);
+  }
+
+  &--small {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11.5px;
+    margin-top: 4px;
+  }
+}
+
+/* ═══════ 关联弹窗内部样式 ═══════ */
+.link-modal__hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  background: rgba(24, 144, 255, 0.06);
+  color: var(--kh-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+
+  span[nz-icon] {
+    color: var(--kh-accent);
+    font-size: 13px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+}
+
+.link-modal__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+
+  .toolbar-search {
+    width: 280px;
+    max-width: 100%;
+  }
+
+  .toolbar-switch {
+    margin-left: auto;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
     cursor: pointer;
+
+    ::ng-deep .ant-switch {
+      min-width: 92px;
+    }
+  }
+}
+
+/* ═══════ States ═══════ */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+
+  &--small {
+    min-height: 160px;
+    background: rgba(24, 144, 255, 0.04);
+    border-radius: 8px;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 16px;
+  color: var(--kh-muted);
+  font-size: 13px;
+  text-align: center;
+  flex: 1;
+
+  .empty-icon {
+    font-size: 36px;
+    color: #c9d4e2;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  .empty-title {
+    color: var(--kh-ink);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .empty-hint {
+    color: var(--kh-muted);
+    font-size: 12.5px;
+    max-width: 360px;
+    line-height: 1.6;
+    margin-bottom: 8px;
+  }
+
+  &--small {
+    padding: 24px 16px;
+    min-height: 140px;
+  }
+
+  &--lg {
+    min-height: 320px;
   }
 }

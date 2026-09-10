@@ -1,12 +1,16 @@
 <div class="chapter-exercise-container">
-  <div class="page-header">
-    <h1>{{ '::Menu:ChapterExercise' | abpLocalization }}</h1>
-  </div>
+  <!-- 顶部标题区 -->
+  <header class="page-hero">
+    <div class="page-hero__main">
+      <h1 class="page-hero__title">{{ '::Menu:ChapterExercise' | abpLocalization }}</h1>
+      <p class="page-hero__desc">将课程内的习题关联到指定章节，方便学生按章节练习；支持搜索、筛选与批量关联</p>
+    </div>
+  </header>
 
-  <!-- Course selector -->
-  <nz-card class="selector-card">
+  <!-- 课程选择 + 统计 -->
+  <nz-card [nzBordered]="false" class="selector-card">
     <div class="course-selector">
-      <label>选择课程：</label>
+      <label class="filter-label">选择课程</label>
       <nz-select
         [ngModel]="selectedCourseId()"
         (ngModelChange)="onCourseSelected($event)"
@@ -18,162 +22,374 @@
           <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
         }
       </nz-select>
-      <button nz-button nzType="primary" nzSize="small" (click)="openImportModal()" style="margin-left: 16px">
-        <span nz-icon nzType="upload"></span>
-        导入习题
-      </button>
+
+      @if (selectedCourseId()) {
+        <span class="stat-divider"></span>
+        <span class="stat-chip">
+          <span nz-icon nzType="branches" nzTheme="outline"></span>
+          章节 <strong>{{ chapters().length }}</strong>
+        </span>
+        <span class="stat-chip">
+          <span nz-icon nzType="form" nzTheme="outline"></span>
+          习题 <strong>{{ courseExercises().length }}</strong>
+        </span>
+        <span class="stat-chip">
+          <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+          已关联 <strong>{{ contentChapterCount() }}</strong> 个章节
+        </span>
+      }
     </div>
   </nz-card>
 
   @if (selectedCourseId()) {
     <div class="content-layout">
-      <!-- Left: Chapter tree (30%) -->
-      <nz-card class="tree-panel" nzTitle="章节列表">
+      <!-- 左侧：章节树 -->
+      <nz-card [nzBordered]="false" class="tree-panel">
+        <div class="sidebar-card__title">
+          <span class="sidebar-card__bar"></span>
+          章节列表
+          <span class="sidebar-card__count">{{ chapters().length }}</span>
+        </div>
+
+        <div class="sidebar-tools">
+          <nz-input-group [nzPrefix]="treeSearchPrefix" class="sidebar-search">
+            <input
+              nz-input
+              placeholder="搜索章节"
+              [ngModel]="chapterKeyword()"
+              (ngModelChange)="chapterKeyword.set($event)"
+            />
+          </nz-input-group>
+          <ng-template #treeSearchPrefix>
+            <span nz-icon nzType="search" nzTheme="outline"></span>
+          </ng-template>
+
+          <label
+            nz-checkbox
+            [ngModel]="onlyWithLinked()"
+            (ngModelChange)="onlyWithLinked.set($event)"
+            class="sidebar-filter"
+            nz-tooltip
+            nzTooltipTitle="仅显示至少关联了一道习题的章节"
+          >
+            仅显示有关联的章节（{{ contentChapterCount() }}）
+          </label>
+        </div>
+
         @if (chapters().length === 0) {
-          <nz-empty nzNotFoundContent="暂无章节"></nz-empty>
+          <div class="sidebar-empty">
+            <span nz-icon nzType="inbox" nzTheme="outline"></span>
+            <p>暂无章节</p>
+          </div>
+        } @else if (visibleChapters().length === 0) {
+          <div class="sidebar-empty">
+            <span nz-icon nzType="search" nzTheme="outline"></span>
+            <p>没有匹配的章节</p>
+            <button class="ghost-btn ghost-btn--small" (click)="clearChapterFilter()">
+              清除筛选
+            </button>
+          </div>
         } @else {
-          <div class="tree-view">
-            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: chapters(), depth: 0 }"></ng-container>
+          <div class="chapter-tree">
+            <ng-container
+              *ngTemplateOutlet="chapterNode; context: { $implicit: visibleChapters(), depth: 0 }"
+            ></ng-container>
           </div>
         }
       </nz-card>
 
-      <!-- Right: Exercise management (70%) -->
-      <nz-card class="exercise-panel">
-        @if (selectedChapterId()) {
-          <div class="exercise-panel-header">
-            <h3>{{ selectedChapterTitle() }} - 已关联习题 ({{ chapterExercises().length }}题)</h3>
-          </div>
-
-          <div class="scrollable-body">
-            @if (loading()) {
-              <div class="loading-container">
-                <nz-spin nzSimple nzSize="large"></nz-spin>
-              </div>
-            } @else if (chapterExercises().length === 0) {
-              <nz-empty nzNotFoundContent="暂无关联习题，可从下方添加"></nz-empty>
-            } @else {
-              <div class="linked-exercises">
-                @for (exercise of chapterExercises(); track exercise.id) {
-                  <div class="exercise-item">
-                    <div class="exercise-item-left">
-                      <div class="exercise-item-title">
-                        {{ exercise.title }}
-                        <nz-tag [nzColor]="getTypeColor(exercise.type)">{{ getTypeName(exercise.type) }}</nz-tag>
-                        <span class="score-badge">{{ exercise.score }}分</span>
-                      </div>
-                      <div class="exercise-item-content">{{ exercise.questionContent }}</div>
-                    </div>
-                    <button nz-button nzType="link" nzSize="small" nzDanger (click)="unlinkExercise(exercise)">
-                      取消关联
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Add from course exercises -->
-            <div class="add-section">
-              <div class="add-section-header">
-                <h4>从习题列表中添加</h4>
-                <input
-                  nz-input
-                  [ngModel]="searchText()"
-                  (ngModelChange)="searchText.set($event)"
-                  placeholder="搜索习题..."
-                  style="width: 200px"
-                />
-              </div>
-              @if (availableExercises().length === 0) {
-                <nz-empty nzNotFoundContent="没有可添加的习题"></nz-empty>
-              } @else {
-                <div class="available-exercises">
-                  @for (exercise of availableExercises(); track exercise.id) {
-                    <div class="exercise-item available">
-                      <div class="exercise-item-left">
-                        <div class="exercise-item-title">
-                          {{ exercise.title }}
-                          <nz-tag [nzColor]="getTypeColor(exercise.type)">{{ getTypeName(exercise.type) }}</nz-tag>
-                        </div>
-                        <div class="exercise-item-content">{{ exercise.questionContent }}</div>
-                      </div>
-                      <button nz-button nzType="primary" nzSize="small" (click)="linkExercise(exercise)">
-                        添加到章节
-                      </button>
-                    </div>
-                  }
-                </div>
-              }
+      <!-- 右侧：习题管理 -->
+      <nz-card [nzBordered]="false" class="exercise-panel">
+        @if (selectedChapterId(); as cid) {
+          <div class="chapter-header">
+            <div class="chapter-header__left">
+              <h2 class="chapter-header__title">
+                {{ selectedChapterTitle() }}
+              </h2>
+              <p class="chapter-header__meta">
+                当前章节已关联 <strong>{{ chapterExercises().length }}</strong> 道习题
+              </p>
+            </div>
+            <div class="chapter-header__actions">
+              <button class="primary-btn" (click)="openLinkModal()">
+                <span nz-icon nzType="plus" nzTheme="outline"></span>
+                <span>关联习题</span>
+              </button>
             </div>
           </div>
+
+          <div class="exercise-card">
+            @if (linkedLoading()) {
+              <div class="loading-state loading-state--small">
+                <nz-spin nzSimple nzSize="default" nzTip="习题加载中..."></nz-spin>
+              </div>
+            } @else if (chapterExercises().length === 0) {
+              <div class="empty-state">
+                <span nz-icon nzType="form" nzTheme="outline" class="empty-icon"></span>
+                <p class="empty-title">本章尚未关联习题</p>
+                <p class="empty-hint">点击右上角“关联习题”，从课程习题池中勾选需要加入本章的题目</p>
+                <button class="primary-btn" (click)="openLinkModal()">
+                  <span nz-icon nzType="plus" nzTheme="outline"></span>
+                  <span>立即关联</span>
+                </button>
+              </div>
+            } @else {
+              <nz-table
+                #linkedTbl
+                [nzData]="pagedLinkedExercises()"
+                [nzFrontPagination]="false"
+                [nzShowPagination]="false"
+                nzSize="middle"
+                [nzScroll]="{ x: '720px' }"
+              >
+                <thead>
+                  <tr>
+                    <th nzWidth="56px">序号</th>
+                    <th>题目</th>
+                    <th nzWidth="100px">类型</th>
+                    <th nzWidth="80px">分值</th>
+                    <th nzWidth="110px" nzRight>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (e of linkedTbl.data; track trackExercise($index, e); let i = $index) {
+                    <tr>
+                      <td class="cell-index">
+                        {{ (linkedPage() - 1) * linkedPageSize() + i + 1 }}
+                      </td>
+                      <td>
+                        <span class="cell-title" [title]="e.title || '未命名题目'">{{
+                          e.title || '未命名题目'
+                        }}</span>
+                        @if (e.questionContent) {
+                          <span class="cell-sub text-ellipsis">{{ e.questionContent }}</span>
+                        }
+                      </td>
+                      <td>
+                        <nz-tag [nzColor]="getTypeColor(e.type)" class="meta-tag">
+                          {{ getTypeName(e.type) }}
+                        </nz-tag>
+                      </td>
+                      <td class="cell-num">{{ e.score ?? 1 }} 分</td>
+                      <td nzRight>
+                        <button
+                          class="link-btn link-btn--danger"
+                          nz-tooltip
+                          nzTooltipTitle="从当前章节移除该题（不会删除题目本身）"
+                          (click)="unlinkExercise(e)"
+                        >
+                          取消关联
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </nz-table>
+
+              @if (chapterExercises().length > linkedPageSize()) {
+                <div class="linked-pagination">
+                  <nz-pagination
+                    [nzPageIndex]="linkedPage()"
+                    [nzPageSize]="linkedPageSize()"
+                    [nzTotal]="chapterExercises().length"
+                    [nzShowSizeChanger]="false"
+                    [nzSize]="'small'"
+                    (nzPageIndexChange)="onLinkedPageChange($event)"
+                  ></nz-pagination>
+                </div>
+              }
+            }
+          </div>
         } @else {
-          <nz-empty nzNotFoundContent="请选择左侧章节查看关联习题"></nz-empty>
+          <div class="empty-state empty-state--lg">
+            <span nz-icon nzType="folder-open" nzTheme="outline" class="empty-icon"></span>
+            <p class="empty-title">请从左侧选择一个章节</p>
+            <p class="empty-hint">选中章节后，将在这里展示已关联的习题，并可批量添加或移除</p>
+          </div>
         }
       </nz-card>
     </div>
   }
 
-  <!-- Recursive tree template -->
-  <ng-template #treeNode let-nodes let-depth="depth">
-    @for (node of nodes; track node.id) {
-      <div class="tree-node" [style.padding-left.px]="depth * 20">
-        <div
-          class="tree-node-content"
-          [class.selected]="selectedChapterId() === node.id"
-          (click)="selectChapter(node)"
+  <!-- 递归章节树：与 student-course-learn 保持一致，按需展开 ───── -->
+  <ng-template #chapterNode let-nodes let-depth="depth">
+    @for (node of nodes; track trackChapter($index, node)) {
+      <div class="chapter-node">
+        <button
+          class="chapter-item"
+          [class.is-active]="selectedChapterId() === node.id"
+          [class.is-parent]="hasChildren(node)"
+          [style.padding-left.px]="depth * 16 + 12"
+          (click)="onChapterItemClick(node)"
         >
           @if (hasChildren(node)) {
-            <span class="toggle-icon" (click)="toggleNode(node.id!); $event.stopPropagation()">
-              <span nz-icon [nzType]="isExpanded(node.id!) ? 'down' : 'right'"></span>
-            </span>
+            <span
+              class="chapter-item__caret"
+              nz-icon
+              [nzType]="isExpanded(node.id!) ? 'caret-down' : 'caret-right'"
+              nzTheme="outline"
+              (click)="toggleChapter($event, node.id!)"
+            ></span>
           } @else {
-            <span class="toggle-icon placeholder"></span>
+            <span class="chapter-item__caret chapter-item__caret--placeholder"></span>
           }
-          <span class="node-title">{{ node.title }}</span>
-        </div>
-        @if (hasChildren(node) && isExpanded(node.id!)) {
-          <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
+          <span
+            class="chapter-item__icon"
+            nz-icon
+            [nzType]="hasChildren(node) ? 'folder' : 'file-text'"
+            nzTheme="outline"
+          ></span>
+          <span class="chapter-item__title">{{ node.title || '未命名章节' }}</span>
+          @if ((chapterExerciseCountMap().get(node.id || '') || 0) > 0) {
+            <span class="chapter-item__badge">
+              {{ chapterExerciseCountMap().get(node.id || '') }}
+            </span>
+          }
+        </button>
+        @if (hasChildren(node) && (isExpanded(node.id!) || isChapterFiltering())) {
+          <div class="chapter-node__children">
+            <ng-container
+              *ngTemplateOutlet="chapterNode; context: { $implicit: node.children, depth: depth + 1 }"
+            ></ng-container>
+          </div>
         }
       </div>
     }
   </ng-template>
 
-  <!-- Import Modal -->
+  <!-- 关联习题弹窗 ──────────────────────────────────────────────── -->
   <nz-modal
-    [(nzVisible)]="isImportModalVisible"
-    nzTitle="导入习题"
-    [nzOkLoading]="importing"
-    nzOkText="导入"
+    [nzVisible]="linkModalVisible()"
+    nzTitle="关联习题到当前章节"
+    [nzWidth]="880"
+    [nzOkLoading]="linkModalSubmitting()"
+    nzOkText="确定"
     nzCancelText="取消"
-    (nzOnOk)="handleImport()"
-    (nzOnCancel)="closeImportModal()"
-    [nzWidth]="520"
-    [nzOkDisabled]="!selectedImportFile"
+    (nzOnOk)="confirmLinkExercises()"
+    (nzOnCancel)="closeLinkModal()"
+    [nzOkDisabled]="linkModalEffectiveCount() === 0"
   >
     <ng-container *nzModalContent>
-      <div class="import-template-download">
-        <span>导入说明：</span>
-        <a href="/assets/习题导入模版.xlsx" download="习题导入模版.xlsx">
-          下载导入模板
-        </a>
+      <div class="link-modal__hint">
+        <span nz-icon nzType="info-circle" nzTheme="outline"></span>
+        <span>默认仅展示课程中尚未关联到当前章节的习题；如需一并查看已关联的题目，可打开右侧开关。</span>
       </div>
-      <div class="file-input-container">
-        <input
-          #fileInput
-          type="file"
-          accept=".xlsx,.xls"
-          style="display: none"
-          (change)="onFileSelected($event)"
-        />
-        <button nz-button nzType="default" (click)="fileInput.click()">
-          <span nz-icon nzType="upload"></span>
-          选择 Excel 文件
-        </button>
-        @if (selectedImportFile) {
-          <span class="selected-file-name">{{ selectedImportFile.name }}</span>
+
+      <div class="link-modal__toolbar">
+        <nz-input-group [nzPrefix]="linkSearchPrefix" class="toolbar-search">
+          <input
+            nz-input
+            placeholder="搜索标题 / 题目内容"
+            [ngModel]="linkModalKeyword()"
+            (ngModelChange)="onLinkKeywordChange($event)"
+          />
+        </nz-input-group>
+        <ng-template #linkSearchPrefix>
+          <span nz-icon nzType="search" nzTheme="outline"></span>
+        </ng-template>
+        <label
+          class="toolbar-switch"
+          nz-tooltip
+          nzTooltipTitle="打开后会一并展示已关联的题目，便于查看上下文"
+        >
+          <nz-switch
+            [ngModel]="showLinkedInModal()"
+            (ngModelChange)="onShowLinkedChange($event)"
+            nzCheckedChildren="显示已关联"
+            nzUnCheckedChildren="隐藏已关联"
+          ></nz-switch>
+        </label>
+      </div>
+
+      @if (linkCandidates().length === 0) {
+        <div class="empty-state empty-state--small">
+          <span nz-icon nzType="search" nzTheme="outline" class="empty-icon"></span>
+          <p>没有匹配的习题</p>
+        </div>
+      } @else {
+        <nz-table
+          #linkTbl
+          [nzData]="pagedLinkCandidates()"
+          [nzFrontPagination]="false"
+          [nzShowPagination]="false"
+          nzSize="middle"
+          [nzScroll]="{ x: '780px', y: '420px' }"
+        >
+          <thead>
+            <tr>
+              <th nzWidth="48px" class="col-checkbox">
+                <label
+                  nz-checkbox
+                  [nzChecked]="linkModalAllChecked()"
+                  [nzIndeterminate]="linkModalIndeterminate()"
+                  (nzCheckedChange)="toggleLinkAll($event)"
+                  [nzDisabled]="selectableOnPageIds().length === 0"
+                ></label>
+              </th>
+              <th nzWidth="48px">序号</th>
+              <th>题目</th>
+              <th nzWidth="100px">类型</th>
+              <th nzWidth="80px">分值</th>
+              <th nzWidth="110px">状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of linkTbl.data; track trackExercise($index, e); let i = $index) {
+              <tr
+                [class.row-disabled]="isAlreadyLinked(e.id)"
+                [class.row-selected]="isLinkSelected(e.id ?? '')"
+              >
+                <td class="col-checkbox" (click)="$event.stopPropagation()">
+                  <label
+                    nz-checkbox
+                    [nzChecked]="isLinkSelected(e.id ?? '')"
+                    [nzDisabled]="isAlreadyLinked(e.id)"
+                    (nzCheckedChange)="toggleLinkOne(e.id, $event)"
+                  ></label>
+                </td>
+                <td class="cell-index">
+                  {{ (linkModalPage() - 1) * linkModalPageSize() + i + 1 }}
+                </td>
+                <td>
+                  <span class="cell-title" [title]="e.title || '未命名题目'">{{
+                    e.title || '未命名题目'
+                  }}</span>
+                  @if (e.questionContent) {
+                    <span class="cell-sub text-ellipsis">{{ e.questionContent }}</span>
+                  }
+                </td>
+                <td>
+                  <nz-tag [nzColor]="getTypeColor(e.type)" class="meta-tag">
+                    {{ getTypeName(e.type) }}
+                  </nz-tag>
+                </td>
+                <td class="cell-num">{{ e.score ?? 1 }} 分</td>
+                <td>
+                  @if (isAlreadyLinked(e.id)) {
+                    <span class="cell-status is-done">已关联</span>
+                  } @else {
+                    <span class="cell-status">可选</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </nz-table>
+
+        @if (linkCandidates().length > linkModalPageSize()) {
+          <div class="linked-pagination">
+            <nz-pagination
+              [nzPageIndex]="linkModalPage()"
+              [nzPageSize]="linkModalPageSize()"
+              [nzTotal]="linkCandidates().length"
+              [nzShowSizeChanger]="false"
+              [nzSize]="'small'"
+              (nzPageIndexChange)="onLinkPageChange($event)"
+            ></nz-pagination>
+          </div>
         }
-      </div>
-      <p class="import-hint">支持 .xlsx 和 .xls 格式，文件大小不超过 10MB</p>
+      }
     </ng-container>
   </nz-modal>
-</div>
+
+  </div>

@@ -9,10 +9,14 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
-import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { KnowledgeResourceService } from '../../proxy/courses/knowledge-resource.service';
@@ -34,9 +38,13 @@ import type { CreateUpdateKnowledgeResourceDto, KnowledgeResourceDto, CourseReso
     NzTagModule,
     NzIconModule,
     NzSpinModule,
-    NzEmptyModule,
-    NzCheckboxModule,
+    NzSelectModule,
+    NzModalModule,
     NzTableModule,
+    NzCheckboxModule,
+    NzPaginationModule,
+    NzTooltipModule,
+    NzSwitchModule,
   ],
   templateUrl: './chapter-resource.component.html',
   styleUrls: ['./chapter-resource.component.scss'],
@@ -49,117 +57,165 @@ export class ChapterResourceComponent implements OnInit {
   private readonly courseResourceService = inject(CourseResourceService);
   private readonly message = inject(NzMessageService);
 
-  courses = signal<CourseDto[]>([]);
-  selectedCourseId = signal<string | null>(null);
-  chapters = signal<ChapterDto[]>([]);
-  expandedNodes = signal<Set<string>>(new Set());
-  selectedChapterId = signal<string | null>(null);
-  selectedChapterTitle = signal('');
+  readonly courses = signal<CourseDto[]>([]);
+  readonly selectedCourseId = signal<string | null>(null);
+  readonly chapters = signal<ChapterDto[]>([]);
+  readonly expandedNodes = signal<Set<string>>(new Set());
 
-  chapterResources = signal<KnowledgeResourceDto[]>([]);
-  // 当前课程已关联的资源（课程资源池）
-  libraryResources = signal<CourseResourceDto[]>([]);
-  // 左侧课程列表搜索关键字
-  courseSearchText = signal('');
+  // ── 左侧章节树：搜索 + 仅显示有关联 ────────────────────────────────
+  readonly chapterKeyword = signal('');
+  readonly onlyWithLinked = signal(false);
+  readonly isChapterFiltering = computed(
+    () => this.chapterKeyword().trim() !== '' || this.onlyWithLinked()
+  );
 
-  readonly filteredCourses = computed(() => {
-    const kw = this.courseSearchText().trim().toLowerCase();
-    const all = this.courses();
-    if (!kw) return all;
-    return all.filter(c =>
-      (c.title ?? '').toLowerCase().includes(kw) ||
-      (c.majorName ?? '').toLowerCase().includes(kw));
-  });
-
-  readonly selectedCourse = computed(() =>
-    this.courses().find(c => c.id === this.selectedCourseId()) ?? null);
-
-  // 选中课程的统计：章节总数 / 已关联章节 / 已关联资源 / 资源池资源
-  readonly courseStats = computed(() => {
-    let chapterCount = 0;
-    let linkedChapterCount = 0;
-    let linkedResourceCount = 0;
+  /** 各章节直接挂载的资源数量（取自章节树自带的 knowledgeResources） */
+  readonly chapterResourceCountMap = computed(() => {
+    const map = new Map<string, number>();
     const walk = (nodes: ChapterDto[]) => {
-      for (const n of nodes) {
-        chapterCount++;
-        const c = n.knowledgeResources?.length ?? 0;
-        if (c > 0) {
-          linkedChapterCount++;
-          linkedResourceCount += c;
+      for (const n of nodes || []) {
+        if (n.id) {
+          map.set(n.id, (n.knowledgeResources || []).length);
         }
         if (n.children?.length) walk(n.children);
       }
     };
     walk(this.chapters());
-    return {
-      chapterCount,
-      linkedChapterCount,
-      linkedResourceCount,
-      poolCount: this.libraryResources().length,
-    };
+    return map;
   });
 
-  loading = signal(false);
-  libraryLoading = signal(false);
-  searchText = signal('');
-
-  // 只显示有关联资源的章节
-  onlyWithResources = signal(false);
-  // 左侧章节树搜索关键字
-  chapterSearchText = signal('');
-
-  // 勾选待添加到章节的资源（键为课程资源池条目 id）
-  selectedResourceIds = signal<Set<string>>(new Set());
-
-  // 根据开关与搜索关键字过滤章节树，保留树状结构（含匹配节点的祖先链）
-  visibleChapters = computed(() => {
-    const base = this.onlyWithResources()
-      ? this.filterTreeWithResources(this.chapters())
-      : this.chapters();
-    const kw = this.chapterSearchText().trim().toLowerCase();
-    if (!kw) return base;
-    return this.filterTreeByKeyword(base, kw);
-  });
-
-  onOnlyWithResourcesChange(checked: boolean) {
-    this.onlyWithResources.set(checked);
-    // 开启过滤时重新拉取章节树，确保按最新的关联数据过滤
-    if (checked) this.loadChapterTree();
-  }
-
-  // 过滤掉已在本章节关联过的资源（按资源库 ResourceId 去重）
-  availableResources = computed(() => {
-    const linkedIds = new Set(
-      this.chapterResources()
-        .map(r => r.resourceId)
-        .filter((id): id is string => !!id)
-    );
-    const search = this.searchText().toLowerCase();
-    let available = this.libraryResources().filter(
-      r => !linkedIds.has(r.resourceId ?? '')
-    );
-    if (search) {
-      available = available.filter(r =>
-        r.resourceName?.toLowerCase().includes(search) ||
-        r.description?.toLowerCase().includes(search)
-      );
+  /** 至少挂了一个资源的章节数（用于筛选文案） */
+  readonly contentChapterCount = computed(() => {
+    let count = 0;
+    for (const v of this.chapterResourceCountMap().values()) {
+      if (v > 0) count++;
     }
-    return available;
+    return count;
   });
 
-  selectedCount = computed(() => this.selectedResourceIds().size);
+  /** 过滤后的章节树：保留命中节点及其祖先链；筛选时模板自动全展开 */
+  readonly visibleChapters = computed(() => {
+    const kw = this.chapterKeyword().trim().toLowerCase();
+    const onlyLinked = this.onlyWithLinked();
+    if (!kw && !onlyLinked) return this.chapters();
 
-  isAllChecked = computed(() => {
-    const avail = this.availableResources();
-    return avail.length > 0 && avail.every(r => this.selectedResourceIds().has(r.id));
+    const filter = (nodes: ChapterDto[]): ChapterDto[] => {
+      const out: ChapterDto[] = [];
+      for (const n of nodes || []) {
+        const children = filter(n.children || []);
+        if (this.chapterSelfVisible(n, kw, onlyLinked) || children.length > 0) {
+          out.push({ ...n, children });
+        }
+      }
+      return out;
+    };
+    return filter(this.chapters());
   });
 
-  isIndeterminate = computed(() => {
-    const avail = this.availableResources();
-    if (avail.length === 0) return false;
-    const checked = avail.filter(r => this.selectedResourceIds().has(r.id)).length;
-    return checked > 0 && checked < avail.length;
+  // ── 右侧：当前选中章节 ───────────────────────────────────────────
+  readonly selectedChapterId = signal<string | null>(null);
+  readonly selectedChapterTitle = signal('');
+
+  readonly chapterResources = signal<KnowledgeResourceDto[]>([]);
+  /** 课程资源池：所有可被关联到章节的资源（来自 course-resource 列表） */
+  readonly libraryResources = signal<CourseResourceDto[]>([]);
+  readonly linkedLoading = signal(false);
+
+  // 右侧表格分页
+  readonly linkedPage = signal(1);
+  readonly linkedPageSize = signal(10);
+  readonly pagedChapterResources = computed(() => {
+    const start = (this.linkedPage() - 1) * this.linkedPageSize();
+    return this.chapterResources().slice(start, start + this.linkedPageSize());
   });
+
+  // ── 关联资源弹窗 ─────────────────────────────────────────────────
+  readonly linkModalVisible = signal(false);
+  readonly linkModalKeyword = signal('');
+  readonly linkModalPage = signal(1);
+  readonly linkModalPageSize = signal(8);
+  readonly linkModalSelectedIds = signal<Set<string>>(new Set());
+  readonly linkModalSubmitting = signal(false);
+  /** 弹窗内是否展示已关联到当前章节的资源（默认隐藏，避免干扰"待添加"列表） */
+  readonly showLinkedInModal = signal(false);
+
+  /** 已关联到当前章节的资源 ResourceId 集合（按 resourceId 匹配资源池条目） */
+  readonly alreadyLinkedToCurrentChapter = computed(() => {
+    const set = new Set<string>();
+    for (const r of this.chapterResources()) {
+      if (r.resourceId) set.add(r.resourceId);
+    }
+    return set;
+  });
+
+  /** 弹窗内的可选资源列表（搜索过滤；默认不展示已关联的，开启开关后可一并查看） */
+  readonly linkCandidates = computed(() => {
+    const kw = this.linkModalKeyword().trim().toLowerCase();
+    const showLinked = this.showLinkedInModal();
+    let list = this.libraryResources();
+    if (!showLinked) {
+      const linked = this.alreadyLinkedToCurrentChapter();
+      list = list.filter(r => !r.resourceId || !linked.has(r.resourceId));
+    }
+    if (kw) {
+      list = list.filter(r => {
+        const name = (r.resourceName ?? r.originalFileName ?? '').toLowerCase();
+        return name.includes(kw) || (r.description ?? '').toLowerCase().includes(kw);
+      });
+    }
+    return list;
+  });
+
+  readonly pagedLinkCandidates = computed(() => {
+    const start = (this.linkModalPage() - 1) * this.linkModalPageSize();
+    return this.linkCandidates().slice(start, start + this.linkModalPageSize());
+  });
+
+  /** 当前分页内"可被选中"的资源 id（即未关联的） */
+  readonly selectableOnPageIds = computed(() => {
+    const linked = this.alreadyLinkedToCurrentChapter();
+    return this.pagedLinkCandidates()
+      .map(r => r.resourceId)
+      .filter((id): id is string => !!id && !linked.has(id));
+  });
+
+  readonly linkModalAllChecked = computed(() => {
+    const ids = this.selectableOnPageIds();
+    if (ids.length === 0) return false;
+    const sel = this.linkModalSelectedIds();
+    return ids.every(id => sel.has(id));
+  });
+
+  readonly linkModalIndeterminate = computed(() => {
+    const ids = this.selectableOnPageIds();
+    if (ids.length === 0) return false;
+    const sel = this.linkModalSelectedIds();
+    const some = ids.some(id => sel.has(id));
+    return some && !this.linkModalAllChecked();
+  });
+
+  /** 弹窗底部真正要新增关联的条目数（已关联的不计入） */
+  readonly linkModalEffectiveCount = computed(() => {
+    const linked = this.alreadyLinkedToCurrentChapter();
+    let n = 0;
+    for (const id of this.linkModalSelectedIds()) {
+      if (!linked.has(id)) n++;
+    }
+    return n;
+  });
+
+  // 顶部统计条
+  readonly selectedCourse = computed(() =>
+    this.courses().find(c => c.id === this.selectedCourseId()) ?? null
+  );
+
+  readonly poolCount = computed(() => this.libraryResources().length);
+  readonly linkedResourceCount = computed(() => {
+    let n = 0;
+    for (const v of this.chapterResourceCountMap().values()) n += v;
+    return n;
+  });
+  readonly linkedChapterCount = computed(() => this.contentChapterCount());
 
   ngOnInit() {
     this.loadCourses();
@@ -167,7 +223,7 @@ export class ChapterResourceComponent implements OnInit {
 
   loadCourses() {
     this.courseService.getList({ maxResultCount: 100, skipCount: 0 } as any).subscribe({
-      next: (result) => {
+      next: result => {
         this.courses.set(result.items || []);
       },
     });
@@ -179,9 +235,7 @@ export class ChapterResourceComponent implements OnInit {
     this.selectedChapterId.set(null);
     this.selectedChapterTitle.set('');
     this.chapterResources.set([]);
-    this.searchText.set('');
-    this.chapterSearchText.set('');
-    this.clearSelection();
+    this.linkedPage.set(1);
     this.loadChapterTree();
     this.loadLibraryResources();
   }
@@ -191,10 +245,11 @@ export class ChapterResourceComponent implements OnInit {
     if (!courseId) return;
 
     this.chapterService.getChapterTree(courseId).subscribe({
-      next: (data) => {
-        this.chapters.set(data || []);
-        const expanded = new Set<string>();
-        this.collectNodeIds(data || [], expanded);
+      next: data => {
+        const list = data || [];
+        this.chapters.set(list);
+        // 默认展开顶级章节
+        const expanded = new Set<string>(list.map(n => n.id!).filter(Boolean));
         this.expandedNodes.set(expanded);
       },
     });
@@ -204,53 +259,62 @@ export class ChapterResourceComponent implements OnInit {
     const courseId = this.selectedCourseId();
     if (!courseId) return;
 
-    this.libraryLoading.set(true);
     this.courseResourceService.getByCourse(courseId).subscribe({
-      next: (data) => {
+      next: data => {
         this.libraryResources.set(data || []);
-        this.libraryLoading.set(false);
       },
       error: () => {
-        this.libraryLoading.set(false);
         this.message.error('加载课程资源失败');
       },
     });
   }
 
-  private collectNodeIds(nodes: ChapterDto[], set: Set<string>) {
-    for (const node of nodes) {
-      if (node.id) set.add(node.id);
-      if (node.children?.length) this.collectNodeIds(node.children, set);
+  // ── 章节树交互 ──────────────────────────────────────────────────
+  onChapterItemClick(node: ChapterDto): void {
+    if (!node.id) return;
+    if (node.children?.length && !this.expandedNodes().has(node.id)) {
+      const set = new Set(this.expandedNodes());
+      set.add(node.id);
+      this.expandedNodes.set(set);
     }
+    this.selectChapter(node);
   }
 
-  private filterTreeByKeyword(nodes: ChapterDto[], keyword: string): ChapterDto[] {
-    const result: ChapterDto[] = [];
-    for (const node of nodes) {
-      const children = this.filterTreeByKeyword(node.children ?? [], keyword);
-      if ((node.title ?? '').toLowerCase().includes(keyword) || children.length > 0) {
-        result.push({ ...node, children });
-      }
-    }
-    return result;
+  toggleChapter(event: MouseEvent, id: string): void {
+    event.stopPropagation();
+    const set = new Set(this.expandedNodes());
+    if (set.has(id)) set.delete(id);
+    else set.add(id);
+    this.expandedNodes.set(set);
   }
 
-  private filterTreeWithResources(nodes: ChapterDto[]): ChapterDto[] {
-    const result: ChapterDto[] = [];
-    for (const node of nodes) {
-      const children = this.filterTreeWithResources(node.children ?? []);
-      const hasOwn = (node.knowledgeResources?.length ?? 0) > 0;
-      if (hasOwn || children.length > 0) {
-        result.push({ ...node, children });
-      }
+  isExpanded(id: string): boolean {
+    return this.expandedNodes().has(id);
+  }
+
+  hasChildren(node: ChapterDto): boolean {
+    return !!node.children && node.children.length > 0;
+  }
+
+  /** 单个章节自身是否满足当前筛选条件（祖先链由 visibleChapters 保留） */
+  private chapterSelfVisible(node: ChapterDto, kw: string, onlyLinked: boolean): boolean {
+    if (onlyLinked) {
+      const cnt = node.id ? this.chapterResourceCountMap().get(node.id) || 0 : 0;
+      if (cnt === 0) return false;
     }
-    return result;
+    if (kw && !(node.title || '').toLowerCase().includes(kw)) return false;
+    return true;
+  }
+
+  clearChapterFilter(): void {
+    this.chapterKeyword.set('');
+    this.onlyWithLinked.set(false);
   }
 
   selectChapter(chapter: ChapterDto) {
     this.selectedChapterId.set(chapter.id ?? null);
     this.selectedChapterTitle.set(chapter.title ?? '');
-    this.clearSelection();
+    this.linkedPage.set(1);
     this.loadChapterResources();
   }
 
@@ -258,115 +322,109 @@ export class ChapterResourceComponent implements OnInit {
     const chapterId = this.selectedChapterId();
     if (!chapterId) return;
 
-    this.loading.set(true);
+    this.linkedLoading.set(true);
     this.knowledgeResourceService.getByChapter(chapterId).subscribe({
-      next: (data) => {
+      next: data => {
         this.chapterResources.set(data || []);
-        this.loading.set(false);
+        this.linkedLoading.set(false);
       },
       error: () => {
-        this.loading.set(false);
+        this.linkedLoading.set(false);
         this.message.error('加载章节资源失败');
       },
     });
   }
 
-  toggleNode(nodeId: string) {
-    const current = new Set(this.expandedNodes());
-    if (current.has(nodeId)) {
-      current.delete(nodeId);
-    } else {
-      current.add(nodeId);
+  onLinkedPageChange(page: number) {
+    this.linkedPage.set(page);
+  }
+
+  // ── 关联资源弹窗 ───────────────────────────────────────────────
+  openLinkModal() {
+    if (!this.selectedChapterId()) {
+      this.message.warning('请先选择章节');
+      return;
     }
-    this.expandedNodes.set(current);
-  }
-
-  isExpanded(nodeId: string): boolean {
-    return this.expandedNodes().has(nodeId);
-  }
-
-  hasChildren(node: ChapterDto): boolean {
-    return !!node.children && node.children.length > 0;
-  }
-
-  linkResource(resource: CourseResourceDto) {
-    const chapterId = this.selectedChapterId();
-    const courseId = this.selectedCourseId();
-    if (!chapterId || !courseId || !resource.resourceId) return;
-
-    // 以课程资源池条目为模板创建 KnowledgeResource，绑定到当前章节
-    const dto: CreateUpdateKnowledgeResourceDto = {
-      courseId: courseId,
-      chapterId: chapterId,
-      name: resource.resourceName ?? resource.originalFileName ?? '',
-      description: resource.description ?? '',
-      content: resource.filePath ?? '',
-      importanceLevel: 'normal',
-      difficulty: 1,
-      sortOrder: 0,
-      tags: resource.keywords ?? '',
-      parentId: null,
-      resourceId: resource.resourceId,
-    };
-
-    this.knowledgeResourceService.create(dto).subscribe({
-      next: () => {
-        this.message.success('资源已关联到章节');
-        this.clearSelection();
-        this.loadChapterResources();
-        this.loadChapterTree();
-      },
-      error: (err) => {
-        const detail =
-          err?.error?.error?.message ||
-          err?.error?.message ||
-          err?.message ||
-          '';
-        this.message.error('关联失败：' + (detail || '未知错误'));
-      },
-    });
-  }
-
-  isSelected(resourceId: string): boolean {
-    return this.selectedResourceIds().has(resourceId);
-  }
-
-  onItemChecked(resourceId: string, checked: boolean) {
-    const set = new Set(this.selectedResourceIds());
-    if (checked) {
-      set.add(resourceId);
-    } else {
-      set.delete(resourceId);
+    if (this.libraryResources().length === 0) {
+      this.message.warning('该课程还没有关联任何资源，请先在「课程资源」页为课程挑选资源');
+      return;
     }
-    this.selectedResourceIds.set(set);
+    this.linkModalKeyword.set('');
+    this.linkModalPage.set(1);
+    this.linkModalSelectedIds.set(new Set());
+    this.showLinkedInModal.set(false);
+    this.linkModalVisible.set(true);
   }
 
-  onAllChecked(checked: boolean) {
-    const set = new Set(this.selectedResourceIds());
-    for (const resource of this.availableResources()) {
-      if (checked) {
-        set.add(resource.id);
-      } else {
-        set.delete(resource.id);
-      }
+  closeLinkModal() {
+    this.linkModalVisible.set(false);
+    this.linkModalSelectedIds.set(new Set());
+    this.linkModalKeyword.set('');
+    this.linkModalPage.set(1);
+    this.showLinkedInModal.set(false);
+  }
+
+  onLinkKeywordChange(value: string) {
+    this.linkModalKeyword.set(value);
+    this.linkModalPage.set(1);
+  }
+
+  onLinkPageChange(page: number) {
+    this.linkModalPage.set(page);
+  }
+
+  /** 切换「显示已关联」开关：回到第一页，避免空选状态跨越分页 */
+  onShowLinkedChange(value: boolean) {
+    this.showLinkedInModal.set(value);
+    this.linkModalPage.set(1);
+  }
+
+  isLinkSelected(resourceId: string | undefined): boolean {
+    if (!resourceId) return false;
+    return this.linkModalSelectedIds().has(resourceId);
+  }
+
+  isAlreadyLinked(resourceId: string | undefined): boolean {
+    if (!resourceId) return false;
+    return this.alreadyLinkedToCurrentChapter().has(resourceId);
+  }
+
+  toggleLinkOne(resourceId: string | undefined, checked: boolean) {
+    if (!resourceId) return;
+    const set = new Set(this.linkModalSelectedIds());
+    if (checked) set.add(resourceId);
+    else set.delete(resourceId);
+    this.linkModalSelectedIds.set(set);
+  }
+
+  toggleLinkAll(checked: boolean) {
+    const ids = this.selectableOnPageIds();
+    if (ids.length === 0) return;
+    const set = new Set(this.linkModalSelectedIds());
+    for (const id of ids) {
+      if (checked) set.add(id);
+      else set.delete(id);
     }
-    this.selectedResourceIds.set(set);
+    this.linkModalSelectedIds.set(set);
   }
 
-  clearSelection() {
-    this.selectedResourceIds.set(new Set());
-  }
-
-  linkSelected() {
+  /** 批量关联：将弹窗内选中的"新"资源关联到当前章节 */
+  confirmLinkResources() {
     const chapterId = this.selectedChapterId();
     const courseId = this.selectedCourseId();
     if (!chapterId || !courseId) return;
-    const ids = [...this.selectedResourceIds()];
-    if (ids.length === 0) return;
 
-    const byId = new Map(this.libraryResources().map(r => [r.id, r]));
-    const tasks = ids
-      .map(id => byId.get(id))
+    const selectedIds = Array.from(this.linkModalSelectedIds());
+    const linked = this.alreadyLinkedToCurrentChapter();
+    const targetIds = selectedIds.filter(id => !linked.has(id));
+    if (targetIds.length === 0) {
+      this.message.warning('请先选择要关联的资源');
+      return;
+    }
+
+    const byId = new Map(this.libraryResources().map(r => [r.resourceId, r]));
+    const tasks = targetIds
+      .map(rid => byId.get(rid))
       .filter((r): r is CourseResourceDto => !!r)
       .map(resource => {
         const dto: CreateUpdateKnowledgeResourceDto = {
@@ -385,14 +443,19 @@ export class ChapterResourceComponent implements OnInit {
         return this.knowledgeResourceService.create(dto);
       });
 
+    if (tasks.length === 0) return;
+
+    this.linkModalSubmitting.set(true);
     forkJoin(tasks).subscribe({
       next: () => {
-        this.message.success(`已关联 ${tasks.length} 个资源到章节`);
-        this.clearSelection();
+        this.linkModalSubmitting.set(false);
+        this.message.success(`已成功关联 ${tasks.length} 个资源到章节`);
+        this.closeLinkModal();
         this.loadChapterResources();
-        this.loadChapterTree();
+        this.loadChapterTree(); // 刷新徽标
       },
-      error: (err) => {
+      error: err => {
+        this.linkModalSubmitting.set(false);
         const detail =
           err?.error?.error?.message ||
           err?.error?.message ||
@@ -404,6 +467,7 @@ export class ChapterResourceComponent implements OnInit {
     });
   }
 
+  // ── 取消关联（单条） ────────────────────────────────────────────
   unlinkResource(resource: KnowledgeResourceDto) {
     if (!resource.id) return;
 
@@ -424,9 +488,9 @@ export class ChapterResourceComponent implements OnInit {
       next: () => {
         this.message.success('已取消关联');
         this.loadChapterResources();
-        this.loadChapterTree();
+        this.loadChapterTree(); // 刷新徽标
       },
-      error: (err) => {
+      error: err => {
         const detail =
           err?.error?.error?.message ||
           err?.error?.message ||
@@ -437,19 +501,39 @@ export class ChapterResourceComponent implements OnInit {
     });
   }
 
-  getResourceTypeLabel(type: ResourceType | undefined): string {
+  // ── 工具方法 ───────────────────────────────────────────────────
+  /** KnowledgeResourceDto 没有 resourceType 字段，按扩展名推断类型用于徽标展示 */
+  inferResourceType(extension: string | null | undefined): ResourceType {
+    if (!extension) return ResourceType.Document;
+    const ext = extension.toLowerCase().replace(/^\./, '');
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'flv'].includes(ext)) return ResourceType.Video;
+    if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext)) return ResourceType.Audio;
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(ext)) return ResourceType.Image;
+    if (['ppt', 'pptx'].includes(ext)) return ResourceType.PPT;
+    return ResourceType.Document;
+  }
+
+  getResourceTypeLabel(extension: string | null | undefined): string {
+    return this.getResourceTypeName(this.inferResourceType(extension));
+  }
+
+  getResourceTypeColor(extension: string | null | undefined): string {
+    return this.getResourceTypeColorByEnum(this.inferResourceType(extension));
+  }
+
+  getResourceTypeName(type: ResourceType | undefined): string {
     if (type === undefined || type === null) return '';
     const map: Record<number, string> = {
       [ResourceType.Document]: '文档',
       [ResourceType.Video]: '视频',
       [ResourceType.Audio]: '音频',
       [ResourceType.Image]: '图片',
-      [ResourceType.PPT]: 'PPT',
+      [ResourceType.PPT]: '演示文稿',
     };
-    return map[type] ?? '其他';
+    return map[type] ?? '资料';
   }
 
-  getResourceTypeColor(type: ResourceType | undefined): string {
+  getResourceTypeColorByEnum(type: ResourceType | undefined): string {
     if (type === undefined || type === null) return 'default';
     const map: Record<number, string> = {
       [ResourceType.Document]: 'blue',
@@ -460,4 +544,18 @@ export class ChapterResourceComponent implements OnInit {
     };
     return map[type] ?? 'default';
   }
+
+  formatFileSize(bytes?: number | null): string {
+    if (!bytes || bytes <= 0) return '—';
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(kb < 10 ? 1 : 0)} KB`;
+    const mb = kb / 1024;
+    if (mb < 1024) return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
+    return `${(mb / 1024).toFixed(2)} GB`;
+  }
+
+  trackChapter = (_: number, n: ChapterDto) => n.id;
+  trackResource = (_: number, r: KnowledgeResourceDto) => r.id;
+  trackCourseResource = (_: number, r: CourseResourceDto) => r.resourceId;
 }

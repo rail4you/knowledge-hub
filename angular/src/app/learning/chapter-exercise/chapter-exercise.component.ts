@@ -1,23 +1,28 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LocalizationPipe, RestService } from '@abp/ng.core';
+import { LocalizationPipe } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import type { CourseDto, ChapterDto } from '../../proxy/courses/dtos/models';
-import type { CreateUpdateExerciseDto, ExerciseDto, ExerciseImportResultDto } from '../../proxy/exams/dtos/models';
+import type { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-chapter-exercise',
@@ -32,9 +37,13 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
     NzTagModule,
     NzIconModule,
     NzSpinModule,
-    NzEmptyModule,
     NzSelectModule,
     NzModalModule,
+    NzTableModule,
+    NzCheckboxModule,
+    NzPaginationModule,
+    NzTooltipModule,
+    NzSwitchModule,
   ],
   templateUrl: './chapter-exercise.component.html',
   styleUrls: ['./chapter-exercise.component.scss'],
@@ -44,34 +53,155 @@ export class ChapterExerciseComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly chapterService = inject(ChapterService);
   private readonly exerciseService = inject(ExerciseService);
-  private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
-  private readonly cdr = inject(ChangeDetectorRef);
 
-  courses = signal<CourseDto[]>([]);
-  selectedCourseId = signal<string | null>(null);
-  chapters = signal<ChapterDto[]>([]);
-  expandedNodes = signal<Set<string>>(new Set());
-  selectedChapterId = signal<string | null>(null);
-  selectedChapterTitle = signal('');
+  readonly courses = signal<CourseDto[]>([]);
+  readonly selectedCourseId = signal<string | null>(null);
+  readonly chapters = signal<ChapterDto[]>([]);
+  readonly expandedNodes = signal<Set<string>>(new Set());
 
-  chapterExercises = signal<ExerciseDto[]>([]);
-  courseExercises = signal<ExerciseDto[]>([]);
-  loading = signal(false);
-  searchText = signal('');
+  // ── 左侧章节树：搜索 + 仅显示有关联 ────────────────────────────────
+  readonly chapterKeyword = signal('');
+  readonly onlyWithLinked = signal(false);
+  readonly isChapterFiltering = computed(
+    () => this.chapterKeyword().trim() !== '' || this.onlyWithLinked()
+  );
 
-  // Available exercises: course exercises not linked to this chapter
-  availableExercises = computed(() => {
-    const linked = new Set(this.chapterExercises().map(e => e.id));
-    const search = this.searchText().toLowerCase();
-    let available = this.courseExercises().filter(e => !linked.has(e.id));
-    if (search) {
-      available = available.filter(e =>
-        e.title?.toLowerCase().includes(search) ||
-        e.questionContent?.toLowerCase().includes(search)
+  /** 各章节直接关联的习题总数（按 chapterIds 多对多累计） */
+  readonly chapterExerciseCountMap = computed(() => {
+    const map = new Map<string, number>();
+    for (const ex of this.courseExercises()) {
+      const ids = ex.chapterIds ?? (ex.chapterId ? [ex.chapterId] : []);
+      for (const id of ids) {
+        if (!id) continue;
+        map.set(id, (map.get(id) || 0) + 1);
+      }
+    }
+    return map;
+  });
+
+  /** 至少关联了一道习题的章节数（用于筛选文案） */
+  readonly contentChapterCount = computed(() => {
+    let count = 0;
+    for (const v of this.chapterExerciseCountMap().values()) {
+      if (v > 0) count++;
+    }
+    return count;
+  });
+
+  /** 过滤后的章节树：保留命中节点及其祖先链；筛选时模板自动全展开 */
+  readonly visibleChapters = computed(() => {
+    const kw = this.chapterKeyword().trim().toLowerCase();
+    const onlyLinked = this.onlyWithLinked();
+    if (!kw && !onlyLinked) return this.chapters();
+
+    const filter = (nodes: ChapterDto[]): ChapterDto[] => {
+      const out: ChapterDto[] = [];
+      for (const n of nodes || []) {
+        const children = filter(n.children || []);
+        if (this.chapterSelfVisible(n, kw, onlyLinked) || children.length > 0) {
+          out.push({ ...n, children });
+        }
+      }
+      return out;
+    };
+    return filter(this.chapters());
+  });
+
+  // ── 右侧：当前选中章节 ───────────────────────────────────────────
+  readonly selectedChapterId = signal<string | null>(null);
+  readonly selectedChapterTitle = signal('');
+
+  // 当前章节已关联的习题（服务端来源：by-chapter，已包含多对多）
+  readonly chapterExercises = signal<ExerciseDto[]>([]);
+  readonly courseExercises = signal<ExerciseDto[]>([]);
+  readonly linkedLoading = signal(false);
+
+  // 右侧表格分页
+  readonly linkedPage = signal(1);
+  readonly linkedPageSize = signal(10);
+  readonly pagedLinkedExercises = computed(() => {
+    const start = (this.linkedPage() - 1) * this.linkedPageSize();
+    return this.chapterExercises().slice(start, start + this.linkedPageSize());
+  });
+
+  // ── 关联习题弹窗 ─────────────────────────────────────────────────
+  readonly linkModalVisible = signal(false);
+  readonly linkModalKeyword = signal('');
+  readonly linkModalPage = signal(1);
+  readonly linkModalPageSize = signal(8);
+  readonly linkModalSelectedIds = signal<Set<string>>(new Set());
+  readonly linkModalSubmitting = signal(false);
+  /** 弹窗内是否展示已关联到当前章节的习题（默认隐藏，避免干扰“待添加”列表） */
+  readonly showLinkedInModal = signal(false);
+
+  /** 已关联到当前章节的习题 id 集合（在弹窗中以灰显 + “已关联”徽标呈现） */
+  readonly alreadyLinkedToCurrentChapter = computed(() => {
+    const chapterId = this.selectedChapterId();
+    if (!chapterId) return new Set<string>();
+    const set = new Set<string>();
+    for (const e of this.courseExercises()) {
+      const ids = e.chapterIds ?? [];
+      if (e.id && ids.includes(chapterId)) set.add(e.id);
+    }
+    return set;
+  });
+
+  /** 弹窗内的可选习题列表（搜索过滤；默认不展示已关联的，开启开关后可一并查看） */
+  readonly linkCandidates = computed(() => {
+    const kw = this.linkModalKeyword().trim().toLowerCase();
+    const showLinked = this.showLinkedInModal();
+    let list = this.courseExercises();
+    if (!showLinked) {
+      const linked = this.alreadyLinkedToCurrentChapter();
+      list = list.filter(e => !e.id || !linked.has(e.id));
+    }
+    if (kw) {
+      list = list.filter(
+        e =>
+          (e.title || '').toLowerCase().includes(kw) ||
+          (e.questionContent || '').toLowerCase().includes(kw)
       );
     }
-    return available;
+    return list;
+  });
+
+  readonly pagedLinkCandidates = computed(() => {
+    const start = (this.linkModalPage() - 1) * this.linkModalPageSize();
+    return this.linkCandidates().slice(start, start + this.linkModalPageSize());
+  });
+
+  /** 当前分页内“可被选中”的习题 id（即未关联的） */
+  readonly selectableOnPageIds = computed(() => {
+    const linked = this.alreadyLinkedToCurrentChapter();
+    return this.pagedLinkCandidates()
+      .map(e => e.id)
+      .filter((id): id is string => !!id && !linked.has(id));
+  });
+
+  readonly linkModalAllChecked = computed(() => {
+    const ids = this.selectableOnPageIds();
+    if (ids.length === 0) return false;
+    const sel = this.linkModalSelectedIds();
+    return ids.every(id => sel.has(id));
+  });
+
+  readonly linkModalIndeterminate = computed(() => {
+    const ids = this.selectableOnPageIds();
+    if (ids.length === 0) return false;
+    const sel = this.linkModalSelectedIds();
+    const some = ids.some(id => sel.has(id));
+    return some && !this.linkModalAllChecked();
+  });
+
+  /** 弹窗底部真正要新增关联的题目数（已关联的不计入） */
+  readonly linkModalEffectiveCount = computed(() => {
+    const linked = this.alreadyLinkedToCurrentChapter();
+    let n = 0;
+    for (const id of this.linkModalSelectedIds()) {
+      if (!linked.has(id)) n++;
+    }
+    return n;
   });
 
   ngOnInit() {
@@ -80,7 +210,7 @@ export class ChapterExerciseComponent implements OnInit {
 
   loadCourses() {
     this.courseService.getList({ maxResultCount: 100, skipCount: 0 } as any).subscribe({
-      next: (result) => {
+      next: result => {
         this.courses.set(result.items || []);
       },
     });
@@ -91,7 +221,7 @@ export class ChapterExerciseComponent implements OnInit {
     this.selectedChapterId.set(null);
     this.selectedChapterTitle.set('');
     this.chapterExercises.set([]);
-    this.searchText.set('');
+    this.linkedPage.set(1);
     this.loadChapterTree();
     this.loadCourseExercises();
   }
@@ -101,10 +231,11 @@ export class ChapterExerciseComponent implements OnInit {
     if (!courseId) return;
 
     this.chapterService.getChapterTree(courseId).subscribe({
-      next: (data) => {
-        this.chapters.set(data || []);
-        // 默认只展开顶级章节，避免长课程章节列表过长遮挡右侧习题区
-        const expanded = new Set<string>((data || []).map(n => n.id!).filter(Boolean));
+      next: data => {
+        const list = data || [];
+        this.chapters.set(list);
+        // 默认只展开顶级章节
+        const expanded = new Set<string>(list.map(n => n.id!).filter(Boolean));
         this.expandedNodes.set(expanded);
       },
     });
@@ -115,22 +246,60 @@ export class ChapterExerciseComponent implements OnInit {
     if (!courseId) return;
 
     this.exerciseService.getByCourse(courseId).subscribe({
-      next: (data) => {
+      next: data => {
         this.courseExercises.set(data || []);
       },
     });
   }
 
-  private collectNodeIds(nodes: ChapterDto[], set: Set<string>) {
-    for (const node of nodes) {
-      if (node.id) set.add(node.id);
-      if (node.children?.length) this.collectNodeIds(node.children, set);
+  // ── 章节树交互 ──────────────────────────────────────────────────
+  /** 章节项点击：选中该章节；若是父级且当前未展开则一并展开，避免下级目录“看不见” */
+  onChapterItemClick(node: ChapterDto): void {
+    if (!node.id) return;
+    if (node.children?.length && !this.expandedNodes().has(node.id)) {
+      const set = new Set(this.expandedNodes());
+      set.add(node.id);
+      this.expandedNodes.set(set);
     }
+    this.selectChapter(node);
+  }
+
+  toggleChapter(event: MouseEvent, id: string): void {
+    event.stopPropagation();
+    const set = new Set(this.expandedNodes());
+    if (set.has(id)) set.delete(id);
+    else set.add(id);
+    this.expandedNodes.set(set);
+  }
+
+  isExpanded(id: string): boolean {
+    return this.expandedNodes().has(id);
+  }
+
+  hasChildren(node: ChapterDto): boolean {
+    return !!node.children && node.children.length > 0;
+  }
+
+  /** 单个章节自身是否满足当前筛选条件（祖先链由 visibleChapters 保留） */
+  private chapterSelfVisible(node: ChapterDto, kw: string, onlyLinked: boolean): boolean {
+    if (onlyLinked) {
+      const cnt = node.id ? this.chapterExerciseCountMap().get(node.id) || 0 : 0;
+      if (cnt === 0) return false;
+    }
+    if (kw && !(node.title || '').toLowerCase().includes(kw)) return false;
+    return true;
+  }
+
+  /** 清空章节搜索与筛选 */
+  clearChapterFilter(): void {
+    this.chapterKeyword.set('');
+    this.onlyWithLinked.set(false);
   }
 
   selectChapter(chapter: ChapterDto) {
     this.selectedChapterId.set(chapter.id ?? null);
     this.selectedChapterTitle.set(chapter.title ?? '');
+    this.linkedPage.set(1);
     this.loadChapterExercises();
   }
 
@@ -138,76 +307,24 @@ export class ChapterExerciseComponent implements OnInit {
     const chapterId = this.selectedChapterId();
     if (!chapterId) return;
 
-    this.loading.set(true);
+    this.linkedLoading.set(true);
     this.exerciseService.getByChapter(chapterId).subscribe({
-      next: (data) => {
+      next: data => {
         this.chapterExercises.set(data || []);
-        this.loading.set(false);
+        this.linkedLoading.set(false);
       },
       error: () => {
-        this.loading.set(false);
+        this.linkedLoading.set(false);
         this.message.error('加载习题失败');
       },
     });
   }
 
-  toggleNode(nodeId: string) {
-    const current = new Set(this.expandedNodes());
-    if (current.has(nodeId)) {
-      current.delete(nodeId);
-    } else {
-      current.add(nodeId);
-    }
-    this.expandedNodes.set(current);
-  }
-
-  isExpanded(nodeId: string): boolean {
-    return this.expandedNodes().has(nodeId);
-  }
-
-  hasChildren(node: ChapterDto): boolean {
-    return !!node.children && node.children.length > 0;
-  }
-
-  linkExercise(exercise: ExerciseDto) {
-    const chapterId = this.selectedChapterId();
-    if (!chapterId || !exercise.id) return;
-
-    // Preserve existing chapterIds and add the new one to the set
-    const existingIds = new Set(exercise.chapterIds?.filter((id): id is string => !!id) ?? []);
-    existingIds.add(chapterId);
-    const mergedChapterIds = Array.from(existingIds);
-
-    const dto: CreateUpdateExerciseDto = {
-      courseId: exercise.courseId,
-      chapterId: chapterId,
-      chapterIds: mergedChapterIds,
-      title: exercise.title,
-      questionContent: exercise.questionContent,
-      type: exercise.type,
-      options: exercise.options,
-      answer: exercise.answer,
-      questionAnalysis: exercise.questionAnalysis,
-      difficulty: exercise.difficulty,
-      score: exercise.score,
-    };
-
-    this.exerciseService.update(exercise.id, dto).subscribe({
-      next: () => {
-        this.message.success('习题已关联到章节');
-        this.loadChapterExercises();
-      },
-      error: () => {
-        this.message.error('关联失败');
-      },
-    });
-  }
-
-  unlinkExercise(exercise: ExerciseDto) {
+  /** 右侧表格行：单题取消关联 */
+  async unlinkExercise(exercise: ExerciseDto) {
     const currentChapterId = this.selectedChapterId();
     if (!exercise.id) return;
 
-    // Remove the current chapter from the exercise's chapterIds, keep the rest
     const remainingIds = (exercise.chapterIds ?? []).filter(id => id !== currentChapterId);
 
     const dto: CreateUpdateExerciseDto = {
@@ -224,17 +341,149 @@ export class ChapterExerciseComponent implements OnInit {
       score: exercise.score,
     };
 
-    this.exerciseService.update(exercise.id, dto).subscribe({
-      next: () => {
-        this.message.success('已取消关联');
-        this.loadChapterExercises();
-      },
-      error: () => {
-        this.message.error('取消关联失败');
-      },
-    });
+    try {
+      await firstValueFrom(this.exerciseService.update(exercise.id, dto));
+      this.message.success('已取消关联');
+      this.loadChapterExercises();
+      this.loadCourseExercises(); // 刷新 chapterIds，章节数徽标同步
+    } catch {
+      this.message.error('取消关联失败');
+    }
   }
 
+  onLinkedPageChange(page: number) {
+    this.linkedPage.set(page);
+  }
+
+  // ── 关联习题弹窗 ───────────────────────────────────────────────
+  openLinkModal() {
+    if (!this.selectedChapterId()) {
+      this.message.warning('请先选择章节');
+      return;
+    }
+    this.linkModalKeyword.set('');
+    this.linkModalPage.set(1);
+    this.linkModalSelectedIds.set(new Set());
+    this.showLinkedInModal.set(false);
+    this.linkModalVisible.set(true);
+  }
+
+  closeLinkModal() {
+    this.linkModalVisible.set(false);
+    this.linkModalSelectedIds.set(new Set());
+    this.linkModalKeyword.set('');
+    this.linkModalPage.set(1);
+    this.showLinkedInModal.set(false);
+  }
+
+  /** 切换「显示已关联」开关：回到第一页，避免空选状态跨越分页 */
+  onShowLinkedChange(value: boolean) {
+    this.showLinkedInModal.set(value);
+    this.linkModalPage.set(1);
+  }
+
+  onLinkKeywordChange(value: string) {
+    this.linkModalKeyword.set(value);
+    this.linkModalPage.set(1);
+  }
+
+  onLinkPageChange(page: number) {
+    this.linkModalPage.set(page);
+  }
+
+  isLinkSelected(id: string): boolean {
+    return this.linkModalSelectedIds().has(id);
+  }
+
+  isAlreadyLinked(id: string | undefined): boolean {
+    if (!id) return false;
+    return this.alreadyLinkedToCurrentChapter().has(id);
+  }
+
+  toggleLinkOne(id: string | undefined, checked: boolean) {
+    if (!id) return;
+    const set = new Set(this.linkModalSelectedIds());
+    if (checked) set.add(id);
+    else set.delete(id);
+    this.linkModalSelectedIds.set(set);
+  }
+
+  toggleLinkAll(checked: boolean) {
+    const ids = this.selectableOnPageIds();
+    if (ids.length === 0) return;
+    const set = new Set(this.linkModalSelectedIds());
+    for (const id of ids) {
+      if (checked) set.add(id);
+      else set.delete(id);
+    }
+    this.linkModalSelectedIds.set(set);
+  }
+
+  /** 批量关联：将弹窗内选中的“新”习题加入到当前章节的 chapterIds 中 */
+  async confirmLinkExercises() {
+    const chapterId = this.selectedChapterId();
+    if (!chapterId) return;
+
+    const selectedIds = Array.from(this.linkModalSelectedIds());
+    const linked = this.alreadyLinkedToCurrentChapter();
+    // 跳过已关联的，避免无意义的写
+    const targetIds = selectedIds.filter(id => !linked.has(id));
+    if (targetIds.length === 0) {
+      this.message.warning('请先选择要关联的习题');
+      return;
+    }
+
+    this.linkModalSubmitting.set(true);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // 顺序提交避免并发覆盖 chapterIds（最后一个胜出会丢关联）
+    for (const id of targetIds) {
+      const exercise = this.courseExercises().find(e => e.id === id);
+      if (!exercise || !exercise.id) continue;
+
+      const existingIds = new Set(
+        exercise.chapterIds?.filter((cid): cid is string => !!cid) ?? []
+      );
+      existingIds.add(chapterId);
+
+      const dto: CreateUpdateExerciseDto = {
+        courseId: exercise.courseId,
+        chapterId: chapterId,
+        chapterIds: Array.from(existingIds),
+        title: exercise.title,
+        questionContent: exercise.questionContent,
+        type: exercise.type,
+        options: exercise.options,
+        answer: exercise.answer,
+        questionAnalysis: exercise.questionAnalysis,
+        difficulty: exercise.difficulty,
+        score: exercise.score,
+      };
+
+      try {
+        await firstValueFrom(this.exerciseService.update(exercise.id, dto));
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+
+    this.linkModalSubmitting.set(false);
+
+    if (failCount === 0) {
+      this.message.success(`已成功关联 ${successCount} 道习题`);
+    } else {
+      this.message.warning(`关联完成：成功 ${successCount}，失败 ${failCount}`);
+    }
+
+    this.closeLinkModal();
+    this.loadChapterExercises();
+    this.loadCourseExercises(); // 刷新章节数徽标
+  }
+
+  // ── 工具方法 ───────────────────────────────────────────────────
   getTypeName(type: ExerciseType | undefined): string {
     if (type === undefined) return '未知';
     const names: Record<number, string> = {
@@ -263,81 +512,6 @@ export class ChapterExerciseComponent implements OnInit {
     return colors[type] ?? 'default';
   }
 
-  // Import modal state
-  isImportModalVisible = false;
-  importing = false;
-  selectedImportFile: File | null = null;
-
-  openImportModal() {
-    const courseId = this.selectedCourseId();
-    if (!courseId) {
-      this.message.warning('请先选择课程');
-      return;
-    }
-    this.isImportModalVisible = true;
-    this.selectedImportFile = null;
-  }
-
-  closeImportModal() {
-    this.isImportModalVisible = false;
-    this.selectedImportFile = null;
-  }
-
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      const file = input.files[0];
-      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
-      if (!isExcel) {
-        this.message.error('只能上传 Excel 文件 (.xlsx, .xls)');
-        return;
-      }
-      const isLt10M = file.size / 1024 / 1024 < 10;
-      if (!isLt10M) {
-        this.message.error('文件大小不能超过 10MB');
-        return;
-      }
-
-      this.selectedImportFile = file;
-      this.cdr.markForCheck();
-    }
-  }
-
-  handleImport() {
-    if (!this.selectedImportFile) {
-      this.message.warning('请先选择文件');
-      return;
-    }
-
-    const courseId = this.selectedCourseId();
-    if (!courseId) return;
-
-    this.importing = true;
-    const file = this.selectedImportFile;
-
-    const formData = new FormData();
-    formData.append('file', file, file.name);
-
-    this.restService.request<any, ExerciseImportResultDto>({
-      method: 'POST',
-      url: `/api/app/exercise/import-from-excel/${courseId}`,
-      body: formData,
-    }, { apiName: 'KnowledgeHub' }).subscribe({
-      next: (result: ExerciseImportResultDto) => {
-        this.importing = false;
-        if (result.failCount === 0) {
-          this.message.success(`导入成功！共导入 ${result.successCount} 个习题`);
-          this.closeImportModal();
-          this.loadCourseExercises();
-        } else {
-          const errorMsg = result.errors?.slice(0, 5).join('\n') || '';
-          this.message.warning(`导入完成：成功 ${result.successCount}，失败 ${result.failCount}\n${errorMsg}`);
-        }
-      },
-      error: (err) => {
-        this.importing = false;
-        this.message.error('导入失败: ' + (err.message || '未知错误'));
-      },
-    });
-  }
+  trackChapter = (_: number, n: ChapterDto) => n.id;
+  trackExercise = (_: number, e: ExerciseDto) => e.id;
 }
