@@ -235,6 +235,9 @@ public class SpecialEduResourceAppService : KnowledgeHubAppService, ISpecialEduR
         await _repository.DeleteAsync(id);
     }
 
+    // 仅供 SSE Controller 直接调用：Func 回调无法绑定为 HTTP 参数，
+    // 必须对 Conventional Controller 隐藏，否则 /Abp/ServiceProxyScript 全站 500。
+    [Volo.Abp.RemoteService(false)]
     public async Task GenerateStreamingAsync(GenerateSpecialResourceInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
     {
         var threadId = Guid.NewGuid().ToString();

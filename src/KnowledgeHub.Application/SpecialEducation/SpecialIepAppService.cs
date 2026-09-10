@@ -249,6 +249,8 @@ public class SpecialIepAppService : KnowledgeHubAppService, ISpecialIepAppServic
     }
 
     /// <summary>流式生成 IEP：手动评估表单 + 选课关联快照作为输入。</summary>
+    // Func 回调无法绑定为 HTTP 参数，必须对 Conventional Controller 隐藏，否则 /Abp/ServiceProxyScript 全站 500。
+    [Volo.Abp.RemoteService(false)]
     public async Task GenerateStreamingAsync(GenerateIepInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
     {
         var threadId = Guid.NewGuid().ToString();

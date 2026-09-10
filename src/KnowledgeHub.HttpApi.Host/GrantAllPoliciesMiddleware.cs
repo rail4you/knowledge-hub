@@ -38,12 +38,22 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
             return;
         }
 
-        // 拦截 application-configuration 响应
+        // 拦截 application-configuration 响应。
+        // 注意：next() 抛出时也必须还原 Response.Body，否则异常处理中间件重入管线
+        // 会拿到外层已释放的 MemoryStream（ObjectDisposedException），导致任何普通异常
+        //（如登录校验失败）都变成空白 500 错误页。
         var originalBody = context.Response.Body;
         using var newBody = new System.IO.MemoryStream();
         context.Response.Body = newBody;
 
-        await next(context);
+        try
+        {
+            await next(context);
+        }
+        finally
+        {
+            context.Response.Body = originalBody;
+        }
 
         if (context.Request.Path.Value?.Contains("/api/abp/application-configuration") == true
             && context.Response.StatusCode == 200)

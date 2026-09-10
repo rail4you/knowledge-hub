@@ -252,6 +252,8 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
     }
 
     /// <summary>流式生成：参考 LessonPlanAppService，Controller 直接注入本类（不经接口代理）。</summary>
+    // Func 回调无法绑定为 HTTP 参数，必须对 Conventional Controller 隐藏，否则 /Abp/ServiceProxyScript 全站 500。
+    [Volo.Abp.RemoteService(false)]
     public async Task GenerateStreamingAsync(GenerateTeachingDesignInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
     {
         var threadId = Guid.NewGuid().ToString();
