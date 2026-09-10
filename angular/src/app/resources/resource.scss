@@ -486,10 +486,9 @@
     &::before { display: none !important; }
     // 资源名称：左对齐
     &.col-title, &.th-name { text-align: left !important; padding-left: 18px !important; }
-    // 其他列：右对齐（数据列）
-    &.th-type, &.th-version, &.th-status, &.th-creator, &.th-time {
-      text-align: right !important;
-      padding-right: 16px !important;
+    // 其他列：居中对齐（资源名称除外）
+    &.th-type, &.th-version, &.th-status, &.th-creator, &.th-time, &.th-ops {
+      text-align: center !important;
     }
   }
   .ant-table-tbody > tr > td {
@@ -500,10 +499,9 @@
     text-align: center;
     vertical-align: middle;
     &.col-title, &.td-name { text-align: left !important; padding-left: 18px !important; }
-    // 数据列右对齐
-    &.td-type, &.td-version, &.td-status, &.td-creator, &.td-time {
-      text-align: right !important;
-      padding-right: 16px !important;
+    // 数据列居中对齐（资源名称除外）
+    &.td-type, &.td-version, &.td-status, &.td-creator, &.td-time, &.td-ops {
+      text-align: center !important;
     }
   }
   .ant-table-tbody > tr:nth-child(even) > td { background: #fafbfd; }
