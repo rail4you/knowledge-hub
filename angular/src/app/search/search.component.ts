@@ -16,7 +16,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzModalModule } from 'ng-zorro-antd/modal';
-import { ConfigStateService, EnvironmentService } from '@abp/ng.core';
+import { ConfigStateService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
 import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/meilisearch-admin.service';
 import { stripUuids, foldByResourceName, getMatchInfo, MatchType } from './search.util';
@@ -51,7 +51,6 @@ export class SearchComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
   private readonly configService = inject(ConfigStateService);
-  private readonly environmentService = inject(EnvironmentService);
 
   searchQuery = '';
   selectedFileExtension = signal('');
@@ -187,6 +186,9 @@ export class SearchComponent implements OnInit {
   currentVideoEndTime = signal('');
   currentVideoName = signal('');
   currentVideoEventDescription = signal('');
+  currentVideoResourceId = signal('');
+  /** 浏览器无法解码/加载视频时显示 fallback 提示 */
+  videoPlaybackError = signal(false);
 
   getIndexLabel(indexUid: string | null | undefined): string {
     const normalized = (indexUid || '').toLowerCase();
@@ -350,22 +352,43 @@ export class SearchComponent implements OnInit {
   }
 
   openVideoModal(result: DocumentSearchResultDto) {
-    const env = this.environmentService.getEnvironment();
-    const baseUrl = env?.apis?.default?.url || '';
-    let videoUrl = result.videoUrl || '';
-    if (videoUrl && !videoUrl.startsWith('http')) {
-      videoUrl = baseUrl + videoUrl;
-    }
-    this.currentVideoUrl.set(videoUrl);
+    const resourceId = result.resourceId || '';
+    // 固定走同源资源预览流：开发走 :4200 的 /api 代理、线上走 nginx 的 /api 代理，
+    // 同源携带认证 cookie、支持 Range 定位片段。索引里的 videoUrl（如 /uploads/...）
+    // 若拼成 API 绝对地址，线上 HTTPS 页会因 mixed-content 被拦截、开发环境会因
+    // 自签名证书加载失败，所以不再使用。
+    this.currentVideoUrl.set(resourceId ? `/api/resource-file/${resourceId}/preview` : '');
     this.currentVideoStartTime.set(result.startTime || '00:00:00');
     this.currentVideoEndTime.set(result.endTime || '');
     this.currentVideoName.set(result.videoName || result.resourceName || '视频');
     this.currentVideoEventDescription.set(result.eventDescription || '');
+    this.currentVideoResourceId.set(resourceId);
+    this.videoPlaybackError.set(false);
     this.isVideoModalOpen.set(true);
   }
 
   closeVideoModal() {
     this.isVideoModalOpen.set(false);
+    // 清空 src 让弹窗关闭后立即停播，避免后台继续播放声音
+    this.currentVideoUrl.set('');
+    this.videoPlaybackError.set(false);
+  }
+
+  onVideoError() {
+    this.videoPlaybackError.set(true);
+  }
+
+  /** 从视频弹窗跳转到该资源的资源库详情 */
+  goToCurrentVideoResource(event?: Event) {
+    if (event) event.stopPropagation();
+    const id = this.currentVideoResourceId();
+    if (!id) return;
+    this.closeVideoModal();
+    if (this.router.url.startsWith('/student')) {
+      this.router.navigate(['/student/resources', id]);
+    } else {
+      this.router.navigate(['/resources'], { queryParams: { resourceId: id } });
+    }
   }
 
   returnToSearch() {

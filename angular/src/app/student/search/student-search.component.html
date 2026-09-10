@@ -5,7 +5,7 @@
         <h1 class="student-search__title">
           智能搜索
         </h1>
-        <p class="student-search__desc">在资源库中按关键词搜索已建索引的文档内容，点击结果查看完整资源。</p>
+        <p class="student-search__desc">在资源库中按关键词搜索已建索引的文档与视频内容，点击结果查看完整资源。</p>
       </div>
     </div>
   </header>
@@ -48,10 +48,15 @@
     <!-- Main search area -->
     <div class="search-main">
       <section class="student-search__bar">
+        <nz-select [(ngModel)]="selectedIndex" nzSize="large" class="student-search__index" (ngModelChange)="pageIndex = 1; searchQuery && search()">
+          <nz-option nzValue="all" nzLabel="全部"></nz-option>
+          <nz-option nzValue="documents" nzLabel="文档"></nz-option>
+          <nz-option nzValue="videos" nzLabel="视频"></nz-option>
+        </nz-select>
         <nz-input-group [nzPrefix]="prefixTemplate" nzSize="large" class="student-search__input">
           <input
             nz-input
-            placeholder="输入关键词搜索资源…"
+            placeholder="输入关键词搜索文档、视频…"
             [(ngModel)]="searchQuery"
             (keyup.enter)="onKeyEnter($event)"
             name="searchQuery"
@@ -99,13 +104,21 @@
             </div>
 
             <div class="student-search__results">
-              @for (r of filteredResults(); track r.resourceId + '-' + r.pageNumber) {
+              @for (r of filteredResults(); track $index) {
                 <article class="result-card" (click)="viewDocument(r)">
                   <header class="result-card__head">
                     <div class="result-card__title">
-                      <span nz-icon [nzType]="getFileIcon(r.fileExtension)" class="result-card__icon"></span>
+                      @if (isVideoResult(r)) {
+                        <span nz-icon nzType="video-camera" class="result-card__icon"></span>
+                      } @else {
+                        <span nz-icon [nzType]="getFileIcon(r.fileExtension)" class="result-card__icon"></span>
+                      }
                       <span class="result-card__name">{{ r.resourceName }}</span>
-                      <nz-tag class="result-card__page">第 {{ r.pageNumber }} 页</nz-tag>
+                      @if (isVideoResult(r)) {
+                        <nz-tag nzColor="purple" class="result-card__page">{{ $any(r).startTime || '' }}{{ $any(r).startTime && $any(r).endTime ? ' - ' : '' }}{{ $any(r).endTime || '' }}</nz-tag>
+                      } @else {
+                        <nz-tag class="result-card__page">第 {{ r.pageNumber }} 页</nz-tag>
+                      }
                     </div>
                     <div class="result-card__meta">
                       @if (r.categoryName) {
@@ -114,10 +127,26 @@
                       <nz-tag [nzColor]="getScoreColor(r.relevanceScore)">
                         相关度 {{ (r.relevanceScore * 100).toFixed(0) }}%
                       </nz-tag>
-                      <span class="result-card__ext">{{ r.fileExtension }}</span>
+                      @if (isVideoResult(r)) {
+                        <span class="result-card__ext">视频</span>
+                      } @else {
+                        <span class="result-card__ext">{{ r.fileExtension }}</span>
+                      }
                     </div>
                   </header>
-                  <div class="result-card__body" [innerHTML]="r.highlightedContent || r.content"></div>
+                  <div class="result-card__body" [innerHTML]="$any(r).highlightedContent || $any(r).eventDescription || r.content"></div>
+                  <div class="result-card__actions" (click)="$event.stopPropagation()">
+                    @if (isVideoResult(r)) {
+                      <button nz-button nzType="link" nzSize="small" (click)="viewDocument(r)">
+                        <span nz-icon nzType="play-circle"></span>
+                        播放片段
+                      </button>
+                    }
+                    <button nz-button nzType="link" nzSize="small" (click)="goToResource(r, $event)">
+                      <span nz-icon nzType="rollback"></span>
+                      返回资源
+                    </button>
+                  </div>
                 </article>
               }
             </div>
@@ -138,3 +167,51 @@
     </div>
   </div>
 </div>
+
+<nz-modal
+  [nzVisible]="isVideoModalOpen()"
+  [nzTitle]="currentVideoName()"
+  [nzWidth]="880"
+  [nzFooter]="videoModalFooter"
+  (nzOnCancel)="closeVideoModal()"
+  [nzMaskClosable]="false"
+>
+  <ng-container *nzModalContent>
+    <div class="video-player-wrap">
+      <video
+        #videoPlayer
+        controls
+        preload="metadata"
+        playsinline
+        [src]="currentVideoUrl()"
+        style="width: 100%; max-height: 60vh; background: #000; border-radius: 8px;"
+        (loadedmetadata)="onVideoMetadataLoaded(videoPlayer)"
+        (error)="onVideoError()"
+      ></video>
+      @if (videoPlaybackError()) {
+        <div class="video-fallback">
+          该视频暂不支持在线播放（可能是浏览器不支持的编码），可返回资源页下载后用本地播放器打开。
+        </div>
+      }
+      @if (currentVideoEventDescription()) {
+        <div class="video-info">
+          <h4>命中片段</h4>
+          <p [innerHTML]="currentVideoEventDescription()"></p>
+        </div>
+      }
+      @if (currentVideoStartTime() && currentVideoEndTime()) {
+        <div class="video-timeline">
+          <span>时间范围：</span>
+          <span>{{ currentVideoStartTime() }} - {{ currentVideoEndTime() }}</span>
+        </div>
+      }
+    </div>
+  </ng-container>
+  <ng-template #videoModalFooter>
+    <button nz-button nzType="default" (click)="closeVideoModal()">关闭</button>
+    <button nz-button nzType="primary" (click)="goToVideoResource($event)">
+      <span nz-icon nzType="rollback"></span>
+      返回资源
+    </button>
+  </ng-template>
+</nz-modal>

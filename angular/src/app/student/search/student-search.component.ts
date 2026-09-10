@@ -13,6 +13,7 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import type { PopularSearchDto, DocumentSearchResultDto } from '../../proxy/application/contracts/search/dtos/models';
 
 @Component({
@@ -31,6 +32,7 @@ import type { PopularSearchDto, DocumentSearchResultDto } from '../../proxy/appl
     NzTagModule,
     NzPaginationModule,
     NzDividerModule,
+    NzModalModule,
   ],
   templateUrl: './student-search.component.html',
   styleUrls: ['./student-search.component.scss'],
@@ -49,6 +51,19 @@ export class StudentSearchComponent implements OnInit {
   results = signal<DocumentSearchResultDto[]>([]);
   totalCount = signal(0);
   selectedFileExtension = signal('');
+  /** 索引选择：all=文档+视频合并，documents=仅文档，videos=仅视频。后端 IndexName 为空时合并双索引。 */
+  selectedIndex: 'all' | 'documents' | 'videos' = 'all';
+
+  // 视频播放弹窗
+  isVideoModalOpen = signal(false);
+  currentVideoUrl = signal('');
+  currentVideoStartTime = signal('00:00:00');
+  currentVideoEndTime = signal('');
+  currentVideoName = signal('');
+  currentVideoEventDescription = signal('');
+  currentVideoResourceId = signal('');
+  /** 浏览器无法解码/加载视频时显示 fallback 提示 */
+  videoPlaybackError = signal(false);
 
   // Hot words
   hotWords = signal<PopularSearchDto[]>([]);
@@ -111,16 +126,25 @@ export class StudentSearchComponent implements OnInit {
 
     this.loading.set(true);
 
+    const body: Record<string, unknown> = {
+      query: q,
+      skipCount: (this.pageIndex - 1) * this.pageSize,
+      maxResultCount: this.pageSize,
+      sorting: 'relevance',
+      // 学生端仅搜索已审核资源（documents 侧生效，videos 侧后端自动忽略）
+      statusFilter: '2,3',
+    };
+    // 选“全部”时不传 indexName，后端合并 documents + videos 双索引；
+    // 选文档/视频时只走单边。
+    if (this.selectedIndex !== 'all') {
+      body['indexName'] = this.selectedIndex;
+    }
+
     fetch('/api/app/search/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: q,
-        skipCount: (this.pageIndex - 1) * this.pageSize,
-        maxResultCount: this.pageSize,
-        sorting: 'relevance',
-        indexName: 'documents',
-      }),
+      credentials: 'include',
+      body: JSON.stringify(body),
     })
       .then(r => {
         console.log('[search] status:', r.status);
@@ -152,6 +176,19 @@ export class StudentSearchComponent implements OnInit {
   }
 
   viewDocument(result: DocumentSearchResultDto) {
+    if ((result as any).sourceType === 'video') {
+      this.openVideoModal(result);
+      return;
+    }
+
+    this.goToResource(result);
+  }
+
+  /** 跳转到学生端资源详情（文档 / 视频共用，视频详情页支持在线预览播放） */
+  goToResource(result: DocumentSearchResultDto, event?: Event) {
+    if (event) event.stopPropagation();
+    if (!result.resourceId) return;
+
     fetch('/api/app/search/log-view', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -183,8 +220,72 @@ export class StudentSearchComponent implements OnInit {
       '.jpg': 'file-image',
       '.jpeg': 'file-image',
       '.png': 'file-image',
+      '.mp4': 'video-camera',
+      '.webm': 'video-camera',
+      '.mov': 'video-camera',
+      '.avi': 'video-camera',
     };
     return iconMap[ext?.toLowerCase()] || 'file';
+  }
+
+  isVideoResult(result: DocumentSearchResultDto): boolean {
+    return (result as any).sourceType === 'video';
+  }
+
+  openVideoModal(result: DocumentSearchResultDto) {
+    const r = result as any;
+    const resourceId: string = r.resourceId || '';
+    // 固定走同源资源预览流：经 /api 代理携带认证 cookie、支持 Range 定位片段，
+    // 实测 200 + video/mp4 + 206。索引里的 videoUrl（如 /uploads/...）在 Angular
+    // 开发服务器下没有代理会 404 黑屏，线上也可能跨域无 cookie，所以不再使用。
+    this.currentVideoUrl.set(resourceId ? `/api/resource-file/${resourceId}/preview` : '');
+    this.currentVideoStartTime.set(r.startTime || '00:00:00');
+    this.currentVideoEndTime.set(r.endTime || '');
+    this.currentVideoName.set(r.videoName || r.resourceName || '视频');
+    this.currentVideoEventDescription.set(r.eventDescription || r.highlightedContent || '');
+    this.currentVideoResourceId.set(resourceId);
+    this.videoPlaybackError.set(false);
+    this.isVideoModalOpen.set(true);
+  }
+
+  closeVideoModal() {
+    this.isVideoModalOpen.set(false);
+    // 清空 src 让弹窗关闭后立即停播，避免后台继续播放声音
+    this.currentVideoUrl.set('');
+    this.videoPlaybackError.set(false);
+  }
+
+  onVideoError() {
+    this.videoPlaybackError.set(true);
+  }
+
+  /** 从视频弹窗跳转到学生端视频资源详情（在线预览/收藏/评价） */
+  goToVideoResource(event?: Event) {
+    if (event) event.stopPropagation();
+    const id = this.currentVideoResourceId();
+    if (!id) return;
+    this.closeVideoModal();
+    this.router.navigate(['/student/resources', id], {
+      queryParams: { from: 'search' }
+    });
+  }
+
+  formatTimeToSeconds(time: string): number {
+    if (!time) return 0;
+    const parts = time.split(':').map(Number);
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    }
+    return 0;
+  }
+
+  onVideoMetadataLoaded(videoPlayer: HTMLVideoElement) {
+    const startSeconds = this.formatTimeToSeconds(this.currentVideoStartTime());
+    if (startSeconds > 0 && startSeconds < videoPlayer.duration) {
+      videoPlayer.currentTime = startSeconds;
+    }
   }
 
   getScoreColor(score: number): string {

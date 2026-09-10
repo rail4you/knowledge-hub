@@ -720,5 +720,22 @@
 .video-modal-footer {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
+}
+
+.video-modal-footer__right {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.video-fallback {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #92580a;
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 8px;
+  padding: 10px 14px;
 }

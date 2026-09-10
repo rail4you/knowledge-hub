@@ -236,10 +236,18 @@
       <video
         #videoPlayer
         controls
+        preload="metadata"
+        playsinline
         [src]="currentVideoUrl()"
         style="width: 100%; max-height: 70vh;"
         (loadedmetadata)="onVideoMetadataLoaded(videoPlayer)"
+        (error)="onVideoError()"
       ></video>
+      @if (videoPlaybackError()) {
+        <div class="video-fallback">
+          该视频暂不支持在线播放（可能是浏览器不支持的编码），可返回资源下载后用本地播放器打开。
+        </div>
+      }
       @if (currentVideoEventDescription()) {
         <div class="video-info">
           <h4>事件描述</h4>
@@ -260,9 +268,15 @@
         <span nz-icon nzType="left"></span>
         返回搜索界面
       </button>
-      <button nz-button nzType="primary" (click)="closeVideoModal()">
-        关闭
-      </button>
+      <span class="video-modal-footer__right">
+        <button nz-button nzType="default" (click)="goToCurrentVideoResource($event)">
+          <span nz-icon nzType="rollback"></span>
+          返回资源
+        </button>
+        <button nz-button nzType="primary" (click)="closeVideoModal()">
+          关闭
+        </button>
+      </span>
     </div>
   </ng-template>
 </nz-modal>
