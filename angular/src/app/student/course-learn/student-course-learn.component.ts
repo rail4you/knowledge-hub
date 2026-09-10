@@ -17,6 +17,8 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
 import { LearningService } from '../../proxy/learning/learning.service';
@@ -69,6 +71,8 @@ interface FlatChapter {
     NzAlertModule,
     NzDividerModule,
     NzPaginationModule,
+    NzSelectModule,
+    NzTableModule,
     FilePreviewComponent,
   ],
   templateUrl: './student-course-learn.component.html',
@@ -94,6 +98,58 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   readonly flatChapters = signal<FlatChapter[]>([]);
   readonly currentChapterId = signal<string | null>(null);
   readonly expandedNodes = signal<Set<string>>(new Set());
+
+  // 左侧章节工具条：关键词搜索 + 仅看有资源的章节
+  readonly chapterKeyword = signal('');
+  readonly onlyWithResources = signal(false);
+  readonly isChapterFiltering = computed(
+    () => this.chapterKeyword().trim() !== '' || this.onlyWithResources()
+  );
+
+  /** 过滤后的章节树：保留命中节点及其祖先链；筛选状态下模板自动全展开 */
+  readonly visibleChapters = computed(() => {
+    const kw = this.chapterKeyword().trim().toLowerCase();
+    const onlyRes = this.onlyWithResources();
+    if (!kw && !onlyRes) return this.chapters();
+    const filter = (nodes: ChapterDto[]): ChapterDto[] => {
+      const out: ChapterDto[] = [];
+      for (const n of nodes || []) {
+        const children = filter(n.children || []);
+        if (this.chapterSelfVisible(n, kw, onlyRes) || children.length > 0) {
+          out.push({ ...n, children });
+        }
+      }
+      return out;
+    };
+    return filter(this.chapters());
+  });
+
+  /** 各章节内容数（直挂资源数 + 习题总数），供章节树徽标使用 */
+  readonly chapterContentCountMap = computed(() => {
+    const map = new Map<string, number>();
+    const progress = this.chapterProgressMap();
+    const walk = (nodes: ChapterDto[]) => {
+      for (const n of nodes || []) {
+        if (!n.id) continue;
+        map.set(n.id, (n.knowledgeResources || []).length + (progress.get(n.id)?.total || 0));
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(this.chapters());
+    return map;
+  });
+  /** 直接挂有学习资源或习题的章节数（用于筛选文案） */
+  readonly contentChapterCount = computed(() => {
+    let count = 0;
+    const walk = (nodes: ChapterDto[]) => {
+      for (const n of nodes || []) {
+        if (this.chapterHasContent(n)) count++;
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(this.chapters());
+    return count;
+  });
 
   readonly activeTab = signal<TabKey>('resources');
 
@@ -346,6 +402,35 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
     this.expandedNodes.set(set);
   }
 
+  /** 单个章节自身是否满足当前筛选条件（祖先链由 visibleChapters 保留） */
+  private chapterSelfVisible(node: ChapterDto, kw: string, onlyRes: boolean): boolean {
+    if (onlyRes && !this.chapterHasContent(node)) return false;
+    if (kw && !(node.title || '').toLowerCase().includes(kw)) return false;
+    return true;
+  }
+
+  /** 自评掌握程度文案 */
+  selfAssessmentLabel(v?: SelfAssessment | null): string {
+    switch (v) {
+      case SelfAssessment.Incorrect: return '未掌握';
+      case SelfAssessment.PartiallyCorrect: return '部分掌握';
+      case SelfAssessment.Correct: return '已掌握';
+      default: return '—';
+    }
+  }
+  /** 章节是否有内容：直挂资源，或习题总数 >0（习题统计异步到达后自动更新） */
+  private chapterHasContent(node: ChapterDto): boolean {
+    if ((node.knowledgeResources || []).length > 0) return true;
+    const stat = node.id ? this.chapterProgressMap().get(node.id) : undefined;
+    return !!stat && stat.total > 0;
+  }
+
+  /** 清空章节搜索与筛选 */
+  clearChapterFilter(): void {
+    this.chapterKeyword.set('');
+    this.onlyWithResources.set(false);
+  }
+
   /** 展开某节点的所有祖先 */
   private expandAncestors(id: string): void {
     const map = new Map(this.flatChapters().map(c => [c.id, c]));
@@ -556,6 +641,83 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
   onResourcePageChange(page: number) {
     this.resourcePage.set(page);
+  }
+
+  // === 提交记录：搜索 + 对错筛选 ===
+  readonly recordKeyword = signal('');
+  readonly recordResultFilter = signal<'all' | 'correct' | 'wrong' | 'pending'>('all');
+  readonly filteredRecords = computed(() => {
+    const kw = this.recordKeyword().trim().toLowerCase();
+    const f = this.recordResultFilter();
+    return this.chapterRecords().filter(r => {
+      if (f === 'correct' && r.isCorrect !== true) return false;
+      if (f === 'wrong' && r.isCorrect !== false) return false;
+      if (f === 'pending' && r.isCorrect != null) return false;
+      if (kw) {
+        const hay = `${r.exerciseTitle || ''} ${r.studentAnswer || ''}`.toLowerCase();
+        if (!hay.includes(kw)) return false;
+      }
+      return true;
+    });
+  });
+
+  clearRecordFilter(): void {
+    this.recordKeyword.set('');
+    this.recordResultFilter.set('all');
+  }
+
+  /** 下拉筛选值回写（nz-select 输出 string，需收窄为联合类型） */
+  setRecordResultFilter(v: string): void {
+    if (v === 'correct' || v === 'wrong' || v === 'pending') {
+      this.recordResultFilter.set(v);
+    } else {
+      this.recordResultFilter.set('all');
+    }
+  }
+
+  /** 提交记录点击习题标题：跳到习题 Tab 并打开该题作答/查看 */
+  jumpToExercise(record: StudentExerciseRecordDto): void {
+    if (!record.exerciseId) return;
+    const target = this.currentExercises().find(e => e.id === record.exerciseId);
+    if (!target) {
+      this.message.warning('该习题不在当前章节');
+      return;
+    }
+    this.setTab('exercises');
+    this.selectExercise(target);
+  }
+
+  // === 表格辅助 ===
+  /** 已作答判断：提交记录中存在该习题即视为已作答 */
+  isExerciseAnswered(exerciseId?: string | null): boolean {
+    if (!exerciseId) return false;
+    return this.chapterRecords().some(r => r.exerciseId === exerciseId);
+  }
+
+  /** 纯文本资源行内正文的展开状态（无关联文件时行内展示正文） */
+  private readonly expandedTextKeys = signal<Set<string>>(new Set());
+  textRowKey(r: KnowledgeResourceDto, index: number): string {
+    return r.id || `${r.name || 'row'}-${index}`;
+  }
+  isTextExpanded(key: string): boolean {
+    return this.expandedTextKeys().has(key);
+  }
+  toggleTextExpand(key: string): void {
+    const set = new Set(this.expandedTextKeys());
+    if (set.has(key)) set.delete(key);
+    else set.add(key);
+    this.expandedTextKeys.set(set);
+  }
+
+  /** 文件大小格式化 */
+  formatFileSize(bytes?: number | null): string {
+    if (!bytes || bytes <= 0) return '—';
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    if (kb < 1024) return `${kb.toFixed(kb < 10 ? 1 : 0)} KB`;
+    const mb = kb / 1024;
+    if (mb < 1024) return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
+    return `${(mb / 1024).toFixed(2)} GB`;
   }
 
   // === 习题 ===

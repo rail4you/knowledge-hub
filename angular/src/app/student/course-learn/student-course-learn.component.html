@@ -1,28 +1,41 @@
 <div class="learn-page">
-  <!-- 顶部条 -->
-  <div class="learn-top">
+  <!-- 标题区 -->
+  <header class="learn-hero">
+    @if (course(); as c) {
+      <div class="learn-hero__main">
+        @if (c.major) {
+          <p class="learn-hero__eyebrow">{{ c.major }}</p>
+        }
+        <h1 class="learn-hero__title">{{ c.title }}</h1>
+        @if (c.description) {
+          <p class="learn-hero__desc">{{ c.description }}</p>
+        }
+      </div>
+      <div class="learn-hero__stats">
+        <div class="hero-stat">
+          <strong>{{ flatChapters().length }}</strong>
+          <span>章节总数</span>
+        </div>
+        <span class="hero-sep"></span>
+        <div class="hero-stat">
+          <strong>{{ courseProgress() }}%</strong>
+          <span>习题进度</span>
+        </div>
+        <span class="hero-sep"></span>
+        <div class="hero-stat">
+          <strong>{{ masteredChapterCount() }}</strong>
+          <span>已完成章节</span>
+        </div>
+      </div>
+    }
+  </header>
+
+  <!-- 返回行：位于标题区下方 -->
+  <div class="learn-crumb">
     <button class="back-btn" (click)="goBack()">
       <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
       <span>返回课程详情</span>
     </button>
-    @if (course(); as c) {
-      <div class="learn-course-info">
-        <h1 class="learn-course-title">{{ c.title }}</h1>
-        <div class="learn-course-meta">
-          @if (c.major) {
-            <span class="meta-pill">{{ c.major }}</span>
-          }
-          <span class="meta-pill progress-pill">
-            <span nz-icon nzType="line-chart" nzTheme="outline"></span>
-            习题进度 {{ courseProgress() }}%
-          </span>
-          <span class="meta-pill mastered-pill">
-            <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-            已完成章节 {{ masteredChapterCount() }}
-          </span>
-        </div>
-      </div>
-    }
   </div>
 
   @if (loading()) {
@@ -39,15 +52,42 @@
             课程章节
             <span class="sidebar-card__count">{{ flatChapters().length }}</span>
           </h3>
+          <div class="sidebar-tools">
+            <nz-input-group [nzPrefix]="chapterSearchPrefix" class="sidebar-search">
+              <input
+                nz-input
+                placeholder="搜索章节"
+                [ngModel]="chapterKeyword()"
+                (ngModelChange)="chapterKeyword.set($event)"
+              />
+            </nz-input-group>
+            <ng-template #chapterSearchPrefix>
+              <span nz-icon nzType="search" nzTheme="outline"></span>
+            </ng-template>
+            <label
+              nz-checkbox
+              [ngModel]="onlyWithResources()"
+              (ngModelChange)="onlyWithResources.set($event)"
+              class="sidebar-filter"
+            >
+              仅看有资源/习题的章节（{{ contentChapterCount() }}）
+            </label>
+          </div>
           @if (chapters().length === 0) {
             <div class="sidebar-empty">
               <span nz-icon nzType="inbox" nzTheme="outline"></span>
               <p>暂无章节</p>
             </div>
+          } @else if (visibleChapters().length === 0) {
+            <div class="sidebar-empty">
+              <span nz-icon nzType="search" nzTheme="outline"></span>
+              <p>没有匹配的章节</p>
+              <button class="ghost-btn ghost-btn--small" (click)="clearChapterFilter()">清除筛选</button>
+            </div>
           } @else {
             <div class="chapter-tree">
               <ng-container
-                *ngTemplateOutlet="chapterNode; context: { $implicit: chapters(), depth: 0 }"
+                *ngTemplateOutlet="chapterNode; context: { $implicit: visibleChapters(), depth: 0 }"
               ></ng-container>
             </div>
           }
@@ -64,18 +104,10 @@
                 <p class="chapter-header__desc">{{ chapter.description }}</p>
               }
             </div>
-            <div class="chapter-header__right">
-              <span class="chapter-stat">
-                <span nz-icon nzType="bulb" nzTheme="outline"></span>
-                {{ currentResources().length }} 学习资源
-              </span>
-              <span class="chapter-stat">
-                <span nz-icon nzType="form" nzTheme="outline"></span>
-                {{ currentExercises().length }} 习题
-              </span>
-            </div>
           </div>
 
+          <!-- Tab 与内容共用同一张卡片底 -->
+          <section class="content-card">
           <nav class="learn-tabs">
             <button
               class="learn-tab"
@@ -120,63 +152,75 @@
                   <p class="empty-hint">老师还没有为本章配置资源，请联系老师或耐心等待更新</p>
                 </div>
               } @else {
-                <div class="resources-panel">
-                  <h4 class="resources-panel__title">
-                    <span nz-icon nzType="bulb" nzTheme="outline"></span>
-                    学习资源
-                    <span class="resources-panel__count">{{ currentResources().length }}</span>
-                  </h4>
-                  <div class="resources-list">
-                    @for (r of pagedResources(); track trackResource($index, r)) {
-                      <div class="resource-card">
-                        <div class="resource-card__head">
-                          <span class="resource-card__name">{{ r.name }}</span>
+                <nz-table
+                  #resTbl
+                  [nzData]="pagedResources()"
+                  [nzFrontPagination]="false"
+                  [nzShowPagination]="false"
+                  nzSize="middle"
+                  [nzScroll]="{ x: '760px' }"
+                >
+                  <thead>
+                    <tr>
+                      <th nzWidth="56px">序号</th>
+                      <th>资源名称</th>
+                      <th nzWidth="90px">难度</th>
+                      <th nzWidth="100px">重要程度</th>
+                      <th nzWidth="100px">大小</th>
+                      <th nzWidth="150px" nzRight>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of resTbl.data; track textRowKey(r, $index); let i = $index) {
+                      <tr>
+                        <td class="cell-index">{{ (resourcePage() - 1) * resourcePageSize() + i + 1 }}</td>
+                        <td>
+                          <span class="cell-title" [title]="r.name || '未命名资源'">{{ r.name || '未命名资源' }}</span>
+                          @if (r.description) {
+                            <span class="cell-sub">{{ r.description }}</span>
+                          }
+                          @if (r.content && !r.resourceId) {
+                            <span class="cell-text" [class.is-collapsed]="!isTextExpanded(textRowKey(r, i))">
+                              <pre>{{ r.content }}</pre>
+                            </span>
+                            <button class="link-btn" (click)="toggleTextExpand(textRowKey(r, i))">
+                              {{ isTextExpanded(textRowKey(r, i)) ? '收起' : '展开' }}
+                            </button>
+                          }
+                        </td>
+                        <td>
+                          <span class="cell-tag">{{ difficultyLabel(r.difficulty) }}</span>
+                        </td>
+                        <td>
                           <span
-                            class="resource-card__importance"
+                            class="cell-tag"
                             [style.background]="importanceColor(r.importanceLevel) + '22'"
                             [style.color]="importanceColor(r.importanceLevel)"
                           >
                             {{ importanceLabel(r.importanceLevel) }}
                           </span>
-                        </div>
-                        @if (r.description) {
-                          <p class="resource-card__desc">{{ r.description }}</p>
-                        }
-                        @if (r.content) {
-                          <div class="resource-card__content">
-                            @if (!r.resourceId) {
-                              <pre>{{ r.content }}</pre>
-                            }
-                          </div>
-                        }
-                        <div class="resource-card__meta">
-                          <span>
-                            <span nz-icon nzType="thunderbolt" nzTheme="outline"></span>
-                            {{ difficultyLabel(r.difficulty) }}
-                          </span>
+                        </td>
+                        <td class="cell-num">{{ formatFileSize(r.fileSize) }}</td>
+                        <td nzRight>
                           @if (r.resourceId) {
-                            <div class="resource-card__actions">
-                              <button
-                                class="file-action-btn file-action-btn--preview"
-                                (click)="previewResource(r)"
-                              >
+                            <div class="cell-actions">
+                              <button class="file-action-btn file-action-btn--preview" (click)="previewResource(r)">
                                 <span nz-icon nzType="eye" nzTheme="outline"></span>
                                 <span>预览</span>
                               </button>
-                              <button
-                                class="file-action-btn file-action-btn--download"
-                                (click)="downloadResource(r)"
-                              >
+                              <button class="file-action-btn file-action-btn--download" (click)="downloadResource(r)">
                                 <span nz-icon nzType="download" nzTheme="outline"></span>
                                 <span>下载</span>
                               </button>
                             </div>
+                          } @else {
+                            <span class="cell-num">—</span>
                           }
-                        </div>
-                      </div>
+                        </td>
+                      </tr>
                     }
-                  </div>
-                </div>
+                  </tbody>
+                </nz-table>
 
                 <!-- 分页 -->
                 @if (currentResources().length > resourcePageSize()) {
@@ -191,9 +235,6 @@
                     ></nz-pagination>
                   </div>
                 }
-
-                <!-- 文件预览组件 -->
-                <app-file-preview #filePreview></app-file-preview>
               }
             </div>
           }
@@ -211,27 +252,56 @@
                   <p>本章暂无习题</p>
                 </div>
               } @else {
-                <div class="exercises-grid">
-                  <aside class="exercise-list">
-                    @for (e of currentExercises(); track trackExercise($index, e); let i = $index) {
-                      <button
-                        class="exercise-item"
-                        [class.is-active]="currentExercise()?.id === e.id"
-                        [class.is-answered]="chapterRecords().length > 0 && chapterRecords()[0]?.exerciseId === e.id"
+                <nz-table
+                  #exTbl
+                  [nzData]="currentExercises()"
+                  [nzFrontPagination]="false"
+                  [nzShowPagination]="false"
+                  nzSize="middle"
+                  [nzScroll]="{ x: '680px' }"
+                >
+                  <thead>
+                    <tr>
+                      <th nzWidth="56px">序号</th>
+                      <th>题目</th>
+                      <th nzWidth="100px">类型</th>
+                      <th nzWidth="80px">分值</th>
+                      <th nzWidth="100px">状态</th>
+                      <th nzWidth="110px" nzRight>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (e of exTbl.data; track trackExercise($index, e); let i = $index) {
+                      <tr
+                        class="row-clickable"
+                        [class.is-selected]="currentExercise()?.id === e.id"
                         (click)="selectExercise(e)"
                       >
-                        <span class="exercise-item__num">{{ i + 1 }}</span>
-                        <div class="exercise-item__body">
-                          <span class="exercise-item__title">{{ e.title || '未命名题目' }}</span>
-                          <span class="exercise-item__meta">
-                            <span class="exercise-type">{{ exerciseTypeLabel(e.type) }}</span>
-                            <span>{{ e.score || 1 }} 分</span>
-                          </span>
-                        </div>
-                      </button>
+                        <td class="cell-index">{{ i + 1 }}</td>
+                        <td>
+                          <span class="cell-title" [title]="e.title || '未命名题目'">{{ e.title || '未命名题目' }}</span>
+                        </td>
+                        <td>
+                          <span class="cell-tag">{{ exerciseTypeLabel(e.type) }}</span>
+                        </td>
+                        <td class="cell-num">{{ e.score || 1 }} 分</td>
+                        <td>
+                          @if (isExerciseAnswered(e.id)) {
+                            <span class="cell-status is-done">已作答</span>
+                          } @else {
+                            <span class="cell-status">未作答</span>
+                          }
+                        </td>
+                        <td nzRight>
+                          <button class="link-btn" (click)="selectExercise(e); $event.stopPropagation()">
+                            {{ currentExercise()?.id === e.id ? '作答中' : (isExerciseAnswered(e.id) ? '查看' : '作答') }}
+                          </button>
+                        </td>
+                      </tr>
                     }
-                  </aside>
-                  <div class="exercise-detail">
+                  </tbody>
+                </nz-table>
+                <div class="exercise-detail-card">
                     @if (currentExercise(); as e) {
                       <div class="exercise-detail__head">
                         <span class="exercise-detail__type">{{ exerciseTypeLabel(e.type) }}</span>
@@ -303,7 +373,6 @@
                             [disabled]="submitting()"
                             (click)="submitAnswer()"
                           >
-                            <span nz-icon [nzType]="submitting() ? 'loading' : 'send'" nzTheme="outline"></span>
                             <span>{{ submitting() ? '提交中...' : '提交答案' }}</span>
                           </button>
                         </div>
@@ -349,21 +418,21 @@
                                   [class.is-active]="selfAssessment() === SelfAssessment.Incorrect"
                                   (click)="setSelfAssessment(SelfAssessment.Incorrect)"
                                 >
-                                  😣 未掌握
+                                  未掌握
                                 </button>
                                 <button
                                   class="assess-btn"
                                   [class.is-active]="selfAssessment() === SelfAssessment.PartiallyCorrect"
                                   (click)="setSelfAssessment(SelfAssessment.PartiallyCorrect)"
                                 >
-                                  😐 部分掌握
+                                  部分掌握
                                 </button>
                                 <button
                                   class="assess-btn"
                                   [class.is-active]="selfAssessment() === SelfAssessment.Correct"
                                   (click)="setSelfAssessment(SelfAssessment.Correct)"
                                 >
-                                  😊 已掌握
+                                  已掌握
                                 </button>
                               </div>
                             </div>
@@ -373,10 +442,9 @@
                     } @else {
                       <div class="empty-state">
                         <span nz-icon nzType="form" nzTheme="outline" class="empty-icon"></span>
-                        <p>请选择左侧题目</p>
+                        <p>请从上表选择一道题目开始作答</p>
                       </div>
                     }
-                  </div>
                 </div>
               }
             </div>
@@ -395,61 +463,97 @@
                   <p>本章暂无提交记录，去做几道题试试</p>
                 </div>
               } @else {
-                <ul class="record-list">
-                  @for (r of chapterRecords(); track trackRecord($index, r); let i = $index) {
-                    <li class="record-row">
-                      <span
-                        class="record-row__icon"
-                        [class.is-correct]="r.isCorrect === true"
-                        [class.is-wrong]="r.isCorrect === false"
-                      >
-                        <span nz-icon [nzType]="r.isCorrect === true ? 'check' : (r.isCorrect === false ? 'close' : 'question')" nzTheme="outline"></span>
-                      </span>
-                      <div class="record-row__body">
-                        <span class="record-row__title">{{ r.exerciseTitle || '习题' }}</span>
-                        <span class="record-row__meta">
-                          @if (r.completedAt) {
-                            <span>
-                              <span nz-icon nzType="clock-circle" nzTheme="outline"></span>
-                              {{ r.completedAt | date:'yyyy-MM-dd HH:mm' }}
-                            </span>
+                <div class="table-toolbar">
+                  <nz-input-group [nzPrefix]="recSearchPrefix" class="toolbar-search">
+                    <input
+                      nz-input
+                      placeholder="搜索习题 / 答案"
+                      [ngModel]="recordKeyword()"
+                      (ngModelChange)="recordKeyword.set($event)"
+                    />
+                  </nz-input-group>
+                  <ng-template #recSearchPrefix>
+                    <span nz-icon nzType="search" nzTheme="outline"></span>
+                  </ng-template>
+                  <nz-select
+                    class="toolbar-select"
+                    [ngModel]="recordResultFilter()"
+                    (ngModelChange)="setRecordResultFilter($event)"
+                  >
+                    <nz-option nzValue="all" nzLabel="全部"></nz-option>
+                    <nz-option nzValue="correct" nzLabel="答对"></nz-option>
+                    <nz-option nzValue="wrong" nzLabel="答错"></nz-option>
+                    <nz-option nzValue="pending" nzLabel="未判定"></nz-option>
+                  </nz-select>
+                </div>
+                @if (filteredRecords().length === 0) {
+                  <div class="empty-state">
+                    <span nz-icon nzType="search" nzTheme="outline" class="empty-icon"></span>
+                    <p>没有匹配的提交记录</p>
+                    <button class="ghost-btn ghost-btn--small" (click)="clearRecordFilter()">清除筛选</button>
+                  </div>
+                } @else {
+                <nz-table
+                  #recTbl
+                  [nzData]="filteredRecords()"
+                  [nzFrontPagination]="false"
+                  [nzShowPagination]="false"
+                  nzSize="middle"
+                  [nzScroll]="{ x: '760px' }"
+                >
+                  <thead>
+                    <tr>
+                      <th nzWidth="56px">序号</th>
+                      <th>习题</th>
+                      <th>我的答案</th>
+                      <th nzWidth="100px">自评</th>
+                      <th nzWidth="150px">提交时间</th>
+                      <th nzWidth="90px">结果</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r of recTbl.data; track trackRecord($index, r); let i = $index) {
+                      <tr>
+                        <td class="cell-index">{{ i + 1 }}</td>
+                        <td>
+                          <button
+                            class="cell-title-btn"
+                            [title]="(r.exerciseTitle || '习题') + '（点击查看习题）'"
+                            (click)="jumpToExercise(r)"
+                          >{{ r.exerciseTitle || '习题' }}</button>
+                        </td>
+                        <td>
+                          @if (r.studentAnswer) {
+                            <span class="cell-text">{{ displayAnswer(r.studentAnswer) }}</span>
+                          } @else {
+                            <span class="cell-num">—</span>
                           }
-                          @if (r.timeSpent) {
-                            <span>
-                              <span nz-icon nzType="hourglass" nzTheme="outline"></span>
-                              {{ r.timeSpent }}
-                            </span>
+                        </td>
+                        <td>
+                          <span class="cell-num">{{ selfAssessmentLabel(r.selfAssessment) }}</span>
+                        </td>
+                        <td class="cell-num">{{ (r.completedAt | date:'yyyy-MM-dd HH:mm') || '—' }}</td>
+                        <td>
+                          @if (r.isCorrect === true) {
+                            <span class="cell-status is-correct">答对</span>
+                          } @else if (r.isCorrect === false) {
+                            <span class="cell-status is-wrong">答错</span>
+                          } @else {
+                            <span class="cell-status">未判定</span>
                           }
-                          @if (r.hasViewedAnswer) {
-                            <span class="record-row__viewed">
-                              <span nz-icon nzType="eye" nzTheme="outline"></span>
-                              已查看答案
-                            </span>
-                          }
-                        </span>
-                        @if (r.studentAnswer) {
-                          <span class="record-row__answer">我的答案：{{ displayAnswer(r.studentAnswer) }}</span>
-                        }
-                      </div>
-                      <span
-                        class="record-row__tag"
-                        [class.is-correct]="r.isCorrect === true"
-                        [class.is-wrong]="r.isCorrect === false"
-                      >
-                        @if (r.isCorrect === true) {
-                          答对
-                        } @else if (r.isCorrect === false) {
-                          答错
-                        } @else {
-                          未判定
-                        }
-                      </span>
-                    </li>
-                  }
-                </ul>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </nz-table>
+                }
               }
             </div>
           }
+
+          <!-- 文件预览组件：放在内容卡内，只挂载一次 -->
+          <app-file-preview #filePreview></app-file-preview>
+          </section>
         } @else {
           <div class="empty-state">
             <span nz-icon nzType="folder-open" nzTheme="outline" class="empty-icon"></span>
@@ -489,11 +593,11 @@
           [nzType]="node.children && node.children.length > 0 ? 'folder' : 'file-text'"
           nzTheme="outline"></span>
         <span class="chapter-item__title">{{ node.title }}</span>
-        @if (currentChapterId() === node.id) {
-          <span class="chapter-item__pulse"></span>
+        @if ((chapterContentCountMap().get(node.id || '') || 0) > 0) {
+          <span class="chapter-item__badge">{{ chapterContentCountMap().get(node.id || '') }}</span>
         }
       </button>
-      @if (node.children && node.children.length > 0 && expandedNodes().has(node.id)) {
+      @if (node.children && node.children.length > 0 && (expandedNodes().has(node.id) || isChapterFiltering())) {
         <div class="chapter-node__children">
           <ng-container
             *ngTemplateOutlet="chapterNode; context: { $implicit: node.children, depth: depth + 1 }"
