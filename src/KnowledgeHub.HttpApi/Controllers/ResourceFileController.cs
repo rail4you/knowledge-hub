@@ -20,6 +20,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.Data;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 
@@ -132,10 +133,22 @@ public class ResourceFileController : AbpControllerBase
     {
         // 与 Preview 一致：禁用多租户过滤器加载资源，
         // 否则跨租户/宿主上下文会抛 EntityNotFoundException（500）。
+        // 注意：本 Controller 的 Action 返回 IActionResult（PhysicalFile/File），
+        // ABP 的 AbpExceptionFilter 对这类 Action 不处理异常（见 ShouldHandleException：
+        // 仅当返回 ObjectResult/DTO，或请求 Accept: application/json / Ajax 时才接管），
+        // <video>/<img> 标签的预览请求两项都不满足，未捕获的 EntityNotFoundException
+        // 会直接以原始 500 暴露出去，因此这里必须显式 catch 转为 404。
         Resource resource;
-        using (DataFilter.Disable<IMultiTenant>())
+        try
         {
-            resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
+            }
+        }
+        catch (EntityNotFoundException)
+        {
+            return NotFound(new { message = "资源文件不存在" });
         }
 
         // 仅允许下载审核通过的资源，或资源创建者本人（上传者随时可下载自己的待审核文件）。
@@ -206,9 +219,16 @@ public class ResourceFileController : AbpControllerBase
     public virtual async Task<IActionResult> Preview(Guid resourceId, [FromQuery] bool countView = true)
     {
         Resource resource;
-        using (DataFilter.Disable<IMultiTenant>())
+        try
         {
-            resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
+            }
+        }
+        catch (EntityNotFoundException)
+        {
+            return NotFound(new { message = "资源文件不存在" });
         }
 
         // 审核通过的资源公开预览；待审核资源允许任意登录用户预览（教师/管理员可在审核前查看内容）。
@@ -252,8 +272,18 @@ public class ResourceFileController : AbpControllerBase
             return NotFound(new { message = "资源文件不存在，可能已被删除或路径变更" });
         }
 
-        // PhysicalFile supports EnableRangeProcessing for chunked download
-        return PhysicalFile(fullPath, contentType, enableRangeProcessing: true);
+        try
+        {
+            // PhysicalFile supports EnableRangeProcessing for chunked download
+            return PhysicalFile(fullPath, contentType, enableRangeProcessing: true);
+        }
+        catch (Exception ex)
+        {
+            // Exists 检查与实际打开之间的 TOCTOU 竞争（文件被删/权限变更/磁盘 IO 错误）
+            // 同样会抛异常，这里转为 JSON 500，避免原始 500 暴露堆栈。
+            Logger.LogError(ex, "[Preview] Failed to serve file: {FullPath} for resource {ResourceId}", fullPath, resourceId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "文件读取失败，请稍后重试" });
+        }
     }
 
     /// <summary>
@@ -875,9 +905,19 @@ public class ResourceFileController : AbpControllerBase
     private async Task<string?> GetResourceFullPathAsync(Guid resourceId)
     {
         Resource resource;
-        using (DataFilter.Disable<IMultiTenant>())
+        try
         {
-            resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                resource = await ResourceRepository.GetWithDetailsAsync(resourceId);
+            }
+        }
+        catch (EntityNotFoundException)
+        {
+            // 调用方（PreviewPdf / GetSlideCount / GetSlide / GetMedia）据此返回 404。
+            // 必须在这里 catch：本 Controller 的 IActionResult Action 抛出的异常
+            // 不会被 AbpExceptionFilter 接管（见 Download 处的注释），否则直接 500。
+            return null;
         }
 
         // 与 Preview 方法保持一致的权限检查：
