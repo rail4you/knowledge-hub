@@ -52,6 +52,11 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
         // 在租户内创建联盟管理员用户。
         EnsureNoLeagueAdminForTenantUser(input.TenantId, input.RoleNames);
 
+        if (string.IsNullOrWhiteSpace(input.Name))
+        {
+            throw new UserFriendlyException("名称不能为空");
+        }
+
         using (_currentTenant.Change(input.TenantId))
         {
             var user = new Volo.Abp.Identity.IdentityUser(
@@ -61,7 +66,7 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
                 tenantId: input.TenantId
             );
 
-            user.Name = input.Name ?? string.Empty;
+            user.Name = input.Name.Trim();
             user.Surname = input.Surname ?? "-";
             user.SetIsActive(input.IsActive);
 
@@ -185,13 +190,18 @@ public class TenantUserAppService : KnowledgeHubAppService, ITenantUserAppServic
             // 租户用户不允许持有全局 LeagueAdmin 角色。
             EnsureNoLeagueAdminForTenantUser(user.TenantId, input.RoleNames);
 
+            if (string.IsNullOrWhiteSpace(input.Name))
+            {
+                throw new UserFriendlyException("名称不能为空");
+            }
+
             using (_currentTenant.Change(user.TenantId))
             {
                 (await _userManager.SetUserNameAsync(user, input.UserName))
                     .CheckErrors();
                 (await _userManager.SetEmailAsync(user, input.Email))
                     .CheckErrors();
-                user.Name = input.Name;
+                user.Name = input.Name.Trim();
                 user.Surname = input.Surname;
                 user.SetIsActive(input.IsActive);
                 user.SetPhoneNumber(input.PhoneNumber, input.PhoneNumberConfirmed);

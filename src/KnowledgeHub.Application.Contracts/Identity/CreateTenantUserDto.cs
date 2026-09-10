@@ -17,6 +17,7 @@ public class CreateTenantUserDto
     [Required]
     public string Password { get; set; }
 
+    [Required]
     public string Name { get; set; }
 
     public string Surname { get; set; } = string.Empty;

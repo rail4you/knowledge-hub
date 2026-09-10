@@ -273,7 +273,7 @@ export class IdentityUsersComponent implements OnInit {
       userName: [this.selectedUser.userName || '', Validators.required],
       email: [this.selectedUser.email || '', [Validators.required, Validators.email]],
       password: [''],
-      name: [this.selectedUser.name || ''],
+      name: [this.selectedUser.name || '', Validators.required],
       phoneNumber: [this.selectedUser.phoneNumber || ''],
       isActive: [this.selectedUser.isActive ?? true],
       tenantId: [tenantIdForForm],
@@ -366,6 +366,8 @@ export class IdentityUsersComponent implements OnInit {
 
   save() {
     if (!this.form || this.form.invalid) {
+      this.form?.markAllAsTouched();
+      Object.values(this.form?.controls ?? {}).forEach(c => c.updateValueAndValidity());
       return;
     }
 

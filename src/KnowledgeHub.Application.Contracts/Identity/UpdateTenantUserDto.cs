@@ -15,6 +15,7 @@ public class UpdateTenantUserDto
     [EmailAddress]
     public string Email { get; set; }
 
+    [Required]
     public string Name { get; set; }
 
     public string Surname { get; set; }

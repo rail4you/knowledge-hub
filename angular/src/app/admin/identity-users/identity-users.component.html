@@ -148,8 +148,8 @@
       <div nz-row [nzGutter]="16">
         <div nz-col [nzSpan]="8">
           <nz-form-item>
-            <nz-form-label>{{ '::Name' | abpLocalization }}</nz-form-label>
-            <nz-form-control>
+            <nz-form-label nzRequired>{{ '::Name' | abpLocalization }}</nz-form-label>
+            <nz-form-control nzErrorTip="{{ '::ThisFieldIsRequired.' | abpLocalization }}">
               <input nz-input formControlName="name" />
             </nz-form-control>
           </nz-form-item>
