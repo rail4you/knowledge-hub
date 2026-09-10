@@ -555,6 +555,10 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   flex-shrink: 0;
 }
 .course-card__cover-img {
+  // 真图与占位图共用此类：必须绝对定位叠放，后渲染的真图压住占位图。
+  // 之前是非定位块级元素，两张图纵向堆叠，第二张被 cover 容器的
+  // aspect-ratio + overflow:hidden 裁掉，导致有封面的课程也只显示占位图。
+  position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
   display: block;
