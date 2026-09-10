@@ -152,10 +152,15 @@
           <div class="section__head-left">
             <h2>精品课程</h2>
           </div>
-          <a routerLink="/student/courses" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
+          @if (globalFeaturedCourses().length > featuredPageSize) {
+            <button type="button" class="link-arrow link-arrow--btn" (click)="toggleFeaturedExpanded()">
+              {{ featuredExpanded() ? '收起' : '展开更多' }}
+              <span nz-icon [nzType]="featuredExpanded() ? 'up' : 'down'" nzTheme="outline"></span>
+            </button>
+          }
         </div>
         <div class="course-grid">
-          @for (c of globalFeaturedCourses(); track c.id; let i = $index) {
+          @for (c of visibleFeaturedCourses(); track c.id; let i = $index) {
             <a class="course-card" [routerLink]="['/student/courses', c.id]" [queryParams]="{ from: 'home' }">
               <div class="course-card__cover">
                 <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
@@ -209,6 +214,17 @@
             </a>
           }
         </div>
+        @if (featuredExpanded() && globalFeaturedCourses().length > featuredPageSize) {
+          <div class="pagination-wrapper">
+            <nz-pagination
+              [nzPageIndex]="featuredPage()"
+              [nzPageSize]="featuredPageSize"
+              [nzTotal]="globalFeaturedCourses().length"
+              (nzPageIndexChange)="onFeaturedPageChange($event)"
+              nzAlign="center"
+            ></nz-pagination>
+          </div>
+        }
       </div>
     </section>
   }
@@ -221,10 +237,15 @@
           <div class="section__head-left">
             <h2>微专业</h2>
           </div>
-          <a routerLink="/student/micro-majors" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
+          @if (globalMicroMajors().length > microPageSize) {
+            <button type="button" class="link-arrow link-arrow--btn" (click)="toggleMicroExpanded()">
+              {{ microExpanded() ? '收起' : '展开更多' }}
+              <span nz-icon [nzType]="microExpanded() ? 'up' : 'down'" nzTheme="outline"></span>
+            </button>
+          }
         </div>
         <div class="mm-grid">
-          @for (m of globalMicroMajors(); track m.id; let i = $index) {
+          @for (m of visibleMicroMajors(); track m.id; let i = $index) {
             <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home' }">
               <div class="mm-card__cover">
                 @if (m.coverImageUrl) {
@@ -257,6 +278,17 @@
             </a>
           }
         </div>
+        @if (microExpanded() && globalMicroMajors().length > microPageSize) {
+          <div class="pagination-wrapper">
+            <nz-pagination
+              [nzPageIndex]="microPage()"
+              [nzPageSize]="microPageSize"
+              [nzTotal]="globalMicroMajors().length"
+              (nzPageIndexChange)="onMicroPageChange($event)"
+              nzAlign="center"
+            ></nz-pagination>
+          </div>
+        }
       </div>
     </section>
   }
@@ -269,7 +301,6 @@
           <div class="rank-panel">
             <div class="rank-panel__head">
               <h3><span nz-icon nzType="file-text" nzTheme="outline"></span>最新资源</h3>
-              <a routerLink="/student/resources" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
             </div>
             <div class="rank-list">
               @for (m of latestResourcesTop5(); track m.id; let i = $index) {
@@ -298,7 +329,6 @@
           <div class="rank-panel">
             <div class="rank-panel__head">
               <h3><span nz-icon nzType="rise" nzTheme="outline"></span>资源排行</h3>
-              <a routerLink="/student/resources" class="link-arrow">更多 <span nz-icon nzType="right" nzTheme="outline"></span></a>
             </div>
             <div class="rank-list">
               @for (m of topResourcesTop5(); track m.id; let i = $index) {
@@ -465,6 +495,17 @@
             <div class="browse-empty">暂无课程数据</div>
           }
         </div>
+        @if (browseCourseTotal() > browsePageSize) {
+          <div class="pagination-wrapper">
+            <nz-pagination
+              [nzPageIndex]="browseCoursePage()"
+              [nzPageSize]="browsePageSize"
+              [nzTotal]="browseCourseTotal()"
+              (nzPageIndexChange)="onBrowseCoursePageChange($event)"
+              nzAlign="center"
+            ></nz-pagination>
+          </div>
+        }
       }
 
       @if (activeTab() === 'resources') {
@@ -509,6 +550,17 @@
             <div class="browse-empty">暂无资源数据</div>
           }
         </div>
+        @if (browseResourceTotal() > browsePageSize) {
+          <div class="pagination-wrapper">
+            <nz-pagination
+              [nzPageIndex]="browseResourcePage()"
+              [nzPageSize]="browsePageSize"
+              [nzTotal]="browseResourceTotal()"
+              (nzPageIndexChange)="onBrowseResourcePageChange($event)"
+              nzAlign="center"
+            ></nz-pagination>
+          </div>
+        }
       }
 
       @if (activeTab() === 'microMajors') {
@@ -543,6 +595,17 @@
             <div class="browse-empty">暂无微专业数据</div>
           }
         </div>
+        @if (browseMicroTotal() > browsePageSize) {
+          <div class="pagination-wrapper">
+            <nz-pagination
+              [nzPageIndex]="browseMicroPage()"
+              [nzPageSize]="browsePageSize"
+              [nzTotal]="browseMicroTotal()"
+              (nzPageIndexChange)="onBrowseMicroPageChange($event)"
+              nzAlign="center"
+            ></nz-pagination>
+          </div>
+        }
       }
     </div>
   </section>

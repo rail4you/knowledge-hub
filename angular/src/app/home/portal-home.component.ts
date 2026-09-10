@@ -3,6 +3,7 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterModule, ActivatedRoute } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
@@ -45,7 +46,7 @@ interface GlobalNewsItem extends NewsBriefDto {
 @Component({
   selector: 'app-portal-home',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, FormsModule, RouterModule, NzIconModule, NzSelectModule, NzInputModule, FilePreviewComponent, SiteBrandComponent, SiteFooterComponent],
+  imports: [CommonModule, DecimalPipe, FormsModule, RouterModule, NzIconModule, NzPaginationModule, NzSelectModule, NzInputModule, FilePreviewComponent, SiteBrandComponent, SiteFooterComponent],
   templateUrl: './portal-home.component.html',
   styleUrls: ['./portal-home.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -76,11 +77,57 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   /** 加载态 */
   readonly loadingHome = signal(false);
 
+  // ── 精品课程：默认只显示两行，展开后分页浏览全部 ──
+  /** 桌面端每行约 5 张卡（minmax 300px），两行 = 10 项；移动端自动换行，仍按 10 项分页 */
+  readonly featuredPageSize = 10;
+  readonly featuredExpanded = signal(false);
+  readonly featuredPage = signal(1);
+  readonly visibleFeaturedCourses = (): GlobalCourseItem[] => {
+    const all = this.globalFeaturedCourses() || [];
+    if (!this.featuredExpanded()) return all.slice(0, this.featuredPageSize);
+    const start = (this.featuredPage() - 1) * this.featuredPageSize;
+    return all.slice(start, start + this.featuredPageSize);
+  };
+  toggleFeaturedExpanded(): void {
+    this.featuredExpanded.update(v => !v);
+    this.featuredPage.set(1);
+  }
+  onFeaturedPageChange(page: number): void {
+    this.featuredPage.set(page);
+  }
+
+  // ── 微专业：默认只显示两行，展开后分页浏览全部 ──
+  readonly microPageSize = 10;
+  readonly microExpanded = signal(false);
+  readonly microPage = signal(1);
+  readonly visibleMicroMajors = (): GlobalMicroMajorItem[] => {
+    const all = this.globalMicroMajors() || [];
+    if (!this.microExpanded()) return all.slice(0, this.microPageSize);
+    const start = (this.microPage() - 1) * this.microPageSize;
+    return all.slice(start, start + this.microPageSize);
+  };
+  toggleMicroExpanded(): void {
+    this.microExpanded.update(v => !v);
+    this.microPage.set(1);
+  }
+  onMicroPageChange(page: number): void {
+    this.microPage.set(page);
+  }
+
   // Browse filters
   readonly activeTab = signal<'courses' | 'resources' | 'microMajors'>('courses');
   readonly filterTenantId = signal<string | null>(null);
   readonly filterMajorId = signal<string | null>(null);
   readonly filterSearch = signal('');
+
+  // ── 全部资源：课程 / 资源 / 微专业各 tab 独立分页 ──
+  readonly browsePageSize = 12;
+  readonly browseCoursePage = signal(1);
+  readonly browseResourcePage = signal(1);
+  readonly browseMicroPage = signal(1);
+  readonly browseCourseTotal = () => this.browseData()?.totalCourseCount ?? 0;
+  readonly browseResourceTotal = () => this.browseData()?.totalResourceCount ?? 0;
+  readonly browseMicroTotal = () => this.browseData()?.totalMicroMajorCount ?? 0;
 
   readonly heroIndex = signal(0);
   private heroTimer: ReturnType<typeof setInterval> | null = null;
@@ -260,8 +307,9 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
         return tb - ta;
       });
 
-      this.globalFeaturedCourses.set(courses.slice(0, 12));
-      this.globalMicroMajors.set(microMajors.slice(0, 8));
+      // 精品课程 / 微专业：保留全量，前端按“默认两行 + 展开分页”展示
+      this.globalFeaturedCourses.set(courses);
+      this.globalMicroMajors.set(microMajors);
       this.globalLatestMaterials.set(materials.slice(0, 8));
       this.globalLatestNews.set(news.slice(0, 5));
       this.loadingHome.set(false);
@@ -269,12 +317,18 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   }
 
   loadBrowseData(): void {
+    const page = this.activeTab() === 'courses'
+      ? this.browseCoursePage()
+      : this.activeTab() === 'resources'
+        ? this.browseResourcePage()
+        : this.browseMicroPage();
+    const skipCount = (page - 1) * this.browsePageSize;
     this.portal.getPublicBrowse(
       this.filterTenantId() || undefined,
       this.filterMajorId() || undefined,
       this.filterSearch() || undefined,
-      0,
-      50,
+      skipCount,
+      this.browsePageSize,
     ).subscribe(d => this.browseData.set(d));
   }
 
@@ -284,6 +338,25 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   }
 
   onFilterChange(): void {
+    // 筛选变化时各 tab 页码归 1，避免 skip 越界导致空白页
+    this.browseCoursePage.set(1);
+    this.browseResourcePage.set(1);
+    this.browseMicroPage.set(1);
+    this.loadBrowseData();
+  }
+
+  onBrowseCoursePageChange(page: number): void {
+    this.browseCoursePage.set(page);
+    this.loadBrowseData();
+  }
+
+  onBrowseResourcePageChange(page: number): void {
+    this.browseResourcePage.set(page);
+    this.loadBrowseData();
+  }
+
+  onBrowseMicroPageChange(page: number): void {
+    this.browseMicroPage.set(page);
     this.loadBrowseData();
   }
 

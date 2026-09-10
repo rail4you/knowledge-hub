@@ -452,6 +452,18 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   transition: gap .2s;
   &:hover { gap: 8px; }
 }
+.link-arrow--btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 4px;
+}
 
 // ============================================================
 //  DUAL-SECTION  双栏容器（最新资源 + 资源排行）
