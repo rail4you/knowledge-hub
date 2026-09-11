@@ -73,4 +73,13 @@ export class ResourceFileService {
       url: `/api/resource-file/${resourceId}/preview-pdf-page/${pageNumber}`,
     },
     { apiName: this.apiName,...config });
+  
+
+  thumbnailByResourceIdAndW = (resourceId: string, w: number = 400, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, IActionResult>({
+      method: 'GET',
+      url: `/api/resource-file/${resourceId}/thumbnail`,
+      params: { w },
+    },
+    { apiName: this.apiName,...config });
 }

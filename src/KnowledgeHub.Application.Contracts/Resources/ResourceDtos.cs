@@ -28,9 +28,12 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     public int CollectionCount { get; set; }
     public int DownloadCount { get; set; }
     public int ViewCount { get; set; }
+
+    /// <summary>媒体处理状态（缩略图/预览生成），前端可据此展示"处理中"。</summary>
+    public ResourceMediaStatus MediaStatus { get; set; }
+
     public Guid? OrganizationId { get; set; }
-    public string? OrganizationName { get; set; }
-    // CreatorId 复用基类 FullAuditedEntityDto<Guid>.CreatorId（Guid?）。
+    public string? OrganizationName { get; set; }    // CreatorId 复用基类 FullAuditedEntityDto<Guid>.CreatorId（Guid?）。
     // 此前这里曾用 `public Guid CreatorId` 隐藏基类（CS0108），导致 Mapperly 在
     // Guid? -> Guid 映射时处理脆弱、历史数据的 NULL 变成 Guid.Empty，
     // FillCreatorNamesAsync 按 Guid.Empty 过滤后直接返回，列表创建人全空。

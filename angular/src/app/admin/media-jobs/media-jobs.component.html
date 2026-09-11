@@ -1,0 +1,94 @@
+<div class="media-jobs-page">
+  <div class="media-jobs-toolbar">
+    <div>
+      <h2 class="media-jobs-title">媒体处理任务</h2>
+      <p class="media-jobs-sub">资源上传后自动生成缩略图 / 预览材料，可在此查看进度、重试失败任务。</p>
+    </div>
+    <div class="media-jobs-actions">
+      <nz-select
+        [(ngModel)]="statusFilter"
+        (ngModelChange)="onStatusChange()"
+        nzPlaceHolder="全部状态"
+        nzAllowClear
+        style="width: 160px"
+      >
+        @for (o of statusOptions; track o.label) {
+          <nz-option [nzValue]="o.value" [nzLabel]="o.label"></nz-option>
+        }
+      </nz-select>
+      <button nz-button nzType="default" (click)="load()" [nzLoading]="loading()">
+        <span nz-icon nzType="reload"></span>
+        刷新
+      </button>
+      <button nz-button nzType="primary" nzDanger (click)="retryAllFailed()" [disabled]="!hasFailed()">
+        重试全部失败
+      </button>
+    </div>
+  </div>
+
+  <nz-table
+    [nzData]="jobs()"
+    [nzLoading]="loading()"
+    [nzTotal]="totalCount()"
+    [nzPageIndex]="pageIndex"
+    [nzPageSize]="pageSize"
+    [nzShowSizeChanger]="false"
+    (nzPageIndexChange)="onPageChange($event)"
+    nzSize="middle"
+  >
+    <thead>
+      <tr>
+        <th>资源</th>
+        <th nzWidth="110px">状态</th>
+        <th nzWidth="190px">进度</th>
+        <th>生成物 / 错误</th>
+        <th nzWidth="190px">时间</th>
+        <th nzWidth="150px">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (job of jobs(); track job.id) {
+        <tr>
+          <td>
+            <div class="job-name">{{ job.resourceName || job.resourceId }}</div>
+            <div class="job-id">{{ job.resourceId }}</div>
+          </td>
+          <td>
+            <nz-tag [nzColor]="statusColor(job.status)">{{ statusLabel(job.status) }}</nz-tag>
+          </td>
+          <td>
+            <nz-progress [nzPercent]="job.progress" nzSize="small"></nz-progress>
+            <span class="progress-msg">{{ job.progressMessage }}</span>
+          </td>
+          <td>
+            <div class="artifacts">
+              @for (a of job.artifacts; track a.kind + a.variant) {
+                <span class="artifact" [class.artifact--failed]="a.state === 40">
+                  {{ a.kind === 0 ? '缩略图' : '预览PDF' }}{{ a.variant ? '·' + a.variant : '' }}
+                </span>
+              } @empty {
+                <span class="muted">—</span>
+              }
+            </div>
+            @if (job.errorMessage) {
+              <div class="err">{{ job.errorMessage }}</div>
+            }
+          </td>
+          <td>
+            <div>{{ job.creationTime | date:'MM-dd HH:mm:ss' }}</div>
+            @if (job.completedAt) {
+              <div class="muted">完成 {{ job.completedAt | date:'MM-dd HH:mm:ss' }}</div>
+            }
+            @if (job.startedAt && !job.completedAt) {
+              <div class="muted">开始 {{ job.startedAt | date:'MM-dd HH:mm:ss' }}</div>
+            }
+          </td>
+          <td>
+            <button nz-button nzSize="small" (click)="retry(job)">重试</button>
+            <button nz-button nzSize="small" nzDanger (click)="cancel(job)" [disabled]="!isRunning(job)">取消</button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
+</div>

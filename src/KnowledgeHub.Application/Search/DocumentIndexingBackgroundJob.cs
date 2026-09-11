@@ -9,7 +9,9 @@ using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
+using KnowledgeHub.Resources.Media;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Data;
@@ -32,6 +34,8 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
     private readonly IBackgroundJobManager _backgroundJobManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
+    private readonly ResourceMediaJobManager _mediaJobManager;
+    private readonly IOptions<ResourceMediaOptions> _mediaOptions;
     private readonly ILogger<DocumentIndexingBackgroundJob> _logger;
 
     public DocumentIndexingBackgroundJob(
@@ -45,6 +49,8 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         IBackgroundJobManager backgroundJobManager,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
+        ResourceMediaJobManager mediaJobManager,
+        IOptions<ResourceMediaOptions> mediaOptions,
         ILogger<DocumentIndexingBackgroundJob> logger)
     {
         _jobRepository = jobRepository;
@@ -57,6 +63,8 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _backgroundJobManager = backgroundJobManager;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
+        _mediaJobManager = mediaJobManager;
+        _mediaOptions = mediaOptions;
         _logger = logger;
         _logger.LogInformation("DocumentIndexingBackgroundJob CONSTRUCTOR called");
     }
@@ -190,6 +198,19 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
 
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Completed, progress: 100);
         _logger.LogInformation("Indexing completed for resource {ResourceId}", args.ResourceId);
+
+        // 索引完成后启动媒体处理（仅当配置为串行时；默认并行已在入队索引时一并入队）
+        if (_mediaOptions.Value.StartAfterIndexing)
+        {
+            try
+            {
+                await _mediaJobManager.EnqueueAsync(resource.Id, args.ResourceVersionId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to enqueue media job after indexing for resource {ResourceId}", args.ResourceId);
+            }
+        }
     }
 
     private async Task DeleteExistingPagesAsync(Guid resourceId)

@@ -164,6 +164,14 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'admin/media-jobs',
+    loadComponent: () => import('./admin/media-jobs/media-jobs.component').then(c => c.MediaJobsComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Resources',
+    },
+  },
+  {
     path: 'admin/meilisearch',
     loadComponent: () => import('./admin/meilisearch/meilisearch-dashboard.component').then(c => c.MeiliSearchDashboardComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],

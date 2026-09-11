@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,6 +11,7 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { ResourceService } from '../../proxy/resources/resource.service';
 import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
+import { ResourceMediaStatus } from '../../proxy/resources/enums/resource-media-status.enum';
 import type { ResourceDto, ResourceCategoryDto } from '../../proxy/resources/models';
 import { PortalService } from '../../proxy/portal/portal.service';
 import { MajorService } from '../../proxy/majors/major.service';
@@ -52,7 +53,7 @@ interface StatItem {
   styleUrls: ['./student-resources.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class StudentResourcesComponent implements OnInit {
+export class StudentResourcesComponent implements OnInit, OnDestroy {
   private readonly resourceService = inject(ResourceService);
   private readonly portalService = inject(PortalService);
   private readonly majorService = inject(MajorService);
@@ -65,6 +66,10 @@ export class StudentResourcesComponent implements OnInit {
   private readonly collectionService = inject(StudentResourceCollectionService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
+
+  /** 媒体生成中的轮询（有限次数），处理完成后自动刷新封面 */
+  private mediaPollTimer?: ReturnType<typeof setTimeout>;
+  private mediaPollCount = 0;
 
   resources = signal<ResourceDto[]>([]);
   loading = signal(false);
@@ -144,8 +149,10 @@ export class StudentResourcesComponent implements OnInit {
     this.loadFavoritesCount();
   }
 
-  loadResources() {
+  loadResources(force = false) {
     this.loading.set(true);
+    // 轮询刷新时带时间戳绕过浏览器 60s 缓存，及时拿到媒体处理状态
+    const bust = force ? { _t: Date.now() } : {};
 
     if (this.showFavorites()) {
       this.collectionService.getCollectedList({
@@ -162,6 +169,7 @@ export class StudentResourcesComponent implements OnInit {
           const map: Record<string, boolean> = {};
           items.forEach(r => { if (r.id) map[r.id] = true; });
           this.collectedResourceIds.set(map);
+          this.scheduleMediaPoll(items);
         },
         error: () => {
           this.loading.set(false);
@@ -179,6 +187,7 @@ export class StudentResourcesComponent implements OnInit {
       majorId: this.selectedMajorId() || undefined,
       skipCount: (this.pageIndex() - 1) * this.pageSize(),
       maxResultCount: this.pageSize(),
+      ...bust,
     };
 
     this.resourceService.getFilteredList(input).subscribe({
@@ -188,6 +197,7 @@ export class StudentResourcesComponent implements OnInit {
         this.loading.set(false);
         this.loadRatingSummaries(result.items || []);
         this.loadCollectionStatus(result.items || []);
+        this.scheduleMediaPoll(result.items || []);
       },
       error: (err) => {
         this.loading.set(false);
@@ -199,6 +209,34 @@ export class StudentResourcesComponent implements OnInit {
         }
       }
     });
+  }
+
+  /** 列表中有资源正在生成媒体时，每 5s 轮询刷新（最多 24 次，约 2 分钟） */
+  private scheduleMediaPoll(items: ResourceDto[]): void {
+    if (this.mediaPollTimer) {
+      clearTimeout(this.mediaPollTimer);
+      this.mediaPollTimer = undefined;
+    }
+
+    const anyProcessing = items.some(r => r.mediaStatus === ResourceMediaStatus.Processing);
+    if (!anyProcessing) {
+      this.mediaPollCount = 0;
+      return;
+    }
+
+    if (this.mediaPollCount >= 24) {
+      return;
+    }
+
+    this.mediaPollCount++;
+    this.mediaPollTimer = setTimeout(() => this.loadResources(true), 5000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.mediaPollTimer) {
+      clearTimeout(this.mediaPollTimer);
+      this.mediaPollTimer = undefined;
+    }
   }
 
   loadCategories() {

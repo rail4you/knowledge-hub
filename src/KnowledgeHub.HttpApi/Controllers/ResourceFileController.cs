@@ -13,6 +13,7 @@ using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Conversion;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.FileStorage;
+using KnowledgeHub.Resources.Media;
 using KnowledgeHub.Resources.Thumbnails;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -68,6 +69,8 @@ public class ResourceFileController : AbpControllerBase
     protected IConversionTaskQueue ConversionTaskQueue { get; }
     protected IOptions<OfficeConversionOptions> ConversionOptions { get; }
     protected IResourceThumbnailService ThumbnailService { get; }
+    protected IRepository<ResourceMediaJob, Guid> MediaJobRepository { get; }
+    protected IRepository<ResourceArtifact, Guid> ArtifactRepository { get; }
 
     public ResourceFileController(
         IResourceRepository resourceRepository,
@@ -77,7 +80,9 @@ public class ResourceFileController : AbpControllerBase
         IOfficeConversionService officeConversionService,
         IConversionTaskQueue conversionTaskQueue,
         IOptions<OfficeConversionOptions> conversionOptions,
-        IResourceThumbnailService thumbnailService)
+        IResourceThumbnailService thumbnailService,
+        IRepository<ResourceMediaJob, Guid> mediaJobRepository,
+        IRepository<ResourceArtifact, Guid> artifactRepository)
     {
         ResourceRepository = resourceRepository;
         Repository = repository;
@@ -87,6 +92,8 @@ public class ResourceFileController : AbpControllerBase
         ConversionTaskQueue = conversionTaskQueue;
         ConversionOptions = conversionOptions;
         ThumbnailService = thumbnailService;
+        MediaJobRepository = mediaJobRepository;
+        ArtifactRepository = artifactRepository;
     }
 
     /// <summary>
@@ -303,6 +310,19 @@ public class ResourceFileController : AbpControllerBase
     [AllowAnonymous]
     public virtual async Task<IActionResult> Thumbnail(Guid resourceId, [FromQuery] int w = 400)
     {
+        // 1) 优先使用媒体处理流水线登记的当前版本生成物（跨租户历史数据也能命中）
+        var artifact = await FindReadyThumbnailAsync(resourceId, w);
+        if (artifact != null)
+        {
+            var artifactPath = Path.Combine(FileStorageService.RootPath, artifact.FilePath);
+            if (System.IO.File.Exists(artifactPath))
+            {
+                Response.Headers.CacheControl = "private, max-age=86400";
+                return PhysicalFile(artifactPath, artifact.ContentType ?? "image/jpeg");
+            }
+        }
+
+        // 2) 兜底：历史数据按需生成（不登记录入 artifact）
         var fullPath = await GetResourceFullPathAsync(resourceId);
         if (fullPath == null)
             return NotFound(new { message = "资源文件不存在" });
@@ -314,6 +334,20 @@ public class ResourceFileController : AbpControllerBase
 
         Response.Headers.CacheControl = "private, max-age=86400";
         return PhysicalFile(thumbPath, "image/jpeg");
+    }
+
+    private async Task<ResourceArtifact?> FindReadyThumbnailAsync(Guid resourceId, int width)
+    {
+        var variant = $"w{width}";
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var list = await ArtifactRepository.GetListAsync(x =>
+                x.ResourceId == resourceId &&
+                x.Kind == ResourceArtifactKind.Thumbnail &&
+                x.Variant == variant &&
+                x.State == ResourceArtifactState.Ready);
+            return list.OrderByDescending(x => x.GeneratedAt).FirstOrDefault();
+        }
     }
 
     /// <summary>
@@ -395,9 +429,10 @@ public class ResourceFileController : AbpControllerBase
     }
 
     /// <summary>
-    /// 查询 PDF 预览的就绪状态。
+    /// 查询 PDF 预览的就绪状态（只读）。
     /// 完整 PDF 缓存存在且 meta 有效时 ready=true（前端随后加载 /preview-pdf 整份 PDF）。
-    /// 尚未转换时触发一次后台转换（内部有缓存 + 同资源并发去重），前端轮询直到 ready=true。
+    /// 转换由统一媒体处理流水线（ResourceMediaJob）在上传后完成，本端点不再触发处理；
+    /// 仅对「尚无任何媒体任务」的历史数据保留一次兜底入队，避免旧资源无法预览。
     /// </summary>
     [HttpGet("{resourceId}/preview-pdf-info")]
     [AllowAnonymous]
@@ -423,13 +458,20 @@ public class ResourceFileController : AbpControllerBase
             if (OfficeConversionService.HasValidCachedPdf(rid, fullPath))
                 return Ok(new { ready = true, count = 0 });
 
-            // 尚未转换：入队 Hangfire 转换任务（队列内部按 resourceId 去重，不会重复转换），
-            // 前端轮询本端点等待就绪。ConvertToPdfAsync 内部另有 in-flight 去重兜底。
-            await ConversionTaskQueue.EnqueueAsync(rid, fullPath);
+            // 历史数据兜底：没有任何媒体处理任务时才触发一次转换（新流程上传即入队）。
+            bool hasMediaJob;
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                hasMediaJob = await MediaJobRepository.AnyAsync(x => x.ResourceId == resourceId);
+            }
+            if (!hasMediaJob)
+            {
+                await ConversionTaskQueue.EnqueueAsync(rid, fullPath);
+            }
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "[PreviewPdfInfo] 触发转换失败: {ResourceId}", resourceId);
+            Logger.LogWarning(ex, "[PreviewPdfInfo] 查询转换状态失败: {ResourceId}", resourceId);
         }
 
         return Ok(new { ready = false, count = 0 });

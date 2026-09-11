@@ -86,6 +86,10 @@ public class KnowledgeHubDbContext :
     public DbSet<PhysicalDeleteRequest> PhysicalDeleteRequests { get; set; }
     public DbSet<KnowledgeHub.Resources.ResourceShare> ResourceShares { get; set; }
 
+    // 资源媒体处理（缩略图/预览 ETL）
+    public DbSet<KnowledgeHub.Resources.Media.ResourceMediaJob> ResourceMediaJobs { get; set; }
+    public DbSet<KnowledgeHub.Resources.Media.ResourceArtifact> ResourceArtifacts { get; set; }
+
     // Search entities
     public DbSet<DocumentIndex> DocumentIndices { get; set; }
     public DbSet<SearchQuery> SearchQueries { get; set; }

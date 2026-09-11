@@ -1,4 +1,5 @@
 import * as Accounts from './accounts';
+import * as Ai from './ai';
 import * as Alliance from './alliance';
 import * as Application from './application';
 import * as Branding from './branding';
@@ -27,4 +28,4 @@ import * as TenantInfos from './tenant-infos';
 import * as Users from './users';
 import * as VoiceAssistant from './voice-assistant';
 import * as Volo from './volo';
-export { Accounts, Alliance, Application, Branding, Controllers, Courses, Domain, DoubleHigh, Employment, Exams, HttpApi, Install, KnowledgeGraph, Learning, Majors, MicroMajors, Microsoft, News, Portal, Practicums, RecruitmentLive, RecruitmentLiveService, Resources, SpecialEducation, TeachingAgents, TenantInfos, Users, VoiceAssistant, Volo };
+export { Accounts, Ai, Alliance, Application, Branding, Controllers, Courses, Domain, DoubleHigh, Employment, Exams, HttpApi, Install, KnowledgeGraph, Learning, Majors, MicroMajors, Microsoft, News, Portal, Practicums, RecruitmentLive, RecruitmentLiveService, Resources, SpecialEducation, TeachingAgents, TenantInfos, Users, VoiceAssistant, Volo };

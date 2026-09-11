@@ -61,6 +61,15 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Search',
     },
+    {
+      path: '/admin/media-jobs',
+      name: '::Menu:MediaJobs',
+      iconClass: 'fas fa-images',
+      parentName: '::Menu:ResourceManagement',
+      order: 4,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Resources',
+    },
 
     // ══════════════════════════════════════════════════════════
     //  ② AI 管理

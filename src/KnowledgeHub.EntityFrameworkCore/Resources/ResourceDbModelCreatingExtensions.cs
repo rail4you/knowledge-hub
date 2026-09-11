@@ -1,6 +1,7 @@
 using KnowledgeHub;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Resources;
+using KnowledgeHub.Resources.Media;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore.Modeling;
 
@@ -102,6 +103,35 @@ public static class ResourceDbModelCreatingExtensions
             b.HasIndex(x => x.ResourceId);
             b.HasIndex(x => x.TargetTenantId);
             b.HasIndex(x => new { x.ResourceId, x.TargetTenantId }).IsUnique();
+        });
+
+        builder.Entity<ResourceMediaJob>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceMediaJobs", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.ProgressMessage).HasMaxLength(500);
+            b.Property(x => x.ErrorMessage).HasMaxLength(2000);
+
+            b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => x.ResourceVersionId);
+            b.HasIndex(x => x.Status);
+            b.HasIndex(x => new { x.TenantId, x.Status, x.CreationTime });
+        });
+
+        builder.Entity<ResourceArtifact>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceArtifacts", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Variant).HasMaxLength(64).IsRequired();
+            b.Property(x => x.FilePath).HasMaxLength(512).IsRequired();
+            b.Property(x => x.ContentType).HasMaxLength(128);
+            b.Property(x => x.ErrorMessage).HasMaxLength(2000);
+
+            b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => x.ResourceVersionId);
+            b.HasIndex(x => new { x.ResourceId, x.ResourceVersionId, x.Kind, x.Variant }).IsUnique();
         });
     }
 }

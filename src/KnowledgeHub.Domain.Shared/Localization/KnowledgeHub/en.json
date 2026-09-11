@@ -402,6 +402,7 @@
     "Menu:DocumentSearch": "Smart Search",
     "Menu:SearchStatistics": "Search Statistics",
     "Menu:SearchHistory": "Search History",
+    "Menu:MediaJobs": "Media Processing Jobs",
     "SearchStatistics:TotalSearches": "Total Searches",
     "SearchStatistics:TodaySearches": "Today's Searches",
     "SearchStatistics:ActiveUsers": "Active Users",

@@ -33,6 +33,9 @@ public class Resource : FullAuditedAggregateRoot<Guid>, IMultiTenant
     public Guid? MajorId { get; set; }
     public Guid? TenantId { get; set; }
 
+    /// <summary>媒体处理状态（缩略图/预览生成），供列表页快速渲染。</summary>
+    public ResourceMediaStatus MediaStatus { get; set; } = ResourceMediaStatus.None;
+
     public ICollection<ResourceVersion> Versions { get; set; }
     public ICollection<ResourceAudit> Audits { get; set; }
     public ICollection<ResourceCollection> Collections { get; set; }

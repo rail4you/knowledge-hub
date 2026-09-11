@@ -1,3 +1,4 @@
 import * as Alliance from './alliance';
+import * as Resources from './resources';
 import * as Search from './search';
-export { Alliance, Search };
+export { Alliance, Resources, Search };

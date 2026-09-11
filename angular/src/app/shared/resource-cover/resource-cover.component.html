@@ -4,7 +4,7 @@
     <ng-content></ng-content>
   </div>
   <!-- 真实缩略图盖在上层；PDF 第一页渲染完成前保持隐藏，露出垫底图标 -->
-  @if (loadMedia() && !failed() && mode() !== 'icon') {
+  @if (loadMedia() && !failed() && mode() !== 'icon' && !mediaProcessing()) {
     <div class="cover-media" [class.is-hidden]="mode() === 'pdf' && !pdfReady()">
       @if (mode() === 'video') {
         @if (thumbFailed()) {
@@ -32,4 +32,13 @@
       }
     </div>
   }
+
+  <!-- 媒体生成中：展示提示，不请求缩略图 -->
+  @if (loadMedia() && mediaProcessing()) {
+    <div class="cover-processing">
+      <span class="cover-processing__spinner"></span>
+      <span class="cover-processing__text">生成中</span>
+    </div>
+  }
 </div>
+

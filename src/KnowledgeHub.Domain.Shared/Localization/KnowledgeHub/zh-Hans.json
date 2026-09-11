@@ -561,6 +561,7 @@
     "KnowledgeHub:ResourceFileNotFound": "资源文件未找到：{ResourceName}",
     "Menu:SearchStatistics": "检索统计",
     "Menu:SearchHistory": "搜索历史",
+    "Menu:MediaJobs": "媒体处理任务",
     "SearchStatistics:TotalSearches": "总检索次数",
     "SearchStatistics:TodaySearches": "今日检索",
     "SearchStatistics:ActiveUsers": "活跃用户",

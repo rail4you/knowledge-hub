@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
+import { ResourceMediaStatus } from '../../proxy/resources/enums/resource-media-status.enum';
 
 type CoverMode = 'video' | 'image' | 'pdf' | 'icon';
 
@@ -37,6 +38,11 @@ export class ResourceCoverComponent {
   /** 用于判断扩展名（originalFileName 优先） */
   readonly fileName = input('');
   readonly alt = input('');
+  /** 资源媒体处理状态（ResourceMediaStatus），Processing 时展示"生成中"提示且不请求缩略图 */
+  readonly mediaStatus = input<number>(0);
+
+  /** 是否正在生成缩略图/预览 */
+  readonly mediaProcessing = computed(() => this.mediaStatus() === ResourceMediaStatus.Processing);
 
   private readonly destroyRef = inject(DestroyRef);
   private readonly hostRef = viewChild<ElementRef<HTMLElement>>('host');

@@ -13,6 +13,7 @@ using KnowledgeHub.Resources.Enums;
 using Microsoft.Extensions.Options;
 using KnowledgeHub.Resources.FileStorage;
 using KnowledgeHub.Resources.Conversion;
+using KnowledgeHub.Resources.Media;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
@@ -61,6 +62,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IDataFilter DataFilter { get; }
     protected ITenantRepository TenantRepository { get; }
     protected ITenantInfoRepository TenantInfoRepository { get; }
+    protected ResourceMediaJobManager MediaJobManager { get; }
+    protected IOptions<ResourceMediaOptions> MediaOptions { get; }
+    protected ResourceMediaCleanupService MediaCleanup { get; }
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
         IResourceRepository resourceRepository,
@@ -86,7 +90,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IResourceShareRepository shareRepository,
         IDataFilter dataFilter,
         ITenantRepository tenantRepository,
-        ITenantInfoRepository tenantInfoRepository)
+        ITenantInfoRepository tenantInfoRepository,
+        ResourceMediaJobManager mediaJobManager,
+        IOptions<ResourceMediaOptions> mediaOptions,
+        ResourceMediaCleanupService mediaCleanup)
     {
         Repository = repository;
         ResourceRepository = resourceRepository;
@@ -113,6 +120,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         DataFilter = dataFilter;
         TenantRepository = tenantRepository;
         TenantInfoRepository = tenantInfoRepository;
+        MediaJobManager = mediaJobManager;
+        MediaOptions = mediaOptions;
+        MediaCleanup = mediaCleanup;
     }
 
     [AllowAnonymous]
@@ -600,6 +610,13 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             {
                 await EnqueueDocumentIndexingJobAsync(resource, initialVersion.Id);
             }
+
+            // 媒体处理（缩略图/预览）：默认与索引并行入队；
+            // StartAfterIndexing=true 时由索引任务完成后触发。
+            if (!MediaOptions.Value.StartAfterIndexing)
+            {
+                await MediaJobManager.EnqueueAsync(resource.Id, initialVersion.Id);
+            }
         }
 
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
@@ -772,6 +789,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     public virtual async Task DeleteAsync(Guid id)
     {
         await CleanupResourceIndexDataAsync(id);
+        // 清理媒体生成物（缩略图/预览 PDF）、媒体任务、解析页与转换缓存
+        await MediaCleanup.CleanupResourceAsync(id);
         await Repository.DeleteAsync(id);
     }
 
@@ -815,6 +834,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             foreach (var oldVersion in oldVersions)
             {
                 await CleanupVersionIndexDataAsync(oldVersion.Id);
+                // 清理旧版本的媒体生成物与媒体任务
+                await MediaCleanup.CleanupVersionAsync(oldVersion.Id);
             }
         }
 
@@ -829,6 +850,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         {
             // 非视频文件，触发文档索引任务
             await EnqueueDocumentIndexingJobAsync(resource, newVersion.Id);
+        }
+
+        // 媒体处理（缩略图/预览）：换版本后强制重新生成
+        if (!MediaOptions.Value.StartAfterIndexing)
+        {
+            await MediaJobManager.EnqueueAsync(resource.Id, newVersion.Id, force: true);
         }
 
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(newVersion);
@@ -864,6 +891,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             foreach (var currentVersion in currentVersions)
             {
                 await CleanupVersionIndexDataAsync(currentVersion.Id);
+                // 清理被回滚版本的媒体生成物与媒体任务
+                await MediaCleanup.CleanupVersionAsync(currentVersion.Id);
             }
         }
 
@@ -875,6 +904,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         {
             // 非视频文件，触发文档索引任务
             await EnqueueDocumentIndexingJobAsync(resource, version.Id);
+        }
+
+        // 媒体处理（缩略图/预览）：回滚版本后强制重新生成
+        if (!MediaOptions.Value.StartAfterIndexing)
+        {
+            await MediaJobManager.EnqueueAsync(resource.Id, version.Id, force: true);
         }
 
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(version);
@@ -1605,6 +1640,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         }
 
         await CleanupResourceIndexDataAsync(request.ResourceId);
+
+        // 清理媒体生成物（缩略图/预览 PDF）、媒体任务、解析页与转换缓存
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            await MediaCleanup.CleanupResourceAsync(request.ResourceId);
+        }
 
         // 清理关联数据（外键约束要求先删子表）
         await CleanupResourceRelatedDataAsync(request.ResourceId);

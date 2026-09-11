@@ -23,6 +23,7 @@ using KnowledgeHub.MultiTenancy;
 using KnowledgeHub.HealthChecks;
 using KnowledgeHub.Resources.FileStorage;
 using KnowledgeHub.Resources.Conversion;
+using KnowledgeHub.Resources.Media;
 using KnowledgeHub.Application.Search;
 using KnowledgeHub.Application.Search.LiteParse;
 using KnowledgeHub.Application.Contracts.Search;
@@ -213,6 +214,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.Configure<EmbeddingServiceOptions>(configuration.GetSection("EmbeddingService"));
         context.Services.Configure<LiteParseOptions>(configuration.GetSection("Liteparse"));
         context.Services.Configure<WasmMirrorOptions>(configuration.GetSection("WasmMirror"));
+        context.Services.Configure<ResourceMediaOptions>(configuration.GetSection("ResourceMedia"));
         // 上传大小限制：App:MaxFileSizeBytes（默认 500MB，env: App__MaxFileSizeBytes）
         context.Services.Configure<KnowledgeHub.Common.AppUploadOptions>(configuration.GetSection("App"));
 
@@ -250,11 +252,13 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             // worker 数：转换真正并发由 ConversionConcurrencyManager 按服务分组控制，
             // 这里给一个合理上限（如 2 * CPU）防止排队任务堆积在后台。
             options.WorkerCount = Math.Max(1, Environment.ProcessorCount * 2);
-            options.Queues = new[] { "default", "conversion", "ai" };
+            options.Queues = new[] { "default", "conversion", "ai", "media" };
         });
         context.Services.AddSingleton<IConversionTaskQueue, HangfireConversionTaskQueue>();
         // AI 生成任务队列（ai 队列，PostgreSQL 持久化）
         context.Services.AddSingleton<IAiTaskQueue, HangfireAiTaskQueue>();
+        // 资源媒体处理队列（media 队列，缩略图/预览 ETL）
+        context.Services.AddSingleton<IResourceMediaJobQueue, HangfireResourceMediaJobQueue>();
 
         context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>();
         context.Services.AddScoped<KnowledgeHub.Application.Search.MeiliSearchService>();
@@ -584,6 +588,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         });
         RegisterOfficeConversionRecurringJobs(context);
         RegisterAiTaskRecoveryRecurringJob();
+        RegisterResourceMediaRecurringJob();
 
         app.UseConfiguredEndpoints();
     }
@@ -612,6 +617,18 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             job => job.RecoverAsync(),
             Cron.MinuteInterval(5),
             new RecurringJobOptions { QueueName = "default" });
+    }
+
+    /// <summary>
+    /// 注册资源媒体处理维护 RecurringJob（每 30 分钟）：回填遗留资源 + 清理孤儿生成物。
+    /// </summary>
+    private void RegisterResourceMediaRecurringJob()
+    {
+        RecurringJob.AddOrUpdate<ResourceMediaMaintenanceJob>(
+            "resource-media-maintenance",
+            job => job.RunAsync(),
+            Cron.MinuteInterval(30),
+            new RecurringJobOptions { QueueName = "media" });
     }
 
     /// <summary>

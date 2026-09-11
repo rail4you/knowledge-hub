@@ -6,8 +6,10 @@ using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.FileStorage;
+using KnowledgeHub.Resources.Media;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.DependencyInjection;
@@ -26,6 +28,8 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly IConfiguration _configuration;
+    private readonly ResourceMediaJobManager _mediaJobManager;
+    private readonly IOptions<ResourceMediaOptions> _mediaOptions;
     private readonly ILogger<VideoIndexingBackgroundJob> _logger;
 
     private static readonly string[] VideoExtensions = { ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".m4v", ".mpg", ".mpeg", ".3gp", ".qt" };
@@ -38,6 +42,8 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         IUnitOfWorkManager unitOfWorkManager,
         ICurrentTenant currentTenant,
         IConfiguration configuration,
+        ResourceMediaJobManager mediaJobManager,
+        IOptions<ResourceMediaOptions> mediaOptions,
         ILogger<VideoIndexingBackgroundJob> logger)
     {
         _jobRepository = jobRepository;
@@ -47,6 +53,8 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         _unitOfWorkManager = unitOfWorkManager;
         _currentTenant = currentTenant;
         _configuration = configuration;
+        _mediaJobManager = mediaJobManager;
+        _mediaOptions = mediaOptions;
         _logger = logger;
     }
 
@@ -136,6 +144,19 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
 
         await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Completed, progress: 100, processedEvents: analysisResult.Events.Count);
         _logger.LogInformation("Video indexing completed for resource {ResourceId}", args.ResourceId);
+
+        // 索引完成后启动媒体处理（仅当配置为串行时；默认并行已在入队索引时一并入队）
+        if (_mediaOptions.Value.StartAfterIndexing)
+        {
+            try
+            {
+                await _mediaJobManager.EnqueueAsync(args.ResourceId, null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to enqueue media job after video indexing for resource {ResourceId}", args.ResourceId);
+            }
+        }
     }
 
     private async Task UpdateJobStatusAsync(
