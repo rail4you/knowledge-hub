@@ -15,7 +15,6 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { CourseService } from '../../proxy/courses/course.service';
 import { MajorService } from '../../proxy/majors/major.service';
 import { LearningService } from '../../proxy/learning/learning.service';
-import { CourseStatus } from '../../proxy/courses/enums/course-status.enum';
 import type { CourseDto, StudentCourseDto } from '../../proxy/courses/dtos/models';
 import type { LearningDashboardDto } from '../../proxy/learning/dtos/models';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
@@ -81,7 +80,6 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   private readonly voiceContext = inject(VoiceContextService);
 
   readonly loading = signal(false);
-  readonly enrolling = signal<string | null>(null);
 
   readonly courses = signal<CourseDto[]>([]);
   readonly myCourses = signal<StudentCourseDto[]>([]);
@@ -91,8 +89,6 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   readonly selectedMajor = signal<string | null>(null);
   readonly selectedDifficulty = signal<number | null>(null);
   readonly selectedStatus = signal<string | null>('enrolled');
-
-  readonly CourseStatus = CourseStatus;
 
   /** 视图模型：所有课程（如果选了"已选课"则仅显示我的课程） */
   readonly visibleCourses = computed<CourseDto[]>(() => {
@@ -109,10 +105,6 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   });
 
   /** 我的课程（从 my-courses 服务取得） */
-  readonly myCourseModels = computed<StudentCourseDto[]>(() => {
-    return this.myCourses();
-  });
-
   readonly stats = signal<StatItem[]>([
     { label: '已选课程', value: 0, suffix: '门', icon: 'book', color: '#0f766e' },
     { label: '学习中', value: 0, suffix: '门', icon: 'play-circle', color: '#14b8a6' },

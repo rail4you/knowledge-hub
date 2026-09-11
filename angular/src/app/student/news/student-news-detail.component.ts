@@ -245,22 +245,39 @@ export class StudentNewsDetailComponent implements OnInit {
 
   /** 某一级评论下的全部回复（含楼中楼，统一挂根下按时间正序展示） */
   repliesOf(rootId: string): NewsCommentDto[] {
+    return this.repliesByRoot().get(rootId) ?? [];
+  }
+
+  /** 评论变化时一次性归组，避免模板对每个根评论重复扫描整棵评论树（O(n²)） */
+  private readonly repliesByRoot = computed(() => {
     const map = this.commentMap();
-    const isDescendant = (c: NewsCommentDto): boolean => {
+    const grouped = new Map<string, NewsCommentDto[]>();
+    const rootOf = (c: NewsCommentDto): string | null => {
       let pid = c.parentId;
       const seen = new Set<string>([c.id]);
       while (pid) {
-        if (pid === rootId) return true;
-        if (seen.has(pid)) return false;
+        if (seen.has(pid)) return null;
         seen.add(pid);
-        pid = map.get(pid)?.parentId;
+        const parent = map.get(pid);
+        if (!parent) return null;
+        if (!parent.parentId) return parent.id;
+        pid = parent.parentId;
       }
-      return false;
+      return null;
     };
-    return this.comments()
-      .filter(c => c.id !== rootId && !!c.parentId && isDescendant(c))
-      .sort((a, b) => +new Date(a.creationTime) - +new Date(b.creationTime));
-  }
+    for (const c of this.comments()) {
+      if (!c.parentId) continue;
+      const rootId = rootOf(c);
+      if (!rootId) continue;
+      const list = grouped.get(rootId);
+      if (list) list.push(c);
+      else grouped.set(rootId, [c]);
+    }
+    for (const list of grouped.values()) {
+      list.sort((a, b) => +new Date(a.creationTime) - +new Date(b.creationTime));
+    }
+    return grouped;
+  });
 
   /** 回复直接 @ 的人名（父评论作者；父为根时模板不展示） */
   replyTargetName(reply: NewsCommentDto): string {
@@ -319,10 +336,6 @@ export class StudentNewsDetailComponent implements OnInit {
     );
   }
 
-  gradientByCategory(name: string): string {
-    return this.gradientByKey(name, name);
-  }
-
   private gradientByKey(primary: string, secondary: string): string {
     const palettes = [
       '#2b6cd4',
@@ -369,27 +382,6 @@ export class StudentNewsDetailComponent implements OnInit {
       .split(/[,，;；\s]+/)
       .map(t => t.trim())
       .filter(t => t.length > 0);
-  }
-
-  authorInitial(name?: string): string {
-    if (!name) return 'S';
-    return name.charAt(0).toUpperCase();
-  }
-
-  authorGradient(name?: string): string {
-    const palettes = [
-      '#2b6cd4',
-      '#0891b2',
-      '#059669',
-      '#10b981',
-      '#2b6cd4',
-    ];
-    const n = name || 'S';
-    let hash = 0;
-    for (let i = 0; i < n.length; i++) {
-      hash = (hash * 31 + n.charCodeAt(i)) | 0;
-    }
-    return palettes[Math.abs(hash) % palettes.length];
   }
 
   commentAuthorInitial(name?: string): string {

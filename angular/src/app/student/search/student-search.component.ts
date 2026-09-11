@@ -146,12 +146,8 @@ export class StudentSearchComponent implements OnInit {
       credentials: 'include',
       body: JSON.stringify(body),
     })
-      .then(r => {
-        console.log('[search] status:', r.status);
-        return r.json();
-      })
+      .then(r => r.json())
       .then(data => {
-        console.log('[search] data:', data, 'items:', data.items);
         this.results.set(data.items ?? []);
         this.totalCount.set(data.totalCount ?? 0);
         this.loading.set(false);

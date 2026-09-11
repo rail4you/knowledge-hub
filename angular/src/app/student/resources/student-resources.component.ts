@@ -2,12 +2,10 @@ import { ChangeDetectionStrategy, Component, OnInit, ViewChild, computed, inject
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '@abp/ng.core';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { NzRateModule } from 'ng-zorro-antd/rate';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { ResourceService } from '../../proxy/resources/resource.service';
@@ -43,11 +41,8 @@ interface StatItem {
     DecimalPipe,
     FormsModule,
     NzIconModule,
-    NzButtonModule,
-    NzInputModule,
     NzSpinModule,
     NzPaginationModule,
-    NzRateModule,
     NzDividerModule,
     FilePreviewComponent,
     StudentHeroComponent,
@@ -64,6 +59,7 @@ export class StudentResourcesComponent implements OnInit {
   private readonly reviewService = inject(ResourceReviewService);
   private readonly recommendationService = inject(RecommendationService);
   private readonly authErrorService = inject(AuthErrorService);
+  private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
   private readonly collectionService = inject(StudentResourceCollectionService);
@@ -138,34 +134,6 @@ export class StudentResourcesComponent implements OnInit {
   ];
 
   // 热门目录：从真实分类数据中取所有有效分类，按资源数量降序排列
-  /** 从 MajorService 加载可用专业列表 */
-  majorChips = computed(() => {
-    return this.majors().map(m => ({
-      id: m.id!,
-      name: m.name!,
-      count: 0
-    }));
-  });
-
-  hotCategories = computed(() => {
-    const cats = this.categories();
-    // 展平所有分类（根节点 + 子节点）
-    const flat: { id: string; name: string; count: number }[] = [];
-    const flatten = (list: ResourceCategoryDto[]) => {
-      for (const c of list) {
-        if (c.id && c.name) {
-          flat.push({ id: c.id, name: c.name, count: c.resourceCount ?? 0 });
-        }
-        if (c.children && c.children.length > 0) {
-          flatten(c.children);
-        }
-      }
-    };
-    flatten(cats);
-    // 按资源数量降序排列
-    flat.sort((a, b) => b.count - a.count);
-    return flat;
-  });
 
   ngOnInit() {
     this.loadCategories();
@@ -249,7 +217,8 @@ export class StudentResourcesComponent implements OnInit {
   loadRatingSummaries(items: ResourceDto[]) {
     const summaries = { ...this.ratingSummaries() };
     items.forEach(resource => {
-      if (!resource.id) return;
+      // 已有缓存不再重复请求，翻页/切换筛选时只补拉新出现的资源
+      if (!resource.id || summaries[resource.id]) return;
       this.reviewService.getRatingSummary(resource.id).subscribe({
         next: (summary) => {
           summaries[resource.id!] = summary;
@@ -260,18 +229,21 @@ export class StudentResourcesComponent implements OnInit {
   }
 
   loadCollectionStatus(items: ResourceDto[]) {
-    if (items.length === 0) {
-      this.collectedResourceIds.set({});
-      return;
-    }
+    // 游客无法收藏，跳过每个资源的收藏状态查询
+    if (!this.authService.isAuthenticated) return;
+
+    const current = this.collectedResourceIds();
+    const pendingIds = items
+      .map(r => r.id)
+      .filter((id): id is string => !!id && current[id] === undefined);
+
+    if (pendingIds.length === 0) return;
 
     const collectedMap: Record<string, boolean> = {};
-
-    items.forEach(resource => {
-      if (!resource.id) return;
-      this.resourceService.isCollected(resource.id).subscribe({
+    pendingIds.forEach(id => {
+      this.resourceService.isCollected(id).subscribe({
         next: (isCollected) => {
-          collectedMap[resource.id!] = isCollected;
+          collectedMap[id] = isCollected;
           this.collectedResourceIds.set({ ...this.collectedResourceIds(), ...collectedMap });
         }
       });
@@ -303,20 +275,6 @@ export class StudentResourcesComponent implements OnInit {
     this.selectedMajorId.set(majorId);
     this.pageIndex.set(1);
     this.loadResources();
-  }
-
-  /**
-   * 点击"热门目录"chip：直接使用分类 id 走 selectCategory。
-   */
-  selectHotCategory(categoryId: string) {
-    this.selectCategory(categoryId);
-  }
-
-  /**
-   * 热门目录 chip 的高亮判断。
-   */
-  isHotCategoryActive(categoryId: string): boolean {
-    return this.selectedCategoryId() === categoryId;
   }
 
   selectType(type: ResourceType | null) {

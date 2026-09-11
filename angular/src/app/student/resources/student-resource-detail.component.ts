@@ -4,11 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzRateModule } from 'ng-zorro-antd/rate';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzTagModule } from 'ng-zorro-antd/tag';
 import { ResourceService } from '../../proxy/resources/resource.service';
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum';
@@ -30,10 +28,8 @@ import { AuthErrorService } from '../../core/auth/auth-error.service';
     FormsModule,
     RouterModule,
     NzIconModule,
-    NzButtonModule,
     NzSpinModule,
     NzRateModule,
-    NzTagModule,
     FilePreviewComponent,
     ResourceReviewComponent,
     ResourceCoverComponent,
@@ -255,12 +251,6 @@ export class StudentResourceDetailComponent implements OnInit {
   /** 资源是否被驳回 */
   isRejected(): boolean {
     return this.resource()?.status === ResourceStatus.Rejected;
-  }
-
-  /** 资源是否处于草稿/隐藏状态（对学生不可见） */
-  isInvisible(): boolean {
-    const s = this.resource()?.status;
-    return s === ResourceStatus.Draft || s === ResourceStatus.Hidden;
   }
 
   /** 资源是否已通过审核（任一审核层级） */

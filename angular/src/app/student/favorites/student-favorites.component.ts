@@ -98,7 +98,8 @@ export class StudentFavoritesComponent implements OnInit {
   loadRatingSummaries(items: ResourceDto[]) {
     const summaries = { ...this.ratingSummaries() };
     items.forEach(resource => {
-      if (!resource.id) return;
+      // 已有缓存不再重复请求，翻页时只补拉新出现的资源
+      if (!resource.id || summaries[resource.id]) return;
       this.reviewService.getRatingSummary(resource.id).subscribe({
         next: summary => {
           summaries[resource.id!] = summary;

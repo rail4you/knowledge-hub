@@ -3,7 +3,6 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
   ElementRef,
-  OnDestroy,
   computed,
   effect,
   inject,
@@ -32,7 +31,7 @@ type CoverMode = 'video' | 'image' | 'pdf' | 'icon';
   styleUrls: ['./resource-cover.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ResourceCoverComponent implements OnDestroy {
+export class ResourceCoverComponent {
   readonly resourceId = input('');
   readonly resourceType = input<number>(ResourceType.Document);
   /** 用于判断扩展名（originalFileName 优先） */
@@ -89,13 +88,11 @@ export class ResourceCoverComponent implements OnDestroy {
         this.observe(el, rid);
       }
     });
-    this.destroyRef.onDestroy(() => this.disconnect());
-  }
-
-  ngOnDestroy() {
-    this.destroyed = true;
-    this.disconnect();
-    this.destroyPdf();
+    this.destroyRef.onDestroy(() => {
+      this.destroyed = true;
+      this.disconnect();
+      this.destroyPdf();
+    });
   }
 
   onMediaError() {

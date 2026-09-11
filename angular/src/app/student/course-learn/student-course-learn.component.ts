@@ -942,11 +942,4 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   trackResource = (_: number, r: KnowledgeResourceDto) => r.id;
   trackExercise = (_: number, e: ExerciseDto) => e.id;
   trackRecord = (_: number, r: StudentExerciseRecordDto) => r.id;
-
-  // 从 content 提取摘要
-  contentExcerpt(content?: string | null): string {
-    if (!content) return '';
-    const stripped = content.replace(/[#*`>_\-\[\]]/g, '').replace(/\n+/g, ' ').trim();
-    return stripped.length > 120 ? stripped.slice(0, 120) + '...' : stripped;
-  }
 }

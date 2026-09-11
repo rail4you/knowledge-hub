@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, signal, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzListModule } from 'ng-zorro-antd/list';
@@ -39,17 +39,28 @@ export class StudentSpecialResourcesComponent {
   category: number | null = null;
   items = signal<any[]>([]);
 
+  /** 解析一次 rawJson，模板中多次 pairsOf() 调用只做 Map 查找，避免每轮变更检测重复 JSON.parse */
+  private readonly pairsCache = computed(() => {
+    const map = new Map<any, any[]>();
+    for (const item of this.items()) {
+      let pairs: any[] = [];
+      try {
+        const raw = JSON.parse(item?.rawJson ?? '{}');
+        if (Array.isArray(raw?.pairs)) pairs = raw.pairs;
+      } catch {
+        pairs = [];
+      }
+      map.set(item, pairs);
+    }
+    return map;
+  });
+
   constructor() {
     this.load();
   }
 
   pairsOf(item: any): any[] {
-    try {
-      const raw = JSON.parse(item?.rawJson ?? '{}');
-      return Array.isArray(raw?.pairs) ? raw.pairs : [];
-    } catch {
-      return [];
-    }
+    return this.pairsCache().get(item) ?? [];
   }
 
   load(): void {

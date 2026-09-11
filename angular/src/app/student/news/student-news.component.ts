@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed } from '@angular/core';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -23,7 +23,6 @@ interface StatItem {
   imports: [
     CommonModule,
     DatePipe,
-    DecimalPipe,
     FormsModule,
     NzIconModule,
     NzSpinModule,

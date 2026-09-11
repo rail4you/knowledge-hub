@@ -4,7 +4,7 @@
   <div *ngIf="!isLoading() && !error()" class="text-content-wrapper">
     <table class="text-table">
       <tbody>
-        <tr *ngFor="let line of getLines(); let i = index">
+        <tr *ngFor="let line of lines(); let i = index">
           <td class="line-number">{{ i + 1 }}</td>
           <td class="line-content"><pre>{{ line }}</pre></td>
         </tr>

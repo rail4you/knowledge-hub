@@ -247,6 +247,11 @@ public class ResourceFileController : AbpControllerBase
             resource.ViewCount++;
             await Repository.UpdateAsync(resource);
         }
+        else
+        {
+            // 封面/缩略图请求：允许浏览器私有缓存，避免列表页每次刷新都重新下载整份源文件。
+            Response.Headers.CacheControl = "private, max-age=3600";
+        }
 
         var filePath = resource.FilePath;
         if (string.IsNullOrEmpty(filePath))
@@ -319,6 +324,9 @@ public class ResourceFileController : AbpControllerBase
             var pdfPath = await OfficeConversionService.ConvertToPdfAsync(
                 resourceId.ToString(), fullPath);
 
+            // 转换结果按资源缓存，浏览器端同样允许私有缓存，重复预览无需再次下载整份 PDF。
+            Response.Headers.CacheControl = "private, max-age=1800";
+
             // PhysicalFile 支持 Range 处理，pdfjs 需要
             return PhysicalFile(pdfPath, "application/pdf", enableRangeProcessing: true);
         }
@@ -354,6 +362,9 @@ public class ResourceFileController : AbpControllerBase
 
         if (!System.IO.File.Exists(pagePath))
             return NotFound(new { message = $"页面 {pageNumber} 不存在或尚未转换" });
+
+        // 单页 PDF 内容稳定，允许浏览器私有缓存，翻页/重开无需重复下载。
+        Response.Headers.CacheControl = "private, max-age=3600";
 
         return PhysicalFile(pagePath, "application/pdf", enableRangeProcessing: true);
     }
@@ -789,6 +800,8 @@ public class ResourceFileController : AbpControllerBase
                 return NotFound(new { message = "媒体文件不存在" });
 
             var contentType = GetContentType(mediaPath);
+            // PPTX 内嵌媒体是资源文件的静态组成部分，允许浏览器私有缓存。
+            Response.Headers.CacheControl = "private, max-age=3600";
             return File(data, contentType);
         }
         catch (Exception ex)

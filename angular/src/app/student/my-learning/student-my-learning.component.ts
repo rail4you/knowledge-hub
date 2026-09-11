@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, computed, inject, signal, viewChild, ElementRef } from '@angular/core';
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -20,8 +19,7 @@ import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/maste
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 echarts.use([LineChart, CanvasRenderer, TooltipComponent, GridComponent]);
-import type { CourseDto } from '../../proxy/courses/dtos/models';
-import type { LearningDashboardDto, LearningProgressDto, StudentCourseListItemDto, RecentLearningDto } from '../../proxy/learning/dtos/models';
+import type { LearningDashboardDto, StudentCourseListItemDto, RecentLearningDto } from '../../proxy/learning/dtos/models';
 
 interface StatItem {
   label: string;
@@ -61,7 +59,6 @@ interface DailyPoint {
     CommonModule,
     DatePipe,
     DecimalPipe,
-    FormsModule,
     RouterModule,
     NzIconModule,
     NzButtonModule,
@@ -109,14 +106,6 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
 
   readonly inProgressCourses = computed<StudentCourseListItemDto[]>(() =>
     this.myCourses().filter(c => c.status === 1 || ((c.progress || 0) > 0 && (c.progress || 0) < 100))
-  );
-
-  readonly completedCourses = computed<StudentCourseListItemDto[]>(() =>
-    this.myCourses().filter(c => c.status === 2 || (c.progress || 0) >= 100)
-  );
-
-  readonly notStartedCourses = computed<StudentCourseListItemDto[]>(() =>
-    this.myCourses().filter(c => (c.progress || 0) === 0 && c.status !== 3)
   );
 
   readonly recentLearnings = computed<RecentLearningDto[]>(() => {

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -19,7 +19,7 @@ interface ResumeFormState extends CreateUpdateStudentResumeDto {
 @Component({
   selector: 'app-student-my-resumes',
   standalone: true,
-  imports: [CommonModule, DatePipe, DecimalPipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule, NzInputModule, NzCheckboxModule, NzUploadModule, StudentHeroComponent],
+  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzModalModule, NzInputModule, NzCheckboxModule, NzUploadModule, StudentHeroComponent],
   templateUrl: './student-my-resumes.component.html',
   styleUrls: ['./student-my-resumes.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

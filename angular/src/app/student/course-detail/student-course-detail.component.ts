@@ -84,7 +84,6 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   private readonly voiceContext = inject(VoiceContextService);
 
   readonly loading = signal(true);
-  readonly enrolling = signal(false);
   readonly activeTab = signal<TabKey>('chapters');
 
   readonly course = signal<CourseDetailDto | null>(null);
@@ -578,12 +577,6 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     this.router.navigate([], { queryParams: { tab }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
-  enrollCourse() {
-    // 学生端不允许自助选课：选课只能由老师分配。
-    // 保留方法以兼容模板引用，统一提示后返回，不再调用后端 enroll 接口。
-    this.message.warning('未选课，请联系老师分配课程');
-  }
-
   notifyNotEnrolled() {
     this.message.warning('未选课，请联系老师分配课程');
   }
@@ -614,19 +607,6 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     const walk = (arr: ChapterDto[]) => {
       arr.forEach(n => {
         total++;
-        if (n.children) walk(n.children);
-      });
-    };
-    walk(nodes);
-    return total;
-  }
-
-  /** 计算资源数 */
-  countResources(nodes: ChapterDto[]): number {
-    let total = 0;
-    const walk = (arr: ChapterDto[]) => {
-      arr.forEach(n => {
-        total += (n.knowledgeResources || []).length;
         if (n.children) walk(n.children);
       });
     };

@@ -1,4 +1,4 @@
-import { Component, signal, effect, input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, effect, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 
@@ -16,6 +16,9 @@ export class TextViewerComponent {
   content = signal('');
   isLoading = signal(true);
   error = signal('');
+
+  /** 仅在文本变化时拆分一次，避免每轮变更检测都重新 split 整个文件 */
+  readonly lines = computed(() => this.content().split('\n'));
 
   constructor() {
     effect(() => {
@@ -48,9 +51,5 @@ export class TextViewerComponent {
     } finally {
       this.isLoading.set(false);
     }
-  }
-
-  getLines(): string[] {
-    return this.content().split('\n');
   }
 }

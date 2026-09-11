@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -22,7 +22,7 @@ import { StudentJobDetailModalComponent } from './student-job-detail-modal.compo
   selector: 'app-student-my-applications',
   standalone: true,
   imports: [
-    CommonModule, DatePipe, DecimalPipe, FormsModule, RouterLink,
+    CommonModule, DatePipe, FormsModule, RouterLink,
     NzIconModule, NzSpinModule, NzEmptyModule, NzPaginationModule, NzTagModule, NzModalModule,
     StudentJobDetailModalComponent,
   ],

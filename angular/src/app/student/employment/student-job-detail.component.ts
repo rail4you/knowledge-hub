@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -19,7 +18,7 @@ import {
 @Component({
   selector: 'app-student-job-detail',
   standalone: true,
-  imports: [CommonModule, DatePipe, FormsModule, RouterLink, NzIconModule, NzSpinModule, NzTagModule, NzProgressModule],
+  imports: [CommonModule, DatePipe, RouterLink, NzIconModule, NzSpinModule, NzTagModule, NzProgressModule],
   templateUrl: './student-job-detail.component.html',
   styleUrls: ['./student-job-detail.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

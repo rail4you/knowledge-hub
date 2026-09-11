@@ -5,10 +5,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzRateModule } from 'ng-zorro-antd/rate';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzListModule } from 'ng-zorro-antd/list';
-import { NzAvatarModule } from 'ng-zorro-antd/avatar';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzModalModule } from 'ng-zorro-antd/modal';
@@ -19,8 +16,8 @@ import { ResourceReviewService, ResourceReviewDto, ResourceRatingSummaryDto, Cre
   standalone: true,
   imports: [
     CommonModule, FormsModule, NzSpinModule, NzRateModule,
-    NzInputModule, NzButtonModule, NzListModule, NzAvatarModule, NzEmptyModule,
-    NzDividerModule, NzIconModule, NzModalModule
+    NzInputModule, NzButtonModule, NzEmptyModule,
+    NzIconModule, NzModalModule
   ],
   templateUrl: './resource-review.component.html',
   styleUrls: ['./resource-review.component.scss'],
@@ -231,28 +228,39 @@ export class ResourceReviewComponent implements OnInit, OnChanges {
 
   /** 某一级评价下的全部回复（含楼中楼，统一挂根下按时间正序展示） */
   repliesOf(rootId: string): ResourceReviewDto[] {
+    return this.repliesByRoot().get(rootId) ?? [];
+  }
+
+  /** 评价变化时一次性归组，避免模板对每个根评价重复扫描整棵评价树（O(n²)） */
+  private readonly repliesByRoot = computed(() => {
     const map = this.reviewMap();
-    const isDescendant = (r: ResourceReviewDto): boolean => {
+    const grouped = new Map<string, ResourceReviewDto[]>();
+    const rootOf = (r: ResourceReviewDto): string | null => {
       let pid = r.parentId;
       const seen = new Set<string>([r.id]);
       while (pid) {
-        if (pid === rootId) return true;
-        if (seen.has(pid)) return false;
+        if (seen.has(pid)) return null;
         seen.add(pid);
-        pid = map.get(pid)?.parentId ?? null;
+        const parent = map.get(pid);
+        if (!parent) return null;
+        if (!parent.parentId) return parent.id;
+        pid = parent.parentId;
       }
-      return false;
+      return null;
     };
-    return this.reviews()
-      .filter(r => r.id !== rootId && !!r.parentId && isDescendant(r))
-      .sort((a, b) => +new Date(a.creationTime) - +new Date(b.creationTime));
-  }
-
-  /** 回复直接 @ 的人名（父评价作者；父为根时模板不展示） */
-  replyTargetName(reply: ResourceReviewDto): string {
-    if (!reply.parentId) return '';
-    return this.reviewMap().get(reply.parentId)?.userName || '';
-  }
+    for (const r of this.reviews()) {
+      if (!r.parentId) continue;
+      const rootId = rootOf(r);
+      if (!rootId) continue;
+      const list = grouped.get(rootId);
+      if (list) list.push(r);
+      else grouped.set(rootId, [r]);
+    }
+    for (const list of grouped.values()) {
+      list.sort((a, b) => +new Date(a.creationTime) - +new Date(b.creationTime));
+    }
+    return grouped;
+  });
 
   /** 打开回复弹窗：目标为被回复的评价（可为一级或楼中回复） */
   openReplyModal(review: ResourceReviewDto) {

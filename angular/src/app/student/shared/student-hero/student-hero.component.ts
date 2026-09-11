@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NzIconModule } from 'ng-zorro-antd/icon';
 
 export interface StudentHeroStat {
   label: string;
@@ -13,7 +12,7 @@ export interface StudentHeroStat {
 @Component({
   selector: 'app-student-hero',
   standalone: true,
-  imports: [CommonModule, NzIconModule],
+  imports: [CommonModule],
   templateUrl: './student-hero.component.html',
   styleUrls: ['./student-hero.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -13,7 +13,7 @@ import { StudentHeroComponent } from '../shared/student-hero/student-hero.compon
   selector: 'app-student-practicums',
   standalone: true,
   imports: [
-    CommonModule, DatePipe, DecimalPipe, RouterModule,
+    CommonModule, DatePipe, RouterModule,
     NzIconModule, NzSpinModule, NzPaginationModule,
     StudentHeroComponent,
   ],
