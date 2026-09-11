@@ -35,6 +35,9 @@ public class ResourceMediaJob : FullAuditedEntity<Guid>, IMultiTenant
 
     public DateTime? NextRetryAt { get; set; }
 
+    /// <summary>发起人是否已读该完成/失败通知（驱动顶栏铃铛未读数）。</summary>
+    public bool IsRead { get; set; }
+
     protected ResourceMediaJob()
     {
     }

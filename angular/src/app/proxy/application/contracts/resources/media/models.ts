@@ -31,5 +31,6 @@ export interface ResourceMediaJobDto extends EntityDto<string> {
   startedAt?: string | null;
   completedAt?: string | null;
   creationTime?: string;
+  isRead?: boolean;
   artifacts?: ResourceArtifactDto[];
 }

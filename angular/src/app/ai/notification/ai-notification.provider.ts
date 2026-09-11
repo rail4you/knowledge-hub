@@ -2,6 +2,7 @@ import { inject, provideAppInitializer } from '@angular/core';
 import { ToolbarService } from '@volo/ngx-lepton-x.core';
 import { AiNotificationBellComponent } from './notification-bell.component';
 import { AiTaskNotificationService } from '../services/ai-task-notification.service';
+import { MediaTaskNotificationService } from '../../admin/media-jobs/media-task-notification.service';
 
 /**
  * 把 AI 任务通知铃铛注册进 LeptonX 顶部工具栏，并启动全局轮询。
@@ -19,6 +20,7 @@ function initAiNotifications() {
   } as any);
 
   inject(AiTaskNotificationService).start();
+  inject(MediaTaskNotificationService).start();
 }
 
 export const AI_NOTIFICATION_PROVIDER = [

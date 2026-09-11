@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
@@ -8,9 +8,11 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { AiTaskNotificationService } from '../services/ai-task-notification.service';
 import { AiGenerationTaskDto, AiTaskService } from '../services/ai-task.service';
+import { MediaTaskNotificationService } from '../../admin/media-jobs/media-task-notification.service';
+import type { ResourceMediaJobDto } from '../../proxy/application/contracts/resources/media/models';
 
 /**
- * 顶部工具栏 AI 任务通知铃铛：未读徽标 + 下拉列出最近完成的 AI 任务。
+ * 顶部工具栏任务通知铃铛：AI 任务完成 + 资源媒体处理失败。
  * 通过 LeptonX ToolbarService 注册到顶栏。
  */
 @Component({
@@ -28,7 +30,7 @@ import { AiGenerationTaskDto, AiTaskService } from '../services/ai-task.service'
   template: `
     <div class="ai-bell" nz-dropdown [nzDropdownMenu]="menu" nzTrigger="click" nzPlacement="bottomRight">
       <nz-badge
-        [nzCount]="notificationService.unreadCount()"
+        [nzCount]="totalUnread()"
         [nzOverflowCount]="99"
         nzSize="small"
         [nzOffset]="[2, -2]"
@@ -40,25 +42,36 @@ import { AiGenerationTaskDto, AiTaskService } from '../services/ai-task.service'
     <nz-dropdown-menu #menu="nzDropdownMenu">
       <div class="ai-bell-panel">
         <div class="ai-bell-panel__header">
-          <span>AI 任务通知</span>
-          @if (notificationService.unreadCount() > 0) {
-            <a (click)="$event.stopPropagation(); notificationService.markAllAsRead()">全部已读</a>
+          <span>任务通知</span>
+          @if (totalUnread() > 0) {
+            <a (click)="$event.stopPropagation(); markAllAsRead()">全部已读</a>
           }
         </div>
 
-        @if (notificationService.notifications().length === 0) {
+        @if (aiService.notifications().length === 0 && mediaService.notifications().length === 0) {
           <div class="ai-bell-panel__empty">
-            <nz-empty nzNotFoundContent="暂无新完成的任务"></nz-empty>
+            <nz-empty nzNotFoundContent="暂无新通知"></nz-empty>
           </div>
         } @else {
           <div class="ai-bell-panel__list">
-            @for (n of notificationService.notifications(); track n.id) {
+            @for (n of aiService.notifications(); track n.id) {
               <div class="ai-bell-item" (click)="openTask(n)">
                 <nz-tag [nzColor]="typeColor(n)">{{ typeLabel(n) }}</nz-tag>
                 <div class="ai-bell-item__body">
                   <div class="ai-bell-item__title">{{ n.title }}</div>
                   <div class="ai-bell-item__meta">
                     {{ n.resourceName || '—' }} · {{ formatDate(n.completedAt || n.creationTime) }}
+                  </div>
+                </div>
+              </div>
+            }
+            @for (m of mediaService.notifications(); track m.id) {
+              <div class="ai-bell-item" (click)="openMediaJob(m)">
+                <nz-tag nzColor="error">媒体处理</nz-tag>
+                <div class="ai-bell-item__body">
+                  <div class="ai-bell-item__title">{{ m.resourceName || '资源媒体生成失败' }}</div>
+                  <div class="ai-bell-item__meta">
+                    {{ m.errorMessage || '生成失败' }} · {{ formatDate(m.completedAt || m.creationTime) }}
                   </div>
                 </div>
               </div>
@@ -139,8 +152,16 @@ import { AiGenerationTaskDto, AiTaskService } from '../services/ai-task.service'
   ],
 })
 export class AiNotificationBellComponent {
-  readonly notificationService = inject(AiTaskNotificationService);
+  readonly aiService = inject(AiTaskNotificationService);
+  readonly mediaService = inject(MediaTaskNotificationService);
   private readonly router = inject(Router);
+
+  readonly totalUnread = computed(() => this.aiService.unreadCount() + this.mediaService.unreadCount());
+
+  markAllAsRead(): void {
+    this.aiService.markAllAsRead();
+    this.mediaService.markAllAsRead();
+  }
 
   typeLabel(n: AiGenerationTaskDto): string {
     return AiTaskService.typeLabel(n.taskType);
@@ -165,7 +186,14 @@ export class AiNotificationBellComponent {
   }
 
   openTask(n: AiGenerationTaskDto): void {
-    this.notificationService.openTaskResult(n);
+    this.aiService.openTaskResult(n);
+  }
+
+  openMediaJob(m: ResourceMediaJobDto): void {
+    if (m.id) {
+      this.mediaService.acknowledge(m.id);
+    }
+    this.router.navigate(['/admin/media-jobs']);
   }
 
   goTaskCenter(): void {

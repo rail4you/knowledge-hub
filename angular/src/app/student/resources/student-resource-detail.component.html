@@ -261,32 +261,36 @@
           }
         </section>
 
-        <!-- 评价 -->
-        <section class="review-section" id="resource-reviews">
-          <header class="section-header">
-            <h2>
-              资源评价
-            </h2>
-            <div class="review-header-right">
-              @if (ratingSummary(); as r) {
-                <div class="review-summary">
-                  <strong>{{ r.averageRating | number:'1.1-1' }}</strong>
-                  <nz-rate [ngModel]="r.averageRating" [nzDisabled]="true" nzSize="small" nzAllowHalf></nz-rate>
-                  <span class="review-summary__count">共 {{ r.totalReviews }} 条评价</span>
-                </div>
-              }
-              <button class="action-btn action-btn--primary action-btn--sm" (click)="focusReviewForm()">
-                <span nz-icon nzType="edit" nzTheme="outline"></span>
-                <span>写评价</span>
-              </button>
-            </div>
-          </header>
-          <app-resource-review
-            [resourceId]="res.id!"
-            [singleEvaluation]="true"
-            (reviewChanged)="onReviewChanged()"
-          ></app-resource-review>
-        </section>
+        <!-- 评价（首屏以下，滚动到视口再加载组件） -->
+        @defer (on viewport) {
+          <section class="review-section" id="resource-reviews">
+            <header class="section-header">
+              <h2>
+                资源评价
+              </h2>
+              <div class="review-header-right">
+                @if (ratingSummary(); as r) {
+                  <div class="review-summary">
+                    <strong>{{ r.averageRating | number:'1.1-1' }}</strong>
+                    <nz-rate [ngModel]="r.averageRating" [nzDisabled]="true" nzSize="small" nzAllowHalf></nz-rate>
+                    <span class="review-summary__count">共 {{ r.totalReviews }} 条评价</span>
+                  </div>
+                }
+                <button class="action-btn action-btn--primary action-btn--sm" (click)="focusReviewForm()">
+                  <span nz-icon nzType="edit" nzTheme="outline"></span>
+                  <span>写评价</span>
+                </button>
+              </div>
+            </header>
+            <app-resource-review
+              [resourceId]="res.id!"
+              [singleEvaluation]="true"
+              (reviewChanged)="onReviewChanged()"
+            ></app-resource-review>
+          </section>
+        } @placeholder {
+          <section class="review-section" style="min-height: 220px;"></section>
+        }
       </div>
 
       <!-- 侧边栏：仅保留相关资源（首屏以下，滚动到视口再渲染组件） -->

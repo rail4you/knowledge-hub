@@ -36,6 +36,39 @@ export class ResourceMediaJobService {
     { apiName: this.apiName,...config });
   
 
+  getMyRecent = (unreadOnly?: boolean, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ResourceMediaJobDto[]>({
+      method: 'GET',
+      url: '/api/app/resource-media-job/my-recent',
+      params: { unreadOnly },
+    },
+    { apiName: this.apiName,...config });
+  
+
+  getMyUnreadCount = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, number>({
+      method: 'GET',
+      url: '/api/app/resource-media-job/my-unread-count',
+    },
+    { apiName: this.apiName,...config });
+  
+
+  markAllAsRead = (config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: '/api/app/resource-media-job/mark-all-as-read',
+    },
+    { apiName: this.apiName,...config });
+  
+
+  markAsRead = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'POST',
+      url: `/api/app/resource-media-job/${id}/mark-as-read`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   retry = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',

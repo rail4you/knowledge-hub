@@ -18,6 +18,7 @@ public class ResourceMediaJobDto : EntityDto<Guid>
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public DateTime CreationTime { get; set; }
+    public bool IsRead { get; set; }
     public List<ResourceArtifactDto> Artifacts { get; set; } = new();
 }
 

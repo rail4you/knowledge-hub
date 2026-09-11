@@ -111,6 +111,58 @@ public class ResourceMediaJobAppService : KnowledgeHubAppService, IResourceMedia
         await _jobRepository.UpdateAsync(job);
     }
 
+    public async Task<int> GetMyUnreadCountAsync()
+    {
+        var me = CurrentUser.Id ?? Guid.Empty;
+        var query = await _jobRepository.GetQueryableAsync();
+        return await AsyncExecuter.CountAsync(query.Where(x =>
+            x.CreatorId == me && !x.IsRead &&
+            (x.Status == ResourceMediaJobStatus.Failed || x.Status == ResourceMediaJobStatus.PartialFailed)));
+    }
+
+    public async Task<List<ResourceMediaJobDto>> GetMyRecentAsync(bool unreadOnly = false)
+    {
+        var me = CurrentUser.Id ?? Guid.Empty;
+        var query = await _jobRepository.GetQueryableAsync();
+        query = query.Where(x =>
+            x.CreatorId == me &&
+            (x.Status == ResourceMediaJobStatus.Failed || x.Status == ResourceMediaJobStatus.PartialFailed));
+        if (unreadOnly)
+        {
+            query = query.Where(x => !x.IsRead);
+        }
+
+        var jobs = await AsyncExecuter.ToListAsync(
+            query.OrderByDescending(x => x.CompletedAt ?? x.CreationTime).Take(20));
+        var dtos = jobs.Select(MapToDto).ToList();
+        await FillDetailsAsync(dtos, jobs);
+        return dtos;
+    }
+
+    public async Task MarkAsReadAsync(Guid id)
+    {
+        var job = await _jobRepository.FindAsync(id);
+        if (job == null || job.IsRead)
+        {
+            return;
+        }
+        job.IsRead = true;
+        await _jobRepository.UpdateAsync(job);
+    }
+
+    public async Task MarkAllAsReadAsync()
+    {
+        var me = CurrentUser.Id ?? Guid.Empty;
+        var items = await _jobRepository.GetListAsync(x =>
+            x.CreatorId == me && !x.IsRead &&
+            (x.Status == ResourceMediaJobStatus.Failed || x.Status == ResourceMediaJobStatus.PartialFailed));
+        foreach (var item in items)
+        {
+            item.IsRead = true;
+            await _jobRepository.UpdateAsync(item);
+        }
+    }
+
     private static ResourceMediaJobDto MapToDto(ResourceMediaJob job)
     {
         return new ResourceMediaJobDto
@@ -125,7 +177,8 @@ public class ResourceMediaJobAppService : KnowledgeHubAppService, IResourceMedia
             RetryCount = job.RetryCount,
             StartedAt = job.StartedAt,
             CompletedAt = job.CompletedAt,
-            CreationTime = job.CreationTime
+            CreationTime = job.CreationTime,
+            IsRead = job.IsRead
         };
     }
 

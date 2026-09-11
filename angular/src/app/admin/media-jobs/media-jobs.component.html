@@ -5,6 +5,13 @@
       <p class="media-jobs-sub">资源上传后自动生成缩略图 / 预览材料，可在此查看进度、重试失败任务。</p>
     </div>
     <div class="media-jobs-actions">
+      <input
+        nz-input
+        [(ngModel)]="filter"
+        (keyup.enter)="onSearch()"
+        placeholder="按资源名称搜索"
+        style="width: 200px"
+      />
       <nz-select
         [(ngModel)]="statusFilter"
         (ngModelChange)="onStatusChange()"
@@ -16,6 +23,7 @@
           <nz-option [nzValue]="o.value" [nzLabel]="o.label"></nz-option>
         }
       </nz-select>
+      <button nz-button nzType="default" (click)="onSearch()">搜索</button>
       <button nz-button nzType="default" (click)="load()" [nzLoading]="loading()">
         <span nz-icon nzType="reload"></span>
         刷新

@@ -84,6 +84,8 @@ public class ResourceMediaProcessingJob : ITransientDependency
                         : outcome.Status == MediaProcessStatus.PartialFailed ? "部分生成物失败" : "处理失败";
                     j.ErrorMessage = outcome.Error;
                     j.CompletedAt = DateTime.UtcNow;
+                    // 失败/部分失败时置未读，驱动顶栏通知
+                    j.IsRead = outcome.Status == MediaProcessStatus.Completed;
                 });
             }
             catch (Exception ex)
@@ -95,6 +97,7 @@ public class ResourceMediaProcessingJob : ITransientDependency
                     j.ErrorMessage = Truncate(ex.Message, 2000);
                     j.ProgressMessage = "处理失败";
                     j.CompletedAt = DateTime.UtcNow;
+                    j.IsRead = false;
                 });
             }
         }

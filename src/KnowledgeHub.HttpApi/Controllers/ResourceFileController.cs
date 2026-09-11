@@ -18,6 +18,7 @@ using KnowledgeHub.Resources.Thumbnails;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp.AspNetCore.Mvc;
@@ -71,6 +72,7 @@ public class ResourceFileController : AbpControllerBase
     protected IResourceThumbnailService ThumbnailService { get; }
     protected IRepository<ResourceMediaJob, Guid> MediaJobRepository { get; }
     protected IRepository<ResourceArtifact, Guid> ArtifactRepository { get; }
+    protected IMemoryCache MemoryCache { get; }
 
     public ResourceFileController(
         IResourceRepository resourceRepository,
@@ -82,7 +84,8 @@ public class ResourceFileController : AbpControllerBase
         IOptions<OfficeConversionOptions> conversionOptions,
         IResourceThumbnailService thumbnailService,
         IRepository<ResourceMediaJob, Guid> mediaJobRepository,
-        IRepository<ResourceArtifact, Guid> artifactRepository)
+        IRepository<ResourceArtifact, Guid> artifactRepository,
+        IMemoryCache memoryCache)
     {
         ResourceRepository = resourceRepository;
         Repository = repository;
@@ -94,7 +97,13 @@ public class ResourceFileController : AbpControllerBase
         ThumbnailService = thumbnailService;
         MediaJobRepository = mediaJobRepository;
         ArtifactRepository = artifactRepository;
+        MemoryCache = memoryCache;
     }
+
+    /// <summary>状态/路径查询短缓存时长，降低预览轮询对 DB 的压力。</summary>
+    private static readonly TimeSpan StatusCacheTtl = TimeSpan.FromSeconds(5);
+
+    private sealed record PathCacheEntry(string? Path);
 
     /// <summary>
     /// 截断/损坏的 PPTX（缺 ZIP 中央目录）无法用 ZipFile 定位条目，只能扫描本地文件头。
@@ -459,10 +468,14 @@ public class ResourceFileController : AbpControllerBase
                 return Ok(new { ready = true, count = 0 });
 
             // 历史数据兜底：没有任何媒体处理任务时才触发一次转换（新流程上传即入队）。
-            bool hasMediaJob;
-            using (DataFilter.Disable<IMultiTenant>())
+            var hasJobKey = $"resfile:hasmedia:{resourceId}";
+            if (!MemoryCache.TryGetValue(hasJobKey, out bool hasMediaJob))
             {
-                hasMediaJob = await MediaJobRepository.AnyAsync(x => x.ResourceId == resourceId);
+                using (DataFilter.Disable<IMultiTenant>())
+                {
+                    hasMediaJob = await MediaJobRepository.AnyAsync(x => x.ResourceId == resourceId);
+                }
+                MemoryCache.Set(hasJobKey, hasMediaJob, StatusCacheTtl);
             }
             if (!hasMediaJob)
             {
@@ -983,6 +996,20 @@ public class ResourceFileController : AbpControllerBase
     }
 
     private async Task<string?> GetResourceFullPathAsync(Guid resourceId)
+    {
+        // 预览轮询会高频调用，加 5s 短缓存，避免每次 GetWithDetailsAsync（Include 版本/审核）
+        var cacheKey = $"resfile:path:{resourceId}:{CurrentTenant.Id}:{CurrentUser.IsAuthenticated}";
+        if (MemoryCache.TryGetValue(cacheKey, out PathCacheEntry? cached) && cached != null)
+        {
+            return cached.Path;
+        }
+
+        var resolved = await ResolveResourceFullPathAsync(resourceId);
+        MemoryCache.Set(cacheKey, new PathCacheEntry(resolved), StatusCacheTtl);
+        return resolved;
+    }
+
+    private async Task<string?> ResolveResourceFullPathAsync(Guid resourceId)
     {
         Resource resource;
         try

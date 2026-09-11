@@ -3,6 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzSelectModule } from 'ng-zorro-antd/select';
@@ -20,7 +21,7 @@ import type { ResourceMediaJobDto } from '../../proxy/application/contracts/reso
   standalone: true,
   imports: [
     CommonModule, DatePipe, FormsModule,
-    NzTableModule, NzTagModule, NzButtonModule, NzIconModule, NzProgressModule, NzSelectModule,
+    NzTableModule, NzTagModule, NzButtonModule, NzIconModule, NzProgressModule, NzSelectModule, NzInputModule,
   ],
   templateUrl: './media-jobs.component.html',
   styleUrls: ['./media-jobs.component.scss'],
@@ -37,6 +38,7 @@ export class MediaJobsComponent implements OnInit, OnDestroy {
   pageIndex = 1;
   pageSize = 20;
   statusFilter: ResourceMediaJobStatus | null = null;
+  filter = '';
 
   readonly statusOptions = [
     { label: '全部', value: null },
@@ -72,6 +74,7 @@ export class MediaJobsComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.service.getList({
       status: this.statusFilter ?? undefined,
+      filter: this.filter?.trim() || undefined,
       sorting: 'creationTime desc',
       skipCount: (this.pageIndex - 1) * this.pageSize,
       maxResultCount: this.pageSize,
@@ -89,6 +92,11 @@ export class MediaJobsComponent implements OnInit, OnDestroy {
   }
 
   onStatusChange(): void {
+    this.pageIndex = 1;
+    this.load();
+  }
+
+  onSearch(): void {
     this.pageIndex = 1;
     this.load();
   }

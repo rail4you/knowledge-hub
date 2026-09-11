@@ -195,6 +195,9 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
 
+        // 内存缓存：资源文件预览状态/路径的短时缓存，降低轮询压力
+        context.Services.AddMemoryCache();
+
         // 响应压缩：ABP API 大量返回 JSON（列表/详情），Brotli/Gzip 可显著降低传输体积。
         // 仅压缩默认文本类 MIME（application/json 等），PDF/视频等已压缩二进制不处理。
         context.Services.AddResponseCompression(options =>
@@ -589,6 +592,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         RegisterOfficeConversionRecurringJobs(context);
         RegisterAiTaskRecoveryRecurringJob();
         RegisterResourceMediaRecurringJob();
+        RegisterResourceMediaRecoveryRecurringJob();
 
         app.UseConfiguredEndpoints();
     }
@@ -628,6 +632,18 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             "resource-media-maintenance",
             job => job.RunAsync(),
             Cron.MinuteInterval(30),
+            new RecurringJobOptions { QueueName = "media" });
+    }
+
+    /// <summary>
+    /// 注册媒体任务恢复 RecurringJob（每 5 分钟）：把中断的 Running 任务标记为失败。
+    /// </summary>
+    private void RegisterResourceMediaRecoveryRecurringJob()
+    {
+        RecurringJob.AddOrUpdate<ResourceMediaTaskRecoveryService>(
+            "resource-media-recovery",
+            job => job.RecoverAsync(),
+            Cron.MinuteInterval(5),
             new RecurringJobOptions { QueueName = "media" });
     }
 
