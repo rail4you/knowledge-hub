@@ -319,14 +319,23 @@
           </div>
         }
 
-        <!-- Step: 章节解析与编辑 -->
+        <!-- Step: 章节管理（嵌套表格） -->
         @if (phase() === 'chapters') {
-          <div class="panel-section">
-            <div class="section-label">
-              <span class="label-dot"></span>
-              章节解析结果
-              @if (!parsing()) {
-                <span class="label-sub">共 {{ chapters().length }} 章，可修改标题与要点，或增删章节</span>
+          <div class="panel-section chapter-manage">
+            <!-- 标题容器（带背景）：标题 + 章节搜索 -->
+            <div class="cm-head">
+              <div class="cm-title">
+                <span class="label-dot"></span>
+                章节管理
+                @if (!parsing()) {
+                  <span class="label-sub">共 {{ chapters().length }} 章 · 标题行内可改，要点点 <b>+</b> 展开编辑</span>
+                }
+              </div>
+              @if (!parsing() && chapters().length > 0) {
+                <nz-input-group [nzPrefix]="cmSearchTpl" class="cm-search">
+                  <input nz-input placeholder="搜索章节标题 / 要点…" [ngModel]="chapterFilter()" (ngModelChange)="chapterFilter.set($event)" />
+                </nz-input-group>
+                <ng-template #cmSearchTpl><span nz-icon nzType="search"></span></ng-template>
               }
             </div>
             @if (courseTitleHint()) {
@@ -339,46 +348,103 @@
                 <span>正在从文档中解析章节结构…</span>
               </div>
             } @else {
-              @if (chapters().length === 0) {
-                <nz-empty nzNotFoundContent="未解析出章节，可重新解析或手动添加章节"></nz-empty>
-              } @else {
-                <div class="chapter-edit-list" #chapterList>
-                  @for (c of chapters(); track $index; let i = $index) {
-                    <div class="chapter-edit-row" [attr.data-index]="i">
-                      <div class="chapter-order">{{ i + 1 }}</div>
-                      <div class="chapter-fields">
-                        <input nz-input [ngModel]="c.title" (ngModelChange)="updateChapterTitle(i, $event)" placeholder="章节标题" />
-                        <textarea nz-input [nzAutosize]="{ minRows: 2, maxRows: 4 }" [ngModel]="c.summary" (ngModelChange)="updateChapterSummary(i, $event)" placeholder="章节内容要点（用于生成该章教案）"></textarea>
-                      </div>
-                      <div class="chapter-ops">
-                        <button nz-button nzSize="small" nzShape="circle" type="button" (click)="moveChapter(i, -1)" [disabled]="i === 0" nz-tooltip nzTooltipTitle="上移">
-                          <span nz-icon nzType="arrow-up"></span>
-                        </button>
-                        <button nz-button nzSize="small" nzShape="circle" type="button" (click)="moveChapter(i, 1)" [disabled]="i === chapters().length - 1" nz-tooltip nzTooltipTitle="下移">
-                          <span nz-icon nzType="arrow-down"></span>
-                        </button>
-                        <button nz-button nzSize="small" nzShape="circle" nzDanger type="button" (click)="removeChapter(i)" nz-tooltip nzTooltipTitle="删除">
-                          <span nz-icon nzType="delete"></span>
-                        </button>
-                      </div>
-                    </div>
+              <!-- 表格上方操作栏 -->
+              <div class="cm-toolbar">
+                <div class="cm-toolbar-left">
+                  <button class="lp-btn ghost sm" type="button" (click)="addChapter()">
+                    <span nz-icon nzType="plus"></span>
+                    添加章节
+                  </button>
+                  <button class="lp-btn ghost sm" type="button" (click)="parseChapters()">
+                    <span nz-icon nzType="reload"></span>
+                    重新解析
+                  </button>
+                  @if (filteredChapters().length > 0) {
+                    <button class="link-btn" type="button" (click)="toggleAllChapters()">
+                      {{ allExpanded() ? '收起全部' : '展开全部' }}
+                    </button>
                   }
                 </div>
+                <span class="cm-count">
+                  共 {{ chapters().length }} 章
+                  @if (chapterFilter().trim()) {
+                    · 命中 {{ filteredChapters().length }} 章
+                  }
+                </span>
+              </div>
+
+              @if (chapters().length === 0) {
+                <nz-empty nzNotFoundContent="未解析出章节，可重新解析或手动添加章节"></nz-empty>
+              } @else if (filteredChapters().length === 0) {
+                <nz-empty nzNotFoundContent="没有匹配的章节，换个关键词试试"></nz-empty>
+              } @else {
+                <nz-table
+                  [nzData]="filteredChapters()"
+                  [nzFrontPagination]="false"
+                  [nzShowPagination]="false"
+                  nzSize="middle"
+                  nzTableLayout="fixed"
+                  class="chapter-table"
+                >
+                  <thead>
+                    <tr>
+                      <th nzWidth="44px"></th>
+                      <th nzWidth="60px" nzAlign="center">序号</th>
+                      <th>章节标题</th>
+                      <th nzWidth="34%">内容要点</th>
+                      <th nzWidth="132px" nzAlign="center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of filteredChapters(); track item.key) {
+                      <tr class="chapter-row" [class.flash]="flashKey() === item.key" [attr.data-key]="item.key">
+                        <td [nzExpand]="isExpanded(item.key)" (nzExpandChange)="setExpand(item.key, $event)"></td>
+                        <td nzAlign="center"><span class="order-badge">{{ item.order }}</span></td>
+                        <td>
+                          <input nz-input nzSize="small" [ngModel]="item.title" (ngModelChange)="updateChapterTitle(item.index, $event)" placeholder="章节标题" />
+                        </td>
+                        <td class="summary-cell" [title]="item.summary || '暂无要点，点击左侧 + 展开编辑'">
+                          {{ item.summary?.trim() ? item.summary : '— 暂无要点 —' }}
+                        </td>
+                        <td nzAlign="center">
+                          <div class="table-ops">
+                            <button nz-button nzSize="small" nzShape="circle" type="button" (click)="moveChapter(item.index, -1)" [disabled]="item.index === 0" nz-tooltip nzTooltipTitle="上移">
+                              <span nz-icon nzType="arrow-up"></span>
+                            </button>
+                            <button nz-button nzSize="small" nzShape="circle" type="button" (click)="moveChapter(item.index, 1)" [disabled]="item.index === chapters().length - 1" nz-tooltip nzTooltipTitle="下移">
+                              <span nz-icon nzType="arrow-down"></span>
+                            </button>
+                            <button nz-button nzSize="small" nzShape="circle" nzDanger type="button" (click)="removeChapterByKey(item.key)" nz-tooltip nzTooltipTitle="删除">
+                              <span nz-icon nzType="delete"></span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      @if (isExpanded(item.key)) {
+                        <tr class="nested-row">
+                          <td></td>
+                          <td colspan="4">
+                            <div class="nested-editor">
+                              <div class="nested-title">
+                                <span nz-icon nzType="unordered-list"></span>
+                                第 {{ item.order }} 章 · 内容要点
+                                <span class="nested-sub">用于生成该章教案，可多行编辑</span>
+                              </div>
+                              <textarea nz-input [nzAutosize]="{ minRows: 3, maxRows: 8 }" [ngModel]="item.summary" (ngModelChange)="updateChapterSummary(item.index, $event)" placeholder="章节内容要点（用于生成该章教案）"></textarea>
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                </nz-table>
               }
             }
           </div>
 
           <div class="workflow-footer">
-            <button class="lp-btn ghost" (click)="addChapter()" [disabled]="parsing()">
-              <span nz-icon nzType="plus"></span>
-              手动添加章节
-            </button>
+            <button class="lp-btn ghost" (click)="goBack()">上一步</button>
             <div class="footer-right">
-              <button class="lp-btn ghost" (click)="goBack()" [disabled]="parsing()">上一步</button>
-              <button class="lp-btn ghost" (click)="parseChapters()" [disabled]="parsing()">
-                <span nz-icon nzType="reload"></span>
-                重新解析
-              </button>
               <button class="lp-btn primary" [disabled]="!canGenerateMulti()" (click)="goNext()">
                 <span nz-icon nzType="thunderbolt"></span>
                 生成整体教案

@@ -1,4 +1,4 @@
-import { Component, signal, inject, computed, ChangeDetectionStrategy, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, signal, inject, computed, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -122,7 +122,6 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   private readonly messageService = inject(NzMessageService);
   private readonly configState = inject(ConfigStateService);
   private readonly destroy$ = new Subject<void>();
-  @ViewChild('chapterList') chapterListRef?: ElementRef<HTMLElement>;
   private readonly HISTORY_KEY_PREFIX = 'kh-lesson-plan-history';
   private historyKey = `${this.HISTORY_KEY_PREFIX}:anon`;
   private readonly MAX_HISTORY = 20;
@@ -203,10 +202,34 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   });
 
   // ---------- chapter parsing ----------
-  chapters = signal<LessonPlanChapter[]>([]);
+  // 章节编辑项：服务端字段 + 本地稳定 key（跨上移/下移/删除保持展开态与高亮定位准确）
+  chapters = signal<(LessonPlanChapter & { key: string })[]>([]);
   courseTitleHint = signal('');
   parsing = signal(false);
   parseRaw = signal('');
+  // 章节搜索关键词
+  chapterFilter = signal('');
+  // 展开的章节 key 集合（嵌套表格的展开行：内容要点编辑区）
+  expandedKeys = signal<string[]>([]);
+  // 新增章节高亮行的 key
+  flashKey = signal<string | null>(null);
+  /** 搜索过滤后的章节（携带原数组下标，供增删改操作定位） */
+  filteredChapters = computed(() => {
+    const kw = this.chapterFilter().trim().toLowerCase();
+    const all = this.chapters().map((c, index) => ({ ...c, index }));
+    if (!kw) return all;
+    return all.filter(c =>
+      (c.title || '').toLowerCase().includes(kw) ||
+      (c.summary || '').toLowerCase().includes(kw)
+    );
+  });
+  /** 当前可见行是否全部展开 */
+  allExpanded = computed(() => {
+    const rows = this.filteredChapters();
+    if (rows.length === 0) return false;
+    const set = new Set(this.expandedKeys());
+    return rows.every(r => set.has(r.key));
+  });
 
   // ---------- generation ----------
   result = signal<LessonPlanResult | null>(null);
@@ -358,6 +381,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.selectedResourceId.set(null);
     this.resourceFilter.set('');
     this.chapters.set([]);
+    this.chapterFilter.set('');
+    this.expandedKeys.set([]);
+    this.flashKey.set(null);
     this.parseRaw.set('');
     this.phase.set('config');
   }
@@ -385,6 +411,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.input.set({ topic: '', subject: '', grade: '', duration: 45, customPrompt: '' });
     this.resourceFilter.set('');
     this.chapters.set([]);
+    this.chapterFilter.set('');
+    this.expandedKeys.set([]);
+    this.flashKey.set(null);
     this.parseRaw.set('');
     this.courseTitleHint.set('');
     this.result.set(null);
@@ -409,6 +438,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.parsing.set(true);
     this.parseRaw.set('');
     this.chapters.set([]);
+    this.chapterFilter.set('');
+    this.expandedKeys.set([]);
+    this.flashKey.set(null);
     this.genError.set('');
 
     let acc = '';
@@ -447,6 +479,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
           if (list.length > 0) {
             this.courseTitleHint.set(parsed?.courseTitle || '');
             this.chapters.set(list.map((c, i) => ({
+              key: this.uid(),
               order: i + 1,
               title: c.title || `第 ${i + 1} 章`,
               summary: c.summary || ''
@@ -461,30 +494,48 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   }
 
   addChapter() {
-    this.chapters.update(list => [
-      ...list,
-      { order: list.length + 1, title: `第 ${list.length + 1} 章`, summary: '' }
-    ]);
-    // 新增后滚动定位到新章节，并聚焦其标题输入框
+    const key = this.uid();
+    const order = this.chapters().length + 1;
+    this.chapters.update(list => [...list, { key, order, title: `第 ${order} 章`, summary: '' }]);
+    // 清掉搜索关键词保证新行可见，并默认展开其要点编辑区
+    this.chapterFilter.set('');
+    this.expandedKeys.update(keys => [...keys, key]);
+    this.flashKey.set(key);
+    // 新增后滚动定位到新行，并聚焦其标题输入框
     setTimeout(() => {
-      const el = this.chapterListRef?.nativeElement
-        ?? document.querySelector('.chapter-edit-list') as HTMLElement | null;
-      if (!el) return;
-      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-      const rows = el.querySelectorAll('.chapter-edit-row');
-      const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
-      if (lastRow) {
-        lastRow.classList.add('flash');
-        setTimeout(() => lastRow.classList.remove('flash'), 1600);
-        const input = lastRow.querySelector('input') as HTMLElement | null;
-        // 等滚动基本完成后再 focus，避免被滚动打断
-        setTimeout(() => input?.focus?.(), 350);
-      }
+      const row = document.querySelector(`tr.chapter-row[data-key="${key}"]`) as HTMLElement | null;
+      row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => {
+        (row?.querySelector('input') as HTMLElement | null)?.focus?.();
+      }, 400);
+      setTimeout(() => {
+        if (this.flashKey() === key) this.flashKey.set(null);
+      }, 1600);
     });
   }
 
-  removeChapter(index: number) {
-    this.chapters.update(list => list.filter((_, i) => i !== index).map((c, i) => ({ ...c, order: i + 1 })));
+  removeChapterByKey(key: string) {
+    this.chapters.update(list => list.filter(c => c.key !== key).map((c, i) => ({ ...c, order: i + 1 })));
+    this.expandedKeys.update(keys => keys.filter(k => k !== key));
+    if (this.flashKey() === key) this.flashKey.set(null);
+  }
+
+  isExpanded(key: string): boolean {
+    return this.expandedKeys().includes(key);
+  }
+
+  setExpand(key: string, expand: boolean) {
+    this.expandedKeys.update(keys =>
+      expand ? (keys.includes(key) ? keys : [...keys, key]) : keys.filter(k => k !== key)
+    );
+  }
+
+  toggleAllChapters() {
+    if (this.allExpanded()) {
+      this.expandedKeys.set([]);
+    } else {
+      this.expandedKeys.set(this.filteredChapters().map(c => c.key));
+    }
   }
 
   moveChapter(index: number, direction: -1 | 1) {

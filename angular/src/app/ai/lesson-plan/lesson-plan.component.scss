@@ -712,53 +712,134 @@
   font-size: 13.5px;
 }
 
-.chapter-edit-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 52vh;
-  overflow-y: auto;
-  padding-right: 4px;
+// ==================== 章节管理（嵌套表格） ====================
+.chapter-manage {
+  // 标题容器：带背景
+  .cm-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: #f6f8fb;
+    border: 1px solid var(--kh-line-2);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 4px;
 
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
+    .cm-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--kh-ink);
+      margin-right: auto;
+
+      .label-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--kh-accent);
+        flex: none;
+      }
+      .label-sub {
+        font-weight: 400;
+        font-size: 12px;
+        color: var(--kh-muted);
+        b { color: var(--kh-accent-deep); }
+      }
+    }
+
+    .cm-search {
+      width: 260px;
+    }
+  }
+
+  // 表格上方操作栏
+  .cm-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 12px 0 10px;
+
+    .cm-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .cm-count {
+      margin-left: auto;
+      font-size: 12.5px;
+      color: var(--kh-muted);
+      white-space: nowrap;
+    }
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    padding: 4px 6px;
+    font-size: 12.5px;
+    color: var(--kh-accent-deep);
+    cursor: pointer;
+    border-radius: 6px;
+    &:hover { background: var(--kh-accent-soft); }
+  }
 }
 
-.chapter-edit-row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  border: 1px solid var(--kh-line-2);
-  border-radius: 10px;
-  padding: 12px;
-  background: var(--kh-panel);
+// 工具栏小尺寸按钮
+.lp-btn.sm {
+  padding: 7px 14px;
+  font-size: 12.5px;
+  border-radius: 8px;
+  .anticon { font-size: 13px; }
+}
 
-  .chapter-order {
-    width: 28px;
-    height: 28px;
-    flex: none;
+.chapter-table {
+  ::ng-deep {
+    .ant-table-thead > tr > th {
+      background: #fafafa;
+      color: var(--kh-ink-2);
+      font-weight: 600;
+      font-size: 12.5px;
+      &::before { display: none !important; }
+    }
+    .ant-table-tbody > tr > td {
+      font-size: 13px;
+      vertical-align: middle;
+    }
+    // 展开列的 +/- 图标过大时收敛一点
+    .ant-table-row-expand-icon {
+      transform: scale(0.9);
+    }
+  }
+
+  .order-badge {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     background: var(--kh-accent-soft);
     color: var(--kh-accent-deep);
-    display: grid;
-    place-items: center;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 700;
-    margin-top: 2px;
   }
 
-  .chapter-fields {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  .summary-cell {
+    color: var(--kh-ink-2);
+    font-size: 12.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .chapter-ops {
-    display: flex;
+  .table-ops {
+    display: inline-flex;
     gap: 6px;
-    flex: none;
     align-items: center;
     // 纯图标圆形按钮：固定尺寸，保证 nz-icon 居中可见
     button.ant-btn-circle-sm {
@@ -772,14 +853,45 @@
       .anticon { font-size: 13px; line-height: 1; }
     }
   }
-}
 
-// 新增章节时的高亮闪动，便于定位
-.chapter-edit-row.flash {
-  border-color: var(--kh-accent);
-  background: var(--kh-accent-soft);
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.18);
-  transition: background 0.3s, box-shadow 0.3s, border-color 0.3s;
+  // 新增行的高亮闪动，便于定位
+  tr.chapter-row.flash > td {
+    background: var(--kh-accent-soft);
+  }
+  tr.chapter-row > td {
+    transition: background 0.3s;
+  }
+
+  // 嵌套行：内容要点编辑区
+  tr.nested-row > td {
+    background: #fbfcfe;
+    padding-top: 0;
+    border-bottom: 1px solid var(--kh-line-2);
+  }
+  .nested-editor {
+    background: var(--kh-panel);
+    border: 1px solid var(--kh-line-2);
+    border-left: 3px solid var(--kh-accent);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 2px 0 6px;
+
+    .nested-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--kh-ink);
+      margin-bottom: 8px;
+      .anticon { color: var(--kh-accent); }
+      .nested-sub {
+        font-weight: 400;
+        font-size: 12px;
+        color: var(--kh-muted);
+      }
+    }
+  }
 }
 
 .generating-panel {
