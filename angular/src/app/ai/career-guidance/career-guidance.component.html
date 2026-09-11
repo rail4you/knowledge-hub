@@ -26,7 +26,7 @@
             <nz-spin nzSimple></nz-spin>
           </div>
         } @else if (filteredStudents().length === 0) {
-          <nz-empty nzNotFoundContent="暂无投递过简历的学生"></nz-empty>
+          <nz-empty nzNotFoundContent="暂无拥有简历的学生"></nz-empty>
         } @else {
           @for (s of filteredStudents(); track s.studentId) {
             <div
@@ -59,7 +59,7 @@
             <span>选择简历</span>
           </div>
           @if (resumes().length === 0) {
-            <nz-empty nzNotFoundContent="该学生暂无投递用过的简历"></nz-empty>
+            <nz-empty nzNotFoundContent="该学生暂无简历"></nz-empty>
           } @else {
             <nz-select
               class="resource-select"

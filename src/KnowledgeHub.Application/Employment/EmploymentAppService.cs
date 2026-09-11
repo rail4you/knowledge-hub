@@ -2065,61 +2065,50 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
     };
 
     /// <summary>
-    /// AI 职业规划管理页：获取租户内投递过简历的学生及其投递用过的简历。
-    /// 通过 JobApplication 反查 StudentId 与 ResumeId，保证只返回真实投递过的简历。
+    /// AI 职业规划管理页：获取租户内拥有简历的学生及其简历。
+    /// 直接以 AppStudentResumes 为来源，学生只要创建过简历即可被指导，无需先投递岗位。
     /// </summary>
     [Authorize(KnowledgeHubPermissions.Employment.ManageGuidance)]
     public async Task<List<CareerGuidanceStudentDto>> GetCareerGuidanceStudentsAsync()
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
-            // 全隔离：仅返回本租户的投递（host 可跨租户）。
-            List<JobApplication> applications;
+            // 全隔离：仅返回本租户学生的简历（host 可跨租户）。
+            List<StudentResume> resumes;
             if (CurrentTenant.Id.HasValue)
             {
                 var tenantId = CurrentTenant.Id.Value;
-                applications = await _applicationRepository.GetListAsync(x => x.TenantId == tenantId);
+                resumes = await _resumeRepository.GetListAsync(x => x.TenantId == tenantId);
             }
             else
             {
-                applications = await _applicationRepository.GetListAsync();
+                resumes = await _resumeRepository.GetListAsync();
             }
 
-            if (applications.Count == 0)
+            if (resumes.Count == 0)
             {
                 return new List<CareerGuidanceStudentDto>();
             }
 
-            var studentIds = applications.Select(x => x.StudentId).Distinct().ToList();
-            var resumeIds = applications.Select(x => x.ResumeId).Distinct().ToList();
+            var studentIds = resumes.Select(x => x.StudentId).Distinct().ToList();
 
-            var students = studentIds.Count == 0
-                ? new List<IdentityUser>()
-                : await _userRepository.GetListAsync(x => studentIds.Contains(x.Id));
+            var students = await _userRepository.GetListAsync(x => studentIds.Contains(x.Id));
             var studentMap = students.ToDictionary(x => x.Id, x => x);
-
-            var resumes = resumeIds.Count == 0
-                ? new List<StudentResume>()
-                : await _resumeRepository.GetListAsync(x => resumeIds.Contains(x.Id));
-            var resumeMap = resumes.ToDictionary(x => x.Id, x => x);
 
             return studentIds
                 .Where(studentMap.ContainsKey)
                 .Select(studentId =>
                 {
                     var student = studentMap[studentId];
-                    var usedResumeIds = applications
-                        .Where(a => a.StudentId == studentId)
-                        .Select(a => a.ResumeId)
-                        .Distinct()
-                        .ToList();
                     return new CareerGuidanceStudentDto
                     {
                         StudentId = studentId,
                         StudentName = GetUserDisplayName(student),
-                        Resumes = usedResumeIds
-                            .Where(resumeMap.ContainsKey)
-                            .Select(resumeId => MapResumeDto(resumeMap[resumeId]))
+                        Resumes = resumes
+                            .Where(r => r.StudentId == studentId)
+                            .OrderByDescending(r => r.IsDefault)
+                            .ThenByDescending(r => r.VersionNo)
+                            .Select(MapResumeDto)
                             .ToList()
                     };
                 })

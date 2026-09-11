@@ -71,7 +71,7 @@ public interface IEmploymentAppService : IApplicationService
     Task<List<InterviewerCandidateDto>> GetInterviewerCandidatesAsync();
 
     /// <summary>
-    /// AI 职业规划管理页：获取租户内投递过简历的学生及其投递用过的简历。
+    /// AI 职业规划管理页：获取租户内拥有简历的学生及其简历。
     /// </summary>
     Task<List<CareerGuidanceStudentDto>> GetCareerGuidanceStudentsAsync();
 

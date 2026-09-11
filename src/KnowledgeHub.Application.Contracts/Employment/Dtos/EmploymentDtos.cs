@@ -319,7 +319,7 @@ public class GetEmploymentGuidanceRecordsInput : PagedAndSortedResultRequestDto
 
 /// <summary>
 /// AI 职业规划管理页：按学生组织的条目。
-/// StudentId = 投递过简历的学生；Resumes = 该学生投递时用过的简历。
+/// StudentId = 拥有简历的学生；Resumes = 该学生的简历。
 /// </summary>
 public class CareerGuidanceStudentDto
 {
