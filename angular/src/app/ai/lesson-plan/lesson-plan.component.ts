@@ -1,4 +1,4 @@
-import { Component, signal, inject, computed, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
+import { Component, signal, inject, computed, ChangeDetectionStrategy, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -20,7 +20,7 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, Subscription, takeUntil } from 'rxjs';
 import { ConfigStateService } from '@abp/ng.core';
 import {
   ChatService,
@@ -122,6 +122,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   private readonly messageService = inject(NzMessageService);
   private readonly configState = inject(ConfigStateService);
   private readonly destroy$ = new Subject<void>();
+  @ViewChild('chapterList') chapterListRef?: ElementRef<HTMLElement>;
   private readonly HISTORY_KEY_PREFIX = 'kh-lesson-plan-history';
   private historyKey = `${this.HISTORY_KEY_PREFIX}:anon`;
   private readonly MAX_HISTORY = 20;
@@ -220,6 +221,13 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   progressMessage = signal('');
   activeChapter = signal(0);
   chapterTotal = signal(0);
+  // 多章节生成：已用时（秒）+ 取消订阅句柄。单章大模型调用常需 30~120 秒，
+  // 用已用时 + 后端 5 秒心跳让用户感知进度，而不是静止不动看似“卡死”。
+  genElapsed = signal(0);
+  private genTimer: ReturnType<typeof setInterval> | null = null;
+  private genStartedAt = 0;
+  private multiGenSub: Subscription | null = null;
+  private cancelRequested = false;
 
   // ---------- current preview / history ----------
   activeItem = signal<LessonPlanHistoryItem | null>(null);
@@ -276,6 +284,8 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.multiGenSub?.unsubscribe();
+    this.stopGenTimer();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -455,6 +465,22 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       ...list,
       { order: list.length + 1, title: `第 ${list.length + 1} 章`, summary: '' }
     ]);
+    // 新增后滚动定位到新章节，并聚焦其标题输入框
+    setTimeout(() => {
+      const el = this.chapterListRef?.nativeElement
+        ?? document.querySelector('.chapter-edit-list') as HTMLElement | null;
+      if (!el) return;
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      const rows = el.querySelectorAll('.chapter-edit-row');
+      const lastRow = rows[rows.length - 1] as HTMLElement | undefined;
+      if (lastRow) {
+        lastRow.classList.add('flash');
+        setTimeout(() => lastRow.classList.remove('flash'), 1600);
+        const input = lastRow.querySelector('input') as HTMLElement | null;
+        // 等滚动基本完成后再 focus，避免被滚动打断
+        setTimeout(() => input?.focus?.(), 350);
+      }
+    });
   }
 
   removeChapter(index: number) {
@@ -596,10 +622,14 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.progressMessage.set('正在准备生成…');
     this.activeChapter.set(0);
     this.chapterTotal.set(chapters.length);
+    this.genElapsed.set(0);
+    this.cancelRequested = false;
+    this.startGenTimer();
 
     const form = this.input();
 
-    this.chatService.generateMultiChapterLessonPlan({
+    this.multiGenSub?.unsubscribe();
+    this.multiGenSub = this.chatService.generateMultiChapterLessonPlan({
       resourceId: resource.id,
       topic: form.topic,
       subject: form.subject || undefined,
@@ -620,12 +650,22 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           console.error('Error generating multi-chapter lesson plan:', err);
+          this.stopGenTimer();
+          this.multiGenSub = null;
           this.isLoading.set(false);
           this.phase.set('chapters');
           this.messageService.error('整体教案生成失败，请稍后重试');
         },
         complete: () => {
+          this.stopGenTimer();
+          this.multiGenSub = null;
           this.isLoading.set(false);
+          // 用户主动取消：静默回到章节页，不弹“解析失败”。
+          if (this.cancelRequested) {
+            this.cancelRequested = false;
+            this.phase.set('chapters');
+            return;
+          }
           if (this.genError()) {
             this.phase.set('chapters');
             this.messageService.error(this.genError());
@@ -642,6 +682,40 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
           }
         }
       });
+  }
+
+  /** 用户在生成中途点“取消生成”：abort 底层的 fetch，后端联动取消大模型调用。 */
+  cancelMultiGeneration() {
+    if (!this.isLoading()) return;
+    this.cancelRequested = true;
+    this.multiGenSub?.unsubscribe();
+    this.multiGenSub = null;
+    this.stopGenTimer();
+    this.isLoading.set(false);
+    this.phase.set('chapters');
+    this.messageService.info('已取消生成');
+  }
+
+  /** 已用时 MM:SS，供模板展示。 */
+  genElapsedText = computed(() => {
+    const s = this.genElapsed();
+    const m = Math.floor(s / 60);
+    return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  });
+
+  private startGenTimer() {
+    this.stopGenTimer();
+    this.genStartedAt = Date.now();
+    this.genTimer = setInterval(() => {
+      this.genElapsed.set(Math.floor((Date.now() - this.genStartedAt) / 1000));
+    }, 1000);
+  }
+
+  private stopGenTimer() {
+    if (this.genTimer !== null) {
+      clearInterval(this.genTimer);
+      this.genTimer = null;
+    }
   }
 
   private finishMulti(resource: ResourceForChat, parsed: MultiChapterPlan, json: string) {

@@ -346,11 +346,37 @@ export class ChatService {
 
   private streamLessonPlanEvent(url: string, body: unknown): Observable<LessonPlanStreamEvent> {
     return new Observable<LessonPlanStreamEvent>(observer => {
+      // 取消订阅时 abort 底层的 fetch，让后端 RequestAborted 联动取消大模型调用，
+      // 避免用户点“取消/返回”后请求仍在后台空跑。
+      const controller = new AbortController();
+      let settled = false;
+
+      const emit = (chunk: LessonPlanStreamEvent) => {
+        if (settled) return;
+        this.ngZone.run(() => observer.next(chunk));
+      };
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        this.ngZone.run(() => observer.complete());
+      };
+      const fail = (err: unknown) => {
+        if (settled) return;
+        settled = true;
+        // 主动取消视为正常结束，由调用方按 cancel 流程处理，不走 error 弹窗。
+        if (controller.signal.aborted) {
+          this.ngZone.run(() => observer.complete());
+        } else {
+          this.ngZone.run(() => observer.error(err));
+        }
+      };
+
       fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(body),
+        signal: controller.signal,
       }).then(async response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -358,50 +384,51 @@ export class ChatService {
 
         const reader = response.body?.getReader();
         if (!reader) {
-          observer.complete();
+          done();
           return;
         }
 
         const decoder = new TextDecoder();
         let buffer = '';
 
+        const pumpLine = (line: string) => {
+          if (!line.startsWith('data: ')) return;
+          try {
+            const chunk = JSON.parse(line.slice(6));
+            emit({
+              content: chunk.content ?? undefined,
+              message: chunk.message ?? undefined,
+              progress: chunk.progress ?? 0,
+              chapterIndex: chunk.chapterIndex ?? null,
+              chapterTotal: chunk.chapterTotal ?? null,
+              isComplete: chunk.isComplete ?? false,
+              isError: chunk.isError ?? false,
+              resultJson: chunk.resultJson ?? undefined,
+            });
+          } catch {
+            // skip malformed JSON
+          }
+        };
+
         while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+          const { done: readerDone, value } = await reader.read();
+          if (readerDone) break;
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const chunk = JSON.parse(line.slice(6));
-                this.ngZone.run(() => {
-                  observer.next({
-                    content: chunk.content ?? undefined,
-                    message: chunk.message ?? undefined,
-                    progress: chunk.progress ?? 0,
-                    chapterIndex: chunk.chapterIndex ?? null,
-                    chapterTotal: chunk.chapterTotal ?? null,
-                    isComplete: chunk.isComplete ?? false,
-                    isError: chunk.isError ?? false,
-                    resultJson: chunk.resultJson ?? undefined,
-                  });
-                });
-              } catch {
-                // skip malformed JSON
-              }
-            }
-          }
+          for (const line of lines) pumpLine(line);
         }
+        // 流结束时 buffer 里可能残留最后一行（无换行结尾），补处理一次，
+        // 否则最终的 resultJson 事件会被丢掉而表现为“一直转圈”。
+        buffer += decoder.decode();
+        if (buffer.trim().length > 0) pumpLine(buffer.trim());
 
-        this.ngZone.run(() => observer.complete());
-      }).catch(err => {
-        this.ngZone.run(() => observer.error(err));
-      });
+        done();
+      }).catch(fail);
 
-      return () => {};
+      return () => controller.abort();
     });
   }
 

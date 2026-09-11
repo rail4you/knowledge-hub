@@ -228,7 +228,7 @@ public class AIController : AbpControllerBase
             var json = JsonSerializer.Serialize(evt, JsonOptions);
             await httpContext.Response.WriteAsync($"data: {json}\n\n");
             await httpContext.Response.Body.FlushAsync();
-        });
+        }, HttpContext.RequestAborted);
     }
 
     [HttpPost("export-multi-chapter-lesson-plan-docx")]

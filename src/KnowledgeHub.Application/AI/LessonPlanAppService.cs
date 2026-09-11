@@ -284,7 +284,8 @@ JSON 结构：
     [Volo.Abp.RemoteService(false)]
     public async Task GenerateMultiChapterStreamingAsync(
         MultiChapterLessonPlanGenerationInputDto input,
-        Func<LessonPlanStreamEventDto, Task> onChunk)
+        Func<LessonPlanStreamEventDto, Task> onChunk,
+        CancellationToken cancellationToken = default)
     {
         var resource = await _resourceRepository.FindAsync(input.ResourceId);
         if (resource == null)
@@ -318,7 +319,10 @@ JSON 结构：
 
             await EmitProgressAsync(onChunk, "正在规划课程总览…", 5);
 
-            var overview = await GenerateCourseOverviewAsync(chatClient, input, chapters, sourceText);
+            var overview = await RunWithHeartbeatAsync(
+                ct => GenerateCourseOverviewAsync(chatClient, input, chapters, sourceText, ct),
+                elapsed => EmitProgressAsync(onChunk, $"正在规划课程总览…（已等待{elapsed}秒）", 5),
+                cancellationToken);
 
             var result = new MultiChapterLessonPlanDto
             {
@@ -333,13 +337,20 @@ JSON 结构：
 
             for (var i = 0; i < total; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var chapter = chapters[i];
                 var progress = 5 + (int)(i / (double)total * 90);
+                var chapterIndex = i + 1;
+                var caption = $"正在生成第 {chapterIndex}/{total} 章：{chapter.Title}";
 
-                await EmitProgressAsync(onChunk,
-                    $"正在生成第 {i + 1}/{total} 章：{chapter.Title}", progress, i + 1, total);
+                await EmitProgressAsync(onChunk, caption, progress, chapterIndex, total);
 
-                var plan = await GenerateChapterPlanAsync(chatClient, input, chapter, sourceText);
+                // 单章大模型调用常需 30~120 秒，期间每 5 秒发一次心跳，
+                // 既让前端进度条/文案持续活动（避免看似“卡死”），也防止中间代理因空闲掐掉 SSE 连接。
+                var plan = await RunWithHeartbeatAsync(
+                    ct => GenerateChapterPlanAsync(chatClient, input, chapter, sourceText, ct),
+                    elapsed => EmitProgressAsync(onChunk, $"{caption}（已等待{elapsed}秒）", progress, chapterIndex, total),
+                    cancellationToken);
 
                 result.Chapters.Add(new LessonPlanChapterPlanDto
                 {
@@ -347,6 +358,9 @@ JSON 结构：
                     ChapterTitle = chapter.Title,
                     LessonPlan = plan
                 });
+
+                await EmitProgressAsync(onChunk, $"第 {chapterIndex}/{total} 章已完成：{chapter.Title}",
+                    5 + (int)((i + 1) / (double)total * 90), chapterIndex, total);
             }
 
             var json = JsonSerializer.Serialize(result, new JsonSerializerOptions
@@ -362,6 +376,11 @@ JSON 结构：
                 ResultJson = json
             });
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Multi-chapter lesson plan generation cancelled by client");
+            await EmitErrorAsync(onChunk, "已取消生成。");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Multi-chapter lesson plan generation failed");
@@ -373,7 +392,8 @@ JSON 结构：
         IChatClient chatClient,
         MultiChapterLessonPlanGenerationInputDto input,
         List<LessonPlanChapterDto> chapters,
-        string sourceText)
+        string sourceText,
+        CancellationToken cancellationToken = default)
     {
         var chapterList = string.Join("\n", chapters.Select(c =>
             $"{c.Order}. {c.Title}{(string.IsNullOrWhiteSpace(c.Summary) ? "" : $"（{c.Summary}）")}"));
@@ -396,7 +416,7 @@ JSON 结构：
 ")}
 请按 SystemPrompt 中规定的 JSON 结构输出课程总览。";
 
-        var text = await CompleteAsync(chatClient, CourseOverviewInstructions, userPrompt, 2048);
+        var text = await CompleteAsync(chatClient, CourseOverviewInstructions, userPrompt, 2048, cancellationToken);
         return Deserialize<CourseOverviewDto>(text) ?? new CourseOverviewDto();
     }
 
@@ -404,7 +424,8 @@ JSON 结构：
         IChatClient chatClient,
         MultiChapterLessonPlanGenerationInputDto input,
         LessonPlanChapterDto chapter,
-        string sourceText)
+        string sourceText,
+        CancellationToken cancellationToken = default)
     {
         var userPrompt = $@"## 本章节信息
 - 章节：{chapter.Order}. {chapter.Title}
@@ -424,7 +445,7 @@ JSON 结构：
 ")}
 请为「{chapter.Title}」生成一份完整、可执行的课堂教案，按 SystemPrompt 中规定的单章节 JSON 结构输出。不许合并其他章节内容。";
 
-        var text = await CompleteAsync(chatClient, LessonPlanInstructions, userPrompt, 8192);
+        var text = await CompleteAsync(chatClient, LessonPlanInstructions, userPrompt, 8192, cancellationToken);
         var plan = Deserialize<LessonPlanDto>(text)
             ?? throw new AbpException($"第 {chapter.Order} 章「{chapter.Title}」教案解析失败，请重试。");
 
@@ -499,7 +520,8 @@ JSON 结构：
         IChatClient chatClient,
         string instructions,
         string userPrompt,
-        int maxOutputTokens)
+        int maxOutputTokens,
+        CancellationToken cancellationToken = default)
     {
         var options = new ChatOptions
         {
@@ -510,9 +532,48 @@ JSON 结构：
 
         var messages = new List<ChatMessage> { new(ChatRole.User, userPrompt) };
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        // 与前端取消/断开联动：客户端 abort 会触发 RequestAborted，这里的 linked CTS 会同步取消，
+        // 避免用户取消后后端仍在空跑大模型调用。
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(TimeSpan.FromMinutes(5));
         var response = await chatClient.GetResponseAsync(messages, options, cts.Token);
         return response.Text ?? string.Empty;
+    }
+
+    /// <summary>
+    /// 在长时间大模型调用期间每 5 秒发送一次心跳进度，避免前端看起来“卡死”，
+    /// 也防止 SSE 空闲过久被中间代理掐断。work 抛出的异常会原样透出。
+    /// </summary>
+    private static async Task<T> RunWithHeartbeatAsync<T>(
+        Func<CancellationToken, Task<T>> run,
+        Func<int, Task> heartbeat,
+        CancellationToken cancellationToken)
+    {
+        var work = run(cancellationToken);
+        var elapsed = 0;
+        while (!work.IsCompleted)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            if (work.IsCompleted) break;
+            elapsed += 5;
+            try
+            {
+                await heartbeat(elapsed);
+            }
+            catch
+            {
+                // 心跳写失败（多为客户端已断开），交给 work 本身的等待去感知取消。
+                break;
+            }
+        }
+        return await work;
     }
 
     /// <summary>

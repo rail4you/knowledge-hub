@@ -342,22 +342,22 @@
               @if (chapters().length === 0) {
                 <nz-empty nzNotFoundContent="未解析出章节，可重新解析或手动添加章节"></nz-empty>
               } @else {
-                <div class="chapter-edit-list">
-                  @for (c of chapters(); track c.order; let i = $index) {
-                    <div class="chapter-edit-row">
+                <div class="chapter-edit-list" #chapterList>
+                  @for (c of chapters(); track $index; let i = $index) {
+                    <div class="chapter-edit-row" [attr.data-index]="i">
                       <div class="chapter-order">{{ i + 1 }}</div>
                       <div class="chapter-fields">
                         <input nz-input [ngModel]="c.title" (ngModelChange)="updateChapterTitle(i, $event)" placeholder="章节标题" />
                         <textarea nz-input [nzAutosize]="{ minRows: 2, maxRows: 4 }" [ngModel]="c.summary" (ngModelChange)="updateChapterSummary(i, $event)" placeholder="章节内容要点（用于生成该章教案）"></textarea>
                       </div>
                       <div class="chapter-ops">
-                        <button nz-button nzSize="small" (click)="moveChapter(i, -1)" [disabled]="i === 0" nz-tooltip nzTooltipTitle="上移">
+                        <button nz-button nzSize="small" nzShape="circle" type="button" (click)="moveChapter(i, -1)" [disabled]="i === 0" nz-tooltip nzTooltipTitle="上移">
                           <span nz-icon nzType="arrow-up"></span>
                         </button>
-                        <button nz-button nzSize="small" (click)="moveChapter(i, 1)" [disabled]="i === chapters().length - 1" nz-tooltip nzTooltipTitle="下移">
+                        <button nz-button nzSize="small" nzShape="circle" type="button" (click)="moveChapter(i, 1)" [disabled]="i === chapters().length - 1" nz-tooltip nzTooltipTitle="下移">
                           <span nz-icon nzType="arrow-down"></span>
                         </button>
-                        <button nz-button nzSize="small" nzDanger (click)="removeChapter(i)" nz-tooltip nzTooltipTitle="删除">
+                        <button nz-button nzSize="small" nzShape="circle" nzDanger type="button" (click)="removeChapter(i)" nz-tooltip nzTooltipTitle="删除">
                           <span nz-icon nzType="delete"></span>
                         </button>
                       </div>
@@ -397,6 +397,13 @@
               </div>
               <nz-progress [nzPercent]="progress()" nzStatus="active"></nz-progress>
               <div class="progress-msg">{{ progressMessage() }}</div>
+              <div class="gen-meta">
+                <span>第 {{ activeChapter() }}/{{ chapterTotal() }} 章</span>
+                <span>·</span>
+                <span>已用时 {{ genElapsedText() }}</span>
+                <span>·</span>
+                <span class="muted">单章约需 0.5~2 分钟，请耐心等待</span>
+              </div>
 
               <div class="chapter-status-list">
                 @for (c of chapters(); track c.order) {
@@ -417,6 +424,15 @@
 
             @if (rawJson()) {
               <div class="stream-hint">已接收 {{ rawJson().length }} 字符…</div>
+            }
+
+            @if (workflowMode() === 'multi') {
+              <div class="gen-actions">
+                <button class="lp-btn ghost" (click)="cancelMultiGeneration()">
+                  <span nz-icon nzType="close"></span>
+                  取消生成
+                </button>
+              </div>
             }
           </div>
         }
