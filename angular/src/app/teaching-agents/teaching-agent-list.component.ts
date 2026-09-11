@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { ConfigStateService } from '@abp/ng.core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -51,10 +52,23 @@ export class TeachingAgentListComponent implements OnInit {
   private readonly teachingAgentService = inject(TeachingAgentService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
+  private readonly configState = inject(ConfigStateService);
+
+  // 当前用户 id（从 ConfigState 读取，用于判断「只能删除自己创建的」）
+  // 用 getter 而非 computed signal：确保每次模板调用都重新读，避免 OnPush 缓存问题。
+  get currentUserId(): string {
+    const u = this.configState.getDeep('currentUser') as { id?: string } | undefined;
+    return u?.id ?? '';
+  }
 
   readonly loading = signal(false);
   readonly agents = signal<TeachingAgent[]>([]);
   readonly filter = signal('');
+
+  // 刪除确认弹窗状态
+  readonly deleteModalVisible = signal(false);
+  readonly deleting = signal(false);
+  readonly deletingAgent = signal<TeachingAgent | null>(null);
 
   // 表格分页（前端分页：数据已全量加载，按页切片展示）
   readonly pageIndex = signal(1);
@@ -139,6 +153,11 @@ export class TeachingAgentListComponent implements OnInit {
 
   visibilityText(visibility: number): string {
     return visibilityLabel(visibility);
+  }
+
+  // 只能删除自己创建的智能体（owner == currentUser）
+  canDelete(agent: TeachingAgent): boolean {
+    return !!agent.ownerUserId && agent.ownerUserId === this.currentUserId;
   }
 
   // ─── Create modal ───
@@ -338,6 +357,39 @@ export class TeachingAgentListComponent implements OnInit {
         }
       },
     });
+  }
+
+  // ─── Delete modal (只能删自己创建的) ───
+  openDeleteModal(agent: TeachingAgent): void {
+    if (!this.canDelete(agent)) {
+      this.message.error('只能删除自己创建的智能体');
+      return;
+    }
+    this.deletingAgent.set(agent);
+    this.deleteModalVisible.set(true);
+  }
+
+  closeDeleteModal(): void {
+    if (this.deleting()) return;
+    this.deleteModalVisible.set(false);
+  }
+
+  async confirmDelete(): Promise<void> {
+    const agent = this.deletingAgent();
+    if (!agent) return;
+
+    this.deleting.set(true);
+    try {
+      await this.teachingAgentService.delete(agent.id).toPromise();
+      this.message.success(`「${agent.name}」已删除`);
+      this.deleteModalVisible.set(false);
+      await this.loadAgents();
+    } catch (err: any) {
+      const detail = err?.error?.error?.message || err?.error?.message || err?.message || '删除失败';
+      this.message.error(detail);
+    } finally {
+      this.deleting.set(false);
+    }
   }
 
   private emptyForm(): CreateUpdateTeachingAgentPayload {

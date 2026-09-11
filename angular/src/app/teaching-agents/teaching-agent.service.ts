@@ -73,4 +73,11 @@ export class TeachingAgentService {
       body: input,
     }, { apiName: this.apiName, ...config });
   }
+
+  delete(id: string, config?: Partial<Rest.Config>) {
+    return this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/teaching-agents/${id}`,
+    }, { apiName: this.apiName, ...config });
+  }
 }

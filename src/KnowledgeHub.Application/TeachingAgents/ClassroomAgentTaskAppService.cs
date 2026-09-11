@@ -69,15 +69,37 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
     [Authorize(KnowledgeHubPermissions.TeachingAgents.Assign)]
     public async Task<TaskCreationOptionsDto> GetCreateOptionsAsync()
     {
-        var versionQuery = await _versionRepository.GetQueryableAsync();
-        var publishedVersions = await versionQuery
-            .Where(x => x.IsPublished)
-            .OrderByDescending(x => x.LastModificationTime ?? x.CreationTime)
-            .ToListAsync();
+        // 跨租户可见性：
+        // - 当前租户的任意智能体（含 Private / School / Public）；
+        // - 跨租户标记为 Public 的智能体。
+        // 由于 TeachingAgent 实现 IMultiTenant，ABP 仓储默认按当前租户过滤，
+        // 这里必须 DataFilter.Disable<IMultiTenant>() 后再手动加可见性条件。
+        List<TeachingAgentVersion> publishedVersions;
+        List<TeachingAgent> agents;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var versionQuery = await _versionRepository.GetQueryableAsync();
+            var allPublishedVersions = await versionQuery
+                .Where(x => x.IsPublished)
+                .ToListAsync();
 
-        var agentIds = publishedVersions.Select(x => x.TeachingAgentId).Distinct().ToList();
-        var agentQuery = await _teachingAgentRepository.GetQueryableAsync();
-        var agents = await agentQuery.Where(x => agentIds.Contains(x.Id)).ToListAsync();
+            var candidateAgentIds = allPublishedVersions.Select(x => x.TeachingAgentId).Distinct().ToList();
+            var agentQuery = await _teachingAgentRepository.GetQueryableAsync();
+            var candidateAgents = await agentQuery.Where(x => candidateAgentIds.Contains(x.Id)).ToListAsync();
+
+            var currentTenantId = CurrentTenant.Id;
+            var allowedAgentIds = candidateAgents
+                .Where(a => a.TenantId == currentTenantId || a.Visibility == TeachingAgentVisibility.Public)
+                .Select(a => a.Id)
+                .ToHashSet();
+
+            agents = candidateAgents.Where(a => allowedAgentIds.Contains(a.Id)).ToList();
+            publishedVersions = allPublishedVersions
+                .Where(v => allowedAgentIds.Contains(v.TeachingAgentId))
+                .OrderByDescending(x => x.LastModificationTime ?? x.CreationTime)
+                .ToList();
+        }
+
         var agentMap = agents.ToDictionary(x => x.Id);
 
         var courseQuery = await _courseRepository.GetQueryableAsync();
@@ -125,8 +147,23 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
     public async Task<ClassroomAgentTaskDto> CreateAsync(CreateClassroomAgentTaskDto input)
     {
         var currentUserId = CurrentUser.GetId();
-        var version = await _versionRepository.GetAsync(input.TeachingAgentVersionId);
-        var agent = await _teachingAgentRepository.GetAsync(version.TeachingAgentId);
+
+        // 跨租户 Public agent 可被 qidi 老师用来创建课堂任务；
+        // 需要禁用多租户过滤后加载 version 与 agent，再校验可见性。
+        TeachingAgentVersion version;
+        TeachingAgent agent;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            version = await _versionRepository.GetAsync(input.TeachingAgentVersionId);
+            agent = await _teachingAgentRepository.GetAsync(version.TeachingAgentId);
+        }
+        await EnsureCanUseAgentAsync(agent);
+
+        if (!version.IsPublished)
+        {
+            throw new UserFriendlyException("只能使用已发布的智能体版本。");
+        }
+
         var targetSnapshot = await _contextBuilder.BuildAsync(input.TargetType, input.TargetId);
 
         var task = new ClassroomAgentTask(GuidGenerator.Create(), agent.Id, version.Id, input.Title)
@@ -347,6 +384,25 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         throw new AbpAuthorizationException("You are not allowed to manage this classroom task.");
     }
 
+    private async Task EnsureCanUseAgentAsync(TeachingAgent agent)
+    {
+        // 跨租户引用智能体的可见性：
+        // - 当前租户的任意智能体都可以被当前租户用户使用；
+        // - 跨租户仅 Public 智能体可被当前租户引用；
+        // - 跨租户 School / Private 不可被引用，避免泄露。
+        if (agent.TenantId == CurrentTenant.Id)
+        {
+            return;
+        }
+
+        if (agent.Visibility == TeachingAgentVisibility.Public)
+        {
+            return;
+        }
+
+        throw new UserFriendlyException("该智能体不可跨租户使用。");
+    }
+
     private async Task<PagedResultDto<ClassroomAgentTaskDto>> BuildTeacherTaskResultAsync(List<ClassroomAgentTask> tasks, long totalCount)
     {
         if (tasks.Count == 0)
@@ -394,8 +450,15 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         ClassroomAgentTask task,
         List<ClassroomAgentAssignment> assignments)
     {
-        var agent = await _teachingAgentRepository.GetAsync(task.TeachingAgentId);
-        var version = await _versionRepository.GetAsync(task.TeachingAgentVersionId);
+        // 任务可能引用跨租户 Public agent（例如 qidi 老师用 guozhou 公开的智能体建任务），
+        // 因此加载 agent / version 时需禁用多租户过滤。
+        TeachingAgent agent;
+        TeachingAgentVersion version;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            agent = await _teachingAgentRepository.GetAsync(task.TeachingAgentId);
+            version = await _versionRepository.GetAsync(task.TeachingAgentVersionId);
+        }
         var studentIds = assignments.Select(x => x.StudentId).Distinct().ToList();
         var userNames = await GetUserNamesAsync(studentIds, task.TenantId);
         var dto = MapTask(task, agent, version, assignments);
@@ -514,14 +577,33 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
 
     private async Task<List<TeachingAgentVersion>> GetVersionsByIdsAsync(List<Guid> versionIds)
     {
-        var query = await _versionRepository.GetQueryableAsync();
-        return await query.Where(x => versionIds.Contains(x.Id)).ToListAsync();
+        if (versionIds.Count == 0)
+        {
+            return new List<TeachingAgentVersion>();
+        }
+
+        // ClassroomAgentTask 可能引用跨租户 Public agent 的版本（qidi 老师用 guozhou 公开的智能体建任务），
+        // 因此必须禁用多租户过滤读取。ToListAsync 必须在 using 块内执行。
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _versionRepository.GetQueryableAsync();
+            return await query.Where(x => versionIds.Contains(x.Id)).ToListAsync();
+        }
     }
 
     private async Task<List<TeachingAgent>> GetAgentsByIdsAsync(List<Guid> agentIds)
     {
-        var query = await _teachingAgentRepository.GetQueryableAsync();
-        return await query.Where(x => agentIds.Contains(x.Id)).ToListAsync();
+        if (agentIds.Count == 0)
+        {
+            return new List<TeachingAgent>();
+        }
+
+        // 同样支持跨租户 Public agent 读取。
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _teachingAgentRepository.GetQueryableAsync();
+            return await query.Where(x => agentIds.Contains(x.Id)).ToListAsync();
+        }
     }
 
     private async Task<List<ClassroomAgentAssignment>> GetAssignmentsByTaskIdsAsync(List<Guid> taskIds)

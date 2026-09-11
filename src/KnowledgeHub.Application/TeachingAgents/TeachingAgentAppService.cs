@@ -13,6 +13,7 @@ using Volo.Abp.Authorization;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.TeachingAgents;
@@ -25,15 +26,18 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
 
     private readonly IRepository<TeachingAgent, Guid> _teachingAgentRepository;
     private readonly IRepository<TeachingAgentVersion, Guid> _teachingAgentVersionRepository;
+    private readonly IRepository<ClassroomAgentTask, Guid> _taskRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
 
     public TeachingAgentAppService(
         IRepository<TeachingAgent, Guid> teachingAgentRepository,
         IRepository<TeachingAgentVersion, Guid> teachingAgentVersionRepository,
+        IRepository<ClassroomAgentTask, Guid> taskRepository,
         IRepository<IdentityUser, Guid> userRepository)
     {
         _teachingAgentRepository = teachingAgentRepository;
         _teachingAgentVersionRepository = teachingAgentVersionRepository;
+        _taskRepository = taskRepository;
         _userRepository = userRepository;
     }
 
@@ -140,6 +144,51 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
     }
 
     [Authorize(KnowledgeHubPermissions.TeachingAgents.Manage)]
+    public async Task DeleteAsync(Guid id)
+    {
+        var agent = await _teachingAgentRepository.GetAsync(id);
+
+        // 只能删除自己创建的智能体（owner == 当前用户）。
+        // 跨租户 Public agent 也不会被其他租户误删，因为 owner 始终是创建者本人。
+        if (agent.OwnerUserId != CurrentUser.Id)
+        {
+            throw new UserFriendlyException("只能删除自己创建的智能体。");
+        }
+
+        // 检查是否已被课堂任务引用。ClassroomAgentTask 在同租户创建，因此只需检查
+        // 当前租户的 task 即可（跨租户引用 guozhou 公开 agent 的 qidi 任务属于 qidi 租户，
+        // 其任务列表已能在解析不到 agent 时跳过脏数据；guozhou 本租户不允许直接引用自己
+        // 的 Private / School agent（只能是当前租户 School/Public），所以不会有冲突）。
+        var taskQuery = await _taskRepository.GetQueryableAsync();
+        var versionQuery = await _teachingAgentVersionRepository.GetQueryableAsync();
+
+        var versionIds = await versionQuery
+            .Where(v => v.TeachingAgentId == agent.Id)
+            .Select(v => v.Id)
+            .ToListAsync();
+
+        var referencedCount = await taskQuery
+            .Where(t => t.TeachingAgentId == agent.Id
+                        || (versionIds.Count > 0 && versionIds.Contains(t.TeachingAgentVersionId)))
+            .LongCountAsync();
+
+        if (referencedCount > 0)
+        {
+            throw new UserFriendlyException(
+                $"该智能体已被 {referencedCount} 个课堂任务引用，无法删除。请先删除相关课堂任务后再试。");
+        }
+
+        // 先删除所有 version（软删除，让审计可追溯）
+        foreach (var versionId in versionIds)
+        {
+            var version = await _teachingAgentVersionRepository.GetAsync(versionId);
+            await _teachingAgentVersionRepository.DeleteAsync(version, autoSave: true);
+        }
+
+        await _teachingAgentRepository.DeleteAsync(agent, autoSave: true);
+    }
+
+    [Authorize(KnowledgeHubPermissions.TeachingAgents.Manage)]
     public async Task<TeachingAgentDto> PublishVersionAsync(Guid id, PublishTeachingAgentVersionDto input)
     {
         var agent = await _teachingAgentRepository.GetAsync(id);
@@ -169,51 +218,63 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
     [Authorize(KnowledgeHubPermissions.TeachingAgents.Manage)]
     public async Task<PagedResultDto<TeachingAgentDto>> GetListAsync(PagedTeachingAgentRequestDto input)
     {
-        var query = await _teachingAgentRepository.GetQueryableAsync();
-
-        // 工作台"我的智能体"展示：
-        // 1) 自己创建的智能体；
-        // 2) 同一租户下标记为"校内共享"（School）的智能体——同租户管理员和老师共享；
-        // 3) 全局公开（Public）的智能体。
-        // 由于 TeachingAgent 实现 IMultiTenant，ABP 仓储已按当前租户过滤，
-        // 因此 School 可见性天然限定在同一租户内。
         var currentUserId = CurrentUser.GetId();
-        query = query.Where(x =>
-            x.OwnerUserId == currentUserId
-            || x.Visibility == TeachingAgentVisibility.School
-            || x.Visibility == TeachingAgentVisibility.Public);
+        var currentTenantId = CurrentTenant.Id;
 
-        query = query
-            .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x =>
-                x.Name.Contains(input.Filter!) || (x.Description != null && x.Description.Contains(input.Filter!)));
-
-        var totalCount = await query.LongCountAsync();
-        var agents = await query
-            .OrderByDescending(x => x.LastModificationTime ?? x.CreationTime)
-            .Skip(input.SkipCount)
-            .Take(input.MaxResultCount)
-            .ToListAsync();
-
-        var versions = await GetVersionsAsync(agents.Select(x => x.Id).ToList());
-        var owners = await GetUserNamesAsync(agents.Select(x => x.OwnerUserId).Distinct().ToList());
-
-        var items = agents.Select(agent =>
+        // 跨租户可见性：
+        // 1) 自己创建的智能体（任意租户）；
+        // 2) 同租户的全部智能体（同租户管理员和老师共享，无论可见性）；
+        // 3) 跨租户标记为 Public 的智能体（全局公开）。
+        //
+        // TeachingAgent 实现 IMultiTenant，ABP 仓储默认按当前租户过滤，
+        // 因此跨租户 Public 的智能体必须通过 DataFilter.Disable<IMultiTenant>() 后再手动加可见性条件。
+        using (DataFilter.Disable<IMultiTenant>())
         {
-            var agentVersions = versions.Where(x => x.TeachingAgentId == agent.Id).ToList();
-            return MapAgent(agent, agentVersions, owners);
-        }).ToList();
+            var query = await _teachingAgentRepository.GetQueryableAsync();
+            query = query.Where(x =>
+                x.OwnerUserId == currentUserId
+                || x.TenantId == currentTenantId
+                || x.Visibility == TeachingAgentVisibility.Public);
 
-        return new PagedResultDto<TeachingAgentDto>(totalCount, items);
+            query = query
+                .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x =>
+                    x.Name.Contains(input.Filter!) || (x.Description != null && x.Description.Contains(input.Filter!)));
+
+            var totalCount = await query.LongCountAsync();
+            var agents = await query
+                .OrderByDescending(x => x.LastModificationTime ?? x.CreationTime)
+                .Skip(input.SkipCount)
+                .Take(input.MaxResultCount)
+                .ToListAsync();
+
+            // 跨租户 Public agent 的 version 与 owner 都可能在另一个租户，同样需要禁用多租户过滤
+            var versions = await GetVersionsAsync(agents.Select(x => x.Id).ToList(), disableTenantFilter: true);
+            var owners = await GetUserNamesAsync(agents.Select(x => x.OwnerUserId).Distinct().ToList(), disableTenantFilter: true);
+
+            var items = agents.Select(agent =>
+            {
+                var agentVersions = versions.Where(x => x.TeachingAgentId == agent.Id).ToList();
+                return MapAgent(agent, agentVersions, owners);
+            }).ToList();
+
+            return new PagedResultDto<TeachingAgentDto>(totalCount, items);
+        }
     }
 
     [Authorize(KnowledgeHubPermissions.TeachingAgents.Manage)]
     public async Task<TeachingAgentDetailDto> GetDetailAsync(Guid id)
     {
-        var agent = await _teachingAgentRepository.GetAsync(id);
-        await EnsureCanManageAgentAsync(agent);
+        // 跨租户 Public agent 允许被其他租户查看版本与提示词，但不允许编辑；
+        // 必须先禁用多租户过滤拿到 agent，再做可读性校验。
+        TeachingAgent agent;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            agent = await _teachingAgentRepository.GetAsync(id);
+        }
+        await EnsureCanReadAgentAsync(agent);
 
-        var versions = await GetVersionsAsync(agent.Id);
-        var owners = await GetUserNamesAsync(new List<Guid> { agent.OwnerUserId });
+        var versions = await GetVersionsAsync(agent.Id, disableTenantFilter: true);
+        var owners = await GetUserNamesAsync(new List<Guid> { agent.OwnerUserId }, disableTenantFilter: true);
         var dto = MapAgent(agent, versions, owners);
 
         return new TeachingAgentDetailDto
@@ -264,32 +325,110 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
 
     private async Task EnsureCanManageAgentAsync(TeachingAgent agent)
     {
+        // 编辑权限：
+        // 1) 创建者本人（owner）始终可管理自己的智能体；
+        // 2) 同租户 Review 权限的管理员可管理同租户的智能体；
+        // 3) 跨租户 Public 智能体只能被源租户的 owner / Review 管理员管理，
+        //    避免 qidi 的管理员误改 guozhou 公开的智能体。
         if (agent.OwnerUserId == CurrentUser.Id)
         {
             return;
         }
 
-        var canReview = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.TeachingAgents.Review);
-        if (!canReview)
+        if (agent.TenantId == CurrentTenant.Id)
         {
-            throw new AbpAuthorizationException("You are not allowed to manage this teaching agent.");
+            var canReview = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.TeachingAgents.Review);
+            if (canReview)
+            {
+                return;
+            }
         }
+
+        throw new AbpAuthorizationException("You are not allowed to manage this teaching agent.");
     }
 
-    private async Task<List<TeachingAgentVersion>> GetVersionsAsync(Guid agentId)
+    private async Task EnsureCanReadAgentAsync(TeachingAgent agent)
     {
+        if (await CanReadAgentAsync(agent))
+        {
+            return;
+        }
+        throw new AbpAuthorizationException("You are not allowed to view this teaching agent.");
+    }
+
+    private async Task<bool> CanReadAgentAsync(TeachingAgent agent)
+    {
+        if (agent.OwnerUserId == CurrentUser.Id)
+        {
+            return true;
+        }
+
+        // 同租户任意智能体都可见（同租户管理员和老师共享工作台）
+        if (agent.TenantId == CurrentTenant.Id)
+        {
+            return true;
+        }
+
+        // 跨租户仅 Public 可见，School / Private 不可见
+        return agent.Visibility == TeachingAgentVisibility.Public;
+    }
+
+    private async Task<List<TeachingAgentVersion>> GetVersionsAsync(Guid agentId, bool disableTenantFilter = false)
+    {
+        // 注意：IQueryable 是延迟执行，ToListAsync 必须发生在 using 块内，
+        // 否则 DataFilter 在外层被恢复后再执行 SQL，过滤器不会生效。
+        if (disableTenantFilter)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var versionQuery = await _teachingAgentVersionRepository.GetQueryableAsync();
+                return await versionQuery.Where(x => x.TeachingAgentId == agentId).ToListAsync();
+            }
+        }
+
         var query = await _teachingAgentVersionRepository.GetQueryableAsync();
         return await query.Where(x => x.TeachingAgentId == agentId).ToListAsync();
     }
 
-    private async Task<List<TeachingAgentVersion>> GetVersionsAsync(List<Guid> agentIds)
+    private async Task<List<TeachingAgentVersion>> GetVersionsAsync(List<Guid> agentIds, bool disableTenantFilter = false)
     {
+        if (agentIds.Count == 0)
+        {
+            return new List<TeachingAgentVersion>();
+        }
+
+        if (disableTenantFilter)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var versionQuery = await _teachingAgentVersionRepository.GetQueryableAsync();
+                return await versionQuery.Where(x => agentIds.Contains(x.TeachingAgentId)).ToListAsync();
+            }
+        }
+
         var query = await _teachingAgentVersionRepository.GetQueryableAsync();
         return await query.Where(x => agentIds.Contains(x.TeachingAgentId)).ToListAsync();
     }
 
-    private async Task<Dictionary<Guid, string>> GetUserNamesAsync(List<Guid> userIds)
+    private async Task<Dictionary<Guid, string>> GetUserNamesAsync(List<Guid> userIds, bool disableTenantFilter = false)
     {
+        if (userIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        // 同租户调用默认走 ABP 多租户过滤；跨租户读取时（如跨租户 Public agent 的 owner 名字）显式禁用。
+        if (disableTenantFilter)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var userQuery = await _userRepository.GetQueryableAsync();
+                return await userQuery
+                    .Where(x => userIds.Contains(x.Id))
+                    .ToDictionaryAsync(x => x.Id, x => !string.IsNullOrEmpty(x.Name) ? x.Name : x.UserName);
+            }
+        }
+
         var query = await _userRepository.GetQueryableAsync();
         return await query
             .Where(x => userIds.Contains(x.Id))

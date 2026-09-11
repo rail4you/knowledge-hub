@@ -17,4 +17,5 @@ public interface ITeachingAgentAppService : IApplicationService
     Task<PagedResultDto<TeachingAgentDto>> GetListAsync(PagedTeachingAgentRequestDto input);
     Task<TeachingAgentDetailDto> GetDetailAsync(Guid id);
     Task<TeachingAgentDto> CloneFromPresetAsync(CloneTeachingAgentFromPresetDto input);
+    Task DeleteAsync(Guid id);
 }

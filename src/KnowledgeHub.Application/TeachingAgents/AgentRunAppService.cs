@@ -15,6 +15,7 @@ using Volo.Abp;
 using Volo.Abp.Authorization;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.Users;
 
 namespace KnowledgeHub.TeachingAgents;
@@ -294,7 +295,12 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
         ClassroomAgentAssignment assignment,
         AgentRun run)
     {
-        var version = await _versionRepository.GetAsync(task.TeachingAgentVersionId);
+        // assignment 可能引用跨租户 Public agent，因此加载 version 时需禁用多租户过滤。
+        TeachingAgentVersion version;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            version = await _versionRepository.GetAsync(task.TeachingAgentVersionId);
+        }
         var history = await GetMessagesAsync(run.Id);
 
         return new TeachingAgentRuntimeRequest
@@ -323,8 +329,15 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
     {
         var messages = await GetMessagesAsync(run.Id);
         var userNames = await GetUserNamesAsync(new List<Guid> { assignment.StudentId }, assignment.TenantId);
-        var version = await _versionRepository.GetAsync(task.TeachingAgentVersionId);
-        var agent = await _teachingAgentRepository.GetAsync(task.TeachingAgentId);
+        // 跨租户 Public agent：qidi 学生的 assignment 可能引用 guozhou 公开的智能体，
+        // 必须禁用多租户过滤后加载 version 与 agent。
+        TeachingAgent agent;
+        TeachingAgentVersion version;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            version = await _versionRepository.GetAsync(task.TeachingAgentVersionId);
+            agent = await _teachingAgentRepository.GetAsync(task.TeachingAgentId);
+        }
 
         var taskDto = new ClassroomAgentTaskDetailDto
         {
