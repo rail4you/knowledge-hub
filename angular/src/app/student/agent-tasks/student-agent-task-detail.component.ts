@@ -11,7 +11,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { MarkdownComponent, MarkdownPipe, provideMarkdown } from 'ngx-markdown';
+import { MarkdownComponent, provideMarkdown } from 'ngx-markdown';
 import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
 import { AgentRunService } from '../../teaching-agents/agent-run.service';
 import {
@@ -44,7 +44,6 @@ interface HelpRecord {
     NzSpinModule,
     NzTagModule,
     MarkdownComponent,
-    MarkdownPipe,
   ],
   providers: [provideMarkdown()],
   templateUrl: './student-agent-task-detail.component.html',

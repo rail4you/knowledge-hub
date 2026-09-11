@@ -4,9 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
-import { NzModalModule } from 'ng-zorro-antd/modal';
 import { EmploymentApplicationStatus, EmploymentJobType, EmploymentService, JobPostingDto } from '../../employment/employment.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentJobDetailModalComponent } from './student-job-detail-modal.component';
@@ -15,7 +13,7 @@ import { StudentJobApplyModalComponent } from './student-job-apply-modal.compone
 @Component({
   selector: 'app-student-jobs',
   standalone: true,
-  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzEmptyModule, NzPaginationModule, NzModalModule, StudentJobDetailModalComponent, StudentJobApplyModalComponent],
+  imports: [CommonModule, DatePipe, FormsModule, NzIconModule, NzSpinModule, NzPaginationModule, StudentJobDetailModalComponent, StudentJobApplyModalComponent],
   templateUrl: './student-jobs.component.html',
   styleUrls: ['./student-jobs.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,

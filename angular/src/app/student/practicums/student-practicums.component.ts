@@ -8,6 +8,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { PracticumService } from '../../proxy/practicums/practicum.service';
 import type { PracticumProjectDto } from '../../proxy/practicums/dtos/models';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
+import { hashGradient } from '../../shared/utils/color.util';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
@@ -102,8 +103,6 @@ export class StudentPracticumsComponent implements OnInit {
       '#5b93db',
     ];
     const key = item.title || item.id || '';
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 }

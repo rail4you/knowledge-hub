@@ -1,6 +1,5 @@
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NzIconModule } from 'ng-zorro-antd/icon';
 import { ChatComponent } from '../../../ai/chat/chat.component';
 
 /**
@@ -15,7 +14,7 @@ import { ChatComponent } from '../../../ai/chat/chat.component';
 @Component({
   selector: 'app-student-chat',
   standalone: true,
-  imports: [CommonModule, NzIconModule, ChatComponent],
+  imports: [CommonModule, ChatComponent],
   templateUrl: './student-chat.component.html',
   styleUrls: ['./student-chat.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

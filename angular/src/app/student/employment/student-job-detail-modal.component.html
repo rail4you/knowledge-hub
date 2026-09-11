@@ -21,7 +21,7 @@
               @if (item.industry) { <span class="chip">{{ item.industry }}</span> }
               @if (item.educationRequirement) { <span class="chip">{{ item.educationRequirement }}</span> }
               @if (item.location) { <span class="chip">{{ item.location }}</span> }
-              @if (item.hasApplied && item.applicationStatus != null) {
+              @if (item.hasApplied && item.applicationStatus !== null && item.applicationStatus !== undefined) {
                 <span class="chip chip--status" [style.background]="getStatusColor(item.applicationStatus)">
                   {{ getStatusLabel(item.applicationStatus) }}
                 </span>
@@ -99,13 +99,13 @@
           <header class="jd-card__head"><h3>岗位描述</h3></header>
           @if (item.summary) { <p class="summary">{{ item.summary }}</p> }
           <p class="desc">{{ getDescription(item) || '暂无详细描述' }}</p>
-          @if (getSkillTags(item).length) {
+          @if (skillTags().length) {
             <h4 class="sub">技能要求</h4>
-            <div class="tags">@for (t of getSkillTags(item); track t) { <span class="tag">{{ t }}</span> }</div>
+            <div class="tags">@for (t of skillTags(); track t) { <span class="tag">{{ t }}</span> }</div>
           }
-          @if (getBenefitItems(item).length) {
+          @if (benefitTags().length) {
             <h4 class="sub">福利待遇</h4>
-            <ul class="bens">@for (b of getBenefitItems(item); track b) { <li>{{ b }}</li> }</ul>
+            <ul class="bens">@for (b of benefitTags(); track b) { <li>{{ b }}</li> }</ul>
           }
         </section>
 

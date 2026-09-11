@@ -92,11 +92,11 @@
             <span class="info-row__label">发布时间</span>
             <span class="info-row__value">{{ article.publishedAt || article.creationTime | date:'yyyy-MM-dd HH:mm' }}</span>
           </li>
-          @if (parseTags(article.tags).length > 0) {
+          @if (articleTags().length > 0) {
             <li>
               <span class="info-row__label">标签</span>
               <span class="info-row__value info-row__value--tags">
-                @for (tag of parseTags(article.tags); track tag) {
+                @for (tag of articleTags(); track tag) {
                   <span class="keyword-tag">#{{ tag }}</span>
                 }
               </span>

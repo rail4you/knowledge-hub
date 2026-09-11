@@ -20,9 +20,19 @@ import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../sear
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
 import { AuthErrorService } from '../../core/auth/auth-error.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
+import { fileSizeText, resourceTypeName } from '../../shared/utils/resource-format.util';
 
 /** 资源详情页缓存命名空间（通用 ClientCacheService，TTL 60s） */
 const DETAIL_CACHE_NS = 'student.resource-detail';
+
+/** 资源类型图标（模块级常量表，避免模板每次变更检测重新创建对象） */
+const RESOURCE_TYPE_ICONS: Record<number, string> = {
+  [ResourceType.Document]: 'file-text',
+  [ResourceType.Video]: 'video-camera',
+  [ResourceType.Audio]: 'sound',
+  [ResourceType.Image]: 'picture',
+  [ResourceType.PPT]: 'file-ppt',
+};
 
 @Component({
   selector: 'app-student-resource-detail',
@@ -247,14 +257,7 @@ export class StudentResourceDetailComponent implements OnInit {
   }
 
   getResourceTypeIcon(type?: number): string {
-    const icons: Record<number, string> = {
-      [ResourceType.Document]: 'file-text',
-      [ResourceType.Video]: 'video-camera',
-      [ResourceType.Audio]: 'sound',
-      [ResourceType.Image]: 'picture',
-      [ResourceType.PPT]: 'file-ppt',
-    };
-    return icons[type ?? 0] || 'file-text';
+    return RESOURCE_TYPE_ICONS[type ?? 0] || 'file-text';
   }
 
   /** 资源是否处于待审核状态 */
@@ -305,21 +308,11 @@ export class StudentResourceDetailComponent implements OnInit {
   }
 
   getResourceTypeName(type?: number): string {
-    const names: Record<number, string> = {
-      [ResourceType.Document]: '文档',
-      [ResourceType.Video]: '视频',
-      [ResourceType.Audio]: '音频',
-      [ResourceType.Image]: '图片',
-      [ResourceType.PPT]: '演示文稿',
-    };
-    return names[type ?? 0] || '资料';
+    return resourceTypeName(type);
   }
 
   formatFileSize(size?: number): string {
-    if (!size) return '未知大小';
-    if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
-    if (size >= 1024) return `${(size / 1024).toFixed(0)} KB`;
-    return `${size} B`;
+    return fileSizeText(size);
   }
 
   splitKeywords(keywords?: string | null): string[] {

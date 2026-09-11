@@ -13,6 +13,56 @@ import {
   JobPostingDto,
 } from '../../employment/employment.service';
 
+const TYPE_LABELS: Record<number, string> = {
+  [EmploymentJobType.FullTime]: '全职',
+  [EmploymentJobType.Internship]: '实习',
+  [EmploymentJobType.PartTime]: '兼职',
+  [EmploymentJobType.Apprenticeship]: '学徒',
+};
+
+const TYPE_COLORS: Record<number, string> = {
+  [EmploymentJobType.FullTime]: '#2b6cd4',
+  [EmploymentJobType.Internship]: '#5b93db',
+  [EmploymentJobType.PartTime]: '#10b981',
+  [EmploymentJobType.Apprenticeship]: '#f59e0b',
+};
+
+const STATUS_LABELS: Record<number, string> = {
+  [EmploymentApplicationStatus.Submitted]: '已投递',
+  [EmploymentApplicationStatus.Viewed]: '已查看',
+  [EmploymentApplicationStatus.InterviewScheduled]: '等待面试',
+  [EmploymentApplicationStatus.InterviewCompleted]: '面试完成',
+  [EmploymentApplicationStatus.Offered]: '已录用',
+  [EmploymentApplicationStatus.Rejected]: '未通过',
+  [EmploymentApplicationStatus.Withdrawn]: '已撤回',
+};
+
+const STATUS_COLORS: Record<number, string> = {
+  [EmploymentApplicationStatus.Submitted]: '#2b6cd4',
+  [EmploymentApplicationStatus.Viewed]: '#6366f1',
+  [EmploymentApplicationStatus.InterviewScheduled]: '#0891b2',
+  [EmploymentApplicationStatus.InterviewCompleted]: '#7c3aed',
+  [EmploymentApplicationStatus.Offered]: '#10b981',
+  [EmploymentApplicationStatus.Rejected]: '#ef4444',
+  [EmploymentApplicationStatus.Withdrawn]: '#94a3b8',
+};
+
+const STAGE_MAP: Record<number, number> = {
+  [EmploymentApplicationStatus.Submitted]: 1,
+  [EmploymentApplicationStatus.Viewed]: 1,
+  [EmploymentApplicationStatus.InterviewScheduled]: 2,
+  [EmploymentApplicationStatus.InterviewCompleted]: 3,
+  [EmploymentApplicationStatus.Offered]: 4,
+  [EmploymentApplicationStatus.Rejected]: -1,
+  [EmploymentApplicationStatus.Withdrawn]: 0,
+};
+
+/** 拆分逗号/分号/换行分隔的多值文本 */
+function splitItems(value?: string | null): string[] {
+  if (!value) return [];
+  return value.split(/[,,;;\n]/).map(s => s.trim()).filter(Boolean);
+}
+
 /**
  * 学生端岗位详情弹窗：在 /student/employment/jobs 列表页点击卡片时弹出，
  * 不做路由跳转。路由 /student/employment/jobs/:id 保留（深链/复制链接可用）。
@@ -41,6 +91,10 @@ export class StudentJobDetailModalComponent {
   readonly appStatus = EmploymentApplicationStatus;
 
   readonly modalTitle = computed(() => this.job()?.title || '岗位详情');
+
+  /** 技能要求 / 福利待遇：一次性拆分，避免模板重复调用 */
+  readonly skillTags = computed(() => splitItems(this.job()?.skillTags));
+  readonly benefitTags = computed(() => splitItems(this.job()?.benefits));
 
   constructor() {
     effect(() => {
@@ -86,31 +140,19 @@ export class StudentJobDetailModalComponent {
 
   // ---- 显示辅助 ----
   getTypeLabel(t: EmploymentJobType): string {
-    const m: Record<number, string> = { [EmploymentJobType.FullTime]: '全职', [EmploymentJobType.Internship]: '实习', [EmploymentJobType.PartTime]: '兼职', [EmploymentJobType.Apprenticeship]: '学徒' };
-    return m[t] || '其他';
+    return TYPE_LABELS[t] || '其他';
   }
 
   getTypeColor(t: EmploymentJobType): string {
-    const m: Record<number, string> = { [EmploymentJobType.FullTime]: '#2b6cd4', [EmploymentJobType.Internship]: '#5b93db', [EmploymentJobType.PartTime]: '#10b981', [EmploymentJobType.Apprenticeship]: '#f59e0b' };
-    return m[t] || '#6b7280';
+    return TYPE_COLORS[t] || '#6b7280';
   }
 
   getStatusLabel(s: EmploymentApplicationStatus): string {
-    const m: Record<number, string> = {
-      [EmploymentApplicationStatus.Submitted]: '已投递', [EmploymentApplicationStatus.Viewed]: '已查看',
-      [EmploymentApplicationStatus.InterviewScheduled]: '等待面试', [EmploymentApplicationStatus.InterviewCompleted]: '面试完成',
-      [EmploymentApplicationStatus.Offered]: '已录用', [EmploymentApplicationStatus.Rejected]: '未通过', [EmploymentApplicationStatus.Withdrawn]: '已撤回',
-    };
-    return m[s] ?? '已投递';
+    return STATUS_LABELS[s] ?? '已投递';
   }
 
   getStatusColor(s: EmploymentApplicationStatus): string {
-    const m: Record<number, string> = {
-      [EmploymentApplicationStatus.Submitted]: '#2b6cd4', [EmploymentApplicationStatus.Viewed]: '#6366f1',
-      [EmploymentApplicationStatus.InterviewScheduled]: '#0891b2', [EmploymentApplicationStatus.InterviewCompleted]: '#7c3aed',
-      [EmploymentApplicationStatus.Offered]: '#10b981', [EmploymentApplicationStatus.Rejected]: '#ef4444', [EmploymentApplicationStatus.Withdrawn]: '#94a3b8',
-    };
-    return m[s] ?? '#6b7280';
+    return STATUS_COLORS[s] ?? '#6b7280';
   }
 
   /** 描述文本裁掉首尾空白：数据里常带多余换行，pre-wrap 会原样撑出大片空白 */
@@ -119,13 +161,11 @@ export class StudentJobDetailModalComponent {
   }
 
   getSkillTags(item: JobPostingDto): string[] {
-    if (!item.skillTags) return [];
-    return item.skillTags.split(/[,,;;\n]/).map(s => s.trim()).filter(Boolean);
+    return splitItems(item.skillTags);
   }
 
   getBenefitItems(item: JobPostingDto): string[] {
-    if (!item.benefits) return [];
-    return item.benefits.split(/[,,;;\n]/).map(s => s.trim()).filter(Boolean);
+    return splitItems(item.benefits);
   }
 
   deadlineDays(item: JobPostingDto): number | null {
@@ -151,11 +191,6 @@ export class StudentJobDetailModalComponent {
   stage(): number {
     const s = this.job()?.applicationStatus;
     if (s == null) return 0;
-    const m: Record<number, number> = {
-      [EmploymentApplicationStatus.Submitted]: 1, [EmploymentApplicationStatus.Viewed]: 1,
-      [EmploymentApplicationStatus.InterviewScheduled]: 2, [EmploymentApplicationStatus.InterviewCompleted]: 3,
-      [EmploymentApplicationStatus.Offered]: 4, [EmploymentApplicationStatus.Rejected]: -1, [EmploymentApplicationStatus.Withdrawn]: 0,
-    };
-    return m[s] ?? 0;
+    return STAGE_MAP[s] ?? 0;
   }
 }

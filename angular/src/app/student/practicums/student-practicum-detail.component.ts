@@ -5,7 +5,6 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -16,17 +15,16 @@ import { PracticumService } from '../../proxy/practicums/practicum.service';
 import { PracticumSimulationService } from '../../proxy/practicums/practicum-simulation.service';
 import type { PracticumProjectDetailDto, PracticumMaterialDto, PracticumGuidanceRecordDto, PracticumEnrollmentDto } from '../../proxy/practicums/dtos/models';
 import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/models';
-import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
 import { OssUploadService } from '../../shared/oss-upload.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
+import { hashGradient } from '../../shared/utils/color.util';
 
 @Component({
   selector: 'app-student-practicum-detail',
   standalone: true,
   imports: [
     CommonModule, DatePipe, DecimalPipe, FormsModule, RouterModule,
-    NzButtonModule, NzIconModule, NzSpinModule, NzTabsModule, NzInputModule, NzModalModule, NzEmptyModule, NzUploadModule,
-    SafeResourceUrlPipe,
+    NzButtonModule, NzIconModule, NzSpinModule, NzInputModule, NzModalModule, NzEmptyModule, NzUploadModule,
   ],
   templateUrl: './student-practicum-detail.component.html',
   styleUrls: ['./student-practicum-detail.component.scss'],
@@ -217,9 +215,7 @@ export class StudentPracticumDetailComponent implements OnInit {
       '#5b93db',
     ];
     const key = d.title || d.id || '';
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 
   openChat(): void {

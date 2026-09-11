@@ -409,7 +409,7 @@
                             </button>
                           }
 
-                          @if (submittedRecord()?.isCorrect != null) {
+                          @if (submittedRecord()?.isCorrect !== null && submittedRecord()?.isCorrect !== undefined) {
                             <div class="self-assessment">
                               <span class="self-assessment__label">自评掌握程度：</span>
                               <div class="self-assessment__options">

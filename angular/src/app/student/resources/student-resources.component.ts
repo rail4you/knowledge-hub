@@ -24,6 +24,7 @@ import { AuthErrorService } from '../../core/auth/auth-error.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 import { StudentResourceCollectionService } from '../resource-collection.service';
 import { ResourceCoverComponent } from '../../shared/resource-cover/resource-cover.component';
+import { fileSizeText, resourceTypeName } from '../../shared/utils/resource-format.util';
 
 interface StatItem {
   label: string;
@@ -254,20 +255,23 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   loadRatingSummaries(items: ResourceDto[]) {
     const summaries = { ...this.ratingSummaries() };
-    items.forEach(resource => {
-      // 已有缓存不再重复请求，翻页/切换筛选时只补拉新出现的资源
-      if (!resource.id || summaries[resource.id]) return;
-      this.reviewService.getRatingSummary(resource.id).subscribe({
-        next: (summary) => {
-          summaries[resource.id!] = summary;
-          this.ratingSummaries.set({ ...summaries });
-        }
-      });
+    // 批量拉取本页缺失的评分汇总，避免每个资源一次请求（N+1）
+    const pendingIds = items
+      .map(r => r.id)
+      .filter((id): id is string => !!id && !summaries[id]);
+    if (pendingIds.length === 0) return;
+
+    this.reviewService.getRatingSummaries(pendingIds).subscribe({
+      next: list => {
+        const next = { ...this.ratingSummaries() };
+        (list || []).forEach(summary => { next[summary.resourceId] = summary; });
+        this.ratingSummaries.set(next);
+      }
     });
   }
 
   loadCollectionStatus(items: ResourceDto[]) {
-    // 游客无法收藏，跳过每个资源的收藏状态查询
+    // 游客无法收藏，跳过收藏状态查询
     if (!this.authService.isAuthenticated) return;
 
     const current = this.collectedResourceIds();
@@ -277,14 +281,14 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
     if (pendingIds.length === 0) return;
 
-    const collectedMap: Record<string, boolean> = {};
-    pendingIds.forEach(id => {
-      this.resourceService.isCollected(id).subscribe({
-        next: (isCollected) => {
-          collectedMap[id] = isCollected;
-          this.collectedResourceIds.set({ ...this.collectedResourceIds(), ...collectedMap });
-        }
-      });
+    // 一次性批量查询已收藏的资源 Id
+    this.collectionService.checkCollectedStatus(pendingIds).subscribe({
+      next: collectedIds => {
+        const map = { ...this.collectedResourceIds() };
+        pendingIds.forEach(id => { map[id] = false; });
+        (collectedIds || []).forEach(id => { map[id] = true; });
+        this.collectedResourceIds.set(map);
+      }
     });
   }
 
@@ -417,21 +421,11 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
   }
 
   getResourceTypeName(type?: number): string {
-    const names: Record<number, string> = {
-      [ResourceType.Document]: '文档',
-      [ResourceType.Video]: '视频',
-      [ResourceType.Audio]: '音频',
-      [ResourceType.Image]: '图片',
-      [ResourceType.PPT]: '演示文稿',
-    };
-    return names[type ?? 0] || '资料';
+    return resourceTypeName(type);
   }
 
   formatFileSize(size?: number): string {
-    if (!size) return '未知大小';
-    if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
-    if (size >= 1024) return `${(size / 1024).toFixed(0)} KB`;
-    return `${size} B`;
+    return fileSizeText(size);
   }
 
   /** 评分对应的实心星星数量（0-5，四舍五入），用于卡片评分行展示 */

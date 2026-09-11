@@ -3,19 +3,11 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzTabsModule } from 'ng-zorro-antd/tabs';
-import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzAlertModule } from 'ng-zorro-antd/alert';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTableModule } from 'ng-zorro-antd/table';
@@ -74,18 +66,10 @@ interface FlatChapter {
     FormsModule,
     RouterModule,
     NzIconModule,
-    NzButtonModule,
     NzSpinModule,
-    NzProgressModule,
-    NzEmptyModule,
-    NzTabsModule,
-    NzTooltipModule,
     NzRadioModule,
     NzCheckboxModule,
     NzInputModule,
-    NzTagModule,
-    NzAlertModule,
-    NzDividerModule,
     NzPaginationModule,
     NzSelectModule,
     NzTableModule,

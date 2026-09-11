@@ -3,7 +3,6 @@ import {
   ConfigStateService,
   LocalizationService,
   LocalizationPipe,
-  PermissionDirective,
   RestService
 } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
@@ -95,7 +94,6 @@ interface IdentityUserDto {
     CommonModule,
     ReactiveFormsModule,
     LocalizationPipe,
-    PermissionDirective,
     NzTableModule,
     NzButtonModule,
     NzModalModule,

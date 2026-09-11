@@ -6,7 +6,6 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -14,7 +13,28 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzModalModule } from 'ng-zorro-antd/modal';
-import type { PopularSearchDto, DocumentSearchResultDto } from '../../proxy/application/contracts/search/dtos/models';
+import { SearchService } from '../../proxy/application/search/search.service';
+import type { PopularSearchDto, DocumentSearchResultDto, SearchQueryDto } from '../../proxy/application/contracts/search/dtos/models';
+
+/** 文件扩展名 -> 图标（模块级常量表，避免模板每次变更检测重新创建对象） */
+const FILE_ICONS: Record<string, string> = {
+  '.pdf': 'file-pdf',
+  '.doc': 'file-word',
+  '.docx': 'file-word',
+  '.xls': 'file-excel',
+  '.xlsx': 'file-excel',
+  '.ppt': 'file-ppt',
+  '.pptx': 'file-ppt',
+  '.txt': 'file-text',
+  '.md': 'file-text',
+  '.jpg': 'file-image',
+  '.jpeg': 'file-image',
+  '.png': 'file-image',
+  '.mp4': 'video-camera',
+  '.webm': 'video-camera',
+  '.mov': 'video-camera',
+  '.avi': 'video-camera',
+};
 
 @Component({
   selector: 'app-student-search',
@@ -26,7 +46,6 @@ import type { PopularSearchDto, DocumentSearchResultDto } from '../../proxy/appl
     NzButtonModule,
     NzIconModule,
     NzSelectModule,
-    NzCardModule,
     NzSpinModule,
     NzEmptyModule,
     NzTagModule,
@@ -42,6 +61,7 @@ export class StudentSearchComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly message = inject(NzMessageService);
+  private readonly searchService = inject(SearchService);
 
   searchQuery = '';
   pageIndex = 1;
@@ -96,16 +116,16 @@ export class StudentSearchComponent implements OnInit {
 
   private loadHotWords() {
     this.isHotWordsLoading.set(true);
-    fetch('/api/app/search/popular-searches?count=30', { credentials: 'include' })
-      .then(r => r.json())
-      .then(data => {
+    this.searchService.getPopularSearches(30).subscribe({
+      next: data => {
         this.hotWords.set(data ?? []);
         this.isHotWordsLoading.set(false);
-      })
-      .catch(() => {
+      },
+      error: () => {
         this.hotWords.set([]);
         this.isHotWordsLoading.set(false);
-      });
+      },
+    });
   }
 
   /** 点击热门词：直接触发搜索 */
@@ -126,7 +146,7 @@ export class StudentSearchComponent implements OnInit {
 
     this.loading.set(true);
 
-    const body: Record<string, unknown> = {
+    const input: SearchQueryDto = {
       query: q,
       skipCount: (this.pageIndex - 1) * this.pageSize,
       maxResultCount: this.pageSize,
@@ -137,26 +157,20 @@ export class StudentSearchComponent implements OnInit {
     // 选“全部”时不传 indexName，后端合并 documents + videos 双索引；
     // 选文档/视频时只走单边。
     if (this.selectedIndex !== 'all') {
-      body['indexName'] = this.selectedIndex;
+      input.indexName = this.selectedIndex;
     }
 
-    fetch('/api/app/search/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(body),
-    })
-      .then(r => r.json())
-      .then(data => {
+    this.searchService.search(input).subscribe({
+      next: data => {
         this.results.set(data.items ?? []);
         this.totalCount.set(data.totalCount ?? 0);
         this.loading.set(false);
-      })
-      .catch(err => {
-        console.error('[search] error:', err);
+      },
+      error: () => {
         this.loading.set(false);
         this.message.error('搜索失败');
-      });
+      },
+    });
   }
 
   onKeyEnter(event: KeyboardEvent) {
@@ -172,7 +186,7 @@ export class StudentSearchComponent implements OnInit {
   }
 
   viewDocument(result: DocumentSearchResultDto) {
-    if ((result as any).sourceType === 'video') {
+    if (result.sourceType === 'video') {
       this.openVideoModal(result);
       return;
     }
@@ -185,17 +199,12 @@ export class StudentSearchComponent implements OnInit {
     if (event) event.stopPropagation();
     if (!result.resourceId) return;
 
-    fetch('/api/app/search/log-view', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        resourceId: result.resourceId ?? '',
-        pageNumber: result.pageNumber,
-        viewDurationSeconds: 0,
-        viewSource: 0
-      }),
-    }).catch(() => {});
+    this.searchService.logView({
+      resourceId: result.resourceId,
+      pageNumber: result.pageNumber,
+      viewDurationSeconds: 0,
+      viewSource: 0,
+    }).subscribe({ error: () => {} });
 
     this.router.navigate(['/student/resources', result.resourceId], {
       queryParams: { page: result.pageNumber, from: 'search' }
@@ -203,42 +212,23 @@ export class StudentSearchComponent implements OnInit {
   }
 
   getFileIcon(ext: string): string {
-    const iconMap: Record<string, string> = {
-      '.pdf': 'file-pdf',
-      '.doc': 'file-word',
-      '.docx': 'file-word',
-      '.xls': 'file-excel',
-      '.xlsx': 'file-excel',
-      '.ppt': 'file-ppt',
-      '.pptx': 'file-ppt',
-      '.txt': 'file-text',
-      '.md': 'file-text',
-      '.jpg': 'file-image',
-      '.jpeg': 'file-image',
-      '.png': 'file-image',
-      '.mp4': 'video-camera',
-      '.webm': 'video-camera',
-      '.mov': 'video-camera',
-      '.avi': 'video-camera',
-    };
-    return iconMap[ext?.toLowerCase()] || 'file';
+    return FILE_ICONS[ext?.toLowerCase()] || 'file';
   }
 
   isVideoResult(result: DocumentSearchResultDto): boolean {
-    return (result as any).sourceType === 'video';
+    return result.sourceType === 'video';
   }
 
   openVideoModal(result: DocumentSearchResultDto) {
-    const r = result as any;
-    const resourceId: string = r.resourceId || '';
+    const resourceId: string = result.resourceId || '';
     // 固定走同源资源预览流：经 /api 代理携带认证 cookie、支持 Range 定位片段，
     // 实测 200 + video/mp4 + 206。索引里的 videoUrl（如 /uploads/...）在 Angular
     // 开发服务器下没有代理会 404 黑屏，线上也可能跨域无 cookie，所以不再使用。
     this.currentVideoUrl.set(resourceId ? `/api/resource-file/${resourceId}/preview` : '');
-    this.currentVideoStartTime.set(r.startTime || '00:00:00');
-    this.currentVideoEndTime.set(r.endTime || '');
-    this.currentVideoName.set(r.videoName || r.resourceName || '视频');
-    this.currentVideoEventDescription.set(r.eventDescription || r.highlightedContent || '');
+    this.currentVideoStartTime.set(result.startTime || '00:00:00');
+    this.currentVideoEndTime.set(result.endTime || '');
+    this.currentVideoName.set(result.videoName || result.resourceName || '视频');
+    this.currentVideoEventDescription.set(result.eventDescription || result.highlightedContent || '');
     this.currentVideoResourceId.set(resourceId);
     this.videoPlaybackError.set(false);
     this.isVideoModalOpen.set(true);

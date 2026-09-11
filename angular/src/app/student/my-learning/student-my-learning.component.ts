@@ -13,6 +13,7 @@ import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { hashGradient } from '../../shared/utils/color.util';
 
 echarts.use([LineChart, PieChart, CanvasRenderer, TooltipComponent, GridComponent, LegendComponent]);
 import type { LearningDashboardDto, StudentCourseListItemDto, RecentLearningDto } from '../../proxy/learning/dtos/models';
@@ -76,6 +77,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
   private readonly pieContainerRef = viewChild<ElementRef<HTMLDivElement>>('pieChartContainer');
   private chartInstance: echarts.ECharts | null = null;
   private pieChartInstance: echarts.ECharts | null = null;
+  private chartTimer?: ReturnType<typeof setTimeout>;
 
   private readonly onWindowResize = () => {
     requestAnimationFrame(() => {
@@ -157,7 +159,9 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
         this.updateStats(data);
         this.buildLearningCurve(data);
         this.loading.set(false);
-        setTimeout(() => {
+        if (this.chartTimer) clearTimeout(this.chartTimer);
+        this.chartTimer = setTimeout(() => {
+          this.chartTimer = undefined;
           this.initLineChart();
           this.initPieChart();
         }, 0);
@@ -177,6 +181,10 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.chartTimer) {
+      clearTimeout(this.chartTimer);
+      this.chartTimer = undefined;
+    }
     window.removeEventListener('resize', this.onWindowResize);
     this.chartInstance?.dispose();
     this.pieChartInstance?.dispose();
@@ -393,11 +401,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
       '#0e7490',
     ];
     const key = (primary || 'x') + (secondary || '');
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) {
-      hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    }
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 
   hasCover(c: StudentCourseListItemDto): boolean {

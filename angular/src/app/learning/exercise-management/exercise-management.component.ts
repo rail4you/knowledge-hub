@@ -1,5 +1,5 @@
 import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed, ChangeDetectorRef } from '@angular/core';
-import { CommonModule, SlicePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocalizationPipe } from '@abp/ng.core';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -48,7 +48,6 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
     NzRadioModule,
     NzTooltipModule,
     NzPageHeaderModule,
-    SlicePipe,
   ],
   templateUrl: './exercise-management.component.html',
   styleUrls: ['./exercise-management.component.scss'],

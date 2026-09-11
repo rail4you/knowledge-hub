@@ -4,13 +4,19 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { MarkdownComponent, MARKED_OPTIONS, provideMarkdown } from 'ngx-markdown';
 import { NewsArticleDto, NewsCommentDto, NewsService } from '../../news/news.service';
 import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
+import { hashGradient } from '../../shared/utils/color.util';
+
+/** 解析标签字符串为数组（模块级纯函数，便于 computed 复用） */
+function splitTagString(tags?: string | null): string[] {
+  if (!tags) return [];
+  return tags.split(/[,，;；\s]+/).map(t => t.trim()).filter(t => t.length > 0);
+}
 
 @Component({
   selector: 'app-student-news-detail',
@@ -22,7 +28,6 @@ import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
     FormsModule,
     RouterModule,
     NzIconModule,
-    NzButtonModule,
     NzSpinModule,
     NzModalModule,
     MarkdownComponent,
@@ -83,6 +88,9 @@ export class StudentNewsDetailComponent implements OnInit {
 
   /** 返回按钮文案：从门户首页进入时为“返回首页”，否则为“返回资讯列表” */
   readonly backLabel = computed(() => this.backToHome() ? '返回首页' : '返回资讯列表');
+
+  /** 文章标签：一次性解析，避免模板中重复 split + 分配 */
+  readonly articleTags = computed(() => splitTagString(this.article()?.tags));
 
   modalVisible = false;
   submitting = false;
@@ -348,11 +356,7 @@ export class StudentNewsDetailComponent implements OnInit {
       '#1f56ad',
     ];
     const key = (primary || 'x') + (secondary || '');
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) {
-      hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    }
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 
   hasCover(article: NewsArticleDto): boolean {
@@ -377,11 +381,7 @@ export class StudentNewsDetailComponent implements OnInit {
   }
 
   parseTags(tags?: string): string[] {
-    if (!tags) return [];
-    return tags
-      .split(/[,，;；\s]+/)
-      .map(t => t.trim())
-      .filter(t => t.length > 0);
+    return splitTagString(tags);
   }
 
   commentAuthorInitial(name?: string): string {
@@ -399,11 +399,7 @@ export class StudentNewsDetailComponent implements OnInit {
       '#0891b2',
     ];
     const n = name || 'U';
-    let hash = 0;
-    for (let i = 0; i < n.length; i++) {
-      hash = (hash * 31 + n.charCodeAt(i)) | 0;
-    }
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(n, palettes);
   }
 
   /** 正文是否有内容（模板空态判断用） */

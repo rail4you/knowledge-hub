@@ -24,4 +24,17 @@ export class StudentResourceCollectionService {
         ...config,
       }
     );
+
+  checkCollectedStatus = (resourceIds: string[], config?: Partial<Rest.Config>) =>
+    this.restService.request<any, string[]>(
+      {
+        method: 'POST',
+        url: '/api/app/resource/check-collected-status',
+        body: resourceIds,
+      },
+      {
+        apiName: 'KnowledgeHub',
+        ...config,
+      }
+    );
 }

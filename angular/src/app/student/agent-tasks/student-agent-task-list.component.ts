@@ -5,6 +5,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { ClassroomAgentTaskService } from '../../teaching-agents/classroom-agent-task.service';
 import { StudentAgentTask, assignmentStatusLabel } from '../../teaching-agents/models';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { hashGradient } from '../../shared/utils/color.util';
 
 @Component({
   selector: 'app-student-agent-task-list',
@@ -56,11 +57,7 @@ export class StudentAgentTaskListComponent implements OnInit {
       '#5b93db',
     ];
     const key = task.teachingAgentName || task.title || '';
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) {
-      hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    }
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 
   statusText(status: number): string {

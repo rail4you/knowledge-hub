@@ -35,7 +35,7 @@
           </div>
           <div class="hero-card__status">
             @if (d.isCurrentUserEnrolled) {
-              @if (d.currentUserProgress == null) {
+              @if (d.currentUserProgress === null || d.currentUserProgress === undefined) {
                 <span class="status-badge status-badge--pending">
                   <span nz-icon nzType="clock-circle" nzTheme="outline"></span>待审批
                 </span>
@@ -69,7 +69,7 @@
               <span class="stat-blk__lbl">完成要求</span>
             </div>
           }
-          @if (d.currentUserProgress != null) {
+          @if (d.currentUserProgress !== null && d.currentUserProgress !== undefined) {
             <span class="stat-blk-div"></span>
             <div class="stat-blk">
               <span class="stat-blk__val">{{ roundProgress(d.currentUserProgress) }}<small>%</small></span>

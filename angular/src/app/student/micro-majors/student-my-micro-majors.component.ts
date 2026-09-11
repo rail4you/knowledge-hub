@@ -12,6 +12,7 @@ import type {
   MyMicroMajorDto,
 } from '../../micro-majors/micro-major.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { hashGradient } from '../../shared/utils/color.util';
 
 @Component({
   selector: 'app-student-my-micro-majors',
@@ -98,9 +99,7 @@ export class StudentMyMicroMajorsComponent implements OnInit {
   coverGradient(item: MyMicroMajorDto): string {
     const palettes = ['#2b6cd4', '#1f56ad', '#2b6cd4', '#2b6cd4', '#0891b2'];
     const key = item.title || item.id || '';
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 
   hasCover(item: MyMicroMajorDto): boolean {

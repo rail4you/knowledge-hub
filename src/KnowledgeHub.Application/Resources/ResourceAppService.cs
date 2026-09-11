@@ -924,6 +924,24 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         return await CollectionRepository.IsCollectedAsync(resourceId, CurrentUser.Id.Value);
     }
 
+    /// <summary>
+    /// 批量查询当前用户已收藏的资源 Id，列表页一次请求即可拿到全部收藏状态。
+    /// </summary>
+    public virtual async Task<List<Guid>> CheckCollectedStatusAsync(List<Guid> resourceIds)
+    {
+        if (CurrentUser.Id == null || resourceIds == null || resourceIds.Count == 0)
+        {
+            return new List<Guid>();
+        }
+
+        var ids = resourceIds.Distinct().ToList();
+        var userId = CurrentUser.Id.Value;
+        var collections = await CollectionRepository.GetListAsync(
+            c => c.UserId == userId && ids.Contains(c.ResourceId));
+
+        return collections.Select(c => c.ResourceId).Distinct().ToList();
+    }
+
     public virtual async Task CollectAsync(Guid resourceId)
     {
         var userId = CurrentUser.Id ?? throw new UserFriendlyException("请先登录");

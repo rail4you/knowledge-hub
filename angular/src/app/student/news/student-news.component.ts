@@ -8,6 +8,7 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NewsArticleDto, NewsCategoryDto, NewsService } from '../../news/news.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
+import { hashGradient } from '../../shared/utils/color.util';
 import { HeadlineHeroComponent } from '../shared/headline-hero/headline-hero.component';
 
 interface StatItem {
@@ -245,11 +246,7 @@ export class StudentNewsComponent implements OnInit {
       '#1f56ad',
     ];
     const key = (primary || 'x') + (secondary || '');
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) {
-      hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    }
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 
   hasCover(article: NewsArticleDto): boolean {

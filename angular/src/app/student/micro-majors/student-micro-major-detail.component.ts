@@ -14,6 +14,7 @@ import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
 import type { MicroMajorDetailDto, MicroMajorResourceDto } from '../../proxy/micro-majors/dtos/models';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
+import { hashGradient } from '../../shared/utils/color.util';
 
 @Component({
   selector: 'app-student-micro-major-detail',
@@ -47,6 +48,24 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   readonly myCourses = signal<StudentCourseListItemDto[]>([]);
   /** 选课进行中状态 */
   readonly enrolling = signal<string | null>(null);
+
+  /** 课程 Id -> 学习进度 的快速查找表，避免模板中 O(n²) 扫描 */
+  private readonly myCourseProgress = computed(() => {
+    const map = new Map<string, number>();
+    for (const c of this.myCourses()) {
+      if (c.courseId) map.set(c.courseId, c.progress || 0);
+    }
+    return map;
+  });
+
+  /** 微专业核心课程 Id 集合 */
+  private readonly coreCourseIds = computed(() =>
+    new Set(
+      (this.detail()?.courses || [])
+        .filter(c => c.isCore && c.courseId)
+        .map(c => c.courseId!)
+    )
+  );
 
   /** 从首页微专业模块进入时，返回首页对应模块位置（原路返回） */
   readonly fromHome = signal(false);
@@ -152,17 +171,17 @@ export class StudentMicroMajorDetailComponent implements OnInit {
 
   /** 判断该课程是否被标记为微专业的“核心课” */
   isCoreCourse(courseId: string): boolean {
-    return (this.detail()?.courses || []).some(c => c.courseId === courseId && c.isCore);
+    return this.coreCourseIds().has(courseId);
   }
 
   /** 是否已选该课 */
   isEnrolled(courseId: string): boolean {
-    return this.myCourses().some(c => c.courseId === courseId);
+    return this.myCourseProgress().has(courseId);
   }
 
   /** 获取该课的学习进度 */
   getMyProgress(courseId: string): number {
-    return this.myCourses().find(c => c.courseId === courseId)?.progress || 0;
+    return this.myCourseProgress().get(courseId) ?? 0;
   }
 
   /** 是否有封面图 */
@@ -176,9 +195,7 @@ export class StudentMicroMajorDetailComponent implements OnInit {
       '#0f766e', '#0d5e56', '#14b8a6', '#16a34a', '#5b93db', '#059669', '#0d9488', '#d97706',
     ];
     const key = (course.title || course.id || 'x') + (course.majorName || '');
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 
   difficultyLabel(d: number | null | undefined): string {

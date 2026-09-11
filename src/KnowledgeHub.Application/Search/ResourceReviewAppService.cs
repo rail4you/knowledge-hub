@@ -7,6 +7,7 @@ using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
@@ -188,6 +189,59 @@ public class ResourceReviewAppService : KnowledgeHubAppService, IResourceReviewA
             RatingDistribution = distribution,
             MyReview = myReview != null ? await MapToDtoAsync(myReview) : null
         };
+    }
+
+    /// <summary>
+    /// 批量获取多个资源的评分统计：一次性查询，避免列表页对每个资源单独请求。
+    /// </summary>
+    [HttpPost]
+    public async Task<List<ResourceRatingSummaryDto>> GetRatingSummariesAsync(List<Guid> resourceIds)
+    {
+        var result = new List<ResourceRatingSummaryDto>();
+        if (resourceIds == null || resourceIds.Count == 0)
+        {
+            return result;
+        }
+
+        var ids = resourceIds.Distinct().ToList();
+
+        // 评分统计仅计入一级评价（ParentId 为空），回复不参与
+        var reviews = await _reviewRepository.GetListAsync(
+            r => ids.Contains(r.ResourceId) && r.ParentId == null);
+
+        var myReviews = new List<ResourceReview>();
+        if (_currentUser.Id.HasValue)
+        {
+            myReviews = await _reviewRepository.GetListAsync(
+                r => ids.Contains(r.ResourceId) && r.UserId == _currentUser.Id.Value);
+        }
+
+        foreach (var id in ids)
+        {
+            var resourceReviews = reviews.Where(r => r.ResourceId == id).ToList();
+
+            var distribution = new int[5];
+            foreach (var review in resourceReviews)
+            {
+                if (review.Rating >= 1 && review.Rating <= 5)
+                {
+                    distribution[review.Rating - 1]++;
+                }
+            }
+
+            var myReview = myReviews.FirstOrDefault(r => r.ResourceId == id);
+
+            result.Add(new ResourceRatingSummaryDto
+            {
+                ResourceId = id,
+                AverageRating = resourceReviews.Count > 0 ? Math.Round(resourceReviews.Average(r => r.Rating), 1) : 0,
+                TotalReviews = resourceReviews.Count,
+                RatingDistribution = distribution,
+                MyReview = myReview != null ? await MapToDtoAsync(myReview) : null
+            });
+        }
+
+        return result;
     }
 
     private async Task<ResourceReviewDto> MapToDtoAsync(ResourceReview review)

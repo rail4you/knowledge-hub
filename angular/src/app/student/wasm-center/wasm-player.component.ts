@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
 import { PracticumSimulationService } from '../../proxy/practicums/practicum-simulation.service';
@@ -16,13 +15,10 @@ import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/
   standalone: true,
   imports: [
     CommonModule,
-    DatePipe,
-    DecimalPipe,
     RouterModule,
     NzIconModule,
     NzSpinModule,
     NzTagModule,
-    NzButtonModule,
     SafeResourceUrlPipe,
   ],
   templateUrl: './wasm-player.component.html',

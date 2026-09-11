@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { PracticumSimulationService } from '../../proxy/practicums/practicum-simulation.service';
 import { PracticumSimulationStatus } from '../../proxy/practicums/enums/practicum-simulation-status.enum';
@@ -16,12 +15,10 @@ import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/
   imports: [
     CommonModule,
     DatePipe,
-    DecimalPipe,
     RouterModule,
     NzIconModule,
     NzSpinModule,
     NzTagModule,
-    NzButtonModule,
   ],
   templateUrl: './wasm-center-list.component.html',
   styleUrls: ['./wasm-center-list.component.scss'],

@@ -5,10 +5,8 @@ import { RouterLink } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzModalModule } from 'ng-zorro-antd/modal';
 import {
   EmploymentApplicationStatus,
   EmploymentInterviewResult,
@@ -24,7 +22,7 @@ import { StudentJobDetailModalComponent } from './student-job-detail-modal.compo
   standalone: true,
   imports: [
     CommonModule, DatePipe, FormsModule, RouterLink,
-    NzIconModule, NzSpinModule, NzEmptyModule, NzPaginationModule, NzTagModule, NzModalModule,
+    NzIconModule, NzSpinModule, NzPaginationModule, NzTagModule,
     StudentJobDetailModalComponent,
   ],
   templateUrl: './student-my-applications.component.html',

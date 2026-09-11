@@ -1,7 +1,6 @@
 import { Component, signal, inject, computed, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
@@ -90,7 +89,6 @@ interface ParsedRecord {
   imports: [
     CommonModule,
     FormsModule,
-    RouterLink,
     NzInputModule,
     NzButtonModule,
     NzCardModule,

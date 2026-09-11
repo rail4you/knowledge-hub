@@ -37,7 +37,6 @@ import { SiteFooterComponent } from '../../shared/branding/site-footer.component
     NzPageHeaderModule,
     NzDividerModule,
     SiteBrandComponent,
-    SiteFooterComponent,
   ],
   template: `
     <nz-page-header>

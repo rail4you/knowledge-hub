@@ -20,6 +20,7 @@ import {
 } from '../../proxy/practicums/dtos/models';
 import { PracticumEnrollmentStatus } from '../../proxy/practicums/enums/practicum-enrollment-status.enum';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
+import { hashGradient } from '../../shared/utils/color.util';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 echarts.use([PieChart, LineChart, CanvasRenderer, TooltipComponent, LegendComponent, GridComponent]);
@@ -75,6 +76,7 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
   @ViewChild('lineChartEl') lineChartEl?: ElementRef<HTMLDivElement>;
   private pieChart: echarts.ECharts | null = null;
   private lineChart: echarts.ECharts | null = null;
+  private chartTimer?: ReturnType<typeof setTimeout>;
 
   ngOnInit(): void {
     this.reload();
@@ -85,6 +87,10 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
   }
 
   ngOnDestroy(): void {
+    if (this.chartTimer) {
+      clearTimeout(this.chartTimer);
+      this.chartTimer = undefined;
+    }
     this.pieChart?.dispose();
     this.lineChart?.dispose();
     this.pieChart = null;
@@ -98,7 +104,11 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
         this.items.set(items || []);
         this.loading.set(false);
         this.computeSummary();
-        setTimeout(() => this.renderCharts(), 0);
+        if (this.chartTimer) clearTimeout(this.chartTimer);
+        this.chartTimer = setTimeout(() => {
+          this.chartTimer = undefined;
+          this.renderCharts();
+        }, 0);
       },
       error: () => {
         this.loading.set(false);
@@ -256,9 +266,7 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
       '#5b93db',
     ];
     const key = item.projectTitle || item.projectId || item.id || '';
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 
   hasMetadata(item: PracticumTimelineItemDto, key: string): boolean {

@@ -3,7 +3,6 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
@@ -18,6 +17,7 @@ import { LearningService } from '../../proxy/learning/learning.service';
 import type { CourseDto, StudentCourseDto } from '../../proxy/courses/dtos/models';
 import type { LearningDashboardDto } from '../../proxy/learning/dtos/models';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { hashGradient } from '../../shared/utils/color.util';
 import { VoiceContextService } from '../voice/voice-context.service';
 
 interface StatItem {
@@ -57,7 +57,6 @@ interface HotCourse {
     FormsModule,
     RouterModule,
     NzIconModule,
-    NzButtonModule,
     NzSpinModule,
     NzProgressModule,
     NzEmptyModule,
@@ -358,11 +357,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       '#d97706',
     ];
     const key = (primary || 'x') + (secondary || '');
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) {
-      hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    }
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 
   hasCover(course: CourseDto): boolean {

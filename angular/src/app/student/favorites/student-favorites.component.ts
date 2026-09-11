@@ -7,12 +7,12 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import type { ResourceDto } from '../../proxy/resources/models';
 import { ResourceService } from '../../proxy/resources/resource.service';
-import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { StudentResourceCollectionService } from '../resource-collection.service';
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { buildDownloadFileName } from '../../shared/download/download-file.util';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
+import { fileSizeText, resourceTypeName } from '../../shared/utils/resource-format.util';
 
 @Component({
   selector: 'app-student-favorites',
@@ -97,15 +97,18 @@ export class StudentFavoritesComponent implements OnInit {
 
   loadRatingSummaries(items: ResourceDto[]) {
     const summaries = { ...this.ratingSummaries() };
-    items.forEach(resource => {
-      // 已有缓存不再重复请求，翻页时只补拉新出现的资源
-      if (!resource.id || summaries[resource.id]) return;
-      this.reviewService.getRatingSummary(resource.id).subscribe({
-        next: summary => {
-          summaries[resource.id!] = summary;
-          this.ratingSummaries.set({ ...summaries });
-        }
-      });
+    // 批量拉取本页缺失的评分汇总，避免每个资源一次请求（N+1）
+    const pendingIds = items
+      .map(r => r.id)
+      .filter((id): id is string => !!id && !summaries[id]);
+    if (pendingIds.length === 0) return;
+
+    this.reviewService.getRatingSummaries(pendingIds).subscribe({
+      next: list => {
+        const next = { ...this.ratingSummaries() };
+        (list || []).forEach(summary => { next[summary.resourceId] = summary; });
+        this.ratingSummaries.set(next);
+      }
     });
   }
 
@@ -194,21 +197,11 @@ export class StudentFavoritesComponent implements OnInit {
   }
 
   getResourceTypeName(type?: number): string {
-    const names: Record<number, string> = {
-      [ResourceType.Document]: '文档',
-      [ResourceType.Video]: '视频',
-      [ResourceType.Audio]: '音频',
-      [ResourceType.Image]: '图片',
-      [ResourceType.PPT]: '演示文稿',
-    };
-    return names[type ?? 0] || '资料';
+    return resourceTypeName(type);
   }
 
   formatFileSize(size?: number): string {
-    if (!size) return '未知大小';
-    if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
-    if (size >= 1024) return `${(size / 1024).toFixed(0)} KB`;
-    return `${size} B`;
+    return fileSizeText(size);
   }
 
   /** 评分对应的实心星星数量（0-5，四舍五入），用于卡片评分行展示 */

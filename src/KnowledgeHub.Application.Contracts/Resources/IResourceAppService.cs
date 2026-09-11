@@ -16,6 +16,9 @@ public interface IResourceAppService : ICrudAppService<ResourceDto, Guid, PagedA
     Task<List<ResourceVersionDto>> GetVersionsAsync(Guid resourceId);
     Task<ResourceVersionDto> RollbackVersionAsync(Guid versionId);
     Task<bool> IsCollectedAsync(Guid resourceId);
+
+    /// <summary>批量查询当前用户已收藏的资源 Id，避免列表页 N+1 请求。</summary>
+    Task<List<Guid>> CheckCollectedStatusAsync(List<Guid> resourceIds);
     Task CollectAsync(Guid resourceId);
     Task UncollectAsync(Guid resourceId);
     Task<List<ResourceCategoryDto>> GetCategoriesAsync(Guid? majorId = null);

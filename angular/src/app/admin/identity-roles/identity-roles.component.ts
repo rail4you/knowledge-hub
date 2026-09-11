@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { ConfigStateService, LocalizationService, LocalizationPipe, PermissionDirective, RestService } from '@abp/ng.core';
+import { ConfigStateService, LocalizationService, LocalizationPipe, RestService } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
 import { IdentityRoleService } from './identity-role.service';
 import type { IdentityRoleDto, IdentityRoleCreateDto, IdentityRoleUpdateDto } from './models';
@@ -49,7 +49,6 @@ interface PermissionGroup {
     ReactiveFormsModule,
     FormsModule,
     LocalizationPipe,
-    PermissionDirective,
     NzTableModule,
     NzButtonModule,
     NzModalModule,

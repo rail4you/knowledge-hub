@@ -9,7 +9,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
-import { MarkdownComponent, MarkdownPipe, provideMarkdown } from 'ngx-markdown';
+import { MarkdownComponent, provideMarkdown } from 'ngx-markdown';
 import { fixCjkMarkdown } from '../shared/markdown-cjk-fix.util';
 import { AgentRunService } from './agent-run.service';
 import { ClassroomAgentTaskService } from './classroom-agent-task.service';
@@ -38,7 +38,6 @@ import {
     NzTagModule,
     NzTabsModule,
     MarkdownComponent,
-    MarkdownPipe,
   ],
   providers: [provideMarkdown()],
   templateUrl: './teaching-agent-task-detail.component.html',

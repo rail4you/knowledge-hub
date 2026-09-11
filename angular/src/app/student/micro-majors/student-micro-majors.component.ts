@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
@@ -9,6 +8,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { MicroMajorService, MicroMajorEnrollmentStatus } from '../../micro-majors/micro-major.service';
 import type { MicroMajorDto, MicroMajorEnrollmentDto } from '../../micro-majors/micro-major.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
+import { hashGradient } from '../../shared/utils/color.util';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
@@ -16,7 +16,7 @@ import { StudentHeroComponent } from '../shared/student-hero/student-hero.compon
   standalone: true,
   imports: [
     CommonModule, RouterModule,
-    NzButtonModule, NzIconModule, NzSpinModule, NzPaginationModule,
+    NzIconModule, NzSpinModule, NzPaginationModule,
     StudentHeroComponent,
   ],
   templateUrl: './student-micro-majors.component.html',
@@ -139,8 +139,6 @@ export class StudentMicroMajorsComponent implements OnInit {
       '#0891b2',
     ];
     const key = item.title || item.id || '';
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 }

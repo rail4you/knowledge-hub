@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { finalize, share, tap } from 'rxjs/operators';
 
 interface CacheEntry {
   value: unknown;
@@ -23,6 +23,9 @@ export class ClientCacheService {
   private static readonly MAX_ENTRIES_PER_NAMESPACE = 50;
 
   private readonly stores = new Map<string, Map<string, CacheEntry>>();
+
+  /** 进行中的请求，按 namespace::key 去重，避免并发重复请求同一 key */
+  private readonly inflight = new Map<string, Observable<unknown>>();
 
   /** 读取缓存；过期或不存在返回 undefined */
   get<T>(namespace: string, key: string): T | undefined {
@@ -56,7 +59,20 @@ export class ClientCacheService {
     if (cached !== undefined) {
       return of(cached);
     }
-    return loader().pipe(tap(value => this.set(namespace, key, value)));
+
+    const inflightKey = `${namespace}::${key}`;
+    const existing = this.inflight.get(inflightKey) as Observable<T> | undefined;
+    if (existing) {
+      return existing;
+    }
+
+    const request$ = loader().pipe(
+      tap(value => this.set(namespace, key, value)),
+      finalize(() => this.inflight.delete(inflightKey)),
+      share()
+    );
+    this.inflight.set(inflightKey, request$);
+    return request$;
   }
 
   /** 忽略缓存强制加载并写入缓存（用于新增/修改/删除后刷新） */

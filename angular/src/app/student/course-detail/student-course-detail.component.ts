@@ -4,15 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { AuthService } from '@abp/ng.core';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
@@ -25,6 +20,7 @@ import type { StudentExerciseRecordDto } from '../../proxy/learning/dtos/models'
 import { ChapterTreeGraphComponent } from '../../learning/knowledge-graph/chapter-tree-graph.component';
 import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
+import { hashGradient } from '../../shared/utils/color.util';
 import { VoiceContextService } from '../voice/voice-context.service';
 
 type TabKey = 'chapters' | 'graph' | 'progress' | 'related';
@@ -57,13 +53,8 @@ interface ResourceItem {
     FormsModule,
     RouterModule,
     NzIconModule,
-    NzButtonModule,
     NzSpinModule,
-    NzProgressModule,
-    NzEmptyModule,
-    NzTabsModule,
     NzTooltipModule,
-    NzDividerModule,
     NzTableModule,
     ChapterTreeGraphComponent,
     MasteryRadarComponent,
@@ -627,11 +618,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       '#0e7490',
     ];
     const key = (primary || 'x') + (secondary || '');
-    let hash = 0;
-    for (let i = 0; i < key.length; i++) {
-      hash = (hash * 31 + key.charCodeAt(i)) | 0;
-    }
-    return palettes[Math.abs(hash) % palettes.length];
+    return hashGradient(key, palettes);
   }
 
   hasCover(c: CourseDetailDto | RelatedCourse): boolean {
