@@ -627,10 +627,10 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
 }
 
 .course-card__body {
-  padding: 14px 16px 16px;
+  padding: 12px 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
   min-width: 0;
 }
@@ -644,20 +644,28 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   transition: color .2s ease;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  overflow-wrap: break-word;
+  // 固定两行标题高度：1 行标题不再把 meta / 描述顶上去，保证同行卡片对齐
+  min-height: calc(1.4em * 2);
 }
 .course-card:hover .course-card__title { color: $blue; }
 
 .course-card__meta {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px 6px;
   font-size: 12px;
   color: $ink-muted;
   line-height: 1.4;
   min-width: 0;
+  overflow: hidden;
+  // 固定单行高度：长组织名省略不再换行顶起描述区
+  min-height: calc(1.4em);
+  max-height: calc(1.4em);
 }
 .course-card__org {
   display: inline-flex;
@@ -697,7 +705,6 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding-top: 2px;
   margin-top: auto;
 }
 .course-card__tag {
@@ -723,18 +730,33 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
     span[nz-icon] { font-size: 10px; color: #d97706; }
   }
 }
+/* 描述盒：只负责背景/padding/定高 + 外层裁剪；省略逻辑在内层（无 padding），
+   避免 padding-bottom 成为透出第三行的窗口（同 student-jobs 卡片实现） */
 .course-card__desc {
   margin: 0;
-  padding: 9px 11px;
+  padding: 7px 11px;
+  box-sizing: border-box;
+  height: 54px;
+  overflow: hidden;
   background: #f0f4fa;
   border-radius: 8px;
-  color: $ink-muted;
   font-size: 12px;
-  line-height: 1.6;
+  color: $ink-muted;
+  line-height: 20px;
+  &--empty {
+    color: $ink-faint;
+    display: flex;
+    align-items: center;
+  }
+}
+.course-card__desc-clamp {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  max-height: 40px;
   overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 // =========================

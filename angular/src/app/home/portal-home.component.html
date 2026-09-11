@@ -490,7 +490,9 @@
                     </span>
                   }
                 </div>
-                @if (c.description) { <p class="course-card__desc">{{ c.description }}</p> }
+                <p class="course-card__desc" [class.course-card__desc--empty]="!c.description" [title]="c.description || '暂无课程描述'">
+                  <span class="course-card__desc-clamp">{{ c.description || '暂无课程描述' }}</span>
+                </p>
                 <div class="course-card__tags">
                   <span class="course-card__tag" [title]="courseMajorText(c)">{{ courseMajorText(c) }}</span>
                 </div>
