@@ -146,6 +146,15 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.AI.LessonPlan',
     },
+    {
+      path: '/ai/tasks',
+      name: '::Menu:AITaskCenter',
+      iconClass: 'fas fa-list-check',
+      parentName: '::Menu:AIManagement',
+      order: 9,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.AI',
+    },
 
     // ══════════════════════════════════════════════════════════
     //  ③ 专业和课程管理

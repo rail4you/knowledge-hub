@@ -75,6 +75,7 @@ public class KnowledgeHubPermissionDefinitionProvider : PermissionDefinitionProv
         aiPermission.AddChild(KnowledgeHubPermissions.AI.CaseAnalysis, L("Permission:AI.CaseAnalysis"));
         aiPermission.AddChild(KnowledgeHubPermissions.AI.CareerGuidance, L("Permission:AI.CareerGuidance"));
         aiPermission.AddChild(KnowledgeHubPermissions.AI.ExerciseGenerate, L("Permission:AI.ExerciseGenerate"));
+        aiPermission.AddChild(KnowledgeHubPermissions.AI.ManageTasks, L("Permission:AI.ManageTasks"));
 
         // Teaching agent permissions
         var teachingAgentsPermission = myGroup.AddPermission(KnowledgeHubPermissions.TeachingAgents.Default, L("Permission:TeachingAgents"));

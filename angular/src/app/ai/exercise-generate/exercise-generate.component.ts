@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -24,7 +24,10 @@ import { ExerciseService } from '../../proxy/exams/exercise.service';
 import type { CourseDto, ChapterDto } from '../../proxy/courses/dtos/models';
 import type { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subject, Subscription } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
+import { AiTaskNotificationService } from '../services/ai-task-notification.service';
 
 @Component({
   selector: 'app-exercise-generate',
@@ -53,13 +56,17 @@ import { firstValueFrom } from 'rxjs';
   styleUrls: ['./exercise-generate.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ExerciseGenerateComponent implements OnInit {
+export class ExerciseGenerateComponent implements OnInit, OnDestroy {
   private readonly courseService = inject(CourseService);
   private readonly chapterService = inject(ChapterService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly message = inject(NzMessageService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly aiTaskService = inject(AiTaskService);
+  private readonly aiTaskNotifications = inject(AiTaskNotificationService);
+  private readonly destroy$ = new Subject<void>();
+  private taskPollSub: Subscription | null = null;
 
   readonly courses = signal<CourseDto[]>([]);
   readonly courseId = signal<string | null>(null);
@@ -303,6 +310,16 @@ export class ExerciseGenerateComponent implements OnInit {
       this.courseId.set(presetCourseId);
       this.loadChapterTree();
     }
+    const taskId = this.route.snapshot.queryParamMap.get('taskId');
+    if (taskId) {
+      this.loadTaskPreview(taskId);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.cancelTaskPolling();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadCourses() {
@@ -341,36 +358,109 @@ export class ExerciseGenerateComponent implements OnInit {
     });
   }
 
-  /** 确认框中点「确认生成」后真正调用 AI（直接保存入库） */
-  async generate() {
+  /** 确认框中点「确认生成」后提交后台任务（完成后自动保存入库） */
+  generate() {
     const courseId = this.courseId();
     if (!courseId) {
       this.message.warning('请先选择课程');
       return;
     }
     const chapterIds = this.selectedChapterIds();
+    const payload = {
+      courseId,
+      chapterId: chapterIds.length > 0 ? chapterIds[0] : undefined,
+      chapterIds,
+      type: this.exerciseType(),
+      count: this.count(),
+      difficulty: this.difficulty(),
+      topicHint: this.topicHint().trim() || undefined,
+      customPrompt: this.customPrompt().trim() || undefined,
+    };
+
     this.generating.set(true);
+    this.cancelTaskPolling();
+    this.aiTaskService
+      .create({
+        taskType: AiTaskType.ExerciseGenerate,
+        title: this.selectedCourseTitle() ? `习题生成：${this.selectedCourseTitle()}` : '习题生成',
+        resourceId: undefined,
+        resourceName: this.selectedCourseTitle() || undefined,
+        inputJson: JSON.stringify(payload),
+      })
+      .subscribe({
+        next: (task) => {
+          this.message.success('任务已提交后台生成，可切换页面，完成后会通知你');
+          this.followTask(task.id);
+        },
+        error: (e) => {
+          this.generating.set(false);
+          this.message.error(e?.error?.error?.message || '提交任务失败，请重试');
+        },
+      });
+  }
+
+  // ---------- background task helpers ----------
+  private followTask(taskId: string) {
+    this.cancelTaskPolling();
+    this.taskPollSub = this.aiTaskNotifications
+      .pollTask(taskId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (t) => {
+          if (t.status === AiTaskStatus.Completed) {
+            this.cancelTaskPolling();
+            this.generating.set(false);
+            const exercises = this.parseExercises(t.resultJson);
+            this.results.set(exercises);
+            this.message.success(`AI 已生成并保存 ${exercises.length} 道习题`);
+            this.confirmVisible.set(false);
+            this.activeTab.set(1);
+          } else if (t.status === AiTaskStatus.Failed || t.status === AiTaskStatus.Cancelled) {
+            this.cancelTaskPolling();
+            this.generating.set(false);
+            this.message.error(t.errorMessage || 'AI 生成失败，请重试');
+          }
+        },
+        error: () => {
+          this.cancelTaskPolling();
+          this.generating.set(false);
+          this.message.error('AI 生成失败，请重试');
+        },
+      });
+  }
+
+  private cancelTaskPolling() {
+    this.taskPollSub?.unsubscribe();
+    this.taskPollSub = null;
+  }
+
+  private loadTaskPreview(taskId: string) {
+    this.aiTaskService
+      .get(taskId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (task) => {
+          if (task.status === AiTaskStatus.Completed) {
+            this.results.set(this.parseExercises(task.resultJson));
+            this.activeTab.set(1);
+          } else if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
+            this.generating.set(true);
+            this.followTask(task.id);
+          } else {
+            this.message.error(task.errorMessage || '该任务未成功完成');
+          }
+        },
+        error: () => this.message.error('加载任务结果失败'),
+      });
+  }
+
+  private parseExercises(raw?: string | null): ExerciseDto[] {
+    if (!raw) return [];
     try {
-      const data = await firstValueFrom(
-        this.exerciseService.generateByAI({
-          courseId,
-          chapterId: chapterIds.length > 0 ? chapterIds[0] : undefined,
-          chapterIds,
-          type: this.exerciseType(),
-          count: this.count(),
-          difficulty: this.difficulty(),
-          topicHint: this.topicHint().trim() || undefined,
-          customPrompt: this.customPrompt().trim() || undefined,
-        } as any)
-      );
-      this.results.set(data || []);
-      this.message.success(`AI 已生成并保存 ${data?.length || 0} 道习题`);
-      this.confirmVisible.set(false);
-      this.activeTab.set(1);
-    } catch (e: any) {
-      this.message.error(e?.error?.error?.message || 'AI 生成失败，请重试');
-    } finally {
-      this.generating.set(false);
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as ExerciseDto[]) : [];
+    } catch {
+      return [];
     }
   }
 

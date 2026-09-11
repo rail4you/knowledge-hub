@@ -493,6 +493,14 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard, nonStudentGuard],
   },
   {
+    path: 'ai/tasks',
+    loadComponent: () => import('./ai/tasks/ai-task-center.component').then(c => c.AiTaskCenterComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.AI',
+    },
+  },
+  {
     path: 'teaching/agents',
     loadComponent: () => import('./teaching-agents/teaching-agent-list.component').then(c => c.TeachingAgentListComponent),
     canActivate: [authGuard, permissionGuard],

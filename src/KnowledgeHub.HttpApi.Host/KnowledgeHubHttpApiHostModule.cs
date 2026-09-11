@@ -56,6 +56,8 @@ using Microsoft.Extensions.Logging;
 using Volo.Abp.BackgroundJobs;
 using Hangfire;
 using Hangfire.Dashboard;
+using Hangfire.PostgreSql;
+using KnowledgeHub.Application.AI.Tasks;
 using KnowledgeHub.HangfireJobs;
 using KnowledgeHub.Json;
 using KnowledgeHub.TeachingAgents;
@@ -212,22 +214,31 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             client.Timeout = TimeSpan.FromSeconds(options.Value.ConversionTimeoutSeconds);
         });
 
-        // ── Hangfire 转换队列（内存存储，不持久化，重启清空）──
+        // ── Hangfire 队列（PostgreSQL 持久化，重启不丢任务）──
+        // 转换任务与 AI 生成任务分别走 conversion / ai 队列，互相隔离、可并发。
         context.Services.AddHangfire(config =>
         {
             config.SetDataCompatibilityLevel(Hangfire.CompatibilityLevel.Version_180);
             config.UseSimpleAssemblyNameTypeSerializer();
             config.UseRecommendedSerializerSettings();
-            config.UseInMemoryStorage();
+            config.UsePostgreSqlStorage(
+                configuration.GetConnectionString("Default"),
+                new Hangfire.PostgreSql.PostgreSqlStorageOptions
+                {
+                    SchemaName = "hangfire",
+                    PrepareSchemaIfNecessary = true
+                });
         });
         context.Services.AddHangfireServer(options =>
         {
             // worker 数：转换真正并发由 ConversionConcurrencyManager 按服务分组控制，
             // 这里给一个合理上限（如 2 * CPU）防止排队任务堆积在后台。
             options.WorkerCount = Math.Max(1, Environment.ProcessorCount * 2);
-            options.Queues = new[] { "default", "conversion" };
+            options.Queues = new[] { "default", "conversion", "ai" };
         });
         context.Services.AddSingleton<IConversionTaskQueue, HangfireConversionTaskQueue>();
+        // AI 生成任务队列（ai 队列，PostgreSQL 持久化）
+        context.Services.AddSingleton<IAiTaskQueue, HangfireAiTaskQueue>();
 
         context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>();
         context.Services.AddScoped<KnowledgeHub.Application.Search.MeiliSearchService>();
@@ -531,8 +542,21 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
         });
         RegisterOfficeConversionRecurringJobs(context);
+        RegisterAiTaskRecoveryRecurringJob();
 
         app.UseConfiguredEndpoints();
+    }
+
+    /// <summary>
+    /// 注册 AI 任务恢复 RecurringJob（每 5 分钟）：清理中断的 Running 任务。
+    /// </summary>
+    private void RegisterAiTaskRecoveryRecurringJob()
+    {
+        RecurringJob.AddOrUpdate<AiTaskRecoveryService>(
+            "ai-task-recovery",
+            job => job.RecoverAsync(),
+            Cron.MinuteInterval(5),
+            new RecurringJobOptions { QueueName = "default" });
     }
 
     /// <summary>

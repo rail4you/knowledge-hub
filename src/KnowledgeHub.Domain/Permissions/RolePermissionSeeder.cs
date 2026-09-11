@@ -321,6 +321,8 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.AI.CaseAnalysis);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.AI.CareerGuidance);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.AI.ExerciseGenerate);
+        // 院校管理员可查看/管理本租户所有人的 AI 生成任务（任务监控面板）
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.AI.ManageTasks);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Manage);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Assign);
@@ -588,6 +590,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.AI.CaseAnalysis);
         await GrantAsync("admin", KnowledgeHubPermissions.AI.CareerGuidance);
         await GrantAsync("admin", KnowledgeHubPermissions.AI.ExerciseGenerate);
+        await GrantAsync("admin", KnowledgeHubPermissions.AI.ManageTasks);
         await GrantAsync("admin", KnowledgeHubPermissions.TeachingAgents.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.TeachingAgents.Manage);
         await GrantAsync("admin", KnowledgeHubPermissions.TeachingAgents.Assign);

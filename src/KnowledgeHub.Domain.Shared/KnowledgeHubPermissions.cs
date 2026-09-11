@@ -65,6 +65,8 @@ public static class KnowledgeHubPermissions
         public const string CaseAnalysis = Default + ".CaseAnalysis";
         public const string CareerGuidance = Default + ".CareerGuidance";
         public const string ExerciseGenerate = Default + ".ExerciseGenerate";
+        /// <summary>可查看/管理本租户所有人的 AI 生成任务（任务监控面板）。</summary>
+        public const string ManageTasks = Default + ".ManageTasks";
     }
 
     public static class TeachingAgents

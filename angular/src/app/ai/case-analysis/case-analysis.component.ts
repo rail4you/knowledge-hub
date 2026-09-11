@@ -17,9 +17,12 @@ import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, Subscription, takeUntil } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
 import { ConfigStateService } from '@abp/ng.core';
 import { ChatService, ResourceForChat } from '../services/chat.service';
+import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
+import { AiTaskNotificationService } from '../services/ai-task-notification.service';
 
 interface CaseAnalysisResult {
   title: string;
@@ -89,7 +92,11 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
   private readonly messageService = inject(NzMessageService);
   private readonly configState = inject(ConfigStateService);
+  private readonly aiTaskService = inject(AiTaskService);
+  private readonly aiTaskNotifications = inject(AiTaskNotificationService);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroy$ = new Subject<void>();
+  private taskPollSub: Subscription | null = null;
   private readonly HISTORY_KEY_PREFIX = 'kh-case-analysis-history';
   private historyKey = `${this.HISTORY_KEY_PREFIX}:anon`;
 
@@ -181,9 +188,15 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
       });
 
     this.loadResources();
+
+    const taskId = this.route.snapshot.queryParamMap.get('taskId');
+    if (taskId) {
+      this.loadTaskPreview(taskId);
+    }
   }
 
   ngOnDestroy() {
+    this.cancelTaskPolling();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -232,58 +245,157 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
     this.result.set(null);
     this.rawJson.set('');
 
-    let fullResponse = '';
+    const focusArea = this.focusArea();
 
-    this.chatService.generateCaseAnalysis({
-      resourceId: resource.id,
-      focusArea: this.focusArea() || undefined
-    })
-      .pipe(takeUntil(this.destroy$))
+    this.submitTask(
+      resource,
+      focusArea,
+      { resourceId: resource.id, focusArea: focusArea || undefined },
+      (resultJson) => {
+        this.isLoading.set(false);
+        this.rawJson.set(resultJson);
+        const parsed = this.parseResult(resultJson);
+        if (!parsed) {
+          this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
+          return;
+        }
+        const item: CaseAnalysisHistoryItem = {
+          id: this.currentTaskId() || Date.now().toString(36),
+          title: parsed.title || resource.name || '未命名案例分析',
+          resourceId: resource.id,
+          resourceName: resource.name,
+          focusArea,
+          result: parsed,
+          rawJson: resultJson,
+          createdAt: new Date().toISOString(),
+        };
+        this.history.update((list) => [item, ...list].slice(0, 50));
+        this.saveHistory();
+        this.result.set(null);
+        this.rawJson.set('');
+        this.activeTabIndex.set(1);
+        this.pageIndex.set(1);
+        this.messageService.success('案例分析已生成，已保存到历史记录');
+      },
+    );
+  }
+
+  // ---------- background task helpers ----------
+  currentTaskId = signal<string | null>(null);
+
+  private submitTask(
+    resource: ResourceForChat,
+    focusArea: string,
+    payload: unknown,
+    onCompleted: (resultJson: string) => void,
+  ) {
+    this.cancelTaskPolling();
+    this.aiTaskService
+      .create({
+        taskType: AiTaskType.CaseAnalysis,
+        title: resource.name ? `案例分析：${resource.name}` : '案例分析',
+        resourceId: resource.id,
+        resourceName: resource.name,
+        inputJson: JSON.stringify(payload),
+      })
       .subscribe({
-        next: (chunk) => {
-          if (chunk.content) {
-            fullResponse += chunk.content;
-            this.rawJson.set(fullResponse);
-            this.tryParseResult(fullResponse);
-          }
+        next: (task) => {
+          this.currentTaskId.set(task.id);
+          this.messageService.success('任务已提交后台生成，可切换页面，完成后会通知你');
+          this.followTask(task.id, onCompleted);
         },
         error: (err) => {
-          console.error('Error generating case analysis:', err);
+          this.isLoading.set(false);
+          this.messageService.error(err?.error?.error?.message || '提交任务失败，请重试');
+        },
+      });
+  }
+
+  private followTask(taskId: string, onCompleted: (resultJson: string) => void) {
+    this.cancelTaskPolling();
+    this.taskPollSub = this.aiTaskNotifications
+      .pollTask(taskId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (t) => {
+          if (t.status === AiTaskStatus.Completed) {
+            this.cancelTaskPolling();
+            onCompleted(t.resultJson || '');
+          } else if (t.status === AiTaskStatus.Failed || t.status === AiTaskStatus.Cancelled) {
+            this.cancelTaskPolling();
+            this.isLoading.set(false);
+            this.messageService.error(t.errorMessage || '案例分析生成失败，请稍后重试');
+          }
+        },
+        error: () => {
+          this.cancelTaskPolling();
           this.isLoading.set(false);
           this.messageService.error('案例分析生成失败，请稍后重试');
         },
-        complete: () => {
-          this.isLoading.set(false);
-          if (fullResponse && !this.result()) {
-            this.tryParseResult(fullResponse, true);
-          }
-          const parsed = this.result();
-          const json = this.rawJson();
-          if (parsed && json) {
-            const item: CaseAnalysisHistoryItem = {
-              id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-              title: parsed.title || resource.name || '未命名案例分析',
-              resourceId: resource.id,
-              resourceName: resource.name,
-              focusArea: this.focusArea(),
-              result: parsed,
-              rawJson: json,
-              createdAt: new Date().toISOString(),
-            };
-            this.history.update(list => [item, ...list].slice(0, 50));
-            this.saveHistory();
-
-            // 生成成功后清空当前预览、直接跳到历史记录 tab
-            this.result.set(null);
-            this.rawJson.set('');
-            this.activeTabIndex.set(1);
-            this.pageIndex.set(1);
-            this.messageService.success('案例分析已生成，已保存到历史记录');
-          } else if (fullResponse) {
-            this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
-          }
-        }
       });
+  }
+
+  private cancelTaskPolling() {
+    this.taskPollSub?.unsubscribe();
+    this.taskPollSub = null;
+  }
+
+  private loadTaskPreview(taskId: string) {
+    this.aiTaskService
+      .get(taskId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (task) => this.openTaskResult(task),
+        error: () => this.messageService.error('加载任务结果失败'),
+      });
+  }
+
+  private openTaskResult(task: AiGenerationTaskDto) {
+    if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
+      this.isLoading.set(true);
+      this.currentTaskId.set(task.id);
+      this.followTask(task.id, (json) => {
+        this.isLoading.set(false);
+        this.previewTask({ ...task, status: AiTaskStatus.Completed, resultJson: json });
+      });
+      return;
+    }
+    this.previewTask(task);
+  }
+
+  private previewTask(task: AiGenerationTaskDto) {
+    if (task.status !== AiTaskStatus.Completed || !task.resultJson) return;
+    const parsed = this.parseResult(task.resultJson);
+    if (!parsed) return;
+    const item: CaseAnalysisHistoryItem = {
+      id: task.id,
+      title: parsed.title || task.title,
+      resourceId: task.resourceId || '',
+      resourceName: task.resourceName || '',
+      focusArea: '',
+      result: parsed,
+      rawJson: task.resultJson,
+      createdAt: task.completedAt || task.creationTime,
+    };
+    this.history.update((list) => (list.some((x) => x.id === item.id) ? list : [item, ...list].slice(0, 50)));
+    this.previewItem.set(item);
+  }
+
+  private parseResult(raw: string): CaseAnalysisResult | null {
+    try {
+      let clean = raw.trim();
+      if (clean.startsWith('```')) {
+        const nl = clean.indexOf('\n');
+        if (nl >= 0) clean = clean.substring(nl + 1);
+        if (clean.endsWith('```')) clean = clean.substring(0, clean.length - 3).trimEnd();
+      }
+      const start = clean.indexOf('{');
+      const end = clean.lastIndexOf('}');
+      if (start >= 0 && end > start) clean = clean.substring(start, end - start + 1);
+      return JSON.parse(clean) as CaseAnalysisResult;
+    } catch {
+      return null;
+    }
   }
 
   private tryParseResult(json: string, final = false) {

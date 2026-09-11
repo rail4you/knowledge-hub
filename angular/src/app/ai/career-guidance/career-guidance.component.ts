@@ -18,8 +18,11 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, Subscription, takeUntil } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
 import { ChatService } from '../services/chat.service';
+import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
+import { AiTaskNotificationService } from '../services/ai-task-notification.service';
 import { EmploymentService, StudentResumeDto, EmploymentGuidanceRecordDto, CareerGuidanceStudentDto } from '../../employment/employment.service';
 
 interface CareerGuidanceResult {
@@ -108,7 +111,12 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
   private readonly employmentService = inject(EmploymentService);
   private readonly messageService = inject(NzMessageService);
+  private readonly aiTaskService = inject(AiTaskService);
+  private readonly aiTaskNotifications = inject(AiTaskNotificationService);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroy$ = new Subject<void>();
+  private taskPollSub: Subscription | null = null;
+  currentTaskId = signal<string | null>(null);
 
   // ============= 学生列表 =============
   readonly students = signal<CareerGuidanceStudentDto[]>([]);
@@ -160,9 +168,15 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadStudents();
+
+    const taskId = this.route.snapshot.queryParamMap.get('taskId');
+    if (taskId) {
+      this.loadTaskPreview(taskId);
+    }
   }
 
   ngOnDestroy() {
+    this.cancelTaskPolling();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -281,35 +295,86 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
     this.isLoading.set(true);
     this.resetResult();
 
-    let fullResponse = '';
-
-    this.chatService.generateCareerGuidance({
+    const careerGoal = this.careerGoal();
+    const payload = {
       resumeContent,
       resumeTitle: resume.title,
-      careerGoal: this.careerGoal() || undefined,
+      careerGoal: careerGoal || undefined,
       attachmentUrl: resume.attachmentUrl || undefined,
-    })
-      .pipe(takeUntil(this.destroy$))
+    };
+
+    this.cancelTaskPolling();
+    this.aiTaskService
+      .create({
+        taskType: AiTaskType.CareerGuidance,
+        title: resume.title ? `职业规划：${resume.title}` : '职业规划',
+        inputJson: JSON.stringify(payload),
+      })
       .subscribe({
-        next: (chunk) => {
-          if (chunk.content) {
-            fullResponse += chunk.content;
-            this.rawJson.set(fullResponse);
-            this.tryParseResult(fullResponse);
-          }
+        next: (task) => {
+          this.currentTaskId.set(task.id);
+          this.messageService.success('任务已提交后台生成，可切换页面，完成后会通知你');
+          this.followTask(task.id);
         },
         error: (err) => {
-          console.error('Error generating career guidance:', err);
+          this.isLoading.set(false);
+          this.messageService.error(err?.error?.error?.message || '提交任务失败，请重试');
+        },
+      });
+  }
+
+  // ---------- background task helpers ----------
+  private followTask(taskId: string, onCompleted?: () => void) {
+    this.cancelTaskPolling();
+    this.taskPollSub = this.aiTaskNotifications
+      .pollTask(taskId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (t) => {
+          if (t.status === AiTaskStatus.Completed) {
+            this.cancelTaskPolling();
+            this.isLoading.set(false);
+            this.tryParseResult(t.resultJson || '', true);
+            onCompleted?.();
+          } else if (t.status === AiTaskStatus.Failed || t.status === AiTaskStatus.Cancelled) {
+            this.cancelTaskPolling();
+            this.isLoading.set(false);
+            this.messageService.error(t.errorMessage || '就业指导生成失败，请稍后重试');
+          }
+        },
+        error: () => {
+          this.cancelTaskPolling();
           this.isLoading.set(false);
           this.messageService.error('就业指导生成失败，请稍后重试');
         },
-        complete: () => {
-          this.isLoading.set(false);
-          if (fullResponse && !this.result()) {
-            this.tryParseResult(fullResponse, true);
-          }
-        }
       });
+  }
+
+  private cancelTaskPolling() {
+    this.taskPollSub?.unsubscribe();
+    this.taskPollSub = null;
+  }
+
+  private loadTaskPreview(taskId: string) {
+    this.aiTaskService
+      .get(taskId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (task) => this.openTaskResult(task),
+        error: () => this.messageService.error('加载任务结果失败'),
+      });
+  }
+
+  private openTaskResult(task: AiGenerationTaskDto) {
+    if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
+      this.isLoading.set(true);
+      this.currentTaskId.set(task.id);
+      this.followTask(task.id);
+      return;
+    }
+    if (task.status === AiTaskStatus.Completed) {
+      this.tryParseResult(task.resultJson || '', true);
+    }
   }
 
   private tryParseResult(json: string, final = false) {

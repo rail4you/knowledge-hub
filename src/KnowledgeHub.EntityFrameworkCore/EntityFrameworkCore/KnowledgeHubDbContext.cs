@@ -101,6 +101,9 @@ public class KnowledgeHubDbContext :
     public DbSet<KnowledgeHub.AI.ChatThread> ChatThreads { get; set; }
     public DbSet<KnowledgeHub.AI.ChatMessage> ChatMessages { get; set; }
 
+    // AI 异步生成任务
+    public DbSet<KnowledgeHub.AI.AiGenerationTask> AiGenerationTasks { get; set; }
+
     // Course entities
     public DbSet<KnowledgeHub.Courses.Course> Courses { get; set; }
     public DbSet<KnowledgeHub.Courses.Chapter> Chapters { get; set; }

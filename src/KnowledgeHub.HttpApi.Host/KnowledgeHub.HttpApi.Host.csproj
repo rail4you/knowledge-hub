@@ -21,7 +21,8 @@
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.UI" Version="9.0.0" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.24" />
-    <PackageReference Include="Hangfire.InMemory" Version="1.0.0" />
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.20.13" />
+    <PackageReference Include="Hangfire.PostgreSql" Version="1.20.13" />
     <PackageReference Include="KubernetesClient" Version="18.0.5" />
     <PackageReference Include="IdentityModel" Version="7.0.0" />
     <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />

@@ -36,5 +36,23 @@ public static class AIDbModelCreatingExtensions
                 .HasForeignKey(x => x.ThreadId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        builder.Entity<KnowledgeHub.AI.AiGenerationTask>(b =>
+        {
+            b.ToTable("AiGenerationTasks");
+            b.ConfigureByConvention();
+
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedOnAdd();
+            b.Property(x => x.Title).HasMaxLength(500).IsRequired();
+            b.Property(x => x.ResourceName).HasMaxLength(500);
+            b.Property(x => x.ProgressMessage).HasMaxLength(500);
+            b.Property(x => x.InputJson).HasMaxLength(-1);
+            b.Property(x => x.ResultJson).HasMaxLength(-1);
+            b.Property(x => x.ErrorMessage).HasMaxLength(-1);
+
+            b.HasIndex(x => new { x.TenantId, x.CreatorUserId, x.Status });
+            b.HasIndex(x => new { x.TenantId, x.TaskType, x.CreationTime });
+        });
     }
 }

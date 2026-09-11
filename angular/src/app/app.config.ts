@@ -137,6 +137,7 @@ import {
   HeartOutline,
   HeartFill,
   StarFill,
+  BellOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -146,6 +147,7 @@ import { SPECIAL_EDU_ROUTE_PROVIDER } from './special-edu-route.provider';
 import { VOICE_ASSISTANT_ROUTE_PROVIDER } from './voice-assistant-route.provider';
 import { accountEditFormPropContributors } from './account-form-prop-contributors';
 import { FOOTER_PROVIDER } from './footer/footer.config';
+import { AI_NOTIFICATION_PROVIDER } from './ai/notification/ai-notification.provider';
 import { IDENTITY_ROLES_PROVIDER } from './identity-roles.config';
 import { IDENTITY_USERS_PROVIDER } from './identity-users.config';
 import { LOGIN_PROVIDER } from './login/login.config';
@@ -273,6 +275,8 @@ const icons = [
   HeartOutline,
   HeartFill,
   StarFill,
+  // AI 任务通知铃铛
+  BellOutline,
 ];
 
 export const appConfig: ApplicationConfig = {
@@ -287,6 +291,7 @@ export const appConfig: ApplicationConfig = {
     SPECIAL_EDU_ROUTE_PROVIDER,
     VOICE_ASSISTANT_ROUTE_PROVIDER,
     FOOTER_PROVIDER,
+    AI_NOTIFICATION_PROVIDER,
     IDENTITY_ROLES_PROVIDER,
     IDENTITY_USERS_PROVIDER,
     LOGIN_PROVIDER,

@@ -21,6 +21,7 @@ import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, Subscription, takeUntil } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
 import { ConfigStateService } from '@abp/ng.core';
 import {
   ChatService,
@@ -28,6 +29,8 @@ import {
   LessonPlanChapter,
   LessonPlanStreamEvent
 } from '../services/chat.service';
+import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
+import { AiTaskNotificationService } from '../services/ai-task-notification.service';
 
 interface LessonPlanInput {
   topic: string;
@@ -121,6 +124,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
   private readonly messageService = inject(NzMessageService);
   private readonly configState = inject(ConfigStateService);
+  private readonly aiTaskService = inject(AiTaskService);
+  private readonly aiTaskNotifications = inject(AiTaskNotificationService);
+  private readonly route = inject(ActivatedRoute);
   private readonly destroy$ = new Subject<void>();
   private readonly HISTORY_KEY_PREFIX = 'kh-lesson-plan-history';
   private historyKey = `${this.HISTORY_KEY_PREFIX}:anon`;
@@ -251,6 +257,9 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   private genStartedAt = 0;
   private multiGenSub: Subscription | null = null;
   private cancelRequested = false;
+  /** 当前后台任务 ID 与轮询订阅 */
+  currentTaskId = signal<string | null>(null);
+  private taskPollSub: Subscription | null = null;
 
   // ---------- current preview / history ----------
   activeItem = signal<LessonPlanHistoryItem | null>(null);
@@ -304,10 +313,16 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       });
 
     this.loadResources();
+
+    const taskId = this.route.snapshot.queryParamMap.get('taskId');
+    if (taskId) {
+      this.loadTaskPreview(taskId);
+    }
   }
 
   ngOnDestroy() {
     this.multiGenSub?.unsubscribe();
+    this.cancelTaskPolling();
     this.stopGenTimer();
     this.destroy$.next();
     this.destroy$.complete();
@@ -567,53 +582,30 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.rawJson.set('');
     this.singleError.set('');
     this.progress.set(0);
-    this.progressMessage.set('正在生成教案…');
+    this.progressMessage.set('任务已提交，正在后台生成…');
 
-    let full = '';
     const form = this.input();
-
-    this.chatService.generateLessonPlan({
+    const payload = {
       resourceId: resource.id,
       topic: form.topic,
       subject: form.subject || undefined,
       grade: form.grade || undefined,
       duration: form.duration,
       customPrompt: form.customPrompt?.trim() || undefined
-    })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (chunk) => {
-          if (chunk.content) {
-            full += chunk.content;
-            this.rawJson.set(full);
-            this.tryParseResult(full);
-          }
-        },
-        error: (err) => {
-          console.error('Error generating lesson plan:', err);
-          this.isLoading.set(false);
-          this.phase.set('config');
-          this.messageService.error('教案生成失败，请稍后重试');
-        },
-        complete: () => {
-          this.isLoading.set(false);
-          if (this.singleError()) {
-            this.phase.set('config');
-            this.messageService.error(this.singleError());
-            return;
-          }
-          if (full && !this.result()) {
-            this.tryParseResult(full, true);
-          }
-          const parsed = this.result();
-          if (parsed) {
-            this.finishSingle(resource, parsed, full);
-          } else {
-            this.phase.set('config');
-            this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
-          }
-        }
-      });
+    };
+
+    this.submitTask(AiTaskType.LessonPlanSingle, resource, form.topic || resource.name, payload, (resultJson) => {
+      this.isLoading.set(false);
+      this.rawJson.set(resultJson);
+      this.tryParseResult(resultJson, true);
+      const parsed = this.result();
+      if (parsed) {
+        this.finishSingle(resource, parsed, resultJson);
+      } else {
+        this.phase.set('config');
+        this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
+      }
+    });
   }
 
   private tryParseResult(json: string, final = false): boolean {
@@ -670,7 +662,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.rawJson.set('');
     this.genError.set('');
     this.progress.set(0);
-    this.progressMessage.set('正在准备生成…');
+    this.progressMessage.set('任务已提交，正在后台生成…');
     this.activeChapter.set(0);
     this.chapterTotal.set(chapters.length);
     this.genElapsed.set(0);
@@ -678,9 +670,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.startGenTimer();
 
     const form = this.input();
-
-    this.multiGenSub?.unsubscribe();
-    this.multiGenSub = this.chatService.generateMultiChapterLessonPlan({
+    const payload = {
       resourceId: resource.id,
       topic: form.topic,
       subject: form.subject || undefined,
@@ -688,63 +678,180 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
       duration: form.duration,
       customPrompt: form.customPrompt?.trim() || undefined,
       chapters
-    })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (evt: LessonPlanStreamEvent) => {
-          if (typeof evt.progress === 'number') this.progress.set(evt.progress);
-          if (evt.message) this.progressMessage.set(evt.message);
-          if (evt.chapterTotal) this.chapterTotal.set(evt.chapterTotal);
-          if (evt.chapterIndex) this.activeChapter.set(evt.chapterIndex);
-          if (evt.isError && evt.message) this.genError.set(evt.message);
-          if (evt.resultJson) this.rawJson.set(evt.resultJson);
-        },
-        error: (err) => {
-          console.error('Error generating multi-chapter lesson plan:', err);
-          this.stopGenTimer();
-          this.multiGenSub = null;
-          this.isLoading.set(false);
-          this.phase.set('chapters');
-          this.messageService.error('整体教案生成失败，请稍后重试');
-        },
-        complete: () => {
-          this.stopGenTimer();
-          this.multiGenSub = null;
-          this.isLoading.set(false);
-          // 用户主动取消：静默回到章节页，不弹“解析失败”。
-          if (this.cancelRequested) {
-            this.cancelRequested = false;
-            this.phase.set('chapters');
-            return;
-          }
-          if (this.genError()) {
-            this.phase.set('chapters');
-            this.messageService.error(this.genError());
-            return;
-          }
-          const json = this.rawJson();
-          const parsed = json ? this.extractJson(json) as MultiChapterPlan : null;
-          if (parsed && Array.isArray(parsed.chapters) && parsed.chapters.length > 0) {
-            this.multiResult.set(parsed);
-            this.finishMulti(resource, parsed, json);
-          } else {
-            this.phase.set('chapters');
-            this.messageService.warning('整体教案结果解析失败，请重试');
-          }
-        }
-      });
+    };
+
+    this.submitTask(AiTaskType.LessonPlanMulti, resource, form.topic || resource.name, payload, (resultJson) => {
+      this.stopGenTimer();
+      this.isLoading.set(false);
+      this.rawJson.set(resultJson);
+      const parsed = this.extractJson(resultJson) as MultiChapterPlan | null;
+      if (parsed && Array.isArray(parsed.chapters) && parsed.chapters.length > 0) {
+        this.multiResult.set(parsed);
+        this.finishMulti(resource, parsed, resultJson);
+      } else {
+        this.phase.set('chapters');
+        this.messageService.warning('整体教案结果解析失败，请重试');
+      }
+    });
   }
 
-  /** 用户在生成中途点“取消生成”：abort 底层的 fetch，后端联动取消大模型调用。 */
+  /** 用户在生成中途点“取消生成”：取消后台任务并回到章节页。 */
   cancelMultiGeneration() {
     if (!this.isLoading()) return;
     this.cancelRequested = true;
-    this.multiGenSub?.unsubscribe();
-    this.multiGenSub = null;
+    const id = this.currentTaskId();
+    if (id) {
+      this.aiTaskService.cancel(id).subscribe({ next: () => {}, error: () => {} });
+    }
+    this.cancelTaskPolling();
     this.stopGenTimer();
     this.isLoading.set(false);
     this.phase.set('chapters');
     this.messageService.info('已取消生成');
+  }
+
+  // ---------- background task helpers ----------
+  private submitTask(
+    taskType: AiTaskType,
+    resource: ResourceForChat,
+    title: string,
+    payload: unknown,
+    onCompleted: (resultJson: string) => void,
+  ) {
+    this.cancelTaskPolling();
+    this.aiTaskService
+      .create({
+        taskType,
+        title: title || 'AI 生成任务',
+        resourceId: resource.id,
+        resourceName: resource.name,
+        inputJson: JSON.stringify(payload),
+      })
+      .subscribe({
+        next: (task) => {
+          this.currentTaskId.set(task.id);
+          this.messageService.success('任务已提交后台生成，可切换页面，完成后会通知你');
+          this.followTask(task.id, onCompleted);
+        },
+        error: (err) => {
+          this.isLoading.set(false);
+          this.phase.set(this.workflowMode() === 'multi' ? 'chapters' : 'config');
+          this.messageService.error(err?.error?.error?.message || '提交任务失败，请重试');
+        },
+      });
+  }
+
+  private followTask(taskId: string, onCompleted: (resultJson: string) => void) {
+    this.cancelTaskPolling();
+    this.taskPollSub = this.aiTaskNotifications
+      .pollTask(taskId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (t) => {
+          if (t.status === AiTaskStatus.Pending || t.status === AiTaskStatus.Running) {
+            if (typeof t.progress === 'number') this.progress.set(t.progress);
+            if (t.progressMessage) this.progressMessage.set(t.progressMessage);
+          } else if (t.status === AiTaskStatus.Completed) {
+            this.cancelTaskPolling();
+            onCompleted(t.resultJson || '');
+          } else {
+            this.cancelTaskPolling();
+            this.isLoading.set(false);
+            this.stopGenTimer();
+            this.phase.set(this.workflowMode() === 'multi' ? 'chapters' : 'config');
+            this.messageService.error(t.errorMessage || '生成失败，请重试');
+          }
+        },
+        error: () => {
+          this.cancelTaskPolling();
+          this.isLoading.set(false);
+          this.stopGenTimer();
+          this.phase.set(this.workflowMode() === 'multi' ? 'chapters' : 'config');
+          this.messageService.error('生成失败，请稍后重试');
+        },
+      });
+  }
+
+  private cancelTaskPolling() {
+    this.taskPollSub?.unsubscribe();
+    this.taskPollSub = null;
+  }
+
+  private loadTaskPreview(taskId: string) {
+    this.aiTaskService
+      .get(taskId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (task) => this.openTaskResult(task),
+        error: () => this.messageService.error('加载任务结果失败'),
+      });
+  }
+
+  private openTaskResult(task: AiGenerationTaskDto) {
+    if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
+      this.workflowMode.set(task.taskType === AiTaskType.LessonPlanMulti ? 'multi' : 'single');
+      this.isLoading.set(true);
+      this.phase.set('generating');
+      this.progressMessage.set(task.progressMessage || '后台生成中…');
+      this.currentTaskId.set(task.id);
+      this.followTask(task.id, (json) => {
+        this.isLoading.set(false);
+        this.previewTask({ ...task, status: AiTaskStatus.Completed, resultJson: json });
+      });
+      return;
+    }
+    this.previewTask(task);
+  }
+
+  private previewTask(task: AiGenerationTaskDto) {
+    if (task.status !== AiTaskStatus.Completed || !task.resultJson) return;
+    const json = task.resultJson;
+    const resource: ResourceForChat = this.resources().find((r) => r.id === task.resourceId) ?? {
+      id: task.resourceId || '',
+      name: task.resourceName || '资源',
+      nodeCount: 0,
+    };
+    const isMulti = task.taskType === AiTaskType.LessonPlanMulti;
+    this.workflowMode.set(isMulti ? 'multi' : 'single');
+
+    const parsed = this.extractJson(json);
+    if (!parsed) {
+      this.messageService.warning('任务结果解析失败');
+      return;
+    }
+
+    const item: LessonPlanHistoryItem = isMulti
+      ? {
+          id: task.id,
+          mode: 'multi',
+          title: parsed.courseTitle || task.title,
+          subject: parsed.subject || '-',
+          grade: parsed.grade || '-',
+          duration: parsed.duration || 0,
+          chapterCount: Array.isArray(parsed.chapters) ? parsed.chapters.length : 0,
+          resourceName: resource.name,
+          resourceId: resource.id,
+          createdAt: task.completedAt || task.creationTime,
+          multiResult: parsed as MultiChapterPlan,
+          rawJson: json,
+        }
+      : {
+          id: task.id,
+          mode: 'single',
+          title: parsed.title || task.title,
+          subject: parsed.subject || '-',
+          grade: parsed.grade || '-',
+          duration: parsed.duration || 0,
+          resourceName: resource.name,
+          resourceId: resource.id,
+          createdAt: task.completedAt || task.creationTime,
+          singleResult: parsed as LessonPlanResult,
+          rawJson: json,
+        };
+
+    this.history.update((list) => (list.some((x) => x.id === item.id) ? list : [item, ...list].slice(0, this.MAX_HISTORY)));
+    this.activeItem.set(item);
+    this.viewMode.set('preview');
   }
 
   /** 已用时 MM:SS，供模板展示。 */
