@@ -18,6 +18,7 @@ import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
+import { ConfigStateService } from '@abp/ng.core';
 import { ChatService, ResourceForChat } from '../services/chat.service';
 
 interface CaseAnalysisResult {
@@ -87,8 +88,22 @@ interface CaseAnalysisHistoryItem {
 export class CaseAnalysisComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
   private readonly messageService = inject(NzMessageService);
+  private readonly configState = inject(ConfigStateService);
   private readonly destroy$ = new Subject<void>();
-  private readonly HISTORY_KEY = 'kh-case-analysis-history';
+  private readonly HISTORY_KEY_PREFIX = 'kh-case-analysis-history';
+  private historyKey = `${this.HISTORY_KEY_PREFIX}:anon`;
+
+  /**
+   * 根据当前登录租户生成 localStorage key，避免不同租户在同一浏览器里互相看到历史记录。
+   * - 宿主 / 未登录 / 无 tenantId 时落到 :host
+   * - 普通租户落到 :tenant:<tenantId>
+   */
+  private computeHistoryKey(): string {
+    const tenantId = this.configState.getDeep('currentUser.tenantId') as string | null | undefined;
+    return tenantId
+      ? `${this.HISTORY_KEY_PREFIX}:tenant:${tenantId}`
+      : `${this.HISTORY_KEY_PREFIX}:host`;
+  }
 
   // 资源列表（左侧）
   resources = signal<ResourceForChat[]>([]);
@@ -148,7 +163,23 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.historyKey = this.computeHistoryKey();
     this.loadHistory();
+
+    // 监听租户/登录状态变化：切换租户或重新登录时，重新加载对应桶里的历史记录，
+    // 避免显示上一个租户的记录，也不会把新租户的记录写到旧 key 里。
+    this.configState.createOnUpdateStream(() => true)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        const newKey = this.computeHistoryKey();
+        if (newKey !== this.historyKey) {
+          this.historyKey = newKey;
+          this.previewItem.set(null);
+          this.history.set([]);
+          this.loadHistory();
+        }
+      });
+
     this.loadResources();
   }
 
@@ -160,7 +191,7 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   // ---------- history persistence ----------
   private loadHistory() {
     try {
-      const raw = localStorage.getItem(this.HISTORY_KEY);
+      const raw = localStorage.getItem(this.historyKey);
       if (raw) {
         const parsed: CaseAnalysisHistoryItem[] = JSON.parse(raw);
         if (Array.isArray(parsed)) this.history.set(parsed);
@@ -170,7 +201,7 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
 
   private saveHistory() {
     try {
-      localStorage.setItem(this.HISTORY_KEY, JSON.stringify(this.history().slice(0, 50)));
+      localStorage.setItem(this.historyKey, JSON.stringify(this.history().slice(0, 50)));
     } catch { /* ignore */ }
   }
 
