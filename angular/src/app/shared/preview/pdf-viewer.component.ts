@@ -4,6 +4,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzDropDownModule } from 'ng-zorro-antd/dropdown';
+import { readCachedPdf, storePdfBytes } from './pdf-preview-cache';
 
 @Component({
   selector: 'app-pdf-viewer',
@@ -30,6 +31,8 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   isLoading = signal(true);
   error = signal('');
   renderedCount = signal(0);
+  /** 后端是否仍在转换（首次预览大文件时），用于区分「转换中」与「加载中」文案 */
+  converting = signal(false);
   /** 已渲染的页码集合 */
   renderedPages = signal<Set<number>>(new Set());
   /** 当前是否处于"适应页面"缩放模式（整页在容器内完整可见） */
@@ -77,7 +80,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       // Full URL streaming mode
       setTimeout(() => {
         if (!this.destroyed && !this.loaded) {
-          this.loadPdfFromUrl(url);
+          this.loadPdfFromUrl(url, `pdf-url:${url}`);
         }
       }, 0);
     } else if (d && d.byteLength > 0 && !this.loaded) {
@@ -154,8 +157,18 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  private async loadPdfFromUrl(url: string) {
+  private async loadPdfFromUrl(url: string, persistKey?: string) {
     if (this.destroyed) return;
+
+    // 命中浏览器持久化缓存：直接用整份 PDF 渲染，免去重新下载（大文件可达 10MB+）
+    if (persistKey) {
+      const cachedBytes = await readCachedPdf(persistKey);
+      if (this.destroyed) return;
+      if (cachedBytes && cachedBytes.byteLength > 0) {
+        await this.loadPdfFromBuffer(cachedBytes);
+        return;
+      }
+    }
 
     try {
       this.isLoading.set(true);
@@ -198,6 +211,11 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.currentPage.set(1);
       this.isLoading.set(false);
 
+      // 首次加载完成后，后台把整份 PDF 写入持久化缓存，供下次打开秒开
+      if (persistKey) {
+        void this.persistLoadedPdf(persistKey);
+      }
+
       // 后台加载第 2 页及以后
       if (total > 1) {
         this.renderQueue = Array.from({ length: total - 1 }, (_, i) => i + 2);
@@ -211,6 +229,26 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
         this.isLoading.set(false);
         this.loaded = true;
       }
+    }
+  }
+
+  /**
+   * 把当前已加载的整份 PDF 写入持久化缓存（供下次打开秒开）。
+   * 通过 pdfjs 的 getData() 复用已建立的数据通道，避免再发一次完整下载请求。
+   */
+  private async persistLoadedPdf(persistKey: string): Promise<void> {
+    const doc = this.pdfDoc;
+    if (!doc) return;
+    try {
+      const bytes: Uint8Array = await doc.getData();
+      // 简单校验是否为完整 PDF（%PDF 头），避免缓存到不完整数据
+      const isPdf = bytes && bytes.byteLength > 4 &&
+        bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+      if (isPdf) {
+        await storePdfBytes(persistKey, bytes);
+      }
+    } catch {
+      // 缓存失败不影响当前预览
     }
   }
 
@@ -278,8 +316,25 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
   private async loadPdfPerPage(rid: string) {
     if (this.destroyed) return;
 
+    const url = `/api/resource-file/${rid}/preview-pdf`;
+    const cacheKey = `resource-pdf:${rid}`;
+
     try {
+      // 1) 持久化缓存优先：命中则直接渲染，不再请求后端转换状态。
+      //    缓存存放在 Cache Storage，跨页面刷新/新标签仍有效。
+      const cached = await readCachedPdf(cacheKey);
+      if (this.destroyed) return;
+      if (cached && cached.byteLength > 0) {
+        this.converting.set(false);
+        this.pageResourceId = '';
+        await this.loadPdfFromBuffer(cached);
+        return;
+      }
+
+      // 2) 无缓存：轮询 /preview-pdf-info 等待后端转换完成（PPTX 转换可能需要 20s+，
+      //    串行队列下大文件排队时可能更久，最多等 10 分钟）
       this.isLoading.set(true);
+      this.converting.set(true);
       this.error.set('');
       this.renderedCount.set(0);
       this.renderedPages.set(new Set());
@@ -287,8 +342,6 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.loaded = false;
       this.pageResourceId = '';
 
-      // 轮询 /preview-pdf-info 等待后端转换完成（PPTX 后端转换可能需要 20s+；
-      // 串行队列下大文件排队时可能更久，最多等 10 分钟）
       let ready = false;
       let tooLarge = false;
       let polls = 0;
@@ -326,8 +379,9 @@ export class PdfViewerComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
 
-      // 转换完成：加载整份 PDF（物理文件支持 Range，pdfjs 按需取页，首页秒出）
-      await this.loadPdfFromUrl(`/api/resource-file/${rid}/preview-pdf`);
+      // 3) 流式加载（首页更快），完成后写入持久化缓存，供下次秒开
+      this.converting.set(false);
+      await this.loadPdfFromUrl(url, cacheKey);
     } catch (e: any) {
       console.error('PDF per-page load error:', e);
       this.loadFailed.emit();
