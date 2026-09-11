@@ -226,3 +226,20 @@ export class AiTaskService {
     }
   }
 }
+
+/** AI 任务查看结果的目标功能页（?taskId= 深度链接，各功能页负责加载并展示结果） */
+export function aiTaskResultRoute(type: AiTaskType): string {
+  switch (type) {
+    case AiTaskType.LessonPlanSingle:
+    case AiTaskType.LessonPlanMulti:
+      return '/ai/lesson-plan';
+    case AiTaskType.CaseAnalysis:
+      return '/ai/case-analysis';
+    case AiTaskType.CareerGuidance:
+      return '/ai/career-guidance';
+    case AiTaskType.ExerciseGenerate:
+      return '/ai/exercise-generate';
+    default:
+      return '/ai/tasks';
+  }
+}

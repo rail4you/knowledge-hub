@@ -4,7 +4,7 @@
     <p class="page-desc">选择学生并基于简历生成就业指导，或查看本租户所有学生的就业指导历史记录</p>
   </header>
 
-  <nz-tabs (nzSelectedIndexChange)="onTabChange($event)" [nzAnimated]="false" class="main-tabs">
+  <nz-tabs [(nzSelectedIndex)]="activeTabIndex" (nzSelectedIndexChange)="onTabChange($event)" [nzAnimated]="false" class="main-tabs">
     <nz-tab nzTitle="生成就业指导">
       <div class="cg-layout">
     <!-- 左侧：学生列表 -->
@@ -48,9 +48,22 @@
     <!-- 右侧：学生详情（整体容器，占满高度，无数据时显示空状态） -->
     <nz-card class="detail-card">
       @if (!selectedStudent()) {
-        <div class="detail-empty">
-          <nz-empty nzNotFoundContent="请选择左侧学生查看简历与历史就业指导"></nz-empty>
-        </div>
+        @if (isLoading() || result()) {
+          <!-- ?taskId= 深链直达：未选学生时也展示任务结果 -->
+          @if (isLoading() && !result()) {
+            <div class="generating-container">
+              <nz-spin nzSimple nzSize="large"></nz-spin>
+              <p class="generating-text">正在加载就业指导结果，请稍候...</p>
+            </div>
+          }
+          @if (result()) {
+            <ng-container *ngTemplateOutlet="taskResultTpl"></ng-container>
+          }
+        } @else {
+          <div class="detail-empty">
+            <nz-empty nzNotFoundContent="请选择左侧学生查看简历与历史就业指导"></nz-empty>
+          </div>
+        }
       } @else {
         <!-- 简历选择 -->
         <section class="detail-section">
@@ -72,7 +85,7 @@
               @for (resume of resumes(); track resume.id) {
                 <nz-option [nzValue]="resume.id" [nzLabel]="resume.title">
                   <span>{{ resume.title }}</span>
-                  <span class="resume-option-sub">（{{ resume.fullName || '未填写姓名' }}）</span>
+                  <span class="resume-option-sub">（{{ resume.fullName || '未填写姓名' }}@if (resume.attachmentUrl) { · 有附件 }）</span>
                 </nz-option>
               }
             </nz-select>
@@ -87,6 +100,16 @@
                   <nz-tag [nzColor]="'blue'">{{ selectedResume()!.major }}</nz-tag>
                 }
                 <span class="meta-text">版本 v{{ selectedResume()!.versionNo }}</span>
+                @if (selectedResume()!.attachmentUrl) {
+                  <button
+                    nz-button nzType="text" nzSize="small" nzShape="circle"
+                    class="resume-preview-btn"
+                    nz-tooltip nzTooltipTitle="预览附件"
+                    (click)="previewResumeAttachment($event)"
+                  >
+                    <span nz-icon nzType="eye" nzTheme="outline"></span>
+                  </button>
+                }
               </div>
             }
           }
@@ -131,29 +154,44 @@
             </div>
           }
 
-          <!-- Result preview -->
-          @if (result(); as r) {
-            <div class="result-card">
-              <div class="result-header">
-                <div class="result-actions">
-                  @if (savedRecordId(); as id) {
-                    <span nz-tag nzColor="success">已保存到该学生的就业指导</span>
-                  } @else {
-                    <button nz-button nzType="primary" (click)="saveToStudentGuidance()" [nzLoading]="isSaving()">
-                      <span nz-icon nzType="save"></span>
-                      保存到该学生的就业指导
-                    </button>
-                  }
-                  <button nz-button nzType="default" (click)="downloadDocx()" [nzLoading]="isExporting()">
-                    <span nz-icon nzType="download"></span>
-                    下载 DOCX
-                  </button>
-                  <button nz-button (click)="reset()">
-                    <span nz-icon nzType="redo"></span>
-                    重新生成
-                  </button>
-                </div>
-              </div>
+          <!-- Result preview（抽成模板：选中学生流程与 ?taskId= 深链共用） -->
+          @if (result()) {
+            <ng-container *ngTemplateOutlet="taskResultTpl"></ng-container>
+          }
+        </section>
+      }
+    </nz-card>
+      </div>
+    </nz-tab>
+
+  <!-- 任务结果模板（选中学生流程与 ?taskId= 深链共用） -->
+  <ng-template #taskResultTpl>
+    @if (result(); as r) {
+      <div class="result-card">
+        <div class="result-header">
+          <div class="result-actions">
+            @if (selectedStudent()) {
+              @if (savedRecordId()) {
+                <span nz-tag nzColor="success">已保存到该学生的就业指导</span>
+              } @else {
+                <button nz-button nzType="primary" (click)="saveToStudentGuidance()" [nzLoading]="isSaving()">
+                  <span nz-icon nzType="save"></span>
+                  保存到该学生的就业指导
+                </button>
+              }
+            } @else {
+              <span nz-tag>任务结果，仅可预览 / 下载</span>
+            }
+            <button nz-button nzType="default" (click)="downloadDocx()" [nzLoading]="isExporting()">
+              <span nz-icon nzType="download"></span>
+              下载 DOCX
+            </button>
+            <button nz-button (click)="reset()">
+              <span nz-icon nzType="redo"></span>
+              重新生成
+            </button>
+          </div>
+        </div>
 
               <div class="result-content">
                 <h2 class="plan-title">{{ r.title }}</h2>
@@ -299,11 +337,7 @@
               </div>
             </div>
           }
-        </section>
-      }
-    </nz-card>
-      </div>
-    </nz-tab>
+  </ng-template>
 
     <nz-tab nzTitle="就业指导历史记录">
       <div class="history-card">
@@ -407,6 +441,9 @@
               <nz-empty nzNotFoundContent="本租户暂无就业指导历史记录"></nz-empty>
             </div>
           } @else {
+            <div class="history-toolbar">
+              <span class="result-count">共 {{ allRecords().length }} 条</span>
+            </div>
             <nz-table
               #historyTable
               [nzData]="allRecords()"
@@ -429,6 +466,9 @@
                   <tr>
                     <td class="col-title">
                       <span class="title-text" [title]="record.title">{{ record.title }}</span>
+                      @if (record.fromTask) {
+                        <nz-tag nzColor="cyan" class="title-tag">任务</nz-tag>
+                      }
                     </td>
                     <td>{{ record.studentName || '未知学生' }}</td>
                     <td class="goal-cell muted" [title]="record.careerGoal">{{ record.careerGoal || '—' }}</td>

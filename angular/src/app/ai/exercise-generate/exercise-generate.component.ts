@@ -71,6 +71,7 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
   private readonly aiTaskNotifications = inject(AiTaskNotificationService);
   private readonly destroy$ = new Subject<void>();
   private taskPollSub: Subscription | null = null;
+  private lastPreviewTaskId: string | null = null;
 
   readonly courses = signal<CourseDto[]>([]);
   readonly courseId = signal<string | null>(null);
@@ -381,11 +382,22 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
     }
     const taskId = this.route.snapshot.queryParamMap.get('taskId');
     if (taskId) {
+      this.lastPreviewTaskId = taskId;
       this.loadTaskPreview(taskId);
     } else {
       // 从任务中心返回 / 切页回来时，恢复最近一次习题生成任务的状态与结果
       this.loadLatestTask();
     }
+    // ?taskId= 深度链接（通知 / 任务中心跳转）：响应式订阅，页内跳转同样生效
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        const id = params.get('taskId');
+        if (id && id !== this.lastPreviewTaskId) {
+          this.lastPreviewTaskId = id;
+          this.loadTaskPreview(id);
+        }
+      });
   }
 
   ngOnDestroy(): void {

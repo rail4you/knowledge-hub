@@ -32,11 +32,11 @@ public class LessonPlanAppService : KnowledgeHubAppService
     /// <summary>逐章生成时作为背景送入模型的正文上限。</summary>
     private const int MaxSourceCharsForGeneration = 12000;
 
-    private const string LessonPlanInstructions = @"你是大学教师/教学设计师，需要根据给定的""文档摘要""和""教学参数""，按中国大学教案（又称""教学设计""）的标准体例，生成一份完整的课堂教案。
+    private const string LessonPlanInstructions = @"你是大学教师/教学设计师，需要根据给定的""文档内容""和""教学参数""，按中国大学教案（又称""教学设计""）的标准体例，生成一份完整的课堂教案。
 
 严格要求：
 1. 必须输出合法 JSON（不要用 markdown 代码块包裹，不要任何多余文字）
-2. 教案内容必须基于""文档摘要""，可适度引申但不得编造与摘要无关的具体数据/公式
+2. 教案内容必须基于""文档内容""，可适度引申但不得编造与文档无关的具体数据/公式
 3. 教学环节时间总和必须等于总课时 duration（分钟）
 4. 教学目标按布鲁姆分类法分三层：知识目标 / 能力目标 / 素质目标
 5. 教学方法、教学活动、作业均要可操作、可观察
@@ -73,7 +73,7 @@ JSON 结构（沿用现有 schema）：
 - activities 数组给出可观察的具体动作（提问、分组讨论、上台演算、随堂测验等）
 - homework 区分""必做""与""选做/拓展""，不少于 3 条
 - methods 选择性采用：讲授法、案例法、讨论法、探究法、演示法、练习法
-- 难度与重点须紧扣摘要所揭示的核心概念
+- 难度与重点须紧扣文档内容所揭示的核心概念
 
 ## 授课对象差异化要求（严格遵循）
 根据「授课对象」参数调整教案的深度、侧重点与风格：
@@ -140,7 +140,7 @@ JSON 结构：
     {
         var threadId = Guid.NewGuid().ToString();
 
-        // 1. 读取资源（包含 AI 摘要）
+        // 1. 读取资源
         var resource = await _resourceRepository.FindAsync(input.ResourceId);
         if (resource == null)
         {
@@ -148,16 +148,18 @@ JSON 结构：
             return;
         }
 
-        // 2. 摘要缺失校验
-        if (string.IsNullOrWhiteSpace(resource.Summary))
+        // 2. 教学依据：优先全文索引（PageContent），缺失时回退到 AI 摘要。
+        // 与多章节 / 章节解析共用 GetResourceSourceTextAsync，口径一致。
+        var sourceText = await GetResourceSourceTextAsync(resource, MaxSourceCharsForGeneration);
+        if (string.IsNullOrWhiteSpace(sourceText))
         {
             await EmitErrorAsync(onChunk, threadId,
-                "该资源尚未生成 AI 摘要，请先在资源详情页生成摘要后再使用教案功能。");
+                "该资源没有可用于生成的正文或摘要，请先在资源详情页生成摘要或等待文档索引完成后再使用教案功能。");
             return;
         }
 
-        // 3. 组合 User Prompt（以 Resource.Summary 为唯一教学依据）
-        var userPrompt = BuildSingleChapterUserPrompt(resource, input);
+        // 3. 组合 User Prompt（以全文/摘要为教学依据）
+        var userPrompt = BuildSingleChapterUserPrompt(resource, sourceText, input);
 
         var chatClient = CreateChatClient();
         var chatOptions = new ChatOptions
@@ -192,10 +194,10 @@ JSON 结构：
         });
     }
 
-    private static string BuildSingleChapterUserPrompt(Resource resource, LessonPlanGenerationInputDto input)
+    private static string BuildSingleChapterUserPrompt(Resource resource, string sourceText, LessonPlanGenerationInputDto input)
     {
-        return $@"## 文档摘要（唯一教学依据）
-{resource.Summary}
+        return $@"## 文档内容（教学依据）
+{sourceText}
 
 ## 文档元信息
 - 名称：{resource.Name}

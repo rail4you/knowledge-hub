@@ -17,6 +17,7 @@ import { NzTimelineModule } from 'ng-zorro-antd/timeline';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, Subscription, takeUntil } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
@@ -77,6 +78,10 @@ interface ParsedRecord {
   guidedAt: string;
   content: string;
   parsed: CareerGuidanceResult | null;
+  /** 来自 AI 任务（尚未保存为指导记录），仅可预览 / 下载 */
+  fromTask?: boolean;
+  /** 任务 inputJson（用于反查所属学生/职业目标） */
+  taskInputJson?: string;
 }
 
 @Component({
@@ -101,6 +106,7 @@ interface ParsedRecord {
     NzIconModule,
     NzEmptyModule,
     NzTabsModule,
+    NzTooltipModule,
     NzEmptyModule,
   ],
   templateUrl: './career-guidance.component.html',
@@ -116,6 +122,7 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly destroy$ = new Subject<void>();
   private taskPollSub: Subscription | null = null;
+  private lastPreviewTaskId: string | null = null;
   currentTaskId = signal<string | null>(null);
 
   // ============= 学生列表 =============
@@ -169,10 +176,42 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadStudents();
 
-    const taskId = this.route.snapshot.queryParamMap.get('taskId');
-    if (taskId) {
-      this.loadTaskPreview(taskId);
-    }
+    // ?taskId= 深度链接（通知 / 任务中心跳转）：响应式订阅，页内跳转同样生效
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        const taskId = params.get('taskId');
+        if (taskId && taskId !== this.lastPreviewTaskId) {
+          this.lastPreviewTaskId = taskId;
+          this.loadTaskPreview(taskId);
+        }
+      });
+
+    // 任务完成实时同步：后台生成成功后，历史记录自动更新
+    this.aiTaskNotifications.completed$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(tasks => {
+        const mine = tasks.filter(t => t.taskType === AiTaskType.CareerGuidance);
+        if (mine.length === 0) return;
+        if (this.allRecordsLoaded()) {
+          for (const t of mine) {
+            const json = t.resultJson;
+            if (json) {
+              this.mergeTaskResult(t, json);
+            } else {
+              this.aiTaskService
+                .get(t.id)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({ next: (full) => {
+                  if (full.resultJson) this.mergeTaskResult(full, full.resultJson);
+                }});
+            }
+          }
+        } else {
+          // 历史尚未加载过：失效标记，下次切页时自动带出任务结果
+          this.allRecordsLoaded.set(false);
+        }
+      });
   }
 
   ngOnDestroy() {
@@ -189,6 +228,7 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
         next: (data) => {
           this.students.set(data || []);
           this.studentsLoading.set(false);
+          this.fillTaskContexts();
         },
         error: () => {
           this.studentsLoading.set(false);
@@ -204,8 +244,23 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
     this.resetResult();
   }
 
+  /** 简历附件预览：走后端预览端点（新标签页内联展示，Word 会先转 PDF）。 */
+  previewResumeAttachment(event: Event): void {
+    event.stopPropagation();
+    const url = this.selectedResume()?.attachmentUrl;
+    if (!url) {
+      this.messageService.warning('该简历暂无附件');
+      return;
+    }
+    window.open(this.employmentService.getResumePreviewUrl(url), '_blank', 'noopener');
+  }
+
+  /** 当前 Tab：0 = 生成就业指导，1 = 就业指导历史记录 */
+  readonly activeTabIndex = signal(0);
+
   /** Tab 切换到「就业指导历史记录」时懒加载全租户记录 */
   onTabChange(index: number): void {
+    this.activeTabIndex.set(index);
     if (index === 1 && !this.allRecordsLoaded()) {
       this.loadAllRecords();
     }
@@ -229,15 +284,118 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
             content: r.content || '',
             parsed: this.tryParseAiResult(r.content),
           }));
-          this.allRecords.set(records);
+          // 保留已在展示中的任务条目（?taskId= 深链），避免切页时预览闪失
+          const keepTasks = this.allRecords().filter(r => r.fromTask && !records.some(x => x.id === r.id));
+          this.allRecords.set([...records, ...keepTasks]);
           this.allRecordsLoaded.set(true);
           this.allRecordsLoading.set(false);
+          // AI 任务结果也并入历史：未点保存的生成内容同样可见（可预览/下载）
+          this.syncTaskResults();
         },
         error: () => {
           this.allRecordsLoading.set(false);
           this.messageService.error('加载就业指导历史记录失败');
         },
       });
+  }
+
+  /**
+   * 把我名下已完成的职业规划 AI 任务并入历史（去重：已保存为指导记录的不重复显示）。
+   * 列表接口不返回 ResultJson 大字段，缺失时取详情后再合并。
+   */
+  private syncTaskResults(): void {
+    this.aiTaskService
+      .getList({ taskType: AiTaskType.CareerGuidance, status: AiTaskStatus.Completed, onlyMine: true, maxResultCount: 20 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const savedContents = new Set(this.allRecords().filter(r => !r.fromTask).map(r => r.content));
+          const missing = (res.items || [])
+            .filter((t) => !this.allRecords().some((x) => x.id === t.id))
+            .slice(0, 10);
+          for (const t of missing) {
+            if (t.resultJson) {
+              this.mergeTaskResult(t, t.resultJson, savedContents);
+            } else {
+              this.aiTaskService
+                .get(t.id)
+                .pipe(takeUntil(this.destroy$))
+                .subscribe({
+                  next: (full) => {
+                    if (full.resultJson) this.mergeTaskResult(full, full.resultJson, savedContents);
+                  },
+                });
+            }
+          }
+        },
+      });
+  }
+
+  /** 单条任务结果并入历史（已入库的跳过），返回是否新增。 */
+  private mergeTaskResult(task: AiGenerationTaskDto, resultJson: string, savedContents?: Set<string>): boolean {
+    if (this.allRecords().some((x) => x.id === task.id)) return false;
+    const contents = savedContents ?? new Set(this.allRecords().filter(r => !r.fromTask).map(r => r.content));
+    if (contents.has(resultJson)) return false;
+    const record = this.buildTaskRecord(task, resultJson);
+    if (!record) return false;
+    this.allRecords.update((list) =>
+      [...list, record].sort((a, b) => +new Date(b.guidedAt) - +new Date(a.guidedAt)));
+    return true;
+  }
+
+  /** 后端任务 → 历史条目（与其他 AI 功能页一致），内容不可解析返回 null。 */
+  private buildTaskRecord(task: AiGenerationTaskDto, resultJson: string): ParsedRecord | null {
+    const parsed = this.tryParseAiResult(resultJson);
+    if (!parsed) return null;
+    const ctx = this.resolveTaskContext(task);
+    return {
+      id: task.id,
+      title: task.title || '未命名就业指导',
+      careerGoal: ctx.careerGoal,
+      studentName: ctx.studentName,
+      guidedAt: task.completedAt || task.creationTime,
+      content: resultJson,
+      parsed,
+      fromTask: true,
+      taskInputJson: task.inputJson,
+    };
+  }
+
+  /**
+   * 从任务 inputJson 还原上下文：职业目标直接可取；
+   * 所属学生按简历附件/标题在已加载的学生简历里匹配（前端本地匹配，无需后端改动）。
+   */
+  private resolveTaskContext(task: AiGenerationTaskDto): { studentName: string; careerGoal?: string } {
+    try {
+      const input = JSON.parse(task.inputJson || '{}') as {
+        resumeTitle?: string; attachmentUrl?: string; careerGoal?: string;
+      };
+      const careerGoal = (input.careerGoal || '').trim() || undefined;
+      const title = (input.resumeTitle || '').trim();
+      const url = (input.attachmentUrl || '').trim();
+      let studentName = '';
+      if (title || url) {
+        const hit = this.students().find((s) =>
+          (s.resumes || []).some((r) =>
+            (!!url && (r.attachmentUrl || '') === url) ||
+            (!!title && (r.title || '') === title)));
+        studentName = hit?.studentName ?? '';
+      }
+      return { studentName, careerGoal };
+    } catch {
+      return { studentName: '' };
+    }
+  }
+
+  /** 学生列表到达后，回填任务条目缺失的学生名/职业目标（列表先到、任务后到的竞态）。 */
+  private fillTaskContexts(): void {
+    if (this.students().length === 0) return;
+    this.allRecords.update((list) => list.map((r) => {
+      if (!r.fromTask || r.studentName || !r.taskInputJson) return r;
+      const ctx = this.resolveTaskContext({ inputJson: r.taskInputJson } as AiGenerationTaskDto);
+      if (!ctx.studentName && !ctx.careerGoal) return r;
+      return { ...r, studentName: ctx.studentName || r.studentName, careerGoal: ctx.careerGoal ?? r.careerGoal };
+    }));
   }
 
   openRecordDetail(record: ParsedRecord): void {
@@ -334,6 +492,8 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
           if (t.status === AiTaskStatus.Completed) {
             this.cancelTaskPolling();
             this.isLoading.set(false);
+            // rawJson 必须同步保存，否则后台完成的结果无法下载 DOCX
+            this.rawJson.set(t.resultJson || '');
             this.tryParseResult(t.resultJson || '', true);
             onCompleted?.();
           } else if (t.status === AiTaskStatus.Failed || t.status === AiTaskStatus.Cancelled) {
@@ -366,14 +526,31 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
   }
 
   private openTaskResult(task: AiGenerationTaskDto) {
+    // 与教案/案例分析一致：?taskId= 结果进「历史记录」Tab 的结果 UI 展示
     if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
       this.isLoading.set(true);
       this.currentTaskId.set(task.id);
-      this.followTask(task.id);
+      this.followTask(task.id, () => {
+        const json = this.rawJson();
+        if (json) this.previewTaskResult({ ...task, status: AiTaskStatus.Completed, resultJson: json });
+      });
       return;
     }
     if (task.status === AiTaskStatus.Completed) {
+      this.rawJson.set(task.resultJson || '');
       this.tryParseResult(task.resultJson || '', true);
+      if (task.resultJson) this.previewTaskResult(task);
+    }
+  }
+
+  /** 任务结果在历史 Tab 预览（合并进列表并选中展示）。 */
+  private previewTaskResult(task: AiGenerationTaskDto): void {
+    if (!task.resultJson) return;
+    this.mergeTaskResult(task, task.resultJson);
+    const record = this.allRecords().find((r) => r.id === task.id);
+    if (record) {
+      this.previewItem.set(record);
+      this.activeTabIndex.set(1);
     }
   }
 
@@ -465,6 +642,13 @@ export class CareerGuidanceComponent implements OnInit, OnDestroy {
           this.isSaving.set(false);
           this.savedRecordId.set(saved.id);
           this.messageService.success('已保存到该学生的就业指导');
+          // 历史缓存失效：下次切到历史 Tab 自动重载（含刚保存的这条）；
+          // 若已在历史 Tab，直接刷新
+          if (this.activeTabIndex() === 1) {
+            this.loadAllRecords();
+          } else {
+            this.allRecordsLoaded.set(false);
+          }
         },
         error: (err) => {
           this.isSaving.set(false);

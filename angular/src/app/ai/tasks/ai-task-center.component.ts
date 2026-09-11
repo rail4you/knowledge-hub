@@ -21,6 +21,7 @@ import {
   AiTaskService,
   AiTaskStatus,
   AiTaskType,
+  aiTaskResultRoute,
 } from '../services/ai-task.service';
 import { AiTaskNotificationService } from '../services/ai-task-notification.service';
 
@@ -318,12 +319,15 @@ export class AiTaskCenterComponent implements OnInit, OnDestroy {
         },
       });
 
-    const taskId = this.route.snapshot.queryParamMap.get('taskId');
-    if (taskId) {
-      this.aiTaskService.get(taskId).subscribe({
-        next: (task) => this.viewResult(task),
-      });
-    }
+    // ?taskId= 转发到对应功能页的结果 UI（响应式订阅，页内跳转同样生效）
+    this.route.queryParamMap.subscribe(params => {
+      const taskId = params.get('taskId');
+      if (taskId) {
+        this.aiTaskService.get(taskId).subscribe({
+          next: (task) => this.viewResult(task),
+        });
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -398,26 +402,9 @@ export class AiTaskCenterComponent implements OnInit, OnDestroy {
   }
 
   viewResult(task: AiGenerationTaskDto): void {
-    if (task.status !== AiTaskStatus.Completed) return;
+    // 未完成也跳转：功能页会对 Running/Pending 任务跟进进度并展示
     this.notificationService.acknowledge(task.id);
-    const route = this.routeForType(task.taskType);
-    this.router.navigate([route], { queryParams: { taskId: task.id } });
-  }
-
-  private routeForType(type: AiTaskType): string {
-    switch (type) {
-      case AiTaskType.LessonPlanSingle:
-      case AiTaskType.LessonPlanMulti:
-        return '/ai/lesson-plan';
-      case AiTaskType.CaseAnalysis:
-        return '/ai/case-analysis';
-      case AiTaskType.CareerGuidance:
-        return '/ai/career-guidance';
-      case AiTaskType.ExerciseGenerate:
-        return '/ai/exercise-generate';
-      default:
-        return '/ai/tasks';
-    }
+    this.router.navigate([aiTaskResultRoute(task.taskType)], { queryParams: { taskId: task.id } });
   }
 
   retry(task: AiGenerationTaskDto): void {

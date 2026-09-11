@@ -165,8 +165,7 @@ export class AiNotificationBellComponent {
   }
 
   openTask(n: AiGenerationTaskDto): void {
-    this.notificationService.acknowledge(n.id);
-    this.router.navigate(['/ai/tasks'], { queryParams: { taskId: n.id } });
+    this.notificationService.openTaskResult(n);
   }
 
   goTaskCenter(): void {

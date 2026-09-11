@@ -43,6 +43,14 @@
                       @if (r.nodeCount > 0) { <span> · {{ r.nodeCount }} 节点</span> }
                     </div>
                   </div>
+                  <button
+                    nz-button nzType="text" nzSize="small" nzShape="circle"
+                    class="preview-btn"
+                    nz-tooltip nzTooltipTitle="预览文档"
+                    (click)="previewResource($event, r)"
+                  >
+                    <span nz-icon nzType="eye" nzTheme="outline"></span>
+                  </button>
                 </div>
               }
             }
@@ -368,3 +376,5 @@
     </nz-tab>
   </nz-tabs>
 </div>
+
+<app-file-preview #filePreview></app-file-preview>

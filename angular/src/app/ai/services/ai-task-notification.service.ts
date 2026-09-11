@@ -1,9 +1,10 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { ConfigStateService } from '@abp/ng.core';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { Observable, Subject, Subscription, timer, forkJoin, interval, of } from 'rxjs';
 import { catchError, startWith, switchMap, takeUntil, takeWhile } from 'rxjs/operators';
-import { AiGenerationTaskDto, AiTaskService, AiTaskStatus } from './ai-task.service';
+import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, aiTaskResultRoute } from './ai-task.service';
 
 /**
  * AI 任务全局轮询 + 完成通知。
@@ -16,6 +17,7 @@ export class AiTaskNotificationService {
   private readonly aiTaskService = inject(AiTaskService);
   private readonly configState = inject(ConfigStateService);
   private readonly nzNotification = inject(NzNotificationService);
+  private readonly router = inject(Router);
 
   readonly unreadCount = signal(0);
   readonly notifications = signal<AiGenerationTaskDto[]>([]);
@@ -85,6 +87,12 @@ export class AiTaskNotificationService {
     });
   }
 
+  /** 跳到对应功能页的结果 UI（通知 toast / 铃铛共用）。 */
+  openTaskResult(task: AiGenerationTaskDto): void {
+    this.acknowledge(task.id);
+    this.router.navigate([aiTaskResultRoute(task.taskType)], { queryParams: { taskId: task.id } });
+  }
+
   private beginPolling(): void {
     if (this.pollSub) return;
     this.pollSub = timer(0, 8000)
@@ -138,11 +146,18 @@ export class AiTaskNotificationService {
     this.seeded = true;
 
     for (const item of newlyCompleted) {
-      this.nzNotification.success(
-        'AI 任务已完成',
+      // 点击通知体直接跳到对应功能页的结果 UI（?taskId= 深度链接）
+      const ref = this.nzNotification.success(
+        'AI 任务已完成（点击查看结果）',
         `${AiTaskService.typeLabel(item.taskType)}：${item.title}`,
-        { nzDuration: 6000, nzPlacement: 'topRight' },
+        { nzDuration: 8000, nzPlacement: 'topRight' },
       );
+      ref.onClick.subscribe((e) => {
+        // 关闭按钮的点击会冒泡到通知体，忽略避免误跳转
+        const el = e.target as HTMLElement | null;
+        if (el?.closest?.('.ant-notification-notice-close')) return;
+        this.openTaskResult(item);
+      });
     }
     if (newlyCompleted.length > 0) {
       this.completedSubject.next(newlyCompleted);

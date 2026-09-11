@@ -53,7 +53,152 @@
   }
 }
 
-// ---------- Buttons ----------
+// ---------- Tabs：Tab 与容器同一背景 ----------
+.main-tabs {
+  padding: 0 20px 20px;
+
+  ::ng-deep .ant-tabs-nav {
+    margin-bottom: 12px;
+  }
+
+  ::ng-deep .ant-tabs-tab {
+    font-size: 14.5px;
+    padding: 12px 18px;
+  }
+}
+
+// 生成 Tab 顶部步骤条
+.gen-steps-bar {
+  padding: 4px 4px 14px;
+
+  .gen-steps {
+    max-width: 760px;
+  }
+}
+
+// ---------- 生成布局：左文档 / 右方式+参数（参考案例分析） ----------
+.gen-layout {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.resource-list-card {
+  border: 1px solid var(--kh-line-2);
+  border-radius: 12px;
+  background: var(--kh-panel);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  max-height: calc(100vh - 320px);
+  position: sticky;
+  top: 12px;
+
+  @media (max-width: 900px) {
+    position: static;
+    max-height: none;
+  }
+
+  .card-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+
+    .card-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--kh-ink);
+    }
+
+    .resource-count {
+      font-size: 12px;
+      color: var(--kh-muted);
+      background: var(--kh-accent-ghost);
+      padding: 2px 10px;
+      border-radius: var(--kh-r-pill);
+    }
+  }
+
+  .card-sub {
+    font-size: 12px;
+    color: var(--kh-muted);
+    margin: 0 0 10px;
+  }
+
+  .resource-search {
+    margin-bottom: 10px;
+    flex-shrink: 0;
+  }
+
+  .resource-list {
+    flex: 1;
+    min-height: 120px;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar { width: 5px; }
+    &::-webkit-scrollbar-thumb { background: #d4dde8; border-radius: 3px; }
+
+    @media (max-width: 900px) {
+      max-height: 300px;
+    }
+  }
+}
+
+.gen-config {
+  min-width: 0;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 12px;
+  background: var(--kh-panel);
+  padding: 6px 18px 0;
+}
+
+.gen-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0 18px;
+  margin-top: 8px;
+  border-top: 1px solid var(--kh-line-2);
+
+  .footer-right {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+  }
+}
+
+// ---------- 历史记录 Tab ----------
+.history-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  .result-count {
+    font-size: 12.5px;
+    color: var(--kh-muted);
+    margin-right: auto;
+  }
+
+  .history-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .history-search-input {
+      width: 280px;
+    }
+  }
+}
 .lp-btn {
   display: inline-flex;
   align-items: center;
@@ -221,7 +366,6 @@
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
-
     .meta-chip {
       display: inline-block;
       padding: 1px 8px;
@@ -238,6 +382,30 @@
       color: var(--kh-muted);
       white-space: nowrap;
     }
+  }
+
+  .preview-btn {
+    flex-shrink: 0;
+    margin-left: auto;
+    opacity: 0;
+    color: var(--kh-muted);
+    &:hover { color: var(--kh-accent); }
+  }
+
+  .status-info {
+    display: inline-flex;
+    align-items: center;
+    font-size: 13px;
+    color: #bfbfbf;
+    cursor: help;
+    flex-shrink: 0;
+
+    &.ready { color: #52c41a; }
+  }
+
+  &:hover .preview-btn,
+  &.on .preview-btn {
+    opacity: 1;
   }
 
   .rtag {
@@ -693,9 +861,6 @@
   }
 }
 
-.meta-chip.idx { background: rgba(24, 144, 255, 0.12); color: #096dd9; }
-.meta-chip.sum { background: rgba(82, 196, 26, 0.14); color: #2f7d0e; }
-
 .course-title-hint {
   font-size: 13px;
   color: var(--kh-ink-2);
@@ -915,6 +1080,16 @@
 
   .progress-msg { font-size: 13px; color: var(--kh-muted); }
   .stream-hint { font-size: 12px; color: var(--kh-muted); }
+
+  .queue-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--kh-muted);
+    .anticon { font-size: 13px; }
+  }
 
   .gen-meta {
     display: flex;

@@ -1,4 +1,4 @@
-import { Component, signal, inject, computed, ChangeDetectionStrategy, OnInit, OnDestroy } from '@angular/core';
+import { Component, signal, inject, computed, ChangeDetectionStrategy, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -16,11 +16,13 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, Subscription, takeUntil } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { ConfigStateService } from '@abp/ng.core';
 import { ChatService, ResourceForChat } from '../services/chat.service';
+import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
 import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
 import { AiTaskNotificationService } from '../services/ai-task-notification.service';
 
@@ -83,6 +85,8 @@ interface CaseAnalysisHistoryItem {
     NzTableModule,
     NzPopconfirmModule,
     NzModalModule,
+    NzTooltipModule,
+    FilePreviewComponent,
   ],
   templateUrl: './case-analysis.component.html',
   styleUrls: ['./case-analysis.component.scss'],
@@ -97,6 +101,8 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly destroy$ = new Subject<void>();
   private taskPollSub: Subscription | null = null;
+  private lastPreviewTaskId: string | null = null;
+  @ViewChild('filePreview') filePreview!: FilePreviewComponent;
   private readonly HISTORY_KEY_PREFIX = 'kh-case-analysis-history';
   private historyKey = `${this.HISTORY_KEY_PREFIX}:anon`;
 
@@ -184,15 +190,37 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
           this.previewItem.set(null);
           this.history.set([]);
           this.loadHistory();
+          this.syncBackendHistory();
         }
       });
 
     this.loadResources();
+    // 后端已完成的任务合并进历史：直接浏览页面也能看到生成结果
+    this.syncBackendHistory();
 
-    const taskId = this.route.snapshot.queryParamMap.get('taskId');
-    if (taskId) {
-      this.loadTaskPreview(taskId);
-    }
+    // 任务完成实时合并：后台生成成功后，列表自动出现新数据
+    this.aiTaskNotifications.completed$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(tasks => {
+        for (const t of tasks) {
+          if (t.taskType === AiTaskType.CaseAnalysis) {
+            if (this.mergeBackendTask(t, true)) {
+              this.messageService.success('新案例分析已生成，已加入历史记录');
+            }
+          }
+        }
+      });
+
+    // ?taskId= 深度链接（通知 / 任务中心跳转）：响应式订阅，页内跳转同样生效
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        const taskId = params.get('taskId');
+        if (taskId && taskId !== this.lastPreviewTaskId) {
+          this.lastPreviewTaskId = taskId;
+          this.loadTaskPreview(taskId);
+        }
+      });
   }
 
   ngOnDestroy() {
@@ -364,10 +392,19 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
   }
 
   private previewTask(task: AiGenerationTaskDto) {
-    if (task.status !== AiTaskStatus.Completed || !task.resultJson) return;
+    const item = this.buildHistoryItemFromTask(task);
+    if (!item) return;
+    this.history.update((list) => (list.some((x) => x.id === item.id) ? list : [item, ...list].slice(0, 50)));
+    this.saveHistory();
+    this.previewItem.set(item);
+  }
+
+  /** 后端任务 DTO → 历史记录项，解析失败返回 null。 */
+  private buildHistoryItemFromTask(task: AiGenerationTaskDto): CaseAnalysisHistoryItem | null {
+    if (task.status !== AiTaskStatus.Completed || !task.resultJson) return null;
     const parsed = this.parseResult(task.resultJson);
-    if (!parsed) return;
-    const item: CaseAnalysisHistoryItem = {
+    if (!parsed) return null;
+    return {
       id: task.id,
       title: parsed.title || task.title,
       resourceId: task.resourceId || '',
@@ -377,8 +414,51 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
       rawJson: task.resultJson,
       createdAt: task.completedAt || task.creationTime,
     };
-    this.history.update((list) => (list.some((x) => x.id === item.id) ? list : [item, ...list].slice(0, 50)));
-    this.previewItem.set(item);
+  }
+
+  /**
+   * 把后端已完成的案例分析任务合并进历史（去重、有上限、持久化）。
+   * @returns 是否新增了一条记录
+   */
+  private mergeBackendTask(task: AiGenerationTaskDto, fetchFullIfNeeded = false): boolean {
+    if (this.history().some((x) => x.id === task.id)) return false;
+    if (!task.resultJson && fetchFullIfNeeded) {
+      // 列表接口不返回 ResultJson 大字段，取详情后再合并
+      this.aiTaskService
+        .get(task.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (full) => {
+            if (this.mergeBackendTask(full)) {
+              this.messageService.success('新案例分析已生成，已加入历史记录');
+            }
+          },
+        });
+      return false;
+    }
+    const item = this.buildHistoryItemFromTask(task);
+    if (!item) return false;
+    this.history.update((list) => [item, ...list].slice(0, 50));
+    this.saveHistory();
+    return true;
+  }
+
+  /**
+   * 进页即同步：拉取后端已完成的案例分析任务并入历史，
+   * 直接浏览页面也能看到（含其他浏览器提交的）生成结果。
+   */
+  private syncBackendHistory(): void {
+    this.aiTaskService
+      .getList({ taskType: AiTaskType.CaseAnalysis, status: AiTaskStatus.Completed, onlyMine: true, maxResultCount: 20 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const missing = (res.items || []).filter((t) => !this.history().some((x) => x.id === t.id)).slice(0, 10);
+          for (const t of missing) {
+            this.mergeBackendTask(t, true);
+          }
+        },
+      });
   }
 
   private parseResult(raw: string): CaseAnalysisResult | null {
@@ -493,6 +573,14 @@ export class CaseAnalysisComponent implements OnInit, OnDestroy {
     // 切换资源时清掉上一次结果，避免显示错位
     this.result.set(null);
     this.rawJson.set('');
+  }
+
+  /** 文档预览：点击列表行右侧眼睛图标，不触发选中。 */
+  previewResource(event: Event, r: ResourceForChat): void {
+    event.stopPropagation();
+    if (!this.filePreview) return;
+    const ext = (r.fileExtension || r.sourceFormat || '').replace('.', '');
+    this.filePreview.open(r.id, r.name, ext, 0, true);
   }
 
   getSeverityColor(severity: string): string {

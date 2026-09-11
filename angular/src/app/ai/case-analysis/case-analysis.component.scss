@@ -147,7 +147,6 @@
   .resource-item-info {
     flex: 1;
     min-width: 0;
-
     .resource-item-name {
       font-size: 14px;
       font-weight: 500;
@@ -164,6 +163,18 @@
       margin-top: 2px;
       line-height: 1.4;
     }
+  }
+
+  .preview-btn {
+    flex-shrink: 0;
+    opacity: 0;
+    color: var(--kh-muted);
+    &:hover { color: var(--kh-accent); }
+  }
+
+  &:hover .preview-btn,
+  &.active .preview-btn {
+    opacity: 1;
   }
 }
 
