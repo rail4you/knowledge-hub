@@ -30,6 +30,9 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
+import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import type { UserImportResultDto } from '../../proxy/users/models';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 
@@ -108,6 +111,7 @@ interface IdentityUserDto {
     NzDividerModule,
     NzGridModule,
     NzAlertModule,
+    NzUploadModule,
     PermissionManagementComponent,
     FormsModule,
   ],
@@ -144,12 +148,29 @@ export class IdentityUsersComponent implements OnInit {
   permissionProviderKey = '';
   formError = '';
 
+  /** Excel 批量导入 */
+  importModalOpen = false;
+  importing = false;
+  downloadingTemplate = false;
+  importFileList: NzUploadFile[] = [];
+  importResult: UserImportResultDto | null = null;
+
+  /** 各角色类型的必填字段说明（与后端 UserImportAppService.RequiredFieldsMapping 保持一致）。 */
+  readonly importRequiredFields: { role: string; fields: string }[] = [
+    { role: '联盟管理员', fields: '角色类型、姓名、登录账号、初始密码、手机号、工号' },
+    { role: '院校管理员', fields: '角色类型、姓名、登录账号、初始密码、手机号、所属院校、工号' },
+    { role: '教师', fields: '角色类型、姓名、登录账号、初始密码、手机号、所属院校、工号、所属院系/部门、所教专业' },
+    { role: '学生', fields: '角色类型、姓名、登录账号、初始密码、手机号、所属院校、专业、学号、年级、班级' },
+    { role: '企业用户', fields: '角色类型、姓名、登录账号、初始密码、手机号、邮箱、企业名称、统一社会信用代码、职位/岗位' },
+  ];
+
   private readonly restService = inject(RestService);
   private readonly localization = inject(LocalizationService);
   private readonly fb = inject(FormBuilder);
   private readonly confirmation = inject(ConfirmationService);
   private readonly tenantUserService = inject(TenantUserService);
   private readonly majorService = inject(MajorService);
+  private readonly message = inject(NzMessageService);
   private readonly configState = inject(ConfigStateService);
 
   readonly majors = signal<MajorLookupDto[]>([]);
@@ -488,5 +509,106 @@ export class IdentityUsersComponent implements OnInit {
     setTimeout(() => {
       this.isPermissionModalOpen = true;
     });
+  }
+
+  // ===== Excel 批量导入 =====
+  openImportModal(): void {
+    this.importModalOpen = true;
+    this.importFileList = [];
+    this.importResult = null;
+  }
+
+  closeImportModal(): void {
+    if (this.importing) return;
+    this.importModalOpen = false;
+    this.importFileList = [];
+    this.importResult = null;
+  }
+
+  beforeImportUpload = (file: NzUploadFile): boolean => {
+    const name = (file.name || '').toLowerCase();
+    if (!name.endsWith('.xlsx') && !name.endsWith('.xls')) {
+      this.message.warning('仅支持 Excel 文件（.xlsx / .xls）');
+      return false;
+    }
+    this.importFileList = [file];
+    return false;
+  };
+
+  downloadImportTemplate(): void {
+    this.downloadingTemplate = true;
+    this.restService.request<any, Blob>({
+      method: 'GET',
+      responseType: 'blob',
+      url: '/api/app/user-import/import-template',
+    }).pipe(finalize(() => (this.downloadingTemplate = false))).subscribe({
+      next: blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `用户导入模板_${this.todayStr()}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: err => this.message.error(this.extractErrorMessage(err, '模板下载失败')),
+    });
+  }
+
+  importXlsx(): void {
+    const file = this.importFileList[0];
+    if (!file) {
+      this.message.warning('请先选择要导入的 Excel 文件');
+      return;
+    }
+    this.importing = true;
+    this.importResult = null;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const arrayBuffer = reader.result as ArrayBuffer;
+      const bytes = Array.from(new Uint8Array(arrayBuffer));
+      this.restService.request<any, UserImportResultDto>({
+        method: 'POST',
+        url: '/api/app/user-import/import',
+        body: bytes,
+      }).subscribe({
+        next: result => {
+          this.importing = false;
+          const ok = result.successCount ?? 0;
+          const fail = result.failCount ?? 0;
+          if (fail > 0) {
+            this.importResult = result;
+            this.message.warning(`导入完成：成功 ${ok} 条，失败 ${fail} 条，详见下方明细`);
+          } else {
+            this.importModalOpen = false;
+            this.importFileList = [];
+            this.importResult = null;
+            this.message.success(`导入完成：成功 ${ok} 条`);
+          }
+          this.loadUsers();
+        },
+        error: err => {
+          this.importing = false;
+          this.importResult = null;
+          this.message.error(this.extractErrorMessage(err, '导入失败'));
+        },
+      });
+    };
+    reader.onerror = () => {
+      this.importing = false;
+      this.message.error('读取文件失败，请重试');
+    };
+    reader.readAsArrayBuffer(file as any);
+  }
+
+  private todayStr(): string {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+  }
+
+  private extractErrorMessage(err: any, fallback: string): string {
+    return err?.error?.error?.message || err?.error?.message || err?.message || fallback;
   }
 }

@@ -7,6 +7,10 @@
       <button nz-button nzType="primary" (click)="createUser()">
         <span>{{ '::NewUser' | abpLocalization }}</span>
       </button>
+      <button nz-button (click)="openImportModal()">
+        <span nz-icon nzType="upload"></span>
+        <span>批量导入</span>
+      </button>
     </div>
     <div class="flex gap-2 items-center">
       <span class="text-sm text-gray-500">按租户筛选：</span>
@@ -333,6 +337,110 @@
         </nz-form-control>
       </nz-form-item>
     </form>
+  </ng-container>
+</nz-modal>
+
+<!-- =================== Excel 批量导入弹窗 =================== -->
+<nz-modal
+  [nzVisible]="importModalOpen"
+  nzTitle="批量导入用户（Excel）"
+  [nzFooter]="null"
+  [nzWidth]="760"
+  (nzOnCancel)="closeImportModal()"
+>
+  <ng-container *nzModalContent>
+    <div class="mb-3">
+      <span>请先下载模板并按模板填写，再上传导入。模板按角色类型分 Sheet，每页表头中橙黄色为必填项。</span>
+      <a (click)="downloadImportTemplate()">点击下载模板</a>
+      @if (downloadingTemplate) {
+        <span class="text-sm text-gray-500">（下载中…）</span>
+      }
+    </div>
+
+    <nz-table
+      [nzData]="importRequiredFields"
+      [nzFrontPagination]="false"
+      [nzShowPagination]="false"
+      nzSize="small"
+      class="mb-4"
+    >
+      <thead>
+        <tr>
+          <th style="width: 120px">角色类型</th>
+          <th>必填字段</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of importRequiredFields; track item.role) {
+          <tr>
+            <td><nz-tag>{{ item.role }}</nz-tag></td>
+            <td class="text-sm">{{ item.fields }}</td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+
+    <nz-upload
+      [nzBeforeUpload]="beforeImportUpload"
+      [nzFileList]="importFileList"
+      accept=".xlsx,.xls"
+      [nzShowUploadList]="{ showPreviewIcon: false, showRemoveIcon: true }"
+    >
+      <button nz-button>
+        <span nz-icon nzType="file-excel"></span>
+        选择 Excel 文件
+      </button>
+    </nz-upload>
+
+    <div class="mt-4 flex gap-2 justify-end">
+      <button nz-button (click)="closeImportModal()" [disabled]="importing">取消</button>
+      <button
+        nz-button
+        nzType="primary"
+        [nzLoading]="importing"
+        [disabled]="!importFileList.length"
+        (click)="importXlsx()"
+      >
+        <span nz-icon nzType="upload"></span>
+        开始导入
+      </button>
+    </div>
+
+    @if (importResult) {
+      <div class="mt-4">
+        <nz-alert
+          nzType="warning"
+          nzShowIcon
+          [nzMessage]="`导入完成：共 ${importResult.totalCount ?? 0} 条，成功 ${importResult.successCount ?? 0} 条，失败 ${importResult.failCount ?? 0} 条`"
+          class="mb-3"
+        ></nz-alert>
+        @if ((importResult.failItems ?? []).length > 0) {
+          <nz-table
+            [nzData]="importResult.failItems || []"
+            [nzFrontPagination]="false"
+            [nzShowPagination]="false"
+            nzSize="small"
+          >
+            <thead>
+              <tr>
+                <th style="width: 70px">行号</th>
+                <th style="width: 160px">账号</th>
+                <th>失败原因</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of importResult.failItems || []; track $index) {
+                <tr>
+                  <td>{{ item.rowNumber }}</td>
+                  <td>{{ item.userName || '-' }}</td>
+                  <td>{{ item.reason }}</td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
+        }
+      </div>
+    }
   </ng-container>
 </nz-modal>
 

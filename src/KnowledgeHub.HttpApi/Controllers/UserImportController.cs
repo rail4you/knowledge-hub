@@ -5,6 +5,7 @@ using KnowledgeHub.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc;
+using Volo.Abp.Content;
 
 namespace KnowledgeHub.Controllers;
 
@@ -30,5 +31,11 @@ public class UserImportController : AbpController, IUserImportAppService
     public async Task<List<RolePermissionSummaryDto>> GetRolePermissionSummaryAsync()
     {
         return await _userImportAppService.GetRolePermissionSummaryAsync();
+    }
+
+    [HttpGet("import-template")]
+    public async Task<IRemoteStreamContent> GetImportTemplateAsync()
+    {
+        return await _userImportAppService.GetImportTemplateAsync();
     }
 }

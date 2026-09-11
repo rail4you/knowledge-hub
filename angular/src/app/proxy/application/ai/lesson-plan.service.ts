@@ -16,4 +16,13 @@ export class LessonPlanService {
       params: { lessonPlanJson },
     },
     { apiName: this.apiName,...config });
+  
+
+  exportMultiChapterDocxByLessonPlanJson = (lessonPlanJson: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, number[]>({
+      method: 'POST',
+      url: '/api/app/lesson-plan/export-multi-chapter-docx',
+      params: { lessonPlanJson },
+    },
+    { apiName: this.apiName,...config });
 }

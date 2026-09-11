@@ -29,6 +29,14 @@ export class TeachingAgentService {
     { apiName: this.apiName,...config });
   
 
+  delete = (id: string, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, void>({
+      method: 'DELETE',
+      url: `/api/app/teaching-agent/${id}`,
+    },
+    { apiName: this.apiName,...config });
+  
+
   getDetail = (id: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, TeachingAgentDetailDto>({
       method: 'GET',
