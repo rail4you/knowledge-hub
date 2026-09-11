@@ -621,15 +621,17 @@ $card-radius: 12px;
   margin-right: auto;
 }
 
-// ═══════ COURSE PREVIEW DRAWER ═══════
-// 注意：抽屉 DOM 挂在 body 全局浮层下，组件内 :host 选择器够不着，
-// 抽屉容器级样式（body padding / 移动端全幅）统一放在 styles/_ngzorro-overrides.scss。
+// ═══════ COURSE PREVIEW MODAL ═══════
+// 注意：弹窗 DOM 挂在 body 全局浮层下，组件内 :host 选择器够不着，
+// 弹窗容器级样式（body padding / 内容圆角）统一放在 styles/_ngzorro-overrides.scss。
 
 .preview-drawer {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  max-height: calc(100vh - 120px);
   background: #f8fafd;
+  border-radius: 12px;
+  overflow: hidden;
 }
 .preview-hero {
   position: relative;
@@ -725,7 +727,9 @@ $card-radius: 12px;
 }
 .preview-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  max-height: calc(100vh - 320px);
   padding: 14px 14px 24px;
 }
 .preview-loading {
@@ -887,7 +891,7 @@ $card-radius: 12px;
   .construct-card { padding: 14px 14px 12px; }
   .graph-chart { height: 340px; }
   .footer__inner { grid-template-columns: 1fr; gap: 20px; }
-  // 预览抽屉移动端：全幅 + 压缩留白
+  // 预览弹窗移动端：压缩留白
   .preview-hero { padding: 18px 14px 16px; }
   .preview-hero__icon { font-size: 54px; right: 14px; bottom: 10px; }
   .preview-title { font-size: 19px; margin-bottom: 8px; }

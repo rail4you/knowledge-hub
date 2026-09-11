@@ -159,7 +159,23 @@
   box-shadow: var(--kh-shadow-pop);
 }
 
-/* ── 租户课程预览抽屉（tenant-homepage，nzWrapClassName="tenant-course-preview"）── */
+/* ── 租户课程预览弹窗（tenant-homepage，nzWrapClassName="tenant-course-preview-modal"）── */
+.tenant-course-preview-modal .ant-modal-content {
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tenant-course-preview-modal .ant-modal-body {
+  padding: 0;
+  background: #f8fafd;
+}
+@media (max-width: 720px) {
+  // 窄屏下弹窗接近全幅
+  .tenant-course-preview-modal .ant-modal {
+    max-width: calc(100vw - 32px);
+  }
+}
+
+/* ── 租户课程预览抽屉（历史样式保留，当前已改用居中弹窗）── */
 /* 注意：nzWrapClassName 把类加在 .ant-drawer-content-wrapper 自身上（同级），不是祖先 */
 .tenant-course-preview .ant-drawer-body {
   padding: 0;

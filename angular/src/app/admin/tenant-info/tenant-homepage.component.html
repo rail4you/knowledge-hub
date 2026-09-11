@@ -260,19 +260,20 @@
   }
 </div>
 
-<!-- ═══════════════════ 课程预览抽屉 ═══════════════════ -->
-<nz-drawer
+<!-- ═══════════════════ 课程预览弹窗（居中） ═══════════════════ -->
+<nz-modal
   [nzVisible]="previewOpen()"
-  [nzPlacement]="'right'"
-  [nzWidth]="520"
+  [nzCentered]="true"
+  [nzWidth]="680"
   [nzTitle]="null"
+  [nzFooter]="null"
   [nzClosable]="false"
   [nzMask]="true"
   [nzMaskClosable]="true"
-  [nzWrapClassName]="'tenant-course-preview'"
-  (nzOnClose)="closeCoursePreview()"
+  [nzWrapClassName]="'tenant-course-preview-modal'"
+  (nzOnCancel)="closeCoursePreview()"
 >
-  <ng-container *nzDrawerContent>
+  <ng-container *nzModalContent>
     <div class="preview-drawer">
       @if (previewCourse(); as c) {
         <div class="preview-hero"
@@ -360,7 +361,7 @@
       }
     </div>
   </ng-container>
-</nz-drawer>
+</nz-modal>
 
 <!-- ═══════════════════ FOOTER — 三端统一 ═══════════════════ -->
 <app-site-footer></app-site-footer>

@@ -7,7 +7,7 @@ import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzDrawerModule } from 'ng-zorro-antd/drawer';
+import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { SiteBrandComponent } from '../../shared/branding/site-brand.component';
@@ -68,7 +68,7 @@ interface NavCard {
     NzIconModule,
     NzSelectModule,
     NzSpinModule,
-    NzDrawerModule,
+    NzModalModule,
     NzAlertModule,
     SiteBrandComponent,
     SiteFooterComponent,
@@ -109,7 +109,7 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
   readonly knowledgeGraph = signal<TenantKnowledgeGraphDto | null>(null);
   readonly portalData = signal<PortalHomeDataDto | null>(null);
 
-  // Course preview drawer state
+  // Course preview modal state
   readonly previewOpen = signal(false);
   readonly previewCourse = signal<CourseBriefDto | null>(null);
   readonly previewDetail = signal<CourseDetailDto | null>(null);
@@ -248,9 +248,9 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     }
   }
 
-  // ═══ Course preview drawer ═══
+  // ═══ Course preview modal ═══
 
-  /** 已选课 → 直接跳转学生课程详情页（带 tenantId，让课程详情页返回资源库而非课程中心）；未选课 → 打开右侧预览抽屉 */
+  /** 已选课 → 直接跳转学生课程详情页（带 tenantId，让课程详情页返回资源库而非课程中心）；未选课 → 打开居中预览弹窗 */
   handleCourseClick(course: CourseBriefDto): void {
     if (!course?.id) return;
     if (this.isEnrolled(course.id)) {
@@ -309,7 +309,7 @@ export class TenantHomepageComponent implements OnInit, AfterViewInit, OnDestroy
     }, 250);
   }
 
-  /** Flatten nested chapter tree for the drawer display. */
+  /** Flatten nested chapter tree for the modal display. */
   flattenChapters(chapters: ChapterDto[] | undefined, depth = 0): Array<ChapterDto & { depth: number }> {
     if (!chapters) return [];
     const out: Array<ChapterDto & { depth: number }> = [];
