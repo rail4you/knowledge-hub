@@ -40,6 +40,22 @@ interface OptionItem {
   content: string;
 }
 
+/** 模板中频繁使用的静态映射，提到模块级避免每次变更检测重复分配 */
+const DIFFICULTY_LABELS = ['入门', '初级', '中级', '高级', '专家'];
+const IMPORTANCE_LABELS: Record<string, string> = {
+  core: '核心',
+  important: '重要',
+  normal: '一般',
+  extended: '拓展',
+};
+const IMPORTANCE_COLORS: Record<string, string> = {
+  core: '#ef4444',
+  important: '#f59e0b',
+  normal: '#2b6cd4',
+  extended: '#10b981',
+};
+const EXERCISE_TYPE_LABELS = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析'];
+
 interface FlatChapter {
   id: string;
   title: string;
@@ -182,6 +198,18 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   // 提交记录
   readonly chapterRecords = signal<StudentExerciseRecordDto[]>([]);
   readonly recordsLoading = signal(false);
+
+  /** 当前章节已作答的习题 id 集合：模板判断避免每次变更检测重复遍历记录 */
+  private readonly answeredExerciseIds = computed(() => {
+    const ids = new Set<string>();
+    for (const r of this.chapterRecords()) {
+      if (r.exerciseId) ids.add(r.exerciseId);
+    }
+    return ids;
+  });
+
+  /** 选项解析缓存：同一 options 字符串只 JSON.parse 一次 */
+  private readonly optionsCache = new Map<string, OptionItem[]>();
 
   // 进度
   readonly chapterStartTime = signal<number>(Date.now());
@@ -691,7 +719,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   /** 已作答判断：提交记录中存在该习题即视为已作答 */
   isExerciseAnswered(exerciseId?: string | null): boolean {
     if (!exerciseId) return false;
-    return this.chapterRecords().some(r => r.exerciseId === exerciseId);
+    return this.answeredExerciseIds().has(exerciseId);
   }
 
   /** 纯文本资源行内正文的展开状态（无关联文件时行内展示正文） */
@@ -769,10 +797,14 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
 
   parseOptions(optionsStr?: string | null): OptionItem[] {
     if (!optionsStr) return [];
+    const cached = this.optionsCache.get(optionsStr);
+    if (cached) return cached;
+
+    let result: OptionItem[] = [];
     try {
       const parsed = JSON.parse(optionsStr);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((o: any, idx: number) => {
+        result = parsed.map((o: any, idx: number) => {
           // 对象格式: {key: "A", content: "..."}
           if (typeof o === 'object' && o !== null) {
             return {
@@ -789,7 +821,7 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
       }
     } catch {
       // 不是 JSON，尝试按换行分割
-      return optionsStr
+      result = optionsStr
         .split(/\r?\n/)
         .map(line => line.trim())
         .filter(line => line.length > 0)
@@ -798,7 +830,11 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
           content: line.replace(/^[A-Z][\.\)]\s*/, ''),
         }));
     }
-    return [];
+
+    // 简单防膨胀：缓存条目过多时整体清空
+    if (this.optionsCache.size > 200) this.optionsCache.clear();
+    this.optionsCache.set(optionsStr, result);
+    return result;
   }
 
   getCurrentAnswerText(): string {
@@ -910,33 +946,19 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   }
 
   difficultyLabel(d?: number): string {
-    const labels = ['入门', '初级', '中级', '高级', '专家'];
-    return labels[(d || 1) - 1] || '未设置';
+    return DIFFICULTY_LABELS[(d || 1) - 1] || '未设置';
   }
 
   importanceLabel(level?: string): string {
-    const map: Record<string, string> = {
-      core: '核心',
-      important: '重要',
-      normal: '一般',
-      extended: '拓展',
-    };
-    return map[level || 'normal'] || '一般';
+    return IMPORTANCE_LABELS[level || 'normal'] || '一般';
   }
 
   importanceColor(level?: string): string {
-    const map: Record<string, string> = {
-      core: '#ef4444',
-      important: '#f59e0b',
-      normal: '#2b6cd4',
-      extended: '#10b981',
-    };
-    return map[level || 'normal'] || '#2b6cd4';
+    return IMPORTANCE_COLORS[level || 'normal'] || '#2b6cd4';
   }
 
   exerciseTypeLabel(t?: ExerciseType): string {
-    const labels = ['单选题', '多选题', '判断题', '填空题', '简答题', '论述题', '案例分析'];
-    return labels[t || 0] || '未知';
+    return EXERCISE_TYPE_LABELS[t || 0] || '未知';
   }
 
   trackResource = (_: number, r: KnowledgeResourceDto) => r.id;

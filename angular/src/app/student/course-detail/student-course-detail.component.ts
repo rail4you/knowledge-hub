@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
@@ -75,6 +76,7 @@ interface ResourceItem {
 export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly courseService = inject(CourseService);
   private readonly chapterService = inject(ChapterService);
   private readonly learningService = inject(LearningService);
@@ -217,7 +219,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     });
     // 订阅路由参数：从“相关课程”点击跳转到其他课程时，URL 参数变化但组件会被复用，
     // 只靠 snapshot 的 ngOnInit 不会再次执行，必须监听 paramMap 才能重新加载目标课程。
-    this.route.paramMap.subscribe(params => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       const id = params.get('id');
       if (!id) {
         this.router.navigate(['/student/courses']);

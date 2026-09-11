@@ -6,31 +6,57 @@
     [stats]="stats()"
   ></app-student-hero>
 
-  <!-- =================== 学习曲线 =================== -->
-  <section class="curve-card">
-    <header class="curve-card__header">
-      <div>
-        <h3 class="curve-card__title">
-          <span class="curve-card__bar"></span>
-          本周学习曲线
-        </h3>
-        <p class="curve-card__sub">展示最近 7 天的每日学习活动次数（习题+资源）</p>
-      </div>
-      <div class="curve-card__total">
-        <span class="curve-card__total-num">
-          {{ totalCurveCount() }}
-        </span>
-        <span class="curve-card__total-label">本周累计 / 次</span>
-      </div>
-    </header>
+  <!-- =================== 学习数据图表（两栏） =================== -->
+  <section class="analytics-grid">
+    <!-- 本周学习曲线 -->
+    <div class="chart-card">
+      <header class="chart-card__header">
+        <div>
+          <h3 class="chart-card__title">
+            <span class="chart-card__icon"><span nz-icon nzType="line-chart" nzTheme="outline"></span></span>
+            本周学习曲线
+          </h3>
+          <p class="chart-card__sub">最近 7 天的每日学习活动次数（习题+资源）</p>
+        </div>
+        <div class="chart-card__total">
+          <span class="chart-card__total-num">{{ totalCurveCount() }}</span>
+          <span class="chart-card__total-label">本周累计 / 次</span>
+        </div>
+      </header>
 
-    @if (loading()) {
-      <div class="loading-state">
-        <nz-spin nzSimple nzSize="default"></nz-spin>
-      </div>
-    } @else {
-      <div #curveChartContainer class="curve-chart"></div>
-    }
+      @if (loading()) {
+        <div class="loading-state">
+          <nz-spin nzSimple nzSize="default"></nz-spin>
+        </div>
+      } @else if (learningCurve().length === 0) {
+        <div class="chart-empty">暂无学习活动数据</div>
+      } @else {
+        <div #curveChartContainer class="chart-canvas"></div>
+      }
+    </div>
+
+    <!-- 学习活动构成 -->
+    <div class="chart-card">
+      <header class="chart-card__header">
+        <div>
+          <h3 class="chart-card__title">
+            <span class="chart-card__icon"><span nz-icon nzType="pie-chart" nzTheme="outline"></span></span>
+            学习活动构成
+          </h3>
+          <p class="chart-card__sub">习题练习与资源学习次数占比</p>
+        </div>
+      </header>
+
+      @if (loading()) {
+        <div class="loading-state">
+          <nz-spin nzSimple nzSize="default"></nz-spin>
+        </div>
+      } @else if (activityBreakdown().total === 0) {
+        <div class="chart-empty">暂无学习活动数据</div>
+      } @else {
+        <div #pieChartContainer class="chart-canvas"></div>
+      }
+    </div>
   </section>
 
   <!-- =================== 主体两栏 =================== -->

@@ -20,36 +20,58 @@
 }
 
 /* =================== HERO =================== */
-/* =================== 学习曲线 =================== */
-.curve-card {
-  background: #fff;
-  border-radius: ds.$student-radius-lg;
-  padding: 24px 28px;
-  box-shadow: ds.$student-shadow-soft;
+/* =================== 学习数据图表（两栏） =================== */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
 }
 
-.curve-card__header {
+.chart-card {
+  background: #fff;
+  border-radius: ds.$student-radius-lg;
+  padding: 22px 24px 16px;
+  box-shadow: ds.$student-shadow-soft;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 6px;
   flex-wrap: wrap;
 }
 
-.curve-card__title {
-  @include ds.section-heading(17px);
+.chart-card__title {
+  @include ds.section-heading(16px);
   margin: 0 0 4px;
 }
 
-.curve-card__sub {
+.chart-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(43, 108, 212, 0.1);
+  color: ds.$student-primary;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.chart-card__sub {
   margin: 0;
   color: ds.$student-text-light;
   font-size: 12px;
-  padding-left: 14px;
+  padding-left: 34px;
 }
 
-.curve-card__total {
+.chart-card__total {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -69,9 +91,24 @@
   }
 }
 
-.curve-chart {
+.chart-canvas {
   width: 100%;
-  height: 280px;
+  height: 260px;
+}
+
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 260px;
+  color: ds.$student-text-light;
+  font-size: 13px;
+}
+
+@media (max-width: 1000px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* =================== 内容两栏 =================== */
@@ -681,12 +718,13 @@
   }
 
   .block-card,
-  .curve-card {
+  .chart-card {
     padding: 18px;
   }
 
-  .curve-chart {
-    gap: 6px;
+  .chart-canvas,
+  .chart-empty {
+    height: 220px;
   }
 
   .course-progress {

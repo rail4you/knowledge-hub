@@ -2,23 +2,19 @@ import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, computed, inject
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
-import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzDividerModule } from 'ng-zorro-antd/divider';
 import * as echarts from 'echarts/core';
-import { LineChart } from 'echarts/charts';
+import { LineChart, PieChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
-import { TooltipComponent, GridComponent } from 'echarts/components';
+import { TooltipComponent, GridComponent, LegendComponent } from 'echarts/components';
 import { CourseService } from '../../proxy/courses/course.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
-import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
-echarts.use([LineChart, CanvasRenderer, TooltipComponent, GridComponent]);
+echarts.use([LineChart, PieChart, CanvasRenderer, TooltipComponent, GridComponent, LegendComponent]);
 import type { LearningDashboardDto, StudentCourseListItemDto, RecentLearningDto } from '../../proxy/learning/dtos/models';
 
 interface StatItem {
@@ -61,12 +57,8 @@ interface DailyPoint {
     DecimalPipe,
     RouterModule,
     NzIconModule,
-    NzButtonModule,
     NzSpinModule,
     NzProgressModule,
-    NzEmptyModule,
-    NzDividerModule,
-    MasteryRadarComponent,
     StudentHeroComponent,
   ],
   templateUrl: './student-my-learning.component.html',
@@ -81,7 +73,16 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
 
   private readonly chartContainerRef = viewChild<ElementRef<HTMLDivElement>>('curveChartContainer');
+  private readonly pieContainerRef = viewChild<ElementRef<HTMLDivElement>>('pieChartContainer');
   private chartInstance: echarts.ECharts | null = null;
+  private pieChartInstance: echarts.ECharts | null = null;
+
+  private readonly onWindowResize = () => {
+    requestAnimationFrame(() => {
+      this.chartInstance?.resize();
+      this.pieChartInstance?.resize();
+    });
+  };
 
   readonly loading = signal(false);
   readonly dashboard = signal<LearningDashboardDto | null>(null);
@@ -103,6 +104,14 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
   readonly totalCurveCount = computed(() =>
     this.learningCurve().reduce((s, p) => s + p.minutes, 0)
   );
+
+  /** 学习活动构成：习题练习 / 资源学习（均为次数） */
+  readonly activityBreakdown = computed(() => {
+    const dash = this.dashboard();
+    const exercises = dash?.totalExerciseRecords || 0;
+    const resources = dash?.totalResourceActivities || 0;
+    return { exercises, resources, total: exercises + resources };
+  });
 
   readonly inProgressCourses = computed<StudentCourseListItemDto[]>(() =>
     this.myCourses().filter(c => c.status === 1 || ((c.progress || 0) > 0 && (c.progress || 0) < 100))
@@ -136,6 +145,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
+    window.addEventListener('resize', this.onWindowResize);
     this.loadAll();
   }
 
@@ -147,7 +157,10 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
         this.updateStats(data);
         this.buildLearningCurve(data);
         this.loading.set(false);
-        setTimeout(() => this.initLineChart(), 100);
+        setTimeout(() => {
+          this.initLineChart();
+          this.initPieChart();
+        }, 0);
       },
       error: () => {
         this.loading.set(false);
@@ -164,7 +177,9 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('resize', this.onWindowResize);
     this.chartInstance?.dispose();
+    this.pieChartInstance?.dispose();
   }
 
   private initLineChart(): void {
@@ -182,6 +197,7 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
     const maxVal = Math.max(...values, 1);
 
     this.chartInstance.setOption({
+      animation: false,
       tooltip: {
         trigger: 'axis',
         backgroundColor: '#fff',
@@ -232,9 +248,68 @@ export class StudentMyLearningComponent implements OnInit, OnDestroy {
           ]),
         },
         emphasis: {
-          scale: 1.5,
-          itemStyle: { shadowBlur: 8, shadowColor: 'rgba(43, 108, 212,0.4)' },
+          itemStyle: { shadowBlur: 6, shadowColor: 'rgba(43, 108, 212,0.35)' },
         },
+      }],
+    });
+  }
+
+  /** 学习活动构成环形图（习题练习 / 资源学习） */
+  private initPieChart(): void {
+    const container = this.pieContainerRef()?.nativeElement;
+    if (!container) return;
+
+    this.pieChartInstance?.dispose();
+    this.pieChartInstance = echarts.init(container);
+
+    const { exercises, resources, total } = this.activityBreakdown();
+    if (total === 0) return;
+
+    this.pieChartInstance.setOption({
+      animation: false,
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: '#fff',
+        borderColor: '#e8ecf1',
+        textStyle: { color: '#1e293b', fontSize: 13 },
+        formatter: (p: any) => `<strong>${p.name}</strong><br/>${p.value} 次（${p.percent}%）`,
+      },
+      legend: {
+        bottom: 4,
+        icon: 'circle',
+        itemWidth: 8,
+        itemHeight: 8,
+        itemGap: 18,
+        textStyle: { color: '#64748b', fontSize: 12 },
+      },
+      title: {
+        text: String(total),
+        subtext: '总活动',
+        left: 'center',
+        top: '38%',
+        textAlign: 'center',
+        textStyle: { color: '#1e293b', fontSize: 24, fontWeight: 700 },
+        subtextStyle: { color: '#94a3b8', fontSize: 12 },
+      },
+      series: [{
+        name: '学习活动',
+        type: 'pie',
+        radius: ['44%', '64%'],
+        center: ['50%', '46%'],
+        avoidLabelOverlap: true,
+        itemStyle: { borderColor: '#fff', borderWidth: 3, borderRadius: 4 },
+        label: {
+          show: true,
+          formatter: '{b}\n{c} 次',
+          color: '#475569',
+          fontSize: 12,
+          lineHeight: 16,
+        },
+        labelLine: { show: true, smooth: true, length: 10, length2: 12 },
+        data: [
+          { value: exercises, name: '习题练习', itemStyle: { color: '#2b6cd4' } },
+          { value: resources, name: '资源学习', itemStyle: { color: '#10b981' } },
+        ],
       }],
     });
   }
