@@ -75,6 +75,44 @@ export class ExerciseGenerateComponent implements OnInit {
   readonly results = signal<ExerciseDto[]>([]);
   readonly activeTab = signal(0);
 
+  // ── 生成前确认（核对本次输入，确认后才真正生成） ──
+  readonly confirmVisible = signal(false);
+
+  readonly selectedCourseTitle = computed(() => {
+    const id = this.courseId();
+    return this.courses().find(c => c.id === id)?.title || '';
+  });
+
+  /** 已选章节标题（含完整路径，如：第一章 / 1.2 概述），按章节树顺序排列 */
+  readonly selectedChapterTitles = computed(() => {
+    const ids = new Set(this.selectedChapterIds());
+    if (ids.size === 0) return [];
+    const out: string[] = [];
+    const walk = (nodes: ChapterDto[] | undefined, ancestors: string[]) => {
+      for (const n of nodes || []) {
+        const title = n.title || '未命名章节';
+        const path = [...ancestors, title].join(' / ');
+        if (n.id && ids.has(n.id)) out.push(path);
+        walk(n.children, [...ancestors, title]);
+      }
+    };
+    walk(this.chapterTree(), []);
+    return out;
+  });
+
+  openConfirm() {
+    if (!this.courseId()) {
+      this.message.warning('请先选择课程');
+      return;
+    }
+    this.confirmVisible.set(true);
+  }
+
+  closeConfirm() {
+    if (this.generating()) return;
+    this.confirmVisible.set(false);
+  }
+
   readonly resultTabTitle = computed(() =>
     this.results().length > 0 ? `生成结果（${this.results().length}）` : '生成结果'
   );
@@ -236,15 +274,12 @@ export class ExerciseGenerateComponent implements OnInit {
     this.selectedChapterIds.set([...set]);
   }
 
+  /** 表头勾选框：全选 / 取消全选当前可见章节 */
   toggleAllVisible(checked: boolean) {
     const set = new Set(this.selectedChapterIds());
     if (checked) this.visibleChapterIds().forEach(id => set.add(id));
     else this.visibleChapterIds().forEach(id => set.delete(id));
     this.selectedChapterIds.set([...set]);
-  }
-
-  clearChapterSelection() {
-    this.selectedChapterIds.set([]);
   }
 
   // ── 编辑弹窗（AI 生成的习题可直接编辑） ──
@@ -306,6 +341,7 @@ export class ExerciseGenerateComponent implements OnInit {
     });
   }
 
+  /** 确认框中点「确认生成」后真正调用 AI（直接保存入库） */
   async generate() {
     const courseId = this.courseId();
     if (!courseId) {
@@ -329,6 +365,7 @@ export class ExerciseGenerateComponent implements OnInit {
       );
       this.results.set(data || []);
       this.message.success(`AI 已生成并保存 ${data?.length || 0} 道习题`);
+      this.confirmVisible.set(false);
       this.activeTab.set(1);
     } catch (e: any) {
       this.message.error(e?.error?.error?.message || 'AI 生成失败，请重试');

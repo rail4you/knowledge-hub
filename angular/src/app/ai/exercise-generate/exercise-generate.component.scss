@@ -159,6 +159,16 @@
     margin-right: 8px;
   }
 
+  .search-clear {
+    cursor: pointer;
+    color: rgba(0, 0, 0, 0.3);
+    font-size: 13px;
+
+    &:hover {
+      color: rgba(0, 0, 0, 0.55);
+    }
+  }
+
   .expand-select {
     width: 140px;
   }
@@ -292,6 +302,68 @@
     padding: 0;
     margin: 0;
   }
+}
+
+// 生成前确认框
+.confirm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirm-row {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  align-items: baseline;
+
+  &--block {
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+  }
+}
+
+.confirm-label {
+  flex: none;
+  width: 88px;
+  color: var(--kh-muted, #8a94a6);
+}
+
+.confirm-value {
+  flex: 1;
+  min-width: 0;
+  color: var(--kh-ink, #1f2933);
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  &.muted {
+    color: var(--kh-muted, #8a94a6);
+  }
+}
+
+.confirm-chapters {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fbfcfe;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.confirm-chapter {
+  font-size: 13px;
+  color: var(--kh-ink, #1f2933);
+  line-height: 1.6;
+}
+
+.confirm-hint {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: var(--kh-muted, #8a94a6);
 }
 
 // 操作区

@@ -107,7 +107,7 @@
             <nz-empty nzNotFoundImage="simple" nzNotFoundContent="请先在上方选择课程"></nz-empty>
           } @else {
             <div class="eg-chapter-toolbar">
-              <nz-input-group [nzPrefix]="chapterSearchTpl" class="chapter-search">
+              <nz-input-group [nzPrefix]="chapterSearchTpl" [nzSuffix]="chapterClearTpl" class="chapter-search">
                 <input
                   nz-input
                   placeholder="搜索章节标题 / 描述…"
@@ -116,8 +116,19 @@
                 />
               </nz-input-group>
               <ng-template #chapterSearchTpl><span nz-icon nzType="search"></span></ng-template>
-              <button nz-button nzType="link" (click)="toggleAllVisible(true)" [disabled]="visibleChapterIds().length === 0">全选</button>
-              <button nz-button nzType="link" (click)="clearChapterSelection()" [disabled]="selectedChapterIds().length === 0">清空</button>
+              <ng-template #chapterClearTpl>
+                @if (chapterKeyword()) {
+                  <span
+                    nz-icon
+                    nzType="close-circle"
+                    nzTheme="fill"
+                    class="search-clear"
+                    nz-tooltip
+                    nzTooltipTitle="清除搜索"
+                    (click)="chapterKeyword.set('')"
+                  ></span>
+                }
+              </ng-template>
               <span class="eg-sep"></span>
               <nz-select
                 [ngModel]="expandLevel()"
@@ -180,11 +191,10 @@
             nz-button
             nzType="primary"
             nzSize="large"
-            (click)="generate()"
-            [nzLoading]="generating()"
+            (click)="openConfirm()"
             [disabled]="!courseId()"
             nz-tooltip
-            [nzTooltipTitle]="courseId() ? '调用 AI 生成习题并直接保存' : '请先选择课程'"
+            [nzTooltipTitle]="courseId() ? '先核对本次输入，确认后再生成' : '请先选择课程'"
           >
             <span nz-icon nzType="robot"></span>
             AI 生成习题
@@ -332,6 +342,58 @@
       </tbody>
     </nz-table>
   </ng-template>
+
+  <!-- 生成前确认：核对本次输入，确认后才真正生成 -->
+  <nz-modal
+    [nzVisible]="confirmVisible()"
+    nzTitle="确认生成习题"
+    [nzOkLoading]="generating()"
+    nzOkText="确认生成"
+    nzCancelText="取消"
+    (nzOnOk)="generate()"
+    (nzOnCancel)="closeConfirm()"
+    [nzWidth]="600"
+  >
+    <ng-container *nzModalContent>
+      <div class="confirm-list">
+        <div class="confirm-row">
+          <span class="confirm-label">课程</span>
+          <span class="confirm-value">{{ selectedCourseTitle() }}</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-label">题型</span>
+          <span class="confirm-value">
+            {{ getTypeName(exerciseType()) }} · {{ getDifficultyName(difficulty()) }} · {{ count() }} 道
+          </span>
+        </div>
+        <div class="confirm-row confirm-row--block">
+          <span class="confirm-label">章节（{{ selectedChapterIds().length }}）</span>
+          @if (selectedChapterTitles().length === 0) {
+            <span class="confirm-value muted">未选择章节，将覆盖整门课程</span>
+          } @else {
+            <div class="confirm-chapters">
+              @for (t of selectedChapterTitles(); track $index) {
+                <div class="confirm-chapter">{{ $index + 1 }}. {{ t }}</div>
+              }
+            </div>
+          }
+        </div>
+        @if (topicHint().trim()) {
+          <div class="confirm-row">
+            <span class="confirm-label">主题提示</span>
+            <span class="confirm-value">{{ topicHint().trim() }}</span>
+          </div>
+        }
+        @if (customPrompt().trim()) {
+          <div class="confirm-row confirm-row--block">
+            <span class="confirm-label">自定义提示词</span>
+            <span class="confirm-value">{{ customPrompt().trim() }}</span>
+          </div>
+        }
+      </div>
+      <p class="confirm-hint">确认后将调用 AI 生成并直接保存为 AI 习题，可在结果页编辑或删除。</p>
+    </ng-container>
+  </nz-modal>
 
   <!-- 编辑弹窗 -->
   <nz-modal
