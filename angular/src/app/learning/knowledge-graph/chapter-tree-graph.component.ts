@@ -313,23 +313,37 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     return maxDepth;
   });
 
+  /** 二级章节数（顶层章节的直接子节点总数）— 用于判断展开三级后是否放得下 */
+  secondLevelCount = computed(() => {
+    let n = 0;
+    for (const top of this.chapters || []) n += top.children?.length || 0;
+    return n;
+  });
+
   /** 图谱画布高度：
-   * 默认已收起到一级（只显示课程根 + 一级章节），所以深层数据的高度
-   * 按“顶层节点数”给，避免 620px 大空白；用户点开深层后靠滚轮缩放/拖拽查看。
-   * - 数据深度≥3 → 按顶层数动态算（360~560px）
-   * - 纯扁平但节点>60 → 固定 620px
-   * - 节点>30 → 560px
-   * - 2 级图谱 → 按"最大同层节点数 × 50 + 80"动态算
-   * - 1 级图谱 → 360px 起步
+   * - 默认两级（根+一级）：深层数据的高度按“顶层节点数”给，避免大空白
+   *   （360~560px），用户点开深层后靠滚轮缩放/拖拽查看；
+   * - 默认三级（根+一级+二级）：可见行数 ≈ 二级节点数 + 无子节点的一级数，
+   *   按行数撑高（480~680px），保证三级文字能放下不挤作一团；
+   * - 纯扁平但节点>60 → 固定 620px；节点>30 → 560px；
+   * - 2 级图谱 → 按"最大同层节点数 × 50 + 80"动态算；
+   * - 1 级图谱 → 360px 起步。
    */
   chartMinHeight = computed(() => {
     const total = this.countChapters(this.chapters);
     const dataDepth = this.dataDepth();
     const maxSiblings = this.maxSiblingCount();
-    const topCount = (this.chapters?.length || 0) + (this.courseName ? 1 : 0);
 
-    // 深层数据默认只展示两层视觉节点（根+一级），高度按顶层数给即可
+    // 深层数据：按默认展开层级给高度
     if (dataDepth >= 3) {
+      if (this.defaultInitialDepth() === 2) {
+        // 默认展开三级：可见行主要是二级节点（另加无子节点的一级兜底）
+        const childlessTop = (this.chapters || []).filter(c => !(c.children?.length || 0)).length;
+        const rows = this.secondLevelCount() + childlessTop;
+        // 每行约 34px + 上下留白，夹紧到 480~680px
+        return Math.max(480, Math.min(rows * 34 + 140, 680));
+      }
+      const topCount = (this.chapters?.length || 0) + (this.courseName ? 1 : 0);
       return Math.max(360, Math.min(topCount * 54 + 120, 560));
     }
     if (total > 60) return 620;
@@ -343,16 +357,23 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
 
   /**
    * 默认展开深度（核心策略，按**视觉层级**算，课程根占第 0 层）：
-   * - 节点很少（≤15）且数据本身只有 ≤2 级 → 全展开（-1），小图一眼看完
-   * - 其余情况 → 只展开到 1 级：
-   *   有课程根时 = 课程根 + 一级章节（视觉 2 层）；
-   *   无课程根时 = 一级 + 二级（视觉 2 层）。
-   * 深层节点默认折叠，用户点节点/工具栏按需展开，避免第三级节点
-   * 默认全部铺开导致挤在一起看不清。
+   * - 节点很少（≤15）且数据本身只有 ≤2 级 → 全展开（-1），小图一眼看完；
+   * - 深层数据（≥3 级）→ 看“展开到三级后的可见节点数”
+   *   （课程根 1 + 一级 top + 二级 lvl2）是否放得下：
+   *   可见 ≤40（如中药药剂学 1+7+28=36）→ 展开到 2 级（视觉 3 层），
+   *   三级文字能放下；节点多（如大课程）→ 只展开到 1 级（视觉 2 层），
+   *   避免第三级默认铺开挤在一起看不清，用户点节点/工具栏按需展开；
+   * - 其余情况 → 只展开到 1 级。
+   * 用户点“展开全部”后 forceExpandAll=true 保持全展开。
    */
   private defaultInitialDepth(): number {
     const total = this.countChapters(this.chapters);
     if (total <= 15 && this.dataDepth() <= 2) return -1;
+    if (this.dataDepth() >= 3) {
+      const top = this.chapters?.length || 0;
+      const visibleAtDepth2 = 1 + top + this.secondLevelCount();
+      if (visibleAtDepth2 <= 40) return 2;
+    }
     return 1;
   }
   /** 用户点过“展开全部”后保持全展开，不再被默认折叠覆盖 */
@@ -810,8 +831,8 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           nodeScaleRatio: 1,
           nodeDraggable: false,
           expandAndCollapse: true,
-          // 默认只展开到 1 级（课程根 + 一级章节，视觉 2 层），深层折叠：
-          // 可见节点少、排布稀疏；用户点节点或工具栏按需展开。
+          // 默认展开层级见 defaultInitialDepth()：小课程展开到 2 级（视觉 3 层），
+          // 大课程只展开到 1 级（视觉 2 层），深层折叠、用户按需展开。
           // 只有节点很少（≤15）的小图谱才全展开。用户点“展开全部”后
           // forceExpandAll=true 保持全展开。
           initialTreeDepth: this.forceExpandAll ? -1 : this.defaultInitialDepth(),
