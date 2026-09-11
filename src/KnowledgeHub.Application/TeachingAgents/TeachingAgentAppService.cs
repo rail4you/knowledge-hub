@@ -455,7 +455,9 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
             Name = agent.Name,
             Description = agent.Description,
             OwnerUserId = agent.OwnerUserId,
-            OwnerUserName = owners.GetValueOrDefault(agent.OwnerUserId, string.Empty),
+            OwnerUserName = owners.TryGetValue(agent.OwnerUserId, out var ownerName) && !string.IsNullOrWhiteSpace(ownerName)
+                ? ownerName
+                : "已删除用户",
             Visibility = agent.Visibility,
             Status = agent.Status,
             PublishedVersionId = agent.PublishedVersionId,
