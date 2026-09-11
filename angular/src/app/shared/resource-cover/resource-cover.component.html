@@ -7,16 +7,26 @@
   @if (loadMedia() && !failed() && mode() !== 'icon') {
     <div class="cover-media" [class.is-hidden]="mode() === 'pdf' && !pdfReady()">
       @if (mode() === 'video') {
-        <video
-          [src]="previewUrl()"
-          preload="metadata"
-          muted
-          playsinline
-          disablepictureinpicture
-          (error)="onMediaError()"
-        ></video>
+        @if (thumbFailed()) {
+          <video
+            [src]="previewUrl()"
+            preload="metadata"
+            muted
+            playsinline
+            disablepictureinpicture
+            (error)="onMediaError()"
+          ></video>
+        } @else {
+          <img [src]="thumbnailUrl()" [alt]="alt()" loading="lazy" decoding="async" (error)="onThumbError()" />
+        }
       } @else if (mode() === 'image') {
-        <img [src]="previewUrl()" [alt]="alt()" loading="lazy" (error)="onMediaError()" />
+        <img
+          [src]="thumbFailed() ? previewUrl() : thumbnailUrl()"
+          [alt]="alt()"
+          loading="lazy"
+          decoding="async"
+          (error)="onThumbError()"
+        />
       } @else if (mode() === 'pdf') {
         <canvas #pdfCanvas></canvas>
       }

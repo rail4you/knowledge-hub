@@ -66,10 +66,17 @@ export class ResourceCoverComponent {
   /** 进入视口后才加载真实媒体 */
   readonly loadMedia = signal(false);
   readonly failed = signal(false);
+  /** 缩略图加载失败后回退原图/视频 */
+  readonly thumbFailed = signal(false);
   readonly pdfReady = signal(false);
 
   readonly previewUrl = computed(() =>
     this.resourceId() ? `/api/resource-file/${this.resourceId()}/preview?countView=false` : ''
+  );
+
+  /** 服务端生成的缩略图（图片缩放 / 视频抽帧），列表封面优先使用，避免下载原文件 */
+  readonly thumbnailUrl = computed(() =>
+    this.resourceId() ? `/api/resource-file/${this.resourceId()}/thumbnail?w=400` : ''
   );
 
   constructor() {
@@ -81,6 +88,7 @@ export class ResourceCoverComponent {
       this.resourceType();
       this.fileName();
       this.failed.set(false);
+      this.thumbFailed.set(false);
       this.pdfReady.set(false);
       this.loadMedia.set(false);
       this.destroyPdf();
@@ -97,6 +105,15 @@ export class ResourceCoverComponent {
 
   onMediaError() {
     this.failed.set(true);
+  }
+
+  /** 缩略图加载失败：图片回退原图，视频回退 <video> */
+  onThumbError() {
+    if (this.thumbFailed()) {
+      this.failed.set(true);
+      return;
+    }
+    this.thumbFailed.set(true);
   }
 
   private observe(el: HTMLElement, rid: string) {

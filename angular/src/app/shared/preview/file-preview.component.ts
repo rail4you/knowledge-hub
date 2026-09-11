@@ -12,6 +12,10 @@ import { WordViewerComponent } from './word-viewer.component';
 import { ExcelViewerComponent } from './excel-viewer.component';
 import { MediaViewerComponent } from './media-viewer.component';
 import { TextViewerComponent } from './text-viewer.component';
+import { createBytesCache } from '../cache/bytes-cache';
+
+/** Word/Excel/图片/文本预览字节的持久化缓存（跨刷新/新标签复用，避免重复下载） */
+const fileBytesCache = createBytesCache('kh-file-preview-v1');
 
 type FileType = 'pdf' | 'word' | 'excel' | 'pptx' | 'ppt' | 'image' | 'video' | 'audio' | 'text' | 'unsupported';
 
@@ -311,12 +315,9 @@ export class FilePreviewComponent {
     // 使用原生 fetch() 而非 Angular HttpClient：
     // - fetch() 自动携带同源 cookie（ABP OIDC 认证 cookie 通过代理转发）
     // - 参考 kg-edu-vite-antd FilePreview.tsx 的实现方式
-    fetch(previewUrl)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
+    // 持久化缓存：重复预览同一文件直接命中本地缓存，避免重复下载（图片/文档可达数十 MB）
+    this.loadPreviewArrayBuffer(previewUrl)
+      .then((arrayBuffer) => {
         this.fileData.set(arrayBuffer);
         this.isLoading.set(false);
       })
@@ -332,6 +333,22 @@ export class FilePreviewComponent {
         }
         this.isLoading.set(false);
       });
+  }
+
+  /** 带持久化缓存的预览字节加载；命中缓存时用 1 字节 Range 请求保留后端浏览量统计 */
+  private async loadPreviewArrayBuffer(url: string): Promise<ArrayBuffer> {
+    const cached = await fileBytesCache.read(url);
+    if (cached && cached.byteLength > 0) {
+      void fetch(url, { headers: { Range: 'bytes=0-0' } }).catch(() => { /* 计数失败不影响预览 */ });
+      return cached;
+    }
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    void fileBytesCache.store(url, new Uint8Array(arrayBuffer.slice(0)));
+    return arrayBuffer;
   }
 
   formatFileSize(bytes: number): string {

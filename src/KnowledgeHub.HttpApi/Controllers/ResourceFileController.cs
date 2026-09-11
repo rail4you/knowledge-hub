@@ -13,6 +13,7 @@ using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Conversion;
 using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.FileStorage;
+using KnowledgeHub.Resources.Thumbnails;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -66,6 +67,7 @@ public class ResourceFileController : AbpControllerBase
     protected IOfficeConversionService OfficeConversionService { get; }
     protected IConversionTaskQueue ConversionTaskQueue { get; }
     protected IOptions<OfficeConversionOptions> ConversionOptions { get; }
+    protected IResourceThumbnailService ThumbnailService { get; }
 
     public ResourceFileController(
         IResourceRepository resourceRepository,
@@ -74,7 +76,8 @@ public class ResourceFileController : AbpControllerBase
         IDataFilter dataFilter,
         IOfficeConversionService officeConversionService,
         IConversionTaskQueue conversionTaskQueue,
-        IOptions<OfficeConversionOptions> conversionOptions)
+        IOptions<OfficeConversionOptions> conversionOptions,
+        IResourceThumbnailService thumbnailService)
     {
         ResourceRepository = resourceRepository;
         Repository = repository;
@@ -83,6 +86,7 @@ public class ResourceFileController : AbpControllerBase
         OfficeConversionService = officeConversionService;
         ConversionTaskQueue = conversionTaskQueue;
         ConversionOptions = conversionOptions;
+        ThumbnailService = thumbnailService;
     }
 
     /// <summary>
@@ -289,6 +293,27 @@ public class ResourceFileController : AbpControllerBase
             Logger.LogError(ex, "[Preview] Failed to serve file: {FullPath} for resource {ResourceId}", fullPath, resourceId);
             return StatusCode(StatusCodes.Status500InternalServerError, new { message = "文件读取失败，请稍后重试" });
         }
+    }
+
+    /// <summary>
+    /// 列表封面缩略图：图片缩放 / 视频抽帧为小尺寸 JPEG，磁盘缓存。
+    /// 不支持的类型返回 404，前端回退到原图/图标。
+    /// </summary>
+    [HttpGet("{resourceId}/thumbnail")]
+    [AllowAnonymous]
+    public virtual async Task<IActionResult> Thumbnail(Guid resourceId, [FromQuery] int w = 400)
+    {
+        var fullPath = await GetResourceFullPathAsync(resourceId);
+        if (fullPath == null)
+            return NotFound(new { message = "资源文件不存在" });
+
+        var thumbPath = await ThumbnailService.GetOrCreateAsync(
+            resourceId.ToString(), fullPath, w, HttpContext.RequestAborted);
+        if (thumbPath == null)
+            return NotFound(new { message = "暂不支持缩略图" });
+
+        Response.Headers.CacheControl = "private, max-age=86400";
+        return PhysicalFile(thumbPath, "image/jpeg");
     }
 
     /// <summary>

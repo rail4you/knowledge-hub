@@ -4,10 +4,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -190,7 +193,20 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         ConfigureSwagger(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
-        
+
+        // 响应压缩：ABP API 大量返回 JSON（列表/详情），Brotli/Gzip 可显著降低传输体积。
+        // 仅压缩默认文本类 MIME（application/json 等），PDF/视频等已压缩二进制不处理。
+        context.Services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+            options.Providers.Add<BrotliCompressionProvider>();
+            options.Providers.Add<GzipCompressionProvider>();
+        });
+        context.Services.Configure<BrotliCompressionProviderOptions>(options =>
+            options.Level = System.IO.Compression.CompressionLevel.Fastest);
+        context.Services.Configure<GzipCompressionProviderOptions>(options =>
+            options.Level = System.IO.Compression.CompressionLevel.Fastest);
+
         context.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
         
         context.Services.Configure<MeilisearchOptions>(configuration.GetSection("Meilisearch"));
@@ -415,6 +431,31 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
 
         app.UseForwardedHeaders();
 
+        // 响应压缩需尽早注册，才能覆盖后续中间件写出的响应体
+        app.UseResponseCompression();
+
+        // 公共只读列表接口：允许浏览器私有缓存（60s），减少重复导航/刷新时的请求。
+        // Vary 按租户/用户/语言分别缓存，避免不同上下文串数据。
+        app.Use(async (context, next) =>
+        {
+            if (HttpMethods.IsGet(context.Request.Method) &&
+                IsCacheablePublicListPath(context.Request.Path))
+            {
+                context.Response.OnStarting(() =>
+                {
+                    if (context.Response.StatusCode == StatusCodes.Status200OK)
+                    {
+                        context.Response.Headers.CacheControl = "private, max-age=60";
+                        context.Response.Headers.Append("Vary", "__tenant");
+                        context.Response.Headers.Append("Vary", "Authorization");
+                        context.Response.Headers.Append("Vary", "Accept-Language");
+                    }
+                    return Task.CompletedTask;
+                });
+            }
+            await next();
+        });
+
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
@@ -545,6 +586,20 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         RegisterAiTaskRecoveryRecurringJob();
 
         app.UseConfiguredEndpoints();
+    }
+
+    /// <summary>
+    /// 命中浏览器私有缓存的公共只读列表接口路径（学生端资讯/资源/微专业/实训等）。
+    /// </summary>
+    private static bool IsCacheablePublicListPath(PathString path)
+    {
+        return path.StartsWithSegments("/api/app/news-article/published-list")
+            || path.StartsWithSegments("/api/app/news-article/hot-list")
+            || path.StartsWithSegments("/api/app/news-category/tree")
+            || path.StartsWithSegments("/api/app/resource/filtered-list")
+            || path.StartsWithSegments("/api/app/resource/categories")
+            || path.StartsWithSegments("/api/app/micro-major/published")
+            || path.StartsWithSegments("/api/app/practicum/published");
     }
 
     /// <summary>

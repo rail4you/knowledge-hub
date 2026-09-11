@@ -241,6 +241,7 @@
                       [src]="article.coverImageUrl"
                       [alt]="article.title"
                       loading="lazy"
+                      decoding="async"
                       (error)="onCoverError($event)"
                     />
                   }

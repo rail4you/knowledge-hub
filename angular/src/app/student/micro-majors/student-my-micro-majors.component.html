@@ -48,6 +48,7 @@
                 [src]="item.coverImageUrl"
                 [alt]="item.title"
                 loading="lazy"
+                decoding="async"
                 (error)="$any($event.target).style.display='none'"
               />
             }

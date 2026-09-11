@@ -15,7 +15,6 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { CourseService } from '../../proxy/courses/course.service';
-import { ChapterService } from '../../proxy/courses/chapter.service';
 import { LearningService } from '../../proxy/learning/learning.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
@@ -78,7 +77,6 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly courseService = inject(CourseService);
-  private readonly chapterService = inject(ChapterService);
   private readonly learningService = inject(LearningService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly recordService = inject(StudentExerciseRecordService);
@@ -254,7 +252,6 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       this.activeTab.set(validTabs.includes(urlTab!) ? urlTab! : 'chapters');
 
       this.loadCourse(id);
-      this.loadChapters(id);
       this.loadProgress(id);
       this.loadMastery(id);
       this.loadExerciseProgress(id);
@@ -267,31 +264,23 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
       next: result => {
         this.course.set(result);
         this.loading.set(false);
+        // 详情接口已返回完整章节树（含知识点资源），直接复用，避免重复请求章节接口
+        const tree = result?.chapters || [];
+        this.chapters.set(tree);
+        this.chaptersLoading.set(false);
+        this.collectResources(tree);
         // 课程加载完成后再加载相关推荐（需要专业归属，多专业时按全部专业找相关）
         this.loadRelated(result?.majorIds, result?.majorId);
         // 默认展开一级章节
         const initial = new Set<string>();
-        (result.chapters || []).forEach(c => c.id && initial.add(c.id));
+        tree.forEach(c => c.id && initial.add(c.id));
         this.expandedNodes.set(initial);
       },
       error: () => {
         this.loading.set(false);
+        this.chaptersLoading.set(false);
         this.message.error('课程加载失败');
         this.router.navigate(['/student/courses']);
-      },
-    });
-  }
-
-  loadChapters(courseId: string) {
-    this.chaptersLoading.set(true);
-    this.cache.load<ChapterDto[]>('student.course-detail', `chapters:${courseId}`, () => this.chapterService.getChapterTree(courseId)).subscribe({
-      next: data => {
-        this.chapters.set(data || []);
-        this.chaptersLoading.set(false);
-        this.collectResources(data || []);
-      },
-      error: () => {
-        this.chaptersLoading.set(false);
       },
     });
   }

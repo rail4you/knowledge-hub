@@ -87,7 +87,7 @@
               <article class="course-progress" (click)="openCourse(c.courseId!)">
                 <div class="course-progress__cover" [style.background]="courseGradient(c)">
                   @if (hasCover(c)) {
-                    <img class="course-progress__cover-img" [src]="c.courseCoverImageUrl" [alt]="c.courseTitle" />
+                    <img class="course-progress__cover-img" [src]="c.courseCoverImageUrl" [alt]="c.courseTitle" loading="lazy" decoding="async" />
                   } @else {
                     <span class="course-progress__cover-icon" nz-icon nzType="read" nzTheme="outline"></span>
                   }

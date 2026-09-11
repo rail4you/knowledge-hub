@@ -288,51 +288,55 @@
         </section>
       </div>
 
-      <!-- 侧边栏：仅保留相关资源 -->
+      <!-- 侧边栏：仅保留相关资源（首屏以下，滚动到视口再渲染组件） -->
       <aside class="detail-aside">
-        <div class="aside-card aside-related">
-          <h3 class="aside-card__title">
-            <span nz-icon nzType="fire" nzTheme="outline"></span>
-            相关资源
-            <span class="aside-card__count">{{ relatedResources().length }}</span>
-          </h3>
+        @defer (on viewport) {
+          <div class="aside-card aside-related">
+            <h3 class="aside-card__title">
+              <span nz-icon nzType="fire" nzTheme="outline"></span>
+              相关资源
+              <span class="aside-card__count">{{ relatedResources().length }}</span>
+            </h3>
 
-          @if (relatedLoading()) {
-            <div class="related-loading">
-              <nz-spin nzSimple nzSize="small"></nz-spin>
-              <span>正在加载...</span>
-            </div>
-          } @else if (relatedResources().length === 0) {
-            <div class="related-empty">
-              <span nz-icon nzType="inbox" nzTheme="outline"></span>
-              <p>暂无相关资源</p>
-            </div>
-          } @else {
-            <ul class="related-list">
-              @for (r of relatedResources(); track r.resourceId) {
-                <li class="related-item" (click)="openRelated(r.resourceId)">
-                  <span class="related-item__icon" [class]="'rec-type-' + r.resourceType">
-                    <span nz-icon [nzType]="getResourceTypeIcon(r.resourceType)" nzTheme="outline"></span>
-                  </span>
-                  <div class="related-item__body">
-                    <span class="related-item__name" [title]="r.resourceName">{{ r.resourceName }}</span>
-                    <span class="related-item__meta">
-                      @if (r.categoryName) {
-                        <span class="related-item__category">{{ r.categoryName }}</span>
-                      }
-                      @if (r.averageRating > 0) {
-                        <span class="related-item__rating">
-                          <span nz-icon nzType="star" nzTheme="fill"></span>
-                          {{ r.averageRating | number:'1.1-1' }}
-                        </span>
-                      }
+            @if (relatedLoading()) {
+              <div class="related-loading">
+                <nz-spin nzSimple nzSize="small"></nz-spin>
+                <span>正在加载...</span>
+              </div>
+            } @else if (relatedResources().length === 0) {
+              <div class="related-empty">
+                <span nz-icon nzType="inbox" nzTheme="outline"></span>
+                <p>暂无相关资源</p>
+              </div>
+            } @else {
+              <ul class="related-list">
+                @for (r of relatedResources(); track r.resourceId) {
+                  <li class="related-item" (click)="openRelated(r.resourceId)">
+                    <span class="related-item__icon" [class]="'rec-type-' + r.resourceType">
+                      <span nz-icon [nzType]="getResourceTypeIcon(r.resourceType)" nzTheme="outline"></span>
                     </span>
-                  </div>
-                </li>
-              }
-            </ul>
-          }
-        </div>
+                    <div class="related-item__body">
+                      <span class="related-item__name" [title]="r.resourceName">{{ r.resourceName }}</span>
+                      <span class="related-item__meta">
+                        @if (r.categoryName) {
+                          <span class="related-item__category">{{ r.categoryName }}</span>
+                        }
+                        @if (r.averageRating > 0) {
+                          <span class="related-item__rating">
+                            <span nz-icon nzType="star" nzTheme="fill"></span>
+                            {{ r.averageRating | number:'1.1-1' }}
+                          </span>
+                        }
+                      </span>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        } @placeholder {
+          <div class="aside-card aside-related" style="min-height: 220px;"></div>
+        }
       </aside>
     </div>
   }
