@@ -10,6 +10,11 @@ export interface GetUserListDto extends PagedAndSortedResultRequestDto {
   filter?: string | null;
 }
 
+export interface ImportUsersFileDto {
+  fileBase64?: string;
+  fileName?: string | null;
+}
+
 export interface MyProfileDto extends EntityDto<string> {
   userName?: string;
   name?: string;

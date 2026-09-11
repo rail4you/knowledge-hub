@@ -22,18 +22,21 @@ public class UserImportController : AbpController, IUserImportAppService
     }
 
     [HttpPost]
-    public async Task<UserImportResultDto> ImportAsync([FromBody] byte[] excelFile)
+    public async Task<UserImportResultDto> ImportAsync([FromBody] ImportUsersFileDto input)
     {
-        return await _userImportAppService.ImportAsync(excelFile);
+        return await _userImportAppService.ImportAsync(input);
     }
 
-    [HttpGet("role-permission-summary")]
+    // 注意：这两个接口同时由 ABP conventional controller 按同名路由自动暴露
+    // （GET api/app/user-import/role-permission-summary、GET api/app/user-import/import-template）。
+    // 此处必须标 [NonAction] 退出路由，否则请求时会报 AmbiguousMatchException（500）。
+    [NonAction]
     public async Task<List<RolePermissionSummaryDto>> GetRolePermissionSummaryAsync()
     {
         return await _userImportAppService.GetRolePermissionSummaryAsync();
     }
 
-    [HttpGet("import-template")]
+    [NonAction]
     public async Task<IRemoteStreamContent> GetImportTemplateAsync()
     {
         return await _userImportAppService.GetImportTemplateAsync();

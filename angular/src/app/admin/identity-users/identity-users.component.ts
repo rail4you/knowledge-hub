@@ -566,12 +566,13 @@ export class IdentityUsersComponent implements OnInit {
     this.importResult = null;
     const reader = new FileReader();
     reader.onload = () => {
-      const arrayBuffer = reader.result as ArrayBuffer;
-      const bytes = Array.from(new Uint8Array(arrayBuffer));
+      // 后端只接受 Base64 字符串（System.Text.Json 无法把数字数组转成 byte[]）。
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(',')[1] || '';
       this.restService.request<any, UserImportResultDto>({
         method: 'POST',
         url: '/api/app/user-import/import',
-        body: bytes,
+        body: { fileBase64: base64, fileName: file.name },
       }).subscribe({
         next: result => {
           this.importing = false;
@@ -599,7 +600,7 @@ export class IdentityUsersComponent implements OnInit {
       this.importing = false;
       this.message.error('读取文件失败，请重试');
     };
-    reader.readAsArrayBuffer(file as any);
+    reader.readAsDataURL(file as any);
   }
 
   private todayStr(): string {

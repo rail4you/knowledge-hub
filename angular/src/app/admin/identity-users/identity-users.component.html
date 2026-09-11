@@ -1,26 +1,38 @@
-<nz-page-header nzTitle="{{ '::Users' | abpLocalization }}" nzSubtitle="{{ '::Users' | abpLocalization }}">
-</nz-page-header>
+<div class="users-page">
+  <!-- 标题区：卡片容器包裹标题 + 说明 -->
+  <nz-card class="page-header-card" [nzBordered]="false">
+    <div class="page-title-block">
+      <h1>{{ '::Users' | abpLocalization }}</h1>
+      <p>管理系统用户账号，支持按租户筛选、单个创建与 Excel 批量导入（先下载模板、填好再上传）</p>
+    </div>
+  </nz-card>
 
-<nz-card>
-  <div class="mb-4 flex gap-4 items-center justify-between">
-    <div class="flex gap-4 items-center">
+  <nz-card class="table-card" [nzBordered]="false">
+  <!-- 工具栏：左侧操作按钮组，右侧租户筛选 -->
+  <div class="table-toolbar">
+    <div class="toolbar-actions">
       <button nz-button nzType="primary" (click)="createUser()">
+        <span nz-icon nzType="plus"></span>
         <span>{{ '::NewUser' | abpLocalization }}</span>
+      </button>
+      <button nz-button (click)="downloadImportTemplate()" [nzLoading]="downloadingTemplate">
+        <span nz-icon nzType="download"></span>
+        <span>下载导入模板</span>
       </button>
       <button nz-button (click)="openImportModal()">
         <span nz-icon nzType="upload"></span>
         <span>批量导入</span>
       </button>
     </div>
-    <div class="flex gap-2 items-center">
-      <span class="text-sm text-gray-500">按租户筛选：</span>
+    <div class="toolbar-filters">
+      <span class="filter-label">按租户筛选</span>
       <nz-select
+        class="tenant-select"
         [(ngModel)]="tenantFilter"
         (ngModelChange)="onTenantFilterChange($event)"
         [nzDisabled]="!isHostAdmin"
         [nzAllowClear]="false"
         [nzPlaceHolder]="isHostAdmin ? '全局' : (getTenantName(currentTenantId) || '当前租户')"
-        style="width: 180px;"
       >
         @if (isHostAdmin) {
           <nz-option [nzValue]="globalOptionValue" [nzLabel]="'全局'"></nz-option>
@@ -76,7 +88,8 @@
       }
     </tbody>
   </nz-table>
-</nz-card>
+  </nz-card>
+</div>
 
 <nz-modal
   [(nzVisible)]="isModalOpen"
@@ -349,9 +362,19 @@
   (nzOnCancel)="closeImportModal()"
 >
   <ng-container *nzModalContent>
-    <div class="mb-3">
-      <span>请先下载模板并按模板填写，再上传导入。模板按角色类型分 Sheet，每页表头中橙黄色为必填项。</span>
-      <a (click)="downloadImportTemplate()">点击下载模板</a>
+    <div class="import-steps">
+      <nz-tag nzColor="blue">1</nz-tag>
+      <span>下载模板</span>
+      <span nz-icon nzType="right"></span>
+      <nz-tag nzColor="blue">2</nz-tag>
+      <span>按角色 Sheet 填写（橙黄色表头为必填）</span>
+      <span nz-icon nzType="right"></span>
+      <nz-tag nzColor="blue">3</nz-tag>
+      <span>上传导入</span>
+      <a class="import-template-link" (click)="downloadImportTemplate()">
+        <span nz-icon nzType="download"></span>
+        重新下载模板
+      </a>
       @if (downloadingTemplate) {
         <span class="text-sm text-gray-500">（下载中…）</span>
       }

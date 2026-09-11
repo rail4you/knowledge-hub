@@ -82,9 +82,24 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
     }
 
     [UnitOfWork]
-    public async Task<UserImportResultDto> ImportAsync(byte[] excelFile)
+    public async Task<UserImportResultDto> ImportAsync(ImportUsersFileDto input)
     {
         var result = new UserImportResultDto();
+
+        if (string.IsNullOrWhiteSpace(input.FileBase64))
+        {
+            throw new UserFriendlyException("请先选择要导入的 Excel 文件。");
+        }
+
+        byte[] excelFile;
+        try
+        {
+            excelFile = Convert.FromBase64String(input.FileBase64);
+        }
+        catch (FormatException)
+        {
+            throw new UserFriendlyException("文件内容不是有效的 Excel 数据，请重新选择文件后上传。");
+        }
 
         using var stream = new System.IO.MemoryStream(excelFile);
         using var workbook = new XLWorkbook(stream);
@@ -287,10 +302,27 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
 
     private async Task CreateIdentityUserAsync(UserImportDto dto)
     {
+        // 学生专业的存在性校验必须在建用户之前：否则建用户成功后抛异常会导致残留半成品账号，
+        // 重试时会报“用户名已存在”。
+        Guid? studentMajorId = null;
+        if (dto.RoleType == UserRoleType.Student && !string.IsNullOrWhiteSpace(dto.Major))
+        {
+            var resolved = await _majorRepository.FindByNameAsync(dto.Major);
+            if (resolved == null)
+            {
+                throw new UserFriendlyException($"专业【{dto.Major}】不存在，请先在专业管理中创建");
+            }
+            studentMajorId = resolved.Id;
+        }
+
+        // 邮箱为空时用默认邮箱兜底（Excel 空单元格读出来是 "" 而非 null，?? 接不住）。
+        var email = string.IsNullOrWhiteSpace(dto.Email)
+            ? $"{dto.UserName}@default.com"
+            : dto.Email.Trim();
         var user = new IdentityUser(
             GuidGenerator.Create(),
             dto.UserName,
-            dto.Email ?? $"{dto.UserName}@default.com"
+            email
         )
         {
             // P1-7 修复：把导入表里的"姓名"写入 ABP IdentityUser.Name，
@@ -325,14 +357,10 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
             user.ExtraProperties["Department"] = dto.Department;
 
         // 学生：把"专业"按名称解析为 MajorId 写入 ExtraProperties["MajorId"]
-        if (dto.RoleType == UserRoleType.Student && !string.IsNullOrWhiteSpace(dto.Major))
+        // （存在性已在建用户前校验过，这里直接用预解析结果）。
+        if (studentMajorId.HasValue)
         {
-            var major = await _majorRepository.FindByNameAsync(dto.Major);
-            if (major == null)
-            {
-                throw new UserFriendlyException($"专业【{dto.Major}】不存在，请先在专业管理中创建");
-            }
-            user.ExtraProperties[MajorIdExtraProperty] = major.Id;
+            user.ExtraProperties[MajorIdExtraProperty] = studentMajorId.Value;
         }
         else if (!string.IsNullOrWhiteSpace(dto.Major))
         {

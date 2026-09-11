@@ -396,6 +396,16 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Default);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TenantInfo.Edit);
 
+        // 用户管理：院校管理员管理本租户用户（列表/创建/编辑/删除/批量导入）。
+        // 后端 TenantUserAppService / UserImportAppService 均已按 CurrentTenant.Id 隔离，
+        // 租户管理员只能操作本租户用户；联盟管理员（LeagueAdmin）角色仍被显式拒绝。
+        // 注意：此前种子从未授予 SchoolAdmin 该组权限，导致租户管理员打不开用户导入（401）。
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Users.Default);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Users.Create);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Users.Edit);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Users.Delete);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.Users.Import);
+
         // 收回历史遗留的"联盟独有"权限（LeagueAudit / Alliance.* / RecruitmentLive.Manage）
         // 院校管理员只做第一级院校审核，不能做第二级联盟审核，也不能做联盟管理（全局能力）。
         foreach (var forbidden in SchoolAdminForbiddenPermissions)

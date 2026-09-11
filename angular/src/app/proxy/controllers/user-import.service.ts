@@ -1,6 +1,6 @@
 import { RestService, Rest } from '@abp/ng.core';
 import { Injectable, inject } from '@angular/core';
-import type { RolePermissionSummaryDto, UserImportResultDto } from '../users/models';
+import type { ImportUsersFileDto, UserImportResultDto } from '../users/models';
 
 @Injectable({
   providedIn: 'root',
@@ -10,19 +10,11 @@ export class UserImportService {
   apiName = 'KnowledgeHub';
   
 
-  getRolePermissionSummary = (config?: Partial<Rest.Config>) =>
-    this.restService.request<any, RolePermissionSummaryDto[]>({
-      method: 'GET',
-      url: '/api/app/user-import/role-permission-summary',
-    },
-    { apiName: this.apiName,...config });
-  
-
-  import = (excelFile: number[], config?: Partial<Rest.Config>) =>
+  import = (input: ImportUsersFileDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, UserImportResultDto>({
       method: 'POST',
       url: '/api/app/user-import',
-      body: excelFile,
+      body: input,
     },
     { apiName: this.apiName,...config });
 }

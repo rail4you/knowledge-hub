@@ -57,13 +57,14 @@ export class UserImportComponent {
     this.uploading = true;
 
     const reader = new FileReader();
-    reader.readAsArrayBuffer(file as any);
+    reader.readAsDataURL(file as any);
     reader.onload = () => {
-      const arrayBuffer = reader.result as ArrayBuffer;
-      const uint8Array = new Uint8Array(arrayBuffer);
+      // 后端只接受 Base64 字符串（System.Text.Json 无法把数字数组转成 byte[]）。
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.split(',')[1] || '';
 
       this.userImportService
-        .import(uint8Array as any)
+        .import({ fileBase64: base64, fileName: (file as any).name })
         .subscribe({
           next: (result) => {
             this.uploading = false;
