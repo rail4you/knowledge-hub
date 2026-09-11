@@ -499,7 +499,14 @@
               </div>
             </a>
           } @empty {
-            <div class="browse-empty">暂无课程数据</div>
+            <div class="browse-empty">
+              <span class="browse-empty__icon" nz-icon nzType="read" nzTheme="outline"></span>
+              <p class="browse-empty__text">暂无课程数据</p>
+              <p class="browse-empty__hint">换个筛选条件试试，或稍后再来看看</p>
+              @if (hasActiveFilters()) {
+                <button type="button" class="browse-clear" (click)="clearFilters()">清除筛选</button>
+              }
+            </div>
           }
         </div>
         @if (browseCourseTotal() > browsePageSize) {
@@ -554,7 +561,14 @@
               </div>
             </div>
           } @empty {
-            <div class="browse-empty">暂无资源数据</div>
+            <div class="browse-empty">
+              <span class="browse-empty__icon" nz-icon nzType="file-text" nzTheme="outline"></span>
+              <p class="browse-empty__text">暂无资源数据</p>
+              <p class="browse-empty__hint">换个筛选条件试试，或稍后再来看看</p>
+              @if (hasActiveFilters()) {
+                <button type="button" class="browse-clear" (click)="clearFilters()">清除筛选</button>
+              }
+            </div>
           }
         </div>
         @if (browseResourceTotal() > browsePageSize) {
@@ -599,7 +613,14 @@
               </div>
             </a>
           } @empty {
-            <div class="browse-empty">暂无微专业数据</div>
+            <div class="browse-empty">
+              <span class="browse-empty__icon" nz-icon nzType="book" nzTheme="outline"></span>
+              <p class="browse-empty__text">暂无微专业数据</p>
+              <p class="browse-empty__hint">换个筛选条件试试，或稍后再来看看</p>
+              @if (hasActiveFilters()) {
+                <button type="button" class="browse-clear" (click)="clearFilters()">清除筛选</button>
+              }
+            </div>
           }
         </div>
         @if (browseMicroTotal() > browsePageSize) {

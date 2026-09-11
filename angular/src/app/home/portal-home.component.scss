@@ -1398,11 +1398,23 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
 }
 .browse-empty {
   grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  // 三个 tab 共用固定高度：空态不再塌成一条细缝，切换 tab / 有无数据布局稳定
+  min-height: 320px;
+  padding: 32px 20px;
   text-align: center;
-  padding: 36px 20px;
   color: $ink-subtle;
-  font-size: 13px;
+  background: $surface-soft;
+  border: 1px dashed $border;
+  border-radius: $radius-lg;
 }
+.browse-empty__icon { font-size: 40px; line-height: 1; color: $ink-faint; }
+.browse-empty__text { margin: 0; font-size: 14px; font-weight: 600; color: $ink-muted; }
+.browse-empty__hint { margin: 0; font-size: 12px; color: $ink-subtle; }
 
 // ============================================================
 //  FOOTER
@@ -1566,7 +1578,8 @@ $pad-tablet:    40px;   // 平板端主体两侧留白
   .browse-filters { gap: 8px; }
   .browse-filter { width: 118px; flex-shrink: 0; }
   .browse-search { flex: 1 1 100%; width: 100%; }
-  .browse-empty { padding: 24px 12px; }
+  .browse-empty { min-height: 220px; padding: 24px 12px; }
+  .browse-empty__icon { font-size: 32px; }
 
   .footer__inner { grid-template-columns: 1fr; gap: 20px; }
 }
