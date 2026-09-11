@@ -63,6 +63,6 @@ export class ResourceReviewService {
   }
 
   getRatingSummaries(resourceIds: string[]): Observable<ResourceRatingSummaryDto[]> {
-    return this.restService.request({ method: 'POST', url: `${this.apiUrl}/rating-summaries`, body: resourceIds }, { apiName: 'KnowledgeHub' });
+    return this.restService.request({ method: 'POST', url: `${this.apiUrl}/get-rating-summaries`, body: resourceIds }, { apiName: 'KnowledgeHub' });
   }
 }
