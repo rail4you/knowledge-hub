@@ -3,9 +3,9 @@
   <div class="cover-fallback">
     <ng-content></ng-content>
   </div>
-  <!-- 真实缩略图盖在上层；PDF 第一页渲染完成前保持隐藏，露出垫底图标 -->
+  <!-- 真实缩略图盖在上层 -->
   @if (loadMedia() && !failed() && mode() !== 'icon' && !mediaProcessing()) {
-    <div class="cover-media" [class.is-hidden]="mode() === 'pdf' && !pdfReady()">
+    <div class="cover-media">
       @if (mode() === 'video') {
         @if (thumbFailed()) {
           <video
@@ -27,8 +27,9 @@
           decoding="async"
           (error)="onThumbError()"
         />
-      } @else if (mode() === 'pdf') {
-        <canvas #pdfCanvas></canvas>
+      } @else if (mode() === 'doc') {
+        <!-- Office/PDF 服务端首页图；失败回退图标 -->
+        <img [src]="thumbnailUrl()" [alt]="alt()" loading="lazy" decoding="async" (error)="onMediaError()" />
       }
     </div>
   }

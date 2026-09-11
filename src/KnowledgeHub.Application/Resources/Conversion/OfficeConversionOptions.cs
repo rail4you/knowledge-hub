@@ -93,6 +93,15 @@ public class OfficeConversionOptions
     public int FfmpegTimeoutSeconds { get; set; } = 60;
 
     /// <summary>
+    /// PDF 首页光栅化可执行文件路径（poppler 的 pdftoppm）。
+    /// 开发机（brew poppler）与 API 容器（apt poppler-utils）均可用；缺失时缩略图回退为图标。
+    /// </summary>
+    public string PdftoppmPath { get; set; } = "pdftoppm";
+
+    /// <summary>PDF 首页光栅化超时（秒）。默认 60s。</summary>
+    public int PdftoppmTimeoutSeconds { get; set; } = 60;
+
+    /// <summary>
     /// 预压缩时是否剥离嵌入字体（PPTX 嵌入的 OTF/TTF 可达数 MB~数十 MB，
     /// 剥离后由 LibreOffice 用 Noto CJK 兜底渲染，预览精度足够）。
     /// 默认 true（收益大，本地实测文本渲染正常）。

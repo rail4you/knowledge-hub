@@ -15,6 +15,7 @@ import { provideLogo, withEnvironmentOptions } from "@abp/ng.theme.shared";
 import { ApplicationConfig, APP_INITIALIZER } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideServiceWorker } from '@angular/service-worker';
 import { provideRouter } from '@angular/router';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
 import {
@@ -330,5 +331,10 @@ export const appConfig: ApplicationConfig = {
       useFactory: checkInstallStatus,
       multi: true,
     },
+    // PWA：生产环境启用 Angular Service Worker 缓存应用外壳与静态资源
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: environment.production,
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
   ]
 };

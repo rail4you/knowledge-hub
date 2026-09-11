@@ -62,6 +62,7 @@ public class ResourceMediaProcessor : ITransientDependency
     private readonly IFileStorageService _fileStorageService;
     private readonly IResourceThumbnailService _thumbnailService;
     private readonly IOfficeConversionService _officeConversionService;
+    private readonly IPdfPageRasterizer _pdfPageRasterizer;
     private readonly IGuidGenerator _guidGenerator;
     private readonly OfficeConversionOptions _options;
     private readonly ILogger<ResourceMediaProcessor> _logger;
@@ -73,6 +74,7 @@ public class ResourceMediaProcessor : ITransientDependency
         IFileStorageService fileStorageService,
         IResourceThumbnailService thumbnailService,
         IOfficeConversionService officeConversionService,
+        IPdfPageRasterizer pdfPageRasterizer,
         IGuidGenerator guidGenerator,
         IOptions<OfficeConversionOptions> options,
         ILogger<ResourceMediaProcessor> logger)
@@ -83,6 +85,7 @@ public class ResourceMediaProcessor : ITransientDependency
         _fileStorageService = fileStorageService;
         _thumbnailService = thumbnailService;
         _officeConversionService = officeConversionService;
+        _pdfPageRasterizer = pdfPageRasterizer;
         _guidGenerator = guidGenerator;
         _options = options.Value;
         _logger = logger;
@@ -116,47 +119,42 @@ public class ResourceMediaProcessor : ITransientDependency
         }
 
         var ext = Path.GetExtension(fullPath);
+        var isImage = ImageExtensions.Contains(ext);
+        var isVideo = VideoExtensions.Contains(ext);
+        var isOffice = OfficeExtensions.Contains(ext);
+        var isPdf = string.Equals(ext, ".pdf", StringComparison.OrdinalIgnoreCase);
+
         var failures = new List<string>();
         var planned = 0;
 
-        if (ImageExtensions.Contains(ext) || VideoExtensions.Contains(ext))
+        if (isImage || isVideo)
         {
             planned++;
             await reportProgress(30, "正在生成缩略图…");
-            try
-            {
-                var abs = await _thumbnailService.GetOrCreateAsync(versionKey, fullPath, ThumbnailWidth, ct);
-                if (abs != null)
-                {
-                    await UpsertArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
-                        $"w{ThumbnailWidth}", abs, "image/jpeg", ct);
-                }
-                else
-                {
-                    failures.Add("缩略图");
-                    await UpsertFailedArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
-                        $"w{ThumbnailWidth}", "缩略图生成失败");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[MediaProcessor] 缩略图失败 resource={ResourceId}", resourceId);
-                failures.Add("缩略图");
-                await UpsertFailedArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
-                    $"w{ThumbnailWidth}", "缩略图生成失败");
-            }
+            await GenerateFfmpegThumbnailAsync(resource, version, versionKey, fullPath, failures, ct);
         }
 
-        if (OfficeExtensions.Contains(ext))
+        if (isPdf)
         {
             planned++;
-            await reportProgress(60, "正在转换预览…");
+            await reportProgress(40, "正在生成封面…");
+            await GeneratePdfThumbnailAsync(resource, version, versionKey, fullPath, failures, ct);
+        }
+
+        if (isOffice)
+        {
+            // Office：预览 PDF + 由 PDF 首页生成封面
+            planned += 2;
+            await reportProgress(55, "正在转换预览…");
             var sizeBytes = new FileInfo(fullPath).Length;
             if (sizeBytes > _options.MaxPreviewFileSizeBytes)
             {
                 failures.Add("预览 PDF");
                 await UpsertFailedArtifactAsync(resource, version, ResourceArtifactKind.PreviewPdf,
                     "full", "文件过大，暂不生成在线预览");
+                failures.Add("封面");
+                await UpsertFailedArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
+                    $"w{ThumbnailWidth}", "文件过大，未生成封面");
             }
             else
             {
@@ -166,6 +164,7 @@ public class ResourceMediaProcessor : ITransientDependency
                         resourceId.ToString(), fullPath, "preview", ct);
                     await UpsertArtifactAsync(resource, version, ResourceArtifactKind.PreviewPdf,
                         "full", pdfAbs, "application/pdf", ct);
+                    await GeneratePdfThumbnailAsync(resource, version, versionKey, pdfAbs, failures, ct);
                 }
                 catch (Exception ex)
                 {
@@ -173,6 +172,9 @@ public class ResourceMediaProcessor : ITransientDependency
                     failures.Add("预览 PDF");
                     await UpsertFailedArtifactAsync(resource, version, ResourceArtifactKind.PreviewPdf,
                         "full", "文档转换失败");
+                    failures.Add("封面");
+                    await UpsertFailedArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
+                        $"w{ThumbnailWidth}", "文档转换失败");
                 }
             }
         }
@@ -198,6 +200,72 @@ public class ResourceMediaProcessor : ITransientDependency
 
         await _resourceRepository.UpdateAsync(resource);
         return outcome;
+    }
+
+    private async Task GenerateFfmpegThumbnailAsync(
+        Resource resource,
+        ResourceVersion? version,
+        string versionKey,
+        string sourcePath,
+        List<string> failures,
+        CancellationToken ct)
+    {
+        try
+        {
+            var abs = await _thumbnailService.GetOrCreateAsync(versionKey, sourcePath, ThumbnailWidth, ct);
+            if (abs != null)
+            {
+                await UpsertArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
+                    $"w{ThumbnailWidth}", abs, "image/jpeg", ct);
+            }
+            else
+            {
+                failures.Add("缩略图");
+                await UpsertFailedArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
+                    $"w{ThumbnailWidth}", "缩略图生成失败");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[MediaProcessor] 缩略图失败 resource={ResourceId}", resource.Id);
+            failures.Add("缩略图");
+            await UpsertFailedArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
+                $"w{ThumbnailWidth}", "缩略图生成失败");
+        }
+    }
+
+    private async Task GeneratePdfThumbnailAsync(
+        Resource resource,
+        ResourceVersion? version,
+        string versionKey,
+        string pdfFullPath,
+        List<string> failures,
+        CancellationToken ct)
+    {
+        try
+        {
+            var thumbDir = Path.Combine(_fileStorageService.RootPath, "thumbnails");
+            var outPath = Path.Combine(thumbDir, $"{versionKey}_{ThumbnailWidth}.jpg");
+            var abs = await _pdfPageRasterizer.RasterizeFirstPageAsync(pdfFullPath, outPath, ThumbnailWidth, ct);
+            if (abs != null)
+            {
+                await UpsertArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
+                    $"w{ThumbnailWidth}", abs, "image/jpeg", ct);
+            }
+            else
+            {
+                failures.Add("封面");
+                await UpsertFailedArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
+                    $"w{ThumbnailWidth}", "封面生成失败");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[MediaProcessor] PDF 封面失败 resource={ResourceId}", resource.Id);
+            failures.Add("封面");
+            await UpsertFailedArtifactAsync(resource, version, ResourceArtifactKind.Thumbnail,
+                $"w{ThumbnailWidth}", "封面生成失败");
+        }
     }
 
     private async Task<ResourceVersion?> ResolveVersionAsync(Guid resourceId, Guid? versionId)

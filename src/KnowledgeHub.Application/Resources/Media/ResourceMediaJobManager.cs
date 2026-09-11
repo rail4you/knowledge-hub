@@ -41,8 +41,9 @@ public class ResourceMediaJobManager : ITransientDependency
     /// <summary>
     /// 为资源版本创建并入队一个媒体处理任务，并把资源 MediaStatus 置为 Processing。
     /// </summary>
+    /// <param name="resource">可传入当前跟踪的资源实体（新建/更新场景），避免未落库时 FindAsync 取不到。</param>
     /// <returns>任务 Id；若被去重返回已存在任务 Id。</returns>
-    public async Task<Guid> EnqueueAsync(Guid resourceId, Guid? resourceVersionId, bool force = false)
+    public async Task<Guid> EnqueueAsync(Guid resourceId, Guid? resourceVersionId, bool force = false, Resource? resource = null)
     {
         var tenantId = _currentTenant.Id;
 
@@ -78,7 +79,7 @@ public class ResourceMediaJobManager : ITransientDependency
             }
         }
 
-        var resource = await _resourceRepository.FindAsync(resourceId);
+        resource ??= await _resourceRepository.FindAsync(resourceId);
         if (resource != null && resource.MediaStatus != ResourceMediaStatus.Processing)
         {
             resource.MediaStatus = ResourceMediaStatus.Processing;

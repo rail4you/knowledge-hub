@@ -57,6 +57,7 @@ WORKDIR /app
 # - locales: en_US.UTF-8
 # - tzdata:  Asia/Shanghai (set via ENV below)
 # - ffmpeg: video processing (installed via apt)
+# - poppler-utils: pdftoppm 渲染 Office/PDF 首页封面缩略图
 # 注：已移除 libreoffice / 中文字体（PPTX/DOCX/XLSX → PDF 由 Gotenberg 容器转换，
 #   中文字体在 Gotenberg 自定义镜像中提供）。
 # Force fresh apt-get (avoid BuildKit cached network errors)
@@ -66,6 +67,7 @@ RUN echo "cache_bust=$CACHE_BUST" && apt-get update \
         locales \
         tzdata \
         ffmpeg \
+        poppler-utils \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen en_US.UTF-8 \
     && ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \

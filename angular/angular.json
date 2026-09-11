@@ -21,6 +21,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "serviceWorker": "ngsw-config.json",
             "outputPath": {
               "base": "dist/KnowledgeHub"
             },

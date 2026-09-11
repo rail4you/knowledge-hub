@@ -613,9 +613,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
             // 媒体处理（缩略图/预览）：默认与索引并行入队；
             // StartAfterIndexing=true 时由索引任务完成后触发。
-            if (!MediaOptions.Value.StartAfterIndexing)
+            if (!MediaOptions.Value.StartAfterIndexing && !MediaOptions.Value.GenerateOnApproval)
             {
-                await MediaJobManager.EnqueueAsync(resource.Id, initialVersion.Id);
+                await MediaJobManager.EnqueueAsync(resource.Id, initialVersion.Id, resource: resource);
             }
         }
 
@@ -853,9 +853,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         }
 
         // 媒体处理（缩略图/预览）：换版本后强制重新生成
-        if (!MediaOptions.Value.StartAfterIndexing)
+        if (!MediaOptions.Value.StartAfterIndexing && !MediaOptions.Value.GenerateOnApproval)
         {
-            await MediaJobManager.EnqueueAsync(resource.Id, newVersion.Id, force: true);
+            await MediaJobManager.EnqueueAsync(resource.Id, newVersion.Id, force: true, resource: resource);
         }
 
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(newVersion);
@@ -907,9 +907,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         }
 
         // 媒体处理（缩略图/预览）：回滚版本后强制重新生成
-        if (!MediaOptions.Value.StartAfterIndexing)
+        if (!MediaOptions.Value.StartAfterIndexing && !MediaOptions.Value.GenerateOnApproval)
         {
-            await MediaJobManager.EnqueueAsync(resource.Id, version.Id, force: true);
+            await MediaJobManager.EnqueueAsync(resource.Id, version.Id, force: true, resource: resource);
         }
 
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(version);
@@ -1522,6 +1522,14 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         if (input.Status == AuditStatus.Approved)
         {
             resource.Status = ResourceStatus.SchoolApproved;
+
+            // 配置为审核通过后生成媒体：此时再入队缩略图/预览任务
+            if (MediaOptions.Value.GenerateOnApproval)
+            {
+                var currentVersion = await VersionRepository.FirstOrDefaultAsync(v =>
+                    v.ResourceId == resource.Id && v.IsCurrentVersion);
+                await MediaJobManager.EnqueueAsync(resource.Id, currentVersion?.Id, resource: resource);
+            }
         }
         else
         {

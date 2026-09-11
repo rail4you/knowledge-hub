@@ -200,7 +200,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         _logger.LogInformation("Indexing completed for resource {ResourceId}", args.ResourceId);
 
         // 索引完成后启动媒体处理（仅当配置为串行时；默认并行已在入队索引时一并入队）
-        if (_mediaOptions.Value.StartAfterIndexing)
+        if (_mediaOptions.Value.StartAfterIndexing && !_mediaOptions.Value.GenerateOnApproval)
         {
             try
             {
