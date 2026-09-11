@@ -8,7 +8,6 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
-import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzCollapseModule } from 'ng-zorro-antd/collapse';
 import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -18,9 +17,17 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
+import { NzProgressModule } from 'ng-zorro-antd/progress';
+import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject, takeUntil } from 'rxjs';
-import { ChatService, ResourceForChat } from '../services/chat.service';
+import { ConfigStateService } from '@abp/ng.core';
+import {
+  ChatService,
+  ResourceForChat,
+  LessonPlanChapter,
+  LessonPlanStreamEvent
+} from '../services/chat.service';
 
 interface LessonPlanInput {
   topic: string;
@@ -52,16 +59,32 @@ interface LessonPlanResult {
   homework: string[];
 }
 
+interface MultiChapterPlan {
+  courseTitle: string;
+  subject: string;
+  grade: string;
+  duration: number;
+  courseObjectives: string[];
+  chapters: { order: number; chapterTitle: string; lessonPlan: LessonPlanResult }[];
+}
+
+type WorkflowMode = 'single' | 'multi';
+type Phase = 'config' | 'chapters' | 'generating' | 'result';
+type ViewMode = 'list' | 'workflow' | 'preview';
+
 interface LessonPlanHistoryItem {
   id: string;
+  mode: WorkflowMode;
   title: string;
   subject: string;
   grade: string;
   duration: number;
+  chapterCount?: number;
   resourceName: string;
   resourceId: string;
   createdAt: string;
-  result: LessonPlanResult;
+  singleResult?: LessonPlanResult;
+  multiResult?: MultiChapterPlan;
   rawJson: string;
 }
 
@@ -78,7 +101,6 @@ interface LessonPlanHistoryItem {
     NzSelectModule,
     NzInputNumberModule,
     NzDividerModule,
-    NzModalModule,
     NzCollapseModule,
     NzDescriptionsModule,
     NzTagModule,
@@ -87,7 +109,9 @@ interface LessonPlanHistoryItem {
     NzEmptyModule,
     NzTableModule,
     NzPopconfirmModule,
-    NzTooltipModule
+    NzTooltipModule,
+    NzProgressModule,
+    NzStepsModule
   ],
   templateUrl: './lesson-plan.component.html',
   styleUrls: ['./lesson-plan.component.scss'],
@@ -96,10 +120,25 @@ interface LessonPlanHistoryItem {
 export class LessonPlanComponent implements OnInit, OnDestroy {
   private readonly chatService = inject(ChatService);
   private readonly messageService = inject(NzMessageService);
+  private readonly configState = inject(ConfigStateService);
   private readonly destroy$ = new Subject<void>();
-  private readonly HISTORY_KEY = 'kh-lesson-plan-history';
+  private readonly HISTORY_KEY_PREFIX = 'kh-lesson-plan-history';
+  private historyKey = `${this.HISTORY_KEY_PREFIX}:anon`;
+  private readonly MAX_HISTORY = 20;
 
-  // resources
+  /**
+   * 根据当前登录租户生成 localStorage key，避免不同租户在同一浏览器里互相看到历史记录。
+   * - 宿主 / 未登录 / 无 tenantId 时落到 :host
+   * - 普通租户落到 :tenant:<tenantId>
+   */
+  private computeHistoryKey(): string {
+    const tenantId = this.configState.getDeep('currentUser.tenantId') as string | null | undefined;
+    return tenantId
+      ? `${this.HISTORY_KEY_PREFIX}:tenant:${tenantId}`
+      : `${this.HISTORY_KEY_PREFIX}:host`;
+  }
+
+  // ---------- resources ----------
   resources = signal<ResourceForChat[]>([]);
   resourcesLoading = signal(false);
   selectedResourceId = signal<string | null>(null);
@@ -111,14 +150,29 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     return this.resources().find(r => r.id === id) ?? null;
   });
 
+  availableResources = computed(() => {
+    const multi = this.workflowMode() === 'multi';
+    return this.resources().filter(r =>
+      multi ? (r.hasSummary === true || r.hasPageIndex === true) : r.hasSummary === true
+    );
+  });
+
   filteredResources = computed(() => {
     const kw = this.resourceFilter().trim().toLowerCase();
-    const list = this.resources().filter(r => r.hasSummary === true);
+    const list = this.availableResources();
     if (!kw) return list;
     return list.filter(r => r.name.toLowerCase().includes(kw) || (r.sourceFormat ?? '').toLowerCase().includes(kw));
   });
 
-  // form input
+  resourceReady = computed(() => {
+    const r = this.selectedResource();
+    if (!r) return false;
+    return this.workflowMode() === 'single'
+      ? r.hasSummary === true
+      : (r.hasSummary === true || r.hasPageIndex === true);
+  });
+
+  // ---------- form input ----------
   input = signal<LessonPlanInput>({
     topic: '',
     subject: '',
@@ -127,21 +181,50 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     customPrompt: ''
   });
 
-  // ui state per spec
-  formModalVisible = signal(false);
-  viewMode = signal<'list' | 'preview'>('list');
+  // ---------- workflow state ----------
+  workflowMode = signal<WorkflowMode>('single');
+  phase = signal<Phase>('config');
+  viewMode = signal<ViewMode>('list');
 
-  // generation
+  // steps
+  steps = computed(() =>
+    this.workflowMode() === 'single'
+      ? ['配置', '生成教案', '完成']
+      : ['配置', '解析章节', '生成教案', '完成']
+  );
+
+  stepIndex = computed(() => {
+    const phase = this.phase();
+    if (this.workflowMode() === 'single') {
+      return phase === 'config' ? 0 : phase === 'generating' ? 1 : 2;
+    }
+    return phase === 'config' ? 0 : phase === 'chapters' ? 1 : phase === 'generating' ? 2 : 3;
+  });
+
+  // ---------- chapter parsing ----------
+  chapters = signal<LessonPlanChapter[]>([]);
+  courseTitleHint = signal('');
+  parsing = signal(false);
+  parseRaw = signal('');
+
+  // ---------- generation ----------
   result = signal<LessonPlanResult | null>(null);
+  multiResult = signal<MultiChapterPlan | null>(null);
   rawJson = signal('');
   isLoading = signal(false);
   isExporting = signal(false);
+  singleError = signal('');
+  genError = signal('');
 
-  // history table
+  progress = signal(0);
+  progressMessage = signal('');
+  activeChapter = signal(0);
+  chapterTotal = signal(0);
+
+  // ---------- current preview / history ----------
+  activeItem = signal<LessonPlanHistoryItem | null>(null);
   history = signal<LessonPlanHistoryItem[]>([]);
-  previewItem = signal<LessonPlanHistoryItem | null>(null);
 
-  // 搜索关键字 + 过滤后的列表（与双高表格一致）
   readonly keyword = signal('');
   readonly filteredHistory = computed(() => {
     const kw = this.keyword().trim().toLowerCase();
@@ -153,7 +236,6 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     );
   });
 
-  // 前端分页：基于 filteredHistory 切片
   readonly pageIndex = signal(1);
   readonly pageSize = signal(8);
   readonly pagedHistory = computed(() => {
@@ -162,14 +244,34 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     return all.slice(start, start + this.pageSize());
   });
 
-  canGenerate = computed(() => {
+  canNextConfig = computed(() => {
     const i = this.input();
-    const r = this.selectedResource();
-    return !!r && r.hasSummary === true && i.topic.trim().length > 0 && !this.isLoading();
+    return this.resourceReady() && i.topic.trim().length > 0 && !this.isLoading() && !this.parsing();
   });
 
+  canGenerateMulti = computed(() =>
+    this.chapters().filter(c => c.title.trim().length > 0).length > 0 && !this.isLoading()
+  );
+
   ngOnInit() {
+    this.historyKey = this.computeHistoryKey();
     this.loadHistory();
+
+    // 监听租户/登录状态变化：切换租户或重新登录时，重新加载对应桶里的历史记录，
+    // 避免显示上一个租户的记录，也不会把新租户的记录写到旧 key 里。
+    this.configState.createOnUpdateStream(() => true)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        const newKey = this.computeHistoryKey();
+        if (newKey !== this.historyKey) {
+          this.historyKey = newKey;
+          this.activeItem.set(null);
+          if (this.viewMode() === 'preview') this.viewMode.set('list');
+          this.history.set([]);
+          this.loadHistory();
+        }
+      });
+
     this.loadResources();
   }
 
@@ -181,7 +283,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
   // ---------- history persistence ----------
   private loadHistory() {
     try {
-      const raw = localStorage.getItem(this.HISTORY_KEY);
+      const raw = localStorage.getItem(this.historyKey);
       if (raw) {
         const parsed: LessonPlanHistoryItem[] = JSON.parse(raw);
         if (Array.isArray(parsed)) this.history.set(parsed);
@@ -191,7 +293,7 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
 
   private saveHistory() {
     try {
-      localStorage.setItem(this.HISTORY_KEY, JSON.stringify(this.history().slice(0, 50)));
+      localStorage.setItem(this.historyKey, JSON.stringify(this.history().slice(0, this.MAX_HISTORY)));
     } catch { /* ignore */ }
   }
 
@@ -230,106 +332,348 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.input.update(v => ({ ...v, customPrompt: value }));
   }
 
-  toggleForm() {
-    this.formModalVisible.update(v => !v);
-  }
-  openForm() {
-    this.formModalVisible.set(true);
-  }
-  cancelForm() {
-    this.formModalVisible.set(false);
+  // ---------- workflow navigation ----------
+  openWorkflow() {
+    this.resetWorkflow();
+    this.viewMode.set('workflow');
   }
 
-  // ---------- generate ----------
-  generate() {
-    const input = this.input();
-    const resource = this.selectedResource();
-    if (!resource || !resource.hasSummary || !input.topic.trim()) return;
+  closeWorkflow() {
+    this.viewMode.set('list');
+  }
 
-    this.isLoading.set(true);
+  setMode(mode: WorkflowMode) {
+    if (this.workflowMode() === mode) return;
+    this.workflowMode.set(mode);
+    this.selectedResourceId.set(null);
+    this.resourceFilter.set('');
+    this.chapters.set([]);
+    this.parseRaw.set('');
+    this.phase.set('config');
+  }
+
+  goNext() {
+    if (this.phase() === 'config') {
+      if (this.workflowMode() === 'single') {
+        this.startSingleGeneration();
+      } else {
+        this.parseChapters();
+      }
+    } else if (this.phase() === 'chapters') {
+      this.startMultiGeneration();
+    }
+  }
+
+  goBack() {
+    if (this.phase() === 'chapters' || this.phase() === 'result') {
+      this.phase.set('config');
+    }
+  }
+
+  resetWorkflow() {
+    this.selectedResourceId.set(null);
+    this.input.set({ topic: '', subject: '', grade: '', duration: 45, customPrompt: '' });
+    this.resourceFilter.set('');
+    this.chapters.set([]);
+    this.parseRaw.set('');
+    this.courseTitleHint.set('');
     this.result.set(null);
+    this.multiResult.set(null);
     this.rawJson.set('');
+    this.singleError.set('');
+    this.genError.set('');
+    this.progress.set(0);
+    this.progressMessage.set('');
+    this.activeChapter.set(0);
+    this.chapterTotal.set(0);
+    this.activeItem.set(null);
+    this.phase.set('config');
+  }
 
-    let fullResponse = '';
+  // ---------- chapter parsing (multi) ----------
+  parseChapters() {
+    const resource = this.selectedResource();
+    if (!resource) return;
 
-    this.chatService.generateLessonPlan({
+    this.phase.set('chapters');
+    this.parsing.set(true);
+    this.parseRaw.set('');
+    this.chapters.set([]);
+    this.genError.set('');
+
+    let acc = '';
+    let errorMessage = '';
+
+    this.chatService.parseChapters({
       resourceId: resource.id,
-      topic: input.topic,
-      subject: input.subject || undefined,
-      grade: input.grade || undefined,
-      duration: input.duration,
-      customPrompt: input.customPrompt?.trim() || undefined
+      customPrompt: this.input().customPrompt?.trim() || undefined
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (chunk) => {
-          if (chunk.content) {
-            fullResponse += chunk.content;
-            this.rawJson.set(fullResponse);
-            this.tryParseResult(fullResponse);
+        next: (evt: LessonPlanStreamEvent) => {
+          if (evt.content) {
+            acc += evt.content;
+            this.parseRaw.set(acc);
+          }
+          if (evt.isError && evt.message) {
+            errorMessage = evt.message;
           }
         },
         error: (err) => {
-          console.error('Error generating lesson plan:', err);
-          this.isLoading.set(false);
-          this.messageService.error('教案生成失败，请稍后重试');
+          console.error('Error parsing chapters:', err);
+          this.parsing.set(false);
+          this.phase.set('config');
+          this.messageService.error('章节解析失败，请稍后重试');
         },
         complete: () => {
-          this.isLoading.set(false);
-          if (fullResponse && !this.result()) {
-            this.tryParseResult(fullResponse, true);
+          this.parsing.set(false);
+          if (errorMessage) {
+            this.phase.set('config');
+            this.messageService.error(errorMessage);
+            return;
           }
-          const parsed = this.result();
-          const json = this.rawJson();
-          if (parsed && json) {
-            const item: LessonPlanHistoryItem = {
-              id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-              title: parsed.title || input.topic || '未命名教案',
-              subject: parsed.subject || input.subject || '-',
-              grade: parsed.grade || input.grade || '-',
-              duration: parsed.duration || input.duration,
-              resourceName: resource.name,
-              resourceId: resource.id,
-              createdAt: new Date().toISOString(),
-              result: parsed,
-              rawJson: json
-            };
-            this.history.update(list => [item, ...list].slice(0, 50));
-            this.saveHistory();
-            this.previewItem.set(item);
-            this.viewMode.set('preview');
-            this.formModalVisible.set(false);
-            this.messageService.success('教案已生成');
-          } else if (fullResponse) {
-            // parsing failed but still show preview with raw
-            this.messageService.warning('AI 返回的数据格式不完整，已保存原始内容，请重试或检查预览');
+          const parsed = this.extractJson(acc);
+          const list: LessonPlanChapter[] = parsed?.chapters ?? [];
+          if (list.length > 0) {
+            this.courseTitleHint.set(parsed?.courseTitle || '');
+            this.chapters.set(list.map((c, i) => ({
+              order: i + 1,
+              title: c.title || `第 ${i + 1} 章`,
+              summary: c.summary || ''
+            })));
+            this.messageService.success(`已解析出 ${list.length} 个章节，请确认或修改`);
+          } else {
+            this.messageService.warning('未能解析出章节，请重试或手动添加章节');
+            this.chapters.set([]);
           }
         }
       });
   }
 
-  private tryParseResult(json: string, final = false) {
-    try {
-      let cleanJson = json.trim();
-      if (cleanJson.startsWith('```')) {
-        const firstNewline = cleanJson.indexOf('\n');
-        if (firstNewline >= 0) cleanJson = cleanJson.substring(firstNewline + 1);
-        if (cleanJson.endsWith('```')) {
-          cleanJson = cleanJson.substring(0, cleanJson.length - 3).trimEnd();
+  addChapter() {
+    this.chapters.update(list => [
+      ...list,
+      { order: list.length + 1, title: `第 ${list.length + 1} 章`, summary: '' }
+    ]);
+  }
+
+  removeChapter(index: number) {
+    this.chapters.update(list => list.filter((_, i) => i !== index).map((c, i) => ({ ...c, order: i + 1 })));
+  }
+
+  moveChapter(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    this.chapters.update(list => {
+      if (target < 0 || target >= list.length) return list;
+      const copy = [...list];
+      [copy[index], copy[target]] = [copy[target], copy[index]];
+      return copy.map((c, i) => ({ ...c, order: i + 1 }));
+    });
+  }
+
+  updateChapterTitle(index: number, value: string) {
+    this.chapters.update(list => list.map((c, i) => i === index ? { ...c, title: value } : c));
+  }
+
+  updateChapterSummary(index: number, value: string) {
+    this.chapters.update(list => list.map((c, i) => i === index ? { ...c, summary: value } : c));
+  }
+
+  // ---------- single generation ----------
+  private startSingleGeneration() {
+    const resource = this.selectedResource();
+    if (!resource) return;
+
+    this.phase.set('generating');
+    this.isLoading.set(true);
+    this.result.set(null);
+    this.rawJson.set('');
+    this.singleError.set('');
+    this.progress.set(0);
+    this.progressMessage.set('正在生成教案…');
+
+    let full = '';
+    const form = this.input();
+
+    this.chatService.generateLessonPlan({
+      resourceId: resource.id,
+      topic: form.topic,
+      subject: form.subject || undefined,
+      grade: form.grade || undefined,
+      duration: form.duration,
+      customPrompt: form.customPrompt?.trim() || undefined
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (chunk) => {
+          if (chunk.content) {
+            full += chunk.content;
+            this.rawJson.set(full);
+            this.tryParseResult(full);
+          }
+        },
+        error: (err) => {
+          console.error('Error generating lesson plan:', err);
+          this.isLoading.set(false);
+          this.phase.set('config');
+          this.messageService.error('教案生成失败，请稍后重试');
+        },
+        complete: () => {
+          this.isLoading.set(false);
+          if (this.singleError()) {
+            this.phase.set('config');
+            this.messageService.error(this.singleError());
+            return;
+          }
+          if (full && !this.result()) {
+            this.tryParseResult(full, true);
+          }
+          const parsed = this.result();
+          if (parsed) {
+            this.finishSingle(resource, parsed, full);
+          } else {
+            this.phase.set('config');
+            this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
+          }
         }
-      }
-      const parsed = JSON.parse(cleanJson);
-      this.result.set(parsed);
-    } catch {
-      if (final) {
-        this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
-      }
+      });
+  }
+
+  private tryParseResult(json: string, final = false): boolean {
+    const parsed = this.extractJson(json);
+    if (parsed?.error) {
+      this.singleError.set(String(parsed.error));
+      return false;
     }
+    if (parsed && (parsed.title !== undefined || Array.isArray(parsed.sections))) {
+      this.result.set(parsed as LessonPlanResult);
+      return true;
+    }
+    if (final) {
+      this.messageService.warning('AI 返回的数据格式不完整，请重新生成');
+    }
+    return false;
+  }
+
+  private finishSingle(resource: ResourceForChat, parsed: LessonPlanResult, json: string) {
+    const form = this.input();
+    const item: LessonPlanHistoryItem = {
+      id: this.uid(),
+      mode: 'single',
+      title: parsed.title || form.topic || '未命名教案',
+      subject: parsed.subject || form.subject || '-',
+      grade: parsed.grade || form.grade || '-',
+      duration: parsed.duration || form.duration,
+      resourceName: resource.name,
+      resourceId: resource.id,
+      createdAt: new Date().toISOString(),
+      singleResult: parsed,
+      rawJson: json
+    };
+    this.commitItem(item);
+  }
+
+  // ---------- multi generation ----------
+  private startMultiGeneration() {
+    const resource = this.selectedResource();
+    if (!resource) return;
+
+    const chapters = this.chapters()
+      .filter(c => c.title.trim().length > 0)
+      .map((c, i) => ({ order: i + 1, title: c.title.trim(), summary: (c.summary || '').trim() }));
+
+    if (chapters.length === 0) {
+      this.messageService.warning('请至少保留一个有效章节');
+      return;
+    }
+
+    this.phase.set('generating');
+    this.isLoading.set(true);
+    this.multiResult.set(null);
+    this.rawJson.set('');
+    this.genError.set('');
+    this.progress.set(0);
+    this.progressMessage.set('正在准备生成…');
+    this.activeChapter.set(0);
+    this.chapterTotal.set(chapters.length);
+
+    const form = this.input();
+
+    this.chatService.generateMultiChapterLessonPlan({
+      resourceId: resource.id,
+      topic: form.topic,
+      subject: form.subject || undefined,
+      grade: form.grade || undefined,
+      duration: form.duration,
+      customPrompt: form.customPrompt?.trim() || undefined,
+      chapters
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (evt: LessonPlanStreamEvent) => {
+          if (typeof evt.progress === 'number') this.progress.set(evt.progress);
+          if (evt.message) this.progressMessage.set(evt.message);
+          if (evt.chapterTotal) this.chapterTotal.set(evt.chapterTotal);
+          if (evt.chapterIndex) this.activeChapter.set(evt.chapterIndex);
+          if (evt.isError && evt.message) this.genError.set(evt.message);
+          if (evt.resultJson) this.rawJson.set(evt.resultJson);
+        },
+        error: (err) => {
+          console.error('Error generating multi-chapter lesson plan:', err);
+          this.isLoading.set(false);
+          this.phase.set('chapters');
+          this.messageService.error('整体教案生成失败，请稍后重试');
+        },
+        complete: () => {
+          this.isLoading.set(false);
+          if (this.genError()) {
+            this.phase.set('chapters');
+            this.messageService.error(this.genError());
+            return;
+          }
+          const json = this.rawJson();
+          const parsed = json ? this.extractJson(json) as MultiChapterPlan : null;
+          if (parsed && Array.isArray(parsed.chapters) && parsed.chapters.length > 0) {
+            this.multiResult.set(parsed);
+            this.finishMulti(resource, parsed, json);
+          } else {
+            this.phase.set('chapters');
+            this.messageService.warning('整体教案结果解析失败，请重试');
+          }
+        }
+      });
+  }
+
+  private finishMulti(resource: ResourceForChat, parsed: MultiChapterPlan, json: string) {
+    const form = this.input();
+    const item: LessonPlanHistoryItem = {
+      id: this.uid(),
+      mode: 'multi',
+      title: parsed.courseTitle || form.topic || '多章节教案',
+      subject: parsed.subject || form.subject || '-',
+      grade: parsed.grade || form.grade || '-',
+      duration: parsed.duration || form.duration * parsed.chapters.length,
+      chapterCount: parsed.chapters.length,
+      resourceName: resource.name,
+      resourceId: resource.id,
+      createdAt: new Date().toISOString(),
+      multiResult: parsed,
+      rawJson: json
+    };
+    this.commitItem(item);
+  }
+
+  private commitItem(item: LessonPlanHistoryItem) {
+    this.history.update(list => [item, ...list].slice(0, this.MAX_HISTORY));
+    this.saveHistory();
+    this.activeItem.set(item);
+    this.phase.set('result');
+    this.messageService.success(item.mode === 'multi' ? '整体教案已生成' : '教案已生成');
   }
 
   // ---------- preview / table actions ----------
   previewHistory(item: LessonPlanHistoryItem) {
-    this.previewItem.set(item);
+    this.activeItem.set(item);
     this.viewMode.set('preview');
   }
 
@@ -337,11 +681,14 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.viewMode.set('list');
   }
 
-  async downloadHistory(item: LessonPlanHistoryItem) {
-    if (!item.rawJson) return;
+  async downloadActive() {
+    const item = this.activeItem();
+    if (!item?.rawJson) return;
     this.isExporting.set(true);
     try {
-      const blob = await this.chatService.exportLessonPlanDocx(item.rawJson);
+      const blob = item.mode === 'multi'
+        ? await this.chatService.exportMultiChapterLessonPlanDocx(item.rawJson)
+        : await this.chatService.exportLessonPlanDocx(item.rawJson);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -359,47 +706,24 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     }
   }
 
-  async downloadPreview() {
-    const item = this.previewItem();
-    if (item) {
-      await this.downloadHistory(item);
-      return;
-    }
-    // fallback: current rawJson (streaming before saved)
-    const json = this.rawJson();
-    if (!json) return;
-    this.isExporting.set(true);
-    try {
-      const blob = await this.chatService.exportLessonPlanDocx(json);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `教案_${new Date().toISOString().slice(0, 10)}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      this.messageService.success('教案已下载');
-    } catch (err) {
-      console.error('Failed to export docx:', err);
-      this.messageService.error('导出失败，请重试');
-    } finally {
-      this.isExporting.set(false);
-    }
+  async downloadHistory(item: LessonPlanHistoryItem) {
+    const previous = this.activeItem();
+    this.activeItem.set(item);
+    await this.downloadActive();
+    this.activeItem.set(previous);
   }
 
   removeHistory(item: LessonPlanHistoryItem, event?: MouseEvent) {
     event?.stopPropagation();
     this.history.update(list => list.filter(x => x.id !== item.id));
     this.saveHistory();
-    if (this.previewItem()?.id === item.id) {
-      this.previewItem.set(null);
-      this.viewMode.set('list');
+    if (this.activeItem()?.id === item.id) {
+      this.activeItem.set(null);
+      if (this.viewMode() === 'preview') this.viewMode.set('list');
     }
     this.messageService.success('已删除');
   }
 
-  // 分页：仅切页/切大小时同步信号
   onPageIndexChange(index: number): void {
     this.pageIndex.set(index);
   }
@@ -409,7 +733,6 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     this.pageIndex.set(1);
   }
 
-  // 搜索：reset 时回到第一页
   reload(): void {
     this.pageIndex.set(1);
   }
@@ -426,16 +749,36 @@ export class LessonPlanComponent implements OnInit, OnDestroy {
     } catch { return iso; }
   }
 
-  resetForm() {
-    this.selectedResourceId.set(null);
-    this.input.set({ topic: '', subject: '', grade: '', duration: 45, customPrompt: '' });
-    this.result.set(null);
-    this.rawJson.set('');
-    this.resourceFilter.set('');
+  chapterState(order: number): 'done' | 'active' | 'pending' {
+    const active = this.activeChapter();
+    if (active <= 0) return 'pending';
+    if (order < active) return 'done';
+    if (order === active) return 'active';
+    return 'pending';
   }
 
-  // keep legacy reset for template compat if needed
-  reset() {
-    this.resetForm();
+  // ---------- shared helpers ----------
+  private uid(): string {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  private extractJson(raw: string): any | null {
+    if (!raw) return null;
+    let text = raw.trim();
+    if (text.startsWith('```')) {
+      const firstNewline = text.indexOf('\n');
+      if (firstNewline >= 0) text = text.substring(firstNewline + 1);
+      if (text.endsWith('```')) text = text.substring(0, text.length - 3).trimEnd();
+    }
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      text = text.substring(start, end - start + 1);
+    }
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
   }
 }

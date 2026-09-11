@@ -55,6 +55,38 @@ export interface LessonPlanGenerationInput {
   customPrompt?: string;
 }
 
+export interface LessonPlanChapter {
+  order: number;
+  title: string;
+  summary?: string;
+}
+
+export interface LessonPlanChapterParseInput {
+  resourceId: string;
+  customPrompt?: string;
+}
+
+export interface MultiChapterLessonPlanGenerationInput {
+  resourceId: string;
+  topic: string;
+  subject?: string;
+  grade?: string;
+  duration: number;
+  customPrompt?: string;
+  chapters: LessonPlanChapter[];
+}
+
+export interface LessonPlanStreamEvent {
+  content?: string;
+  message?: string;
+  progress: number;
+  chapterIndex?: number | null;
+  chapterTotal?: number | null;
+  isComplete: boolean;
+  isError?: boolean;
+  resultJson?: string;
+}
+
 export interface CaseAnalysisGenerationInput {
   resourceId: string;
   focusArea?: string;
@@ -285,6 +317,91 @@ export class ChatService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       return response.blob();
+    });
+  }
+
+  // ===== Multi-chapter lesson plan workflow =====
+
+  parseChapters(input: LessonPlanChapterParseInput): Observable<LessonPlanStreamEvent> {
+    return this.streamLessonPlanEvent(`${this.apiUrl}/parse-chapters`, input);
+  }
+
+  generateMultiChapterLessonPlan(input: MultiChapterLessonPlanGenerationInput): Observable<LessonPlanStreamEvent> {
+    return this.streamLessonPlanEvent(`${this.apiUrl}/generate-multi-chapter-lesson-plan`, input);
+  }
+
+  exportMultiChapterLessonPlanDocx(lessonPlanJson: string): Promise<Blob> {
+    return fetch(`${this.apiUrl}/export-multi-chapter-lesson-plan-docx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ lessonPlanJson }),
+    }).then(async response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.blob();
+    });
+  }
+
+  private streamLessonPlanEvent(url: string, body: unknown): Observable<LessonPlanStreamEvent> {
+    return new Observable<LessonPlanStreamEvent>(observer => {
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      }).then(async response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          observer.complete();
+          return;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const chunk = JSON.parse(line.slice(6));
+                this.ngZone.run(() => {
+                  observer.next({
+                    content: chunk.content ?? undefined,
+                    message: chunk.message ?? undefined,
+                    progress: chunk.progress ?? 0,
+                    chapterIndex: chunk.chapterIndex ?? null,
+                    chapterTotal: chunk.chapterTotal ?? null,
+                    isComplete: chunk.isComplete ?? false,
+                    isError: chunk.isError ?? false,
+                    resultJson: chunk.resultJson ?? undefined,
+                  });
+                });
+              } catch {
+                // skip malformed JSON
+              }
+            }
+          }
+        }
+
+        this.ngZone.run(() => observer.complete());
+      }).catch(err => {
+        this.ngZone.run(() => observer.error(err));
+      });
+
+      return () => {};
     });
   }
 

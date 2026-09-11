@@ -13,16 +13,76 @@ public static class LessonPlanDocxGenerator
         using var ms = new MemoryStream();
         var doc = new XWPFDocument();
 
-        // Title
+        AppendTitle(doc, lessonPlan.Title);
+        AppendInfoTable(doc, lessonPlan.Subject, lessonPlan.Grade, lessonPlan.Duration);
+        AppendLessonPlanBody(doc, lessonPlan);
+
+        doc.Write(ms);
+        return ms.ToArray();
+    }
+
+    /// <summary>
+    /// 生成""课程总览 + 每章独立教案""的整体教案 DOCX。
+    /// </summary>
+    public static byte[] GenerateMultiChapter(MultiChapterLessonPlanDto plan)
+    {
+        using var ms = new MemoryStream();
+        var doc = new XWPFDocument();
+
+        // 封面标题
+        AppendTitle(doc, string.IsNullOrWhiteSpace(plan.CourseTitle) ? "课程教案" : plan.CourseTitle);
+        AppendInfoTable(doc, plan.Subject, plan.Grade, plan.Duration);
+
+        // 课程总览
+        if (plan.CourseObjectives.Count > 0)
+        {
+            AddSection(doc, "课程总体教学目标", plan.CourseObjectives);
+        }
+
+        // 各章节
+        for (var i = 0; i < plan.Chapters.Count; i++)
+        {
+            var chapter = plan.Chapters[i];
+
+            if (i > 0)
+            {
+                var breakPara = doc.CreateParagraph();
+                breakPara.CreateRun().AddBreak(BreakType.PAGE);
+            }
+
+            var headingText = string.IsNullOrWhiteSpace(chapter.ChapterTitle)
+                ? $"第 {chapter.Order} 章"
+                : $"第 {chapter.Order} 章  {chapter.ChapterTitle}";
+
+            var headingPara = doc.CreateParagraph();
+            headingPara.SpacingBefore = 200;
+            headingPara.SpacingAfter = 100;
+            var headingRun = headingPara.CreateRun();
+            headingRun.SetText(headingText);
+            headingRun.FontSize = 16;
+            headingRun.IsBold = true;
+            headingRun.FontFamily = "微软雅黑";
+
+            AppendLessonPlanBody(doc, chapter.LessonPlan);
+        }
+
+        doc.Write(ms);
+        return ms.ToArray();
+    }
+
+    private static void AppendTitle(XWPFDocument doc, string title)
+    {
         var titlePara = doc.CreateParagraph();
         titlePara.Alignment = ParagraphAlignment.CENTER;
         var titleRun = titlePara.CreateRun();
-        titleRun.SetText(lessonPlan.Title);
+        titleRun.SetText(title);
         titleRun.FontSize = 22;
         titleRun.IsBold = true;
         titleRun.FontFamily = "微软雅黑";
+    }
 
-        // Basic info table
+    private static void AppendInfoTable(XWPFDocument doc, string subject, string grade, int duration)
+    {
         doc.CreateParagraph(); // blank line
         var infoTable = doc.CreateTable(1, 4);
         infoTable.SetColumnWidth(0, 3000);
@@ -31,21 +91,18 @@ public static class LessonPlanDocxGenerator
         infoTable.SetColumnWidth(3, 3000);
 
         var row = infoTable.GetRow(0);
-        SetCellText(row.GetCell(0), $"学科：{lessonPlan.Subject}");
-        SetCellText(row.GetCell(1), $"年级：{lessonPlan.Grade}");
-        SetCellText(row.GetCell(2), $"课时：{lessonPlan.Duration}分钟");
+        SetCellText(row.GetCell(0), $"学科：{subject}");
+        SetCellText(row.GetCell(1), $"年级：{grade}");
+        SetCellText(row.GetCell(2), $"课时：{duration}分钟");
         SetCellText(row.GetCell(3), $"生成日期：{DateTime.Now:yyyy-MM-dd}");
+    }
 
-        // Objectives
+    private static void AppendLessonPlanBody(XWPFDocument doc, LessonPlanDto lessonPlan)
+    {
         AddSection(doc, "教学目标", lessonPlan.Objectives);
-
-        // Key Points
         AddSection(doc, "教学重点", lessonPlan.KeyPoints);
-
-        // Difficulties
         AddSection(doc, "教学难点", lessonPlan.Difficulties);
 
-        // Teaching sections
         AddHeading(doc, "教学环节");
         foreach (var section in lessonPlan.Sections)
         {
@@ -75,20 +132,10 @@ public static class LessonPlanDocxGenerator
             doc.CreateParagraph(); // blank line
         }
 
-        // Methods
         AddSection(doc, "教学方法", lessonPlan.Methods);
-
-        // Resources
         AddSection(doc, "教学资源", lessonPlan.Resources);
-
-        // Assessment
         AddSection(doc, "评估方法", lessonPlan.Assessment);
-
-        // Homework
         AddSection(doc, "课后作业", lessonPlan.Homework);
-
-        doc.Write(ms);
-        return ms.ToArray();
     }
 
     private static void AddHeading(XWPFDocument doc, string text)

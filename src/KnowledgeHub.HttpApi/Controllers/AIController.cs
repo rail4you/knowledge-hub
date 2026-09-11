@@ -176,6 +176,86 @@ public class AIController : AbpControllerBase
             fileName);
     }
 
+    /// <summary>
+    /// 多章节 步骤一：从文档中解析章节，流式返回 JSON 片段。
+    /// </summary>
+    [HttpPost("parse-chapters")]
+    [Authorize(KnowledgeHubPermissions.AI.LessonPlan)]
+    [IgnoreAntiforgeryToken]
+    public async Task ParseChapters([FromBody] LessonPlanChapterParseInputDto input)
+    {
+        var httpContext = HttpContext;
+
+        if (!CurrentUser.IsAuthenticated)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await httpContext.Response.WriteAsJsonAsync(new { error = "User not logged in" });
+            return;
+        }
+
+        await StartSseAsync(httpContext);
+
+        await _lessonPlanAppService.ParseChaptersStreamingAsync(input, async evt =>
+        {
+            var json = JsonSerializer.Serialize(evt, JsonOptions);
+            await httpContext.Response.WriteAsync($"data: {json}\n\n");
+            await httpContext.Response.Body.FlushAsync();
+        });
+    }
+
+    /// <summary>
+    /// 多章节 步骤二：基于用户确认的章节生成""课程总览 + 每章独立教案""，
+    /// 流式返回进度事件，完成后一次性下发结果 JSON。
+    /// </summary>
+    [HttpPost("generate-multi-chapter-lesson-plan")]
+    [Authorize(KnowledgeHubPermissions.AI.LessonPlan)]
+    [IgnoreAntiforgeryToken]
+    public async Task GenerateMultiChapterLessonPlan([FromBody] MultiChapterLessonPlanGenerationInputDto input)
+    {
+        var httpContext = HttpContext;
+
+        if (!CurrentUser.IsAuthenticated)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await httpContext.Response.WriteAsJsonAsync(new { error = "User not logged in" });
+            return;
+        }
+
+        await StartSseAsync(httpContext);
+
+        await _lessonPlanAppService.GenerateMultiChapterStreamingAsync(input, async evt =>
+        {
+            var json = JsonSerializer.Serialize(evt, JsonOptions);
+            await httpContext.Response.WriteAsync($"data: {json}\n\n");
+            await httpContext.Response.Body.FlushAsync();
+        });
+    }
+
+    [HttpPost("export-multi-chapter-lesson-plan-docx")]
+    [Authorize(KnowledgeHubPermissions.AI.LessonPlan)]
+    [IgnoreAntiforgeryToken]
+    public IActionResult ExportMultiChapterLessonPlanDocx([FromBody] MultiChapterLessonPlanExportInputDto input)
+    {
+        var docxBytes = _lessonPlanAppService.ExportMultiChapterDocx(input.LessonPlanJson);
+        var fileName = $"多章节教案_{DateTime.Now:yyyyMMdd_HHmmss}.docx";
+
+        return File(docxBytes,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            fileName);
+    }
+
+    private static async Task StartSseAsync(HttpContext httpContext)
+    {
+        httpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
+
+        httpContext.Response.ContentType = "text/event-stream";
+        httpContext.Response.Headers["Cache-Control"] = "no-cache";
+        httpContext.Response.Headers["Connection"] = "keep-alive";
+        httpContext.Response.Headers["X-Accel-Buffering"] = "no";
+
+        await httpContext.Response.StartAsync();
+    }
+
     [HttpPost("generate-case-analysis")]
     [Authorize(KnowledgeHubPermissions.AI.CaseAnalysis)]
     [IgnoreAntiforgeryToken]
