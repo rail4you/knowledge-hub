@@ -237,7 +237,9 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
   private currentAbsoluteZoom = 1;
   /** 首次适配是否已执行，避免后续 ngOnChanges 重新适配 */
   private hasInitiallyFit = false;
-  /** 当前非叶子节点标签位置：缩放小时从 'right' 改为 'bottom' 避免重叠 */
+  /** 非叶子节点标签位置：固定 'right'。曾按缩放动态切换到 'bottom'，
+   * 但 treeRoam 回调里任何 setOption 都会重建整棵树、丢弃用户展开状态，
+   * 故缩放路径上禁止 setOption，此处保持固定。 */
   private nonLeafLabelPosition: 'right' | 'bottom' = 'right';
   /**
    * 下一次 treeRoam 是由本组件派发的"回滚"事件，用于把视觉缩放拉回边界。
@@ -460,16 +462,12 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
         this.currentAbsoluteZoom = targetZoom;
         const pct = Math.round(targetZoom * 100);
         this.zoomPercent.set(pct);
-
-        // 缩放比例较小时非叶子节点标签改到下方，避免长标题重叠
-        const wantBottom = pct <= 70;
-        if (wantBottom !== (this.nonLeafLabelPosition === 'bottom')) {
-          this.nonLeafLabelPosition = wantBottom ? 'bottom' : 'right';
-          // 只更新 label 位置，不重建整张图
-          this.chart?.setOption({
-            series: [{ label: { position: this.nonLeafLabelPosition } }]
-          });
-        }
+        // 注意：此处绝不能调用 chart.setOption（即使是 merge 模式）。
+        // ECharts tree 系列每次 setOption 都会按 option.data + initialTreeDepth
+        // 重建整棵树，用户通过点击节点产生的运行时展开/折叠状态（isExpand）
+        // 会被丢弃、回退到初始折叠态。这就是“展开后一滚轮缩放就复原”的根因。
+        // 非叶子标签位置固定为 'right'，靠 labelLayout.hideOverlap 避让，
+        // 缩放只走 treeRoam action，不重建数据，展开状态自然保留。
       }
     });
 
