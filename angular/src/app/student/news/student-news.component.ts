@@ -7,6 +7,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NewsArticleDto, NewsCategoryDto, NewsService } from '../../news/news.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { HeadlineHeroComponent } from '../shared/headline-hero/headline-hero.component';
 
 interface StatItem {
@@ -16,6 +17,9 @@ interface StatItem {
   icon: string;
   color: string;
 }
+
+/** 资讯列表页缓存命名空间（通用 ClientCacheService，TTL 60s） */
+const NEWS_CACHE_NS = 'student.news';
 
 @Component({
   selector: 'app-student-news',
@@ -37,6 +41,7 @@ export class StudentNewsComponent implements OnInit {
   private readonly newsService = inject(NewsService);
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly loading = signal(false);
   readonly articles = signal<NewsArticleDto[]>([]);
@@ -106,7 +111,7 @@ export class StudentNewsComponent implements OnInit {
   }
 
   loadCategories(): void {
-    this.newsService.getCategoryTree().subscribe({
+    this.cache.load<NewsCategoryDto[]>(NEWS_CACHE_NS, 'categories', () => this.newsService.getCategoryTree()).subscribe({
       next: categories => {
         this.categories.set(categories || []);
       },
@@ -114,10 +119,9 @@ export class StudentNewsComponent implements OnInit {
   }
 
   loadArticles(): void {
-    this.loading.set(true);
     const attr = this.attrFilter();
     const time = this.timeRange();
-    this.newsService.getPublishedArticles({
+    const input = {
       filter: this.filter() || undefined,
       categoryId: this.categoryId() || undefined,
       isTop: attr === 'top' ? true : attr === 'normal' ? false : undefined,
@@ -126,7 +130,10 @@ export class StudentNewsComponent implements OnInit {
       publishedBefore: time.before,
       skipCount: 0,
       maxResultCount: 30,
-    }).subscribe({
+    };
+
+    this.loading.set(true);
+    this.cache.load<any>(NEWS_CACHE_NS, `list:${JSON.stringify(input)}`, () => this.newsService.getPublishedArticles(input)).subscribe({
       next: result => {
         this.articles.set(result.items || []);
         this.totalCount.set(result.totalCount || 0);
@@ -140,18 +147,18 @@ export class StudentNewsComponent implements OnInit {
   }
 
   loadHotArticles(): void {
-    this.newsService.getHotArticles().subscribe({
+    this.cache.load<NewsArticleDto[]>(NEWS_CACHE_NS, 'hot', () => this.newsService.getHotArticles()).subscribe({
       next: items => this.hotArticles.set(items || []),
     });
   }
 
   /** 拉取头条文章（isTop=true，按发布时间倒序，取前 4 篇） */
   loadHeadlineArticles(): void {
-    this.newsService.getPublishedArticles({
+    this.cache.load<any>(NEWS_CACHE_NS, 'headlines', () => this.newsService.getPublishedArticles({
       isTop: true,
       skipCount: 0,
       maxResultCount: 4,
-    }).subscribe({
+    })).subscribe({
       next: result => this.headlineArticles.set(result.items || []),
       error: () => this.headlineArticles.set([]),
     });

@@ -14,6 +14,7 @@ import { NzTimelineModule } from 'ng-zorro-antd/timeline';
 import { Subject, takeUntil } from 'rxjs';
 import { EmploymentService } from '../../employment/employment.service';
 import { ChatService } from '../../ai/services/chat.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 interface GuidanceAssessment {
@@ -96,6 +97,7 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
   private readonly employmentService = inject(EmploymentService);
   private readonly chatService = inject(ChatService);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
   private readonly destroy$ = new Subject<void>();
 
   readonly items = signal<GuidanceListItem[]>([]);
@@ -130,7 +132,7 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
 
   reload(): void {
     this.loading.set(true);
-    this.employmentService.getMyGuidanceRecordList({ skipCount: 0, maxResultCount: 100 })
+    this.cache.load<any>('student.employment', 'guidance-list', () => this.employmentService.getMyGuidanceRecordList({ skipCount: 0, maxResultCount: 100 }))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: result => {

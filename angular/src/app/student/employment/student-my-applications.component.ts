@@ -16,6 +16,7 @@ import {
   InterviewScheduleDto,
   JobApplicationDto,
 } from '../../employment/employment.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentJobDetailModalComponent } from './student-job-detail-modal.component';
 
 @Component({
@@ -33,6 +34,7 @@ import { StudentJobDetailModalComponent } from './student-job-detail-modal.compo
 export class StudentMyApplicationsComponent implements OnInit {
   private readonly employmentService = inject(EmploymentService);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly items = signal<JobApplicationDto[]>([]);
   readonly loading = signal(false);
@@ -68,11 +70,12 @@ export class StudentMyApplicationsComponent implements OnInit {
 
   loadItems(): void {
     this.loading.set(true);
-    this.employmentService.getMyApplicationList({
+    const input = {
       status: this.statusFilter() ?? undefined,
       skipCount: (this.pageIndex() - 1) * this.pageSize(),
       maxResultCount: this.pageSize(),
-    }).subscribe({
+    };
+    this.cache.load<any>('student.employment', `applications:${JSON.stringify(input)}`, () => this.employmentService.getMyApplicationList(input)).subscribe({
       next: result => {
         const apps = result.items || [];
         this.items.set(apps);
@@ -91,7 +94,7 @@ export class StudentMyApplicationsComponent implements OnInit {
   }
 
   private loadInterviews(): void {
-    this.employmentService.getInterviewList({ skipCount: 0, maxResultCount: 200 }).subscribe({
+    this.cache.load<any>('student.employment', 'interviews', () => this.employmentService.getInterviewList({ skipCount: 0, maxResultCount: 200 })).subscribe({
       next: result => {
         const map: Record<string, InterviewScheduleDto> = {};
         for (const iv of (result.items || [])) {

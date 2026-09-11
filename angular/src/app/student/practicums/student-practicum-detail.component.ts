@@ -18,6 +18,7 @@ import type { PracticumProjectDetailDto, PracticumMaterialDto, PracticumGuidance
 import type { PracticumSimulationDto } from '../../proxy/practicums/simulations/models';
 import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
 import { OssUploadService } from '../../shared/oss-upload.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 
 @Component({
   selector: 'app-student-practicum-detail',
@@ -38,6 +39,7 @@ export class StudentPracticumDetailComponent implements OnInit {
   private readonly simulationService = inject(PracticumSimulationService);
   private readonly ossUploadService = inject(OssUploadService);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly detail = signal<PracticumProjectDetailDto | null>(null);
   readonly simulations = signal<PracticumSimulationDto[]>([]);
@@ -64,8 +66,8 @@ export class StudentPracticumDetailComponent implements OnInit {
   loadDetailAndSimulations(id: string): void {
     this.loading.set(true);
     forkJoin({
-      detail: this.practicumService.getDetail(id),
-      simulations: this.simulationService.getListByProject(id),
+      detail: this.cache.load<any>('student.practicums', `detail:${id}`, () => this.practicumService.getDetail(id)),
+      simulations: this.cache.load<any>('student.practicums', `simulations:${id}`, () => this.simulationService.getListByProject(id)),
     }).subscribe({
       next: ({ detail, simulations }) => {
         this.detail.set({
@@ -85,7 +87,7 @@ export class StudentPracticumDetailComponent implements OnInit {
 
   loadMyProgress(projectId: string): void {
     const enrollmentId = this.detail()?.currentUserEnrollmentId;
-    this.practicumService.getMyEnrollments().subscribe({
+    this.cache.load<any[]>('student.practicums', 'my-enrollments', () => this.practicumService.getMyEnrollments()).subscribe({
       next: list => {
         const mine = (list || []).find(e => e.projectId === projectId && (enrollmentId ? e.id === enrollmentId : true));
         this.enrollment.set(mine ?? null);
@@ -99,7 +101,7 @@ export class StudentPracticumDetailComponent implements OnInit {
 
   loadGuidance(enrollmentId: string): void {
     this.guidanceLoading.set(true);
-    this.practicumService.getGuidanceList(enrollmentId).subscribe({
+    this.cache.load<any[]>('student.practicums', `guidance:${enrollmentId}`, () => this.practicumService.getGuidanceList(enrollmentId)).subscribe({
       next: list => {
         this.guidanceItems.set(list || []);
         this.guidanceLoading.set(false);
@@ -120,6 +122,7 @@ export class StudentPracticumDetailComponent implements OnInit {
     this.practicumService.enroll(id).subscribe({
       next: () => {
         this.message.success('报名成功，等待教师审核');
+        this.cache.clear('student.practicums');
         this.loadDetailAndSimulations(id);
       },
       error: () => this.message.error('报名失败'),
@@ -182,6 +185,7 @@ export class StudentPracticumDetailComponent implements OnInit {
         this.submitModalVisible.set(false);
         this.message.success('提交成功');
         if (this.detail()?.currentUserEnrollmentId) {
+          this.cache.clear('student.practicums');
           this.loadMyProgress(this.detail()!.id);
         }
       },

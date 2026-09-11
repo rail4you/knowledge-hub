@@ -10,6 +10,10 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { ResourceReviewService, ResourceReviewDto, ResourceRatingSummaryDto, CreateResourceReviewInput, UpdateResourceReviewInput } from './resource-review.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
+
+/** 评价数据缓存命名空间（通用 ClientCacheService，TTL 60s）。提交/更新/删除后走 refresh() 强制刷新。 */
+const REVIEW_CACHE_NS = 'student.resource-review';
 
 @Component({
   selector: 'app-resource-review',
@@ -39,6 +43,7 @@ export class ResourceReviewComponent implements OnInit, OnChanges {
 
   private readonly reviewService = inject(ResourceReviewService);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   summary = signal<ResourceRatingSummaryDto | null>(null);
   reviews = signal<ResourceReviewDto[]>([]);
@@ -116,37 +121,51 @@ export class ResourceReviewComponent implements OnInit, OnChanges {
   }
 
   private refresh() {
-    this.loadedForResourceId = '';
-    this.reloadIfNeeded();
+    this.loadedForResourceId = this.resourceId;
+    this.resetForm();
+    this.loadSummary(true);
+    this.loadReviews(true);
     this.reviewChanged.emit();
   }
 
-  private loadSummary() {
+  private loadSummary(force = false) {
     if (!this.resourceId) return;
     const rid = this.resourceId;
-    this.reviewService.getRatingSummary(rid).subscribe({
+    const loader = () => this.reviewService.getRatingSummary(rid);
+    const request$ = force
+      ? this.cache.reload<ResourceRatingSummaryDto>(REVIEW_CACHE_NS, `summary:${rid}`, loader)
+      : this.cache.load<ResourceRatingSummaryDto>(REVIEW_CACHE_NS, `summary:${rid}`, loader);
+    request$.subscribe({
       next: (data) => {
         // 防止切换资源时的竞态：只接受当前资源的响应
         if (rid !== this.resourceId) return;
-        this.summary.set(data);
-        if (data.myReview) {
-          this.myRating.set(data.myReview.rating);
-          this.myContent.set(data.myReview.content || '');
-          this.editingReviewId.set(data.myReview.id);
-        } else {
-          this.myRating.set(0);
-          this.myContent.set('');
-          this.editingReviewId.set(null);
-        }
+        this.applySummary(data);
       }
     });
   }
 
-  private loadReviews() {
+  private applySummary(data: ResourceRatingSummaryDto) {
+    this.summary.set(data);
+    if (data.myReview) {
+      this.myRating.set(data.myReview.rating);
+      this.myContent.set(data.myReview.content || '');
+      this.editingReviewId.set(data.myReview.id);
+    } else {
+      this.myRating.set(0);
+      this.myContent.set('');
+      this.editingReviewId.set(null);
+    }
+  }
+
+  private loadReviews(force = false) {
     if (!this.resourceId) return;
     const rid = this.resourceId;
+    const loader = () => this.reviewService.getResourceReviews(rid, 0, 50);
+    const request$ = force
+      ? this.cache.reload<ResourceReviewDto[]>(REVIEW_CACHE_NS, `reviews:${rid}`, loader)
+      : this.cache.load<ResourceReviewDto[]>(REVIEW_CACHE_NS, `reviews:${rid}`, loader);
     this.loading.set(true);
-    this.reviewService.getResourceReviews(rid, 0, 50).subscribe({
+    request$.subscribe({
       next: (data) => {
         if (rid !== this.resourceId) return;
         this.reviews.set(data);

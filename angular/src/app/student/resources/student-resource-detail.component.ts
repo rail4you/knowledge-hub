@@ -3,6 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AuthService } from '@abp/ng.core';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzRateModule } from 'ng-zorro-antd/rate';
@@ -18,6 +19,10 @@ import { ResourceReviewComponent } from '../../search/resource-review/resource-r
 import { ResourceReviewService, type ResourceRatingSummaryDto } from '../../search/resource-review/resource-review.service';
 import { RecommendationService, type RecommendedResourceDto } from '../../search/recommendation/recommendation.service';
 import { AuthErrorService } from '../../core/auth/auth-error.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
+
+/** 资源详情页缓存命名空间（通用 ClientCacheService，TTL 60s） */
+const DETAIL_CACHE_NS = 'student.resource-detail';
 
 @Component({
   selector: 'app-student-resource-detail',
@@ -46,6 +51,8 @@ export class StudentResourceDetailComponent implements OnInit {
   private readonly reviewService = inject(ResourceReviewService);
   private readonly recommendationService = inject(RecommendationService);
   private readonly authErrorService = inject(AuthErrorService);
+  private readonly authService = inject(AuthService);
+  private readonly cache = inject(ClientCacheService);
   private readonly message = inject(NzMessageService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
@@ -77,7 +84,7 @@ export class StudentResourceDetailComponent implements OnInit {
 
   loadDetail(id: string) {
     this.loading.set(true);
-    this.resourceService.getWithVersions(id).subscribe({
+    this.cache.load<ResourceDto>(DETAIL_CACHE_NS, `resource:${id}`, () => this.resourceService.getWithVersions(id)).subscribe({
       next: (data) => {
         this.resource.set(data);
         this.loading.set(false);
@@ -100,20 +107,26 @@ export class StudentResourceDetailComponent implements OnInit {
   }
 
   loadCollectionStatus(id: string) {
-    this.resourceService.isCollected(id).subscribe({
+    // 游客无法收藏，跳过收藏状态查询
+    if (!this.authService.isAuthenticated) return;
+    this.cache.load<boolean>(DETAIL_CACHE_NS, `collected:${id}`, () => this.resourceService.isCollected(id)).subscribe({
       next: (v) => this.isCollected.set(!!v)
     });
   }
 
-  loadRatingSummary(id: string) {
-    this.reviewService.getRatingSummary(id).subscribe({
+  loadRatingSummary(id: string, force = false) {
+    const loader = () => this.reviewService.getRatingSummary(id);
+    const request$ = force
+      ? this.cache.reload<ResourceRatingSummaryDto>(DETAIL_CACHE_NS, `rating:${id}`, loader)
+      : this.cache.load<ResourceRatingSummaryDto>(DETAIL_CACHE_NS, `rating:${id}`, loader);
+    request$.subscribe({
       next: (s) => this.ratingSummary.set(s)
     });
   }
 
   loadRelated(id: string) {
     this.relatedLoading.set(true);
-    this.recommendationService.getRelatedResources(id, 8).subscribe({
+    this.cache.load<RecommendedResourceDto[]>(DETAIL_CACHE_NS, `related:${id}`, () => this.recommendationService.getRelatedResources(id, 8)).subscribe({
       next: (list) => {
         this.relatedResources.set(list || []);
         this.relatedLoading.set(false);
@@ -183,6 +196,7 @@ export class StudentResourceDetailComponent implements OnInit {
       next: () => {
         const next = !this.isCollected();
         this.isCollected.set(next);
+        this.cache.set(DETAIL_CACHE_NS, `collected:${r.id}`, next);
         this.message.success(next ? '已加入收藏' : '已取消收藏');
       },
       error: () => this.message.error('操作失败')
@@ -229,7 +243,7 @@ export class StudentResourceDetailComponent implements OnInit {
 
   onReviewChanged() {
     const r = this.resource();
-    if (r?.id) this.loadRatingSummary(r.id);
+    if (r?.id) this.loadRatingSummary(r.id, true);
   }
 
   getResourceTypeIcon(type?: number): string {

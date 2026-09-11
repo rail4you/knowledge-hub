@@ -14,6 +14,7 @@ import {
   JobPostingDto,
   StudentResumeDto,
 } from '../../employment/employment.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 
 @Component({
   selector: 'app-student-job-detail',
@@ -28,6 +29,7 @@ export class StudentJobDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly employmentService = inject(EmploymentService);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly job = signal<JobPostingDto | null>(null);
   readonly resumes = signal<StudentResumeDto[]>([]);
@@ -46,7 +48,7 @@ export class StudentJobDetailComponent implements OnInit {
     if (!id) { this.message.error('岗位不存在'); this.router.navigate(['/student/employment/jobs']); return; }
 
     this.loading.set(true);
-    this.employmentService.getJob(id).subscribe({
+    this.cache.load<JobPostingDto>('student.employment', `job:${id}`, () => this.employmentService.getJob(id)).subscribe({
       next: job => {
         this.job.set(job);
         this.loading.set(false);
@@ -56,7 +58,7 @@ export class StudentJobDetailComponent implements OnInit {
       error: () => { this.loading.set(false); this.message.error('加载岗位失败'); this.router.navigate(['/student/employment/jobs']); },
     });
 
-    this.employmentService.getMyResumeList().subscribe(items => {
+    this.cache.load<StudentResumeDto[]>('student.employment', 'resumes', () => this.employmentService.getMyResumeList()).subscribe(items => {
       const list = items || [];
       this.resumes.set(list);
       const d = list.find(x => x.isDefault) || list[0];
@@ -66,7 +68,7 @@ export class StudentJobDetailComponent implements OnInit {
 
   /** 加载该岗位关联的面试记录 */
   loadInterview(jobId: string): void {
-    this.employmentService.getInterviewList({ skipCount: 0, maxResultCount: 50 }).subscribe({
+    this.cache.load<any>('student.employment', 'interviews', () => this.employmentService.getInterviewList({ skipCount: 0, maxResultCount: 50 })).subscribe({
       next: result => {
         const list = (result.items || []).filter(x => x.jobPostingId === jobId);
         // 取最新一条
@@ -89,7 +91,9 @@ export class StudentJobDetailComponent implements OnInit {
       next: () => {
         this.message.success('投递成功！');
         this.submitting.set(false);
-        this.employmentService.getJob(j.id).subscribe(item => { this.job.set(item); if (item.hasApplied) this.loadInterview(item.id); });
+        this.cache.clear('student.employment');
+        this.cache.load<JobPostingDto>('student.employment', `job:${j.id}`, () => this.employmentService.getJob(j.id))
+          .subscribe(item => { this.job.set(item); if (item.hasApplied) this.loadInterview(item.id); });
       },
       error: () => { this.submitting.set(false); this.message.error('投递失败'); },
     });

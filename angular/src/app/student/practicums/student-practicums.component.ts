@@ -7,6 +7,7 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { PracticumService } from '../../proxy/practicums/practicum.service';
 import type { PracticumProjectDto } from '../../proxy/practicums/dtos/models';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
@@ -25,6 +26,7 @@ export class StudentPracticumsComponent implements OnInit {
   private readonly practicumService = inject(PracticumService);
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly items = signal<PracticumProjectDto[]>([]);
   readonly loading = signal(false);
@@ -52,10 +54,11 @@ export class StudentPracticumsComponent implements OnInit {
 
   loadItems(): void {
     this.loading.set(true);
-    this.practicumService.getPublished({
+    const key = `list:${this.pageIndex()}:${this.pageSize()}`;
+    this.cache.load<any>('student.practicums', key, () => this.practicumService.getPublished({
       skipCount: (this.pageIndex() - 1) * this.pageSize(),
       maxResultCount: this.pageSize(),
-    }).subscribe({
+    })).subscribe({
       next: result => {
         this.items.set(result.items || []);
         this.totalCount.set(result.totalCount || 0);
@@ -83,6 +86,8 @@ export class StudentPracticumsComponent implements OnInit {
     this.practicumService.enroll(item.id).subscribe({
       next: () => {
         this.message.success('报名成功，等待教师审核');
+        // 报名后清空该业务缓存，确保列表刷新
+        this.cache.clear('student.practicums');
         this.loadItems();
       },
       error: () => this.message.error('报名失败'),

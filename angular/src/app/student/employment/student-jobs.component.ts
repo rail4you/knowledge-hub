@@ -8,6 +8,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { EmploymentApplicationStatus, EmploymentJobType, EmploymentService, JobPostingDto } from '../../employment/employment.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentJobDetailModalComponent } from './student-job-detail-modal.component';
 import { StudentJobApplyModalComponent } from './student-job-apply-modal.component';
 
@@ -22,6 +23,7 @@ import { StudentJobApplyModalComponent } from './student-job-apply-modal.compone
 export class StudentJobsComponent implements OnInit {
   private readonly svc = inject(EmploymentService);
   private readonly msg = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly jobs = signal<JobPostingDto[]>([]);
   readonly loading = signal(false);
@@ -54,13 +56,19 @@ export class StudentJobsComponent implements OnInit {
 
   ngOnInit() { this.load(); }
 
-  load() {
+  load(force = false) {
     this.loading.set(true);
-    this.svc.getPublishedJobList({
+    const input = {
       filter: this.keyword() || undefined, location: this.location() || undefined,
       jobType: this.jobType() ?? undefined,
       skipCount: (this.pageIndex() - 1) * this.pageSize(), maxResultCount: this.pageSize(),
-    }).subscribe({
+    };
+    const loader = () => this.svc.getPublishedJobList(input);
+    const key = `jobs:${JSON.stringify(input)}`;
+    const request$ = force
+      ? this.cache.reload<any>('student.employment', key, loader)
+      : this.cache.load<any>('student.employment', key, loader);
+    request$.subscribe({
       next: r => { this.jobs.set(r.items || []); this.totalCount.set(r.totalCount || 0); this.loading.set(false); },
       error: () => { this.loading.set(false); this.msg.error('加载失败'); },
     });

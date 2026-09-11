@@ -9,6 +9,7 @@ import {
   EmploymentOutcomeStatus,
   EmploymentService,
 } from '../../employment/employment.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
@@ -26,6 +27,7 @@ import { StudentHeroComponent } from '../shared/student-hero/student-hero.compon
 export class StudentMyOutcomesComponent implements OnInit {
   private readonly employmentService = inject(EmploymentService);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly items = signal<EmploymentOutcomeDto[]>([]);
   readonly loading = signal(false);
@@ -60,7 +62,7 @@ export class StudentMyOutcomesComponent implements OnInit {
 
   reload(): void {
     this.loading.set(true);
-    this.employmentService.getOutcomeList({ skipCount: 0, maxResultCount: 100 }).subscribe({
+    this.cache.load<any>('student.employment', 'outcomes', () => this.employmentService.getOutcomeList({ skipCount: 0, maxResultCount: 100 })).subscribe({
       next: result => {
         this.items.set(result.items || []);
         this.loading.set(false);

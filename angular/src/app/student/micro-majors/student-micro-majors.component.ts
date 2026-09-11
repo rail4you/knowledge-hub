@@ -8,6 +8,7 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { MicroMajorService, MicroMajorEnrollmentStatus } from '../../micro-majors/micro-major.service';
 import type { MicroMajorDto, MicroMajorEnrollmentDto } from '../../micro-majors/micro-major.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 @Component({
@@ -26,6 +27,7 @@ export class StudentMicroMajorsComponent implements OnInit {
   private readonly microMajorService = inject(MicroMajorService);
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly items = signal<MicroMajorDto[]>([]);
   readonly enrollmentStatusMap = signal<Record<string, number>>({});
@@ -53,7 +55,7 @@ export class StudentMicroMajorsComponent implements OnInit {
   }
 
   loadEnrollmentStatus(): void {
-    this.microMajorService.getMyEnrollments().subscribe({
+    this.cache.load<MicroMajorEnrollmentDto[]>('student.micro-majors', 'my-enrollments', () => this.microMajorService.getMyEnrollments()).subscribe({
       next: enrollments => {
         const map: Record<string, number> = {};
         for (const e of enrollments) {
@@ -78,10 +80,11 @@ export class StudentMicroMajorsComponent implements OnInit {
 
   loadItems(): void {
     this.loading.set(true);
-    this.microMajorService.getPublished({
+    const key = `list:${this.pageIndex()}:${this.pageSize()}`;
+    this.cache.load<any>('student.micro-majors', key, () => this.microMajorService.getPublished({
       skipCount: (this.pageIndex() - 1) * this.pageSize(),
       maxResultCount: this.pageSize(),
-    }).subscribe({
+    })).subscribe({
       next: result => {
         this.items.set(result.items || []);
         this.totalCount.set(result.totalCount || 0);
@@ -109,7 +112,10 @@ export class StudentMicroMajorsComponent implements OnInit {
     this.microMajorService.enroll(item.id).subscribe({
       next: () => {
         this.message.success('报名成功，等待教师审核');
+        // 报名后列表与我的报名状态需刷新：清空该业务缓存再重新拉取
+        this.cache.clear('student.micro-majors');
         this.loadItems();
+        this.loadEnrollmentStatus();
         // 立即更新状态映射，不等异步返回
         this.enrollmentStatusMap.update(m => ({ ...m, [item.id!]: MicroMajorEnrollmentStatus.Pending }));
       },

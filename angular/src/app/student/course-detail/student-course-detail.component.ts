@@ -24,6 +24,7 @@ import type { LearningProgressDto, KnowledgeMasteryDto } from '../../proxy/learn
 import type { StudentExerciseRecordDto } from '../../proxy/learning/dtos/models';
 import { ChapterTreeGraphComponent } from '../../learning/knowledge-graph/chapter-tree-graph.component';
 import { MasteryRadarComponent, type RadarAxis } from '../../shared/charts/mastery-radar.component';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { VoiceContextService } from '../voice/voice-context.service';
 
 type TabKey = 'chapters' | 'graph' | 'progress' | 'related';
@@ -81,6 +82,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   private readonly recordService = inject(StudentExerciseRecordService);
   private readonly authService = inject(AuthService);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
   private readonly voiceContext = inject(VoiceContextService);
 
   readonly loading = signal(true);
@@ -259,7 +261,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
 
   loadCourse(id: string) {
     this.loading.set(true);
-    this.courseService.getDetail(id).subscribe({
+    this.cache.load<CourseDetailDto>('student.course-detail', `course:${id}`, () => this.courseService.getDetail(id)).subscribe({
       next: result => {
         this.course.set(result);
         this.loading.set(false);
@@ -280,7 +282,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
 
   loadChapters(courseId: string) {
     this.chaptersLoading.set(true);
-    this.chapterService.getChapterTree(courseId).subscribe({
+    this.cache.load<ChapterDto[]>('student.course-detail', `chapters:${courseId}`, () => this.chapterService.getChapterTree(courseId)).subscribe({
       next: data => {
         this.chapters.set(data || []);
         this.chaptersLoading.set(false);
@@ -467,7 +469,7 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
     };
     if (ids.length > 1) input['majorIds'] = ids;
     else if (singleId) input['majorId'] = singleId;
-    this.courseService.getPublished(input as any).subscribe({
+    this.cache.load<any>('student.course-detail', `related:${JSON.stringify(input)}`, () => this.courseService.getPublished(input as any)).subscribe({
       next: result => {
         const currentId = this.course()?.id;
         const wanted = new Set(ids);

@@ -13,6 +13,7 @@ import { LearningService } from '../../proxy/learning/learning.service';
 import type { CourseDto } from '../../proxy/courses/dtos/models';
 import type { StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
 import type { MicroMajorDetailDto, MicroMajorResourceDto } from '../../proxy/micro-majors/dtos/models';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 
 @Component({
   selector: 'app-student-micro-major-detail',
@@ -32,6 +33,7 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   private readonly courseService = inject(CourseService);
   private readonly learningService = inject(LearningService);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly detail = signal<MicroMajorDetailDto | null>(null);
   readonly resources = signal<MicroMajorResourceDto[]>([]);
@@ -88,7 +90,7 @@ export class StudentMicroMajorDetailComponent implements OnInit {
 
   loadDetail(id: string): void {
     this.loading.set(true);
-    this.microMajorService.getDetail(id).subscribe({
+    this.cache.load<MicroMajorDetailDto>('student.micro-majors', `detail:${id}`, () => this.microMajorService.getDetail(id)).subscribe({
       next: result => {
         this.detail.set(result);
         const courseIds = (result?.courses || [])
@@ -115,7 +117,8 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     // 单个课程失败不应阻断其他课程的加载
     forkJoin(
       courseIds.map(id =>
-        this.courseService.get(id).pipe(catchError(() => of(null as CourseDto | null)))
+        this.cache.load<CourseDto>('student.micro-majors', `course:${id}`, () => this.courseService.get(id))
+          .pipe(catchError(() => of(null as CourseDto | null)))
       )
     ).subscribe({
       next: results => {
@@ -133,14 +136,14 @@ export class StudentMicroMajorDetailComponent implements OnInit {
 
   /** 拉取当前用户的选课列表（与课程列表同一逻辑） */
   loadMyCourses(): void {
-    this.learningService.getMyCourses().subscribe({
+    this.cache.load<StudentCourseListItemDto[]>('student.my-courses', 'list', () => this.learningService.getMyCourses()).subscribe({
       next: list => this.myCourses.set(list || []),
       error: () => this.myCourses.set([]),
     });
   }
 
   loadResources(id: string): void {
-    this.microMajorService.getResources(id).pipe(
+    this.cache.load<MicroMajorResourceDto[]>('student.micro-majors', `resources:${id}`, () => this.microMajorService.getResources(id)).pipe(
       catchError(() => of([] as MicroMajorResourceDto[]))
     ).subscribe({
       next: result => this.resources.set(result || []),
@@ -211,6 +214,7 @@ export class StudentMicroMajorDetailComponent implements OnInit {
       next: () => {
         this.enrolling.set(null);
         this.message.success('选课成功');
+        this.cache.clear('student.my-courses');
         this.loadMyCourses();
       },
       error: (err: any) => {
@@ -227,7 +231,12 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     const id = this.detail()?.id;
     if (!id) return;
     this.microMajorService.enroll(id).subscribe({
-      next: () => { this.message.success('报名成功'); this.loadDetail(id); },
+      next: () => {
+        this.message.success('报名成功');
+        // 报名状态变化：清空微专业缓存后重新拉取详情
+        this.cache.clear('student.micro-majors');
+        this.loadDetail(id);
+      },
       error: (err: any) => {
         // 跨租户微专业后端会返回“不能跨院校报名…仅支持浏览”，直接展示服务端信息
         const msg = err?.error?.error?.message || err?.error?.message;

@@ -19,6 +19,7 @@ import {
   PracticumTimelineItemDto,
 } from '../../proxy/practicums/dtos/models';
 import { PracticumEnrollmentStatus } from '../../proxy/practicums/enums/practicum-enrollment-status.enum';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 echarts.use([PieChart, LineChart, CanvasRenderer, TooltipComponent, LegendComponent, GridComponent]);
@@ -39,6 +40,7 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
   private readonly practicumService = inject(PracticumService);
   private readonly router = inject(Router);
   private readonly message = inject(NzMessageService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly items = signal<PracticumEnrollmentDto[]>([]);
   readonly loading = signal(true);
@@ -91,7 +93,7 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
 
   reload(): void {
     this.loading.set(true);
-    this.practicumService.getMyEnrollments().subscribe({
+    this.cache.load<PracticumEnrollmentDto[]>('student.practicums', 'my-enrollments', () => this.practicumService.getMyEnrollments()).subscribe({
       next: items => {
         this.items.set(items || []);
         this.loading.set(false);
@@ -189,7 +191,7 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
     this.guidanceVisible.set(true);
     this.guidanceLoading.set(true);
     this.guidanceItems.set([]);
-    this.practicumService.getGuidanceList(item.id).subscribe({
+    this.cache.load<PracticumGuidanceRecordDto[]>('student.practicums', `guidance:${item.id}`, () => this.practicumService.getGuidanceList(item.id)).subscribe({
       next: list => {
         this.guidanceItems.set(list || []);
         this.guidanceLoading.set(false);
@@ -206,7 +208,7 @@ export class StudentMyPracticumsComponent implements OnInit, AfterViewInit, OnDe
     this.timelineVisible.set(true);
     this.timelineLoading.set(true);
     this.timelineItems.set([]);
-    this.practicumService.getTimeline(item.id).subscribe({
+    this.cache.load<PracticumTimelineItemDto[]>('student.practicums', `timeline:${item.id}`, () => this.practicumService.getTimeline(item.id)).subscribe({
       next: list => {
         this.timelineItems.set(list || []);
         this.timelineLoading.set(false);

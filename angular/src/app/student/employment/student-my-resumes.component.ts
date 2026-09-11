@@ -9,6 +9,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzUploadModule } from 'ng-zorro-antd/upload';
 import { CreateUpdateStudentResumeDto, EmploymentService, StudentResumeDto } from '../../employment/employment.service';
+import { ClientCacheService } from '../../shared/cache/client-cache.service';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 
 interface ResumeFormState extends CreateUpdateStudentResumeDto {
@@ -28,6 +29,7 @@ export class StudentMyResumesComponent implements OnInit {
   private readonly employmentService = inject(EmploymentService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
+  private readonly cache = inject(ClientCacheService);
 
   readonly items = signal<StudentResumeDto[]>([]);
   readonly loading = signal(false);
@@ -77,9 +79,13 @@ export class StudentMyResumesComponent implements OnInit {
     };
   }
 
-  reload(): void {
+  reload(force = false): void {
     this.loading.set(true);
-    this.employmentService.getMyResumeList().subscribe({
+    const loader = () => this.employmentService.getMyResumeList();
+    const request$ = force
+      ? this.cache.reload<StudentResumeDto[]>('student.employment', 'resumes', loader)
+      : this.cache.load<StudentResumeDto[]>('student.employment', 'resumes', loader);
+    request$.subscribe({
       next: items => {
         this.items.set(items || []);
         this.loading.set(false);
@@ -203,7 +209,7 @@ export class StudentMyResumesComponent implements OnInit {
           this.saving.set(false);
           this.message.success('简历已保存');
           this.closeModal();
-          this.reload();
+          this.reload(true);
         },
         error: () => {
           this.saving.set(false);
@@ -234,7 +240,7 @@ export class StudentMyResumesComponent implements OnInit {
     this.employmentService.setDefaultResume(item.id).subscribe({
       next: () => {
         this.message.success('已设为默认简历');
-        this.reload();
+        this.reload(true);
       },
       error: () => this.message.error('设置失败'),
     });
@@ -253,7 +259,7 @@ export class StudentMyResumesComponent implements OnInit {
           this.employmentService.deleteResume(item.id).subscribe({
             next: () => {
               this.message.success('简历已删除');
-              this.reload();
+              this.reload(true);
               resolve();
             },
             error: () => {
