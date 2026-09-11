@@ -76,25 +76,28 @@ export class AiTaskService {
       { apiName: this.apiName },
     );
 
-  getList = (input: GetAiGenerationTaskListDto = {}) =>
-    this.restService.request<any, PagedResultDto<AiGenerationTaskDto>>(
+  getList = (input: GetAiGenerationTaskListDto = {}) => {
+    const params: Record<string, any> = {
+      skipCount: input.skipCount ?? 0,
+      maxResultCount: input.maxResultCount ?? 10,
+    };
+    if (input.taskType !== undefined && input.taskType !== null) params.taskType = input.taskType;
+    if (input.status !== undefined && input.status !== null) params.status = input.status;
+    if (input.filter) params.filter = input.filter;
+    if (input.startTime) params.startTime = input.startTime;
+    if (input.endTime) params.endTime = input.endTime;
+    if (input.onlyMine !== undefined) params.onlyMine = input.onlyMine;
+    if (input.sorting) params.sorting = input.sorting;
+
+    return this.restService.request<any, PagedResultDto<AiGenerationTaskDto>>(
       {
         method: 'GET',
         url: '/api/app/ai-generation-task',
-        params: {
-          taskType: input.taskType,
-          status: input.status,
-          filter: input.filter,
-          startTime: input.startTime,
-          endTime: input.endTime,
-          onlyMine: input.onlyMine,
-          sorting: input.sorting,
-          skipCount: input.skipCount ?? 0,
-          maxResultCount: input.maxResultCount ?? 10,
-        },
+        params,
       },
       { apiName: this.apiName },
     );
+  };
 
   get = (id: string) =>
     this.restService.request<any, AiGenerationTaskDto>(

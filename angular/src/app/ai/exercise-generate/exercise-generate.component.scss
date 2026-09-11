@@ -385,6 +385,25 @@
   padding: 48px 0;
 }
 
+// 后台任务进度
+.task-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 0;
+
+  &__text {
+    color: #8c8c8c;
+    font-size: 13px;
+  }
+
+  &__bar {
+    width: 360px;
+    max-width: 80%;
+  }
+}
+
 // 生成结果
 .result-toolbar {
   display: flex;
@@ -399,6 +418,45 @@
   margin-right: auto;
 }
 
+.result-toolbar__spacer {
+  flex: none;
+}
+
+.result-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.result-search {
+  width: 260px;
+}
+
+.result-filter-select {
+  width: 140px;
+}
+
+.result-cell-title,
+.result-cell-content,
+.result-cell-answer {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-cell-title {
+  font-weight: 500;
+}
+
+.result-ops {
+  white-space: nowrap;
+}
+
+// 兼容旧结果卡片样式（保留避免影响其它引用）
 .result-list {
   display: flex;
   flex-direction: column;
@@ -477,6 +535,31 @@
   gap: 8px;
   font-size: 13px;
   color: rgba(0, 0, 0, 0.75);
+}
+
+.option-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__letter {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    border-radius: 50%;
+    background: rgba(24, 144, 255, 0.1);
+    color: #1890ff;
+    font-weight: 600;
+    font-size: 12px;
+  }
 }
 
 .option-letter {

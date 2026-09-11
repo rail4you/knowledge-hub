@@ -11,6 +11,8 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzProgressModule } from 'ng-zorro-antd/progress';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -26,7 +28,7 @@ import type { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dto
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { firstValueFrom, Subject, Subscription } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
+import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
 import { AiTaskNotificationService } from '../services/ai-task-notification.service';
 
 @Component({
@@ -45,6 +47,8 @@ import { AiTaskNotificationService } from '../services/ai-task-notification.serv
     NzTagModule,
     NzIconModule,
     NzSpinModule,
+    NzProgressModule,
+    NzTableModule,
     NzModalModule,
     NzFormModule,
     NzEmptyModule,
@@ -74,13 +78,78 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
   readonly selectedChapterIds = signal<string[]>([]);
   readonly exerciseType = signal<ExerciseType>(ExerciseType.SingleChoice);
   readonly difficulty = signal<number>(2);
-  readonly count = signal<number>(5);
+  readonly count = signal<number>(1);
   readonly topicHint = signal('');
   readonly customPrompt = signal('');
 
-  readonly generating = signal(false);
+  /** 确认框提交中（仅提交请求的短暂时长，提交成功后立即关闭弹窗） */
+  readonly submitting = signal(false);
+  /** 后台任务运行中（驱动结果 Tab 的进度展示） */
+  readonly taskRunning = signal(false);
+  readonly taskProgress = signal(0);
+  readonly taskMessage = signal('');
   readonly results = signal<ExerciseDto[]>([]);
   readonly activeTab = signal(0);
+
+  // ── 结果表格：搜索 / 筛选（客户端） ──
+  readonly resultKeyword = signal('');
+  readonly resultTypeFilter = signal<ExerciseType | null>(null);
+  readonly resultDifficultyFilter = signal<number | null>(null);
+  readonly resultSourceFilter = signal<'all' | 'ai' | 'manual'>('all');
+
+  readonly filteredResults = computed(() => {
+    const kw = this.resultKeyword().trim().toLowerCase();
+    const type = this.resultTypeFilter();
+    const difficulty = this.resultDifficultyFilter();
+    const source = this.resultSourceFilter();
+    return this.results().filter((e) => {
+      if (type !== null && e.type !== type) return false;
+      if (difficulty !== null && e.difficulty !== difficulty) return false;
+      if (source === 'ai' && !e.isAiGenerated) return false;
+      if (source === 'manual' && e.isAiGenerated) return false;
+      if (kw) {
+        const hit =
+          (e.title || '').toLowerCase().includes(kw) ||
+          (e.questionContent || '').toLowerCase().includes(kw) ||
+          (e.answer || '').toLowerCase().includes(kw);
+        if (!hit) return false;
+      }
+      return true;
+    });
+  });
+
+  // 显式分页（不依赖 nz-table 的前端分页 data，避免 OnPush 下首次渲染取不到数据）
+  readonly resultPageIndex = signal(1);
+  readonly resultPageSize = signal(10);
+  readonly pagedResults = computed(() => {
+    const start = (this.resultPageIndex() - 1) * this.resultPageSize();
+    return this.filteredResults().slice(start, start + this.resultPageSize());
+  });
+
+  readonly hasResultFilter = computed(
+    () =>
+      this.resultKeyword().trim() !== '' ||
+      this.resultTypeFilter() !== null ||
+      this.resultDifficultyFilter() !== null ||
+      this.resultSourceFilter() !== 'all',
+  );
+
+  clearResultFilter() {
+    this.resultKeyword.set('');
+    this.resultTypeFilter.set(null);
+    this.resultDifficultyFilter.set(null);
+    this.resultSourceFilter.set('all');
+    this.resultPageIndex.set(1);
+  }
+
+  onResultPageIndexChange(page: number) {
+    this.resultPageIndex.set(page);
+  }
+
+  onResultPageSizeChange(size: number) {
+    this.resultPageSize.set(size);
+    this.resultPageIndex.set(1);
+  }
 
   // ── 生成前确认（核对本次输入，确认后才真正生成） ──
   readonly confirmVisible = signal(false);
@@ -116,7 +185,7 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
   }
 
   closeConfirm() {
-    if (this.generating()) return;
+    if (this.submitting()) return;
     this.confirmVisible.set(false);
   }
 
@@ -295,7 +364,7 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
   editing: ExerciseDto | null = null;
   editTitle = '';
   editQuestionContent = '';
-  editOptionsText = '';
+  editOptions: string[] = [];
   editAnswer = '';
   editQuestionAnalysis = '';
   editDifficulty = 2;
@@ -313,6 +382,9 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
     const taskId = this.route.snapshot.queryParamMap.get('taskId');
     if (taskId) {
       this.loadTaskPreview(taskId);
+    } else {
+      // 从任务中心返回 / 切页回来时，恢复最近一次习题生成任务的状态与结果
+      this.loadLatestTask();
     }
   }
 
@@ -377,7 +449,7 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
       customPrompt: this.customPrompt().trim() || undefined,
     };
 
-    this.generating.set(true);
+    this.submitting.set(true);
     this.cancelTaskPolling();
     this.aiTaskService
       .create({
@@ -389,11 +461,18 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: (task) => {
+          // 提交成功后立即关闭确认框，任务转入后台执行，不再阻塞页面
+          this.submitting.set(false);
+          this.confirmVisible.set(false);
+          this.taskRunning.set(true);
+          this.taskProgress.set(0);
+          this.taskMessage.set('任务已提交，正在后台生成…');
+          this.activeTab.set(1);
           this.message.success('任务已提交后台生成，可切换页面，完成后会通知你');
           this.followTask(task.id);
         },
         error: (e) => {
-          this.generating.set(false);
+          this.submitting.set(false);
           this.message.error(e?.error?.error?.message || '提交任务失败，请重试');
         },
       });
@@ -407,23 +486,28 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (t) => {
+          if (t.status === AiTaskStatus.Pending || t.status === AiTaskStatus.Running) {
+            this.taskRunning.set(true);
+            this.taskProgress.set(t.progress ?? 0);
+            this.taskMessage.set(t.progressMessage || '生成中…');
+            return;
+          }
+
+          this.cancelTaskPolling();
+          this.taskRunning.set(false);
+
           if (t.status === AiTaskStatus.Completed) {
-            this.cancelTaskPolling();
-            this.generating.set(false);
             const exercises = this.parseExercises(t.resultJson);
             this.results.set(exercises);
-            this.message.success(`AI 已生成并保存 ${exercises.length} 道习题`);
-            this.confirmVisible.set(false);
             this.activeTab.set(1);
-          } else if (t.status === AiTaskStatus.Failed || t.status === AiTaskStatus.Cancelled) {
-            this.cancelTaskPolling();
-            this.generating.set(false);
+            this.message.success(`AI 已生成并保存 ${exercises.length} 道习题`);
+          } else {
             this.message.error(t.errorMessage || 'AI 生成失败，请重试');
           }
         },
         error: () => {
           this.cancelTaskPolling();
-          this.generating.set(false);
+          this.taskRunning.set(false);
           this.message.error('AI 生成失败，请重试');
         },
       });
@@ -439,19 +523,43 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
       .get(taskId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (task) => {
-          if (task.status === AiTaskStatus.Completed) {
-            this.results.set(this.parseExercises(task.resultJson));
-            this.activeTab.set(1);
-          } else if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
-            this.generating.set(true);
-            this.followTask(task.id);
-          } else {
-            this.message.error(task.errorMessage || '该任务未成功完成');
-          }
-        },
+        next: (task) => this.handleTask(task),
         error: () => this.message.error('加载任务结果失败'),
       });
+  }
+
+  /** 页面无 taskId 时，恢复当前用户最近一次习题生成任务 */
+  private loadLatestTask() {
+    this.aiTaskService
+      .getList({ taskType: AiTaskType.ExerciseGenerate, onlyMine: true, maxResultCount: 1 })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const task = res.items?.[0];
+          if (!task) return;
+          // 列表接口不返回 ResultJson（大字段），需再取详情才能拿到结果
+          this.aiTaskService
+            .get(task.id)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (full) => this.handleTask(full),
+              error: () => this.handleTask(task),
+            });
+        },
+      });
+  }
+
+  private handleTask(task: AiGenerationTaskDto) {
+    if (task.status === AiTaskStatus.Completed) {
+      this.results.set(this.parseExercises(task.resultJson));
+      this.activeTab.set(1);
+    } else if (task.status === AiTaskStatus.Pending || task.status === AiTaskStatus.Running) {
+      this.taskRunning.set(true);
+      this.taskProgress.set(task.progress ?? 0);
+      this.taskMessage.set(task.progressMessage || '后台生成中…');
+      this.activeTab.set(1);
+      this.followTask(task.id);
+    }
   }
 
   private parseExercises(raw?: string | null): ExerciseDto[] {
@@ -464,10 +572,15 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
     }
   }
 
-  goChapterExercise() {
-    const courseId = this.courseId();
+  /** 单题「去章节关联」：定位到该题所属课程 + 主章节 */
+  goChapterExerciseFor(e: ExerciseDto) {
+    const courseId = e.courseId || this.courseId();
+    const chapterId = e.chapterId || e.chapterIds?.[0] || this.selectedChapterIds()[0] || null;
+    const queryParams: Record<string, string> = {};
+    if (courseId) queryParams['courseId'] = courseId;
+    if (chapterId) queryParams['chapterId'] = chapterId;
     this.router.navigate(['/learning/chapter-exercise'], {
-      queryParams: courseId ? { courseId } : undefined,
+      queryParams: Object.keys(queryParams).length > 0 ? queryParams : undefined,
     });
   }
 
@@ -491,12 +604,28 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
     this.editing = e;
     this.editTitle = e.title || '';
     this.editQuestionContent = e.questionContent || '';
-    this.editOptionsText = this.parseOptions(e).join('\n');
+    this.editOptions = this.parseOptions(e);
+    if (this.isChoice(e) && this.editOptions.length < 4) {
+      while (this.editOptions.length < 4) this.editOptions.push('');
+    }
     this.editAnswer = e.answer || '';
     this.editQuestionAnalysis = e.questionAnalysis || '';
     this.editDifficulty = e.difficulty ?? 2;
     this.editScore = e.score ?? 1;
     this.editVisible.set(true);
+  }
+
+  addEditOption() {
+    if (this.editOptions.length >= 8) return;
+    this.editOptions = [...this.editOptions, ''];
+  }
+
+  removeEditOption(index: number) {
+    this.editOptions = this.editOptions.filter((_, i) => i !== index);
+  }
+
+  updateEditOption(index: number, value: string) {
+    this.editOptions = this.editOptions.map((opt, i) => (i === index ? value : opt));
   }
 
   closeEdit() {
@@ -519,10 +648,7 @@ export class ExerciseGenerateComponent implements OnInit, OnDestroy {
       type: this.editing.type,
       options: this.isChoice(this.editing)
         ? JSON.stringify(
-            this.editOptionsText
-              .split('\n')
-              .map(s => s.trim())
-              .filter(s => s.length > 0)
+            this.editOptions.map(s => (s ?? '').trim()).filter(s => s.length > 0)
           )
         : this.editing.options,
       answer: this.editAnswer.trim(),

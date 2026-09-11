@@ -23,6 +23,7 @@ import type { CourseDto, ChapterDto } from '../../proxy/courses/dtos/models';
 import type { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
 import { Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -56,6 +57,11 @@ export class ChapterExerciseComponent implements OnInit {
   private readonly exerciseService = inject(ExerciseService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  /** 从其它页面跳转进来时待选中的课程 / 章节（等数据加载完成后再选） */
+  private pendingCourseId: string | null = null;
+  private pendingChapterId: string | null = null;
 
   readonly courses = signal<CourseDto[]>([]);
   readonly selectedCourseId = signal<string | null>(null);
@@ -213,13 +219,22 @@ export class ChapterExerciseComponent implements OnInit {
   });
 
   ngOnInit() {
+    this.pendingCourseId = this.route.snapshot.queryParamMap.get('courseId');
+    this.pendingChapterId = this.route.snapshot.queryParamMap.get('chapterId');
     this.loadCourses();
   }
 
   loadCourses() {
     this.courseService.getList({ maxResultCount: 100, skipCount: 0 } as any).subscribe({
       next: result => {
-        this.courses.set(result.items || []);
+        const items = result.items || [];
+        this.courses.set(items);
+        // 带 courseId 跳转进来：课程加载完成后自动选中并加载章节
+        if (this.pendingCourseId && items.some(c => c.id === this.pendingCourseId)) {
+          const courseId = this.pendingCourseId;
+          this.pendingCourseId = null;
+          this.onCourseSelected(courseId);
+        }
       },
     });
   }
@@ -244,9 +259,45 @@ export class ChapterExerciseComponent implements OnInit {
         this.chapters.set(list);
         // 默认只展开顶级章节
         const expanded = new Set<string>(list.map(n => n.id!).filter(Boolean));
+
+        // 带 chapterId 跳转进来：章节树加载完成后自动选中该章节并展开其祖先链
+        const pendingChapterId = this.pendingChapterId;
+        if (pendingChapterId) {
+          const node = this.findChapterNode(list, pendingChapterId);
+          if (node) {
+            this.expandAncestors(list, pendingChapterId, expanded);
+            this.expandedNodes.set(new Set(expanded));
+            this.pendingChapterId = null;
+            this.selectChapter(node);
+            return;
+          }
+        }
+
         this.expandedNodes.set(expanded);
       },
     });
+  }
+
+  /** 深度优先查找章节节点 */
+  private findChapterNode(nodes: ChapterDto[], id: string): ChapterDto | null {
+    for (const n of nodes) {
+      if (n.id === id) return n;
+      const found = this.findChapterNode(n.children || [], id);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  /** 将包含目标章节的所有祖先节点加入展开集合，返回目标是否在该子树内 */
+  private expandAncestors(nodes: ChapterDto[], targetId: string, expanded: Set<string>): boolean {
+    for (const n of nodes) {
+      if (n.id === targetId) return true;
+      if (n.children?.length && this.expandAncestors(n.children, targetId, expanded)) {
+        if (n.id) expanded.add(n.id);
+        return true;
+      }
+    }
+    return false;
   }
 
   loadCourseExercises() {
