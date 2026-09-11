@@ -22,6 +22,7 @@ import { ExerciseService } from '../../proxy/exams/exercise.service';
 import type { CourseDto, ChapterDto } from '../../proxy/courses/dtos/models';
 import type { CreateUpdateExerciseDto, ExerciseDto } from '../../proxy/exams/dtos/models';
 import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -54,6 +55,7 @@ export class ChapterExerciseComponent implements OnInit {
   private readonly chapterService = inject(ChapterService);
   private readonly exerciseService = inject(ExerciseService);
   private readonly message = inject(NzMessageService);
+  private readonly router = inject(Router);
 
   readonly courses = signal<CourseDto[]>([]);
   readonly selectedCourseId = signal<string | null>(null);
@@ -147,15 +149,21 @@ export class ChapterExerciseComponent implements OnInit {
     return set;
   });
 
-  /** 弹窗内的可选习题列表（搜索过滤；默认不展示已关联的，开启开关后可一并查看） */
+  /** 弹窗内习题来源筛选：全部 / 手动 / AI生成 */
+  readonly linkModalSource = signal<'all' | 'manual' | 'ai'>('all');
+
+  /** 弹窗内的可选习题列表（搜索 + 来源过滤；默认不展示已关联的，开启开关后可一并查看） */
   readonly linkCandidates = computed(() => {
     const kw = this.linkModalKeyword().trim().toLowerCase();
     const showLinked = this.showLinkedInModal();
+    const source = this.linkModalSource();
     let list = this.courseExercises();
     if (!showLinked) {
       const linked = this.alreadyLinkedToCurrentChapter();
       list = list.filter(e => !e.id || !linked.has(e.id));
     }
+    if (source === 'ai') list = list.filter(e => e.isAiGenerated);
+    else if (source === 'manual') list = list.filter(e => !e.isAiGenerated);
     if (kw) {
       list = list.filter(
         e =>
@@ -365,6 +373,7 @@ export class ChapterExerciseComponent implements OnInit {
     this.linkModalPage.set(1);
     this.linkModalSelectedIds.set(new Set());
     this.showLinkedInModal.set(false);
+    this.linkModalSource.set('all');
     this.linkModalVisible.set(true);
   }
 
@@ -385,6 +394,20 @@ export class ChapterExerciseComponent implements OnInit {
   onLinkKeywordChange(value: string) {
     this.linkModalKeyword.set(value);
     this.linkModalPage.set(1);
+  }
+
+  onLinkSourceChange(value: 'all' | 'manual' | 'ai') {
+    this.linkModalSource.set(value);
+    this.linkModalPage.set(1);
+  }
+
+  /** 跳转 AI 生成习题页（携带当前课程，便于生成后回来关联） */
+  goAiGenerate() {
+    const courseId = this.selectedCourseId();
+    this.router.navigate(
+      ['/ai/exercise-generate'],
+      courseId ? { queryParams: { courseId } } : undefined
+    );
   }
 
   onLinkPageChange(page: number) {

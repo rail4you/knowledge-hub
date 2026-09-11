@@ -97,7 +97,7 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
                     "KnowledgeHub.Resources.Share", "KnowledgeHub.Resources.ManageShare",
                     "KnowledgeHub.Search", "KnowledgeHub.Search.ManageIndex", "KnowledgeHub.Search.ViewStatistics", "KnowledgeHub.Search.ReviewResource",
                     "KnowledgeHub.Courses", "KnowledgeHub.Courses.Create", "KnowledgeHub.Courses.Edit", "KnowledgeHub.Courses.Delete", "KnowledgeHub.Courses.Enroll", "KnowledgeHub.Courses.ManageEnrollment",
-                    "KnowledgeHub.AI", "KnowledgeHub.AI.Chat", "KnowledgeHub.AI.LessonPlan", "KnowledgeHub.AI.CaseAnalysis", "KnowledgeHub.AI.CareerGuidance",
+                    "KnowledgeHub.AI", "KnowledgeHub.AI.Chat", "KnowledgeHub.AI.LessonPlan", "KnowledgeHub.AI.CaseAnalysis", "KnowledgeHub.AI.CareerGuidance", "KnowledgeHub.AI.ExerciseGenerate",
                     "KnowledgeHub.TeachingAgents", "KnowledgeHub.TeachingAgents.Manage", "KnowledgeHub.TeachingAgents.Assign", "KnowledgeHub.TeachingAgents.Execute", "KnowledgeHub.TeachingAgents.Review",
                     "KnowledgeHub.Employment", "KnowledgeHub.Employment.PublishJob", "KnowledgeHub.Employment.ReviewJob", "KnowledgeHub.Employment.ManageResume",
                     "KnowledgeHub.Employment.ScheduleInterview", "KnowledgeHub.Employment.ManageGuidance", "KnowledgeHub.Employment.ManageOutcome",

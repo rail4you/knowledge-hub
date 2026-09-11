@@ -1,0 +1,404 @@
+<div class="exercise-generate-container">
+  <!-- 1. 标题容器（带背景） -->
+  <div class="eg-head">
+    <div class="eg-head-left">
+      <h1>{{ '::Menu:AIGenerateExercise' | abpLocalization }}</h1>
+      <p class="eg-desc">
+        按课程、章节、题型、难度与自定义要求生成习题；生成结果直接保存为 AI 习题并归属到所选章节，可继续编辑、删除，或去章节习题按需关联。
+      </p>
+    </div>
+    <div class="eg-stats">
+      <span class="stat">已选章节 <b>{{ selectedChapterIds().length }}</b></span>
+      <span class="stat-sep">|</span>
+      <span class="stat">已生成 <b>{{ results().length }}</b> 道</span>
+    </div>
+  </div>
+
+  <!-- 2. Tab + 内容整体背景 -->
+  <div class="eg-panel">
+    <nz-tabs
+      [nzSelectedIndex]="activeTab()"
+      (nzSelectedIndexChange)="activeTab.set($event)"
+      nzSize="large"
+    >
+      <!-- ═══════ 生成习题 ═══════ -->
+      <nz-tab nzTitle="生成习题">
+        <!-- 条件行：课程 / 题型 / 难度 / 数量 -->
+        <div class="eg-conditions">
+          <div class="eg-field eg-field--course">
+            <label class="eg-label">课程 <span class="eg-required">*</span></label>
+            <nz-select
+              [ngModel]="courseId()"
+              (ngModelChange)="onCourseChange($event)"
+              [ngModelOptions]="{ standalone: true }"
+              nzPlaceHolder="请选择课程"
+              nzAllowClear
+              nzShowSearch
+              class="full-width"
+            >
+              @for (course of courses(); track course.id) {
+                <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+              }
+            </nz-select>
+          </div>
+          <div class="eg-field">
+            <label class="eg-label">题型 <span class="eg-required">*</span></label>
+            <nz-select
+              [ngModel]="exerciseType()"
+              (ngModelChange)="exerciseType.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              class="full-width"
+            >
+              <nz-option [nzValue]="0" nzLabel="单选题"></nz-option>
+              <nz-option [nzValue]="1" nzLabel="多选题"></nz-option>
+              <nz-option [nzValue]="2" nzLabel="判断题"></nz-option>
+              <nz-option [nzValue]="3" nzLabel="填空题"></nz-option>
+              <nz-option [nzValue]="4" nzLabel="问答题"></nz-option>
+              <nz-option [nzValue]="5" nzLabel="论述题"></nz-option>
+              <nz-option [nzValue]="6" nzLabel="案例分析"></nz-option>
+            </nz-select>
+          </div>
+          <div class="eg-field">
+            <label class="eg-label">难度等级 <span class="eg-required">*</span></label>
+            <nz-select
+              [ngModel]="difficulty()"
+              (ngModelChange)="difficulty.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              class="full-width"
+            >
+              <nz-option [nzValue]="1" nzLabel="1 入门"></nz-option>
+              <nz-option [nzValue]="2" nzLabel="2 简单"></nz-option>
+              <nz-option [nzValue]="3" nzLabel="3 中等"></nz-option>
+              <nz-option [nzValue]="4" nzLabel="4 困难"></nz-option>
+              <nz-option [nzValue]="5" nzLabel="5 专家"></nz-option>
+            </nz-select>
+          </div>
+          <div class="eg-field">
+            <label class="eg-label">生成数量 <span class="eg-required">*</span></label>
+            <nz-input-number
+              [ngModel]="count()"
+              (ngModelChange)="count.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              [nzMin]="1"
+              [nzMax]="20"
+              [nzStep]="1"
+              class="full-width"
+            ></nz-input-number>
+          </div>
+        </div>
+
+        <!-- 章节选择器：嵌套表格 -->
+        <div class="eg-section">
+          <div class="eg-section-head">
+            <span class="eg-section-title">
+              选择章节
+              <span
+                class="label-tip"
+                nz-tooltip
+                nzTooltipTitle="不选表示覆盖整门课程；勾选父章节会自动选中其全部子章节"
+              >（可选）</span>
+            </span>
+            @if (courseId()) {
+              <span class="eg-section-stat">已选 <b>{{ selectedChapterIds().length }}</b> / 共 {{ totalChapterCount() }} 章</span>
+            }
+          </div>
+
+          @if (!courseId()) {
+            <nz-empty nzNotFoundImage="simple" nzNotFoundContent="请先在上方选择课程"></nz-empty>
+          } @else {
+            <div class="eg-chapter-toolbar">
+              <nz-input-group [nzPrefix]="chapterSearchTpl" class="chapter-search">
+                <input
+                  nz-input
+                  placeholder="搜索章节标题 / 描述…"
+                  [ngModel]="chapterKeyword()"
+                  (ngModelChange)="chapterKeyword.set($event)"
+                />
+              </nz-input-group>
+              <ng-template #chapterSearchTpl><span nz-icon nzType="search"></span></ng-template>
+              <button nz-button nzType="link" (click)="toggleAllVisible(true)" [disabled]="visibleChapterIds().length === 0">全选</button>
+              <button nz-button nzType="link" (click)="clearChapterSelection()" [disabled]="selectedChapterIds().length === 0">清空</button>
+              <span class="eg-sep"></span>
+              <nz-select
+                [ngModel]="expandLevel()"
+                (ngModelChange)="onExpandLevelChange($event)"
+                [ngModelOptions]="{ standalone: true }"
+                class="expand-select"
+                nz-tooltip
+                nzTooltipTitle="控制章节树的展开层级"
+              >
+                <nz-option [nzValue]="0" nzLabel="仅展开一级"></nz-option>
+                <nz-option [nzValue]="1" nzLabel="展开到二级"></nz-option>
+                <nz-option [nzValue]="2" nzLabel="展开到三级"></nz-option>
+                <nz-option [nzValue]="-1" nzLabel="展开全部"></nz-option>
+              </nz-select>
+            </div>
+
+            @if (chapterLoading()) {
+              <div class="loading-container">
+                <nz-spin nzSimple nzSize="large"></nz-spin>
+              </div>
+            } @else if (chapterTree().length === 0) {
+              <nz-empty nzNotFoundImage="simple" nzNotFoundContent="该课程暂无章节"></nz-empty>
+            } @else if (visibleChapters().length === 0) {
+              <nz-empty nzNotFoundImage="simple" nzNotFoundContent="没有匹配的章节，换个关键词试试"></nz-empty>
+            } @else {
+              <div class="eg-table-wrap">
+                <ng-container *ngTemplateOutlet="chapterPickTable; context: { $implicit: visibleChapters(), level: 0 }"></ng-container>
+              </div>
+            }
+          }
+        </div>
+
+        <!-- 主题提示 + 自定义提示词 -->
+        <div class="eg-conditions eg-conditions--prompts">
+          <div class="eg-field eg-field--grow">
+            <label class="eg-label">主题提示 <span class="label-tip">（可选）</span></label>
+            <input
+              nz-input
+              [ngModel]="topicHint()"
+              (ngModelChange)="topicHint.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="如：重点围绕第二章的排序算法"
+            />
+          </div>
+        </div>
+        <div class="eg-field eg-field--block">
+          <label class="eg-label">自定义提示词 <span class="label-tip">（可选，补充出题方向、知识点侧重、语言风格等）</span></label>
+          <textarea
+            nz-input
+            [ngModel]="customPrompt()"
+            (ngModelChange)="customPrompt.set($event)"
+            [ngModelOptions]="{ standalone: true }"
+            placeholder="如：题目贴近工程实践，每道题附带易错点说明；选项要有干扰性"
+            [nzAutosize]="{ minRows: 2, maxRows: 5 }"
+          ></textarea>
+        </div>
+
+        <div class="eg-actions">
+          <button
+            nz-button
+            nzType="primary"
+            nzSize="large"
+            (click)="generate()"
+            [nzLoading]="generating()"
+            [disabled]="!courseId()"
+            nz-tooltip
+            [nzTooltipTitle]="courseId() ? '调用 AI 生成习题并直接保存' : '请先选择课程'"
+          >
+            <span nz-icon nzType="robot"></span>
+            AI 生成习题
+          </button>
+        </div>
+      </nz-tab>
+
+      <!-- ═══════ 生成结果 ═══════ -->
+      <nz-tab [nzTitle]="resultTabTitle()">
+        @if (generating()) {
+          <div class="loading-container">
+            <nz-spin nzSimple nzSize="large" nzTip="AI 正在命题，请稍候..."></nz-spin>
+          </div>
+        } @else if (results().length === 0) {
+          <nz-empty
+            nzNotFoundImage="simple"
+            nzNotFoundContent="暂无生成结果，请先到「生成习题」页设置条件并生成"
+          ></nz-empty>
+        } @else {
+          <div class="result-toolbar">
+            <span class="result-count">共 {{ results().length }} 道（已保存为 AI 习题）</span>
+            <button nz-button nzType="default" (click)="goChapterExercise()">
+              <span nz-icon nzType="branches"></span>
+              去章节习题按需关联
+            </button>
+          </div>
+          <div class="result-list">
+            @for (e of results(); track trackResult($index, e); let i = $index) {
+              <div class="result-item">
+                <div class="result-item__head">
+                  <span class="result-index">{{ i + 1 }}</span>
+                  <span class="result-item__title" [title]="e.title">{{ e.title }}</span>
+                  <nz-tag nzColor="purple">AI生成</nz-tag>
+                  <nz-tag [nzColor]="getTypeColor(e.type)">{{ getTypeName(e.type) }}</nz-tag>
+                  <nz-tag nzColor="gold">{{ getDifficultyName(e.difficulty) }}</nz-tag>
+                  <span class="result-item__spacer"></span>
+                  <button nz-button nzType="text" nzSize="small" (click)="openEdit(e)" nz-tooltip nzTooltipTitle="编辑">
+                    <span nz-icon nzType="edit"></span>
+                  </button>
+                  <button nz-button nzType="text" nzSize="small" nzDanger (click)="deleteOne(e)" nz-tooltip nzTooltipTitle="删除">
+                    <span nz-icon nzType="delete"></span>
+                  </button>
+                </div>
+                <p class="result-item__content">{{ e.questionContent }}</p>
+                @if (isChoice(e) && parseOptions(e).length > 0) {
+                  <div class="result-item__options">
+                    @for (opt of parseOptions(e); track $index) {
+                      <div class="option-line">
+                        <span class="option-letter">{{ letters[$index] }}.</span>
+                        <span>{{ opt }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+                <div class="result-item__meta">
+                  <span><strong>答案：</strong>{{ e.answer || '-' }}</span>
+                  <span><strong>分值：</strong>{{ e.score }} 分</span>
+                </div>
+                @if (e.questionAnalysis) {
+                  <p class="result-item__analysis"><strong>解析：</strong>{{ e.questionAnalysis }}</p>
+                }
+              </div>
+            }
+          </div>
+        }
+      </nz-tab>
+    </nz-tabs>
+  </div>
+
+  <!-- 递归嵌套表格：子章节渲染为展开行内的内嵌表格（参考章节管理） -->
+  <ng-template #chapterPickTable let-rows let-level="level">
+    <nz-table
+      [nzData]="rows"
+      [nzFrontPagination]="false"
+      [nzShowPagination]="false"
+      nzSize="middle"
+      nzTableLayout="fixed"
+      class="eg-table"
+    >
+      @if (level === 0) {
+        <thead>
+          <tr>
+            <th nzWidth="52px">
+              <label
+                nz-checkbox
+                [nzChecked]="isAllVisibleChecked()"
+                [nzIndeterminate]="isVisibleIndeterminate()"
+                (nzCheckedChange)="toggleAllVisible($event)"
+                nz-tooltip
+                nzTooltipTitle="全选 / 取消全选当前可见章节"
+              ></label>
+            </th>
+            <th>章节标题</th>
+          </tr>
+        </thead>
+      } @else {
+        <colgroup>
+          <col style="width: 52px" />
+          <col />
+        </colgroup>
+      }
+      <tbody>
+        @for (node of rows; track trackChapter($index, node)) {
+          <tr class="eg-row" [class.is-selected]="isChapterChecked(node)">
+            <td>
+              <label
+                nz-checkbox
+                [nzChecked]="isChapterChecked(node)"
+                [nzIndeterminate]="isChapterIndeterminate(node)"
+                (nzCheckedChange)="toggleChapter(node, $event)"
+              ></label>
+            </td>
+            <td>
+              <div class="title-flex">
+                <span class="depth-blank" [style.width.px]="level * 22 + (hasChildren(node) ? 0 : 22)"></span>
+                @if (hasChildren(node)) {
+                  <button nz-button nzType="text" nzSize="small" class="inline-expand" (click)="toggleExpand(node.id)">
+                    <span nz-icon [nzType]="isExpanded(node.id) || isChapterFiltering() ? 'down' : 'right'"></span>
+                  </button>
+                }
+                @if (node.description?.trim()) {
+                  <span
+                    class="eg-node-title"
+                    [title]="node.title"
+                    nz-tooltip
+                    [nzTooltipTitle]="node.description"
+                    nzTooltipPlacement="topLeft"
+                  >{{ node.title }}</span>
+                } @else {
+                  <span class="eg-node-title" [title]="node.title">{{ node.title }}</span>
+                }
+              </div>
+            </td>
+          </tr>
+          @if (hasChildren(node) && (isExpanded(node.id) || isChapterFiltering())) {
+            <tr class="nested-row">
+              <td colspan="2">
+                <div class="nested-table">
+                  <ng-container *ngTemplateOutlet="chapterPickTable; context: { $implicit: node.children, level: level + 1 }"></ng-container>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </nz-table>
+  </ng-template>
+
+  <!-- 编辑弹窗 -->
+  <nz-modal
+    [nzVisible]="editVisible()"
+    nzTitle="编辑习题（AI生成）"
+    [nzOkLoading]="editSaving()"
+    nzOkText="保存"
+    nzCancelText="取消"
+    (nzOnOk)="saveEdit()"
+    (nzOnCancel)="closeEdit()"
+    [nzWidth]="680"
+  >
+    <ng-container *nzModalContent>
+      <form nz-form nzLayout="vertical">
+        <nz-form-item>
+          <nz-form-label nzRequired>标题</nz-form-label>
+          <nz-form-control>
+            <input nz-input [(ngModel)]="editTitle" [ngModelOptions]="{ standalone: true }" placeholder="习题标题" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label nzRequired>题目内容</nz-form-label>
+          <nz-form-control>
+            <textarea nz-input [(ngModel)]="editQuestionContent" [ngModelOptions]="{ standalone: true }" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+        @if (editing && isChoice(editing)) {
+          <nz-form-item>
+            <nz-form-label>选项（每行一个）</nz-form-label>
+            <nz-form-control>
+              <textarea nz-input [(ngModel)]="editOptionsText" [ngModelOptions]="{ standalone: true }" [nzAutosize]="{ minRows: 3, maxRows: 6 }"></textarea>
+            </nz-form-control>
+          </nz-form-item>
+        }
+        <nz-form-item>
+          <nz-form-label>答案</nz-form-label>
+          <nz-form-control>
+            <textarea nz-input [(ngModel)]="editAnswer" [ngModelOptions]="{ standalone: true }" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>题目解析</nz-form-label>
+          <nz-form-control>
+            <textarea nz-input [(ngModel)]="editQuestionAnalysis" [ngModelOptions]="{ standalone: true }" [nzAutosize]="{ minRows: 2, maxRows: 4 }"></textarea>
+          </nz-form-control>
+        </nz-form-item>
+        <div class="form-row">
+          <nz-form-item style="flex: 1">
+            <nz-form-label>难度</nz-form-label>
+            <nz-form-control>
+              <nz-select [(ngModel)]="editDifficulty" [ngModelOptions]="{ standalone: true }" style="width: 100%">
+                <nz-option [nzValue]="1" nzLabel="入门"></nz-option>
+                <nz-option [nzValue]="2" nzLabel="简单"></nz-option>
+                <nz-option [nzValue]="3" nzLabel="中等"></nz-option>
+                <nz-option [nzValue]="4" nzLabel="困难"></nz-option>
+                <nz-option [nzValue]="5" nzLabel="专家"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+          <nz-form-item style="flex: 1">
+            <nz-form-label>分值</nz-form-label>
+            <nz-form-control>
+              <nz-input-number [(ngModel)]="editScore" [ngModelOptions]="{ standalone: true }" [nzMin]="1" [nzMax]="100" style="width: 100%"></nz-input-number>
+            </nz-form-control>
+          </nz-form-item>
+        </div>
+      </form>
+    </ng-container>
+  </nz-modal>
+</div>

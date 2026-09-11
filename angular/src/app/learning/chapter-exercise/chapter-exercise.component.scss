@@ -643,6 +643,10 @@
     max-width: 100%;
   }
 
+  .toolbar-source {
+    width: 130px;
+  }
+
   .toolbar-switch {
     margin-left: auto;
     display: inline-flex;
@@ -653,6 +657,12 @@
       min-width: 92px;
     }
   }
+}
+
+.source-tag {
+  margin-left: 6px;
+  font-size: 11px;
+  line-height: 18px;
 }
 
 /* ═══════ States ═══════ */

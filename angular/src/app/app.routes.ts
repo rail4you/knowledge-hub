@@ -480,6 +480,14 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'ai/exercise-generate',
+    loadComponent: () => import('./ai/exercise-generate/exercise-generate.component').then(c => c.ExerciseGenerateComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.AI.ExerciseGenerate',
+    },
+  },
+  {
     path: 'ai/model-management',
     loadComponent: () => import('./ai/model-management/model-management.component').then(c => c.ModelManagementComponent),
     canActivate: [authGuard, nonStudentGuard],

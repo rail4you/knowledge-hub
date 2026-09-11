@@ -59,6 +59,15 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
           <nz-option [nzValue]="4" nzLabel="简答题"></nz-option>
         </nz-select>
         <input nz-input [(ngModel)]="searchText" (ngModelChange)="loadExercises()" placeholder="搜索标题" style="width: 200px" />
+        <nz-select [(ngModel)]="selectedSource" (ngModelChange)="loadExercises()" style="width: 130px">
+          <nz-option nzValue="all" nzLabel="全部来源"></nz-option>
+          <nz-option nzValue="manual" nzLabel="手动"></nz-option>
+          <nz-option nzValue="ai" nzLabel="AI生成"></nz-option>
+        </nz-select>
+        <button nz-button nzType="default" (click)="goAiGenerate()">
+          <span nz-icon nzType="robot"></span>
+          AI生成习题
+        </button>
         <button nz-button nzType="primary" (click)="showForm = true">
           <span nz-icon nzType="plus"></span>
           创建习题
@@ -80,6 +89,7 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
             <th>ID</th>
             <th>标题</th>
             <th>题型</th>
+            <th>来源</th>
             <th>难度</th>
             <th>分值</th>
             <th>课程ID</th>
@@ -96,6 +106,13 @@ import { ExerciseType } from '../../proxy/exams/enums/exercise-type.enum';
                 <nz-tag [nzColor]="getTypeColor(exercise.type!)">
                   {{ getTypeName(exercise.type!) }}
                 </nz-tag>
+              </td>
+              <td>
+                @if (exercise.isAiGenerated) {
+                  <nz-tag nzColor="purple">AI生成</nz-tag>
+                } @else {
+                  <nz-tag nzColor="default">手动</nz-tag>
+                }
               </td>
               <td>
                 <nz-tag [nzColor]="getDifficultyColor(exercise.difficulty!)">
@@ -262,6 +279,7 @@ export class ExerciseManagementComponent implements OnInit {
   loading = signal(true);
   selectedType: ExerciseType | null = null;
   searchText = '';
+  selectedSource: 'all' | 'manual' | 'ai' = 'all';
   showForm = false;
   isEditing = false;
   editingId = '';
@@ -372,6 +390,8 @@ export class ExerciseManagementComponent implements OnInit {
         if (this.searchText) {
           items = items.filter(e => e.title?.toLowerCase().includes(this.searchText.toLowerCase()));
         }
+        if (this.selectedSource === 'ai') items = items.filter(e => e.isAiGenerated);
+        else if (this.selectedSource === 'manual') items = items.filter(e => !e.isAiGenerated);
         this.exercises.set(items);
         this.loading.set(false);
       },
@@ -426,8 +446,21 @@ export class ExerciseManagementComponent implements OnInit {
     });
   }
   
+  goAiGenerate() {
+    this.router.navigate(['/ai/exercise-generate']);
+  }
+
   deleteExercise(exercise: ExerciseDto) {
-    this.message.info('删除功能开发中...');
+    if (!exercise.id) return;
+    this.exerciseService.delete(exercise.id).subscribe({
+      next: () => {
+        this.message.success('已删除');
+        this.loadExercises();
+      },
+      error: () => {
+        this.message.error('删除失败');
+      },
+    });
   }
   
   getTypeName(type: ExerciseType): string {

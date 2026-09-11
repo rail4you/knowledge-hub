@@ -111,6 +111,10 @@
               </p>
             </div>
             <div class="chapter-header__actions">
+              <button class="ghost-btn" (click)="goAiGenerate()" nz-tooltip nzTooltipTitle="按课程、章节、题型、难度 AI 生成习题">
+                <span nz-icon nzType="robot" nzTheme="outline"></span>
+                <span>AI生成</span>
+              </button>
               <button class="primary-btn" (click)="openLinkModal()">
                 <span nz-icon nzType="plus" nzTheme="outline"></span>
                 <span>关联习题</span>
@@ -161,6 +165,11 @@
                         <span class="cell-title" [title]="e.title || '未命名题目'">{{
                           e.title || '未命名题目'
                         }}</span>
+                        @if (e.isAiGenerated) {
+                          <nz-tag nzColor="purple" class="source-tag">AI生成</nz-tag>
+                        } @else {
+                          <nz-tag nzColor="default" class="source-tag">手动</nz-tag>
+                        }
                         @if (e.questionContent) {
                           <span class="cell-sub text-ellipsis">{{ e.questionContent }}</span>
                         }
@@ -287,6 +296,16 @@
         <ng-template #linkSearchPrefix>
           <span nz-icon nzType="search" nzTheme="outline"></span>
         </ng-template>
+        <nz-select
+          [ngModel]="linkModalSource()"
+          (ngModelChange)="onLinkSourceChange($event)"
+          nzPlaceHolder="全部来源"
+          class="toolbar-source"
+        >
+          <nz-option nzValue="all" nzLabel="全部来源"></nz-option>
+          <nz-option nzValue="manual" nzLabel="手动"></nz-option>
+          <nz-option nzValue="ai" nzLabel="AI生成"></nz-option>
+        </nz-select>
         <label
           class="toolbar-switch"
           nz-tooltip
@@ -354,6 +373,11 @@
                   <span class="cell-title" [title]="e.title || '未命名题目'">{{
                     e.title || '未命名题目'
                   }}</span>
+                  @if (e.isAiGenerated) {
+                    <nz-tag nzColor="purple" class="source-tag">AI生成</nz-tag>
+                  } @else {
+                    <nz-tag nzColor="default" class="source-tag">手动</nz-tag>
+                  }
                   @if (e.questionContent) {
                     <span class="cell-sub text-ellipsis">{{ e.questionContent }}</span>
                   }

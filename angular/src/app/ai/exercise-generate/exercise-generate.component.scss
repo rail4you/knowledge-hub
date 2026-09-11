@@ -1,0 +1,428 @@
+.exercise-generate-container {
+  padding: 20px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+// 1. 标题容器（带背景）：左侧标题 + 说明，右侧数据统计
+.eg-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f6f8fb;
+  border: 1px solid var(--kh-line-2, #e8edf3);
+  border-radius: 12px;
+  padding: 16px 18px;
+
+  .eg-head-left {
+    flex: 1;
+    min-width: 0;
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--kh-ink, #1f2933);
+    }
+
+    .eg-desc {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--kh-muted, #8a94a6);
+    }
+  }
+
+  .eg-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+    font-size: 13px;
+    color: var(--kh-muted, #8a94a6);
+    white-space: nowrap;
+
+    .stat b {
+      color: var(--kh-ink, #1f2933);
+      font-size: 14px;
+      margin: 0 2px;
+    }
+
+    .stat-sep {
+      color: var(--kh-line-2, #e8edf3);
+    }
+  }
+}
+
+// 2. Tab + 内容整体背景
+.eg-panel {
+  background: var(--kh-panel, #fff);
+  border: 1px solid var(--kh-line, #e8edf3);
+  border-radius: 12px;
+  padding: 8px 18px 18px;
+
+  ::ng-deep .ant-tabs-nav {
+    margin-bottom: 16px;
+  }
+}
+
+// 条件行
+.eg-conditions {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 0 20px;
+  margin-bottom: 4px;
+
+  &--prompts {
+    grid-template-columns: 1fr;
+  }
+}
+
+.eg-field {
+  margin-bottom: 12px;
+
+  &--block {
+    margin-bottom: 12px;
+  }
+}
+
+.eg-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--kh-ink, #1f2933);
+  margin-bottom: 6px;
+}
+
+.eg-required {
+  color: #ff4d4f;
+}
+
+.label-tip {
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+// 章节选择区
+.eg-section {
+  border: 1px dashed var(--kh-line-2, #e8edf3);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 8px 0 4px;
+  background: #fbfcfe;
+}
+
+.eg-section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.eg-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--kh-ink, #1f2933);
+}
+
+.eg-section-stat {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--kh-muted, #8a94a6);
+  white-space: nowrap;
+
+  b {
+    color: var(--kh-ink, #1f2933);
+    margin: 0 2px;
+  }
+}
+
+.eg-chapter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  row-gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  .chapter-search {
+    width: 240px;
+    max-width: 100%;
+    margin-right: 8px;
+  }
+
+  .expand-select {
+    width: 140px;
+  }
+
+  .eg-sep {
+    width: 1px;
+    height: 18px;
+    background: var(--kh-line-2, #e8edf3);
+    margin: 0 8px;
+  }
+}
+
+.eg-table-wrap {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+// 嵌套表格（参考章节管理：纯白表头/行，逐级缩进一致）
+.eg-table {
+  ::ng-deep {
+    .ant-table-tbody .ant-table-wrapper:only-child .ant-table {
+      margin: 0;
+    }
+
+    .ant-table {
+      background: #fff;
+    }
+
+    .ant-table-thead > tr > th {
+      background: #fff;
+      color: var(--kh-ink-2, #3e4c59);
+      font-weight: 600;
+      font-size: 12.5px;
+
+      &::before {
+        display: none !important;
+      }
+    }
+
+    .ant-table-tbody > tr > td {
+      font-size: 13px;
+      vertical-align: middle;
+      background: #fff;
+      padding: 12px 14px;
+    }
+
+    // 首列（勾选框）：左对齐，左侧留白 20px（默认 8px），与标题列间距协调、垂直居中
+    .ant-table-thead > tr > th:first-child,
+    .ant-table-tbody > tr > td:first-child {
+      padding: 12px 0 12px 20px;
+      text-align: left;
+    }
+
+    .ant-table-thead > tr > th:first-child > label,
+    .ant-table-tbody > tr > td:first-child > label {
+      display: inline-flex;
+      vertical-align: middle;
+    }
+
+    // 标题列左内边距收窄，勾选框与标题间距一致
+    .ant-table-thead > tr > th:nth-child(2),
+    .ant-table-tbody > tr > td:nth-child(2) {
+      padding-left: 8px;
+    }
+
+    .ant-table-tbody > tr:nth-child(even) > td {
+      background: #fff;
+    }
+
+    .ant-table-tbody > tr:hover > td {
+      background: #f5f8ff !important;
+    }
+  }
+
+  .eg-row.is-selected > td {
+    background: #f0f6ff !important;
+  }
+
+  .title-flex {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    min-height: 34px;
+
+    .depth-blank {
+      flex: none;
+    }
+
+    .inline-expand {
+      flex: none;
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      .anticon {
+        font-size: 12px;
+        line-height: 1;
+      }
+    }
+
+    .eg-node-title {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+      color: var(--kh-ink, #1f2933);
+      padding-right: 8px;
+    }
+  }
+
+  tr.nested-row > td {
+    background: transparent;
+    padding: 0;
+    border-bottom: none;
+  }
+
+  .nested-table {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+// 操作区
+.eg-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.form-row {
+  display: flex;
+  gap: 24px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+// 生成结果
+.result-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.result-count {
+  font-size: 13px;
+  color: var(--kh-muted, #8a94a6);
+  margin-right: auto;
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.result-item {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #fff;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  &__title {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 420px;
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  &__content {
+    margin: 0 0 8px;
+    color: rgba(0, 0, 0, 0.85);
+  }
+
+  &__options {
+    margin: 0 0 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__meta {
+    display: flex;
+    gap: 24px;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.65);
+    margin-bottom: 4px;
+  }
+
+  &__analysis {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.65);
+    background: #fafafa;
+    border-radius: 6px;
+    padding: 8px 12px;
+  }
+}
+
+.result-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.option-line {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.option-letter {
+  font-weight: 600;
+  color: #1890ff;
+}
+
+@media (max-width: 900px) {
+  .eg-head {
+    flex-direction: column;
+    align-items: stretch;
+
+    .eg-stats {
+      flex-wrap: wrap;
+    }
+  }
+
+  .eg-conditions {
+    grid-template-columns: 1fr 1fr;
+  }
+}

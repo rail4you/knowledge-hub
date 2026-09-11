@@ -64,6 +64,7 @@ public static class KnowledgeHubPermissions
         public const string LessonPlan = Default + ".LessonPlan";
         public const string CaseAnalysis = Default + ".CaseAnalysis";
         public const string CareerGuidance = Default + ".CareerGuidance";
+        public const string ExerciseGenerate = Default + ".ExerciseGenerate";
     }
 
     public static class TeachingAgents

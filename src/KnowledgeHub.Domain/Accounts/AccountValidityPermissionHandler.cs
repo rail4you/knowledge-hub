@@ -54,6 +54,7 @@ public class AccountValidityPermissionHandler : IAccountValidityPermissionHandle
         KnowledgeHubPermissions.AI.LessonPlan,
         KnowledgeHubPermissions.AI.CaseAnalysis,
         KnowledgeHubPermissions.AI.CareerGuidance,
+        KnowledgeHubPermissions.AI.ExerciseGenerate,
         // 就业：仅浏览
         KnowledgeHubPermissions.Employment.Default,
         KnowledgeHubPermissions.Employment.ViewMyApplication,
@@ -87,6 +88,7 @@ public class AccountValidityPermissionHandler : IAccountValidityPermissionHandle
         KnowledgeHubPermissions.AI.LessonPlan,
         KnowledgeHubPermissions.AI.CaseAnalysis,
         KnowledgeHubPermissions.AI.CareerGuidance,
+        KnowledgeHubPermissions.AI.ExerciseGenerate,
         KnowledgeHubPermissions.Employment.Default,
         KnowledgeHubPermissions.Employment.ViewStatistics,
         KnowledgeHubPermissions.Employment.ViewMyApplication,

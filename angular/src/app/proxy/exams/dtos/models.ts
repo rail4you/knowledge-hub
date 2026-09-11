@@ -52,10 +52,13 @@ export interface ExerciseImportResultDto {
 export interface GenerateExerciseInput {
   courseId?: string;
   knowledgeResourceId?: string | null;
+  chapterId?: string | null;
+  chapterIds?: string[];
   type?: ExerciseType;
   count?: number;
   difficulty?: number;
   topicHint?: string | null;
+  customPrompt?: string | null;
 }
 
 export interface GradeEssayInput {

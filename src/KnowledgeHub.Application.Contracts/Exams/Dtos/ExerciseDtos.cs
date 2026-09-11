@@ -42,10 +42,16 @@ public class GenerateExerciseInput
 {
     public Guid CourseId { get; set; }
     public Guid? KnowledgeResourceId { get; set; }
+    /// <summary>主章节（生成的习题归属，写入 Exercise.ChapterId）</summary>
+    public Guid? ChapterId { get; set; }
+    /// <summary>全量章节（含主章节，写入 ChapterExercise 关联表）</summary>
+    public List<Guid> ChapterIds { get; set; } = new();
     public ExerciseType Type { get; set; }
     public int Count { get; set; } = 5;
     public int Difficulty { get; set; } = 2;
     public string? TopicHint { get; set; }
+    /// <summary>教师自定义提示词（出题方向/知识点侧重/语言风格等）</summary>
+    public string? CustomPrompt { get; set; }
 }
 
 public class GradeEssayInput

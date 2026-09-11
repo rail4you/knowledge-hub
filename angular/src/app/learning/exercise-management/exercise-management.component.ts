@@ -18,6 +18,7 @@ import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { Router } from '@angular/router';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ExerciseService } from '../../proxy/exams/exercise.service';
 import { RestService } from '@abp/ng.core';
@@ -59,6 +60,7 @@ export class ExerciseManagementComponent implements OnInit {
   private readonly restService = inject(RestService);
   private readonly message = inject(NzMessageService);
   private readonly modal = inject(NzModalService);
+  private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
 
   courses = signal<CourseDto[]>([]);
@@ -88,11 +90,16 @@ export class ExerciseManagementComponent implements OnInit {
   selectedAnswerIndex = signal<number>(-1);
   multiSelectedAnswers = signal<Set<number>>(new Set());
 
+  selectedSource = signal<'all' | 'manual' | 'ai'>('all');
+
   filteredExercises = computed(() => {
     const type = this.selectedType();
-    const list = this.exercises();
-    if (type === null) return list;
-    return list.filter(e => e.type === type);
+    const source = this.selectedSource();
+    let list = this.exercises();
+    if (type !== null) list = list.filter(e => e.type === type);
+    if (source === 'ai') list = list.filter(e => e.isAiGenerated);
+    else if (source === 'manual') list = list.filter(e => !e.isAiGenerated);
+    return list;
   });
 
   // 表格分页（前端分页：数据已全量加载，按页切片展示）
@@ -117,6 +124,19 @@ export class ExerciseManagementComponent implements OnInit {
   onTypeFilterChange(type: ExerciseType | null) {
     this.selectedType.set(type);
     this.pageIndex.set(1);
+  }
+
+  onSourceFilterChange(source: 'all' | 'manual' | 'ai') {
+    this.selectedSource.set(source);
+    this.pageIndex.set(1);
+  }
+
+  goAiGenerate() {
+    const courseId = this.selectedCourseId();
+    this.router.navigate(
+      ['/ai/exercise-generate'],
+      courseId ? { queryParams: { courseId } } : undefined
+    );
   }
 
   ngOnInit() {
