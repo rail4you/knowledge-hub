@@ -1707,7 +1707,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         return ObjectMapper.Map<PhysicalDeleteRequest, PhysicalDeleteRequestDto>(request);
     }
 
-    [AllowAnonymous]
+    [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
     public virtual async Task SeedTestDocumentsAsync()
     {
         var testDocs = new List<DocumentPage>
@@ -1782,7 +1782,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
 
-    [AllowAnonymous]
+    // 遗留 ISearchService 路径：底层 MeiliSearchService（Resources）没有租户过滤，
+    // 且 input.IndexName 可由调用方指定，能绕过 documents 索引的租户隔离去搜真实索引。
+    // 该端点前端已无调用，仅测试/调试用，因此限制为索引管理权限（等同 Host 管理员）。
+    [Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
     public virtual async Task<MeiliSearchResultDto> SearchDocumentsAsync(MeiliSearchQueryDto input)
     {
         var result = await SearchService.SearchAsync(input.Query, input.Limit, input.Offset, input.IndexName);

@@ -11,15 +11,22 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
+using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources.Conversion;
 using KnowledgeHub.Resources.FileStorage;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp;
+using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Application.Search;
 
+// 视频理解会调用付费的 Qwen VL API，且时间轴会写入共享的 videos 索引。
+// 该服务仅供后台索引任务内部调用和管理端调试，必须限制为索引管理权限，
+// 禁止匿名/普通用户调用以免刷额度或污染他人索引。
+[Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
 public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisAppService
 {
     private readonly IConfiguration _configuration;
@@ -28,6 +35,7 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
     private readonly IFfmpegRunner _ffmpegRunner;
     private readonly OfficeConversionOptions _conversionOptions;
     private readonly IFileStorageService _fileStorageService;
+    private readonly ICurrentTenant _currentTenant;
 
     private const string DefaultModel = "qwen3-vl-plus";
     private const string VideosIndexName = "videos";
@@ -49,7 +57,8 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         IHttpClientFactory httpClientFactory,
         IFfmpegRunner ffmpegRunner,
         IOptions<OfficeConversionOptions> conversionOptions,
-        IFileStorageService fileStorageService)
+        IFileStorageService fileStorageService,
+        ICurrentTenant currentTenant)
     {
         _configuration = configuration;
         _logger = logger;
@@ -57,6 +66,7 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         _ffmpegRunner = ffmpegRunner;
         _conversionOptions = conversionOptions.Value;
         _fileStorageService = fileStorageService;
+        _currentTenant = currentTenant;
     }
 
     public async Task<VideoAnalysisResultDto> AnalyzeVideoTimelineAsync(VideoAnalysisRequestDto input)
@@ -92,6 +102,10 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
     {
         await EnsureVideosIndexExistsAsync();
 
+        // 租户隔离：把当前租户写入每条视频时间轴文档。
+        // Host 用户（CurrentTenant 为空）写空字符串；租户用户严格只搜到本租户视频，Host 视频对租户不可见。
+        var tenantId = _currentTenant.Id?.ToString() ?? "";
+
         var documents = analysisResult.Events.Select((evt, index) => new
         {
             id = $"{videoId}_{index}",
@@ -103,6 +117,7 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
             endTime = evt.EndTime,
             eventDescription = evt.Event,
             order = index,
+            tenantId = tenantId,
             indexedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
         }).ToList();
 
@@ -152,7 +167,7 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
             try
             {
                 await client.PutAsJsonAsync($"{indexBaseExisting}/settings/filterable-attributes",
-                    new[] { "resourceId", "videoId", "videoName", "indexedAt" });
+                    new[] { "resourceId", "videoId", "videoName", "tenantId", "indexedAt" });
             }
             catch { }
             try
@@ -188,7 +203,7 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         var indexBase = client.BaseAddress + $"/indexes/{VideosIndexName}";
 
         await client.PutAsJsonAsync($"{indexBase}/settings/filterable-attributes",
-            new[] { "resourceId", "videoId", "videoName", "indexedAt" });
+            new[] { "resourceId", "videoId", "videoName", "tenantId", "indexedAt" });
 
         await client.PutAsJsonAsync($"{indexBase}/settings/searchable-attributes",
             new[] { "videoName", "eventDescription" });

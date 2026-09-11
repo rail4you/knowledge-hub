@@ -65,8 +65,8 @@ public class MeiliSearchService : IMeiliSearchService
     private string IndexName => _options.Value.IndexName;
 
     /// <summary>
-    /// 视频时间轴事件索引。schema 与 documents 不同：没有 status/tenantId/categoryId 等字段，
-    /// SearchAsync 需要在两边分别取结果再合并。
+    /// 视频时间轴事件索引。schema 与 documents 不同：没有 status/categoryId/fileExtension 等字段，
+    /// 但有 tenantId（租户隔离用），SearchAsync 需要在两边分别取结果再合并。
     /// </summary>
     private const string VideoIndexName = "videos";
 
@@ -165,7 +165,7 @@ public class MeiliSearchService : IMeiliSearchService
                 new[] { "videoName", "eventDescription" });
 
             await _httpClient.PutAsJsonAsync($"{index}/settings/filterable-attributes",
-                new[] { "resourceId", "videoId", "videoName", "indexedAt" });
+                new[] { "resourceId", "videoId", "videoName", "tenantId", "indexedAt" });
 
             await _httpClient.PutAsJsonAsync($"{index}/settings/sortable-attributes",
                 new[] { "order", "indexedAt", "startTime" });
@@ -395,8 +395,8 @@ public class MeiliSearchService : IMeiliSearchService
         }
 
         // 同时搜两个索引：documents（文档/PDF/PPT等） 和 videos（视频时间轴事件）。
-        // 两套 schema 不同：videos 没有 status/tenantId/fileExtension/categoryId，
-        // 所以只在 documents 侧应用这些 filter，videos 侧只使用通用项（query、resourceId、limit）。
+        // 两套 schema 不同：videos 没有 status/fileExtension/categoryId，
+        // 所以只在 documents 侧应用这些 filter；tenantId 两个索引都有，统一应用。
         var docTask = ExecuteSingleIndexSearchAsync(IndexName, query, applyDocumentFilters: true, hybrid: false);
         var vidTask = ExecuteSingleIndexSearchAsync(VideoIndexName, query, applyDocumentFilters: false, hybrid: false);
 
@@ -463,8 +463,8 @@ public class MeiliSearchService : IMeiliSearchService
 
     /// <summary>
     /// 在指定 Meilisearch 索引上执行一次搜索，返回 (items, total)。
-    /// applyDocumentFilters=false 时仅使用通用 filter（query、resourceId、limit），
-    /// 不加 status/tenantId/categoryId/fileExtension，适用于视频索引。
+    /// applyDocumentFilters=false 时不加 status/categoryId/fileExtension 等文档专属 filter，
+    /// 适用于视频索引；但租户隔离（tenantId）对两个索引统一生效。
     /// </summary>
     private async Task<(List<DocumentSearchResultDto> Items, int Total)> ExecuteSingleIndexSearchAsync(
         string indexName, SearchQueryDto query, bool applyDocumentFilters, bool hybrid)
@@ -497,14 +497,17 @@ public class MeiliSearchService : IMeiliSearchService
             filters.Add(!string.IsNullOrWhiteSpace(query.StatusFilter)
                 ? $"status IN [{query.StatusFilter}]"
                 : "status IN [0, 1, 2, 3]");
+        }
 
-            var tenantId = _currentTenant.Id;
-            if (tenantId.HasValue)
-            {
-                // 租户用户：搜索该租户的文档 + Host 公共文档（tenantId 为空）
-                filters.Add($"(tenantId = \"{tenantId}\" OR tenantId = \"\")");
-            }
-            // Host 用户不加 tenantId 过滤，可以搜索所有文档
+        // 租户隔离：documents 与 videos 两个索引统一应用，严格只返回当前租户的资源。
+        // Host 用户（CurrentTenant 为空）不过滤，可见全部，用于平台管理。
+        // NOT EXISTS 用于兼容历史上未写入 tenantId 的旧视频索引文档：这些文档先被放行，
+        // 随后在 FilterStaleResourceHitsAsync 中以数据库 Resource.TenantId 为准兜底过滤，
+        // 非本租户的命中会被丢弃，因此不会造成跨租户数据泄漏。
+        var tenantId = _currentTenant.Id;
+        if (tenantId.HasValue)
+        {
+            filters.Add($"(tenantId = \"{tenantId}\" OR tenantId NOT EXISTS)");
         }
 
         if (query.ResourceId.HasValue)
@@ -617,8 +620,8 @@ public class MeiliSearchService : IMeiliSearchService
 
     /// <summary>
     /// 丢弃 resourceId 在数据库中已不存在的命中。
-    /// 必须禁用多租户过滤器：Host 公共资源（TenantId 为空）也会被租户用户搜到，
-    /// 带租户过滤校验会误杀；Meili 侧的 tenantId 过滤已做过租户隔离。
+    /// 同时以数据库 Resource.TenantId 为准做租户兜底校验（防御纵深）：
+    /// 即便 Meili 索引里的 tenantId 字段缺失或写错，也不会把其它租户的资源返回给当前租户。
     /// </summary>
     private async Task<List<DocumentSearchResultDto>> FilterStaleResourceHitsAsync(List<DocumentSearchResultDto> items)
     {
@@ -633,13 +636,21 @@ public class MeiliSearchService : IMeiliSearchService
 
         if (ids.Count == 0) return new List<DocumentSearchResultDto>();
 
+        // 禁用 ABP 多租户过滤器后自行按数据库 TenantId 校验，逻辑显式且可覆盖历史脏数据。
         List<Resource> existing;
         using (_dataFilter.Disable<IMultiTenant>())
         {
             existing = await _resourceRepository.GetListAsync(x => ids.Contains(x.Id));
         }
 
-        var alive = new HashSet<Guid>(existing.Select(r => r.Id));
+        // 严格租户隔离：租户用户只保留本租户资源，Host 资源（TenantId 为空）不可见；
+        // Host 用户（CurrentTenant 为空）可见全部。
+        var currentTenantId = _currentTenant.Id;
+        var alive = new HashSet<Guid>(
+            existing
+                .Where(r => !currentTenantId.HasValue || r.TenantId == currentTenantId.Value)
+                .Select(r => r.Id));
+
         return items
             .Where(x => Guid.TryParse(x.ResourceId, out var g) && alive.Contains(g))
             .ToList();
