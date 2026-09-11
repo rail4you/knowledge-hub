@@ -17,28 +17,81 @@ internal class LiveRoom
     /// <summary>房间内所有参与者连接</summary>
     private readonly ConcurrentDictionary<string, ParticipantConnection> _participants = new();
 
+    /// <summary>
+    /// 保护“清空后移除房间”的临界区。
+    /// 房间被判定为空时会标记 _closed；并发的加入必须看到该标记并重建房间，
+    /// 否则会出现“旧连接把刚有新人的房间从 Rooms 中删掉”，导致晚来的学生被隔离到另一个房间对象。
+    /// </summary>
+    private readonly object _sync = new();
+    private bool _closed;
+
     public LiveRoom(Guid liveId)
     {
         LiveId = liveId;
     }
 
+    /// <summary>房间是否已被判定为空并标记关闭</summary>
+    public bool IsClosed
+    {
+        get { lock (_sync) { return _closed; } }
+    }
+
+    /// <summary>
+    /// 添加或更新参与者连接。
+    /// 若房间已被标记关闭则返回 false（调用方应丢弃该房间并重建）。
+    /// </summary>
+    public bool TryAddParticipant(string userId, WebSocket ws, string role, string userName)
+    {
+        lock (_sync)
+        {
+            if (_closed) return false;
+
+            _participants[userId] = new ParticipantConnection
+            {
+                UserId = userId,
+                UserName = userName,
+                Role = role,
+                Ws = ws,
+                ConnectedAt = DateTime.UtcNow,
+            };
+            return true;
+        }
+    }
+
     /// <summary>添加或更新参与者连接</summary>
     public void AddParticipant(string userId, WebSocket ws, string role, string userName)
-    {
-        _participants[userId] = new ParticipantConnection
-        {
-            UserId = userId,
-            UserName = userName,
-            Role = role,
-            Ws = ws,
-            ConnectedAt = DateTime.UtcNow,
-        };
-    }
+        => TryAddParticipant(userId, ws, role, userName);
 
     /// <summary>移除参与者</summary>
     public void RemoveParticipant(string userId)
     {
-        _participants.TryRemove(userId, out _);
+        lock (_sync)
+        {
+            _participants.TryRemove(userId, out _);
+        }
+    }
+
+    /// <summary>
+    /// 移除参与者（仅当存量连接就是断开的这条 WS 时才删），并原子地返回移除后房间是否已无人。
+    /// 用户快速重进时，旧连接的断开清理不得删除新连接，否则新会话收不到后续信令。
+    /// </summary>
+    public bool RemoveParticipantAndCheckEmpty(string userId, WebSocket? ws)
+    {
+        lock (_sync)
+        {
+            if (ws == null)
+            {
+                _participants.TryRemove(userId, out _);
+            }
+            else if (_participants.TryGetValue(userId, out var p) && p.Ws == ws)
+            {
+                _participants.TryRemove(userId, out _);
+            }
+
+            var empty = !_participants.Values.Any(p => p.Ws is { State: WebSocketState.Open });
+            if (empty) _closed = true;
+            return empty;
+        }
     }
 
     /// <summary>
@@ -47,15 +100,7 @@ internal class LiveRoom
     /// </summary>
     public void RemoveParticipant(string userId, WebSocket? ws)
     {
-        if (ws == null)
-        {
-            _participants.TryRemove(userId, out _);
-            return;
-        }
-        if (_participants.TryGetValue(userId, out var p) && p.Ws == ws)
-        {
-            _participants.TryRemove(userId, out _);
-        }
+        RemoveParticipantAndCheckEmpty(userId, ws);
     }
 
     /// <summary>根据 WebSocket 查找参与者信息</summary>

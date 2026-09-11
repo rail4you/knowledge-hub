@@ -102,6 +102,19 @@
   .time-cell { font-size: 13px; color: var(--kh-muted); line-height: 1.5; }
   .time-cell.empty { color: #bfbfbf; }
 
+  .student-cell {
+    display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px;
+    max-width: 100%;
+  }
+  .student-tag {
+    display: inline-block; max-width: 100%;
+    padding: 1px 8px; border-radius: 6px;
+    background: var(--kh-accent-soft); color: var(--kh-accent-deep);
+    font-size: 12px; font-weight: 500; line-height: 1.7;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .muted-cell { font-size: 13px; color: #bfbfbf; }
+
   .op-links { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; justify-content: flex-start; flex-wrap: wrap; }
   .op-link { cursor: pointer; font-weight: 500; text-decoration: none; transition: opacity .15s; }
   .op-link.enter { color: var(--kh-ok); &:hover { text-decoration: underline; } &.disabled { opacity: .45; cursor: not-allowed; text-decoration: none; } }

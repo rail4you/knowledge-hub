@@ -17,7 +17,7 @@ import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { RecruitmentLiveService } from '../../recruitment-live/recruitment-live.service';
-import { RecruitmentLiveDto, RecruitmentLiveStatus, UserBriefDto } from '../../recruitment-live/recruitment-live.models';
+import { ParticipantBriefDto, RecruitmentLiveDto, RecruitmentLiveStatus, UserBriefDto } from '../../recruitment-live/recruitment-live.models';
 
 @Component({
   selector: 'app-recruitment-live-management',
@@ -266,6 +266,14 @@ export class RecruitmentLiveManagementComponent implements OnInit {
     return live.status === RecruitmentLiveStatus.Waiting
       && !!live.scheduledEndAt
       && new Date(live.scheduledEndAt) < new Date();
+  }
+
+  /**
+   * 该直播对应的学生参与者列表（可能多个）。
+   * 优先取参与者表中 role=student 的记录；旧记录无参与者时回退到 StudentName。
+   */
+  liveStudents(live: RecruitmentLiveDto): ParticipantBriefDto[] {
+    return (live.participants || []).filter(p => p.role === 'student');
   }
 
 

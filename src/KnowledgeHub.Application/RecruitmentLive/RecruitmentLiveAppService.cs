@@ -324,8 +324,11 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
         {
             var entity = await _liveRepository.GetAsync(id);
 
-            if (entity.ScheduledEndAt.HasValue && entity.ScheduledEndAt.Value < DateTime.UtcNow
-                && entity.Status != RecruitmentLiveStatus.Ended && entity.Status != RecruitmentLiveStatus.Cancelled)
+            // 仅“等待中且已超过计划结束时间”的直播视为过期。
+            // 已开始（Active）的直播不因计划结束时间而拒绝进入，与前端 isExpired 语义保持一致，
+            // 否则直播进行中时，晚来的学生会在计划结束时间后被挡在门外。
+            if (entity.Status == RecruitmentLiveStatus.Waiting
+                && entity.ScheduledEndAt.HasValue && entity.ScheduledEndAt.Value < DateTime.UtcNow)
             {
                 throw new UserFriendlyException("该直播已过期，无法进入。");
             }

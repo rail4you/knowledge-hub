@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
@@ -162,17 +163,26 @@ public class RecruitmentLiveWebSocketHandler
 
         // 4. 加入房间
         var roomKey = liveId.ToString();
-        var room = Rooms.GetOrAdd(roomKey, _ => new LiveRoom(liveId));
-
         var userIdStr = tokenUserId.ToString();
 
-        // 踢掉同一用户的旧连接
-        var existing = room.GetByUserId(userIdStr);
-        if (existing?.Ws is { State: WebSocketState.Open } oldWs && oldWs != ws)
+        // 房间可能刚被判定为空并标记关闭，需重建后再加入，避免晚来的学生被隔离到已废弃的房间对象
+        LiveRoom room;
+        while (true)
         {
-            await TryCloseWebSocket(oldWs, "您已在其他设备进入直播间");
+            room = Rooms.GetOrAdd(roomKey, _ => new LiveRoom(liveId));
+
+            // 踢掉同一用户的旧连接
+            var existing = room.GetByUserId(userIdStr);
+            if (existing?.Ws is { State: WebSocketState.Open } oldWs && oldWs != ws)
+            {
+                await TryCloseWebSocket(oldWs, "您已在其他设备进入直播间");
+            }
+
+            if (room.TryAddParticipant(userIdStr, ws, role, userName)) break;
+
+            // 该房间已关闭：按值精确移除（不误删并发创建的新房间）后重试
+            Rooms.TryRemove(new KeyValuePair<string, LiveRoom>(roomKey, room));
         }
-        room.AddParticipant(userIdStr, ws, role, userName);
 
         _logger.LogInformation("用户 {UserId}({Role}) 进入直播间 {LiveId}", userIdStr, role, liveId);
 
@@ -367,14 +377,15 @@ public class RecruitmentLiveWebSocketHandler
             }
         }
 
-        // 清理房间引用（仅当断开的正是存量连接时，重连的新连接不受影响）
-        room.RemoveParticipant(userId, ws);
+        // 清理房间引用（仅当断开的正是存量连接时，重连的新连接不受影响），
+        // 并原子地判断房间是否已空，避免“判定为空”与“新人加入”之间的竞态
+        var empty = room.RemoveParticipantAndCheckEmpty(userId, ws);
 
-        // 如果房间空了，清理房间缓存
-        if (!room.HasAnyone)
+        // 如果房间空了，按值精确移除房间缓存（不误删并发创建的新房间）
+        if (empty)
         {
             _logger.LogInformation("直播间 {LiveId} 所有人已离开，清理房间缓存", liveId);
-            Rooms.TryRemove(liveId.ToString(), out _);
+            Rooms.TryRemove(new KeyValuePair<string, LiveRoom>(liveId.ToString(), room));
         }
 
         await TryCloseWebSocket(ws, null);
