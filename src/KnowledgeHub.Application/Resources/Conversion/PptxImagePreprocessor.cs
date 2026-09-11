@@ -34,15 +34,18 @@ namespace KnowledgeHub.Resources.Conversion;
 public class PptxImagePreprocessor : ISingletonDependency
 {
     private readonly IFileStorageService _fileStorageService;
+    private readonly IFfmpegRunner _runner;
     private readonly OfficeConversionOptions _options;
     private readonly ILogger<PptxImagePreprocessor> _logger;
 
     public PptxImagePreprocessor(
         IFileStorageService fileStorageService,
+        IFfmpegRunner runner,
         IOptions<OfficeConversionOptions> options,
         ILogger<PptxImagePreprocessor> logger)
     {
         _fileStorageService = fileStorageService;
+        _runner = runner;
         _options = options.Value;
         _logger = logger;
     }
@@ -119,14 +122,14 @@ public class PptxImagePreprocessor : ISingletonDependency
     /// 获取（或生成）预压缩后的 light PPTX 路径。缓存有效则直接返回。
     /// 生成失败时返回 null（调用方应回退到原始文件）。
     /// </summary>
-    public Task<string?> GetOrCreateLightAsync(string resourceId, string sourcePath, CancellationToken ct = default)
+    public async Task<string?> GetOrCreateLightAsync(string resourceId, string sourcePath, CancellationToken ct = default)
     {
         var lightPath = GetLightPptxPath(resourceId);
         var metaPath = GetLightMetaPath(resourceId);
 
         if (File.Exists(lightPath) && IsCacheValid(metaPath, sourcePath))
         {
-            return Task.FromResult<string?>(lightPath);
+            return lightPath;
         }
 
         // 无效缓存先清理，避免并发读到旧文件
@@ -136,10 +139,10 @@ public class PptxImagePreprocessor : ISingletonDependency
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(lightPath)!);
-            if (Preprocess(sourcePath, lightPath, ct))
+            if (await PreprocessAsync(sourcePath, lightPath, ct))
             {
                 SaveMeta(metaPath, sourcePath);
-                return Task.FromResult<string?>(lightPath);
+                return lightPath;
             }
         }
         catch (Exception ex)
@@ -148,7 +151,7 @@ public class PptxImagePreprocessor : ISingletonDependency
             TryDelete(lightPath);
         }
 
-        return Task.FromResult<string?>(null);
+        return null;
     }
 
     /// <summary>
@@ -174,7 +177,7 @@ public class PptxImagePreprocessor : ISingletonDependency
     /// <summary>
     /// 预压缩主流程。返回是否成功。
     /// </summary>
-    private bool Preprocess(string sourcePath, string outPath, CancellationToken ct)
+    private async Task<bool> PreprocessAsync(string sourcePath, string outPath, CancellationToken ct)
     {
         var workDir = Path.Combine(
             Path.GetTempPath(),
@@ -217,7 +220,7 @@ public class PptxImagePreprocessor : ISingletonDependency
                 }
 
                 var outputPath = Path.Combine(workDir, outBase);
-                if (CompressMedia(inputPath, outputPath, ct))
+                if (await CompressMediaAsync(inputPath, outputPath, ct))
                 {
                     var bytes = File.ReadAllBytes(outputPath);
                     if (bytes.Length < entry.Length) // 压缩后确实变小才替换
@@ -261,39 +264,41 @@ public class PptxImagePreprocessor : ISingletonDependency
     /// ffmpeg 压缩单个媒体。GIF 取中间帧转 JPEG（PDF 预览是静态的）；
     /// 静态大图缩放到目标宽度转 JPEG。返回是否成功。
     /// </summary>
-    private bool CompressMedia(string inputPath, string outputPath, CancellationToken ct)
+    private async Task<bool> CompressMediaAsync(string inputPath, string outputPath, CancellationToken ct)
     {
         try
         {
-            string filter;
             var maxDim = _options.PptxMaxImageDimension;
             var ext = Path.GetExtension(inputPath).ToLowerInvariant();
 
+            var args = new List<string> { "-y" };
+
             if (ext == ".gif")
             {
-                // GIF：取中间帧。先探测总帧数
-                var frames = ProbeGifFrames(inputPath, ct);
-                var mid = Math.Max(0, frames / 2);
-                var scale = maxDim > 0 ? $"scale='min({maxDim},iw)':-2" : "null";
-                filter = $"select=eq(n\\,{mid}),{scale}";
-            }
-            else
-            {
-                // 静态图：整体缩放
-                filter = maxDim > 0 ? $"scale='min({maxDim},iw)':-2" : "null";
+                // GIF：输入前用 -ss 定位到中间时刻抽一帧。
+                // 原实现用 ffprobe -count_frames 全量解码数帧，对大 GIF 很贵；
+                // 改为读时长取中点（只读容器索引，不解码）。
+                var midSeconds = ProbeMediaMidSeconds(inputPath);
+                if (midSeconds > 0)
+                {
+                    args.Add("-ss");
+                    args.Add(midSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
+                }
             }
 
-            var args = new List<string>
-            {
-                "-y",
-                "-i", inputPath,
-                "-vf", filter,
-                "-frames:v", "1",
-                "-q:v", _options.PptxJpegQuality.ToString(),
-                outputPath
-            };
+            var scale = maxDim > 0 ? $"scale='min({maxDim},iw)':-2" : "null";
+            args.Add("-i");
+            args.Add(inputPath);
+            args.Add("-vf");
+            args.Add(scale);
+            args.Add("-frames:v");
+            args.Add("1");
+            args.Add("-q:v");
+            args.Add(_options.PptxJpegQuality.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            args.Add(outputPath);
 
-            return RunFfmpeg(args, ct);
+            var result = await _runner.RunFfmpegAsync(args, ct: ct);
+            return result.Success;
         }
         catch (Exception ex)
         {
@@ -302,7 +307,10 @@ public class PptxImagePreprocessor : ISingletonDependency
         }
     }
 
-    private int ProbeGifFrames(string path, CancellationToken ct)
+    /// <summary>
+    /// 用 ffprobe 读取媒体时长并返回中点秒数。失败返回 0（调用方退化为取首帧）。
+    /// </summary>
+    private double ProbeMediaMidSeconds(string path)
     {
         try
         {
@@ -312,69 +320,31 @@ public class PptxImagePreprocessor : ISingletonDependency
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
+                CreateNoWindow = true,
             };
             foreach (var a in new[]
             {
-                "-v", "error", "-count_frames", "-select_streams", "v:0",
-                "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", path
+                "-v", "error", "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1", path
             })
                 psi.ArgumentList.Add(a);
 
             using var proc = Process.Start(psi);
-            if (proc == null) return 1;
+            if (proc == null) return 0;
             var stdout = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(15000);
-            if (int.TryParse(stdout.Trim().Split('\n')[0], out var n) && n > 0)
-                return n;
+            proc.WaitForExit(10000);
+            if (double.TryParse(
+                    stdout.Trim(),
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var duration)
+                && duration > 0)
+            {
+                return duration / 2.0;
+            }
         }
         catch { /* ignore */ }
-        return 1;
-    }
-
-    private bool RunFfmpeg(List<string> args, CancellationToken ct)
-    {
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_options.FfmpegTimeoutSeconds));
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = _options.FfmpegPath,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (var a in args)
-            psi.ArgumentList.Add(a);
-
-        using var proc = Process.Start(psi);
-        if (proc == null)
-        {
-            _logger.LogWarning("[PptxPreprocess] 无法启动 ffmpeg: {Path}", _options.FfmpegPath);
-            return false;
-        }
-
-        var stderrTask = proc.StandardError.ReadToEndAsync();
-        try
-        {
-            proc.WaitForExit((int)TimeSpan.FromSeconds(_options.FfmpegTimeoutSeconds).TotalMilliseconds);
-            if (!proc.HasExited)
-            {
-                proc.Kill(true);
-                return false;
-            }
-            if (proc.ExitCode != 0)
-            {
-                _logger.LogWarning("[PptxPreprocess] ffmpeg 退出码 {Code}: {Err}",
-                    proc.ExitCode, stderrTask.Result[..Math.Min(500, stderrTask.Result.Length)]);
-                return false;
-            }
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[PptxPreprocess] ffmpeg 异常");
-            return false;
-        }
+        return 0;
     }
 
     /// <summary>

@@ -81,9 +81,18 @@ services:
       # AuthServer（外部可访问地址，用于 token 验证）
       - AuthServer__Authority=${PUBLIC_URL}/
       - AuthServer__RequireHttpsMetadata=false
-      # 数据库
-      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}
+      # 数据库（连接池：API 50 + Hangfire 20，为 PG max_connections=100 留足余量）
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD};Maximum Pool Size=50;Timeout=15;Command Timeout=30
+      # Hangfire 独立连接串，避免后台任务与 API 请求争抢连接池
+      - ConnectionStrings__Hangfire=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD};Maximum Pool Size=20;Timeout=15;Command Timeout=30
       - Redis__Configuration=redis
+      # Hangfire 作业存储切到 Redis（卸载 PostgreSQL 连接池/轮询压力）
+      - Hangfire__Storage=Redis
+      # 各队列独立 worker 数（按队列拆分独立 Server）
+      - Hangfire__Workers__Default=2
+      - Hangfire__Workers__Conversion=1
+      - Hangfire__Workers__Ai=2
+      - Hangfire__Workers__Media=2
       # Meilisearch
       - Meilisearch__Host=http://meilisearch:7700
       - Meilisearch__ApiKey=${MEILISEARCH_MASTER_KEY}
@@ -122,6 +131,8 @@ services:
       - Qwen__ApiKey=${QWEN_API_KEY}
       - Qwen__BaseUrl=${QWEN_BASE_URL}
       - Qwen__Model=${QWEN_MODEL}
+      # 全局 Qwen 并发限流（所有 Chat/VL 调用共用）
+      - Qwen__MaxConcurrentRequests=${QWEN_MAX_CONCURRENT:-3}
       # OSS 阿里云对象存储
       - Oss__Endpoint=${OSS_ENDPOINT:-oss-cn-beijing.aliyuncs.com}
       - Oss__AccessKeyId=${OSS_ACCESS_KEY_ID}
@@ -142,8 +153,11 @@ services:
       - Serilog__MinimumLevel__Default=Information
       # 仿真实训 WASM 本地镜像（由 Kestrel 兜底读取；生产主要由 Nginx 直接静态托管）
       - WasmMirror__RootPath=/app/wasm-mirrors
+      # 文件存储根路径（容器内挂载点；必须与下方 volumes 的挂载目标一致）
+      - Storage__RootPath=${STORAGE_ROOT_PATH:-/app/uploads}
     volumes:
-      - ./uploads:/app/uploads
+      # 宿主机上传目录 : 容器内存储根路径（均可通过 .env 覆盖）
+      - ${STORAGE_HOST_DIR:-./uploads}:${STORAGE_ROOT_PATH:-/app/uploads}
       - ./wasm-mirrors:/app/wasm-mirrors:rw
     depends_on:
       postgres:
@@ -274,7 +288,8 @@ services:
       - OpenIddict__Applications__KnowledgeHub_App__RedirectAllowedUrls=${PUBLIC_URL}
       - OpenIddict__Applications__KnowledgeHub_Swagger__ClientId=KnowledgeHub_Swagger
       - OpenIddict__Applications__KnowledgeHub_Swagger__RootUrl=${PUBLIC_URL}
-      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD}
+      # 迁移可能耗时较长，放宽命令超时
+      - ConnectionStrings__Default=Host=postgres;Port=5432;Database=KnowledgeHub;Username=postgres;Password=${POSTGRES_PASSWORD};Maximum Pool Size=10;Timeout=15;Command Timeout=300
       - AuthServer__CertificatePassPhrase=${JWT_CERTIFICATE_PASSWORD}
       - StringEncryption__DefaultPassPhrase=${STRING_ENCRYPTION_PASSPHRASE}
     depends_on:
@@ -315,6 +330,10 @@ services:
     container_name: redis
     hostname: redis
     platform: linux/amd64
+    # Hangfire 作业存储需要持久化，开启 AOF 并把数据落到 bind mount
+    command: redis-server --appendonly yes
+    volumes:
+      - ./redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

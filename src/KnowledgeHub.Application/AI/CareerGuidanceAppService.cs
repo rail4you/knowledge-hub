@@ -259,11 +259,7 @@ JSON 结构：
             return;
         }
 
-        var openaiClient = new OpenAIClient(
-            new ApiKeyCredential(apiKey),
-            new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-
-        IChatClient chatClient = openaiClient.GetChatClient(model).AsIChatClient();
+        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
 
         var chatOptions = new ChatOptions
         {

@@ -45,8 +45,9 @@ public class HangfireConversionTaskQueue : IConversionTaskQueue
 
         _logger.LogInformation("[ConversionQueue] 入队转换: {ResourceId}", resourceId);
 
-        _backgroundJobClient.Enqueue<OfficeConversionJob>(job =>
-            job.ConvertAsync(resourceId, sourcePath));
+        _backgroundJobClient.Enqueue<OfficeConversionJob>(
+            "conversion",
+            job => job.ConvertAsync(resourceId, sourcePath));
 
         // job 完成后移除去重标记（job 内部无法直接通知这里，用延时清理兜底；
         // 实际在 IsInFlight 判断 + ConvertToPdfAsync 内部缓存/in-flight 去重已足够安全）。

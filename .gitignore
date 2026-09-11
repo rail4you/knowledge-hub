@@ -146,6 +146,7 @@ etc/docker/wasm-mirrors/*/*
 # Docker 引擎与数据库运行时数据（二进制、不稳定，不进 git）
 etc/docker/postgres_data/
 etc/docker/meilisearch_data/
+etc/docker/redis_data/          # Hangfire 作业存储（Redis AOF）
 etc/docker/uploads/             # 用户上传文件 + 转换缓存
 etc/docker/.env                # 生产环境 secrets
 etc/docker/certs/              # 自签名证书（生产用真证书）

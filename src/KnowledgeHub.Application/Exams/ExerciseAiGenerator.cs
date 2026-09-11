@@ -140,10 +140,7 @@ public class ExerciseAiGenerator : ITransientDependency
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-plus";
 
-        var openaiClient = new OpenAIClient(
-            new ApiKeyCredential(apiKey),
-            new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-        IChatClient chatClient = openaiClient.GetChatClient(model).AsIChatClient();
+        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
 
         var messages = new List<ChatMessage> { new(ChatRole.User, userPrompt) };
         var chatOptions = new ChatOptions { Instructions = systemPrompt };

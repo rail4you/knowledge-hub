@@ -138,11 +138,7 @@ public class ChatAppService : KnowledgeHubAppService
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-plus";
 
-        var openaiClient = new OpenAIClient(
-            new ApiKeyCredential(apiKey),
-            new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-
-        IChatClient chatClient = openaiClient.GetChatClient(model).AsIChatClient();
+        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
         chatClient = new FunctionInvokingChatClient(chatClient);
 
         List<AITool> tools;

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,16 +25,17 @@ public interface IPdfPageRasterizer
 [ExposeServices(typeof(IPdfPageRasterizer))]
 public class PdftoppmPageRasterizer : IPdfPageRasterizer, ISingletonDependency
 {
-    private static readonly SemaphoreSlim Gate = new(2, 2);
-
     private readonly OfficeConversionOptions _options;
+    private readonly IFfmpegRunner _runner;
     private readonly ILogger<PdftoppmPageRasterizer> _logger;
 
     public PdftoppmPageRasterizer(
         IOptions<OfficeConversionOptions> options,
+        IFfmpegRunner runner,
         ILogger<PdftoppmPageRasterizer> logger)
     {
         _options = options.Value;
+        _runner = runner;
         _logger = logger;
     }
 
@@ -63,7 +63,6 @@ public class PdftoppmPageRasterizer : IPdfPageRasterizer, ISingletonDependency
             return outputJpegPath;
         }
 
-        await Gate.WaitAsync(ct);
         try
         {
             var prefix = Path.Combine(dir, Path.GetFileNameWithoutExtension(outputJpegPath));
@@ -77,7 +76,9 @@ public class PdftoppmPageRasterizer : IPdfPageRasterizer, ISingletonDependency
                 prefix
             };
 
-            if (!RunPdftoppm(args, ct))
+            var timeout = TimeSpan.FromSeconds(Math.Max(5, _options.PdftoppmTimeoutSeconds));
+            var result = await _runner.RunAsync(_options.PdftoppmPath, args, timeout, ct);
+            if (!result.Success)
             {
                 return null;
             }
@@ -88,61 +89,6 @@ public class PdftoppmPageRasterizer : IPdfPageRasterizer, ISingletonDependency
         {
             _logger.LogWarning(ex, "[PdfRasterizer] 首页渲染失败: {Pdf}", pdfFullPath);
             return null;
-        }
-        finally
-        {
-            Gate.Release();
-        }
-    }
-
-    private bool RunPdftoppm(List<string> args, CancellationToken ct)
-    {
-        var timeout = TimeSpan.FromSeconds(Math.Max(5, _options.PdftoppmTimeoutSeconds));
-        using var timeoutCts = new CancellationTokenSource(timeout);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = _options.PdftoppmPath,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (var a in args)
-        {
-            psi.ArgumentList.Add(a);
-        }
-
-        using var proc = Process.Start(psi);
-        if (proc == null)
-        {
-            _logger.LogWarning("[PdfRasterizer] 无法启动 pdftoppm: {Path}", _options.PdftoppmPath);
-            return false;
-        }
-
-        var stderrTask = proc.StandardError.ReadToEndAsync(linked.Token);
-        try
-        {
-            proc.WaitForExit((int)timeout.TotalMilliseconds);
-            if (!proc.HasExited)
-            {
-                try { proc.Kill(true); } catch { /* ignore */ }
-                return false;
-            }
-            if (proc.ExitCode != 0)
-            {
-                var err = stderrTask.IsCompletedSuccessfully ? stderrTask.Result : string.Empty;
-                _logger.LogWarning("[PdfRasterizer] pdftoppm 退出码 {Code}: {Err}", proc.ExitCode,
-                    err.Length > 300 ? err[..300] : err);
-                return false;
-            }
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[PdfRasterizer] pdftoppm 异常");
-            try { proc.Kill(true); } catch { /* ignore */ }
-            return false;
         }
     }
 }

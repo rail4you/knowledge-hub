@@ -61,6 +61,7 @@ using Volo.Abp.BackgroundJobs;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.PostgreSql;
+using Hangfire.Redis.StackExchange;
 using KnowledgeHub.Application.AI.Tasks;
 using KnowledgeHub.HangfireJobs;
 using KnowledgeHub.Json;
@@ -220,6 +221,8 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.Configure<ResourceMediaOptions>(configuration.GetSection("ResourceMedia"));
         // 上传大小限制：App:MaxFileSizeBytes（默认 500MB，env: App__MaxFileSizeBytes）
         context.Services.Configure<KnowledgeHub.Common.AppUploadOptions>(configuration.GetSection("App"));
+        // 文件存储根路径：Storage:RootPath（默认 uploads，env: Storage__RootPath）
+        context.Services.Configure<KnowledgeHub.Common.FileStorageOptions>(configuration.GetSection("Storage"));
 
         context.Services.AddHttpClient("LiteParse", (sp, client) =>
         {
@@ -242,21 +245,69 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             config.SetDataCompatibilityLevel(Hangfire.CompatibilityLevel.Version_180);
             config.UseSimpleAssemblyNameTypeSerializer();
             config.UseRecommendedSerializerSettings();
-            config.UsePostgreSqlStorage(
-                configuration.GetConnectionString("Default"),
-                new Hangfire.PostgreSql.PostgreSqlStorageOptions
+
+            // 存储后端：Hangfire:Storage = Postgres（默认）| Redis
+            // Redis 可把作业存储从 PostgreSQL 卸载到 Redis（复用已有的 Redis 容器），
+            // 避免后台任务轮询与 API 请求争抢 PG 连接池、降低持久化开销。
+            var storage = configuration["Hangfire:Storage"] ?? "Postgres";
+            if (string.Equals(storage, "Redis", StringComparison.OrdinalIgnoreCase))
+            {
+                var redisConnection = configuration["Hangfire:Redis:ConnectionString"];
+                if (string.IsNullOrWhiteSpace(redisConnection))
                 {
-                    SchemaName = "hangfire",
-                    PrepareSchemaIfNecessary = true
+                    redisConnection = configuration["Redis:Configuration"];
+                }
+                if (string.IsNullOrWhiteSpace(redisConnection))
+                {
+                    throw new AbpInitializationException(
+                        "Hangfire:Storage=Redis 但未配置 Hangfire:Redis:ConnectionString 或 Redis:Configuration");
+                }
+
+                config.UseRedisStorage(redisConnection, new RedisStorageOptions
+                {
+                    Prefix = configuration["Hangfire:Redis:Prefix"] ?? "{knowledgehub-hangfire}:",
+                    Db = configuration.GetValue("Hangfire:Redis:Db", 0),
                 });
+            }
+            else
+            {
+                // PostgreSQL：使用独立连接串（ConnectionStrings:Hangfire），
+                // 避免与 API 请求争抢同一个连接池；未配置时回退到 Default。
+                var hangfireConnectionString = configuration.GetConnectionString("Hangfire")
+                    ?? configuration.GetConnectionString("Default");
+                config.UsePostgreSqlStorage(
+                    hangfireConnectionString,
+                    new Hangfire.PostgreSql.PostgreSqlStorageOptions
+                    {
+                        SchemaName = "hangfire",
+                        PrepareSchemaIfNecessary = true
+                    });
+            }
         });
-        context.Services.AddHangfireServer(options =>
+
+        // ── 按队列拆分独立 BackgroundJobServer ──
+        // 每个队列一个 server，独立 WorkerCount：长任务（AI / 转换 / 媒体）互不阻塞，
+        // 也不会因某个队列积压占满共享 worker 导致其他队列饥饿。
+        // WorkerCount 由 Hangfire:Workers:{Queue} 配置，<=0 表示不启动该队列的 server。
+        void AddQueueServer(string queue, int workerCount)
         {
-            // worker 数：转换真正并发由 ConversionConcurrencyManager 按服务分组控制，
-            // 这里给一个合理上限（如 2 * CPU）防止排队任务堆积在后台。
-            options.WorkerCount = Math.Max(1, Environment.ProcessorCount * 2);
-            options.Queues = new[] { "default", "conversion", "ai", "media" };
-        });
+            if (workerCount <= 0)
+            {
+                return;
+            }
+
+            context.Services.AddHangfireServer(options =>
+            {
+                options.ServerName = $"knowledgehub-{queue}";
+                options.Queues = new[] { queue };
+                options.WorkerCount = workerCount;
+            });
+        }
+
+        AddQueueServer("default", configuration.GetValue("Hangfire:Workers:Default", 2));
+        AddQueueServer("conversion", configuration.GetValue("Hangfire:Workers:Conversion", 1));
+        AddQueueServer("ai", configuration.GetValue("Hangfire:Workers:Ai", 2));
+        AddQueueServer("media", configuration.GetValue("Hangfire:Workers:Media", 2));
         context.Services.AddSingleton<IConversionTaskQueue, HangfireConversionTaskQueue>();
         // AI 生成任务队列（ai 队列，PostgreSQL 持久化）
         context.Services.AddSingleton<IAiTaskQueue, HangfireAiTaskQueue>();
@@ -265,8 +316,11 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
 
         context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>();
         context.Services.AddScoped<KnowledgeHub.Application.Search.MeiliSearchService>();
-        context.Services.AddScoped<KnowledgeHub.Resources.ISearchService>(sp => 
-    new global::KnowledgeHub.Resources.MeiliSearchService(new HttpClient { BaseAddress = new Uri(configuration["Meilisearch:Host"] ?? "http://localhost:7700") }));
+        // 复用下方注册的 "MeiliSearch" 命名客户端（连接池由 IHttpClientFactory 管理），
+        // 避免每个请求 new HttpClient 导致 socket/TIME_WAIT 耗尽。
+        context.Services.AddScoped<KnowledgeHub.Resources.ISearchService>(sp =>
+            new global::KnowledgeHub.Resources.MeiliSearchService(
+                sp.GetRequiredService<IHttpClientFactory>().CreateClient("MeiliSearch")));
         context.Services.AddHttpClient<IEmbeddingService, EmbeddingService>();
         context.Services.AddTransient<ITeachingAgentRuntimeClient, TeachingAgentRuntimeClient>();
         context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();
@@ -501,10 +555,12 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         app.UseAbpStudioLink();
         app.UseAbpSecurityHeaders();
 
+        var fileStorageRoot = context.ServiceProvider
+            .GetRequiredService<IOptions<KnowledgeHub.Common.FileStorageOptions>>()
+            .Value.ResolveRootPath(env.ContentRootPath);
         app.UseStaticFiles(new StaticFileOptions
         {
-            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
-                Path.Combine(env.ContentRootPath, "uploads")),
+            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(fileStorageRoot),
             RequestPath = "/uploads"
         });
 

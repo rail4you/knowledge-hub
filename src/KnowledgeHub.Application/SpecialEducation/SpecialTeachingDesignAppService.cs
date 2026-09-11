@@ -299,8 +299,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
 {(input.CustomPrompt.IsNullOrWhiteSpace() ? "" : $"## 教师附加要求：\n{input.CustomPrompt}\n")}
 请按 SystemPrompt JSON 结构输出。";
 
-        var openaiClient = new OpenAIClient(new ApiKeyCredential(apiKey), new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-        IChatClient chatClient = openaiClient.GetChatClient(model).AsIChatClient();
+        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
         var messages = new List<ChatMessage> { new(ChatRole.User, userPrompt) };
         var options = new ChatOptions { Instructions = SpecialEduPromptBuilder.TeachingDesignInstructions };
         await foreach (var update in chatClient.GetStreamingResponseAsync(messages, options, CancellationToken.None))

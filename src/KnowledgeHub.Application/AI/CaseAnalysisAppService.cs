@@ -128,11 +128,7 @@ JSON 结构:
 
 请按 SystemPrompt 中规定的 JSON 结构输出案例分析。";
 
-        var openaiClient = new OpenAIClient(
-            new ApiKeyCredential(apiKey),
-            new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-
-        IChatClient chatClient = openaiClient.GetChatClient(model).AsIChatClient();
+        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
 
         var chatOptions = new ChatOptions
         {

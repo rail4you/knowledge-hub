@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Resources;
+using KnowledgeHub.Resources.Conversion;
 using KnowledgeHub.Resources.FileStorage;
 using KnowledgeHub.Resources.Media;
 using Microsoft.Extensions.Configuration;
@@ -30,6 +33,8 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
     private readonly IConfiguration _configuration;
     private readonly ResourceMediaJobManager _mediaJobManager;
     private readonly IOptions<ResourceMediaOptions> _mediaOptions;
+    private readonly IFfmpegRunner _ffmpegRunner;
+    private readonly OfficeConversionOptions _conversionOptions;
     private readonly ILogger<VideoIndexingBackgroundJob> _logger;
 
     private static readonly string[] VideoExtensions = { ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".m4v", ".mpg", ".mpeg", ".3gp", ".qt" };
@@ -44,6 +49,8 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         IConfiguration configuration,
         ResourceMediaJobManager mediaJobManager,
         IOptions<ResourceMediaOptions> mediaOptions,
+        IFfmpegRunner ffmpegRunner,
+        IOptions<OfficeConversionOptions> conversionOptions,
         ILogger<VideoIndexingBackgroundJob> logger)
     {
         _jobRepository = jobRepository;
@@ -55,26 +62,47 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         _configuration = configuration;
         _mediaJobManager = mediaJobManager;
         _mediaOptions = mediaOptions;
+        _ffmpegRunner = ffmpegRunner;
+        _conversionOptions = conversionOptions.Value;
         _logger = logger;
     }
 
+    // 本类是 ABP IAsyncBackgroundJob（走 AbpBackgroundJobs 轮询），
+    // Hangfire 的 [DisableConcurrentExecution] 对其无效，故用进程内并发保护：
+    // 同一 JobId 只允许一个实例执行，避免重复入队/重试时并发压缩写坏同一文件。
+    private static readonly ConcurrentDictionary<Guid, byte> RunningJobs = new();
+
     public async Task ExecuteAsync(VideoIndexingJobArgs args)
     {
-        _logger.LogInformation("VideoIndexingBackgroundJob.ExecuteAsync STARTED for job {JobId}, resource {ResourceId}, tenant {TenantId}", args.JobId, args.ResourceId, args.TenantId);
-
-        // Set tenant context for multi-tenant resource retrieval
-        using (_currentTenant.Change(args.TenantId))
+        if (!RunningJobs.TryAdd(args.JobId, 0))
         {
-            try
+            _logger.LogWarning(
+                "Video indexing job {JobId} is already running; skip duplicate execution.", args.JobId);
+            return;
+        }
+
+        try
+        {
+            _logger.LogInformation("VideoIndexingBackgroundJob.ExecuteAsync STARTED for job {JobId}, resource {ResourceId}, tenant {TenantId}", args.JobId, args.ResourceId, args.TenantId);
+
+            // Set tenant context for multi-tenant resource retrieval
+            using (_currentTenant.Change(args.TenantId))
             {
-                await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Parsing, progress: 5);
-                await ExecuteJobAsync(args);
+                try
+                {
+                    await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Parsing, progress: 5);
+                    await ExecuteJobAsync(args);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Video indexing job {JobId} failed: {Error}", args.JobId, ex.Message);
+                    await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Failed, errorMessage: ex.Message);
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Video indexing job {JobId} failed: {Error}", args.JobId, ex.Message);
-                await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Failed, errorMessage: ex.Message);
-            }
+        }
+        finally
+        {
+            RunningJobs.TryRemove(args.JobId, out _);
         }
     }
 
@@ -112,7 +140,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Analyzing, progress: 20);
         _logger.LogInformation("Analyzing video: {ResourceId}", args.ResourceId);
 
-        var analysisRequest = BuildVideoAnalysisRequest(videoPath, videoUrl, resource.FilePath);
+        var analysisRequest = await BuildVideoAnalysisRequestAsync(videoPath, videoUrl, resource.FilePath);
 
         _logger.LogInformation("Video analysis request: FilePath={FilePath}, VideoUrl={VideoUrl}",
             analysisRequest.FilePath,
@@ -210,7 +238,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
     /// over cross-cloud links. The compressed file is written under uploads/_tmp/ so
     /// nginx /uploads/ proxy serves it directly to Qwen.
     /// </summary>
-    private VideoAnalysisRequestDto BuildVideoAnalysisRequest(string videoPath, string? videoUrl, string? resourceFilePath)
+    private async Task<VideoAnalysisRequestDto> BuildVideoAnalysisRequestAsync(string videoPath, string? videoUrl, string? resourceFilePath)
     {
         var selfUrl = _configuration["App:SelfUrl"] ?? "";
 
@@ -221,7 +249,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
             string urlToUse = videoUrl;
 
             // 大文件预压缩：Qwen 在阿里云，跨云下载大文件容易超时
-            var compressedPath = TryCompressForQwen(videoPath);
+            var compressedPath = await TryCompressForQwenAsync(videoPath);
             if (compressedPath != null)
             {
                 var compressedFileName = Path.GetFileName(compressedPath);
@@ -254,11 +282,12 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
     }
 
     /// <summary>
-    /// 大文件压缩：阈值 30MB；压缩到 480p H.264，输出到 /app/uploads/_tmp/。
-    /// 同源文件多次索引会复用同一压缩产物（按源 mtime 判断）。
+    /// 大文件压缩：阈值 30MB；压到 480p，输出到 /app/uploads/_tmp/。
+    /// 参数针对"Qwen VL 抽帧理解"优化：去音轨(-an)、降帧率(-r 2)、veryfast，
+    /// 显著降低编码耗时与文件体积。同源文件多次索引复用同一产物（按源 mtime 判断）。
     /// 失败时返回 null，调用方回退到原文件 URL。
     /// </summary>
-    private string? TryCompressForQwen(string videoPath)
+    private async Task<string?> TryCompressForQwenAsync(string videoPath)
     {
         if (string.IsNullOrEmpty(videoPath) || !File.Exists(videoPath))
         {
@@ -275,12 +304,13 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         try
         {
             // 输出路径：/app/uploads/_tmp/<safe_name>.compressed.mp4
-            // 用 sha1(源路径) 做文件名，避免中文/空格/特殊字符在文件系统/URL 上出问题
+            // 用 sha1(源路径 + 编码参数版本) 做文件名：参数变化时自动失效旧缓存
             var tmpDir = Path.Combine(_fileStorageService.RootPath, "_tmp");
             Directory.CreateDirectory(tmpDir);
 
+            const string encodeProfile = "v2-an-r2-veryfast-480p";
             using var sha1 = System.Security.Cryptography.SHA1.Create();
-            var hashBytes = sha1.ComputeHash(System.Text.Encoding.UTF8.GetBytes(videoPath));
+            var hashBytes = sha1.ComputeHash(System.Text.Encoding.UTF8.GetBytes($"{videoPath}|{encodeProfile}"));
             var hashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
             var compressedPath = Path.Combine(tmpDir, $"{hashHex}.compressed.mp4");
 
@@ -293,36 +323,32 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
             _logger.LogInformation("Compressing video for Qwen: {Source} ({Size:F2} MB) -> {Target}",
                 videoPath, fileInfo.Length / 1024.0 / 1024.0, compressedPath);
 
-            var psi = new System.Diagnostics.ProcessStartInfo
+            var args = new List<string>
             {
-                FileName = "ffmpeg",
-                // 480p + crf 32：保留下采样后清晰度足够 Qwen 1fps 抽帧理解内容，文件能压到几 MB~几十 MB
-                Arguments = $"-i \"{videoPath}\" -vf \"scale=-2:480\" -vcodec libx264 -crf 32 -preset fast -acodec aac -b:a 64k -movflags +faststart -y \"{compressedPath}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
+                "-y",
+                "-i", videoPath,
+                // 480p：Qwen 抽帧理解足够清晰
+                "-vf", "scale=-2:480",
+                // 降到 2fps：Qwen 本身按 ~1-2fps 抽帧，编码帧数大幅下降 => 快数倍
+                "-r", "2",
+                "-c:v", "libx264",
+                "-crf", "32",
+                "-preset", "veryfast",
+                // 视觉理解不需要音轨
+                "-an",
+                "-threads", Math.Max(1, _conversionOptions.FfmpegThreads).ToString(),
+                compressedPath
             };
 
-            using var process = System.Diagnostics.Process.Start(psi);
-            if (process == null)
-            {
-                _logger.LogWarning("Failed to start ffmpeg for compression, falling back to original URL");
-                return null;
-            }
+            // 大视频压缩可能耗时数分钟，显式放宽超时
+            var result = await _ffmpegRunner.RunFfmpegAsync(args, TimeSpan.FromMinutes(15));
 
-            // 给压缩一些时间；视频很大时可能耗时数分钟
-            if (!process.WaitForExit(15 * 60 * 1000))
+            if (!result.Success)
             {
-                try { process.Kill(true); } catch { }
-                _logger.LogWarning("ffmpeg compression timed out after 15min, falling back to original URL");
-                return null;
-            }
-
-            if (process.ExitCode != 0)
-            {
-                var stderr = process.StandardError.ReadToEnd();
-                _logger.LogWarning("ffmpeg compression failed (exit={Code}): {Err}", process.ExitCode, stderr);
+                _logger.LogWarning("ffmpeg compression failed ({Reason}): {Err}, falling back to original URL",
+                    result.ExitCode, result.StandardError);
+                // 清理半成品，避免下次误判为有效缓存
+                try { if (File.Exists(compressedPath)) File.Delete(compressedPath); } catch { }
                 return null;
             }
 

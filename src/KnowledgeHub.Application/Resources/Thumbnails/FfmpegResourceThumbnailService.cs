@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -9,7 +8,6 @@ using System.Threading.Tasks;
 using KnowledgeHub.Resources.Conversion;
 using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Volo.Abp.DependencyInjection;
 
 namespace KnowledgeHub.Resources.Thumbnails;
@@ -33,22 +31,19 @@ public class FfmpegResourceThumbnailService : IResourceThumbnailService, ISingle
     /// <summary>同一资源的并发去重，避免重复触发 ffmpeg。</summary>
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> PerKeyLocks = new();
 
-    /// <summary>全局并发的 ffmpeg 进程数上限，防止打爆 CPU。</summary>
-    private static readonly SemaphoreSlim GlobalGate = new(2, 2);
-
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
 
     private readonly IFileStorageService _fileStorageService;
-    private readonly OfficeConversionOptions _options;
+    private readonly IFfmpegRunner _ffmpegRunner;
     private readonly ILogger<FfmpegResourceThumbnailService> _logger;
 
     public FfmpegResourceThumbnailService(
         IFileStorageService fileStorageService,
-        IOptions<OfficeConversionOptions> options,
+        IFfmpegRunner ffmpegRunner,
         ILogger<FfmpegResourceThumbnailService> logger)
     {
         _fileStorageService = fileStorageService;
-        _options = options.Value;
+        _ffmpegRunner = ffmpegRunner;
         _logger = logger;
     }
 
@@ -80,7 +75,8 @@ public class FfmpegResourceThumbnailService : IResourceThumbnailService, ISingle
         if (File.Exists(thumbPath) && IsCacheValid(metaPath, info))
             return thumbPath;
 
-        var gate = PerKeyLocks.GetOrAdd($"{resourceId}_{maxWidth}", _ => new SemaphoreSlim(1, 1));
+        var lockKey = $"{resourceId}_{maxWidth}";
+        var gate = PerKeyLocks.GetOrAdd(lockKey, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try
         {
@@ -88,16 +84,9 @@ public class FfmpegResourceThumbnailService : IResourceThumbnailService, ISingle
             if (File.Exists(thumbPath) && IsCacheValid(metaPath, info))
                 return thumbPath;
 
-            await GlobalGate.WaitAsync(ct);
-            try
-            {
-                if (!RunFfmpeg(BuildArgs(sourceFullPath, thumbPath, maxWidth, isVideo), ct))
-                    return null;
-            }
-            finally
-            {
-                GlobalGate.Release();
-            }
+            var result = await _ffmpegRunner.RunFfmpegAsync(BuildArgs(sourceFullPath, thumbPath, maxWidth, isVideo), ct: ct);
+            if (!result.Success)
+                return null;
 
             if (!File.Exists(thumbPath))
                 return null;
@@ -113,6 +102,9 @@ public class FfmpegResourceThumbnailService : IResourceThumbnailService, ISingle
         finally
         {
             gate.Release();
+            // 用完即移除，避免字典随资源数无界增长（并发安全：即使有竞态，
+            // 上面的缓存双重检查也能保证不会重复生成）。
+            PerKeyLocks.TryRemove(lockKey, out _);
         }
     }
 
@@ -129,6 +121,11 @@ public class FfmpegResourceThumbnailService : IResourceThumbnailService, ISingle
         args.Add(input);
         args.Add("-vf");
         args.Add($"scale='min({maxWidth},iw)':-2");
+        if (isVideo)
+        {
+            // 缩略图不需要音轨
+            args.Add("-an");
+        }
         args.Add("-frames:v");
         args.Add("1");
         args.Add("-q:v");
@@ -139,55 +136,6 @@ public class FfmpegResourceThumbnailService : IResourceThumbnailService, ISingle
         args.Add("image2");
         args.Add(output);
         return args;
-    }
-
-    private bool RunFfmpeg(List<string> args, CancellationToken ct)
-    {
-        var timeout = TimeSpan.FromSeconds(_options.FfmpegTimeoutSeconds);
-        using var timeoutCts = new CancellationTokenSource(timeout);
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = _options.FfmpegPath,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-        foreach (var a in args)
-            psi.ArgumentList.Add(a);
-
-        using var proc = Process.Start(psi);
-        if (proc == null)
-        {
-            _logger.LogWarning("[Thumbnail] 无法启动 ffmpeg: {Path}", _options.FfmpegPath);
-            return false;
-        }
-
-        var stderrTask = proc.StandardError.ReadToEndAsync(linked.Token);
-        try
-        {
-            proc.WaitForExit((int)timeout.TotalMilliseconds);
-            if (!proc.HasExited)
-            {
-                try { proc.Kill(true); } catch { /* ignore */ }
-                return false;
-            }
-            if (proc.ExitCode != 0)
-            {
-                var err = stderrTask.IsCompletedSuccessfully ? stderrTask.Result : string.Empty;
-                _logger.LogWarning("[Thumbnail] ffmpeg 退出码 {Code}: {Err}", proc.ExitCode,
-                    err.Length > 400 ? err[..400] : err);
-                return false;
-            }
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[Thumbnail] ffmpeg 异常");
-            try { proc.Kill(true); } catch { /* ignore */ }
-            return false;
-        }
     }
 
     private static bool IsCacheValid(string metaPath, FileInfo source)

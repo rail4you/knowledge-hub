@@ -89,8 +89,20 @@ public class OfficeConversionOptions
 
     /// <summary>
     /// 单个媒体 ffmpeg 处理超时（秒）。默认 60s。
+    /// 注意：视频索引压缩等长任务会显式传入更长的超时。
     /// </summary>
     public int FfmpegTimeoutSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// 全局 ffmpeg/pdftoppm 并发进程上限（跨缩略图 / PPTX 预压缩 / 视频索引 / 视频分析共享）。
+    /// 默认 2（与 2 核机器匹配），防止并发进程打爆 CPU。
+    /// </summary>
+    public int FfmpegMaxConcurrency { get; set; } = 2;
+
+    /// <summary>
+    /// 视频编码线程数上限（ffmpeg -threads）。默认 2，避免抢占 API/其他任务 CPU。
+    /// </summary>
+    public int FfmpegThreads { get; set; } = 2;
 
     /// <summary>
     /// PDF 首页光栅化可执行文件路径（poppler 的 pdftoppm）。

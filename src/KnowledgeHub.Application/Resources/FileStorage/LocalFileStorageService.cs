@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using KnowledgeHub.Common;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace KnowledgeHub.Resources.FileStorage;
 
@@ -11,10 +13,10 @@ public class LocalFileStorageService : IFileStorageService
     private readonly IHostEnvironment _environment;
     private readonly string _rootPath;
 
-    public LocalFileStorageService(IHostEnvironment environment)
+    public LocalFileStorageService(IHostEnvironment environment, IOptions<FileStorageOptions> options)
     {
         _environment = environment;
-        _rootPath = Path.Combine(_environment.ContentRootPath, "uploads");
+        _rootPath = options.Value.ResolveRootPath(_environment.ContentRootPath);
         
         if (!Directory.Exists(_rootPath))
         {

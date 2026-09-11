@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -35,7 +36,31 @@ public class ResourceMediaProcessingJob : ITransientDependency
         _logger = logger;
     }
 
+    // 同一 jobId 只允许一个实例执行，防止重复入队导致进度/状态互相覆盖。
+    // 注：Application 层不引用 Hangfire，故用进程内保护；单实例足够，
+    // 未来多实例部署可改用 Hangfire [DisableConcurrentExecution] 分布式锁。
+    private static readonly ConcurrentDictionary<Guid, byte> RunningJobs = new();
+
     public async Task ExecuteAsync(Guid jobId, Guid? tenantId)
+    {
+        if (!RunningJobs.TryAdd(jobId, 0))
+        {
+            _logger.LogWarning(
+                "ResourceMediaProcessingJob: job {JobId} is already running; skip duplicate execution.", jobId);
+            return;
+        }
+
+        try
+        {
+            await ExecuteInternalAsync(jobId, tenantId);
+        }
+        finally
+        {
+            RunningJobs.TryRemove(jobId, out _);
+        }
+    }
+
+    private async Task ExecuteInternalAsync(Guid jobId, Guid? tenantId)
     {
         using (_currentTenant.Change(tenantId))
         {

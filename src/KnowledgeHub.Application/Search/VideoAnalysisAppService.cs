@@ -11,8 +11,11 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Application.Contracts.Search.Dtos;
+using KnowledgeHub.Resources.Conversion;
+using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Volo.Abp;
 
 namespace KnowledgeHub.Application.Search;
@@ -22,6 +25,9 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
     private readonly IConfiguration _configuration;
     private readonly ILogger<VideoAnalysisAppService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IFfmpegRunner _ffmpegRunner;
+    private readonly OfficeConversionOptions _conversionOptions;
+    private readonly IFileStorageService _fileStorageService;
 
     private const string DefaultModel = "qwen3-vl-plus";
     private const string VideosIndexName = "videos";
@@ -40,11 +46,17 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
     public VideoAnalysisAppService(
         IConfiguration configuration,
         ILogger<VideoAnalysisAppService> logger,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        IFfmpegRunner ffmpegRunner,
+        IOptions<OfficeConversionOptions> conversionOptions,
+        IFileStorageService fileStorageService)
     {
         _configuration = configuration;
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _ffmpegRunner = ffmpegRunner;
+        _conversionOptions = conversionOptions.Value;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<VideoAnalysisResultDto> AnalyzeVideoTimelineAsync(VideoAnalysisRequestDto input)
@@ -65,6 +77,9 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         }
 
         var prompt = string.IsNullOrWhiteSpace(input.CustomPrompt) ? TimelinePrompt : input.CustomPrompt;
+
+        // 与 Chat 调用共用全局 Qwen 并发限流，避免视频理解请求打爆配额
+        using var lease = await QwenClient.AcquireAsync(_configuration);
         return await CallQwenVlApiAsync(videoDataUrl, prompt);
     }
 
@@ -196,6 +211,16 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
             throw new UserFriendlyException($"Video file not found: {filePath}");
         }
 
+        // 优先返回公开 URL，避免把整个视频 base64 内联进请求体（内存/带宽浪费）。
+        // 仅当文件位于上传目录且 App:SelfUrl 为非 localhost 的公网地址时可用；
+        // 生产索引流程本身已走 URL 路径，这里覆盖直接的本地调用场景。
+        var publicUrl = TryBuildPublicUrl(filePath);
+        if (publicUrl != null)
+        {
+            _logger.LogInformation("Using public URL for local video instead of base64: {Url}", publicUrl);
+            return publicUrl;
+        }
+
         var fileInfo = new FileInfo(filePath);
         var extension = fileInfo.Extension.ToLowerInvariant();
         string targetPath = filePath;
@@ -236,29 +261,62 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         return dataUrl;
     }
 
+    /// <summary>
+    /// 若文件位于上传根目录且 App:SelfUrl 为公网地址，构造其公开 URL；否则返回 null。
+    /// </summary>
+    private string? TryBuildPublicUrl(string filePath)
+    {
+        var selfUrl = _configuration["App:SelfUrl"];
+        if (string.IsNullOrWhiteSpace(selfUrl) || IsLocalhostUrl(selfUrl))
+        {
+            return null;
+        }
+
+        try
+        {
+            var fullRoot = Path.GetFullPath(_fileStorageService.RootPath);
+            var full = Path.GetFullPath(filePath);
+            if (!full.StartsWith(fullRoot, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            var relative = Path.GetRelativePath(fullRoot, full).Replace('\\', '/');
+            var encoded = string.Join('/', relative.Split('/').Select(Uri.EscapeDataString));
+            return $"{selfUrl.TrimEnd('/')}/uploads/{encoded}";
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool IsLocalhostUrl(string url)
+    {
+        return url.Contains("localhost", StringComparison.OrdinalIgnoreCase)
+            || url.Contains("127.0.0.1")
+            || url.Contains("::1");
+    }
+
     private async Task<string> ConvertToMp4Async(string inputPath)
     {
         var outputPath = Path.Combine(Path.GetTempPath(), $"video_{Guid.NewGuid()}.mp4");
 
-        var psi = new System.Diagnostics.ProcessStartInfo
+        var args = new List<string>
         {
-            FileName = "ffmpeg",
-            Arguments = $"-i \"{inputPath}\" -vcodec libx264 -crf 28 -preset fast -y \"{outputPath}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
+            "-y",
+            "-i", inputPath,
+            "-c:v", "libx264",
+            "-crf", "28",
+            "-preset", "veryfast",
+            "-threads", Math.Max(1, _conversionOptions.FfmpegThreads).ToString(),
+            outputPath
         };
 
-        using var process = System.Diagnostics.Process.Start(psi)
-            ?? throw new UserFriendlyException("Cannot start ffmpeg. Please install ffmpeg first.");
-
-        await process.WaitForExitAsync();
-
-        if (process.ExitCode != 0)
+        var result = await _ffmpegRunner.RunFfmpegAsync(args, TimeSpan.FromMinutes(10));
+        if (!result.Success)
         {
-            var error = await process.StandardError.ReadToEndAsync();
-            throw new UserFriendlyException($"Video conversion failed: {error}");
+            throw new UserFriendlyException($"Video conversion failed: {result.StandardError}");
         }
 
         return outputPath;
@@ -268,25 +326,24 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
     {
         var outputPath = Path.Combine(Path.GetTempPath(), $"video_compressed_{Guid.NewGuid()}.mp4");
 
-        var psi = new System.Diagnostics.ProcessStartInfo
+        var args = new List<string>
         {
-            FileName = "ffmpeg",
-            Arguments = $"-i \"{inputPath}\" -vcodec libx264 -crf 32 -preset slow -vf \"scale=-2:480\" -y \"{outputPath}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
+            "-y",
+            "-i", inputPath,
+            "-c:v", "libx264",
+            "-crf", "32",
+            "-preset", "veryfast",
+            "-vf", "scale=-2:480",
+            // 视觉理解不需要音轨
+            "-an",
+            "-threads", Math.Max(1, _conversionOptions.FfmpegThreads).ToString(),
+            outputPath
         };
 
-        using var process = System.Diagnostics.Process.Start(psi)
-            ?? throw new UserFriendlyException("Cannot start ffmpeg.");
-
-        await process.WaitForExitAsync();
-
-        if (process.ExitCode != 0)
+        var result = await _ffmpegRunner.RunFfmpegAsync(args, TimeSpan.FromMinutes(10));
+        if (!result.Success)
         {
-            var error = await process.StandardError.ReadToEndAsync();
-            _logger.LogWarning("Video compression failed: {Error}, using original", error);
+            _logger.LogWarning("Video compression failed: {Error}, using original", result.StandardError);
             return inputPath;
         }
 

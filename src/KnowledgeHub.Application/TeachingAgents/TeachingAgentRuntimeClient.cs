@@ -35,11 +35,7 @@ public class TeachingAgentRuntimeClient : ITeachingAgentRuntimeClient
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
-        var openaiClient = new OpenAIClient(
-            new ApiKeyCredential(apiKey),
-            new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-
-        IChatClient chatClient = openaiClient.GetChatClient(FixedModelId).AsIChatClient();
+        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, FixedModelId);
         var chatOptions = new ChatOptions
         {
             Instructions = BuildInstructions(input),
@@ -79,11 +75,7 @@ public class TeachingAgentRuntimeClient : ITeachingAgentRuntimeClient
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
-        var openaiClient = new OpenAIClient(
-            new ApiKeyCredential(apiKey),
-            new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-
-        IChatClient chatClient = openaiClient.GetChatClient(FixedModelId).AsIChatClient();
+        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, FixedModelId);
         var chatOptions = new ChatOptions
         {
             Instructions = BuildInstructions(input),

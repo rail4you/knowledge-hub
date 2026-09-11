@@ -511,11 +511,7 @@ JSON 结构：
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-plus";
 
-        var openaiClient = new OpenAIClient(
-            new ApiKeyCredential(apiKey),
-            new OpenAIClientOptions { Endpoint = new Uri(baseUrl) });
-
-        return openaiClient.GetChatClient(model).AsIChatClient();
+        return QwenClient.CreateChatClient(_configuration, model);
     }
 
     private static async Task<string> CompleteAsync(
