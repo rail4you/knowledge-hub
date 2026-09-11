@@ -1,9 +1,7 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { LocalizationPipe } from '@abp/ng.core';
-import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzSelectModule } from 'ng-zorro-antd/select';
@@ -14,8 +12,7 @@ import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzListModule } from 'ng-zorro-antd/list';
-import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { CourseService } from '../../proxy/courses/course.service';
 import { ChapterService } from '../../proxy/courses/chapter.service';
@@ -28,9 +25,7 @@ import { ChapterMindMapComponent } from './chapter-mind-map/chapter-mind-map.com
   imports: [
     CommonModule,
     FormsModule,
-    DragDropModule,
     LocalizationPipe,
-    NzCardModule,
     NzButtonModule,
     NzInputModule,
     NzSelectModule,
@@ -40,8 +35,7 @@ import { ChapterMindMapComponent } from './chapter-mind-map/chapter-mind-map.com
     NzModalModule,
     NzFormModule,
     NzInputNumberModule,
-    NzListModule,
-    NzTagModule,
+    NzTableModule,
     NzTooltipModule,
     ChapterMindMapComponent,
   ],
@@ -59,10 +53,49 @@ export class ChapterManagementComponent implements OnInit {
   courses = signal<CourseDto[]>([]);
   selectedCourseId = signal<string | null>(null);
   chapters = signal<ChapterDto[]>([]);
-  selectedChapter = signal<ChapterDto | null>(null);
   loading = signal(false);
   expandedNodes = signal<Set<string>>(new Set());
   isMindMapVisible = signal(false);
+  // 章节搜索关键词（按标题/描述过滤，保留匹配节点的祖先链，搜索时自动展开）
+  chapterKeyword = signal('');
+
+  /** 搜索过滤后的章节树 */
+  visibleChapters = computed(() => {
+    const kw = this.chapterKeyword().trim().toLowerCase();
+    const all = this.chapters();
+    if (!kw) return all;
+    const prune = (nodes: ChapterDto[]): ChapterDto[] => {
+      const out: ChapterDto[] = [];
+      for (const n of nodes) {
+        const kids = n.children?.length ? prune(n.children) : [];
+        const hitTitle = (n.title ?? '').toLowerCase().includes(kw);
+        const hitDesc = (n.description ?? '').toLowerCase().includes(kw);
+        if (hitTitle || hitDesc || kids.length > 0) {
+          out.push({ ...n, children: kids });
+        }
+      }
+      return out;
+    };
+    return prune(all);
+  });
+
+  /** 全部章节总数（含子章节） */
+  totalChapterCount = computed(() => this.countNodes(this.chapters()));
+
+  /** 当前可见章节总数（搜索过滤后） */
+  visibleChapterCount = computed(() => this.countNodes(this.visibleChapters()));
+
+  private countNodes(nodes: ChapterDto[]): number {
+    let count = 0;
+    const walk = (list: ChapterDto[]) => {
+      for (const n of list) {
+        count++;
+        if (n.children?.length) walk(n.children);
+      }
+    };
+    walk(nodes);
+    return count;
+  }
 
   // Modal state
   isModalVisible = false;
@@ -95,7 +128,7 @@ export class ChapterManagementComponent implements OnInit {
 
   onCourseSelected(courseId: string) {
     this.selectedCourseId.set(courseId);
-    this.selectedChapter.set(null);
+    this.chapterKeyword.set('');
     this.loadChapterTree();
   }
 
@@ -126,10 +159,6 @@ export class ChapterManagementComponent implements OnInit {
     }
   }
 
-  selectChapter(chapter: ChapterDto) {
-    this.selectedChapter.set(chapter);
-  }
-
   toggleNode(nodeId: string) {
     const current = new Set(this.expandedNodes());
     if (current.has(nodeId)) {
@@ -141,7 +170,19 @@ export class ChapterManagementComponent implements OnInit {
   }
 
   isExpanded(nodeId: string): boolean {
+    // 搜索时强制展开，方便直接看到所有命中节点
+    if (this.chapterKeyword().trim()) return true;
     return this.expandedNodes().has(nodeId);
+  }
+
+  expandAll() {
+    const expanded = new Set<string>();
+    this.collectNodeIds(this.visibleChapters(), expanded);
+    this.expandedNodes.set(expanded);
+  }
+
+  collapseAll() {
+    this.expandedNodes.set(new Set());
   }
 
   hasChildren(node: ChapterDto): boolean {
@@ -226,9 +267,6 @@ export class ChapterManagementComponent implements OnInit {
         this.chapterService.delete(chapter.id).subscribe({
           next: () => {
             this.message.success('章节已删除');
-            if (this.selectedChapter()?.id === chapter.id) {
-              this.selectedChapter.set(null);
-            }
             this.loadChapterTree();
           },
           error: (err) => this.showApiError(err, '删除失败'),
@@ -306,50 +344,36 @@ export class ChapterManagementComponent implements OnInit {
     return course?.title ?? '';
   }
 
-  // Drag and drop for chapter reordering
-  onChapterDrop(event: CdkDragDrop<ChapterDto[]>, parentId: string | null = null) {
-    // Don't do anything if dropped in the same position
-    if (event.previousIndex === event.currentIndex && event.previousContainer === event.container) {
+  // 表格行内上移/下移：同级内交换位置后同步到后端（替代原来的拖拽排序）
+  moveNode(siblings: ChapterDto[], index: number, direction: -1 | 1, parentId: string | null) {
+    const target = index + direction;
+    if (target < 0 || target >= siblings.length) return;
+    const copy = this.deepCloneChapters(this.chapters());
+    const list = this.findNodeList(copy, parentId ?? 'root');
+    if (!list || target >= list.length) {
+      this.loadChapterTree();
       return;
     }
+    [list[index], list[target]] = [list[target], list[index]];
+    this.chapters.set(copy);
+    this.syncSiblingOrder(list);
+  }
 
-    const chaptersCopy = this.deepCloneChapters(this.chapters());
-    
-    // Find the source and target containers in the tree
-    const sourceNodes = this.findNodeList(chaptersCopy, event.previousContainer.id);
-    const targetNodes = event.container === event.previousContainer 
-      ? sourceNodes 
-      : this.findNodeList(chaptersCopy, event.container.id);
+  private syncSiblingOrder(nodes: ChapterDto[]) {
+    const orders = nodes.map((node, index) => ({
+      chapterId: node.id!,
+      sortOrder: index * 10
+    }));
 
-    if (!sourceNodes || !targetNodes) {
-      this.loadChapterTree(); // Reload if we can't find the nodes
-      return;
-    }
-
-    // Move the item
-    const movedNode = sourceNodes.splice(event.previousIndex, 1)[0];
-    
-    if (event.previousContainer === event.container) {
-      // Same container - just reorder
-      targetNodes.splice(event.currentIndex, 0, movedNode);
-    } else {
-      // Different container - move to new parent
-      targetNodes.splice(event.currentIndex, 0, movedNode);
-      
-      // Update parent ID
-      const oldParentId = event.previousContainer.id === 'root' ? null : event.previousContainer.id;
-      const newParentId = event.container.id === 'root' ? null : event.container.id;
-      
-      // Find the moved node and update its parent
-      this.updateNodeParent(chaptersCopy, movedNode.id!, newParentId);
-    }
-
-    // Update local state
-    this.chapters.set(chaptersCopy);
-    this.cdr.markForCheck();
-
-    // Sync order to server
-    this.syncChapterOrderAfterDrop(targetNodes, event.container.id === 'root' ? null : event.container.id);
+    this.chapterService.reorderChapters(orders).subscribe({
+      next: () => {
+        this.message.success('章节顺序已更新');
+      },
+      error: () => {
+        this.message.error('保存顺序失败');
+        this.loadChapterTree();
+      }
+    });
   }
 
   private deepCloneChapters(nodes: ChapterDto[]): ChapterDto[] {
@@ -374,36 +398,6 @@ export class ChapterManagementComponent implements OnInit {
       }
     }
     return null;
-  }
-
-  private updateNodeParent(nodes: ChapterDto[], nodeId: string, newParentId: string | null) {
-    for (const node of nodes) {
-      if (node.id === nodeId) {
-        node.parentId = newParentId;
-        return;
-      }
-      if (node.children?.length) {
-        this.updateNodeParent(node.children, nodeId, newParentId);
-      }
-    }
-  }
-
-  private syncChapterOrderAfterDrop(nodes: ChapterDto[], parentId: string | null) {
-    const orders = nodes.map((node, index) => ({
-      chapterId: node.id!,
-      sortOrder: index * 10
-    }));
-
-    this.chapterService.reorderChapters(orders).subscribe({
-      next: () => {
-        // Order saved successfully
-        this.message.success('章节顺序已更新');
-      },
-      error: () => {
-        this.message.error('保存顺序失败');
-        this.loadChapterTree();
-      }
-    });
   }
 
   // Import modal state

@@ -1,156 +1,177 @@
 <div class="chapter-management-container">
-  <div class="page-header">
-    <h1>{{ '::Menu:ChapterManagement' | abpLocalization }}</h1>
-  </div>
-
-  <!-- Course selector -->
-  <nz-card class="selector-card">
-    <div class="course-selector">
-      <label>选择课程：</label>
-      <nz-select
-        [ngModel]="selectedCourseId()"
-        (ngModelChange)="onCourseSelected($event)"
-        nzPlaceHolder="请选择课程"
-        nzAllowClear
-        class="course-select"
-      >
-        @for (course of courses(); track course.id) {
-          <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
-        }
-      </nz-select>
+  <!-- 标题容器（带背景）：左侧标题 + 说明，右侧文字版数据统计 -->
+  <div class="cm-head">
+    <div class="cm-head-left">
+      <h1>{{ '::Menu:ChapterManagement' | abpLocalization }}</h1>
+      <p class="cm-desc">先在下方菜单中选择一门课程，再在表格中管理其章节结构：支持多级嵌套展示、按标题 / 描述搜索、行内上移下移排序、Excel 批量导入，以及一键生成知识图谱。</p>
     </div>
-  </nz-card>
-
-  @if (selectedCourseId()) {
-    <div class="content-layout">
-      <!-- Left: Chapter tree -->
-      <nz-card class="tree-panel" nzTitle="章节结构">
-        <div class="tree-toolbar">
-          <button nz-button nzType="primary" nzSize="small" (click)="openCreateRootModal()">
-            <span nz-icon nzType="plus"></span>
-            新建根章节
-          </button>
-          <button nz-button nzSize="small" (click)="openImportModal()">
-            <span nz-icon nzType="upload"></span>
-            导入章节
-          </button>
-          <button nz-button nzSize="small" (click)="openMindMap()">
-            <span nz-icon nzType="deployment-unit"></span>
-            生成知识图谱
-          </button>
-        </div>
-
-        @if (loading()) {
-          <div class="loading-container">
-            <nz-spin nzSimple nzSize="large"></nz-spin>
-          </div>
-        } @else if (chapters().length === 0) {
-          <nz-empty nzNotFoundContent="暂无章节，请新建根章节"></nz-empty>
-        } @else {
-          <div class="tree-view" cdkDropListGroup>
-            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: chapters(), depth: 0 }"></ng-container>
-          </div>
-        }
-      </nz-card>
-
-      <!-- Right: Chapter detail -->
-      <nz-card class="detail-panel" nzTitle="章节详情">
-        @if (selectedChapter()) {
-          @let chapter = selectedChapter()!;
-          <div class="detail-content">
-            <div class="detail-field">
-              <label>章节名称：</label>
-              <span>{{ chapter.title }}</span>
-            </div>
-            @if (chapter.description) {
-              <div class="detail-field">
-                <label>描述：</label>
-                <span class="detail-desc">{{ chapter.description }}</span>
-              </div>
-            }
-            <div class="detail-actions">
-              <button nz-button nzType="primary" nzSize="small" (click)="openEditModal(chapter)">
-                <span nz-icon nzType="edit"></span>
-                编辑
-              </button>
-              <button nz-button nzSize="small" (click)="openCreateChildModal(chapter)">
-                <span nz-icon nzType="plus"></span>
-                添加子章节
-              </button>
-              <button nz-button nzDanger nzSize="small" (click)="deleteChapter(chapter)">
-                <span nz-icon nzType="delete"></span>
-                删除
-              </button>
-            </div>
-          </div>
-        } @else {
-          <nz-empty nzNotFoundContent="请选择左侧章节查看详情"></nz-empty>
-        }
-      </nz-card>
-    </div>
-  }
-
-  <!-- Recursive tree template -->
-  <ng-template #treeNode let-nodes let-depth="depth">
-    @for (node of nodes; track node.id; let i = $index) {
-      <div class="tree-node">
-        <div
-          class="tree-node-content"
-          [class.selected]="selectedChapter()?.id === node.id"
-          (click)="selectChapter(node)"
-          cdkDrag
-          [cdkDragData]="node"
-        >
-          <span class="tree-indent" [style.width.px]="depth * 16"></span>
-          <span class="drag-handle" cdkDragHandle>
-            <span nz-icon nzType="holder"></span>
-          </span>
-          @if (hasChildren(node)) {
-            <span class="toggle-icon" (click)="toggleNode(node.id!); $event.stopPropagation()">
-              <span nz-icon [nzType]="isExpanded(node.id!) ? 'down' : 'right'"></span>
-            </span>
-          } @else {
-            <span class="toggle-icon placeholder"></span>
-          }
-          <span class="node-main">
-            @if (node.description) {
-              <span
-                class="node-title"
-                nz-tooltip
-                [nzTooltipTitle]="node.description"
-                nzTooltipPlacement="topLeft"
-              >{{ node.title }}</span>
-            } @else {
-              <span class="node-title">{{ node.title }}</span>
-            }
-          </span>
-          <span class="node-actions">
-            <button nz-button nzType="text" nzSize="small" (click)="openCreateChildModal(node); $event.stopPropagation()"
-              title="添加子章节">
-              <span nz-icon nzType="plus"></span>
-            </button>
-            <button nz-button nzType="text" nzSize="small" (click)="openEditModal(node); $event.stopPropagation()"
-              title="编辑">
-              <span nz-icon nzType="edit"></span>
-            </button>
-            <button nz-button nzType="text" nzSize="small" nzDanger (click)="deleteChapter(node); $event.stopPropagation()"
-              title="删除">
-              <span nz-icon nzType="delete"></span>
-            </button>
-          </span>
-        </div>
-        @if (hasChildren(node) && isExpanded(node.id!)) {
-          <div 
-            class="tree-children"
-            cdkDropList
-            [cdkDropListData]="node.children"
-            (cdkDropListDropped)="onChapterDrop($event, node.id)"
-          >
-            <ng-container *ngTemplateOutlet="treeNode; context: { $implicit: node.children, depth: depth + 1 }"></ng-container>
-          </div>
+    @if (selectedCourseId()) {
+      <div class="cm-stats">
+        <span class="stat">章节总数 <b>{{ totalChapterCount() }}</b> 章</span>
+        @if (chapterKeyword().trim()) {
+          <span class="stat-sep">|</span>
+          <span class="stat">命中 <b>{{ visibleChapterCount() }}</b> 章</span>
         }
       </div>
     }
+  </div>
+
+  <!-- 菜单栏：课程选择 + 章节搜索 + 操作按钮 -->
+  <div class="cm-menu">
+    <nz-select
+      [ngModel]="selectedCourseId()"
+      (ngModelChange)="onCourseSelected($event)"
+      nzPlaceHolder="请选择课程"
+      nzAllowClear
+      class="course-select"
+    >
+      @for (course of courses(); track course.id) {
+        <nz-option [nzValue]="course.id" [nzLabel]="course.title ?? ''"></nz-option>
+      }
+    </nz-select>
+    @if (selectedCourseId()) {
+      <nz-input-group [nzPrefix]="cmSearchTpl" class="cm-search">
+        <input
+          nz-input
+          placeholder="搜索章节标题 / 描述…"
+          [ngModel]="chapterKeyword()"
+          (ngModelChange)="chapterKeyword.set($event)"
+        />
+      </nz-input-group>
+      <ng-template #cmSearchTpl><span nz-icon nzType="search"></span></ng-template>
+      <span class="cm-sep"></span>
+      <div class="cm-actions">
+        <button nz-button nzType="primary" (click)="openCreateRootModal()">
+          <span nz-icon nzType="plus"></span>
+          新建根章节
+        </button>
+        <button nz-button (click)="openImportModal()">
+          <span nz-icon nzType="upload"></span>
+          导入章节
+        </button>
+        <button nz-button (click)="openMindMap()">
+          <span nz-icon nzType="deployment-unit"></span>
+          生成知识图谱
+        </button>
+        <button nz-button nzType="link" (click)="expandAll()">展开全部</button>
+        <button nz-button nzType="link" (click)="collapseAll()">收起全部</button>
+      </div>
+    }
+  </div>
+
+  @if (selectedCourseId()) {
+    @if (loading()) {
+      <div class="loading-container">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+      </div>
+    } @else if (chapters().length === 0) {
+      <div class="cm-table-wrap">
+        <nz-empty nzNotFoundContent="暂无章节，请点击上方“新建根章节”"></nz-empty>
+      </div>
+    } @else if (visibleChapters().length === 0) {
+      <div class="cm-table-wrap">
+        <nz-empty nzNotFoundContent="没有匹配的章节，换个关键词试试"></nz-empty>
+      </div>
+    } @else {
+      <div class="cm-table-wrap">
+        <ng-container *ngTemplateOutlet="chapterTable; context: { $implicit: visibleChapters(), parentId: null, level: 0 }"></ng-container>
+      </div>
+    }
+  } @else {
+    <div class="cm-table-wrap">
+      <nz-empty nzNotFoundContent="请先在上方选择课程"></nz-empty>
+    </div>
+  }
+
+  <!-- 递归嵌套表格：子章节渲染为展开行内的内嵌表格（内层表隐藏表头、用 colgroup 固定列宽，保证逐级缩进一致） -->
+  <ng-template #chapterTable let-rows let-parentId="parentId" let-level="level">
+    <nz-table
+      [nzData]="rows"
+      [nzFrontPagination]="false"
+      [nzShowPagination]="false"
+      nzSize="middle"
+      nzTableLayout="fixed"
+      class="cm-table"
+    >
+      @if (level === 0) {
+        <thead>
+          <tr>
+            <th>章节标题</th>
+            <th nzWidth="76px" nzAlign="center">子章节</th>
+            <th nzWidth="180px" nzAlign="center">操作</th>
+          </tr>
+        </thead>
+      } @else {
+        <colgroup>
+          <col />
+          <col style="width: 76px" />
+          <col style="width: 180px" />
+        </colgroup>
+      }
+      <tbody>
+        @for (node of rows; track node.id; let i = $index) {
+          <tr class="cm-row">
+            <td>
+              <div class="title-flex">
+                <span class="depth-blank" [style.width.px]="level * 22 + (hasChildren(node) ? 0 : 22)"></span>
+                @if (hasChildren(node)) {
+                  <button nz-button nzType="text" nzSize="small" class="inline-expand" (click)="toggleNode(node.id!)">
+                    <span nz-icon [nzType]="isExpanded(node.id!) ? 'down' : 'right'"></span>
+                  </button>
+                }
+                @if (node.description?.trim()) {
+                  <span
+                    class="cm-node-title"
+                    [title]="node.title"
+                    nz-tooltip
+                    [nzTooltipTitle]="node.description"
+                    nzTooltipPlacement="topLeft"
+                  >{{ node.title }}</span>
+                } @else {
+                  <span class="cm-node-title" [title]="node.title">{{ node.title }}</span>
+                }
+              </div>
+            </td>
+            <td nzAlign="center">
+              <span class="count-num">{{ node.children?.length || '—' }}</span>
+            </td>
+            <td nzAlign="center">
+              <div class="row-ops">
+                <button nz-button nzType="text" nzSize="small" (click)="moveNode(rows, i, -1, parentId)" [disabled]="i === 0"
+                  nz-tooltip nzTooltipTitle="上移">
+                  <span nz-icon nzType="arrow-up"></span>
+                </button>
+                <button nz-button nzType="text" nzSize="small" (click)="moveNode(rows, i, 1, parentId)" [disabled]="i === rows.length - 1"
+                  nz-tooltip nzTooltipTitle="下移">
+                  <span nz-icon nzType="arrow-down"></span>
+                </button>
+                <button nz-button nzType="text" nzSize="small" (click)="openCreateChildModal(node)"
+                  nz-tooltip nzTooltipTitle="添加子章节">
+                  <span nz-icon nzType="plus"></span>
+                </button>
+                <button nz-button nzType="text" nzSize="small" (click)="openEditModal(node)"
+                  nz-tooltip nzTooltipTitle="编辑">
+                  <span nz-icon nzType="edit"></span>
+                </button>
+                <button nz-button nzType="text" nzSize="small" nzDanger (click)="deleteChapter(node)"
+                  nz-tooltip nzTooltipTitle="删除">
+                  <span nz-icon nzType="delete"></span>
+                </button>
+              </div>
+            </td>
+          </tr>
+          @if (hasChildren(node) && isExpanded(node.id!)) {
+            <tr class="nested-row">
+              <td colspan="3">
+                <div class="nested-table">
+                  <ng-container *ngTemplateOutlet="chapterTable; context: { $implicit: node.children, parentId: node.id, level: level + 1 }"></ng-container>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </nz-table>
   </ng-template>
 
   <!-- Create/Edit Modal -->
