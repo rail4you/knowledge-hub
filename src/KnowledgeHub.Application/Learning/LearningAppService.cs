@@ -51,6 +51,21 @@ public class LearningAppService : ApplicationService, ILearningAppService
         var studentCourses = (await _studentCourseRepository.GetListAsync(x => x.StudentId == studentId))
             .Where(x => x.Status != StudentCourseStatus.Dropped)
             .ToList();
+
+        // 口径统一：排除课程已被删除的孤儿选课，与 GetMyCoursesAsync（找不到 course 则跳过）一致。
+        // 否则 TotalCourses 会大于“我的课程”列表数（曾出现 Hero 显示 10 但列表只有 7）。
+        if (studentCourses.Count > 0)
+        {
+            var enrolledCourseIds = studentCourses.Select(x => x.CourseId).Distinct().ToList();
+            List<Guid> existingCourseIds;
+            using (DataFilter.Disable<Volo.Abp.MultiTenancy.IMultiTenant>())
+            {
+                var existingCourses = await _courseRepository.GetListAsync(c => enrolledCourseIds.Contains(c.Id));
+                existingCourseIds = existingCourses.Select(c => c.Id).ToList();
+            }
+            var existingSet = new HashSet<Guid>(existingCourseIds);
+            studentCourses = studentCourses.Where(x => existingSet.Contains(x.CourseId)).ToList();
+        }
         
         // 从 LearningProgress 表计算真实学习时长（分钟）
         var allProgress = await _progressRepository.GetListAsync(x => x.StudentId == studentId);

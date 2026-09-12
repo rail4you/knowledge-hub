@@ -14,8 +14,8 @@ import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { CourseService } from '../../proxy/courses/course.service';
 import { MajorService } from '../../proxy/majors/major.service';
 import { LearningService } from '../../proxy/learning/learning.service';
-import type { CourseDto, StudentCourseDto } from '../../proxy/courses/dtos/models';
-import type { LearningDashboardDto } from '../../proxy/learning/dtos/models';
+import type { CourseDto } from '../../proxy/courses/dtos/models';
+import type { LearningDashboardDto, StudentCourseListItemDto } from '../../proxy/learning/dtos/models';
 import { StudentHeroComponent } from '../shared/student-hero/student-hero.component';
 import { hashGradient } from '../../shared/utils/color.util';
 import { VoiceContextService } from '../voice/voice-context.service';
@@ -81,8 +81,10 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   readonly loading = signal(false);
 
   readonly courses = signal<CourseDto[]>([]);
-  readonly myCourses = signal<StudentCourseDto[]>([]);
+  readonly myCourses = signal<StudentCourseListItemDto[]>([]);
   readonly dashboard = signal<LearningDashboardDto | null>(null);
+  /** 当前 published 查询的后端 totalCount（分页总数，避免只用 items.length 截断） */
+  readonly publishedTotal = signal<number | null>(null);
 
   readonly filter = signal('');
   readonly selectedMajor = signal<string | null>(null);
@@ -93,8 +95,41 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   readonly visibleCourses = computed<CourseDto[]>(() => {
     const status = this.selectedStatus();
     if (status === 'enrolled') {
-      const myIds = new Set(this.myCourses().map(c => c.courseId));
-      return this.courses().filter(c => myIds.has(c.id) || c.isEnrolled);
+      const my = this.myCourses();
+      const myIds = new Set(my.map(c => c.courseId));
+      const published = this.courses().filter(c => myIds.has(c.id) || c.isEnrolled);
+      const publishedIds = new Set(published.map(c => c.id));
+      // 口径统一：published 接口按租户/状态/分页过滤，会漏掉已选但未发布、跨租户或翻页外的课程，
+      // 导致“我的课程”列表数（7）小于统计数（10）。把缺失的已选课按 myCourses 补齐，
+      // 并叠加当前搜索/专业筛选（难度未知时不按难度剔除），保证列表数 == 统计数。
+      const keyword = (this.filter() || '').trim().toLowerCase();
+      const majorSel = this.selectedMajor();
+      const missing: CourseDto[] = [];
+      for (const m of my) {
+        if (!m.courseId || publishedIds.has(m.courseId)) continue;
+        if (keyword && !(m.courseTitle || '').toLowerCase().includes(keyword)) continue;
+        if (majorSel === this.majorPublicOnlyValue) {
+          if (m.majorId) continue;
+        } else if (majorSel) {
+          if (m.majorId !== majorSel) continue;
+        }
+        missing.push({
+          id: m.courseId,
+          title: m.courseTitle || '未命名课程',
+          coverImageUrl: m.courseCoverImageUrl ?? null,
+          majorId: m.majorId ?? null,
+          majorName: m.majorName ?? null,
+          majorIds: m.majorId ? [m.majorId] : [],
+          majorNames: m.majorName ? [m.majorName] : [],
+          semester: m.semester ?? null,
+          credits: m.credits ?? null,
+          isEnrolled: true,
+          progress: m.progress ?? 0,
+          studentCount: 0,
+          chapterCount: 0,
+        } as unknown as CourseDto);
+      }
+      return [...published, ...missing];
     }
     if (status === 'recommended') {
       // 后端已按 isRecommended 过滤；此处再兜底一次，兼容旧数据/缓存
@@ -103,13 +138,34 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     return this.courses();
   });
 
-  /** 我的课程（从 my-courses 服务取得） */
-  readonly stats = signal<StatItem[]>([
-    { label: '已选课程', value: 0, suffix: '门', icon: 'book', color: '#0f766e' },
-    { label: '学习中', value: 0, suffix: '门', icon: 'play-circle', color: '#14b8a6' },
-    { label: '已完成', value: 0, suffix: '门', icon: 'check-circle', color: '#16a34a' },
-    { label: '学习进度', value: 0, suffix: '%', icon: 'rise', color: '#0d5e56' },
-  ]);
+  /**
+   * Hero 统计：随 tab/列表同步，口径与 visibleCourses() 一致。
+   * - 第一项显示当前列表数（我的课程 / 全部课程 / 推荐课程随 tab 切换 label）
+   * - 学习中/已完成/平均进度按当前可见列表中已选课的子集计算
+   */
+  readonly stats = computed<StatItem[]>(() => {
+    const status = this.selectedStatus();
+    const visible = this.visibleCourses();
+    const myMap = new Map((this.myCourses() || []).map(c => [c.courseId as string, c]));
+    const enrolledVisible = visible.filter(v => (v.id && myMap.has(v.id)) || (v as any).isEnrolled);
+    const inProgress = enrolledVisible.filter(v => myMap.get(v.id!)?.status === 1).length;
+    const completed = enrolledVisible.filter(v => myMap.get(v.id!)?.status === 2).length;
+    const avgProgress = enrolledVisible.length
+      ? Math.round(enrolledVisible.reduce((s, v) => s + (myMap.get(v.id!)?.progress || 0), 0) / enrolledVisible.length)
+      : 0;
+    const firstLabel = status === 'enrolled' ? '已选课程' : status === 'recommended' ? '推荐课程' : '全部课程';
+    // 全部/推荐 tab 下第一项用后端 totalCount 更准（当前页可能截断），有筛选时用可见数
+    const firstValue =
+      !this.hasActiveFilters() && status !== 'enrolled' && this.publishedTotal() != null
+        ? this.publishedTotal()!
+        : visible.length;
+    return [
+      { label: firstLabel, value: firstValue, suffix: '门', icon: 'book', color: '#0f766e' },
+      { label: '学习中', value: inProgress, suffix: '门', icon: 'play-circle', color: '#14b8a6' },
+      { label: '已完成', value: completed, suffix: '门', icon: 'check-circle', color: '#16a34a' },
+      { label: '学习进度', value: avgProgress, suffix: '%', icon: 'rise', color: '#0d5e56' },
+    ];
+  });
 
   readonly majors = signal<MajorChip[]>([
     { id: null, name: '全部专业', icon: 'appstore', color: '#0f766e' },
@@ -181,7 +237,8 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       filter: this.filter() || undefined,
       difficulty: this.selectedDifficulty() ?? undefined,
       skipCount: 0,
-      maxResultCount: 30,
+      // 列表无分页 UI，取足够大的页避免 totalCount 与 items.length 不一致（曾因截断出现 8 vs 10）
+      maxResultCount: 200,
     };
     if (majorSel === this.majorPublicOnlyValue) {
       params.onlyPublicCourses = true;
@@ -199,9 +256,11 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       .subscribe({
         next: result => {
           this.courses.set(result.items || []);
+          this.publishedTotal.set(result.totalCount ?? (result.items || []).length);
           this.loading.set(false);
         },
         error: () => {
+          this.publishedTotal.set(null);
           this.loading.set(false);
           this.message.error('课程加载失败');
         },
@@ -212,8 +271,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     if (!this.authService.isAuthenticated) return;
     this.learningService.getMyCourses().subscribe({
       next: list => {
-        this.myCourses.set(list || []);
-        this.updateStats();
+        this.myCourses.set((list || []) as StudentCourseListItemDto[]);
       },
       error: () => {
         // 静默失败，不影响主流程
@@ -226,31 +284,11 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     this.learningService.getDashboard().subscribe({
       next: data => {
         this.dashboard.set(data);
-        this.updateStats();
       },
       error: () => {
         // 静默失败
       },
     });
-  }
-
-  private updateStats() {
-    const dash = this.dashboard();
-    const my = this.myCourses();
-    const totalCourses = my.length || 0;
-    const inProgress = my.filter(c => c.status === 1).length;
-    const completed = dash?.completedCourses ?? my.filter(c => c.status === 2).length;
-    const avgProgress = Math.round(
-      (dash?.averageProgress ??
-        (my.length ? my.reduce((s, c) => s + (c.progress || 0), 0) / my.length : 0)) || 0
-    );
-
-    this.stats.set([
-      { label: '已选课程', value: totalCourses, suffix: '门', icon: 'book', color: '#0f766e' },
-      { label: '学习中', value: inProgress, suffix: '门', icon: 'play-circle', color: '#14b8a6' },
-      { label: '已完成', value: completed, suffix: '门', icon: 'check-circle', color: '#16a34a' },
-      { label: '学习进度', value: avgProgress, suffix: '%', icon: 'rise', color: '#0d5e56' },
-    ]);
   }
 
   /** 专业下拉选项：全量专业字典（不受当前课程列表影响），前面保留“全部专业/公共课” */
@@ -331,7 +369,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     this.message.warning('未选课，请联系老师分配课程');
   }
 
-  startLearning(course: CourseDto | StudentCourseDto, event: Event) {
+  startLearning(course: CourseDto | StudentCourseListItemDto, event: Event) {
     event.stopPropagation();
     const id = (course as any).courseId ?? course.id;
     this.router.navigate(['/student/courses', id]);
