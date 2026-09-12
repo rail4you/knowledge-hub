@@ -320,31 +320,28 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     return n;
   });
 
-  /** 图谱画布高度：
-   * - 默认两级（根+一级）：深层数据的高度按“顶层节点数”给，避免大空白
-   *   （360~560px），用户点开深层后靠滚轮缩放/拖拽查看；
-   * - 默认三级（根+一级+二级）：可见行数 ≈ 二级节点数 + 无子节点的一级数，
-   *   按行数撑高（480~680px），保证三级文字能放下不挤作一团；
-   * - 纯扁平但节点>60 → 固定 620px；节点>30 → 560px；
-   * - 2 级图谱 → 按"最大同层节点数 × 50 + 80"动态算；
-   * - 1 级图谱 → 360px 起步。
+  /** 图谱画布高度（普通方法而非 computed：需每次读取最新的 forceExpandAll，
+   * 保证点“展开全部/收起”后高度立即刷新）：
+   * 固定展示 3 个层级（课程根 + 一级 + 二级），高度按第三级可见行数撑高，
+   * 保证第三级节点再多、文字也不互相重叠。行高按 32px 估算，夹紧到 520~1400px。
    */
-  chartMinHeight = computed(() => {
+  chartMinHeight(): number {
     const total = this.countChapters(this.chapters);
     const dataDepth = this.dataDepth();
     const maxSiblings = this.maxSiblingCount();
 
-    // 深层数据：按默认展开层级给高度
+    // 深层数据：可见行主要是二级节点（另加无子节点的一级兜底）；
+    // 全展开时可见行按总数估算，避免展开后挤作一团。
     if (dataDepth >= 3) {
-      if (this.defaultInitialDepth() === 2) {
-        // 默认展开三级：可见行主要是二级节点（另加无子节点的一级兜底）
+      let rows: number;
+      if (this.forceExpandAll) {
+        rows = Math.max(total, this.secondLevelCount());
+      } else {
         const childlessTop = (this.chapters || []).filter(c => !(c.children?.length || 0)).length;
-        const rows = this.secondLevelCount() + childlessTop;
-        // 每行约 34px + 上下留白，夹紧到 480~680px
-        return Math.max(480, Math.min(rows * 34 + 140, 680));
+        rows = this.secondLevelCount() + childlessTop;
       }
-      const topCount = (this.chapters?.length || 0) + (this.courseName ? 1 : 0);
-      return Math.max(360, Math.min(topCount * 54 + 120, 560));
+      // 每行约 32px + 上下留白，夹紧到 520~1400px
+      return Math.max(520, Math.min(rows * 32 + 180, 1400));
     }
     if (total > 60) return 620;
     if (total > 30) return 560;
@@ -353,28 +350,18 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     // 每个叶子 symbolSize=36 + 间距 ≈ 50px，上下各留 40px 呼吸空间
     const neededForLeaves = maxSiblings * 50 + 80;
     return Math.max(360, Math.min(neededForLeaves, 640));
-  });
+  }
 
   /**
-   * 默认展开深度（核心策略，按**视觉层级**算，课程根占第 0 层）：
-   * - 节点很少（≤15）且数据本身只有 ≤2 级 → 全展开（-1），小图一眼看完；
-   * - 深层数据（≥3 级）→ 看“展开到三级后的可见节点数”
-   *   （课程根 1 + 一级 top + 二级 lvl2）是否放得下：
-   *   可见 ≤40（如中药药剂学 1+7+28=36）→ 展开到 2 级（视觉 3 层），
-   *   三级文字能放下；节点多（如大课程）→ 只展开到 1 级（视觉 2 层），
-   *   避免第三级默认铺开挤在一起看不清，用户点节点/工具栏按需展开；
-   * - 其余情况 → 只展开到 1 级。
+   * 默认展开深度（固定 3 个层级，按**视觉层级**算，课程根占第 0 层）：
+   * - 数据本身只有 ≤2 级 → 全展开（-1），小图一眼看完；
+   * - 深层数据（≥3 级）→ 固定展开到 2 级（视觉 3 层），不再按节点数量
+   *   自适应切换到 2 层。第三级节点多时靠画布撑高 + 小字号保证不重叠。
    * 用户点“展开全部”后 forceExpandAll=true 保持全展开。
    */
   private defaultInitialDepth(): number {
-    const total = this.countChapters(this.chapters);
-    if (total <= 15 && this.dataDepth() <= 2) return -1;
-    if (this.dataDepth() >= 3) {
-      const top = this.chapters?.length || 0;
-      const visibleAtDepth2 = 1 + top + this.secondLevelCount();
-      if (visibleAtDepth2 <= 40) return 2;
-    }
-    return 1;
+    if (this.dataDepth() <= 2) return -1;
+    return 2;
   }
   /** 用户点过“展开全部”后保持全展开，不再被默认折叠覆盖 */
   private forceExpandAll = false;
@@ -790,9 +777,22 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
     const isLarge = total > 60 || dataDepth >= 3;
     // 2 级图谱叶子特别多时也按"密集"处理，避免互相挤压
     const isFlatDense = dataDepth <= 2 && maxSiblings > 20;
-    // 大图谱 / 2 级密集图谱：节点小一号，标签小一号，减少拥挤
-    const symbolSize = isLarge || isFlatDense ? 28 : 36;
-    const fontSize = isLarge || isFlatDense ? 12 : 13;
+    // 第三级可见行数：行数越多字号/节点越小，配合撑高的画布保证文字不重叠
+    const childlessTop = (this.chapters || []).filter(c => !(c.children?.length || 0)).length;
+    const thirdLevelRows = this.secondLevelCount() + childlessTop;
+    // 分档：节点小一号，标签小一号，减少拥挤
+    let symbolSize: number;
+    let fontSize: number;
+    let labelWidth: number;
+    if (dataDepth >= 3 && thirdLevelRows > 50) {
+      symbolSize = 22; fontSize = 11; labelWidth = 120;
+    } else if (dataDepth >= 3 && thirdLevelRows > 30) {
+      symbolSize = 24; fontSize = 11; labelWidth = 140;
+    } else if (isLarge || isFlatDense) {
+      symbolSize = 28; fontSize = 12; labelWidth = 160;
+    } else {
+      symbolSize = 36; fontSize = 13; labelWidth = 160;
+    }
     const option: echarts.EChartsCoreOption = {
       tooltip: {
         trigger: 'item',
@@ -831,9 +831,9 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
           nodeScaleRatio: 1,
           nodeDraggable: false,
           expandAndCollapse: true,
-          // 默认展开层级见 defaultInitialDepth()：小课程展开到 2 级（视觉 3 层），
-          // 大课程只展开到 1 级（视觉 2 层），深层折叠、用户按需展开。
-          // 只有节点很少（≤15）的小图谱才全展开。用户点“展开全部”后
+          // 默认展开层级见 defaultInitialDepth()：固定展示 3 个层级
+          //（课程根 + 一级 + 二级），不再按节点数量自适应切换。
+          // 数据本身 ≤2 级时全展开。用户点“展开全部”后
           // forceExpandAll=true 保持全展开。
           initialTreeDepth: this.forceExpandAll ? -1 : this.defaultInitialDepth(),
           animationDuration: 600,
@@ -886,7 +886,7 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
             color: '#1f2937',
             backgroundColor: 'transparent',
             overflow: 'truncate',
-            width: 160,
+            width: labelWidth,
           },
           // 叶子节点样式
           leaves: {
@@ -902,10 +902,10 @@ export class ChapterTreeGraphComponent implements AfterViewInit, AfterViewChecke
               fontWeight: 600,
               color: '#1f2937',
               overflow: 'truncate',
-              width: 160,
+              width: labelWidth,
             },
           },
-          // 标签自动避让：文字放大后避免相互重叠 / 溢出
+          // 标签自动避让：第三级节点密集时隐藏重叠文字，保证不出现压盖
           labelLayout: {
             hideOverlap: true,
           },
