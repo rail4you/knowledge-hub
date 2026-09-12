@@ -765,17 +765,32 @@ export class StudentCourseLearnComponent implements OnInit, OnDestroy {
   /** 将存储的答案转为字母显示（1→A, 2→B, ...），兼容已有字母格式 */
   readonly letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-  displayAnswer(raw: string | undefined | null): string {
+  displayAnswer(raw: string | undefined | null, type?: ExerciseType): string {
     if (!raw) return '';
-    const tokens = raw.split(',').map(s => s.trim()).filter(Boolean);
-    return tokens.map(t => {
-      if (/^\d+$/.test(t)) {
-        const i = Number(t);
+    // 判断题统一显示为中文，避免 true/TRUE/对 等多种写法让用户困惑
+    const t = raw.trim().toLowerCase();
+    if (type === ExerciseType.TrueFalse || t === 'true' || t === 'false') {
+      if (['true', 't', '1', '对', '正确', '是', '√', '✓'].includes(t)) return '正确';
+      if (['false', 'f', '0', '错', '错误', '否', '×', 'x'].includes(t)) return '错误';
+    }
+    const tokens = raw.split(/[,;，；、\s|/]+/).map(s => s.trim()).filter(Boolean);
+    // 兼容无分隔符连写（如历史数据 "ABC"）：拆成单个字母
+    const expanded: string[] = [];
+    for (const tok of tokens) {
+      if (/^[A-Za-z]{2,6}$/.test(tok) && !/^(true|false)$/i.test(tok)) {
+        expanded.push(...tok.toUpperCase().split(''));
+      } else {
+        expanded.push(tok);
+      }
+    }
+    return expanded.map(tok => {
+      if (/^\d+$/.test(tok)) {
+        const i = Number(tok);
         if (i === 0) return 'A';
         if (i >= 1 && i <= 26) return this.letters[i - 1];
-        return t;
+        return tok;
       }
-      return t.toUpperCase();
+      return tok.toUpperCase();
     }).join(',');
   }
 

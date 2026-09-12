@@ -382,9 +382,9 @@
                             @if (isCorrect(submittedRecord()) === true) {
                               <span nz-icon nzType="check-circle" nzTheme="fill"></span>
                               <span>回答正确</span>
-                            } @else if (isCorrect(submittedRecord()) === false) {
+                            }                             @else if (isCorrect(submittedRecord()) === false) {
                               <span nz-icon nzType="close-circle" nzTheme="fill"></span>
-                              <span>回答错误，你的答案：{{ submittedRecord()?.studentAnswer }}</span>
+                              <span>回答错误，你的答案：{{ displayAnswer(submittedRecord()?.studentAnswer, currentExercise()?.type) }}</span>
                             } @else {
                               <span nz-icon nzType="info-circle" nzTheme="fill"></span>
                               <span>已提交，等待批改</span>
@@ -394,7 +394,7 @@
                           @if (hasViewedAnswer() && e.answer) {
                             <div class="answer-block">
                               <strong>参考答案：</strong>
-                              <p>{{ displayAnswer(e.answer) }}</p>
+                              <p>{{ displayAnswer(e.answer, e.type) }}</p>
                               @if (e.questionAnalysis) {
                                 <div class="analysis-section">
                                   <strong>题目解析：</strong>

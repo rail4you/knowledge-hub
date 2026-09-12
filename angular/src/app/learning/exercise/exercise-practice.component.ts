@@ -376,14 +376,44 @@ export class ExercisePracticeComponent implements OnInit {
   }
   
   checkAnswer(exercise: ExerciseDto, userAnswer: string): boolean {
-    if (exercise.type === ExerciseType.SingleChoice || exercise.type === ExerciseType.MultiChoice) {
-      return exercise.answer.toUpperCase() === userAnswer.toUpperCase();
+    const norm = (s: string) => (s || '').trim();
+    if (exercise.type === ExerciseType.SingleChoice) {
+      return this.normChoice(norm(userAnswer)) === this.normChoice(norm(exercise.answer));
+    }
+    if (exercise.type === ExerciseType.MultiChoice) {
+      return this.normChoiceSet(norm(userAnswer)) === this.normChoiceSet(norm(exercise.answer));
     }
     if (exercise.type === ExerciseType.TrueFalse) {
-      return exercise.answer === userAnswer;
+      return this.normTrueFalse(norm(userAnswer)) === this.normTrueFalse(norm(exercise.answer));
     }
     // FillBlank, ShortAnswer, Essay - partial matching could be implemented
     return exercise.answer.includes(userAnswer) || userAnswer.includes(exercise.answer);
+  }
+
+  private normChoice(s: string): string {
+    const t = (s || '').trim().toUpperCase();
+    const first = t.split(/[,;，；、\s|/]+/).filter(Boolean)[0] ?? t;
+    let tok = first.trim();
+    if (tok.length >= 2 && tok[0] >= 'A' && tok[0] <= 'Z' && '.、)]:：:-'.includes(tok[1])) tok = tok[0];
+    if (/^\d+$/.test(tok)) {
+      const n = Number(tok);
+      if (n === 0) return 'A';
+      if (n >= 1 && n <= 26) return String.fromCharCode(65 + n - 1);
+    }
+    return tok;
+  }
+
+  private normChoiceSet(s: string): string {
+    let tokens = (s || '').split(/[,;，；、\s|/]+/).map(x => this.normChoice(x)).filter(Boolean);
+    if (tokens.length === 1 && /^[A-Z]{2,6}$/.test(tokens[0])) tokens = tokens[0].split('');
+    return [...tokens].sort().join(',');
+  }
+
+  private normTrueFalse(s: string): string {
+    const t = (s || '').trim().toLowerCase().replace(/[。.!！'"]/g, '');
+    if (['true', 't', '1', 'yes', 'y', '√', '✓', '对', '正确', '是', '真', 'right'].includes(t)) return 'true';
+    if (['false', 'f', '0', 'no', 'n', '×', 'x', '错', '错误', '否', '假', 'wrong'].includes(t)) return 'false';
+    return t;
   }
   
   retry() {

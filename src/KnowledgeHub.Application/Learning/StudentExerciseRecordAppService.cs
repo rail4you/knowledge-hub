@@ -627,8 +627,10 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
 
         return exercise.Type switch
         {
-            ExerciseType.SingleChoice or ExerciseType.TrueFalse =>
-                string.Equals(studentAnswer.Trim(), exercise.Answer.Trim(), StringComparison.OrdinalIgnoreCase),
+            ExerciseType.SingleChoice =>
+                string.Equals(NormalizeChoiceToken(studentAnswer), NormalizeChoiceToken(exercise.Answer), StringComparison.OrdinalIgnoreCase),
+            ExerciseType.TrueFalse =>
+                GradeTrueFalse(studentAnswer, exercise.Answer),
             ExerciseType.MultiChoice =>
                 AreSetsEqual(studentAnswer, exercise.Answer),
             ExerciseType.FillBlank =>
@@ -639,11 +641,76 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         };
     }
 
+    private static bool GradeTrueFalse(string? studentAnswer, string? correctAnswer)
+    {
+        var s = NormalizeTrueFalse(studentAnswer);
+        var c = NormalizeTrueFalse(correctAnswer);
+        if (s.HasValue && c.HasValue) return s.Value == c.Value;
+        // 有一边无法归一化时回退为忽略大小写比较，避免误判也避免误判为对
+        return string.Equals(studentAnswer?.Trim(), correctAnswer?.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// 归一化判断题答案为 bool。兼容手动创建的 true/false 与 AI 生成的 对/错/正确/错误等写法。
+    /// 无法识别时回退为 trim + OrdinalIgnoreCase 比较，避免“true vs True”这类大小写误判。
+    /// </summary>
+    private static bool? NormalizeTrueFalse(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var t = raw.Trim().ToLowerInvariant();
+        // 去掉首尾引号/句号等噪音
+        t = t.Trim('\'', '"', '。', '.', '!', '！');
+        return t switch
+        {
+            "true" or "t" or "1" or "yes" or "y" or "√" or "✓" or "对" or "正确" or "是" or "真" or "right" => true,
+            "false" or "f" or "0" or "no" or "n" or "×" or "x" or "错" or "错误" or "否" or "假" or "wrong" => false,
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// 归一化单选选项 token：兼容数字序号（1→A）、带前缀（"A."/"A、"/"A)"）、小写等问题。
+    /// </summary>
+    private static string NormalizeChoiceToken(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+        var t = raw.Trim().ToUpperInvariant();
+        // 取第一个有效 token（防止 "A,B" 误传到单选用整个字符串比较）
+        var first = t.Split(new[] { ',', ';', '，', '；', '、', ' ', '\t', '|', '/' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? t;
+        t = first.Trim();
+        // 去掉 "A." / "A、" / "A)" / "A:" / "A-" 这类前缀残留
+        if (t.Length >= 2 && t[0] >= 'A' && t[0] <= 'Z' && ".、)]:：:-".Contains(t[1]))
+            t = t[0].ToString();
+        // 数字序号转字母：1→A, 2→B ...；兼容历史数据 0→A
+        if (int.TryParse(t, out var n))
+        {
+            if (n == 0) return "A";
+            if (n >= 1 && n <= 26) return ((char)('A' + n - 1)).ToString();
+            return t;
+        }
+        return t;
+    }
+
+    private static IEnumerable<string> SplitChoiceTokens(string answer)
+    {
+        return answer.Split(new[] { ',', ';', '，', '；', '、', ' ', '\t', '\n', '\r', '|', '/' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => NormalizeChoiceToken(s))
+            .Where(s => !string.IsNullOrEmpty(s));
+    }
+
     private static bool AreSetsEqual(string answer1, string answer2)
     {
-        var set1 = answer1.Split(',', ';').Select(s => s.Trim()).OrderBy(s => s);
-        var set2 = answer2.Split(',', ';').Select(s => s.Trim()).OrderBy(s => s);
-        return set1.SequenceEqual(set2);
+        // 兼容无分隔符连写（如历史数据 "ABC"）与逗号分隔（如 "A,B,C"）两种写法
+        static List<string> ToSet(string a)
+        {
+            var tokens = SplitChoiceTokens(a).ToList();
+            if (tokens.Count == 1 && tokens[0].Length > 1 && tokens[0].All(c => c >= 'A' && c <= 'Z'))
+                return tokens[0].Select(c => c.ToString()).OrderBy(s => s).ToList();
+            return tokens.OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+        var set1 = ToSet(answer1);
+        var set2 = ToSet(answer2);
+        return set1.SequenceEqual(set2, StringComparer.OrdinalIgnoreCase);
     }
 
     private async Task<StudentExerciseRecordDto> MapToDtoAsync(StudentExerciseRecord record)
