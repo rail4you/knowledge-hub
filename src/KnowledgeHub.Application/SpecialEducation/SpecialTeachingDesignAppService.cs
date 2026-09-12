@@ -284,7 +284,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
             return;
         }
         var baseUrl = _configuration["Qwen:BaseUrl"] ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
-        var model = _configuration["Qwen:Model"] ?? "qwen-plus";
+        var model = _configuration["Qwen:Model"] ?? "qwen-flash";
 
         var userPrompt = $@"## 特殊教育类别：{SpecialEduCategoryNames.ToDisplayName(input.Category)}
 {SpecialEduPromptBuilder.CategoryAdaptation(input.Category)}

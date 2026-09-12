@@ -21,7 +21,7 @@ namespace KnowledgeHub.TeachingAgents;
 [Authorize(KnowledgeHubPermissions.TeachingAgents.Default)]
 public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentAppService
 {
-    private const string FixedModelId = "qwen-plus";
+    private const string FixedModelId = "qwen-flash";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IRepository<TeachingAgent, Guid> _teachingAgentRepository;

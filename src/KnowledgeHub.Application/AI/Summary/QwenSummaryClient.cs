@@ -31,7 +31,7 @@ public class QwenSummaryClient : ITransientDependency
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:SummaryModel"]
             ?? _configuration["Qwen:Model"]
-            ?? "qwen-plus";
+            ?? "qwen-flash";
 
         IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
 

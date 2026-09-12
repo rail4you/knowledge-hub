@@ -296,7 +296,7 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
             ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = config["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
-        var model = config["Qwen:Model"] ?? "qwen-plus";
+        var model = config["Qwen:Model"] ?? "qwen-flash";
 
         IChatClient chatClient = QwenClient.CreateChatClient(config, model);
 

@@ -138,7 +138,7 @@ public class ExerciseAiGenerator : ITransientDependency
             ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
-        var model = _configuration["Qwen:Model"] ?? "qwen-plus";
+        var model = _configuration["Qwen:Model"] ?? "qwen-flash";
 
         IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
 

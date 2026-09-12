@@ -20,7 +20,7 @@ public interface ITeachingAgentRuntimeClient
 
 public class TeachingAgentRuntimeClient : ITeachingAgentRuntimeClient
 {
-    private const string FixedModelId = "qwen-plus";
+    private const string FixedModelId = "qwen-flash";
     private readonly IConfiguration _configuration;
 
     public TeachingAgentRuntimeClient(IConfiguration configuration)

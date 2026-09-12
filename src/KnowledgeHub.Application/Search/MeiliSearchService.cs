@@ -424,12 +424,14 @@ public class MeiliSearchService : IMeiliSearchService
     {
         await EnsureIndexExistsAsync();
 
+        // 语义搜索已暂停（省向量费用）：Hybrid 入口整体降级为关键词搜索，
+        // 接口签名不变，前端无需改动；恢复时把下面三个 hybrid 改回 true 并重配 embedder。
         // 如果调用者明确指定了 IndexName（videos 或 documents）则只走单边，
         // 默认不指定则同时搜两个索引，合并结果。
         if (!string.IsNullOrEmpty(query.IndexName))
         {
             var (items, total) = await ExecuteSingleIndexSearchAsync(
-                query.IndexName!, query, applyDocumentFilters: query.IndexName == IndexName, hybrid: true);
+                query.IndexName!, query, applyDocumentFilters: query.IndexName == IndexName, hybrid: false);
             return new SearchResultDto
             {
                 Items = items,
@@ -439,8 +441,8 @@ public class MeiliSearchService : IMeiliSearchService
             };
         }
 
-        var docTask = ExecuteSingleIndexSearchAsync(IndexName, query, applyDocumentFilters: true, hybrid: true);
-        var vidTask = ExecuteSingleIndexSearchAsync(VideoIndexName, query, applyDocumentFilters: false, hybrid: true);
+        var docTask = ExecuteSingleIndexSearchAsync(IndexName, query, applyDocumentFilters: true, hybrid: false);
+        var vidTask = ExecuteSingleIndexSearchAsync(VideoIndexName, query, applyDocumentFilters: false, hybrid: false);
 
         await Task.WhenAll(docTask, vidTask);
 
@@ -681,37 +683,22 @@ public class MeiliSearchService : IMeiliSearchService
 
     public async Task<IndexTaskResultDto> RefreshDocumentIndexAsync(Guid resourceId)
     {
-        var embedderConfig = new
+        // 语义搜索已暂停（省向量费用）：不再向索引下发 qwen embedder，
+        // 并顺手清空索引上已有的 embedder 配置，存量/新增文档都不再触发向量化。
+        // 恢复语义搜索时：恢复下发 embedder 配置并重建索引。
+        var json = JsonSerializer.Serialize(new { });
+        MeiliTaskResponse? taskResult = null;
+        try
         {
-            qwen = new
-            {
-                source = "rest",
-                url = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings",
-                apiKey = _options.Value.EmbeddingApiKey,
-                dimensions = _options.Value.EmbeddingDimension,
-                documentTemplate = "{{doc.pageTitle}} {{doc.pageContent}}",
-                request = new
-                {
-                    model = "text-embedding-v3",
-                    input = "{{text}}",
-                    encoding_format = "float"
-                },
-                response = new
-                {
-                    data = new[]
-                    {
-                        new { embedding = "{{embedding}}" }
-                    }
-                }
-            }
-        };
-
-        var json = JsonSerializer.Serialize(embedderConfig);
-        var response = await _httpClient.PatchAsync(
-            $"/indexes/{IndexName}/settings/embedders",
-            new StringContent(json, Encoding.UTF8, "application/json"));
-
-        var taskResult = await response.Content.ReadFromJsonAsync<MeiliTaskResponse>();
+            var response = await _httpClient.PatchAsync(
+                $"/indexes/{IndexName}/settings/embedders",
+                new StringContent(json, Encoding.UTF8, "application/json"));
+            taskResult = await response.Content.ReadFromJsonAsync<MeiliTaskResponse>();
+        }
+        catch
+        {
+            // 索引不存在等情况忽略：关键词搜索不受影响
+        }
 
         return new IndexTaskResultDto
         {

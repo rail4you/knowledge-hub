@@ -112,7 +112,7 @@ JSON 结构:
             ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
-        var model = _configuration["Qwen:Model"] ?? "qwen-plus";
+        var model = _configuration["Qwen:Model"] ?? "qwen-flash";
 
         // 3. 组合 User Prompt(以 Resource.Summary 为唯一案例依据)
         var userPrompt = $@"## 文档摘要(唯一案例依据)

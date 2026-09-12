@@ -262,7 +262,7 @@ public class SpecialIepAppService : KnowledgeHubAppService, ISpecialIepAppServic
         var apiKey = _configuration["Qwen:ApiKey"];
         if (apiKey.IsNullOrWhiteSpace()) { await EmitErrorAsync(onChunk, threadId, "Qwen:ApiKey 未配置。"); return; }
         var baseUrl = _configuration["Qwen:BaseUrl"] ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
-        var model = _configuration["Qwen:Model"] ?? "qwen-plus";
+        var model = _configuration["Qwen:Model"] ?? "qwen-flash";
 
         string enrollmentSnapshot = "无选课记录";
         string? courseTitle = null;

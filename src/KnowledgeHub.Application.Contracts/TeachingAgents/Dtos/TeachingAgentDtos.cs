@@ -64,7 +64,7 @@ public class CreateUpdateTeachingAgentDto
     public TeachingAgentVisibility Visibility { get; set; } = TeachingAgentVisibility.Private;
     public string SystemPrompt { get; set; } = string.Empty;
     public string? WelcomeMessage { get; set; }
-    public string ModelId { get; set; } = "qwen-plus";
+    public string ModelId { get; set; } = "qwen-flash";
     public double Temperature { get; set; } = 0.2;
     public string? VersionNote { get; set; }
     public List<TeachingAgentSkillBindingDto> Skills { get; set; } = new();

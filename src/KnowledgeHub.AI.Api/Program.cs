@@ -35,7 +35,7 @@ var apiKey = builder.Configuration["Qwen:ApiKey"]
     ?? throw new InvalidOperationException("Qwen:ApiKey is not configured");
 var baseUrl = builder.Configuration["Qwen:BaseUrl"] 
     ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
-var model = builder.Configuration["Qwen:Model"] ?? "qwen-plus";
+var model = builder.Configuration["Qwen:Model"] ?? "qwen-flash";
 
 Log.Information("Creating AI agents with model {Model} at {BaseUrl}", model, baseUrl);
 

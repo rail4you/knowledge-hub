@@ -37,7 +37,9 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
     private readonly IFileStorageService _fileStorageService;
     private readonly ICurrentTenant _currentTenant;
 
-    private const string DefaultModel = "qwen3-vl-plus";
+    private const string DefaultModel = "qwen3-vl-flash";
+    /// <summary>视频抽帧率（帧/秒）：时间轴分析 0.2（5 秒一帧）足够，烧钱量与帧数成正比，可用 Qwen:VideoFps 覆盖。</summary>
+    private const double DefaultFps = 0.2;
     private const string VideosIndexName = "videos";
     private const string TimelinePrompt = @"请详细分析这段视频的内容，按照时间轴输出事件列表。
 
@@ -373,6 +375,8 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:VisionModel"] ?? DefaultModel;
         var textPrompt = prompt ?? TimelinePrompt;
+        var fps = _configuration.GetValue("Qwen:VideoFps", DefaultFps);
+        if (fps <= 0) fps = DefaultFps;
 
         _logger.LogInformation("Calling Qwen VL API, model: {Model}", model);
 
@@ -390,7 +394,7 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
                         {
                             type = "video_url",
                             video_url = new { url = videoUrl },
-                            fps = 1
+                            fps
                         },
                         new
                         {
