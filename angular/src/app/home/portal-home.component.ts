@@ -378,6 +378,12 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     this.loadBrowseData();
   }
 
+  /** 租户切换：专业是租户级数据，旧租户的专业选择直接失效，必须清空，否则会用串租户的专业 id 查询 */
+  onTenantChange(): void {
+    this.filterMajorId.set(null);
+    this.onFilterChange();
+  }
+
   onBrowseCoursePageChange(page: number): void {
     this.browseCoursePage.set(page);
     this.loadBrowseData();

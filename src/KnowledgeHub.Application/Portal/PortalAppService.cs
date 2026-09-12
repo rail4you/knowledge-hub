@@ -406,12 +406,12 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         }
         else if (majorId.HasValue)
         {
-            // 多专业语义：命中该专业（含兼属）或公共课（无任何专业归属）
+            // 严格按专业筛选：命中该专业（含兼属）才返回。
+            // 公共课（无任何专业归属）请用“公共课”选项（onlyPublicCourses）单独筛选，不在此混入。
             var linkedMatched = browseLinkQuery.Where(x => x.MajorId == majorId.Value).Select(x => x.CourseId).ToHashSet();
             coursesFiltered = coursesFiltered.Where(c =>
                 (c.MajorId.HasValue && c.MajorId.Value == majorId.Value) ||
-                linkedMatched.Contains(c.Id) ||
-                !browseLinkedAny.Contains(c.Id));
+                linkedMatched.Contains(c.Id));
         }
         if (!string.IsNullOrWhiteSpace(search))
             coursesFiltered = coursesFiltered.Where(c => (c.Title ?? "").Contains(search, StringComparison.OrdinalIgnoreCase)
@@ -562,7 +562,9 @@ public class PortalAppService : KnowledgeHubAppService, IPortalAppService
         // ── 筛选选项 ──
         var tenantOptions = tenants.Select(t => new PublicBrowseFilterOption { Id = t.Id, Name = tenantInfos.GetValueOrDefault(t.Id, t.Name) ?? t.Name }).ToList();
         var majorQuery = await _majorRepository.GetQueryableAsync();
+        // 专业是租户级数据：选中租户时只返回该租户的专业，避免选串到其他租户的专业
         var majorOptions = majorQuery.AsEnumerable()
+            .Where(m => !tenantId.HasValue || m.TenantId == tenantId.Value)
             .Select(m => new PublicBrowseFilterOption { Id = m.Id, Name = m.Name }).ToList();
 
         return new PublicBrowseDto
