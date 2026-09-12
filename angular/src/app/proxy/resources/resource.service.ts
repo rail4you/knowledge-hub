@@ -36,6 +36,15 @@ export class ResourceService {
     { apiName: this.apiName,...config });
   
 
+  checkCollectedStatus = (resourceIds: string[], config?: Partial<Rest.Config>) =>
+    this.restService.request<any, string[]>({
+      method: 'POST',
+      url: '/api/app/resource/check-collected-status',
+      body: resourceIds,
+    },
+    { apiName: this.apiName,...config });
+  
+
   collect = (resourceId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, void>({
       method: 'POST',

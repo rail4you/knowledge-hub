@@ -35,6 +35,15 @@ export class ResourceReviewService {
     { apiName: this.apiName,...config });
   
 
+  getRatingSummaries = (resourceIds: string[], config?: Partial<Rest.Config>) =>
+    this.restService.request<any, ResourceRatingSummaryDto[]>({
+      method: 'POST',
+      url: '/api/app/resource-review/get-rating-summaries',
+      body: resourceIds,
+    },
+    { apiName: this.apiName,...config });
+  
+
   getRatingSummary = (resourceId: string, config?: Partial<Rest.Config>) =>
     this.restService.request<any, ResourceRatingSummaryDto>({
       method: 'GET',

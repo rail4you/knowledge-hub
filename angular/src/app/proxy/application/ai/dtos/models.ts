@@ -23,6 +23,55 @@ export interface AiGenerationTaskDto {
   resultJson?: string | null;
 }
 
+export interface AiManagementStatusDto {
+  maskedApiKey?: string;
+  hasApiKey?: boolean;
+  textModel?: string;
+  visionModel?: string;
+  videoFps?: number;
+  pricing?: AiModelPriceDto[];
+}
+
+export interface AiModelPriceDto {
+  model?: string;
+  inputPerMillion?: number;
+  outputPerMillion?: number;
+}
+
+export interface AiQuotasDto {
+  quotas?: Record<string, Record<string, number>>;
+}
+
+export interface AiUsageRecordDto {
+  id?: string;
+  tenantId?: string | null;
+  tenantName?: string | null;
+  userId?: string;
+  userName?: string | null;
+  roles?: string | null;
+  featureGroup?: string;
+  featureGroupName?: string;
+  feature?: string;
+  model?: string;
+  status?: number;
+  statusName?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  isEstimated?: boolean;
+  estimatedCost?: number;
+  errorMessage?: string | null;
+  creationTime?: string;
+}
+
+export interface AiUsageSummaryDto {
+  totalCount?: number;
+  successCount?: number;
+  failedCount?: number;
+  totalInputTokens?: number;
+  totalOutputTokens?: number;
+  totalEstimatedCost?: number;
+}
+
 export interface ChatMessageDto {
   id?: string;
   role?: string;
@@ -58,6 +107,16 @@ export interface GetAiGenerationTaskListDto extends PagedAndSortedResultRequestD
   onlyMine?: boolean;
 }
 
+export interface GetAiUsageRecordsInput {
+  startTime?: string | null;
+  endTime?: string | null;
+  featureGroup?: string | null;
+  status?: number | null;
+  filter?: string | null;
+  skipCount?: number;
+  maxResultCount?: number;
+}
+
 export interface ResourceForChatDto {
   id?: string;
   name?: string;
@@ -68,4 +127,8 @@ export interface ResourceForChatDto {
   hasSummary?: boolean;
   categoryId?: string | null;
   categoryName?: string | null;
+}
+
+export interface UpdateAiApiKeyDto {
+  apiKey?: string;
 }
