@@ -11,6 +11,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { Router } from '@angular/router';
 import { SearchService, SearchHistoryDto } from '../search.service';
 @Component({
   selector: 'app-search-history',
@@ -93,6 +94,18 @@ import { SearchService, SearchHistoryDto } from '../search.service';
                     <td nzAlign="center">{{ item.creationTime | date:'yyyy-MM-dd HH:mm' }}</td>
                     <td nzAlign="center">
                       <div class="row-actions">
+                        <span nz-tooltip nzTooltipTitle="重新搜索">
+                          <button
+                            nz-button
+                            nzType="text"
+                            nzSize="small"
+                            (click)="reSearch(item.queryText)"
+                            class="action-btn"
+                            aria-label="重新搜索"
+                          >
+                            <span nz-icon nzType="redo" nzTheme="outline"></span>
+                          </button>
+                        </span>
                         <span nz-tooltip nzTooltipTitle="删除">
                           <button
                             nz-button
@@ -205,6 +218,7 @@ import { SearchService, SearchHistoryDto } from '../search.service';
 export class SearchHistoryComponent implements OnInit {
   private readonly searchService = inject(SearchService);
   private readonly message = inject(NzMessageService);
+  private readonly router = inject(Router);
 
   readonly history = signal<SearchHistoryDto[]>([]);
   readonly loading = signal(false);
@@ -261,6 +275,14 @@ export class SearchHistoryComponent implements OnInit {
       error: () => {
         this.message.error('清空失败');
       },
+    });
+  }
+
+  reSearch(queryText: string) {
+    if (!queryText.trim()) return;
+    const target = this.router.url.startsWith('/student') ? '/student/search' : '/search';
+    this.router.navigate([target], {
+      queryParams: { q: queryText },
     });
   }
 

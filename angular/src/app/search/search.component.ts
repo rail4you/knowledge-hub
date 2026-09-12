@@ -267,6 +267,20 @@ export class SearchComponent implements OnInit {
     return clean.length > maxLen ? clean.slice(0, maxLen) + '…' : clean;
   }
 
+  /**
+   * 把 Date 格式化为本地日期字符串 yyyy-MM-dd。
+   * 不要用 toISOString()——它会把日期按 UTC 转换，东八区用户选 "2026-01-15"
+   * 会变成 "2026-01-14"，导致后端 Meili filter 把"开始日期"提前一天、
+   * "结束日期"也提前一天，最近一天的资源全部被过滤掉。
+   */
+  private formatLocalDate(d: Date | null | undefined): string | undefined {
+    if (!d) return undefined;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
   ngOnInit() {
     this.loadIndexes();
     
@@ -294,8 +308,10 @@ export class SearchComponent implements OnInit {
       this.selectedFileExtension.set(s.selectedFileExtension);
       this.searchType = s.searchType;
       this.selectedIndex = s.selectedIndex;
-      this.startDate = s.startDate ? new Date(s.startDate) : null;
-      this.endDate = s.endDate ? new Date(s.endDate) : null;
+      // 从详情页返回时，还原的是本地日期字符串 "yyyy-MM-dd"，
+      // 拼成 T00:00:00 让 Date 解析为本地零点，避免 UTC 转换导致的日期偏移
+      this.startDate = s.startDate ? new Date(`${s.startDate}T00:00:00`) : null;
+      this.endDate = s.endDate ? new Date(`${s.endDate}T00:00:00`) : null;
       return;
     }
 
@@ -331,8 +347,8 @@ export class SearchComponent implements OnInit {
       skipCount: (this.pageIndex - 1) * this.pageSize,
       maxResultCount: this.pageSize,
       sorting: 'relevance',
-      startDate: this.startDate ? this.startDate.toISOString() : undefined,
-      endDate: this.endDate ? this.endDate.toISOString() : undefined,
+      startDate: this.formatLocalDate(this.startDate),
+      endDate: this.formatLocalDate(this.endDate),
       indexName: this.selectedIndex,
       // 学生端仅搜索已审核资源
       statusFilter: this.router.url.startsWith('/student') ? '2,3' : undefined,
@@ -445,8 +461,8 @@ export class SearchComponent implements OnInit {
             selectedFileExtension: this.selectedFileExtension(),
             searchType: this.searchType,
             selectedIndex: this.selectedIndex,
-            startDate: this.startDate ? this.startDate.toISOString() : null,
-            endDate: this.endDate ? this.endDate.toISOString() : null,
+            startDate: this.formatLocalDate(this.startDate) ?? null,
+            endDate: this.formatLocalDate(this.endDate) ?? null,
           }
         }
       }
