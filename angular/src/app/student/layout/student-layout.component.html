@@ -1,4 +1,4 @@
-<div class="student-layout">
+<div class="student-layout" [class.student-layout--full]="hideFooter()">
   <!-- 统一头部：Logo + Tab 导航 + 账户操作（MOOC 风格：单行 + 文本 tab） -->
   <header class="app-header" [class.open]="menuOpen()">
     <div class="app-header__inner">
@@ -296,5 +296,7 @@
     <app-voice-panel></app-voice-panel>
   }
 
-  <app-site-footer></app-site-footer>
+  @if (!hideFooter()) {
+    <app-site-footer></app-site-footer>
+  }
 </div>

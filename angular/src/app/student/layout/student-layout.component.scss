@@ -419,6 +419,22 @@
   min-height: 0;
 }
 
+/* 全高聊天页（如 /student/agent-tasks/:id）：占满视口、隐藏 footer 后
+   main 固定为视口剩余高度且不产生页面级滚动，聊天卡内部自行滚动，
+   输入框自然贴在页面底部。 */
+.student-layout--full {
+  height: 100vh;
+  min-height: 100vh;
+  overflow: hidden;
+
+  .main-content {
+    flex: 1 1 auto;
+    height: calc(100vh - 56px);
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
 .app-footer {
   background: #1c1917;
   padding: 32px 24px;

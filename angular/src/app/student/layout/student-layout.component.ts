@@ -45,6 +45,12 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
   userName = signal('用户');
   userRoleLabel = signal('学生');
   menuOpen = signal(false);
+  /**
+   * 智能体任务详情页（/student/agent-tasks/:id）是全高聊天布局：
+   * 聊天窗口占满视口剩余高度、输入框贴页面底部，此时隐藏全局 footer，
+   * 否则 footer 会挤占高度、聊天框无法贴底。
+   */
+  readonly hideFooter = signal(false);
   /** 语音助手 Feature 开关（KnowledgeHub.VoiceAssistant，按租户控制；取不到值时默认显示） */
   readonly voiceAssistantEnabled = signal(true);
 
@@ -132,12 +138,24 @@ export class StudentLayoutComponent implements OnInit, AfterViewInit, OnDestroy 
     if (hasRole(this.configState, 'Teacher')) {
       this.userRoleLabel.set('教师');
     }
+
+    this.updateFooterVisibility(this.router.url);
+  }
+
+  /** 全高聊天页隐藏 footer（智能体任务详情、实训聊天；列表页仍保留 footer）。 */
+  private updateFooterVisibility(url: string): void {
+    const path = (url || '').split('?')[0].split('#')[0];
+    this.hideFooter.set(
+      /^\/student\/agent-tasks\/[^/]+$/.test(path) ||
+      /^\/student\/practicums\/[^/]+\/chat\/?$/.test(path)
+    );
   }
 
   ngAfterViewInit(): void {
     this.routerSub = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe(() => {
+      .subscribe((e) => {
+        this.updateFooterVisibility((e as NavigationEnd).urlAfterRedirects || this.router.url);
         this.scheduleReflow();
         // 路由跳转后自动关闭移动抽屉
         this.closeMenu();
