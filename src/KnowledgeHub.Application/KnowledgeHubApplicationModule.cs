@@ -6,6 +6,7 @@ using KnowledgeHub.Application.Contracts.Search;
 using KnowledgeHub.Resources.Conversion;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Volo.Abp;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.SettingManagement;
 using Volo.Abp.Account;
@@ -48,5 +49,12 @@ public class KnowledgeHubApplicationModule : AbpModule
         context.Services.AddSingleton<ConversionConcurrencyManager>();
         // PPTX 大媒体预压缩（GIF/大图 ffmpeg 压小后再喂 LibreOffice）
         context.Services.AddSingleton<PptxImagePreprocessor>();
+    }
+
+    public override void OnApplicationInitialization(ApplicationInitializationContext context)
+    {
+        // Qwen 动态 Key 解析：静态 QwenClient 经此 scope 工厂读取数据库配置，
+        // 管理页换 Key 后（缓存 5 分钟或主动清理）新调用即生效，无需重启。
+        QwenClient.ScopeFactory = context.ServiceProvider.GetRequiredService<IServiceScopeFactory>();
     }
 }

@@ -7,7 +7,9 @@ using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
+using Volo.Abp;
 
 namespace KnowledgeHub;
 
@@ -23,6 +25,29 @@ public static class QwenClient
     private static ConcurrencyLimiter? _limiter;
 
     /// <summary>
+    /// DI 根（ApplicationModule 初始化时写入）：用于按需创建 scope 解析动态 Key。
+    /// 直接从 root 解析会因 scoped 依赖报错，必须经 scope。
+    /// </summary>
+    public static IServiceScopeFactory? ScopeFactory { get; set; }
+
+    /// <summary>
+    /// API Key 解析器（默认读动态配置 → 回退 appsettings）。测试可替换。
+    /// </summary>
+    public static Func<Task<string>>? ApiKeyResolver { get; set; } = DefaultApiKeyResolver;
+
+    private static async Task<string> DefaultApiKeyResolver()
+    {
+        if (ScopeFactory == null)
+        {
+            return null!;
+        }
+
+        using var scope = ScopeFactory.CreateScope();
+        var provider = scope.ServiceProvider.GetRequiredService<Application.AI.IQwenCredentialProvider>();
+        return await provider.GetApiKeyAsync();
+    }
+
+    /// <summary>
     /// 获取全局 Qwen 限流许可（供非 OpenAI-SDK 的直接 HTTP 调用，如视频理解 VL 复用同一限流）。
     /// 调用方必须释放返回的 lease。
     /// </summary>
@@ -31,10 +56,19 @@ public static class QwenClient
         return await GetLimiter(configuration).AcquireAsync(1, ct).ConfigureAwait(false);
     }
 
-    public static IChatClient CreateChatClient(IConfiguration configuration, string? modelOverride = null)
+    public static async Task<IChatClient> CreateChatClient(IConfiguration configuration, string? modelOverride = null)
     {
-        var apiKey = configuration["Qwen:ApiKey"]
-            ?? throw new InvalidOperationException("Qwen:ApiKey is not configured");
+        // 动态 Key（管理页可换，换完即生效）→ 回退 appsettings。
+        string? apiKey = null;
+        if (ApiKeyResolver != null)
+        {
+            apiKey = await ApiKeyResolver().ConfigureAwait(false);
+        }
+        apiKey ??= configuration["Qwen:ApiKey"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new AbpException("Qwen:ApiKey is not configured");
+        }
         var baseUrl = configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = modelOverride

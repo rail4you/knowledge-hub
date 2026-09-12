@@ -15,7 +15,12 @@ public class KnowledgeHubSettingDefinitionProvider : SettingDefinitionProvider
             new SettingDefinition(KnowledgeHubSettings.BrandingAppTitle, "易课通", isVisibleToClients: true),
             new SettingDefinition(KnowledgeHubSettings.BrandingAppSubtitle, "知识资源库", isVisibleToClients: true),
             new SettingDefinition(KnowledgeHubSettings.BrandingFooterText, "© 2026 易课通 · 知识资源库", isVisibleToClients: true),
-            new SettingDefinition(KnowledgeHubSettings.BrandingLogoUrl, "", isVisibleToClients: true)
+            new SettingDefinition(KnowledgeHubSettings.BrandingLogoUrl, "", isVisibleToClients: true),
+
+            // AI 使用管理：Qwen Key 全局唯一、加密存储，仅后端可读；
+            // 每日配额 JSON（角色 → 分组 → 次数），AI 使用管理页维护。
+            new SettingDefinition(KnowledgeHubSettings.QwenApiKey, "", isVisibleToClients: false, isEncrypted: true),
+            new SettingDefinition(KnowledgeHubSettings.AiQuotas, KnowledgeHubSettings.DefaultAiQuotas, isVisibleToClients: false)
         );
     }
 }

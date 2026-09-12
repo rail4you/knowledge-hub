@@ -54,5 +54,23 @@ public static class AIDbModelCreatingExtensions
             b.HasIndex(x => new { x.TenantId, x.CreatorUserId, x.Status });
             b.HasIndex(x => new { x.TenantId, x.TaskType, x.CreationTime });
         });
+
+        builder.Entity<KnowledgeHub.AI.AiUsageRecord>(b =>
+        {
+            b.ToTable("AiUsageRecords");
+            b.ConfigureByConvention();
+
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedOnAdd();
+            b.Property(x => x.UserName).HasMaxLength(256);
+            b.Property(x => x.Roles).HasMaxLength(256);
+            b.Property(x => x.FeatureGroup).HasMaxLength(64).IsRequired();
+            b.Property(x => x.Feature).HasMaxLength(64).IsRequired();
+            b.Property(x => x.Model).HasMaxLength(128).IsRequired();
+            b.Property(x => x.ErrorMessage).HasMaxLength(-1);
+
+            b.HasIndex(x => new { x.TenantId, x.UserId, x.FeatureGroup, x.CreationTime });
+            b.HasIndex(x => new { x.TenantId, x.CreationTime });
+        });
     }
 }
