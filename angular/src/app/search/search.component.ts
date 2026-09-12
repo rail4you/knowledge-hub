@@ -55,10 +55,19 @@ export class SearchComponent implements OnInit {
   searchQuery = '';
   selectedFileExtension = signal('');
   searchType: 'keyword' | 'hybrid' = 'keyword';
-  selectedIndex = 'documents';
+  /**
+   * 索引选择：
+   *   - 'all'：全部（不传 indexName，后端合并 documents + videos 双索引）
+   *   - 其它：Meili 索引 uid（单边搜索）
+   * 默认 'all'，覆盖历史 'documents' 单边默认值，避免漏检视频时间轴。
+   */
+  selectedIndex: string = 'all';
   startDate: Date | null = null;
   endDate: Date | null = null;
-  
+
+  /** 用于 ngFor 渲染：'all' 作为首项固定显示，后接 availableIndexes() 动态项 */
+  readonly ALL_INDEX_OPTION = 'all' as const;
+
   availableIndexes = signal<MeiliIndexDto[]>([]);
 
   results = signal<DocumentSearchResultDto[]>([]);
@@ -199,6 +208,8 @@ export class SearchComponent implements OnInit {
   videoPlaybackError = signal(false);
 
   getIndexLabel(indexUid: string | null | undefined): string {
+    // 'all' 是 UI 层的哨兵值，代表“全部索引”
+    if (indexUid === 'all') return '全部';
     const normalized = (indexUid || '').toLowerCase();
     if (normalized === 'documents') {
       return '文档';
@@ -327,7 +338,13 @@ export class SearchComponent implements OnInit {
     this.adminService.getIndexes().subscribe({
       next: (indexes) => {
         this.availableIndexes.set(indexes);
-        if (indexes.length > 0 && !indexes.find(i => i.uid === this.selectedIndex)) {
+        // 'all' 是固定首项，永远保留；若用户当前未选 'all'，但列表里没有对应 uid，
+        // 才回退到第一个真实索引，避免用户主动选“全部”后被这里静默改成单边。
+        if (
+          this.selectedIndex !== 'all' &&
+          indexes.length > 0 &&
+          !indexes.find(i => i.uid === this.selectedIndex)
+        ) {
           this.selectedIndex = indexes[0].uid;
         }
       },
@@ -342,6 +359,10 @@ export class SearchComponent implements OnInit {
 
     this.loading.set(true);
     
+    // 'all' = 不传 indexName，让后端走 documents + videos 双索引合并逻辑；
+    // 其它值 = 走单边索引（与后端 SearchAsync/HybridSearchAsync 行为一致）。
+    const isAll = this.selectedIndex === 'all';
+
     const query: SearchQueryDto = {
       query: this.searchQuery,
       skipCount: (this.pageIndex - 1) * this.pageSize,
@@ -349,7 +370,7 @@ export class SearchComponent implements OnInit {
       sorting: 'relevance',
       startDate: this.formatLocalDate(this.startDate),
       endDate: this.formatLocalDate(this.endDate),
-      indexName: this.selectedIndex,
+      indexName: isAll ? undefined : this.selectedIndex,
       // 学生端仅搜索已审核资源
       statusFilter: this.router.url.startsWith('/student') ? '2,3' : undefined,
     };

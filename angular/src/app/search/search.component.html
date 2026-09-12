@@ -82,6 +82,8 @@
           搜索索引
         </label>
         <nz-select [(ngModel)]="selectedIndex" class="filter-select" nzPlaceHolder="选择索引">
+          <!-- “全部”固定为首项：不传 indexName，后端自动合并 documents + videos 双索引 -->
+          <nz-option [nzValue]="ALL_INDEX_OPTION" nzLabel="全部"></nz-option>
           @for (idx of availableIndexes(); track idx.uid) {
             <nz-option [nzValue]="idx.uid" [nzLabel]="getIndexLabel(idx.uid)"></nz-option>
           }
