@@ -104,6 +104,17 @@
           <div class="chapter-header">
             <div class="chapter-header__left">
               <h2 class="chapter-header__title">
+                @if (canGoBack()) {
+                  <button
+                    type="button"
+                    class="back-btn"
+                    nz-tooltip
+                    [nzTooltipTitle]="'返回上一章节：' + previousChapterTitle()"
+                    (click)="goBackToPreviousChapter()"
+                  >
+                    <span nz-icon nzType="arrow-left" nzTheme="outline"></span>
+                  </button>
+                }
                 {{ selectedChapterTitle() }}
               </h2>
               <p class="chapter-header__meta">
@@ -144,14 +155,16 @@
                 [nzFrontPagination]="false"
                 [nzShowPagination]="false"
                 nzSize="middle"
-                [nzScroll]="{ x: '720px' }"
+                [nzScroll]="{ x: '860px' }"
               >
                 <thead>
                   <tr>
                     <th nzWidth="56px">序号</th>
                     <th>题目</th>
-                    <th nzWidth="100px">类型</th>
-                    <th nzWidth="80px">分值</th>
+                    <th nzWidth="88px">来源</th>
+                    <th nzWidth="96px">类型</th>
+                    <th nzWidth="72px">分值</th>
+                    <th nzWidth="100px">关联</th>
                     <th nzWidth="110px" nzRight>操作</th>
                   </tr>
                 </thead>
@@ -165,13 +178,15 @@
                         <span class="cell-title" [title]="e.title || '未命名题目'">{{
                           e.title || '未命名题目'
                         }}</span>
-                        @if (e.isAiGenerated) {
-                          <nz-tag nzColor="purple" class="source-tag">AI生成</nz-tag>
-                        } @else {
-                          <nz-tag nzColor="default" class="source-tag">手动</nz-tag>
-                        }
                         @if (e.questionContent) {
                           <span class="cell-sub text-ellipsis">{{ e.questionContent }}</span>
+                        }
+                      </td>
+                      <td>
+                        @if (e.isAiGenerated) {
+                          <nz-tag nzColor="purple" class="meta-tag">AI生成</nz-tag>
+                        } @else {
+                          <nz-tag nzColor="default" class="meta-tag">手动</nz-tag>
                         }
                       </td>
                       <td>
@@ -180,6 +195,61 @@
                         </nz-tag>
                       </td>
                       <td class="cell-num">{{ e.score ?? 1 }} 分</td>
+                      <td>
+                        @if (hasMultiChapters(e)) {
+                          <button
+                            type="button"
+                            class="chapter-count-btn"
+                            nz-popover
+                            nzPopoverTrigger="click"
+                            nzPopoverPlacement="top"
+                            [nzPopoverContent]="linkedChapterTpl"
+                            [nzPopoverVisible]="openChapterPopoverId() === e.id"
+                            (nzPopoverVisibleChange)="onChapterPopoverVisibleChange(e.id, $event)"
+                            nz-tooltip
+                            nzTooltipTitle="该题已关联多个章节，点击查看并跳转"
+                          >
+                            <span nz-icon nzType="apartment" nzTheme="outline"></span>
+                            {{ linkedChapterCount(e) }}
+                          </button>
+                          <ng-template #linkedChapterTpl>
+                            <div class="chapter-popover">
+                              <div class="chapter-popover__head">
+                                <span nz-icon nzType="apartment" nzTheme="outline"></span>
+                                该题已关联 {{ linkedChapterCount(e) }} 个章节
+                              </div>
+                              <ul class="chapter-popover__list">
+                                @for (ch of chapterItemsOf(e); track ch.id) {
+                                  <li>
+                                    @if (ch.id === selectedChapterId()) {
+                                      <span class="chapter-popover__item is-current">
+                                        <span class="chapter-popover__name" [title]="ch.title">{{
+                                          ch.title
+                                        }}</span>
+                                        <span class="chapter-popover__badge">当前</span>
+                                      </span>
+                                    } @else {
+                                      <button
+                                        type="button"
+                                        class="chapter-popover__item"
+                                        (click)="jumpToChapter(ch.id)"
+                                      >
+                                        <span class="chapter-popover__name" [title]="ch.title">{{
+                                          ch.title
+                                        }}</span>
+                                        <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+                                      </button>
+                                    }
+                                  </li>
+                                }
+                              </ul>
+                              <div class="chapter-popover__hint">点击章节名可跳转到该章节</div>
+                            </div>
+                          </ng-template>
+                        } @else {
+                          <span class="cell-muted">—</span>
+                        }
+                      </td>
                       <td nzRight>
                         <button
                           class="link-btn link-btn--danger"
@@ -229,6 +299,7 @@
           [class.is-active]="selectedChapterId() === node.id"
           [class.is-parent]="hasChildren(node)"
           [style.padding-left.px]="depth * 16 + 12"
+          [attr.data-chapter-id]="node.id"
           (click)="onChapterItemClick(node)"
         >
           @if (hasChildren(node)) {
@@ -272,6 +343,7 @@
     nzTitle="关联习题到当前章节"
     [nzWidth]="880"
     [nzOkLoading]="linkModalSubmitting()"
+    [nzNoAnimation]="true"
     nzOkText="确定"
     nzCancelText="取消"
     (nzOnOk)="confirmLinkExercises()"
@@ -332,7 +404,7 @@
           [nzFrontPagination]="false"
           [nzShowPagination]="false"
           nzSize="middle"
-          [nzScroll]="{ x: '780px', y: '420px' }"
+          [nzScroll]="{ x: '820px', y: '420px' }"
         >
           <thead>
             <tr>
@@ -347,8 +419,10 @@
               </th>
               <th nzWidth="48px">序号</th>
               <th>题目</th>
-              <th nzWidth="100px">类型</th>
-              <th nzWidth="80px">分值</th>
+              <th nzWidth="88px">来源</th>
+              <th nzWidth="96px">类型</th>
+              <th nzWidth="72px">分值</th>
+              <th nzWidth="100px">关联</th>
               <th nzWidth="110px">状态</th>
             </tr>
           </thead>
@@ -373,13 +447,15 @@
                   <span class="cell-title" [title]="e.title || '未命名题目'">{{
                     e.title || '未命名题目'
                   }}</span>
-                  @if (e.isAiGenerated) {
-                    <nz-tag nzColor="purple" class="source-tag">AI生成</nz-tag>
-                  } @else {
-                    <nz-tag nzColor="default" class="source-tag">手动</nz-tag>
-                  }
                   @if (e.questionContent) {
                     <span class="cell-sub text-ellipsis">{{ e.questionContent }}</span>
+                  }
+                </td>
+                <td>
+                  @if (e.isAiGenerated) {
+                    <nz-tag nzColor="purple" class="meta-tag">AI生成</nz-tag>
+                  } @else {
+                    <nz-tag nzColor="default" class="meta-tag">手动</nz-tag>
                   }
                 </td>
                 <td>
@@ -388,6 +464,61 @@
                   </nz-tag>
                 </td>
                 <td class="cell-num">{{ e.score ?? 1 }} 分</td>
+                <td>
+                  @if (hasMultiChapters(e)) {
+                    <button
+                      type="button"
+                      class="chapter-count-btn"
+                      nz-popover
+                      nzPopoverTrigger="click"
+                      nzPopoverPlacement="top"
+                      [nzPopoverContent]="modalChapterTpl"
+                      [nzPopoverVisible]="openChapterPopoverId() === e.id"
+                      (nzPopoverVisibleChange)="onChapterPopoverVisibleChange(e.id, $event)"
+                      nz-tooltip
+                      nzTooltipTitle="该题已关联多个章节，点击查看并跳转"
+                    >
+                      <span nz-icon nzType="apartment" nzTheme="outline"></span>
+                      {{ linkedChapterCount(e) }}
+                    </button>
+                    <ng-template #modalChapterTpl>
+                      <div class="chapter-popover">
+                        <div class="chapter-popover__head">
+                          <span nz-icon nzType="apartment" nzTheme="outline"></span>
+                          该题已关联 {{ linkedChapterCount(e) }} 个章节
+                        </div>
+                        <ul class="chapter-popover__list">
+                          @for (ch of chapterItemsOf(e); track ch.id) {
+                            <li>
+                              @if (ch.id === selectedChapterId()) {
+                                <span class="chapter-popover__item is-current">
+                                  <span class="chapter-popover__name" [title]="ch.title">{{
+                                    ch.title
+                                  }}</span>
+                                  <span class="chapter-popover__badge">当前</span>
+                                </span>
+                              } @else {
+                                <button
+                                  type="button"
+                                  class="chapter-popover__item"
+                                  (click)="jumpToChapter(ch.id)"
+                                >
+                                  <span class="chapter-popover__name" [title]="ch.title">{{
+                                    ch.title
+                                  }}</span>
+                                  <span nz-icon nzType="arrow-right" nzTheme="outline"></span>
+                                </button>
+                              }
+                            </li>
+                          }
+                        </ul>
+                        <div class="chapter-popover__hint">点击章节名可跳转到该章节</div>
+                      </div>
+                    </ng-template>
+                  } @else {
+                    <span class="cell-muted">—</span>
+                  }
+                </td>
                 <td>
                   @if (isAlreadyLinked(e.id)) {
                     <span class="cell-status is-done">已关联</span>

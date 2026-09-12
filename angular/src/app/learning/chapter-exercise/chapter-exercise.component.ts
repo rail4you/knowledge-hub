@@ -14,6 +14,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { NzPopoverModule } from 'ng-zorro-antd/popover';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { CourseService } from '../../proxy/courses/course.service';
@@ -44,6 +45,7 @@ import { firstValueFrom } from 'rxjs';
     NzTableModule,
     NzCheckboxModule,
     NzPaginationModule,
+    NzPopoverModule,
     NzTooltipModule,
     NzSwitchModule,
   ],
@@ -97,6 +99,19 @@ export class ChapterExerciseComponent implements OnInit {
     return count;
   });
 
+  /** 全部章节 id -> 标题 映射（含各级子章节），用于把 chapterIds 解析成可跳转的章节 */
+  readonly chapterTitleMap = computed(() => {
+    const map = new Map<string, string>();
+    const walk = (nodes: ChapterDto[] | undefined): void => {
+      for (const n of nodes || []) {
+        if (n.id) map.set(n.id, n.title || '未命名章节');
+        walk(n.children);
+      }
+    };
+    walk(this.chapters());
+    return map;
+  });
+
   /** 过滤后的章节树：保留命中节点及其祖先链；筛选时模板自动全展开 */
   readonly visibleChapters = computed(() => {
     const kw = this.chapterKeyword().trim().toLowerCase();
@@ -131,6 +146,23 @@ export class ChapterExerciseComponent implements OnInit {
   readonly pagedLinkedExercises = computed(() => {
     const start = (this.linkedPage() - 1) * this.linkedPageSize();
     return this.chapterExercises().slice(start, start + this.linkedPageSize());
+  });
+
+  // ── 关联章节气泡（题目关联了多个章节时的提示按钮） ───────────────
+  /** 当前打开「关联章节」气泡的习题 id（受控 nz-popover，跳转后需要能主动收起） */
+  readonly openChapterPopoverId = signal<string | null>(null);
+
+  // ── 跳转历史：从关联章节跳走后可以返回上一章节 ──────────────────
+  /** 跳转历史栈：每次 jumpToChapter 把当前章节入栈；切课程或手动点章节树会清空 */
+  readonly chapterNavHistory = signal<string[]>([]);
+  readonly canGoBack = computed(() => this.chapterNavHistory().length > 0);
+  /** 栈顶章节的标题，用于返回按钮 tooltip */
+  readonly previousChapterTitle = computed(() => {
+    const history = this.chapterNavHistory();
+    if (history.length === 0) return '';
+    const previousId = history[history.length - 1];
+    const titles = this.chapterTitleMap();
+    return titles.get(previousId) ?? '上一章节';
   });
 
   // ── 关联习题弹窗 ─────────────────────────────────────────────────
@@ -245,6 +277,7 @@ export class ChapterExerciseComponent implements OnInit {
     this.selectedChapterTitle.set('');
     this.chapterExercises.set([]);
     this.linkedPage.set(1);
+    this.chapterNavHistory.set([]); // 切换课程：清空跳转历史
     this.loadChapterTree();
     this.loadCourseExercises();
   }
@@ -320,6 +353,8 @@ export class ChapterExerciseComponent implements OnInit {
       set.add(node.id);
       this.expandedNodes.set(set);
     }
+    // 手动选章节 = 主动跳出“关联跳转”上下文，清空历史，避免返回错乱
+    this.chapterNavHistory.set([]);
     this.selectChapter(node);
   }
 
@@ -558,6 +593,95 @@ export class ChapterExerciseComponent implements OnInit {
   }
 
   // ── 工具方法 ───────────────────────────────────────────────────
+  /** 题目关联的章节 id 列表（兼容仅有 chapterId 的旧数据） */
+  private chapterIdsOf(exercise: ExerciseDto): string[] {
+    const ids = exercise.chapterIds ?? (exercise.chapterId ? [exercise.chapterId] : []);
+    return ids.filter((id): id is string => !!id);
+  }
+
+  /** 题目关联的章节数 */
+  linkedChapterCount(exercise: ExerciseDto): number {
+    return this.chapterIdsOf(exercise).length;
+  }
+
+  /** 是否关联了多个章节（决定是否显示「关联章节」提示按钮） */
+  hasMultiChapters(exercise: ExerciseDto): boolean {
+    return this.linkedChapterCount(exercise) > 1;
+  }
+
+  /** 题目关联章节的 {id, title} 列表，供气泡展示与跳转 */
+  chapterItemsOf(exercise: ExerciseDto): { id: string; title: string }[] {
+    const titles = this.chapterTitleMap();
+    return this.chapterIdsOf(exercise).map(id => ({ id, title: titles.get(id) ?? '未知章节' }));
+  }
+
+  onChapterPopoverVisibleChange(exerciseId: string | undefined, visible: boolean): void {
+    this.openChapterPopoverId.set(visible ? exerciseId ?? null : null);
+  }
+
+  /** 从气泡中点击章节：收起气泡，清除筛选、展开祖先链并选中该章节 */
+  jumpToChapter(chapterId: string): void {
+    const node = this.findChapterNode(this.chapters(), chapterId);
+    if (!node) {
+      this.message.warning('未找到该章节');
+      return;
+    }
+
+    if (this.linkModalVisible()) this.closeLinkModal();
+    this.openChapterPopoverId.set(null);
+    if (this.isChapterFiltering()) this.clearChapterFilter();
+
+    const expanded = new Set(this.expandedNodes());
+    this.expandAncestors(this.chapters(), chapterId, expanded);
+    if (this.hasChildren(node)) expanded.add(chapterId);
+    this.expandedNodes.set(expanded);
+
+    // 把当前章节推入跳转历史，便于“返回上一章节”
+    const currentId = this.selectedChapterId();
+    if (currentId && currentId !== chapterId) {
+      this.chapterNavHistory.set([...this.chapterNavHistory(), currentId]);
+    }
+
+    this.selectChapter(node);
+
+    // 等树按新展开状态渲染后，把目标章节滚动到可视区
+    setTimeout(() => {
+      document
+        .querySelector(`[data-chapter-id="${chapterId}"]`)
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  }
+
+  /** 返回历史栈中的上一章节（仅在通过关联章节跳转后可用） */
+  goBackToPreviousChapter(): void {
+    const history = this.chapterNavHistory();
+    if (history.length === 0) return;
+
+    const previousId = history[history.length - 1];
+    const node = this.findChapterNode(this.chapters(), previousId);
+    if (!node) {
+      // 历史章节已不可用（例如切换了课程/数据变更），清空历史
+      this.chapterNavHistory.set([]);
+      this.message.warning('历史章节已不可用');
+      return;
+    }
+
+    this.chapterNavHistory.set(history.slice(0, -1));
+
+    const expanded = new Set(this.expandedNodes());
+    this.expandAncestors(this.chapters(), previousId, expanded);
+    if (this.hasChildren(node)) expanded.add(previousId);
+    this.expandedNodes.set(expanded);
+
+    this.selectChapter(node);
+
+    setTimeout(() => {
+      document
+        .querySelector(`[data-chapter-id="${previousId}"]`)
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  }
+
   getTypeName(type: ExerciseType | undefined): string {
     if (type === undefined) return '未知';
     const names: Record<number, string> = {
