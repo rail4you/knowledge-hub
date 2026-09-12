@@ -39,7 +39,7 @@ public static class QwenClient
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = modelOverride
             ?? configuration["Qwen:Model"]
-            ?? "qwen-plus";
+            ?? "qwen-flash";
 
         var openaiClient = new OpenAIClient(
             new ApiKeyCredential(apiKey),
@@ -56,7 +56,12 @@ public static class QwenClient
     {
         lock (SyncRoot)
         {
-            return _httpClient ??= new HttpClient(new QwenRateLimitingHandler(GetLimiter(configuration)))
+            // DelegatingHandler 必须指定 InnerHandler，否则 SendAsync 会抛
+            // "The inner handler has not been assigned."（后台任务/流式生成全挂）。
+            return _httpClient ??= new HttpClient(new QwenRateLimitingHandler(GetLimiter(configuration))
+            {
+                InnerHandler = new SocketsHttpHandler(),
+            })
             {
                 // LLM 长响应/流式：给足超时
                 Timeout = TimeSpan.FromMinutes(10),
