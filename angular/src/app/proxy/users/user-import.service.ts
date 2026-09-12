@@ -34,4 +34,13 @@ export class UserImportService {
       body: input,
     },
     { apiName: this.apiName,...config });
+  
+
+  preview = (input: ImportUsersFileDto, config?: Partial<Rest.Config>) =>
+    this.restService.request<any, UserImportResultDto>({
+      method: 'POST',
+      url: '/api/app/user-import/preview',
+      body: input,
+    },
+    { apiName: this.apiName,...config });
 }

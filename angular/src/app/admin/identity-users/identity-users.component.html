@@ -3,7 +3,7 @@
   <nz-card class="page-header-card" [nzBordered]="false">
     <div class="page-title-block">
       <h1>{{ '::Users' | abpLocalization }}</h1>
-      <p>管理系统用户账号，支持按租户筛选、单个创建与 Excel 批量导入（先下载模板、填好再上传）</p>
+      <p>管理系统用户账号，支持按租户筛选、单个创建与 Excel 批量导入（下载模板 → 填写 → 上传预检 → 确认导入）</p>
     </div>
   </nz-card>
 
@@ -353,115 +353,193 @@
   </ng-container>
 </nz-modal>
 
-<!-- =================== Excel 批量导入弹窗 =================== -->
+<!-- =================== Excel 批量导入弹窗（三步：选文件 → 预览确认 → 完成） =================== -->
 <nz-modal
   [nzVisible]="importModalOpen"
   nzTitle="批量导入用户（Excel）"
   [nzFooter]="null"
-  [nzWidth]="760"
+  [nzWidth]="900"
   (nzOnCancel)="closeImportModal()"
 >
   <ng-container *nzModalContent>
     <div class="import-steps">
-      <nz-tag nzColor="blue">1</nz-tag>
-      <span>下载模板</span>
+      <nz-tag [nzColor]="importStep === 1 ? 'blue' : 'default'">1</nz-tag>
+      <span>选择文件</span>
       <span nz-icon nzType="right"></span>
-      <nz-tag nzColor="blue">2</nz-tag>
-      <span>按角色 Sheet 填写（橙黄色表头为必填）</span>
+      <nz-tag [nzColor]="importStep === 2 ? 'blue' : 'default'">2</nz-tag>
+      <span>预览确认</span>
       <span nz-icon nzType="right"></span>
-      <nz-tag nzColor="blue">3</nz-tag>
-      <span>上传导入</span>
+      <nz-tag [nzColor]="importStep === 3 ? 'green' : 'default'">3</nz-tag>
+      <span>完成</span>
       <a class="import-template-link" (click)="downloadImportTemplate()">
         <span nz-icon nzType="download"></span>
-        重新下载模板
+        下载导入模板
       </a>
       @if (downloadingTemplate) {
         <span class="text-sm text-gray-500">（下载中…）</span>
       }
     </div>
 
-    <nz-table
-      [nzData]="importRequiredFields"
-      [nzFrontPagination]="false"
-      [nzShowPagination]="false"
-      nzSize="small"
-      class="mb-4"
-    >
-      <thead>
-        <tr>
-          <th style="width: 120px">角色类型</th>
-          <th>必填字段</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of importRequiredFields; track item.role) {
-          <tr>
-            <td><nz-tag>{{ item.role }}</nz-tag></td>
-            <td class="text-sm">{{ item.fields }}</td>
-          </tr>
-        }
-      </tbody>
-    </nz-table>
-
-    <nz-upload
-      [nzBeforeUpload]="beforeImportUpload"
-      [nzFileList]="importFileList"
-      accept=".xlsx,.xls"
-      [nzShowUploadList]="{ showPreviewIcon: false, showRemoveIcon: true }"
-    >
-      <button nz-button>
-        <span nz-icon nzType="file-excel"></span>
-        选择 Excel 文件
-      </button>
-    </nz-upload>
-
-    <div class="mt-4 flex gap-2 justify-end">
-      <button nz-button (click)="closeImportModal()" [disabled]="importing">取消</button>
-      <button
-        nz-button
-        nzType="primary"
-        [nzLoading]="importing"
-        [disabled]="!importFileList.length"
-        (click)="importXlsx()"
+    <!-- 步骤 1：选择文件 -->
+    @if (importStep === 1) {
+      <nz-alert
+        nzType="info"
+        nzShowIcon
+        [nzMessage]="importTargetHint"
+        class="mb-3"
+      ></nz-alert>
+      <p class="text-sm text-gray-600 mb-2">
+        所有用户填在同一张 Sheet 内，用第 1 列“角色类型”区分（联盟管理员 / 院校管理员 / 教师 / 学生 / 企业用户）。通用必填：{{ importCommonRequired }}，橙黄色表头为必填列。
+      </p>
+      <nz-table
+        [nzData]="importRequiredFields"
+        [nzFrontPagination]="false"
+        [nzShowPagination]="false"
+        nzSize="small"
+        class="mb-4"
       >
-        <span nz-icon nzType="upload"></span>
-        开始导入
-      </button>
-    </div>
+        <thead>
+          <tr>
+            <th style="width: 120px">角色类型</th>
+            <th>专属必填（通用必填之外）</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of importRequiredFields; track item.role) {
+            <tr>
+              <td><nz-tag>{{ item.role }}</nz-tag></td>
+              <td class="text-sm">{{ item.fields }}</td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
 
-    @if (importResult) {
-      <div class="mt-4">
-        <nz-alert
-          nzType="warning"
-          nzShowIcon
-          [nzMessage]="`导入完成：共 ${importResult.totalCount ?? 0} 条，成功 ${importResult.successCount ?? 0} 条，失败 ${importResult.failCount ?? 0} 条`"
+      <nz-upload
+        [nzBeforeUpload]="beforeImportUpload"
+        [nzFileList]="importFileList"
+        accept=".xlsx,.xls"
+        [nzShowUploadList]="{ showPreviewIcon: false, showRemoveIcon: true }"
+      >
+        <button nz-button>
+          <span nz-icon nzType="file-excel"></span>
+          选择 Excel 文件
+        </button>
+      </nz-upload>
+
+      <div class="mt-4 flex gap-2 justify-end">
+        <button nz-button (click)="closeImportModal()" [disabled]="previewing">取消</button>
+        <button
+          nz-button
+          nzType="primary"
+          [nzLoading]="previewing"
+          [disabled]="!importFileList.length"
+          (click)="startPreview()"
+        >
+          <span nz-icon nzType="search"></span>
+          预览检查
+        </button>
+      </div>
+    }
+
+    <!-- 步骤 2：预览确认 -->
+    @if (importStep === 2 && previewResult) {
+      <nz-alert
+        [nzType]="(previewResult.failCount ?? 0) > 0 ? 'warning' : 'success'"
+        nzShowIcon
+        [nzMessage]="`预检结果：共 ${previewResult.totalCount ?? 0} 条，可新建 ${previewResult.newCount ?? 0} 条，可覆盖 ${previewResult.overwriteCount ?? 0} 条，跳过 ${previewResult.skipCount ?? 0} 条，失败 ${previewResult.failCount ?? 0} 条`"
+        [nzDescription]="previewHasDuplicateSkips && !overwriteExisting ? '存在同名用户，默认将跳过；如需更新这些用户的信息，请勾选下方“覆盖已存在用户”后重新预览。' : ''"
+        class="mb-3"
+      ></nz-alert>
+
+      <label nz-checkbox [(ngModel)]="overwriteExisting" (ngModelChange)="rePreview()" [nzDisabled]="previewing" class="mb-3 block">
+        覆盖已存在用户（用表格中的姓名 / 手机号 / 邮箱等更新同名账号，不改密码）
+      </label>
+
+      <nz-table
+        [nzData]="previewResult.items || []"
+        [nzFrontPagination]="false"
+        [nzShowPagination]="false"
+        nzSize="small"
+        [nzScroll]="{ y: '320px' }"
+        class="mb-3"
+      >
+        <thead>
+          <tr>
+            <th style="width: 60px">行号</th>
+            <th style="width: 90px">角色</th>
+            <th style="width: 140px">登录账号</th>
+            <th style="width: 90px">姓名</th>
+            <th style="width: 80px">状态</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of previewResult.items || []; track $index) {
+            <tr>
+              <td>{{ item.rowNumber }}</td>
+              <td>{{ item.roleDisplayName || '-' }}</td>
+              <td>{{ item.userName || '-' }}</td>
+              <td>{{ item.name || '-' }}</td>
+              <td><nz-tag [nzColor]="statusTagColor(item.status)">{{ statusTagText(item.status) }}</nz-tag></td>
+              <td class="text-sm">{{ item.reason || (item.status === importStatus.New ? '将新建用户' : '') }}</td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+
+      <div class="mt-4 flex gap-2 justify-end">
+        <button nz-button (click)="backToFileStep()" [disabled]="previewing || importing">返回修改</button>
+        <button
+          nz-button
+          nzType="primary"
+          [nzLoading]="importing"
+          [disabled]="!canConfirmImport"
+          (click)="confirmImport()"
+        >
+          <span nz-icon nzType="upload"></span>
+          确认导入
+        </button>
+      </div>
+    }
+
+    <!-- 步骤 3：完成 -->
+    @if (importStep === 3 && finalResult) {
+      <nz-alert
+        [nzType]="(finalResult.failCount ?? 0) > 0 ? 'warning' : 'success'"
+        nzShowIcon
+        [nzMessage]="`导入完成：共 ${finalResult.totalCount ?? 0} 条，新建 ${finalResult.newCount ?? 0} 条，覆盖 ${finalResult.overwriteCount ?? 0} 条，跳过 ${finalResult.skipCount ?? 0} 条，失败 ${finalResult.failCount ?? 0} 条`"
+        nzDescription="用户列表已刷新并回到第 1 页。"
+        class="mb-3"
+      ></nz-alert>
+      @if ((finalResult.failItems ?? []).length > 0) {
+        <nz-table
+          [nzData]="finalResult.failItems || []"
+          [nzFrontPagination]="false"
+          [nzShowPagination]="false"
+          nzSize="small"
+          [nzScroll]="{ y: '240px' }"
           class="mb-3"
-        ></nz-alert>
-        @if ((importResult.failItems ?? []).length > 0) {
-          <nz-table
-            [nzData]="importResult.failItems || []"
-            [nzFrontPagination]="false"
-            [nzShowPagination]="false"
-            nzSize="small"
-          >
-            <thead>
+        >
+          <thead>
+            <tr>
+              <th style="width: 70px">行号</th>
+              <th style="width: 160px">账号</th>
+              <th>失败原因</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of finalResult.failItems || []; track $index) {
               <tr>
-                <th style="width: 70px">行号</th>
-                <th style="width: 160px">账号</th>
-                <th>失败原因</th>
+                <td>{{ item.rowNumber }}</td>
+                <td>{{ item.userName || '-' }}</td>
+                <td>{{ item.reason }}</td>
               </tr>
-            </thead>
-            <tbody>
-              @for (item of importResult.failItems || []; track $index) {
-                <tr>
-                  <td>{{ item.rowNumber }}</td>
-                  <td>{{ item.userName || '-' }}</td>
-                  <td>{{ item.reason }}</td>
-                </tr>
-              }
-            </tbody>
-          </nz-table>
-        }
+            }
+          </tbody>
+        </nz-table>
+      }
+      <div class="mt-4 flex gap-2 justify-end">
+        <button nz-button nzType="primary" (click)="closeImportModal()">关闭</button>
       </div>
     }
   </ng-container>

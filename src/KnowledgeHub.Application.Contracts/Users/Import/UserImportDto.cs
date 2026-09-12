@@ -74,4 +74,10 @@ public class UserImportDto
 
     [StringLength(500)]
     public string? Remark { get; set; }
+
+    /// <summary>
+    /// 仅 host 管理员使用：导入用户归属的租户名称。
+    /// 租户管理员导入时该字段始终为 null，CreateIdentityUserAsync 会用 _currentTenant.Id 兜底。
+    /// </summary>
+    public string? TenantName { get; set; }
 }

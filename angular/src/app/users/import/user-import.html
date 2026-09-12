@@ -39,7 +39,7 @@
       <nz-result
         nzStatus="success"
         nzTitle="导入完成"
-        [nzSubTitle]="`成功: ${importResult?.successCount || 0} 条, 失败: ${importResult?.failCount || 0} 条`"
+        [nzSubTitle]="`成功: ${((importResult?.newCount || 0) + (importResult?.overwriteCount || 0))} 条, 失败: ${importResult?.failCount || 0} 条`"
       >
         <div nz-result-extra>
           @if (importResult?.failCount > 0) {

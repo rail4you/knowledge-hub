@@ -31,7 +31,10 @@ import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
+import { UserImportService } from '../../proxy/users/user-import.service';
 import type { UserImportResultDto } from '../../proxy/users/models';
+import { UserImportItemStatus } from '../../proxy/users/user-import-item-status.enum';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 
@@ -110,6 +113,7 @@ interface IdentityUserDto {
     NzGridModule,
     NzAlertModule,
     NzUploadModule,
+    NzCheckboxModule,
     PermissionManagementComponent,
     FormsModule,
   ],
@@ -146,20 +150,29 @@ export class IdentityUsersComponent implements OnInit {
   permissionProviderKey = '';
   formError = '';
 
-  /** Excel 批量导入 */
+  /** Excel 批量导入（三步：1 选文件 → 2 预览确认 → 3 完成） */
   importModalOpen = false;
+  importStep: 1 | 2 | 3 = 1;
   importing = false;
+  previewing = false;
   downloadingTemplate = false;
   importFileList: NzUploadFile[] = [];
-  importResult: UserImportResultDto | null = null;
+  /** 预览阶段复用：避免确认导入时重新读文件 */
+  private previewFileBase64: string | null = null;
+  previewResult: UserImportResultDto | null = null;
+  finalResult: UserImportResultDto | null = null;
+  overwriteExisting = false;
+  readonly importStatus = UserImportItemStatus;
 
-  /** 各角色类型的必填字段说明（与后端 UserImportAppService.RequiredFieldsMapping 保持一致）。 */
+  /** 通用必填（所有角色） */
+  readonly importCommonRequired = '角色类型、姓名、登录账号、初始密码、手机号';
+  /** 各角色专属必填（与后端 UserImportAppService.RequiredFieldsMapping 保持一致） */
   readonly importRequiredFields: { role: string; fields: string }[] = [
-    { role: '联盟管理员', fields: '角色类型、姓名、登录账号、初始密码、手机号、工号' },
-    { role: '院校管理员', fields: '角色类型、姓名、登录账号、初始密码、手机号、所属院校、工号' },
-    { role: '教师', fields: '角色类型、姓名、登录账号、初始密码、手机号、所属院校、工号、所属院系/部门、所教专业' },
-    { role: '学生', fields: '角色类型、姓名、登录账号、初始密码、手机号、所属院校、专业、学号、年级、班级' },
-    { role: '企业用户', fields: '角色类型、姓名、登录账号、初始密码、手机号、邮箱、企业名称、统一社会信用代码、职位/岗位' },
+    { role: '联盟管理员', fields: '工号' },
+    { role: '院校管理员', fields: '工号' },
+    { role: '教师', fields: '工号、所属院系/部门、专业' },
+    { role: '学生', fields: '专业、学号、年级、班级' },
+    { role: '企业用户', fields: '邮箱、企业名称、统一社会信用代码、职位/岗位' },
   ];
 
   private readonly restService = inject(RestService);
@@ -167,6 +180,7 @@ export class IdentityUsersComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly confirmation = inject(ConfirmationService);
   private readonly tenantUserService = inject(TenantUserService);
+  private readonly userImportService = inject(UserImportService);
   private readonly majorService = inject(MajorService);
   private readonly message = inject(NzMessageService);
   private readonly configState = inject(ConfigStateService);
@@ -509,18 +523,83 @@ export class IdentityUsersComponent implements OnInit {
     });
   }
 
-  // ===== Excel 批量导入 =====
+  // ===== Excel 批量导入（三步：选文件 → 预览确认 → 完成） =====
   openImportModal(): void {
     this.importModalOpen = true;
+    this.importStep = 1;
     this.importFileList = [];
-    this.importResult = null;
+    this.previewFileBase64 = null;
+    this.previewResult = null;
+    this.finalResult = null;
+    this.overwriteExisting = false;
   }
 
   closeImportModal(): void {
-    if (this.importing) return;
+    if (this.importing || this.previewing) return;
     this.importModalOpen = false;
+    this.importStep = 1;
     this.importFileList = [];
-    this.importResult = null;
+    this.previewFileBase64 = null;
+    this.previewResult = null;
+    this.finalResult = null;
+    this.overwriteExisting = false;
+  }
+
+  backToFileStep(): void {
+    if (this.importing || this.previewing) return;
+    this.importStep = 1;
+    this.previewResult = null;
+  }
+
+  /** host 管理员按当前租户筛选导入：选中某租户时，未填租户名称的行默认归属该租户；
+   *  租户管理员恒为 undefined（后端强制用自己所在租户，忽略模板里的租户名称列）。 */
+  private get importTenantId(): string | undefined {
+    return this.isHostAdmin ? this.selectedTenantId ?? undefined : undefined;
+  }
+
+  get importTargetHint(): string {
+    if (!this.isHostAdmin) {
+      return `将导入到当前租户「${this.getTenantName(this.currentTenantId)}」（模板里的“租户名称”列将被忽略）`;
+    }
+    const tid = this.selectedTenantId;
+    if (tid) {
+      return `将导入到租户「${this.getTenantName(tid)}」（未填写租户名称的行默认归属该租户）`;
+    }
+    return '当前为全局视图：未填写租户名称的行将创建为全局用户（仅联盟管理员 / 企业用户合法）';
+  }
+
+  statusTagColor(status: UserImportItemStatus | undefined): string {
+    switch (status) {
+      case UserImportItemStatus.New: return 'green';
+      case UserImportItemStatus.Overwrite: return 'orange';
+      case UserImportItemStatus.Skip: return 'default';
+      case UserImportItemStatus.Fail: return 'red';
+      default: return 'default';
+    }
+  }
+
+  statusTagText(status: UserImportItemStatus | undefined): string {
+    switch (status) {
+      case UserImportItemStatus.New: return '新建';
+      case UserImportItemStatus.Overwrite: return '覆盖';
+      case UserImportItemStatus.Skip: return '跳过';
+      case UserImportItemStatus.Fail: return '失败';
+      default: return '-';
+    }
+  }
+
+  /** 预览结果里是否存在“因重名而跳过”的行（提示用户可勾选覆盖后重新预览） */
+  get previewHasDuplicateSkips(): boolean {
+    return !!this.previewResult?.items?.some(
+      i => i.status === UserImportItemStatus.Skip && !!i.existingUserId
+    );
+  }
+
+  /** 确认导入按钮是否可用：至少有一行可写入（新建 / 覆盖） */
+  get canConfirmImport(): boolean {
+    const r = this.previewResult;
+    if (!r) return false;
+    return (r.newCount ?? 0) + (r.overwriteCount ?? 0) > 0;
   }
 
   beforeImportUpload = (file: NzUploadFile): boolean => {
@@ -554,51 +633,103 @@ export class IdentityUsersComponent implements OnInit {
     });
   }
 
-  importXlsx(): void {
+  /** 步骤 1 → 2：读取文件并请求预览（不写库） */
+  startPreview(): void {
     const file = this.importFileList[0];
     if (!file) {
       this.message.warning('请先选择要导入的 Excel 文件');
       return;
     }
-    this.importing = true;
-    this.importResult = null;
+    this.previewing = true;
+    this.previewResult = null;
     const reader = new FileReader();
     reader.onload = () => {
       // 后端只接受 Base64 字符串（System.Text.Json 无法把数字数组转成 byte[]）。
       const dataUrl = reader.result as string;
       const base64 = dataUrl.split(',')[1] || '';
-      this.restService.request<any, UserImportResultDto>({
-        method: 'POST',
-        url: '/api/app/user-import/import',
-        body: { fileBase64: base64, fileName: file.name },
-      }).subscribe({
-        next: result => {
-          this.importing = false;
-          const ok = result.successCount ?? 0;
-          const fail = result.failCount ?? 0;
-          if (fail > 0) {
-            this.importResult = result;
-            this.message.warning(`导入完成：成功 ${ok} 条，失败 ${fail} 条，详见下方明细`);
-          } else {
-            this.importModalOpen = false;
-            this.importFileList = [];
-            this.importResult = null;
-            this.message.success(`导入完成：成功 ${ok} 条`);
-          }
-          this.loadUsers();
-        },
-        error: err => {
-          this.importing = false;
-          this.importResult = null;
-          this.message.error(this.extractErrorMessage(err, '导入失败'));
-        },
-      });
+      this.previewFileBase64 = base64;
+      this.requestPreview(false);
     };
     reader.onerror = () => {
-      this.importing = false;
+      this.previewing = false;
       this.message.error('读取文件失败，请重试');
     };
     reader.readAsDataURL(file as any);
+  }
+
+  /** 用当前覆盖选项重新预览（用户勾选“覆盖已存在用户”后刷新预览分布） */
+  rePreview(): void {
+    if (!this.previewFileBase64) {
+      this.message.warning('请先选择文件并预览');
+      return;
+    }
+    this.previewing = true;
+    this.requestPreview(false);
+  }
+
+  private requestPreview(silent: boolean): void {
+    const file = this.importFileList[0];
+    this.userImportService.preview({
+      fileBase64: this.previewFileBase64 ?? '',
+      fileName: file?.name,
+      tenantId: this.importTenantId,
+      overwriteExisting: this.overwriteExisting,
+    }).subscribe({
+      next: result => {
+        this.previewing = false;
+        this.previewResult = result;
+        this.importStep = 2;
+        if (!silent) {
+          const ok = (result.newCount ?? 0) + (result.overwriteCount ?? 0);
+          const bad = (result.failCount ?? 0) + (result.skipCount ?? 0);
+          if (bad > 0) {
+            this.message.warning(`预检完成：可导入 ${ok} 条，跳过 ${result.skipCount ?? 0} 条，失败 ${result.failCount ?? 0} 条，请确认后再导入`);
+          } else {
+            this.message.success(`预检通过：可导入 ${ok} 条，请确认后执行导入`);
+          }
+        }
+      },
+      error: err => {
+        this.previewing = false;
+        this.previewResult = null;
+        this.message.error(this.extractErrorMessage(err, '预检失败'));
+      },
+    });
+  }
+
+  /** 步骤 2 → 3：确认导入（真正写库）。导入后回到第 1 页并刷新列表，保证新用户立即可见。 */
+  confirmImport(): void {
+    if (!this.previewFileBase64 || !this.canConfirmImport) return;
+    const file = this.importFileList[0];
+    this.importing = true;
+    this.finalResult = null;
+    this.userImportService.import({
+      fileBase64: this.previewFileBase64,
+      fileName: file?.name,
+      tenantId: this.importTenantId,
+      overwriteExisting: this.overwriteExisting,
+    }).subscribe({
+      next: result => {
+        this.importing = false;
+        this.finalResult = result;
+        this.importStep = 3;
+        const ok = (result.newCount ?? 0) + (result.overwriteCount ?? 0);
+        const fail = result.failCount ?? 0;
+        if (fail > 0) {
+          this.message.warning(`导入完成：成功 ${ok} 条，失败 ${fail} 条，详见下方明细`);
+        } else {
+          this.message.success(`导入完成：成功 ${ok} 条`);
+        }
+        // 新用户按创建时间倒序排在第 1 页：回到第 1 页再刷新，用户才能立刻看到。
+        this.pageIndex = 1;
+        this.loadUsers();
+      },
+      error: err => {
+        this.importing = false;
+        this.finalResult = null;
+        this.message.error(this.extractErrorMessage(err, '导入失败'));
+      },
+    });
   }
 
   private todayStr(): string {

@@ -7,12 +7,17 @@ using ClosedXML.Excel;
 using KnowledgeHub.Majors;
 using KnowledgeHub.Permissions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Content;
 using Volo.Abp.Data;
+using Volo.Abp.DependencyInjection;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.PermissionManagement;
+using Volo.Abp.TenantManagement;
 using Volo.Abp.Uow;
 
 namespace KnowledgeHub.Users;
@@ -23,69 +28,122 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
     private const string MajorIdExtraProperty = "MajorId";
 
     private readonly IIdentityUserRepository _identityUserRepository;
+    private readonly IRepository<Volo.Abp.Identity.IdentityUser, Guid> _userRepository;
     private readonly IdentityUserManager _identityUserManager;
     private readonly IIdentityRoleRepository _identityRoleRepository;
     private readonly IMajorRepository _majorRepository;
     private readonly IPermissionManager _permissionManager;
+    private readonly ITenantRepository _tenantRepository;
+    private readonly ICurrentTenant _currentTenant;
 
-    private static readonly Dictionary<string, UserRoleType> SheetRoleMapping = new()
+    private static readonly Dictionary<string, UserRoleType> RoleDisplayNameMapping = new()
     {
         { "联盟管理员", UserRoleType.LeagueAdmin },
         { "院校管理员", UserRoleType.SchoolAdmin },
         { "教师", UserRoleType.Teacher },
         { "学生", UserRoleType.Student },
-        { "企业用户", UserRoleType.EnterpriseUser }
+        { "企业用户", UserRoleType.EnterpriseUser },
     };
 
-    private static readonly Dictionary<UserRoleType, List<string>> RequiredFieldsMapping = new()
+    private static readonly Dictionary<UserRoleType, string> RoleTypeDisplayNames = new()
     {
-        { UserRoleType.LeagueAdmin, new List<string> { "角色类型", "姓名", "登录账号", "初始密码", "手机号", "工号" } },
-        { UserRoleType.SchoolAdmin, new List<string> { "角色类型", "姓名", "登录账号", "初始密码", "手机号", "所属院校", "工号" } },
-        { UserRoleType.Teacher, new List<string> { "角色类型", "姓名", "登录账号", "初始密码", "手机号", "所属院校", "工号", "所属院系/部门", "所教专业" } },
-        { UserRoleType.Student, new List<string> { "角色类型", "姓名", "登录账号", "初始密码", "手机号", "所属院校", "专业", "学号", "年级", "班级" } },
-        { UserRoleType.EnterpriseUser, new List<string> { "角色类型", "姓名", "登录账号", "初始密码", "手机号", "邮箱", "企业名称", "统一社会信用代码", "职位/岗位" } }
+        { UserRoleType.LeagueAdmin, "联盟管理员" },
+        { UserRoleType.SchoolAdmin, "院校管理员" },
+        { UserRoleType.Teacher, "教师" },
+        { UserRoleType.Student, "学生" },
+        { UserRoleType.EnterpriseUser, "企业用户" },
     };
 
     /// <summary>
-    /// 用户导入模板表头（22 列），与 ParseRow 读取的列顺序严格对应。
+    /// 各角色类型 → 必填列名（与 UserImportTemplateHeaders 列名严格对应）。
+    /// 注意：跨角色共有字段（姓名/登录账号/初始密码/手机号）由通用校验处理，不在此重复列出。
+    /// </summary>
+    private static readonly Dictionary<UserRoleType, List<string>> RequiredFieldsMapping = new()
+    {
+        { UserRoleType.LeagueAdmin, new List<string> { "工号" } },
+        { UserRoleType.SchoolAdmin, new List<string> { "工号" } },
+        { UserRoleType.Teacher, new List<string> { "工号", "所属院系/部门", "专业" } },
+        { UserRoleType.Student, new List<string> { "学号", "年级", "班级", "专业" } },
+        { UserRoleType.EnterpriseUser, new List<string> { "邮箱", "企业名称", "统一社会信用代码", "职位/岗位" } },
+    };
+
+    /// <summary>
+    /// 用户导入模板表头（单 Sheet）。
+    /// 与 ParseRow 读取的列顺序严格对应；前 5 列（角色类型/姓名/登录账号/初始密码/手机号）为通用必填，
+    /// 第 6 列（邮箱）默认为可选，仅 企业用户 必填；其它列按角色按需填写。
+    /// 最后一列"租户名称"仅 host 管理员导入时使用：留空表示导入到 host 全局用户。
     /// </summary>
     private static readonly string[] UserImportTemplateHeaders =
     {
         "角色类型", "姓名", "登录账号", "初始密码", "手机号", "邮箱",
         "所属院校", "工号", "所属院系/部门", "专业", "所教课程", "职称",
         "学号", "年级", "班级", "管理范围", "企业名称", "统一社会信用代码",
-        "职位/岗位", "行业", "合作学校", "备注"
+        "职位/岗位", "行业", "合作学校", "备注", "租户名称"
     };
 
-    /// <summary>
-    /// 必填列背景色（用于在模板表头中高亮必填项）。
-    /// </summary>
     private static readonly XLColor RequiredHeaderColor = XLColor.FromArgb(255, 244, 230);
-
-    /// <summary>
-    /// 可选列表头背景色。
-    /// </summary>
     private static readonly XLColor OptionalHeaderColor = XLColor.FromArgb(232, 244, 255);
+    private static readonly string DefaultSheetName = "用户导入";
 
     public UserImportAppService(
         IIdentityUserRepository identityUserRepository,
+        IRepository<Volo.Abp.Identity.IdentityUser, Guid> userRepository,
         IdentityUserManager identityUserManager,
         IIdentityRoleRepository identityRoleRepository,
         IMajorRepository majorRepository,
-        IPermissionManager permissionManager)
+        IPermissionManager permissionManager,
+        ITenantRepository tenantRepository,
+        ICurrentTenant currentTenant)
     {
         _identityUserRepository = identityUserRepository;
+        _userRepository = userRepository;
         _identityUserManager = identityUserManager;
         _identityRoleRepository = identityRoleRepository;
         _majorRepository = majorRepository;
         _permissionManager = permissionManager;
+        _tenantRepository = tenantRepository;
+        _currentTenant = currentTenant;
     }
 
-    [UnitOfWork]
+    // ──────────────────────────── 公开 API ────────────────────────────
+
+    /// <summary>
+    /// 解析 Excel 文件并返回每行的预览结果（新建/覆盖/跳过/失败），
+    /// 不写入数据库；用户确认后再调用 <see cref="ImportAsync"/> 实际落地。
+    /// 自动路由：POST /api/app/user-import/preview（方法名 PreviewAsync 去掉 Async 后缀转 kebab-case）。
+    /// [IgnoreAntiforgeryToken] 会被 ABP conventional controller 继承，避免浏览器 POST 被 antiforgery 拦截。
+    /// </summary>
+    [IgnoreAntiforgeryToken]
+    public async Task<UserImportResultDto> PreviewAsync(ImportUsersFileDto input)
+    {
+        var rows = await ParseFileAsync(input);
+        // 透传 input.OverwriteExisting：预览必须如实反映“勾选覆盖后会发生什么”，
+        // 用户才能在确认前看到 新建/覆盖/跳过 的真实分布。
+        var result = await BuildResultAsync(rows, overwriteExisting: input.OverwriteExisting, isPreview: true);
+        return result;
+    }
+
+    /// <summary>
+    /// 实际导入：根据 <see cref="ImportUsersFileDto.OverwriteExisting"/> 决定遇到同名用户时是覆盖还是跳过。
+    /// 行为：单事务内尽力而为；任意一行失败不会回滚其他行，结果通过 Items 返回。
+    /// 自动路由：POST /api/app/user-import/import。
+    /// </summary>
+    [IgnoreAntiforgeryToken]
     public async Task<UserImportResultDto> ImportAsync(ImportUsersFileDto input)
     {
-        var result = new UserImportResultDto();
+        var rows = await ParseFileAsync(input);
+        var result = await BuildResultAsync(rows, overwriteExisting: input.OverwriteExisting, isPreview: false);
+        return result;
+    }
 
+    // ────────────────────── 解析 & 预览 & 落库 核心 ──────────────────────
+
+    /// <summary>
+    /// 解析 Excel → 标准化 ParsedRow 列表（含每行的角色 / 字段 / 解析错误）。
+    /// 不做业务校验、不查重复、不写库；同时被 Preview / Import 共用。
+    /// </summary>
+    private async Task<List<ParsedImportRow>> ParseFileAsync(ImportUsersFileDto input)
+    {
         if (string.IsNullOrWhiteSpace(input.FileBase64))
         {
             throw new UserFriendlyException("请先选择要导入的 Excel 文件。");
@@ -101,92 +159,491 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
             throw new UserFriendlyException("文件内容不是有效的 Excel 数据，请重新选择文件后上传。");
         }
 
-        using var stream = new System.IO.MemoryStream(excelFile);
-        using var workbook = new XLWorkbook(stream);
-
-        foreach (var sheetName in SheetRoleMapping.Keys)
+        // 解析 Excel 中所有可识别的行：兼容新旧模板（第 1 行标题 / 第 2 行说明 / 第 3 行表头）
+        // 与旧模板（第 1 行即表头）；找不到表头时按旧行为默认跳过第 1 行。
+        List<ParsedImportRow> allRows;
+        using (var stream = new MemoryStream(excelFile))
+        using (var workbook = new XLWorkbook(stream))
         {
-            var worksheet = workbook.Worksheet(sheetName);
-            if (worksheet == null) continue;
+            var worksheet = workbook.Worksheet(DefaultSheetName) ?? workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null)
+            {
+                throw new UserFriendlyException($"未找到工作表（{DefaultSheetName}），请使用最新模板。");
+            }
 
-            var roleType = SheetRoleMapping[sheetName];
-            var allRows = worksheet.RangeUsed()?.RowsUsed().ToList();
-            if (allRows == null || allRows.Count == 0) continue;
+            var usedRows = worksheet.RangeUsed()?.RowsUsed().ToList();
+            if (usedRows == null || usedRows.Count == 0)
+            {
+                return new List<ParsedImportRow>();
+            }
 
-            // 兼容新模板（第 1 行标题、第 2 行说明、第 3 行表头）与旧模板（第 1 行即表头）：
-            // 定位表头行，数据从表头下一行开始；找不到则默认跳过第 1 行（旧行为）。
-            var headerRowNumber = FindHeaderRowNumber(worksheet, allRows);
-            var dataRows = allRows.Where(r => r.RowNumber() > headerRowNumber).ToList();
-            if (dataRows.Count == 0) continue;
+            var headerRowNumber = FindHeaderRowNumber(usedRows);
+            var dataRows = usedRows.Where(r => r.RowNumber() > headerRowNumber).ToList();
+            allRows = new List<ParsedImportRow>(dataRows.Count);
 
-            var rowNumber = headerRowNumber + 1;
-            var countedRows = 0;
             foreach (var row in dataRows)
             {
-                // 全空行静默跳过（不计入总数），避免尾部空行产生误报。
-                if (IsEmptyRow(row))
+                var parsed = ParseSingleRow(row, headerRowNumber);
+                if (parsed != null)
                 {
-                    rowNumber++;
+                    allRows.Add(parsed);
+                }
+            }
+        }
+
+        // 解决租户名称 → TenantId（host 管理员才需要；租户管理员永远用自己所在租户）
+        await ResolveTenantsAsync(allRows, input.TenantId);
+
+        return allRows;
+    }
+
+    /// <summary>
+    /// 校验 + 落库（或仅预览），返回前端可直接渲染的 UserImportResultDto。
+    /// 同一方法被 Preview / Import 共用，差异仅在 isPreview 与 overwriteExisting。
+    /// </summary>
+    private async Task<UserImportResultDto> BuildResultAsync(
+        List<ParsedImportRow> parsedRows,
+        bool overwriteExisting,
+        bool isPreview)
+    {
+        var result = new UserImportResultDto();
+
+        // 1) 预先缓存"已有用户名 → 用户"映射，用于一次查询完成所有行的重复检测
+        var userNameToExistingUser = await GetExistingUserLookupAsync(parsedRows);
+
+        // 2) 文件内去重：同一文件出现两次相同（登录账号 + 目标租户）时，
+        //    后出现的行直接跳过，避免导入时第二行撞库产生难懂的 Identity 错误。
+        //    key → 首次出现的行号（仅校验通过的行才计入）。
+        var seenInFile = new Dictionary<(string UserName, Guid? TenantId), int>();
+
+        foreach (var pr in parsedRows)
+        {
+            var item = new UserImportPreviewItemDto
+            {
+                RowNumber = pr.RowNumber,
+                RoleType = pr.RoleType,
+                RoleDisplayName = RoleTypeDisplayNames.GetValueOrDefault(pr.RoleType, pr.RoleType.ToString()),
+                UserName = pr.Parsed?.UserName ?? string.Empty,
+                Name = pr.Parsed?.Name ?? string.Empty,
+                PhoneNumber = pr.Parsed?.PhoneNumber ?? string.Empty,
+                Email = pr.Parsed?.Email ?? string.Empty,
+                TenantName = pr.Parsed?.TenantName,
+            };
+
+            // 解析阶段就失败（如：角色类型无效 / 通用必填缺失）
+            if (pr.ParseError != null)
+            {
+                item.Status = UserImportItemStatus.Fail;
+                item.Reason = pr.ParseError;
+                AddItem(result, item);
+                continue;
+            }
+
+            // 业务校验（角色专属必填 + 租户分配合法性）
+            var validationError = ValidateBusinessRules(pr);
+            if (validationError != null)
+            {
+                item.Status = UserImportItemStatus.Fail;
+                item.Reason = validationError;
+                AddItem(result, item);
+                continue;
+            }
+
+            // 学生专业存在性预检（预览与导入共用，保证两者结论一致）。
+            // 若留到建用户时才检查，预览会显示 NEW 而实际导入失败，用户无法信任预览。
+            if (pr.Parsed!.RoleType == UserRoleType.Student && !string.IsNullOrWhiteSpace(pr.Parsed.Major))
+            {
+                var majorExists = await _majorRepository.FindByNameAsync(pr.Parsed.Major) != null;
+                if (!majorExists)
+                {
+                    item.Status = UserImportItemStatus.Fail;
+                    item.Reason = $"专业【{pr.Parsed.Major}】不存在，请先在专业管理中创建";
+                    AddItem(result, item);
                     continue;
                 }
-                countedRows++;
+            }
 
+            // 文件内重复检测（校验通过后才计入 seen，避免失败行污染后续行）
+            var fileKey = (NormalizeUserName(pr.Parsed!.UserName), pr.EffectiveTenantId);
+            if (seenInFile.TryGetValue(fileKey, out var firstRowNumber))
+            {
+                item.Status = UserImportItemStatus.Skip;
+                item.Reason = $"与第 {firstRowNumber} 行登录账号重复（同一租户），已跳过";
+                result.SkipCount++;
+                AddItem(result, item);
+                continue;
+            }
+            seenInFile[fileKey] = pr.RowNumber;
+
+            // 重名检测：与"目标租户同租户"或 host 全局下的同名用户算作冲突
+            userNameToExistingUser.TryGetValue((NormalizeUserName(pr.Parsed!.UserName), pr.EffectiveTenantId), out var existingUser);
+            if (existingUser != null)
+            {
+                if (overwriteExisting && !isPreview)
+                {
+                    try
+                    {
+                        await OverwriteIdentityUserAsync(existingUser, pr.Parsed!);
+                        item.Status = UserImportItemStatus.Overwrite;
+                        item.ExistingUserId = existingUser.Id.ToString();
+                        result.OverwriteCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        item.Status = UserImportItemStatus.Fail;
+                        item.Reason = $"覆盖失败：{ex.Message}";
+                        result.FailCount++;
+                    }
+                }
+                else if (overwriteExisting && isPreview)
+                {
+                    // 预览阶段：标记 Overwrite 让用户确认
+                    item.Status = UserImportItemStatus.Overwrite;
+                    item.ExistingUserId = existingUser.Id.ToString();
+                    item.Reason = "已存在同名用户，导入时将覆盖";
+                    result.OverwriteCount++;
+                }
+                else
+                {
+                    item.Status = UserImportItemStatus.Skip;
+                    item.Reason = $"已存在同名用户（{existingUser.UserName}），未开启覆盖，已跳过";
+                    item.ExistingUserId = existingUser.Id.ToString();
+                    result.SkipCount++;
+                }
+                AddItem(result, item);
+                continue;
+            }
+
+            // 新建
+            if (isPreview)
+            {
+                item.Status = UserImportItemStatus.New;
+                result.NewCount++;
+            }
+            else
+            {
                 try
                 {
-                    var userImportDto = ParseRow(row, roleType, rowNumber);
-                    if (userImportDto == null)
-                    {
-                        result.FailCount++;
-                        result.FailItems.Add(new UserImportFailItemDto
-                        {
-                            RowNumber = rowNumber,
-                            UserName = "",
-                            Reason = "数据解析失败"
-                        });
-                        rowNumber++;
-                        continue;
-                    }
-
-                    var validationError = ValidateUserImport(userImportDto, roleType);
-                    if (validationError != null)
-                    {
-                        result.FailCount++;
-                        result.FailItems.Add(new UserImportFailItemDto
-                        {
-                            RowNumber = rowNumber,
-                            UserName = userImportDto.UserName,
-                            Reason = validationError
-                        });
-                        rowNumber++;
-                        continue;
-                    }
-
-                    await CreateIdentityUserAsync(userImportDto);
-                    result.SuccessCount++;
+                    await CreateIdentityUserAsync(pr.Parsed!, pr.EffectiveTenantId);
+                    item.Status = UserImportItemStatus.New;
+                    result.NewCount++;
                 }
                 catch (Exception ex)
                 {
+                    item.Status = UserImportItemStatus.Fail;
+                    item.Reason = ex.Message;
                     result.FailCount++;
-                    result.FailItems.Add(new UserImportFailItemDto
-                    {
-                        RowNumber = rowNumber,
-                        UserName = "",
-                        Reason = ex.Message
-                    });
                 }
-                rowNumber++;
             }
-            result.TotalCount += countedRows;
+            AddItem(result, item);
         }
 
+        result.TotalCount = result.Items.Count;
+        result.FailItems = result.Items
+            .Where(i => i.Status == UserImportItemStatus.Fail)
+            .Select(i => new UserImportFailItemDto
+            {
+                RowNumber = i.RowNumber,
+                UserName = i.UserName,
+                Reason = i.Reason ?? string.Empty,
+            })
+            .ToList();
         return result;
+    }
+
+    private static void AddItem(UserImportResultDto result, UserImportPreviewItemDto item)
+    {
+        result.Items.Add(item);
+        if (item.Status == UserImportItemStatus.Fail)
+        {
+            result.FailCount++;
+        }
+    }
+
+    /// <summary>
+    /// 一次性查回所有相关用户，按 (NormalizedUserName, TenantId) 索引；
+    /// TenantId=null 表示 host 全局用户。
+    /// </summary>
+    private async Task<Dictionary<(string UserName, Guid? TenantId), Volo.Abp.Identity.IdentityUser>> GetExistingUserLookupAsync(
+        List<ParsedImportRow> parsedRows)
+    {
+        // 收集需要查询的 userName 与目标 TenantId
+        var userNames = parsedRows
+            .Where(r => r.ParseError == null && r.Parsed != null && !string.IsNullOrWhiteSpace(r.Parsed.UserName))
+            .Select(r => NormalizeUserName(r.Parsed!.UserName))
+            .Distinct()
+            .ToList();
+
+        var lookup = new Dictionary<(string, Guid?), Volo.Abp.Identity.IdentityUser>();
+        if (userNames.Count == 0)
+        {
+            return lookup;
+        }
+
+        // 用 DataFilter.Disable<IMultiTenant> 同时查询 host 与所有租户的用户；
+        // 用 IQueryable 按 NormalizedUserName 做大小写不敏感匹配，避免一个 userName 一次查询的 N+1。
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var queryable = await _userRepository.GetQueryableAsync();
+            var matches = await AsyncExecuter.ToListAsync(
+                queryable.Where(u => userNames.Contains(u.NormalizedUserName))
+            );
+            foreach (var u in matches)
+            {
+                lookup[(u.NormalizedUserName ?? string.Empty, u.TenantId)] = u;
+            }
+        }
+        return lookup;
+    }
+
+    private static string NormalizeUserName(string userName)
+    {
+        // ABP Identity 默认 UpperInvariant 规范化；为了匹配数据库，这里也按同样规则归一化
+        return userName.Trim().ToUpperInvariant();
+    }
+
+    // ────────────────────── 单行解析 ──────────────────────
+
+    /// <summary>
+    /// 解析单行：先做基础字段读取，再做通用必填校验。
+    /// 返回 null 表示该行全空，应跳过；否则返回 ParsedImportRow（含可能的 ParseError）。
+    /// </summary>
+    private ParsedImportRow? ParseSingleRow(IXLRangeRow row, int headerRowNumber)
+    {
+        var rowNumber = row.RowNumber();
+        if (IsEmptyRow(row))
+        {
+            return null; // 静默跳过空行
+        }
+
+        try
+        {
+            var roleTypeStr = row.Cell(1).GetString().Trim();
+            if (!RoleDisplayNameMapping.TryGetValue(roleTypeStr, out var roleType))
+            {
+                return new ParsedImportRow
+                {
+                    RowNumber = rowNumber,
+                    ParseError = $"第 {rowNumber} 行：角色类型「{roleTypeStr}」无效，应为：联盟管理员/院校管理员/教师/学生/企业用户",
+                };
+            }
+
+            var dto = new UserImportDto
+            {
+                RoleType = roleType,
+                Name = row.Cell(2).GetString().Trim(),
+                UserName = row.Cell(3).GetString().Trim(),
+                Password = row.Cell(4).GetString(), // 保留原始字符串，不 Trim：密码可能含空格
+                PhoneNumber = row.Cell(5).GetString().Trim(),
+                Email = row.Cell(6).GetString().Trim(),
+                EmployeeNumber = row.Cell(8).GetString().Trim(),
+                Department = row.Cell(9).GetString().Trim(),
+                Major = row.Cell(10).GetString().Trim(),
+                Course = row.Cell(11).GetString().Trim(),
+                Title = row.Cell(12).GetString().Trim(),
+                StudentNumber = row.Cell(13).GetString().Trim(),
+                Grade = row.Cell(14).GetString().Trim(),
+                ClassName = row.Cell(15).GetString().Trim(),
+                ManagementScope = row.Cell(16).GetString().Trim(),
+                CompanyName = row.Cell(17).GetString().Trim(),
+                UnifiedSocialCreditCode = row.Cell(18).GetString().Trim(),
+                Position = row.Cell(19).GetString().Trim(),
+                Industry = row.Cell(20).GetString().Trim(),
+                PartnerSchool = row.Cell(21).GetString().Trim(),
+                Remark = row.Cell(22).GetString().Trim(),
+                TenantName = string.IsNullOrWhiteSpace(row.Cell(23).GetString()) ? null : row.Cell(23).GetString().Trim(),
+            };
+
+            // 通用必填校验（跨所有角色）
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return new ParsedImportRow { RowNumber = rowNumber, ParseError = "姓名为必填项" };
+            }
+            if (string.IsNullOrWhiteSpace(dto.UserName))
+            {
+                return new ParsedImportRow { RowNumber = rowNumber, ParseError = "登录账号为必填项" };
+            }
+            if (string.IsNullOrWhiteSpace(dto.Password))
+            {
+                return new ParsedImportRow { RowNumber = rowNumber, ParseError = "初始密码为必填项" };
+            }
+            if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
+            {
+                return new ParsedImportRow { RowNumber = rowNumber, ParseError = "手机号为必填项" };
+            }
+
+            return new ParsedImportRow
+            {
+                RowNumber = rowNumber,
+                RoleType = roleType,
+                Parsed = dto,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ParsedImportRow
+            {
+                RowNumber = rowNumber,
+                ParseError = $"第 {rowNumber} 行解析失败：{ex.Message}",
+            };
+        }
+    }
+
+    /// <summary>
+    /// 把 ParsedImportRow.TenantName 解析为 EffectiveTenantId。
+    /// - 租户管理员：忽略输入的 TenantName，强制使用 _currentTenant.Id。
+    /// - host 管理员：
+    ///   - 显式传入了 TenantId → 优先用；
+    ///   - 否则按行内 TenantName 解析；解析不到则该行标记失败。
+    ///   - 留空且角色为全局（联盟管理员/企业用户）→ TenantId=null。
+    /// </summary>
+    private async Task ResolveTenantsAsync(List<ParsedImportRow> rows, Guid? explicitTenantId)
+    {
+        var isHost = !_currentTenant.Id.HasValue;
+
+        // 收集所有非空 TenantName，一次性查询缓存
+        var neededNames = rows
+            .Where(r => r.Parsed != null && !string.IsNullOrWhiteSpace(r.Parsed.TenantName))
+            .Select(r => r.Parsed!.TenantName!.Trim())
+            .Distinct()
+            .ToList();
+
+        Dictionary<string, Guid> tenantNameToId = new(StringComparer.OrdinalIgnoreCase);
+        if (isHost && neededNames.Count > 0)
+        {
+            var allTenants = await _tenantRepository.GetListAsync(includeDetails: false);
+            tenantNameToId = allTenants
+                .Where(t => !string.IsNullOrWhiteSpace(t.Name))
+                .GroupBy(t => t.Name!, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().Id);
+        }
+
+        foreach (var pr in rows)
+        {
+            if (pr.Parsed == null) continue;
+
+            if (!isHost)
+            {
+                pr.EffectiveTenantId = _currentTenant.Id;
+                continue;
+            }
+
+            // host 管理员
+            if (explicitTenantId.HasValue)
+            {
+                pr.EffectiveTenantId = explicitTenantId.Value;
+                pr.Parsed.TenantName = allTenantsNameFor(explicitTenantId.Value, tenantNameToId);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(pr.Parsed.TenantName))
+            {
+                // 留空：仅全局角色（联盟管理员/企业用户）合法
+                if (pr.Parsed.RoleType == UserRoleType.LeagueAdmin || pr.Parsed.RoleType == UserRoleType.EnterpriseUser)
+                {
+                    pr.EffectiveTenantId = null;
+                }
+                else
+                {
+                    pr.ParseError = pr.ParseError ?? $"角色「{pr.Parsed.RoleType}」必须填写归属租户";
+                }
+            }
+            else if (tenantNameToId.TryGetValue(pr.Parsed.TenantName!, out var tid))
+            {
+                pr.EffectiveTenantId = tid;
+            }
+            else
+            {
+                pr.ParseError = pr.ParseError ?? $"租户名称「{pr.Parsed.TenantName}」不存在";
+            }
+        }
+    }
+
+    private static string? allTenantsNameFor(Guid tenantId, Dictionary<string, Guid> nameToId)
+    {
+        foreach (var kv in nameToId)
+        {
+            if (kv.Value == tenantId) return kv.Key;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 业务级校验：角色专属必填项 + 租户范围限制。
+    /// </summary>
+    private static string? ValidateBusinessRules(ParsedImportRow pr)
+    {
+        if (pr.Parsed == null) return null;
+
+        var roleType = pr.RoleType;
+        var required = RequiredFieldsMapping[roleType];
+        var dto = pr.Parsed;
+
+        foreach (var field in required)
+        {
+            var value = field switch
+            {
+                "工号" => dto.EmployeeNumber,
+                "所属院系/部门" => dto.Department,
+                "专业" => dto.Major,
+                "学号" => dto.StudentNumber,
+                "年级" => dto.Grade,
+                "班级" => dto.ClassName,
+                "邮箱" => dto.Email,
+                "企业名称" => dto.CompanyName,
+                "统一社会信用代码" => dto.UnifiedSocialCreditCode,
+                "职位/岗位" => dto.Position,
+                _ => null,
+            };
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return $"「{field}」为必填项（{RoleTypeDisplayNames.GetValueOrDefault(roleType, roleType.ToString())}）";
+            }
+        }
+
+        // 邮箱格式（仅当非空时校验；空已经在上面拦过了）
+        if (!string.IsNullOrWhiteSpace(dto.Email) && !IsValidEmail(dto.Email))
+        {
+            return $"邮箱格式不合法：{dto.Email}";
+        }
+
+        // 手机号格式（最宽松校验：11 位数字）
+        if (!string.IsNullOrWhiteSpace(dto.PhoneNumber) && !System.Text.RegularExpressions.Regex.IsMatch(dto.PhoneNumber, @"^\d{11}$"))
+        {
+            return $"手机号格式不合法：{dto.PhoneNumber}（应为 11 位数字）";
+        }
+
+        // LeagueAdmin 仅允许全局（TenantId=null）
+        if (roleType == UserRoleType.LeagueAdmin && pr.EffectiveTenantId.HasValue)
+        {
+            return "联盟管理员为全局角色，不允许分配到具体租户";
+        }
+
+        // EnterpriseUser 全局允许；如分配到某租户，需租户已建立 EnterpriseUser 角色
+        // 实际上创建时若找不到租户级角色，ResolveRoleForUserAsync 会回退到全局角色
+        // —— 但导入时不希望这种"隐式回退"，先放过不拦。
+
+        return null;
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>
     /// 在前 3 行内定位表头行：以 B 列=="姓名" 且 C 列=="登录账号" 为锚点。
     /// 新模板表头在第 3 行，旧模板表头在第 1 行；找不到时返回 1（保持旧行为）。
     /// </summary>
-    private static int FindHeaderRowNumber(IXLWorksheet worksheet, List<IXLRangeRow> rows)
+    private static int FindHeaderRowNumber(List<IXLRangeRow> rows)
     {
         foreach (var row in rows)
         {
@@ -197,11 +654,10 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                 return row.RowNumber();
             }
         }
-
         return 1;
     }
 
-    /// <summary>判断是否为全空行（22 个模板列均为空）。</summary>
+    /// <summary>判断是否为全空行（按 UserImportTemplateHeaders 实际列数）。</summary>
     private static bool IsEmptyRow(IXLRangeRow row)
     {
         for (var i = 1; i <= UserImportTemplateHeaders.Length; i++)
@@ -211,99 +667,20 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                 return false;
             }
         }
-
         return true;
     }
 
-    private UserImportDto? ParseRow(IXLRangeRow row, UserRoleType roleType, int rowNumber)
-    {
-        try
-        {
-            // 学生表里"专业"在 J 列；教师表里 J 列是"所教专业"（保留为字符串 ExtraProperty）。
-            // 这里统一从 J 列读取，CreateIdentityUserAsync 里再按角色处理。
-            var dto = new UserImportDto
-            {
-                RoleType = roleType,
-                Name = row.Cell("B").GetString(),
-                UserName = row.Cell("C").GetString(),
-                Password = row.Cell("D").GetString(),
-                PhoneNumber = row.Cell("E").GetString(),
-                Email = row.Cell("F").GetString(),
-                EmployeeNumber = row.Cell("H").GetString(),
-                Department = row.Cell("I").GetString(),
-                Major = row.Cell("J").GetString(),
-                Course = row.Cell("K").GetString(),
-                Title = row.Cell("L").GetString(),
-                StudentNumber = row.Cell("M").GetString(),
-                Grade = row.Cell("N").GetString(),
-                ClassName = row.Cell("O").GetString(),
-                ManagementScope = row.Cell("P").GetString(),
-                CompanyName = row.Cell("Q").GetString(),
-                UnifiedSocialCreditCode = row.Cell("R").GetString(),
-                Position = row.Cell("S").GetString(),
-                Industry = row.Cell("T").GetString(),
-                PartnerSchool = row.Cell("U").GetString(),
-                Remark = row.Cell("V").GetString()
-            };
+    // ────────────────────── 用户创建 / 覆盖 ──────────────────────
 
-            var schoolName = row.Cell("G").GetString();
-            if (!string.IsNullOrWhiteSpace(schoolName))
-            {
-                // SchoolId will need to be resolved - placeholder for now
-                dto.SchoolId = null;
-            }
-
-            return dto;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private string? ValidateUserImport(UserImportDto dto, UserRoleType roleType)
-    {
-        var requiredFields = RequiredFieldsMapping[roleType];
-
-        if (string.IsNullOrWhiteSpace(dto.Name)) return "姓名为必填项";
-        if (string.IsNullOrWhiteSpace(dto.UserName)) return "登录账号为必填项";
-        if (string.IsNullOrWhiteSpace(dto.Password)) return "初始密码为必填项";
-        if (string.IsNullOrWhiteSpace(dto.PhoneNumber)) return "手机号为必填项";
-
-        switch (roleType)
-        {
-            case UserRoleType.LeagueAdmin:
-                if (string.IsNullOrWhiteSpace(dto.EmployeeNumber)) return "工号为必填项";
-                break;
-            case UserRoleType.SchoolAdmin:
-                if (string.IsNullOrWhiteSpace(dto.EmployeeNumber)) return "工号为必填项";
-                break;
-            case UserRoleType.Teacher:
-                if (string.IsNullOrWhiteSpace(dto.EmployeeNumber)) return "工号为必填项";
-                if (string.IsNullOrWhiteSpace(dto.Department)) return "所属院系/部门为必填项";
-                if (string.IsNullOrWhiteSpace(dto.Major)) return "所教专业为必填项";
-                break;
-            case UserRoleType.Student:
-                if (string.IsNullOrWhiteSpace(dto.StudentNumber)) return "学号为必填项";
-                if (string.IsNullOrWhiteSpace(dto.Grade)) return "年级为必填项";
-                if (string.IsNullOrWhiteSpace(dto.ClassName)) return "班级为必填项";
-                if (string.IsNullOrWhiteSpace(dto.Major)) return "专业为必填项";
-                break;
-            case UserRoleType.EnterpriseUser:
-                if (string.IsNullOrWhiteSpace(dto.Email)) return "邮箱为必填项";
-                if (string.IsNullOrWhiteSpace(dto.CompanyName)) return "企业名称为必填项";
-                if (string.IsNullOrWhiteSpace(dto.UnifiedSocialCreditCode)) return "统一社会信用代码为必填项";
-                if (string.IsNullOrWhiteSpace(dto.Position)) return "职位/岗位为必填项";
-                break;
-        }
-
-        return null;
-    }
-
-    private async Task CreateIdentityUserAsync(UserImportDto dto)
+    /// <summary>
+    /// 新建用户。
+    /// 修复历史 bug：必须把 <paramref name="tenantId"/> 传给 IdentityUser 构造函数，
+    /// 否则租户管理员导入时会创建出 host 全局用户，回到列表看不到数据。
+    /// </summary>
+    private async Task CreateIdentityUserAsync(UserImportDto dto, Guid? tenantId)
     {
         // 学生专业的存在性校验必须在建用户之前：否则建用户成功后抛异常会导致残留半成品账号，
-        // 重试时会报“用户名已存在”。
+        // 重试时会报"用户名已存在"。
         Guid? studentMajorId = null;
         if (dto.RoleType == UserRoleType.Student && !string.IsNullOrWhiteSpace(dto.Major))
         {
@@ -315,94 +692,30 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
             studentMajorId = resolved.Id;
         }
 
-        // 邮箱为空时用默认邮箱兜底（Excel 空单元格读出来是 "" 而非 null，?? 接不住）。
+        // 邮箱为空时用默认邮箱兜底（Excel 空单元格读出来是 "" 而非 null）。
         var email = string.IsNullOrWhiteSpace(dto.Email)
             ? $"{dto.UserName}@default.com"
             : dto.Email.Trim();
-        var user = new IdentityUser(
+        var user = new Volo.Abp.Identity.IdentityUser(
             GuidGenerator.Create(),
             dto.UserName,
-            email
+            email,
+            tenantId: tenantId  // ★ 修复：必须传 TenantId，否则租户管理员导入的用户会变成全局用户
         )
         {
-            // P1-7 修复：把导入表里的"姓名"写入 ABP IdentityUser.Name，
-            // 否则就业/指导/投递等列表 GetUserDisplayName() 退化到 UserName/邮箱/GUID，
-            // 教师/HR 看到的学生列全是 ID 截断，没有姓名。
             Name = dto.Name
         };
 
         user.SetPhoneNumber(dto.PhoneNumber, false);
 
-        var createResult = await _identityUserManager.CreateAsync(
-            user,
-            dto.Password,
-            false
-        );
-
+        var createResult = await _identityUserManager.CreateAsync(user, dto.Password, false);
         if (!createResult.Succeeded)
         {
             var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
             throw new UserFriendlyException($"创建用户失败: {errors}");
         }
 
-        user.ExtraProperties["RoleType"] = (int)dto.RoleType;
-
-        if (!string.IsNullOrWhiteSpace(dto.SchoolId))
-            user.ExtraProperties["SchoolId"] = dto.SchoolId;
-
-        if (!string.IsNullOrWhiteSpace(dto.EmployeeNumber))
-            user.ExtraProperties["EmployeeNumber"] = dto.EmployeeNumber;
-
-        if (!string.IsNullOrWhiteSpace(dto.Department))
-            user.ExtraProperties["Department"] = dto.Department;
-
-        // 学生：把"专业"按名称解析为 MajorId 写入 ExtraProperties["MajorId"]
-        // （存在性已在建用户前校验过，这里直接用预解析结果）。
-        if (studentMajorId.HasValue)
-        {
-            user.ExtraProperties[MajorIdExtraProperty] = studentMajorId.Value;
-        }
-        else if (!string.IsNullOrWhiteSpace(dto.Major))
-        {
-            // 教师/其他角色：原"所教专业"等仍以字符串存放在 ExtraProperties.Major
-            user.ExtraProperties["Major"] = dto.Major;
-        }
-
-        if (!string.IsNullOrWhiteSpace(dto.Course))
-            user.ExtraProperties["Course"] = dto.Course;
-
-        if (!string.IsNullOrWhiteSpace(dto.Title))
-            user.ExtraProperties["Title"] = dto.Title;
-
-        if (!string.IsNullOrWhiteSpace(dto.StudentNumber))
-            user.ExtraProperties["StudentNumber"] = dto.StudentNumber;
-
-        if (!string.IsNullOrWhiteSpace(dto.Grade))
-            user.ExtraProperties["Grade"] = dto.Grade;
-
-        if (!string.IsNullOrWhiteSpace(dto.ClassName))
-            user.ExtraProperties["ClassName"] = dto.ClassName;
-
-        if (!string.IsNullOrWhiteSpace(dto.ManagementScope))
-            user.ExtraProperties["ManagementScope"] = dto.ManagementScope;
-
-        if (!string.IsNullOrWhiteSpace(dto.CompanyName))
-            user.ExtraProperties["CompanyName"] = dto.CompanyName;
-
-        if (!string.IsNullOrWhiteSpace(dto.UnifiedSocialCreditCode))
-            user.ExtraProperties["UnifiedSocialCreditCode"] = dto.UnifiedSocialCreditCode;
-
-        if (!string.IsNullOrWhiteSpace(dto.Position))
-            user.ExtraProperties["Position"] = dto.Position;
-
-        if (!string.IsNullOrWhiteSpace(dto.Industry))
-            user.ExtraProperties["Industry"] = dto.Industry;
-
-        if (!string.IsNullOrWhiteSpace(dto.PartnerSchool))
-            user.ExtraProperties["PartnerSchool"] = dto.PartnerSchool;
-
-        if (!string.IsNullOrWhiteSpace(dto.Remark))
-            user.ExtraProperties["Remark"] = dto.Remark;
+        ApplyExtraProperties(user, dto, studentMajorId);
 
         var roleName = GetRoleNameByRoleType(dto.RoleType);
         var role = await ResolveRoleForUserAsync(roleName, user.TenantId);
@@ -415,12 +728,110 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
     }
 
     /// <summary>
+    /// 覆盖现有用户：仅更新姓名/手机号/邮箱/扩展属性，不修改登录账号与密码。
+    /// 角色：保留原有角色并附加新角色（按角色类型解析），不去掉已有角色，
+    /// 避免误删管理员手动配置的特殊权限。
+    /// </summary>
+    private async Task OverwriteIdentityUserAsync(Volo.Abp.Identity.IdentityUser existing, UserImportDto dto)
+    {
+        // 学生专业预解析
+        Guid? studentMajorId = null;
+        if (dto.RoleType == UserRoleType.Student && !string.IsNullOrWhiteSpace(dto.Major))
+        {
+            var resolved = await _majorRepository.FindByNameAsync(dto.Major);
+            if (resolved == null)
+            {
+                throw new UserFriendlyException($"专业【{dto.Major}】不存在，请先在专业管理中创建");
+            }
+            studentMajorId = resolved.Id;
+        }
+
+        // 邮箱更新（如提供）
+        if (!string.IsNullOrWhiteSpace(dto.Email) && !string.Equals(existing.Email, dto.Email.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            (await _identityUserManager.SetEmailAsync(existing, dto.Email.Trim())).CheckErrors();
+        }
+
+        // 姓名
+        existing.Name = dto.Name;
+
+        // 手机号
+        existing.SetPhoneNumber(dto.PhoneNumber, false);
+
+        // 扩展属性整体覆盖（按字段写入，未提供的字段保留原值）
+        ApplyExtraProperties(existing, dto, studentMajorId);
+
+        // 角色：若用户当前没有对应角色，则补一个
+        var roleName = GetRoleNameByRoleType(dto.RoleType);
+        var role = await ResolveRoleForUserAsync(roleName, existing.TenantId);
+        if (role != null)
+        {
+            using (_currentTenant.Change(existing.TenantId))
+            {
+                var currentRoles = await _identityUserManager.GetRolesAsync(existing);
+                if (!currentRoles.Contains(role.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    existing.AddRole(role.Id);
+                }
+            }
+        }
+
+        (await _identityUserManager.UpdateAsync(existing)).CheckErrors();
+    }
+
+    private static void ApplyExtraProperties(Volo.Abp.Identity.IdentityUser user, UserImportDto dto, Guid? studentMajorId)
+    {
+        user.ExtraProperties["RoleType"] = (int)dto.RoleType;
+
+        if (!string.IsNullOrWhiteSpace(dto.SchoolId))
+            user.ExtraProperties["SchoolId"] = dto.SchoolId;
+
+        if (!string.IsNullOrWhiteSpace(dto.EmployeeNumber))
+            user.ExtraProperties["EmployeeNumber"] = dto.EmployeeNumber;
+
+        if (!string.IsNullOrWhiteSpace(dto.Department))
+            user.ExtraProperties["Department"] = dto.Department;
+
+        if (studentMajorId.HasValue)
+        {
+            user.ExtraProperties[MajorIdExtraProperty] = studentMajorId.Value;
+        }
+        else if (!string.IsNullOrWhiteSpace(dto.Major))
+        {
+            user.ExtraProperties["Major"] = dto.Major;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.Course))
+            user.ExtraProperties["Course"] = dto.Course;
+        if (!string.IsNullOrWhiteSpace(dto.Title))
+            user.ExtraProperties["Title"] = dto.Title;
+        if (!string.IsNullOrWhiteSpace(dto.StudentNumber))
+            user.ExtraProperties["StudentNumber"] = dto.StudentNumber;
+        if (!string.IsNullOrWhiteSpace(dto.Grade))
+            user.ExtraProperties["Grade"] = dto.Grade;
+        if (!string.IsNullOrWhiteSpace(dto.ClassName))
+            user.ExtraProperties["ClassName"] = dto.ClassName;
+        if (!string.IsNullOrWhiteSpace(dto.ManagementScope))
+            user.ExtraProperties["ManagementScope"] = dto.ManagementScope;
+        if (!string.IsNullOrWhiteSpace(dto.CompanyName))
+            user.ExtraProperties["CompanyName"] = dto.CompanyName;
+        if (!string.IsNullOrWhiteSpace(dto.UnifiedSocialCreditCode))
+            user.ExtraProperties["UnifiedSocialCreditCode"] = dto.UnifiedSocialCreditCode;
+        if (!string.IsNullOrWhiteSpace(dto.Position))
+            user.ExtraProperties["Position"] = dto.Position;
+        if (!string.IsNullOrWhiteSpace(dto.Industry))
+            user.ExtraProperties["Industry"] = dto.Industry;
+        if (!string.IsNullOrWhiteSpace(dto.PartnerSchool))
+            user.ExtraProperties["PartnerSchool"] = dto.PartnerSchool;
+        if (!string.IsNullOrWhiteSpace(dto.Remark))
+            user.ExtraProperties["Remark"] = dto.Remark;
+    }
+
+    /// <summary>
     /// 为导入用户解析角色：优先取与用户同租户（TenantId）的角色；
     /// 只有宿主用户才允许分配到宿主级角色。
-    /// 目的：避免历史 bug —— 租户用户被分配到宿主级同名角色
-    /// （Student/Teacher/SchoolAdmin…），运行时角色解析为空导致行为异常。
     /// </summary>
-    private async Task<IdentityRole?> ResolveRoleForUserAsync(string roleName, Guid? userTenantId)
+    private async Task<Volo.Abp.Identity.IdentityRole?> ResolveRoleForUserAsync(string roleName, Guid? userTenantId)
     {
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -443,7 +854,7 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         }
     }
 
-    private string GetRoleNameByRoleType(UserRoleType roleType)
+    private static string GetRoleNameByRoleType(UserRoleType roleType)
     {
         return roleType switch
         {
@@ -452,11 +863,12 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
             UserRoleType.Teacher => "Teacher",
             UserRoleType.Student => "Student",
             UserRoleType.EnterpriseUser => "EnterpriseUser",
-            _ => "User"
+            _ => "User",
         };
     }
 
-    // P1-2：角色 → 中文名 / 是否全局
+    // ────────────────────── 角色权限概要 / 模板下载 ──────────────────────
+
     private static readonly Dictionary<string, (string DisplayName, bool IsGlobal)> RoleMeta = new()
     {
         ["LeagueAdmin"] = ("联盟管理员", true),
@@ -467,7 +879,6 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         ["admin"] = ("平台管理员", true),
     };
 
-    // P1-2：用于在前端突出显示「LeagueAdmin 独有」权限
     private static readonly HashSet<string> LeagueExclusivePermissions = new()
     {
         KnowledgeHubPermissions.Resources.LeagueAudit,
@@ -486,9 +897,6 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         var result = new List<RolePermissionSummaryDto>();
         foreach (var (roleName, (displayName, isGlobal)) in RoleMeta)
         {
-            // IPermissionManager.GetAllAsync("R", roleName) 在 ABP 新版返回
-            // List<PermissionWithGrantedProviders>，每条记录代表一个已声明的权限；
-            // 若该权限被授予过指定 provider，则 Providers 列表会非空。
             var allPerms = await _permissionManager.GetAllAsync("R", roleName);
             var granted = allPerms
                 .Where(p => p.Providers != null && p.Providers.Count > 0)
@@ -512,23 +920,14 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
     }
 
     /// <summary>
-    /// 生成用户批量导入 Excel 模板：按角色类型分 Sheet（联盟管理员/院校管理员/教师/学生/企业用户），
-    /// 每页含表头、说明、示例行；必填列表头用橙黄色高亮，便于管理员识别必填项。
-    /// 模板与 ImportAsync 读取的列顺序严格对应。
+    /// 生成用户批量导入 Excel 模板：单 Sheet 包含全部角色类型，第 1 列"角色类型"区分必填项；
+    /// 第 1 行标题、第 2 行说明、第 3 行表头、之后为示例行；必填列高亮。
     /// </summary>
     [Authorize(KnowledgeHubPermissions.Users.Import)]
     public Task<IRemoteStreamContent> GetImportTemplateAsync()
     {
         using var workbook = new XLWorkbook();
-
-        foreach (var (sheetName, roleType) in SheetRoleMapping)
-        {
-            BuildImportSheet(workbook, sheetName, roleType);
-        }
-
-        // 首列页：使用说明总览
-        BuildOverviewSheet(workbook);
-
+        BuildImportSheet(workbook);
         var stream = new MemoryStream();
         workbook.SaveAs(stream);
         stream.Position = 0;
@@ -541,22 +940,18 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
     }
 
     /// <summary>
-    /// 构建单角色类型的导入模板 Sheet。
-    /// 布局：
+    /// 构建单 Sheet 的导入模板：
     ///   第 1 行：标题（合并）
     ///   第 2 行：使用说明 + 必填项提示（合并）
     ///   第 3 行：表头（必填列高亮）
-    ///   第 4 行：示例（灰色斜体）
+    ///   第 4 行起：每个角色类型一行示例（灰色斜体）
     /// </summary>
-    private static void BuildImportSheet(XLWorkbook workbook, string sheetName, UserRoleType roleType)
+    private static void BuildImportSheet(XLWorkbook workbook)
     {
-        var worksheet = workbook.Worksheets.Add(sheetName);
-        var required = RequiredFieldsMapping[roleType];
-        var requiredSet = new HashSet<string>(required);
+        var worksheet = workbook.Worksheets.Add(DefaultSheetName);
 
         // 第 1 行：标题
-        var titleText = $"{sheetName} - 用户导入模板";
-        worksheet.Cell(1, 1).Value = titleText;
+        worksheet.Cell(1, 1).Value = "用户批量导入模板";
         worksheet.Range(1, 1, 1, UserImportTemplateHeaders.Length).Merge();
         worksheet.Cell(1, 1).Style.Font.Bold = true;
         worksheet.Cell(1, 1).Style.Font.FontSize = 14;
@@ -566,25 +961,42 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         worksheet.Cell(1, 1).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
         worksheet.Row(1).Height = 28;
 
-        // 第 2 行：使用说明
-        var requiredText = string.Join("、", required);
-        var note = $"必填项：{requiredText}。未填项可留空。示例行请删除后再上传。" +
-                   $"导入后默认初始密码请用户首次登录后修改。";
-        worksheet.Cell(2, 1).Value = note;
+        // 第 2 行：使用说明（合并 + 灰色斜体 + 自动换行）
+        var notes = new[]
+        {
+            "1. 所有用户填在同一张 Sheet 内，请用第 1 列「角色类型」区分（联盟管理员/院校管理员/教师/学生/企业用户）。",
+            "2. 通用必填：姓名、登录账号、初始密码、手机号。其它必填项按角色类型不同，详见下方表格。",
+            "3. 橙黄色表头为必填列；空白示例行请删除后再上传。",
+            "4. 学生的「专业」按名称解析为系统内 MajorId；教师「专业」按字符串保存。",
+            "5. 「租户名称」仅 host（系统）管理员需要填写，留空表示导入 host 全局用户；租户管理员导入时该列被忽略。",
+            "6. 登录账号不可重复；若已存在同名用户，导入时默认跳过，开启「覆盖」后会更新其姓名/手机号/邮箱等扩展信息。",
+            "7. 初始密码建议首次登录后由用户自行修改，避免长期使用默认密码。",
+        };
+        worksheet.Cell(2, 1).Value = string.Join("\n", notes);
         worksheet.Range(2, 1, 2, UserImportTemplateHeaders.Length).Merge();
         worksheet.Cell(2, 1).Style.Font.Italic = true;
         worksheet.Cell(2, 1).Style.Font.FontColor = XLColor.Gray;
         worksheet.Cell(2, 1).Style.Alignment.WrapText = true;
-        worksheet.Cell(2, 1).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-        worksheet.Row(2).Height = 36;
+        worksheet.Cell(2, 1).Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
+        worksheet.Row(2).Height = 110;
 
         // 第 3 行：表头
+        // 通用必填列：角色类型/姓名/登录账号/初始密码/手机号
+        var universalRequired = new HashSet<string> { "角色类型", "姓名", "登录账号", "初始密码", "手机号" };
+        // 角色专属必填：把所有 RequiredFieldsMapping 的字段打平
+        var roleSpecificRequired = new HashSet<string>();
+        foreach (var (_, fields) in RequiredFieldsMapping)
+        {
+            foreach (var f in fields) roleSpecificRequired.Add(f);
+        }
+
         for (var i = 0; i < UserImportTemplateHeaders.Length; i++)
         {
+            var header = UserImportTemplateHeaders[i];
             var cell = worksheet.Cell(3, i + 1);
-            cell.Value = UserImportTemplateHeaders[i];
+            cell.Value = header;
             cell.Style.Font.Bold = true;
-            cell.Style.Fill.BackgroundColor = requiredSet.Contains(UserImportTemplateHeaders[i])
+            cell.Style.Fill.BackgroundColor = (universalRequired.Contains(header) || roleSpecificRequired.Contains(header))
                 ? RequiredHeaderColor
                 : OptionalHeaderColor;
             cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
@@ -593,33 +1005,35 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         }
         worksheet.Row(3).Height = 22;
 
-        // 第 4 行：示例（灰色斜体；不为必填项赋值，便于管理员删除整行）
-        BuildSampleRow(worksheet, roleType);
+        // 第 4 行起：每个角色类型给一个示例
+        var rowIndex = 4;
+        foreach (var roleType in RoleDisplayNameMapping.Values)
+        {
+            BuildSampleRow(worksheet, rowIndex, roleType);
+            rowIndex++;
+        }
 
-        // 冻结前 3 行；列宽自适应
+        // 冻结前 3 行；列宽自适应（最后"租户名称"列加宽便于查看）
         worksheet.SheetView.FreezeRows(3);
         worksheet.Columns().AdjustToContents();
+        worksheet.Column(UserImportTemplateHeaders.Length).Width = 18;
     }
 
-    /// <summary>
-    /// 填充示例行：仅填写必填项以便管理员看到格式。
-    /// </summary>
-    private static void BuildSampleRow(IXLWorksheet worksheet, UserRoleType roleType)
+    /// <summary>填充示例行：仅填写必填项以避免误导。</summary>
+    private static void BuildSampleRow(IXLWorksheet worksheet, int rowNumber, UserRoleType roleType)
     {
         var sample = GetSampleRow(roleType);
         for (var i = 0; i < UserImportTemplateHeaders.Length; i++)
         {
-            var cell = worksheet.Cell(4, i + 1);
             var header = UserImportTemplateHeaders[i];
+            var cell = worksheet.Cell(rowNumber, i + 1);
             cell.Value = sample.TryGetValue(header, out var val) ? val : string.Empty;
             cell.Style.Font.FontColor = XLColor.Gray;
             cell.Style.Font.Italic = true;
         }
     }
 
-    /// <summary>
-    /// 各角色类型的示例数据：仅填写必填项以避免误导。
-    /// </summary>
+    /// <summary>各角色类型的示例数据：仅填写必填项以避免误导。</summary>
     private static Dictionary<string, string> GetSampleRow(UserRoleType roleType)
     {
         return roleType switch
@@ -640,7 +1054,6 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                 { "登录账号", "school_admin_demo" },
                 { "初始密码", "Init@123" },
                 { "手机号", "13800000001" },
-                { "所属院校", "示例学校" },
                 { "工号", "SA0001" },
             },
             UserRoleType.Teacher => new Dictionary<string, string>
@@ -650,7 +1063,6 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                 { "登录账号", "teacher_demo" },
                 { "初始密码", "Init@123" },
                 { "手机号", "13800000002" },
-                { "所属院校", "示例学校" },
                 { "工号", "T0001" },
                 { "所属院系/部门", "计算机学院" },
                 { "专业", "计算机科学与技术" },
@@ -662,7 +1074,6 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                 { "登录账号", "student_demo" },
                 { "初始密码", "Init@123" },
                 { "手机号", "13800000003" },
-                { "所属院校", "示例学校" },
                 { "专业", "计算机科学与技术" },
                 { "学号", "2024001" },
                 { "年级", "2024" },
@@ -684,72 +1095,18 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         };
     }
 
+    // ────────────────────── 内部数据结构 ──────────────────────
+
     /// <summary>
-    /// 构建使用说明 Sheet：列示所有角色类型、必填项、注意事项。
+    /// 解析阶段的中间结果：包含原始 RowNumber、可能失败的 ParseError，
+    /// 以及成功时填充的 Parsed（DTO）和 EffectiveTenantId（用于后续校验 / 落库 / 重名检测）。
     /// </summary>
-    private static void BuildOverviewSheet(XLWorkbook workbook)
+    private class ParsedImportRow
     {
-        var worksheet = workbook.Worksheets.Add("使用说明", 1);
-
-        // 标题
-        worksheet.Cell(1, 1).Value = "用户批量导入模板 · 使用说明";
-        worksheet.Range(1, 1, 1, 2).Merge();
-        worksheet.Cell(1, 1).Style.Font.Bold = true;
-        worksheet.Cell(1, 1).Style.Font.FontSize = 14;
-        worksheet.Cell(1, 1).Style.Fill.BackgroundColor = XLColor.FromArgb(30, 108, 232);
-        worksheet.Cell(1, 1).Style.Font.FontColor = XLColor.White;
-        worksheet.Cell(1, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-        worksheet.Row(1).Height = 28;
-
-        // 表头
-        worksheet.Cell(3, 1).Value = "角色类型";
-        worksheet.Cell(3, 2).Value = "必填字段";
-        for (var c = 1; c <= 2; c++)
-        {
-            worksheet.Cell(3, c).Style.Font.Bold = true;
-            worksheet.Cell(3, c).Style.Fill.BackgroundColor = OptionalHeaderColor;
-            worksheet.Cell(3, c).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-            worksheet.Cell(3, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-        }
-
-        var row = 4;
-        foreach (var (sheetName, roleType) in SheetRoleMapping)
-        {
-            worksheet.Cell(row, 1).Value = sheetName;
-            worksheet.Cell(row, 2).Value = string.Join("、", RequiredFieldsMapping[roleType]);
-            worksheet.Cell(row, 1).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-            worksheet.Cell(row, 2).Style.Alignment.WrapText = true;
-            worksheet.Cell(row, 2).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-            row++;
-        }
-
-        // 注意事项
-        row += 1;
-        worksheet.Cell(row, 1).Value = "注意事项";
-        worksheet.Range(row, 1, row, 2).Merge();
-        worksheet.Cell(row, 1).Style.Font.Bold = true;
-        worksheet.Cell(row, 1).Style.Font.FontSize = 12;
-        row++;
-
-        var notes = new[]
-        {
-            "1. 每个角色类型对应一个独立 Sheet，请在该 Sheet 内填写数据。",
-            "2. \"所属院校\"为 Sheet 内统一名称，导入时按名称解析；解析失败的行将被标记为失败。",
-            "3. 学生的\"专业\"按名称解析为系统内 MajorId；教师\"所教专业\"以字符串保存。",
-            "4. 必填字段为空、账号重复、邮箱格式不合法时，该行会被跳过并在结果中列出失败原因。",
-            "5. 初始密码建议首次登录后由用户自行修改，避免长期使用默认密码。",
-            "6. 上传前请删除示例行；多 Sheet 同时上传会被一并处理。",
-        };
-        foreach (var note in notes)
-        {
-            worksheet.Cell(row, 1).Value = note;
-            worksheet.Range(row, 1, row, 2).Merge();
-            worksheet.Cell(row, 1).Style.Alignment.WrapText = true;
-            row++;
-        }
-
-        worksheet.Column(1).Width = 20;
-        worksheet.Column(2).Width = 80;
-        worksheet.SheetView.FreezeRows(3);
+        public int RowNumber { get; set; }
+        public UserRoleType RoleType { get; set; }
+        public UserImportDto? Parsed { get; set; }
+        public string? ParseError { get; set; }
+        public Guid? EffectiveTenantId { get; set; }
     }
 }

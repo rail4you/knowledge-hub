@@ -70,8 +70,9 @@ export class UserImportComponent {
             this.uploading = false;
             this.uploadSuccess = true;
             this.importResult = result;
+            const okCount = (result.newCount ?? 0) + (result.overwriteCount ?? 0);
             this.message.success(
-              `导入完成：成功 ${result.successCount} 条，失败 ${result.failCount} 条`
+              `导入完成：成功 ${okCount} 条，失败 ${result.failCount} 条`
             );
           },
           error: (err) => {
