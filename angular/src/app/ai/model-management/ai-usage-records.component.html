@@ -1,0 +1,96 @@
+<div class="usage-records">
+  <nz-card nzTitle="AI 调用记录" [nzExtra]="summaryExtra">
+    <ng-template #summaryExtra>
+      <span class="table-note">
+        @if (isHost()) {
+          平台视角：全部租户
+        } @else {
+          仅本租户
+        }
+      </span>
+    </ng-template>
+
+    @if (summary(); as s) {
+      <div nz-row [nzGutter]="16" class="summary-row">
+        <div nz-col [nzSpan]="4"><div class="summary-item"><span class="summary-item__value">{{ s.totalCount }}</span><span class="summary-item__label">总调用</span></div></div>
+        <div nz-col [nzSpan]="4"><div class="summary-item"><span class="summary-item__value summary-item__value--ok">{{ s.successCount }}</span><span class="summary-item__label">成功</span></div></div>
+        <div nz-col [nzSpan]="4"><div class="summary-item"><span class="summary-item__value summary-item__value--err">{{ s.failedCount }}</span><span class="summary-item__label">失败</span></div></div>
+        <div nz-col [nzSpan]="4"><div class="summary-item"><span class="summary-item__value">{{ s.totalInputTokens + s.totalOutputTokens }}</span><span class="summary-item__label">总 tokens（估算）</span></div></div>
+        <div nz-col [nzSpan]="4"><div class="summary-item"><span class="summary-item__value">¥{{ s.totalEstimatedCost | number:'1.2-4' }}</span><span class="summary-item__label">估算费用</span></div></div>
+      </div>
+    }
+
+    <div class="filter-row">
+      <nz-range-picker [(ngModel)]="dateRange" (ngModelChange)="onFilterChange()"></nz-range-picker>
+      <nz-select [(ngModel)]="filterGroup" (ngModelChange)="onFilterChange()" nzPlaceHolder="全部任务类型" nzAllowClear class="filter-control">
+        @for (g of featureGroups; track g.value) {
+          <nz-option [nzValue]="g.value" [nzLabel]="g.label"></nz-option>
+        }
+      </nz-select>
+      <nz-select [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()" nzPlaceHolder="全部状态" nzAllowClear class="filter-control">
+        <nz-option [nzValue]="10" nzLabel="成功"></nz-option>
+        <nz-option [nzValue]="40" nzLabel="失败"></nz-option>
+        <nz-option [nzValue]="0" nzLabel="进行中"></nz-option>
+      </nz-select>
+      <input nz-input [(ngModel)]="filterText" (keyup.enter)="onFilterChange()" placeholder="用户名 / 功能 / 模型" class="filter-control" />
+      <button nz-button nzType="primary" (click)="onFilterChange()">查询</button>
+      <button nz-button nzType="link" (click)="clearFilters()">清除</button>
+    </div>
+
+    <nz-table
+      #tbl
+      [nzData]="records()"
+      [nzFrontPagination]="false"
+      [nzTotal]="total()"
+      [nzPageIndex]="pageIndex()"
+      [nzPageSize]="pageSize()"
+      [nzShowSizeChanger]="true"
+      [nzShowTotal]="totalTemplate"
+      [nzLoading]="recordsLoading()"
+      (nzQueryParams)="onTableQuery($event)"
+      nzSize="small"
+      [nzScroll]="{ x: '1200px' }"
+    >
+      <ng-template #totalTemplate let-range="range" let-total>共 {{ total }} 条</ng-template>
+      <thead>
+        <tr>
+          <th>时间</th>
+          @if (isHost()) {
+            <th>租户</th>
+          }
+          <th>用户</th>
+          <th>角色</th>
+          <th>任务类型</th>
+          <th>功能</th>
+          <th>模型</th>
+          <th nzAlign="center">状态</th>
+          <th nzAlign="right">输入 tokens</th>
+          <th nzAlign="right">输出 tokens</th>
+          <th nzAlign="right">估算费用(元)</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of tbl.data; track r.id) {
+          <tr>
+            <td class="cell-time">{{ r.creationTime | date:'yyyy-MM-dd HH:mm:ss' }}</td>
+            @if (isHost()) {
+              <td>{{ r.tenantName || '平台' }}</td>
+            }
+            <td>{{ r.userName || r.userId.slice(0, 8) }}</td>
+            <td>{{ r.roles || '—' }}</td>
+            <td>{{ r.featureGroupName }}</td>
+            <td>{{ r.feature }}</td>
+            <td class="mono">{{ r.model }}</td>
+            <td nzAlign="center">
+              <nz-tag [nzColor]="statusColor(r.status)" [title]="r.errorMessage || ''">{{ r.statusName }}</nz-tag>
+            </td>
+            <td nzAlign="right">{{ r.inputTokens }}</td>
+            <td nzAlign="right">{{ r.outputTokens }}</td>
+            <td nzAlign="right">¥{{ r.estimatedCost | number:'1.2-6' }}</td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+    <p class="table-note">token 与费用均为估算值（按文本长度折算），仅供成本参考；失败记录的错误原文悬停状态标签查看。</p>
+  </nz-card>
+</div>

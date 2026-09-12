@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using KnowledgeHub.AI;
 using KnowledgeHub.Settings;
 using Volo.Abp;
-using Volo.Abp;
 using Volo.Abp.Authorization;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Linq;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.Settings;
 using Volo.Abp.Users;
@@ -41,15 +41,18 @@ public class AiQuotaService : IAiQuotaService, ITransientDependency
     private readonly IRepository<AiUsageRecord, Guid> _repository;
     private readonly ICurrentUser _currentUser;
     private readonly ISettingProvider _settingProvider;
+    private readonly IAsyncQueryableExecuter _asyncExecuter;
 
     public AiQuotaService(
         IRepository<AiUsageRecord, Guid> repository,
         ICurrentUser currentUser,
-        ISettingProvider settingProvider)
+        ISettingProvider settingProvider,
+        IAsyncQueryableExecuter asyncExecuter)
     {
         _repository = repository;
         _currentUser = currentUser;
         _settingProvider = settingProvider;
+        _asyncExecuter = asyncExecuter;
     }
 
     public Task CheckAsync(string featureGroup)
@@ -62,26 +65,16 @@ public class AiQuotaService : IAiQuotaService, ITransientDependency
     public async Task CheckAsync(Guid userId, string[] roles, string featureGroup)
     {
         var quotas = await GetQuotasAsync();
-        int? limit = null;
-        foreach (var role in roles)
-        {
-            if (quotas.TryGetValue(role, out var byGroup)
-                && byGroup.TryGetValue(featureGroup, out var v)
-                && v.HasValue)
-            {
-                limit = limit.HasValue ? Math.Min(limit.Value, v.Value) : v.Value;
-            }
-        }
-
+        var limit = ResolveLimit(quotas, roles, featureGroup);
         if (!limit.HasValue) return;
 
         var (startUtc, endUtc) = GetBeijingTodayRangeUtc();
         var query = await _repository.GetQueryableAsync();
-        var used = query.Count(x =>
+        var used = await _asyncExecuter.CountAsync(query.Where(x =>
             x.UserId == userId &&
             x.FeatureGroup == featureGroup &&
             x.CreationTime >= startUtc &&
-            x.CreationTime < endUtc);
+            x.CreationTime < endUtc));
 
         if (used >= limit.Value)
         {
@@ -106,31 +99,19 @@ public class AiQuotaService : IAiQuotaService, ITransientDependency
         var (startUtc, endUtc) = GetBeijingTodayRangeUtc();
         var query = await _repository.GetQueryableAsync();
 
+        // 一次分组统计，避免按分组多次往返数据库
+        var counts = await _asyncExecuter.ToListAsync(query
+            .Where(x => x.UserId == userId.Value && x.CreationTime >= startUtc && x.CreationTime < endUtc)
+            .GroupBy(x => x.FeatureGroup)
+            .Select(g => new { Group = g.Key, Count = g.Count() }));
+        var usedByGroup = counts.ToDictionary(x => x.Group, x => x.Count);
+
         foreach (var group in groups)
         {
-            int? limit = null;
-            foreach (var role in roles)
-            {
-                if (quotas.TryGetValue(role, out var byGroup)
-                    && byGroup.TryGetValue(group, out var v)
-                    && v.HasValue)
-                {
-                    limit = limit.HasValue ? Math.Min(limit.Value, v.Value) : v.Value;
-                }
-            }
-
-            if (!limit.HasValue)
-            {
-                result[group] = null;
-                continue;
-            }
-
-            var used = query.Count(x =>
-                x.UserId == userId.Value &&
-                x.FeatureGroup == group &&
-                x.CreationTime >= startUtc &&
-                x.CreationTime < endUtc);
-            result[group] = Math.Max(0, limit.Value - used);
+            var limit = ResolveLimit(quotas, roles, group);
+            result[group] = limit.HasValue
+                ? Math.Max(0, limit.Value - usedByGroup.GetValueOrDefault(group))
+                : null;
         }
 
         return result;
@@ -149,6 +130,25 @@ public class AiQuotaService : IAiQuotaService, ITransientDependency
         {
             return new Dictionary<string, Dictionary<string, int?>>();
         }
+    }
+
+    /// <summary>取用户所有角色中最严的配额；未配置返回 null（不限）。</summary>
+    private static int? ResolveLimit(
+        Dictionary<string, Dictionary<string, int?>> quotas,
+        string[] roles,
+        string featureGroup)
+    {
+        int? limit = null;
+        foreach (var role in roles)
+        {
+            if (quotas.TryGetValue(role, out var byGroup)
+                && byGroup.TryGetValue(featureGroup, out var v)
+                && v.HasValue)
+            {
+                limit = limit.HasValue ? Math.Min(limit.Value, v.Value) : v.Value;
+            }
+        }
+        return limit;
     }
 
     /// <summary>北京时间今日 00:00~24:00 对应的 UTC 区间（CreationTime 按 UTC 存）。</summary>

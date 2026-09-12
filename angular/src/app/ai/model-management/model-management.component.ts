@@ -1,7 +1,7 @@
 import { Component, signal, inject, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PermissionService } from '@abp/ng.core';
+import { PermissionService, ConfigStateService } from '@abp/ng.core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzGridModule } from 'ng-zorro-antd/grid';
@@ -15,6 +15,7 @@ import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { AiUsageManagementComponent } from './ai-usage-management.component';
+import { AiUsageRecordsComponent } from './ai-usage-records.component';
 
 interface AIModel {
   id: string;
@@ -45,6 +46,7 @@ interface AIModel {
     NzBadgeModule,
     NzTabsModule,
     AiUsageManagementComponent,
+    AiUsageRecordsComponent,
   ],
   templateUrl: './model-management.component.html',
   styleUrls: ['./model-management.component.scss'],
@@ -53,14 +55,21 @@ interface AIModel {
 export class ModelManagementComponent implements OnInit {
   private readonly message = inject(NzMessageService);
   private readonly permissionService = inject(PermissionService);
+  private readonly configState = inject(ConfigStateService);
   private readonly apiUrl = 'http://localhost:5000';
 
   /** AI 使用管理 Tab 仅 AI.ManageTasks 权限可见（校级管理员 / host 超管） */
   readonly canManageAi = signal(false);
 
+  /** AI 调用记录：租户管理员看本租户，host 平台看全部；仅租户上下文可维护 Key/配额 */
+  readonly isTenantContext = signal(false);
+
   ngOnInit(): void {
     this.canManageAi.set(
       this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));
+    const currentUser = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
+    this.isTenantContext.set(
+      !!currentUser && (currentUser['tenantId'] as string | null | undefined) != null);
   }
 
   models = signal<AIModel[]>([

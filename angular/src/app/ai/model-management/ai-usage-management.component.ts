@@ -1,25 +1,17 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzSelectModule } from 'ng-zorro-antd/select';
-import { NzTableModule, NzTableQueryParams } from 'ng-zorro-antd/table';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
-import { NzEmptyModule } from 'ng-zorro-antd/empty';
-import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzDescriptionsModule } from 'ng-zorro-antd/descriptions';
-import { NzGridModule } from 'ng-zorro-antd/grid';
 import { Subject, takeUntil } from 'rxjs';
 import {
   AiManagementService,
   type AiManagementStatusDto,
-  type AiUsageRecordDto,
-  type AiUsageSummaryDto,
 } from '../services/ai-management.service';
 
 interface QuotaRow {
@@ -27,14 +19,17 @@ interface QuotaRow {
   values: Record<string, string>;
 }
 
+/**
+ * 租户级 AI 配置：Qwen API Key（租户各自分配）+ 每日配额。
+ * 只影响当前租户；平台（host）不在此维护配置。
+ */
 @Component({
   selector: 'app-ai-usage-management',
   standalone: true,
   imports: [
-    CommonModule, DatePipe, DecimalPipe, FormsModule,
-    NzCardModule, NzButtonModule, NzInputModule, NzSelectModule,
-    NzTableModule, NzTagModule, NzIconModule, NzSpinModule,
-    NzEmptyModule, NzDatePickerModule, NzDescriptionsModule, NzGridModule,
+    CommonModule, FormsModule,
+    NzCardModule, NzButtonModule, NzInputModule, NzTableModule,
+    NzTagModule, NzDescriptionsModule,
   ],
   templateUrl: './ai-usage-management.component.html',
   styleUrls: ['./ai-usage-management.component.scss'],
@@ -51,20 +46,6 @@ export class AiUsageManagementComponent implements OnInit {
   readonly newApiKey = signal('');
   readonly savingKey = signal(false);
   readonly testing = signal(false);
-
-  // ============= 用量记录 =============
-  readonly records = signal<AiUsageRecordDto[]>([]);
-  readonly recordsLoading = signal(false);
-  readonly total = signal(0);
-  readonly pageIndex = signal(1);
-  readonly pageSize = signal(20);
-  readonly summary = signal<AiUsageSummaryDto | null>(null);
-
-  readonly filterStart = signal<Date | null>(null);
-  readonly filterEnd = signal<Date | null>(null);
-  readonly filterGroup = signal<string | null>(null);
-  readonly filterStatus = signal<number | null>(null);
-  readonly filterText = signal('');
 
   readonly featureGroups = [
     { value: 'CareerGuidance', label: '职业规划生成' },
@@ -84,32 +65,12 @@ export class AiUsageManagementComponent implements OnInit {
   readonly savingQuotas = signal(false);
 
   ngOnInit(): void {
-    // 默认最近 7 天
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - 7);
-    this.filterStart.set(start);
-    this.filterEnd.set(end);
     this.loadStatus();
     this.loadQuotas();
-    this.loadRecords();
   }
 
   groupLabel(value: string): string {
     return this.featureGroups.find(g => g.value === value)?.label || value;
-  }
-
-  /** 日期区间双向绑定桥（range-picker 需要数组形态） */
-  get dateRange(): Date[] {
-    const s = this.filterStart();
-    const e = this.filterEnd();
-    return s && e ? [s, e] : [];
-  }
-
-  onDateRangeChange(dates: Date[]): void {
-    this.filterStart.set(dates?.[0] || null);
-    this.filterEnd.set(dates?.[1] || null);
-    this.onFilterChange();
   }
 
   // ---------- Key ----------
@@ -142,7 +103,7 @@ export class AiUsageManagementComponent implements OnInit {
         next: () => {
           this.savingKey.set(false);
           this.newApiKey.set('');
-          this.message.success('API Key 已更新，新调用即时生效，无需重启');
+          this.message.success('本租户 API Key 已更新，新调用即时生效，无需重启');
           this.loadStatus();
         },
         error: err => {
@@ -167,69 +128,6 @@ export class AiUsageManagementComponent implements OnInit {
           this.message.error('连接失败，请检查 Key 是否正确或是否欠费');
         },
       });
-  }
-
-  // ---------- 用量 ----------
-  private buildFilterInput() {
-    return {
-      startTime: this.filterStart()?.toISOString(),
-      endTime: this.filterEnd()?.toISOString(),
-      featureGroup: this.filterGroup() || undefined,
-      status: this.filterStatus() ?? undefined,
-      filter: this.filterText().trim() || undefined,
-      skipCount: (this.pageIndex() - 1) * this.pageSize(),
-      maxResultCount: this.pageSize(),
-    };
-  }
-
-  loadRecords(): void {
-    this.recordsLoading.set(true);
-    const input = this.buildFilterInput();
-    this.api.getUsageRecords(input)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: res => {
-          this.records.set(res.items || []);
-          this.total.set(res.totalCount || 0);
-          this.recordsLoading.set(false);
-        },
-        error: () => this.recordsLoading.set(false),
-      });
-    this.api.getUsageSummary(input)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: s => this.summary.set(s),
-        error: () => {},
-      });
-  }
-
-  onTableQuery(params: NzTableQueryParams): void {
-    const { pageIndex, pageSize } = params;
-    if (pageIndex !== this.pageIndex() || pageSize !== this.pageSize()) {
-      this.pageIndex.set(pageIndex);
-      this.pageSize.set(pageSize);
-      this.loadRecords();
-    }
-  }
-
-  onFilterChange(): void {
-    this.pageIndex.set(1);
-    this.loadRecords();
-  }
-
-  clearFilters(): void {
-    this.filterGroup.set(null);
-    this.filterStatus.set(null);
-    this.filterText.set('');
-    this.onFilterChange();
-  }
-
-  statusColor(status: number): string {
-    switch (status) {
-      case 10: return 'success';
-      case 40: return 'error';
-      default: return 'processing';
-    }
   }
 
   // ---------- 配额 ----------
@@ -276,7 +174,7 @@ export class AiUsageManagementComponent implements OnInit {
       .subscribe({
         next: () => {
           this.savingQuotas.set(false);
-          this.message.success('配额已更新，即时生效');
+          this.message.success('本租户配额已更新，即时生效');
         },
         error: err => {
           this.savingQuotas.set(false);

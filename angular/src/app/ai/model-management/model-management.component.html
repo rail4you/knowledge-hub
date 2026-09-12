@@ -4,7 +4,7 @@
     <p class="page-desc">管理系统中的 AI 模型，查看模型状态和性能</p>
   </header>
 
-  <nz-tabset>
+  <nz-tabs>
     <nz-tab nzTitle="模型列表">
   <nz-card class="stats-card">
     <div nz-row [nzGutter]="16">
@@ -118,10 +118,15 @@
     </nz-table>
   </nz-card>
     </nz-tab>
-    @if (canManageAi()) {
-      <nz-tab nzTitle="AI 使用管理">
+    @if (canManageAi() && isTenantContext()) {
+      <nz-tab nzTitle="AI 配置">
         <app-ai-usage-management></app-ai-usage-management>
       </nz-tab>
     }
-  </nz-tabset>
+    @if (canManageAi()) {
+      <nz-tab nzTitle="AI 调用记录">
+        <app-ai-usage-records></app-ai-usage-records>
+      </nz-tab>
+    }
+  </nz-tabs>
 </div>

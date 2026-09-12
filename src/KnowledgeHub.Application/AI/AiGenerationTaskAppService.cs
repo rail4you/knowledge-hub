@@ -172,6 +172,9 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
             throw new UserFriendlyException("任务进行中，请稍后再试");
         }
 
+        // 重试同样消耗 token，纳入每日配额（防刷重试）
+        await _quotaService.CheckAsync(ToFeatureGroup(task.TaskType));
+
         task.Status = AiTaskStatus.Pending;
         task.Progress = 0;
         task.ProgressMessage = "排队中…";

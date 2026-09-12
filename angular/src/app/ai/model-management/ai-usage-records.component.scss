@@ -1,40 +1,12 @@
-.usage-mgmt {
+.usage-records {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.mgmt-card {
-  border-radius: 8px;
-}
-
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
-}
-
-.sub-title {
-  margin: 16px 0 8px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.scope-hint {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: rgba(0, 0, 0, 0.45);
-}
-
-.key-form {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.key-input {
-  flex: 1 1 320px;
-  min-width: 240px;
 }
 
 .summary-row {
@@ -89,23 +61,6 @@
 
 .table-note {
   margin: 8px 0 0;
-  font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
-}
-
-.quota-input {
-  width: 90px;
-  text-align: center;
-}
-
-.quota-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.quota-hint {
   font-size: 12px;
   color: rgba(0, 0, 0, 0.45);
 }

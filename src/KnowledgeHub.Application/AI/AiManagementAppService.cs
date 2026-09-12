@@ -14,8 +14,10 @@ using Microsoft.Extensions.Configuration;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Linq;
+using Volo.Abp.MultiTenancy;
 using Volo.Abp.SettingManagement;
 using Volo.Abp.Settings;
 using Volo.Abp.TenantManagement;
@@ -37,6 +39,7 @@ public class AiManagementAppService : KnowledgeHubAppService, IAiManagementAppSe
     private readonly IAiQuotaService _quotaService;
     private readonly IAsyncQueryableExecuter _asyncExecuter;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IDataFilter _dataFilter;
 
     public AiManagementAppService(
         ISettingManager settingManager,
@@ -47,7 +50,8 @@ public class AiManagementAppService : KnowledgeHubAppService, IAiManagementAppSe
         ITenantRepository tenantRepository,
         IAiQuotaService quotaService,
         IAsyncQueryableExecuter asyncExecuter,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        IDataFilter dataFilter)
     {
         _settingManager = settingManager;
         _settingProvider = settingProvider;
@@ -58,6 +62,7 @@ public class AiManagementAppService : KnowledgeHubAppService, IAiManagementAppSe
         _quotaService = quotaService;
         _asyncExecuter = asyncExecuter;
         _httpClientFactory = httpClientFactory;
+        _dataFilter = dataFilter;
     }
 
     public async Task<AiManagementStatusDto> GetStatusAsync()
@@ -99,8 +104,11 @@ public class AiManagementAppService : KnowledgeHubAppService, IAiManagementAppSe
             throw new UserFriendlyException("API Key 不能为空。");
         }
 
-        await _settingManager.SetGlobalAsync(KnowledgeHubSettings.QwenApiKey, key);
-        // 换 Key 即生效：清掉凭证缓存（静态 HttpClient 不绑 Key，无需重启）
+        // AI 服务按租户配置：Key 写入当前租户，只影响本租户
+        var tenantId = RequireTenant();
+        await _settingManager.SetForTenantAsync(tenantId, KnowledgeHubSettings.QwenApiKey, key);
+
+        // 换 Key 即生效：清掉本租户的凭证缓存（静态 HttpClient 不绑 Key，无需重启）
         _credentials.ClearCache();
     }
 
@@ -136,6 +144,8 @@ public class AiManagementAppService : KnowledgeHubAppService, IAiManagementAppSe
 
     public async Task<PagedResultDto<AiUsageRecordDto>> GetUsageRecordsAsync(GetAiUsageRecordsInput input)
     {
+        // host（平台）需要查看全部租户的调用情况：关闭多租户查询过滤器，手动按上下文限定
+        using var tenantFilter = _dataFilter.Disable<IMultiTenant>();
         var query = await ApplyFiltersAsync(input);
 
         var totalCount = await _asyncExecuter.CountAsync(query);
@@ -162,16 +172,27 @@ public class AiManagementAppService : KnowledgeHubAppService, IAiManagementAppSe
 
     public async Task<AiUsageSummaryDto> GetUsageSummaryAsync(GetAiUsageRecordsInput input)
     {
+        // 只取聚合所需列（不拉取含长文本 ErrorMessage 的完整实体），在内存中汇总
+        using var tenantFilter = _dataFilter.Disable<IMultiTenant>();
         var query = await ApplyFiltersAsync(input);
-        var list = await _asyncExecuter.ToListAsync(query);
+        var rows = await _asyncExecuter.ToListAsync(query.Select(x => new
+        {
+            x.Status,
+            x.InputTokens,
+            x.OutputTokens,
+            x.EstimatedCost,
+        }));
+
+        if (rows.Count == 0) return new AiUsageSummaryDto();
+
         return new AiUsageSummaryDto
         {
-            TotalCount = list.Count,
-            SuccessCount = list.Count(x => x.Status == AiUsageStatus.Completed),
-            FailedCount = list.Count(x => x.Status == AiUsageStatus.Failed),
-            TotalInputTokens = list.Sum(x => (long)x.InputTokens),
-            TotalOutputTokens = list.Sum(x => (long)x.OutputTokens),
-            TotalEstimatedCost = Math.Round(list.Sum(x => x.EstimatedCost), 4),
+            TotalCount = rows.Count,
+            SuccessCount = rows.Count(x => x.Status == AiUsageStatus.Completed),
+            FailedCount = rows.Count(x => x.Status == AiUsageStatus.Failed),
+            TotalInputTokens = rows.Sum(x => (long)x.InputTokens),
+            TotalOutputTokens = rows.Sum(x => (long)x.OutputTokens),
+            TotalEstimatedCost = Math.Round(rows.Sum(x => x.EstimatedCost), 4),
         };
     }
 
@@ -196,16 +217,33 @@ public class AiManagementAppService : KnowledgeHubAppService, IAiManagementAppSe
             }
         }
 
-        await _settingManager.SetGlobalAsync(
-            KnowledgeHubSettings.AiQuotas, JsonSerializer.Serialize(quotas));
+        // 配额按租户配置：写入当前租户，只影响本租户
+        var tenantId = RequireTenant();
+        await _settingManager.SetForTenantAsync(
+            tenantId, KnowledgeHubSettings.AiQuotas, JsonSerializer.Serialize(quotas));
+    }
+
+    /// <summary>AI 配置为租户级，host 上下文不允许修改。</summary>
+    private Guid RequireTenant()
+    {
+        if (!CurrentTenant.Id.HasValue)
+        {
+            throw new UserFriendlyException("AI 服务按租户配置，请使用租户管理员账号操作。");
+        }
+        return CurrentTenant.Id.Value;
     }
 
     // ============= helpers =============
 
     private async Task<IQueryable<AiUsageRecord>> ApplyFiltersAsync(GetAiUsageRecordsInput input)
     {
-        // 不打破多租户隔离：校级管理员只看本租户，host 看全部
+        // 调用方已关闭多租户过滤器：租户上下文手动限定本租户；host 上下文查看全部租户
         var query = await _usageRepository.GetQueryableAsync();
+        if (CurrentTenant.Id.HasValue)
+        {
+            var tenantId = CurrentTenant.Id.Value;
+            query = query.Where(x => x.TenantId == tenantId);
+        }
 
         if (input.StartTime.HasValue)
         {
