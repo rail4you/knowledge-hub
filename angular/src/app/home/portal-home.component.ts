@@ -218,11 +218,19 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     const cu = this.config.getDeep('currentUser') as Record<string, unknown> | undefined;
     if (typeof cu?.['userName'] === 'string') this.userName.set(cu['userName'] as string);
 
-    // 从微专业详情页“返回首页”时携带 section=microMajors，回到首页的“微专业”模块位置。
-    // 兼容旧链接 ?tab=microMajors：同样定位到“微专业”模块（不再去底部的“全部资源”）。
-    const section = this.route.snapshot.queryParamMap.get('section');
-    if (section === 'microMajors') {
-      this.scrollToSection('micro-majors');
+    // 从详情页“返回首页”时携带 section=<区块id>，回到首页原来的模块位置。
+    // 合法取值：tenants / featured-courses / micro-majors / latest-resources / latest-news / browse。
+    // 兼容旧链接 ?section=microMajors 与 ?tab=microMajors（统一映射到 micro-majors，不再去底部“全部资源”）。
+    const rawSection = this.route.snapshot.queryParamMap.get('section');
+    const section = rawSection === 'microMajors' ? 'micro-majors' : rawSection;
+    const validSections = new Set(['tenants', 'featured-courses', 'micro-majors', 'latest-resources', 'latest-news', 'browse']);
+    if (section && validSections.has(section)) {
+      // section=browse 可能是课程/资源 Tab 返回：同时恢复 tab 参数（若有）再定位到底部“全部资源”。
+      const browseTab = this.route.snapshot.queryParamMap.get('tab');
+      if (section === 'browse' && (browseTab === 'courses' || browseTab === 'resources' || browseTab === 'microMajors')) {
+        this.activeTab.set(browseTab);
+      }
+      this.scrollToSection(section);
     } else {
       const browseTab = this.route.snapshot.queryParamMap.get('tab');
       if (browseTab === 'courses' || browseTab === 'resources' || browseTab === 'microMajors') {

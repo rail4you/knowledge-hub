@@ -5,7 +5,7 @@
       <app-site-brand></app-site-brand>
     </a>
     <nav class="nav__links">
-      <a routerLink="/">主站首页</a>
+      <a routerLink="/" [queryParams]="{ section: 'tenants' }">主站首页</a>
       <a (click)="scrollToSection('section-intro')" class="nav__anchor">资源库简介</a>
       <a (click)="scrollToSection('section-construction')" class="nav__anchor">专业建设</a>
       <a (click)="scrollToSection('section-courses')" class="nav__anchor">学历课程</a>

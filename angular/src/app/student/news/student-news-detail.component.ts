@@ -86,6 +86,9 @@ export class StudentNewsDetailComponent implements OnInit {
   /** 从门户首页（PortalHome）的最新资讯卡片进入时为 true；返回按钮显示“返回首页”并跳 `/` */
   readonly backToHome = signal<boolean>(false);
 
+  /** 首页来源区块（latest-news 等），返回首页时原路定位到该模块位置 */
+  readonly homeSection = signal<string | null>(null);
+
   /** 返回按钮文案：从门户首页进入时为“返回首页”，否则为“返回资讯列表” */
   readonly backLabel = computed(() => this.backToHome() ? '返回首页' : '返回资讯列表');
 
@@ -107,8 +110,9 @@ export class StudentNewsDetailComponent implements OnInit {
         this.router.navigate(['/student/news']);
         return;
       }
-      // 从门户首页（最新资讯卡片）进入时返回按钮回到门户首页
+      // 从门户首页（最新资讯卡片）进入时返回按钮回到门户首页原来位置
       this.backToHome.set(this.route.snapshot.queryParamMap.get('from') === 'home');
+      this.homeSection.set(this.route.snapshot.queryParamMap.get('section') || 'latest-news');
       this.loadArticle(id);
       this.loadComments(id);
       this.loadHot();
@@ -170,9 +174,9 @@ export class StudentNewsDetailComponent implements OnInit {
   }
 
   goBack(): void {
-    // 从门户首页（最新资讯卡片）进入：直接返回门户首页 `/`
+    // 从门户首页（最新资讯卡片）进入：返回门户首页原来位置（section=latest-news）
     if (this.backToHome()) {
-      this.router.navigate(['/']);
+      this.router.navigate(['/'], { queryParams: { section: this.homeSection() || 'latest-news' } });
       return;
     }
     this.router.navigate(['/student/news']);
@@ -333,7 +337,14 @@ export class StudentNewsDetailComponent implements OnInit {
   }
 
   openArticle(id: string): void {
-    this.router.navigate(['/student/news', id]);
+    // 相关/热门资讯跳转时保留首页来源（from/section），返回时仍能回到首页原来位置
+    const qp = this.route.snapshot.queryParamMap;
+    const queryParams: Record<string, string> = {};
+    const from = qp.get('from');
+    const section = qp.get('section');
+    if (from) queryParams['from'] = from;
+    if (section) queryParams['section'] = section;
+    this.router.navigate(['/student/news', id], { queryParams });
   }
 
   /** 资讯封面渐变（与列表页一致） */

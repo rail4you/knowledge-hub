@@ -109,7 +109,7 @@
 
   <!-- ===== 租户列表 ===== -->
   @if (tenants().length > 0) {
-    <section class="section">
+    <section id="tenants" class="section">
       <div class="section__inner">
         <div class="section__head">
           <div class="section__head-left">
@@ -119,7 +119,7 @@
         </div>
         <div class="tenant-grid">
           @for (t of tenants(); track t.id) {
-            <a class="tenant-card" [routerLink]="['/tenant', t.id]">
+            <a class="tenant-card" [routerLink]="['/tenant', t.id]" [queryParams]="{ from: 'home', section: 'tenants' }">
               <div class="tenant-card__cover tenant-card__cover--placeholder">
                 <div class="tenant-card__type-badge">{{ (t.tenantType === 1 ? '项目' : '专业') + '园地' }}</div>
                 <span nz-icon nzType="bank" nzTheme="outline"></span>
@@ -146,7 +146,7 @@
 
   <!-- ===== 精选课程 ===== -->
   @if (globalFeaturedCourses().length) {
-    <section class="section">
+    <section id="featured-courses" class="section">
       <div class="section__inner">
         <div class="section__head">
           <div class="section__head-left">
@@ -161,7 +161,7 @@
         </div>
         <div class="course-grid">
           @for (c of visibleFeaturedCourses(); track c.id; let i = $index) {
-            <a class="course-card" [routerLink]="['/student/courses', c.id]" [queryParams]="{ from: 'home' }">
+            <a class="course-card" [routerLink]="['/student/courses', c.id]" [queryParams]="{ from: 'home', section: 'featured-courses' }">
               <div class="course-card__cover">
                 <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
                 @if (c.coverImageUrl) {
@@ -246,7 +246,7 @@
         </div>
         <div class="mm-grid">
           @for (m of visibleMicroMajors(); track m.id; let i = $index) {
-            <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home' }">
+            <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home', section: 'micro-majors' }">
               <div class="mm-card__cover">
                 @if (m.coverImageUrl) {
                   <img [src]="m.coverImageUrl" [alt]="m.title" loading="lazy" class="mm-card__cover-img" />
@@ -295,7 +295,7 @@
 
   <!-- ===== 最新资源 + 资源排行（同一容器，两栏榜单，各前五） ===== -->
   @if (globalLatestMaterials().length || topResources().length) {
-    <section class="section dual-section">
+    <section id="latest-resources" class="section dual-section">
       <div class="dual-section__inner">
         @if (globalLatestMaterials().length) {
           <div class="rank-panel">
@@ -355,7 +355,7 @@
 
   <!-- ===== 最新资讯 ===== -->
   @if (globalLatestNews().length) {
-    <section class="section">
+    <section id="latest-news" class="section">
       <div class="section__inner">
         <div class="section__head">
           <div class="section__head-left">
@@ -365,7 +365,7 @@
         </div>
         <div class="news-grid">
           @for (n of globalLatestNews(); track n.id) {
-            <a class="news-card" [routerLink]="['/student/news', n.id]" [queryParams]="{ from: 'home' }">
+            <a class="news-card" [routerLink]="['/student/news', n.id]" [queryParams]="{ from: 'home', section: 'latest-news' }">
               <div class="news-card__cover">
                 <img src="assets/images/home/news-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="news-card__cover-img" />
                 <div class="news-card__overlay" aria-hidden="true"></div>
@@ -461,7 +461,7 @@
       @if (activeTab() === 'courses') {
         <div class="course-grid">
           @for (c of browseCourses(); track c.id) {
-            <a class="course-card" [routerLink]="['/student/courses', c.id]" [queryParams]="{ from: 'home' }">
+            <a class="course-card" [routerLink]="['/student/courses', c.id]" [queryParams]="{ from: 'home', section: 'browse' }">
               <div class="course-card__cover">
                 <img src="assets/images/home/course-cover-placeholder.svg" alt="" loading="lazy" aria-hidden="true" class="course-card__cover-img" />
                 @if (c.coverImageUrl) {
@@ -587,7 +587,7 @@
       @if (activeTab() === 'microMajors') {
         <div class="mm-grid">
           @for (m of browseMicroMajors(); track m.id) {
-            <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home' }">
+            <a class="mm-card" [routerLink]="['/student/micro-majors', m.id]" [queryParams]="{ from: 'home', section: 'browse' }">
               <div class="mm-card__cover">
                 @if (m.coverImageUrl) {
                   <img [src]="m.coverImageUrl" [alt]="m.title" loading="lazy" class="mm-card__cover-img" />

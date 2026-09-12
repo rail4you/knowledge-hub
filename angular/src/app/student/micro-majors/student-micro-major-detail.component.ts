@@ -71,6 +71,8 @@ export class StudentMicroMajorDetailComponent implements OnInit {
   readonly fromHome = signal(false);
   /** 从“我的微专业”进入时，返回我的微专业 */
   readonly fromMyMicroMajors = signal(false);
+  /** 首页来源区块，返回首页时原路定位（默认 micro-majors，兼容旧 section=microMajors） */
+  readonly homeSection = signal<string | null>(null);
 
   /** 当前微专业 id，随课程链接透传给课程详情页，实现“返回微专业” */
   readonly microMajorId = signal<string | null>(null);
@@ -84,7 +86,7 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     return '/student/micro-majors';
   });
   readonly backQueryParams = computed(() => {
-    if (this.fromHome()) return { section: 'microMajors' };
+    if (this.fromHome()) return { section: this.homeSection() || 'micro-majors' };
     return {};
   });
   readonly backLabel = computed(() => {
@@ -97,6 +99,9 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     const from = this.route.snapshot.queryParamMap.get('from');
     this.fromHome.set(from === 'home');
     this.fromMyMicroMajors.set(from === 'my-micro-majors');
+    const rawSection = this.route.snapshot.queryParamMap.get('section');
+    // 兼容旧链接 section=microMajors；browse 来源的微专业返回底部“全部资源”
+    this.homeSection.set(rawSection === 'microMajors' ? 'micro-majors' : (rawSection || 'micro-majors'));
     this.fromSource.set(from || null);
 
     const id = this.route.snapshot.paramMap.get('id');
@@ -213,6 +218,8 @@ export class StudentMicroMajorDetailComponent implements OnInit {
     const queryParams: Record<string, string> = {};
     if (this.microMajorId()) queryParams['fromMicroMajor'] = this.microMajorId()!;
     if (this.fromSource()) queryParams['from'] = this.fromSource()!;
+    // 透传首页来源区块，课程页“返回首页”时仍能定位到原来位置
+    if (this.fromHome() && this.homeSection()) queryParams['section'] = this.homeSection()!;
     this.router.navigate(['/student/courses', courseId], { queryParams });
   }
 
