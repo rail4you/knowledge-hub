@@ -2,9 +2,105 @@
   <!-- =================== HERO =================== -->
   <app-student-hero
     title="就业指导"
-    description="查看就业指导老师为你生成的个性化指导报告，可预览详情或下载存档"
+    description="基于你的简历一键生成个性化 AI 指导报告，也可查看老师为你生成的指导，可预览详情或下载存档"
     [stats]="heroStats()"
   ></app-student-hero>
+
+  <!-- =================== AI 自助生成 =================== -->
+  <section class="table-card generate-card">
+    <header class="table-card__head">
+      <h2 class="table-card__title">
+        <span nz-icon nzType="robot" nzTheme="outline"></span>
+        AI 生成指导
+      </h2>
+    </header>
+
+    @if (resumesLoading()) {
+      <div class="loading-state">
+        <nz-spin nzSimple></nz-spin>
+        <p>正在加载我的简历...</p>
+      </div>
+    } @else if (resumes().length === 0) {
+      <div class="empty-state">
+        <div class="empty-state__art">
+          <span nz-icon nzType="file-add" nzTheme="outline"></span>
+        </div>
+        <h3>还没有简历</h3>
+        <p>先去「我的简历」创建一份简历，再回来一键生成就业指导</p>
+      </div>
+    } @else {
+      <div class="generate-form">
+        <div class="generate-form__field">
+          <label class="generate-form__label">选择简历</label>
+          <nz-select
+            class="generate-form__control"
+            [(ngModel)]="selectedResumeId"
+            nzPlaceHolder="请选择用于生成的简历"
+          >
+            @for (r of resumes(); track r.id) {
+              <nz-option [nzValue]="r.id" [nzLabel]="r.title + (r.isDefault ? '（默认）' : '')"></nz-option>
+            }
+          </nz-select>
+        </div>
+        <div class="generate-form__field">
+          <label class="generate-form__label">职业目标（选填）</label>
+          <input
+            nz-input
+            class="generate-form__control"
+            [(ngModel)]="careerGoalInput"
+            placeholder="例如：前端开发工程师"
+            maxlength="100"
+          />
+        </div>
+        <div class="generate-form__actions">
+          <button
+            nz-button
+            nzType="primary"
+            (click)="generate()"
+            [disabled]="!canGenerate()"
+            [nzLoading]="submitting()"
+          >
+            <span nz-icon nzType="thunderbolt" nzTheme="outline"></span>
+            生成我的就业指导
+          </button>
+          <span class="generate-form__hint">可连续提交多个，后台并行生成，完成后自动保存，可离开本页</span>
+        </div>
+      </div>
+    }
+
+    <!-- 进行中的任务：进度条 + 取消 -->
+    @if (pendingTasks().length > 0) {
+      <div class="pending-list">
+        <h4 class="pending-list__title">
+          <span nz-icon nzType="loading" nzTheme="outline"></span>
+          正在生成（{{ pendingTasks().length }}）
+        </h4>
+        @for (t of pendingTasks(); track t.id) {
+          <div class="pending-item">
+            <div class="pending-item__head">
+              <span class="pending-item__title" [title]="t.title">{{ t.title }}</span>
+              <span class="pending-item__time">{{ t.creationTime | date:'MM-dd HH:mm' }}</span>
+              <button
+                nz-button
+                nzType="link"
+                nzSize="small"
+                nzDanger
+                (click)="cancelTask(t.id)"
+              >取消</button>
+            </div>
+            <nz-progress
+              [nzPercent]="t.progress || 0"
+              nzSize="small"
+              [nzStatus]="t.status === runningStatus ? 'active' : 'normal'"
+            ></nz-progress>
+            @if (t.progressMessage) {
+              <p class="pending-item__msg">{{ t.progressMessage }}</p>
+            }
+          </div>
+        }
+      </div>
+    }
+  </section>
 
   <!-- =================== 记录表格 =================== -->
   <section class="table-card">
@@ -28,7 +124,7 @@
           <span nz-icon nzType="message" nzTheme="outline"></span>
         </div>
         <h3>暂无就业指导记录</h3>
-        <p>就业指导报告由就业指导老师生成后会显示在这里</p>
+        <p>用上方「AI 生成指导」一键生成，或等待就业指导老师为你生成</p>
       </div>
     } @else {
       <nz-table

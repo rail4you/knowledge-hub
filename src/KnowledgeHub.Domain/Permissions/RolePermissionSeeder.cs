@@ -530,6 +530,7 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
 
         await GrantAsync("Student", KnowledgeHubPermissions.AI.Default);
         await GrantAsync("Student", KnowledgeHubPermissions.AI.Chat);
+        await GrantAsync("Student", KnowledgeHubPermissions.AI.CareerGuidance);
         await GrantAsync("Student", KnowledgeHubPermissions.TeachingAgents.Default);
         await GrantAsync("Student", KnowledgeHubPermissions.TeachingAgents.Execute);
 

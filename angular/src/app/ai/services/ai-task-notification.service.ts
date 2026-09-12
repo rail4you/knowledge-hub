@@ -4,7 +4,8 @@ import { ConfigStateService } from '@abp/ng.core';
 import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { Observable, Subject, Subscription, timer, forkJoin, interval, of } from 'rxjs';
 import { catchError, startWith, switchMap, takeUntil, takeWhile } from 'rxjs/operators';
-import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, aiTaskResultRoute } from './ai-task.service';
+import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType, aiTaskResultRoute } from './ai-task.service';
+import { hasRole } from '../../auth/current-user.utils';
 
 /**
  * AI 任务全局轮询 + 完成通知。
@@ -87,9 +88,13 @@ export class AiTaskNotificationService {
     });
   }
 
-  /** 跳到对应功能页的结果 UI（通知 toast / 铃铛共用）。 */
+  /** 跳到对应功能页的结果 UI（通知 toast / 铃铛共用）。学生点的职业规划任务回到学生端指导页。 */
   openTaskResult(task: AiGenerationTaskDto): void {
     this.acknowledge(task.id);
+    if (task.taskType === AiTaskType.CareerGuidance && hasRole(this.configState, 'Student')) {
+      this.router.navigate(['/student/employment/guidance']);
+      return;
+    }
     this.router.navigate([aiTaskResultRoute(task.taskType)], { queryParams: { taskId: task.id } });
   }
 
