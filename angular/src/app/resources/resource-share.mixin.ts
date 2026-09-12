@@ -34,6 +34,16 @@ export class ResourceShareMixin {
   availableTenants = signal<TenantResourceSummaryDto[]>([]);
 
   /**
+   * 当前选中的本租户资源已共享给多少个目标租户（用于在 drawer 上展示「已共享给 N 个租户」徽标，
+   * 以及控制「取消共享」按钮的显隐）。被其它租户共享过来的资源（isShared=true）走另一套展示，
+   * 这里的 count 仅对当前租户拥有的资源有意义。
+   */
+  outgoingShareCount = signal<number>(0);
+
+  /** 当前选中的资源是否属于当前租户（用于控制共享按钮是否可点）。 */
+  isOwnResource = signal<boolean>(true);
+
+  /**
    * 共享资源弹窗宽度：响应式配置，避免窄屏占满全屏。
    * ng-zorro nz-modal 的 [nzWidth] 接受字符串或 NzBreakpointKey 响应式对象。
    */
@@ -55,6 +65,7 @@ export class ResourceShareMixin {
     this.shareService.getShares(resourceId).subscribe({
       next: (list) => {
         this.currentShares.set(list || []);
+        this.outgoingShareCount.set((list || []).length);
         // 已共享的目标租户默认不再出现在可选列表（避免误重复共享）
         const sharedIds = new Set((list || []).map(s => s.targetTenantId));
         this.availableTenants.set(
@@ -63,6 +74,35 @@ export class ResourceShareMixin {
       },
       error: () => this.currentShares.set([]),
     });
+  }
+
+  /**
+   * 加载当前选中资源的 outgoing shares（不打开弹窗），
+   * 用于在 drawer 上展示「已共享给 N 个租户」徽标和控制「取消共享」按钮显隐。
+   * 仅对当前租户拥有的资源调用；被其它租户共享过来的资源走 incoming 路径，不会调本方法。
+   */
+  loadOutgoingShares(resourceId: string): void {
+    this.shareService.getShares(resourceId).subscribe({
+      next: (list) => this.outgoingShareCount.set((list || []).length),
+      error: () => this.outgoingShareCount.set(0),
+    });
+  }
+
+  /** 切换资源时清空 outgoing share 状态。 */
+  resetOutgoingShareState(): void {
+    this.outgoingShareCount.set(0);
+    this.currentShares.set([]);
+    this.availableTenants.set([]);
+    this.selectedShareTargetIds.set([]);
+    this.shareNote.set('');
+  }
+
+  /**
+   * 当前资源可被本租户管理共享吗？
+   * 被其它租户共享过来的资源（isShared=true）不能在本租户取消共享 —— 仅创建者账户能取消。
+   */
+  canManageShare(): boolean {
+    return this.isOwnResource();
   }
 
   openShareDialog(): void {

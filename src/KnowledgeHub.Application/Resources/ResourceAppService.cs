@@ -256,11 +256,48 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [AllowAnonymous]
     public virtual async Task<ResourceDto> GetWithVersionsAsync(Guid id)
     {
-        var resource = await ResourceRepository.GetWithDetailsAsync(id);
+        // 与 GetAsync 一致：先跨租户查 ResourceShare，确认当前租户是被共享的目标。
+        // 否则直接 GetWithDetailsAsync 受多租户过滤器约束，列表里"被其它租户共享过来"的资源会 404。
+        Resource resource;
+        ResourceShare? shareRecord = null;
+        if (CurrentTenant.Id.HasValue)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var shares = await ShareRepository.GetByResourceAsync(id);
+                shareRecord = shares.FirstOrDefault(s => s.TargetTenantId == CurrentTenant.Id.Value);
+            }
+        }
+        if (shareRecord != null)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            using (DataFilter.Disable<ISoftDelete>())
+            {
+                var query = (await ResourceRepository.GetQueryableAsync()).Where(r => r.Id == id);
+                resource = await AsyncExecuter.FirstOrDefaultAsync(query)
+                    ?? throw new EntityNotFoundException(typeof(Resource), id);
+            }
+        }
+        else
+        {
+            resource = await ResourceRepository.GetWithDetailsAsync(id);
+        }
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
         EnsureFileMetadata(dto);
         EnsureFileMetadataFromCurrentVersion(resource, dto);
+        dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
         await FillCreatorNamesAsync(new List<ResourceDto> { dto });
+
+        // 与 GetAsync 一致：被共享过来的资源在详情页也展示来源/共享人
+        if (shareRecord != null)
+        {
+            dto.IsShared = true;
+            dto.SourceTenantId = shareRecord.SourceTenantId;
+            dto.SharedAt = shareRecord.SharedAt;
+            dto.SharedByUserId = shareRecord.SharedByUserId;
+            dto.ShareNote = shareRecord.Note;
+            await FillShareMetaAsync(new List<ResourceDto> { dto });
+        }
         return dto;
     }
 

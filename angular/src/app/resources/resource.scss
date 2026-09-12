@@ -999,6 +999,52 @@
     font-weight: 500;
     white-space: nowrap;
   }
+
+  // 「取消共享」按钮：在普通 action-card 基础上用警示色提示其撤销语义
+  &--cancel-share {
+    color: var(--kh-warn, #d46b08);
+    border-color: var(--kh-warn-soft, #ffd591);
+    background: var(--kh-warn-bg, #fff7e6);
+
+    &:hover:not(:disabled) {
+      color: #fff;
+      background: var(--kh-warn, #d46b08);
+      border-color: var(--kh-warn, #d46b08);
+    }
+
+    .action-card-badge {
+      display: inline-grid;
+      place-items: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      margin-left: 2px;
+      background: var(--kh-warn, #d46b08);
+      color: #fff;
+      border-radius: 9px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1;
+    }
+  }
+}
+
+// 共享信息提示条：drawer 顶部展示「已共享给 N 个租户」
+.action-share-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  background: var(--kh-warn-bg, #fff7e6);
+  border: 1px solid var(--kh-warn-soft, #ffd591);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--kh-warn, #d46b08);
+
+  [nz-icon] {
+    font-size: 12px;
+  }
 }
 
 // CTA 按钮脉冲动画

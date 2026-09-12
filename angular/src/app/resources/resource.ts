@@ -582,6 +582,16 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     this.loadVersions(resource.id!);
     this.checkCollected(resource.id!);
     this.loadResourceStatistics(resource.id!);
+    // 仅本租户拥有的资源（isShared=false）才允许管理共享。
+    // 被其它租户共享过来的资源走 incoming 路径：不展示共享按钮，drawer 已展示来源租户信息卡。
+    const isOwn = !resource.isShared;
+    this.isOwnResource.set(isOwn);
+    if (isOwn && resource.id) {
+      this.resetOutgoingShareState();
+      this.loadOutgoingShares(resource.id);
+    } else {
+      this.resetOutgoingShareState();
+    }
   }
 
   toggleSidebar() {
@@ -595,6 +605,8 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
   closeDrawer() {
     this.drawerVisible.set(false);
     this.resourceStatistics.set(null);
+    // 关 drawer 时清空共享状态，避免下次打开另一个资源时短暂显示旧资源的数据
+    this.resetOutgoingShareState();
   }
 
   loadResourceStatistics(resourceId: string) {

@@ -221,6 +221,8 @@
     "SourceTenant": "Source tenant",
     "ShareToTenants": "Share to tenants",
     "Unshare": "Unshare",
+    "CancelShare": "Cancel share",
+    "CancelShareHint": "View shared tenants and cancel individual shares",
     "SharedBy": "Shared by",
     "FromTenant": "From: {0}",
     "NoSharedResources": "No resources have been shared with this tenant yet",

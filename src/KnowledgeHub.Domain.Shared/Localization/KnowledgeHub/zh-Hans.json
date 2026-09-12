@@ -350,6 +350,8 @@
     "SourceTenant": "来源租户",
     "ShareToTenants": "共享给租户",
     "Unshare": "取消共享",
+    "CancelShare": "取消共享",
+    "CancelShareHint": "查看已共享的租户，可逐条取消共享",
     "SharedBy": "共享者",
     "FromTenant": "来源：{0}",
     "NoSharedResources": "暂无私有资源被共享给当前租户",

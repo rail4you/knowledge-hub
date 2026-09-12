@@ -511,20 +511,57 @@
           </span>
           <span class="action-card-label">{{ '::SubmitForReview' | abpLocalization }}</span>
         </button>
-        <button class="action-card" type="button"
-          *abpPermission="'KnowledgeHub.Resources.Share'"
-          (click)="openShareDialog()">
-          <span class="action-card-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <circle cx="18" cy="5" r="3"/>
-              <circle cx="6" cy="12" r="3"/>
-              <circle cx="18" cy="19" r="3"/>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
-          </span>
-          <span class="action-card-label">{{ '::ShareResource' | abpLocalization }}</span>
-        </button>
+        <!--
+          共享按钮 + 取消共享按钮：
+          - 仅当资源属于当前租户（!selectedResource()?.isShared）时显示；
+            被其它租户共享过来的资源走 incoming 路径，不能在本租户操作共享。
+          - 无 outgoing shares：仅展示「共享资源」按钮（创建新的共享）。
+          - 有 outgoing shares：在「共享资源」按钮旁边追加「取消共享 (N)」按钮，
+            点击打开共享弹窗（弹窗内已列出当前已共享租户，可点 X 逐条取消）。
+        -->
+        <ng-container *ngIf="isOwnResource()">
+          <button class="action-card" type="button"
+            *abpPermission="'KnowledgeHub.Resources.Share'"
+            (click)="openShareDialog()">
+            <span class="action-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </span>
+            <span class="action-card-label">{{ '::ShareResource' | abpLocalization }}</span>
+          </button>
+          <button class="action-card action-card--cancel-share" type="button"
+            *abpPermission="'KnowledgeHub.Resources.Share'"
+            *ngIf="outgoingShareCount() > 0"
+            nz-tooltip
+            [nzTooltipTitle]="'::CancelShareHint' | abpLocalization"
+            (click)="openShareDialog()">
+            <span class="action-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke-dasharray="2 2"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke-dasharray="2 2"/>
+              </svg>
+            </span>
+            <span class="action-card-label">
+              {{ '::CancelShare' | abpLocalization }}
+              <span class="action-card-badge">{{ outgoingShareCount() }}</span>
+            </span>
+          </button>
+        </ng-container>
+
+        <!-- 共享信息提示条：仅当本租户资源已共享给其它租户时展示，
+             与上面的「取消共享」按钮呼应，方便用户一眼看到当前已共享状态。 -->
+        <div class="action-share-summary" *ngIf="isOwnResource() && outgoingShareCount() > 0">
+          <span nz-icon nzType="link"></span>
+          {{ '::SharedTargetCount' | abpLocalization:outgoingShareCount() }}
+        </div>
       </div>
 
       <!-- Drawer Tab Navigation -->
