@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
@@ -26,8 +26,20 @@ export class HomeComponent implements OnInit {
   readonly stats = signal<PublicHomeStatsDto | null>(null);
   readonly tenants = signal<TenantResourceSummaryDto[]>([]);
   readonly homeData = signal<PortalHomeDataDto | null>(null);
-  readonly loadingStats = signal(false);
-  readonly loadingTenants = signal(false);
+  readonly loadingStats = signal(true);
+  readonly loadingTenants = signal(true);
+  readonly loadingHomeData = signal(true);
+  readonly isContentLoading = computed(() => this.loadingTenants() || this.loadingHomeData());
+  readonly hasAnyContent = computed(() => {
+    const d = this.homeData();
+    return !!(
+      d?.featuredCourses?.length ||
+      d?.microMajors?.length ||
+      d?.latestMaterials?.length ||
+      d?.latestNews?.length ||
+      this.tenants().length > 1
+    );
+  });
 
   get hasLoggedIn(): boolean { return this.authService.isAuthenticated; }
   get isStudent(): boolean { return hasRole(this.configService, 'Student'); }
@@ -51,6 +63,7 @@ export class HomeComponent implements OnInit {
 
   loadAllData() {
     this.loadingTenants.set(true);
+    this.loadingHomeData.set(true);
     // Load tenants and home data in parallel for anonymous users
     this.portalService.getPublicTenantList().subscribe({
       next: tenants => {
@@ -61,6 +74,7 @@ export class HomeComponent implements OnInit {
         const sorted = [...(tenants || [])].sort((a, b) => (b.courseCount || 0) - (a.courseCount || 0));
         const firstId = sorted[0]?.id;
         if (firstId) this.loadHomeData(firstId);
+        else this.loadingHomeData.set(false);
       },
       error: () => {
         this.loadingTenants.set(false);
@@ -71,11 +85,13 @@ export class HomeComponent implements OnInit {
   }
 
   loadHomeData(tenantId: string) {
+    this.loadingHomeData.set(true);
     this.portalService.getHomeData(tenantId).subscribe({
-      next: data => this.homeData.set(data),
+      next: data => { this.homeData.set(data); this.loadingHomeData.set(false); },
       error: () => {
         // If getHomeData also fails, try stats directly as materials
         console.warn('Home data load failed for tenant:', tenantId);
+        this.loadingHomeData.set(false);
       },
     });
   }

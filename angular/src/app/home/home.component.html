@@ -21,22 +21,38 @@
         </div>
       </div>
       <div class="hero__stats">
-        <div class="hero-stats-card">
+        <div class="hero-stats-card" [class.is-loading]="loadingStats()">
           <div class="hero-stats-card__grid">
             <div class="hero-stat">
-              <span class="hero-stat__value">{{ stats()?.totalCourseCount || 0 | number }}</span>
+              @if (loadingStats()) {
+                <span class="skel skel--stat-value"></span>
+              } @else {
+                <span class="hero-stat__value">{{ stats()?.totalCourseCount || 0 | number }}</span>
+              }
               <span class="hero-stat__label">课程</span>
             </div>
             <div class="hero-stat">
-              <span class="hero-stat__value">{{ stats()?.totalResourceCount || 0 | number }}</span>
+              @if (loadingStats()) {
+                <span class="skel skel--stat-value"></span>
+              } @else {
+                <span class="hero-stat__value">{{ stats()?.totalResourceCount || 0 | number }}</span>
+              }
               <span class="hero-stat__label">资源</span>
             </div>
             <div class="hero-stat">
-              <span class="hero-stat__value">{{ stats()?.totalMicroMajorCount || 0 | number }}</span>
+              @if (loadingStats()) {
+                <span class="skel skel--stat-value"></span>
+              } @else {
+                <span class="hero-stat__value">{{ stats()?.totalMicroMajorCount || 0 | number }}</span>
+              }
               <span class="hero-stat__label">微专业</span>
             </div>
             <div class="hero-stat">
-              <span class="hero-stat__value">{{ tenants().length || 0 | number }}</span>
+              @if (loadingStats() || loadingTenants()) {
+                <span class="skel skel--stat-value"></span>
+              } @else {
+                <span class="hero-stat__value">{{ tenants().length || 0 | number }}</span>
+              }
               <span class="hero-stat__label">院校</span>
             </div>
           </div>
@@ -45,124 +61,205 @@
     </div>
   </section>
 
-  <!-- =================== 精选课程 =================== -->
-  @if (homeData()?.featuredCourses?.length) {
-    <section class="section">
-      <div class="section__head">
-        <h2 class="section__title">精选课程</h2>
-        <a routerLink="/student/courses" class="section__more">查看全部 <span nz-icon nzType="arrow-right" nzTheme="outline"></span></a>
-      </div>
-      <div class="courses-scroll" #coursesScroll>
-        @for (course of homeData()?.featuredCourses; track course.id; let i = $index) {
-          <a class="course-card" [routerLink]="['/student/courses', course.id]">
-            <div class="course-card__cover" [style.background]="coverGradient(i)">
-              @if (hasCover(course)) {
-                <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
-              } @else {
-                <span class="course-card__icon"><span nz-icon nzType="read" nzTheme="outline"></span></span>
-              }
-            </div>
-            <div class="course-card__body">
-              <h4>{{ course.title }}</h4>
-              <span class="course-card__teacher">{{ course.teacherName || '未指定教师' }}</span>
-            </div>
-          </a>
-        }
-      </div>
-    </section>
-  }
-
-  <!-- =================== 微专业 =================== -->
-  @if (homeData()?.microMajors?.length) {
-    <section class="section">
-      <div class="section__head">
-        <h2 class="section__title">微专业</h2>
-        <a routerLink="/student/micro-majors" class="section__more">查看全部 <span nz-icon nzType="arrow-right" nzTheme="outline"></span></a>
-      </div>
-      <div class="mm-grid">
-        @for (mm of homeData()?.microMajors; track mm.id; let i = $index) {
-          <a class="mm-card" [routerLink]="['/student/micro-majors', mm.id]" [style.background]="coverGradient(i)">
-            @if (hasCover(mm)) {
-              <img class="mm-card__cover-img" [src]="mm.coverImageUrl" [alt]="mm.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
-            }
-            <span class="mm-card__icon"><span nz-icon nzType="trophy" nzTheme="outline"></span></span>
-            <h4>{{ mm.title }}</h4>
-            <span class="mm-card__count">{{ mm.courseCount || 0 }} 门课程</span>
-          </a>
-        }
-      </div>
-    </section>
-  }
-
-  <!-- =================== 最新资源 =================== -->
-  @if (homeData()?.latestMaterials?.length) {
-    <section class="section">
-      <div class="section__head">
-        <h2 class="section__title">最新资源</h2>
-        <a routerLink="/student/resources" class="section__more">查看全部 <span nz-icon nzType="arrow-right" nzTheme="outline"></span></a>
-      </div>
-      <div class="materials-list">
-        @for (mat of homeData()?.latestMaterials; track mat.id) {
-          <div class="material-item" (click)="previewResource(mat)">
-            <span class="material-item__icon">
-              <span nz-icon nzType="file-text" nzTheme="outline"></span>
-            </span>
-            <div class="material-item__body">
-              <span class="material-item__name">{{ mat.name }}</span>
-              <span class="material-item__meta">
-                @if (mat.fileExtension) { <span>.{{ mat.fileExtension }}</span> }
-                <span>{{ mat.downloadCount || 0 }} 次下载</span>
-              </span>
-            </div>
-          </div>
-        }
-      </div>
-    </section>
-  }
-
-  <!-- =================== 最新资讯 =================== -->
-  @if (homeData()?.latestNews?.length) {
-    <section class="section">
-      <div class="section__head">
-        <h2 class="section__title">最新资讯</h2>
-        <a routerLink="/student/news" class="section__more">查看全部 <span nz-icon nzType="arrow-right" nzTheme="outline"></span></a>
-      </div>
-      <div class="news-list">
-        @for (news of homeData()?.latestNews; track news.id) {
-          <a class="news-item" [routerLink]="['/student/news', news.id]" [queryParams]="{ from: 'home' }">
-            <span class="news-item__dot"></span>
-            <span class="news-item__title">{{ news.title }}</span>
-            <span class="news-item__date">{{ news.publishedAt | date:'MM-dd' }}</span>
-          </a>
-        }
-      </div>
-    </section>
-  }
-
-  <!-- =================== 院校资源库 =================== -->
-  @if (tenants().length > 1) {
-    <section class="section">
-      <div class="section__head">
-        <h2 class="section__title">资源库广场</h2>
-      </div>
-      <div class="tenants-grid">
-        @for (tenant of tenants(); track tenant.id) {
-          <div class="tenant-card" (click)="!hasLoggedIn && login()">
-            <div class="tenant-card__icon" [style.background]="coverGradient($index)">
-              <span nz-icon nzType="bank" nzTheme="outline"></span>
-            </div>
-            <div class="tenant-card__body">
-              <h4>{{ tenant.name }}</h4>
-              <p>{{ tenant.industryField || '教育机构' }}</p>
-              <div class="tenant-card__stats">
-                <span>{{ tenant.courseCount }} 课程</span>
-                <span>{{ tenant.resourceCount }} 资源</span>
-                <span>{{ tenant.microMajorCount }} 微专业</span>
+  @if (isContentLoading()) {
+    <!-- =================== Loading skeletons =================== -->
+    <div class="home-loading" aria-busy="true" aria-label="首页内容加载中">
+      <section class="section">
+        <div class="section__head">
+          <div class="skel skel--title"></div>
+          <div class="skel skel--more"></div>
+        </div>
+        <div class="courses-scroll">
+          @for (i of [0,1,2,3,4,5]; track i) {
+            <div class="course-card course-card--skel">
+              <div class="skel course-card__cover"></div>
+              <div class="course-card__body">
+                <div class="skel skel--line skel--line-wide"></div>
+                <div class="skel skel--line skel--line-narrow"></div>
               </div>
             </div>
-          </div>
-        }
-      </div>
-    </section>
+          }
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section__head">
+          <div class="skel skel--title"></div>
+          <div class="skel skel--more"></div>
+        </div>
+        <div class="mm-grid">
+          @for (i of [0,1,2,3]; track i) {
+            <div class="mm-card mm-card--skel">
+              <div class="skel skel--circle"></div>
+              <div class="skel skel--line skel--line-wide"></div>
+              <div class="skel skel--line skel--line-narrow"></div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section__head">
+          <div class="skel skel--title"></div>
+          <div class="skel skel--more"></div>
+        </div>
+        <div class="materials-list">
+          @for (i of [0,1,2,3]; track i) {
+            <div class="material-item material-item--skel">
+              <div class="skel skel--thumb"></div>
+              <div class="material-item__body">
+                <div class="skel skel--line skel--line-wide"></div>
+                <div class="skel skel--line skel--line-narrow"></div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section__head">
+          <div class="skel skel--title"></div>
+        </div>
+        <div class="tenants-grid">
+          @for (i of [0,1,2,3]; track i) {
+            <div class="tenant-card tenant-card--skel">
+              <div class="skel skel--thumb-lg"></div>
+              <div class="tenant-card__body">
+                <div class="skel skel--line skel--line-wide"></div>
+                <div class="skel skel--line skel--line-narrow"></div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  } @else {
+    <!-- =================== 精选课程 =================== -->
+    @if (homeData()?.featuredCourses?.length) {
+      <section class="section">
+        <div class="section__head">
+          <h2 class="section__title">精选课程</h2>
+          <a routerLink="/student/courses" class="section__more">查看全部 <span nz-icon nzType="arrow-right" nzTheme="outline"></span></a>
+        </div>
+        <div class="courses-scroll" #coursesScroll>
+          @for (course of homeData()?.featuredCourses; track course.id; let i = $index) {
+            <a class="course-card" [routerLink]="['/student/courses', course.id]">
+              <div class="course-card__cover" [style.background]="coverGradient(i)">
+                @if (hasCover(course)) {
+                  <img class="course-card__cover-img" [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
+                } @else {
+                  <span class="course-card__icon"><span nz-icon nzType="read" nzTheme="outline"></span></span>
+                }
+              </div>
+              <div class="course-card__body">
+                <h4>{{ course.title }}</h4>
+                <span class="course-card__teacher">{{ course.teacherName || '未指定教师' }}</span>
+              </div>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- =================== 微专业 =================== -->
+    @if (homeData()?.microMajors?.length) {
+      <section class="section">
+        <div class="section__head">
+          <h2 class="section__title">微专业</h2>
+          <a routerLink="/student/micro-majors" class="section__more">查看全部 <span nz-icon nzType="arrow-right" nzTheme="outline"></span></a>
+        </div>
+        <div class="mm-grid">
+          @for (mm of homeData()?.microMajors; track mm.id; let i = $index) {
+            <a class="mm-card" [routerLink]="['/student/micro-majors', mm.id]" [style.background]="coverGradient(i)">
+              @if (hasCover(mm)) {
+                <img class="mm-card__cover-img" [src]="mm.coverImageUrl" [alt]="mm.title" loading="lazy" (error)="$any($event.target).style.display='none'" />
+              }
+              <span class="mm-card__icon"><span nz-icon nzType="trophy" nzTheme="outline"></span></span>
+              <h4>{{ mm.title }}</h4>
+              <span class="mm-card__count">{{ mm.courseCount || 0 }} 门课程</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- =================== 最新资源 =================== -->
+    @if (homeData()?.latestMaterials?.length) {
+      <section class="section">
+        <div class="section__head">
+          <h2 class="section__title">最新资源</h2>
+          <a routerLink="/student/resources" class="section__more">查看全部 <span nz-icon nzType="arrow-right" nzTheme="outline"></span></a>
+        </div>
+        <div class="materials-list">
+          @for (mat of homeData()?.latestMaterials; track mat.id) {
+            <div class="material-item" (click)="previewResource(mat)">
+              <span class="material-item__icon">
+                <span nz-icon nzType="file-text" nzTheme="outline"></span>
+              </span>
+              <div class="material-item__body">
+                <span class="material-item__name">{{ mat.name }}</span>
+                <span class="material-item__meta">
+                  @if (mat.fileExtension) { <span>.{{ mat.fileExtension }}</span> }
+                  <span>{{ mat.downloadCount || 0 }} 次下载</span>
+                </span>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- =================== 最新资讯 =================== -->
+    @if (homeData()?.latestNews?.length) {
+      <section class="section">
+        <div class="section__head">
+          <h2 class="section__title">最新资讯</h2>
+          <a routerLink="/student/news" class="section__more">查看全部 <span nz-icon nzType="arrow-right" nzTheme="outline"></span></a>
+        </div>
+        <div class="news-list">
+          @for (news of homeData()?.latestNews; track news.id) {
+            <a class="news-item" [routerLink]="['/student/news', news.id]" [queryParams]="{ from: 'home' }">
+              <span class="news-item__dot"></span>
+              <span class="news-item__title">{{ news.title }}</span>
+              <span class="news-item__date">{{ news.publishedAt | date:'MM-dd' }}</span>
+            </a>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- =================== 院校资源库 =================== -->
+    @if (tenants().length > 1) {
+      <section class="section">
+        <div class="section__head">
+          <h2 class="section__title">资源库广场</h2>
+        </div>
+        <div class="tenants-grid">
+          @for (tenant of tenants(); track tenant.id) {
+            <div class="tenant-card" (click)="!hasLoggedIn && login()">
+              <div class="tenant-card__icon" [style.background]="coverGradient($index)">
+                <span nz-icon nzType="bank" nzTheme="outline"></span>
+              </div>
+              <div class="tenant-card__body">
+                <h4>{{ tenant.name }}</h4>
+                <p>{{ tenant.industryField || '教育机构' }}</p>
+                <div class="tenant-card__stats">
+                  <span>{{ tenant.courseCount }} 课程</span>
+                  <span>{{ tenant.resourceCount }} 资源</span>
+                  <span>{{ tenant.microMajorCount }} 微专业</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- 加载完成后依然无任何内容时，才显示空状态 -->
+    @if (!hasAnyContent()) {
+      <section class="section home-empty">
+        <nz-empty nzNotFoundContent="暂无课程，敬请期待"></nz-empty>
+      </section>
+    }
   }
 </div>

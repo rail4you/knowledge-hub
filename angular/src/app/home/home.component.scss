@@ -140,6 +140,56 @@
 .tenant-card__body p { margin: 0 0 6px; color: ds.$student-text-light; font-size: 12px; }
 .tenant-card__stats { display: flex; gap: 12px; color: ds.$student-text-light; font-size: 11px; }
 
+/* =================== Loading skeleton =================== */
+.home-loading { display: flex; flex-direction: column; gap: 48px; }
+.home-empty { align-items: center; padding: 32px 0; }
+
+.skel {
+  position: relative; overflow: hidden; display: block;
+  background: linear-gradient(100deg, #eef2f7 40%, #f7fafd 50%, #eef2f7 60%);
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+@keyframes skel-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skel--title { width: 120px; height: 24px; border-radius: 6px; }
+.skel--more { width: 80px; height: 16px; border-radius: 6px; }
+.skel--line { height: 14px; border-radius: 6px; }
+.skel--line-wide { width: 85%; }
+.skel--line-narrow { width: 55%; height: 12px; }
+.skel--stat-value { width: 64px; height: 30px; margin: 0 auto; border-radius: 8px; }
+.skel--circle { width: 48px; height: 48px; border-radius: 12px; }
+.skel--thumb { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
+.skel--thumb-lg { width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0; }
+
+.course-card--skel,
+.mm-card--skel,
+.material-item--skel,
+.tenant-card--skel {
+  pointer-events: none;
+  &:hover { transform: none; box-shadow: none; }
+}
+.course-card--skel {
+  .course-card__cover { height: 100px; border-radius: 0; }
+  .course-card__body { display: flex; flex-direction: column; gap: 8px; }
+}
+.mm-card--skel {
+  background: #fff !important;
+  border: 1px solid ds.$student-border-soft;
+  align-items: center;
+  .skel--line-wide { width: 70%; }
+  .skel--line-narrow { width: 45%; }
+}
+.material-item--skel { align-items: center; &:hover { background: #fff; border-color: ds.$student-border-soft; } }
+.tenant-card--skel { cursor: default; &:hover { transform: none; box-shadow: none; border-color: ds.$student-border-soft; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .skel { animation: none; }
+}
+
 @media (max-width: 768px) {
   .home { padding: 16px 16px 32px; gap: 36px; }
   .hero__inner { flex-direction: column; padding: 32px 24px 28px; gap: 24px; }
