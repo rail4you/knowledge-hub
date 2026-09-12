@@ -30,12 +30,10 @@ public class TeachingAgentRuntimeClient : ITeachingAgentRuntimeClient
 
     public async Task<TeachingAgentRuntimeResponse> GenerateReplyAsync(TeachingAgentRuntimeRequest input, CancellationToken cancellationToken = default)
     {
-        var apiKey = _configuration["Qwen:ApiKey"]
-            ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
-        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, FixedModelId);
+        IChatClient chatClient = await QwenClient.CreateChatClient(_configuration, FixedModelId);
         var chatOptions = new ChatOptions
         {
             Instructions = BuildInstructions(input),
@@ -70,12 +68,10 @@ public class TeachingAgentRuntimeClient : ITeachingAgentRuntimeClient
 
     public async IAsyncEnumerable<string> GenerateReplyStreamingAsync(TeachingAgentRuntimeRequest input, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var apiKey = _configuration["Qwen:ApiKey"]
-            ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
-        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, FixedModelId);
+        IChatClient chatClient = await QwenClient.CreateChatClient(_configuration, FixedModelId);
         var chatOptions = new ChatOptions
         {
             Instructions = BuildInstructions(input),

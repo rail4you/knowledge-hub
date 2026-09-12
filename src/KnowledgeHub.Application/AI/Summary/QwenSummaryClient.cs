@@ -23,17 +23,21 @@ public class QwenSummaryClient : ITransientDependency
         _configuration = configuration;
     }
 
+    /// <summary>实际使用的模型（用量记录用，与 CompleteAsync 一致）。</summary>
+    public string ResolvedModel =>
+        _configuration["Qwen:SummaryModel"]
+            ?? _configuration["Qwen:Model"]
+            ?? "qwen-flash";
+
     public async Task<string> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken = default)
     {
-        var apiKey = _configuration["Qwen:ApiKey"]
-            ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:SummaryModel"]
             ?? _configuration["Qwen:Model"]
             ?? "qwen-flash";
 
-        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
+        IChatClient chatClient = await QwenClient.CreateChatClient(_configuration, model);
 
         var messages = new[]
         {

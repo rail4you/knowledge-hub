@@ -42,6 +42,8 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
     private readonly IConfiguration _configuration;
     private readonly ILogger<ExerciseAppService> _logger;
     private readonly ExerciseAiGenerator _exerciseAiGenerator;
+    private readonly Application.AI.IAiQuotaService _quotaService;
+    private readonly Application.AI.IAiUsageTracker _usageTracker;
 
     public ExerciseAppService(
         IRepository<Exercise, Guid> exerciseRepository,
@@ -50,7 +52,9 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         IRepository<Chapter, Guid> chapterRepository,
         IConfiguration configuration,
         ILogger<ExerciseAppService> logger,
-        ExerciseAiGenerator exerciseAiGenerator)
+        ExerciseAiGenerator exerciseAiGenerator,
+        Application.AI.IAiQuotaService quotaService,
+        Application.AI.IAiUsageTracker usageTracker)
     {
         _exerciseRepository = exerciseRepository;
         _chapterExerciseRepository = chapterExerciseRepository;
@@ -59,6 +63,8 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
         _configuration = configuration;
         _logger = logger;
         _exerciseAiGenerator = exerciseAiGenerator;
+        _quotaService = quotaService;
+        _usageTracker = usageTracker;
     }
 
     public async Task<ExerciseDto> GetAsync(Guid id)
@@ -354,13 +360,20 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
 
         result.TotalCount = exercises.Count;
 
-        var apiKey = _configuration["Qwen:ApiKey"]
-            ?? throw new AbpException("Qwen:ApiKey is not configured");
+        // 习题分析计入习题生成配额（一次批量算一次）
+        await _quotaService.CheckAsync(Application.AI.AiFeatureGroups.ExerciseGenerate);
+
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-flash";
 
-        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
+        IChatClient chatClient = await QwenClient.CreateChatClient(_configuration, model);
+
+        // 用量按整批聚合记一条（逐题调用，加总 token）
+        var batchInputTokens = 0;
+        var batchOutputTokens = 0;
+        var usageId = await _usageTracker.StartAsync(
+            Application.AI.AiFeatureGroups.ExerciseGenerate, "AiAnalyze", model, inputText: null, inputTokens: 0);
 
         foreach (var exercise in exercises)
         {
@@ -442,6 +455,8 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
                 }
 
                 var responseText = responseBuilder.ToString().Trim();
+                batchInputTokens += Application.AI.IAiUsageTracker.EstimateTokens(systemPrompt + userPrompt);
+                batchOutputTokens += Application.AI.IAiUsageTracker.EstimateTokens(responseText);
                 if (string.IsNullOrWhiteSpace(responseText)) continue;
 
                 // 去除可能的 markdown 代码块包裹
@@ -498,6 +513,13 @@ public class ExerciseAppService : ApplicationService, IExerciseAppService
                 result.Errors.Add($"习题「{exercise.Title}」AI 分析失败: {ex.Message}");
             }
         }
+
+        var batchError = result.Errors.Count > 0
+            ? string.Join("；", result.Errors.Take(5))
+            : null;
+        await _usageTracker.CompleteAsync(
+            usageId, null, result.Errors.Count == 0, batchError,
+            outputTokens: batchOutputTokens, inputTokens: batchInputTokens);
 
         return result;
     }

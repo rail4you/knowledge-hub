@@ -33,6 +33,8 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
     private readonly IRepository<TeachingAgentVersion, Guid> _versionRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly ITeachingAgentRuntimeClient _runtimeClient;
+    private readonly Application.AI.IAiQuotaService _quotaService;
+    private readonly Application.AI.IAiUsageTracker _usageTracker;
 
     public AgentRunAppService(
         IRepository<AgentRun, Guid> runRepository,
@@ -42,7 +44,9 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
         IRepository<TeachingAgent, Guid> teachingAgentRepository,
         IRepository<TeachingAgentVersion, Guid> versionRepository,
         IRepository<IdentityUser, Guid> userRepository,
-        ITeachingAgentRuntimeClient runtimeClient)
+        ITeachingAgentRuntimeClient runtimeClient,
+        Application.AI.IAiQuotaService quotaService,
+        Application.AI.IAiUsageTracker usageTracker)
     {
         _runRepository = runRepository;
         _messageRepository = messageRepository;
@@ -52,6 +56,8 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
         _versionRepository = versionRepository;
         _userRepository = userRepository;
         _runtimeClient = runtimeClient;
+        _quotaService = quotaService;
+        _usageTracker = usageTracker;
     }
 
     public async Task<AgentRunDetailDto> CreateOrGetForAssignmentAsync(Guid assignmentId)
@@ -117,6 +123,9 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
 
         await CreateMessageAsync(run.Id, "user", input.Message, "[]");
 
+        // 智能体聊天计入 AI 对话配额（学生/教师共用整体限制）
+        await _quotaService.CheckAsync(Application.AI.AiFeatureGroups.Chat);
+
         try
         {
             run.RuntimeStatus = AgentRunStatus.InProgress;
@@ -124,7 +133,19 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
             await _runRepository.UpdateAsync(run, autoSave: true);
 
             var runtimeRequest = await BuildRuntimeRequestAsync(task, assignment, run);
-            var runtimeResponse = await _runtimeClient.GenerateReplyAsync(runtimeRequest);
+            var usageId = await _usageTracker.StartAsync(
+                Application.AI.AiFeatureGroups.Chat, "AgentReply", "qwen-flash", input.Message);
+            TeachingAgentRuntimeResponse runtimeResponse;
+            try
+            {
+                runtimeResponse = await _runtimeClient.GenerateReplyAsync(runtimeRequest);
+                await _usageTracker.CompleteAsync(usageId, runtimeResponse.Content, true);
+            }
+            catch (Exception tex)
+            {
+                await _usageTracker.CompleteAsync(usageId, null, false, tex.Message);
+                throw;
+            }
             var toolCallsJson = JsonSerializer.Serialize(runtimeResponse.ToolCalls, JsonOptions);
 
             await CreateMessageAsync(run.Id, "assistant", runtimeResponse.Content, toolCallsJson);

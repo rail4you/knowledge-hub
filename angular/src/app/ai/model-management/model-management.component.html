@@ -4,6 +4,8 @@
     <p class="page-desc">管理系统中的 AI 模型，查看模型状态和性能</p>
   </header>
 
+  <nz-tabset>
+    <nz-tab nzTitle="模型列表">
   <nz-card class="stats-card">
     <div nz-row [nzGutter]="16">
       <div nz-col [nzSpan]="6">
@@ -115,4 +117,11 @@
       </tbody>
     </nz-table>
   </nz-card>
+    </nz-tab>
+    @if (canManageAi()) {
+      <nz-tab nzTitle="AI 使用管理">
+        <app-ai-usage-management></app-ai-usage-management>
+      </nz-tab>
+    }
+  </nz-tabset>
 </div>

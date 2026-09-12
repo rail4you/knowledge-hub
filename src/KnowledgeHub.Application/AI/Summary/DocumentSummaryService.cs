@@ -32,6 +32,7 @@ public class DocumentSummaryService : IDocumentSummaryService
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
     private readonly ILogger<DocumentSummaryService> _logger;
+    private readonly IAiUsageTracker _usageTracker;
 
     private const string SystemPrompt = @"你是文档摘要与关键词提取助手。
 严格要求：
@@ -47,7 +48,8 @@ JSON 结构：{ ""summary"": ""..."", ""keywords"": ""..."" }";
         QwenSummaryClient qwenClient,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
-        ILogger<DocumentSummaryService> logger)
+        ILogger<DocumentSummaryService> logger,
+        IAiUsageTracker usageTracker)
     {
         _resourceRepository = resourceRepository;
         _pageContentRepository = pageContentRepository;
@@ -55,6 +57,7 @@ JSON 结构：{ ""summary"": ""..."", ""keywords"": ""..."" }";
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
         _logger = logger;
+        _usageTracker = usageTracker;
     }
 
     public async Task GenerateAndPersistAsync(DocumentSummaryGenerationJobArgs args)
@@ -94,7 +97,20 @@ JSON 结构：{ ""summary"": ""..."", ""keywords"": ""..."" }";
                 "Calling Qwen to generate summary for resource {ResourceId} ({PageCount} pages, {CharCount} chars sampled)",
                 args.ResourceId, pages.Count, truncatedText.Length);
 
-            var rawResponse = await _qwenClient.CompleteAsync(SystemPrompt, userPrompt);
+            var usageId = await _usageTracker.StartAsync(
+                AiFeatureGroups.Summary, "DocSummary", _qwenClient.ResolvedModel,
+                SystemPrompt + "\n" + userPrompt, tenantId: args.TenantId);
+            string rawResponse;
+            try
+            {
+                rawResponse = await _qwenClient.CompleteAsync(SystemPrompt, userPrompt);
+                await _usageTracker.CompleteAsync(usageId, rawResponse, true);
+            }
+            catch (Exception ex)
+            {
+                await _usageTracker.CompleteAsync(usageId, null, false, ex.Message);
+                throw;
+            }
 
             var (summary, keywords) = ParseResponse(rawResponse);
 

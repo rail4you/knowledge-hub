@@ -161,7 +161,7 @@ JSON 结构：
         // 3. 组合 User Prompt（以全文/摘要为教学依据）
         var userPrompt = BuildSingleChapterUserPrompt(resource, sourceText, input);
 
-        var chatClient = CreateChatClient();
+        var chatClient = await CreateChatClient();
         var chatOptions = new ChatOptions
         {
             Instructions = LessonPlanInstructions,
@@ -253,7 +253,7 @@ JSON 结构：
 
 请按 SystemPrompt 中规定的 JSON 结构输出从本文档中识别出的章节列表。";
 
-        var chatClient = CreateChatClient();
+        var chatClient = await CreateChatClient();
         var chatOptions = new ChatOptions
         {
             Instructions = ChapterParseInstructions,
@@ -316,7 +316,7 @@ JSON 结构：
 
         try
         {
-            var chatClient = CreateChatClient();
+            var chatClient = await CreateChatClient();
             var total = chapters.Count;
 
             await EmitProgressAsync(onChunk, "正在规划课程总览…", 5);
@@ -503,15 +503,13 @@ JSON 结构：
     // 内部辅助
     // ====================================================================
 
-    private IChatClient CreateChatClient()
+    private async Task<IChatClient> CreateChatClient()
     {
-        var apiKey = _configuration["Qwen:ApiKey"]
-            ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-flash";
 
-        return QwenClient.CreateChatClient(_configuration, model);
+        return await QwenClient.CreateChatClient(_configuration, model);
     }
 
     private static async Task<string> CompleteAsync(

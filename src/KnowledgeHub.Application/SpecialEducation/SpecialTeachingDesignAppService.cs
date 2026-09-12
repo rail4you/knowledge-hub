@@ -277,12 +277,9 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
             if (course != null) courseTitle = course.Title;
         }
 
-        var apiKey = _configuration["Qwen:ApiKey"];
-        if (apiKey.IsNullOrWhiteSpace())
-        {
-            await EmitErrorAsync(onChunk, threadId, "Qwen:ApiKey 未配置。");
-            return;
-        }
+
+        try { if (QwenClient.ApiKeyResolver != null) await QwenClient.ApiKeyResolver(); }
+        catch { await EmitErrorAsync(onChunk, threadId, "Qwen:ApiKey 未配置。"); return; }
         var baseUrl = _configuration["Qwen:BaseUrl"] ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-flash";
 
@@ -299,7 +296,7 @@ public class SpecialTeachingDesignAppService : KnowledgeHubAppService, ISpecialT
 {(input.CustomPrompt.IsNullOrWhiteSpace() ? "" : $"## 教师附加要求：\n{input.CustomPrompt}\n")}
 请按 SystemPrompt JSON 结构输出。";
 
-        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
+        IChatClient chatClient = await QwenClient.CreateChatClient(_configuration, model);
         var messages = new List<ChatMessage> { new(ChatRole.User, userPrompt) };
         var options = new ChatOptions { Instructions = SpecialEduPromptBuilder.TeachingDesignInstructions };
         await foreach (var update in chatClient.GetStreamingResponseAsync(messages, options, CancellationToken.None))

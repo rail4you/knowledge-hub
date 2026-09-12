@@ -38,6 +38,8 @@ public class ChatAppService : KnowledgeHubAppService
     private readonly IMeiliSearchService _meiliSearchService;
     private readonly IRepository<ChatThread, Guid> _threadRepository;
     private readonly IRepository<KnowledgeHubChatMessage, Guid> _messageRepository;
+    private readonly IAiQuotaService _quotaService;
+    private readonly IAiUsageTracker _usageTracker;
 
     private const string DefaultInstructions = @"你是 KnowledgeHub 平台的智能教育助手。
 
@@ -87,7 +89,9 @@ public class ChatAppService : KnowledgeHubAppService
         IResourceCategoryRepository categoryRepository,
         IMeiliSearchService meiliSearchService,
         IRepository<ChatThread, Guid> threadRepository,
-        IRepository<KnowledgeHubChatMessage, Guid> messageRepository)
+        IRepository<KnowledgeHubChatMessage, Guid> messageRepository,
+        IAiQuotaService quotaService,
+        IAiUsageTracker usageTracker)
     {
         _currentUser = currentUser;
         _configuration = configuration;
@@ -99,6 +103,8 @@ public class ChatAppService : KnowledgeHubAppService
         _meiliSearchService = meiliSearchService;
         _threadRepository = threadRepository;
         _messageRepository = messageRepository;
+        _quotaService = quotaService;
+        _usageTracker = usageTracker;
     }
 
     // 仅供 SSE Controller 直接调用：Func 回调无法绑定为 HTTP 参数，
@@ -107,6 +113,10 @@ public class ChatAppService : KnowledgeHubAppService
     public async Task ChatStreamingAsync(ChatInputDto input, Func<ChatMessageChunkDto, Task> onChunk)
     {
         var userId = _currentUser.Id ?? throw new AbpException("User not logged in");
+
+        // 每日聊天配额：超限直接中文提示，不再烧 token
+        await _quotaService.CheckAsync(AiFeatureGroups.Chat);
+
         var threadIdStr = string.IsNullOrEmpty(input.ThreadId)
             ? Guid.NewGuid().ToString()
             : input.ThreadId;
@@ -132,13 +142,11 @@ public class ChatAppService : KnowledgeHubAppService
             thread.SetTitle(title);
         }
 
-        var apiKey = _configuration["Qwen:ApiKey"]
-            ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-flash";
 
-        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
+        IChatClient chatClient = await QwenClient.CreateChatClient(_configuration, model);
         chatClient = new FunctionInvokingChatClient(chatClient);
 
         List<AITool> tools;
@@ -168,18 +176,33 @@ public class ChatAppService : KnowledgeHubAppService
 
         var fullResponse = new StringBuilder();
 
-        await foreach (var update in chatClient.GetStreamingResponseAsync(messages, chatOptions, CancellationToken.None))
+        // 用量记录（input=用户消息，output=完整回复，均为估算）
+        var usageId = await _usageTracker.StartAsync(
+            AiFeatureGroups.Chat,
+            input.ResourceId.HasValue ? "DocQA" : "ChatMessage",
+            model,
+            input.Message);
+        try
         {
-            if (update.Text != null && update.Text.Length > 0)
+            await foreach (var update in chatClient.GetStreamingResponseAsync(messages, chatOptions, CancellationToken.None))
             {
-                fullResponse.Append(update.Text);
-                await onChunk(new ChatMessageChunkDto
+                if (update.Text != null && update.Text.Length > 0)
                 {
-                    Content = update.Text,
-                    ThreadId = threadIdStr,
-                    IsComplete = false
-                });
+                    fullResponse.Append(update.Text);
+                    await onChunk(new ChatMessageChunkDto
+                    {
+                        Content = update.Text,
+                        ThreadId = threadIdStr,
+                        IsComplete = false
+                    });
+                }
             }
+            await _usageTracker.CompleteAsync(usageId, fullResponse.ToString(), true);
+        }
+        catch (Exception ex)
+        {
+            await _usageTracker.CompleteAsync(usageId, fullResponse.ToString(), false, ex.Message);
+            throw;
         }
 
         // Save assistant message

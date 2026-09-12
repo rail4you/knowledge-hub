@@ -1,0 +1,155 @@
+<div class="usage-mgmt">
+  <!-- =================== Key 与模型 =================== -->
+  <nz-card nzTitle="API Key 与模型" class="mgmt-card" [nzLoading]="statusLoading()">
+    @if (status(); as st) {
+      <nz-descriptions nzBordered [nzColumn]="2" nzSize="small">
+        <nz-descriptions-item nzTitle="当前 Key">
+          @if (st.hasApiKey) {
+            <span class="mono">{{ st.maskedApiKey }}</span>
+            <nz-tag nzColor="success">已配置</nz-tag>
+          } @else {
+            <nz-tag nzColor="error">未配置</nz-tag>
+          }
+        </nz-descriptions-item>
+        <nz-descriptions-item nzTitle="文本模型">{{ st.textModel }}</nz-descriptions-item>
+        <nz-descriptions-item nzTitle="视频理解模型">{{ st.visionModel }}</nz-descriptions-item>
+        <nz-descriptions-item nzTitle="视频抽帧率">{{ st.videoFps }} 帧/秒</nz-descriptions-item>
+      </nz-descriptions>
+
+      <div class="key-form">
+        <input
+          nz-input
+          class="key-input mono"
+          [(ngModel)]="newApiKey"
+          placeholder="输入新的 Qwen API Key（sk-…），保存后新调用即时生效"
+        />
+        <button nz-button nzType="primary" (click)="saveApiKey()" [nzLoading]="savingKey()">更新 Key</button>
+        <button nz-button nzType="default" (click)="testConnection()" [nzLoading]="testing()">测试连接</button>
+      </div>
+
+      <h4 class="sub-title">模型单价（元 / 百万 tokens）</h4>
+      <nz-table [nzData]="st.pricing" nzSize="small" [nzShowPagination]="false" [nzFrontPagination]="false">
+        <thead>
+          <tr><th>模型</th><th nzAlign="right">输入</th><th nzAlign="right">输出</th></tr>
+        </thead>
+        <tbody>
+          @for (p of st.pricing; track p.model) {
+            <tr>
+              <td class="mono">{{ p.model }}</td>
+              <td nzAlign="right">{{ p.inputPerMillion }}</td>
+              <td nzAlign="right">{{ p.outputPerMillion }}</td>
+            </tr>
+          }
+        </tbody>
+      </nz-table>
+    }
+  </nz-card>
+
+  <!-- =================== 用量记录 =================== -->
+  <nz-card nzTitle="AI 调用记录" class="mgmt-card">
+    @if (summary(); as s) {
+      <div nz-row [nzGutter]="16" class="summary-row">
+        <div nz-col [nzSpan]="4"><div class="summary-item"><span class="summary-item__value">{{ s.totalCount }}</span><span class="summary-item__label">总调用</span></div></div>
+        <div nz-col [nzSpan]="4"><div class="summary-item"><span class="summary-item__value summary-item__value--ok">{{ s.successCount }}</span><span class="summary-item__label">成功</span></div></div>
+        <div nz-col [nzSpan]="4"><div class="summary-item"><span class="summary-item__value summary-item__value--err">{{ s.failedCount }}</span><span class="summary-item__label">失败</span></div></div>
+        <div nz-col [nzSpan]="4"><div class="summary-item"><span class="summary-item__value">{{ s.totalInputTokens + s.totalOutputTokens }}</span><span class="summary-item__label">总 tokens（估算）</span></div></div>
+        <div nz-col [nzSpan]="4"><div class="summary-item"><span class="summary-item__value">¥{{ s.totalEstimatedCost | number:'1.2-4' }}</span><span class="summary-item__label">估算费用</span></div></div>
+      </div>
+    }
+
+    <div class="filter-row">
+      <nz-range-picker [(ngModel)]="dateRange" (ngModelChange)="onDateRangeChange($event)"></nz-range-picker>
+      <nz-select [(ngModel)]="filterGroup" (ngModelChange)="onFilterChange()" nzPlaceHolder="全部分组" nzAllowClear class="filter-control">
+        @for (g of featureGroups; track g.value) {
+          <nz-option [nzValue]="g.value" [nzLabel]="g.label"></nz-option>
+        }
+      </nz-select>
+      <nz-select [(ngModel)]="filterStatus" (ngModelChange)="onFilterChange()" nzPlaceHolder="全部状态" nzAllowClear class="filter-control">
+        <nz-option [nzValue]="10" nzLabel="成功"></nz-option>
+        <nz-option [nzValue]="40" nzLabel="失败"></nz-option>
+        <nz-option [nzValue]="0" nzLabel="进行中"></nz-option>
+      </nz-select>
+      <input nz-input [(ngModel)]="filterText" (keyup.enter)="onFilterChange()" placeholder="用户名 / 功能 / 模型" class="filter-control" />
+      <button nz-button nzType="primary" (click)="onFilterChange()">查询</button>
+      <button nz-button nzType="link" (click)="clearFilters()">清除</button>
+    </div>
+
+    <nz-table
+      #tbl
+      [nzData]="records()"
+      [nzFrontPagination]="false"
+      [nzTotal]="total()"
+      [nzPageIndex]="pageIndex()"
+      [nzPageSize]="pageSize()"
+      [nzShowSizeChanger]="true"
+      [nzLoading]="recordsLoading()"
+      (nzQueryParams)="onTableQuery($event)"
+      nzSize="small"
+      [nzScroll]="{ x: '1100px' }"
+    >
+      <thead>
+        <tr>
+          <th>时间</th>
+          <th>用户</th>
+          <th>角色</th>
+          <th>分组</th>
+          <th>功能</th>
+          <th>模型</th>
+          <th nzAlign="center">状态</th>
+          <th nzAlign="right">输入 tokens</th>
+          <th nzAlign="right">输出 tokens</th>
+          <th nzAlign="right">估算费用(元)</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of tbl.data; track r.id) {
+          <tr>
+            <td class="cell-time">{{ r.creationTime | date:'MM-dd HH:mm:ss' }}</td>
+            <td>{{ r.userName || r.userId.slice(0, 8) }}</td>
+            <td>{{ r.roles || '—' }}</td>
+            <td>{{ r.featureGroupName }}</td>
+            <td>{{ r.feature }}</td>
+            <td class="mono">{{ r.model }}</td>
+            <td nzAlign="center">
+              <nz-tag [nzColor]="statusColor(r.status)" [title]="r.errorMessage || ''">{{ r.statusName }}</nz-tag>
+            </td>
+            <td nzAlign="right">{{ r.inputTokens }}</td>
+            <td nzAlign="right">{{ r.outputTokens }}</td>
+            <td nzAlign="right">¥{{ r.estimatedCost | number:'1.2-6' }}</td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+    <p class="table-note">token 与费用均为估算值（按文本长度折算），仅供成本参考；失败记录的错误原文悬停状态标签查看。</p>
+  </nz-card>
+
+  <!-- =================== 每日配额 =================== -->
+  <nz-card nzTitle="每日配额（按角色 × 功能分组，每人每天次数）" class="mgmt-card" [nzLoading]="quotasLoading()">
+    <nz-table [nzData]="quotaRows()" nzSize="small" [nzShowPagination]="false" [nzFrontPagination]="false">
+      <thead>
+        <tr>
+          <th>角色</th>
+          @for (g of quotaGroups; track g) {
+            <th nzAlign="center">{{ groupLabel(g) }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of quotaRows(); track row.role) {
+          <tr>
+            <td><nz-tag>{{ row.role }}</nz-tag></td>
+            @for (g of quotaGroups; track g) {
+              <td nzAlign="center">
+                <input nz-input class="quota-input" [(ngModel)]="row.values[g]" placeholder="不限" />
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+    <div class="quota-actions">
+      <button nz-button nzType="primary" (click)="saveQuotas()" [nzLoading]="savingQuotas()">保存配额</button>
+      <span class="quota-hint">留空=不限； counting 含成功/失败/进行中的调用（防刷重试）；按北京时间自然日统计</span>
+    </div>
+  </nz-card>
+</div>

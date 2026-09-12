@@ -134,13 +134,52 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
             var connectionManager = _connectionManager;
             var config = _configuration;
             var logger = _logger;
+            // 配额检查用显式身份（Task.Run 后台上下文 CurrentUser 可能丢失）
+            var quotaUserId = userId;
+            var quotaRoles = CurrentUser.Roles ?? Array.Empty<string>();
+            var quotaModel = _configuration["Qwen:Model"] ?? "qwen-flash";
 
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    var replyContent = await GenerateAgentReplyContentAsync(
-                        agentName, projectTitle, projectDescription, projectAgentPrompt, userContent, config);
+                    using var quotaScope = scopeFactory.CreateScope();
+                    var quota = quotaScope.ServiceProvider.GetRequiredService<Application.AI.IAiQuotaService>();
+                    var tracker = quotaScope.ServiceProvider.GetRequiredService<Application.AI.IAiUsageTracker>();
+                    Guid usageId;
+                    try
+                    {
+                        await quota.CheckAsync(quotaUserId, quotaRoles, Application.AI.AiFeatureGroups.Chat);
+                        usageId = await tracker.StartAsync(
+                            Application.AI.AiFeatureGroups.Chat, "AgentReply", quotaModel, userContent,
+                            userId: quotaUserId, tenantId: projectTenantId);
+                    }
+                    catch (UserFriendlyException qex)
+                    {
+                        // 配额超限：广播友好提示，不抛异常
+                        await BroadcastAgentTextAsync(scopeFactory, connectionManager, projectId, projectTenantId, agentName, qex.Message);
+                        return;
+                    }
+
+                    string replyContent;
+                    bool ok = true;
+                    string? failError = null;
+                    try
+                    {
+                        replyContent = await GenerateAgentReplyContentAsync(
+                            agentName, projectTitle, projectDescription, projectAgentPrompt, userContent, config);
+                    }
+                    catch (Exception tex)
+                    {
+                        ok = false;
+                        failError = tex.Message;
+                        replyContent = string.Empty;
+                    }
+                    await tracker.CompleteAsync(usageId, replyContent, ok, failError);
+                    if (!ok)
+                    {
+                        throw new Exception(failError);
+                    }
 
                     using var scope = scopeFactory.CreateScope();
                     var messageRepo = scope.ServiceProvider.GetRequiredService<IRepository<PracticumChatMessage, Guid>>();
@@ -203,6 +242,34 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
         }
 
         return dto;
+    }
+
+    /// <summary>以后台 scope 发送一条 AI 智能体文本消息并广播（配额超限等友好提示用）。</summary>
+    private async Task BroadcastAgentTextAsync(
+        IServiceScopeFactory scopeFactory,
+        PracticumChatConnectionManager connectionManager,
+        Guid projectId,
+        Guid? tenantId,
+        string agentName,
+        string content)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<IRepository<PracticumChatMessage, Guid>>();
+        var guidGen = scope.ServiceProvider.GetRequiredService<IGuidGenerator>();
+        var msg = new PracticumChatMessage(
+            guidGen.Create(),
+            projectId,
+            null,
+            PracticumChatSenderType.AIAgent,
+            agentName,
+            content,
+            PracticumChatMessageType.Text)
+        {
+            TenantId = tenantId,
+            IsAgentReply = true
+        };
+        await repo.InsertAsync(msg, autoSave: true);
+        await connectionManager.BroadcastAsync(projectId, MapToDto(msg));
     }
 
     public async Task<List<PracticumChatMessageDto>> GetMessagesAsync(GetPracticumChatMessagesDto input)
@@ -292,13 +359,11 @@ public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatApp
     {
         var systemPrompt = BuildAgentSystemPrompt(agentName, projectTitle, projectDescription, projectAgentPrompt);
 
-        var apiKey = config["Qwen:ApiKey"]
-            ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = config["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = config["Qwen:Model"] ?? "qwen-flash";
 
-        IChatClient chatClient = QwenClient.CreateChatClient(config, model);
+        IChatClient chatClient = await QwenClient.CreateChatClient(config, model);
 
         var cleanMessage = StripAgentMention(userMessage, agentName);
 

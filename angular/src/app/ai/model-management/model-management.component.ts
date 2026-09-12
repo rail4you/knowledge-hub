@@ -1,6 +1,7 @@
-import { Component, signal, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, inject, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { PermissionService } from '@abp/ng.core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzGridModule } from 'ng-zorro-antd/grid';
@@ -12,6 +13,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { AiUsageManagementComponent } from './ai-usage-management.component';
 
 interface AIModel {
   id: string;
@@ -40,14 +43,25 @@ interface AIModel {
     NzProgressModule,
     NzPopconfirmModule,
     NzBadgeModule,
+    NzTabsModule,
+    AiUsageManagementComponent,
   ],
   templateUrl: './model-management.component.html',
   styleUrls: ['./model-management.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ModelManagementComponent {
+export class ModelManagementComponent implements OnInit {
   private readonly message = inject(NzMessageService);
+  private readonly permissionService = inject(PermissionService);
   private readonly apiUrl = 'http://localhost:5000';
+
+  /** AI 使用管理 Tab 仅 AI.ManageTasks 权限可见（校级管理员 / host 超管） */
+  readonly canManageAi = signal(false);
+
+  ngOnInit(): void {
+    this.canManageAi.set(
+      this.permissionService.getGrantedPolicy('KnowledgeHub.AI.ManageTasks'));
+  }
 
   models = signal<AIModel[]>([
     {

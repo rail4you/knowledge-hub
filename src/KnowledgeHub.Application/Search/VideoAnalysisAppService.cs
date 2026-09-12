@@ -36,6 +36,8 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
     private readonly OfficeConversionOptions _conversionOptions;
     private readonly IFileStorageService _fileStorageService;
     private readonly ICurrentTenant _currentTenant;
+    private readonly Application.AI.IQwenCredentialProvider _qwenCredentials;
+    private readonly Application.AI.IAiUsageTracker _usageTracker;
 
     private const string DefaultModel = "qwen3-vl-flash";
     /// <summary>视频抽帧率（帧/秒）：时间轴分析 0.2（5 秒一帧）足够，烧钱量与帧数成正比，可用 Qwen:VideoFps 覆盖。</summary>
@@ -60,7 +62,9 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         IFfmpegRunner ffmpegRunner,
         IOptions<OfficeConversionOptions> conversionOptions,
         IFileStorageService fileStorageService,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        Application.AI.IQwenCredentialProvider qwenCredentials,
+        Application.AI.IAiUsageTracker usageTracker)
     {
         _configuration = configuration;
         _logger = logger;
@@ -69,6 +73,8 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         _conversionOptions = conversionOptions.Value;
         _fileStorageService = fileStorageService;
         _currentTenant = currentTenant;
+        _qwenCredentials = qwenCredentials;
+        _usageTracker = usageTracker;
     }
 
     public async Task<VideoAnalysisResultDto> AnalyzeVideoTimelineAsync(VideoAnalysisRequestDto input)
@@ -367,10 +373,37 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         return outputPath;
     }
 
+    /// <summary>从时间轴事件的最大 end 时间估算视频时长（秒），用于输入 token 估算。</summary>
+    private static double EstimateVideoDurationSeconds(VideoAnalysisResultDto result)
+    {
+        double max = 0;
+        foreach (var evt in result.Events ?? Enumerable.Empty<VideoTimelineEventDto>())
+        {
+            if (TryParseHms(evt.EndTime, out var sec) && sec > max) max = sec;
+        }
+        return max;
+    }
+
+    private static bool TryParseHms(string? text, out double seconds)
+    {
+        seconds = 0;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var parts = text.Trim().Split(':');
+        if (parts.Length == 3
+            && double.TryParse(parts[0], out var h)
+            && double.TryParse(parts[1], out var m)
+            && double.TryParse(parts[2], out var s))
+        {
+            seconds = h * 3600 + m * 60 + s;
+            return true;
+        }
+        return false;
+    }
+
     private async Task<VideoAnalysisResultDto> CallQwenVlApiAsync(string videoUrl, string? prompt = null)
     {
-        var apiKey = _configuration["Qwen:ApiKey"]
-            ?? throw new UserFriendlyException("Qwen:ApiKey not configured");
+        // 动态 Key（管理页可换，换完即生效），不再直读 appsettings
+        var apiKey = await _qwenCredentials.GetApiKeyAsync();
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:VisionModel"] ?? DefaultModel;
@@ -379,6 +412,10 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         if (fps <= 0) fps = DefaultFps;
 
         _logger.LogInformation("Calling Qwen VL API, model: {Model}", model);
+
+        // 用量记录：输出文本可精确计量；输入以“时长×fps×1000tokens/帧”估算
+        var usageId = await _usageTracker.StartAsync(
+            Application.AI.AiFeatureGroups.Video, "VideoAnalyze", model, textPrompt);
 
         var requestBody = new
         {
@@ -414,20 +451,37 @@ public class VideoAnalysisAppService : KnowledgeHubAppService, IVideoAnalysisApp
         var client = _httpClientFactory.CreateClient();
         client.Timeout = TimeSpan.FromMinutes(5);
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/chat/completions");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        var response = await client.SendAsync(request);
-        var responseBody = await response.Content.ReadAsStringAsync();
-
-        if (!response.IsSuccessStatusCode)
+        VideoAnalysisResultDto result;
+        try
         {
-            _logger.LogError("Qwen VL API failed: {StatusCode} - {Body}", response.StatusCode, responseBody);
-            throw new UserFriendlyException($"Video analysis API call failed: {response.StatusCode}");
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/chat/completions");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await client.SendAsync(request);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Qwen VL API failed: {StatusCode} - {Body}", response.StatusCode, responseBody);
+                throw new UserFriendlyException($"Video analysis API call failed: {response.StatusCode}");
+            }
+
+            result = ParseResponse(responseBody);
+        }
+        catch (Exception ex)
+        {
+            await _usageTracker.CompleteAsync(usageId, null, false, ex.Message);
+            throw;
         }
 
-        return ParseResponse(responseBody);
+        var durationSec = EstimateVideoDurationSeconds(result);
+        var frames = Math.Max(1, (int)Math.Ceiling(durationSec * fps));
+        var inputTokens = Application.AI.IAiUsageTracker.EstimateTokens(textPrompt) + frames * 1000;
+        var outputTokens = Application.AI.IAiUsageTracker.EstimateTokens(
+            JsonSerializer.Serialize(result.Events));
+        await _usageTracker.CompleteAsync(usageId, null, true, outputTokens: outputTokens, inputTokens: inputTokens);
+        return result;
     }
 
     private VideoAnalysisResultDto ParseResponse(string responseBody)

@@ -30,17 +30,20 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
     private readonly IAiTaskQueue _aiTaskQueue;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly IIdentityUserRepository _userRepository;
+    private readonly IAiQuotaService _quotaService;
 
     public AiGenerationTaskAppService(
         IRepository<AiGenerationTask, Guid> taskRepository,
         IAiTaskQueue aiTaskQueue,
         IUnitOfWorkManager unitOfWorkManager,
-        IIdentityUserRepository userRepository)
+        IIdentityUserRepository userRepository,
+        IAiQuotaService quotaService)
     {
         _taskRepository = taskRepository;
         _aiTaskQueue = aiTaskQueue;
         _unitOfWorkManager = unitOfWorkManager;
         _userRepository = userRepository;
+        _quotaService = quotaService;
     }
 
     public async Task<AiGenerationTaskDto> CreateAsync(CreateAiGenerationTaskDto input)
@@ -51,6 +54,9 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
         {
             throw new UserFriendlyException("任务参数为空");
         }
+
+        // 每日配额：超限直接中文提示，不再烧 token
+        await _quotaService.CheckAsync(ToFeatureGroup(input.TaskType));
 
         var task = new AiGenerationTask(
             GuidGenerator.Create(),
@@ -266,6 +272,16 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
         AiTaskType.CareerGuidance => KnowledgeHubPermissions.AI.CareerGuidance,
         AiTaskType.ExerciseGenerate => KnowledgeHubPermissions.AI.ExerciseGenerate,
         _ => throw new UserFriendlyException($"未知的任务类型：{taskType}")
+    };
+
+    private static string ToFeatureGroup(AiTaskType taskType) => taskType switch
+    {
+        AiTaskType.LessonPlanSingle => AiFeatureGroups.LessonPlan,
+        AiTaskType.LessonPlanMulti => AiFeatureGroups.LessonPlan,
+        AiTaskType.CaseAnalysis => AiFeatureGroups.CaseAnalysis,
+        AiTaskType.CareerGuidance => AiFeatureGroups.CareerGuidance,
+        AiTaskType.ExerciseGenerate => AiFeatureGroups.ExerciseGenerate,
+        _ => AiFeatureGroups.Chat,
     };
 
     private async Task FillCreatorNamesAsync(List<AiGenerationTaskDto> items)

@@ -108,8 +108,6 @@ JSON 结构:
             return;
         }
 
-        var apiKey = _configuration["Qwen:ApiKey"]
-            ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-flash";
@@ -128,7 +126,7 @@ JSON 结构:
 
 请按 SystemPrompt 中规定的 JSON 结构输出案例分析。";
 
-        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
+        IChatClient chatClient = await QwenClient.CreateChatClient(_configuration, model);
 
         var chatOptions = new ChatOptions
         {

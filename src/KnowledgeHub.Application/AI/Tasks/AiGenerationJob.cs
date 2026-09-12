@@ -31,6 +31,8 @@ public class AiGenerationJob : ITransientDependency
     private readonly CaseAnalysisAppService _caseAnalysisService;
     private readonly CareerGuidanceAppService _careerGuidanceService;
     private readonly ExerciseAiGenerator _exerciseAiGenerator;
+    private readonly IAiUsageTracker _usageTracker;
+    private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
     private readonly ILogger<AiGenerationJob> _logger;
 
     public AiGenerationJob(
@@ -41,6 +43,8 @@ public class AiGenerationJob : ITransientDependency
         CaseAnalysisAppService caseAnalysisService,
         CareerGuidanceAppService careerGuidanceService,
         ExerciseAiGenerator exerciseAiGenerator,
+        IAiUsageTracker usageTracker,
+        Microsoft.Extensions.Configuration.IConfiguration configuration,
         ILogger<AiGenerationJob> logger)
     {
         _taskRepository = taskRepository;
@@ -50,6 +54,8 @@ public class AiGenerationJob : ITransientDependency
         _caseAnalysisService = caseAnalysisService;
         _careerGuidanceService = careerGuidanceService;
         _exerciseAiGenerator = exerciseAiGenerator;
+        _usageTracker = usageTracker;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -146,10 +152,35 @@ public class AiGenerationJob : ITransientDependency
         // Hangfire 不经过 ABP 的 HTTP/UoW 管线，显式开启一个 UoW，
         // 保证生成服务内部的仓储可用；进度更新使用 requiresNew 独立提交。
         using var uow = _unitOfWorkManager.Begin(requiresNew: true);
-        var result = await GenerateCoreAsync(task, cancellationToken);
-        await uow.CompleteAsync();
-        return result;
+        // 用量记录：inputJson 既是 token 估算来源（多章节等多轮调用按总量估，IsEstimated 标记）
+        var group = ToFeatureGroup(task.TaskType);
+        var model = _configuration["Qwen:Model"] ?? "qwen-flash";
+        var usageId = await _usageTracker.StartAsync(
+            group, "BackgroundTask", model, task.InputJson,
+            userId: task.CreatorUserId, tenantId: task.TenantId);
+        try
+        {
+            var result = await GenerateCoreAsync(task, cancellationToken);
+            await _usageTracker.CompleteAsync(usageId, result, true);
+            await uow.CompleteAsync();
+            return result;
+        }
+        catch (Exception ex)
+        {
+            await _usageTracker.CompleteAsync(usageId, null, false, ex.Message);
+            throw;
+        }
     }
+
+    private static string ToFeatureGroup(AiTaskType taskType) => taskType switch
+    {
+        AiTaskType.LessonPlanSingle => AiFeatureGroups.LessonPlan,
+        AiTaskType.LessonPlanMulti => AiFeatureGroups.LessonPlan,
+        AiTaskType.CaseAnalysis => AiFeatureGroups.CaseAnalysis,
+        AiTaskType.CareerGuidance => AiFeatureGroups.CareerGuidance,
+        AiTaskType.ExerciseGenerate => AiFeatureGroups.ExerciseGenerate,
+        _ => AiFeatureGroups.Chat,
+    };
 
     private async Task<string> GenerateCoreAsync(AiGenerationTask task, CancellationToken cancellationToken)
     {

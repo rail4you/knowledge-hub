@@ -134,13 +134,11 @@ public class ExerciseAiGenerator : ITransientDependency
 
 请直接输出 JSON 数组。";
 
-        var apiKey = _configuration["Qwen:ApiKey"]
-            ?? throw new AbpException("Qwen:ApiKey is not configured");
         var baseUrl = _configuration["Qwen:BaseUrl"]
             ?? "https://dashscope.aliyuncs.com/compatible-mode/v1";
         var model = _configuration["Qwen:Model"] ?? "qwen-flash";
 
-        IChatClient chatClient = QwenClient.CreateChatClient(_configuration, model);
+        IChatClient chatClient = await QwenClient.CreateChatClient(_configuration, model);
 
         var messages = new List<ChatMessage> { new(ChatRole.User, userPrompt) };
         var chatOptions = new ChatOptions { Instructions = systemPrompt };
