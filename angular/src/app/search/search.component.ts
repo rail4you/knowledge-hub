@@ -19,7 +19,7 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { ConfigStateService } from '@abp/ng.core';
 import { SearchService, SearchQueryDto, SearchResultDto, DocumentSearchResultDto, SearchHistoryDto, SearchStatsDto, PopularSearchDto, TopResourceDto, IndexStatusDto } from './search.service';
 import { MeiliSearchAdminService, MeiliIndexDto } from '../admin/meilisearch/meilisearch-admin.service';
-import { stripUuids, foldByResourceName, getMatchInfo, MatchType } from './search.util';
+import { stripUuids, foldByResourceName, getMatchInfo, filterFuzzyFallback, MatchType } from './search.util';
 import { HostListener } from '@angular/core';
 
 @Component({
@@ -91,10 +91,18 @@ export class SearchComponent implements OnInit {
     const base = this.filteredResults();
     const { folded } = foldByResourceName(base);
     const q = this.searchQuery;
-    return folded.map(r => ({
+
+    // 给每条结果标注匹配类型，再做"全是 fuzzy 时过滤"的兜底：
+    //   - 有正文 / 文件名命中：所有 fuzzy 作为陪衬保留
+    //   - 只有 fuzzy：近似结果全部隐藏，避免刷出大量弱相关资源
+    const annotated = folded.map(r => ({
       ...r,
       _match: getMatchInfo(r.resourceName, r.highlightedContent, r.eventDescription, q)
     }));
+    const hasRealMatch = annotated.some(
+      r => r._match.type === 'content' || r._match.type === 'name'
+    );
+    return hasRealMatch ? annotated : annotated.filter(r => r._match.type !== 'fuzzy');
   });
 
   hiddenCount = signal(0);

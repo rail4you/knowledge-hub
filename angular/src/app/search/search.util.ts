@@ -119,6 +119,43 @@ export function highlightInText(text: string, query: string): string {
 }
 
 /**
+ * 给一条结果补充 match info，然后按"是否全是模糊匹配"过滤：
+ * - 当结果集中存在 content / name 命中时，所有 fuzzy 都保留（作为陪衬）
+ * - 当结果集全是 fuzzy（没有正文 / 文件名命中）时，把 fuzzy 全部过滤掉
+ *
+ * 这样可以避免搜索无意义关键词时返回一堆弱相关结果。
+ */
+export function filterFuzzyFallback<
+  T extends {
+    resourceName?: string;
+    highlightedContent?: string | null;
+    eventDescription?: string | null;
+  }
+>(items: T[], query: string): T[] {
+  if (!items.length) return items;
+
+  const annotated = items.map(item => ({
+    item,
+    match: getMatchInfo(
+      item.resourceName ?? '',
+      item.highlightedContent,
+      item.eventDescription,
+      query
+    )
+  }));
+
+  const hasRealMatch = annotated.some(
+    m => m.match.type === 'content' || m.match.type === 'name'
+  );
+
+  const kept = hasRealMatch
+    ? annotated
+    : annotated.filter(m => m.match.type !== 'fuzzy');
+
+  return kept.map(m => m.item);
+}
+
+/**
  * 按资源名折叠结果：
  * - 第一个出现的 resourceName 保留
  * - 之后出现的同名（按 resourceId 同组）保留 pageNumber 最小的那条

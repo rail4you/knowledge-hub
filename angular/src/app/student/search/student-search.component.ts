@@ -15,6 +15,7 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { SearchService } from '../../proxy/application/search/search.service';
 import type { PopularSearchDto, DocumentSearchResultDto, SearchQueryDto } from '../../proxy/application/contracts/search/dtos/models';
+import { filterFuzzyFallback } from '../../search/search.util';
 
 /** 文件扩展名 -> 图标（模块级常量表，避免模板每次变更检测重新创建对象） */
 const FILE_ICONS: Record<string, string> = {
@@ -100,8 +101,11 @@ export class StudentSearchComponent implements OnInit {
   filteredResults = computed(() => {
     const all = this.results();
     const ext = this.selectedFileExtension();
-    if (!ext) return all;
-    return all.filter(r => r.fileExtension === ext);
+    const extFiltered = !ext ? all : all.filter(r => r.fileExtension === ext);
+    // 与教师端保持一致的搜索行为：
+    //   - 没有正文 / 文件名命中时，隐藏所有 fuzzy（近似）结果
+    //   - 有正文 / 文件名命中时，fuzzy 作为陪衬保留
+    return filterFuzzyFallback(extFiltered, this.searchQuery);
   });
 
   ngOnInit() {
