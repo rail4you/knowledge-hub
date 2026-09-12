@@ -3,7 +3,7 @@
     <header class="page-header">
       <div class="page-header-left">
         <h1 class="page-title">教案生成</h1>
-        <p class="page-desc">基于已索引文档生成结构化教案：支持单章节整篇生成，或多章节“解析 → 编辑 → 逐章生成”工作流</p>
+        <p class="page-desc">基于已索引文档生成多章节教案：先生成章节（AI 自动解析或手动填写），再按章节逐章生成完整教案</p>
       </div>
     </header>
 
@@ -12,7 +12,7 @@
       <nz-tab nzTitle="生成教案">
         <div class="gen-steps-bar">
           <nz-steps [nzCurrent]="stepIndex()" nzSize="small" class="gen-steps">
-            @for (s of steps(); track s) {
+            @for (s of steps; track s) {
               <nz-step [nzTitle]="s"></nz-step>
             }
           </nz-steps>
@@ -85,24 +85,23 @@
               <div class="panel-section">
                 <div class="section-label">
                   <span class="label-dot"></span>
-                  生成方式
+                  章节来源
                 </div>
-                <div class="mode-cards">
-                  <div class="mode-card" [class.on]="workflowMode() === 'single'" (click)="setMode('single')">
-                    <div class="mode-title">
-                      <span nz-icon nzType="file-text"></span>
-                      单章节
-                    </div>
-                    <div class="mode-desc">整份文档视为一个章节，直接生成一份完整教案（原有方案）</div>
-                  </div>
-                  <div class="mode-card" [class.on]="workflowMode() === 'multi'" (click)="setMode('multi')">
-                    <div class="mode-title">
-                      <span nz-icon nzType="unordered-list"></span>
-                      多章节
-                    </div>
-                    <div class="mode-desc">先从文档解析章节，确认并编辑后，逐章生成“课程总览 + 多份教案”</div>
-                  </div>
-                </div>
+                <nz-radio-group
+                  class="chapter-source-group"
+                  [ngModel]="chapterSource()"
+                  (ngModelChange)="setChapterSource($event)"
+                  [nzDisabled]="isLoading()"
+                >
+                  <label nz-radio nzValue="auto">
+                    <span nz-icon nzType="thunderbolt"></span>
+                    AI 自动解析
+                  </label>
+                  <label nz-radio nzValue="manual">
+                    <span nz-icon nzType="edit"></span>
+                    手动填写
+                  </label>
+                </nz-radio-group>
               </div>
 
               <nz-divider style="margin: 4px 0;"></nz-divider>
@@ -157,13 +156,13 @@
                   </div>
 
                   <div class="lp-row">
-                    <label>{{ workflowMode() === 'multi' ? '单章课时' : '课时' }}</label>
+                    <label>单章课时</label>
                     <div class="lp-ctl">
                       <div class="lp-duration">
                         <nz-input-number [ngModel]="input().duration" (ngModelChange)="updateDuration($event)" [nzMin]="5" [nzMax]="180" [nzStep]="5" [nzDisabled]="isLoading()"></nz-input-number>
                         <span class="unit">分钟</span>
                       </div>
-                      <span class="lp-hint">{{ workflowMode() === 'multi' ? '每章课时，总课时 = 单章课时 × 章节数' : '单节课时长，默认 45 分钟' }}</span>
+                      <span class="lp-hint">每章课时；总课时 = 单章课时 × 章节数</span>
                     </div>
                   </div>
 
@@ -194,12 +193,12 @@
               <div class="gen-footer">
                 <div class="footer-right">
                   <button class="lp-btn primary" [disabled]="!canNextConfig()" (click)="goNext()">
-                    @if (workflowMode() === 'multi') {
+                    @if (chapterSource() === 'auto') {
                       <span nz-icon nzType="apartment"></span>
                       解析章节
                     } @else {
-                      <span nz-icon nzType="thunderbolt"></span>
-                      生成教案
+                      <span nz-icon nzType="edit"></span>
+                      下一步：填写章节
                     }
                   </button>
                 </div>
@@ -244,10 +243,12 @@
                     <span nz-icon nzType="plus"></span>
                     添加章节
                   </button>
-                  <button class="lp-btn ghost sm" type="button" (click)="parseChapters()">
-                    <span nz-icon nzType="reload"></span>
-                    重新解析
-                  </button>
+                  @if (chapterSource() === 'auto') {
+                    <button class="lp-btn ghost sm" type="button" (click)="reparseChapters()">
+                      <span nz-icon nzType="reload"></span>
+                      重新解析
+                    </button>
+                  }
                   @if (filteredChapters().length > 0) {
                     <button class="link-btn" type="button" (click)="toggleAllChapters()">
                       {{ allExpanded() ? '收起全部' : '展开全部' }}
@@ -263,7 +264,11 @@
               </div>
 
               @if (chapters().length === 0) {
-                <nz-empty nzNotFoundContent="未解析出章节，可重新解析或手动添加章节"></nz-empty>
+                <nz-empty
+                  [nzNotFoundContent]="chapterSource() === 'auto'
+                    ? '未解析出章节，可点击「重新解析」或「添加章节」手动补充'
+                    : '请使用上方「添加章节」按钮添加章节'"
+                ></nz-empty>
               } @else if (filteredChapters().length === 0) {
                 <nz-empty nzNotFoundContent="没有匹配的章节，换个关键词试试"></nz-empty>
               } @else {
@@ -311,16 +316,9 @@
                       </tr>
                       @if (isExpanded(item.key)) {
                         <tr class="nested-row">
-                          <td></td>
-                          <td colspan="4">
-                            <div class="nested-editor">
-                              <div class="nested-title">
-                                <span nz-icon nzType="unordered-list"></span>
-                                第 {{ item.order }} 章 · 内容要点
-                                <span class="nested-sub">用于生成该章教案，可多行编辑</span>
-                              </div>
-                              <textarea nz-input [nzAutosize]="{ minRows: 3, maxRows: 8 }" [ngModel]="item.summary" (ngModelChange)="updateChapterSummary(item.index, $event)" placeholder="章节内容要点（用于生成该章教案）"></textarea>
-                            </div>
+                          <td colspan="5">
+                            <div class="nested-title">第 {{ item.order }} 章 · 内容要点</div>
+                            <textarea nz-input [nzAutosize]="{ minRows: 3, maxRows: 8 }" [ngModel]="item.summary" (ngModelChange)="updateChapterSummary(item.index, $event)" placeholder="章节内容要点（用于生成该章教案）"></textarea>
                           </td>
                         </tr>
                       }
@@ -345,37 +343,28 @@
         <!-- Step: 生成中 -->
         @if (phase() === 'generating') {
           <div class="generating-panel">
-            @if (workflowMode() === 'multi') {
-              <div class="gen-head">
-                <span nz-icon nzType="loading"></span>
-                正在逐章生成整体教案
-              </div>
-              <nz-progress [nzPercent]="progress()" nzStatus="active"></nz-progress>
-              <div class="progress-msg">{{ progressMessage() }}</div>
-              <div class="gen-meta">
-                <span>第 {{ activeChapter() }}/{{ chapterTotal() }} 章</span>
-                <span>·</span>
-                <span>已用时 {{ genElapsedText() }}</span>
-                <span>·</span>
-                <span class="muted">单章约需 0.5~2 分钟，请耐心等待</span>
-              </div>
+            <div class="gen-head">
+              <span nz-icon nzType="loading"></span>
+              正在逐章生成整体教案
+            </div>
+            <nz-progress [nzPercent]="progress()" nzStatus="active"></nz-progress>
+            <div class="progress-msg">{{ progressMessage() }}</div>
+            <div class="gen-meta">
+              <span>第 {{ activeChapter() }}/{{ chapterTotal() }} 章</span>
+              <span>·</span>
+              <span>已用时 {{ genElapsedText() }}</span>
+              <span>·</span>
+              <span class="muted">单章约需 0.5~2 分钟，请耐心等待</span>
+            </div>
 
-              <div class="chapter-status-list">
-                @for (c of chapters(); track c.order) {
-                  <div class="chapter-status" [class.done]="chapterState(c.order) === 'done'" [class.active]="chapterState(c.order) === 'active'">
-                    <span nz-icon [nzType]="chapterState(c.order) === 'done' ? 'check-circle' : chapterState(c.order) === 'active' ? 'loading' : 'clock-circle'"></span>
-                    <span class="cs-title">{{ c.order }}. {{ c.title }}</span>
-                  </div>
-                }
-              </div>
-            } @else {
-              <div class="gen-head">
-                <span nz-icon nzType="loading"></span>
-                正在生成教案，请稍候…
-              </div>
-              <nz-progress [nzPercent]="90" nzStatus="active"></nz-progress>
-              <div class="progress-msg">AI 正在组织教学内容，完成后会通知你并加入历史记录</div>
-            }
+            <div class="chapter-status-list">
+              @for (c of chapters(); track c.order) {
+                <div class="chapter-status" [class.done]="chapterState(c.order) === 'done'" [class.active]="chapterState(c.order) === 'active'">
+                  <span nz-icon [nzType]="chapterState(c.order) === 'done' ? 'check-circle' : chapterState(c.order) === 'active' ? 'loading' : 'clock-circle'"></span>
+                  <span class="cs-title">{{ c.order }}. {{ c.title }}</span>
+                </div>
+              }
+            </div>
 
             <div class="queue-hint">
               <span nz-icon nzType="info-circle" nzTheme="outline"></span>
@@ -386,14 +375,12 @@
               <div class="stream-hint">已接收 {{ rawJson().length }} 字符…</div>
             }
 
-            @if (workflowMode() === 'multi') {
-              <div class="gen-actions">
-                <button class="lp-btn ghost" (click)="cancelMultiGeneration()">
-                  <span nz-icon nzType="close"></span>
-                  取消生成
-                </button>
-              </div>
-            }
+            <div class="gen-actions">
+              <button class="lp-btn ghost" (click)="cancelMultiGeneration()">
+                <span nz-icon nzType="close"></span>
+                取消生成
+              </button>
+            </div>
           </div>
         }
       </nz-tab>
@@ -457,7 +444,7 @@
             <thead>
               <tr>
                 <th>教案标题</th>
-                <th nzWidth="120px">类型</th>
+                <th nzWidth="100px">章节数</th>
                 <th nzWidth="180px">关联资源</th>
                 <th nzWidth="160px">生成时间</th>
                 <th nzWidth="220px" nzAlign="center">操作</th>
@@ -470,11 +457,7 @@
                     <span class="title-text" [title]="item.title">{{ item.title }}</span>
                   </td>
                   <td>
-                    @if (item.mode === 'multi') {
-                      <nz-tag nzColor="purple">{{ item.chapterCount }} 章</nz-tag>
-                    } @else {
-                      <nz-tag>单章节</nz-tag>
-                    }
+                    <nz-tag nzColor="purple">{{ item.chapterCount }} 章</nz-tag>
                   </td>
                   <td class="muted" [title]="item.resourceName">{{ item.resourceName }}</td>
                   <td class="muted">{{ formatDate(item.createdAt) }}</td>
@@ -505,24 +488,23 @@
     </nz-tabs>
   </div>
 
-  <!-- ========== 教案预览模板 ========== -->
+  <!-- ========== 教案预览模板（多章节） ========== -->
   <ng-template #resultTpl let-p>
     <div class="preview-card">
       <div class="preview-meta-head">
-        <h2 class="plan-title">{{ p.mode === 'multi' ? p.multiResult?.courseTitle : p.singleResult?.title }}</h2>
+        <h2 class="plan-title">{{ p.multiResult?.courseTitle }}</h2>
         <p class="plan-subtitle">
-          基于资源《{{ p.resourceName }}》 · {{ formatDate(p.createdAt) }}
-          @if (p.mode === 'multi') { · 共 {{ p.chapterCount }} 章 }
+          基于资源《{{ p.resourceName }}》 · {{ formatDate(p.createdAt) }} · 共 {{ p.chapterCount }} 章
         </p>
       </div>
 
       <nz-descriptions nzBordered [nzColumn]="3" nzSize="small" class="preview-desc">
         <nz-descriptions-item nzTitle="学科">{{ p.subject }}</nz-descriptions-item>
         <nz-descriptions-item nzTitle="授课对象">{{ p.grade }}</nz-descriptions-item>
-        <nz-descriptions-item [nzTitle]="p.mode === 'multi' ? '总课时' : '课时'">{{ p.duration }}分钟</nz-descriptions-item>
+        <nz-descriptions-item nzTitle="总课时">{{ p.duration }}分钟</nz-descriptions-item>
       </nz-descriptions>
 
-      @if (p.mode === 'multi' && p.multiResult; as mr) {
+      @if (p.multiResult; as mr) {
         @if (mr.courseObjectives?.length) {
           <div class="section-block">
             <h4 class="section-heading">课程总体教学目标</h4>
@@ -538,13 +520,11 @@
             </nz-collapse-panel>
           }
         </nz-collapse>
-      } @else if (p.singleResult; as plan) {
-        <ng-container *ngTemplateOutlet="planBodyTpl; context: { $implicit: plan }"></ng-container>
       }
     </div>
   </ng-template>
 
-  <!-- ========== 单份教案主体模板 ========== -->
+  <!-- ========== 单章教案主体模板 ========== -->
   <ng-template #planBodyTpl let-plan>
     <div class="preview-table-wrap">
       <table class="lp-preview-table">

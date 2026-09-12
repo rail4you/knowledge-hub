@@ -534,8 +534,8 @@
             </span>
             <span class="action-card-label">{{ '::ShareResource' | abpLocalization }}</span>
           </button>
+          <ng-container *abpPermission="'KnowledgeHub.Resources.Share'">
           <button class="action-card action-card--cancel-share" type="button"
-            *abpPermission="'KnowledgeHub.Resources.Share'"
             *ngIf="outgoingShareCount() > 0"
             nz-tooltip
             [nzTooltipTitle]="'::CancelShareHint' | abpLocalization"
@@ -562,6 +562,7 @@
           <span nz-icon nzType="link"></span>
           {{ '::SharedTargetCount' | abpLocalization:outgoingShareCount() }}
         </div>
+        </ng-container>
       </div>
 
       <!-- Drawer Tab Navigation -->

@@ -821,43 +821,27 @@
   }
 }
 
-.mode-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
+// ==================== 章节来源选择（AI 自动解析 / 手动填写） ====================
+// 扁平化设计：不用卡片边框/背景，用 nz-radio 原生圆圈 + 小图标 + 文字标签。
+.chapter-source-group {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
 
-.mode-card {
-  border: 1.5px solid var(--kh-line-2);
-  border-radius: 12px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.15s;
-  background: var(--kh-panel);
+  ::ng-deep .ant-radio-wrapper {
+    font-size: 14px;
+    color: var(--kh-ink-2);
 
-  &:hover { border-color: #c3ccd8; }
+    .anticon {
+      color: var(--kh-accent);
+      margin-right: 4px;
+      font-size: 14px;
+    }
 
-  &.on {
-    border-color: var(--kh-accent);
-    background: var(--kh-accent-soft);
-    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.12);
-  }
-
-  .mode-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14.5px;
-    font-weight: 700;
-    color: var(--kh-ink);
-    .anticon { color: var(--kh-accent); font-size: 16px; }
-  }
-
-  .mode-desc {
-    margin-top: 6px;
-    font-size: 12.5px;
-    color: var(--kh-muted);
-    line-height: 1.6;
+    &.ant-radio-wrapper-checked {
+      color: var(--kh-ink);
+      font-weight: 600;
+    }
   }
 }
 
@@ -1027,35 +1011,16 @@
     transition: background 0.3s;
   }
 
-  // 嵌套行：内容要点编辑区
+  // 嵌套行：内容要点编辑区 —— 拍平：去边框、去 box、去左侧缩进
   tr.nested-row > td {
-    background: #fbfcfe;
-    padding-top: 0;
-    border-bottom: 1px solid var(--kh-line-2);
+    background: transparent;
+    padding: 0 0 14px;
   }
-  .nested-editor {
-    background: var(--kh-panel);
-    border: 1px solid var(--kh-line-2);
-    border-left: 3px solid var(--kh-accent);
-    border-radius: 8px;
-    padding: 12px;
-    margin: 2px 0 6px;
-
-    .nested-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--kh-ink);
-      margin-bottom: 8px;
-      .anticon { color: var(--kh-accent); }
-      .nested-sub {
-        font-weight: 400;
-        font-size: 12px;
-        color: var(--kh-muted);
-      }
-    }
+  .nested-title {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--kh-muted);
+    margin: 0 0 6px;
   }
 }
 
