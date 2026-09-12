@@ -369,6 +369,7 @@ public class AgentRunAppService : KnowledgeHubAppService, IAgentRunAppService
             TeachingAgentVersionId = task.TeachingAgentVersionId,
             TeachingAgentName = agent.Name,
             TeachingAgentVersionNumber = version.VersionNumber,
+            WelcomeMessage = version.WelcomeMessage,
             TaskPrompt = task.TaskPrompt,
             TargetType = task.TargetType,
             TargetId = task.TargetId,

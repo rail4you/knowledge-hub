@@ -44,20 +44,21 @@
             nzSize="middle"
             class="task-table"
             [nzBordered]="false"
+            [nzScroll]="{ x: '1240px' }"
           >
             <thead>
               <tr>
-                <th class="col-title">任务名称</th>
-                <th nzAlign="center">描述</th>
-                <th nzAlign="center">智能体</th>
-                <th nzAlign="center">版本</th>
-                <th nzAlign="center">对象</th>
-                <th nzAlign="center">学生数</th>
-                <th nzAlign="center">已提交</th>
-                <th nzAlign="center">待介入</th>
-                <th nzAlign="center">截止时间</th>
-                <th nzAlign="center">状态</th>
-                <th nzAlign="center">操作</th>
+                <th class="col-title" nzWidth="200px">任务名称</th>
+                <th nzAlign="center" nzWidth="240px">描述</th>
+                <th nzAlign="center" nzWidth="130px">智能体</th>
+                <th nzAlign="center" nzWidth="80px">版本</th>
+                <th nzAlign="center" nzWidth="160px">对象</th>
+                <th nzAlign="center" nzWidth="80px">学生数</th>
+                <th nzAlign="center" nzWidth="80px">已提交</th>
+                <th nzAlign="center" nzWidth="80px">待介入</th>
+                <th nzAlign="center" nzWidth="110px">截止时间</th>
+                <th nzAlign="center" nzWidth="90px">状态</th>
+                <th nzAlign="center" nzWidth="150px" nzRight>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -106,7 +107,7 @@
                       {{ publishText(task.publishStatus) }}
                     </nz-tag>
                   </td>
-                  <td nzAlign="center">
+                  <td nzAlign="center" nzRight>
                     <div class="row-actions">
                       <a nz-button nzType="link" nzSize="small" [routerLink]="['/teaching/agent-tasks', task.id]">详情</a>
                       @if (task.publishStatus === publishStatus.draft) {

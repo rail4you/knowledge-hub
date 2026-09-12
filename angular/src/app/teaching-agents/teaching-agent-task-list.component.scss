@@ -178,6 +178,7 @@
       top: 0;
       z-index: 2;
       padding: 10px 12px;
+      white-space: nowrap;
 
       &::before {
         display: none !important;
@@ -237,8 +238,10 @@
   flex-direction: column;
 }
 
-.task-table td strong,
-.task-table td span {
+/* 仅对单行省略的单元格生效，描述列用 -webkit-box 做多行截断，不可被覆盖 */
+.task-table td > strong,
+.task-table td > span:not(.desc-text),
+.task-table td > div > span {
   display: inline-block;
 }
 
@@ -248,7 +251,7 @@
   font-weight: 600;
   font-size: 14px;
   display: inline-block;
-  max-width: 260px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -256,6 +259,7 @@
 }
 
 .col-desc {
+  min-width: 180px;
   max-width: 240px;
 }
 
@@ -264,10 +268,13 @@
   font-size: 12px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  text-align: center;
+  text-align: left;
   line-height: 1.5;
+  max-height: 3em;
+  word-break: break-word;
 }
 
 .agent-text {
@@ -540,6 +547,25 @@
 }
 
 /* ── Responsive ── */
+@media (max-width: 1280px) {
+  /* 窄屏时表格横向滚动而非挤压列，描述列收敛为单行省略，行高保持一致 */
+  .title-text {
+    max-width: 140px;
+  }
+
+  .col-desc {
+    min-width: 160px;
+    max-width: 200px;
+  }
+
+  .desc-text {
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-height: none;
+  }
+}
+
 @media (max-width: 980px) {
   .task-page {
     padding: 16px;

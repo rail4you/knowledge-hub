@@ -61,6 +61,7 @@ export interface ClassroomAgentTaskDto extends FullAuditedEntityDto<string> {
   teachingAgentVersionId?: string;
   teachingAgentName?: string;
   teachingAgentVersionNumber?: number;
+  welcomeMessage?: string | null;
   taskPrompt?: string;
   targetType?: ClassroomAgentTaskTargetType;
   targetId?: string;

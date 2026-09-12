@@ -107,12 +107,14 @@ export class StudentAgentTaskDetailComponent implements OnInit {
     try {
       const detail = await this.agentRunService.getRun(assignmentId).toPromise();
       this.detail.set(detail ?? null);
+      const configuredWelcome = detail?.task.welcomeMessage?.trim();
       const agentName = detail?.task.teachingAgentName || '';
+      const fallbackWelcome = `你好！我是${agentName}智能体。先阅读上方任务说明，再用聊天区逐步完成本次任务，最后使用「提交任务」提交所有对话信息。`;
       this.messages.set(detail?.messages?.length ? detail.messages : [{
         id: 'welcome',
         agentRunId: detail?.run.id || '',
         role: 'assistant',
-        content: `你好！我是${agentName}智能体。先阅读上方任务说明，再用聊天区逐步完成本次任务，最后使用「提交任务」提交所有对话信息。`,
+        content: configuredWelcome || fallbackWelcome,
         toolCallsJson: '[]',
       }]);
     } finally {

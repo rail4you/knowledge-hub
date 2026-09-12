@@ -222,6 +222,7 @@ public class ClassroomAgentTaskDto : FullAuditedEntityDto<Guid>
     public Guid TeachingAgentVersionId { get; set; }
     public string TeachingAgentName { get; set; } = string.Empty;
     public int TeachingAgentVersionNumber { get; set; }
+    public string? WelcomeMessage { get; set; }
     public string TaskPrompt { get; set; } = string.Empty;
     public ClassroomAgentTaskTargetType TargetType { get; set; }
     public Guid TargetId { get; set; }

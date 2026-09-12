@@ -189,6 +189,7 @@ export interface ClassroomAgentTask {
   teachingAgentVersionId: string;
   teachingAgentName: string;
   teachingAgentVersionNumber: number;
+  welcomeMessage?: string;
   taskPrompt: string;
   targetType: number;
   targetId: string;
