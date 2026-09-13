@@ -2,7 +2,7 @@
   [nzVisible]="visible()"
   [nzTitle]="resourceName() || ('::Preview' | abpLocalization)"
   (nzOnCancel)="close()"
-  [nzWidth]="(fileType === 'pptx' || fileType === 'ppt') ? 1280 : 1000"
+  [nzWidth]="(fileType === 'pptx' || fileType === 'ppt' || isLegacyDocPdfMode) ? 1280 : 1000"
   [nzFooter]="previewFooter"
   [nzStyle]="modalStyle"
   [nzMaskClosable]="false"
@@ -67,7 +67,7 @@
     <div
       *ngIf="previewReady()"
       class="preview-content"
-      [class.pdf-preview]="fileType === 'pdf' || fileType === 'ppt' || fileType === 'pptx'"
+      [class.pdf-preview]="fileType === 'pdf' || fileType === 'ppt' || fileType === 'pptx' || isLegacyDocPdfMode"
       (mousedown)="$event.stopPropagation()"
       (click)="$event.stopPropagation()"
     >
@@ -86,7 +86,11 @@
       } @else if (fileType === 'ppt') {
         <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
       } @else if (fileType === 'word') {
-        <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>
+        @if (isLegacyDocPdfMode) {
+          <app-pdf-viewer [previewUrl]="fileUrl()" [fileName]="fileName"></app-pdf-viewer>
+        } @else {
+          <app-word-viewer [data]="fileData()" [fileName]="fileName"></app-word-viewer>
+        }
       } @else if (fileType === 'excel') {
         <app-excel-viewer [data]="fileData()" [fileName]="fileName"></app-excel-viewer>
       } @else if (fileType === 'image') {

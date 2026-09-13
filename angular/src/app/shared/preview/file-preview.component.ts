@@ -136,6 +136,19 @@ export class FilePreviewComponent {
     return name + '.' + ext;
   }
 
+  /**
+   * 旧版 .doc 是否走 PDF 预览。
+   * mammoth 只支持 docx（OOXML），无法解析 .doc（OLE/CFB 二进制），
+   * 因此 .doc 改走 Gotenberg 转 PDF 通道（同 .ppt），复用后端转换缓存。
+   * .docx 仍走 mammoth 客户端解析；.xls/.xlsx 仍走 SheetJS（原生支持 xls）。
+   */
+  get isLegacyDocPdfMode(): boolean {
+    if (this.fileType !== 'word') return false;
+    const ext = this.fileExtension().toLowerCase().replace('.', '');
+    if (ext) return ext === 'doc';
+    return this.extractExtension(this.resourceName()) === 'doc';
+  }
+
   open(resourceId: string, resourceName: string, fileExtension: string, fileSize: number, isDownloadable = true) {
     this.resourceId.set(resourceId);
     this.resourceName.set(resourceName);
@@ -228,8 +241,9 @@ export class FilePreviewComponent {
   previewReady(): boolean {
     if (this.isLoading() || this.loadError() || this.tooLarge() || this.unsupported()) return false;
     const type = this.fileType;
-    // PDF/PPT: previewUrl 模式（均通过后端 PDF 转换）
+    // PDF/PPT/旧版 DOC: previewUrl 模式（均通过后端 PDF 转换）
     if (type === 'pdf' || type === 'ppt') return !!this.fileUrl();
+    if (type === 'word' && this.isLegacyDocPdfMode) return !!this.fileUrl();
     // PPTX: 走 Gotenberg PDF 逐页预览（resourceId 模式），转换失败降级坐标提取
     if (type === 'pptx') return true;
     // Video/Audio: streamUrl 模式（不下载 ArrayBuffer）
@@ -295,6 +309,15 @@ export class FilePreviewComponent {
       return;
     }
     if (type === 'ppt') {
+      const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
+      this.fileUrl.set(previewUrl);
+      this.isLoading.set(false);
+      return;
+    }
+
+    // 旧版 .doc（二进制 OLE）：mammoth 无法解析，走 Gotenberg 转 PDF（同 .ppt）。
+    // 后端 PreviewPdf/PreviewPdfInfo 白名单已含 .doc，直接复用。
+    if (type === 'word' && this.isLegacyDocPdfMode) {
       const previewUrl = `/api/resource-file/${this.resourceId()}/preview-pdf`;
       this.fileUrl.set(previewUrl);
       this.isLoading.set(false);

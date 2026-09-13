@@ -15,13 +15,14 @@ public static class AppFileUploadConsts
     public static readonly string[] AllowedExtensions =
     {
         ".doc", ".docx", ".pdf",
+        ".xls", ".xlsx",
         ".mp4", ".avi",
         ".mp3",
         ".jpg", ".jpeg", ".png",
         ".ppt", ".pptx"
     };
 
-    public static readonly string[] DocumentExtensions = { ".doc", ".docx", ".pdf" };
+    public static readonly string[] DocumentExtensions = { ".doc", ".docx", ".pdf", ".xls", ".xlsx" };
     public static readonly string[] VideoExtensions = { ".mp4", ".avi" };
     public static readonly string[] AudioExtensions = { ".mp3" };
     public static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png" };

@@ -26,7 +26,8 @@ namespace KnowledgeHub.Application.Search.LiteParse;
 /// <summary>
 /// 通过 HTTP multipart 调用本地 liteparse-server 容器的 /parse 端点。
 /// 替代了原 .NET 解析流程（NPOI 解析 docx/pptx/xlsx，UglyToad.PdfPig 解析 pdf），
-/// 现 PDF/DOCX/PPTX/XLSX 全部由 liteparse 内部 PDFium/Office 引擎处理。
+/// 现 PDF/DOCX/PPTX/XLSX 以及旧版 DOC/PPT/XLS 全部送往 liteparse 内部 PDFium/Office 引擎处理
+/// （旧版格式的实际解析能力取决于 liteparse-server 版本，见 GuessMimeType）。
 /// </summary>
 public class LiteParseDocumentExtractionService :
     IDocumentExtractionService,

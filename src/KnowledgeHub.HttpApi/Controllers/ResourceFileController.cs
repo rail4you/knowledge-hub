@@ -375,7 +375,7 @@ public class ResourceFileController : AbpControllerBase
 
         var ext = Path.GetExtension(fullPath)?.ToLowerInvariant();
         if (ext != ".pptx" && ext != ".docx" && ext != ".xlsx" && ext != ".ppt" && ext != ".doc" && ext != ".xls")
-            return BadRequest(new { message = "仅支持 Office 文档（PPTX/DOCX/XLSX）" });
+            return BadRequest(new { message = "仅支持 Office 文档（DOC/DOCX/XLS/XLSX/PPT/PPTX）" });
 
         // 超大文件保护：不做转换，直接提示下载（避免 LibreOffice 长期占满服务器）。
         var fileSize = new FileInfo(fullPath).Length;
@@ -455,7 +455,7 @@ public class ResourceFileController : AbpControllerBase
 
             var ext = Path.GetExtension(fullPath)?.ToLowerInvariant();
             if (ext != ".pptx" && ext != ".docx" && ext != ".xlsx" && ext != ".ppt" && ext != ".doc" && ext != ".xls")
-                return BadRequest(new { message = "仅支持 Office 文档（PPTX/DOCX/XLSX）" });
+                return BadRequest(new { message = "仅支持 Office 文档（DOC/DOCX/XLS/XLSX/PPT/PPTX）" });
 
             // 超大文件保护：不做转换，前端轮询会一直不 ready → 前端超时提示。
             // 但更友好的是直接告知过大。前端已按 100MB 阈值降级为"下载查看"。
