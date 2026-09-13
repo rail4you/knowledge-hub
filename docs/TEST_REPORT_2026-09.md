@@ -180,7 +180,26 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 
 > 说明：host 用户即使带 `__tenant: qidi` 头，删除租户资源仍按 host 上下文处理（审计 TenantId 为空），因此返回 404 属正确隔离行为。
 
-## 8. 本轮代码改动
+## 8. 视频链路与 Hangfire
+
+### 8.1 视频链路（VideoIndexingJob）
+- **成功路径**：用 `mov_bbb.mp4`（770KB/10s）建视频资源 → `KhVideoIndexingJobs` Pending→Parsing→Analyzing→Indexing→**Completed(TotalEvents=2, ProcessedEvents=2)**；Meili `videos` 索引新增 2 条时间轴（含 tenantId）；应用搜索命中 `sourceType=video`（含 videoName/startTime）；媒体任务生成缩略图（HTTP 200）。
+- **合成视频**（ffmpeg `testsrc`）：Qwen VL 正常返回 `{"events": []}`，但旧逻辑仍标记 **Completed** 且未写入任何文档 → **假成功，已修复为 Failed（“AI 未返回任何时间轴事件”）**。
+- **授权缺陷**：`VideoIndexingBackgroundJob` 通过接口调用带 `[Authorize(Search.ManageIndex)]` 的 `VideoAnalysisAppService`，后台任务无用户上下文 → `AbpAuthorizationException`，**视频索引 100% 失败**。已修复为注入具体类型（HTTP 入口仍受接口代理鉴权保护）。
+
+### 8.2 Hangfire
+- 存储：PostgreSQL `hangfire` schema；当前 `Succeeded=920`、`Failed=1`，无堆积队列。
+- 队列隔离：4 个独立 server —— `default(2)`、`ai(2)`、`conversion(1)`、`media(2)`，与配置一致。
+- Recurring（均每 5 分钟，执行 Succeeded）：`office-conversion-reprocess`、`ai-task-recovery`、`resource-media-maintenance`、`resource-media-recovery`。
+- Dashboard `/hangfire` 经回环访问返回 200（鉴权过滤器放行本机；nginx 侧另行限制）。
+- 失败样本：`OfficeConversionJob`（`FileNotFoundException`，缺失 `*.light.pptx`），完整异常记录在 `hangfire.state`；该 job `[AutomaticRetry(Attempts = 0)]`，按设计不重试。
+- **重要发现：文档/视频索引未接入 Hangfire**
+  - `hangfire.job` 中不存在 `DocumentIndexing`/`VideoIndexing` 类型——它们走 ABP `IBackgroundJobManager`（内存存储，项目未引用 `Volo.Abp.BackgroundJobs.Hangfire`）。
+  - 库中存在 **5 条自 2026-03 起一直 Pending** 的 `KhDocumentIndexingJobs`（Host、资源名“测试5/test1”等），为进程重启后内存队列丢失且无恢复任务所致。
+  - 风险：重启会丢失排队中的索引任务，DB job 行永久停留 Pending；媒体/AI/转换有恢复任务，索引没有。
+  - 建议：引入 `Volo.Abp.BackgroundJobs.Hangfire` 或新增 Hangfire 索引队列，并补索引恢复 RecurringJob。
+
+## 9. 本轮代码改动
 - `src/KnowledgeHub.Application/Search/SearchAnalyticsService.cs`：`[RemoteService(false)]`
 - `src/KnowledgeHub.Application/Users/UserAppService.cs` + `IUserAppService.cs`：遗留 CRUD 隐藏
 - `src/KnowledgeHub.Application/Search/ResourceRecommendationAppService.cs`：连接/命令占用修复
@@ -188,15 +207,16 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 - `src/KnowledgeHub.HttpApi/Controllers/TenantListController.cs`：移除类级 `[AllowAnonymous]`，仅 `GetTenants` 匿名
 - `src/KnowledgeHub.Application/Resources/Media/ResourceMediaProcessor.cs`：源文件缺失时媒体任务标记 Failed（修复假成功）
 - `src/KnowledgeHub.Application/Resources/ResourceAppService.cs`：DeleteAsync 先确认存在再删除，再清理（修复假成功与索引不一致）
+- `src/KnowledgeHub.Application/Search/VideoIndexingBackgroundJob.cs`：具体类型注入修复授权异常；0 事件标记 Failed
 - `scripts/test/seed-perf-data.sh`、`scripts/perf/pgbench/read.sql`：表名修正为 `AppResources/AppCourses`
 - `scripts/test/security-regression.sh`：SSE 超时保护、`Accept: application/json`、REJECT 状态集合、变量花括号修复、新增 M-6/L-1 用例
 - `scripts/test/api-permission-matrix.sh`：修正 major 路径与 teacher 期望
 - `scripts/test/cleanup-perf-data.sh`：新增清理脚本
 
-## 9. 后续仍待补的测试
+## 10. 后续仍待补的测试
 1. **业务集成测试**：权限 Seeder、租户隔离、AI 配额等（安全原语单测已补 11 个）。
 2. **E2E（Playwright）**：管理端/教师/学生关键旅程与前端路由守卫（当前仅有 API 级验证）。
 3. **k6 混合/搜索压测**：本机无 k6；`ai.js` 按用户要求暂缓。
-4. **视频链路**：`VideoIndexingJob`（ffmpeg 抽帧 + Qwen VL 索引）尚未走完整闭环。
+4. **索引持久化改造**：将索引任务接入 Hangfire + 恢复任务后，回归「重启不丢任务」。
 5. **契约测试**：对 api-definition 全量 action 做参数化调用（当前冒烟仅覆盖无参 GET）。
-6. **Hangfire 重试/恢复**：人为让转换/索引失败，验证异常队列、重试与恢复任务。
+6. **Hangfire 重试**：为媒体/AI 任务制造可重试失败（默认 10 次），验证退避与最终 Failed。
