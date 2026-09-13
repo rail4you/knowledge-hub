@@ -651,10 +651,6 @@ export const APP_ROUTES: Routes = [
         loadComponent: () => import('./learning/exercise-learning/exercise-learning.component').then(c => c.ExerciseLearningComponent),
       },
       {
-        path: 'learning-progress',
-        loadComponent: () => import('./learning/learning-progress/learning-progress.component').then(c => c.LearningProgressComponent),
-      },
-      {
         path: 'learning-statistics',
         loadComponent: () => import('./learning/learning-statistics/learning-statistics.component').then(c => c.LearningStatisticsComponent),
         canActivate: [permissionGuard],

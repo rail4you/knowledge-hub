@@ -2,9 +2,137 @@
   <!-- Header -->
   <div class="page-header">
     <h1>学习统计</h1>
-    <p class="subtitle">从左侧选择课程，查看章节进度概览与学生统计明细</p>
+    <p class="subtitle">总体统计查看全租户课程汇总，课程明细查看单课程的学生与章节统计</p>
   </div>
 
+  <nz-card class="main-tabs-card">
+    <nz-tabs
+      [nzSelectedIndex]="mainTab()"
+      (nzSelectedIndexChange)="onMainTabChange($event)"
+    >
+      <nz-tab nzTitle="总体统计">
+        @if (loadingTenant()) {
+          <div class="loading-container">
+            <nz-spin nzSimple></nz-spin>
+          </div>
+        } @else if (tenantStats(); as ts) {
+          <div class="overview-toolbar">
+            <span class="overview-toolbar-title">各课程汇总</span>
+            <button
+              nz-button
+              nzType="primary"
+              [nzLoading]="exporting()"
+              (click)="exportOverview()"
+            >
+              <span nz-icon nzType="download"></span>
+              导出 Excel
+            </button>
+          </div>
+
+          <div class="summary-grid tab-summary-grid">
+            <div class="summary-item">
+              <span class="summary-value">{{ ts.totalCourses ?? 0 }}</span>
+              <span class="summary-label">课程总数</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value">{{ ts.totalStudents ?? 0 }}</span>
+              <span class="summary-label">学习人数</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value">{{ ts.activeStudents ?? 0 }}</span>
+              <span class="summary-label">活跃学生</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value">{{ ts.totalExercises ?? 0 }}</span>
+              <span class="summary-label">总关联习题</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value">{{ ts.averageCompletionRate ?? 0 }}%</span>
+              <span class="summary-label">平均完成率</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-value">{{ ts.averageCorrectRate ?? 0 }}%</span>
+              <span class="summary-label">平均正确率</span>
+            </div>
+          </div>
+
+          @if (tenantCourses().length > 0) {
+            <div class="overview-charts">
+              <div class="chart-card">
+                <div class="chart-title">课程统计</div>
+                <div class="chart-body" #rateBarChart></div>
+              </div>
+              <div class="chart-card">
+                <div class="chart-title">各课程学习人数占比</div>
+                <div class="chart-body" #studentPieChart></div>
+              </div>
+            </div>
+
+            <nz-table
+              [nzData]="tenantCourses()"
+              nzSize="small"
+              [nzPageSize]="10"
+              [nzShowSizeChanger]="true"
+              [nzNoResult]="noCourseData"
+            >
+              <thead>
+                <tr>
+                  <th>课程</th>
+                  <th>学习人数</th>
+                  <th>活跃学生</th>
+                  <th>总习题</th>
+                  <th>有题章节</th>
+                  <th>平均完成率</th>
+                  <th>平均正确率</th>
+                  <th>最后活跃</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of tenantCourses(); track c.courseId) {
+                  <tr>
+                    <td>{{ c.courseName }}</td>
+                    <td>{{ c.totalStudents }}</td>
+                    <td>{{ c.activeStudents }}</td>
+                    <td>{{ c.totalExercises }}</td>
+                    <td>{{ c.chapterCount }}</td>
+                    <td>
+                      <nz-tag [nzColor]="getCompletionColor(c.averageCompletionRate ?? 0)">
+                        {{ c.averageCompletionRate ?? 0 }}%
+                      </nz-tag>
+                    </td>
+                    <td>
+                      <nz-tag [nzColor]="getCorrectColor(c.averageCorrectRate ?? 0)">
+                        {{ c.averageCorrectRate ?? 0 }}%
+                      </nz-tag>
+                    </td>
+                    <td>{{ (c.lastActiveTime | date: 'yyyy-MM-dd HH:mm') || '-' }}</td>
+                    <td>
+                      <button
+                        nz-button
+                        nzType="link"
+                        nzSize="small"
+                        (click)="viewCourseDetail(c.courseId)"
+                      >
+                        查看明细
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </nz-table>
+            <ng-template #noCourseData>
+              <nz-empty nzNotFoundContent="暂无课程统计"></nz-empty>
+            </ng-template>
+          } @else {
+            <nz-empty nzNotFoundContent="暂无课程统计"></nz-empty>
+          }
+        } @else {
+          <nz-empty nzNotFoundContent="暂无统计数据"></nz-empty>
+        }
+      </nz-tab>
+
+      <nz-tab nzTitle="课程明细">
   <!-- Loading state -->
   @if (loadingCourses()) {
     <div class="loading-container">
@@ -55,7 +183,7 @@
       <!-- Right: statistics for selected course -->
       @if (selectedCourseId()) {
         <div class="detail-column">
-          <!-- Top toolbar: actions on top of right column -->
+          <!-- Top toolbar: course name + overview stats + actions -->
           <nz-card class="toolbar-card">
             <div class="toolbar-bar">
               <div class="toolbar-left">
@@ -64,14 +192,17 @@
                 </span>
                 <span class="toolbar-hint">共 {{ chapterTotal() }} 个章节 · 共 {{ totalCount() }} 名学生</span>
               </div>
-              <button
-                nz-button
-                nzType="primary"
-                (click)="openExportModal()"
-              >
-                <span nz-icon nzType="download"></span>
-                导出 Excel
-              </button>
+              <div class="toolbar-right">
+                @if (overview(); as ov) {
+                  <div class="toolbar-stats">
+                    <span class="tstat">学习人数<b>{{ ov.totalStudents ?? 0 }}</b></span>
+                    <span class="tstat">活跃学生<b>{{ ov.activeStudents ?? 0 }}</b></span>
+                    <span class="tstat">总习题<b>{{ ov.totalExercises ?? 0 }}</b></span>
+                    <span class="tstat">平均完成率<b [style.color]="getScoreColor(ov.averageCompletionRate ?? 0)">{{ ov.averageCompletionRate ?? 0 }}%</b></span>
+                    <span class="tstat">平均正确率<b [style.color]="getScoreColor(ov.averageCorrectRate ?? 0)">{{ ov.averageCorrectRate ?? 0 }}%</b></span>
+                  </div>
+                }
+              </div>
             </div>
           </nz-card>
 
@@ -82,43 +213,6 @@
               (nzSelectedIndexChange)="activeTab.set($event)"
             >
               <nz-tab [nzTitle]="'学生统计（' + totalCount() + '）'">
-                @if (overview(); as ov) {
-                  <div class="summary-grid tab-summary-grid">
-                    <div class="summary-item">
-                      <span class="summary-value">{{ ov.totalStudents ?? 0 }}</span>
-                      <span class="summary-label">学习人数</span>
-                    </div>
-                    <div class="summary-item">
-                      <span class="summary-value">{{ ov.activeStudents ?? 0 }}</span>
-                      <span class="summary-label">活跃学生</span>
-                    </div>
-                    <div class="summary-item">
-                      <span class="summary-value">{{ ov.totalExercises ?? 0 }}</span>
-                      <span class="summary-label">总习题</span>
-                    </div>
-                    <div class="summary-item">
-                      <span class="summary-value">{{ (ov.totalLearningMinutes ?? 0) | number: '1.0-0' }}</span>
-                      <span class="summary-label">学习时长(分钟)</span>
-                    </div>
-                    <div class="summary-item">
-                      <span class="summary-value" [style.color]="getScoreColor(ov.averageCompletionRate ?? 0)">
-                        {{ ov.averageCompletionRate ?? 0 }}%
-                      </span>
-                      <span class="summary-label">平均完成率</span>
-                    </div>
-                    <div class="summary-item">
-                      <span class="summary-value" [style.color]="getScoreColor(ov.averageCorrectRate ?? 0)">
-                        {{ ov.averageCorrectRate ?? 0 }}%
-                      </span>
-                      <span class="summary-label">平均正确率</span>
-                    </div>
-                  </div>
-                } @else if (loadingOverview()) {
-                  <div class="loading-container" style="padding: 40px 0;">
-                    <nz-spin nzSimple></nz-spin>
-                  </div>
-                }
-
                 @if (loading()) {
                   <div class="loading-container">
                     <nz-spin nzSimple></nz-spin>
@@ -161,7 +255,7 @@
                               {{ item.correctRate ?? 0 }}%
                             </nz-tag>
                           </td>
-                          <td>{{ item.lastActiveTime | date: 'yyyy-MM-dd HH:mm' }}</td>
+                          <td>{{ (item.lastActiveTime | date: 'yyyy-MM-dd HH:mm') || '-' }}</td>
                         </tr>
                       }
                     </tbody>
@@ -190,6 +284,7 @@
                       <tr>
                         <th>章节</th>
                         <th>习题总数</th>
+                        <th>参与学生</th>
                         <th>已完成</th>
                         <th>完成率</th>
                         <th>正确率</th>
@@ -200,6 +295,7 @@
                         <tr>
                           <td>{{ ch.chapterName }}</td>
                           <td>{{ ch.totalExercises }}</td>
+                          <td>{{ ch.participantCount ?? 0 }}</td>
                           <td>{{ ch.completedCount }}</td>
                           <td>
                             <nz-tag [nzColor]="getCompletionColor(ch.completionRate ?? 0)">
@@ -233,23 +329,7 @@
       }
     </div>
   }
-
-  <!-- Export confirm modal: time range confirmed here -->
-  <nz-modal
-    [nzVisible]="exportModalVisible()"
-    nzTitle="导出学习统计"
-    (nzOnCancel)="closeExportModal()"
-    (nzOnOk)="confirmExport()"
-    [nzOkLoading]="exporting()"
-    nzOkText="确认导出"
-    nzCancelText="取消"
-  >
-    <ng-container *nzModalContent>
-      <div class="export-form">
-        <div class="export-course">课程：{{ selectedCourse()?.title }}</div>
-        <div class="export-label">时间范围（可选，不选则导出全部）：</div>
-        <nz-range-picker [(ngModel)]="exportDateRange" style="width: 100%;"></nz-range-picker>
-      </div>
-    </ng-container>
-  </nz-modal>
+      </nz-tab>
+    </nz-tabs>
+  </nz-card>
 </div>

@@ -293,15 +293,6 @@ function configureRoutes() {
       invisible: true,
     },
     {
-      path: '/learning/learning-progress',
-      name: '::Menu:LearningProgress',
-      iconClass: 'fas fa-chart-line',
-      parentName: '::Menu:CourseManagement',
-      order: 12,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Courses.Edit',
-    },
-    {
       path: '/learning/learning-statistics',
       name: '::Menu:LearningStatistics',
       iconClass: 'fas fa-chart-bar',

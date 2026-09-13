@@ -10,6 +10,7 @@ export interface ChapterProgressDto {
   completedCount?: number;
   completionRate?: number;
   correctRate?: number;
+  participantCount?: number;
 }
 
 export interface CourseLearningOverviewDto {
@@ -22,6 +23,18 @@ export interface CourseLearningOverviewDto {
   averageCorrectRate?: number;
   totalLearningMinutes?: number;
   chapterProgress?: ChapterProgressDto[];
+}
+
+export interface CourseStatisticsItemDto {
+  courseId?: string;
+  courseName?: string;
+  totalStudents?: number;
+  activeStudents?: number;
+  totalExercises?: number;
+  chapterCount?: number;
+  averageCompletionRate?: number;
+  averageCorrectRate?: number;
+  lastActiveTime?: string | null;
 }
 
 export interface GetCourseLearningOverviewInput {
@@ -45,6 +58,10 @@ export interface GetMyRecentRecordsInput extends PagedAndSortedResultRequestDto 
 export interface GetStudentExerciseRecordsInput extends PagedAndSortedResultRequestDto {
   courseId?: string;
   chapterId?: string | null;
+}
+
+export interface GetTenantCourseStatisticsInput {
+  tenantId?: string | null;
 }
 
 export interface KnowledgeDimensionDto {
@@ -165,4 +182,14 @@ export interface SubmitSelfAssessmentInput {
   exerciseId?: string;
   courseId?: string;
   assessment?: SelfAssessment;
+}
+
+export interface TenantCourseStatisticsDto {
+  totalCourses?: number;
+  totalStudents?: number;
+  activeStudents?: number;
+  totalExercises?: number;
+  averageCompletionRate?: number;
+  averageCorrectRate?: number;
+  courses?: CourseStatisticsItemDto[];
 }

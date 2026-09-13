@@ -1,17 +1,19 @@
-import { Component, signal, inject, OnInit, ChangeDetectionStrategy, computed } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy, ChangeDetectionStrategy, computed, ElementRef, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import * as echarts from 'echarts/core';
+import { BarChart, PieChart } from 'echarts/charts';
+import { CanvasRenderer } from 'echarts/renderers';
+import { TooltipComponent, LegendComponent, GridComponent } from 'echarts/components';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzTableModule } from 'ng-zorro-antd/table';
-import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { StudentExerciseRecordService } from '../../proxy/learning/student-exercise-record.service';
@@ -20,8 +22,12 @@ import type { CourseDto } from '../../proxy/courses/dtos/models';
 import {
   StudentLearningStatisticsDto,
   CourseLearningOverviewDto,
+  CourseStatisticsItemDto,
   GetLearningStatisticsInput,
+  TenantCourseStatisticsDto,
 } from '../../proxy/learning/dtos/models';
+
+echarts.use([BarChart, PieChart, CanvasRenderer, TooltipComponent, LegendComponent, GridComponent]);
 
 @Component({
   selector: 'app-learning-statistics',
@@ -32,24 +38,35 @@ import {
     NzCardModule,
     NzButtonModule,
     NzTableModule,
-    NzDatePickerModule,
     NzIconModule,
     NzSpinModule,
     NzTagModule,
     NzTooltipModule,
     NzEmptyModule,
     NzInputModule,
-    NzModalModule,
     NzTabsModule,
   ],
   templateUrl: './learning-statistics.component.html',
   styleUrls: ['./learning-statistics.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LearningStatisticsComponent implements OnInit {
+export class LearningStatisticsComponent implements OnInit, OnDestroy {
   private readonly recordService = inject(StudentExerciseRecordService);
   private readonly courseService = inject(CourseService);
   private readonly message = inject(NzMessageService);
+
+  // ===== 顶层 Tab：0=总体统计，1=课程明细 =====
+  mainTab = signal(0);
+
+  // ===== 总体统计（租户级全课程汇总） =====
+  loadingTenant = signal(false);
+  tenantStats = signal<TenantCourseStatisticsDto | null>(null);
+  readonly tenantCourses = computed(() => this.tenantStats()?.courses ?? []);
+
+  private readonly rateBarRef = viewChild<ElementRef<HTMLDivElement>>('rateBarChart');
+  private readonly studentPieRef = viewChild<ElementRef<HTMLDivElement>>('studentPieChart');
+  private rateBarChart: echarts.ECharts | null = null;
+  private studentPieChart: echarts.ECharts | null = null;
 
   // ===== 左侧课程列表 =====
   loadingCourses = signal(false);
@@ -77,11 +94,9 @@ export class LearningStatisticsComponent implements OnInit {
   // ===== 右侧 Tab 状态：0=学生统计，1=章节统计 =====
   activeTab = signal(0);
 
-  // ===== 右侧导出（时间范围仅在导出弹窗中确认） =====
+  // ===== 导出（总体统计：各课程汇总表） =====
   selectedChapterId: string | null = null;
   exporting = signal(false);
-  exportModalVisible = signal(false);
-  exportDateRange: Date[] | null = null;
 
   // ===== 概览 + 明细 =====
   loadingOverview = signal(false);
@@ -97,7 +112,9 @@ export class LearningStatisticsComponent implements OnInit {
   chapterPageIndex = signal(1);
   chapterPageSize = signal(10);
 
-  readonly chapterProgressList = computed(() => this.overview()?.chapterProgress ?? []);
+  // 后端已只返回有习题关联的章节，前端再兜底过滤一次，避免旧接口缓存出现空行
+  readonly chapterProgressList = computed(() =>
+    (this.overview()?.chapterProgress ?? []).filter(c => (c.totalExercises ?? 0) > 0));
   readonly chapterTotal = computed(() => this.chapterProgressList().length);
   readonly pagedChapterProgress = computed(() => {
     const all = this.chapterProgressList();
@@ -107,6 +124,124 @@ export class LearningStatisticsComponent implements OnInit {
 
   ngOnInit() {
     this.loadCourses();
+    this.loadTenantStatistics();
+  }
+
+  ngOnDestroy() {
+    this.rateBarChart?.dispose();
+    this.rateBarChart = null;
+    this.studentPieChart?.dispose();
+    this.studentPieChart = null;
+  }
+
+  onMainTabChange(index: number) {
+    this.mainTab.set(index);
+    // 图表容器在隐藏 Tab 下宽度为 0，切换回来后重建
+    if (index === 0 && this.tenantStats()) {
+      setTimeout(() => this.initOverviewCharts());
+    }
+  }
+
+  // ===== 总体统计 =====
+  loadTenantStatistics() {
+    this.loadingTenant.set(true);
+    this.recordService.getTenantCourseStatistics({}).subscribe({
+      next: data => {
+        this.tenantStats.set(data);
+        this.loadingTenant.set(false);
+        setTimeout(() => this.initOverviewCharts());
+      },
+      error: () => {
+        this.loadingTenant.set(false);
+        this.message.error('加载总体统计失败');
+      },
+    });
+  }
+
+  viewCourseDetail(courseId: string | undefined) {
+    if (!courseId) return;
+    this.mainTab.set(1);
+    this.selectCourse(courseId);
+  }
+
+  private initOverviewCharts() {
+    const barEl = this.rateBarRef();
+    const pieEl = this.studentPieRef();
+    const courses = this.tenantCourses();
+    if (!barEl || !pieEl || courses.length === 0) return;
+    this.rateBarChart?.dispose();
+    this.studentPieChart?.dispose();
+    this.rateBarChart = echarts.init(barEl.nativeElement);
+    this.studentPieChart = echarts.init(pieEl.nativeElement);
+    this.updateOverviewCharts();
+  }
+
+  private updateOverviewCharts() {
+    const courses = this.tenantCourses();
+    if (courses.length === 0) return;
+    const names = courses.map(c => this.truncate(c.courseName ?? '', 10));
+    const fullNames = courses.map(c => c.courseName ?? '');
+
+    this.rateBarChart?.setOption({
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: any) => {
+          const p = Array.isArray(params) ? params[0] : params;
+          const d = p?.data ?? {};
+          return `${d.courseName ?? p?.name ?? ''}<br/>学习人数：${d.value ?? 0}<br/>完成率：${d.completionRate ?? 0}%<br/>正确率：${d.correctRate ?? 0}%`;
+        },
+      },
+      grid: { left: 8, right: 8, bottom: 0, top: 32, containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: names,
+        axisLabel: { interval: 0, rotate: names.length > 6 ? 30 : 0, fontSize: 12 },
+      },
+      yAxis: { type: 'value', name: '学习人数', minInterval: 1 },
+      series: [
+        {
+          name: '学习人数',
+          type: 'bar',
+          barMaxWidth: 44,
+          itemStyle: { color: '#1677ff', borderRadius: [4, 4, 0, 0] },
+          label: { show: true, position: 'top', fontSize: 12, color: '#262626' },
+          data: courses.map((c, i) => ({
+            value: c.totalStudents ?? 0,
+            courseName: fullNames[i],
+            completionRate: c.averageCompletionRate ?? 0,
+            correctRate: c.averageCorrectRate ?? 0,
+          })),
+        },
+      ],
+    });
+
+    this.studentPieChart?.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c} 人 ({d}%)' },
+      legend: {
+        type: 'scroll',
+        bottom: 0,
+        textStyle: { fontSize: 13, color: '#262626' },
+        itemWidth: 14,
+        itemHeight: 10,
+      },
+      series: [{
+        type: 'pie',
+        radius: ['44%', '70%'],
+        center: ['50%', '44%'],
+        avoidLabelOverlap: true,
+        // 单色系分级配色：明度差区分扇形，避免多色花哨，保持专业统一
+        color: this.pieColors(courses.length),
+        itemStyle: { borderRadius: 6 },
+        label: { show: true, position: 'inside', formatter: '{d}%', fontSize: 11, fontWeight: 600, color: '#fff' },
+        labelLayout: { hideOverlap: true },
+        data: courses.map(c => ({ name: this.truncate(c.courseName ?? '', 12), value: c.totalStudents ?? 0 })),
+      }],
+    });
+  }
+
+  private truncate(text: string, max: number): string {
+    return text.length > max ? `${text.slice(0, max)}…` : text;
   }
 
   loadCourses() {
@@ -196,47 +331,21 @@ export class LearningStatisticsComponent implements OnInit {
   }
 
   openExportModal() {
-    const courseId = this.selectedCourseId();
-    if (!courseId) {
-      this.message.warning('请先从左侧选择课程');
-      return;
-    }
-    this.exportDateRange = null;
-    this.exportModalVisible.set(true);
+    this.exportOverview();
   }
 
-  closeExportModal() {
-    if (this.exporting()) return;
-    this.exportModalVisible.set(false);
-  }
-
-  confirmExport() {
-    const courseId = this.selectedCourseId();
-    if (!courseId) {
-      this.message.warning('请先从左侧选择课程');
-      return;
-    }
-
+  // 总体统计：导出各课程汇总表
+  exportOverview() {
     this.exporting.set(true);
-    const input: GetLearningStatisticsInput = {
-      courseId,
-      chapterId: this.selectedChapterId,
-      startTime: this.exportDateRange?.[0]?.toISOString(),
-      endTime: this.exportDateRange?.[1]?.toISOString(),
-      skipCount: 0,
-      maxResultCount: 10000,
-    };
-
-    this.recordService.exportLearningStatistics(input).subscribe({
+    this.recordService.exportTenantCourseStatistics({}).subscribe({
       next: blob => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `学习统计_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.download = `课程统计_${new Date().toISOString().slice(0, 10)}.xlsx`;
         a.click();
         window.URL.revokeObjectURL(url);
         this.exporting.set(false);
-        this.exportModalVisible.set(false);
         this.message.success('导出成功');
       },
       error: () => {
@@ -246,9 +355,25 @@ export class LearningStatisticsComponent implements OnInit {
     });
   }
 
-  // 保留旧方法名兼容模板误调用，统一走弹窗
+  // 保留旧方法名兼容模板误调用
   exportExcel() {
-    this.openExportModal();
+    this.exportOverview();
+  }
+
+  /**
+   * 与柱状图统一色系：都基于品牌蓝 hsl(211,100%,54%)，
+   * 用明度差区分扇形，明度控制在 38%~58%，保证白色百分比文字可读。
+   */
+  private pieColors(count: number): string[] {
+    if (count <= 0) return [];
+    if (count === 1) return ['hsl(211, 88%, 48%)'];
+    const colors: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const t = i / (count - 1);
+      const l = Math.round(38 + (58 - 38) * t);
+      colors.push(`hsl(211, 88%, ${l}%)`);
+    }
+    return colors;
   }
 
   getScoreColor(rate: number): string {

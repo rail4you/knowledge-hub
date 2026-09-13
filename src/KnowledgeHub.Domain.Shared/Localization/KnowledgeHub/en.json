@@ -498,7 +498,6 @@
     "Permission:Learning.ViewStatistics": "View Learning Statistics",
     "Permission:Learning.ExportData": "Export Learning Data",
     "Menu:ExerciseLearning": "Exercise Learning",
-    "Menu:LearningProgress": "Learning Progress",
     "Menu:LearningStatistics": "Learning Statistics",
     "Enum:SelfAssessment.0": "Not Assessed",
     "Enum:SelfAssessment.1": "Correct",

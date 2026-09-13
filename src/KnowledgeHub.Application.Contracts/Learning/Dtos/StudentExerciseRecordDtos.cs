@@ -99,6 +99,8 @@ public class ChapterProgressDto
     public int CompletedCount { get; set; }
     public decimal CompletionRate { get; set; }
     public decimal CorrectRate { get; set; }
+    /// <summary>参与该章节习题的学生数量（有已完成作答记录，去重）。</summary>
+    public int ParticipantCount { get; set; }
 }
 
 public class GetLearningStatisticsInput : PagedAndSortedResultRequestDto
@@ -118,5 +120,37 @@ public class GetLearningStatisticsInput : PagedAndSortedResultRequestDto
 public class GetCourseLearningOverviewInput
 {
     public Guid CourseId { get; set; }
+    public Guid? TenantId { get; set; }
+}
+
+public class CourseStatisticsItemDto
+{
+    public Guid CourseId { get; set; }
+    public string CourseName { get; set; } = string.Empty;
+    public int TotalStudents { get; set; }
+    public int ActiveStudents { get; set; }
+    /// <summary>已关联到章节的习题数（去重）。</summary>
+    public int TotalExercises { get; set; }
+    /// <summary>有习题关联的章节数。</summary>
+    public int ChapterCount { get; set; }
+    public decimal AverageCompletionRate { get; set; }
+    public decimal AverageCorrectRate { get; set; }
+    public DateTime? LastActiveTime { get; set; }
+}
+
+public class TenantCourseStatisticsDto
+{
+    public int TotalCourses { get; set; }
+    /// <summary>全租户学习人数（跨课程去重）。</summary>
+    public int TotalStudents { get; set; }
+    public int ActiveStudents { get; set; }
+    public int TotalExercises { get; set; }
+    public decimal AverageCompletionRate { get; set; }
+    public decimal AverageCorrectRate { get; set; }
+    public List<CourseStatisticsItemDto> Courses { get; set; } = new();
+}
+
+public class GetTenantCourseStatisticsInput
+{
     public Guid? TenantId { get; set; }
 }

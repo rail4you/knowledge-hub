@@ -22,5 +22,7 @@ public interface IStudentExerciseRecordAppService : IApplicationService
     Task<PagedResultDto<StudentLearningStatisticsDto>> GetLearningStatisticsAsync(GetLearningStatisticsInput input);
     Task<PagedResultDto<StudentExerciseRecordDto>> GetStudentRecordsAsync(GetStudentExerciseRecordsInput input, Guid studentId);
     Task<CourseLearningOverviewDto> GetCourseLearningOverviewAsync(GetCourseLearningOverviewInput input);
+    Task<TenantCourseStatisticsDto> GetTenantCourseStatisticsAsync(GetTenantCourseStatisticsInput input);
+    Task<IRemoteStreamContent> ExportTenantCourseStatisticsAsync(GetTenantCourseStatisticsInput input);
     Task<IRemoteStreamContent> ExportLearningStatisticsAsync(GetLearningStatisticsInput input);
 }

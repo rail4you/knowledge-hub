@@ -34,6 +34,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
     private readonly IRepository<Chapter, Guid> _chapterRepository;
     private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly IRepository<LearningProgress, Guid> _learningProgressRepository;
+    private readonly IRepository<ChapterExercise, Guid> _chapterExerciseRepository;
     private readonly ICurrentTenant _currentTenant;
 
     public StudentExerciseRecordAppService(
@@ -44,6 +45,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         IRepository<Chapter, Guid> chapterRepository,
         IRepository<IdentityUser, Guid> userRepository,
         IRepository<LearningProgress, Guid> learningProgressRepository,
+        IRepository<ChapterExercise, Guid> chapterExerciseRepository,
         ICurrentTenant currentTenant)
     {
         _recordRepository = recordRepository;
@@ -53,6 +55,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         _chapterRepository = chapterRepository;
         _userRepository = userRepository;
         _learningProgressRepository = learningProgressRepository;
+        _chapterExerciseRepository = chapterExerciseRepository;
         _currentTenant = currentTenant;
     }
 
@@ -327,6 +330,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         List<StudentExerciseRecord> allRecords;
         List<LearningProgress> learningProgresses;
         List<Exercise> allExercises;
+        List<ChapterExercise> chapterExerciseLinks;
 
         using (DataFilter.Disable<IMultiTenant>())
         {
@@ -355,12 +359,34 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
 
             var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
             allExercises = await exerciseQuery
-                .WhereIf(input.ChapterId.HasValue, e => e.ChapterId == input.ChapterId!.Value)
                 .Where(e => e.CourseId == input.CourseId)
+                .ToListAsync();
+
+            var chapterQuery = await _chapterRepository.GetQueryableAsync();
+            var courseChapterIds = await chapterQuery
+                .Where(c => c.CourseId == input.CourseId)
+                .Select(c => c.Id)
+                .ToListAsync();
+
+            var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
+            chapterExerciseLinks = await ceQuery
+                .Where(ce => courseChapterIds.Contains(ce.ChapterId))
                 .ToListAsync();
         }
 
-        var exerciseCount = allExercises.Count;
+        // 总题数口径：只统计已关联到章节的题目（主章节 Exercise.ChapterId + 复用关联表 ChapterExercise 去重）。
+        // 未关联章节的题目（题库备选题）不计入分母，否则完成率会被拉低。
+        var exerciseChapterMap = BuildExerciseChapterMap(allExercises, chapterExerciseLinks);
+        int exerciseCount;
+        if (input.ChapterId.HasValue)
+        {
+            var chapterId = input.ChapterId.Value;
+            exerciseCount = exerciseChapterMap.Count(kv => kv.Value.Contains(chapterId));
+        }
+        else
+        {
+            exerciseCount = exerciseChapterMap.Count;
+        }
 
         // 统计口径与 GetCourseLearningOverviewAsync 对齐：学习人数 = 选课 ∪ 做题 ∪ 视频/资源进度 去重，
         // 这样顶部「学习时长(分钟)」与下方每人的时长之和能对应上。
@@ -378,6 +404,10 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         var progressLastAccessMap = learningProgresses
             .GroupBy(p => p.StudentId)
             .ToDictionary(g => g.Key, g => g.Max(p => p.LastAccessAt));
+        // 选课时间兜底：从未做题、也无视频进度的学生，用选课时间作为最后活跃，保证列表不再空白
+        var enrollTimeMap = studentCourses
+            .GroupBy(sc => sc.StudentId)
+            .ToDictionary(g => g.Key, g => g.Min(sc => sc.EnrolledAt));
 
         // Load student names
         Dictionary<Guid, string> studentMap;
@@ -398,13 +428,14 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             var videoTime = progressTimeMap.TryGetValue(studentId, out var pt) ? pt : TimeSpan.Zero;
             var totalTime = exerciseTime + videoTime;
 
+            // 作答时间兜底：CompletedAt 为空的老数据用记录创建时间，保证有作答就有活跃时间
             var lastExerciseTime = studentRecords
-                .Where(r => r.CompletedAt.HasValue)
-                .Select(r => r.CompletedAt!.Value)
+                .Select(r => r.CompletedAt ?? r.CreationTime)
                 .DefaultIfEmpty(DateTime.MinValue)
                 .Max();
             var lastProgressTime = progressLastAccessMap.TryGetValue(studentId, out var lat) ? lat : DateTime.MinValue;
-            var lastActive = new[] { lastExerciseTime, lastProgressTime }.Max();
+            var lastEnrollTime = enrollTimeMap.TryGetValue(studentId, out var et) ? et : DateTime.MinValue;
+            var lastActive = new[] { lastExerciseTime, lastProgressTime, lastEnrollTime }.Max();
             DateTime? lastActiveTime = lastActive == DateTime.MinValue ? null : lastActive;
 
             return new StudentLearningStatisticsDto
@@ -448,6 +479,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         List<LearningProgress> learningProgresses;
         List<Exercise> allExercises;
         List<Chapter> chapters;
+        List<ChapterExercise> chapterExerciseLinks;
         Course course;
 
         using (DataFilter.Disable<IMultiTenant>())
@@ -479,6 +511,12 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
 
             var chapterQuery = await _chapterRepository.GetQueryableAsync();
             chapters = await chapterQuery.Where(c => c.CourseId == input.CourseId).ToListAsync();
+
+            var chapterIds = chapters.Select(c => c.Id).ToList();
+            var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
+            chapterExerciseLinks = await ceQuery
+                .Where(ce => chapterIds.Contains(ce.ChapterId))
+                .ToListAsync();
         }
 
         // P1-9：学习人数 = 选课学生 ∪ 有学习记录的学生 ∪ 有视频进度的学生（去重）。
@@ -504,10 +542,29 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         var gradedRecords = allRecords.Where(r => r.IsCorrect.HasValue).ToList();
         var completedRecords = allRecords.Where(r => r.CompletedAt.HasValue).ToList();
 
+        // 总题数口径与 GetLearningStatisticsAsync 对齐：只统计已关联到章节的题目
+        // （主章节 Exercise.ChapterId + 复用关联表 ChapterExercise 去重），未关联章节的备选题不计入。
+        var exerciseChapterMap = BuildExerciseChapterMap(allExercises, chapterExerciseLinks);
+        var associatedExerciseCount = exerciseChapterMap.Count;
+
+        // 章节 -> 题目 ID 集合（去重，只收敛到本课程的章节）
+        var chapterExerciseIdsMap = chapters.ToDictionary(c => c.Id, _ => new HashSet<Guid>());
+        foreach (var kv in exerciseChapterMap)
+        {
+            foreach (var chId in kv.Value)
+            {
+                if (chapterExerciseIdsMap.TryGetValue(chId, out var set)) set.Add(kv.Key);
+            }
+        }
+
+        bool RecordInChapter(StudentExerciseRecord r, Guid chapterId) =>
+            r.ChapterId == chapterId ||
+            (exerciseChapterMap.TryGetValue(r.ExerciseId, out var chs) && chs.Contains(chapterId));
+
         var chapterProgress = chapters.Select(ch =>
         {
-            var chExercises = allExercises.Where(e => e.ChapterId == ch.Id).ToList();
-            var chRecords = allRecords.Where(r => r.ChapterId == ch.Id).ToList();
+            var chTotal = chapterExerciseIdsMap[ch.Id].Count;
+            var chRecords = allRecords.Where(r => RecordInChapter(r, ch.Id)).ToList();
             var chCompleted = chRecords.Count(r => r.CompletedAt.HasValue);
             var chGraded = chRecords.Where(r => r.IsCorrect.HasValue).ToList();
             var chCorrect = chGraded.Count(r => r.IsCorrect!.Value);
@@ -516,16 +573,24 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             {
                 ChapterId = ch.Id,
                 ChapterName = ch.Title,
-                TotalExercises = chExercises.Count,
+                TotalExercises = chTotal,
                 CompletedCount = chCompleted,
-                CompletionRate = chExercises.Count > 0
-                    ? Math.Round((decimal)chCompleted / chExercises.Count * 100, 1)
+                CompletionRate = chTotal > 0
+                    ? Math.Round((decimal)chCompleted / chTotal * 100, 1)
                     : 0,
                 CorrectRate = chGraded.Count > 0
                     ? Math.Round((decimal)chCorrect / chGraded.Count * 100, 1)
-                    : 0
+                    : 0,
+                ParticipantCount = chRecords
+                    .Where(r => r.CompletedAt.HasValue)
+                    .Select(r => r.StudentId)
+                    .Distinct()
+                    .Count()
             };
-        }).ToList();
+        })
+        // 只显示有习题关联的章节：未挂任何题目的章节不展示，避免空行干扰
+        .Where(x => x.TotalExercises > 0)
+        .ToList();
 
         return new CourseLearningOverviewDto
         {
@@ -533,16 +598,204 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             CourseName = course.Title,
             TotalStudents = allLearnerIds,
             ActiveStudents = activeStudentIds,
-            TotalExercises = allExercises.Count,
+            TotalExercises = associatedExerciseCount,
             TotalLearningMinutes = (double)Math.Round((decimal)totalTimeMinutes, 1),
-            AverageCompletionRate = allExercises.Count > 0 && allLearnerIds > 0
-                ? Math.Round((decimal)completedRecords.Count / (allExercises.Count * allLearnerIds) * 100, 1)
+            AverageCompletionRate = associatedExerciseCount > 0 && allLearnerIds > 0
+                ? Math.Round((decimal)completedRecords.Count / (associatedExerciseCount * allLearnerIds) * 100, 1)
                 : 0,
             AverageCorrectRate = gradedRecords.Count > 0
                 ? Math.Round((decimal)gradedRecords.Count(r => r.IsCorrect!.Value) / gradedRecords.Count * 100, 1)
                 : 0,
             ChapterProgress = chapterProgress
         };
+    }
+
+    [AllowAnonymous]
+    public async Task<TenantCourseStatisticsDto> GetTenantCourseStatisticsAsync(GetTenantCourseStatisticsInput input)
+    {
+        var tenantFilter = ResolveTenantFilter(input.TenantId);
+
+        List<Course> courses;
+        List<StudentCourse> studentCourses;
+        List<StudentExerciseRecord> allRecords;
+        List<LearningProgress> learningProgresses;
+        List<Exercise> allExercises;
+        List<Chapter> chapters;
+        List<ChapterExercise> chapterExerciseLinks;
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var courseQuery = await _courseRepository.GetQueryableAsync();
+            courses = await courseQuery
+                .WhereIf(tenantFilter.HasValue, c => c.TenantId == tenantFilter!.Value)
+                .ToListAsync();
+
+            var courseIds = courses.Select(c => c.Id).ToList();
+            if (courseIds.Count == 0) return new TenantCourseStatisticsDto();
+
+            var scQuery = await _studentCourseRepository.GetQueryableAsync();
+            studentCourses = await scQuery.Where(sc => courseIds.Contains(sc.CourseId)).ToListAsync();
+
+            var recordQuery = await _recordRepository.GetQueryableAsync();
+            allRecords = await recordQuery.Where(r => courseIds.Contains(r.CourseId)).ToListAsync();
+
+            var progressQuery = await _learningProgressRepository.GetQueryableAsync();
+            learningProgresses = await progressQuery.Where(p => courseIds.Contains(p.CourseId)).ToListAsync();
+
+            var exerciseQuery = await _exerciseRepository.GetQueryableAsync();
+            allExercises = await exerciseQuery.Where(e => courseIds.Contains(e.CourseId)).ToListAsync();
+
+            var chapterQuery = await _chapterRepository.GetQueryableAsync();
+            chapters = await chapterQuery.Where(c => courseIds.Contains(c.CourseId)).ToListAsync();
+
+            var chapterIds = chapters.Select(c => c.Id).ToList();
+            var ceQuery = await _chapterExerciseRepository.GetQueryableAsync();
+            chapterExerciseLinks = await ceQuery.Where(ce => chapterIds.Contains(ce.ChapterId)).ToListAsync();
+        }
+
+        // 与单课程口径对齐：题目 -> 所属章节（主章节 + 复用关联表去重），未关联章节的不计入
+        var exerciseChapterMap = BuildExerciseChapterMap(allExercises, chapterExerciseLinks);
+        var exerciseCourseMap = allExercises.ToDictionary(e => e.Id, e => e.CourseId);
+
+        var items = courses.Select(course =>
+        {
+            var courseId = course.Id;
+            var scs = studentCourses.Where(sc => sc.CourseId == courseId).ToList();
+            var recs = allRecords.Where(r => r.CourseId == courseId).ToList();
+            var progs = learningProgresses.Where(p => p.CourseId == courseId).ToList();
+            var courseChapters = chapters.Where(c => c.CourseId == courseId).ToList();
+
+            var assocExerciseIds = exerciseChapterMap.Keys
+                .Where(exId => exerciseCourseMap.TryGetValue(exId, out var ec) && ec == courseId)
+                .ToHashSet();
+            var linkedChapterCount = courseChapters.Count(ch =>
+                assocExerciseIds.Any(exId =>
+                    exerciseChapterMap.TryGetValue(exId, out var chs) && chs.Contains(ch.Id)));
+
+            var learnerIds = scs.Select(sc => sc.StudentId)
+                .Concat(recs.Select(r => r.StudentId))
+                .Concat(progs.Select(p => p.StudentId))
+                .Distinct()
+                .ToList();
+            var activeIds = recs.Where(r => r.CompletedAt.HasValue).Select(r => r.StudentId)
+                .Concat(progs.Select(p => p.StudentId))
+                .Distinct()
+                .ToList();
+
+            var completedCount = recs.Count(r => r.CompletedAt.HasValue);
+            var graded = recs.Where(r => r.IsCorrect.HasValue).ToList();
+            var correctCount = graded.Count(r => r.IsCorrect!.Value);
+
+            var lastActive = recs.Select(r => r.CompletedAt ?? r.CreationTime)
+                .Concat(progs.Select(p => p.LastAccessAt))
+                .Concat(scs.Select(sc => sc.EnrolledAt))
+                .DefaultIfEmpty(DateTime.MinValue)
+                .Max();
+
+            return new CourseStatisticsItemDto
+            {
+                CourseId = courseId,
+                CourseName = course.Title,
+                TotalStudents = learnerIds.Count,
+                ActiveStudents = activeIds.Count,
+                TotalExercises = assocExerciseIds.Count,
+                ChapterCount = linkedChapterCount,
+                AverageCompletionRate = assocExerciseIds.Count > 0 && learnerIds.Count > 0
+                    ? Math.Round((decimal)completedCount / (assocExerciseIds.Count * learnerIds.Count) * 100, 1)
+                    : 0,
+                AverageCorrectRate = graded.Count > 0
+                    ? Math.Round((decimal)correctCount / graded.Count * 100, 1)
+                    : 0,
+                LastActiveTime = lastActive == DateTime.MinValue ? null : lastActive
+            };
+        })
+        .OrderByDescending(x => x.TotalStudents)
+        .ThenBy(x => x.CourseName)
+        .ToList();
+
+        var allLearnerIds = studentCourses.Select(sc => sc.StudentId)
+            .Concat(allRecords.Select(r => r.StudentId))
+            .Concat(learningProgresses.Select(p => p.StudentId))
+            .Distinct()
+            .ToList();
+        var allActiveIds = allRecords.Where(r => r.CompletedAt.HasValue).Select(r => r.StudentId)
+            .Concat(learningProgresses.Select(p => p.StudentId))
+            .Distinct()
+            .ToList();
+        var totalCompleted = allRecords.Count(r => r.CompletedAt.HasValue);
+        var totalGraded = allRecords.Where(r => r.IsCorrect.HasValue).ToList();
+        // 总完成率分母：各课程（关联题数 × 学习人数）之和，与单课程口径对齐
+        var denomSum = items.Sum(x => (long)x.TotalExercises * x.TotalStudents);
+
+        return new TenantCourseStatisticsDto
+        {
+            TotalCourses = courses.Count,
+            TotalStudents = allLearnerIds.Count,
+            ActiveStudents = allActiveIds.Count,
+            TotalExercises = exerciseChapterMap.Count,
+            AverageCompletionRate = denomSum > 0
+                ? Math.Round((decimal)totalCompleted / denomSum * 100, 1)
+                : 0,
+            AverageCorrectRate = totalGraded.Count > 0
+                ? Math.Round((decimal)totalGraded.Count(r => r.IsCorrect!.Value) / totalGraded.Count * 100, 1)
+                : 0,
+            Courses = items
+        };
+    }
+
+    [AllowAnonymous]
+    public async Task<IRemoteStreamContent> ExportTenantCourseStatisticsAsync(GetTenantCourseStatisticsInput input)
+    {
+        var result = await GetTenantCourseStatisticsAsync(input);
+
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("课程汇总");
+
+        worksheet.Cell(1, 1).Value = "课程";
+        worksheet.Cell(1, 2).Value = "学习人数";
+        worksheet.Cell(1, 3).Value = "活跃学生";
+        worksheet.Cell(1, 4).Value = "总习题";
+        worksheet.Cell(1, 5).Value = "有题章节";
+        worksheet.Cell(1, 6).Value = "平均完成率(%)";
+        worksheet.Cell(1, 7).Value = "平均正确率(%)";
+        worksheet.Cell(1, 8).Value = "最后活跃时间";
+
+        var headerRange = worksheet.Range(1, 1, 1, 8);
+        headerRange.Style.Font.Bold = true;
+        headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+
+        for (int i = 0; i < result.Courses.Count; i++)
+        {
+            var item = result.Courses[i];
+            var row = i + 2;
+            worksheet.Cell(row, 1).Value = item.CourseName;
+            worksheet.Cell(row, 2).Value = item.TotalStudents;
+            worksheet.Cell(row, 3).Value = item.ActiveStudents;
+            worksheet.Cell(row, 4).Value = item.TotalExercises;
+            worksheet.Cell(row, 5).Value = item.ChapterCount;
+            worksheet.Cell(row, 6).Value = item.AverageCompletionRate;
+            worksheet.Cell(row, 7).Value = item.AverageCorrectRate;
+            worksheet.Cell(row, 8).Value = item.LastActiveTime?.ToString("yyyy-MM-dd HH:mm") ?? "";
+        }
+
+        // 总计行：跨课程数据不做简单相加（学习人数已跨课程去重），放在表尾便于核对
+        var totalRow = result.Courses.Count + 2;
+        worksheet.Cell(totalRow, 1).Value = "合计（去重后）";
+        worksheet.Cell(totalRow, 2).Value = result.TotalStudents;
+        worksheet.Cell(totalRow, 3).Value = result.ActiveStudents;
+        worksheet.Cell(totalRow, 4).Value = result.TotalExercises;
+        worksheet.Cell(totalRow, 6).Value = result.AverageCompletionRate;
+        worksheet.Cell(totalRow, 7).Value = result.AverageCorrectRate;
+        worksheet.Range(totalRow, 1, totalRow, 8).Style.Font.Bold = true;
+
+        worksheet.Columns().AdjustToContents();
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Seek(0, SeekOrigin.Begin);
+
+        return new RemoteStreamContent(stream, $"课程统计_{DateTime.Now:yyyyMMddHHmmss}.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     }
 
     [AllowAnonymous]
@@ -619,6 +872,30 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// 构建「题目 -&gt; 所属章节」映射（主章节 Exercise.ChapterId + 复用关联表 ChapterExercise 去重合并）。
+    /// 未关联任何章节的题目（题库备选题）不会出现在映射中；关联表里指向已不在本课程题目集合中的脏数据会被忽略。
+    /// </summary>
+    private static Dictionary<Guid, HashSet<Guid>> BuildExerciseChapterMap(
+        List<Exercise> exercises, List<ChapterExercise> links)
+    {
+        var exerciseIds = new HashSet<Guid>(exercises.Select(e => e.Id));
+        var map = new Dictionary<Guid, HashSet<Guid>>();
+        foreach (var e in exercises)
+        {
+            if (!e.ChapterId.HasValue) continue;
+            if (!map.TryGetValue(e.Id, out var set)) { set = new HashSet<Guid>(); map[e.Id] = set; }
+            set.Add(e.ChapterId.Value);
+        }
+        foreach (var ce in links)
+        {
+            if (!exerciseIds.Contains(ce.ExerciseId)) continue;
+            if (!map.TryGetValue(ce.ExerciseId, out var set)) { set = new HashSet<Guid>(); map[ce.ExerciseId] = set; }
+            set.Add(ce.ChapterId);
+        }
+        return map;
+    }
 
     private bool? AutoGrade(Exercise exercise, string? studentAnswer)
     {
