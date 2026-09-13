@@ -349,7 +349,7 @@
             <div class="resume-preview__sub">{{ r.fullName || '-' }}@if (r.isDefault) { <span class="user-tag">默认简历</span> }</div>
           </div>
           @if (r.attachmentUrl) {
-            <button class="op-btn op-btn--ghost" type="button" (click)="previewResumeAttachment()">
+            <button class="op-btn op-btn--ghost" type="button" (click)="openAttachmentPreview()">
               预览附件
             </button>
           }
@@ -391,6 +391,24 @@
       </div>
     } @else {
       <div class="empty-tip"><nz-empty nzNotFoundContent="暂无简历数据"></nz-empty></div>
+    }
+  </div>
+</nz-modal>
+
+<!-- =================== 简历附件预览弹窗 =================== -->
+<nz-modal [(nzVisible)]="attachmentVisible" nzTitle="简历附件预览" (nzOnCancel)="closeAttachmentPreview()"
+  [nzFooter]="null" [nzWidth]="960" [nzBodyStyle]="{ padding: '0' }">
+  <div *nzModalContent class="attachment-preview">
+    @if (attachmentSrc(); as src) {
+      <iframe class="attachment-preview__frame" [src]="src | safeResourceUrl"
+        (load)="attachmentLoading.set(false)" title="简历附件预览"></iframe>
+    }
+    @if (attachmentLoading()) {
+      <div class="attachment-preview__loading">
+        <nz-spin nzSimple nzSize="large"></nz-spin>
+        <p class="attachment-preview__loading-text">简历加载中，请稍候...</p>
+        <p class="attachment-preview__loading-hint">Word 文档需先转换为 PDF，可能稍慢</p>
+      </div>
     }
   </div>
 </nz-modal>

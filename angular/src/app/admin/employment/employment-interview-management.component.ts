@@ -14,6 +14,7 @@ import { NzPopconfirmModule } from 'ng-zorro-antd/popconfirm';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { ConfigStateService } from '@abp/ng.core';
+import { SafeResourceUrlPipe } from '../../shared/safe-resource-url.pipe';
 import {
   CompleteInterviewDto,
   CreateUpdateInterviewScheduleDto,
@@ -42,6 +43,7 @@ interface InterviewStudent {
     NzButtonModule, NzInputModule, NzModalModule,
     NzSelectModule, NzTableModule, NzTagModule, NzIconModule,
     NzTooltipModule, NzEmptyModule, NzSpinModule, NzPopconfirmModule,
+    SafeResourceUrlPipe,
   ],
   templateUrl: './employment-interview-management.component.html',
   styleUrls: ['./employment-interview-management.component.scss'],
@@ -103,6 +105,12 @@ export class EmploymentInterviewManagementComponent implements OnInit {
   resumeInterviewContext: InterviewScheduleDto | null = null;
   /** 从「安排面试」表单弹出预览：预览时先关闭表单，关闭预览后回到表单 */
   private resumeReturnToSchedule = false;
+
+  // --- Attachment Preview Modal（弹窗内嵌预览，不再新开浏览器页面） ---
+  attachmentVisible = false;
+  readonly attachmentSrc = signal<string | null>(null);
+  /** 附件（尤其 Word 转 PDF）加载较慢，用 iframe load 事件控制 loading 遮罩 */
+  readonly attachmentLoading = signal(true);
 
   ngOnInit(): void {
     this.reload();
@@ -348,8 +356,8 @@ export class EmploymentInterviewManagementComponent implements OnInit {
     if (!app) return;
     this.resumeReturnToSchedule = true;
     this.scheduleVisible = false;
-    // 等表单窗口关闭动画后再弹出预览，避免两个弹窗叠加
-    setTimeout(() => this.openResume(app));
+    // 同步打开预览（OnPush 下不可放到 setTimeout，否则不会触发变更检测）
+    this.openResume(app);
   }
 
   /** 投递管理 Tab：按投递行预览学生投递时使用的简历 */
@@ -390,11 +398,19 @@ export class EmploymentInterviewManagementComponent implements OnInit {
     }
   }
 
-  /** 简历附件预览：走后端预览端点（新标签页内联展示，Word 会先转 PDF）。 */
-  previewResumeAttachment(): void {
+  /** 简历附件预览：在后端预览端点（Word 会先转 PDF）基础上，弹窗内嵌 iframe 展示。 */
+  openAttachmentPreview(): void {
     const url = this.resumeDetail()?.attachmentUrl;
     if (!url) { this.message.warning('该简历暂无附件'); return; }
-    window.open(this.employmentService.getResumePreviewUrl(url), '_blank', 'noopener');
+    this.attachmentLoading.set(true);
+    this.attachmentSrc.set(this.employmentService.getResumePreviewUrl(url));
+    this.attachmentVisible = true;
+  }
+
+  closeAttachmentPreview(): void {
+    this.attachmentVisible = false;
+    this.attachmentSrc.set(null);
+    this.attachmentLoading.set(true);
   }
 
   /** 预览弹窗副标题：优先投递上下文，其次面试上下文 */
