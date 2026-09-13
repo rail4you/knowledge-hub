@@ -93,6 +93,7 @@ services:
       - Hangfire__Workers__Conversion=1
       - Hangfire__Workers__Ai=2
       - Hangfire__Workers__Media=2
+      - Hangfire__Workers__Indexing=2
       # Meilisearch
       - Meilisearch__Host=http://meilisearch:7700
       - Meilisearch__ApiKey=${MEILISEARCH_MASTER_KEY}

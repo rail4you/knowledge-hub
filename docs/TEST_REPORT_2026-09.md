@@ -193,10 +193,11 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 - Recurring（均每 5 分钟，执行 Succeeded）：`office-conversion-reprocess`、`ai-task-recovery`、`resource-media-maintenance`、`resource-media-recovery`。
 - Dashboard `/hangfire` 经回环访问返回 200（鉴权过滤器放行本机；nginx 侧另行限制）。
 - 失败样本：`OfficeConversionJob`（`FileNotFoundException`，缺失 `*.light.pptx`），完整异常记录在 `hangfire.state`；该 job `[AutomaticRetry(Attempts = 0)]`，按设计不重试。
-- **重要发现（已修复）：文档/视频索引未接入 Hangfire**
-  - 现象：`hangfire.job` 中无 Indexing 类型——走 ABP `IBackgroundJobManager`（内存存储）；库中存在 5 条自 2026-03 起一直 Pending 的 `KhDocumentIndexingJobs`。
+- **重要发现（已修复）：文档/视频索引未纳入统一 Hangfire 队列、失败后无恢复**
+  - 现象：索引走 ABP `IBackgroundJobManager`，作业持久化在 **EF 表 `AbpBackgroundJobs`**（重启不丢，非内存），但与媒体/AI/转换的 Hangfire 队列分离，`hangfire.job` 中无索引类型；库中存在 5 条自 2026-03 起一直 Pending 的 `KhDocumentIndexingJobs`，对应 `AbpBackgroundJobs` 里 `IsAbandoned=true` 的失败作业（重试耗尽后未回写业务 job 状态），形成僵尸。
+  - 结论：真正的缺口是「索引未进入与媒体/AI 一致的 Hangfire 队列 + 失败/放弃后无恢复」，而非“内存丢任务”。（早期报告此处的“内存存储”判断有误，特此更正。）
   - 修复：新增 `IIndexingJobQueue` + `HangfireIndexingJobQueue`（`indexing` 队列，PostgreSQL 持久化），文档/视频索引统一走该队列；新增 `IndexingTaskRecoveryService` + `indexing-task-recovery` RecurringJob（每 10 分钟把中断/超时或过期排队的索引任务标记失败）。
-  - 连带修复提交时序竞态：Hangfire 工作线程可能在创建事务提交前抢跑（查不到资源）。改为 `IUnitOfWork.OnCompleted` 提交后再入队（与 media/AI 队列一致）。
+  - 连带修复提交时序竞态：迁移到 Hangfire 后工作线程可能在创建事务提交前抢跑（查不到资源）。改为 `IUnitOfWork.OnCompleted` 提交后再入队（与 media/AI 队列一致）。
   - 验证：新文档资源 → `hangfire.job` 出现 `DocumentIndexingProcessingJob`（`indexing` 队列）Processing→Succeeded，DB job 30、Meili 文档 1；触发 recovery 后 5 条僵尸 Pending 变为 Failed；`indexing` server（2 worker）与 `indexing-task-recovery` 均已注册。
 
 ## 9. 本轮代码改动
@@ -220,7 +221,27 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 - `scripts/test/api-permission-matrix.sh`：修正 major 路径与 teacher 期望
 - `scripts/test/cleanup-perf-data.sh`：新增清理脚本
 
-## 10. 后续仍待补的测试
+## 10. 生产部署（119.45.170.4）
+
+两条命令完成更新：`./etc/docker/deploy-to-remote.sh api`、`./etc/docker/deploy-to-remote.sh angular`（均构建 linux/amd64 镜像并推送阿里云 registry）。
+
+**部署中遇到的故障与修复**
+- 现象：新版 API 容器启动即崩溃循环（`RestartCount=5`），nginx 502；日志显示 Hangfire `RecurringJob.AddOrUpdate` → `PostgreSqlStorage` 连接 `127.0.0.1:5433` 失败。
+- 根因：远程 `~/knowledgehub/docker-compose.yml` 是旧版，**缺少 `ConnectionStrings__Hangfire`**。新镜像 `appsettings.json` 内含 `ConnectionStrings:Hangfire=Host=localhost;Port=5433`，而 `HostModule` 用 `GetConnectionString("Hangfire") ?? Default`，于是不再回退到 env 覆盖后的 `Default`（`postgres:5432`），导致连本机 5433。
+- 修复：对远程 compose 做最小增量补丁（先备份 `docker-compose.yml.bak.*`），在 API 服务加入
+  `ConnectionStrings__Hangfire=Host=postgres;Port=5432;...` 与 `Hangfire__Workers__Indexing=2`，随后 `./deploy.sh restart knowledgehub-api`。
+
+**部署后验证（公网）**
+- `https://119.45.170.4/api/app/install/status` → 200 `{"isInstalled":true,"currentEdition":"Standard"}`
+- `https://119.45.170.4/`（Angular）→ 200
+- API 容器 `RestartCount=0`；Hangfire `indexing` server（2 worker）在线
+- Recurring 5 个齐全：`ai-task-recovery`、`indexing-task-recovery`、`office-conversion-reprocess`、`resource-media-maintenance`、`resource-media-recovery`
+
+**遗留提醒**
+- 远程 `~/knowledgehub/.env` 缺少本地 compose 引用的若干变量（`LITEPARSE_IMAGE/LITEPARSE_TIMEOUT/LITEPARSE_DPI/GOTENBERG_IMAGE/QWEN_MAX_CONCURRENT/STORAGE_*`）。在下次执行 `sync`/`all`（会覆盖 compose）前需补齐，否则会被替换为空。
+- 本地 `docker-compose.yml` 已同步补上 `Hangfire__Workers__Indexing=2`。
+
+## 11. 后续仍待补的测试
 1. **业务集成测试**：权限 Seeder、租户隔离、AI 配额等（安全原语单测已补 11 个）。
 2. **E2E（Playwright）**：管理端/教师/学生关键旅程与前端路由守卫（当前仅有 API 级验证）。
 3. **k6 混合/搜索压测**：本机无 k6；`ai.js` 按用户要求暂缓。
