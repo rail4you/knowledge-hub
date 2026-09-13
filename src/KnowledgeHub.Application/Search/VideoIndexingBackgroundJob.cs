@@ -27,7 +27,10 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
     private readonly IRepository<VideoIndexingJob, Guid> _jobRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
     private readonly IFileStorageService _fileStorageService;
-    private readonly IVideoAnalysisAppService _videoAnalysisAppService;
+    // 直接注入具体类型而非接口：ABP 的 [Authorize] 拦截器基于接口代理，
+    // 后台任务无用户上下文，走接口会抛 AbpAuthorizationException；
+    // HTTP 入口仍经接口代理与 [Authorize(Search.ManageIndex)] 保护。
+    private readonly VideoAnalysisAppService _videoAnalysisAppService;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ICurrentTenant _currentTenant;
     private readonly IConfiguration _configuration;
@@ -43,7 +46,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         IRepository<VideoIndexingJob, Guid> jobRepository,
         IRepository<Resource, Guid> resourceRepository,
         IFileStorageService fileStorageService,
-        IVideoAnalysisAppService videoAnalysisAppService,
+        VideoAnalysisAppService videoAnalysisAppService,
         IUnitOfWorkManager unitOfWorkManager,
         ICurrentTenant currentTenant,
         IConfiguration configuration,
@@ -149,6 +152,15 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
                 : analysisRequest.VideoUrl);
 
         var analysisResult = await _videoAnalysisAppService.AnalyzeVideoTimelineAsync(analysisRequest);
+
+        // 分析成功但没有任何时间轴事件时，不应标记为 Completed（否则界面显示完成却搜不到内容）。
+        if (analysisResult.Events == null || analysisResult.Events.Count == 0)
+        {
+            _logger.LogWarning("Video analysis returned no timeline events for resource {ResourceId}", args.ResourceId);
+            await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Failed,
+                errorMessage: "AI 未返回任何时间轴事件（视频可能过短或无有效画面）");
+            return;
+        }
 
         await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Indexing, progress: 70, totalEvents: analysisResult.Events.Count, processedEvents: 0);
         _logger.LogInformation("Analyzed {EventCount} timeline events, saving to Meilisearch", analysisResult.Events.Count);
