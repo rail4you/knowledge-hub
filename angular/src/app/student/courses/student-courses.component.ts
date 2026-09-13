@@ -94,49 +94,58 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   /** 视图模型：所有课程（如果选了"已选课"则仅显示我的课程） */
   readonly visibleCourses = computed<CourseDto[]>(() => {
     const status = this.selectedStatus();
+    if (status === 'recommended') {
+      // 后端已按 isRecommended 过滤；此处再兜底一次，兼容旧数据/缓存
+      return this.courses().filter(c => (c as any).isRecommended);
+    }
     if (status === 'enrolled') {
       const my = this.myCourses();
       const myIds = new Set(my.map(c => c.courseId));
       const published = this.courses().filter(c => myIds.has(c.id) || c.isEnrolled);
       const publishedIds = new Set(published.map(c => c.id));
-      // 口径统一：published 接口按租户/状态/分页过滤，会漏掉已选但未发布、跨租户或翻页外的课程，
-      // 导致“我的课程”列表数（7）小于统计数（10）。把缺失的已选课按 myCourses 补齐，
-      // 并叠加当前搜索/专业筛选（难度未知时不按难度剔除），保证列表数 == 统计数。
-      const keyword = (this.filter() || '').trim().toLowerCase();
-      const majorSel = this.selectedMajor();
-      const missing: CourseDto[] = [];
-      for (const m of my) {
-        if (!m.courseId || publishedIds.has(m.courseId)) continue;
-        if (keyword && !(m.courseTitle || '').toLowerCase().includes(keyword)) continue;
-        if (majorSel === this.majorPublicOnlyValue) {
-          if (m.majorId) continue;
-        } else if (majorSel) {
-          if (m.majorId !== majorSel) continue;
-        }
-        missing.push({
-          id: m.courseId,
-          title: m.courseTitle || '未命名课程',
-          coverImageUrl: m.courseCoverImageUrl ?? null,
-          majorId: m.majorId ?? null,
-          majorName: m.majorName ?? null,
-          majorIds: m.majorId ? [m.majorId] : [],
-          majorNames: m.majorName ? [m.majorName] : [],
-          semester: m.semester ?? null,
-          credits: m.credits ?? null,
-          isEnrolled: true,
-          progress: m.progress ?? 0,
-          studentCount: 0,
-          chapterCount: 0,
-        } as unknown as CourseDto);
-      }
-      return [...published, ...missing];
+      return [...published, ...this.collectMissingEnrolled(publishedIds)];
     }
-    if (status === 'recommended') {
-      // 后端已按 isRecommended 过滤；此处再兜底一次，兼容旧数据/缓存
-      return this.courses().filter(c => (c as any).isRecommended);
-    }
-    return this.courses();
+    // 全部课程：published 接口按当前租户 + Published 状态过滤，会漏掉已选但跨租户/未发布的课程，
+    // 导致「已选课」徽标数少于「我的课程」列表数（生产数据曾出现 10 vs 13）。
+    // 这里同样把缺失的已选课补齐，保证两个 tab 的已选课集合完全一致。
+    const publishedIds = new Set(this.courses().map(c => c.id));
+    return [...this.courses(), ...this.collectMissingEnrolled(publishedIds)];
   });
+
+  /**
+   * 从我的选课记录中补齐列表缺失的课程卡片（跨租户 / 未发布 / 翻页外），
+   * 并叠加当前搜索/专业筛选（难度未知时不按难度剔除），保证列表数 == 统计数。
+   */
+  private collectMissingEnrolled(existingIds: Set<string>): CourseDto[] {
+    const keyword = (this.filter() || '').trim().toLowerCase();
+    const majorSel = this.selectedMajor();
+    const missing: CourseDto[] = [];
+    for (const m of this.myCourses()) {
+      if (!m.courseId || existingIds.has(m.courseId)) continue;
+      if (keyword && !(m.courseTitle || '').toLowerCase().includes(keyword)) continue;
+      if (majorSel === this.majorPublicOnlyValue) {
+        if (m.majorId) continue;
+      } else if (majorSel) {
+        if (m.majorId !== majorSel) continue;
+      }
+      missing.push({
+        id: m.courseId,
+        title: m.courseTitle || '未命名课程',
+        coverImageUrl: m.courseCoverImageUrl ?? null,
+        majorId: m.majorId ?? null,
+        majorName: m.majorName ?? null,
+        majorIds: m.majorId ? [m.majorId] : [],
+        majorNames: m.majorName ? [m.majorName] : [],
+        semester: m.semester ?? null,
+        credits: m.credits ?? null,
+        isEnrolled: true,
+        progress: m.progress ?? 0,
+        studentCount: 0,
+        chapterCount: 0,
+      } as unknown as CourseDto);
+    }
+    return missing;
+  }
 
   /**
    * Hero 统计：随 tab/列表同步，口径与 visibleCourses() 一致。
@@ -154,11 +163,12 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       ? Math.round(enrolledVisible.reduce((s, v) => s + (myMap.get(v.id!)?.progress || 0), 0) / enrolledVisible.length)
       : 0;
     const firstLabel = status === 'enrolled' ? '已选课程' : status === 'recommended' ? '推荐课程' : '全部课程';
-    // 全部/推荐 tab 下第一项用后端 totalCount 更准（当前页可能截断），有筛选时用可见数
+    // 全部/推荐 tab 下第一项用后端 totalCount 更准（当前页可能截断），有筛选时用可见数。
+    // 注意：全部课程已把缺失的已选课（跨租户/未发布）并入列表，故取两者较大值。
     const firstValue =
-      !this.hasActiveFilters() && status !== 'enrolled' && this.publishedTotal() != null
-        ? this.publishedTotal()!
-        : visible.length;
+      status === 'enrolled' || this.hasActiveFilters() || this.publishedTotal() == null
+        ? visible.length
+        : Math.max(this.publishedTotal()!, visible.length);
     return [
       { label: firstLabel, value: firstValue, suffix: '门', icon: 'book', color: '#0f766e' },
       { label: '学习中', value: inProgress, suffix: '门', icon: 'play-circle', color: '#14b8a6' },
