@@ -47,7 +47,10 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
         var statusFilter = GetStatusFilter();
 
         var connection = _dbContext.Database.GetDbConnection();
-        await connection.OpenAsync();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
 
         try
         {
@@ -117,7 +120,10 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
         var statusFilter = GetStatusFilter();
 
         var connection = _dbContext.Database.GetDbConnection();
-        await connection.OpenAsync();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
 
         try
         {
@@ -164,13 +170,17 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
                 LIMIT {count}";
 
             var results = new List<RecommendedResourceDto>();
-            using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            using (var reader = await command.ExecuteReaderAsync())
             {
-                results.Add(MapReaderToRecommended(reader, "基于你的兴趣"));
+                while (await reader.ReadAsync())
+                {
+                    results.Add(MapReaderToRecommended(reader, "基于你的兴趣"));
+                }
             }
 
-            // Fallback to trending if not enough results
+            // Fallback to trending if not enough results。
+            // 必须先释放上面 command 的 reader，否则同一连接上的第二个命令会抛
+            // Npgsql "A command is already in progress"。
             if (results.Count < count)
             {
                 var trending = await GetTrendingResourcesAsync(count - results.Count);
@@ -195,7 +205,10 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
 
         // Check if user has enough history for personalized recs
         var connection = _dbContext.Database.GetDbConnection();
-        await connection.OpenAsync();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
 
         try
         {
@@ -360,7 +373,10 @@ public class ResourceRecommendationAppService : KnowledgeHubAppService, IResourc
         var statusFilter = GetStatusFilter();
 
         var connection = _dbContext.Database.GetDbConnection();
-        await connection.OpenAsync();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
 
         try
         {

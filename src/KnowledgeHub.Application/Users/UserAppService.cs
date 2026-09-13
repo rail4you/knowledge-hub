@@ -31,12 +31,14 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
         _identityUserManager = identityUserManager;
     }
 
+    [RemoteService(false)]
     public async Task<UserDto> GetAsync(Guid id)
     {
         var user = await _userRepository.GetAsync(id);
         return ObjectMapper.Map<AppUser, UserDto>(user);
     }
 
+    [RemoteService(false)]
     public async Task<PagedResultDto<UserDto>> GetListAsync(GetUserListDto input)
     {
         if (input.Sorting.IsNullOrWhiteSpace())
@@ -62,6 +64,7 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
         );
     }
 
+    [RemoteService(false)]
     [Authorize(KnowledgeHubPermissions.Users.Create)]
     public async Task<UserDto> CreateAsync(CreateUserDto input)
     {
@@ -76,6 +79,7 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
         return ObjectMapper.Map<AppUser, UserDto>(user);
     }
 
+    [RemoteService(false)]
     [Authorize(KnowledgeHubPermissions.Users.Edit)]
     public async Task UpdateAsync(Guid id, UpdateUserDto input)
     {
@@ -92,6 +96,7 @@ public class UserAppService : KnowledgeHubAppService, IUserAppService
         await _userRepository.UpdateAsync(user);
     }
 
+    [RemoteService(false)]
     [Authorize(KnowledgeHubPermissions.Users.Delete)]
     public async Task DeleteAsync(Guid id)
     {

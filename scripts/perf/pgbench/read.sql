@@ -7,18 +7,18 @@
 
 -- 1) 主键点查（随机 uuid，强制走 PK 索引）
 SELECT 1
-FROM "Resources"
+FROM "AppResources"
 WHERE "Id" = md5(:rid::text || clock_timestamp()::text)::uuid
 LIMIT 1;
 
 -- 2) 租户 + 状态过滤聚合（应命中 TenantId/Status 相关索引）
 SELECT count(*)
-FROM "Resources"
+FROM "AppResources"
 WHERE "TenantId" = md5(:rid::text)::uuid
   AND "Status" = 1;
 
 -- 3) 按创建时间排序取前 20（列表页常见模式）
 SELECT "Id", "Name"
-FROM "Resources"
+FROM "AppResources"
 ORDER BY "CreationTime" DESC
 LIMIT 20;

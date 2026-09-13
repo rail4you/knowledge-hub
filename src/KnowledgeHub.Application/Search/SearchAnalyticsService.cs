@@ -21,6 +21,11 @@ using Volo.Abp.Users;
 
 namespace KnowledgeHub.Application.Search;
 
+// 说明：本类实现 ISearchAnalyticsService（IApplicationService），会被 ABP 约定控制器
+// 暴露为 /api/app/search-analytics，但该服务仅作为 SearchAppService 的内部依赖使用，
+// 且未按具体类型注册（会导致 500）。用 [RemoteService(false)] 关闭其远程暴露，
+// 对外统一走 /api/app/search/*（已在 SearchAppService 中按策略鉴权）。
+[RemoteService(false)]
 public class SearchAnalyticsService : ISearchAnalyticsService
 {
     private readonly IRepository<SearchQuery, Guid> _searchQueryRepository;

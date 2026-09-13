@@ -14,6 +14,8 @@ set -uo pipefail
 
 API_BASE="${API_BASE:-https://localhost:44305}"
 CURL_OPTS="${CURL_OPTS:--sk}"
+# SSE 等长连接接口需要超时保护，避免脚本挂起
+CURL_MAX_TIME="${CURL_MAX_TIME:-15}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 TOKEN="${1:-}"
@@ -34,7 +36,8 @@ check() {
   local desc="$1"; shift
   local expect="$1"; shift
   local status
-  status="$(curl $CURL_OPTS -o /dev/null -w '%{http_code}' "$@")"
+  status="$(curl $CURL_OPTS --max-time "$CURL_MAX_TIME" -o /dev/null -w '%{http_code}' \
+    -H 'Accept: application/json' "$@")"
   if [[ "$status" =~ ^($expect)$ ]]; then
     printf '  \033[32mPASS\033[0m %-70s [%s]\n' "$desc" "$status"
     passed=$((passed + 1))
@@ -46,12 +49,15 @@ check() {
 
 echo "== 安全回归 =="
 
+# 匿名请求被拒的期望状态：ABP 对浏览器可能 302 跳登录，API 场景 401，越权 403
+REJECT='401|403|302'
+
 # C-1 开放 SSRF 代理：匿名必须被拒
-check "C-1 匿名 /api/proxy/http 内网" '401|403' \
+check "C-1 匿名 /api/proxy/http 内网" "$REJECT" \
   "$API_BASE/api/proxy/http/169.254.169.254/latest/meta-data/"
 
 # C-2 OSS 匿名上传
-check "C-2 匿名 /api/oss-upload/file" '401|403' \
+check "C-2 匿名 /api/oss-upload/file" "$REJECT" \
   -X POST "$API_BASE/api/oss-upload/file" -F 'file=@/etc/hosts'
 
 # C-3 安装接口：本机回环会被放行，需显式开启校验
@@ -63,32 +69,32 @@ if [ "${ENFORCE_REMOTE_INSTALL:-0}" = "1" ]; then
 fi
 
 # H-8 版本升级
-check "H-8 匿名 /api/app/edition/upgrade-to-standard" '401|403' \
+check "H-8 匿名 /api/app/edition/upgrade-to-standard" "$REJECT" \
   -X POST "$API_BASE/api/app/edition/upgrade-to-standard" \
   -H 'Content-Type: application/json' -d '{"licenseKey":"KH-STANDARD-x"}'
 
 # H-9 章节资源写入
-check "H-9 匿名 POST /api/app/chapter-resource" '401|403' \
+check "H-9 匿名 POST /api/app/chapter-resource" "$REJECT" \
   -X POST "$API_BASE/api/app/chapter-resource" \
   -H 'Content-Type: application/json' -d '{}'
 
 # H-10 搜索索引写入
-check "H-10 匿名 POST /api/app/search/index-resource" '401|403' \
+check "H-10 匿名 POST /api/app/search/index-resource" "$REJECT" \
   -X POST "$API_BASE/api/app/search/index-resource" \
   -H 'Content-Type: application/json' -d '{}'
 
 # H-13 学习统计导出
-check "H-13 匿名 学习统计导出" '401|403' \
+check "H-13 匿名 学习统计导出" "$REJECT" \
   -X POST "$API_BASE/api/app/student-exercise-record/export-learning-statistics" \
   -H 'Content-Type: application/json' -d '{}'
 
 # H-3 实训聊天 SSE
-check "H-3 匿名 practicum-chat stream" '401|403' \
+check "H-3 匿名 practicum-chat stream" "$REJECT" \
   "$API_BASE/api/learning/practicum-chat/stream/00000000-0000-0000-0000-000000000000"
 
 # H-6 热词接口
-check "H-6 匿名 meili-search-admin/hot-words" '401|403' \
-  "$API_BASE/api/app/meili-search-admin/hot-words?resourceId=00000000-0000-0000-0000-000000000000"
+check "H-6 匿名 meili-search-admin/hot-words" "$REJECT" \
+  "$API_BASE/api/app/meili-search-admin/hot-words/00000000-0000-0000-0000-000000000000"
 
 if [ -n "$TOKEN" ]; then
   # H-1 图片代理 SSRF（已登录访问内网应 403）
@@ -103,5 +109,5 @@ if [ -n "$TOKEN" ]; then
 fi
 
 echo
-echo "通过 $passed，失败 $failed"
+echo "通过 ${passed}，失败 ${failed}"
 [ "$failed" -eq 0 ]

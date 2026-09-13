@@ -36,7 +36,7 @@ PSQL=(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_S
 echo "-> 检查模板数据 ..."
 "${PSQL[@]}" -tAc 'SELECT count(*) FROM "AbpTenants"' | grep -qv '^0$' \
   || { echo "库中没有租户，请先完成安装/迁移。"; exit 1; }
-"${PSQL[@]}" -tAc 'SELECT count(*) FROM "Resources"' | grep -qv '^0$' \
+"${PSQL[@]}" -tAc 'SELECT count(*) FROM "AppResources"' | grep -qv '^0$' \
   || { echo "库中没有 Resource 模板，请先在系统中创建至少 1 条资源。"; exit 1; }
 
 sql_file="$(mktemp)"
@@ -65,14 +65,14 @@ DO \$\$
 DECLARE j jsonb; i int; newid text; tids uuid[]; tid uuid;
 BEGIN
   SELECT array_agg("Id") INTO tids FROM "AbpTenants";
-  SELECT to_jsonb(r) INTO j FROM "Resources" r ORDER BY "CreationTime" LIMIT 1;
+  SELECT to_jsonb(r) INTO j FROM "AppResources" r ORDER BY "CreationTime" LIMIT 1;
   FOR i IN 1..$COUNT LOOP
     newid := gen_random_uuid()::text;
     tid := tids[1 + floor(random() * array_length(tids, 1))::int];
     j := jsonb_set(j, '{Id}', to_jsonb(newid));
     j := jsonb_set(j, '{Name}', to_jsonb('perf-res-' || i));
     j := jsonb_set(j, '{TenantId}', to_jsonb(tid::text));
-    INSERT INTO "Resources" SELECT * FROM jsonb_populate_record(NULL::"Resources", j);
+    INSERT INTO "AppResources" SELECT * FROM jsonb_populate_record(NULL::"AppResources", j);
   END LOOP;
 END \$\$;
 
@@ -80,30 +80,31 @@ END \$\$;
 DO \$\$
 DECLARE j jsonb; i int; newid text; tids uuid[];
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM "Courses") THEN
+  IF NOT EXISTS (SELECT 1 FROM "AppCourses") THEN
     RAISE NOTICE 'No course template, skip.';
     RETURN;
   END IF;
   SELECT array_agg("Id") INTO tids FROM "AbpTenants";
-  SELECT to_jsonb(c) INTO j FROM "Courses" c ORDER BY "CreationTime" LIMIT 1;
+  SELECT to_jsonb(c) INTO j FROM "AppCourses" c ORDER BY "CreationTime" LIMIT 1;
   FOR i IN 1..$COUNT LOOP
     newid := gen_random_uuid()::text;
     j := jsonb_set(j, '{Id}', to_jsonb(newid));
-    j := jsonb_set(j, '{Name}', to_jsonb('perf-course-' || i));
+    -- 注意：AppCourses 的名称列是 Title（不是 Name）
+    j := jsonb_set(j, '{Title}', to_jsonb('perf-course-' || i));
     j := jsonb_set(j, '{TenantId}', to_jsonb(tids[1 + floor(random() * array_length(tids, 1))::int]::text));
-    INSERT INTO "Courses" SELECT * FROM jsonb_populate_record(NULL::"Courses", j);
+    INSERT INTO "AppCourses" SELECT * FROM jsonb_populate_record(NULL::"AppCourses", j);
   END LOOP;
 END \$\$;
 
-ANALYZE "Resources";
-ANALYZE "Courses";
+ANALYZE "AppResources";
+ANALYZE "AppCourses";
 SQL
 
-echo "-> 造数中（tenants=$TENANTS, count=$COUNT）..."
+echo "-> 造数中（tenants=${TENANTS}, count=${COUNT}）..."
 "${PSQL[@]}" -f "$sql_file"
 
 echo "-> 完成。统计："
 "${PSQL[@]}" -c 'SELECT
   (SELECT count(*) FROM "AbpTenants")   AS tenants,
-  (SELECT count(*) FROM "Resources")    AS resources,
-  (SELECT count(*) FROM "Courses")      AS courses;'
+  (SELECT count(*) FROM "AppResources")    AS resources,
+  (SELECT count(*) FROM "AppCourses")      AS courses;'
