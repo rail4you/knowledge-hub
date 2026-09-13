@@ -38,6 +38,12 @@ public interface IEmploymentAppService : IApplicationService
     Task<PagedResultDto<JobApplicationDto>> GetJobApplicationListAsync(GetJobApplicationsInput input);
     Task<JobApplicationDto> UpdateApplicationStatusAsync(Guid id, UpdateJobApplicationStatusDto input);
 
+    /// <summary>
+    /// 投递简历预览：面试管理页按投递查看学生投递时使用的简历全文（含附件地址）。
+    /// 权限：岗位审核 / 投递管理 / 安排面试其一，或岗位发布者 / 被分配的面试官。
+    /// </summary>
+    Task<StudentResumeDto> GetApplicationResumeAsync(Guid id);
+
     Task<InterviewScheduleDto> ScheduleInterviewAsync(CreateUpdateInterviewScheduleDto input);
     Task<InterviewScheduleDto> UpdateInterviewAsync(Guid id, CreateUpdateInterviewScheduleDto input);
     Task<InterviewScheduleDto> RecordInterviewResultAsync(Guid id, RecordInterviewResultDto input);

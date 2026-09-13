@@ -58,6 +58,10 @@
               </td>
               <td>
                 <div class="action-group">
+                  <button class="op-btn op-btn--ghost" type="button" (click)="openResume(app)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+                    查看简历
+                  </button>
                   <button class="op-btn" type="button" (click)="openSchedule(app)"
                     [disabled]="app.status === appStatus.Offered || app.status === appStatus.Rejected || app.status === appStatus.Withdrawn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -144,6 +148,7 @@
                     <td><nz-tag [nzColor]="getResultColor(item.result)">{{ getResultLabel(item.result) }}</nz-tag></td>
                     <td>
                       <div class="record-actions">
+                        <a class="record-action" (click)="openResumeForInterview(item)">查看简历</a>
                         @if (canComplete(item)) {
                           <a class="record-action" (click)="openComplete(item)">完成</a>
                         }
@@ -184,6 +189,12 @@
       }
       @if (selectedApplication?.companyName) {
         <nz-tag nzColor="purple">企业</nz-tag> <strong>{{ selectedApplication?.companyName }}</strong>
+      }
+      @if (selectedApplication) {
+        <button class="op-btn op-btn--ghost preview-resume-btn" type="button" (click)="openResumeFromSchedule()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          预览简历
+        </button>
       }
     </div>
 
@@ -316,5 +327,70 @@
       <label class="form-label">结果说明</label>
       <textarea nz-input rows="3" [(ngModel)]="resultForm.resultComment" placeholder="补充说明（学生可见）"></textarea>
     </div>
+  </div>
+</nz-modal>
+
+<!-- =================== 投递简历预览弹窗 =================== -->
+<nz-modal [(nzVisible)]="resumeVisible" nzTitle="投递简历预览" (nzOnCancel)="closeResume()"
+  [nzFooter]="null" [nzWidth]="720">
+  <div *nzModalContent class="modal-body">
+    <div class="context-row">
+      <nz-tag nzColor="blue">投递</nz-tag>
+      <strong>{{ resumeContextText() || '—' }}</strong>
+    </div>
+
+    @if (resumeLoading()) {
+      <div class="loading-wrap"><nz-spin nzSimple></nz-spin></div>
+    } @else if (resumeDetail(); as r) {
+      <div class="resume-preview">
+        <div class="resume-preview__head">
+          <div>
+            <div class="resume-preview__title">{{ r.title || '未命名简历' }}</div>
+            <div class="resume-preview__sub">{{ r.fullName || '-' }}@if (r.isDefault) { <span class="user-tag">默认简历</span> }</div>
+          </div>
+          @if (r.attachmentUrl) {
+            <button class="op-btn op-btn--ghost" type="button" (click)="previewResumeAttachment()">
+              预览附件
+            </button>
+          }
+        </div>
+
+        <div class="resume-grid">
+          <div class="resume-field"><span class="resume-field__label">手机</span><span>{{ r.phoneNumber || '—' }}</span></div>
+          <div class="resume-field"><span class="resume-field__label">邮箱</span><span>{{ r.email || '—' }}</span></div>
+          <div class="resume-field"><span class="resume-field__label">学校</span><span>{{ r.schoolName || '—' }}</span></div>
+          <div class="resume-field"><span class="resume-field__label">专业</span><span>{{ r.major || '—' }}</span></div>
+          <div class="resume-field"><span class="resume-field__label">年级 / 班级</span><span>{{ r.grade || '—' }} {{ r.className || '' }}</span></div>
+          <div class="resume-field"><span class="resume-field__label">学号</span><span>{{ r.studentNumber || '—' }}</span></div>
+        </div>
+
+        @if (r.summary) {
+          <div class="resume-section"><div class="resume-section__title">个人简介</div><p class="resume-section__body">{{ r.summary }}</p></div>
+        }
+        @if (r.skills) {
+          <div class="resume-section"><div class="resume-section__title">技能特长</div><p class="resume-section__body">{{ r.skills }}</p></div>
+        }
+        @if (r.educationExperience) {
+          <div class="resume-section"><div class="resume-section__title">教育经历</div><p class="resume-section__body">{{ r.educationExperience }}</p></div>
+        }
+        @if (r.internshipExperience) {
+          <div class="resume-section"><div class="resume-section__title">实习经历</div><p class="resume-section__body">{{ r.internshipExperience }}</p></div>
+        }
+        @if (r.projectExperience) {
+          <div class="resume-section"><div class="resume-section__title">项目经历</div><p class="resume-section__body">{{ r.projectExperience }}</p></div>
+        }
+        @if (r.certificateText) {
+          <div class="resume-section"><div class="resume-section__title">证书荣誉</div><p class="resume-section__body">{{ r.certificateText }}</p></div>
+        }
+        @if (!r.attachmentUrl) {
+          <p class="hint-text">该简历暂无附件。</p>
+        }
+        @if (resumeCoverLetter()) {
+          <div class="resume-section"><div class="resume-section__title resume-section__title--plain">投递附言</div><p class="resume-section__body">{{ resumeCoverLetter() }}</p></div>
+        }
+      </div>
+    } @else {
+      <div class="empty-tip"><nz-empty nzNotFoundContent="暂无简历数据"></nz-empty></div>
+    }
   </div>
 </nz-modal>

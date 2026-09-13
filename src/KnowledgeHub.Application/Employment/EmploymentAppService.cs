@@ -932,6 +932,49 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         return await MapApplicationDtoAsync(entity);
     }
 
+    [Authorize(KnowledgeHubPermissions.Employment.Default)]
+    public async Task<StudentResumeDto> GetApplicationResumeAsync(Guid id)
+    {
+        JobApplication application;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            application = await _applicationRepository.GetAsync(id);
+        }
+
+        // 租户隔离：仅可查看本租户投递（host 可跨租户）。
+        if (CurrentTenant.Id.HasValue && application.TenantId != CurrentTenant.Id.Value)
+        {
+            throw new AbpAuthorizationException();
+        }
+
+        var canReview = await CanReviewJobsAsync();
+        var canManage = await CanManageApplicationsAsync();
+        var canSchedule = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.Employment.ScheduleInterview);
+
+        if (!canReview && !canManage && !canSchedule)
+        {
+            // 兜底：岗位发布者本人可查看自己岗位收到的简历。
+            JobPosting job;
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                job = await _jobPostingRepository.GetAsync(application.JobPostingId);
+            }
+
+            if (job.EmployerUserId != CurrentUser.Id)
+            {
+                throw new AbpAuthorizationException();
+            }
+        }
+
+        StudentResume resume;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            resume = await _resumeRepository.GetAsync(application.ResumeId);
+        }
+
+        return MapResumeDto(resume);
+    }
+
     [Authorize(KnowledgeHubPermissions.Employment.ScheduleInterview)]
     public async Task<InterviewScheduleDto> ScheduleInterviewAsync(CreateUpdateInterviewScheduleDto input)
     {

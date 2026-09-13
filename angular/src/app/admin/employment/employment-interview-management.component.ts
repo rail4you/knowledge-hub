@@ -24,6 +24,7 @@ import {
   InterviewScheduleDto,
   JobApplicationDto,
   RecordInterviewResultDto,
+  StudentResumeDto,
 } from '../../employment/employment.service';
 
 interface InterviewStudent {
@@ -93,6 +94,15 @@ export class EmploymentInterviewManagementComponent implements OnInit {
   updateVisible = false;
   updateTarget: InterviewScheduleDto | null = null;
   updateForm: CreateUpdateInterviewScheduleDto = this.emptyScheduleForm();
+
+  // --- Resume Preview Modal ---
+  resumeVisible = false;
+  readonly resumeLoading = signal(false);
+  readonly resumeDetail = signal<StudentResumeDto | null>(null);
+  resumeContext: JobApplicationDto | null = null;
+  resumeInterviewContext: InterviewScheduleDto | null = null;
+  /** 从「安排面试」表单弹出预览：预览时先关闭表单，关闭预览后回到表单 */
+  private resumeReturnToSchedule = false;
 
   ngOnInit(): void {
     this.reload();
@@ -328,6 +338,79 @@ export class EmploymentInterviewManagementComponent implements OnInit {
       next: () => { this.message.success('面试记录已删除'); this.reload(); },
       error: () => this.message.error('删除失败'),
     });
+  }
+
+  // =============== Resume Preview ===============
+
+  /** 从「安排面试」表单弹出简历预览：关闭原表单窗口，预览关闭后返回表单 */
+  openResumeFromSchedule(): void {
+    const app = this.selectedApplication;
+    if (!app) return;
+    this.resumeReturnToSchedule = true;
+    this.scheduleVisible = false;
+    // 等表单窗口关闭动画后再弹出预览，避免两个弹窗叠加
+    setTimeout(() => this.openResume(app));
+  }
+
+  /** 投递管理 Tab：按投递行预览学生投递时使用的简历 */
+  openResume(app: JobApplicationDto): void {
+    this.resumeContext = app;
+    this.resumeInterviewContext = null;
+    this.resumeDetail.set(null);
+    this.resumeVisible = true;
+    this.resumeLoading.set(true);
+    this.employmentService.getApplicationResume(app.id).subscribe({
+      next: r => { this.resumeDetail.set(r); this.resumeLoading.set(false); },
+      error: () => { this.message.error('加载投递简历失败'); this.resumeLoading.set(false); },
+    });
+  }
+
+  /** 面试管理 Tab：按面试记录关联的投递预览简历 */
+  openResumeForInterview(item: InterviewScheduleDto): void {
+    this.resumeInterviewContext = item;
+    this.resumeContext = null;
+    this.resumeDetail.set(null);
+    this.resumeVisible = true;
+    this.resumeLoading.set(true);
+    this.employmentService.getApplicationResume(item.applicationId).subscribe({
+      next: r => { this.resumeDetail.set(r); this.resumeLoading.set(false); },
+      error: () => { this.message.error('加载投递简历失败'); this.resumeLoading.set(false); },
+    });
+  }
+
+  closeResume(): void {
+    this.resumeVisible = false;
+    this.resumeDetail.set(null);
+    this.resumeContext = null;
+    this.resumeInterviewContext = null;
+    if (this.resumeReturnToSchedule) {
+      this.resumeReturnToSchedule = false;
+      // 关闭预览后回到「安排面试」表单，已填写的表单内容保持不变
+      setTimeout(() => { this.scheduleVisible = true; });
+    }
+  }
+
+  /** 简历附件预览：走后端预览端点（新标签页内联展示，Word 会先转 PDF）。 */
+  previewResumeAttachment(): void {
+    const url = this.resumeDetail()?.attachmentUrl;
+    if (!url) { this.message.warning('该简历暂无附件'); return; }
+    window.open(this.employmentService.getResumePreviewUrl(url), '_blank', 'noopener');
+  }
+
+  /** 预览弹窗副标题：优先投递上下文，其次面试上下文 */
+  resumeContextText(): string {
+    if (this.resumeContext) {
+      return `${this.parseStudentName(this.resumeContext.studentName).name} · ${this.resumeContext.jobTitle || '未知岗位'}`;
+    }
+    if (this.resumeInterviewContext) {
+      return `${this.parseStudentName(this.resumeInterviewContext.studentName).name} · ${this.resumeInterviewContext.jobTitle || '未知岗位'}`;
+    }
+    return '';
+  }
+
+  /** 投递附言（coverLetter）：优先投递上下文 */
+  resumeCoverLetter(): string {
+    return this.resumeContext?.coverLetter || '';
   }
 
   // =============== Helpers ===============

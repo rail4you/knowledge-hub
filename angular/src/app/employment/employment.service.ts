@@ -567,6 +567,13 @@ export class EmploymentService {
       body: input,
     }, { apiName: this.apiName });
 
+  /** 投递简历预览：按投递 ID 获取学生投递时使用的简历全文（管理端/面试官）。 */
+  getApplicationResume = (id: string) =>
+    this.restService.request<any, StudentResumeDto>({
+      method: 'GET',
+      url: `/api/app/employment/${id}/application-resume`,
+    }, { apiName: this.apiName });
+
   scheduleInterview = (input: CreateUpdateInterviewScheduleDto) =>
     this.restService.request<any, InterviewScheduleDto>({
       method: 'POST',
