@@ -279,41 +279,21 @@
       color: var(--kh-bad) !important;
     }
 
+    &--success {
+      color: var(--kh-ok, #52c41a) !important;
+    }
+
+    &--success:hover:not([disabled]) {
+      background: rgba(82, 196, 26, 0.10) !important;
+      color: var(--kh-ok, #52c41a) !important;
+    }
+
     &[disabled] {
       cursor: not-allowed;
       opacity: 0.35;
     }
   }
 
-  /* ── Progress Cell ── */
-  .progress-cell {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 140px;
-    max-width: 240px;
-    margin: 0 auto;
-    padding: 0 8px;
-
-    &__bar {
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-
-    &__value {
-      flex: 0 0 auto;
-      font-size: 12px;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-      color: var(--kh-muted);
-      min-width: 42px;
-      text-align: right;
-    }
-
-    &--done &__value {
-      color: var(--kh-ok);
-    }
-  }
 }
 
 /* ── Add Modal Toolbar ── */

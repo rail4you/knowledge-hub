@@ -133,5 +133,16 @@ public static class ResourceDbModelCreatingExtensions
             b.HasIndex(x => x.ResourceVersionId);
             b.HasIndex(x => new { x.ResourceId, x.ResourceVersionId, x.Kind, x.Variant }).IsUnique();
         });
+
+        builder.Entity<ResourceMajor>(b =>
+        {
+            b.ToTable(KnowledgeHubConsts.DbTablePrefix + "ResourceMajors", KnowledgeHubConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.HasIndex(x => x.ResourceId);
+            b.HasIndex(x => x.MajorId);
+            b.HasIndex(x => new { x.ResourceId, x.MajorId }).IsUnique();
+            b.HasIndex(x => x.TenantId);
+        });
     }
 }

@@ -28,4 +28,5 @@ import * as TenantInfos from './tenant-infos';
 import * as Users from './users';
 import * as VoiceAssistant from './voice-assistant';
 import * as Volo from './volo';
-export { Accounts, Ai, Alliance, Application, Branding, Controllers, Courses, Domain, DoubleHigh, Employment, Exams, HttpApi, Install, KnowledgeGraph, Learning, Majors, MicroMajors, Microsoft, News, Portal, Practicums, RecruitmentLive, RecruitmentLiveService, Resources, SpecialEducation, TeachingAgents, TenantInfos, Users, VoiceAssistant, Volo };
+import * as Workbench from './workbench';
+export { Accounts, Ai, Alliance, Application, Branding, Controllers, Courses, Domain, DoubleHigh, Employment, Exams, HttpApi, Install, KnowledgeGraph, Learning, Majors, MicroMajors, Microsoft, News, Portal, Practicums, RecruitmentLive, RecruitmentLiveService, Resources, SpecialEducation, TeachingAgents, TenantInfos, Users, VoiceAssistant, Volo, Workbench };

@@ -141,7 +141,6 @@
             <th nzWidth="20%">课程名称</th>
             <th nzWidth="12%">选课状态</th>
             <th nzWidth="16%">选课时间</th>
-            <th nzWidth="22%">学习进度</th>
             <th nzWidth="16%" class="col-actions">操作</th>
           </tr>
         </thead>
@@ -162,26 +161,6 @@
               <td class="cell-time">
                 <span class="text-ellipsis">{{ enrollment.enrolledAt | date:'yyyy-MM-dd HH:mm' }}</span>
               </td>
-              <td>
-                @let p = enrollment.progress || 0;
-                <div class="progress-cell" [class.progress-cell--done]="p >= 100">
-                  <nz-progress
-                    class="progress-cell__bar"
-                    [nzPercent]="p"
-                    [nzShowInfo]="false"
-                    [nzStrokeLinecap]="'round'"
-                    nzSize="small"
-                    [nzStatus]="p >= 100 ? 'success' : 'active'"
-                  ></nz-progress>
-                  <span
-                    class="progress-cell__value"
-                    nz-tooltip
-                    [nzTooltipTitle]="p.toFixed(2) + '%'"
-                  >
-                    {{ p | number:'1.0-1' }}%
-                  </span>
-                </div>
-              </td>
               <td class="col-actions">
                 <div class="action-cell">
                   <button
@@ -196,14 +175,18 @@
                   >
                     <span nz-icon nzType="delete"></span>
                   </button>
+                  <!-- 已退课学生：提供「再选课」按钮复用 batchEnroll，
+                       后端会重置 status=Enrolled、progress=0、enrolledAt=now。 -->
                   <button
+                    *ngIf="enrollment.status === 3"
                     nz-button
                     nzType="text"
-                    class="action-btn action-btn--primary"
+                    class="action-btn action-btn--success"
                     nz-tooltip
-                    nzTooltipTitle="查看学习详情"
+                    nzTooltipTitle="重新选课"
+                    (click)="reEnrollStudent(enrollment)"
                   >
-                    <span nz-icon nzType="eye"></span>
+                    <span nz-icon nzType="plus-circle"></span>
                   </button>
                 </div>
               </td>

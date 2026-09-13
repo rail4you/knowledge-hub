@@ -727,6 +727,19 @@
   max-width: 100%;
 }
 
+// 传出共享（本租户资源已共享给其它租户）—— 配色与传入区分，出口图标。
+.shared-tenant-badge.outgoing {
+  background: rgba(82, 196, 26, 0.08);
+  color: #52c41a;
+  border-color: rgba(82, 196, 26, 0.22);
+}
+
+.shared-tenant-badge.outgoing.multi {
+  background: rgba(250, 173, 20, 0.10);
+  color: #d48806;
+  border-color: rgba(250, 173, 20, 0.25);
+}
+
 // 表格空状态
 .empty-tip {
   display: flex;
@@ -1723,6 +1736,8 @@
 .share-modal-content {
   display: flex;
   flex-direction: column;
+
+  .text-center { text-align: center; }
   gap: 14px;
 
   .share-modal-tip {
@@ -1741,10 +1756,67 @@
     label { font-size: 13px; font-weight: 600; color: var(--kh-ink-2); }
   }
 
-  .share-current-list {
+  .share-current-count {
+    margin-left: 4px;
+    color: var(--kh-muted);
+    font-weight: normal;
+  }
+
+  .share-current-summary {
     display: flex;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--kh-accent-ghost);
+    font-size: 12.5px;
+    color: var(--kh-ink-2);
+    line-height: 1.4;
     flex-wrap: wrap;
+  }
+
+  .share-current-summary strong {
+    color: var(--kh-accent, #3884ff);
+    margin: 0 2px;
+  }
+
+  .share-current-summary .share-current-tenants {
+    color: var(--kh-muted);
+    margin-left: 4px;
+  }
+
+  .share-current-table {
+    border: 1px solid var(--kh-line-2);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .share-current-table .share-row-icon {
+    color: var(--kh-muted);
+    margin-right: 6px;
+  }
+
+  .share-current-table .share-row-tenant {
+    font-weight: 500;
+  }
+
+  .share-current-table .share-row-note {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .share-empty-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: rgba(250, 173, 20, 0.08);
+    color: #d48806;
+    font-size: 12.5px;
+    border: 1px solid rgba(250, 173, 20, 0.22);
   }
 
   .muted { color: var(--kh-muted); }

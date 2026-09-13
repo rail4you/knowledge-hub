@@ -49,6 +49,7 @@ export interface CreateUpdateResourceDto {
   resourceType?: ResourceType;
   categoryId?: string | null;
   majorId?: string | null;
+  majorIds?: string[];
   keywords?: string | null;
   copyrightInfo?: string | null;
   isDownloadable?: boolean;
@@ -150,6 +151,8 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   categoryName?: string | null;
   majorId?: string | null;
   majorName?: string | null;
+  majorIds?: string[];
+  majorNames?: string[];
   filePath?: string;
   fileSize?: number;
   fileExtension?: string;
@@ -168,6 +171,8 @@ export interface ResourceDto extends FullAuditedEntityDto<string> {
   organizationName?: string | null;
   creatorName?: string | null;
   isShared?: boolean;
+  outgoingShareCount?: number;
+  outgoingShareTenantNames?: string[];
   sourceTenantId?: string | null;
   sourceTenantName?: string | null;
   sharedAt?: string | null;
@@ -229,6 +234,8 @@ export interface SharedResourceDto extends EntityDto<string> {
   categoryName?: string | null;
   majorId?: string | null;
   majorName?: string | null;
+  majorIds?: string[];
+  majorNames?: string[];
   fileExtension?: string | null;
   status?: ResourceStatus;
   summary?: string | null;

@@ -54,10 +54,21 @@ export class ResourceShareMixin {
     lg: '720px',
   };
 
+  /** 全量可选租户（包含已共享的）—— 供共享列表查询后过滤使用。 */
+  private allAvailableTenants = signal<TenantResourceSummaryDto[]>([]);
+
   loadAvailableTenants(): void {
     this.portalService.getPublicTenantList().subscribe({
-      next: (list) => this.availableTenants.set(list || []),
-      error: () => this.availableTenants.set([]),
+      next: (list) => {
+        const all = list || [];
+        this.allAvailableTenants.set(all);
+        // 默认只展示未共享的；后续若 currentShares 也加载完会再次过滤
+        this.applyTenantFilter();
+      },
+      error: () => {
+        this.allAvailableTenants.set([]);
+        this.availableTenants.set([]);
+      },
     });
   }
 
@@ -67,13 +78,18 @@ export class ResourceShareMixin {
         this.currentShares.set(list || []);
         this.outgoingShareCount.set((list || []).length);
         // 已共享的目标租户默认不再出现在可选列表（避免误重复共享）
-        const sharedIds = new Set((list || []).map(s => s.targetTenantId));
-        this.availableTenants.set(
-          this.availableTenants().filter(t => !sharedIds.has(t.id!))
-        );
+        this.applyTenantFilter();
       },
       error: () => this.currentShares.set([]),
     });
+  }
+
+  /** 从全量可选中剔除已共享过的，写入 availableTenants。 */
+  private applyTenantFilter(): void {
+    const sharedIds = new Set(this.currentShares().map(s => s.targetTenantId));
+    this.availableTenants.set(
+      this.allAvailableTenants().filter(t => !sharedIds.has(t.id!))
+    );
   }
 
   /**
@@ -92,6 +108,7 @@ export class ResourceShareMixin {
   resetOutgoingShareState(): void {
     this.outgoingShareCount.set(0);
     this.currentShares.set([]);
+    this.allAvailableTenants.set([]);
     this.availableTenants.set([]);
     this.selectedShareTargetIds.set([]);
     this.shareNote.set('');

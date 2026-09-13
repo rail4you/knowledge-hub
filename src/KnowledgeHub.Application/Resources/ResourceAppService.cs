@@ -59,6 +59,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected IOfficeConversionService OfficeConversionService { get; }
     protected IOptions<AppUploadOptions> UploadOptions { get; }
     protected IResourceShareRepository ShareRepository { get; }
+    /// <summary>资源—专业关联表仓储（双写 Resource.MajorId 时使用）。</summary>
+    protected IRepository<ResourceMajor, Guid> ResourceMajorRepository { get; }
     protected IDataFilter DataFilter { get; }
     protected ITenantRepository TenantRepository { get; }
     protected ITenantInfoRepository TenantInfoRepository { get; }
@@ -88,6 +90,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         IOfficeConversionService officeConversionService,
         IOptions<AppUploadOptions> uploadOptions,
         IResourceShareRepository shareRepository,
+        IRepository<ResourceMajor, Guid> resourceMajorRepository,
         IDataFilter dataFilter,
         ITenantRepository tenantRepository,
         ITenantInfoRepository tenantInfoRepository,
@@ -117,6 +120,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         OfficeConversionService = officeConversionService;
         UploadOptions = uploadOptions;
         ShareRepository = shareRepository;
+        ResourceMajorRepository = resourceMajorRepository;
         DataFilter = dataFilter;
         TenantRepository = tenantRepository;
         TenantInfoRepository = tenantInfoRepository;
@@ -159,7 +163,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
         EnsureFileMetadata(dto);
         EnsureFileMetadataFromCurrentVersion(resource, dto);
-        dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
+        // 兼容字段 MajorId/MajorName 由 AttachMajorsBatchAsync 回填。
+        await AttachMajorsBatchAsync(new List<ResourceDto> { dto });
         await FillCreatorNamesAsync(new List<ResourceDto> { dto });
 
         // 填充共享信息（仅当前租户上下文 + 实际是共享资源时）
@@ -285,7 +290,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
         EnsureFileMetadata(dto);
         EnsureFileMetadataFromCurrentVersion(resource, dto);
-        dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
+        // 兼容字段 MajorId/MajorName 由 AttachMajorsBatchAsync 回填。
+        await AttachMajorsBatchAsync(new List<ResourceDto> { dto });
         await FillCreatorNamesAsync(new List<ResourceDto> { dto });
 
         // 与 GetAsync 一致：被共享过来的资源在详情页也展示来源/共享人
@@ -332,6 +338,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             ownQuery = ownQuery.Where(x => x.CategoryId.HasValue && allCategoryIds.Contains(x.CategoryId.Value));
         }
 
+        // 专业过滤：单选，仅匹配 Resource.MajorId 主专业。多专业支持走 ResourceMajor 关联表 + Create/Update 双写。
         if (input.MajorId.HasValue)
         {
             ownQuery = ownQuery.Where(x => x.MajorId == input.MajorId.Value);
@@ -383,6 +390,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
                         var allCategoryIds = await GetAllCategoryIdsAsync(input.CategoryId.Value);
                         sharedQuery = sharedQuery.Where(x => x.CategoryId.HasValue && allCategoryIds.Contains(x.CategoryId.Value));
                     }
+                    // 与 ownQuery 一致：单专业过滤，仅匹配 Resource.MajorId 主专业。
                     if (input.MajorId.HasValue)
                     {
                         sharedQuery = sharedQuery.Where(x => x.MajorId == input.MajorId.Value);
@@ -436,7 +444,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(combined);
         EnsureFileMetadata(dtos);
         await EnsureFileMetadataFromCurrentVersionAsync(combined, dtos);
-        await FillMajorNamesAsync(dtos);
+        await AttachMajorsBatchAsync(dtos);
+        await AttachOutgoingSharesBatchAsync(dtos);
         await FillCreatorNamesAsync(dtos);
 
         // 标记共享资源 + 填充共享元数据
@@ -623,6 +632,11 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         await Repository.InsertAsync(resource);
 
+        // 双写 ResourceMajor 关联表：归一化后写入，Resource.MajorId 与 IsPrimary 主专业保持一致。
+        var majorIds = CollectMajorInput(input);
+        var primaryMajorId = NormalizeMajorInput(input, out _);
+        await SyncResourceMajorsAsync(resource, majorIds, primaryMajorId);
+
         var initialVersion = new ResourceVersion
         {
             ResourceId = resource.Id,
@@ -657,7 +671,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         }
 
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
-        dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
+        // 兼容字段 MajorId/MajorName 由 AttachMajorsBatchAsync 回填。
+        await AttachMajorsBatchAsync(new List<ResourceDto> { dto });
         await FillCreatorNamesAsync(new List<ResourceDto> { dto });
         return dto;
     }
@@ -805,7 +820,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var existingOriginalFileName = resource.OriginalFileName;
 
         ObjectMapper.Map(input, resource);
-        resource.MajorId = input.MajorId;
+        // 主专业字段由 SyncResourceMajorsAsync 双写保证一致，这里不再手动赋 MajorId。
+        var majorIds = CollectMajorInput(input);
+        var primaryMajorId = NormalizeMajorInput(input, out _);
+        await SyncResourceMajorsAsync(resource, majorIds, primaryMajorId);
 
         if (string.IsNullOrEmpty(input.FilePath))
         {
@@ -817,7 +835,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         await Repository.UpdateAsync(resource);
         var dto = ObjectMapper.Map<Resource, ResourceDto>(resource);
-        dto.MajorName = await ResolveMajorNameAsync(resource.MajorId);
+        // 兼容字段 MajorId/MajorName 由 AttachMajorsBatchAsync 回填。
+        await AttachMajorsBatchAsync(new List<ResourceDto> { dto });
         await FillCreatorNamesAsync(new List<ResourceDto> { dto });
         return dto;
     }
@@ -1327,7 +1346,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected virtual Resource MapToEntity(CreateUpdateResourceDto input)
     {
         var resource = ObjectMapper.Map<CreateUpdateResourceDto, Resource>(input);
-        resource.MajorId = input.MajorId;
+        // MajorId 不在这里手动赋值；由 CreateAsync/UpdateAsync 调用
+        // NormalizeMajorInput + SyncResourceMajorsAsync 双写保证主专业字段始终与关联表一致。
+        resource.MajorId = NormalizeMajorInput(input, out _);
         resource.Status = ResourceStatus.Draft;
         resource.CurrentVersion = 1;
         resource.CollectionCount = 0;
@@ -1335,17 +1356,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         resource.ViewCount = 0;
         resource.TenantId = CurrentTenant.Id;
         return resource;
-    }
-
-    private async Task<string?> ResolveMajorNameAsync(Guid? majorId)
-    {
-        if (!majorId.HasValue)
-        {
-            return null;
-        }
-
-        var major = await MajorRepository.FindAsync(majorId.Value);
-        return major?.Name;
     }
 
     /// <summary>
@@ -1400,32 +1410,6 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         if (!string.IsNullOrWhiteSpace(extraName)) return extraName!;
 
         return user.UserName ?? user.Email ?? user.Id.ToString("N");
-    }
-
-    private async Task FillMajorNamesAsync(List<ResourceDto> dtos)
-    {
-        var ids = dtos
-            .Where(x => x.MajorId.HasValue)
-            .Select(x => x.MajorId!.Value)
-            .Distinct()
-            .ToList();
-        if (ids.Count == 0)
-        {
-            return;
-        }
-
-        var query = await MajorRepository.GetQueryableAsync();
-        var map = await query
-            .Where(x => ids.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, x => x.Name);
-
-        foreach (var dto in dtos)
-        {
-            if (dto.MajorId.HasValue && map.TryGetValue(dto.MajorId.Value, out var name))
-            {
-                dto.MajorName = name;
-            }
-        }
     }
 
     public virtual async Task<InitiateUploadResultDto> InitiateUploadAsync(InitiateUploadDto input)
@@ -1832,7 +1816,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(items);
         EnsureFileMetadata(dtos);
         await EnsureFileMetadataFromCurrentVersionAsync(items, dtos);
-        await FillMajorNamesAsync(dtos);
+        await AttachMajorsBatchAsync(dtos);
+        await AttachOutgoingSharesBatchAsync(dtos);
 
         return new PagedResultDto<ResourceDto>(totalCount, dtos);
     }
@@ -1933,5 +1918,233 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         return snippet;
+    }
+
+    /// <summary>
+    /// 收集输入中的全量专业 Id（MajorIds + MajorId 去重），用于双写 ResourceMajor 关联表。
+    /// 老客户端只传 MajorId 时退化为单专业。
+    /// </summary>
+    private static List<Guid> CollectMajorInput(CreateUpdateResourceDto input)
+    {
+        var list = (input.MajorIds ?? new List<Guid>())
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToList();
+        if (input.MajorId.HasValue && input.MajorId.Value != Guid.Empty && !list.Contains(input.MajorId.Value))
+        {
+            list.Insert(0, input.MajorId.Value);
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// 归一化主专业：优先使用 input.MajorId；若该 Id 在归一化后的 MajorIds 列表里则保留，
+    /// 否则取列表首项。返回主专业 Id 并通过 out 带回完整归一化后的列表。
+    /// </summary>
+    private static Guid? NormalizeMajorInput(CreateUpdateResourceDto input, out List<Guid> normalizedIds)
+    {
+        normalizedIds = CollectMajorInput(input);
+        if (normalizedIds.Count == 0)
+        {
+            return null;
+        }
+        if (input.MajorId.HasValue && normalizedIds.Contains(input.MajorId.Value))
+        {
+            return input.MajorId.Value;
+        }
+        return normalizedIds[0];
+    }
+
+    /// <summary>
+    /// 双写 ResourceMajor 关联表 + 回写主专业字段。
+    /// majorIds 为空即“无专业归属”（清关联、主专业置空）；
+    /// primaryMajorId 由 <see cref="NormalizeMajorInput"/> 决定，未提供时取列表首项。
+    /// </summary>
+    private async Task SyncResourceMajorsAsync(Resource resource, List<Guid> majorIds, Guid? primaryMajorId)
+    {
+        resource.MajorId = primaryMajorId;
+
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var existing = await AsyncExecuter.ToListAsync(
+                (await ResourceMajorRepository.GetQueryableAsync())
+                    .Where(x => x.ResourceId == resource.Id)
+                    .WhereIf(resource.TenantId.HasValue, x => x.TenantId == resource.TenantId!.Value)
+                    .WhereIf(!resource.TenantId.HasValue, x => x.TenantId == null));
+
+            foreach (var stale in existing.Where(x => !majorIds.Contains(x.MajorId)))
+            {
+                await ResourceMajorRepository.DeleteAsync(stale);
+            }
+
+            foreach (var mid in majorIds)
+            {
+                var isPrimary = primaryMajorId.HasValue && mid == primaryMajorId.Value;
+                var link = existing.FirstOrDefault(x => x.MajorId == mid);
+                if (link == null)
+                {
+                    await ResourceMajorRepository.InsertAsync(
+                        new ResourceMajor(GuidGenerator.Create(), resource.Id, mid, isPrimary)
+                        {
+                            TenantId = resource.TenantId
+                        });
+                }
+                else if (link.IsPrimary != isPrimary)
+                {
+                    link.IsPrimary = isPrimary;
+                    await ResourceMajorRepository.UpdateAsync(link);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 批量填充 MajorIds/MajorNames（主专业排第一）并回填 MajorId/MajorName 兼容字段。
+    /// ResourceMajor 在 DB 里与 Resource 同租户，这里使用 GetQueryableAsync 默认的多租户过滤器。
+    /// </summary>
+    private async Task AttachMajorsBatchAsync(List<ResourceDto> dtos)
+    {
+        if (dtos.Count == 0)
+        {
+            return;
+        }
+
+        var resourceIds = dtos.Where(d => d.Id != Guid.Empty).Select(d => d.Id).Distinct().ToList();
+        List<ResourceMajor> links = new();
+        if (resourceIds.Count > 0)
+        {
+            links = await AsyncExecuter.ToListAsync(
+                (await ResourceMajorRepository.GetQueryableAsync())
+                    .Where(x => resourceIds.Contains(x.ResourceId)));
+        }
+
+        var majorIds = links.Select(x => x.MajorId).Distinct().ToList();
+        Dictionary<Guid, string> names = new();
+        if (majorIds.Count > 0)
+        {
+            var majorQuery = await MajorRepository.GetQueryableAsync();
+            names = await majorQuery
+                .Where(x => majorIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Name);
+        }
+
+        var linksByResource = links
+            .GroupBy(x => x.ResourceId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.IsPrimary).ThenBy(x => x.CreationTime).ToList());
+
+        // 同时拉取 dto.MajorId 关联的 Major（兼容老数据 / 未迁移到 ResourceMajor 的资源），
+        // 名字查询与上方 names 合并去重。
+        var legacyMajorIds = dtos
+            .Where(d => d.MajorId.HasValue && !majorIds.Contains(d.MajorId.Value))
+            .Select(d => d.MajorId!.Value)
+            .Distinct()
+            .ToList();
+        if (legacyMajorIds.Count > 0)
+        {
+            var legacyQuery = await MajorRepository.GetQueryableAsync();
+            var legacyNames = await legacyQuery
+                .Where(x => legacyMajorIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Name);
+            foreach (var (id, n) in legacyNames)
+            {
+                names[id] = n;
+            }
+        }
+
+        foreach (var dto in dtos)
+        {
+            dto.MajorIds = new List<Guid>();
+            dto.MajorNames = new List<string>();
+            if (dto.Id == Guid.Empty || !linksByResource.TryGetValue(dto.Id, out var resourceLinks))
+            {
+                // 无关联表数据（老数据 / 未迁移资源）：保留原有 MajorId/MajorName 兼容输出。
+                // MajorName 仍然从 names 表回填，保证前端能看到名字而不是 null。
+                if (dto.MajorId.HasValue && names.TryGetValue(dto.MajorId.Value, out var legacyName))
+                {
+                    dto.MajorName = legacyName;
+                }
+                continue;
+            }
+
+            foreach (var link in resourceLinks)
+            {
+                dto.MajorIds.Add(link.MajorId);
+                dto.MajorNames.Add(names.TryGetValue(link.MajorId, out var n) ? n : link.MajorId.ToString());
+            }
+
+            // 回填兼容字段：主专业排第一；若 DTO 原本已有 MajorId（老客户端创建的）但与关联表不一致，以关联表为准
+            dto.MajorId = dto.MajorIds.FirstOrDefault();
+            dto.MajorName = dto.MajorNames.FirstOrDefault();
+        }
+    }
+
+    /// <summary>
+    /// 批量填充 OutgoingShareCount / OutgoingShareTenantNames（本租户资源已共享给其它租户的情况）。
+    /// 仅统计当前租户作为源的 ResourceShare 记录：ResourceShare.TenantId = CurrentTenant.Id。
+    /// 对传入共享（资源属于其它租户、共享给本租户）不会计数，避免重复展示。
+    /// </summary>
+    private async Task AttachOutgoingSharesBatchAsync(List<ResourceDto> dtos)
+    {
+        if (dtos.Count == 0) return;
+
+        var resourceIds = dtos.Where(d => d.Id != Guid.Empty).Select(d => d.Id).Distinct().ToList();
+        if (resourceIds.Count == 0) return;
+
+        // 共享记录的 TenantId = 源租户 = CurrentTenant.Id。我们直接按 TenantId 查本租户的源共享，
+        // 不需要禁用多租户过滤器（默认就限定本租户）。
+        List<ResourceShare> shares;
+        var shareQuery = await ShareRepository.GetQueryableAsync();
+        if (CurrentTenant.Id.HasValue)
+        {
+            // 普通租户：仅看本租户作为源共享出去的记录
+            shares = await AsyncExecuter.ToListAsync(
+                shareQuery.Where(s => resourceIds.Contains(s.ResourceId) && s.TenantId == CurrentTenant.Id.Value));
+        }
+        else
+        {
+            // host：源租户为 null，看 TenantId IS NULL 的记录
+            shares = await AsyncExecuter.ToListAsync(
+                shareQuery.Where(s => resourceIds.Contains(s.ResourceId) && s.TenantId == null));
+        }
+
+        if (shares.Count == 0) return;
+
+        var tenantIds = shares.Select(s => s.TargetTenantId).Distinct().ToList();
+        Dictionary<Guid, string> names = new();
+        if (tenantIds.Count > 0)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                // ITenantRepository / ITenantInfoRepository 的 GetListAsync 不接受谓词，
+                // 这里拉全量后在内存里按 tenantIds 过滤。租户基数极小，不构成性能问题。
+                var tenantInfos = await TenantInfoRepository.GetListAsync();
+                var tenants = await TenantRepository.GetListAsync();
+                var infoMap = tenantInfos.ToDictionary(ti => ti.TenantId);
+                foreach (var t in tenants.Where(x => tenantIds.Contains(x.Id)))
+                {
+                    var n = infoMap.TryGetValue(t.Id, out var ti) && !string.IsNullOrWhiteSpace(ti.Name)
+                        ? ti.Name
+                        : (t.Name ?? t.Id.ToString());
+                    names[t.Id] = n;
+                }
+            }
+        }
+
+        var byResource = shares
+            .GroupBy(s => s.ResourceId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        foreach (var dto in dtos)
+        {
+            dto.OutgoingShareCount = 0;
+            dto.OutgoingShareTenantNames = new List<string>();
+            if (dto.Id == Guid.Empty || !byResource.TryGetValue(dto.Id, out var list)) continue;
+            dto.OutgoingShareCount = list.Count;
+            dto.OutgoingShareTenantNames = list
+                .Select(s => names.TryGetValue(s.TargetTenantId, out var n) ? n : s.TargetTenantId.ToString())
+                .ToList();
+        }
     }
 }

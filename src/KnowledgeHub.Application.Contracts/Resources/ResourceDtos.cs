@@ -14,6 +14,10 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     public string? CategoryName { get; set; }
     public Guid? MajorId { get; set; }
     public string? MajorName { get; set; }
+    /// <summary>资源归属的全部专业 Id（主专业排第一）；与 <see cref="MajorId"/> / <see cref="MajorName"/> 兼容并双写。</summary>
+    public List<Guid> MajorIds { get; set; } = new();
+    /// <summary>与 <see cref="MajorIds"/> 一一对应的专业名（主专业排第一）。</summary>
+    public List<string> MajorNames { get; set; } = new();
     public string FilePath { get; set; }
     public long FileSize { get; set; }
     public string FileExtension { get; set; }
@@ -46,6 +50,12 @@ public class ResourceDto : FullAuditedEntityDto<Guid>
     /// 前端资源列表据此显示「共享者」列和详情「共享信息」块。
     /// </summary>
     public bool IsShared { get; set; }
+
+    /// <summary>本资源（本租户拥有）已共享给多少个其它租户。仅对 <see cref="IsShared"/>=false 的资源有意义。</summary>
+    public int OutgoingShareCount { get; set; }
+
+    /// <summary>已共享的目标租户名列表（用于表格列悬停提示）。仅 <see cref="OutgoingShareCount"/> > 0 时有值。</summary>
+    public List<string> OutgoingShareTenantNames { get; set; } = new();
 
     /// <summary>源租户 Id（仅 IsShared=true 时有意义）。</summary>
     public Guid? SourceTenantId { get; set; }
@@ -110,7 +120,10 @@ public class CreateUpdateResourceDto
     public string? Description { get; set; }
     public ResourceType ResourceType { get; set; }
     public Guid? CategoryId { get; set; }
+    /// <summary>主专业（兼容老字段；与 <see cref="MajorIds"/> 同时传时以后端归一化结果为准）。</summary>
     public Guid? MajorId { get; set; }
+    /// <summary>资源归属的全部专业（主专业排第一）；为空表示“无专业归属”。</summary>
+    public List<Guid> MajorIds { get; set; } = new();
     public string? Keywords { get; set; }
     public string? CopyrightInfo { get; set; }
     public bool IsDownloadable { get; set; } = true;
@@ -236,6 +249,10 @@ public class SharedResourceDto : EntityDto<Guid>
     public string? CategoryName { get; set; }
     public Guid? MajorId { get; set; }
     public string? MajorName { get; set; }
+    /// <summary>资源归属的全部专业 Id（主专业排第一）；与 <see cref="MajorId"/> / <see cref="MajorName"/> 兼容并双写。</summary>
+    public List<Guid> MajorIds { get; set; } = new();
+    /// <summary>与 <see cref="MajorIds"/> 一一对应的专业名（主专业排第一）。</summary>
+    public List<string> MajorNames { get; set; } = new();
     public string? FileExtension { get; set; }
     public ResourceStatus Status { get; set; }
     public string? Summary { get; set; }

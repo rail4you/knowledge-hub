@@ -251,6 +251,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
   loadResources() {
     const dateRange = this.getDateRangeFromFilter(this.timeFilter());
     this.isLoading.set(true);
+    // 筛选栏：专业单选，只走 Resource.MajorId 主专业；表单里才用多选 majorIds。
     this.resourceService.getFilteredList({
       maxResultCount: this.pageSize,
       skipCount: (this.pageIndex - 1) * this.pageSize,
@@ -273,12 +274,17 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
 
   buildForm() {
     const res = this.selectedResource();
+    // 专业多选：优先用后端返回的 MajorIds（包含主专业+兼属），
+    // 老数据仅 MajorId 的资源回退到 [MajorId]，保证表单始终呈现当前资源全部归属专业。
+    const majorIds = (res.majorIds && res.majorIds.length > 0)
+      ? res.majorIds
+      : (res.majorId ? [res.majorId] : []);
     this.form = this.fb.group({
       name: [res.name || '', Validators.required],
       description: [res.description || ''],
       resourceType: [res.resourceType ?? null, Validators.required],
       categoryId: [res.categoryId ?? null],
-      majorId: [res.majorId ?? null],
+      majorIds: [majorIds],
       keywords: [res.keywords || ''],
       copyrightInfo: [res.copyrightInfo || ''],
       isDownloadable: [res.isDownloadable ?? true],
@@ -788,6 +794,10 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
       formValue.fileSize = this.uploadedFileInfo.fileSize;
       formValue.fileExtension = this.uploadedFileInfo.fileExtension;
       formValue.originalFileName = this.uploadedFileInfo.originalFileName;
+
+      // 专业多选：表单 majorIds 为数组传给后端，后端双写 Resource.MajorId（主专业）
+      // + ResourceMajor 关联表（全部归属）。majorId 老字段不再下发，避免歧义。
+      delete formValue.majorId;
 
       this.resourceService.create(formValue).subscribe({
         next: () => {

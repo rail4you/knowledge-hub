@@ -52,6 +52,13 @@ public interface IPhysicalDeleteRequestRepository : IRepository<PhysicalDeleteRe
     Task<PhysicalDeleteRequest> GetByResourceIdAsync(Guid resourceId, CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// 资源—专业关联仓储复用 <see cref="IRepository{TEntity, TKey}"/> 的标准增删改查，
+/// 实际写入由 AppService 层在双写 <see cref="Resource.MajorId"/> 之后统一调用，
+/// 保证主专业字段与关联表始终一致。
+/// （参照 CourseMajor 的处理：使用通用 IRepository 而非自定义接口）
+/// </summary>
+
 public interface IResourceShareRepository : IRepository<ResourceShare, Guid>
 {
     /// <summary>

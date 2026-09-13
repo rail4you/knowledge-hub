@@ -15,7 +15,6 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
-import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzPageHeaderModule } from 'ng-zorro-antd/page-header';
@@ -53,7 +52,6 @@ interface TenantDto {
     NzFormModule,
     NzGridModule,
     NzCheckboxModule,
-    NzProgressModule,
     NzDividerModule,
     NzTooltipModule,
     NzPageHeaderModule,
@@ -369,6 +367,38 @@ export class StudentEnrollmentComponent implements OnInit {
           },
           error: () => {
             this.message.error('退课失败');
+          },
+        });
+      },
+    });
+  }
+
+  /**
+   * 对已退课学生重新选课。复用 batchEnroll：
+   * 后端看到该 student 在该课程下已有 Dropped 记录，会原地复活
+   * （status=Enrolled、progress=0、enrolledAt=now），而非重复插入。
+   */
+  reEnrollStudent(enrollment: StudentCourseDto) {
+    if (!enrollment.studentId || !enrollment.courseId) {
+      this.message.warning('记录缺失学生或课程信息，无法重新选课');
+      return;
+    }
+    this.modal.confirm({
+      nzTitle: '重新选课',
+      nzContent: `将「${enrollment.studentName || ''}」重新加入该课程？\n\n学习进度将清零。`,
+      nzOkText: '确认选课',
+      nzCancelText: '取消',
+      nzOnOk: () => {
+        this.studentCourseService.batchEnroll({
+          studentIds: [enrollment.studentId!],
+          courseId: enrollment.courseId!,
+        }).subscribe({
+          next: () => {
+            this.message.success('已重新选课');
+            this.loadEnrollments();
+          },
+          error: () => {
+            this.message.error('重新选课失败');
           },
         });
       },
