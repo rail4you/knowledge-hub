@@ -1841,6 +1841,19 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
                 query = query.Where(x => x.IsPrimary == input.OnlyPrimary.Value);
             }
 
+            if (input.ConfirmedFrom.HasValue)
+            {
+                var from = input.ConfirmedFrom.Value.Date;
+                query = query.Where(x => x.ConfirmedAt >= from);
+            }
+
+            if (input.ConfirmedTo.HasValue)
+            {
+                // 含当天：取次日 0 点之前
+                var toExclusive = input.ConfirmedTo.Value.Date.AddDays(1);
+                query = query.Where(x => x.ConfirmedAt < toExclusive);
+            }
+
             if (!canManageOutcome && !canViewStatistics)
             {
                 if (!currentUserId.HasValue)
@@ -1868,6 +1881,103 @@ public class EmploymentAppService : KnowledgeHubAppService, IEmploymentAppServic
         var entity = await _outcomeRepository.GetAsync(id);
 
         await _outcomeRepository.DeleteAsync(entity, autoSave: true);
+    }
+
+    /// <summary>
+    /// 导出就业去向（xlsx，全中文表头，按当前筛选条件导出，最多 5000 条）。
+    /// </summary>
+    [Authorize(KnowledgeHubPermissions.Employment.ManageOutcome)]
+    public async Task<IRemoteStreamContent> ExportOutcomesAsync(GetEmploymentOutcomeListInput input)
+    {
+        List<EmploymentOutcomeDto> dtos;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var query = await _outcomeRepository.GetQueryableAsync();
+
+            if (CurrentTenant.Id.HasValue)
+            {
+                var tenantId = CurrentTenant.Id.Value;
+                query = query.Where(x => x.TenantId == tenantId);
+            }
+
+            if (input.StudentId.HasValue)
+            {
+                query = query.Where(x => x.StudentId == input.StudentId.Value);
+            }
+
+            if (input.Status.HasValue)
+            {
+                query = query.Where(x => x.Status == input.Status.Value);
+            }
+
+            if (input.OnlyPrimary.HasValue)
+            {
+                query = query.Where(x => x.IsPrimary == input.OnlyPrimary.Value);
+            }
+
+            if (input.ConfirmedFrom.HasValue)
+            {
+                var from = input.ConfirmedFrom.Value.Date;
+                query = query.Where(x => x.ConfirmedAt >= from);
+            }
+
+            if (input.ConfirmedTo.HasValue)
+            {
+                var toExclusive = input.ConfirmedTo.Value.Date.AddDays(1);
+                query = query.Where(x => x.ConfirmedAt < toExclusive);
+            }
+
+            var entities = await query
+                .OrderByDescending(x => x.ConfirmedAt)
+                .Take(5000)
+                .ToListAsync();
+
+            dtos = await MapOutcomeDtosAsync(entities);
+        }
+
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add("就业去向");
+
+        var headers = new[]
+        {
+            "学生姓名", "去向单位", "岗位名称", "去向状态",
+            "就业方式", "工作地点", "薪资范围", "入职时间",
+            "确认时间", "是否主要去向", "备注"
+        };
+        for (var c = 0; c < headers.Length; c++)
+        {
+            sheet.Cell(1, c + 1).Value = headers[c];
+        }
+
+        var headerRange = sheet.Range(1, 1, 1, headers.Length);
+        headerRange.Style.Font.Bold = true;
+        headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+
+        for (var i = 0; i < dtos.Count; i++)
+        {
+            var o = dtos[i];
+            var r = i + 2;
+            // 学生姓名仅取姓名段（后端拼串为"姓名 用户名"）
+            var studentName = (o.StudentName ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+            sheet.Cell(r, 1).Value = studentName;
+            sheet.Cell(r, 2).Value = o.EmployerName ?? string.Empty;
+            sheet.Cell(r, 3).Value = o.JobTitle ?? string.Empty;
+            sheet.Cell(r, 4).Value = GetOutcomeStatusLabel(o.Status);
+            sheet.Cell(r, 5).Value = o.EmploymentType ?? string.Empty;
+            sheet.Cell(r, 6).Value = o.Region ?? string.Empty;
+            sheet.Cell(r, 7).Value = o.SalaryRange ?? string.Empty;
+            sheet.Cell(r, 8).Value = o.StartDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+            sheet.Cell(r, 9).Value = o.ConfirmedAt.ToString("yyyy-MM-dd");
+            sheet.Cell(r, 10).Value = o.IsPrimary ? "是" : "否";
+            sheet.Cell(r, 11).Value = o.Remark ?? string.Empty;
+        }
+
+        sheet.Columns().AdjustToContents();
+
+        var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+        return new RemoteStreamContent(stream, $"就业去向_{Clock.Now:yyyyMMddHHmmss}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     }
 
     /// <summary>

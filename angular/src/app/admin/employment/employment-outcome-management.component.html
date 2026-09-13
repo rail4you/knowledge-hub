@@ -20,6 +20,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         导入Excel
       </button>
+      <button class="action-btn primary" type="button" (click)="exportExcel()" [disabled]="exporting()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        {{ exporting() ? '导出中...' : '导出Excel' }}
+      </button>
     </div>
 
     <!-- 搜索筛选栏（原型 filter-bar） -->
@@ -53,6 +57,28 @@
         <nz-option [nzValue]="statuses.Entrepreneurship" nzLabel="创业"></nz-option>
         <nz-option [nzValue]="statuses.Unemployed" nzLabel="待就业"></nz-option>
       </nz-select>
+      <div class="time-filter-group" [class.has-value]="!!dateRange">
+        <span class="time-group-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          确认时间
+        </span>
+        <nz-range-picker
+          class="time-range-picker"
+          [(ngModel)]="dateRange"
+          (ngModelChange)="onDateRangeChange()"
+          [nzPlaceHolder]="['开始日期', '结束日期']"
+          nzAllowClear
+        ></nz-range-picker>
+        <span class="time-group-divider"></span>
+        <div class="quick-range">
+          <button class="quick-btn" type="button" [class.active]="isQuickActive('6m')" (click)="setLast6Months()">近6个月</button>
+          <button class="quick-btn" type="button" [class.active]="isQuickActive('thisYear')" (click)="setThisYear()">今年</button>
+          <button class="quick-btn" type="button" [class.active]="isQuickActive('lastYear')" (click)="setLastYear()">去年</button>
+          @if (dateRange) {
+            <button class="quick-btn clear" type="button" (click)="clearDateRange()">清除</button>
+          }
+        </div>
+      </div>
       <button class="reset-btn" type="button" (click)="resetFilter()">重置</button>
     </div>
 

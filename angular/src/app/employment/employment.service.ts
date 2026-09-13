@@ -370,6 +370,8 @@ export interface GetEmploymentOutcomeListInput {
   studentId?: string;
   status?: EmploymentOutcomeStatus;
   onlyPrimary?: boolean;
+  confirmedFrom?: string;
+  confirmedTo?: string;
   sorting?: string;
   skipCount: number;
   maxResultCount: number;
@@ -692,6 +694,14 @@ export class EmploymentService {
     this.restService.request<any, EmploymentOutcomeStudentDto[]>({
       method: 'GET',
       url: '/api/app/employment/outcome-students',
+    }, { apiName: this.apiName });
+
+  exportOutcomes = (input: Omit<GetEmploymentOutcomeListInput, 'skipCount' | 'maxResultCount'>) =>
+    this.restService.request<any, Blob>({
+      method: 'POST',
+      responseType: 'blob',
+      url: '/api/app/employment/export-outcomes',
+      body: input,
     }, { apiName: this.apiName });
 
   getOutcomeImportTemplate = () =>

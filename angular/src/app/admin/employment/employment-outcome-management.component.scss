@@ -163,6 +163,102 @@
   }
 }
 
+// ── 时间范围胶囊组：空态也有底、有标签，不会"空一块" ──
+.time-filter-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 10px;
+  background: #fafbfc;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background 0.2s;
+  &:hover { border-color: #d9d9d9; }
+  &.has-value {
+    background: #fff;
+    border-color: var(--kh-accent);
+    box-shadow: 0 0 0 2px var(--kh-accent-ghost);
+  }
+}
+.time-group-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--kh-muted);
+  white-space: nowrap;
+  user-select: none;
+  svg { width: 14px; height: 14px; color: #bfbfbf; }
+  .has-value & { color: var(--kh-ink); svg { color: var(--kh-accent); } }
+}
+.time-group-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--kh-line-2);
+  flex-shrink: 0;
+}
+.quick-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.quick-btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--kh-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  line-height: 1;
+  &:hover {
+    border-color: var(--kh-accent);
+    color: var(--kh-accent);
+    background: var(--kh-accent-ghost);
+  }
+  &.active {
+    background: var(--kh-accent);
+    border-color: var(--kh-accent);
+    color: #fff;
+  }
+  &.clear {
+    background: transparent;
+    border-color: var(--kh-line-2);
+    &:hover { background: #fff; border-color: var(--kh-bad); color: var(--kh-bad); }
+  }
+}
+.action-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+// picker 在胶囊内做成无框幽灵样式，与胶囊融为一体
+:host ::ng-deep .time-range-picker.ant-picker {
+  height: 28px;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 4px !important;
+  flex: 0 0 auto;
+  .ant-picker-input input {
+    font-size: 13px;
+    &::placeholder { color: #bfbfbf; }
+  }
+  .ant-picker-suffix, .ant-picker-clear { color: #bfbfbf; }
+}
+:host ::ng-deep .time-range-picker.ant-picker-focused {
+  box-shadow: none !important;
+}
+
 // ── table-card / dest-table (prototype) ───────────────────
 .table-card {
   background: var(--kh-panel);

@@ -3,6 +3,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
+import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -36,6 +37,7 @@ import {
     FormsModule,
     NzButtonModule,
     NzCardModule,
+    NzDatePickerModule,
     NzIconModule,
     NzInputModule,
     NzModalModule,
@@ -68,6 +70,9 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
   keyword = '';
   statusFilter?: EmploymentOutcomeStatus;
   studentFilter?: string;
+  /** 确认时间范围（nz-range-picker 双向绑定） */
+  dateRange: Date[] | null = null;
+  readonly exporting = signal(false);
 
   // 分页
   pageIndex = 1;
@@ -124,6 +129,8 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
       .getOutcomeList({
         studentId: this.studentFilter,
         status: this.statusFilter,
+        confirmedFrom: this.toDateStr(this.dateRange?.[0]),
+        confirmedTo: this.toDateStr(this.dateRange?.[1]),
         skipCount: (this.pageIndex - 1) * this.pageSize,
         maxResultCount: this.pageSize,
       })
@@ -164,7 +171,96 @@ export class EmploymentOutcomeManagementComponent implements OnInit {
     this.keyword = '';
     this.statusFilter = undefined;
     this.studentFilter = undefined;
+    this.dateRange = null;
     this.onFilterChange();
+  }
+
+  onDateRangeChange(): void {
+    // nz-range-picker 在清空时会传 null / []，统一归一为 null
+    if (!this.dateRange || (Array.isArray(this.dateRange) && this.dateRange.length === 0)) {
+      this.dateRange = null;
+    }
+    this.pageIndex = 1;
+    this.reload();
+  }
+
+  clearDateRange(): void {
+    this.dateRange = null;
+    this.onDateRangeChange();
+  }
+
+  isQuickActive(key: '6m' | 'thisYear' | 'lastYear'): boolean {
+    if (!this.dateRange || this.dateRange.length !== 2) return false;
+    const [s, e] = this.dateRange;
+    if (!s || !e) return false;
+    const fmt = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if (key === '6m') {
+      const end = new Date();
+      const start = new Date(end.getFullYear(), end.getMonth() - 5, 1);
+      return fmt(s) === fmt(start) && fmt(e) === fmt(end);
+    }
+    if (key === 'thisYear') {
+      const y = new Date().getFullYear();
+      return fmt(s) === fmt(new Date(y, 0, 1)) && fmt(e) === fmt(new Date(y, 11, 31));
+    }
+    const y = new Date().getFullYear() - 1;
+    return fmt(s) === fmt(new Date(y, 0, 1)) && fmt(e) === fmt(new Date(y, 11, 31));
+  }
+
+  // ===== 快捷时间范围 =====
+  setLast6Months(): void {
+    const end = new Date();
+    const start = new Date(end.getFullYear(), end.getMonth() - 5, 1);
+    this.dateRange = [start, end];
+    this.onDateRangeChange();
+  }
+
+  setThisYear(): void {
+    const now = new Date();
+    this.dateRange = [new Date(now.getFullYear(), 0, 1), new Date(now.getFullYear(), 11, 31)];
+    this.onDateRangeChange();
+  }
+
+  setLastYear(): void {
+    const lastYear = new Date().getFullYear() - 1;
+    this.dateRange = [new Date(lastYear, 0, 1), new Date(lastYear, 11, 31)];
+    this.onDateRangeChange();
+  }
+
+  // ===== 导出 Excel（全中文表头，按当前筛选条件） =====
+  exportExcel(): void {
+    this.exporting.set(true);
+    this.employmentService
+      .exportOutcomes({
+        studentId: this.studentFilter,
+        status: this.statusFilter,
+        confirmedFrom: this.toDateStr(this.dateRange?.[0]),
+        confirmedTo: this.toDateStr(this.dateRange?.[1]),
+      })
+      .subscribe({
+        next: blob => {
+          this.exporting.set(false);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `就业去向_${this.todayStr()}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          this.message.success('导出成功');
+        },
+        error: err => {
+          this.exporting.set(false);
+          this.message.error(this.extractErrorMessage(err, '导出失败'));
+        },
+      });
+  }
+
+  private toDateStr(d?: Date | null): string | undefined {
+    if (!d) return undefined;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
   openCreate(): void {

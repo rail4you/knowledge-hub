@@ -379,6 +379,10 @@ public class GetEmploymentOutcomeListInput : PagedAndSortedResultRequestDto
     public Guid? StudentId { get; set; }
     public EmploymentOutcomeStatus? Status { get; set; }
     public bool? OnlyPrimary { get; set; }
+    /// <summary>确认时间范围起（含）</summary>
+    public DateTime? ConfirmedFrom { get; set; }
+    /// <summary>确认时间范围止（含）</summary>
+    public DateTime? ConfirmedTo { get; set; }
 }
 
 /// <summary>
