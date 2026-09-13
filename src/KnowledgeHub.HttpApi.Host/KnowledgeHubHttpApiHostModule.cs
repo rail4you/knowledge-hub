@@ -308,11 +308,15 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         AddQueueServer("conversion", configuration.GetValue("Hangfire:Workers:Conversion", 1));
         AddQueueServer("ai", configuration.GetValue("Hangfire:Workers:Ai", 2));
         AddQueueServer("media", configuration.GetValue("Hangfire:Workers:Media", 2));
+        // 索引任务（文档/视频）也走 Hangfire 持久化，避免重启丢失、job 表永久 Pending
+        AddQueueServer("indexing", configuration.GetValue("Hangfire:Workers:Indexing", 2));
         context.Services.AddSingleton<IConversionTaskQueue, HangfireConversionTaskQueue>();
         // AI 生成任务队列（ai 队列，PostgreSQL 持久化）
         context.Services.AddSingleton<IAiTaskQueue, HangfireAiTaskQueue>();
         // 资源媒体处理队列（media 队列，缩略图/预览 ETL）
         context.Services.AddSingleton<IResourceMediaJobQueue, HangfireResourceMediaJobQueue>();
+        // 文档/视频索引队列（indexing 队列，Hangfire 持久化）
+        context.Services.AddSingleton<KnowledgeHub.Search.Indexing.IIndexingJobQueue, HangfireIndexingJobQueue>();
 
         context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>();
         context.Services.AddScoped<KnowledgeHub.Application.Search.MeiliSearchService>();
@@ -663,6 +667,7 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         RegisterAiTaskRecoveryRecurringJob();
         RegisterResourceMediaRecurringJob();
         RegisterResourceMediaRecoveryRecurringJob();
+        RegisterIndexingTaskRecoveryRecurringJob();
 
         app.UseConfiguredEndpoints();
     }
@@ -715,6 +720,18 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
             job => job.RecoverAsync(),
             Cron.MinuteInterval(5),
             new RecurringJobOptions { QueueName = "media" });
+    }
+
+    /// <summary>
+    /// 注册索引任务恢复 RecurringJob（每 10 分钟）：把中断/超时或过期排队的文档/视频索引任务标记失败。
+    /// </summary>
+    private void RegisterIndexingTaskRecoveryRecurringJob()
+    {
+        RecurringJob.AddOrUpdate<KnowledgeHub.Search.Indexing.IndexingTaskRecoveryService>(
+            "indexing-task-recovery",
+            job => job.RecoverAsync(),
+            Cron.MinuteInterval(10),
+            new RecurringJobOptions { QueueName = "default" });
     }
 
     /// <summary>

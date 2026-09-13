@@ -193,11 +193,11 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 - Recurring（均每 5 分钟，执行 Succeeded）：`office-conversion-reprocess`、`ai-task-recovery`、`resource-media-maintenance`、`resource-media-recovery`。
 - Dashboard `/hangfire` 经回环访问返回 200（鉴权过滤器放行本机；nginx 侧另行限制）。
 - 失败样本：`OfficeConversionJob`（`FileNotFoundException`，缺失 `*.light.pptx`），完整异常记录在 `hangfire.state`；该 job `[AutomaticRetry(Attempts = 0)]`，按设计不重试。
-- **重要发现：文档/视频索引未接入 Hangfire**
-  - `hangfire.job` 中不存在 `DocumentIndexing`/`VideoIndexing` 类型——它们走 ABP `IBackgroundJobManager`（内存存储，项目未引用 `Volo.Abp.BackgroundJobs.Hangfire`）。
-  - 库中存在 **5 条自 2026-03 起一直 Pending** 的 `KhDocumentIndexingJobs`（Host、资源名“测试5/test1”等），为进程重启后内存队列丢失且无恢复任务所致。
-  - 风险：重启会丢失排队中的索引任务，DB job 行永久停留 Pending；媒体/AI/转换有恢复任务，索引没有。
-  - 建议：引入 `Volo.Abp.BackgroundJobs.Hangfire` 或新增 Hangfire 索引队列，并补索引恢复 RecurringJob。
+- **重要发现（已修复）：文档/视频索引未接入 Hangfire**
+  - 现象：`hangfire.job` 中无 Indexing 类型——走 ABP `IBackgroundJobManager`（内存存储）；库中存在 5 条自 2026-03 起一直 Pending 的 `KhDocumentIndexingJobs`。
+  - 修复：新增 `IIndexingJobQueue` + `HangfireIndexingJobQueue`（`indexing` 队列，PostgreSQL 持久化），文档/视频索引统一走该队列；新增 `IndexingTaskRecoveryService` + `indexing-task-recovery` RecurringJob（每 10 分钟把中断/超时或过期排队的索引任务标记失败）。
+  - 连带修复提交时序竞态：Hangfire 工作线程可能在创建事务提交前抢跑（查不到资源）。改为 `IUnitOfWork.OnCompleted` 提交后再入队（与 media/AI 队列一致）。
+  - 验证：新文档资源 → `hangfire.job` 出现 `DocumentIndexingProcessingJob`（`indexing` 队列）Processing→Succeeded，DB job 30、Meili 文档 1；触发 recovery 后 5 条僵尸 Pending 变为 Failed；`indexing` server（2 worker）与 `indexing-task-recovery` 均已注册。
 
 ## 9. 本轮代码改动
 - `src/KnowledgeHub.Application/Search/SearchAnalyticsService.cs`：`[RemoteService(false)]`
@@ -208,6 +208,13 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 - `src/KnowledgeHub.Application/Resources/Media/ResourceMediaProcessor.cs`：源文件缺失时媒体任务标记 Failed（修复假成功）
 - `src/KnowledgeHub.Application/Resources/ResourceAppService.cs`：DeleteAsync 先确认存在再删除，再清理（修复假成功与索引不一致）
 - `src/KnowledgeHub.Application/Search/VideoIndexingBackgroundJob.cs`：具体类型注入修复授权异常；0 事件标记 Failed
+- 索引持久化（新增/改动）：
+  - `src/KnowledgeHub.Application/Search/Indexing/IIndexingJobQueue.cs`（新增）
+  - `src/KnowledgeHub.Application/Search/Indexing/DocumentIndexingProcessingJob.cs`、`VideoIndexingProcessingJob.cs`（新增）
+  - `src/KnowledgeHub.Application/Search/Indexing/IndexingTaskRecoveryService.cs`（新增）
+  - `src/KnowledgeHub.HttpApi.Host/HangfireJobs/HangfireIndexingJobQueue.cs`（新增）
+  - `ResourceAppService` / `IndexingJobAppService`：索引入队改走 `IIndexingJobQueue`，提交后入队
+  - `KnowledgeHubHttpApiHostModule`：注册 `indexing` 队列 server 与 `indexing-task-recovery`；`appsettings.json` 增 `Hangfire:Workers:Indexing=2`
 - `scripts/test/seed-perf-data.sh`、`scripts/perf/pgbench/read.sql`：表名修正为 `AppResources/AppCourses`
 - `scripts/test/security-regression.sh`：SSE 超时保护、`Accept: application/json`、REJECT 状态集合、变量花括号修复、新增 M-6/L-1 用例
 - `scripts/test/api-permission-matrix.sh`：修正 major 路径与 teacher 期望
@@ -217,6 +224,6 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 1. **业务集成测试**：权限 Seeder、租户隔离、AI 配额等（安全原语单测已补 11 个）。
 2. **E2E（Playwright）**：管理端/教师/学生关键旅程与前端路由守卫（当前仅有 API 级验证）。
 3. **k6 混合/搜索压测**：本机无 k6；`ai.js` 按用户要求暂缓。
-4. **索引持久化改造**：将索引任务接入 Hangfire + 恢复任务后，回归「重启不丢任务」。
+4. **重启不丢任务回归**：索引已接入 Hangfire，后续可在「排队中重启进程」场景下验证任务续跑。
 5. **契约测试**：对 api-definition 全量 action 做参数化调用（当前冒烟仅覆盖无参 GET）。
 6. **Hangfire 重试**：为媒体/AI 任务制造可重试失败（默认 10 次），验证退避与最终 Failed。

@@ -49,6 +49,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected ICurrentTenant CurrentTenant { get; }
     protected IHttpContextAccessor HttpContextAccessor { get; }
     protected IBackgroundJobManager BackgroundJobManager { get; }
+    protected KnowledgeHub.Search.Indexing.IIndexingJobQueue IndexingJobQueue { get; }
     protected IRepository<DocumentIndexingJob, Guid> IndexingJobRepository { get; }
     protected IRepository<VideoIndexingJob, Guid> VideoIndexingJobRepository { get; }
     protected IEditionConfigService EditionConfigService { get; }
@@ -80,6 +81,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         ICurrentTenant currentTenant,
         IHttpContextAccessor httpContextAccessor,
         IBackgroundJobManager backgroundJobManager,
+        KnowledgeHub.Search.Indexing.IIndexingJobQueue indexingJobQueue,
         IRepository<DocumentIndexingJob, Guid> indexingJobRepository,
         IRepository<VideoIndexingJob, Guid> videoIndexingJobRepository,
         IEditionConfigService editionConfigService,
@@ -110,6 +112,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         CurrentTenant = currentTenant;
         HttpContextAccessor = httpContextAccessor;
         BackgroundJobManager = backgroundJobManager;
+        IndexingJobQueue = indexingJobQueue;
         IndexingJobRepository = indexingJobRepository;
         VideoIndexingJobRepository = videoIndexingJobRepository;
         EditionConfigService = editionConfigService;
@@ -759,22 +762,26 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await VideoIndexingJobRepository.InsertAsync(indexingJob);
         Logger.LogInformation("Created VideoIndexingJob {JobId} for resource {ResourceId}", indexingJob.Id, resource.Id);
 
-        try
+        var videoArgs = new VideoIndexingJobArgs
         {
-            await BackgroundJobManager.EnqueueAsync(new VideoIndexingJobArgs
-            {
-                JobId = indexingJob.Id,
-                ResourceId = resource.Id,
-                FilePath = resource.FilePath,
-                TenantId = CurrentTenant.Id
-            });
-            Logger.LogInformation("Successfully enqueued background job for VideoIndexingJob {JobId}", indexingJob.Id);
-        }
-        catch (Exception ex)
+            JobId = indexingJob.Id,
+            ResourceId = resource.Id,
+            FilePath = resource.FilePath,
+            TenantId = CurrentTenant.Id
+        };
+
+        // 事务提交后再入队，避免 Hangfire 工作线程在资源行提交前抢跑（查不到资源）
+        var videoUow = UnitOfWorkManager.Current;
+        if (videoUow != null)
         {
-            Logger.LogError(ex, "Failed to enqueue background job for VideoIndexingJob {JobId}", indexingJob.Id);
-            throw;
+            videoUow.OnCompleted(async () => await IndexingJobQueue.EnqueueVideoAsync(videoArgs));
         }
+        else
+        {
+            await IndexingJobQueue.EnqueueVideoAsync(videoArgs);
+        }
+
+        Logger.LogInformation("Enqueued VideoIndexingJob {JobId} (after commit)", indexingJob.Id);
     }
 
     private async Task EnqueueDocumentIndexingJobAsync(Resource resource, Guid? resourceVersionId = null)
@@ -788,23 +795,27 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         await IndexingJobRepository.InsertAsync(indexingJob);
         Logger.LogInformation("Created DocumentIndexingJob {JobId} for resource {ResourceId}", indexingJob.Id, resource.Id);
 
-        try
+        var documentArgs = new DocumentIndexingJobArgs
         {
-            await BackgroundJobManager.EnqueueAsync(new DocumentIndexingJobArgs
-            {
-                JobId = indexingJob.Id,
-                ResourceId = resource.Id,
-                FilePath = resource.FilePath,
-                TenantId = CurrentTenant.Id,
-                ResourceVersionId = resourceVersionId
-            });
-            Logger.LogInformation("Successfully enqueued background job for DocumentIndexingJob {JobId}, ResourceVersionId: {VersionId}", indexingJob.Id, resourceVersionId);
-        }
-        catch (Exception ex)
+            JobId = indexingJob.Id,
+            ResourceId = resource.Id,
+            FilePath = resource.FilePath,
+            TenantId = CurrentTenant.Id,
+            ResourceVersionId = resourceVersionId
+        };
+
+        // 事务提交后再入队，避免 Hangfire 工作线程在资源行提交前抢跑（查不到资源）
+        var documentUow = UnitOfWorkManager.Current;
+        if (documentUow != null)
         {
-            Logger.LogError(ex, "Failed to enqueue background job for DocumentIndexingJob {JobId}", indexingJob.Id);
-            throw;
+            documentUow.OnCompleted(async () => await IndexingJobQueue.EnqueueDocumentAsync(documentArgs));
         }
+        else
+        {
+            await IndexingJobQueue.EnqueueDocumentAsync(documentArgs);
+        }
+
+        Logger.LogInformation("Enqueued DocumentIndexingJob {JobId} (after commit), ResourceVersionId: {VersionId}", indexingJob.Id, resourceVersionId);
     }
 
     [Authorize(KnowledgeHubPermissions.Resources.Edit)]

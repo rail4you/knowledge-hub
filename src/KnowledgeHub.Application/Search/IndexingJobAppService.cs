@@ -29,7 +29,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
     private readonly IRepository<DocumentIndexingJob, Guid> _jobRepository;
     private readonly IRepository<VideoIndexingJob, Guid> _videoJobRepository;
     private readonly IRepository<Resource, Guid> _resourceRepository;
-    private readonly IBackgroundJobManager _backgroundJobManager;
+    private readonly KnowledgeHub.Search.Indexing.IIndexingJobQueue _indexingJobQueue;
     private readonly IDocumentExtractionService _documentExtractionService;
     private readonly IFileStorageService _fileStorageService;
 
@@ -37,14 +37,14 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
         IRepository<DocumentIndexingJob, Guid> jobRepository,
         IRepository<VideoIndexingJob, Guid> videoJobRepository,
         IRepository<Resource, Guid> resourceRepository,
-        IBackgroundJobManager backgroundJobManager,
+        KnowledgeHub.Search.Indexing.IIndexingJobQueue indexingJobQueue,
         IDocumentExtractionService documentExtractionService,
         IFileStorageService fileStorageService)
     {
         _jobRepository = jobRepository;
         _videoJobRepository = videoJobRepository;
         _resourceRepository = resourceRepository;
-        _backgroundJobManager = backgroundJobManager;
+        _indexingJobQueue = indexingJobQueue;
         _documentExtractionService = documentExtractionService;
         _fileStorageService = fileStorageService;
     }
@@ -348,7 +348,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
 
         await _jobRepository.InsertAsync(job);
 
-        await _backgroundJobManager.EnqueueAsync(new DocumentIndexingJobArgs
+        await _indexingJobQueue.EnqueueDocumentAsync(new DocumentIndexingJobArgs
         {
             JobId = job.Id,
             ResourceId = input.ResourceId,
@@ -432,7 +432,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
 
             await _jobRepository.UpdateAsync(docJob);
 
-            await _backgroundJobManager.EnqueueAsync(new DocumentIndexingJobArgs
+            await _indexingJobQueue.EnqueueDocumentAsync(new DocumentIndexingJobArgs
             {
                 JobId = docJob.Id,
                 ResourceId = docJob.ResourceId,
@@ -468,7 +468,7 @@ public class IndexingJobAppService : KnowledgeHubAppService, IIndexingJobAppServ
 
             await _videoJobRepository.UpdateAsync(vidJob);
 
-            await _backgroundJobManager.EnqueueAsync(new VideoIndexingJobArgs
+            await _indexingJobQueue.EnqueueVideoAsync(new VideoIndexingJobArgs
             {
                 JobId = vidJob.Id,
                 ResourceId = vidJob.ResourceId,
