@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
-import { hasAnyRole, hasRole } from '../auth/current-user.utils';
+import { hasAnyRole } from '../auth/current-user.utils';
 import { ADMIN_ROLES } from '../auth/admin-roles';
 
 /**
@@ -15,11 +15,12 @@ import { ADMIN_ROLES } from '../auth/admin-roles';
  * - 未登录游客：放行（首页/租户主页本身是公开浏览页）；
  * - 已登录且持有任一管理端角色：直接返回 UrlTree 跳到系统工作台 `/admin/workbench`，
  *   组件永远不会被创建，不存在"先看到首页再跳走"的窗口；
- * - 已登录学生：跳到学生门户 `/student`，登录后不回落到公开首页；
+ * - 已登录学生：放行。学生端头部「主站」按钮（`routerLink="/"`）需要能回到
+ *   门户首页浏览，之前在此拦截跳回 `/student` 会导致按钮看起来"点不动"。
+ *   首页组件本身已支持登录态（显示「学生门户」入口），学生可自行往返两端。
  * - 其余已登录用户（无角色）：放行。
  *
- * 管理员优先于学生判断：即使某账号同时持有 Student + 管理角色，
- * 也一律视为管理端身份。
+ * 只要持有任一管理端角色（即使同时持有 Student）就一律视为管理端身份。
  */
 export const portalHomeGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
@@ -32,10 +33,6 @@ export const portalHomeGuard: CanActivateFn = () => {
 
   if (hasAnyRole(configState, ADMIN_ROLES)) {
     return router.createUrlTree(['/admin/workbench']);
-  }
-
-  if (hasRole(configState, 'Student')) {
-    return router.createUrlTree(['/student']);
   }
 
   return true;

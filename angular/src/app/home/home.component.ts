@@ -1,6 +1,6 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
-import { RouterLink, Router, ActivatedRoute } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
@@ -19,8 +19,6 @@ import type { TenantResourceSummaryDto, PublicHomeStatsDto, PortalHomeDataDto } 
 export class HomeComponent implements OnInit {
   private authService = inject(AuthService);
   private configService = inject(ConfigStateService);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
   private portalService = inject(PortalService);
 
   readonly stats = signal<PublicHomeStatsDto | null>(null);
@@ -47,10 +45,8 @@ export class HomeComponent implements OnInit {
   ngOnInit() {
     this.loadStats();
     this.loadAllData();
-    if (this.hasLoggedIn && this.isStudent) {
-      const returnUrl = this.route.snapshot.queryParams['returnUrl'];
-      if (!returnUrl) this.router.navigate(['/student']);
-    }
+    // 学生允许停留在门户首页（与 PortalHomeComponent 保持一致），
+    // 否则学生端「主站」按钮跳过来又被弹回，看起来像"点不动"。
   }
 
   loadStats() {

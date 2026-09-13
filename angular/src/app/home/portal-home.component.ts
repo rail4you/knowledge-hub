@@ -209,15 +209,12 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // 第二道防线（第一道是路由层的 portalHomeGuard，组件通常不会被实例化）。
     // 保留此处兜底：若守卫执行时角色声明尚未就绪，组件内再次拦截。
+    // 注意：已登录学生不再强制跳回 /student，否则学生端「主站」按钮
+    // （routerLink="/"）会看起来"点不动"（跳过去又被弹回来）。
+    // 首页模板已支持登录态（显示「学生门户」入口），学生可自行往返两端。
     if (this.isLoggedIn && this.isTeacher) {
       const returnUrl = this.route.snapshot.queryParams['returnUrl'];
       if (!returnUrl) this.router.navigate(['/admin/workbench']);
-      return;
-    }
-
-    if (this.isLoggedIn && this.isStudent) {
-      const returnUrl = this.route.snapshot.queryParams['returnUrl'];
-      if (!returnUrl) this.router.navigate(['/student']);
       return;
     }
 
