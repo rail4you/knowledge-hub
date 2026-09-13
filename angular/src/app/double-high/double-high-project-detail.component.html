@@ -381,6 +381,10 @@
 
       <label>最新值</label>
       <input nz-input type="number" [(ngModel)]="latestValueDraft" placeholder="手工填报最新值，可为空" />
+      @if (isLatestExceedingTarget()) {
+        <span></span>
+        <span class="weight-hint error">最新值不能大于目标值（当前 最新值 {{ latestValueDraft }} &gt; 目标值 {{ indicatorForm.targetValue }}），保存会被拒绝</span>
+      }
 
       <label>最新值备注</label>
       <input nz-input [(ngModel)]="latestNoteDraft" placeholder="备注，可为空" />

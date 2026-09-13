@@ -142,6 +142,21 @@ export class DoubleHighProjectDetailComponent implements OnInit {
   }
 
   openCreateIndicator(): void {
+    // 关键约束 1：单个项目最多 20 个指标。与权重上限独立，避免指标海。
+    const indicatorCount = this.project()?.indicators.length ?? 0;
+    if (indicatorCount >= 20) {
+      this.message.warning('单个项目的指标数已达上限 20，无法新建指标。请合并或删除部分指标后再添加。');
+      return;
+    }
+    // 关键约束 2：项目权重合计 ≥ 0.99（约等于满）时，不允许再创建任何新指标。
+    // 考虑两位小数权重的精度问题：3 × 0.33 = 0.99 应当视为“已满”，
+    // 即便把新指标权重填 0 也禁止。后端 AddIndicatorAsync 是权威检查，
+    // 这里提前给友好提示，避免用户白填一遍表单。
+    // 这里略松于 0.01（用 0.009）以容忍 JS 浮点误差（1 - 0.99 可能为 0.010000000000000009）。
+    if (this.getTrueRemainingWeight() <= 0.01) {
+      this.message.warning('项目权重合计已接近上限（≥ 0.99），无法新建指标。请先调整现有指标权重腾出空间。');
+      return;
+    }
     this.editingIndicatorId = null;
     this.indicatorForm = this.createEmptyIndicatorForm();
     // 权重语义：0~1 小数，合计不超过 1；新建默认填剩余可用权重，方便用户直接保存
@@ -205,6 +220,18 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     const project = this.project();
     if (!project) {
       return;
+    }
+
+    // 关键约束：最新值必须 ≤ 目标值（如果目标值已设置），后端 SaveManualValueAsync 是权威检查。
+    // 这里提前给提示，避免走一轮网络请求才发现问题。注意：如果指标未设置目标值（null/undefined/0），
+    // 则不限制最新值上限，与后端逻辑保持一致。
+    const target = this.indicatorForm.targetValue;
+    if (target !== null && target !== undefined && Number(target) > 0) {
+      const latest = this.latestValueDraft;
+      if (latest !== null && latest !== undefined && Number.isFinite(Number(latest)) && Number(latest) > Number(target)) {
+        this.message.warning(`最新值 ${latest} 不能大于目标值 ${target}，请调低最新值或先调高目标值`);
+        return;
+      }
     }
 
     // 权重语义：0~1 小数（如 0.3），所有指标权重之和不超过 1（0 表示暂未分配）
@@ -527,6 +554,19 @@ export class DoubleHighProjectDetailComponent implements OnInit {
     if (!resourceId) return '-';
     const found = this.resourceOptions().find(r => r.id === resourceId);
     return found?.name || '-';
+  }
+
+  /** 检查“最新值”是否超过“目标值”，用于弹窗内实时提示 */
+  isLatestExceedingTarget(): boolean {
+    const target = this.indicatorForm.targetValue;
+    const latest = this.latestValueDraft;
+    if (target === null || target === undefined || Number(target) <= 0) {
+      return false;
+    }
+    if (latest === null || latest === undefined || !Number.isFinite(Number(latest))) {
+      return false;
+    }
+    return Number(latest) > Number(target);
   }
 
   getEvidenceIndicatorName(item: DoubleHighEvidenceDto): string {

@@ -211,6 +211,39 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             throw new UserFriendlyException($"指标编码 {code} 已存在。");
         }
 
+        // 指标数上限：单个项目最多 20 个指标。
+        // 业务上两位小数权重（0.05~1.0）的实际最大指标数就是 20 个（20 × 0.05 = 1.0），
+        // 加这条硬限制避免 UI 列表过长、批量计算性能退化，同时保留与“权重预算”逻辑的独立性
+        // （即使将来引入更高精度的小数权重，也会被这条拦住，不会出现“指标海”）。
+        var query = await _indicatorRepository.GetQueryableAsync();
+        var existingIndicatorCount = await query
+            .Where(x => x.ProjectId == projectId)
+            .CountAsync();
+        if (existingIndicatorCount >= 20)
+        {
+            throw new UserFriendlyException(
+                $"单个项目的指标数已达上限 20，无法再添加新指标。请合并或删除部分指标后再添加。");
+        }
+
+        // 权重约束：当项目现有权重合计 ≥ 0.99（约等于上限 1），不允许再创建任何新指标。
+        // 考虑两位小数权重的精度问题：3 × 0.33 = 0.99 应当视为“已满”，
+        // 即便新指标权重填 0 也禁止 —— 避免出现 weight=0 的“死指标”噪声。
+        // 用户必须先调整现有指标权重腾出空间。
+        // 阈值选 0.99（而非 1.000001 / 0.999999）的原因：
+        //   - 实际业务中两位小数权重（0.05、0.33、0.5）是主流，0.99 是三位权重加到 0.99 的临界点
+        //   - 20 个指标 × 0.05 = 1.0、3 × 0.33 = 0.99 这种典型场景都能被拦住
+        //   - 不会误拦 0.95（19 × 0.05，允许添加第 20 个 0.05 凑到 1.0）
+        // 注：现有 ValidateWeightSumAsync 只拦 total > 1，total == 1 + newWeight == 0 这条边值会漏过，
+        // 所以这里补一条专门的检查给清晰的错误文案。
+        var existingWeightSum = await query
+            .Where(x => x.ProjectId == projectId)
+            .SumAsync(x => (decimal?)x.Weight) ?? 0;
+        if (existingWeightSum >= 0.99m)
+        {
+            throw new UserFriendlyException(
+                $"项目权重合计已接近上限（当前 {existingWeightSum:0.##}，已 ≥ 0.99），无法再添加新指标。请先调整现有指标权重腾出空间。");
+        }
+
         // 权重语义：0~1 的小数，所有指标权重之和不超过 1（如 0.3 + 0.5 + 0.2 = 1）
         ValidateIndicatorWeight(input.Weight);
         await ValidateWeightSumAsync(projectId, input.Weight);
@@ -334,6 +367,17 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
     public async Task<DoubleHighIndicatorValueSnapshotDto> SaveManualValueAsync(SaveDoubleHighIndicatorValueDto input)
     {
         var indicator = await _indicatorRepository.GetAsync(input.IndicatorId);
+
+        // 关键约束：最新值必须 ≤ 目标值（如果目标值已设置）。
+        // 业务含义：目标值是“应达到的目标”，最新值不应超出目标，
+        // 否则完成率计算（latest/target）被生硬地截断到 100%，脱离实际语义。
+        // 未设置目标值（null/0）的指标不限制上限，保留“待定”灵活性。
+        if (indicator.TargetValue.HasValue && indicator.TargetValue.Value > 0
+            && input.Value > indicator.TargetValue.Value)
+        {
+            throw new UserFriendlyException(
+                $"最新值 {input.Value} 不能大于目标值 {indicator.TargetValue.Value}。请调低最新值，或先调高目标值后再保存。");
+        }
 
         // 自动采集指标也允许手工覆盖最新值：用户在指标编辑里填写的"最新值"应即时生效，
         // 直到下一次 CollectProjectAsync 重新自动采集。故不再拒绝非手工来源指标。
