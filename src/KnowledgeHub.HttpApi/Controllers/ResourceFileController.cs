@@ -263,8 +263,10 @@ public class ResourceFileController : AbpControllerBase
                 return Forbid();
             }
 
-            // 未审核资源仅限同租户查看（宿主管理员不受限），防止跨租户预览他人待审文件
-            if (CurrentTenant.Id.HasValue && resource.TenantId.HasValue && resource.TenantId != CurrentTenant.Id)
+            // 未审核资源仅限同租户查看（宿主管理员不受限）：
+            // 租户用户只能看本租户的待审资源，宿主资源（TenantId 为空）对租户用户同样不可见，
+            // 防止跨租户/跨层级预览他人待审文件。
+            if (CurrentTenant.Id.HasValue && resource.TenantId != CurrentTenant.Id)
             {
                 return Forbid();
             }
@@ -1045,7 +1047,8 @@ public class ResourceFileController : AbpControllerBase
             if (!CurrentUser.IsAuthenticated)
                 return null;
 
-            if (CurrentTenant.Id.HasValue && resource.TenantId.HasValue && resource.TenantId != CurrentTenant.Id)
+            // 未审核资源：租户用户仅可访问本租户（宿主资源对租户用户不可见）
+            if (CurrentTenant.Id.HasValue && resource.TenantId != CurrentTenant.Id)
                 return null;
         }
 

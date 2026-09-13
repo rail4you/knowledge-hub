@@ -104,10 +104,58 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 
 ---
 
-## 6. 本轮代码改动
+## 6. 第二轮：权限矩阵、越权与多租户隔离验证
+
+### 6.1 单元/集成测试现状
+`dotnet test`：仅 **3 个** EF Core 样例测试（`SampleRepositoryTests` 等），Application/Domain 测试项目为空壳。**无真实业务用例** —— 这是当前最大的测试缺口。
+
+### 6.2 测试账号
+通过 `POST /api/app/tenant-user/user-for-tenant` 在 `qidi` 租户创建：
+- `qa-teacher / 1q2w3E*`（Teacher）
+- `qa-student / 1q2w3E*`（Student）
+
+（如需清理，可用 admin 调 `DELETE /api/app/tenant-user/{id}`。）
+
+### 6.3 权限矩阵（`api-permission-matrix.sh`，8/8 通过）
+| 端点 | admin | teacher | student |
+|------|-------|---------|---------|
+| `/api/app/resource/filtered-list` | 200 | 200 | — |
+| `/api/app/major/lookup-list` | 200 | — | — |
+| `/api/app/meili-search-admin/indexes` | 200 | 200 | 403 |
+| `/api/app/meili-search-admin/dashboard` | 200 | — | 403 |
+
+> 结论：Teacher 确实持有 `Search.ManageIndex`（由 `RolePermissionSeeder` 授予），因此能看到 Meili 管理端点；Student 被正确拒绝。矩阵脚本最初把该端点期望写成 teacher=403，已验证并修正为 teacher=2xx。
+
+### 6.4 越权 / 隔离负向验证
+| 用例 | 构造 | 结果 |
+|------|------|------|
+| H-4 宿主未审资源 | qa-teacher（qidi）预览 HOST 未审核资源 | **200（越权，已修复）→ 403** |
+| H-4 同租户未审资源 | qa-teacher 预览 qidi 未审核资源 | 200（符合预期） |
+| H-4 宿主管理员 | admin 预览 HOST 未审核资源 | 200（符合预期） |
+| H-5 摘要跨租户 | qa-teacher 对 HOST 资源触发摘要 | **403** |
+| H-12 AI 会话 IDOR | qa-student 用 qa-teacher 的 threadId 发消息 | 拒绝「无权访问该会话」，插入 0 条消息，未调用 AI |
+| H-2 上传路径穿越 | `fileName=../../pwned.txt` 上传并 complete | 落点为 `uploads/20260913/pwned.txt`，未越界 |
+| M-6 租户统计 | 匿名 `/api/public/tenants-with-stats` | **200（越权，已修复）→ 拒绝**；`/api/public/tenants` 仍匿名可用 |
+| L-1 登出 CSRF | 匿名 `GET /api/app/logout/clear-session` | 拒绝（302） |
+
+### 6.5 本轮新发现并修复的缺陷
+1. **`TenantListController` 类级 `[AllowAnonymous]` 覆盖方法级 `[Authorize]`** —— ASP.NET Core 中 `[AllowAnonymous]` 优先，导致 `tenants-with-stats` 仍匿名可访问。改为移除类级、`GetTenants` 单独 `[AllowAnonymous]`。
+2. **`ResourceFileController` 未审核资源隔离不完整** —— 租户用户可预览宿主（TenantId=null）未审核资源。收紧为「租户用户仅可访问本租户未审核资源」。
+
+## 7. 本轮代码改动
 - `src/KnowledgeHub.Application/Search/SearchAnalyticsService.cs`：`[RemoteService(false)]`
 - `src/KnowledgeHub.Application/Users/UserAppService.cs` + `IUserAppService.cs`：遗留 CRUD 隐藏
 - `src/KnowledgeHub.Application/Search/ResourceRecommendationAppService.cs`：连接/命令占用修复
+- `src/KnowledgeHub.HttpApi/Controllers/ResourceFileController.cs`：未审核资源租户/宿主隔离收紧
+- `src/KnowledgeHub.HttpApi/Controllers/TenantListController.cs`：移除类级 `[AllowAnonymous]`，仅 `GetTenants` 匿名
 - `scripts/test/seed-perf-data.sh`、`scripts/perf/pgbench/read.sql`：表名修正为 `AppResources/AppCourses`
-- `scripts/test/security-regression.sh`：SSE 超时保护、`Accept: application/json`、REJECT 状态集合、变量花括号修复
+- `scripts/test/security-regression.sh`：SSE 超时保护、`Accept: application/json`、REJECT 状态集合、变量花括号修复、新增 M-6/L-1 用例
+- `scripts/test/api-permission-matrix.sh`：修正 major 路径与 teacher 期望
 - `scripts/test/cleanup-perf-data.sh`：新增清理脚本
+
+## 8. 后续仍待补的测试
+1. **真实单元/集成测试**（最高优先）：权限 Seeder、租户隔离、上传路径、SSRF Guard、AI 配额等。
+2. **E2E（Playwright）**：管理端/教师/学生关键旅程与前端路由守卫（当前仅有 API 级验证）。
+3. **k6 混合/搜索压测**：本机无 k6；`ai.js` 按用户要求暂缓。
+4. **索引/转换/Hangfire 链路**：上传 → 转换 → 索引 → 搜索 的异步闭环验证。
+5. **契约测试**：对 api-definition 全量 action 做参数化调用（当前冒烟仅覆盖无参 GET）。

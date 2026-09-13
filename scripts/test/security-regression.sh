@@ -96,6 +96,14 @@ check "H-3 匿名 practicum-chat stream" "$REJECT" \
 check "H-6 匿名 meili-search-admin/hot-words" "$REJECT" \
   "$API_BASE/api/app/meili-search-admin/hot-words/00000000-0000-0000-0000-000000000000"
 
+# M-6 租户统计元数据
+check "M-6 匿名 /api/public/tenants-with-stats" "$REJECT" \
+  "$API_BASE/api/public/tenants-with-stats"
+
+# L-1 登出接口（防 CSRF）
+check "L-1 匿名 GET /api/app/logout/clear-session" "$REJECT" \
+  "$API_BASE/api/app/logout/clear-session"
+
 if [ -n "$TOKEN" ]; then
   # H-1 图片代理 SSRF（已登录访问内网应 403）
   check "H-1 已登录 image-proxy 内网" '403' \

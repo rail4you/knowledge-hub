@@ -14,7 +14,6 @@ using Volo.Abp.TenantManagement;
 namespace KnowledgeHub.Controllers;
 
 [Route("api/public")]
-[AllowAnonymous]
 public class TenantListController : AbpControllerBase
 {
     private readonly ITenantRepository _tenantRepository;
@@ -31,6 +30,8 @@ public class TenantListController : AbpControllerBase
         _resourceRepository = resourceRepository;
     }
 
+    // 登录页/公开下拉需要租户名列表，保持匿名
+    [AllowAnonymous]
     [HttpGet("tenants")]
     public async Task<List<TenantInfoDto>> GetTenants()
     {

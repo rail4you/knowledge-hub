@@ -76,11 +76,11 @@ expect GET '/api/app/resource/filtered-list?skipCount=0&maxResultCount=5' admin 
 expect GET '/api/app/resource/filtered-list?skipCount=0&maxResultCount=5' teacher 2xx
 
 # 专业 lookup：匿名可读
-expect GET '/api/app/majors/lookup-list' admin 2xx
+expect GET '/api/app/major/lookup-list' admin 2xx
 
-# Meili 管理：仅 ManageIndex（admin）；teacher/student 期望 403
+# Meili 管理：Teacher/SchoolAdmin 按 Seeder 持有 ManageIndex；Student 期望 403
 expect GET '/api/app/meili-search-admin/indexes' admin   2xx
-expect GET '/api/app/meili-search-admin/indexes' teacher '401|403'
+expect GET '/api/app/meili-search-admin/indexes' teacher 2xx
 expect GET '/api/app/meili-search-admin/indexes' student '401|403'
 
 expect GET '/api/app/meili-search-admin/dashboard' admin   2xx
