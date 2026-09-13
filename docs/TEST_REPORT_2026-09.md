@@ -107,7 +107,12 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 ## 6. 第二轮：权限矩阵、越权与多租户隔离验证
 
 ### 6.1 单元/集成测试现状
-`dotnet test`：仅 **3 个** EF Core 样例测试（`SampleRepositoryTests` 等），Application/Domain 测试项目为空壳。**无真实业务用例** —— 这是当前最大的测试缺口。
+- 修复前：`dotnet test` 仅有 **3 个** EF Core 样例测试，Application/Domain 测试项目为空壳。
+- 本轮补充 **11 个** 安全原语单元测试，`dotnet test` 现为 **14/14 通过**：
+  - `FixedLicenseValidatorTests`（4）：空值、前缀回退、精确密钥白名单、HMAC 签名/篡改。
+  - `InstallAccessGuardTests`（2）：令牌匹配、无令牌仅回环、无 HttpContext fail-closed。
+  - `LocalFileStorageServiceTests`（5）：文件名清洗、`../` 穿越不越界、非法 uploadId 拒绝、分片合并顺序、越界读取拒绝。
+- 仍缺：业务 AppService/Domain 的集成用例（含真实 DB）。
 
 ### 6.2 测试账号
 通过 `POST /api/app/tenant-user/user-for-tenant` 在 `qidi` 租户创建：
@@ -154,7 +159,7 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 - `scripts/test/cleanup-perf-data.sh`：新增清理脚本
 
 ## 8. 后续仍待补的测试
-1. **真实单元/集成测试**（最高优先）：权限 Seeder、租户隔离、上传路径、SSRF Guard、AI 配额等。
+1. **业务集成测试**：权限 Seeder、租户隔离、AI 配额等（安全原语单测已补 11 个）。
 2. **E2E（Playwright）**：管理端/教师/学生关键旅程与前端路由守卫（当前仅有 API 级验证）。
 3. **k6 混合/搜索压测**：本机无 k6；`ai.js` 按用户要求暂缓。
 4. **索引/转换/Hangfire 链路**：上传 → 转换 → 索引 → 搜索 的异步闭环验证。
