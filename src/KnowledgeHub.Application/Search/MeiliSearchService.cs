@@ -14,6 +14,7 @@ using KnowledgeHub.Domain.Search.Enums;
 using KnowledgeHub.Resources;
 using KnowledgeHub.Resources.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Data;
@@ -33,6 +34,7 @@ public class MeiliSearchService : IMeiliSearchService
     private readonly IRepository<PageContent, Guid> _pageContentRepository;
     private readonly ICurrentTenant _currentTenant;
     private readonly IDataFilter _dataFilter;
+    private readonly ILogger<MeiliSearchService> _logger;
 
     public MeiliSearchService(
         IOptions<MeilisearchOptions> options,
@@ -43,6 +45,7 @@ public class MeiliSearchService : IMeiliSearchService
         IRepository<PageContent, Guid> pageContentRepository,
         ICurrentTenant currentTenant,
         IDataFilter dataFilter,
+        ILogger<MeiliSearchService> logger,
         HttpClient httpClient)
     {
         _options = options;
@@ -53,6 +56,7 @@ public class MeiliSearchService : IMeiliSearchService
         _pageContentRepository = pageContentRepository;
         _currentTenant = currentTenant;
         _dataFilter = dataFilter;
+        _logger = logger;
         
         _httpClient = httpClient;
         _httpClient.BaseAddress = new Uri(_options.Value.Host);
@@ -101,22 +105,30 @@ public class MeiliSearchService : IMeiliSearchService
 
     private async Task UpdateIndexSettingsAsync()
     {
-        var index = _httpClient.BaseAddress + $"/indexes/{IndexName}";
+        // 注意：Meilisearch 各子设置的接受方法并不一致 ——
+        // v1.39 起 typo-tolerance 只接受 PATCH（PUT 返回 405），其余子设置仍只接受 PUT（PATCH 返回 405）。
+        // 之前这里对所有设置统一用 PutAsJsonAsync，导致 typo-tolerance 每次搜索都返回 405，
+        // 继而污染 keep-alive 连接池，使后续请求抛出
+        // HttpIOException: The response ended prematurely（搜索接口 500）。
+        var index = $"/indexes/{IndexName}";
 
-        await _httpClient.PutAsJsonAsync($"{index}/settings/filterable-attributes",
-            new[] { "resourceId", "resourceType", "categoryId", "fileExtension", "uploadDate", "tenantId", "status", "pageNumber" });
+        await PutSettingAsync($"{index}/settings/filterable-attributes",
+            new[] { "resourceId", "resourceType", "categoryId", "fileExtension", "uploadDate", "tenantId", "status", "pageNumber" },
+            "filterable-attributes");
 
-        await _httpClient.PutAsJsonAsync($"{index}/settings/searchable-attributes",
-            new[] { "pageContent", "pageTitle", "resourceName", "keywords", "description" });
+        await PutSettingAsync($"{index}/settings/searchable-attributes",
+            new[] { "pageContent", "pageTitle", "resourceName", "keywords", "description" },
+            "searchable-attributes");
 
-        await _httpClient.PutAsJsonAsync($"{index}/settings/sortable-attributes",
-            new[] { "uploadDate", "pageNumber", "relevanceScore" });
+        await PutSettingAsync($"{index}/settings/sortable-attributes",
+            new[] { "uploadDate", "pageNumber", "relevanceScore" },
+            "sortable-attributes");
 
         // ====== 中文搜索质量保护（2026-08-31 加固）======
         // 生产环境曾被手动改过 ranking-rules（移除 'words' 规则），导致搜索"医生"时
         // 把大量不含 query 词的文档也返回（基于 attributeRank 等次要规则凑分）。
         // 在这里强制设置默认 ranking-rules，确保每次重建索引时 settings 保持正确。
-        await _httpClient.PutAsJsonAsync($"{index}/settings/ranking-rules", new[]
+        await PutSettingAsync($"{index}/settings/ranking-rules", new[]
         {
             "words",        // 必须放第一位：匹配 query 词的百分比，剔除不相关文档
             "typo",
@@ -124,20 +136,66 @@ public class MeiliSearchService : IMeiliSearchService
             "attribute",
             "sort",
             "exactness"
-        });
+        }, "ranking-rules");
 
-        // typo-tolerance 保持默认：中文 5 字以下不做 typo，避免"医/以"这种字符级错配
-        await _httpClient.PutAsJsonAsync($"{index}/settings/typo-tolerance", new
+        // typo-tolerance 保持默认：中文 5 字以下不做 typo，避免"医/以"这种字符级错配。
+        // 必须用 PATCH（见方法开头说明）。
+        await PatchSettingAsync($"{index}/settings/typo-tolerance", new
         {
             enabled = true,
             minWordSizeForTypos = new { oneTypo = 5, twoTypos = 9 }
-        });
+        }, "typo-tolerance");
 
         // prefix-search 保持 indexingTime：用户输入时即时补全，但 ranking 仍然受 words 约束
-        await _httpClient.PutAsJsonAsync($"{index}/settings/prefix-search", "indexingTime");
+        await PutSettingAsync($"{index}/settings/prefix-search", "indexingTime", "prefix-search");
 
         // proximityPrecision 用 byAttribute：按属性而不是按字计算 proximity，召回更准
-        await _httpClient.PutAsJsonAsync($"{index}/settings/proximity-precision", "byAttribute");
+        await PutSettingAsync($"{index}/settings/proximity-precision", "byAttribute", "proximity-precision");
+    }
+
+    /// <summary>
+    /// 发送单个设置项：消费响应体并做状态校验，避免未读响应污染 keep-alive 连接。
+    /// 失败仅告警，不抛异常 —— 设置同步属于自愈动作，不应拖垮正常搜索。
+    /// </summary>
+    private async Task PutSettingAsync(string url, object value, string settingName)
+    {
+        try
+        {
+            using var response = await _httpClient.PutAsJsonAsync(url, value);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Meilisearch setting '{Setting}' sync failed: {Status} {Body}",
+                    settingName, (int)response.StatusCode, body);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Meilisearch setting '{Setting}' sync request failed", settingName);
+        }
+    }
+
+    /// <summary>同 <see cref="PutSettingAsync"/>，但使用 PATCH（typo-tolerance 专用）。</summary>
+    private async Task PatchSettingAsync(string url, object value, string settingName)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Patch, url)
+            {
+                Content = JsonContent.Create(value)
+            };
+            using var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Meilisearch setting '{Setting}' sync failed: {Status} {Body}",
+                    settingName, (int)response.StatusCode, body);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Meilisearch setting '{Setting}' sync request failed", settingName);
+        }
     }
 
     /// <summary>
@@ -157,21 +215,21 @@ public class MeiliSearchService : IMeiliSearchService
                 response.EnsureSuccessStatusCode();
             }
 
-            var index = _httpClient.BaseAddress + $"/indexes/{VideoIndexName}";
+            var index = $"/indexes/{VideoIndexName}";
 
             // 关键：searchable 只保留业务文本字段。id/order/startTime/endTime
             // 等一旦可搜，数字查询（如 "1"）就会误命中 GUID/序号/时间戳。
-            await _httpClient.PutAsJsonAsync($"{index}/settings/searchable-attributes",
-                new[] { "videoName", "eventDescription" });
+            await PutSettingAsync($"{index}/settings/searchable-attributes",
+                new[] { "videoName", "eventDescription" }, "videos.searchable-attributes");
 
-            await _httpClient.PutAsJsonAsync($"{index}/settings/filterable-attributes",
-                new[] { "resourceId", "videoId", "videoName", "tenantId", "indexedAt" });
+            await PutSettingAsync($"{index}/settings/filterable-attributes",
+                new[] { "resourceId", "videoId", "videoName", "tenantId", "indexedAt" }, "videos.filterable-attributes");
 
-            await _httpClient.PutAsJsonAsync($"{index}/settings/sortable-attributes",
-                new[] { "order", "indexedAt", "startTime" });
+            await PutSettingAsync($"{index}/settings/sortable-attributes",
+                new[] { "order", "indexedAt", "startTime" }, "videos.sortable-attributes");
 
             // words 必须第一位：不含 query 词的文档直接剔除
-            await _httpClient.PutAsJsonAsync($"{index}/settings/ranking-rules", new[]
+            await PutSettingAsync($"{index}/settings/ranking-rules", new[]
             {
                 "words",
                 "typo",
@@ -179,7 +237,7 @@ public class MeiliSearchService : IMeiliSearchService
                 "attribute",
                 "sort",
                 "exactness"
-            });
+            }, "videos.ranking-rules");
         }
         catch
         {
