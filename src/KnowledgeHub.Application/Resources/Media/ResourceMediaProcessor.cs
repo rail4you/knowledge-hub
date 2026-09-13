@@ -109,9 +109,17 @@ public class ResourceMediaProcessor : ITransientDependency
         }
 
         var version = await ResolveVersionAsync(resourceId, resourceVersionId);
-        var (fullPath, versionKey) = ResolveSource(resource, version);
+        var (fullPath, versionKey, pathConfigured) = ResolveSource(resource, version);
         if (fullPath == null)
         {
+            if (pathConfigured)
+            {
+                // 配置了文件路径但磁盘文件缺失：标记失败，避免"处理完成却无生成物"的假成功
+                resource.MediaStatus = ResourceMediaStatus.Failed;
+                await _resourceRepository.UpdateAsync(resource);
+                return MediaProcessOutcome.Fail("源文件不存在");
+            }
+
             // 无源文件（仅正文等），无需媒体处理
             resource.MediaStatus = ResourceMediaStatus.Ready;
             await _resourceRepository.UpdateAsync(resource);
@@ -283,7 +291,7 @@ public class ResourceMediaProcessor : ITransientDependency
             ?? await _versionRepository.FirstOrDefaultAsync(x => x.ResourceId == resourceId);
     }
 
-    private (string? fullPath, string versionKey) ResolveSource(Resource resource, ResourceVersion? version)
+    private (string? fullPath, string versionKey, bool pathConfigured) ResolveSource(Resource resource, ResourceVersion? version)
     {
         var versionKey = (version?.Id ?? resource.Id).ToString();
         var filePath = version?.FilePath;
@@ -293,11 +301,12 @@ public class ResourceMediaProcessor : ITransientDependency
         }
         if (string.IsNullOrWhiteSpace(filePath))
         {
-            return (null, versionKey);
+            // 未配置文件路径（仅正文等），无需媒体处理
+            return (null, versionKey, false);
         }
 
         var fullPath = Path.Combine(_fileStorageService.RootPath, filePath);
-        return File.Exists(fullPath) ? (fullPath, versionKey) : (null, versionKey);
+        return File.Exists(fullPath) ? (fullPath, versionKey, true) : (null, versionKey, true);
     }
 
     private async Task UpsertArtifactAsync(

@@ -147,20 +147,56 @@ R-W   : -c 30 -j 4 -T 60  → 877,086 txns, tps=14,632, avg latency=2.05ms
 1. **`TenantListController` 类级 `[AllowAnonymous]` 覆盖方法级 `[Authorize]`** —— ASP.NET Core 中 `[AllowAnonymous]` 优先，导致 `tenants-with-stats` 仍匿名可访问。改为移除类级、`GetTenants` 单独 `[AllowAnonymous]`。
 2. **`ResourceFileController` 未审核资源隔离不完整** —— 租户用户可预览宿主（TenantId=null）未审核资源。收紧为「租户用户仅可访问本租户未审核资源」。
 
-## 7. 本轮代码改动
+## 7. 异步闭环验证（上传 → 处理 → 索引 → 搜索 → 删除）
+
+用带唯一关键词 `ZEBRAFISH-QA-9137` 的最小 DOCX（1KB）走完整链路，逐阶段核对 DB/Meili/文件系统/接口。
+
+### 7.1 成功路径
+| 阶段 | 观测 | 结果 |
+|------|------|------|
+| 上传 | `POST /api/app/chunk-upload/{initiate,upload,complete}` | `uploads/20260913/qa-workflow.docx`，落点正确 |
+| 建资源 | `POST /api/app/resource`（带 filePath） | 资源+初始版本创建，入队 `KhDocumentIndexingJobs` + `AppResourceMediaJobs` |
+| 文本解析 | LiteParse（localhost:15000） | `KhPageContents` 1 页 |
+| 索引 | Meilisearch `documents` 索引 | 文档含 `pageContent` / `tenantId` |
+| 媒体 | Gotenberg（localhost:3000） | `converted/{rid}.pdf` + `thumbnails/{versionId}_400.jpg`，artifacts State=Ready |
+| 搜索 | `POST /api/app/search/search` | 关键词命中，total=1 |
+| 预览 | `preview-pdf-info` / `thumbnail` | `ready=true` / HTTP 200 |
+
+### 7.2 版本更新（换版本重索引）
+- `POST /api/app/resource/upload-version` 上传 v2（关键词 `ZEBRAFISH-QA-V2-4471`）。
+- 新索引任务 Completed；Meili 该资源仅剩 1 页且为 v2 内容 → **旧正文已被替换，无残留**。
+- 搜索 v2 关键词命中；v1 关键词仅命中的是资源名（资源名未改），正文已更新。
+
+### 7.3 失败路径
+- 建资源时指向不存在的文件：索引任务 → **Failed(40)**，错误 `File not found: ...`，无无限重试。
+
+### 7.4 删除路径
+- host 资源由 host 删除：`204` + `IsDeleted=true`。
+- 租户资源被 host 上下文删除：修复后返回 **404**，资源保留（不再假成功）。
+
+### 7.5 本轮新发现并修复的缺陷
+1. **媒体任务假成功**：源文件缺失时 `ResourceMediaProcessor` 把“路径已配置但文件不存在”与“仅正文无文件”混为一谈，直接标记 `Ready/Completed`，导致“处理完成却无任何生成物”。修复：区分二者，前者标记 `Failed`（错误“源文件不存在”）。
+2. **删除假成功 + 状态不一致**：`ResourceAppService.DeleteAsync` 先做 Meili/媒体清理再删除；且 ABP `DeleteAsync(id)` 找不到实体时**静默返回**，导致跨租户/不存在时返回 204、资源未删但 Meili 索引已被清掉。修复：先 `GetAsync`（不存在抛 404）再删除，最后清理。
+
+> 说明：host 用户即使带 `__tenant: qidi` 头，删除租户资源仍按 host 上下文处理（审计 TenantId 为空），因此返回 404 属正确隔离行为。
+
+## 8. 本轮代码改动
 - `src/KnowledgeHub.Application/Search/SearchAnalyticsService.cs`：`[RemoteService(false)]`
 - `src/KnowledgeHub.Application/Users/UserAppService.cs` + `IUserAppService.cs`：遗留 CRUD 隐藏
 - `src/KnowledgeHub.Application/Search/ResourceRecommendationAppService.cs`：连接/命令占用修复
 - `src/KnowledgeHub.HttpApi/Controllers/ResourceFileController.cs`：未审核资源租户/宿主隔离收紧
 - `src/KnowledgeHub.HttpApi/Controllers/TenantListController.cs`：移除类级 `[AllowAnonymous]`，仅 `GetTenants` 匿名
+- `src/KnowledgeHub.Application/Resources/Media/ResourceMediaProcessor.cs`：源文件缺失时媒体任务标记 Failed（修复假成功）
+- `src/KnowledgeHub.Application/Resources/ResourceAppService.cs`：DeleteAsync 先确认存在再删除，再清理（修复假成功与索引不一致）
 - `scripts/test/seed-perf-data.sh`、`scripts/perf/pgbench/read.sql`：表名修正为 `AppResources/AppCourses`
 - `scripts/test/security-regression.sh`：SSE 超时保护、`Accept: application/json`、REJECT 状态集合、变量花括号修复、新增 M-6/L-1 用例
 - `scripts/test/api-permission-matrix.sh`：修正 major 路径与 teacher 期望
 - `scripts/test/cleanup-perf-data.sh`：新增清理脚本
 
-## 8. 后续仍待补的测试
+## 9. 后续仍待补的测试
 1. **业务集成测试**：权限 Seeder、租户隔离、AI 配额等（安全原语单测已补 11 个）。
 2. **E2E（Playwright）**：管理端/教师/学生关键旅程与前端路由守卫（当前仅有 API 级验证）。
 3. **k6 混合/搜索压测**：本机无 k6；`ai.js` 按用户要求暂缓。
-4. **索引/转换/Hangfire 链路**：上传 → 转换 → 索引 → 搜索 的异步闭环验证。
+4. **视频链路**：`VideoIndexingJob`（ffmpeg 抽帧 + Qwen VL 索引）尚未走完整闭环。
 5. **契约测试**：对 api-definition 全量 action 做参数化调用（当前冒烟仅覆盖无参 GET）。
+6. **Hangfire 重试/恢复**：人为让转换/索引失败，验证异常队列、重试与恢复任务。

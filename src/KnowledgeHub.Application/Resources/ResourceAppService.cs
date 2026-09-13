@@ -844,10 +844,14 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     [Authorize(KnowledgeHubPermissions.Resources.Delete)]
     public virtual async Task DeleteAsync(Guid id)
     {
+        // 先用 GetAsync 确认资源存在（不存在或跨租户会抛 404），
+        // 因为 ABP 的 DeleteAsync(id) 在找不到实体时会静默返回，
+        // 否则会出现“返回 204 但资源未删除、Meili 索引却已被清掉”的不一致。
+        var resource = await Repository.GetAsync(id);
+        await Repository.DeleteAsync(resource);
+        // 清理索引数据与媒体生成物（缩略图/预览 PDF）、媒体任务、解析页与转换缓存
         await CleanupResourceIndexDataAsync(id);
-        // 清理媒体生成物（缩略图/预览 PDF）、媒体任务、解析页与转换缓存
         await MediaCleanup.CleanupResourceAsync(id);
-        await Repository.DeleteAsync(id);
     }
 
     public virtual async Task<ResourceVersionDto> UploadVersionAsync(UploadVersionDto input)
