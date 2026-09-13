@@ -72,13 +72,14 @@
           </div>
 
           <!-- 其他人的视频 -->
-          @for (p of participants(); track p.userId) {
+          @for (p of visibleParticipants(); track p.userId) {
             <div class="gallery-tile">
               @if (getStreamFor(p.userId)) {
                 <video
                   [srcObject]="getStreamFor(p.userId)!"
                   autoplay playsinline
                   [muted]="!speakerEnabled()"
+                  (loadedmetadata)="onRemoteVideoLoaded($event)"
                 ></video>
               } @else {
                 <div class="gallery-tile__placeholder">
@@ -104,6 +105,7 @@
                 [srcObject]="remoteStreams()[0].stream"
                 autoplay playsinline
                 [muted]="!speakerEnabled()"
+                (loadedmetadata)="onRemoteVideoLoaded($event)"
               ></video>
               <div class="video-remote__label">
                 {{ remoteStreams()[0].userName }}

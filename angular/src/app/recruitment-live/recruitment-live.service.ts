@@ -187,6 +187,13 @@ export class RecruitmentLiveService {
   }
 
   private async acquireMediaStream(): Promise<MediaStream | null> {
+    // 移动端浏览器（尤其 Android）在非安全上下文（HTTP 局域网地址）下会直接隐藏
+    // navigator.mediaDevices，导致既拿不到摄像头也拿不到麦克风。给出明确日志便于排查。
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      console.warn('[Live] 当前为非安全上下文或浏览器不支持 getUserMedia：'
+        + '请通过 HTTPS（或 localhost）访问，否则无法使用摄像头/麦克风。');
+      return null;
+    }
     const constraints: MediaStreamConstraints[] = [
       { video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: true },
       { video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: false },
@@ -272,7 +279,7 @@ export class RecruitmentLiveService {
     try { msg = JSON.parse(raw); } catch { return; }
 
     switch (msg.type) {
-      case 'participant-list':
+      case 'participant-list': {
         // 收到完整的参与者列表（在刚连接时由服务器发送）
         const list = (msg.participants || []) as Array<{
           userId: string; userName: string; role: string; you: boolean;
@@ -280,9 +287,10 @@ export class RecruitmentLiveService {
         this.participants.set(list
           .filter(p => !p.you)
           .map(p => ({ userId: p.userId, userName: p.userName, role: p.role })));
-        // 为列表中的每个人创建 PC（如果是教师则主动发起 offer，学生侧靠 offer-watch 自愈）
+        // 星型拓扑：只与教师建立连接（教师连所有学生，学生只连教师）。
+        // 教师主动发起 offer；学生侧靠 offer-watch 自愈。
         for (const p of list) {
-          if (!p.you && !this.peerConnections.has(p.userId)) {
+          if (this.shouldConnectTo(p.userId, p.role) && !this.peerConnections.has(p.userId)) {
             await this.createPeerConnectionFor(p.userId, p.role);
             if (this.myRole === 'teacher') {
               await this.sendOfferResilient(p.userId);
@@ -292,16 +300,19 @@ export class RecruitmentLiveService {
           }
         }
         break;
+      }
 
-      case 'user-joined':
+      case 'user-joined': {
         // 新用户加入
         const newUserId = msg.userId;
         const newUserName = msg.userName;
         const newRole = msg.role;
-        if (newUserId !== this.myUserId && !this.peerConnections.has(newUserId)) {
-          // 更新参与者列表
+        if (newUserId === this.myUserId) break;
+        // 名单始终更新（用于展示/聊天）；星型拓扑下只与教师建立媒体连接
+        if (!this.participants().some(p => p.userId === newUserId)) {
           this.participants.update(list => [...list, { userId: newUserId, userName: newUserName, role: newRole }]);
-          // 为此用户创建 PC
+        }
+        if (this.shouldConnectTo(newUserId, newRole) && !this.peerConnections.has(newUserId)) {
           await this.createPeerConnectionFor(newUserId, newRole);
           // 教师主动发起 offer；学生侧靠 offer-watch 自愈（offer 丢失时补发 request-offer）
           if (this.myRole === 'teacher') {
@@ -313,6 +324,7 @@ export class RecruitmentLiveService {
           this.liveState.set('signaling');
         }
         break;
+      }
 
       case 'user-left':
         // 用户离开
@@ -341,9 +353,11 @@ export class RecruitmentLiveService {
         break;
 
       case 'request-offer': {
-        // 对方没收到 offer（offer 在传输中丢失 / 老 PC 已失效），为其（重）发一份
+        // 对方没收到 offer（offer 在传输中丢失 / 老 PC 已失效），为其（重）发一份。
+        // 星型拓扑下只有教师是 offer 方，学生收到其他学生的 request-offer 直接忽略。
         const fromUserId = msg.fromUserId;
         if (!fromUserId || fromUserId === this.myUserId) break;
+        if (!this.shouldConnectTo(fromUserId, msg.fromRole || 'student')) break;
         console.log('[LiveWS] Received request-offer from', fromUserId);
         if (!this.peerConnections.has(fromUserId)) {
           await this.createPeerConnectionFor(fromUserId, msg.fromRole || 'student');
@@ -491,6 +505,15 @@ export class RecruitmentLiveService {
     }
   }
 
+  /**
+   * 星型拓扑连接判定：教师与所有学生建立连接；学生只与教师建立连接。
+   * 学生之间不建立 PeerConnection，因此学生互相看不到画面、听不到声音。
+   */
+  private shouldConnectTo(remoteUserId: string, remoteRole: string): boolean {
+    if (!remoteUserId || remoteUserId === this.myUserId) return false;
+    return this.myRole === 'teacher' || remoteRole === 'teacher';
+  }
+
   private async createPeerConnectionFor(remoteUserId: string, remoteRole: string) {
     // 如果已经存在，先关闭
     this.closePeerConnection(remoteUserId);
@@ -522,14 +545,20 @@ export class RecruitmentLiveService {
     };
 
     pc.ontrack = (e) => {
-      console.log('[LiveWS] Received track from', remoteUserId, e.streams[0]);
-      const stream = e.streams[0];
-      if (!stream) return;
+      console.log('[LiveWS] Received track from', remoteUserId, 'kind=', e.track.kind, 'streams=', e.streams.length);
+      // 部分 Android 浏览器/旧内核会把远端 track 作为“无归属流”（streamless）返回，
+      // 此时 e.streams[0] 为空。旧代码遇到空流直接 return，导致对端画面永远不显示。
+      // 这里改为：无事件流时复用手上已有的流或新建一个，并把 track 手动装入。
+      const eventStream = e.streams[0];
       this.cancelOfferWatch(remoteUserId);
-      // 同步扬声器状态：若用户已静音扬声器，新接收到的远端音频轨也应静音
-      stream.getAudioTracks().forEach(t => (t.enabled = this.speakerEnabled()));
       this.remoteStreams.update(streams => {
         const existing = streams.find(s => s.userId === remoteUserId);
+        const stream = existing?.stream ?? eventStream ?? new MediaStream();
+        if (!stream.getTracks().some(t => t.id === e.track.id)) {
+          stream.addTrack(e.track);
+        }
+        // 同步扬声器状态：若用户已静音扬声器，新接收到的远端音频轨也应静音
+        stream.getAudioTracks().forEach(t => (t.enabled = this.speakerEnabled()));
         if (existing) {
           existing.stream = stream;
           existing.connectionState = 'connected';
@@ -552,7 +581,15 @@ export class RecruitmentLiveService {
 
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
-      console.log('[LiveWS] PC state for', remoteUserId, ':', state);
+      console.log('[LiveWS] PC state for', remoteUserId, ':', state, '| ice:', pc.iceConnectionState);
+      if (state === 'failed') {
+        console.warn('[LiveWS] 连接失败诊断', {
+          remoteUserId,
+          connectionState: pc.connectionState,
+          iceConnectionState: pc.iceConnectionState,
+          iceGatheringState: pc.iceGatheringState,
+        });
+      }
       this.remoteStreams.update(streams => {
         const s = streams.find(st => st.userId === remoteUserId);
         if (s) s.connectionState = state;
@@ -592,6 +629,12 @@ export class RecruitmentLiveService {
       console.warn('[LiveWS] sendOfferResilient: PC not found for', remoteUserId);
       return;
     }
+    if (pc.signalingState === 'have-local-offer') {
+      // offer 已发出、正在等待 answer：这是正常中间态，绝不能重建 PC，
+      // 否则会丢弃在途 offer 与已收集 ICE，导致对端 answer 无法匹配。
+      console.log('[LiveWS] sendOfferResilient: offer already pending for', remoteUserId);
+      return;
+    }
     if (pc.signalingState !== 'stable') {
       console.log('[LiveWS] sendOfferResilient: recreate PC (state=', pc.signalingState, ') for', remoteUserId);
       const role = this.participants().find(p => p.userId === remoteUserId)?.role || 'student';
@@ -625,6 +668,13 @@ export class RecruitmentLiveService {
     this.offerWatchTimers.delete(remoteUserId);
     if (this.liveState() === 'ended' || this.liveState() === 'idle') return;
     if (!this.peerConnections.has(remoteUserId)) return;
+    const pc = this.peerConnections.get(remoteUserId);
+    // 本端 offer 已在途（等待 answer）：这是正常中间态，延后复查，
+    // 避免误判为“对方没收到 offer”而重发/重建。
+    if (pc && pc.signalingState === 'have-local-offer') {
+      this.offerWatchTimers.set(remoteUserId, setTimeout(() => this.runOfferWatch(remoteUserId), 4000));
+      return;
+    }
     const hasMedia = this.remoteStreams().some(s => s.userId === remoteUserId);
     if (hasMedia || this.offerReceivedFrom.has(remoteUserId)) return;
     const retries = this.offerWatchRetries.get(remoteUserId) ?? 0;

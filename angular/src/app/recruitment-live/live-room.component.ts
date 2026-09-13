@@ -86,8 +86,17 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
     return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   });
 
-  /** 计算远程参与者人数 */
-  readonly participantCount = computed(() => this.participants().length);
+  /**
+   * 当前视角下应展示的远端参与者。
+   * 星型拓扑：教师看所有学生；学生只看教师（学生之间不建立媒体连接）。
+   */
+  readonly visibleParticipants = computed(() => {
+    const list = this.participants();
+    return this.myRole === 'teacher' ? list : list.filter(p => p.role === 'teacher');
+  });
+
+  /** 计算远程参与者人数（按当前视角过滤） */
+  readonly participantCount = computed(() => this.visibleParticipants().length);
 
   /** 是否显示 gallery 网格（多人模式） */
   readonly isGroupCall = computed(() => this.participantCount() > 1);
@@ -358,5 +367,22 @@ export class LiveRoomComponent implements OnInit, OnDestroy, AfterViewChecked {
   /** 获取流状态 */
   getStreamState(userId: string): string {
     return this.remoteStreams().find(s => s.userId === userId)?.connectionState || 'connecting';
+  }
+
+  /**
+   * 远端视频元数据就绪时主动播放。
+   * Android 浏览器（尤其默认/厂商浏览器）比 iOS 更严格：带声音的远端视频可能
+   * 被自动播放策略拦截而黑屏。这里先尝试正常播放；被拦截时降级为静音播放保证
+   * 画面可见，用户可通过“扬声器”按钮（一次手势）恢复声音。
+   */
+  onRemoteVideoLoaded(event: Event): void {
+    const video = event.target as HTMLVideoElement | null;
+    if (!video) return;
+    video.play().catch(() => {
+      console.warn('[LiveRoom] 自动播放被拦截，降级为静音播放，请点击扬声器按钮开启声音');
+      video.muted = true;
+      this.liveService.speakerEnabled.set(false);
+      video.play().catch(() => undefined);
+    });
   }
 }
