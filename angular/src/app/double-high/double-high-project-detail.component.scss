@@ -347,7 +347,20 @@
   tbody tr:hover { background: var(--kh-accent-ghost); }
   tbody tr:last-child td { border-bottom: 0; }
 
-  .center { text-align: center; }
+  th.center,
+  td.center,
+  .center { text-align: center !important; }
+
+  // 关键修复：td.center 内的块级元素（最新值/完成度/权重等）需显式居中，
+  // 否则 flex 容器 progress-cell 仍左对齐，看起来像“最新值列明显都没对齐”
+  td.center .latest-val,
+  td.center .cell-sub,
+  td.center .val,
+  td.center .muted,
+  td.center .weight-val,
+  td.center .progress-num { text-align: center; }
+  td.center .progress-cell { justify-content: center; }
+  td.center .link-cell { text-align: center; }
 }
 
 /* ─── 表格单元格通用 ───────────────────────── */

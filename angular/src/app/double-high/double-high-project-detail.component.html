@@ -116,12 +116,12 @@
           </colgroup>
           <thead>
             <tr>
-              <th>指标</th>
-              <th>数据来源</th>
+              <th class="center">指标</th>
+              <th class="center">数据来源</th>
               <th class="center">目标值</th>
               <th class="center">权重</th>
-              <th>最新值</th>
-              <th>完成度</th>
+              <th class="center">最新值</th>
+              <th class="center">完成度</th>
               <th class="center">操作</th>
             </tr>
           </thead>
@@ -142,7 +142,7 @@
                     <div class="cell-main">{{ item.name }}</div>
                     <div class="cell-sub">{{ item.description || '暂无说明' }}</div>
                   </td>
-                  <td><nz-tag>{{ getSourceLabel(item.dataSourceType) }}</nz-tag></td>
+                  <td class="center"><nz-tag>{{ getSourceLabel(item.dataSourceType) }}</nz-tag></td>
                   <td class="center">
                     <span class="val">{{ item.targetValue ?? '-' }}</span>
                     @if (item.targetValue !== null && item.targetValue !== undefined) {
@@ -152,7 +152,7 @@
                   <td class="center">
                     <span class="weight-val">{{ formatWeight(item.weight) }}</span>
                   </td>
-                  <td>
+                  <td class="center">
                     @if (item.latestValue) {
                       <div class="latest-val">{{ item.latestValue.value }} <span class="unit">{{ item.unit || '' }}</span></div>
                       <div class="cell-sub">{{ item.latestValue.note || getValueSourceLabel(item.latestValue.sourceType) }} · {{ formatLocalDate(item.latestValue.collectedAt) }}</div>
@@ -160,7 +160,7 @@
                       <span class="muted">尚未填报</span>
                     }
                   </td>
-                  <td>
+                  <td class="center">
                     @if (getIndicatorProgress(item) === null) {
                       <span class="muted">-</span>
                     } @else {
@@ -210,10 +210,10 @@
           </colgroup>
           <thead>
             <tr>
-              <th>佐证材料</th>
-              <th>关联指标</th>
-              <th>类型</th>
-              <th>内容</th>
+              <th class="center">佐证材料</th>
+              <th class="center">关联指标</th>
+              <th class="center">类型</th>
+              <th class="center">内容</th>
               <th class="center">操作</th>
             </tr>
           </thead>
@@ -234,14 +234,14 @@
                     <div class="cell-main">{{ item.title }}</div>
                     @if (item.description) { <div class="cell-sub">{{ item.description }}</div> }
                   </td>
-                  <td><span class="ref-chip" [class.missing]="isEvidenceIndicatorMissing(item)">{{ getEvidenceIndicatorName(item) }}</span></td>
-                  <td>
+                  <td class="center"><span class="ref-chip" [class.missing]="isEvidenceIndicatorMissing(item)">{{ getEvidenceIndicatorName(item) }}</span></td>
+                  <td class="center">
                     <span class="type-tag">
                       <span nz-icon [nzType]="getEvidenceIcon(item.evidenceType)" nzTheme="outline"></span>
                       {{ getEvidenceTypeLabel(item.evidenceType) }}
                     </span>
                   </td>
-                  <td>
+                  <td class="center">
                     <div class="link-cell">
                       @if (item.externalLink) {
                         <a [href]="item.externalLink" target="_blank" rel="noreferrer" [title]="item.externalLink">{{ item.externalLink }}</a>
@@ -290,8 +290,8 @@
             </colgroup>
             <thead>
               <tr>
-                <th>报表名称</th>
-                <th>生成时间</th>
+                <th class="center">报表名称</th>
+                <th class="center">生成时间</th>
                 <th class="center">操作</th>
               </tr>
             </thead>
@@ -311,7 +311,7 @@
                     <td>
                       <span class="cell-main">{{ item.reportName }}</span>
                     </td>
-                    <td><span class="muted">{{ formatLocalDate(item.generatedAt) }}</span></td>
+                    <td class="center"><span class="muted">{{ formatLocalDate(item.generatedAt) }}</span></td>
                     <td class="center">
                       <span class="op-links">
                         <a class="edit" (click)="downloadReport(item)">下载</a>
