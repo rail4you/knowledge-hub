@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace KnowledgeHub.Workbench;
 
@@ -43,6 +44,44 @@ public class WorkbenchStatsDto
     public WorkbenchSearchStatsDto Search { get; set; } = new();
 
     public WorkbenchUserStatsDto Users { get; set; } = new();
+
+    /// <summary>基于时间的近 7 天使用趋势。</summary>
+    public WorkbenchTrendsDto Trends { get; set; } = new();
+}
+
+/// <summary>近 7 天使用趋势：逐日明细 + 今天/昨天/近 7 天汇总。</summary>
+public class WorkbenchTrendsDto
+{
+    /// <summary>近 7 天逐日使用量（含今天，按日期升序）。</summary>
+    public List<WorkbenchDailyUsageDto> Daily { get; set; } = new();
+
+    public WorkbenchUsageDto Today { get; set; } = new();
+
+    public WorkbenchUsageDto Yesterday { get; set; } = new();
+
+    /// <summary>近 7 天合计。</summary>
+    public WorkbenchUsageDto LastDays { get; set; } = new();
+}
+
+/// <summary>某时间段内的各模块使用量。</summary>
+public class WorkbenchUsageDto
+{
+    public long Searches { get; set; }
+    public long ResourceUploads { get; set; }
+    public long ResourceViews { get; set; }
+    public long AiCalls { get; set; }
+    public long Enrollments { get; set; }
+    public long JobApplications { get; set; }
+    public long PracticumSubmissions { get; set; }
+}
+
+/// <summary>单日使用量。</summary>
+public class WorkbenchDailyUsageDto : WorkbenchUsageDto
+{
+    public DateTime Date { get; set; }
+
+    /// <summary>展示用短标签（MM-dd）。</summary>
+    public string Label { get; set; } = string.Empty;
 }
 
 /// <summary>资源管理统计。</summary>

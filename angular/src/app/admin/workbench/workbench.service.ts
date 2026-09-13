@@ -74,6 +74,28 @@ export interface WorkbenchUserStats {
   teacherCount: number;
 }
 
+export interface WorkbenchUsage {
+  searches: number;
+  resourceUploads: number;
+  resourceViews: number;
+  aiCalls: number;
+  enrollments: number;
+  jobApplications: number;
+  practicumSubmissions: number;
+}
+
+export interface WorkbenchDailyUsage extends WorkbenchUsage {
+  date: string;
+  label: string;
+}
+
+export interface WorkbenchTrends {
+  daily: WorkbenchDailyUsage[];
+  today: WorkbenchUsage;
+  yesterday: WorkbenchUsage;
+  lastDays: WorkbenchUsage;
+}
+
 export interface WorkbenchStats {
   tenantId?: string | null;
   tenantName?: string | null;
@@ -86,6 +108,7 @@ export interface WorkbenchStats {
   news: WorkbenchNewsStats;
   search: WorkbenchSearchStats;
   users: WorkbenchUserStats;
+  trends: WorkbenchTrends;
 }
 
 @Injectable({

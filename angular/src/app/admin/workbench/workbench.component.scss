@@ -151,26 +151,188 @@
   font-size: 13px;
 }
 
-/* ── 模块网格 ─────────────────────────────────── */
+/* ── 使用趋势（近 7 天） ───────────────────────── */
+/* 使用趋势 + 模块概览合并为一张卡片，中间无空白间隔 */
+.dashboard-stack {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--kh-shadow-card);
+}
+
+.trend-panel {
+  background: var(--kh-panel);
+  padding: 18px 20px 20px;
+}
+
+.trend-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+/* 左侧图表栏：顶部为指标下拉，下方为折线图；右侧为汇总表 */
+.trend-chart-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.metric-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--kh-ink-2);
+
+  select {
+    min-width: 180px;
+    padding: 6px 10px;
+    border: 1px solid var(--kh-line-2);
+    border-radius: 8px;
+    background: var(--kh-panel);
+    color: var(--kh-ink);
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+
+    &:hover,
+    &:focus {
+      border-color: var(--kh-accent);
+    }
+  }
+}
+
+.metric-select__label {
+  color: var(--kh-muted);
+}
+
+.trend-panel__body {
+  display: grid;
+  grid-template-columns: 1.6fr minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.trend-chart {
+  width: 100%;
+  height: 280px;
+  min-width: 0;
+}
+
+/* ── 汇总表（今天 / 昨天 / 近 7 天） ───────────── */
+.period-table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 10px;
+  overflow: hidden;
+  align-self: stretch;
+}
+
+.period-table__row {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr 1fr;
+  align-items: center;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: var(--kh-ink-2);
+  border-bottom: 1px solid var(--kh-line-2);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &--head {
+    flex: 0 0 auto;
+    background: var(--kh-canvas);
+    color: var(--kh-muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  span:not(:first-child) {
+    text-align: right;
+  }
+}
+
+.period-table__metric {
+  color: var(--kh-ink);
+  font-weight: 500;
+}
+
+.period-table__num {
+  font-variant-numeric: tabular-nums;
+  color: var(--kh-ink-2);
+}
+
+.period-table__num--strong {
+  color: var(--kh-accent);
+  font-weight: 700;
+}
+
+/* ── 模块概览 ─────────────────────────────────── */
+.modules-head {
+  padding: 4px 6px 16px;
+
+  h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--kh-ink);
+  }
+
+  p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--kh-muted);
+  }
+}
+
+.modules-panel {
+  background: linear-gradient(180deg, #f3f7fc 0%, #eef3fa 100%);
+  padding: 16px;
+}
+
+/* ── 模块网格：桌面一行两个 ───────────────────── */
 .module-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 
-  @media (max-width: 560px) {
+  @media (max-width: 900px) {
     grid-template-columns: 1fr;
   }
 }
 
 .module-card {
   background: var(--kh-panel);
-  border: 1px solid var(--kh-line);
+  border: 1px solid var(--kh-line-2);
   border-radius: 12px;
-  box-shadow: var(--kh-shadow-card);
-  padding: 18px 20px 20px;
+  box-shadow: 0 1px 2px rgba(14, 27, 46, 0.04);
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+
+  &:hover {
+    border-color: var(--kh-line);
+    box-shadow: 0 6px 18px -8px rgba(24, 144, 255, 0.28);
+  }
 }
 
 .module-card__head {
@@ -183,11 +345,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
   flex-shrink: 0;
-  font-size: 19px;
+  font-size: 17px;
 
   &.tone-blue {
     background: var(--kh-accent-soft);
@@ -211,18 +373,10 @@
 /* ── 指标 ─────────────────────────────────────── */
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px 12px;
   padding-top: 14px;
   border-top: 1px solid var(--kh-line-2);
-
-  &--two {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (max-width: 480px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 .metric {

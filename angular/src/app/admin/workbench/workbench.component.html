@@ -61,7 +61,54 @@
         <nz-empty nzNotFoundContent="统计数据加载失败，请稍后重试"></nz-empty>
       </div>
     } @else if (stats(); as s) {
-      <div class="module-grid">
+      <!-- 概览区：使用趋势 + 模块概览，合并为一体化卡片，中间无空白间隔 -->
+      <div class="dashboard-stack">
+      <!-- 使用趋势（近 7 天）：折线图 + 汇总表，指标用普通列表切换 -->
+      <section class="trend-panel">
+        <header class="trend-panel__head">
+          <div class="module-card__title">
+            <h2>使用趋势</h2>
+            <p>近 7 天使用趋势</p>
+          </div>
+        </header>
+        <div class="trend-panel__body">
+          <div class="trend-chart-col">
+            <label class="metric-select">
+              <span class="metric-select__label">指标</span>
+              <select [value]="selectedMetricKey()" (change)="onMetricChange($event)">
+                @for (m of trendMetrics; track m.key) {
+                  <option [value]="m.key">{{ m.label }}</option>
+                }
+              </select>
+            </label>
+            <div class="trend-chart" #trendChart></div>
+          </div>
+          <div class="period-table">
+            <div class="period-table__row period-table__row--head">
+              <span>指标</span>
+              <span>今天</span>
+              <span>昨天</span>
+              <span>近 7 天</span>
+            </div>
+            @for (row of periodRows(); track row.key) {
+              <div class="period-table__row">
+                <span class="period-table__metric">{{ row.label }}</span>
+                <span class="period-table__num">{{ row.today | number }}</span>
+                <span class="period-table__num">{{ row.yesterday | number }}</span>
+                <span class="period-table__num period-table__num--strong">{{ row.week | number }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- 模块概览 -->
+      <div class="modules-panel">
+        <div class="modules-head">
+          <h2>模块概览</h2>
+          <p>各管理模块的核心指标</p>
+        </div>
+        <div class="module-grid">
         <!-- 资源管理 -->
         <section class="module-card">
           <header class="module-card__head">
@@ -341,6 +388,8 @@
             </div>
           </div>
         </section>
+        </div>
+      </div>
       </div>
     } @else if (!loading()) {
       <div class="state-card">

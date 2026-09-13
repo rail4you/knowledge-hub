@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.AI;
@@ -61,6 +62,7 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
     private readonly IRepository<PracticumSubmission, Guid> _practicumSubmissionRepository;
     private readonly IRepository<NewsArticle, Guid> _newsRepository;
     private readonly IRepository<KnowledgeHub.Domain.Search.SearchQuery, Guid> _searchQueryRepository;
+    private readonly IRepository<KnowledgeHub.Domain.Search.ResourceViewLog, Guid> _resourceViewLogRepository;
     private readonly ITenantRepository _tenantRepository;
     private readonly IDataFilter _dataFilter;
 
@@ -86,6 +88,7 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         IRepository<PracticumSubmission, Guid> practicumSubmissionRepository,
         IRepository<NewsArticle, Guid> newsRepository,
         IRepository<KnowledgeHub.Domain.Search.SearchQuery, Guid> searchQueryRepository,
+        IRepository<KnowledgeHub.Domain.Search.ResourceViewLog, Guid> resourceViewLogRepository,
         ITenantRepository tenantRepository,
         IDataFilter dataFilter)
     {
@@ -110,6 +113,7 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         _practicumSubmissionRepository = practicumSubmissionRepository;
         _newsRepository = newsRepository;
         _searchQueryRepository = searchQueryRepository;
+        _resourceViewLogRepository = resourceViewLogRepository;
         _tenantRepository = tenantRepository;
         _dataFilter = dataFilter;
     }
@@ -138,6 +142,7 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
             dto.News = await BuildNewsStatsAsync(scope);
             dto.Search = await BuildSearchStatsAsync(scope);
             dto.Users = await BuildUserStatsAsync(scope);
+            dto.Trends = await BuildTrendsAsync(scope);
         }
 
         return dto;
@@ -376,6 +381,106 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         {
             StudentCount = studentCount,
             TeacherCount = teacherCount,
+        };
+    }
+
+    /// <summary>近 7 天各模块使用量：逐日明细 + 今天/昨天/近 7 天汇总。</summary>
+    private async Task<WorkbenchTrendsDto> BuildTrendsAsync(Guid? tenantId)
+    {
+        var today = Clock.Now.Date;
+        var start = today.AddDays(-6);
+
+        var searchQuery = await _searchQueryRepository.GetQueryableAsync();
+        var viewQuery = await _resourceViewLogRepository.GetQueryableAsync();
+        var resourceQuery = await _resourceRepository.GetQueryableAsync();
+        var aiQuery = await _aiUsageRepository.GetQueryableAsync();
+        var enrollmentQuery = await _studentCourseRepository.GetQueryableAsync();
+        var applicationQuery = await _jobApplicationRepository.GetQueryableAsync();
+        var submissionQuery = await _practicumSubmissionRepository.GetQueryableAsync();
+
+        if (tenantId.HasValue)
+        {
+            var id = tenantId.Value;
+            searchQuery = searchQuery.Where(x => x.TenantId == id);
+            viewQuery = viewQuery.Where(x => x.TenantId == id);
+            resourceQuery = resourceQuery.Where(x => x.TenantId == id);
+            aiQuery = aiQuery.Where(x => x.TenantId == id);
+            enrollmentQuery = enrollmentQuery.Where(x => x.TenantId == id);
+            applicationQuery = applicationQuery.Where(x => x.TenantId == id);
+            submissionQuery = submissionQuery.Where(x => x.TenantId == id);
+        }
+
+        var searchMap = await BuildDailyMapAsync(searchQuery, start, x => x.CreationTime);
+        var viewMap = await BuildDailyMapAsync(viewQuery, start, x => x.CreationTime);
+        var resourceMap = await BuildDailyMapAsync(resourceQuery, start, x => x.CreationTime);
+        var aiMap = await BuildDailyMapAsync(aiQuery, start, x => x.CreationTime);
+        var enrollmentMap = await BuildDailyMapAsync(enrollmentQuery, start, x => x.CreationTime);
+        var applicationMap = await BuildDailyMapAsync(applicationQuery, start, x => x.CreationTime);
+        var submissionMap = await BuildDailyMapAsync(submissionQuery, start, x => x.CreationTime);
+
+        var daily = new List<WorkbenchDailyUsageDto>();
+        for (var date = start; date <= today; date = date.AddDays(1))
+        {
+            daily.Add(new WorkbenchDailyUsageDto
+            {
+                Date = date,
+                Label = date.ToString("MM-dd"),
+                Searches = CountOn(searchMap, date),
+                ResourceUploads = CountOn(resourceMap, date),
+                ResourceViews = CountOn(viewMap, date),
+                AiCalls = CountOn(aiMap, date),
+                Enrollments = CountOn(enrollmentMap, date),
+                JobApplications = CountOn(applicationMap, date),
+                PracticumSubmissions = CountOn(submissionMap, date),
+            });
+        }
+
+        var yesterday = today.AddDays(-1);
+
+        return new WorkbenchTrendsDto
+        {
+            Daily = daily,
+            Today = SumUsage(daily.Where(d => d.Date == today)),
+            Yesterday = SumUsage(daily.Where(d => d.Date == yesterday)),
+            LastDays = SumUsage(daily),
+        };
+    }
+
+    /// <summary>按自然日分组计数（仅取日期字段，避免加载整行）。</summary>
+    private async Task<Dictionary<DateTime, int>> BuildDailyMapAsync<TEntity>(
+        IQueryable<TEntity> query,
+        DateTime from,
+        System.Linq.Expressions.Expression<Func<TEntity, DateTime>> dateSelector)
+    {
+        var parameter = dateSelector.Parameters[0];
+        var predicate = System.Linq.Expressions.Expression.Lambda<Func<TEntity, bool>>(
+            System.Linq.Expressions.Expression.GreaterThanOrEqual(
+                dateSelector.Body,
+                System.Linq.Expressions.Expression.Constant(from, typeof(DateTime))),
+            parameter);
+
+        var times = await AsyncExecuter.ToListAsync(query.Where(predicate).Select(dateSelector));
+
+        return times
+            .GroupBy(t => t.Date)
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
+    private static int CountOn(Dictionary<DateTime, int> map, DateTime date)
+        => map.TryGetValue(date, out var count) ? count : 0;
+
+    private static WorkbenchUsageDto SumUsage(IEnumerable<WorkbenchUsageDto> items)
+    {
+        var list = items.ToList();
+        return new WorkbenchUsageDto
+        {
+            Searches = list.Sum(x => x.Searches),
+            ResourceUploads = list.Sum(x => x.ResourceUploads),
+            ResourceViews = list.Sum(x => x.ResourceViews),
+            AiCalls = list.Sum(x => x.AiCalls),
+            Enrollments = list.Sum(x => x.Enrollments),
+            JobApplications = list.Sum(x => x.JobApplications),
+            PracticumSubmissions = list.Sum(x => x.PracticumSubmissions),
         };
     }
 }
