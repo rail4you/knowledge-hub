@@ -9,7 +9,7 @@ import { ADMIN_ROLES } from '../auth/admin-roles';
  *
  * - 未登录游客：放行（学生端支持公开浏览）；
  * - 已登录且持有任一管理端角色（Teacher / SchoolAdmin / LeagueAdmin /
- *   EnterpriseUser / admin）：直接返回 UrlTree 跳到 `/resources`，
+ *   EnterpriseUser / admin）：直接返回 UrlTree 跳到系统工作台 `/admin/workbench`，
  *   即使手动输入 URL 也进不来；
  * - 其余已登录用户（Student / 无角色）：放行。
  *
@@ -29,7 +29,7 @@ export const studentPortalGuard: CanActivateFn = () => {
 
   // 管理端身份优先判断：即使同时持有 Student 角色也不放行
   if (hasAnyRole(configState, ADMIN_ROLES)) {
-    return router.createUrlTree(['/resources']);
+    return router.createUrlTree(['/admin/workbench']);
   }
 
   return true;

@@ -211,7 +211,13 @@ export class PortalHomeComponent implements OnInit, OnDestroy {
     // 保留此处兜底：若守卫执行时角色声明尚未就绪，组件内再次拦截。
     if (this.isLoggedIn && this.isTeacher) {
       const returnUrl = this.route.snapshot.queryParams['returnUrl'];
-      if (!returnUrl) this.router.navigate(['/resources']);
+      if (!returnUrl) this.router.navigate(['/admin/workbench']);
+      return;
+    }
+
+    if (this.isLoggedIn && this.isStudent) {
+      const returnUrl = this.route.snapshot.queryParams['returnUrl'];
+      if (!returnUrl) this.router.navigate(['/student']);
       return;
     }
 

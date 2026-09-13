@@ -284,8 +284,8 @@ export class LoginComponent implements OnInit {
     this.inProgress = true;
     const { username, password, rememberMe } = this.form.value;
     const redirectUrl = this.isHostLogin()
-      // 系统管理员登录成功后直达管理端，不经过门户首页
-      ? (this.route.snapshot.queryParams['returnUrl'] || '/resources')
+      // 系统管理员登录成功后直达管理端工作台，不经过门户首页
+      ? (this.route.snapshot.queryParams['returnUrl'] || '/admin/workbench')
       : (this.route.snapshot.queryParams['returnUrl'] || '/');
 
     // 登录前再次清除可能的残留 session

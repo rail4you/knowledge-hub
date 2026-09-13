@@ -1,0 +1,351 @@
+<div class="workbench">
+  <!-- 页头 -->
+  <header class="page-header">
+    <div class="page-header__main">
+      <h1>系统工作台</h1>
+      <p>汇总资源、课程专业、AI、就业、实训、资讯、检索与用户等管理模块的实时数据。</p>
+    </div>
+    <div class="page-header__aside">
+      @if (scopeName()) {
+        <span class="scope-badge">
+          <i nz-icon nzType="apartment"></i>
+          {{ scopeName() }}
+        </span>
+      }
+      @if (stats()?.generatedAt) {
+        <span class="updated-at">统计时间 {{ stats()!.generatedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+      }
+      <button type="button" class="refresh-btn" (click)="refresh()" [disabled]="loading()">
+        <i nz-icon nzType="reload" [nzSpin]="loading()"></i>
+        刷新
+      </button>
+    </div>
+  </header>
+
+  <!-- host：租户列表切换 -->
+  @if (isHost()) {
+    <div class="tenant-bar">
+      <span class="tenant-bar__label">
+        <i nz-icon nzType="team"></i>
+        租户
+      </span>
+      <div class="tenant-list">
+        <button
+          type="button"
+          class="tenant-chip"
+          [class.active]="selectedTenantId() === null"
+          (click)="selectTenant(null)"
+        >
+          全部租户
+        </button>
+        @for (t of tenants(); track t.id) {
+          <button
+            type="button"
+            class="tenant-chip"
+            [class.active]="selectedTenantId() === t.id"
+            (click)="selectTenant(t.id)"
+          >
+            {{ t.name }}
+          </button>
+        }
+        @if (tenants().length === 0) {
+          <span class="tenant-empty">暂无租户</span>
+        }
+      </div>
+    </div>
+  }
+
+  <nz-spin [nzSpinning]="loading()">
+    @if (loadError()) {
+      <div class="state-card">
+        <nz-empty nzNotFoundContent="统计数据加载失败，请稍后重试"></nz-empty>
+      </div>
+    } @else if (stats(); as s) {
+      <div class="module-grid">
+        <!-- 资源管理 -->
+        <section class="module-card">
+          <header class="module-card__head">
+            <span class="module-card__icon tone-blue"><i nz-icon nzType="folder-open"></i></span>
+            <div class="module-card__title">
+              <h2>资源管理</h2>
+              <p>资源总量、审核状态与使用情况</p>
+            </div>
+          </header>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric__value">{{ s.resources.total | number }}</span>
+              <span class="metric__label">资源总数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-warn">{{ s.resources.pendingReview | number }}</span>
+              <span class="metric__label">待审核</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-ok">{{ s.resources.approved | number }}</span>
+              <span class="metric__label">已通过</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-bad">{{ s.resources.rejected | number }}</span>
+              <span class="metric__label">已驳回</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.resources.totalDownloads | number }}</span>
+              <span class="metric__label">下载量</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.resources.totalViews | number }}</span>
+              <span class="metric__label">浏览量</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.resources.totalCollections | number }}</span>
+              <span class="metric__label">收藏量</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.resources.categoryCount | number }}</span>
+              <span class="metric__label">分类数</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 专业和课程 -->
+        <section class="module-card">
+          <header class="module-card__head">
+            <span class="module-card__icon tone-blue"><i nz-icon nzType="read"></i></span>
+            <div class="module-card__title">
+              <h2>专业和课程</h2>
+              <p>课程、章节、习题与专业建设情况</p>
+            </div>
+          </header>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric__value">{{ s.courses.total | number }}</span>
+              <span class="metric__label">课程总数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-ok">{{ s.courses.published | number }}</span>
+              <span class="metric__label">已发布</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-warn">{{ s.courses.pendingReview | number }}</span>
+              <span class="metric__label">待审核</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.courses.chapterCount | number }}</span>
+              <span class="metric__label">章节数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.courses.exerciseCount | number }}</span>
+              <span class="metric__label">习题数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.courses.majorCount | number }}</span>
+              <span class="metric__label">专业数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.courses.microMajorCount | number }}</span>
+              <span class="metric__label">微专业数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.courses.enrollmentCount | number }}</span>
+              <span class="metric__label">选课人次</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- AI 管理 -->
+        <section class="module-card">
+          <header class="module-card__head">
+            <span class="module-card__icon tone-blue"><i nz-icon nzType="robot"></i></span>
+            <div class="module-card__title">
+              <h2>AI 管理</h2>
+              <p>调用量、成功率、Token 消耗与费用估算</p>
+            </div>
+          </header>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric__value">{{ s.ai.totalCalls | number }}</span>
+              <span class="metric__label">调用总数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-ok">{{ s.ai.successCalls | number }}</span>
+              <span class="metric__label">成功</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-bad">{{ s.ai.failedCalls | number }}</span>
+              <span class="metric__label">失败</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-warn">{{ s.ai.runningCalls | number }}</span>
+              <span class="metric__label">进行中</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ rate(s.ai.successCalls, s.ai.totalCalls) }}%</span>
+              <span class="metric__label">成功率</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.ai.taskCount | number }}</span>
+              <span class="metric__label">生成任务</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.ai.totalInputTokens | number }}</span>
+              <span class="metric__label">输入 Tokens</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.ai.totalOutputTokens | number }}</span>
+              <span class="metric__label">输出 Tokens</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 就业管理 -->
+        <section class="module-card">
+          <header class="module-card__head">
+            <span class="module-card__icon tone-blue"><i nz-icon nzType="idcard"></i></span>
+            <div class="module-card__title">
+              <h2>就业管理</h2>
+              <p>职位、申请、面试与就业成果</p>
+            </div>
+          </header>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric__value">{{ s.employment.jobTotal | number }}</span>
+              <span class="metric__label">职位总数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-ok">{{ s.employment.jobPublished | number }}</span>
+              <span class="metric__label">已发布职位</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.employment.applicationCount | number }}</span>
+              <span class="metric__label">申请数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.employment.interviewCount | number }}</span>
+              <span class="metric__label">面试数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.employment.outcomeCount | number }}</span>
+              <span class="metric__label">就业成果</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-ok">{{ s.employment.signedCount | number }}</span>
+              <span class="metric__label">已签约</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-ok">{{ s.employment.employedCount | number }}</span>
+              <span class="metric__label">已就业</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 实训 -->
+        <section class="module-card">
+          <header class="module-card__head">
+            <span class="module-card__icon tone-blue"><i nz-icon nzType="experiment"></i></span>
+            <div class="module-card__title">
+              <h2>实训</h2>
+              <p>实训项目、任务、报名与提交情况</p>
+            </div>
+          </header>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric__value">{{ s.practicum.projectTotal | number }}</span>
+              <span class="metric__label">实训项目</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-ok">{{ s.practicum.projectPublished | number }}</span>
+              <span class="metric__label">已发布</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.practicum.taskCount | number }}</span>
+              <span class="metric__label">任务数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.practicum.enrollmentCount | number }}</span>
+              <span class="metric__label">报名人次</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.practicum.submissionCount | number }}</span>
+              <span class="metric__label">提交数</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 资讯管理 -->
+        <section class="module-card">
+          <header class="module-card__head">
+            <span class="module-card__icon tone-blue"><i nz-icon nzType="file-text"></i></span>
+            <div class="module-card__title">
+              <h2>资讯管理</h2>
+              <p>资讯发布与审核情况</p>
+            </div>
+          </header>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric__value">{{ s.news.total | number }}</span>
+              <span class="metric__label">资讯总数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-ok">{{ s.news.published | number }}</span>
+              <span class="metric__label">已发布</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-warn">{{ s.news.pendingReview | number }}</span>
+              <span class="metric__label">待审核</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 检索统计 -->
+        <section class="module-card">
+          <header class="module-card__head">
+            <span class="module-card__icon tone-blue"><i nz-icon nzType="search"></i></span>
+            <div class="module-card__title">
+              <h2>检索统计</h2>
+              <p>检索量与活跃用户</p>
+            </div>
+          </header>
+          <div class="metric-grid">
+            <div class="metric">
+              <span class="metric__value">{{ s.search.totalSearches | number }}</span>
+              <span class="metric__label">检索总数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value tone-accent">{{ s.search.todaySearches | number }}</span>
+              <span class="metric__label">今日检索</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.search.activeUsers | number }}</span>
+              <span class="metric__label">活跃用户</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 用户概览 -->
+        <section class="module-card">
+          <header class="module-card__head">
+            <span class="module-card__icon tone-blue"><i nz-icon nzType="user"></i></span>
+            <div class="module-card__title">
+              <h2>用户概览</h2>
+              <p>参与教学的师生规模</p>
+            </div>
+          </header>
+          <div class="metric-grid metric-grid--two">
+            <div class="metric">
+              <span class="metric__value">{{ s.users.studentCount | number }}</span>
+              <span class="metric__label">选课学生数</span>
+            </div>
+            <div class="metric">
+              <span class="metric__value">{{ s.users.teacherCount | number }}</span>
+              <span class="metric__label">授课教师数</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    } @else if (!loading()) {
+      <div class="state-card">
+        <nz-empty nzNotFoundContent="暂无统计数据"></nz-empty>
+      </div>
+    }
+  </nz-spin>
+</div>

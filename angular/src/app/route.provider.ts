@@ -11,7 +11,7 @@ function configureRoutes() {
   const routes = inject(RoutesService);
   routes.add([
     // ==========================================================
-    //  首页（不显示在侧边栏）
+    //  首页 / 系统工作台
     // ==========================================================
     {
       path: '/',
@@ -19,6 +19,15 @@ function configureRoutes() {
       iconClass: 'fas fa-home',
       order: 1,
       layout: eLayoutType.empty,
+      // 门户首页：不再出现在管理端侧边栏（管理端首页改为「系统工作台」）。
+      invisible: true,
+    },
+    {
+      path: '/admin/workbench',
+      name: '::Menu:Workbench',
+      iconClass: 'fas fa-gauge-high',
+      order: 1,
+      layout: eLayoutType.application,
     },
 
     // ══════════════════════════════════════════════════════════

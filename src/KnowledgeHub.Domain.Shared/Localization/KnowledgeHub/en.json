@@ -3,6 +3,7 @@
   "Texts": {
     "AppName": "YiKeTong Resource Library System",
     "Menu:Home": "Home",
+    "Menu:Workbench": "System Workbench",
     "Menu:KnowledgeHub": "Resource Library",
     "Menu:Documents": "Documents",
     "Menu:Users": "Users",

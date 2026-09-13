@@ -14,6 +14,15 @@ export const APP_ROUTES: Routes = [
     canActivate: [installGuard],
   },
   {
+    // 管理端首页：系统工作台，聚合各管理模块统计。
+    path: 'admin/workbench',
+    loadComponent: () => import('./admin/workbench/workbench.component').then(c => c.WorkbenchComponent),
+    canActivate: [authGuard, nonStudentGuard],
+    data: {
+      layout: eLayoutType.application,
+    },
+  },
+  {
     path: 'student',
     canActivate: [authGuard, studentPortalGuard],
     loadChildren: () => Promise.resolve(STUDENT_ROUTES),
