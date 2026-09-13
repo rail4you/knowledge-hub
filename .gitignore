@@ -164,3 +164,7 @@ etc/docker/certs/
 
 # graphify 工具缓存输出（文档转知识图谱的中间产物，可重新生成）
 src/graphify-out/
+
+# 测试/性能测试产物
+reports/
+test-results/
