@@ -857,11 +857,37 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
         }
         var courseMap = courses.ToDictionary(x => x.Id);
 
-        var majorIds = courses
-            .Where(x => x.MajorId.HasValue)
-            .Select(x => x.MajorId!.Value)
+        // 课程专业以 CourseMajor 桥接表为准（主专业 IsPrimary 排第一），
+        // Course.MajorId 仅为兼容字段，桥接表无数据时才回退使用它。
+        var involvedCourseIds = courses.Select(x => x.Id).Distinct().ToList();
+        var linksByCourse = new Dictionary<Guid, List<CourseMajor>>();
+        if (involvedCourseIds.Count > 0)
+        {
+            var courseMajorRepo = LazyServiceProvider.LazyGetRequiredService<IRepository<CourseMajor, Guid>>();
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var cmQueryable = await courseMajorRepo.GetQueryableAsync();
+                var cmLinks = await AsyncExecuter.ToListAsync(cmQueryable.Where(x => involvedCourseIds.Contains(x.CourseId)));
+                linksByCourse = cmLinks
+                    .GroupBy(x => x.CourseId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.OrderByDescending(x => x.IsPrimary).ThenBy(x => x.CreationTime).ToList());
+            }
+        }
+
+        var majorIds = linksByCourse.Values
+            .SelectMany(x => x.Select(l => l.MajorId))
             .Distinct()
             .ToList();
+        if (majorIds.Count == 0)
+        {
+            majorIds = courses
+                .Where(x => x.MajorId.HasValue)
+                .Select(x => x.MajorId!.Value)
+                .Distinct()
+                .ToList();
+        }
         var majorMap = new Dictionary<Guid, string>();
         if (majorIds.Count > 0)
         {
@@ -882,8 +908,17 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
             .Select(link =>
             {
                 courseMap.TryGetValue(link.CourseId, out var course);
+                Guid? majorId = null;
                 string? majorName = null;
-                if (course?.MajorId.HasValue == true && majorMap.TryGetValue(course.MajorId.Value, out var name))
+                if (course != null && linksByCourse.TryGetValue(course.Id, out var courseLinks) && courseLinks.Count > 0)
+                {
+                    majorId = courseLinks[0].MajorId;
+                }
+                else if (course?.MajorId.HasValue == true)
+                {
+                    majorId = course.MajorId.Value;
+                }
+                if (majorId.HasValue && majorMap.TryGetValue(majorId.Value, out var name))
                 {
                     majorName = name;
                 }
@@ -894,7 +929,7 @@ public class MicroMajorAppService : KnowledgeHubAppService, IMicroMajorAppServic
                     CourseId = link.CourseId,
                     CourseTitle = course?.Title,
                     CourseCoverImageUrl = course?.CoverImageUrl,
-                    MajorId = course?.MajorId,
+                    MajorId = majorId,
                     MajorName = majorName,
                     Semester = course?.Semester,
                     SortOrder = link.SortOrder,

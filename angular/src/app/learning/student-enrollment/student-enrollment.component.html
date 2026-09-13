@@ -141,7 +141,7 @@
             <th nzWidth="20%">课程名称</th>
             <th nzWidth="12%">选课状态</th>
             <th nzWidth="16%">选课时间</th>
-            <th nzWidth="16%" class="col-actions">操作</th>
+            <th nzWidth="180px" class="col-actions">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -165,29 +165,30 @@
                 <div class="action-cell">
                   <button
                     nz-button
-                    nzType="text"
+                    nzType="link"
                     nzDanger
+                    nzSize="small"
                     class="action-btn action-btn--danger"
-                    nz-tooltip
-                    [nzTooltipTitle]="enrollment.status === 3 ? '该学生已退课' : '退课'"
                     (click)="dropStudent(enrollment)"
                     [disabled]="enrollment.status === 3"
                   >
                     <span nz-icon nzType="delete"></span>
+                    <span>退课</span>
                   </button>
                   <!-- 已退课学生：提供「再选课」按钮复用 batchEnroll，
                        后端会重置 status=Enrolled、progress=0、enrolledAt=now。 -->
-                  <button
-                    *ngIf="enrollment.status === 3"
-                    nz-button
-                    nzType="text"
-                    class="action-btn action-btn--success"
-                    nz-tooltip
-                    nzTooltipTitle="重新选课"
-                    (click)="reEnrollStudent(enrollment)"
-                  >
-                    <span nz-icon nzType="plus-circle"></span>
-                  </button>
+                  @if (enrollment.status === 3) {
+                    <button
+                      nz-button
+                      nzType="link"
+                      nzSize="small"
+                      class="action-btn action-btn--success"
+                      (click)="reEnrollStudent(enrollment)"
+                    >
+                      <span nz-icon nzType="plus-circle"></span>
+                      <span>重新选课</span>
+                    </button>
+                  }
                 </div>
               </td>
             </tr>

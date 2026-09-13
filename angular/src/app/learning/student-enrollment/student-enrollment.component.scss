@@ -247,22 +247,23 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 8px;
   }
 
   .action-btn {
-    width: 30px;
-    height: 30px;
-    padding: 0;
+    height: 28px;
+    padding: 0 8px;
     border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 4px;
+    white-space: nowrap;
     transition: background-color 0.18s ease, color 0.18s ease,
       box-shadow 0.18s ease;
 
     span[nz-icon] {
-      font-size: 15px;
+      font-size: 14px;
     }
 
     &:hover:not([disabled]) {

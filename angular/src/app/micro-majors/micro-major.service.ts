@@ -29,8 +29,14 @@ export interface MicroMajorCourseDto {
   courseId: string;
   courseTitle?: string;
   courseCoverImageUrl?: string;
+  majorId?: string | null;
+  majorName?: string | null;
+  majorIds?: string[];
+  majorNames?: string[];
+  /** 历史兼容字段：等同于 majorName，新代码请使用 majorName */
   major?: string;
   semester?: string;
+  credits?: number | null;
   sortOrder: number;
   isCore: boolean;
 }

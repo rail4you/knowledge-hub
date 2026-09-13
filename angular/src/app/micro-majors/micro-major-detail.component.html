@@ -5,48 +5,113 @@
 } @else if (detail(); as detail) {
   <div class="detail-page">
     <div class="back">
-      <a routerLink="/micro-majors">返回微专业列表</a>
+      <button nz-button nzType="link" routerLink="/micro-majors">
+        <span nz-icon nzType="arrow-left"></span>返回微专业列表
+      </button>
     </div>
 
     <nz-card>
       <div class="hero">
-        <div>
-          <h1>{{ detail.title }}</h1>
-          <p>{{ detail.summary || detail.description || '暂无介绍' }}</p>
-          <div class="meta">
-            <span>行业方向：{{ detail.industryField || '通用方向' }}</span>
-            <span>协同单位：{{ detail.collaborationUnit || '未设置' }}</span>
-            <span>{{ detail.courseCount }} 门核心课程</span>
+        <div class="hero-main">
+          @if (detail.coverImageUrl) {
+            <img class="hero-cover" [src]="detail.coverImageUrl" [alt]="detail.title" />
+          } @else {
+            <div class="hero-cover hero-cover--placeholder" aria-hidden="true">
+              <span nz-icon nzType="trophy" nzTheme="outline"></span>
+            </div>
+          }
+          <div class="hero-text">
+            <h1>{{ detail.title }}</h1>
+            <p class="hero-summary">{{ detail.summary || detail.description || '暂无介绍' }}</p>
+            <div class="hero-tags">
+              <nz-tag nzColor="blue">{{ detail.courseCount }} 门课程</nz-tag>
+              <nz-tag nzColor="green">{{ detail.enrollmentCount }} 人报名</nz-tag>
+              @if (detail.isCertificateEnabled) {
+                <nz-tag nzColor="gold">含证书</nz-tag>
+              }
+            </div>
           </div>
         </div>
-        <div class="cta">
-          @if (detail.currentUserProgress !== undefined && detail.currentUserProgress !== null) {
-            <nz-progress [nzPercent]="detail.currentUserProgress"></nz-progress>
+        <dl class="hero-meta">
+          <div class="hero-meta__row">
+            <dt>行业方向</dt>
+            <dd>{{ detail.industryField || '通用方向' }}</dd>
+          </div>
+          <div class="hero-meta__row">
+            <dt>协同单位</dt>
+            <dd>{{ detail.collaborationUnit || '未设置' }}</dd>
+          </div>
+          <div class="hero-meta__row">
+            <dt>完成要求</dt>
+            <dd>{{ detail.requiredCompletionRate }}%</dd>
+          </div>
+          @if (detail.description && detail.summary) {
+            <div class="hero-meta__row hero-meta__row--full">
+              <dt>详细介绍</dt>
+              <dd>{{ detail.description }}</dd>
+            </div>
           }
-          <button nz-button nzType="primary" (click)="enroll()" [disabled]="!canEnroll()">
-            {{ detail.isCurrentUserEnrolled ? '已报名' : (canEnroll() ? '立即报名' : '仅学生可报名') }}
-          </button>
-        </div>
+        </dl>
       </div>
     </nz-card>
 
     <nz-card nzTitle="课程组成">
-      <div class="course-list">
-        @for (course of detail.courses; track course.id) {
-          <div class="course-item">
-            <div>
-              <strong>{{ course.courseTitle || '未命名课程' }}</strong>
-              <div class="course-item__meta">
-                <span>{{ course.major || '未设置专业' }}</span>
-                <span>{{ course.semester || '未设置学期' }}</span>
+      @if (coursesLoading()) {
+        <div class="state">
+          <nz-spin nzTip="加载课程中..."></nz-spin>
+        </div>
+      } @else if (!courseDetails().length) {
+        <nz-empty nzNotFoundContent="该微专业暂无课程"></nz-empty>
+      } @else {
+        <div class="course-grid">
+          @for (course of courseDetails(); track course.id) {
+            <a
+              class="course-card"
+              [routerLink]="['/learning/course-detail', course.id]"
+            >
+              <div class="course-card__cover">
+                @if (course.coverImageUrl) {
+                  <img [src]="course.coverImageUrl" [alt]="course.title" loading="lazy" />
+                } @else {
+                  <div class="course-card__cover-placeholder" aria-hidden="true">
+                    <span nz-icon nzType="read" nzTheme="outline"></span>
+                  </div>
+                }
+                @if (course.id && isCoreCourse(course.id)) {
+                  <nz-tag class="course-card__core" nzColor="blue">核心</nz-tag>
+                }
               </div>
-            </div>
-            @if (course.isCore) {
-              <nz-tag nzColor="blue">核心</nz-tag>
-            }
-          </div>
-        }
-      </div>
+              <div class="course-card__body">
+                <strong class="course-card__title" [title]="course.title">{{ course.title || '未命名课程' }}</strong>
+                <div class="course-card__tags">
+                  @for (name of courseMajorNames(course); track name) {
+                    <nz-tag nzColor="blue">{{ name }}</nz-tag>
+                  } @empty {
+                    <nz-tag nzColor="default">公共课</nz-tag>
+                  }
+                  @if (course.semester) {
+                    <nz-tag nzColor="cyan">{{ course.semester }}</nz-tag>
+                  }
+                  @if (course.credits) {
+                    <nz-tag nzColor="purple">{{ course.credits }} 学分</nz-tag>
+                  }
+                </div>
+                <div class="course-card__meta">
+                  @if (course.teacherName) {
+                    <span>{{ course.teacherName }}</span>
+                  }
+                  @if (course.studentCount !== undefined && course.studentCount !== null) {
+                    <span>{{ course.studentCount }} 人学习</span>
+                  }
+                  @if (course.chapterCount !== undefined && course.chapterCount !== null) {
+                    <span>{{ course.chapterCount }} 章节</span>
+                  }
+                </div>
+              </div>
+            </a>
+          }
+        </div>
+      }
     </nz-card>
   </div>
 }
