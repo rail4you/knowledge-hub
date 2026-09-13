@@ -834,6 +834,38 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
         var latestValues = await GetLatestValueMapAsync(indicatorIds);
         var collectedCount = indicatorIds.Count(id => latestValues.ContainsKey(id));
 
+        // 关键修复：项目完成率 = 各指标完成度按权重加权求和（与详情页 getIndicatorProgress 公式保持一致）
+        // 原实现只用 collectedCount / indicators.Count，仅反映"是否已采集"，完全不看离目标多远。
+        // 举例：3 个指标里有 2 个仅采集到最新值（3% / 8%），旧逻辑会算成 66.7%；
+        // 新逻辑按权重加权求和，得到的就是真实的整体进度（如 4.9%）。
+        // 当所有指标权重合计 = 1 时，加权求和等价于加权平均，结果天然落在 0~100%。
+        // 兜底：所有权重都为 0 时（新建项目未分配权重），按算术平均计算，避免分母为 0。
+        decimal completionRate = 0;
+        if (indicators.Count > 0)
+        {
+            decimal totalWeight = indicators.Sum(x => x.Weight);
+            if (totalWeight > 0)
+            {
+                decimal weightedProgress = 0;
+                foreach (var indicator in indicators)
+                {
+                    var progress = CalculateIndicatorProgress(indicator, latestValues);
+                    weightedProgress += progress * indicator.Weight;
+                }
+                completionRate = Math.Round(weightedProgress / totalWeight, 1);
+            }
+            else
+            {
+                // 所有指标都未分配权重（weight = 0）：按算术平均展示真实进度，避免被 0 权重抹平
+                decimal sumProgress = 0;
+                foreach (var indicator in indicators)
+                {
+                    sumProgress += CalculateIndicatorProgress(indicator, latestValues);
+                }
+                completionRate = Math.Round(sumProgress / indicators.Count, 1);
+            }
+        }
+
         return new DoubleHighDashboardDto
         {
             TotalIndicators = indicators.Count,
@@ -841,11 +873,36 @@ public class DoubleHighAppService : KnowledgeHubAppService, IDoubleHighAppServic
             AutomaticIndicators = indicators.Count(x => x.DataSourceType != DoubleHighDataSourceType.Manual),
             CollectedIndicators = collectedCount,
             EvidenceCount = evidences,
-            CompletionRate = indicators.Count == 0
-                ? 0
-                : Math.Round((decimal)collectedCount / indicators.Count * 100, 1),
+            CompletionRate = completionRate,
             LastCollectedAt = project.LastCollectedAt
         };
+    }
+
+    private static decimal CalculateIndicatorProgress(
+        DoubleHighIndicator indicator,
+        Dictionary<Guid, DoubleHighIndicatorValue> latestValues)
+    {
+        // 与前端 double-high-project-detail.component.ts 的 getIndicatorProgress 公式保持一致：
+        //   target 为空 / ≤ 0，或 latest 为空：未填报，返回 0
+        //   否则 progress = min(100, latest / target * 100)
+        // 这里统一返回 0~100 的小数（保留 1 位），便于后端加权求和。
+        var target = indicator.TargetValue;
+        if (target == null || target <= 0)
+        {
+            return 0;
+        }
+
+        if (!latestValues.TryGetValue(indicator.Id, out var latest))
+        {
+            return 0;
+        }
+
+        var raw = (decimal)latest.Value / target.Value * 100m;
+        if (raw > 100m)
+        {
+            raw = 100m;
+        }
+        return Math.Round(raw, 1);
     }
 
     private async Task<Dictionary<Guid, DoubleHighIndicatorValue>> GetLatestValueMapAsync(List<Guid> indicatorIds)
