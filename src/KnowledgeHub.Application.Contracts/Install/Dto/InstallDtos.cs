@@ -9,7 +9,12 @@ public class InstallStatusDto
 public class InstallInputDto
 {
     public string LicenseKey { get; set; } = string.Empty;
-    
+
+    /// <summary>
+    /// 安装令牌：当配置了 Install:Token 时必填，用于保护安装入口。
+    /// </summary>
+    public string? InstallToken { get; set; }
+
     public string Edition { get; set; } = "Basic";
     
     public string AdminUsername { get; set; } = "admin";
@@ -22,6 +27,11 @@ public class InstallInputDto
 public class EditionUpgradeInputDto
 {
     public string LicenseKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 安装令牌：当配置了 Install:Token 时必填，用于保护升级入口。
+    /// </summary>
+    public string? InstallToken { get; set; }
 }
 
 public class EditionDto

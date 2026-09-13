@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.Auditing;
 using Volo.Abp.Uow;
@@ -371,7 +372,12 @@ public class AIController : AbpControllerBase
     [IgnoreAntiforgeryToken]
     public async Task DeleteThread(string threadId)
     {
-        await _chatAppService.DeleteThreadAsync(Guid.Parse(threadId));
+        if (!Guid.TryParse(threadId, out var id))
+        {
+            throw new UserFriendlyException("无效的会话标识");
+        }
+
+        await _chatAppService.DeleteThreadAsync(id);
     }
 
     /// <summary>

@@ -561,7 +561,21 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         app.UseStaticFiles(new StaticFileOptions
         {
             FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(fileStorageRoot),
-            RequestPath = "/uploads"
+            RequestPath = "/uploads",
+            OnPrepareResponse = ctx =>
+            {
+                // 安全：上传目录可能被写入任意扩展名文件，禁止浏览器内联渲染可脚本化类型，
+                // 避免同源存储型 XSS（html/svg/js/xml 一律作为附件下载）。
+                ctx.Context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+                var path = ctx.File.Name;
+                var ext = System.IO.Path.GetExtension(path)?.ToLowerInvariant();
+                if (ext is ".html" or ".htm" or ".xhtml" or ".svg" or ".js" or ".mjs"
+                    or ".xml" or ".xsl" or ".swf" or ".wasm")
+                {
+                    ctx.Context.Response.Headers["Content-Disposition"] = "attachment";
+                    ctx.Context.Response.Headers["Content-Security-Policy"] = "default-src 'none'; sandbox";
+                }
+            }
         });
 
         // 仿真实训 WASM 本地镜像：开发/容器场景下用 Kestrel 兜底托管。

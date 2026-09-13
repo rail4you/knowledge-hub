@@ -10,12 +10,14 @@ using KnowledgeHub.Application.Contracts.Search.Dtos;
 using KnowledgeHub.Domain.Search;
 using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.MultiTenancy;
 
 namespace KnowledgeHub.Application.Search;
 
+[Authorize(KnowledgeHubPermissions.Search.ManageIndex)]
 public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAdminAppService
 {
     private readonly HttpClient _httpClient;
@@ -325,6 +327,7 @@ public class MeiliSearchAdminAppService : KnowledgeHubAppService, IMeiliSearchAd
 
     public async Task<List<HotWordDto>> GetHotWordsAsync(Guid resourceId, int count = 30)
     {
+        await CheckPolicyAsync(KnowledgeHubPermissions.Search.ManageIndex);
         return await _meiliSearchService.GetHotWordsAsync(resourceId, count);
     }
 }

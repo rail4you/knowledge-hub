@@ -137,6 +137,14 @@ import { InstallInputDto } from './models';
                      placeholder="请确认密码" />
             </nz-form-control>
           </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label [nzSpan]="6">安装令牌</nz-form-label>
+            <nz-form-control [nzSpan]="14">
+              <input nz-input type="password" [(ngModel)]="installData.installToken"
+                     placeholder="如服务器配置了 Install:Token，请填写；本机安装可留空" />
+            </nz-form-control>
+          </nz-form-item>
           
           <div *ngIf="installError" class="install-error">
             <nz-alert nzType="error" [nzMessage]="installError" nzShowIcon></nz-alert>
@@ -250,6 +258,7 @@ export class InstallComponent {
   currentStep = 0;
   installData: InstallInputDto = {
     licenseKey: '',
+    installToken: '',
     edition: 'Basic',
     adminUsername: 'admin',
     adminPassword: '',

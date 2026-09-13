@@ -30,7 +30,7 @@ public class HangfireDashboardAuthorizationFilter : IDashboardAuthorizationFilte
         var remoteIp = httpContext.Connection.RemoteIpAddress;
         if (remoteIp == null)
         {
-            return true; // 无 IP（某些代理）保守放行
+            return false; // 无 IP 时 fail-closed，避免未知来源访问任务面板
         }
 
         // 回环地址：本机 / localhost 直接访问

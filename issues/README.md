@@ -9,6 +9,7 @@
 - [教师账号问题清单](./teacher-account-issues.md)
 - [学生账号问题清单](./student-account-issues.md)
 - [修复代码计划方案](./fix-plan.md)
+- [安全审计与修复记录（2026-09）](./security-audit-2026.md)
 
 ## 说明
 

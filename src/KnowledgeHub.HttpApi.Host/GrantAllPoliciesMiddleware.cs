@@ -30,6 +30,21 @@ public class GrantAllPoliciesMiddleware : IMiddleware, ITransientDependency
         // 永远发不出去，前端 EventSource 一直停在 CONNECTING（页面显示"连接中"）。
         // 这类端点与 application-configuration 无关，直接放行。
         var path = context.Request.Path.Value;
+
+        // 浏览器 EventSource 无法设置 Authorization 头，允许 SSE 端点通过
+        // ?access_token=xxx 传递 JWT；这里在认证中间件之前把它复制为标准头，
+        // 仅对 practicum-chat stream 生效，避免全站通过 query 传 token。
+        if (path != null &&
+            path.Contains("/practicum-chat/stream", System.StringComparison.OrdinalIgnoreCase) &&
+            !context.Request.Headers.ContainsKey("Authorization"))
+        {
+            var accessToken = context.Request.Query["access_token"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                context.Request.Headers.Authorization = "Bearer " + accessToken;
+            }
+        }
+
         if (path != null &&
             (path.Contains("/stream", System.StringComparison.OrdinalIgnoreCase)
              || path.Contains("/practicum-chat/", System.StringComparison.OrdinalIgnoreCase)))

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Courses.Dtos;
+using KnowledgeHub.Permissions;
 using KnowledgeHub.Resources;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
@@ -24,6 +26,7 @@ public class ChapterResourceAppService : KnowledgeHubAppService, IChapterResourc
         _resourceRepository = resourceRepository;
     }
 
+    [Authorize(KnowledgeHubPermissions.Courses.Default)]
     public async Task<List<ChapterResourceDto>> GetByChapterAsync(Guid chapterId)
     {
         var chapterResources = await _chapterResourceRepository.GetQueryableAsync();
@@ -59,6 +62,7 @@ public class ChapterResourceAppService : KnowledgeHubAppService, IChapterResourc
         }
     }
 
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task<ChapterResourceDto> CreateAsync(CreateChapterResourceDto input)
     {
         var resource = await _resourceRepository.GetAsync(input.ResourceId);
@@ -93,6 +97,7 @@ public class ChapterResourceAppService : KnowledgeHubAppService, IChapterResourc
         };
     }
 
+    [Authorize(KnowledgeHubPermissions.Courses.Edit)]
     public async Task DeleteAsync(Guid id)
     {
         await _chapterResourceRepository.DeleteAsync(id);

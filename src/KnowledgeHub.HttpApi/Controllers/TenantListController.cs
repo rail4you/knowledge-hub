@@ -47,6 +47,7 @@ public class TenantListController : AbpControllerBase
         return result;
     }
 
+    [Authorize]
     [HttpGet("tenants-with-stats")]
     public async Task<List<TenantWithStatsDto>> GetTenantsWithStats()
     {
@@ -72,6 +73,7 @@ public class TenantListController : AbpControllerBase
         return result.OrderByDescending(x => x.CourseCount).ToList();
     }
 
+    [Authorize]
     [HttpGet("tenant-stats/{tenantId}")]
     public async Task<TenantStatsDto> GetTenantStats(Guid tenantId)
     {

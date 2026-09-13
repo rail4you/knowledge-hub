@@ -15,8 +15,10 @@ using KnowledgeHub.Resources;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authorization;
 using OpenAI;
 using Volo.Abp;
+using Volo.Abp.Authorization;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 using MEAIChatMessage = Microsoft.Extensions.AI.ChatMessage;
@@ -26,6 +28,7 @@ namespace KnowledgeHub.Application.AI;
 
 // Not implementing IChatAppService to avoid ABP Castle DynamicProxy buffering IAsyncEnumerable.
 // The controller injects this class directly for the streaming method.
+[Authorize]
 public class ChatAppService : KnowledgeHubAppService
 {
     private readonly ICurrentUser _currentUser;
@@ -129,6 +132,11 @@ public class ChatAppService : KnowledgeHubAppService
             var title = input.Message.Length > 50 ? input.Message[..50] + "…" : input.Message;
             thread = new ChatThread(threadGuid, userId, title, input.ResourceId);
             await _threadRepository.InsertAsync(thread);
+        }
+        else if (thread.UserId != userId)
+        {
+            // 安全：禁止向他人会话写入消息（防止越权/会话投毒）
+            throw new AbpAuthorizationException("无权访问该会话。");
         }
 
         // Save user message

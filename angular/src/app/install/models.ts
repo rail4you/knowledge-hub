@@ -5,6 +5,7 @@ export interface InstallStatusDto {
 
 export interface InstallInputDto {
   licenseKey: string;
+  installToken?: string;
   edition: string;
   adminUsername: string;
   adminPassword: string;

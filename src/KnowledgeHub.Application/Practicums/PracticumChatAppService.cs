@@ -24,6 +24,7 @@ using Volo.Abp.Identity;
 namespace KnowledgeHub.Practicums;
 
 [IgnoreAntiforgeryToken]
+[Authorize]
 public class PracticumChatAppService : KnowledgeHubAppService, IPracticumChatAppService
 {
     private readonly IRepository<PracticumChatMessage, Guid> _messageRepository;

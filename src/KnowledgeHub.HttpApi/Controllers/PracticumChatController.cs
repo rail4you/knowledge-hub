@@ -18,6 +18,7 @@ namespace KnowledgeHub.Controllers;
 
 [Area("learning")]
 [Route("api/learning/practicum-chat")]
+[Authorize]
 [DisableAuditing]
 public class PracticumChatController : AbpControllerBase
 {
@@ -46,12 +47,19 @@ public class PracticumChatController : AbpControllerBase
     /// 前端 EventSource 收不到 data: 事件，一直显示"连接中"。
     /// </summary>
     [HttpGet("stream/{projectId:guid}")]
-    [AllowAnonymous]
     [IgnoreAntiforgeryToken]
     [UnitOfWork(IsDisabled = true)]
     [Produces("text/event-stream")]
     public async Task Stream(Guid projectId)
     {
+        // 安全：订阅前先校验项目访问权限（未报名/无权限会抛 403），
+        // 避免知道 projectId 的任意登录用户或非成员窃听聊天。
+        await _chatAppService.GetMessagesAsync(new GetPracticumChatMessagesDto
+        {
+            ProjectId = projectId,
+            MaxResultCount = 1
+        });
+
         var httpContext = HttpContext;
         httpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
 

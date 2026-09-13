@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Volo.Abp.AspNetCore.Mvc;
@@ -7,6 +8,7 @@ namespace KnowledgeHub.Controllers;
 
 [Area("app")]
 [Route("api/app/logout")]
+[Authorize]
 public class LogoutController : AbpController
 {
     /// <summary>

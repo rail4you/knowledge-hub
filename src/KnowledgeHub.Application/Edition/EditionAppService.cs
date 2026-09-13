@@ -7,9 +7,11 @@ using KnowledgeHub.Edition;
 using KnowledgeHub.Settings;
 using KnowledgeHub.Features;
 using KnowledgeHub.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Authorization;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Uow;
 
@@ -21,17 +23,20 @@ public class EditionAppService : ApplicationService, IEditionAppService
     private readonly ILicenseValidator _licenseValidator;
     private readonly IEditionConfigService _editionConfig;
     private readonly KnowledgeHubDbContext _dbContext;
+    private readonly IInstallAccessGuard _installAccessGuard;
 
     public EditionAppService(
         IInstallStatusService installStatusService,
         ILicenseValidator licenseValidator,
         IEditionConfigService editionConfig,
-        KnowledgeHubDbContext dbContext)
+        KnowledgeHubDbContext dbContext,
+        IInstallAccessGuard installAccessGuard)
     {
         _installStatusService = installStatusService;
         _licenseValidator = licenseValidator;
         _editionConfig = editionConfig;
         _dbContext = dbContext;
+        _installAccessGuard = installAccessGuard;
     }
 
     public async Task<EditionDto> GetCurrentEditionAsync()
@@ -52,9 +57,22 @@ public class EditionAppService : ApplicationService, IEditionAppService
         };
     }
 
+    [Authorize]
     [UnitOfWork]
     public virtual async Task UpgradeToStandardAsync(EditionUpgradeInputDto input)
     {
+        // 版本升级会写入宿主 Feature/Setting 并创建租户，仅宿主管理员可执行。
+        if (CurrentTenant.Id.HasValue)
+        {
+            throw new AbpAuthorizationException("仅宿主管理员可升级版本。");
+        }
+
+        // 与安装入口一致：本机或携带正确安装令牌，防止匿名越权开启付费能力。
+        if (!_installAccessGuard.IsAccessAllowed(input.InstallToken))
+        {
+            throw new AbpAuthorizationException("升级入口已受保护：请从服务器本机访问，或在请求中提供正确的安装令牌。");
+        }
+
         if (!await _installStatusService.IsInstalledAsync())
         {
             throw new UserFriendlyException("系统未安装");

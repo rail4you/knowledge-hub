@@ -6,6 +6,7 @@ using KnowledgeHub.Courses;
 using KnowledgeHub.Learning.Dtos;
 using KnowledgeHub.Learning.Enums;
 using KnowledgeHub.Majors;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Data;
@@ -15,6 +16,7 @@ using Volo.Abp.Users;
 namespace KnowledgeHub.Learning;
 
 [IgnoreAntiforgeryToken]
+[Authorize]
 public class LearningAppService : ApplicationService, ILearningAppService
 {
     private readonly IRepository<StudentCourse> _studentCourseRepository;

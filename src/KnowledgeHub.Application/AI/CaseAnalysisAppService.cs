@@ -17,6 +17,9 @@ namespace KnowledgeHub.Application.AI;
 
 // Not implementing an ABP interface to avoid Castle DynamicProxy buffering issues with IAsyncEnumerable.
 // The controller injects this class directly.
+// 说明：本服务不直接暴露 HTTP（公开方法均标注 [RemoteService(false)]，由 AIController
+// 以 [Authorize(AI.CaseAnalysis)] 代理），且被 AiGenerationJob 后台任务直接调用，
+// 因此不在类级加 [Authorize]（后台任务无用户上下文）。
 public class CaseAnalysisAppService : KnowledgeHubAppService
 {
     private readonly IConfiguration _configuration;
@@ -178,6 +181,7 @@ JSON 结构:
         });
     }
 
+    [Volo.Abp.RemoteService(false)]
     public byte[] ExportDocx(string caseAnalysisJson)
     {
         var cleanJson = caseAnalysisJson.Trim();

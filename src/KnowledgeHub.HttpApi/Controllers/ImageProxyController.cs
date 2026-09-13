@@ -2,7 +2,9 @@ using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp.AspNetCore.Mvc;
 
@@ -14,6 +16,12 @@ namespace KnowledgeHub.Controllers;
 ///
 /// 用法：
 ///   /api/image-proxy?url=https://bucket.oss-cn-beijing.aliyuncs.com/cert/xxx.png
+///
+/// 安全约束（防 SSRF）：
+///   - 可选 ImageProxy:AllowedHosts 白名单，配置后仅允许代理指定 host；
+///   - 未配置白名单时仅允许解析到公网地址的 host，阻断内网/回环地址；
+///   - 仅转发 Content-Type 为 image/* 的响应，限制 32MB。
+/// 注：该接口需要能被 &lt;img&gt; 直接加载（无法携带 Authorization 头），故保持匿名。
 /// </summary>
 [Route("/api/image-proxy")]
 [AllowAnonymous]
@@ -23,11 +31,16 @@ public class ImageProxyController : AbpControllerBase
     private const int MaxBytes = 32 * 1024 * 1024; // 限制 32MB，防止滥用
 
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<ImageProxyController> _logger;
 
-    public ImageProxyController(IHttpClientFactory httpClientFactory, ILogger<ImageProxyController> logger)
+    public ImageProxyController(
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        ILogger<ImageProxyController> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -44,6 +57,18 @@ public class ImageProxyController : AbpControllerBase
             return BadRequest("无效的图片地址");
         }
 
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var parsedUri))
+        {
+            return BadRequest("无效的图片地址");
+        }
+
+        // SSRF 防护：白名单或公网地址校验
+        if (!ProxyHostGuard.IsHostAllowed(parsedUri.Authority, _configuration["ImageProxy:AllowedHosts"]))
+        {
+            _logger.LogWarning("图片代理拒绝访问未授权 host: {Url}", url);
+            return StatusCode(StatusCodes.Status403Forbidden, "图片地址不被允许");
+        }
+
         var client = _httpClientFactory.CreateClient("ImageProxy");
         try
         {
@@ -54,6 +79,11 @@ public class ImageProxyController : AbpControllerBase
             }
 
             var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+            if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("仅支持代理图片内容");
+            }
+
             var length = response.Content.Headers.ContentLength;
             if (length.HasValue && length.Value > MaxBytes)
             {

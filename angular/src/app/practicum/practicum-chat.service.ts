@@ -4,6 +4,7 @@ import { Observable, Subject, from, of, throwError } from 'rxjs';
 import { map, catchError, retryWhen, delay, take } from 'rxjs/operators';
 import { RestService } from '@abp/ng.core';
 import type { Rest } from '@abp/ng.core';
+import { OAuthService } from 'angular-oauth2-oidc';
 
 export enum PracticumChatSenderType {
   Student = 0,
@@ -55,6 +56,7 @@ export interface UpdatePracticumAgentConfigDto {
 export class PracticumChatService implements OnDestroy {
   private readonly restService = inject(RestService);
   private readonly http = inject(HttpClient);
+  private readonly oauth = inject(OAuthService);
 
   private eventSources = new Map<string, EventSource>();
   private messageSubject = new Subject<PracticumChatMessageDto>();
@@ -78,7 +80,10 @@ export class PracticumChatService implements OnDestroy {
     }
 
     const baseUrl = this.getApiBaseUrl();
-    const url = `${baseUrl}/api/learning/practicum-chat/stream/${projectId}`;
+    // EventSource 无法设置 Authorization 头，通过 query 传递访问令牌（后端仅对 stream 端点放行）。
+    const token = this.oauth.getAccessToken();
+    const tokenQuery = token ? `?access_token=${encodeURIComponent(token)}` : '';
+    const url = `${baseUrl}/api/learning/practicum-chat/stream/${projectId}${tokenQuery}`;
 
     return new Observable<void>(observer => {
       const es = new EventSource(url);

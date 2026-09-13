@@ -128,8 +128,9 @@ export const APP_ROUTES: Routes = [
   {
     path: 'resources',
     loadComponent: () => import('./resources/resource').then(c => c.ResourceComponent),
-    canActivate: [authGuard, nonStudentGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
+      requiredPolicy: 'KnowledgeHub.Resources',
       layout: eLayoutType.application,
     },
   },
@@ -169,7 +170,7 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./admin/indexing-jobs/indexing-jobs.component').then(c => c.IndexingJobsComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.Resources',
+      requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
     },
   },
   {
@@ -249,13 +250,16 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./admin/micro-majors/micro-major-management.component').then(c => c.MicroMajorManagementComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.MicroMajors',
+      requiredPolicy: 'KnowledgeHub.MicroMajors.Create',
     },
   },
   {
     path: 'admin/majors',
     loadComponent: () => import('./admin/majors/major-management.component').then(c => c.MajorManagementComponent),
-    canActivate: [authGuard, nonStudentGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Majors.Create',
+    },
   },
   {
     path: 'admin/tenant-info',
@@ -366,7 +370,10 @@ export const APP_ROUTES: Routes = [
   {
     path: 'admin/recruitment-live/:id',
     loadComponent: () => import('./recruitment-live/live-room.component').then(c => c.LiveRoomComponent),
-    canActivate: [authGuard, nonStudentGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.RecruitmentLive.Create',
+    },
   },
   {
     // P1-20：教师/管理员端的"实训项目"列表——学生应走 /student/practicums，
@@ -415,7 +422,7 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./admin/practicum/practicum-management.component').then(c => c.PracticumManagementComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.Practicum',
+      requiredPolicy: 'KnowledgeHub.Practicum.Create',
     },
   },
   {
@@ -451,7 +458,7 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./admin/news/news-management.component').then(c => c.NewsManagementComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
-      requiredPolicy: 'KnowledgeHub.News',
+      requiredPolicy: 'KnowledgeHub.News.Create',
     },
   },
   {
@@ -466,11 +473,17 @@ export const APP_ROUTES: Routes = [
     path: 'document-viewer/:id',
     loadComponent: () => import('./document-viewer/document-viewer.component').then(c => c.DocumentViewerComponent),
     canActivate: [authGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Resources',
+    },
   },
   {
     path: 'ai/chat',
     loadComponent: () => import('./ai/chat/chat.component').then(c => c.ChatComponent),
-    canActivate: [authGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.AI',
+    },
   },
   {
     path: 'ai/lesson-plan',
@@ -507,7 +520,10 @@ export const APP_ROUTES: Routes = [
   {
     path: 'ai/model-management',
     loadComponent: () => import('./ai/model-management/model-management.component').then(c => c.ModelManagementComponent),
-    canActivate: [authGuard, nonStudentGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.AI.LessonPlan',
+    },
   },
   {
     path: 'ai/tasks',
@@ -592,7 +608,10 @@ export const APP_ROUTES: Routes = [
   },
   {
     path: 'learning',
-    canActivate: [authGuard, nonStudentGuard],
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Courses',
+    },
     children: [
       {
         path: 'my-courses',

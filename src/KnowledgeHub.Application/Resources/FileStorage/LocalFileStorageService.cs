@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using KnowledgeHub.Common;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Volo.Abp;
 
 namespace KnowledgeHub.Resources.FileStorage;
 
@@ -27,7 +28,7 @@ public class LocalFileStorageService : IFileStorageService
     public async Task<string> SaveAsync(Stream stream, string fileName, string directory)
     {
         var path = GetFilePath(directory, fileName);
-        var fullPath = Path.Combine(_rootPath, path);
+        var fullPath = EnsureUnderRoot(Path.Combine(_rootPath, path));
         var directoryPath = Path.GetDirectoryName(fullPath);
         
         if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
@@ -43,14 +44,21 @@ public class LocalFileStorageService : IFileStorageService
 
     public async Task<string> SaveChunkAsync(Stream stream, string fileName, int chunkNumber, string uploadId)
     {
-        var chunkPath = Path.Combine(_rootPath, "chunks", uploadId);
+        if (!Guid.TryParse(uploadId, out _))
+        {
+            throw new BusinessException("上传会话标识非法。");
+        }
+
+        var safeName = SanitizeFileName(fileName);
+        var chunkPath = EnsureUnderRoot(Path.Combine(_rootPath, "chunks", uploadId));
         
         if (!Directory.Exists(chunkPath))
         {
             Directory.CreateDirectory(chunkPath);
         }
 
-        var chunkFilePath = Path.Combine(chunkPath, $"{chunkNumber}_{fileName}");
+        // 仅用服务端拼接的「序号_文件名」作为块名，文件名已去除路径分隔符
+        var chunkFilePath = EnsureUnderRoot(Path.Combine(chunkPath, $"{chunkNumber}_{safeName}"));
         
         await using var outputStream = new FileStream(chunkFilePath, FileMode.Create);
         await stream.CopyToAsync(outputStream);
@@ -60,9 +68,19 @@ public class LocalFileStorageService : IFileStorageService
 
     public async Task<string> MergeChunksAsync(string uploadId, string fileName, string directory)
     {
-        var chunkPath = Path.Combine(_rootPath, "chunks", uploadId);
+        if (!Guid.TryParse(uploadId, out _))
+        {
+            throw new BusinessException("上传会话标识非法。");
+        }
+
+        var chunkPath = EnsureUnderRoot(Path.Combine(_rootPath, "chunks", uploadId));
+        if (!Directory.Exists(chunkPath))
+        {
+            throw new BusinessException("上传分片不存在或已过期。");
+        }
+
         var finalPath = GetFilePath(directory, fileName);
-        var fullFinalPath = Path.Combine(_rootPath, finalPath);
+        var fullFinalPath = EnsureUnderRoot(Path.Combine(_rootPath, finalPath));
         var directoryPath = Path.GetDirectoryName(fullFinalPath);
 
         if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
@@ -98,7 +116,7 @@ public class LocalFileStorageService : IFileStorageService
 
     public async Task<Stream> GetAsync(string path)
     {
-        var fullPath = Path.Combine(_rootPath, path);
+        var fullPath = EnsureUnderRoot(Path.Combine(_rootPath, path));
         
         if (!File.Exists(fullPath))
         {
@@ -115,7 +133,7 @@ public class LocalFileStorageService : IFileStorageService
 
     public Task DeleteAsync(string path)
     {
-        var fullPath = Path.Combine(_rootPath, path);
+        var fullPath = EnsureUnderRoot(Path.Combine(_rootPath, path));
         
         if (File.Exists(fullPath))
         {
@@ -132,14 +150,46 @@ public class LocalFileStorageService : IFileStorageService
 
     public bool HasChunk(string uploadId, int chunkNumber)
     {
-        var chunkPath = Path.Combine(_rootPath, "chunks", uploadId, $"{chunkNumber}_*");
-        return Directory.GetFiles(Path.GetDirectoryName(chunkPath)!, Path.GetFileName(chunkPath)).Length > 0;
+        if (!Guid.TryParse(uploadId, out _))
+        {
+            return false;
+        }
+
+        var chunkPath = Path.Combine(_rootPath, "chunks", uploadId);
+        if (!Directory.Exists(chunkPath))
+        {
+            return false;
+        }
+
+        return Directory.GetFiles(chunkPath, $"{chunkNumber}_*").Length > 0;
     }
 
     public string RootPath => _rootPath;
     
     public string GetFilePath(string directory, string fileName)
     {
-        return string.IsNullOrEmpty(directory) ? fileName : Path.Combine(directory, fileName);
+        var safeName = SanitizeFileName(fileName);
+        return string.IsNullOrEmpty(directory) ? safeName : Path.Combine(directory, safeName);
+    }
+
+    private static string SanitizeFileName(string fileName)
+    {
+        // 去掉任何目录成分与路径分隔符，防止 ../ 或绝对路径穿越
+        var name = Path.GetFileName((fileName ?? string.Empty).Replace('\\', '/'));
+        return string.IsNullOrWhiteSpace(name) || name == "." || name == ".."
+            ? $"file_{Guid.NewGuid():N}"
+            : name;
+    }
+
+    private string EnsureUnderRoot(string fullPath)
+    {
+        var root = Path.GetFullPath(_rootPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var resolved = Path.GetFullPath(fullPath);
+        if (!resolved.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new BusinessException("非法的文件路径。");
+        }
+
+        return resolved;
     }
 }

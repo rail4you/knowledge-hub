@@ -69,6 +69,12 @@ public class SummaryGenerationAppService : KnowledgeHubAppService, ISummaryGener
             throw new UserFriendlyException($"Resource not found: {input.ResourceId}");
         }
 
+        // 安全：租户管理员不得操作其它租户的资源（宿主不受限）
+        if (_currentTenant.Id.HasValue && resource.TenantId != _currentTenant.Id)
+        {
+            throw new AbpAuthorizationException("无权操作其他租户的资源。");
+        }
+
         var tenantId = resource.TenantId;
         var jobId = await _backgroundJobManager.EnqueueAsync(new DocumentSummaryGenerationJobArgs
         {
@@ -101,6 +107,13 @@ public class SummaryGenerationAppService : KnowledgeHubAppService, ISummaryGener
         using (_dataFilter.Disable<IMultiTenant>())
         {
             var query = await _resourceRepository.GetQueryableAsync();
+
+            // 安全：租户上下文强制只处理本租户资源（宿主不受限）
+            if (_currentTenant.Id.HasValue)
+            {
+                var currentTenantId = _currentTenant.Id.Value;
+                query = query.Where(r => r.TenantId == currentTenantId);
+            }
 
             // 显式列表优先
             if (input.ResourceIds != null && input.ResourceIds.Count > 0)

@@ -25,6 +25,7 @@ using Volo.Abp.Users;
 namespace KnowledgeHub.Learning;
 
 [IgnoreAntiforgeryToken]
+[Authorize]
 public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentExerciseRecordAppService
 {
     private readonly IRepository<StudentExerciseRecord, Guid> _recordRepository;
@@ -296,7 +297,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
 
     #region Teacher APIs
 
-    [AllowAnonymous]
+    [Authorize(KnowledgeHubPermissions.Learning.ViewStatistics)]
     public async Task<PagedResultDto<StudentExerciseRecordDto>> GetStudentRecordsAsync(GetStudentExerciseRecordsInput input, Guid studentId)
     {
         List<StudentExerciseRecord> items;
@@ -320,7 +321,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         return new PagedResultDto<StudentExerciseRecordDto>(totalCount, dtos);
     }
 
-    [AllowAnonymous]
+    [Authorize(KnowledgeHubPermissions.Learning.ViewStatistics)]
     public async Task<PagedResultDto<StudentLearningStatisticsDto>> GetLearningStatisticsAsync(GetLearningStatisticsInput input)
     {
         var tenantFilter = ResolveTenantFilter(input.TenantId);
@@ -469,7 +470,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         return new PagedResultDto<StudentLearningStatisticsDto>(totalCount, paged);
     }
 
-    [AllowAnonymous]
+    [Authorize(KnowledgeHubPermissions.Learning.ViewStatistics)]
     public async Task<CourseLearningOverviewDto> GetCourseLearningOverviewAsync(GetCourseLearningOverviewInput input)
     {
         var tenantFilter = ResolveTenantFilter(input.TenantId);
@@ -610,7 +611,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         };
     }
 
-    [AllowAnonymous]
+    [Authorize(KnowledgeHubPermissions.Learning.ViewStatistics)]
     public async Task<TenantCourseStatisticsDto> GetTenantCourseStatisticsAsync(GetTenantCourseStatisticsInput input)
     {
         var tenantFilter = ResolveTenantFilter(input.TenantId);
@@ -743,7 +744,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
         };
     }
 
-    [AllowAnonymous]
+    [Authorize(KnowledgeHubPermissions.Learning.ExportData)]
     public async Task<IRemoteStreamContent> ExportTenantCourseStatisticsAsync(GetTenantCourseStatisticsInput input)
     {
         var result = await GetTenantCourseStatisticsAsync(input);
@@ -798,7 +799,7 @@ public class StudentExerciseRecordAppService : KnowledgeHubAppService, IStudentE
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     }
 
-    [AllowAnonymous]
+    [Authorize(KnowledgeHubPermissions.Learning.ExportData)]
     public async Task<IRemoteStreamContent> ExportLearningStatisticsAsync(GetLearningStatisticsInput input)
     {
         input.SkipCount = 0;

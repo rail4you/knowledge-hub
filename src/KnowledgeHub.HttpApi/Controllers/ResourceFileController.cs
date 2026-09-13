@@ -256,9 +256,18 @@ public class ResourceFileController : AbpControllerBase
         var isApproved = resource.Status == ResourceStatus.SchoolApproved ||
                          resource.Status == ResourceStatus.LeagueApproved;
         
-        if (!isApproved && !CurrentUser.IsAuthenticated)
+        if (!isApproved)
         {
-            return Forbid();
+            if (!CurrentUser.IsAuthenticated)
+            {
+                return Forbid();
+            }
+
+            // 未审核资源仅限同租户查看（宿主管理员不受限），防止跨租户预览他人待审文件
+            if (CurrentTenant.Id.HasValue && resource.TenantId.HasValue && resource.TenantId != CurrentTenant.Id)
+            {
+                return Forbid();
+            }
         }
 
         // 每次预览增加查看次数（封面缩略图用 countView=false，不计入，避免列表页刷出虚假浏览量）
@@ -1028,11 +1037,17 @@ public class ResourceFileController : AbpControllerBase
         }
 
         // 与 Preview 方法保持一致的权限检查：
-        // 审核通过的资源公开预览；待审核资源仅登录用户可预览（教师/管理员审核前查看）。
+        // 审核通过的资源公开预览；待审核资源仅同租户登录用户可预览（教师/管理员审核前查看）。
         var isApproved = resource.Status == ResourceStatus.SchoolApproved ||
                          resource.Status == ResourceStatus.LeagueApproved;
-        if (!isApproved && !CurrentUser.IsAuthenticated)
-            return null;
+        if (!isApproved)
+        {
+            if (!CurrentUser.IsAuthenticated)
+                return null;
+
+            if (CurrentTenant.Id.HasValue && resource.TenantId.HasValue && resource.TenantId != CurrentTenant.Id)
+                return null;
+        }
 
         var filePath = resource.FilePath;
         if (string.IsNullOrEmpty(filePath))
