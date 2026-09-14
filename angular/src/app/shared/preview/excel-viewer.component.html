@@ -1,48 +1,102 @@
 <div class="excel-viewer">
-  <nz-spin *ngIf="isLoading()" nzSimple class="viewer-spinner"></nz-spin>
-  <div *ngIf="error()" class="viewer-error">{{ error() }}</div>
-
-  <ng-container *ngIf="!isLoading() && !error()">
-    <!-- Toolbar -->
-    <div class="viewer-toolbar">
-      <span class="sheet-info">{{ sheets().length }} Sheets</span>
-      <nz-space>
-        <button nz-button nzSize="small" (click)="zoomOut()" [disabled]="scale() <= 0.5">
+  @if (isLoading()) {
+    <div class="excel-viewer__state">
+      <nz-spin nzSimple></nz-spin>
+    </div>
+  } @else if (error()) {
+    <div class="excel-viewer__state excel-viewer__error">{{ error() }}</div>
+  } @else {
+    <!-- 工具栏：工作表信息 + 缩放（缩放作用于表格容器的布局尺寸，滚动条会同步） -->
+    <div class="excel-toolbar">
+      <span class="excel-toolbar__count">{{ sheets().length }} 个工作表</span>
+      @if (currentSheet(); as cs) {
+        <span class="excel-toolbar__sep">·</span>
+        <span class="excel-toolbar__sheet" [title]="cs.name">{{ cs.name }}</span>
+        <span class="excel-toolbar__dim">{{ cs.cols }} 列 × {{ cs.totalRows }} 行</span>
+      }
+      <span class="excel-toolbar__spacer"></span>
+      <div class="excel-zoom">
+        <button
+          nz-button
+          nzSize="small"
+          nzType="text"
+          nz-tooltip="缩小"
+          (click)="zoomOut()"
+          [disabled]="scale() <= minScale"
+        >
           <span nz-icon nzType="zoom-out"></span>
         </button>
-        <span class="scale-info">{{ getScalePercent() }}%</span>
-        <button nz-button nzSize="small" (click)="zoomIn()" [disabled]="scale() >= 1.5">
+        <button
+          nz-button
+          nzSize="small"
+          nzType="text"
+          class="excel-zoom__value"
+          nz-tooltip="重置为 100%"
+          (click)="resetZoom()"
+        >
+          {{ getScalePercent() }}%
+        </button>
+        <button
+          nz-button
+          nzSize="small"
+          nzType="text"
+          nz-tooltip="放大"
+          (click)="zoomIn()"
+          [disabled]="scale() >= maxScale"
+        >
           <span nz-icon nzType="zoom-in"></span>
         </button>
-      </nz-space>
+      </div>
     </div>
 
-    <!-- Sheet Tabs -->
-    <nz-tabs [nzSelectedIndex]="activeSheet()" (nzSelectedIndexChange)="onSheetChange($event)" nzSize="small" nzType="card">
-      <nz-tab *ngFor="let sheet of sheets(); let i = index" [nzTitle]="sheet.name">
-        <div class="table-container" [style.transform]="'scale(' + scale() + ')'" [style.transformOrigin]="'top left'">
-          <table class="excel-table" *ngIf="currentSheet()">
+    <!-- 工作表切换：仅作导航，表格统一渲染在下方，避免每个 tab 重复渲染 -->
+    <nz-tabs
+      class="excel-tabs"
+      nzSize="small"
+      nzType="card"
+      [nzSelectedIndex]="activeSheet()"
+      (nzSelectedIndexChange)="onSheetChange($event)"
+    >
+      @for (sheet of sheets(); track sheet.name) {
+        <nz-tab [nzTitle]="sheet.name"></nz-tab>
+      }
+    </nz-tabs>
+
+    <!-- 表格视口：自身滚动，表头/行号冻结 -->
+    <div class="excel-viewport" #viewport>
+      @if (currentSheet(); as cs) {
+        <div class="excel-sheet" [style.zoom]="scale() + ''">
+          <table class="excel-table">
             <thead>
               <tr>
-                <th class="row-number">#</th>
-                <th *ngFor="let ci of colIndices()" class="col-header">
-                  {{ getColName(ci) }}
-                </th>
+                <th class="corner"></th>
+                @for (ci of colIndices(); track ci) {
+                  <th class="col-header">{{ getColName(ci) }}</th>
+                }
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let row of currentSheet()!.rows; let ri = index">
-                <td class="row-number">{{ ri + 1 }}</td>
-                <td *ngFor="let cell of row; let ci = index"
-                    [class.header-cell]="ri === 0"
-                    [class.empty-cell]="!cell && cell !== 0">
-                  {{ cell }}
-                </td>
-              </tr>
+              @for (row of cs.rows; track $index; let ri = $index) {
+                <tr>
+                  <td class="row-number">{{ ri + 1 }}</td>
+                  @for (ci of colIndices(); track ci) {
+                    <td
+                      [class.header-cell]="ri === 0"
+                      [class.empty-cell]="isEmptyCell(row[ci])"
+                    >{{ row[ci] }}</td>
+                  }
+                </tr>
+              }
             </tbody>
           </table>
+
+          @if (cs.totalRows > cs.rows.length || cs.cols > colIndices().length) {
+            <div class="excel-truncated">
+              文件较大，仅预览前 {{ cs.rows.length }} 行 / {{ colIndices().length }} 列
+            </div>
+          }
         </div>
-      </nz-tab>
-    </nz-tabs>
-  </ng-container>
+      }
+    </div>
+  }
 </div>

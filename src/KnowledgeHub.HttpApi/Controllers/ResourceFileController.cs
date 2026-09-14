@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using KnowledgeHub.Permissions;
@@ -70,6 +71,7 @@ public class ResourceFileController : AbpControllerBase
     protected IConversionTaskQueue ConversionTaskQueue { get; }
     protected IOptions<OfficeConversionOptions> ConversionOptions { get; }
     protected IResourceThumbnailService ThumbnailService { get; }
+    protected IPdfPageRasterizer PdfPageRasterizer { get; }
     protected IRepository<ResourceMediaJob, Guid> MediaJobRepository { get; }
     protected IRepository<ResourceArtifact, Guid> ArtifactRepository { get; }
     protected IMemoryCache MemoryCache { get; }
@@ -83,6 +85,7 @@ public class ResourceFileController : AbpControllerBase
         IConversionTaskQueue conversionTaskQueue,
         IOptions<OfficeConversionOptions> conversionOptions,
         IResourceThumbnailService thumbnailService,
+        IPdfPageRasterizer pdfPageRasterizer,
         IRepository<ResourceMediaJob, Guid> mediaJobRepository,
         IRepository<ResourceArtifact, Guid> artifactRepository,
         IMemoryCache memoryCache)
@@ -95,6 +98,7 @@ public class ResourceFileController : AbpControllerBase
         ConversionTaskQueue = conversionTaskQueue;
         ConversionOptions = conversionOptions;
         ThumbnailService = thumbnailService;
+        PdfPageRasterizer = pdfPageRasterizer;
         MediaJobRepository = mediaJobRepository;
         ArtifactRepository = artifactRepository;
         MemoryCache = memoryCache;
@@ -323,8 +327,9 @@ public class ResourceFileController : AbpControllerBase
     }
 
     /// <summary>
-    /// 列表封面缩略图：图片缩放 / 视频抽帧为小尺寸 JPEG，磁盘缓存。
-    /// 不支持的类型返回 404，前端回退到原图/图标。
+    /// 资源封面缩略图：优先使用媒体流水线生成物；文档（PDF/Office）按请求宽度
+    /// 从预览 PDF 首页光栅化（磁盘缓存）；图片/视频用 ffmpeg 缩放/抽帧。
+    /// 传入较大的 w（如详情页 800）可得到高分屏清晰封面，不支持的类型返回 404。
     /// </summary>
     [HttpGet("{resourceId}/thumbnail")]
     [AllowAnonymous]
@@ -342,8 +347,20 @@ public class ResourceFileController : AbpControllerBase
             }
         }
 
-        // 2) 兜底：历史数据按需生成（不登记录入 artifact）
         var fullPath = await GetResourceFullPathAsync(resourceId);
+
+        // 2) 文档（PDF/Office）：按请求宽度光栅化预览 PDF 首页并磁盘缓存，
+        //    使详情页等大尺寸展示也能拿到清晰封面（不再固定 400px）。
+        var docThumb = fullPath != null
+            ? await TryGetDocumentThumbnailAsync(resourceId, fullPath, w, HttpContext.RequestAborted)
+            : null;
+        if (docThumb != null)
+        {
+            Response.Headers.CacheControl = "private, max-age=86400";
+            return PhysicalFile(docThumb, "image/jpeg");
+        }
+
+        // 3) 图片/视频：历史数据按需生成（不登记录入 artifact）
         if (fullPath == null)
             return NotFound(new { message = "资源文件不存在" });
 
@@ -354,6 +371,49 @@ public class ResourceFileController : AbpControllerBase
 
         Response.Headers.CacheControl = "private, max-age=86400";
         return PhysicalFile(thumbPath, "image/jpeg");
+    }
+
+    /// <summary>
+    /// 文档封面：源文件是 PDF 时直接光栅化；Office 则复用媒体流水线生成的
+    /// PreviewPdf 首页图。按 width 生成缓存文件（pdftoppm 命中已存在文件时直接复用）。
+    /// </summary>
+    private async Task<string?> TryGetDocumentThumbnailAsync(
+        Guid resourceId, string sourceFullPath, int width, CancellationToken ct)
+    {
+        width = Math.Clamp(width, 64, 1600);
+
+        string? pdfPath = null;
+        if (string.Equals(Path.GetExtension(sourceFullPath), ".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            pdfPath = sourceFullPath;
+        }
+        else
+        {
+            ResourceArtifact? preview = null;
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var list = await ArtifactRepository.GetListAsync(x =>
+                    x.ResourceId == resourceId &&
+                    x.Kind == ResourceArtifactKind.PreviewPdf &&
+                    x.State == ResourceArtifactState.Ready);
+                preview = list.OrderByDescending(x => x.GeneratedAt).FirstOrDefault();
+            }
+            if (preview != null)
+            {
+                var candidate = Path.Combine(FileStorageService.RootPath, preview.FilePath);
+                if (System.IO.File.Exists(candidate))
+                {
+                    pdfPath = candidate;
+                }
+            }
+        }
+
+        if (pdfPath == null)
+            return null;
+
+        var outPath = Path.Combine(
+            FileStorageService.RootPath, "thumbnails", $"{resourceId}_{width}.jpg");
+        return await PdfPageRasterizer.RasterizeFirstPageAsync(pdfPath, outPath, width, ct);
     }
 
     private async Task<ResourceArtifact?> FindReadyThumbnailAsync(Guid resourceId, int width)

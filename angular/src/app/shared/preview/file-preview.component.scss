@@ -361,64 +361,6 @@
 }
 
 // ============================================
-// Excel Viewer
-// ============================================
-.excel-viewer {
-  display: flex;
-  flex-direction: column;
-
-  .table-container {
-    overflow: auto;
-    max-height: calc(90vh - 320px);
-  }
-
-  .excel-table {
-    border-collapse: collapse;
-    font-size: 12px;
-    min-width: 100%;
-
-    th, td {
-      border: 1px solid #e8e8e8;
-      padding: 4px 8px;
-      white-space: nowrap;
-      max-width: 300px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .row-number {
-      background: #fafafa;
-      color: #999;
-      text-align: center;
-      width: 40px;
-      min-width: 40px;
-      font-size: 11px;
-    }
-
-    .col-header {
-      background: #fafafa;
-      color: #666;
-      text-align: center;
-      font-weight: 600;
-    }
-
-    .header-cell {
-      background: #f0f7ff;
-      font-weight: 600;
-      color: #333;
-    }
-
-    .empty-cell {
-      background: #fafafa;
-    }
-
-    tbody tr:hover {
-      background: #e6f7ff;
-    }
-  }
-}
-
-// ============================================
 // Media Viewer
 // ============================================
 .media-viewer {

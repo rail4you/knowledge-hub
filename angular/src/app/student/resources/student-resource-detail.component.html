@@ -57,6 +57,7 @@
             [fileName]="res.originalFileName || res.name || ''"
             [alt]="res.name || ''"
             [mediaStatus]="res.mediaStatus ?? 0"
+            [width]="800"
           >
           </app-resource-cover>
           <span class="detail-media__type">{{ getResourceTypeName(res.resourceType) }}</span>

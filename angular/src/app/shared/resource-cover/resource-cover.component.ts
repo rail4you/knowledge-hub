@@ -43,6 +43,8 @@ export class ResourceCoverComponent {
   readonly alt = input('');
   /** 资源媒体处理状态（ResourceMediaStatus），Processing 时展示"生成中"提示且不请求缩略图 */
   readonly mediaStatus = input<number>(0);
+  /** 缩略图目标宽度（px）：列表卡片用 400，详情页大图用 800+ 以获得高分屏清晰封面 */
+  readonly width = input<number>(400);
 
   /** 是否正在生成缩略图/预览 */
   readonly mediaProcessing = computed(() => this.mediaStatus() === ResourceMediaStatus.Processing);
@@ -81,7 +83,7 @@ export class ResourceCoverComponent {
 
   /** 服务端生成的缩略图，列表封面优先使用，避免下载原文件 */
   readonly thumbnailUrl = computed(() =>
-    this.resourceId() ? `/api/resource-file/${this.resourceId()}/thumbnail?w=400` : ''
+    this.resourceId() ? `/api/resource-file/${this.resourceId()}/thumbnail?w=${this.width()}` : ''
   );
 
   constructor() {
@@ -92,6 +94,7 @@ export class ResourceCoverComponent {
       const rid = this.resourceId();
       this.resourceType();
       this.fileName();
+      this.width();
       this.failed.set(false);
       this.thumbFailed.set(false);
       this.loadMedia.set(false);
