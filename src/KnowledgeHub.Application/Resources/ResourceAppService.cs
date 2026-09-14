@@ -403,45 +403,50 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             }
         }
 
-        // 总数 = 本租户资源 + 跨租户共享资源
+        // 总数口径（与工作台「资源总数」统一）= 本租户自有 + 共享进来 + 共享出去。
+        // 共享出去的资源本身也是自有，会重复计入一次（产品确认按“资源—租户关系条目”统计）。
         var ownCount = await AsyncExecuter.CountAsync(ownQuery);
-        var totalCount = ownCount + sharedResources.Count;
-
-        // 本租户分页
-        ownQuery = ownQuery.OrderByDescending(x => x.CreationTime);
-        if (sharedResources.Count == 0)
+        var outgoingCount = 0;
+        if (CurrentTenant.Id.HasValue)
         {
-            // 仅本租户：按 skip/take 正常分页
-            ownQuery = ownQuery.Skip(input.SkipCount).Take(input.MaxResultCount);
-        }
-        else
-        {
-            // 跨租户拼接：先取本租户前 N 条，N = max(0, MaxResultCount - 共享数)
-            // 共享资源全部带回（本租户资源页内最多 MaxResultCount 条，总数仍为 ownCount + sharedCount）
-            var remainForOwn = Math.Max(0, input.MaxResultCount - sharedResources.Count);
-            if (remainForOwn > 0)
+            var currentTenantId = CurrentTenant.Id.Value;
+            using (DataFilter.Disable<IMultiTenant>())
             {
-                // 本租户资源 skipCount 减去已返回的共享数（若 skipCount 小于 sharedCount，本页全为共享资源）
-                if (input.SkipCount >= sharedResources.Count)
-                {
-                    ownQuery = ownQuery.Skip(input.SkipCount - sharedResources.Count).Take(remainForOwn);
-                }
-                else
-                {
-                    ownQuery = ownQuery.Take(remainForOwn);
-                }
+                var outgoingQuery = await ShareRepository.GetQueryableAsync();
+                outgoingCount = await AsyncExecuter.CountAsync(
+                    outgoingQuery.Where(s => s.SourceTenantId == currentTenantId));
+            }
+        }
+        var totalCount = ownCount + sharedResources.Count + outgoingCount;
+
+        // 合并分页：共享资源整体排在本租户资源前面，按 skip/take 对合并后的序列切片，
+        // 避免共享资源在每一页都被重复返回。
+        var sharedCount = sharedResources.Count;
+        var orderedOwn = ownQuery.OrderByDescending(x => x.CreationTime);
+        var pageShared = new List<Resource>();
+        var ownSkip = input.SkipCount;
+        var ownTake = input.MaxResultCount;
+        if (sharedCount > 0)
+        {
+            if (input.SkipCount < sharedCount)
+            {
+                pageShared = sharedResources.Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
+                ownTake = Math.Max(0, input.MaxResultCount - pageShared.Count);
+                ownSkip = 0;
             }
             else
             {
-                // 共享资源已超过一页容量，不取本租户
-                ownQuery = ownQuery.Take(0);
+                ownSkip = input.SkipCount - sharedCount;
             }
         }
-        var ownPageResources = await AsyncExecuter.ToListAsync(ownQuery);
 
-        // 合并：本租户 + 共享。共享资源放前面（共享时间最新优先）
-        var combined = new List<Resource>(ownPageResources.Count + sharedResources.Count);
-        combined.AddRange(sharedResources);
+        var ownPageResources = ownTake > 0
+            ? await AsyncExecuter.ToListAsync(orderedOwn.Skip(ownSkip).Take(ownTake))
+            : new List<Resource>();
+
+        // 合并：本租户 + 共享。共享资源放前面
+        var combined = new List<Resource>(pageShared.Count + ownPageResources.Count);
+        combined.AddRange(pageShared);
         combined.AddRange(ownPageResources);
 
         var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(combined);

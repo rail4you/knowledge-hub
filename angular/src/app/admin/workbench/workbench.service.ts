@@ -3,7 +3,14 @@ import { Observable } from 'rxjs';
 import { RestService } from '@abp/ng.core';
 
 export interface WorkbenchResourceStats {
+  /** 资源总数 = 自有 + 共享进来 + 共享出去（与资源列表「共 N 条」口径一致） */
   total: number;
+  /** 本租户自有资源数 */
+  own: number;
+  /** 其它租户共享给本租户的资源数 */
+  sharedIncoming: number;
+  /** 本租户共享给其它租户的资源数 */
+  sharedOutgoing: number;
   draft: number;
   pendingReview: number;
   approved: number;

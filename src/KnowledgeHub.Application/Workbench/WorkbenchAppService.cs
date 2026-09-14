@@ -63,6 +63,7 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
     private readonly IRepository<NewsArticle, Guid> _newsRepository;
     private readonly IRepository<KnowledgeHub.Domain.Search.SearchQuery, Guid> _searchQueryRepository;
     private readonly IRepository<KnowledgeHub.Domain.Search.ResourceViewLog, Guid> _resourceViewLogRepository;
+    private readonly IResourceShareRepository _resourceShareRepository;
     private readonly ITenantRepository _tenantRepository;
     private readonly IDataFilter _dataFilter;
 
@@ -89,6 +90,7 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         IRepository<NewsArticle, Guid> newsRepository,
         IRepository<KnowledgeHub.Domain.Search.SearchQuery, Guid> searchQueryRepository,
         IRepository<KnowledgeHub.Domain.Search.ResourceViewLog, Guid> resourceViewLogRepository,
+        IResourceShareRepository resourceShareRepository,
         ITenantRepository tenantRepository,
         IDataFilter dataFilter)
     {
@@ -114,6 +116,7 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
         _newsRepository = newsRepository;
         _searchQueryRepository = searchQueryRepository;
         _resourceViewLogRepository = resourceViewLogRepository;
+        _resourceShareRepository = resourceShareRepository;
         _tenantRepository = tenantRepository;
         _dataFilter = dataFilter;
     }
@@ -162,9 +165,29 @@ public class WorkbenchAppService : KnowledgeHubAppService, IWorkbenchAppService
             categoryQuery = categoryQuery.Where(x => x.TenantId == tenantId.Value);
         }
 
+        // 共享资源口径：与资源列表 GetFilteredListAsync 保持一致。
+        // 总数 = 自有 + 共享进来 + 共享出去（共享出去的资源本身也是自有，会重复计入一次，
+        // 产品确认按“资源—租户关系条目”统计）。
+        // 仅租户范围有意义；host「全部租户」不叠加共享数。
+        long sharedIncoming = 0;
+        long sharedOutgoing = 0;
+        if (tenantId.HasValue)
+        {
+            var shareQuery = await _resourceShareRepository.GetQueryableAsync();
+            sharedIncoming = await AsyncExecuter.CountAsync(
+                shareQuery.Where(s => s.TargetTenantId == tenantId.Value));
+            sharedOutgoing = await AsyncExecuter.CountAsync(
+                shareQuery.Where(s => s.SourceTenantId == tenantId.Value));
+        }
+
+        var own = await query.LongCountAsync();
+
         return new WorkbenchResourceStatsDto
         {
-            Total = await query.LongCountAsync(),
+            Own = own,
+            SharedIncoming = sharedIncoming,
+            SharedOutgoing = sharedOutgoing,
+            Total = own + sharedIncoming + sharedOutgoing,
             Draft = await query.LongCountAsync(x => x.Status == ResourceStatus.Draft),
             PendingReview = await query.LongCountAsync(x => x.Status == ResourceStatus.PendingReview),
             Approved = await query.LongCountAsync(x =>

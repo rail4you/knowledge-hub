@@ -87,7 +87,22 @@ public class WorkbenchDailyUsageDto : WorkbenchUsageDto
 /// <summary>资源管理统计。</summary>
 public class WorkbenchResourceStatsDto
 {
+    /// <summary>
+    /// 资源总数 = 自有 + 共享进来 + 共享出去，与资源列表「共 N 条」口径一致。
+    /// 说明：共享出去的资源本身也是自有资源，因此这里会重复计入一次
+    /// （产品确认按“资源—租户关系条目”统计，而非去重后的资源数）。
+    /// </summary>
     public long Total { get; set; }
+
+    /// <summary>本租户自有资源数（TenantId = 当前范围）。</summary>
+    public long Own { get; set; }
+
+    /// <summary>其它租户共享给本租户的资源数（共享记录数）。</summary>
+    public long SharedIncoming { get; set; }
+
+    /// <summary>本租户共享给其它租户的资源数（共享记录数）。</summary>
+    public long SharedOutgoing { get; set; }
+
     public long Draft { get; set; }
     public long PendingReview { get; set; }
 
