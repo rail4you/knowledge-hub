@@ -324,7 +324,9 @@ export class StudentGuidanceComponent implements OnInit, OnDestroy {
       .subscribe({
         next: full => {
           this.savingTaskIds.delete(task.id);
-          if (full.resultJson) this.ensureSaved({ ...task, resultJson: full.resultJson });
+          // 列表/通知接口不返回 inputJson/resultJson，此处用详情补齐两者，
+          // 避免后续 extractCareerGoal 因 inputJson 缺失导致职业目标未写入记录。
+          if (full.resultJson) this.ensureSaved({ ...task, resultJson: full.resultJson, inputJson: full.inputJson });
         },
         error: () => this.savingTaskIds.delete(task.id),
       });
