@@ -97,6 +97,14 @@ public class ResourceMediaProcessingJob : ITransientDependency
 
                 await UpdateJobAsync(jobId, j =>
                 {
+                    // 处理器可能按 Resource.FilePath 解析出比入队时更新的版本，
+                    // 回写以保证任务页展示的产物与该版本一致。
+                    if (outcome.ResourceVersionId.HasValue &&
+                        outcome.ResourceVersionId.Value != j.ResourceVersionId)
+                    {
+                        j.ResourceVersionId = outcome.ResourceVersionId;
+                    }
+
                     j.Status = outcome.Status switch
                     {
                         MediaProcessStatus.Completed => ResourceMediaJobStatus.Completed,

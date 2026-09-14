@@ -28,6 +28,9 @@ public enum MediaProcessStatus
 
 public sealed record MediaProcessOutcome(MediaProcessStatus Status, string? Error)
 {
+    /// <summary>本次实际处理的版本 Id（用于回写任务，保证产物与任务指向一致）。</summary>
+    public Guid? ResourceVersionId { get; init; }
+
     public static readonly MediaProcessOutcome Ok = new(MediaProcessStatus.Completed, null);
     public static MediaProcessOutcome Partial(string error) => new(MediaProcessStatus.PartialFailed, error);
     public static MediaProcessOutcome Fail(string error) => new(MediaProcessStatus.Failed, error);
@@ -117,13 +120,13 @@ public class ResourceMediaProcessor : ITransientDependency
                 // 配置了文件路径但磁盘文件缺失：标记失败，避免"处理完成却无生成物"的假成功
                 resource.MediaStatus = ResourceMediaStatus.Failed;
                 await _resourceRepository.UpdateAsync(resource);
-                return MediaProcessOutcome.Fail("源文件不存在");
+                return MediaProcessOutcome.Fail("源文件不存在") with { ResourceVersionId = version?.Id };
             }
 
             // 无源文件（仅正文等），无需媒体处理
             resource.MediaStatus = ResourceMediaStatus.Ready;
             await _resourceRepository.UpdateAsync(resource);
-            return MediaProcessOutcome.Ok;
+            return MediaProcessOutcome.Ok with { ResourceVersionId = version?.Id };
         }
 
         var ext = Path.GetExtension(fullPath);
@@ -207,7 +210,7 @@ public class ResourceMediaProcessor : ITransientDependency
         }
 
         await _resourceRepository.UpdateAsync(resource);
-        return outcome;
+        return outcome with { ResourceVersionId = version?.Id };
     }
 
     private async Task GenerateFfmpegThumbnailAsync(
