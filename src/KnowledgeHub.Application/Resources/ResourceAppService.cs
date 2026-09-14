@@ -406,21 +406,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             }
         }
 
-        // 总数口径（与工作台「资源总数」统一）= 本租户自有 + 共享进来 + 共享出去。
-        // 共享出去的资源本身也是自有，会重复计入一次（产品确认按“资源—租户关系条目”统计）。
+        // 列表总数 = 实际可翻页的条目数（本租户自有 + 共享进来）。
+        // 共享出去的资源本身已包含在自有里，不能再重复计入：否则 totalCount 会大于
+        // 实际返回的条目数，翻到最后一页就是空页（表现为“该租户下暂无资源”）。
+        // 工作台「资源总数」是按“资源—租户关系条目”口径单独统计的（见 WorkbenchAppService）。
         var ownCount = await AsyncExecuter.CountAsync(ownQuery);
-        var outgoingCount = 0;
-        if (CurrentTenant.Id.HasValue)
-        {
-            var currentTenantId = CurrentTenant.Id.Value;
-            using (DataFilter.Disable<IMultiTenant>())
-            {
-                var outgoingQuery = await ShareRepository.GetQueryableAsync();
-                outgoingCount = await AsyncExecuter.CountAsync(
-                    outgoingQuery.Where(s => s.SourceTenantId == currentTenantId));
-            }
-        }
-        var totalCount = ownCount + sharedResources.Count + outgoingCount;
+        var totalCount = ownCount + sharedResources.Count;
 
         // 合并分页：共享资源整体排在本租户资源前面，按 skip/take 对合并后的序列切片，
         // 避免共享资源在每一页都被重复返回。

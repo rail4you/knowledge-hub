@@ -492,13 +492,22 @@ public class MeiliSearchService : IMeiliSearchService
         // DbContext / ABP UoW，并行会触发 “A second operation was started on this
         // context instance” 与 “This unit of work already contains a database API”
         // 导致搜索结果随机 500。
-        var (docItems, docTotal) = await ExecuteSingleIndexSearchAsync(IndexName, query, applyDocumentFilters: true, hybrid: false);
-        var (vidItems, vidTotal) = await ExecuteSingleIndexSearchAsync(VideoIndexName, query, applyDocumentFilters: false, hybrid: false);
+        // 合并分页：各索引先取到「全局 skip + limit」条，合并排序后再统一 skip/take。
+        // 若像以前那样把 offset 直接下发给两个索引，当 skip 超过单个索引的总数时
+        // 该索引返回空，合并后整页为空（与资源列表“翻页后暂无数据”同类问题）。
+        var globalSkip = Math.Max(query.SkipCount, 0);
+        var globalTake = Math.Max(query.MaxResultCount, 0);
+        var fetchTake = Math.Min(globalSkip + globalTake, 1000);
+        var fetchQuery = WithPaging(query, 0, Math.Max(fetchTake, globalTake));
 
-        // 按 RelevanceScore 合并取 top N
+        var (docItems, docTotal) = await ExecuteSingleIndexSearchAsync(IndexName, fetchQuery, applyDocumentFilters: true, hybrid: false);
+        var (vidItems, vidTotal) = await ExecuteSingleIndexSearchAsync(VideoIndexName, fetchQuery, applyDocumentFilters: false, hybrid: false);
+
+        // 按 RelevanceScore 合并后做全局分页
         var merged = docItems.Concat(vidItems)
             .OrderByDescending(x => x.RelevanceScore)
-            .Take(Math.Max(query.MaxResultCount, 0))
+            .Skip(globalSkip)
+            .Take(globalTake)
             .ToList();
 
         return new SearchResultDto
@@ -531,17 +540,20 @@ public class MeiliSearchService : IMeiliSearchService
             };
         }
 
-        var docTask = ExecuteSingleIndexSearchAsync(IndexName, query, applyDocumentFilters: true, hybrid: false);
-        var vidTask = ExecuteSingleIndexSearchAsync(VideoIndexName, query, applyDocumentFilters: false, hybrid: false);
+        // 同 SearchAsync：各索引取 offset+limit 条后合并，再做全局 skip/take，
+        // 避免单索引 offset 造成的空页；串行执行以避免共享 DbContext 并发 500。
+        var globalSkip = Math.Max(query.SkipCount, 0);
+        var globalTake = Math.Max(query.MaxResultCount, 0);
+        var fetchTake = Math.Min(globalSkip + globalTake, 1000);
+        var fetchQuery = WithPaging(query, 0, Math.Max(fetchTake, globalTake));
 
-        await Task.WhenAll(docTask, vidTask);
-
-        var (docItems, docTotal) = docTask.Result;
-        var (vidItems, vidTotal) = vidTask.Result;
+        var (docItems, docTotal) = await ExecuteSingleIndexSearchAsync(IndexName, fetchQuery, applyDocumentFilters: true, hybrid: false);
+        var (vidItems, vidTotal) = await ExecuteSingleIndexSearchAsync(VideoIndexName, fetchQuery, applyDocumentFilters: false, hybrid: false);
 
         var merged = docItems.Concat(vidItems)
             .OrderByDescending(x => x.RelevanceScore)
-            .Take(Math.Max(query.MaxResultCount, 0))
+            .Skip(globalSkip)
+            .Take(globalTake)
             .ToList();
 
         return new SearchResultDto
@@ -552,6 +564,25 @@ public class MeiliSearchService : IMeiliSearchService
             Facets = new Dictionary<string, Dictionary<string, long>>()
         };
     }
+
+    /// <summary>
+    /// 复制查询并替换分页参数，用于合并双索引时把 offset 收敛为 0、一次性取足够多的结果，
+    /// 再在内存里对合并序列做全局 skip/take（避免单索引 offset 导致的空页/错位）。
+    /// </summary>
+    private static SearchQueryDto WithPaging(SearchQueryDto query, int skipCount, int maxResultCount) => new()
+    {
+        Query = query.Query,
+        FileExtensions = query.FileExtensions,
+        CategoryId = query.CategoryId,
+        StartDate = query.StartDate,
+        EndDate = query.EndDate,
+        SkipCount = skipCount,
+        MaxResultCount = maxResultCount,
+        Sorting = query.Sorting,
+        IndexName = query.IndexName,
+        StatusFilter = query.StatusFilter,
+        ResourceId = query.ResourceId,
+    };
 
     /// <summary>
     /// 在指定 Meilisearch 索引上执行一次搜索，返回 (items, total)。
