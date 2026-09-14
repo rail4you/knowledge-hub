@@ -178,16 +178,30 @@
 >
   <ng-container *nzModalContent>
     <div class="video-player-wrap">
-      <video
-        #videoPlayer
-        controls
-        preload="metadata"
-        playsinline
-        [src]="currentVideoUrl()"
-        style="width: 100%; max-height: 60vh; background: #000; border-radius: 8px;"
-        (loadedmetadata)="onVideoMetadataLoaded(videoPlayer)"
-        (error)="onVideoError()"
-      ></video>
+      @if (!videoPlaybackError()) {
+        <div class="video-stage">
+          <video
+            #videoPlayer
+            controls
+            preload="auto"
+            playsinline
+            [src]="currentVideoUrl()"
+            (loadedmetadata)="onVideoMetadataLoaded(videoPlayer)"
+            (loadeddata)="onVideoReady()"
+            (canplay)="onVideoReady()"
+            (waiting)="onVideoWaiting()"
+            (stalled)="onVideoWaiting()"
+            (playing)="onVideoPlaying()"
+            (error)="onVideoError()"
+          ></video>
+          @if (videoLoading()) {
+            <div class="video-loading">
+              <nz-spin nzSimple nzSize="large"></nz-spin>
+              <p>视频加载中，请稍候...</p>
+            </div>
+          }
+        </div>
+      }
       @if (videoPlaybackError()) {
         <div class="video-fallback">
           该视频暂不支持在线播放（可能是浏览器不支持的编码），可返回资源页下载后用本地播放器打开。

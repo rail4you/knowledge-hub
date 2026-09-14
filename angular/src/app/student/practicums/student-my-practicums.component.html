@@ -90,7 +90,7 @@
     (nzOnCancel)="guidanceVisible.set(false)"
     [nzTitle]="guidanceTitle"
     [nzFooter]="null"
-    nzWidth="640"
+    [nzWidth]="640"
     nzMaskClosable="true"
   >
     <ng-container *nzModalContent>
@@ -124,7 +124,7 @@
     (nzOnCancel)="timelineVisible.set(false)"
     [nzTitle]="timelineTitle"
     [nzFooter]="null"
-    nzWidth="760"
+    [nzWidth]="760"
     nzMaskClosable="true"
   >
     <ng-container *nzModalContent>

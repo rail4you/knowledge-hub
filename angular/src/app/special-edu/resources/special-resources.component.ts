@@ -152,7 +152,6 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
         } @else {
           @for (c of r.content; track c) { <p>• {{ c }}</p> }
         }
-        <button nz-button (click)="exportDocx()">导出 Word</button>
       }
     </nz-spin>
     <div class="modal-foot">
@@ -171,7 +170,7 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
   </nz-modal>
 
   <!-- 查看 -->
-  <nz-modal [(nzVisible)]="viewVisible" [nzTitle]="viewTarget?.title || '查看资源'" nzWidth="900" (nzOnCancel)="viewVisible = false" [nzFooter]="null">
+  <nz-modal [(nzVisible)]="viewVisible" [nzTitle]="viewTarget?.title || '查看资源'" [nzWidth]="900" [nzBodyStyle]="{ minHeight: '360px' }" (nzOnCancel)="viewVisible = false" [nzFooter]="null">
     <ng-container *nzModalContent>
     <p style="color:#888">{{ viewTarget?.modalityName }} · {{ viewTarget?.categoryName }} · {{ statusName(viewTarget?.status) }}</p>
     @if (viewPairs().length > 0) {
@@ -182,9 +181,6 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
       <p style="color:#999">暂无可展示内容（历史数据缺少正文，可删除后重新生成）。</p>
     }
     @if (viewTarget?.reviewComment) { <p style="color:#c00">审核意见：{{ viewTarget.reviewComment }}</p> }
-    <div style="margin-top:12px">
-      <button nz-button nzType="primary" (click)="openEdit(viewTarget)">编辑内容（当前 v{{ viewTarget?.versionNumber ?? 1 }}）</button>
-    </div>
 
     </ng-container>
   </nz-modal>
@@ -440,13 +436,6 @@ export class SpecialResourcesComponent {
       nzOnOk: () => this.http.delete(`/api/learning/special-edu/resources/${h.id}`)
         .subscribe({ next: () => { this.msg.success('已删除'); this.loadAll(); }, error: () => this.msg.error('删除失败') }),
     });
-  }
-
-  exportDocx(): void {
-    if (!this.rawJson()) return;
-    this.svc.downloadBlob('/api/learning/special-edu/export-resource-docx',
-      { title: '', category: this.input.category, modality: this.input.modality, resultJson: this.rawJson() },
-      `特教资源_${Date.now()}.docx`).catch(() => this.msg.error('导出失败'));
   }
 
   exportOne(h: any): void {

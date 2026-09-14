@@ -115,7 +115,6 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
         } @else {
           @for (c of r.content; track c) { <p>• {{ c }}</p> }
         }
-        <button nz-button (click)="exportDocx()">导出 Word</button>
       }
     </nz-spin>
     <div class="modal-foot">
@@ -133,17 +132,12 @@ import { ContentVersionFieldComponent } from '../content-version-field.component
     </ng-container>
   </nz-modal>
 
-  <nz-modal [(nzVisible)]="viewVisible" [nzTitle]="viewTitle" [nzFooter]="null" nzWidth="900" (nzOnCancel)="viewVisible = false">
+  <nz-modal [(nzVisible)]="viewVisible" [nzTitle]="viewTitle" [nzFooter]="null" [nzWidth]="900" [nzBodyStyle]="{ minHeight: '360px' }" (nzOnCancel)="viewVisible = false">
     <ng-container *nzModalContent>
     @if (viewPairs().length > 0) {
       <app-braille-viewer [pairs]="viewPairs()"></app-braille-viewer>
     } @else {
       <p style="color:#999">该资源暂无对照数据。</p>
-    }
-    @if (viewTarget) {
-      <div style="margin-top:12px">
-        <button nz-button nzType="primary" (click)="openEdit(viewTarget)">编辑内容（当前 v{{ viewTarget?.versionNumber ?? 1 }}）</button>
-      </div>
     }
     </ng-container>
   </nz-modal>
@@ -373,13 +367,6 @@ export class BrailleStudyComponent {
       },
       error: e => { this.editSaving.set(false); this.msg.error(e?.error?.message ?? '保存失败'); },
     });
-  }
-
-  exportDocx(): void {
-    if (!this.rawJson()) return;
-    this.svc.downloadBlob('/api/learning/special-edu/export-resource-docx',
-      { title: '', category: 2, modality: 'BrailleParallel', resultJson: this.rawJson() },
-      `盲文对照_${Date.now()}.docx`).catch(() => this.msg.error('导出失败'));
   }
 
   exportOne(h: any): void {

@@ -205,6 +205,8 @@ export class SearchComponent implements OnInit {
   currentVideoResourceId = signal('');
   /** 浏览器无法解码/加载视频时显示 fallback 提示 */
   videoPlaybackError = signal(false);
+  /** 大视频缓冲/加载中：显示"完整窗口 + loading"，就绪/播放后隐藏 */
+  videoLoading = signal(false);
 
   getIndexLabel(indexUid: string | null | undefined): string {
     // 'all' 是 UI 层的哨兵值，代表“全部索引”
@@ -403,6 +405,8 @@ export class SearchComponent implements OnInit {
     this.currentVideoEventDescription.set(result.eventDescription || '');
     this.currentVideoResourceId.set(resourceId);
     this.videoPlaybackError.set(false);
+    // 大视频 metadata/首帧未就绪前先显示"完整窗口 + loading"，避免部分窗口闪烁
+    this.videoLoading.set(true);
     this.isVideoModalOpen.set(true);
   }
 
@@ -411,10 +415,26 @@ export class SearchComponent implements OnInit {
     // 清空 src 让弹窗关闭后立即停播，避免后台继续播放声音
     this.currentVideoUrl.set('');
     this.videoPlaybackError.set(false);
+    this.videoLoading.set(false);
   }
 
   onVideoError() {
     this.videoPlaybackError.set(true);
+  }
+
+  /** 视频已缓冲到可播放的数据（loadeddata/canplay）→ 收起 loading */
+  onVideoReady() {
+    this.videoLoading.set(false);
+  }
+
+  /** 视频进入缓冲等待（waiting/stalled）→ 显示 loading，避免"一直卡着"没有反馈 */
+  onVideoWaiting() {
+    this.videoLoading.set(true);
+  }
+
+  /** 视频真正开始播放（playing）→ 收起 loading */
+  onVideoPlaying() {
+    this.videoLoading.set(false);
   }
 
   /** 从视频弹窗跳转到该资源的资源库详情 */
