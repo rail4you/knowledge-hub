@@ -779,12 +779,12 @@
   }
 }
 
-// 资源来源院校：标题右侧的图标（后端会给所有资源填充 sourceTenantName）
-.title-source-icon {
+// 来自其他院校的共享资源：标题右侧图标（仅当 resource.isShared=true 时显示）
+.title-shared-in-icon {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  color: #0ea5e9;
+  color: #10b981;
   cursor: help;
 
   span[nz-icon] {

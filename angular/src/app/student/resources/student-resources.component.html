@@ -283,13 +283,13 @@
 
                   <h3 class="resource-card__title" [title]="resource.name || ''">
                     <span class="resource-card__title-text">{{ resource.name }}</span>
-                    @if (getResourceSourceName(resource); as sourceName) {
+                    @if (resource.isShared) {
                       <span
-                        class="title-source-icon"
-                        [title]="'来源院校：' + sourceName"
-                        aria-label="来源院校"
+                        class="title-shared-in-icon"
+                        [title]="(resource.sourceTenantName ? '来自院校：' + resource.sourceTenantName : '来自其他院校')"
+                        aria-label="来自其他院校"
                       >
-                        <span nz-icon nzType="bank" nzTheme="outline"></span>
+                        <span nz-icon nzType="link" nzTheme="outline"></span>
                       </span>
                     }
                     @if (hasOutgoingShare(resource)) {
