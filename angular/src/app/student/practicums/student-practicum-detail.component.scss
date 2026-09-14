@@ -61,7 +61,6 @@
   &.is-active { color: ds.$student-primary; font-weight: 600;
     &::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: #2b6cd4; }
   }
-  &--action { margin-left: auto; }
 }
 .tab-item__count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #f0f4fa; color: ds.$student-text-light; font-size: 11px; font-weight: 600; }
 .tab-item.is-active .tab-item__count { background: #e9f0fa; color: ds.$student-primary; }

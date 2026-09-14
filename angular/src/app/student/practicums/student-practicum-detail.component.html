@@ -166,13 +166,13 @@
         }
         @if (enrollment(); as en) {
           <button class="tab-item" role="tab" [class.is-active]="activeTab() === 'guidance'" (click)="activeTab.set('guidance')">
-            <span nz-icon nzType="message" nzTheme="outline"></span><span>指导记录</span>
+            <span nz-icon nzType="solution" nzTheme="outline"></span><span>指导记录</span>
             <span class="tab-item__count">{{ guidanceItems().length }}</span>
           </button>
         }
         @if (d.isCurrentUserEnrolled) {
-          <button class="tab-item tab-item--action" (click)="openChat()">
-            <span nz-icon nzType="message" nzTheme="outline"></span><span>沟通</span>
+          <button class="tab-item tab-item--action" type="button" (click)="openChat()" title="进入沟通">
+            <span nz-icon nzType="comment" nzTheme="outline"></span><span>沟通</span>
           </button>
         }
       </nav>

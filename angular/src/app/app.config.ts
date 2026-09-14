@@ -139,6 +139,8 @@ import {
   HeartFill,
   StarFill,
   BellOutline,
+  // 学生端实训详情·沟通 tab 图标
+  CommentOutline,
 } from '@ant-design/icons-angular/icons';
 import { environment } from '../environments/environment';
 import { APP_ROUTES } from './app.routes';
@@ -278,6 +280,8 @@ const icons = [
   StarFill,
   // AI 任务通知铃铛
   BellOutline,
+  // 学生端实训详情·沟通 tab 图标
+  CommentOutline,
 ];
 
 export const appConfig: ApplicationConfig = {
