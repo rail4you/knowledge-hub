@@ -455,13 +455,12 @@ public class MeiliSearchService : IMeiliSearchService
         // 同时搜两个索引：documents（文档/PDF/PPT等） 和 videos（视频时间轴事件）。
         // 两套 schema 不同：videos 没有 status/fileExtension/categoryId，
         // 所以只在 documents 侧应用这些 filter；tenantId 两个索引都有，统一应用。
-        var docTask = ExecuteSingleIndexSearchAsync(IndexName, query, applyDocumentFilters: true, hybrid: false);
-        var vidTask = ExecuteSingleIndexSearchAsync(VideoIndexName, query, applyDocumentFilters: false, hybrid: false);
-
-        await Task.WhenAll(docTask, vidTask);
-
-        var (docItems, docTotal) = docTask.Result;
-        var (vidItems, vidTotal) = vidTask.Result;
+        // 串行执行两个索引的检索：FilterStaleResourceHitsAsync 会访问同一个作用域
+        // DbContext / ABP UoW，并行会触发 “A second operation was started on this
+        // context instance” 与 “This unit of work already contains a database API”
+        // 导致搜索结果随机 500。
+        var (docItems, docTotal) = await ExecuteSingleIndexSearchAsync(IndexName, query, applyDocumentFilters: true, hybrid: false);
+        var (vidItems, vidTotal) = await ExecuteSingleIndexSearchAsync(VideoIndexName, query, applyDocumentFilters: false, hybrid: false);
 
         // 按 RelevanceScore 合并取 top N
         var merged = docItems.Concat(vidItems)
@@ -557,6 +556,20 @@ public class MeiliSearchService : IMeiliSearchService
             filters.Add(!string.IsNullOrWhiteSpace(query.StatusFilter)
                 ? $"status IN [{query.StatusFilter}]"
                 : "status IN [0, 1, 2, 3]");
+        }
+        else
+        {
+            // videos 索引没有 uploadDate（资源创建日期），只有 indexedAt（写入索引的时间）。
+            // 时间过滤退化为按 indexedAt 近似过滤；结束日上界取次日零点，避免
+            // "2026-09-11T10:00:00Z" <= "2026-09-14" 这类字符串同日边界比较漏掉当天数据。
+            if (query.StartDate.HasValue)
+            {
+                filters.Add($"indexedAt >= \"{query.StartDate.Value:yyyy-MM-dd}\"");
+            }
+            if (query.EndDate.HasValue)
+            {
+                filters.Add($"indexedAt < \"{query.EndDate.Value.AddDays(1):yyyy-MM-dd}\"");
+            }
         }
 
         // 租户隔离：documents 与 videos 两个索引统一应用，严格只返回当前租户的资源。
