@@ -255,7 +255,13 @@
 .student-search__count {
   font-size: 14px;
   color: ds.$student-text-muted;
-  strong { color: ds.$student-primary; }
+  strong { color: ds.$student-primary; font-size: 16px; }
+}
+
+.student-search__hidden {
+  margin-left: 4px;
+  color: ds.$student-text-light;
+  font-size: 12.5px;
 }
 
 .student-search__ext {
@@ -282,6 +288,8 @@
   gap: 14px;
 }
 
+// 匹配类型相关：命中正文（content）= 默认蓝边卡片；命中文件名（name）= 暖色边；
+// 模糊匹配（fuzzy）= 极淡边框，避免太抢眼。
 .result-card {
   padding: 18px 20px;
   background: #fff;
@@ -294,6 +302,19 @@
     border-color: rgba(ds.$student-primary, 0.35);
     box-shadow: ds.$student-shadow-card;
     transform: translateY(-1px);
+  }
+
+  &.match-name {
+    border-color: rgba(ds.$student-accent, 0.45);
+
+    &:hover {
+      border-color: ds.$student-accent;
+    }
+  }
+
+  &.match-fuzzy {
+    border-color: ds.$student-border-soft;
+    background: linear-gradient(180deg, #fbfcfd 0%, #fff 100%);
   }
 }
 
@@ -327,6 +348,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  // 文件名命中：em 包裹的关键词高亮（与正文 mark 颜色一致）
+  ::ng-deep em {
+    background: #fff3a3;
+    color: #92400e;
+    font-style: normal;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
 }
 
 .result-card__page {
@@ -334,6 +365,38 @@
   background: ds.$student-surface-soft;
   border-color: ds.$student-border;
   color: ds.$student-text-muted;
+}
+
+// 匹配类型小标签：取代 nz-tag，与教师端风格一致（纯背景色 + 文字色）
+.result-card__match-tag {
+  font-size: 11.5px;
+  line-height: 20px;
+  padding: 0 8px;
+  flex-shrink: 0;
+  font-weight: 600;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  .result-card__match-icon {
+    font-size: 11px;
+  }
+
+  &.match-content {
+    background: #ecfdf3;
+    color: #15803d;
+  }
+
+  &.match-name {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  &.match-fuzzy {
+    background: ds.$student-surface-soft;
+    color: ds.$student-text-light;
+  }
 }
 
 .result-card__meta {
@@ -354,29 +417,106 @@
   text-transform: uppercase;
 }
 
-.result-card__actions {
-  display: flex;
-  gap: 4px;
-  margin-top: 8px;
-  padding-top: 2px;
+.result-card__body {
+  border-top: 1px solid ds.$student-border-soft;
+  padding-top: 10px;
+  margin-top: 2px;
 }
 
-.result-card__body {
+.result-card__preview {
+  margin: 0;
   font-size: 13px;
   color: ds.$student-text-muted;
   line-height: 1.7;
-  max-height: 120px;
+  max-height: 80px;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 
+  // 正文命中：mark 关键词高亮（Meili 高亮标签）
   ::ng-deep mark {
     background: #fff3a3;
     color: #92400e;
     padding: 0 2px;
     border-radius: 2px;
     font-weight: 600;
+  }
+
+  // 文件名/事件描述里若残留 em 包裹，做兼容处理（应被 stripUuids 清理掉 UUID，但 em 仍可能出现）
+  ::ng-deep em {
+    background: #fff3a3;
+    color: #92400e;
+    font-style: normal;
+    font-weight: 600;
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+}
+
+.result-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed ds.$student-border;
+}
+
+// 统一胶囊按钮样式：与教师端 enter-btn 风格一致，仅替换颜色为学生主题
+.result-card__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s,
+    transform 0.18s, box-shadow 0.18s;
+  background: rgba(ds.$student-primary, 0.08);
+  color: ds.$student-primary;
+  font-family: inherit;
+
+  span[nz-icon] {
+    font-size: 12px;
+    transition: transform 0.18s;
+  }
+
+  &:hover {
+    background: ds.$student-primary;
+    color: #fff;
+    border-color: ds.$student-primary;
+    box-shadow: 0 4px 10px rgba(ds.$student-primary, 0.25);
+
+    span[nz-icon] {
+      transform: translateX(2px);
+    }
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  // 幽灵样式：用于“返回资源”等次级操作
+  &--ghost {
+    background: transparent;
+    border-color: ds.$student-border;
+    color: ds.$student-text;
+
+    &:hover {
+      background: rgba(ds.$student-primary, 0.08);
+      border-color: ds.$student-primary;
+      color: ds.$student-primary;
+      box-shadow: none;
+
+      span[nz-icon] {
+        transform: translateX(0);
+      }
+    }
   }
 }
 

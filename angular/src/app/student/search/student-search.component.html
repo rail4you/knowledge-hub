@@ -84,7 +84,12 @@
             </div>
           } @else {
             <div class="student-search__toolbar">
-              <span class="student-search__count">找到 <strong>{{ totalCount() }}</strong> 条结果</span>
+              <span class="student-search__count">
+                找到 <strong>{{ renderedResults().length }}</strong> 个结果
+                @if (hiddenCount() > 0) {
+                  <span class="student-search__hidden">（已折叠 {{ hiddenCount() }} 条同名匹配）</span>
+                }
+              </span>
               <nz-divider nzType="vertical"></nz-divider>
               <div class="student-search__ext">
                 <span class="student-search__ext-label">类型：</span>
@@ -104,48 +109,82 @@
             </div>
 
             <div class="student-search__results">
-              @for (r of filteredResults(); track $index) {
-                <article class="result-card" (click)="viewDocument(r)">
+              @for (result of renderedResults(); track result.resourceId + '-' + result.pageNumber) {
+                <article
+                  class="result-card"
+                  [class.match-name]="result._match.type === 'name'"
+                  [class.match-fuzzy]="result._match.type === 'fuzzy'"
+                  (click)="viewDocument(result)"
+                >
                   <header class="result-card__head">
                     <div class="result-card__title">
-                      @if (isVideoResult(r)) {
+                      @if (isVideoResult(result)) {
                         <span nz-icon nzType="video-camera" class="result-card__icon"></span>
                       } @else {
-                        <span nz-icon [nzType]="getFileIcon(r.fileExtension)" class="result-card__icon"></span>
+                        <span nz-icon [nzType]="getFileIcon(result.fileExtension)" class="result-card__icon"></span>
                       }
-                      <span class="result-card__name">{{ r.resourceName }}</span>
-                      @if (isVideoResult(r)) {
-                        <nz-tag nzColor="purple" class="result-card__page">{{ $any(r).startTime || '' }}{{ $any(r).startTime && $any(r).endTime ? ' - ' : '' }}{{ $any(r).endTime || '' }}</nz-tag>
+                      <span class="result-card__name" [innerHTML]="result._match.highlightedName"></span>
+                      <span
+                        class="result-card__match-tag"
+                        [class.match-content]="result._match.type === 'content'"
+                        [class.match-name]="result._match.type === 'name'"
+                        [class.match-fuzzy]="result._match.type === 'fuzzy'"
+                      >
+                        <span nz-icon [nzType]="matchIcon(result._match.type)" class="result-card__match-icon"></span>
+                        {{ matchLabel(result._match.type) }}
+                      </span>
+                      @if (isVideoResult(result)) {
+                        <nz-tag nzColor="purple" class="result-card__page">
+                          {{ asVideoTime(result).startTime || '' }}
+                          {{ asVideoTime(result).startTime && asVideoTime(result).endTime ? ' - ' : '' }}
+                          {{ asVideoTime(result).endTime || '' }}
+                        </nz-tag>
                       } @else {
-                        <nz-tag class="result-card__page">第 {{ r.pageNumber }} 页</nz-tag>
+                        <nz-tag class="result-card__page">第 {{ result.pageNumber }} 页</nz-tag>
                       }
                     </div>
                     <div class="result-card__meta">
-                      @if (r.categoryName && !isCategoryId(r.categoryName)) {
-                        <nz-tag nzColor="blue">{{ r.categoryName }}</nz-tag>
+                      @if (result.categoryName && !isCategoryId(result.categoryName)) {
+                        <nz-tag nzColor="blue">{{ result.categoryName }}</nz-tag>
                       }
-                      <nz-tag [nzColor]="getScoreColor(r.relevanceScore)">
-                        相关度 {{ (r.relevanceScore * 100).toFixed(0) }}%
+                      <nz-tag [nzColor]="getScoreColor(result.relevanceScore)">
+                        相关度 {{ (result.relevanceScore * 100).toFixed(0) }}%
                       </nz-tag>
-                      @if (isVideoResult(r)) {
+                      @if (isVideoResult(result)) {
                         <span class="result-card__ext">视频</span>
                       } @else {
-                        <span class="result-card__ext">{{ r.fileExtension }}</span>
+                        <span class="result-card__ext">{{ result.fileExtension }}</span>
                       }
                     </div>
                   </header>
-                  <div class="result-card__body" [innerHTML]="$any(r).highlightedContent || $any(r).eventDescription || r.content"></div>
+
+                  <div class="result-card__body">
+                    <p class="result-card__preview" [innerHTML]="previewText(result)"></p>
+                  </div>
+
                   <div class="result-card__actions" (click)="$event.stopPropagation()">
-                    @if (isVideoResult(r)) {
-                      <button nz-button nzType="link" nzSize="small" (click)="viewDocument(r)">
+                    @if (isVideoResult(result)) {
+                      <button
+                        type="button"
+                        class="result-card__btn result-card__btn--primary"
+                        nz-tooltip="在弹窗中播放该片段"
+                        (click)="viewDocument(result)"
+                      >
                         <span nz-icon nzType="play-circle"></span>
-                        播放片段
+                        <span>播放片段</span>
                       </button>
                     }
-                    <button nz-button nzType="link" nzSize="small" (click)="goToResource(r, $event)">
-                      <span nz-icon nzType="rollback"></span>
-                      返回资源
-                    </button>
+                    @if (result.resourceId) {
+                      <button
+                        type="button"
+                        class="result-card__btn result-card__btn--ghost"
+                        nz-tooltip="查看该资源在资源库中的详情"
+                        (click)="goToResource(result, $event)"
+                      >
+                        <span nz-icon nzType="rollback"></span>
+                        <span>返回资源</span>
+                      </button>
+                    }
                   </div>
                 </article>
               }

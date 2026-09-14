@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, effect, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -13,9 +13,16 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { SearchService } from '../../proxy/application/search/search.service';
-import type { PopularSearchDto, DocumentSearchResultDto, SearchQueryDto } from '../../proxy/application/contracts/search/dtos/models';
-import { filterFuzzyFallback } from '../../search/search.util';
+import { type DocumentSearchResultDto, type SearchQueryDto } from '../../search/search.service';
+import type { PopularSearchDto } from '../../proxy/application/contracts/search/dtos/models';
+import {
+  stripUuids,
+  foldByResourceName,
+  getMatchInfo,
+  MatchType
+} from '../../search/search.util';
 
 /** 文件扩展名 -> 图标（模块级常量表，避免模板每次变更检测重新创建对象） */
 const FILE_ICONS: Record<string, string> = {
@@ -53,6 +60,7 @@ const FILE_ICONS: Record<string, string> = {
     NzPaginationModule,
     NzDividerModule,
     NzModalModule,
+    NzTooltipModule,
   ],
   templateUrl: './student-search.component.html',
   styleUrls: ['./student-search.component.scss'],
@@ -72,7 +80,7 @@ export class StudentSearchComponent implements OnInit {
   results = signal<DocumentSearchResultDto[]>([]);
   totalCount = signal(0);
   selectedFileExtension = signal('');
-  /** 索引选择：all=文档+视频合并，documents=仅文档，videos=仅视频。后端 IndexName 为空时合并双索引。 */
+  /** 索引选择：all=文档+视频合并，documents=仅文档，videos=仅视频。后端 IndexName 为空时合并双索引。默认 'all'。 */
   selectedIndex: 'all' | 'documents' | 'videos' = 'all';
 
   // 视频播放弹窗
@@ -100,15 +108,59 @@ export class StudentSearchComponent implements OnInit {
     return [...exts].sort();
   });
 
-  filteredResults = computed(() => {
-    const all = this.results();
+  /**
+   * 用于渲染的最终结果（与教师端保持一致）：
+   * 1. 按类型扩展名过滤
+   * 2. 按资源名折叠（同一资源只保留 pageNumber 最小的一条）
+   * 3. 给每条结果标注匹配类型（content / name / fuzzy）
+   * 4. 兜底：全是 fuzzy 时全部隐藏，避免弱相关结果淹没列表
+   */
+  renderedResults = computed(() => {
     const ext = this.selectedFileExtension();
+    const all = this.results();
     const extFiltered = !ext ? all : all.filter(r => r.fileExtension === ext);
-    // 与教师端保持一致的搜索行为：
-    //   - 没有正文 / 文件名命中时，隐藏所有 fuzzy（近似）结果
-    //   - 有正文 / 文件名命中时，fuzzy 作为陪衬保留
-    return filterFuzzyFallback(extFiltered, this.searchQuery);
+
+    const { folded } = foldByResourceName(extFiltered);
+    const q = this.searchQuery;
+
+    const annotated = folded.map(r => ({
+      ...r,
+      _match: getMatchInfo(r.resourceName, r.highlightedContent, r.eventDescription, q)
+    }));
+
+    const hasRealMatch = annotated.some(
+      r => r._match.type === 'content' || r._match.type === 'name'
+    );
+    return hasRealMatch ? annotated : annotated.filter(r => r._match.type !== 'fuzzy');
   });
+
+  /** 因同名而被折叠掉的条数（用于工具栏 "已折叠 X 条" 提示） */
+  hiddenCount = signal(0);
+
+  constructor() {
+    // 同步折叠数（不能放在 computed 里写 signal）
+    effect(() => {
+      const ext = this.selectedFileExtension();
+      const all = this.results();
+      const extFiltered = !ext ? all : all.filter(r => r.fileExtension === ext);
+      const { hiddenCount } = foldByResourceName(extFiltered);
+      this.hiddenCount.set(hiddenCount);
+    });
+  }
+
+  /** 匹配类型中文标签 */
+  matchLabel(type: MatchType): string {
+    if (type === 'content') return '正文命中';
+    if (type === 'name') return '文件名命中';
+    return '可能相关';
+  }
+
+  /** 匹配类型对应的图标 */
+  matchIcon(type: MatchType): string {
+    if (type === 'content') return 'highlight';
+    if (type === 'name') return 'file-text';
+    return 'question-circle';
+  }
 
   ngOnInit() {
     this.loadHotWords();
@@ -160,7 +212,7 @@ export class StudentSearchComponent implements OnInit {
       // 学生端仅搜索联盟审核通过的资源（与资源列表口径一致；documents 侧生效，videos 侧后端自动忽略）
       statusFilter: '3',
     };
-    // 选“全部”时不传 indexName，后端合并 documents + videos 双索引；
+    // 选"全部"时不传 indexName，后端合并 documents + videos 双索引；
     // 选文档/视频时只走单边。
     if (this.selectedIndex !== 'all') {
       input.indexName = this.selectedIndex;
@@ -168,7 +220,9 @@ export class StudentSearchComponent implements OnInit {
 
     this.searchService.search(input).subscribe({
       next: data => {
-        this.results.set(data.items ?? []);
+        // 后端 items 使用生成代理的可选字段类型，本组件内部的 renderedResults / foldByResourceName
+        // 要求 resourceId / pageNumber 为必填，这里按手写的 DTO 形状断言以满足类型检查。
+        this.results.set((data.items ?? []) as unknown as DocumentSearchResultDto[]);
         this.totalCount.set(data.totalCount ?? 0);
         this.loading.set(false);
       },
@@ -192,11 +246,13 @@ export class StudentSearchComponent implements OnInit {
   }
 
   viewDocument(result: DocumentSearchResultDto) {
+    // 视频：保留弹窗播放（学生端也支持在线预览片段）
     if (result.sourceType === 'video') {
       this.openVideoModal(result);
       return;
     }
 
+    // 文档：仅跳转资源详情页（学生端不做高亮搜索详情）
     this.goToResource(result);
   }
 
@@ -223,6 +279,24 @@ export class StudentSearchComponent implements OnInit {
 
   isVideoResult(result: DocumentSearchResultDto): boolean {
     return result.sourceType === 'video';
+  }
+
+  /**
+   * 获取卡片预览文本：优先 Meili 高亮，否则显示精简的正文片段。
+   * 高亮内容里可能含原始资源 ID（UUID），统一清理。
+   */
+  previewText(result: DocumentSearchResultDto): string {
+    const raw =
+      result.highlightedContent ||
+      result.eventDescription ||
+      this.truncateContent(result.content);
+    return stripUuids(raw);
+  }
+
+  private truncateContent(content: string | null | undefined, maxLen = 240): string {
+    if (!content) return '';
+    const clean = content.replace(/\s+/g, ' ').trim();
+    return clean.length > maxLen ? clean.slice(0, maxLen) + '…' : clean;
   }
 
   openVideoModal(result: DocumentSearchResultDto) {
@@ -312,5 +386,13 @@ export class StudentSearchComponent implements OnInit {
   isCategoryId(value: string | null | undefined): boolean {
     if (!value) return true;
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
+  }
+
+  /** 视频结果辅助：从任意带 _match 字段的结果上安全取出 startTime / endTime */
+  asVideoTime(result: DocumentSearchResultDto): { startTime?: string; endTime?: string } {
+    return {
+      startTime: (result as { startTime?: string }).startTime,
+      endTime: (result as { endTime?: string }).endTime,
+    };
   }
 }
