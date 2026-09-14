@@ -69,9 +69,11 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
     [Authorize(KnowledgeHubPermissions.TeachingAgents.Assign)]
     public async Task<TaskCreationOptionsDto> GetCreateOptionsAsync()
     {
-        // 跨租户可见性：
-        // - 当前租户的任意智能体（含 Private / School / Public）；
-        // - 跨租户标记为 Public 的智能体。
+        // 可用于分发的智能体：
+        // - 自己创建的（含 Private / School / Public）；
+        // - 同租户标记为 School（校内共享）的智能体；
+        // - 跨租户标记为 Public（全局公开）的智能体。
+        // 他人的 Private 不可见、不可用于分发。
         // 由于 TeachingAgent 实现 IMultiTenant，ABP 仓储默认按当前租户过滤，
         // 这里必须 DataFilter.Disable<IMultiTenant>() 后再手动加可见性条件。
         List<TeachingAgentVersion> publishedVersions;
@@ -88,8 +90,11 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
             var candidateAgents = await agentQuery.Where(x => candidateAgentIds.Contains(x.Id)).ToListAsync();
 
             var currentTenantId = CurrentTenant.Id;
+            var currentUserId = CurrentUser.GetId();
             var allowedAgentIds = candidateAgents
-                .Where(a => a.TenantId == currentTenantId || a.Visibility == TeachingAgentVisibility.Public)
+                .Where(a => a.OwnerUserId == currentUserId
+                            || (a.TenantId == currentTenantId && a.Visibility == TeachingAgentVisibility.School)
+                            || a.Visibility == TeachingAgentVisibility.Public)
                 .Select(a => a.Id)
                 .ToHashSet();
 
@@ -206,8 +211,15 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
         task.PublishStatus = ClassroomAgentTaskPublishStatus.Published;
         await _taskRepository.UpdateAsync(task, autoSave: true);
 
-        var agent = await _teachingAgentRepository.GetAsync(task.TeachingAgentId);
-        var version = await _versionRepository.GetAsync(task.TeachingAgentVersionId);
+        // 任务可能引用跨租户 Public agent（例如 qidi 老师用 guozhou 公开的智能体建任务），
+        // 加载 agent / version 时必须禁用多租户过滤，否则会抛 EntityNotFound。
+        TeachingAgent agent;
+        TeachingAgentVersion version;
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            agent = await _teachingAgentRepository.GetAsync(task.TeachingAgentId);
+            version = await _versionRepository.GetAsync(task.TeachingAgentVersionId);
+        }
         return await BuildTaskDtoAsync(task, agent, version);
     }
 
@@ -386,11 +398,17 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
 
     private async Task EnsureCanUseAgentAsync(TeachingAgent agent)
     {
-        // 跨租户引用智能体的可见性：
-        // - 当前租户的任意智能体都可以被当前租户用户使用；
-        // - 跨租户仅 Public 智能体可被当前租户引用；
-        // - 跨租户 School / Private 不可被引用，避免泄露。
-        if (agent.TenantId == CurrentTenant.Id)
+        // 可用于分发的智能体可见性（与 GetCreateOptionsAsync 保持一致）：
+        // - 自己创建的智能体；
+        // - 同租户标记为 School（校内共享）的智能体；
+        // - 跨租户标记为 Public（全局公开）的智能体。
+        // 他人的 Private / 跨租户的 School 均不可使用，避免越权泄露。
+        if (agent.OwnerUserId == CurrentUser.Id)
+        {
+            return;
+        }
+
+        if (agent.TenantId == CurrentTenant.Id && agent.Visibility == TeachingAgentVisibility.School)
         {
             return;
         }
@@ -400,7 +418,7 @@ public class ClassroomAgentTaskAppService : KnowledgeHubAppService, IClassroomAg
             return;
         }
 
-        throw new UserFriendlyException("该智能体不可跨租户使用。");
+        throw new UserFriendlyException("该智能体不可用于分发任务。");
     }
 
     private async Task<PagedResultDto<ClassroomAgentTaskDto>> BuildTeacherTaskResultAsync(List<ClassroomAgentTask> tasks, long totalCount)

@@ -155,9 +155,15 @@ export class TeachingAgentListComponent implements OnInit {
     return visibilityLabel(visibility);
   }
 
+  // 只有自己创建的智能体才能编辑、发布、下架、删除；
+  // 校内共享 / 全局公开的他人智能体只能用于分发任务。
+  canManage(agent: TeachingAgent): boolean {
+    return !!agent.ownerUserId && agent.ownerUserId === this.currentUserId;
+  }
+
   // 只能删除自己创建的智能体（owner == currentUser）
   canDelete(agent: TeachingAgent): boolean {
-    return !!agent.ownerUserId && agent.ownerUserId === this.currentUserId;
+    return this.canManage(agent);
   }
 
   // ─── Create modal ───

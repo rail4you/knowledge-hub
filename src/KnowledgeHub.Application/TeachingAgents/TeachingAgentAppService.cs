@@ -221,10 +221,11 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
         var currentUserId = CurrentUser.GetId();
         var currentTenantId = CurrentTenant.Id;
 
-        // 跨租户可见性：
+        // 可读可见性（管理员和老师一致）：
         // 1) 自己创建的智能体（任意租户）；
-        // 2) 同租户的全部智能体（同租户管理员和老师共享，无论可见性）；
-        // 3) 跨租户标记为 Public 的智能体（全局公开）。
+        // 2) 同租户标记为 School（校内共享）的智能体；
+        // 3) 标记为 Public（全局公开）的智能体，可跨租户查看。
+        // 他人的 Private（仅自己可见）不可见。
         //
         // TeachingAgent 实现 IMultiTenant，ABP 仓储默认按当前租户过滤，
         // 因此跨租户 Public 的智能体必须通过 DataFilter.Disable<IMultiTenant>() 后再手动加可见性条件。
@@ -233,7 +234,7 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
             var query = await _teachingAgentRepository.GetQueryableAsync();
             query = query.Where(x =>
                 x.OwnerUserId == currentUserId
-                || x.TenantId == currentTenantId
+                || (x.TenantId == currentTenantId && x.Visibility == TeachingAgentVisibility.School)
                 || x.Visibility == TeachingAgentVisibility.Public);
 
             query = query
@@ -325,23 +326,12 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
 
     private async Task EnsureCanManageAgentAsync(TeachingAgent agent)
     {
-        // 编辑权限：
-        // 1) 创建者本人（owner）始终可管理自己的智能体；
-        // 2) 同租户 Review 权限的管理员可管理同租户的智能体；
-        // 3) 跨租户 Public 智能体只能被源租户的 owner / Review 管理员管理，
-        //    避免 qidi 的管理员误改 guozhou 公开的智能体。
+        // 只能管理自己创建的智能体：
+        // 校内共享（School）和全局公开（Public）的智能体对其他人只能用于分发任务，
+        // 不允许编辑、发布/下架或删除。
         if (agent.OwnerUserId == CurrentUser.Id)
         {
             return;
-        }
-
-        if (agent.TenantId == CurrentTenant.Id)
-        {
-            var canReview = await AuthorizationService.IsGrantedAsync(KnowledgeHubPermissions.TeachingAgents.Review);
-            if (canReview)
-            {
-                return;
-            }
         }
 
         throw new AbpAuthorizationException("You are not allowed to manage this teaching agent.");
@@ -363,8 +353,8 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
             return true;
         }
 
-        // 同租户任意智能体都可见（同租户管理员和老师共享工作台）
-        if (agent.TenantId == CurrentTenant.Id)
+        // 同租户仅「校内共享」可见；他人的 Private（仅自己可见）不可见
+        if (agent.TenantId == CurrentTenant.Id && agent.Visibility == TeachingAgentVisibility.School)
         {
             return true;
         }

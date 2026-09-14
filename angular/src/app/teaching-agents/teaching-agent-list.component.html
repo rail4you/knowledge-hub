@@ -97,12 +97,14 @@
                 </td>
                 <td>
                   <div class="row-actions">
-                    <a nz-button nzType="link" nzSize="small" (click)="openEditModal(agent)">编辑</a>
-                    @if (agent.status !== 1) {
-                      <a nz-button nzType="link" nzSize="small" (click)="openPublishModal(agent)">发布</a>
-                    }
-                    @if (agent.status === 1) {
-                      <a nz-button nzType="link" nzSize="small" nzDanger (click)="unpublishAgent(agent)">下架</a>
+                    @if (canManage(agent)) {
+                      <a nz-button nzType="link" nzSize="small" (click)="openEditModal(agent)">编辑</a>
+                      @if (agent.status !== 1) {
+                        <a nz-button nzType="link" nzSize="small" (click)="openPublishModal(agent)">发布</a>
+                      }
+                      @if (agent.status === 1) {
+                        <a nz-button nzType="link" nzSize="small" nzDanger (click)="unpublishAgent(agent)">下架</a>
+                      }
                     }
                     <a nz-button nzType="link" nzSize="small" [routerLink]="['/teaching/agent-tasks']">分发任务</a>
                     @if (canDelete(agent)) {
