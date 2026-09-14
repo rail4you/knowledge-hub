@@ -27,8 +27,9 @@ public interface IUserImportAppService : IApplicationService
     Task<List<RolePermissionSummaryDto>> GetRolePermissionSummaryAsync();
 
     /// <summary>
-    /// 生成用户批量导入模板（xlsx）：单 Sheet，第 1 行标题、第 2 行说明、第 3 行表头、之后为示例行。
-    /// 必填列高亮；第 1 列 "角色类型" 用于区分不同角色用户的必填字段。
+    /// 生成用户批量导入模板（xlsx）：单 Sheet，第 1 行标题、第 2 行说明、第 3 行表头（附列批注），
+    /// 第 4 行起为数据区。
+    /// 必填列高亮；第 1 列 "角色类型" 用于区分不同角色用户的必填字段，并提供下拉列表选择。
     /// </summary>
     Task<IRemoteStreamContent> GetImportTemplateAsync();
 }

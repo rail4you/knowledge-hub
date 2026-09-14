@@ -64,7 +64,7 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         { UserRoleType.SchoolAdmin, new List<string> { "工号" } },
         { UserRoleType.Teacher, new List<string> { "工号", "所属院系/部门", "专业" } },
         { UserRoleType.Student, new List<string> { "学号", "年级", "班级", "专业" } },
-        { UserRoleType.EnterpriseUser, new List<string> { "邮箱", "企业名称", "统一社会信用代码", "职位/岗位" } },
+        { UserRoleType.EnterpriseUser, new List<string> { "邮箱", "企业名称", "职位/岗位" } },
     };
 
     /// <summary>
@@ -77,7 +77,7 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
     {
         "角色类型", "姓名", "登录账号", "初始密码", "手机号", "邮箱",
         "所属院校", "工号", "所属院系/部门", "专业", "所教课程", "职称",
-        "学号", "年级", "班级", "管理范围", "企业名称", "统一社会信用代码",
+        "学号", "年级", "班级", "管理范围", "企业名称",
         "职位/岗位", "行业", "合作学校", "备注", "租户名称"
     };
 
@@ -446,12 +446,11 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                 ClassName = row.Cell(15).GetString().Trim(),
                 ManagementScope = row.Cell(16).GetString().Trim(),
                 CompanyName = row.Cell(17).GetString().Trim(),
-                UnifiedSocialCreditCode = row.Cell(18).GetString().Trim(),
-                Position = row.Cell(19).GetString().Trim(),
-                Industry = row.Cell(20).GetString().Trim(),
-                PartnerSchool = row.Cell(21).GetString().Trim(),
-                Remark = row.Cell(22).GetString().Trim(),
-                TenantName = string.IsNullOrWhiteSpace(row.Cell(23).GetString()) ? null : row.Cell(23).GetString().Trim(),
+                Position = row.Cell(18).GetString().Trim(),
+                Industry = row.Cell(19).GetString().Trim(),
+                PartnerSchool = row.Cell(20).GetString().Trim(),
+                Remark = row.Cell(21).GetString().Trim(),
+                TenantName = string.IsNullOrWhiteSpace(row.Cell(22).GetString()) ? null : row.Cell(22).GetString().Trim(),
             };
 
             // 通用必填校验（跨所有角色）
@@ -591,7 +590,6 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
                 "班级" => dto.ClassName,
                 "邮箱" => dto.Email,
                 "企业名称" => dto.CompanyName,
-                "统一社会信用代码" => dto.UnifiedSocialCreditCode,
                 "职位/岗位" => dto.Position,
                 _ => null,
             };
@@ -921,7 +919,8 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
 
     /// <summary>
     /// 生成用户批量导入 Excel 模板：单 Sheet 包含全部角色类型，第 1 列"角色类型"区分必填项；
-    /// 第 1 行标题、第 2 行说明、第 3 行表头、之后为示例行；必填列高亮。
+    /// 第 1 行标题、第 2 行说明、第 3 行表头（附列批注），第 4 行起为数据区；
+    /// 必填列高亮、「角色类型」提供下拉列表。
     /// </summary>
     [Authorize(KnowledgeHubPermissions.Users.Import)]
     public Task<IRemoteStreamContent> GetImportTemplateAsync()
@@ -943,8 +942,9 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
     /// 构建单 Sheet 的导入模板：
     ///   第 1 行：标题（合并）
     ///   第 2 行：使用说明 + 必填项提示（合并）
-    ///   第 3 行：表头（必填列高亮）
-    ///   第 4 行起：每个角色类型一行示例（灰色斜体）
+    ///   第 3 行：表头（必填列高亮，并附列批注说明）
+    ///   第 4 行起：可填写的数据区（「角色类型」列提供下拉列表校验）
+    /// 工作表受保护：标题/说明/表头行锁定，数据列可编辑。
     /// </summary>
     private static void BuildImportSheet(XLWorkbook workbook)
     {
@@ -964,13 +964,12 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         // 第 2 行：使用说明（合并 + 灰色斜体 + 自动换行）
         var notes = new[]
         {
-            "1. 所有用户填在同一张 Sheet 内，请用第 1 列「角色类型」区分（联盟管理员/院校管理员/教师/学生/企业用户）。",
-            "2. 通用必填：姓名、登录账号、初始密码、手机号。其它必填项按角色类型不同，详见下方表格。",
-            "3. 橙黄色表头为必填列；空白示例行请删除后再上传。",
-            "4. 学生的「专业」按名称解析为系统内 MajorId；教师「专业」按字符串保存。",
-            "5. 「租户名称」仅 host（系统）管理员需要填写，留空表示导入 host 全局用户；租户管理员导入时该列被忽略。",
-            "6. 登录账号不可重复；若已存在同名用户，导入时默认跳过，开启「覆盖」后会更新其姓名/手机号/邮箱等扩展信息。",
-            "7. 初始密码建议首次登录后由用户自行修改，避免长期使用默认密码。",
+            "1. 所有用户填在同一张 Sheet 内，第 1 列「角色类型」请通过下拉列表选择（联盟管理员/院校管理员/教师/学生/企业用户）。",
+            "2. 通用必填：姓名、登录账号、初始密码、手机号；其它必填项随角色不同，把鼠标移到表头单元格即可查看列批注说明（橙黄色表头为必填列）。",
+            "3. 数据请从第 4 行开始逐行填写；标题、说明与表头行已锁定，不会参与导入。",
+            "4. 学生的「专业」按名称解析为系统内专业；教师「专业」按字符串保存。",
+            "5. 「租户名称」仅系统（host）管理员使用：留空表示导入全局用户，填写则导入到对应租户；租户管理员导入时无需填写，该列会被忽略，用户直接归属本租户。",
+            "6. 登录账号不可重复；若已存在同名用户，导入时默认跳过，开启「覆盖」后会更新其姓名/手机号/邮箱等信息（不改密码）。",
         };
         worksheet.Cell(2, 1).Value = string.Join("\n", notes);
         worksheet.Range(2, 1, 2, UserImportTemplateHeaders.Length).Merge();
@@ -978,7 +977,7 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
         worksheet.Cell(2, 1).Style.Font.FontColor = XLColor.Gray;
         worksheet.Cell(2, 1).Style.Alignment.WrapText = true;
         worksheet.Cell(2, 1).Style.Alignment.Vertical = XLAlignmentVerticalValues.Top;
-        worksheet.Row(2).Height = 110;
+        worksheet.Row(2).Height = 96;
 
         // 第 3 行：表头
         // 通用必填列：角色类型/姓名/登录账号/初始密码/手机号
@@ -1002,96 +1001,99 @@ public class UserImportAppService : KnowledgeHubAppService, IUserImportAppServic
             cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+            // 用批注说明每列的填写要求，避免在模板里堆砌示例数据。
+            var hint = GetHeaderHint(header);
+            if (hint != null)
+            {
+                cell.CreateComment().AddText(hint);
+            }
         }
         worksheet.Row(3).Height = 22;
 
-        // 第 4 行起：每个角色类型给一个示例
-        var rowIndex = 4;
-        foreach (var roleType in RoleDisplayNameMapping.Values)
-        {
-            BuildSampleRow(worksheet, rowIndex, roleType);
-            rowIndex++;
-        }
+        // 第 1 列「角色类型」下拉列表：数据行只能从列表中选择，避免手填出错。
+        var roleNames = string.Join(",", RoleDisplayNameMapping.Keys);
+        var firstDataRow = 4;
+        var roleRange = worksheet.Range(firstDataRow, 1, 1000, 1);
+        roleRange.CreateDataValidation().List($"\"{roleNames}\"", true);
 
-        // 冻结前 3 行；列宽自适应（最后"租户名称"列加宽便于查看）
+        // 保护工作表：数据列默认解锁（列级样式，避免逐行生成单元格），仅标题/说明/表头行锁定。
+        for (var col = 1; col <= UserImportTemplateHeaders.Length; col++)
+        {
+            worksheet.Column(col).Style.Protection.SetLocked(false);
+        }
+        worksheet.Range(1, 1, firstDataRow - 1, UserImportTemplateHeaders.Length).Style.Protection.SetLocked(true);
+        worksheet.Protect(XLSheetProtectionElements.SelectLockedCells | XLSheetProtectionElements.SelectUnlockedCells);
+
+        // 冻结前 3 行；列宽按字段内容手工设定（前部关键字段留足宽度，避免显示不全）
         worksheet.SheetView.FreezeRows(3);
-        worksheet.Columns().AdjustToContents();
-        worksheet.Column(UserImportTemplateHeaders.Length).Width = 18;
+        ApplyColumnWidths(worksheet);
     }
 
-    /// <summary>填充示例行：仅填写必填项以避免误导。</summary>
-    private static void BuildSampleRow(IXLWorksheet worksheet, int rowNumber, UserRoleType roleType)
+    /// <summary>列宽设置：前部关键字段（角色类型/姓名/登录账号/初始密码/手机号/邮箱）留足宽度。</summary>
+    private static void ApplyColumnWidths(IXLWorksheet worksheet)
     {
-        var sample = GetSampleRow(roleType);
+        var widths = new Dictionary<string, double>
+        {
+            { "角色类型", 14 },
+            { "姓名", 14 },
+            { "登录账号", 20 },
+            { "初始密码", 16 },
+            { "手机号", 16 },
+            { "邮箱", 24 },
+            { "所属院校", 20 },
+            { "工号", 14 },
+            { "所属院系/部门", 22 },
+            { "专业", 24 },
+            { "所教课程", 20 },
+            { "职称", 12 },
+            { "学号", 16 },
+            { "年级", 10 },
+            { "班级", 16 },
+            { "管理范围", 16 },
+            { "企业名称", 26 },
+            { "职位/岗位", 16 },
+            { "行业", 14 },
+            { "合作学校", 20 },
+            { "备注", 24 },
+            { "租户名称", 20 },
+        };
+
         for (var i = 0; i < UserImportTemplateHeaders.Length; i++)
         {
             var header = UserImportTemplateHeaders[i];
-            var cell = worksheet.Cell(rowNumber, i + 1);
-            cell.Value = sample.TryGetValue(header, out var val) ? val : string.Empty;
-            cell.Style.Font.FontColor = XLColor.Gray;
-            cell.Style.Font.Italic = true;
+            worksheet.Column(i + 1).Width = widths.TryGetValue(header, out var width) ? width : 16;
         }
     }
 
-    /// <summary>各角色类型的示例数据：仅填写必填项以避免误导。</summary>
-    private static Dictionary<string, string> GetSampleRow(UserRoleType roleType)
+    /// <summary>表头批注：说明该列的填写要求（必填角色等）。</summary>
+    private static string? GetHeaderHint(string header)
     {
-        return roleType switch
+        return header switch
         {
-            UserRoleType.LeagueAdmin => new Dictionary<string, string>
-            {
-                { "角色类型", "联盟管理员" },
-                { "姓名", "张三" },
-                { "登录账号", "league_admin_demo" },
-                { "初始密码", "Init@123" },
-                { "手机号", "13800000000" },
-                { "工号", "LA0001" },
-            },
-            UserRoleType.SchoolAdmin => new Dictionary<string, string>
-            {
-                { "角色类型", "院校管理员" },
-                { "姓名", "李四" },
-                { "登录账号", "school_admin_demo" },
-                { "初始密码", "Init@123" },
-                { "手机号", "13800000001" },
-                { "工号", "SA0001" },
-            },
-            UserRoleType.Teacher => new Dictionary<string, string>
-            {
-                { "角色类型", "教师" },
-                { "姓名", "王五" },
-                { "登录账号", "teacher_demo" },
-                { "初始密码", "Init@123" },
-                { "手机号", "13800000002" },
-                { "工号", "T0001" },
-                { "所属院系/部门", "计算机学院" },
-                { "专业", "计算机科学与技术" },
-            },
-            UserRoleType.Student => new Dictionary<string, string>
-            {
-                { "角色类型", "学生" },
-                { "姓名", "赵六" },
-                { "登录账号", "student_demo" },
-                { "初始密码", "Init@123" },
-                { "手机号", "13800000003" },
-                { "专业", "计算机科学与技术" },
-                { "学号", "2024001" },
-                { "年级", "2024" },
-                { "班级", "计科2401" },
-            },
-            UserRoleType.EnterpriseUser => new Dictionary<string, string>
-            {
-                { "角色类型", "企业用户" },
-                { "姓名", "钱七" },
-                { "登录账号", "enterprise_demo" },
-                { "初始密码", "Init@123" },
-                { "手机号", "13800000004" },
-                { "邮箱", "hr@example.com" },
-                { "企业名称", "示例科技有限公司" },
-                { "统一社会信用代码", "91330000000000000X" },
-                { "职位/岗位", "招聘经理" },
-            },
-            _ => new Dictionary<string, string>(),
+            "角色类型" => "点击单元格右侧的下拉箭头选择：联盟管理员 / 院校管理员 / 教师 / 学生 / 企业用户。",
+            "姓名" => "必填。用户真实姓名。",
+            "登录账号" => "必填。登录用户名，系统内不可重复。",
+            "初始密码" => "必填。首次登录密码，建议用户登录后自行修改。",
+            "手机号" => "必填。11 位手机号。",
+            "邮箱" => "选填；企业用户必填。",
+            "所属院校" => "选填。用户所属院校名称。",
+            "工号" => "联盟管理员 / 院校管理员 / 教师 必填。",
+            "所属院系/部门" => "教师必填。",
+            "专业" => "教师 / 学生 必填。学生按专业名称匹配系统内已有专业。",
+            "所教课程" => "选填。仅教师。",
+            "职称" => "选填。仅教师。",
+            "学号" => "学生必填。",
+            "年级" => "学生必填。",
+            "班级" => "学生必填。",
+            "管理范围" => "选填。仅院校管理员。",
+            "企业名称" => "企业用户必填。",
+            "职位/岗位" => "企业用户必填。",
+            "行业" => "选填。仅企业用户。",
+            "合作学校" => "选填。",
+            "备注" => "选填。",
+            "租户名称" => "仅系统（host）管理员使用。留空表示导入为全局用户；租户管理员导入时忽略此列，用户直接归属本租户。",
+            _ => null,
         };
     }
 

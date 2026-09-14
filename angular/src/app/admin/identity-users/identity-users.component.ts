@@ -172,7 +172,7 @@ export class IdentityUsersComponent implements OnInit {
     { role: '院校管理员', fields: '工号' },
     { role: '教师', fields: '工号、所属院系/部门、专业' },
     { role: '学生', fields: '专业、学号、年级、班级' },
-    { role: '企业用户', fields: '邮箱、企业名称、统一社会信用代码、职位/岗位' },
+    { role: '企业用户', fields: '邮箱、企业名称、职位/岗位' },
   ];
 
   private readonly restService = inject(RestService);
@@ -711,18 +711,21 @@ export class IdentityUsersComponent implements OnInit {
     }).subscribe({
       next: result => {
         this.importing = false;
-        this.finalResult = result;
-        this.importStep = 3;
         const ok = (result.newCount ?? 0) + (result.overwriteCount ?? 0);
         const fail = result.failCount ?? 0;
-        if (fail > 0) {
-          this.message.warning(`导入完成：成功 ${ok} 条，失败 ${fail} 条，详见下方明细`);
-        } else {
-          this.message.success(`导入完成：成功 ${ok} 条`);
-        }
         // 新用户按创建时间倒序排在第 1 页：回到第 1 页再刷新，用户才能立刻看到。
         this.pageIndex = 1;
         this.loadUsers();
+        if (fail > 0) {
+          // 存在失败行时保留完成页，便于用户查看失败原因并修正后重新导入。
+          this.finalResult = result;
+          this.importStep = 3;
+          this.message.warning(`导入完成：成功 ${ok} 条，失败 ${fail} 条，详见下方明细`);
+        } else {
+          // 全部成功：直接关闭弹窗回到用户列表。
+          this.message.success(`导入完成：成功 ${ok} 条`);
+          this.closeImportModal();
+        }
       },
       error: err => {
         this.importing = false;
