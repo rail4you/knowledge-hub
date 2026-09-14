@@ -54,6 +54,11 @@ load_env() {
         err "缺少必要配置: PUBLIC_URL"
     fi
 
+    # 上传文件大小上限（字节，默认 500MB）。envsubst 不支持 ${VAR:-default} 语法，
+    # 故在此兜底默认值并 export，供 generate_dynamic_env 替换。
+    : "${UPLOAD_MAX_FILE_SIZE_BYTES:=524288000}"
+    export UPLOAD_MAX_FILE_SIZE_BYTES
+
     # 给 LiteParse / Gotenberg 相关变量设默认值（compose 文件不再写 shell 默认值语法，
     # 因为远端的 docker-compose v1 不支持 ${VAR:-default} 语法）
     : "${LITEPARSE_IMAGE:=${REGISTRY:-registry.cn-zhangjiakou.aliyuncs.com/myelixir}/knowledgehub-liteparse:${IMAGE_TAG:-latest}}"
@@ -72,7 +77,7 @@ generate_dynamic_env() {
     fi
     info "生成 dynamic-env.json (PUBLIC_URL=$PUBLIC_URL)"
     # 只替换模板中的变量，避免 shell 变量被意外展开
-    envsubst '$PUBLIC_URL' < "$TEMPLATE_FILE" > "$DYNAMIC_ENV_FILE"
+    envsubst '$PUBLIC_URL $UPLOAD_MAX_FILE_SIZE_BYTES' < "$TEMPLATE_FILE" > "$DYNAMIC_ENV_FILE"
     ok "生成完成"
 }
 
