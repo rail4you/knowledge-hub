@@ -163,7 +163,7 @@
 
         [nzShowTotal]="totalTemplate"
         nzSize="middle"
-        [nzScroll]="{ x: 880 }"
+        [nzScroll]="{ x: 970 }"
       >
         <thead>
           <tr>
@@ -181,6 +181,7 @@
             <th nzWidth="110px">答案</th>
             <th nzWidth="90px">难度</th>
             <th nzWidth="70px">分值</th>
+            <th nzWidth="90px">来源</th>
             <th nzWidth="120px" class="col-actions">操作</th>
           </tr>
         </thead>
@@ -196,11 +197,6 @@
               </td>
               <td class="cell-title" [title]="exercise.title">
                 <span class="text-ellipsis-2 text-left">{{ exercise.title }}</span>
-                @if (exercise.isAiGenerated) {
-                  <nz-tag nzColor="purple" class="source-tag">AI生成</nz-tag>
-                } @else {
-                  <nz-tag nzColor="default" class="source-tag">手动</nz-tag>
-                }
               </td>
               <td class="cell-content" [title]="exercise.questionContent">
                 <span class="text-ellipsis">{{ exercise.questionContent }}</span>
@@ -219,6 +215,13 @@
                 </nz-tag>
               </td>
               <td class="cell-score">{{ exercise.score }}</td>
+              <td class="cell-source">
+                @if (exercise.isAiGenerated) {
+                  <nz-tag nzColor="purple" class="source-tag">AI生成</nz-tag>
+                } @else {
+                  <nz-tag nzColor="default" class="source-tag">手动</nz-tag>
+                }
+              </td>
               <td class="col-actions">
                 <div class="action-cell">
                   <button
