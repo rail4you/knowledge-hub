@@ -2,14 +2,16 @@ import { Component, signal, effect, OnDestroy, input, ChangeDetectionStrategy } 
 import { CommonModule } from '@angular/common';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzResultModule } from 'ng-zorro-antd/result';
 import { LocalizationPipe } from '@abp/ng.core';
 
 @Component({
   selector: 'app-media-viewer',
   standalone: true,
-  imports: [CommonModule, NzButtonModule, NzIconModule, NzResultModule, LocalizationPipe],
+  imports: [CommonModule, NzButtonModule, NzIconModule, NzSpinModule, NzResultModule, LocalizationPipe],
   templateUrl: './media-viewer.component.html',
+  styleUrls: ['./media-viewer.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MediaViewerComponent implements OnDestroy {
@@ -22,18 +24,23 @@ export class MediaViewerComponent implements OnDestroy {
   scale = signal(1);
   /** 视频播放失败（codec 不支持、源加载错误、MIME 不匹配等） */
   playbackError = signal(false);
+  /** 视频是否处于缓冲/加载状态：期间显示"完整窗口 + loading 覆盖层" */
+  videoLoading = signal(false);
 
   constructor() {
     effect(() => {
       const url = this.streamUrl();
       if (url) {
-        // Streaming URL mode: use URL directly (video/audio)
+        // Streaming URL mode: use URL directly (video/audio，后端支持 Range 边下边播)
         if (this.blobUrl()) {
           URL.revokeObjectURL(this.blobUrl());
         }
         this.blobUrl.set(url);
         // 切到新视频时重置错误状态
         this.playbackError.set(false);
+        // 大视频 metadata/首帧未就绪前先显示"完整窗口 + loading"，
+        // 避免渲染成浏览器默认 300×150 的部分窗口，等 metadata 到了才跳成完整窗口
+        this.videoLoading.set(true);
         return;
       }
 
@@ -97,6 +104,21 @@ export class MediaViewerComponent implements OnDestroy {
    */
   onVideoError(_event: Event): void {
     this.playbackError.set(true);
+  }
+
+  /** 视频已缓冲到可播放的数据（loadeddata/canplay）→ 收起 loading */
+  onVideoReady(): void {
+    this.videoLoading.set(false);
+  }
+
+  /** 视频进入缓冲等待（waiting/stalled）→ 显示 loading，避免"一直卡着"没有反馈 */
+  onVideoWaiting(): void {
+    this.videoLoading.set(true);
+  }
+
+  /** 视频真正开始播放（playing）→ 收起 loading */
+  onVideoPlaying(): void {
+    this.videoLoading.set(false);
   }
 
   zoomIn() {

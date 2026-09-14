@@ -1,0 +1,90 @@
+:host {
+  display: block;
+}
+
+.media-viewer {
+  .image-toolbar {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    max-height: calc(90vh - 320px);
+    overflow: auto;
+    padding: 16px;
+
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      transition: transform 0.2s;
+    }
+  }
+
+  // 视频：固定 16:9 完整窗口 + 黑色底。
+  // metadata/首帧未就绪前也保持完整窗口，不会出现"先部分窗口、后完整窗口"的闪烁；
+  // 视频本身走服务器串流（后端支持 Range），大文件边下边播。
+  .video-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 300px;
+    max-height: calc(90vh - 220px);
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+      outline: none;
+    }
+  }
+
+  // 大视频缓冲 loading 覆盖层：保持完整窗口，就绪/播放后隐藏。
+  // pointer-events: none 不拦截点击，用户可直接穿透点击播放。
+  .video-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 13px;
+    pointer-events: none;
+
+    p {
+      margin: 0;
+      opacity: 0.9;
+    }
+  }
+
+  .audio-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .audio-name {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 16px;
+  }
+}
