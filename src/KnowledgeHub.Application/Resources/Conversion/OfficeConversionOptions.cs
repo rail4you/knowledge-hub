@@ -110,6 +110,12 @@ public class OfficeConversionOptions
     /// </summary>
     public string PdftoppmPath { get; set; } = "pdftoppm";
 
+    /// <summary>
+    /// PDF 文本边界探测可执行文件路径（poppler 的 pdftotext，用于首页内容裁剪）。
+    /// 与 pdftoppm 同属 poppler-utils；缺失时缩略图回退为整页渲染。
+    /// </summary>
+    public string PdftotextPath { get; set; } = "pdftotext";
+
     /// <summary>PDF 首页光栅化超时（秒）。默认 60s。</summary>
     public int PdftoppmTimeoutSeconds { get; set; } = 60;
 
