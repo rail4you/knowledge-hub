@@ -434,13 +434,13 @@ public class CourseAppService : KnowledgeHubAppService, ICourseAppService
                                    .ToList();
 
         var courseIds = studentCourses.Select(x => x.CourseId).ToList();
-        // 我的课程按选课记录定位课程：课程查询禁用租户过滤器，
-        // 否则历史上已选的跨租户课程会被租户过滤器丢掉，导致“已选课”在我的课程里消失。
+        var effectiveTenantId = CurrentTenant.Id ?? _currentUser.TenantId;
         List<Course> courses;
         using (DataFilter.Disable<IMultiTenant>())
         {
             var coursesQuery = await _courseRepository.GetQueryableAsync();
             var coursesBaseQuery = coursesQuery.Where(x => courseIds.Contains(x.Id))
+                                      .WhereIf(effectiveTenantId.HasValue, x => x.TenantId == effectiveTenantId!.Value)
                                       .WhereIf(!string.IsNullOrWhiteSpace(input.Filter), x => x.Title.Contains(input.Filter))
                                       .WhereIf(!string.IsNullOrWhiteSpace(input.Semester), x => x.Semester == input.Semester)
                                       .WhereIf(input.Difficulty.HasValue, x => x.Difficulty == input.Difficulty)

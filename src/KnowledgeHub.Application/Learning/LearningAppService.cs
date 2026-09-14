@@ -59,11 +59,15 @@ public class LearningAppService : ApplicationService, ILearningAppService
         if (studentCourses.Count > 0)
         {
             var enrolledCourseIds = studentCourses.Select(x => x.CourseId).Distinct().ToList();
+            var effectiveTenantId = CurrentTenant.Id ?? _currentUser.TenantId;
             List<Guid> existingCourseIds;
             using (DataFilter.Disable<Volo.Abp.MultiTenancy.IMultiTenant>())
             {
                 var existingCourses = await _courseRepository.GetListAsync(c => enrolledCourseIds.Contains(c.Id));
-                existingCourseIds = existingCourses.Select(c => c.Id).ToList();
+                existingCourseIds = existingCourses
+                    .Where(c => !effectiveTenantId.HasValue || c.TenantId == effectiveTenantId)
+                    .Select(c => c.Id)
+                    .ToList();
             }
             var existingSet = new HashSet<Guid>(existingCourseIds);
             studentCourses = studentCourses.Where(x => existingSet.Contains(x.CourseId)).ToList();
@@ -162,6 +166,7 @@ public class LearningAppService : ApplicationService, ILearningAppService
             .ToList();
 
         var result = new List<StudentCourseListItemDto>();
+        var effectiveTenantId = CurrentTenant.Id ?? _currentUser.TenantId;
 
         var majorIds = new HashSet<Guid>();
         // 课程查询禁用租户过滤器：历史跨租户选课的课程仍需解析，否则“我的课程”会丢数据
@@ -198,6 +203,10 @@ public class LearningAppService : ApplicationService, ILearningAppService
             }
             if (course != null)
             {
+                if (effectiveTenantId.HasValue && course.TenantId != effectiveTenantId)
+                {
+                    continue;
+                }
                 string? majorName = null;
                 if (course.MajorId.HasValue && majorMap.TryGetValue(course.MajorId.Value, out var name))
                 {
