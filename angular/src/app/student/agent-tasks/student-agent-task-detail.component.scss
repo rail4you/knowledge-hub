@@ -122,8 +122,11 @@
   gap: 12px;
   min-height: 0;
   height: 100%;
-  /* 左侧保持不动：不产生内部滚动 */
-  overflow: visible;
+  /* 左侧独立滚动：内容超出时自己滚，不撑高页面、不留大片空白 */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  align-content: start;
+  padding-right: 2px;
 }
 
 .chat-column {
@@ -175,85 +178,217 @@
   }
 }
 
-/* =================== 任务简报（左侧，占满栏高） =================== */
-.task-brief {
+/* =================== 左侧信息卡（紧凑堆叠，不拉伸留白） =================== */
+.side-card {
+  flex: none;
+}
+
+.info-list {
+  margin: 0 0 4px;
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+.info-row {
+  display: flex;
   gap: 10px;
-  flex: 1;
-  padding: 12px 14px;
-  border-radius: ds.$student-radius-lg;
-  background: #fff;
-  border: 1px solid ds.$student-border-soft;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  align-items: baseline;
+  font-size: 13px;
+  margin: 0;
 
-  &__head {
-    display: flex;
-    align-items: center;
-  }
-
-  &__title {
-    color: ds.$student-text;
-    font-size: 14px;
-    font-weight: 700;
-  }
-
-  &__usage {
+  dt {
     margin: 0;
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    color: ds.$student-text-muted;
-    font-size: 12px;
-    line-height: 1.6;
-
-    span[nz-icon] {
-      color: ds.$student-primary;
-      font-size: 14px;
-      margin-top: 1px;
-      flex-shrink: 0;
-    }
-  }
-
-  &__body {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding-top: 12px;
-    border-top: 1px dashed ds.$student-border;
-  }
-
-  &__row {
-    display: flex;
-    gap: 10px;
-    align-items: baseline;
-    font-size: 13px;
-  }
-
-  &__label {
     color: ds.$student-text-light;
     flex-shrink: 0;
-    min-width: 52px;
+    min-width: 44px;
   }
 
-  &__value {
+  dd {
     margin: 0;
     color: ds.$student-text;
     font-weight: 600;
     min-width: 0;
+  }
+}
 
-    &--text {
-      font-weight: 400;
-      color: ds.$student-text-muted;
-      line-height: 1.6;
-    }
+.info-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed ds.$student-border;
+
+  &__label {
+    font-size: 11px;
+    font-weight: 700;
+    color: ds.$student-text-light;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
   }
 
-  &__actions {
-    display: flex;
-    gap: 10px;
-    padding-top: 4px;
-    flex-wrap: wrap;
+  &__text {
+    margin: 0;
+    color: ds.$student-text-muted;
+    font-size: 13px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+}
+
+.info-link {
+  color: ds.$student-text;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.info-sub {
+  margin-top: 2px;
+  color: ds.$student-text-light;
+  font-size: 12px;
+}
+
+/* 进度步骤微调 */
+.side-card ::ng-deep .ant-steps-vertical {
+  margin: 2px 0 4px;
+}
+.side-card ::ng-deep .ant-steps-item-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+.side-card ::ng-deep .ant-steps-item-description {
+  font-size: 12px !important;
+}
+
+/* =================== 教师介入（对话线程式布局） =================== */
+.help-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+
+  &__icon {
+    color: ds.$student-primary;
+    font-size: 15px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+}
+
+.help-desc {
+  margin: 0;
+  color: ds.$student-text-muted;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* 状态行：小圆点 + 文案，低饱和不抢焦点 */
+.help-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid ds.$student-border-soft;
+
+  &__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: ds.$student-text-light;
+  }
+
+  &__text {
+    font-size: 12px;
+    font-weight: 600;
+    color: ds.$student-text-muted;
+  }
+
+  &--waiting .help-status__dot {
+    background: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.14);
+  }
+
+  &--waiting .help-status__text {
+    color: #b45309;
+  }
+
+  &--replied .help-status__dot {
+    background: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+  }
+
+  &--replied .help-status__text {
+    color: #15803d;
+  }
+}
+
+/* 对话线程：学生与教师消息左右区分，教师回复带主色左边框 */
+.help-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.help-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &__role {
+    font-size: 11px;
+    font-weight: 600;
+    color: ds.$student-text-light;
+    letter-spacing: 0.3px;
+  }
+
+  &__bubble {
+    padding: 9px 11px;
+    border-radius: ds.$student-radius;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &--student .help-msg__bubble {
+    background: ds.$student-surface-soft;
+    border: 1px solid ds.$student-border-soft;
+    color: ds.$student-text;
+  }
+
+  &--teacher .help-msg__role {
+    color: ds.$student-primary;
+  }
+
+  &--teacher .help-msg__bubble {
+    background: #f2f7fe;
+    border: 1px solid #dbe8f9;
+    border-left: 3px solid ds.$student-primary;
+    color: ds.$student-text;
+  }
+
+  &--pending .help-msg__role {
+    color: ds.$student-text-light;
+  }
+
+  &--pending .help-msg__bubble {
+    background: transparent;
+    border: 1px dashed ds.$student-border;
+    color: ds.$student-text-light;
+    font-style: italic;
+  }
+}
+
+.help-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: ds.$student-text-muted;
+
+  &--ok {
+    color: #15803d;
   }
 }
 
@@ -299,12 +434,11 @@
       color: #fff;
     }
   }
-}
 
-.hint-text {
-  margin: 8px 0 0;
-  color: #d97706;
-  font-size: 13px;
+  &--block {
+    width: 100%;
+    margin-top: 10px;
+  }
 }
 
 /* =================== Done banner =================== */
@@ -313,6 +447,11 @@
   border: 1px solid #bbf7d0;
   border-radius: ds.$student-radius;
   padding: 14px;
+
+  &--compact {
+    margin-top: 10px;
+    padding: 10px 12px;
+  }
 
   .ant-tag {
     margin-bottom: 8px;
@@ -324,86 +463,6 @@
   color: ds.$student-text;
   font-size: 14px;
   line-height: 1.6;
-}
-
-/* =================== Help timeline =================== */
-.help-timeline {
-  margin-top: 14px;
-}
-
-.timeline-title {
-  font-weight: 700;
-  color: ds.$student-text;
-  font-size: 14px;
-  margin-bottom: 10px;
-}
-
-.timeline-item {
-  display: flex;
-  gap: 10px;
-  padding-bottom: 14px;
-  position: relative;
-}
-
-.timeline-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #f59e0b;
-  margin-top: 6px;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
-
-  &.replied {
-    background: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
-  }
-}
-
-.timeline-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.timeline-label {
-  font-size: 11px;
-  color: ds.$student-text-light;
-  display: block;
-  margin-bottom: 4px;
-  font-weight: 500;
-}
-
-.timeline-question {
-  background: #fffbeb;
-  border-radius: ds.$student-radius;
-  padding: 10px 14px;
-  border: 1px solid #fef3c7;
-
-  p {
-    margin: 0;
-    color: ds.$student-text;
-    font-size: 13px;
-    line-height: 1.5;
-  }
-}
-
-.timeline-reply {
-  margin-top: 8px;
-  background: #e9f0fa;
-  border-radius: ds.$student-radius;
-  padding: 10px 14px;
-  border: 1px solid #d9e5f6;
-
-  p {
-    margin: 0;
-    color: ds.$student-text;
-    font-size: 13px;
-    line-height: 1.5;
-  }
-}
-
-.timeline-pending {
-  margin-top: 8px;
 }
 
 /* =================== Chat messages（聊天气泡 + 独立滚动） =================== */
@@ -599,7 +658,7 @@
     overflow: visible;
   }
 
-  .task-brief {
+  .side-card {
     flex: none;
   }
 

@@ -10,6 +10,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { MarkdownComponent, provideMarkdown } from 'ngx-markdown';
 import { fixCjkMarkdown } from '../../shared/markdown-cjk-fix.util';
@@ -17,15 +18,13 @@ import { AgentRunService } from '../../teaching-agents/agent-run.service';
 import {
   AgentRunDetail,
   AgentRunMessage,
-  ClassroomAgentAssignment,
   assignmentStatusLabel,
   formatDateTime,
+  targetTypeLabel,
 } from '../../teaching-agents/models';
 
-interface HelpRecord {
-  helpReason: string;
-  teacherResponse?: string;
-}
+/** 教师介入状态机：none 未求助 / waiting 等待回复 / replied 已回复可继续 / done-help 已提交且求助过 / done-solo 已提交独立完成 */
+export type HelpState = 'none' | 'waiting' | 'replied' | 'done-help' | 'done-solo';
 
 @Component({
   selector: 'app-student-agent-task-detail',
@@ -42,6 +41,7 @@ interface HelpRecord {
     NzInputModule,
     NzModalModule,
     NzSpinModule,
+    NzStepsModule,
     NzTagModule,
     MarkdownComponent,
   ],
@@ -73,25 +73,34 @@ export class StudentAgentTaskDetailComponent implements OnInit {
   readonly isCompleted = computed(() => this.detail()?.assignment.status === 2);
   readonly isHelpActive = computed(() => this.detail()?.assignment.status === 3);
 
-  /** Build help history from assignment data. */
-  readonly helpRecords = computed<HelpRecord[]>(() => {
+  /** 学生已发送的用户消息轮数（用于进度展示）。 */
+  readonly userTurnCount = computed(() =>
+    this.messages().filter(m => m.role === 'user' && m.content.trim().length > 0).length
+  );
+
+  /** 教师介入状态机：左侧「教师介入」卡与进度步骤共用。 */
+  readonly helpState = computed<HelpState>(() => {
     const assignment = this.detail()?.assignment;
-    if (!assignment) return [];
-
-    const records: HelpRecord[] = [];
-
-    // Current help request
-    if (assignment.helpReason) {
-      records.push({
-        helpReason: assignment.helpReason,
-        teacherResponse: assignment.teacherResponse || undefined,
-      });
-    }
-
-    // Previous help history stored in extraProperties or just show current
-    // For now we show the current active help record
-    return records;
+    if (!assignment) return 'none';
+    const completed = assignment.status === 2;
+    const waiting = assignment.status === 3;
+    const hasHelp = !!assignment.helpReason?.trim();
+    if (completed) return hasHelp ? 'done-help' : 'done-solo';
+    if (waiting) return 'waiting';
+    // 教师回复后状态回到进行中，但 helpReason 仍保留 → 视为已回复
+    if (hasHelp) return assignment.teacherResponse?.trim() ? 'replied' : 'waiting';
+    return 'none';
   });
+
+  /** 对话步骤状态：0 未开始 / 1 对话中 / 2 已提交。 */
+  readonly chatStepStatus = computed<'wait' | 'process' | 'finish'>(() => {
+    if (this.isCompleted()) return 'finish';
+    return this.userTurnCount() > 0 ? 'process' : 'wait';
+  });
+
+  targetText(targetType?: number): string {
+    return targetTypeLabel(targetType ?? 0);
+  }
 
   ngOnInit(): void {
     void this.load();

@@ -256,6 +256,66 @@
     border-color: rgba(24, 144, 255, 0.32);
     box-shadow: var(--kh-shadow-card);
   }
+
+  /* ── 需教师介入：强调卡片（弱化版） ── */
+  &.needs-help {
+    border: 1px solid #fde68a;
+    background: #fffdf9;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.06), var(--kh-shadow-card);
+
+    .student-header {
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.04), transparent 55%);
+    }
+
+    .student-header:hover {
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.06), transparent 55%);
+    }
+  }
+
+  &.needs-help.expanded {
+    border-color: #fcd34d;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.08), var(--kh-shadow-card);
+  }
+}
+
+.student-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attention-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: var(--kh-r-pill);
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  flex-shrink: 0;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f59e0b;
+    animation: attention-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes attention-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.3);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0);
+    opacity: 0.9;
+  }
 }
 
 .student-header {

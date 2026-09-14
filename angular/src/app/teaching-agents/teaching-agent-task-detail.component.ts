@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -61,6 +61,15 @@ export class TeachingAgentTaskDetailComponent implements OnInit {
   readonly expandedAssignmentId = signal<string | null>(null);
   readonly responding = signal(false);
   teacherResponseText = '';
+
+  /** 学生按最后活跃时间倒序（最活跃的排最前，未开始的沉底）。 */
+  readonly sortedAssignments = computed<ClassroomAgentAssignment[]>(() => {
+    const assignments = this.task()?.assignments ?? [];
+    return [...assignments].sort((a, b) => {
+      const t = (x: ClassroomAgentAssignment) => (x.lastActiveAt ? new Date(x.lastActiveAt).getTime() : 0);
+      return t(b) - t(a);
+    });
+  });
 
   ngOnInit(): void {
     void this.load();

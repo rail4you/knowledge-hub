@@ -110,14 +110,23 @@
               <nz-empty nzNotFoundContent="暂无学生分配记录"></nz-empty>
             } @else {
               <div class="student-grid">
-                @for (assignment of currentTask.assignments; track assignment.id) {
+                @for (assignment of sortedAssignments(); track assignment.id) {
                   <div
                     class="student-card"
                     [class.expanded]="expandedAssignmentId() === assignment.id"
+                    [class.needs-help]="assignment.status === 3"
                   >
                     <div class="student-header" (click)="toggleAssignment(assignment)">
                       <div class="student-info">
-                        <strong class="student-name">{{ assignment.studentName || '未知学生' }}</strong>
+                        <div class="student-name-row">
+                          @if (assignment.status === 3) {
+                            <span class="attention-badge">
+                              <span class="attention-badge__dot"></span>
+                              待回复
+                            </span>
+                          }
+                          <strong class="student-name">{{ assignment.studentName || '未知学生' }}</strong>
+                        </div>
                         <div class="student-meta">
                           <span>{{ assignmentText(assignment.status) }}</span>
                           <span class="dot">·</span>

@@ -6,7 +6,9 @@
       <header class="page-head">
         <div>
           <h1>{{ currentDetail.task.title }}</h1>
-          <p>{{ currentDetail.task.description || currentDetail.task.taskPrompt }}</p>
+          @if (currentDetail.task.description) {
+            <p>{{ currentDetail.task.description }}</p>
+          }
         </div>
         <div class="status-box">
           <nz-tag [nzColor]="currentDetail.assignment.status === 2 ? 'green' : currentDetail.assignment.status === 3 ? 'red' : 'blue'">
@@ -18,90 +20,163 @@
 
       <div class="workspace">
         <aside class="context-column">
-          <!-- 左侧：任务简报 -->
-          <div class="task-brief">
-            <div class="task-brief__head">
-              <strong class="task-brief__title">{{ currentDetail.task.teachingAgentName }}智能体已就绪</strong>
-            </div>
-            <p class="task-brief__usage">
-              <span nz-icon nzType="info-circle" nzTheme="outline"></span>
-              <span>用法：先阅读任务说明，再用聊天区逐步完成本次任务，最后使用「提交任务」提交所有对话信息。</span>
-            </p>
-            <div class="task-brief__body">
-              <div class="task-brief__row">
-                <span class="task-brief__label">任务</span>
-                <strong class="task-brief__value">{{ currentDetail.task.title }}</strong>
+          <!-- 任务信息：紧凑展示智能体 / 类型 / 截止 / 要求 / 关联对象 -->
+          <nz-card class="side-card" nzTitle="任务信息">
+            <dl class="info-list">
+              <div class="info-row">
+                <dt>智能体</dt>
+                <dd>{{ currentDetail.task.teachingAgentName }} · v{{ currentDetail.task.teachingAgentVersionNumber }}</dd>
               </div>
-              @if (currentDetail.task.description || currentDetail.task.taskPrompt) {
-                <div class="task-brief__row">
-                  <span class="task-brief__label">任务说明</span>
-                  <p class="task-brief__value task-brief__value--text">{{ currentDetail.task.description || currentDetail.task.taskPrompt }}</p>
-                </div>
-              }
-              @if (currentDetail.task.dueTime) {
-                <div class="task-brief__row">
-                  <span class="task-brief__label">截止</span>
-                  <strong class="task-brief__value">{{ formatDate(currentDetail.task.dueTime) }}</strong>
-                </div>
-              }
-            </div>
+              <div class="info-row">
+                <dt>类型</dt>
+                <dd>{{ targetText(currentDetail.task.targetType) }}</dd>
+              </div>
+              <div class="info-row">
+                <dt>截止</dt>
+                <dd>{{ formatDate(currentDetail.task.dueTime) }}</dd>
+              </div>
+            </dl>
+            @if (currentDetail.task.taskPrompt) {
+              <div class="info-block">
+                <div class="info-block__label">完成要求</div>
+                <p class="info-block__text">{{ currentDetail.task.taskPrompt }}</p>
+              </div>
+            }
+            @if (currentDetail.task.targetSnapshot?.course; as course) {
+              <div class="info-block">
+                <div class="info-block__label">关联课程</div>
+                <div class="info-link">{{ course.title }}</div>
+                @if (course.chapters.length) {
+                  <div class="info-sub">共 {{ course.chapters.length }} 个章节</div>
+                }
+              </div>
+            }
+            @if (currentDetail.task.targetSnapshot?.resource; as resource) {
+              <div class="info-block">
+                <div class="info-block__label">关联资源</div>
+                <div class="info-link">{{ resource.name }}</div>
+              </div>
+            }
+            @if (currentDetail.task.targetSnapshot?.exercises?.length) {
+              <div class="info-block">
+                <div class="info-block__label">关联习题</div>
+                <div class="info-sub">共 {{ currentDetail.task.targetSnapshot!.exercises!.length }} 道题</div>
+              </div>
+            }
+          </nz-card>
+
+          <!-- 学习进度：线性三步，教师介入为可选分支在下一步单独卡片展示 -->
+          <nz-card class="side-card" nzTitle="学习进度">
+            <nz-steps nzDirection="vertical" nzSize="small">
+              <nz-step nzStatus="finish" nzTitle="阅读任务说明" nzDescription="已了解本次任务的要求与关联内容"></nz-step>
+              <nz-step
+                [nzStatus]="chatStepStatus()"
+                nzTitle="与智能体对话"
+                [nzDescription]="userTurnCount() > 0 ? '已对话 ' + userTurnCount() + ' 轮，继续在右侧完善思路' : '在右侧聊天区开始第一轮对话'"
+              ></nz-step>
+              <nz-step
+                [nzStatus]="isCompleted() ? 'finish' : 'wait'"
+                nzTitle="提交任务"
+                [nzDescription]="isCompleted() ? '已提交，可在下方查看提交结果' : '对话完成后点此提交，提交后不可修改'"
+              ></nz-step>
+            </nz-steps>
             @if (!isCompleted()) {
-              <div class="task-brief__actions">
-                <button class="brief-btn brief-btn--primary" (click)="submitModalVisible.set(true)">
-                  <span nz-icon nzType="check-circle" nzTheme="outline"></span>
-                  <span>提交任务</span>
-                </button>
-                <button class="brief-btn" (click)="helpModalVisible.set(true)" [disabled]="isHelpActive()">
+              <button class="brief-btn brief-btn--primary brief-btn--block" (click)="submitModalVisible.set(true)">
+                <span nz-icon nzType="check-circle" nzTheme="outline"></span>
+                <span>提交任务</span>
+              </button>
+            } @else {
+              <div class="done-banner done-banner--compact">
+                <nz-tag nzColor="green">已提交</nz-tag>
+                @if (currentDetail.assignment.submissionSummary) {
+                  <p class="done-summary">{{ currentDetail.assignment.submissionSummary }}</p>
+                }
+              </div>
+            }
+          </nz-card>
+
+          <!-- 教师介入：状态行 + 师生对话线程，求助 → 回复 → 继续 -->
+          <nz-card class="side-card" nzTitle="教师介入">
+            @switch (helpState()) {
+              @case ('none') {
+                <div class="help-empty">
+                  <span nz-icon nzType="question-circle" nzTheme="outline" class="help-empty__icon"></span>
+                  <p class="help-desc">遇到卡点？向教师描述问题，教师回复后任务会自动回到「进行中」，你可继续对话并提交。</p>
+                </div>
+                <button class="brief-btn brief-btn--block" (click)="helpModalVisible.set(true)">
                   <span nz-icon nzType="question-circle" nzTheme="outline"></span>
                   <span>请求教师帮助</span>
                 </button>
-              </div>
-              @if (isHelpActive()) {
-                <p class="hint-text">已发送求助请求，等待教师回复中</p>
               }
-            }
-          </div>
-
-          <!-- 求助记录 / 提交结果 -->
-          @if (isCompleted() || helpRecords().length > 0) {
-            <nz-card [nzTitle]="isCompleted() ? '提交结果' : '求助记录'">
-              @if (isCompleted()) {
-                <div class="done-banner">
-                  <nz-tag nzColor="green">已提交</nz-tag>
-                  @if (currentDetail.assignment.submissionSummary) {
-                    <p class="done-summary">{{ currentDetail.assignment.submissionSummary }}</p>
-                  }
+              @case ('waiting') {
+                <div class="help-status help-status--waiting">
+                  <span class="help-status__dot"></span>
+                  <span class="help-status__text">等待教师回复</span>
                 </div>
+                <div class="help-thread">
+                  <div class="help-msg help-msg--student">
+                    <div class="help-msg__role">我</div>
+                    <div class="help-msg__bubble">{{ currentDetail.assignment.helpReason }}</div>
+                  </div>
+                  <div class="help-msg help-msg--teacher help-msg--pending">
+                    <div class="help-msg__role">教师</div>
+                    <div class="help-msg__bubble">教师回复后会显示在这里</div>
+                  </div>
+                </div>
+                <p class="help-note">等待期间仍可在右侧继续补充上下文，不用干等。</p>
               }
-
-              @if (helpRecords().length > 0) {
-                <div class="help-timeline">
-                  <div class="timeline-title">求助记录</div>
-                  @for (record of helpRecords(); track $index) {
-                    <div class="timeline-item">
-                      <div class="timeline-dot" [class.replied]="record.teacherResponse"></div>
-                      <div class="timeline-body">
-                        <div class="timeline-question">
-                          <span class="timeline-label">我的提问</span>
-                          <p>{{ record.helpReason }}</p>
-                        </div>
-                        @if (record.teacherResponse) {
-                          <div class="timeline-reply">
-                            <span class="timeline-label">教师回复</span>
-                            <p>{{ record.teacherResponse }}</p>
-                          </div>
-                        } @else {
-                          <div class="timeline-pending">
-                            <nz-tag nzColor="orange">等待教师回复</nz-tag>
-                          </div>
-                        }
-                      </div>
+              @case ('replied') {
+                <div class="help-status help-status--replied">
+                  <span class="help-status__dot"></span>
+                  <span class="help-status__text">教师已回复</span>
+                </div>
+                <div class="help-thread">
+                  <div class="help-msg help-msg--student">
+                    <div class="help-msg__role">我</div>
+                    <div class="help-msg__bubble">{{ currentDetail.assignment.helpReason }}</div>
+                  </div>
+                  <div class="help-msg help-msg--teacher">
+                    <div class="help-msg__role">教师</div>
+                    <div class="help-msg__bubble">{{ currentDetail.assignment.teacherResponse }}</div>
+                  </div>
+                </div>
+                <p class="help-note help-note--ok">任务已回到「进行中」，结合教师建议继续对话，完成后记得提交。</p>
+                <button class="brief-btn brief-btn--block" (click)="helpModalVisible.set(true)">
+                  <span nz-icon nzType="question-circle" nzTheme="outline"></span>
+                  <span>仍有疑问，再次求助</span>
+                </button>
+              }
+              @case ('done-help') {
+                <div class="help-status">
+                  <span class="help-status__dot"></span>
+                  <span class="help-status__text">已提交 · 本次求助记录</span>
+                </div>
+                <div class="help-thread">
+                  <div class="help-msg help-msg--student">
+                    <div class="help-msg__role">我</div>
+                    <div class="help-msg__bubble">{{ currentDetail.assignment.helpReason }}</div>
+                  </div>
+                  @if (currentDetail.assignment.teacherResponse) {
+                    <div class="help-msg help-msg--teacher">
+                      <div class="help-msg__role">教师</div>
+                      <div class="help-msg__bubble">{{ currentDetail.assignment.teacherResponse }}</div>
+                    </div>
+                  } @else {
+                    <div class="help-msg help-msg--teacher help-msg--pending">
+                      <div class="help-msg__role">教师</div>
+                      <div class="help-msg__bubble">提交时教师尚未回复</div>
                     </div>
                   }
                 </div>
               }
-            </nz-card>
-          }
+              @default {
+                <div class="help-empty">
+                  <span nz-icon nzType="check-circle" nzTheme="outline" class="help-empty__icon"></span>
+                  <p class="help-desc">本次任务你独立完成，没有请求教师介入。</p>
+                </div>
+              }
+            }
+          </nz-card>
         </aside>
 
         <!-- 右侧：聊天区 -->
@@ -188,7 +263,7 @@
       nzWidth="480px"
     >
       <ng-container *nzModalContent>
-        <p class="modal-desc">描述你遇到的问题，教师会尽快回复。</p>
+        <p class="modal-desc">描述你遇到的问题，教师会尽快回复。求助后任务进入「需教师介入」，教师回复后自动回到「进行中」。</p>
         <textarea
           nz-input
           rows="5"
