@@ -32,6 +32,8 @@ public class AiGenerationJob : ITransientDependency
     private readonly CareerGuidanceAppService _careerGuidanceService;
     private readonly ExerciseAiGenerator _exerciseAiGenerator;
     private readonly IAiUsageTracker _usageTracker;
+    private readonly IAiMediaGenerator _mediaGenerator;
+    private readonly IMediaStorageService _mediaStorage;
     private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
     private readonly ILogger<AiGenerationJob> _logger;
 
@@ -44,6 +46,8 @@ public class AiGenerationJob : ITransientDependency
         CareerGuidanceAppService careerGuidanceService,
         ExerciseAiGenerator exerciseAiGenerator,
         IAiUsageTracker usageTracker,
+        IAiMediaGenerator mediaGenerator,
+        IMediaStorageService mediaStorage,
         Microsoft.Extensions.Configuration.IConfiguration configuration,
         ILogger<AiGenerationJob> logger)
     {
@@ -55,6 +59,8 @@ public class AiGenerationJob : ITransientDependency
         _careerGuidanceService = careerGuidanceService;
         _exerciseAiGenerator = exerciseAiGenerator;
         _usageTracker = usageTracker;
+        _mediaGenerator = mediaGenerator;
+        _mediaStorage = mediaStorage;
         _configuration = configuration;
         _logger = logger;
     }
@@ -154,23 +160,31 @@ public class AiGenerationJob : ITransientDependency
         using var uow = _unitOfWorkManager.Begin(requiresNew: true);
         // 用量记录：inputJson 既是 token 估算来源（多章节等多轮调用按总量估，IsEstimated 标记）
         var group = ToFeatureGroup(task.TaskType);
-        var model = _configuration["Qwen:Model"] ?? "qwen-flash";
+        var (model, fixedCost) = ResolveUsage(task.TaskType);
         var usageId = await _usageTracker.StartAsync(
             group, "BackgroundTask", model, task.InputJson,
             userId: task.CreatorUserId, tenantId: task.TenantId);
         try
         {
             var result = await GenerateCoreAsync(task, cancellationToken);
-            await _usageTracker.CompleteAsync(usageId, result, true);
+            await _usageTracker.CompleteAsync(usageId, result, true, fixedCost: fixedCost);
             await uow.CompleteAsync();
             return result;
         }
         catch (Exception ex)
         {
-            await _usageTracker.CompleteAsync(usageId, null, false, ex.Message);
+            await _usageTracker.CompleteAsync(usageId, null, false, ex.Message, fixedCost: fixedCost);
             throw;
         }
     }
+
+    /// <summary>媒体生成按张/按次计费，使用万相模型与固定费用；文本任务按 token 估算。</summary>
+    private (string Model, decimal? FixedCost) ResolveUsage(AiTaskType taskType) => taskType switch
+    {
+        AiTaskType.ImageGeneration => (_mediaGenerator.ImageModel, AiMediaPricing.ImageCost(_mediaGenerator.ImageModel)),
+        AiTaskType.VideoGeneration => (_mediaGenerator.VideoModel, AiMediaPricing.VideoCost(_mediaGenerator.VideoModel, 5)),
+        _ => (_configuration["Qwen:Model"] ?? "qwen-flash", (decimal?)null),
+    };
 
     private static string ToFeatureGroup(AiTaskType taskType) => taskType switch
     {
@@ -179,6 +193,8 @@ public class AiGenerationJob : ITransientDependency
         AiTaskType.CaseAnalysis => AiFeatureGroups.CaseAnalysis,
         AiTaskType.CareerGuidance => AiFeatureGroups.CareerGuidance,
         AiTaskType.ExerciseGenerate => AiFeatureGroups.ExerciseGenerate,
+        AiTaskType.ImageGeneration => AiFeatureGroups.ImageGeneration,
+        AiTaskType.VideoGeneration => AiFeatureGroups.VideoGeneration,
         _ => AiFeatureGroups.Chat,
     };
 
@@ -196,9 +212,66 @@ public class AiGenerationJob : ITransientDependency
                 return await GenerateCareerGuidanceAsync(task, cancellationToken);
             case AiTaskType.ExerciseGenerate:
                 return await GenerateExerciseAsync(task, cancellationToken);
+            case AiTaskType.ImageGeneration:
+                return await GenerateImageAsync(task, cancellationToken);
+            case AiTaskType.VideoGeneration:
+                return await GenerateVideoAsync(task, cancellationToken);
             default:
                 throw new UserFriendlyException($"不支持的任务类型：{task.TaskType}");
         }
+    }
+
+    private static readonly JsonSerializerOptions CamelCaseJson = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
+    private async Task<string> GenerateImageAsync(AiGenerationTask task, CancellationToken cancellationToken)
+    {
+        var input = Deserialize<ImageGenerationInputDto>(task.InputJson);
+        await UpdateProgressAsync(task.Id, 10, "正在生成图片…");
+
+        var submitted = await _mediaGenerator.SubmitImageAsync(input.Prompt, input.Size, input.NegativePrompt);
+        var done = await _mediaGenerator.WaitForCompletionAsync(
+            submitted.TaskId, TimeSpan.FromMinutes(5), cancellationToken);
+
+        if (!string.Equals(done.Status, "SUCCEEDED", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UserFriendlyException(done.Error ?? "图片生成失败");
+        }
+        if (string.IsNullOrWhiteSpace(done.ImageUrl))
+        {
+            throw new UserFriendlyException("图片生成结果为空");
+        }
+
+        await UpdateProgressAsync(task.Id, 90, "正在保存图片…");
+        var imageUrl = await _mediaStorage.PersistAsync(done.ImageUrl!, ".png", "images");
+        // 同时保留通义万相原始临时 URL：本地持久化地址对 DashScope 不可达（如 localhost），
+        // 图生视频必须使用原始 URL 作为首帧。该 URL 约 24 小时内有效，图→视频在同一次会话完成。
+        return JsonSerializer.Serialize(new { imageUrl, dashScopeUrl = done.ImageUrl }, CamelCaseJson);
+    }
+
+    private async Task<string> GenerateVideoAsync(AiGenerationTask task, CancellationToken cancellationToken)
+    {
+        var input = Deserialize<VideoGenerationInputDto>(task.InputJson);
+        await UpdateProgressAsync(task.Id, 10, "正在生成视频…");
+
+        var submitted = await _mediaGenerator.SubmitVideoAsync(input.ImageUrl, input.Prompt, input.Duration);
+        var done = await _mediaGenerator.WaitForCompletionAsync(
+            submitted.TaskId, TimeSpan.FromMinutes(10), cancellationToken);
+
+        if (!string.Equals(done.Status, "SUCCEEDED", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UserFriendlyException(done.Error ?? "视频生成失败");
+        }
+        if (string.IsNullOrWhiteSpace(done.VideoUrl))
+        {
+            throw new UserFriendlyException("视频生成结果为空");
+        }
+
+        await UpdateProgressAsync(task.Id, 90, "正在保存视频…");
+        var videoUrl = await _mediaStorage.PersistAsync(done.VideoUrl!, ".mp4", "videos");
+        return JsonSerializer.Serialize(new { videoUrl, imageUrl = input.ImageUrl }, CamelCaseJson);
     }
 
     private async Task<string> GenerateLessonPlanSingleAsync(AiGenerationTask task, CancellationToken cancellationToken)

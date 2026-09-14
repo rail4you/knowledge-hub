@@ -112,6 +112,9 @@ public class KnowledgeHubDbContext :
     // AI 服务调用记录（用量审计 + 费用估算 + 配额统计）
     public DbSet<KnowledgeHub.AI.AiUsageRecord> AiUsageRecords { get; set; }
 
+    // 教学场景模板（图片 / 视频）
+    public DbSet<KnowledgeHub.AI.TeachingScene> TeachingScenes { get; set; }
+
     // Course entities
     public DbSet<KnowledgeHub.Courses.Course> Courses { get; set; }
     public DbSet<KnowledgeHub.Courses.Chapter> Chapters { get; set; }

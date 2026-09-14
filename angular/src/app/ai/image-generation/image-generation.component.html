@@ -1,0 +1,115 @@
+<div class="img-gen-container">
+  <!-- 1. 标题容器 -->
+  <div class="img-head">
+    <div class="img-head-left">
+      <h1>{{ '::Menu:AIImageGeneration' | abpLocalization }}</h1>
+      <p class="img-desc">
+        用提示词生成教学配图：课堂场景、科学实验、古诗意境、物理示意图等。底层使用通义万相文生图模型（wan2.2-t2i-flash），适合课件插图、手抄报、教具素材。
+      </p>
+    </div>
+  </div>
+
+  <!-- 2. 内容面板 -->
+  <div class="img-panel">
+    <div class="img-layout">
+      <!-- 左侧：输入区 -->
+      <div class="img-form">
+        <nz-card [nzTitle]="'提示词'" nzSize="small">
+          <div class="img-field">
+            <app-teaching-scene-picker
+              [category]="imageCategory"
+              (promptSelected)="prompt.set($event)"
+            ></app-teaching-scene-picker>
+          </div>
+
+          <div class="img-field">
+            <label class="img-label">图片提示词 <span class="img-required">*</span></label>
+            <textarea
+              nz-input
+              [ngModel]="prompt()"
+              (ngModelChange)="prompt.set($event)"
+              rows="5"
+              placeholder="描述你想要的画面，例如：明亮的教室中老师正在黑板上讲解数学公式，卡通插画风格…"
+            ></textarea>
+            <div class="img-count">{{ prompt().length }}/500</div>
+          </div>
+
+          <div class="img-field">
+            <label class="img-label">画面尺寸</label>
+            <nz-select
+              [ngModel]="size()"
+              (ngModelChange)="size.set($event)"
+              [ngModelOptions]="{ standalone: true }"
+              class="full-width"
+            >
+              @for (s of sizes; track s.value) {
+                <nz-option [nzValue]="s.value" [nzLabel]="s.label"></nz-option>
+              }
+            </nz-select>
+          </div>
+
+          <div class="img-field">
+            <label class="img-label">负向提示词（可选）</label>
+            <input
+              nz-input
+              [ngModel]="negativePrompt()"
+              (ngModelChange)="negativePrompt.set($event)"
+              placeholder="不希望出现的内容，如：文字、水印、变形"
+            />
+          </div>
+
+          <div class="img-actions">
+            <button
+              nz-button
+              nzType="primary"
+              nzSize="large"
+              [nzLoading]="generating()"
+              (click)="generate()"
+            >
+              <span nz-icon nzType="picture"></span>
+              {{ generating() ? progressMessage() : '生成图片' }}
+            </button>
+          </div>
+        </nz-card>
+      </div>
+
+      <!-- 右侧：结果区 -->
+      <div class="img-result">
+        <nz-card nzSize="small">
+          <div nz-card-extra>生成结果</div>
+
+          @if (generating()) {
+            <div class="img-loading">
+              <nz-spin nzSize="large"></nz-spin>
+              <p>{{ progressMessage() }}</p>
+              <p class="img-hint">图片通常需要 10~30 秒，请耐心等待</p>
+            </div>
+          } @else if (imageUrl()) {
+            <div class="img-preview">
+              <img [src]="imageUrl()" alt="生成的图片" />
+              <div class="img-preview-actions">
+                <button nz-button nzType="primary" (click)="downloadImage()">
+                  <span nz-icon nzType="download"></span> 下载图片
+                </button>
+                <a nz-button [href]="imageUrl()" target="_blank" rel="noopener">
+                  <span nz-icon nzType="eye"></span> 打开原图
+                </a>
+              </div>
+            </div>
+          } @else if (error()) {
+            <div class="img-error">
+              <span nz-icon nzType="close-circle"></span>
+              <p>{{ error() }}</p>
+              <button nz-button (click)="error.set('')">知道了</button>
+            </div>
+          } @else {
+            <div class="img-empty">
+              <nz-empty nzNotFoundImage="simple" [nzNotFoundContent]="emptyTpl"></nz-empty>
+              <ng-template #emptyTpl>生成结果将显示在这里</ng-template>
+            </div>
+          }
+        </nz-card>
+      </div>
+    </div>
+  </div>
+</div>

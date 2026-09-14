@@ -72,5 +72,19 @@ public static class AIDbModelCreatingExtensions
             b.HasIndex(x => new { x.TenantId, x.UserId, x.FeatureGroup, x.CreationTime });
             b.HasIndex(x => new { x.TenantId, x.CreationTime });
         });
+
+        builder.Entity<KnowledgeHub.AI.TeachingScene>(b =>
+        {
+            b.ToTable("TeachingScenes");
+            b.ConfigureByConvention();
+
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Id).ValueGeneratedOnAdd();
+            b.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            b.Property(x => x.Prompt).HasMaxLength(2000).IsRequired();
+
+            b.HasIndex(x => new { x.TenantId, x.Category, x.SortOrder });
+            b.HasIndex(x => x.IsSystem);
+        });
     }
 }

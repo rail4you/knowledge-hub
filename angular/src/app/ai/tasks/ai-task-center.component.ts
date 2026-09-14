@@ -296,6 +296,8 @@ export class AiTaskCenterComponent implements OnInit, OnDestroy {
     { value: AiTaskType.CaseAnalysis, label: '案例分析' },
     { value: AiTaskType.CareerGuidance, label: '职业规划' },
     { value: AiTaskType.ExerciseGenerate, label: '习题生成' },
+    { value: AiTaskType.ImageGeneration, label: '教学图片生成' },
+    { value: AiTaskType.VideoGeneration, label: '教学短视频生成' },
   ];
 
   readonly statusOptions = [

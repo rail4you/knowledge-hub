@@ -29,7 +29,7 @@ public interface IAiUsageTracker
         string? userName = null,
         string? roles = null);
 
-    Task CompleteAsync(Guid recordId, string? outputText, bool success, string? error = null, int? outputTokens = null, int? inputTokens = null, bool exact = false);
+    Task CompleteAsync(Guid recordId, string? outputText, bool success, string? error = null, int? outputTokens = null, int? inputTokens = null, bool exact = false, decimal? fixedCost = null);
 
     /// <summary>文本长度折算 token（中英混合约 1.5 字符/token）。</summary>
     static int EstimateTokens(string? text)
@@ -113,7 +113,7 @@ public class AiUsageTracker : IAiUsageTracker, ITransientDependency
         }
     }
 
-    public async Task CompleteAsync(Guid recordId, string? outputText, bool success, string? error = null, int? outputTokens = null, int? inputTokens = null, bool exact = false)
+    public async Task CompleteAsync(Guid recordId, string? outputText, bool success, string? error = null, int? outputTokens = null, int? inputTokens = null, bool exact = false, decimal? fixedCost = null)
     {
         if (recordId == Guid.Empty) return;
         try
@@ -129,7 +129,9 @@ public class AiUsageTracker : IAiUsageTracker, ITransientDependency
             record.ErrorMessage = string.IsNullOrWhiteSpace(error)
                 ? null
                 : (error.Length > 2000 ? error[..2000] : error);
-            record.EstimatedCost = IAiUsageTracker.EstimateCost(record.Model, record.InputTokens, record.OutputTokens);
+            // 图片 / 视频按张、按次计费，直接使用调用方给定的固定费用
+            record.EstimatedCost = fixedCost
+                ?? IAiUsageTracker.EstimateCost(record.Model, record.InputTokens, record.OutputTokens);
             await _repository.UpdateAsync(record, autoSave: true);
             await uow.CompleteAsync();
         }

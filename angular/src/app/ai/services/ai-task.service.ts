@@ -9,6 +9,8 @@ export enum AiTaskType {
   CaseAnalysis = 20,
   CareerGuidance = 30,
   ExerciseGenerate = 40,
+  ImageGeneration = 50,
+  VideoGeneration = 60,
 }
 
 /** 与后端 KnowledgeHub.AI.AiTaskStatus 对齐 */
@@ -189,6 +191,8 @@ export class AiTaskService {
       case AiTaskType.CaseAnalysis: return '案例分析';
       case AiTaskType.CareerGuidance: return '职业规划';
       case AiTaskType.ExerciseGenerate: return '习题生成';
+      case AiTaskType.ImageGeneration: return '教学图片生成';
+      case AiTaskType.VideoGeneration: return '教学短视频生成';
       default: return 'AI 任务';
     }
   }
@@ -200,6 +204,8 @@ export class AiTaskService {
       case AiTaskType.CaseAnalysis: return 'purple';
       case AiTaskType.CareerGuidance: return 'cyan';
       case AiTaskType.ExerciseGenerate: return 'orange';
+      case AiTaskType.ImageGeneration: return 'green';
+      case AiTaskType.VideoGeneration: return 'magenta';
       default: return 'default';
     }
   }
@@ -239,6 +245,10 @@ export function aiTaskResultRoute(type: AiTaskType): string {
       return '/ai/career-guidance';
     case AiTaskType.ExerciseGenerate:
       return '/ai/exercise-generate';
+    case AiTaskType.ImageGeneration:
+      return '/ai/image-generation';
+    case AiTaskType.VideoGeneration:
+      return '/ai/video-generation';
     default:
       return '/ai/tasks';
   }

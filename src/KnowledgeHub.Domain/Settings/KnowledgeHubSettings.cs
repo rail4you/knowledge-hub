@@ -31,7 +31,7 @@ public static class KnowledgeHubSettings
     /// <summary>AI 每日配额（JSON：角色 → 分组 → 次数，null/缺失=不限）。</summary>
     public const string AiQuotas = AiPrefix + ".Quotas";
 
-    /// <summary>默认配额：学生职业规划 2/天、聊天 30/天；教师职业规划 5/天、聊天 100/天；其余不限。</summary>
+    /// <summary>默认配额：学生职业规划 2/天、聊天 30/天；教师职业规划 5/天、聊天 100/天、图片 20/天、视频 5/天；其余不限。</summary>
     public const string DefaultAiQuotas =
-        "{\"Student\":{\"CareerGuidance\":2,\"Chat\":30},\"Teacher\":{\"CareerGuidance\":5,\"Chat\":100}}";
+        "{\"Student\":{\"CareerGuidance\":2,\"Chat\":30},\"Teacher\":{\"CareerGuidance\":5,\"Chat\":100,\"ImageGeneration\":20,\"VideoGeneration\":5}}";
 }

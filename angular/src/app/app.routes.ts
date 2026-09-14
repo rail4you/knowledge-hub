@@ -533,6 +533,22 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    path: 'ai/image-generation',
+    loadComponent: () => import('./ai/image-generation/image-generation.component').then(c => c.ImageGenerationComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.AI.ImageGeneration',
+    },
+  },
+  {
+    path: 'ai/video-generation',
+    loadComponent: () => import('./ai/video-generation/video-generation.component').then(c => c.VideoGenerationComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.AI.VideoGeneration',
+    },
+  },
+  {
     path: 'ai/model-management',
     loadComponent: () => import('./ai/model-management/model-management.component').then(c => c.ModelManagementComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],

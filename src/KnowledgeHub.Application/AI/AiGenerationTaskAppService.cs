@@ -274,6 +274,8 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
         AiTaskType.CaseAnalysis => KnowledgeHubPermissions.AI.CaseAnalysis,
         AiTaskType.CareerGuidance => KnowledgeHubPermissions.AI.CareerGuidance,
         AiTaskType.ExerciseGenerate => KnowledgeHubPermissions.AI.ExerciseGenerate,
+        AiTaskType.ImageGeneration => KnowledgeHubPermissions.AI.ImageGeneration,
+        AiTaskType.VideoGeneration => KnowledgeHubPermissions.AI.VideoGeneration,
         _ => throw new UserFriendlyException($"未知的任务类型：{taskType}")
     };
 
@@ -284,6 +286,8 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
         AiTaskType.CaseAnalysis => AiFeatureGroups.CaseAnalysis,
         AiTaskType.CareerGuidance => AiFeatureGroups.CareerGuidance,
         AiTaskType.ExerciseGenerate => AiFeatureGroups.ExerciseGenerate,
+        AiTaskType.ImageGeneration => AiFeatureGroups.ImageGeneration,
+        AiTaskType.VideoGeneration => AiFeatureGroups.VideoGeneration,
         _ => AiFeatureGroups.Chat,
     };
 

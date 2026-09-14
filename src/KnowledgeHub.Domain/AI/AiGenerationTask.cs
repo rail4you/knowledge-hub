@@ -70,7 +70,9 @@ public enum AiTaskType : byte
     LessonPlanMulti = 10,
     CaseAnalysis = 20,
     CareerGuidance = 30,
-    ExerciseGenerate = 40
+    ExerciseGenerate = 40,
+    ImageGeneration = 50,
+    VideoGeneration = 60
 }
 
 public enum AiTaskStatus : byte

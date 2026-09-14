@@ -27,14 +27,16 @@ public class AIController : AbpControllerBase
     private readonly LessonPlanAppService _lessonPlanAppService;
     private readonly CaseAnalysisAppService _caseAnalysisAppService;
     private readonly CareerGuidanceAppService _careerGuidanceAppService;
+    private readonly AiMediaAppService _aiMediaAppService;
     private readonly ILogger<AIController> _logger;
 
-    public AIController(ChatAppService chatAppService, LessonPlanAppService lessonPlanAppService, CaseAnalysisAppService caseAnalysisAppService, CareerGuidanceAppService careerGuidanceAppService, ILogger<AIController> logger)
+    public AIController(ChatAppService chatAppService, LessonPlanAppService lessonPlanAppService, CaseAnalysisAppService caseAnalysisAppService, CareerGuidanceAppService careerGuidanceAppService, AiMediaAppService aiMediaAppService, ILogger<AIController> logger)
     {
         _chatAppService = chatAppService;
         _lessonPlanAppService = lessonPlanAppService;
         _caseAnalysisAppService = caseAnalysisAppService;
         _careerGuidanceAppService = careerGuidanceAppService;
+        _aiMediaAppService = aiMediaAppService;
         _logger = logger;
     }
 
@@ -343,6 +345,39 @@ public class AIController : AbpControllerBase
         return File(docxBytes,
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             fileName);
+    }
+
+    // ========== 教学图片 / 短视频生成（通义万相） ==========
+
+    /// <summary>
+    /// 提交教学图片生成任务（文生图，wan2.2-t2i-flash），立即返回任务号，前端轮询结果。
+    /// </summary>
+    [HttpPost("generate-image")]
+    [Authorize(KnowledgeHubPermissions.AI.ImageGeneration)]
+    [IgnoreAntiforgeryToken]
+    public async Task<MediaGenerationTaskDto> GenerateImage([FromBody] ImageGenerationInputDto input)
+    {
+        return await _aiMediaAppService.GenerateImageAsync(input);
+    }
+
+    /// <summary>
+    /// 提交教学短视频生成任务（图生视频，wan2.2-i2v-flash，首帧图片 + 提示词，最长 5 秒）。
+    /// </summary>
+    [HttpPost("generate-video")]
+    [Authorize(KnowledgeHubPermissions.AI.VideoGeneration)]
+    [IgnoreAntiforgeryToken]
+    public async Task<MediaGenerationTaskDto> GenerateVideo([FromBody] VideoGenerationInputDto input)
+    {
+        return await _aiMediaAppService.GenerateVideoAsync(input);
+    }
+
+    /// <summary>
+    /// 查询图片 / 视频生成任务状态与结果。
+    /// </summary>
+    [HttpGet("media-task/{taskId}")]
+    public async Task<MediaGenerationTaskDto> GetMediaTask(string taskId)
+    {
+        return await _aiMediaAppService.GetMediaTaskAsync(taskId);
     }
 
     // ========== Thread Management ==========

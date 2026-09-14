@@ -65,6 +65,10 @@ public static class KnowledgeHubPermissions
         public const string CaseAnalysis = Default + ".CaseAnalysis";
         public const string CareerGuidance = Default + ".CareerGuidance";
         public const string ExerciseGenerate = Default + ".ExerciseGenerate";
+        /// <summary>教学图片生成（通义万相文生图）。</summary>
+        public const string ImageGeneration = Default + ".ImageGeneration";
+        /// <summary>教学短视频生成（通义万相图生视频）。</summary>
+        public const string VideoGeneration = Default + ".VideoGeneration";
         /// <summary>可查看/管理本租户所有人的 AI 生成任务（任务监控面板）。</summary>
         public const string ManageTasks = Default + ".ManageTasks";
     }

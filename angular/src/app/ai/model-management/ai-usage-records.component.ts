@@ -63,6 +63,8 @@ export class AiUsageRecordsComponent implements OnInit {
     { value: 'Chat', label: 'AI 对话' },
     { value: 'Video', label: '视频理解' },
     { value: 'Summary', label: '文档摘要' },
+    { value: 'ImageGeneration', label: '教学图片生成' },
+    { value: 'VideoGeneration', label: '教学短视频生成' },
   ];
 
   ngOnInit(): void {

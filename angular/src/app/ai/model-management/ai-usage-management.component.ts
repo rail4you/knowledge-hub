@@ -55,10 +55,12 @@ export class AiUsageManagementComponent implements OnInit {
     { value: 'Chat', label: 'AI 对话' },
     { value: 'Video', label: '视频理解' },
     { value: 'Summary', label: '文档摘要' },
+    { value: 'ImageGeneration', label: '教学图片生成' },
+    { value: 'VideoGeneration', label: '教学短视频生成' },
   ];
 
   // ============= 配额 =============
-  readonly quotaGroups = ['CareerGuidance', 'Chat', 'LessonPlan', 'CaseAnalysis', 'ExerciseGenerate'];
+  readonly quotaGroups = ['CareerGuidance', 'Chat', 'LessonPlan', 'CaseAnalysis', 'ExerciseGenerate', 'ImageGeneration', 'VideoGeneration'];
   readonly quotaRoles = ['Student', 'Teacher', 'SchoolAdmin', 'admin'];
   readonly quotaRows = signal<QuotaRow[]>([]);
   readonly quotasLoading = signal(false);

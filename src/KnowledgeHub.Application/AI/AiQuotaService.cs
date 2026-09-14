@@ -90,6 +90,7 @@ public class AiQuotaService : IAiQuotaService, ITransientDependency
         {
             AiFeatureGroups.CareerGuidance, AiFeatureGroups.LessonPlan, AiFeatureGroups.CaseAnalysis,
             AiFeatureGroups.ExerciseGenerate, AiFeatureGroups.Chat,
+            AiFeatureGroups.ImageGeneration, AiFeatureGroups.VideoGeneration,
         };
         var userId = _currentUser.Id;
         if (!userId.HasValue) return groups.ToDictionary(g => g, _ => (int?)null);

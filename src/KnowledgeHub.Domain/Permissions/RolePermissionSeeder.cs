@@ -321,6 +321,8 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.AI.CaseAnalysis);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.AI.CareerGuidance);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.AI.ExerciseGenerate);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.AI.ImageGeneration);
+        await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.AI.VideoGeneration);
         // 院校管理员可查看/管理本租户所有人的 AI 生成任务（任务监控面板）
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.AI.ManageTasks);
         await GrantAsync("SchoolAdmin", KnowledgeHubPermissions.TeachingAgents.Default);
@@ -460,6 +462,8 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("Teacher", KnowledgeHubPermissions.AI.CaseAnalysis);
         await GrantAsync("Teacher", KnowledgeHubPermissions.AI.CareerGuidance);
         await GrantAsync("Teacher", KnowledgeHubPermissions.AI.ExerciseGenerate);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.AI.ImageGeneration);
+        await GrantAsync("Teacher", KnowledgeHubPermissions.AI.VideoGeneration);
         await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingAgents.Default);
         await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingAgents.Manage);
         await GrantAsync("Teacher", KnowledgeHubPermissions.TeachingAgents.Assign);
@@ -591,6 +595,8 @@ public class RolePermissionSeeder : IRolePermissionSeeder, ITransientDependency
         await GrantAsync("admin", KnowledgeHubPermissions.AI.CaseAnalysis);
         await GrantAsync("admin", KnowledgeHubPermissions.AI.CareerGuidance);
         await GrantAsync("admin", KnowledgeHubPermissions.AI.ExerciseGenerate);
+        await GrantAsync("admin", KnowledgeHubPermissions.AI.ImageGeneration);
+        await GrantAsync("admin", KnowledgeHubPermissions.AI.VideoGeneration);
         await GrantAsync("admin", KnowledgeHubPermissions.AI.ManageTasks);
         await GrantAsync("admin", KnowledgeHubPermissions.TeachingAgents.Default);
         await GrantAsync("admin", KnowledgeHubPermissions.TeachingAgents.Manage);

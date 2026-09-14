@@ -1,0 +1,84 @@
+<div class="scene-picker">
+  <div class="sp-head">
+    <span class="sp-title">{{ title() }}</span>
+    <button nz-button nzType="link" nzSize="small" (click)="openAdd()">
+      <span nz-icon nzType="plus"></span> 添加场景
+    </button>
+  </div>
+
+  <div class="sp-chips">
+    @for (scene of scenes(); track scene.id) {
+      <div class="sp-chip" [class.sp-chip--system]="scene.isSystem">
+        <span class="sp-chip-name" (click)="select(scene)" [title]="scene.prompt">
+          {{ scene.name }}
+        </span>
+        @if (scene.isSystem) {
+          <nz-tag class="sp-badge" nzColor="default">模板</nz-tag>
+          <span
+            class="sp-icon"
+            nz-icon
+            nzType="copy"
+            nz-tooltip
+            nzTooltipTitle="复制为我的场景"
+            (click)="copy(scene)"
+          ></span>
+        } @else {
+          <span
+            class="sp-icon"
+            nz-icon
+            nzType="edit"
+            nz-tooltip
+            nzTooltipTitle="编辑"
+            (click)="openEdit(scene)"
+          ></span>
+          <span
+            class="sp-icon sp-icon--danger"
+            nz-icon
+            nzType="delete"
+            nz-tooltip
+            nzTooltipTitle="删除"
+            (click)="remove(scene)"
+          ></span>
+        }
+      </div>
+    }
+    @if (!loading() && scenes().length === 0) {
+      <span class="sp-empty">暂无场景，点击「添加场景」创建</span>
+    }
+  </div>
+
+  <nz-modal
+    [nzVisible]="modalVisible()"
+    [nzTitle]="editingId() ? '编辑场景' : '添加场景'"
+    [nzOkLoading]="saving()"
+    nzOkText="保存"
+    nzCancelText="取消"
+    (nzVisibleChange)="modalVisible.set($event)"
+    (nzOnOk)="save()"
+    (nzOnCancel)="closeModal()"
+  >
+    <ng-container *nzModalContent>
+      <div class="sp-form-item">
+        <label>场景名称 <span class="sp-required">*</span></label>
+        <input
+          nz-input
+          [ngModel]="formName()"
+          (ngModelChange)="formName.set($event)"
+          maxlength="100"
+          placeholder="如：课堂讲解、科学实验"
+        />
+      </div>
+      <div class="sp-form-item">
+        <label>提示词 <span class="sp-required">*</span></label>
+        <textarea
+          nz-input
+          [ngModel]="formPrompt()"
+          (ngModelChange)="formPrompt.set($event)"
+          rows="5"
+          maxlength="2000"
+          placeholder="描述该教学场景的画面或运镜，生成时会填入提示词输入框"
+        ></textarea>
+      </div>
+    </ng-container>
+  </nz-modal>
+</div>
