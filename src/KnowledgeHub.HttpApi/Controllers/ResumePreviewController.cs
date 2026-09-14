@@ -63,15 +63,23 @@ public class ResumePreviewController : AbpControllerBase
             return BadRequest(new { message = "附件地址不合法" });
         }
 
-        // 仅允许本应用 OSS Bucket 下的简历文件
+        // 仅允许本应用 OSS Bucket 下的简历文件（防止成为开放代理）
         var bucketName = _configuration["Oss:BucketName"] ?? "kg-edu";
         var endpoint = _configuration["Oss:Endpoint"] ?? "oss-cn-beijing.aliyuncs.com";
         var region = endpoint.Replace(".aliyuncs.com", "").Replace("oss-", "");
         var expectedHost = $"{bucketName}.oss-{region}.aliyuncs.com";
         var uploadPath = (_configuration["Oss:UploadPath"] ?? "knowledgehub").Trim('/');
 
+        // 必须落在本应用 OSS 上传根目录下且位于 resumes/ 目录。
+        // 历史简历存在两条上传路径：knowledgehub/resumes/... 与
+        // knowledgehub/images/resumes/...（旧图片上传流），两者都要支持。
+        var path = uri.AbsolutePath;
+        var underUploadRoot = path.StartsWith($"/{uploadPath}/", StringComparison.OrdinalIgnoreCase);
+        var underResumesDir = path.Contains("/resumes/", StringComparison.OrdinalIgnoreCase);
+
         if (!string.Equals(uri.Host, expectedHost, StringComparison.OrdinalIgnoreCase) ||
-            !uri.AbsolutePath.Contains($"/{uploadPath}/resumes/", StringComparison.OrdinalIgnoreCase))
+            !underUploadRoot ||
+            !underResumesDir)
         {
             return BadRequest(new { message = "仅支持预览本站简历附件" });
         }
