@@ -114,7 +114,7 @@
         </div>
       } @else {
         <div class="course-grid">
-          @for (course of visibleCourses(); track course.id) {
+          @for (course of pagedCourses(); track course.id) {
             <article class="course-card" (click)="openCourse(course.id!)">
               <!-- 封面 -->
               <div class="course-card__cover" [style.background]="courseGradient(course)">
@@ -207,6 +207,18 @@
             </article>
           }
         </div>
+
+        @if (visibleCourses().length > pageSize()) {
+          <div class="courses-pagination">
+            <nz-pagination
+              [nzPageIndex]="pageIndex()"
+              [nzPageSize]="pageSize()"
+              [nzTotal]="visibleCourses().length"
+              (nzPageIndexChange)="onPageChange($event)"
+              nzAlign="center"
+            ></nz-pagination>
+          </div>
+        }
       }
     </main>
   </div>

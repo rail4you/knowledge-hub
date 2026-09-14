@@ -34,7 +34,7 @@ export class StudentMicroMajorsComponent implements OnInit {
   readonly loading = signal(false);
   readonly totalCount = signal(0);
   readonly pageIndex = signal(1);
-  readonly pageSize = signal(12);
+  readonly pageSize = signal(10);
   readonly EnrollmentStatus = MicroMajorEnrollmentStatus;
 
   /** 头部数据总览 */

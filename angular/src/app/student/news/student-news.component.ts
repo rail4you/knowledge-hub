@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NewsArticleDto, NewsCategoryDto, NewsService } from '../../news/news.service';
 import { ClientCacheService } from '../../shared/cache/client-cache.service';
@@ -32,6 +33,7 @@ const NEWS_CACHE_NS = 'student.news';
     NzIconModule,
     NzSpinModule,
     NzDividerModule,
+    NzPaginationModule,
     HeadlineHeroComponent,
   ],
   templateUrl: './student-news.component.html',
@@ -47,6 +49,9 @@ export class StudentNewsComponent implements OnInit {
   readonly loading = signal(false);
   readonly articles = signal<NewsArticleDto[]>([]);
   readonly totalCount = signal(0);
+  /** 分页：默认每页 10 条（服务端分页） */
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(10);
   readonly hotArticles = signal<NewsArticleDto[]>([]);
   /** 头条文章列表（第 0 个作为主推，其他作为右侧次条） */
   readonly headlineArticles = signal<NewsArticleDto[]>([]);
@@ -65,7 +70,7 @@ export class StudentNewsComponent implements OnInit {
     const totalViews = all.reduce((sum, a) => sum + (a.viewCount || 0), 0);
     const totalLikes = all.reduce((sum, a) => sum + (a.likeCount || 0), 0);
     return [
-      { label: '资讯总数', value: all.length, suffix: '篇', icon: 'file-text', color: '#2b6cd4' },
+      { label: '资讯总数', value: this.totalCount(), suffix: '篇', icon: 'file-text', color: '#2b6cd4' },
       { label: '热门资讯', value: hot.length, suffix: '篇', icon: 'fire', color: '#f59e0b' },
       { label: '总阅读量', value: totalViews, suffix: totalViews >= 10000 ? '万次' : '次', icon: 'eye', color: '#10b981' },
       { label: '总点赞量', value: totalLikes, suffix: totalLikes >= 10000 ? '万次' : '次', icon: 'like', color: '#06b6d4' },
@@ -129,8 +134,8 @@ export class StudentNewsComponent implements OnInit {
       isHot: attr === 'hot' ? true : attr === 'normal' ? false : undefined,
       publishedAfter: time.after,
       publishedBefore: time.before,
-      skipCount: 0,
-      maxResultCount: 30,
+      skipCount: (this.pageIndex() - 1) * this.pageSize(),
+      maxResultCount: this.pageSize(),
     };
 
     this.loading.set(true);
@@ -171,17 +176,28 @@ export class StudentNewsComponent implements OnInit {
 
   selectCategory(id: string | null): void {
     this.categoryId.set(id);
+    this.pageIndex.set(1);
     this.loadArticles();
   }
 
   selectAttrFilter(value: 'all' | 'top' | 'hot' | 'normal'): void {
     this.attrFilter.set(value);
+    this.pageIndex.set(1);
     this.loadArticles();
   }
 
   selectTimeFilter(value: 'all' | 'week' | 'month' | 'older'): void {
     this.timeFilter.set(value);
+    this.pageIndex.set(1);
     this.loadArticles();
+  }
+
+  /** 翻页：服务端分页，回到列表顶部 */
+  onPageChange(index: number): void {
+    this.pageIndex.set(index);
+    this.loadArticles();
+    const el = document.querySelector('.news-grid');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /** 发布时间范围（周一起点 / 月初，ISO 字符串） */
@@ -208,6 +224,7 @@ export class StudentNewsComponent implements OnInit {
   }
 
   onSearch(): void {
+    this.pageIndex.set(1);
     this.loadArticles();
   }
 

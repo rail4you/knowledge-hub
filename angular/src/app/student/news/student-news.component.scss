@@ -275,6 +275,12 @@
   gap: 18px;
 }
 
+.news-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
 .news-card {
   display: flex;
   flex-direction: column;

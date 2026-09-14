@@ -296,6 +296,18 @@
               </article>
             }
           </div>
+
+          @if (totalCount() > pageSize()) {
+            <div class="news-pagination">
+              <nz-pagination
+                [nzPageIndex]="pageIndex()"
+                [nzPageSize]="pageSize()"
+                [nzTotal]="totalCount()"
+                (nzPageIndexChange)="onPageChange($event)"
+                nzAlign="center"
+              ></nz-pagination>
+            </div>
+          }
         }
       </main>
     </div>

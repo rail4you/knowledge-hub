@@ -45,7 +45,7 @@ export class StudentFavoritesComponent implements OnInit {
   loading = signal(false);
   totalCount = signal(0);
   pageIndex = signal(1);
-  pageSize = signal(12);
+  pageSize = signal(10);
 
   ratingSummaries = signal<Record<string, ResourceRatingSummaryDto>>({});
 

@@ -83,7 +83,7 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   totalCount = signal(0);
   pageIndex = signal(1);
-  pageSize = signal(12);
+  pageSize = signal(10);
 
   ratingSummaries = signal<Record<string, ResourceRatingSummaryDto>>({});
   collectedResourceIds = signal<Record<string, boolean>>({});
@@ -452,5 +452,13 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     event.preventDefault();
     if (!rec.resourceId) return;
     this.router.navigate(['/student/resources', rec.resourceId]);
+  }
+
+  /** 推荐卡片封面用文件名：资源名 + 扩展名（ResourceCover 依据扩展名判断封面类型） */
+  recCoverName(rec: RecommendedResourceDto): string {
+    const name = rec.resourceName || '';
+    const ext = (rec.fileExtension || '').replace('.', '').toLowerCase();
+    if (!ext) return name;
+    return name.toLowerCase().endsWith('.' + ext) ? name : `${name}.${ext}`;
   }
 }

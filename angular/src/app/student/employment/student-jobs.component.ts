@@ -30,7 +30,7 @@ export class StudentJobsComponent implements OnInit {
   readonly jobType = signal<EmploymentJobType | null>(null);
   readonly totalCount = signal(0);
   readonly pageIndex = signal(1);
-  readonly pageSize = signal(12);
+  readonly pageSize = signal(10);
   readonly jobTypes = EmploymentJobType;
   readonly as = EmploymentApplicationStatus;
   /** 选中的岗位 id：有值时弹出详情弹窗，不做路由跳转 */

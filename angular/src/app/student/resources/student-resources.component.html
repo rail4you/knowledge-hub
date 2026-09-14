@@ -31,9 +31,17 @@
               <img
                 class="rec-card__cover-img"
                 src="assets/images/home/material-cover-placeholder.svg"
-                [alt]="rec.resourceName"
+                alt=""
                 loading="lazy"
+                aria-hidden="true"
               />
+              <app-resource-cover
+                [resourceId]="rec.resourceId"
+                [resourceType]="rec.resourceType"
+                [fileName]="recCoverName(rec)"
+                [alt]="rec.resourceName"
+              >
+              </app-resource-cover>
               <span class="rec-card__overlay" aria-hidden="true"></span>
               <span class="rec-card__type" [ngClass]="'rec-type--' + rec.resourceType">
                 {{ getResourceTypeName(rec.resourceType) }}

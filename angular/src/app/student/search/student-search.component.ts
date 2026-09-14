@@ -66,7 +66,7 @@ export class StudentSearchComponent implements OnInit {
 
   searchQuery = '';
   pageIndex = 1;
-  readonly pageSize = 20;
+  readonly pageSize = 10;
 
   loading = signal(false);
   results = signal<DocumentSearchResultDto[]>([]);

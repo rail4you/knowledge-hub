@@ -261,6 +261,12 @@
   gap: 18px;
 }
 
+.courses-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
 .course-card {
   background: #fff;
   border-radius: ds.$student-radius-lg;

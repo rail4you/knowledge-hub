@@ -7,6 +7,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { AuthService, Rest, RestService } from '@abp/ng.core';
 import type { PagedResultDto } from '@abp/ng.core';
@@ -60,6 +61,7 @@ interface HotCourse {
     NzSpinModule,
     NzProgressModule,
     NzEmptyModule,
+    NzPaginationModule,
     NzTooltipModule,
     NzSelectModule,
     StudentHeroComponent,
@@ -86,6 +88,10 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   /** 当前 published 查询的后端 totalCount（分页总数，避免只用 items.length 截断） */
   readonly publishedTotal = signal<number | null>(null);
 
+  /** 分页：默认每页 10 条（对 visibleCourses 做客户端分页，保证与统计口径一致） */
+  readonly pageIndex = signal(1);
+  readonly pageSize = signal(10);
+
   readonly filter = signal('');
   readonly selectedMajor = signal<string | null>(null);
   readonly selectedDifficulty = signal<number | null>(null);
@@ -110,6 +116,13 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     // 这里同样把缺失的已选课补齐，保证两个 tab 的已选课集合完全一致。
     const publishedIds = new Set(this.courses().map(c => c.id));
     return [...this.courses(), ...this.collectMissingEnrolled(publishedIds)];
+  });
+
+  /** 当前页展示的课程（客户端分页，默认每页 10） */
+  readonly pagedCourses = computed<CourseDto[]>(() => {
+    const list = this.visibleCourses();
+    const start = (this.pageIndex() - 1) * this.pageSize();
+    return list.slice(start, start + this.pageSize());
   });
 
   /**
@@ -247,7 +260,8 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
       filter: this.filter() || undefined,
       difficulty: this.selectedDifficulty() ?? undefined,
       skipCount: 0,
-      // 列表无分页 UI，取足够大的页避免 totalCount 与 items.length 不一致（曾因截断出现 8 vs 10）
+      // 一次取足够大的一页：列表在客户端对 visibleCourses()（含跨租户/未发布已选课补齐）分页，
+      // 避免后端截断导致 totalCount 与可见条目不一致。
       maxResultCount: 200,
     };
     if (majorSel === this.majorPublicOnlyValue) {
@@ -341,16 +355,19 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
 
   selectMajor(id: string | null) {
     this.selectedMajor.set(id);
+    this.pageIndex.set(1);
     this.loadCourses();
   }
 
   selectDifficulty(value: number | null) {
     this.selectedDifficulty.set(value);
+    this.pageIndex.set(1);
     this.loadCourses();
   }
 
   selectStatus(value: string) {
     this.selectedStatus.set(value);
+    this.pageIndex.set(1);
     // 'enrolled' 是基于 myCourses() 的客户端过滤，不需要重新发请求
     // 'all' / 'recommended' 需要重新拉取，否则点击"全部课程/推荐课程"看上去无反应
     if (value !== 'enrolled') {
@@ -359,6 +376,7 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
   }
 
   onSearch() {
+    this.pageIndex.set(1);
     this.loadCourses();
   }
 
@@ -366,7 +384,12 @@ export class StudentCoursesComponent implements OnInit, OnDestroy {
     this.filter.set('');
     this.selectedMajor.set(null);
     this.selectedDifficulty.set(null);
+    this.pageIndex.set(1);
     this.loadCourses();
+  }
+
+  onPageChange(index: number) {
+    this.pageIndex.set(index);
   }
 
   openCourse(id: string) {
