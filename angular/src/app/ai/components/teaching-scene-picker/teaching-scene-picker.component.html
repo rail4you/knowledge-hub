@@ -6,46 +6,49 @@
     </button>
   </div>
 
-  <div class="sp-chips">
-    @for (scene of scenes(); track scene.id) {
-      <div class="sp-chip" [class.sp-chip--system]="scene.isSystem">
-        <span class="sp-chip-name" (click)="select(scene)" [title]="scene.prompt">
-          {{ scene.name }}
-        </span>
-        @if (scene.isSystem) {
-          <nz-tag class="sp-badge" nzColor="default">模板</nz-tag>
-          <span
-            class="sp-icon"
-            nz-icon
-            nzType="copy"
-            nz-tooltip
-            nzTooltipTitle="复制为我的场景"
-            (click)="copy(scene)"
-          ></span>
-        } @else {
-          <span
-            class="sp-icon"
-            nz-icon
-            nzType="edit"
-            nz-tooltip
-            nzTooltipTitle="编辑"
-            (click)="openEdit(scene)"
-          ></span>
-          <span
-            class="sp-icon sp-icon--danger"
-            nz-icon
-            nzType="delete"
-            nz-tooltip
-            nzTooltipTitle="删除"
-            (click)="remove(scene)"
-          ></span>
-        }
-      </div>
-    }
-    @if (!loading() && scenes().length === 0) {
-      <span class="sp-empty">暂无场景，点击「添加场景」创建</span>
-    }
-  </div>
+  <nz-table
+    #sceneTable
+    [nzData]="tableScenes()"
+    [nzShowPagination]="false"
+    nzSize="small"
+    [nzLoading]="loading()"
+  >
+    <thead>
+      <tr>
+        <th nzWidth="24%">场景名称</th>
+        <th>提示词</th>
+        <th nzWidth="280">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (scene of sceneTable.data; track scene.id) {
+        <tr>
+          <td>
+            <span class="sp-name">{{ scene.name }}</span>
+          </td>
+          <td>
+            <span class="sp-prompt" [title]="scene.prompt">{{ scene.prompt }}</span>
+          </td>
+          <td class="sp-actions">
+            <button nz-button nzType="link" nzSize="small" (click)="select(scene)">
+              使用
+            </button>
+            <button nz-button nzType="link" nzSize="small" (click)="openEdit(scene)">
+              <span nz-icon nzType="edit"></span> 编辑
+            </button>
+            <button nz-button nzType="link" nzSize="small" nzDanger (click)="remove(scene)">
+              <span nz-icon nzType="delete"></span> 删除
+            </button>
+          </td>
+        </tr>
+      }
+      @if (!loading() && tableScenes().length === 0) {
+        <tr>
+          <td colspan="3" class="sp-empty">暂无场景，点击「添加场景」创建，可从内置模板开始</td>
+        </tr>
+      }
+    </tbody>
+  </nz-table>
 
   <nz-modal
     [nzVisible]="modalVisible()"
@@ -58,6 +61,26 @@
     (nzOnCancel)="closeModal()"
   >
     <ng-container *nzModalContent>
+      @if (!editingId()) {
+        <div class="sp-form-item">
+          <label>选择模板（可选，自动填充下方内容）</label>
+          <nz-select
+            [ngModel]="templateId()"
+            (ngModelChange)="onTemplateChange($event)"
+            nzAllowClear
+            nzPlaceHolder="从内置教学模板中选择"
+            class="sp-select"
+          >
+            @for (tpl of templateOptions(); track tpl.id) {
+              <nz-option [nzValue]="tpl.id" [nzLabel]="tpl.name"></nz-option>
+            }
+          </nz-select>
+          @if (templateOptions().length === 0) {
+            <div class="sp-hint">当前分类暂无内置模板</div>
+          }
+        </div>
+      }
+
       <div class="sp-form-item">
         <label>场景名称 <span class="sp-required">*</span></label>
         <input
@@ -76,7 +99,7 @@
           (ngModelChange)="formPrompt.set($event)"
           rows="5"
           maxlength="2000"
-          placeholder="描述该教学场景的画面或运镜，生成时会填入提示词输入框"
+          placeholder="描述该教学场景的画面或运镜，使用时会填入提示词输入框"
         ></textarea>
       </div>
     </ng-container>

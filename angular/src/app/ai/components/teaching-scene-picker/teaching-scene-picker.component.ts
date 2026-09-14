@@ -1,10 +1,12 @@
-import { Component, inject, input, output, signal, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, input, output, signal, computed, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
+import { NzSelectModule } from 'ng-zorro-antd/select';
+import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { NzTooltipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -15,8 +17,8 @@ import {
 } from '../../services/teaching-scene.service';
 
 /**
- * 教学场景选择器：展示系统内置模板 + 本租户自定义场景。
- * 点击场景名回填提示词；系统模板只读（可复制为我的场景），自定义场景可编辑/删除。
+ * 教学场景选择器：表格展示「我的场景」（使用 / 编辑 / 删除）。
+ * 内置模板从表格中移出，在「添加场景」表单的「选择模板」下拉中选取并自动填充。
  */
 @Component({
   selector: 'app-teaching-scene-picker',
@@ -28,6 +30,8 @@ import {
     NzIconModule,
     NzInputModule,
     NzModalModule,
+    NzSelectModule,
+    NzTableModule,
     NzTagModule,
     NzTooltipModule,
   ],
@@ -47,8 +51,13 @@ export class TeachingScenePickerComponent {
   readonly scenes = signal<TeachingScene[]>([]);
   readonly loading = signal(false);
 
+  /** 表格只展示「我的场景」；内置模板放到新建表单的「选择模板」下拉里。 */
+  readonly tableScenes = computed(() => this.scenes().filter(s => !s.isSystem));
+  readonly templateOptions = computed(() => this.scenes().filter(s => s.isSystem));
+
   readonly modalVisible = signal(false);
   readonly editingId = signal<string | null>(null);
+  readonly templateId = signal<string | null>(null);
   readonly formName = signal('');
   readonly formPrompt = signal('');
   readonly saving = signal(false);
@@ -80,13 +89,26 @@ export class TeachingScenePickerComponent {
 
   openAdd() {
     this.editingId.set(null);
+    this.templateId.set(null);
     this.formName.set('');
     this.formPrompt.set('');
     this.modalVisible.set(true);
   }
 
+  /** 选择内置模板：自动填充名称与提示词，可在此基础上修改。 */
+  onTemplateChange(id: string | null) {
+    this.templateId.set(id);
+    if (!id) return;
+    const tpl = this.templateOptions().find(t => t.id === id);
+    if (tpl) {
+      this.formName.set(tpl.name);
+      this.formPrompt.set(tpl.prompt);
+    }
+  }
+
   openEdit(scene: TeachingScene) {
     this.editingId.set(scene.id);
+    this.templateId.set(null);
     this.formName.set(scene.name);
     this.formPrompt.set(scene.prompt);
     this.modalVisible.set(true);
@@ -124,16 +146,6 @@ export class TeachingScenePickerComponent {
         this.saving.set(false);
         this.message.error(err?.error?.error?.message || '保存失败');
       },
-    });
-  }
-
-  copy(scene: TeachingScene) {
-    this.sceneService.copyToMine(scene.id).subscribe({
-      next: () => {
-        this.message.success('已复制为我的场景，可自由编辑');
-        this.load(this.category());
-      },
-      error: () => this.message.error('复制失败'),
     });
   }
 

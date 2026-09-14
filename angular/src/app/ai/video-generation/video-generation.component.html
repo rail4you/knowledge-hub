@@ -4,123 +4,254 @@
     <div class="vid-head-left">
       <h1>{{ '::Menu:AIVideoGeneration' | abpLocalization }}</h1>
       <p class="vid-desc">
-        两步生成教学短视频：先用 AI 生成首帧图片，再用「首帧图片 + 运镜提示词」生成不超过 5 秒的动画片段。底层使用通义万相图生视频模型（wan2.2-i2v-flash），适合微课片头、知识点动画。
+        两步生成教学短视频：先用 AI 生成首帧图片或上传图片，再配合运镜提示词生成不超过 5 秒的动画片段。底层使用通义万相图生视频模型（wan2.2-i2v-flash），生成结果自动持久化。
       </p>
     </div>
   </div>
 
-  <!-- 2. 内容面板 -->
+  <!-- 2. Tab 面板 -->
   <div class="vid-panel">
-    <div class="vid-steps">
-      <!-- 步骤一：生成首帧图片 -->
-      <nz-card [nzTitle]="'第 1 步 · 生成首帧图片'" nzSize="small">
-        <div class="vid-field">
-          <app-teaching-scene-picker
-            [category]="sceneCategory"
-            title="画面场景示例（点击填入）"
-            (promptSelected)="scenePrompt.set($event)"
-          ></app-teaching-scene-picker>
-        </div>
+    <nz-tabs
+      [nzSelectedIndex]="activeTab()"
+      (nzSelectedIndexChange)="onTabChange($event)"
+      nzSize="large"
+    >
+      <!-- ═══════ 生成视频 ═══════ -->
+      <nz-tab nzTitle="生成视频">
+        <div class="vid-steps">
+          <!-- 第 1 步：首帧图片 -->
+          <div class="vid-step">
+            <div class="vid-step-head">
+              <span class="vid-step-badge">1</span>
+              <span class="vid-step-title">首帧图片</span>
+              @if (firstFrameUrl()) {
+                <nz-tag nzColor="success">已就绪</nz-tag>
+              }
+            </div>
 
-        <div class="vid-field">
-          <label class="vid-label">画面提示词 <span class="vid-required">*</span></label>
-          <textarea
-            nz-input
-            [ngModel]="scenePrompt()"
-            (ngModelChange)="scenePrompt.set($event)"
-            rows="4"
-            placeholder="描述首帧画面，例如：明亮的教室里教师正在黑板上讲解数学公式，卡通插画风格…"
-          ></textarea>
-        </div>
+            @if (firstFrameUrl()) {
+              <div class="vid-frame-preview">
+                <img [src]="firstFrameUrl()" alt="首帧图片" />
+                <div class="vid-frame-actions">
+                  <button nz-button nzSize="small" (click)="clearFirstFrame()">
+                    <span nz-icon nzType="close"></span> 移除重选
+                  </button>
+                </div>
+              </div>
+            }
 
-        <button
-          nz-button
-          nzType="primary"
-          nzSize="large"
-          [nzLoading]="generatingImage()"
-          (click)="generateFirstFrame()"
-        >
-          <span nz-icon nzType="picture"></span>
-          {{ generatingImage() ? progressMessage() : '生成首帧图片' }}
-        </button>
+            <div class="vid-source">
+              <div class="vid-source-tabs">
+                <button
+                  class="vid-source-tab"
+                  [class.vid-source-tab--active]="sourceMode() === 'ai'"
+                  (click)="sourceMode.set('ai')"
+                >AI 生成</button>
+                <button
+                  class="vid-source-tab"
+                  [class.vid-source-tab--active]="sourceMode() === 'upload'"
+                  (click)="sourceMode.set('upload')"
+                >上传图片</button>
+              </div>
 
-        @if (firstFrameUrl()) {
-          <div class="vid-frame">
-            <img [src]="firstFrameUrl()" alt="首帧图片" />
-            <span class="vid-frame-badge">首帧</span>
+              @if (sourceMode() === 'ai') {
+                <div class="vid-ai-source">
+                  <app-teaching-scene-picker
+                    [category]="sceneCategory"
+                    title="画面场景（可选）"
+                    (promptSelected)="scenePrompt.set($event)"
+                  ></app-teaching-scene-picker>
+                  <div class="vid-field">
+                    <label class="vid-label">画面提示词 <span class="vid-required">*</span></label>
+                    <textarea
+                      nz-input
+                      [ngModel]="scenePrompt()"
+                      (ngModelChange)="scenePrompt.set($event)"
+                      rows="3"
+                      placeholder="描述首帧画面，例如：明亮的教室里教师正在黑板上讲解数学公式，卡通插画风格…"
+                    ></textarea>
+                  </div>
+                  <button
+                    nz-button
+                    nzType="primary"
+                    [nzLoading]="generatingImage()"
+                    (click)="generateFirstFrame()"
+                  >
+                    <span nz-icon nzType="picture"></span>
+                    {{ generatingImage() ? progressMessage() : '生成首帧图片' }}
+                  </button>
+                </div>
+              } @else {
+                <div class="vid-upload">
+                  <input
+                    type="file"
+                    #fileInput
+                    hidden
+                    accept="image/jpeg,image/png,image/gif,image/webp,image/bmp"
+                    (change)="onFileSelected($event)"
+                  />
+                  <div class="vid-upload-drop" (click)="fileInput.click()">
+                    <span nz-icon nzType="cloud-upload"></span>
+                    <p>点击选择图片作为首帧</p>
+                    <p class="vid-hint">支持 JPG / PNG / GIF / WebP / BMP，≤ 15MB</p>
+                  </div>
+                </div>
+              }
+            </div>
           </div>
-        }
-      </nz-card>
 
-      <!-- 步骤二：生成视频 -->
-      <nz-card [nzTitle]="'第 2 步 · 生成短视频（≤5 秒）'" nzSize="small">
-        <div class="vid-field">
-          <app-teaching-scene-picker
-            [category]="motionCategory"
-            title="运镜 / 动作示例（点击填入）"
-            (promptSelected)="motionPrompt.set($event)"
-          ></app-teaching-scene-picker>
-        </div>
+          <!-- 第 2 步：运镜 / 动作提示词 -->
+          <div class="vid-step">
+            <div class="vid-step-head">
+              <span class="vid-step-badge">2</span>
+              <span class="vid-step-title">运镜 / 动作提示词</span>
+            </div>
 
-        <div class="vid-field">
-          <label class="vid-label">运镜 / 动作提示词 <span class="vid-required">*</span></label>
-          <textarea
-            nz-input
-            [ngModel]="motionPrompt()"
-            (ngModelChange)="motionPrompt.set($event)"
-            rows="3"
-            placeholder="描述镜头与动作，例如：镜头缓慢向前推进，教师微笑点头…"
-          ></textarea>
-        </div>
+            <app-teaching-scene-picker
+              [category]="motionCategory"
+              title="运镜示例（可选）"
+              (promptSelected)="motionPrompt.set($event)"
+            ></app-teaching-scene-picker>
 
-        <button
-          nz-button
-          nzType="primary"
-          nzSize="large"
-          [nzLoading]="generatingVideo()"
-          (click)="generateVideo()"
-          [disabled]="!firstFrameUrl()"
-        >
-          <span nz-icon nzType="video-camera"></span>
-          {{ generatingVideo() ? progressMessage() : '生成视频' }}
-        </button>
-      </nz-card>
-    </div>
+            <div class="vid-field">
+              <label class="vid-label">运镜 / 动作提示词 <span class="vid-required">*</span></label>
+              <textarea
+                nz-input
+                [ngModel]="motionPrompt()"
+                (ngModelChange)="motionPrompt.set($event)"
+                rows="3"
+                placeholder="描述镜头与动作，例如：镜头缓慢向前推进，教师微笑点头…"
+              ></textarea>
+            </div>
 
-    <!-- 结果区 -->
-    <nz-card nzSize="small" class="vid-result-card">
-      <div nz-card-extra>生成结果</div>
-
-      @if (generatingImage() || generatingVideo()) {
-        <div class="vid-loading">
-          <nz-spin nzSize="large"></nz-spin>
-          <p>{{ progressMessage() }}</p>
-          <p class="vid-hint">视频生成通常需要 1~3 分钟，请耐心等待</p>
-        </div>
-      } @else if (videoUrl()) {
-        <div class="vid-preview">
-          <video [src]="videoUrl()" controls autoplay loop playsinline></video>
-          <div class="vid-preview-actions">
-            <button nz-button nzType="primary" (click)="downloadVideo()">
-              <span nz-icon nzType="download"></span> 下载视频
+            <button
+              nz-button
+              nzType="primary"
+              nzSize="large"
+              [nzLoading]="generatingVideo()"
+              (click)="generateVideo()"
+              [disabled]="!firstFrameUrl()"
+            >
+              <span nz-icon nzType="video-camera"></span>
+              {{ generatingVideo() ? progressMessage() : '生成视频（≤ 5 秒）' }}
             </button>
-            <a nz-button [href]="videoUrl()" target="_blank" rel="noopener">
-              <span nz-icon nzType="eye"></span> 在新窗口打开
-            </a>
+          </div>
+
+          <!-- 生成结果 -->
+          <div class="vid-result">
+            @if (generatingImage() || generatingVideo()) {
+              <div class="vid-loading">
+                <nz-spin nzSize="large"></nz-spin>
+                <p>{{ progressMessage() }}</p>
+                <p class="vid-hint">视频生成通常需要 1~3 分钟，请耐心等待</p>
+              </div>
+            } @else if (videoUrl()) {
+              <div class="vid-preview">
+                <video [src]="videoUrl()" controls autoplay loop playsinline></video>
+                <div class="vid-preview-actions">
+                  <button nz-button nzType="primary" (click)="downloadUrl(videoUrl(), '教学短视频_' + Date.now() + '.mp4')">
+                    <span nz-icon nzType="download"></span> 下载视频
+                  </button>
+                  <button nz-button (click)="openPreview(videoUrl())">
+                    <span nz-icon nzType="eye"></span> 预览大图
+                  </button>
+                </div>
+              </div>
+            } @else if (error()) {
+              <div class="vid-error">
+                <span nz-icon nzType="close-circle"></span>
+                <p>{{ error() }}</p>
+                <button nz-button (click)="error.set('')">知道了</button>
+              </div>
+            } @else {
+              <div class="vid-empty">
+                <nz-empty nzNotFoundImage="simple" [nzNotFoundContent]="emptyTpl"></nz-empty>
+                <ng-template #emptyTpl>完成两步后，生成的视频将显示在这里</ng-template>
+              </div>
+            }
           </div>
         </div>
-      } @else if (error()) {
-        <div class="vid-error">
-          <span nz-icon nzType="close-circle"></span>
-          <p>{{ error() }}</p>
-          <button nz-button (click)="error.set('')">知道了</button>
+      </nz-tab>
+
+      <!-- ═══════ 视频历史 ═══════ -->
+      <nz-tab nzTitle="视频历史">
+        <div class="vid-history">
+          <nz-table
+            [nzData]="history()"
+            [nzLoading]="historyLoading()"
+            [nzFrontPagination]="false"
+            [nzTotal]="historyTotal()"
+            [nzPageIndex]="historyPageIndex()"
+            [nzPageSize]="historyPageSize"
+            [nzShowSizeChanger]="false"
+            (nzPageIndexChange)="onHistoryPageChange($event)"
+          >
+            <thead>
+              <tr>
+                <th nzWidth="90">预览</th>
+                <th>提示词</th>
+                <th nzWidth="170">生成时间</th>
+                <th nzWidth="90">状态</th>
+                <th nzWidth="170">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of history(); track row.id) {
+                <tr>
+                  <td>
+                    @if (row.videoUrl) {
+                      <video
+                        class="vid-thumb"
+                        [src]="row.videoUrl"
+                        muted
+                        preload="metadata"
+                        (click)="openPreview(row.videoUrl)"
+                      ></video>
+                    } @else {
+                      <span class="vid-thumb-empty">-</span>
+                    }
+                  </td>
+                  <td>
+                    <span class="vid-prompt" [title]="row.prompt || row.title">
+                      {{ row.prompt || row.title }}
+                    </span>
+                  </td>
+                  <td>{{ row.creationTime | date: 'yyyy-MM-dd HH:mm' }}</td>
+                  <td>
+                    <nz-tag [nzColor]="statusColor(row.status)">
+                      {{ statusLabel(row.status) }}
+                    </nz-tag>
+                  </td>
+                  <td>
+                    @if (row.videoUrl) {
+                      <a class="vid-action" (click)="openPreview(row.videoUrl)">预览</a>
+                      <a
+                        class="vid-action"
+                        (click)="downloadUrl(row.videoUrl!, '教学短视频_' + row.id + '.mp4')"
+                      >下载</a>
+                    } @else {
+                      <span class="vid-muted">无结果</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </nz-table>
         </div>
-      } @else {
-        <div class="vid-empty">
-          <nz-empty nzNotFoundImage="simple" [nzNotFoundContent]="emptyTpl"></nz-empty>
-          <ng-template #emptyTpl>完成两步后，生成的视频将显示在这里</ng-template>
-        </div>
-      }
-    </nz-card>
+      </nz-tab>
+    </nz-tabs>
   </div>
+
+  <!-- 预览 -->
+  <nz-modal
+    [nzVisible]="previewVisible()"
+    (nzVisibleChange)="previewVisible.set($event)"
+    [nzFooter]="null"
+    [nzWidth]="720"
+    nzTitle="预览"
+  >
+    <ng-container *nzModalContent>
+      <video class="vid-preview-modal" [src]="previewUrl()" controls autoplay playsinline></video>
+    </ng-container>
+  </nz-modal>
 </div>

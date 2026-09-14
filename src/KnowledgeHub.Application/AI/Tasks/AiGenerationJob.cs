@@ -256,7 +256,9 @@ public class AiGenerationJob : ITransientDependency
         var input = Deserialize<VideoGenerationInputDto>(task.InputJson);
         await UpdateProgressAsync(task.Id, 10, "正在生成视频…");
 
-        var submitted = await _mediaGenerator.SubmitVideoAsync(input.ImageUrl, input.Prompt, input.Duration);
+        // 本地持久化 / 上传的首帧图片转 base64 data URL，公网 URL 原样提交
+        var resolvedImage = await _mediaGenerator.ResolveImageUrlForI2vAsync(input.ImageUrl);
+        var submitted = await _mediaGenerator.SubmitVideoAsync(resolvedImage, input.Prompt, input.Duration);
         var done = await _mediaGenerator.WaitForCompletionAsync(
             submitted.TaskId, TimeSpan.FromMinutes(10), cancellationToken);
 

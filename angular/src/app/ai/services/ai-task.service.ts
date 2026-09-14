@@ -63,6 +63,19 @@ export interface GetAiGenerationTaskListDto {
   maxResultCount?: number;
 }
 
+/** 图片 / 视频生成历史记录（持久化结果地址）。 */
+export interface AiMediaHistoryDto {
+  id: string;
+  title: string;
+  prompt?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  status: AiTaskStatus;
+  creationTime: string;
+  completedAt?: string;
+  errorMessage?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AiTaskService {
   private readonly restService = inject(RestService);
@@ -100,6 +113,20 @@ export class AiTaskService {
       { apiName: this.apiName },
     );
   };
+
+  getMediaHistory = (taskType: AiTaskType, input: { skipCount?: number; maxResultCount?: number } = {}) =>
+    this.restService.request<any, PagedResultDto<AiMediaHistoryDto>>(
+      {
+        method: 'GET',
+        url: '/api/app/ai-generation-task/media-history',
+        params: {
+          taskType,
+          skipCount: input.skipCount ?? 0,
+          maxResultCount: input.maxResultCount ?? 20,
+        },
+      },
+      { apiName: this.apiName },
+    );
 
   get = (id: string) =>
     this.restService.request<any, AiGenerationTaskDto>(

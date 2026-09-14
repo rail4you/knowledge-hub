@@ -10,10 +10,20 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
+import { NzTableModule } from 'ng-zorro-antd/table';
+import { NzTagModule } from 'ng-zorro-antd/tag';
+import { NzModalModule } from 'ng-zorro-antd/modal';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { firstValueFrom, lastValueFrom, Subject } from 'rxjs';
 import { take, takeUntil, tap } from 'rxjs/operators';
-import { AiGenerationTaskDto, AiTaskService, AiTaskStatus, AiTaskType } from '../services/ai-task.service';
+import {
+  AiGenerationTaskDto,
+  AiMediaHistoryDto,
+  AiTaskService,
+  AiTaskStatus,
+  AiTaskType,
+} from '../services/ai-task.service';
 import { AiTaskNotificationService } from '../services/ai-task-notification.service';
 import { TeachingSceneCategory } from '../services/teaching-scene.service';
 import { TeachingScenePickerComponent } from '../components/teaching-scene-picker/teaching-scene-picker.component';
@@ -38,6 +48,10 @@ const SIZES = [
     NzIconModule,
     NzSpinModule,
     NzEmptyModule,
+    NzTableModule,
+    NzTagModule,
+    NzModalModule,
+    NzTabsModule,
     TeachingScenePickerComponent,
   ],
   templateUrl: './image-generation.component.html',
@@ -52,6 +66,10 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
+  // ── Tab ──
+  readonly activeTab = signal(0);
+
+  // ── 生成 ──
   readonly imageCategory = TeachingSceneCategory.Image;
   readonly sizes = SIZES;
 
@@ -63,6 +81,15 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
   readonly progressMessage = signal('');
   readonly imageUrl = signal('');
   readonly error = signal('');
+
+  // ── 历史记录 ──
+  readonly history = signal<AiMediaHistoryDto[]>([]);
+  readonly historyTotal = signal(0);
+  readonly historyLoading = signal(false);
+  readonly historyPageIndex = signal(1);
+  readonly historyPageSize = 10;
+  readonly previewVisible = signal(false);
+  readonly previewUrl = signal('');
 
   private lastPreviewTaskId: string | null = null;
 
@@ -78,6 +105,13 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
         }
       });
   }
+
+  onTabChange(index: number) {
+    this.activeTab.set(index);
+    if (index === 1) this.loadHistory(this.historyPageIndex());
+  }
+
+  // ==================== 生成 ====================
 
   async generate() {
     const prompt = this.prompt().trim();
@@ -109,6 +143,8 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
         this.progressMessage.set(t.progressMessage || this.progressMessage()),
       );
       this.applyResult(done);
+      this.historyPageIndex.set(1);
+      this.loadHistory(1);
     } catch (err: any) {
       this.error.set(err?.message || '生成失败，请稍后重试');
     } finally {
@@ -165,11 +201,55 @@ export class ImageGenerationComponent implements OnInit, OnDestroy {
   async downloadImage() {
     const url = this.imageUrl();
     if (!url) return;
+    await this.downloadUrl(url, `教学图片_${Date.now()}.png`);
+  }
+
+  // ==================== 历史记录 ====================
+
+  loadHistory(page: number) {
+    this.historyLoading.set(true);
+    this.aiTaskService
+      .getMediaHistory(AiTaskType.ImageGeneration, {
+        skipCount: (page - 1) * this.historyPageSize,
+        maxResultCount: this.historyPageSize,
+      })
+      .subscribe({
+        next: res => {
+          this.history.set(res.items ?? []);
+          this.historyTotal.set(res.totalCount ?? 0);
+          this.historyLoading.set(false);
+        },
+        error: () => {
+          this.history.set([]);
+          this.historyLoading.set(false);
+        },
+      });
+  }
+
+  onHistoryPageChange(page: number) {
+    this.historyPageIndex.set(page);
+    this.loadHistory(page);
+  }
+
+  statusLabel(status: AiTaskStatus): string {
+    return AiTaskService.statusLabel(status);
+  }
+
+  statusColor(status: AiTaskStatus): string {
+    return AiTaskService.statusColor(status);
+  }
+
+  openPreview(url: string) {
+    this.previewUrl.set(url);
+    this.previewVisible.set(true);
+  }
+
+  async downloadUrl(url: string, fileName: string) {
     try {
       const blob = await fetch(url, { mode: 'cors' }).then(r => r.blob());
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `教学图片_${Date.now()}.png`;
+      a.download = fileName;
       a.click();
       URL.revokeObjectURL(a.href);
     } catch {

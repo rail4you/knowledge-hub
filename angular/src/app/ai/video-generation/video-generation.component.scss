@@ -40,24 +40,55 @@
   background: var(--kh-panel, #fff);
   border: 1px solid var(--kh-line, #e8edf3);
   border-radius: 12px;
-  padding: 18px;
+  padding: 8px 18px 18px;
+
+  ::ng-deep .ant-tabs-nav {
+    margin-bottom: 16px;
+  }
+}
+
+.vid-steps {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-.vid-steps {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
+// ── 步骤卡片 ──
+.vid-step {
+  border: 1px solid var(--kh-line-2, #e8edf3);
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: #fff;
 
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
+  .vid-step-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+
+    .vid-step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #1677ff;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .vid-step-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--kh-ink, #1f2933);
+    }
   }
 }
 
 .vid-field {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 
   .vid-label {
     display: block;
@@ -72,58 +103,116 @@
   }
 }
 
-.vid-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+// ── 首帧预览 ──
+.vid-frame-preview {
+  position: relative;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--kh-line, #e8edf3);
 
-  .vid-preset-tag {
-    cursor: pointer;
-    user-select: none;
-    border-radius: 6px;
-    padding: 2px 10px;
-    font-size: 13px;
-    transition: all 0.2s;
+  img {
+    display: block;
+    width: 100%;
+    max-height: 260px;
+    object-fit: contain;
+    background: #fafbfc;
+  }
 
-    &:hover {
-      color: #1677ff;
-      border-color: #1677ff;
-      background: rgba(22, 119, 255, 0.06);
+  .vid-frame-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+}
+
+// ── 首帧来源切换 ──
+.vid-source {
+  .vid-source-tabs {
+    display: inline-flex;
+    gap: 4px;
+    padding: 3px;
+    background: #f2f4f7;
+    border-radius: 8px;
+    margin-bottom: 14px;
+
+    .vid-source-tab {
+      border: none;
+      background: transparent;
+      padding: 4px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--kh-muted, #8a94a6);
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &--active {
+        background: #fff;
+        color: #1677ff;
+        font-weight: 600;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      }
     }
   }
 }
 
-.vid-frame {
-  position: relative;
-  margin-top: 14px;
-
-  img {
-    width: 100%;
-    max-height: 260px;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid var(--kh-line, #e8edf3);
-  }
-
-  .vid-frame-badge {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    padding: 2px 10px;
-    font-size: 12px;
-    color: #fff;
-    background: rgba(22, 119, 255, 0.9);
-    border-radius: 4px;
+.vid-ai-source {
+  .app-teaching-scene-picker-host {
+    margin-bottom: 12px;
   }
 }
 
-.vid-result-card {
+.vid-upload {
+  .vid-upload-drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 32px 16px;
+    border: 1px dashed var(--kh-line-2, #c6d0dc);
+    border-radius: 10px;
+    cursor: pointer;
+    background: #fafbfc;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: #1677ff;
+      background: rgba(22, 119, 255, 0.04);
+    }
+
+    span[nz-icon] {
+      font-size: 36px;
+      color: #1677ff;
+    }
+
+    p {
+      margin: 0;
+      color: var(--kh-ink, #1f2933);
+    }
+
+    .vid-hint {
+      font-size: 12px;
+      color: var(--kh-muted, #8a94a6);
+    }
+  }
+}
+
+// ── 生成结果（占满宽度） ──
+.vid-result {
+  min-height: 320px;
+  border: 1px dashed var(--kh-line-2, #e8edf3);
+  border-radius: 12px;
+  background: #fafbfc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   .vid-loading {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 260px;
     gap: 12px;
     color: var(--kh-muted, #8a94a6);
 
@@ -133,14 +222,16 @@
   }
 
   .vid-preview {
+    width: 100%;
+    padding: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
 
     video {
       max-width: 100%;
-      max-height: 420px;
+      max-height: 460px;
       border-radius: 8px;
       border: 1px solid var(--kh-line, #e8edf3);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -157,7 +248,6 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 260px;
     gap: 12px;
     color: #f5222d;
 
@@ -172,9 +262,54 @@
   }
 
   .vid-empty {
-    display: flex;
+    padding: 40px 0;
+  }
+}
+
+// ── 视频历史 ──
+.vid-history {
+  .vid-thumb {
+    width: 64px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--kh-line, #e8edf3);
+    cursor: pointer;
+    background: #000;
+  }
+
+  .vid-thumb-empty {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 260px;
+    width: 64px;
+    height: 44px;
+    border-radius: 6px;
+    background: #f5f6f8;
+    color: var(--kh-muted, #8a94a6);
   }
+
+  .vid-prompt {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--kh-ink, #1f2933);
+    font-size: 13px;
+  }
+
+  .vid-action {
+    margin-right: 12px;
+    white-space: nowrap;
+  }
+
+  .vid-muted {
+    color: var(--kh-muted, #8a94a6);
+  }
+}
+
+.vid-preview-modal {
+  width: 100%;
+  border-radius: 8px;
 }

@@ -3,7 +3,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 
     .sp-title {
       font-size: 13px;
@@ -12,71 +12,51 @@
     }
   }
 
-  .sp-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+  ::ng-deep .ant-table {
+    border: 1px solid var(--kh-line-2, #e8edf3);
+    border-radius: 8px;
+    overflow: hidden;
 
-    .sp-empty {
+    .ant-table-thead > tr > th {
+      background: #fafbfc;
+      font-weight: 600;
       font-size: 12px;
-      color: var(--kh-muted, #8a94a6);
     }
   }
 
-  .sp-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 10px;
-    border: 1px solid var(--kh-line-2, #e8edf3);
-    border-radius: 16px;
-    background: #fff;
-    font-size: 13px;
-    transition: all 0.2s;
+  .sp-name {
+    font-weight: 500;
+    color: var(--kh-ink, #1f2933);
+  }
 
-    &:hover {
-      border-color: #1677ff;
-      background: rgba(22, 119, 255, 0.04);
-    }
+  .sp-select {
+    width: 100%;
+  }
 
-    .sp-chip-name {
-      cursor: pointer;
-      color: var(--kh-ink, #1f2933);
-      max-width: 180px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+  .sp-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--kh-muted, #8a94a6);
+  }
 
-      &:hover {
-        color: #1677ff;
-      }
-    }
+  .sp-prompt {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--kh-muted, #8a94a6);
+    font-size: 12px;
+  }
 
-    .sp-badge {
-      margin: 0;
-      padding: 0 5px;
-      font-size: 11px;
-      line-height: 16px;
-      transform: scale(0.92);
-    }
+  .sp-actions {
+    white-space: nowrap;
+  }
 
-    .sp-icon {
-      cursor: pointer;
-      color: var(--kh-muted, #8a94a6);
-      font-size: 12px;
-
-      &:hover {
-        color: #1677ff;
-      }
-
-      &--danger:hover {
-        color: #f5222d;
-      }
-    }
-
-    &--system {
-      background: #fafbfc;
-    }
+  .sp-empty {
+    text-align: center;
+    color: var(--kh-muted, #8a94a6);
+    padding: 16px 0;
   }
 }
 

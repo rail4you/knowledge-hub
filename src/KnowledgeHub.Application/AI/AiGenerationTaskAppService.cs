@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.AI;
 using KnowledgeHub.Application.AI.Dtos;
@@ -142,6 +143,21 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
         var dto = MapToDto(task, includePayload: true);
         await FillCreatorNamesAsync(new List<AiGenerationTaskDto> { dto });
         return dto;
+    }
+
+    public async Task<PagedResultDto<AiMediaHistoryDto>> GetMediaHistoryAsync(AiTaskType taskType, GetAiMediaHistoryInputDto input)
+    {
+        var me = CurrentUser.Id ?? Guid.Empty;
+        var query = await _taskRepository.GetQueryableAsync();
+        query = query.Where(x => x.CreatorUserId == me && x.TaskType == taskType);
+
+        var totalCount = await AsyncExecuter.CountAsync(query);
+        var items = await AsyncExecuter.ToListAsync(
+            query.OrderByDescending(x => x.CreationTime)
+                .Skip(input.SkipCount)
+                .Take(input.MaxResultCount));
+
+        return new PagedResultDto<AiMediaHistoryDto>(totalCount, items.Select(MapToMediaHistory).ToList());
     }
 
     public async Task<string?> GetResultAsync(Guid id)
@@ -312,6 +328,56 @@ public class AiGenerationTaskAppService : KnowledgeHubAppService, IAiGenerationT
                 // 跨租户 / 用户已删除时忽略
             }
         }
+    }
+
+    private static AiMediaHistoryDto MapToMediaHistory(AiGenerationTask task)
+    {
+        string? prompt = null;
+        string? imageUrl = null;
+        string? videoUrl = null;
+
+        try
+        {
+            using var input = JsonDocument.Parse(task.InputJson ?? "{}");
+            if (input.RootElement.TryGetProperty("prompt", out var p) && p.ValueKind == JsonValueKind.String)
+            {
+                prompt = p.GetString();
+            }
+        }
+        catch
+        {
+            // 输入解析失败忽略
+        }
+
+        try
+        {
+            using var result = JsonDocument.Parse(task.ResultJson ?? "{}");
+            if (result.RootElement.TryGetProperty("imageUrl", out var img) && img.ValueKind == JsonValueKind.String)
+            {
+                imageUrl = img.GetString();
+            }
+            if (result.RootElement.TryGetProperty("videoUrl", out var vid) && vid.ValueKind == JsonValueKind.String)
+            {
+                videoUrl = vid.GetString();
+            }
+        }
+        catch
+        {
+            // 结果解析失败忽略
+        }
+
+        return new AiMediaHistoryDto
+        {
+            Id = task.Id,
+            Title = task.Title,
+            Prompt = prompt,
+            ImageUrl = imageUrl,
+            VideoUrl = videoUrl,
+            Status = task.Status,
+            CreationTime = task.CreationTime,
+            CompletedAt = task.CompletedAt,
+            ErrorMessage = task.ErrorMessage,
+        };
     }
 
     private static AiGenerationTaskDto MapToDto(AiGenerationTask task, bool includePayload)

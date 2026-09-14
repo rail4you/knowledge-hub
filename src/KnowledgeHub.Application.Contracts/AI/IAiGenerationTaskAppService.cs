@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using KnowledgeHub.AI;
 using KnowledgeHub.Application.AI.Dtos;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
@@ -17,6 +18,9 @@ public interface IAiGenerationTaskAppService : IApplicationService
 
     /// <summary>任务列表（监控面板 / 各功能结果表）。无管理权限时只能看到自己的任务。</summary>
     Task<PagedResultDto<AiGenerationTaskDto>> GetListAsync(GetAiGenerationTaskListDto input);
+
+    /// <summary>当前用户图片 / 视频生成历史（按创建时间倒序，返回持久化结果地址）。</summary>
+    Task<PagedResultDto<AiMediaHistoryDto>> GetMediaHistoryAsync(AiTaskType taskType, GetAiMediaHistoryInputDto input);
 
     /// <summary>任务详情（含 InputJson / ResultJson）。</summary>
     Task<AiGenerationTaskDto> GetAsync(Guid id);

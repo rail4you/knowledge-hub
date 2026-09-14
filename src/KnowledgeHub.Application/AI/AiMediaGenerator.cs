@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -7,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI.Dtos;
+using KnowledgeHub.Resources.FileStorage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
@@ -27,6 +29,9 @@ public interface IAiMediaGenerator
     Task<MediaGenerationTaskDto> SubmitVideoAsync(string imageUrl, string prompt, int duration);
     Task<MediaGenerationTaskDto> GetTaskAsync(string taskId);
     Task<MediaGenerationTaskDto> WaitForCompletionAsync(string taskId, TimeSpan timeout, CancellationToken cancellationToken = default);
+
+    /// <summary>把本地持久化的首帧图片（/uploads/...）转成 base64 data URL 供通义万相图生视频使用。</summary>
+    Task<string> ResolveImageUrlForI2vAsync(string imageUrl);
 }
 
 public class AiMediaGenerator : IAiMediaGenerator, ITransientDependency
@@ -41,17 +46,20 @@ public class AiMediaGenerator : IAiMediaGenerator, ITransientDependency
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IQwenCredentialProvider _qwenCredentials;
+    private readonly IFileStorageService _fileStorage;
     private readonly ILogger<AiMediaGenerator> _logger;
 
     public AiMediaGenerator(
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory,
         IQwenCredentialProvider qwenCredentials,
+        IFileStorageService fileStorage,
         ILogger<AiMediaGenerator> logger)
     {
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
         _qwenCredentials = qwenCredentials;
+        _fileStorage = fileStorage;
         _logger = logger;
     }
 
@@ -142,6 +150,63 @@ public class AiMediaGenerator : IAiMediaGenerator, ITransientDependency
 
         using var doc = JsonDocument.Parse(text);
         return ReadTaskStatus(taskId, doc);
+    }
+
+    /// <summary>
+    /// 本地持久化的首帧图片（/uploads/... 或 App:SelfUrl 开头的地址）DashScope 无法访问（如 localhost），
+    /// 转成 base64 data URL 再提交；公网 URL（OSS / 通义万相临时地址）原样返回。
+    /// </summary>
+    public async Task<string> ResolveImageUrlForI2vAsync(string imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+        {
+            return imageUrl;
+        }
+
+        var localPath = TryResolveLocalPath(imageUrl);
+        if (localPath == null)
+        {
+            return imageUrl;
+        }
+
+        try
+        {
+            await using var stream = await _fileStorage.GetAsync(localPath);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+
+            var ext = Path.GetExtension(localPath).ToLowerInvariant();
+            var mime = ext switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".webp" => "image/webp",
+                ".bmp" => "image/bmp",
+                _ => "application/octet-stream",
+            };
+
+            return $"data:{mime};base64,{Convert.ToBase64String(ms.ToArray())}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "本地首帧图片转 base64 失败，回退原 URL：{Url}", imageUrl);
+            return imageUrl;
+        }
+    }
+
+    private string? TryResolveLocalPath(string url)
+    {
+        var selfUrl = (_configuration["App:SelfUrl"] ?? string.Empty).TrimEnd('/');
+        if (!string.IsNullOrEmpty(selfUrl) && url.StartsWith(selfUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            url = url[selfUrl.Length..];
+        }
+
+        const string uploadsPrefix = "/uploads/";
+        return url.StartsWith(uploadsPrefix, StringComparison.OrdinalIgnoreCase)
+            ? url[uploadsPrefix.Length..]
+            : null;
     }
 
     public async Task<MediaGenerationTaskDto> WaitForCompletionAsync(

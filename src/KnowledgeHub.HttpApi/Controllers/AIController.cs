@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using KnowledgeHub.Application.AI;
 using KnowledgeHub.Application.AI.Dtos;
 using KnowledgeHub.Permissions;
+using KnowledgeHub.Resources.FileStorage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
@@ -28,21 +31,30 @@ public class AIController : AbpControllerBase
     private readonly CaseAnalysisAppService _caseAnalysisAppService;
     private readonly CareerGuidanceAppService _careerGuidanceAppService;
     private readonly AiMediaAppService _aiMediaAppService;
+    private readonly IFileStorageService _fileStorage;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<AIController> _logger;
 
-    public AIController(ChatAppService chatAppService, LessonPlanAppService lessonPlanAppService, CaseAnalysisAppService caseAnalysisAppService, CareerGuidanceAppService careerGuidanceAppService, AiMediaAppService aiMediaAppService, ILogger<AIController> logger)
+    public AIController(ChatAppService chatAppService, LessonPlanAppService lessonPlanAppService, CaseAnalysisAppService caseAnalysisAppService, CareerGuidanceAppService careerGuidanceAppService, AiMediaAppService aiMediaAppService, IFileStorageService fileStorage, IConfiguration configuration, ILogger<AIController> logger)
     {
         _chatAppService = chatAppService;
         _lessonPlanAppService = lessonPlanAppService;
         _caseAnalysisAppService = caseAnalysisAppService;
         _careerGuidanceAppService = careerGuidanceAppService;
         _aiMediaAppService = aiMediaAppService;
+        _fileStorage = fileStorage;
+        _configuration = configuration;
         _logger = logger;
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"
     };
 
     [HttpGet("resources")]
@@ -378,6 +390,43 @@ public class AIController : AbpControllerBase
     public async Task<MediaGenerationTaskDto> GetMediaTask(string taskId)
     {
         return await _aiMediaAppService.GetMediaTaskAsync(taskId);
+    }
+
+    /// <summary>
+    /// 上传视频首帧图片（本地持久化，图生视频时后端自动转 base64 提交通义万相）。
+    /// </summary>
+    [HttpPost("upload-first-frame")]
+    [Authorize(KnowledgeHubPermissions.AI.VideoGeneration)]
+    [IgnoreAntiforgeryToken]
+    [RequestSizeLimit(15 * 1024 * 1024)]
+    public async Task<UploadFirstFrameResultDto> UploadFirstFrame(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            throw new UserFriendlyException("请选择要上传的图片");
+        }
+
+        var extension = Path.GetExtension(file.FileName);
+        if (string.IsNullOrEmpty(extension) || !AllowedImageExtensions.Contains(extension))
+        {
+            throw new UserFriendlyException("仅支持 JPG、PNG、GIF、WebP、BMP 格式的图片");
+        }
+        if (file.Length > 15 * 1024 * 1024)
+        {
+            throw new UserFriendlyException("图片大小不能超过 15MB");
+        }
+
+        var fileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        await using var stream = file.OpenReadStream();
+        var path = await _fileStorage.SaveAsync(stream, fileName, "ai-media/first-frames");
+        var relativeUrl = _fileStorage.GetFileUrl(path);
+
+        var selfUrl = (_configuration["App:SelfUrl"] ?? string.Empty).TrimEnd('/');
+        return new UploadFirstFrameResultDto
+        {
+            Url = string.IsNullOrEmpty(selfUrl) ? relativeUrl : selfUrl + relativeUrl,
+            FileName = fileName,
+        };
     }
 
     // ========== Thread Management ==========

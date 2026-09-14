@@ -1,4 +1,7 @@
+using System;
 using System.ComponentModel.DataAnnotations;
+using KnowledgeHub.AI;
+using Volo.Abp.Application.Dtos;
 
 namespace KnowledgeHub.Application.AI.Dtos;
 
@@ -52,4 +55,41 @@ public class MediaGenerationTaskDto
 
     /// <summary>失败原因。</summary>
     public string? Error { get; set; }
+}
+
+/// <summary>生成历史分页查询入参。</summary>
+public class GetAiMediaHistoryInputDto : PagedAndSortedResultRequestDto
+{
+}
+
+/// <summary>上传首帧图片结果。</summary>
+public class UploadFirstFrameResultDto
+{
+    public string Url { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+}
+
+/// <summary>生成历史记录（图片 / 视频）。</summary>
+public class AiMediaHistoryDto
+{
+    public Guid Id { get; set; }
+
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>提示词（从 InputJson 解析）。</summary>
+    public string? Prompt { get; set; }
+
+    /// <summary>持久化后的图片地址。</summary>
+    public string? ImageUrl { get; set; }
+
+    /// <summary>持久化后的视频地址。</summary>
+    public string? VideoUrl { get; set; }
+
+    public AiTaskStatus Status { get; set; }
+
+    public DateTime CreationTime { get; set; }
+
+    public DateTime? CompletedAt { get; set; }
+
+    public string? ErrorMessage { get; set; }
 }
