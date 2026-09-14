@@ -33,6 +33,10 @@ namespace KnowledgeHub.Resources.Conversion;
 /// </summary>
 public class PptxImagePreprocessor : ISingletonDependency
 {
+    // 预压缩缓存格式版本。改动包重写逻辑（如 content-types 修复）后递增，
+    // 使旧缓存 meta 校验失败、自动重建，避免复用历史坏包。
+    private const int CacheSchemaVersion = 2;
+
     private readonly IFileStorageService _fileStorageService;
     private readonly IFfmpegRunner _runner;
     private readonly OfficeConversionOptions _options;
@@ -85,6 +89,7 @@ public class PptxImagePreprocessor : ISingletonDependency
             var meta = System.Text.Json.JsonSerializer.Deserialize<CacheMeta>(File.ReadAllText(metaPath));
             var info = new FileInfo(sourcePath);
             return meta != null
+                && meta.Schema == CacheSchemaVersion
                 && meta.LastWriteTimeUtc == info.LastWriteTimeUtc
                 && meta.Length == info.Length;
         }
@@ -102,6 +107,7 @@ public class PptxImagePreprocessor : ISingletonDependency
             Directory.CreateDirectory(Path.GetDirectoryName(metaPath)!);
             File.WriteAllText(metaPath, System.Text.Json.JsonSerializer.Serialize(new CacheMeta
             {
+                Schema = CacheSchemaVersion,
                 LastWriteTimeUtc = info.LastWriteTimeUtc,
                 Length = info.Length
             }));
@@ -114,6 +120,7 @@ public class PptxImagePreprocessor : ISingletonDependency
 
     private sealed class CacheMeta
     {
+        public int Schema { get; set; }
         public DateTime LastWriteTimeUtc { get; set; }
         public long Length { get; set; }
     }
@@ -425,22 +432,19 @@ public class PptxImagePreprocessor : ISingletonDependency
                 }
 
                 // [Content_Types].xml：注入 jpg 默认声明（GIF/大图被转为 .jpg）
+                // 只在缺失时追加，绝不改写既有 jpeg 声明——原实现按字符串替换假设了
+                // Extension 在 ContentType 之前的属性顺序，遇到相反的写法会生成
+                // 重复 ContentType 属性的非法 XML，LibreOffice 直接 UNO 异常。
                 if (name == "[Content_Types].xml")
                 {
                     using var es = entry.Open();
                     using var reader = new StreamReader(es, Encoding.UTF8);
                     var xml = reader.ReadToEnd();
-                    if (!xml.Contains("Extension=\"jpg\"") && !xml.Contains("Extension=\"jpeg\""))
+                    if (!xml.Contains("Extension=\"jpg\""))
                     {
                         xml = xml.Replace(
                             "</Types>",
                             "<Default Extension=\"jpg\" ContentType=\"image/jpeg\"/></Types>");
-                    }
-                    else if (!xml.Contains("Extension=\"jpg\""))
-                    {
-                        xml = xml.Replace(
-                            "Extension=\"jpeg\"",
-                            "Extension=\"jpg\" ContentType=\"image/jpeg\"/><Default Extension=\"jpeg\"");
                     }
                     var newEntry = outZip.CreateEntry(name, CompressionLevel.Optimal);
                     using var s = newEntry.Open();
