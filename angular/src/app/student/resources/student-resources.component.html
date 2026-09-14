@@ -282,10 +282,37 @@
                   }
 
                   <h3 class="resource-card__title" [title]="resource.name || ''">
-                    {{ resource.name }}
+                    <span class="resource-card__title-text">{{ resource.name }}</span>
+                    @if (getResourceSourceName(resource); as sourceName) {
+                      <span
+                        class="title-source-icon"
+                        [title]="'来源院校：' + sourceName"
+                        aria-label="来源院校"
+                      >
+                        <span nz-icon nzType="bank" nzTheme="outline"></span>
+                      </span>
+                    }
+                    @if (hasOutgoingShare(resource)) {
+                      <span
+                        class="title-share-icon"
+                        [title]="'已分享给 ' + resource.outgoingShareCount + ' 所院校'"
+                        aria-label="已分享"
+                      >
+                        <span nz-icon nzType="share-alt" nzTheme="outline"></span>
+                      </span>
+                    }
                   </h3>
 
                   <div class="resource-card__meta">
+                    @if (getResourceSourceName(resource); as sourceName) {
+                      <span
+                        class="meta-item meta-source"
+                        [title]="'来源院校：' + sourceName"
+                      >
+                        <span nz-icon nzType="bank" nzTheme="outline"></span>
+                        <span class="meta-source__name">{{ sourceName }}</span>
+                      </span>
+                    }
                     <span class="meta-item">
                       <span nz-icon nzType="calendar" nzTheme="outline"></span>
                       {{ resource.creationTime | date:'yyyy-MM-dd' }}
@@ -301,6 +328,7 @@
                     @if (ratingSummaries()[resource.id!]; as summary) {
                       @if (summary.totalReviews > 0) {
                         <span class="meta-item meta-count" [title]="summary.totalReviews + '人评价'">
+                          <span nz-icon nzType="message" nzTheme="outline"></span>
                           {{ summary.totalReviews }}
                         </span>
                       }

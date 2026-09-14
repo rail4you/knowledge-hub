@@ -154,13 +154,25 @@
                   <h3 class="course-card__title" [title]="course.title">{{ course.title }}</h3>
                   <div class="course-card__tags">
                     <span class="tag" [title]="courseMajorText(course)">{{ courseMajorText(course) }}</span>
-                    @if (course.semester) {
-                      <span class="tag">{{ course.semester }}</span>
-                    }
-                    @if (course.credits) {
-                      <span class="tag">{{ course.credits }}学分</span>
-                    }
                   </div>
+                </div>
+
+                <!-- 学期 / 学分 / 学时（一行内联） -->
+                <div class="course-card__details">
+                  <span class="detail-item">
+                    <span class="detail-item__label">学期</span>
+                    <span class="detail-item__value">{{ course.semester || '-' }}</span>
+                  </span>
+                  <span class="detail-item__divider" aria-hidden="true"></span>
+                  <span class="detail-item">
+                    <span class="detail-item__label">学分</span>
+                    <span class="detail-item__value">{{ course.credits != null ? course.credits + '学分' : '-' }}</span>
+                  </span>
+                  <span class="detail-item__divider" aria-hidden="true"></span>
+                  <span class="detail-item">
+                    <span class="detail-item__label">学时</span>
+                    <span class="detail-item__value">{{ course.semesterHours != null ? course.semesterHours + '学时' : '-' }}</span>
+                  </span>
                 </div>
 
                 <div class="course-card__stats">

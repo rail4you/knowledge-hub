@@ -418,6 +418,52 @@
   display: none;
 }
 
+.course-card__details {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding-top: 2px;
+  color: ds.$student-text;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.detail-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+
+  &__label {
+    color: ds.$student-text-light;
+    font-size: 12px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  &__value {
+    color: ds.$student-text;
+    font-size: 12px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  &__divider {
+    display: inline-block;
+    width: 1px;
+    height: 12px;
+    background: ds.$student-border;
+    flex-shrink: 0;
+  }
+}
+
 .course-card__stats {
   display: flex;
   flex-wrap: wrap;

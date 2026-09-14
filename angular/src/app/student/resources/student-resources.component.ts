@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, compu
 import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '@abp/ng.core';
+import { AuthService, ConfigStateService } from '@abp/ng.core';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
@@ -13,7 +13,8 @@ import { ResourceStatus } from '../../proxy/resources/enums/resource-status.enum
 import { ResourceType } from '../../proxy/resources/enums/resource-type.enum';
 import { ResourceMediaStatus } from '../../proxy/resources/enums/resource-media-status.enum';
 import type { ResourceDto, ResourceCategoryDto } from '../../proxy/resources/models';
-import { PortalService } from '../../proxy/portal/portal.service';
+import { ResourceShareService } from '../../proxy/resources/resource-share.service';
+import { TenantInfoService } from '../../proxy/tenant-infos/tenant-info.service';
 import { MajorService } from '../../proxy/majors/major.service';
 import type { MajorLookupDto } from '../../proxy/majors/dtos/models';
 import { FilePreviewComponent } from '../../shared/preview/file-preview.component';
@@ -56,15 +57,17 @@ interface StatItem {
 })
 export class StudentResourcesComponent implements OnInit, OnDestroy {
   private readonly resourceService = inject(ResourceService);
-  private readonly portalService = inject(PortalService);
+  private readonly shareService = inject(ResourceShareService);
   private readonly majorService = inject(MajorService);
   private readonly reviewService = inject(ResourceReviewService);
   private readonly recommendationService = inject(RecommendationService);
   private readonly authErrorService = inject(AuthErrorService);
   private readonly authService = inject(AuthService);
+  private readonly configState = inject(ConfigStateService);
   private readonly message = inject(NzMessageService);
   private readonly router = inject(Router);
   private readonly collectionService = inject(StudentResourceCollectionService);
+  private readonly tenantInfoService = inject(TenantInfoService);
 
   @ViewChild('filePreview') filePreview!: FilePreviewComponent;
 
@@ -107,27 +110,37 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   readonly ResourceType = ResourceType;
 
-  // 站点统计（演示数据，实际可从后端获取）
-  stats = signal<StatItem[]>([]);
+  /** 资源总数（不受当前筛选影响，用于 Hero 统计） */
+  readonly totalResourcesCount = signal(0);
+  /** 我共享出去的资源数 */
+  readonly sharedCount = signal(0);
 
-  /** 加载首页数据总览：从 PortalService 拿真实数据，避免显示硬编码占位 */
-  private loadHomeStats(): void {
-    this.portalService.getPublicHomeStats().subscribe({
-      next: data => {
-        this.stats.set([
-          { label: '课程数', value: data.totalCourseCount ?? 0, suffix: '门', icon: 'book', color: '#2b6cd4' },
-          { label: '资源数', value: data.totalResourceCount ?? 0, suffix: '份', icon: 'play-circle', color: '#5b93db' },
-          { label: '入驻租户', value: data.tenantCount ?? 0, suffix: '家', icon: 'team', color: '#f59e0b' },
-        ]);
-      },
-      error: () => {
-        // 静默失败时显示 0 占位
-        this.stats.set([
-          { label: '课程数', value: 0, suffix: '门', icon: 'book', color: '#2b6cd4' },
-          { label: '资源数', value: 0, suffix: '份', icon: 'play-circle', color: '#5b93db' },
-          { label: '入驻租户', value: 0, suffix: '家', icon: 'team', color: '#f59e0b' },
-        ]);
-      },
+  /** 资源统计：去掉租户/课程，仅保留资源相关信息 */
+  readonly stats = computed<StatItem[]>(() => [
+    { label: '资源', value: this.totalResourcesCount(), suffix: '', icon: 'database', color: '#2b6cd4' },
+    { label: '收藏', value: this.favoritesCount(), suffix: '', icon: 'star', color: '#f59e0b' },
+    { label: '共享', value: this.sharedCount(), suffix: '', icon: 'share-alt', color: '#22c55e' },
+  ]);
+
+  /** 加载资源统计：资源总数 + 我共享的资源数（收藏数走 loadFavoritesCount） */
+  private loadResourceStats(): void {
+    // 资源总数（应用 LeagueApproved 过滤，与列表口径一致，不受当前筛选影响）
+    this.resourceService.getFilteredList({
+      status: ResourceStatus.LeagueApproved,
+      skipCount: 0,
+      maxResultCount: 1,
+    }).subscribe({
+      next: result => this.totalResourcesCount.set(result.totalCount || 0),
+      error: () => this.totalResourcesCount.set(0),
+    });
+
+    // 我共享出去的资源数（maxResultCount=1 仅取 totalCount）
+    this.shareService.getSharedByMe({
+      skipCount: 0,
+      maxResultCount: 1,
+    }).subscribe({
+      next: result => this.sharedCount.set(result.totalCount || 0),
+      error: () => this.sharedCount.set(0),
     });
   }
 
@@ -146,8 +159,9 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
     this.loadMajors();
     this.loadResources();
     this.loadRecommendations();
-    this.loadHomeStats();
+    this.loadResourceStats();
     this.loadFavoritesCount();
+    this.loadCurrentTenantName();
   }
 
   loadResources(force = false) {
@@ -418,6 +432,47 @@ export class StudentResourcesComponent implements OnInit, OnDestroy {
 
   isCollected(resourceId?: string) {
     return !!resourceId && !!this.collectedResourceIds()[resourceId];
+  }
+
+  /** 当前登录用户的租户 ID（host 为 null） */
+  private get currentTenantId(): string | null {
+    const cu = this.configState.getDeep('currentUser') as Record<string, unknown> | undefined;
+    return (cu?.['tenantId'] as string | null | undefined) ?? null;
+  }
+
+  /** 是否为跨租户资源：只要后端返回了来源信息即视为跨院校（避免不同场景下 sourceTenantId 为 null 漏判） */
+  isCrossTenant(resource: ResourceDto | null | undefined): boolean {
+    if (!resource) return false;
+    return !!(resource.sourceTenantId || resource.sourceTenantName);
+  }
+
+  /** 当前租户展示名（从 TenantInfo 接口加载；host 用户为 null） */
+  readonly currentTenantName = signal<string | null>(null);
+
+  /** 从后端加载当前租户展示名（本租户资源的来源兜底） */
+  private loadCurrentTenantName(): void {
+    if (!this.currentTenantId) return;
+    this.tenantInfoService.getCurrent().subscribe({
+      next: info => {
+        // 优先 TenantInfo.Name（专业库展示名，如“启迪”），回退 tenantId
+        const name = (info?.name || '').trim();
+        this.currentTenantName.set(name || null);
+      },
+      error: () => {
+        // 静默失败：不影响列表主体
+        this.currentTenantName.set(null);
+      },
+    });
+  }
+
+  /** 获取资源的来源名称：优先用后端返回的 sourceTenantName，本租户资源则取当前用户所在租户名 */
+  getResourceSourceName(resource: ResourceDto | null | undefined): string | null {
+    return resource?.sourceTenantName || this.currentTenantName();
+  }
+
+  /** 是否有主动共享给其他院校 */
+  hasOutgoingShare(resource: ResourceDto | null | undefined): boolean {
+    return (resource?.outgoingShareCount ?? 0) > 0;
   }
 
   getResourceTypeName(type?: number): string {

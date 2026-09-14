@@ -726,6 +726,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-height: 20px;
 }
 
 .category-name {
@@ -752,9 +753,43 @@
   line-height: 1.45;
   letter-spacing: -0.2px;
   transition: color .2s ease;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.resource-card__title-text {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title-share-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  color: #f59e0b;
+  cursor: help;
+
+  span[nz-icon] {
+    font-size: 13px;
+  }
+}
+
+// 资源来源院校：标题右侧的图标（后端会给所有资源填充 sourceTenantName）
+.title-source-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  color: #0ea5e9;
+  cursor: help;
+
+  span[nz-icon] {
+    font-size: 13px;
+  }
 }
 .resource-card:hover .resource-card__title {
   color: ds.$student-primary;
@@ -777,9 +812,30 @@
   gap: 3px;
   white-space: nowrap;
   flex-shrink: 0;
+  min-width: 0;
 
   span[nz-icon] {
     font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  // 来源租户：蓝色文字 + 图标，无边框
+  &--source {
+    color: #0369a1;
+    font-weight: 600;
+
+    span[nz-icon] {
+      color: #0369a1;
+      flex-shrink: 0;
+    }
+
+    .meta-source__name {
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
   }
 }
 
