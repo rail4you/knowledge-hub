@@ -41,12 +41,15 @@ export class CourseDetailComponent implements OnInit {
   loading = signal(true);
   courseId = signal<string>('');
   isStudentView = signal(false);
+  /** 从微专业课程列表进入时的微专业 id；存在时返回按钮先回微专业，再由微专业回列表 */
+  backToMicroMajor = signal<string | null>(null);
   chapters = signal<ChapterDto[]>([]);
   chaptersLoading = signal(true);
   expandedNodes = signal<Set<string>>(new Set());
 
   ngOnInit() {
     this.isStudentView.set(this.router.url.startsWith('/student'));
+    this.backToMicroMajor.set(this.route.snapshot.queryParamMap.get('fromMicroMajor'));
     const courseId = this.route.snapshot.paramMap.get('id');
     if (courseId) {
       this.courseId.set(courseId);
@@ -114,6 +117,11 @@ export class CourseDetailComponent implements OnInit {
   }
   
   goBack() {
+    const mmId = this.backToMicroMajor();
+    if (mmId) {
+      this.router.navigate(['/micro-majors', mmId]);
+      return;
+    }
     this.router.navigate([this.isStudentView() ? '/student/courses' : '/']);
   }
   

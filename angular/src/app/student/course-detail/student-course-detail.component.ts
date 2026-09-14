@@ -165,13 +165,13 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   /** 首页来源区块（featured-courses / browse 等），返回首页时原路定位到该模块位置 */
   readonly homeSection = signal<string | null>(null);
 
-  /** 返回按钮文案：门户首页 > 租户资源库 > 微专业上下文 > 相关课程上下文 > 默认课程中心 */
+  /** 返回按钮文案：微专业上下文 > 门户首页 > 租户资源库 > 相关课程上下文 > 默认课程中心 */
   readonly backLabel = computed(() => {
-    if (this.backToHome()) return '返回首页';
-    if (this.backToTenant()) return '返回资源库';
     if (this.backToMicroMajor()) {
       return this.microMajorFrom() === 'my-micro-majors-list' ? '返回我的微专业' : '返回微专业';
     }
+    if (this.backToHome()) return '返回首页';
+    if (this.backToTenant()) return '返回资源库';
     return this.backToCourse() ? '返回相关课程' : '返回课程中心';
   });
 
@@ -526,18 +526,8 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
   }
 
   goBack() {
-    // 从门户首页（精品课程/全部资源卡片）进入：返回门户首页原来位置
-    if (this.backToHome()) {
-      this.router.navigate(['/'], { queryParams: { section: this.homeSection() || 'featured-courses' } });
-      return;
-    }
-    // 从租户资源库进入：直接返回对应的租户页
-    const tenantId = this.backToTenant();
-    if (tenantId) {
-      this.router.navigate(['/tenant', tenantId]);
-      return;
-    }
-    // 从微专业课程进入：直接返回之前的微专业页面（原 URL 含 from 参数时一并还原）
+    // 从微专业课程进入：优先返回之前的微专业页面（原 URL 含 from/section 时一并还原，
+    // 使“首页 → 微专业 → 课程”先回微专业、再由微专业回首页，而不是直跳首页）。
     const mmId = this.backToMicroMajor();
     if (mmId) {
       const from = this.microMajorFrom();
@@ -547,8 +537,24 @@ export class StudentCourseDetailComponent implements OnInit, OnDestroy {
         return;
       }
       const queryParams: Record<string, string> = {};
-      if (from) queryParams['from'] = from;
+      if (from) {
+        queryParams['from'] = from;
+        // 透传首页来源区块，微专业页“返回首页”时仍能定位到原来位置
+        const section = this.homeSection();
+        if (section) queryParams['section'] = section;
+      }
       this.router.navigate(['/student/micro-majors', mmId], { queryParams });
+      return;
+    }
+    // 从门户首页（精品课程/全部资源卡片）进入：返回门户首页原来位置
+    if (this.backToHome()) {
+      this.router.navigate(['/'], { queryParams: { section: this.homeSection() || 'featured-courses' } });
+      return;
+    }
+    // 从租户资源库进入：直接返回对应的租户页
+    const tenantId = this.backToTenant();
+    if (tenantId) {
+      this.router.navigate(['/tenant', tenantId]);
       return;
     }
     // 从“相关课程”进入：回退浏览器历史到上一课程，保留其 Tab 与返回链；否则返回课程中心列表

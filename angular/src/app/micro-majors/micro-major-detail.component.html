@@ -68,6 +68,7 @@
             <a
               class="course-card"
               [routerLink]="['/learning/course-detail', course.id]"
+              [queryParams]="{ fromMicroMajor: detail.id }"
             >
               <div class="course-card__cover">
                 @if (course.coverImageUrl) {
