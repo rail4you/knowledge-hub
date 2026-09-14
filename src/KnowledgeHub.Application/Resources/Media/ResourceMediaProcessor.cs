@@ -108,7 +108,7 @@ public class ResourceMediaProcessor : ITransientDependency
             // 兜底：资源级文件路径存在，但版本表可能未建版本（历史数据）
         }
 
-        var version = await ResolveVersionAsync(resourceId, resourceVersionId);
+        var version = await ResolveVersionAsync(resource, resourceVersionId);
         var (fullPath, versionKey, pathConfigured) = ResolveSource(resource, version);
         if (fullPath == null)
         {
@@ -276,8 +276,23 @@ public class ResourceMediaProcessor : ITransientDependency
         }
     }
 
-    private async Task<ResourceVersion?> ResolveVersionAsync(Guid resourceId, Guid? versionId)
+    private async Task<ResourceVersion?> ResolveVersionAsync(Resource resource, Guid? versionId)
     {
+        var resourceId = resource.Id;
+
+        // 以资源实际对外提供的文件（Resource.FilePath）为准：下载/预览端点都取该路径，
+        // 生成物必须与之一致。版本表的 IsCurrentVersion 可能因历史发布流程未同步而滞后，
+        // 若仍按陈旧版本处理，会把错误的（甚至损坏的）文件交给转换/缩略图流水线。
+        if (!string.IsNullOrWhiteSpace(resource.FilePath))
+        {
+            var byPath = await _versionRepository.FirstOrDefaultAsync(x =>
+                x.ResourceId == resourceId && x.FilePath == resource.FilePath);
+            if (byPath != null)
+            {
+                return byPath;
+            }
+        }
+
         if (versionId.HasValue)
         {
             var v = await _versionRepository.FindAsync(versionId.Value);
