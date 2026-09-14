@@ -282,7 +282,10 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
 
         using (DataFilter.Disable<IMultiTenant>())
         {
-            // 通过参与者表查询分配给当前学生的直播，兼容旧记录（仅 StudentId）
+            // 只返回当前学生真实参与（参与者表）的直播。
+            // 注意：不再回退到 RecruitmentLive.StudentId 旧字段——该字段在重新分配/取消后可能残留，
+            // 而且这类残留记录在教师端（按 TeacherId 过滤）根本看不到、删不掉，
+            // 会在学生端冒出「已结束 / 已取消 / 进行中」的无效卡片。
             var participantQuery = await _participantRepository.GetQueryableAsync();
             var participantLiveIds = await participantQuery
                 .Where(p => p.UserId == currentUserId && p.Role == "student")
@@ -290,15 +293,24 @@ public class RecruitmentLiveAppService : KnowledgeHubAppService, IRecruitmentLiv
                 .ToListAsync();
 
             var query = (await _liveRepository.GetQueryableAsync())
-                .Where(x => participantLiveIds.Contains(x.Id) || x.StudentId == currentUserId);
+                .Where(x => participantLiveIds.Contains(x.Id));
 
             if (!string.IsNullOrWhiteSpace(input.Filter))
             {
                 query = query.Where(x => x.Title.Contains(input.Filter));
             }
+
             if (input.Status.HasValue)
             {
+                // 显式指定状态时按状态查询（保留查看历史记录的能力）
                 query = query.Where(x => x.Status == input.Status.Value);
+            }
+            else
+            {
+                // 默认过滤掉已结束 / 已取消的无效数据，学生端只展示仍可用的直播
+                query = query.Where(x =>
+                    x.Status == RecruitmentLiveStatus.Waiting ||
+                    x.Status == RecruitmentLiveStatus.Active);
             }
 
             var totalCount = await query.LongCountAsync();

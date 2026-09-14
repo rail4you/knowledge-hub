@@ -38,12 +38,17 @@ export class StudentRecruitmentLiveComponent implements OnInit {
       { label: '直播总数', value: lives.length, suffix: '场', icon: 'video-camera', color: '#2b6cd4' },
       { label: '进行中', value: lives.filter(l => l.status === RecruitmentLiveStatus.Active).length, suffix: '场', icon: 'play-circle', color: '#10b981' },
       { label: '等待中', value: lives.filter(l => l.status === RecruitmentLiveStatus.Waiting && !this.isExpired(l)).length, suffix: '场', icon: 'clock-circle', color: '#f59e0b' },
-      { label: '已结束', value: lives.filter(l => l.status === RecruitmentLiveStatus.Ended).length, suffix: '场', icon: 'check-circle', color: '#94a3b8' },
+      { label: '已过期', value: lives.filter(l => this.isExpired(l)).length, suffix: '场', icon: 'exclamation-circle', color: '#94a3b8' },
     ];
   });
 
-  /** 状态过滤：全部 / 进行中 / 等待中 / 已过期 / 已结束 / 已取消 */
+  /** 状态过滤：全部 / 进行中 / 等待中 / 已过期（已结束/已取消不再下发给学生端） */
   statusFilter = signal<RecruitmentLiveStatus | 'all' | 'expired'>('all');
+
+  /** 课堂结束（已结束 / 已取消）的直播属于无效数据，学生端不再展示 */
+  private isTerminal(live: RecruitmentLiveDto): boolean {
+    return live.status === RecruitmentLiveStatus.Ended || live.status === RecruitmentLiveStatus.Cancelled;
+  }
 
   readonly filteredLives = computed(() => {
     const list = this.lives();
@@ -63,7 +68,8 @@ export class StudentRecruitmentLiveComponent implements OnInit {
       maxResultCount: 50,
     }).subscribe({
       next: (res) => {
-        this.lives.set(res.items);
+        // 双保险：即使后端返回了已结束/已取消的记录，也不在学生端展示
+        this.lives.set((res.items ?? []).filter(l => !this.isTerminal(l)));
         this.loading.set(false);
       },
       error: () => {

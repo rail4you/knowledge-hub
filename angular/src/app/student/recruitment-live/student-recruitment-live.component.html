@@ -50,16 +50,6 @@
         [class.is-active]="statusFilter() === 'expired'"
         (click)="setStatusFilter('expired')"
       >已过期</button>
-      <button
-        class="status-filter__tab"
-        [class.is-active]="statusFilter() === 2"
-        (click)="setStatusFilter(2)"
-      >已结束</button>
-      <button
-        class="status-filter__tab"
-        [class.is-active]="statusFilter() === 3"
-        (click)="setStatusFilter(3)"
-      >已取消</button>
     </nav>
 
     <div class="live-grid">
