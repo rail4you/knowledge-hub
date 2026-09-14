@@ -54,7 +54,6 @@ export class SearchComponent implements OnInit {
 
   searchQuery = '';
   selectedFileExtension = signal('');
-  searchType: 'keyword' | 'hybrid' = 'keyword';
   /**
    * 索引选择：
    *   - 'all'：全部（不传 indexName，后端合并 documents + videos 双索引）
@@ -303,7 +302,6 @@ export class SearchComponent implements OnInit {
         totalCount: number;
         pageIndex: number;
         selectedFileExtension: string;
-        searchType: 'keyword' | 'hybrid';
         selectedIndex: string;
         startDate: string | null;
         endDate: string | null;
@@ -317,7 +315,6 @@ export class SearchComponent implements OnInit {
       this.totalCount.set(s.totalCount);
       this.pageIndex = s.pageIndex;
       this.selectedFileExtension.set(s.selectedFileExtension);
-      this.searchType = s.searchType;
       this.selectedIndex = s.selectedIndex;
       // 从详情页返回时，还原的是本地日期字符串 "yyyy-MM-dd"，
       // 拼成 T00:00:00 让 Date 解析为本地零点，避免 UTC 转换导致的日期偏移
@@ -375,11 +372,8 @@ export class SearchComponent implements OnInit {
       statusFilter: this.router.url.startsWith('/student') ? '3' : undefined,
     };
 
-    const searchObservable = this.searchType === 'hybrid' 
-      ? this.searchService.hybridSearch(query)
-      : this.searchService.search(query);
-
-    searchObservable.subscribe({
+    // 语义混合搜索已停用，统一走关键词搜索。
+    this.searchService.search(query).subscribe({
       next: (result: SearchResultDto) => {
         this.results.set(result.items);
         this.totalCount.set(result.totalCount);
@@ -480,7 +474,6 @@ export class SearchComponent implements OnInit {
             totalCount: this.totalCount(),
             pageIndex: this.pageIndex,
             selectedFileExtension: this.selectedFileExtension(),
-            searchType: this.searchType,
             selectedIndex: this.selectedIndex,
             startDate: this.formatLocalDate(this.startDate) ?? null,
             endDate: this.formatLocalDate(this.endDate) ?? null,

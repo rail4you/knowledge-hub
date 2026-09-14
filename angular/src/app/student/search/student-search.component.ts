@@ -284,4 +284,13 @@ export class StudentSearchComponent implements OnInit {
     if (score >= 0.3) return 'orange';
     return 'red';
   }
+
+  /**
+   * 后端搜索结果中的 CategoryName 实际存的是 CategoryId（UUID）。
+   * 值是 UUID 形式时视为未填充，不渲染分类标签。
+   */
+  isCategoryId(value: string | null | undefined): boolean {
+    if (!value) return true;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
+  }
 }

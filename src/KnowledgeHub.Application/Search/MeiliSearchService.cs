@@ -718,7 +718,7 @@ public class MeiliSearchService : IMeiliSearchService
         // 写入 KhResourceViewLogs/KhResourceExposures 时外键冲突 500。
         // 这里批量校验存在性，直接丢弃幽灵命中。
         var rawCount = items.Count;
-        items = await FilterStaleResourceHitsAsync(items);
+        items = await FilterStaleResourceHitsAsync(items, query);
         var total = (int)(result?.EstimatedTotalHits ?? 0) - (rawCount - items.Count);
 
         return (items, Math.Max(total, 0));
@@ -728,8 +728,12 @@ public class MeiliSearchService : IMeiliSearchService
     /// 丢弃 resourceId 在数据库中已不存在的命中。
     /// 同时以数据库 Resource.TenantId 为准做租户兜底校验（防御纵深）：
     /// 即便 Meili 索引里的 tenantId 字段缺失或写错，也不会把其它租户的资源返回给当前租户。
+    /// 调用方通过 StatusFilter 限制可见状态时（如学生端 "3" 仅联盟通过），
+    /// 也在此以数据库 Resource.Status 为准兜底：videos 索引没有 status 字段，
+    /// 若不兜底，院校通过或后续被驳回的视频仍会出现在学生端结果中。
     /// </summary>
-    private async Task<List<DocumentSearchResultDto>> FilterStaleResourceHitsAsync(List<DocumentSearchResultDto> items)
+    private async Task<List<DocumentSearchResultDto>> FilterStaleResourceHitsAsync(
+        List<DocumentSearchResultDto> items, SearchQueryDto? query)
     {
         if (items.Count == 0) return items;
 
@@ -749,12 +753,28 @@ public class MeiliSearchService : IMeiliSearchService
             existing = await _resourceRepository.GetListAsync(x => ids.Contains(x.Id));
         }
 
+        // 调用方限制可见状态时（如学生端 statusFilter="3"），解析出允许的状态集合。
+        // documents 索引已在 Meili 侧按 status 过滤，这里对两个索引统一兜底，
+        // 尤其覆盖没有 status 字段的 videos 索引。
+        HashSet<int>? allowedStatuses = null;
+        if (!string.IsNullOrWhiteSpace(query?.StatusFilter))
+        {
+            var parsed = query.StatusFilter
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out var v) ? (int?)v : null)
+                .Where(v => v.HasValue)
+                .Select(v => v!.Value)
+                .ToHashSet();
+            if (parsed.Count > 0) allowedStatuses = parsed;
+        }
+
         // 严格租户隔离：租户用户只保留本租户资源，Host 资源（TenantId 为空）不可见；
         // Host 用户（CurrentTenant 为空）可见全部。
         var currentTenantId = _currentTenant.Id;
         var alive = new HashSet<Guid>(
             existing
                 .Where(r => !currentTenantId.HasValue || r.TenantId == currentTenantId.Value)
+                .Where(r => allowedStatuses == null || allowedStatuses.Contains((int)r.Status))
                 .Select(r => r.Id));
 
         return items

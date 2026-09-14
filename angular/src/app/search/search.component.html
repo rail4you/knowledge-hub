@@ -67,17 +67,6 @@
     <div class="search-filters">
       <div class="filter-group">
         <label class="filter-label">
-          <span nz-icon nzType="search"></span>
-          搜索类型
-        </label>
-        <nz-select [(ngModel)]="searchType" class="filter-select" nzPlaceHolder="搜索类型">
-          <nz-option nzValue="keyword" nzLabel="关键词搜索"></nz-option>
-          <nz-option nzValue="hybrid" nzLabel="混合搜索"></nz-option>
-        </nz-select>
-      </div>
-
-      <div class="filter-group">
-        <label class="filter-label">
           <span nz-icon nzType="database"></span>
           搜索索引
         </label>
@@ -214,7 +203,7 @@
         <div class="pagination">
           <nz-pagination
             [(nzPageIndex)]="pageIndex"
-            [nzTotal]="renderedResults().length"
+            [nzTotal]="totalCount()"
             [nzPageSize]="pageSize"
             (nzPageIndexChange)="onPageChange()">
           </nz-pagination>

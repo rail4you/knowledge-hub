@@ -29,7 +29,6 @@ interface SearchStateSnapshot {
   totalCount: number;
   pageIndex: number;
   selectedFileExtension: string;
-  searchType: 'keyword' | 'hybrid';
   selectedIndex: string;
   startDate: string | null;
   endDate: string | null;

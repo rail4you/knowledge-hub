@@ -121,7 +121,7 @@
                       }
                     </div>
                     <div class="result-card__meta">
-                      @if (r.categoryName) {
+                      @if (r.categoryName && !isCategoryId(r.categoryName)) {
                         <nz-tag nzColor="blue">{{ r.categoryName }}</nz-tag>
                       }
                       <nz-tag [nzColor]="getScoreColor(r.relevanceScore)">
