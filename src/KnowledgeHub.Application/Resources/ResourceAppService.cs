@@ -67,6 +67,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
     protected ITenantInfoRepository TenantInfoRepository { get; }
     protected ResourceMediaJobManager MediaJobManager { get; }
     protected IOptions<ResourceMediaOptions> MediaOptions { get; }
+    protected IOptions<ResourceProcessingFlowOptions> FlowOptions { get; }
     protected ResourceMediaCleanupService MediaCleanup { get; }
     public ResourceAppService(
         IRepository<Resource, Guid> repository,
@@ -98,6 +99,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         ITenantInfoRepository tenantInfoRepository,
         ResourceMediaJobManager mediaJobManager,
         IOptions<ResourceMediaOptions> mediaOptions,
+        IOptions<ResourceProcessingFlowOptions> flowOptions,
         ResourceMediaCleanupService mediaCleanup)
     {
         Repository = repository;
@@ -129,6 +131,7 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         TenantInfoRepository = tenantInfoRepository;
         MediaJobManager = mediaJobManager;
         MediaOptions = mediaOptions;
+        FlowOptions = flowOptions;
         MediaCleanup = mediaCleanup;
     }
 
@@ -656,12 +659,12 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         };
         await VersionRepository.InsertAsync(initialVersion);
 
-        var isVideo = IsVideoResource(input);
-        var hasFile = !string.IsNullOrEmpty(resource.FilePath);
-
-        if (hasFile)
+        // 新流程：上传仅创建草稿，不生成任何后台任务。
+        // 预览在发布/提交审核时生成，索引在院校审核通过后启动。
+        // ProcessOnUpload=true 时保留旧的"上传即处理"行为。
+        if (!string.IsNullOrEmpty(resource.FilePath) && FlowOptions.Value.ProcessOnUpload)
         {
-            if (isVideo)
+            if (IsVideoResource(resource))
             {
                 await EnqueueVideoIndexingJobAsync(resource);
             }
@@ -741,19 +744,63 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         }
     }
 
-    private bool IsVideoResource(CreateUpdateResourceDto input)
+    private static bool IsVideoResource(Resource resource)
     {
-        if (input.ResourceType == ResourceType.Video)
+        return resource.ResourceType == ResourceType.Video
+            || VideoIndexingBackgroundJob.IsVideoFile(resource.FileExtension);
+    }
+
+    /// <summary>
+    /// 发布/提交审核后触发预览生成（缩略图 + 预览 PDF），供审核人查看。
+    /// 视频缩略图按配置延后到院校审核，此处跳过视频。
+    /// </summary>
+    private async Task TriggerPreviewOnPublishAsync(Resource resource)
+    {
+        if (!FlowOptions.Value.GeneratePreviewOnPublish)
         {
-            return true;
+            return;
         }
 
-        if (VideoIndexingBackgroundJob.IsVideoFile(input.FileExtension))
+        if (string.IsNullOrEmpty(resource.FilePath))
         {
-            return true;
+            return;
         }
 
-        return false;
+        if (IsVideoResource(resource) && FlowOptions.Value.GenerateVideoThumbnailOnSchoolApproval)
+        {
+            return;
+        }
+
+        var currentVersion = await VersionRepository.FirstOrDefaultAsync(v =>
+            v.ResourceId == resource.Id && v.IsCurrentVersion);
+        await MediaJobManager.EnqueueAsync(resource.Id, currentVersion?.Id, resource: resource);
+    }
+
+    /// <summary>
+    /// 院校审核通过后启动索引；视频附带缩略图媒体任务。
+    /// </summary>
+    private async Task TriggerIndexOnSchoolApprovalAsync(Resource resource)
+    {
+        if (!FlowOptions.Value.GenerateIndexOnSchoolApproval)
+        {
+            return;
+        }
+
+        var currentVersion = await VersionRepository.FirstOrDefaultAsync(v =>
+            v.ResourceId == resource.Id && v.IsCurrentVersion);
+
+        if (IsVideoResource(resource))
+        {
+            await EnqueueVideoIndexingJobAsync(resource);
+            if (FlowOptions.Value.GenerateVideoThumbnailOnSchoolApproval && !string.IsNullOrEmpty(resource.FilePath))
+            {
+                await MediaJobManager.EnqueueAsync(resource.Id, currentVersion?.Id, resource: resource);
+            }
+        }
+        else
+        {
+            await EnqueueDocumentIndexingJobAsync(resource, currentVersion?.Id);
+        }
     }
 
     private async Task EnqueueVideoIndexingJobAsync(Resource resource)
@@ -918,21 +965,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         // 清除 Office 转换缓存（源文件已更新，需重新转换）
         OfficeConversionService.InvalidateCache(input.ResourceId.ToString());
 
-        if (VideoIndexingBackgroundJob.IsVideoFile(resource.FileExtension))
-        {
-            await EnqueueVideoIndexingJobAsync(resource);
-        }
-        else
-        {
-            // 非视频文件，触发文档索引任务
-            await EnqueueDocumentIndexingJobAsync(resource, newVersion.Id);
-        }
-
-        // 媒体处理（缩略图/预览）：换版本后强制重新生成
-        if (!MediaOptions.Value.StartAfterIndexing && !MediaOptions.Value.GenerateOnApproval)
-        {
-            await MediaJobManager.EnqueueAsync(resource.Id, newVersion.Id, force: true, resource: resource);
-        }
+        // 换版本后回到待审核：重新生成预览，索引留待院校审核通过后启动。
+        await TriggerPreviewOnPublishAsync(resource);
 
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(newVersion);
     }
@@ -972,21 +1006,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
             }
         }
 
-        if (VideoIndexingBackgroundJob.IsVideoFile(resource.FileExtension))
-        {
-            await EnqueueVideoIndexingJobAsync(resource);
-        }
-        else
-        {
-            // 非视频文件，触发文档索引任务
-            await EnqueueDocumentIndexingJobAsync(resource, version.Id);
-        }
-
-        // 媒体处理（缩略图/预览）：回滚版本后强制重新生成
-        if (!MediaOptions.Value.StartAfterIndexing && !MediaOptions.Value.GenerateOnApproval)
-        {
-            await MediaJobManager.EnqueueAsync(resource.Id, version.Id, force: true, resource: resource);
-        }
+        // 回滚版本后回到待审核：重新生成预览，索引留待院校审核通过后启动。
+        await TriggerPreviewOnPublishAsync(resource);
 
         return ObjectMapper.Map<ResourceVersion, ResourceVersionDto>(version);
     }
@@ -1582,13 +1603,8 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         {
             resource.Status = ResourceStatus.SchoolApproved;
 
-            // 配置为审核通过后生成媒体：此时再入队缩略图/预览任务
-            if (MediaOptions.Value.GenerateOnApproval)
-            {
-                var currentVersion = await VersionRepository.FirstOrDefaultAsync(v =>
-                    v.ResourceId == resource.Id && v.IsCurrentVersion);
-                await MediaJobManager.EnqueueAsync(resource.Id, currentVersion?.Id, resource: resource);
-            }
+            // 院校审核通过后启动索引（视频附带缩略图媒体任务）
+            await TriggerIndexOnSchoolApprovalAsync(resource);
         }
         else
         {
@@ -1617,6 +1633,9 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         resource.Status = ResourceStatus.PendingReview;
         await Repository.UpdateAsync(resource);
+
+        // 发布后生成预览（缩略图/预览 PDF），供审核人查看
+        await TriggerPreviewOnPublishAsync(resource);
     }
 
     // 申请删除资源：低风险动作（仅生成删除申请，实际删除由联盟管理员 PhysicalDelete 权限审批）。

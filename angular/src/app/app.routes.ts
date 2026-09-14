@@ -126,6 +126,17 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
+    // 资源进度：上传 → 预览 → 院校审核 → 索引 → 联盟审核 → 学生可见。
+    // 放在 /admin 下，避免与 '/resources' 前缀冲突（否则会误展开「资源管理」菜单）。
+    path: 'admin/resource-progress',
+    loadComponent: () => import('./admin/resource-tracking/resource-tracking.component').then(c => c.ResourceTrackingComponent),
+    canActivate: [authGuard, nonStudentGuard, permissionGuard],
+    data: {
+      requiredPolicy: 'KnowledgeHub.Resources',
+      layout: eLayoutType.application,
+    },
+  },
+  {
     path: 'resources',
     loadComponent: () => import('./resources/resource').then(c => c.ResourceComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
@@ -166,20 +177,24 @@ export const APP_ROUTES: Routes = [
     },
   },
   {
-    path: 'admin/indexing-jobs',
-    loadComponent: () => import('./admin/indexing-jobs/indexing-jobs.component').then(c => c.IndexingJobsComponent),
-    canActivate: [authGuard, nonStudentGuard, permissionGuard],
-    data: {
-      requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
-    },
-  },
-  {
-    path: 'admin/media-jobs',
-    loadComponent: () => import('./admin/media-jobs/media-jobs.component').then(c => c.MediaJobsComponent),
+    // 资源任务：合并媒体处理 + 文档索引 + 视频索引，按资源聚合。
+    path: 'admin/resource-tasks',
+    loadComponent: () => import('./admin/resource-tasks/resource-task.component').then(c => c.ResourceTaskComponent),
     canActivate: [authGuard, nonStudentGuard, permissionGuard],
     data: {
       requiredPolicy: 'KnowledgeHub.Resources',
     },
+  },
+  // 旧入口重定向：索引任务 / 媒体处理任务已合并进资源任务。
+  {
+    path: 'admin/indexing-jobs',
+    redirectTo: 'admin/resource-tasks',
+    pathMatch: 'full',
+  },
+  {
+    path: 'admin/media-jobs',
+    redirectTo: 'admin/resource-tasks',
+    pathMatch: 'full',
   },
   {
     path: 'admin/meilisearch',

@@ -1,0 +1,176 @@
+<div class="resource-tasks-page">
+  <header class="page-header">
+    <h1 class="page-header__title">资源任务</h1>
+    <div class="page-header__actions">
+      <input
+        nz-input
+        [(ngModel)]="filter"
+        (keyup.enter)="onSearch()"
+        placeholder="按资源名称搜索"
+        style="width: 200px"
+      />
+      <nz-select
+        [(ngModel)]="taskStatus"
+        (ngModelChange)="onStatusChange()"
+        nzPlaceHolder="全部状态"
+        style="width: 150px"
+      >
+        @for (o of statusOptions; track o.value) {
+          <nz-option [nzValue]="o.value" [nzLabel]="o.label"></nz-option>
+        }
+      </nz-select>
+      <button nz-button nzType="default" (click)="onSearch()">搜索</button>
+      <button nz-button nzType="default" (click)="load()" [nzLoading]="loading()">
+        <span nz-icon nzType="reload"></span>
+        刷新
+      </button>
+    </div>
+  </header>
+
+  @if (resourceIdFilter()) {
+    <div class="resource-filter-banner">
+      <span nz-icon nzType="filter"></span>
+      已筛选单个资源（来自资源进度页）
+      <a (click)="clearResourceFilter()">清除筛选</a>
+    </div>
+  }
+
+  <div class="table-card">
+    <nz-table
+      [nzData]="groups()"
+      [nzLoading]="loading()"
+      [nzFrontPagination]="false"
+      [nzTotal]="totalCount()"
+      [nzPageIndex]="pageIndex"
+      [nzPageSize]="pageSize"
+      [nzShowSizeChanger]="false"
+      (nzPageIndexChange)="onPageChange($event)"
+      nzSize="middle"
+    >
+      <thead>
+        <tr>
+          <th>资源名</th>
+          <th nzWidth="240px" nzAlign="center">资源状态</th>
+          <th nzWidth="100px" nzAlign="center">任务数</th>
+          <th nzWidth="150px" nzAlign="center">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (group of groups(); track group.resourceId) {
+          <tr class="group-row">
+            <td>
+              <div class="resource-cell">
+                <button
+                  type="button"
+                  class="expand-toggle"
+                  [attr.aria-expanded]="isExpanded(group.resourceId)"
+                  (click)="toggleGroup(group.resourceId)"
+                >
+                  <i nz-icon [nzType]="isExpanded(group.resourceId) ? 'down' : 'right'"></i>
+                </button>
+                <div class="resource-cell__text">
+                  <span class="resource-name" (click)="openProgress(group)">{{ group.resourceName || group.resourceId }}</span>
+                  <span class="resource-id">{{ group.resourceId }}</span>
+                </div>
+              </div>
+            </td>
+            <td nzAlign="center">
+              <nz-tag [nzColor]="resourceStatusColor(group.resourceStatus)">
+                {{ resourceStatusLabel(group.resourceStatus) }}
+              </nz-tag>
+            </td>
+            <td nzAlign="center">
+              <span class="task-count">{{ group.taskCount }}</span>
+              @if (group.failedCount > 0) {
+                <span class="task-count--failed">失败 {{ group.failedCount }}</span>
+              }
+            </td>
+            <td nzAlign="center">
+              <button nz-button nzType="link" nzSize="small" (click)="openProgress(group)">进度</button>
+              <button
+                nz-button
+                nzType="link"
+                nzSize="small"
+                [disabled]="group.failedCount === 0"
+                (click)="retryGroup(group)"
+              >
+                重试失败
+              </button>
+            </td>
+          </tr>
+          @if (isExpanded(group.resourceId)) {
+            <tr class="expanded-row">
+              <td colspan="4" class="expanded-cell">
+                <div class="sub-table-wrap">
+                <div class="sub-table-card">
+                  <table class="sub-table">
+                    <thead>
+                      <tr>
+                        <th nzWidth="100px">类型</th>
+                        <th nzWidth="110px">状态</th>
+                        <th nzWidth="190px">进度</th>
+                        <th>生成物 / 错误</th>
+                        <th nzWidth="180px">时间</th>
+                        <th nzWidth="90px">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (task of group.tasks; track task.id) {
+                        <tr>
+                          <td>
+                            <nz-tag [nzColor]="kindColor(task.kind)">{{ kindLabel(task.kind) }}</nz-tag>
+                          </td>
+                          <td>
+                            <nz-tag [nzColor]="taskStatusColor(task.status)">{{ taskStatusLabel(task.status) }}</nz-tag>
+                            @if (task.retryCount > 0) {
+                              <span class="retry-count">重试 {{ task.retryCount }} 次</span>
+                            }
+                          </td>
+                          <td>
+                            <nz-progress [nzPercent]="task.progress" nzSize="small"></nz-progress>
+                            <span class="progress-msg">{{ task.message }}</span>
+                          </td>
+                          <td>
+                            <div class="artifacts">
+                              @for (a of task.artifacts; track (a.kind + (a.variant || ''))) {
+                                <span class="artifact" [class.artifact--failed]="a.state === 40">
+                                  {{ artifactLabel(a.kind) }}{{ a.variant ? '·' + a.variant : '' }}
+                                </span>
+                              } @empty {
+                                <span class="muted">—</span>
+                              }
+                            </div>
+                            @if (task.errorMessage) {
+                              <div class="err">{{ task.errorMessage }}</div>
+                            }
+                          </td>
+                          <td>
+                            <div>{{ task.creationTime | date:'MM-dd HH:mm:ss' }}</div>
+                            @if (task.completedAt) {
+                              <div class="muted">完成 {{ task.completedAt | date:'MM-dd HH:mm:ss' }}</div>
+                            }
+                            @if (task.startedAt && !task.completedAt) {
+                              <div class="muted">开始 {{ task.startedAt | date:'MM-dd HH:mm:ss' }}</div>
+                            }
+                          </td>
+                          <td>
+                            <button nz-button nzType="link" nzSize="small" (click)="retry(task)" [disabled]="!task.canRetry">重试</button>
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="6" class="muted">该资源暂无任务</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </td>
+          </tr>
+          }
+        }
+      </tbody>
+    </nz-table>
+  </div>
+</div>

@@ -24,6 +24,12 @@ public interface IMeiliSearchService
     Task<IndexTaskResultDto> IndexDocumentFromPagesAsync(Guid resourceId, List<PageContentDto> pages);
 
     /// <summary>
+    /// 轻量更新某资源在文档索引中的审核状态字段（不重建分页内容）。
+    /// 用于院校/联盟审核通过或驳回后同步搜索可见性口径（仅 documents 索引有 status 字段）。
+    /// </summary>
+    Task UpdateResourceStatusAsync(Guid resourceId, int status);
+
+    /// <summary>
     /// 获取文档的高频词汇（用于前端词云 / 热门词展示）。
     /// </summary>
     /// <param name="resourceId">资源 ID</param>

@@ -371,8 +371,8 @@ export class SearchComponent implements OnInit {
       startDate: this.formatLocalDate(this.startDate),
       endDate: this.formatLocalDate(this.endDate),
       indexName: isAll ? undefined : this.selectedIndex,
-      // 学生端仅搜索已审核资源
-      statusFilter: this.router.url.startsWith('/student') ? '2,3' : undefined,
+      // 学生端仅搜索联盟审核通过的资源（与资源列表口径一致）
+      statusFilter: this.router.url.startsWith('/student') ? '3' : undefined,
     };
 
     const searchObservable = this.searchType === 'hybrid' 

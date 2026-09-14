@@ -17,6 +17,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using OpenIddict.Validation.AspNetCore;
 using OpenIddict.Server.AspNetCore;
+using Polly;
+using Polly.Extensions.Http;
 using KnowledgeHub.Resources;
 using KnowledgeHub.EntityFrameworkCore;
 using KnowledgeHub.MultiTenancy;
@@ -219,24 +221,35 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         context.Services.Configure<LiteParseOptions>(configuration.GetSection("Liteparse"));
         context.Services.Configure<WasmMirrorOptions>(configuration.GetSection("WasmMirror"));
         context.Services.Configure<ResourceMediaOptions>(configuration.GetSection("ResourceMedia"));
+        // 资源处理流水线触发时机：上传→草稿，发布→预览，院校审核→索引，联盟审核→学生可见
+        context.Services.Configure<ResourceProcessingFlowOptions>(configuration.GetSection("ResourceProcessingFlow"));
         // 上传大小限制：App:MaxFileSizeBytes（默认 500MB，env: App__MaxFileSizeBytes）
         context.Services.Configure<KnowledgeHub.Common.AppUploadOptions>(configuration.GetSection("App"));
         // 文件存储根路径：Storage:RootPath（默认 uploads，env: Storage__RootPath）
         context.Services.Configure<KnowledgeHub.Common.FileStorageOptions>(configuration.GetSection("Storage"));
+
+        // 统一的 Polly 瞬时故障重试策略：5xx / 408 / 网络异常 / 429，指数退避重试 3 次。
+        // 用于 Gotenberg 转换、Meili 索引、LiteParse 解析、Embedding 等外部调用，
+        // 降低瞬时抖动导致的"生成失败"；重试仍失败则任务标记失败，由用户在跟踪页手动重启。
+        IAsyncPolicy<HttpResponseMessage> transientRetry() =>
+            HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .OrResult(r => r.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                .WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)));
 
         context.Services.AddHttpClient("LiteParse", (sp, client) =>
         {
             var options = sp.GetRequiredService<IOptions<LiteParseOptions>>();
             client.BaseAddress = new Uri(options.Value.Host);
             client.Timeout = TimeSpan.FromSeconds(options.Value.RequestTimeoutSeconds);
-        });
+        }).AddPolicyHandler(transientRetry());
 
         context.Services.AddHttpClient(GotenbergConversionService.GotenbergHttpClientName, (sp, client) =>
         {
             var options = sp.GetRequiredService<IOptions<OfficeConversionOptions>>();
             client.BaseAddress = new Uri(options.Value.BaseUrl);
             client.Timeout = TimeSpan.FromSeconds(options.Value.ConversionTimeoutSeconds);
-        });
+        }).AddPolicyHandler(transientRetry());
 
         // ── Hangfire 队列（PostgreSQL 持久化，重启不丢任务）──
         // 转换任务与 AI 生成任务分别走 conversion / ai 队列，互相隔离、可并发。
@@ -318,22 +331,25 @@ public class KnowledgeHubHttpApiHostModule : AbpModule
         // 文档/视频索引队列（indexing 队列，Hangfire 持久化）
         context.Services.AddSingleton<KnowledgeHub.Search.Indexing.IIndexingJobQueue, HangfireIndexingJobQueue>();
 
-        context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>();
+        context.Services.AddHttpClient<IMeiliSearchService, KnowledgeHub.Application.Search.MeiliSearchService>()
+            .AddPolicyHandler(transientRetry());
         context.Services.AddScoped<KnowledgeHub.Application.Search.MeiliSearchService>();
         // 复用下方注册的 "MeiliSearch" 命名客户端（连接池由 IHttpClientFactory 管理），
         // 避免每个请求 new HttpClient 导致 socket/TIME_WAIT 耗尽。
         context.Services.AddScoped<KnowledgeHub.Resources.ISearchService>(sp =>
             new global::KnowledgeHub.Resources.MeiliSearchService(
                 sp.GetRequiredService<IHttpClientFactory>().CreateClient("MeiliSearch")));
-        context.Services.AddHttpClient<IEmbeddingService, EmbeddingService>();
+        context.Services.AddHttpClient<IEmbeddingService, EmbeddingService>()
+            .AddPolicyHandler(transientRetry());
         context.Services.AddTransient<ITeachingAgentRuntimeClient, TeachingAgentRuntimeClient>();
         context.Services.AddScoped<ISearchAnalyticsService, SearchAnalyticsService>();
-        context.Services.AddHttpClient<IMeiliSearchAdminAppService, MeiliSearchAdminAppService>();
+        context.Services.AddHttpClient<IMeiliSearchAdminAppService, MeiliSearchAdminAppService>()
+            .AddPolicyHandler(transientRetry());
         context.Services.AddHttpClient("MeiliSearch", client =>
         {
             client.BaseAddress = new Uri(configuration["Meilisearch:Host"] ?? "http://localhost:7700");
             client.Timeout = TimeSpan.FromSeconds(30);
-        });
+        }).AddPolicyHandler(transientRetry());
 
         // HTTP 代理：用于 HTTPS 页面加载 HTTP 仿真资源（Unity WebGL 等）
         context.Services.AddHttpClient("HttpProxy", client =>

@@ -38,6 +38,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
     protected IRepository<ResourceEntity, Guid> ResourceRepository { get; }
     protected IEditionConfigService EditionConfigService { get; }
     protected ICurrentTenant CurrentTenant { get; }
+    protected KnowledgeHub.Application.Contracts.Search.IMeiliSearchService MeiliSearchService { get; }
 
     public AllianceAppService(
         IRepository<AllianceEntity, Guid> allianceRepository,
@@ -45,7 +46,8 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         AllianceAuditRepo auditRepository,
         IRepository<ResourceEntity, Guid> resourceRepository,
         IEditionConfigService editionConfigService,
-        ICurrentTenant currentTenant)
+        ICurrentTenant currentTenant,
+        KnowledgeHub.Application.Contracts.Search.IMeiliSearchService meiliSearchService)
     {
         AllianceRepository = allianceRepository;
         MemberRepository = memberRepository;
@@ -53,6 +55,7 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
         ResourceRepository = resourceRepository;
         EditionConfigService = editionConfigService;
         CurrentTenant = currentTenant;
+        MeiliSearchService = meiliSearchService;
     }
 
     [Authorize(KnowledgeHubPermissions.Alliance.Default)]
@@ -225,6 +228,8 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
             {
                 await ResourceRepository.UpdateAsync(resource);
             }
+            // 同步搜索索引状态：学生端按 status=3（联盟通过）过滤，避免索引停留在院校通过(2)。
+            await MeiliSearchService.UpdateResourceStatusAsync(input.ResourceId, (int)ResourceStatus.LeagueApproved);
         }
         else if (input.Status == AuditStatus.Rejected)
         {
@@ -233,6 +238,8 @@ public class AllianceAppService : KnowledgeHubAppService, IAllianceAppService
             {
                 await ResourceRepository.UpdateAsync(resource);
             }
+            // 联盟驳回后从学生端检索结果中移除。
+            await MeiliSearchService.UpdateResourceStatusAsync(input.ResourceId, (int)ResourceStatus.Rejected);
         }
 
         var dto = ObjectMapper.Map<AllianceAuditEntity, AllianceAuditDto>(audit);

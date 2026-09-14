@@ -70,15 +70,6 @@ function configureRoutes() {
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Search',
     },
-    {
-      path: '/admin/media-jobs',
-      name: '::Menu:MediaJobs',
-      iconClass: 'fas fa-images',
-      parentName: '::Menu:ResourceManagement',
-      order: 4,
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Resources',
-    },
 
     // ══════════════════════════════════════════════════════════
     //  ② AI 管理
@@ -462,7 +453,8 @@ function configureRoutes() {
     },
 
     // ══════════════════════════════════════════════════════════
-    //  搜索和资源库管理（::Menu:SearchAndTenantManagement / ::Menu:TenantInfo）
+    //  资源搜索和资源库管理（::Menu:SearchAndTenantManagement / ::Menu:TenantInfo）
+    //  顺序：资源搜索（搜索引擎管理/检索统计）在前，资源库管理（资源进度/资源任务/资源库管理）在后。
     //  资源库管理页 /admin/tenant-info：host 管理所有租户，SchoolAdmin 仅管理本租户（后端已隔离）。
     // ══════════════════════════════════════════════════════════
     {
@@ -474,18 +466,11 @@ function configureRoutes() {
       requiredPolicy: 'KnowledgeHub.Search',
     },
     {
-      path: '/admin/indexing-jobs',
-      name: '::Menu:IndexingJobs',
-      iconClass: 'fas fa-tasks',
-      parentName: '::Menu:SearchAndTenantManagement',
-      layout: eLayoutType.application,
-      requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
-    },
-    {
       path: '/admin/meilisearch',
       name: '::Menu:MeiliSearchDashboard',
       iconClass: 'fas fa-tachometer-alt',
       parentName: '::Menu:SearchAndTenantManagement',
+      order: 1,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
     },
@@ -494,15 +479,36 @@ function configureRoutes() {
       name: '::Menu:SearchStatistics',
       iconClass: 'fas fa-chart-bar',
       parentName: '::Menu:SearchAndTenantManagement',
+      order: 2,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.Search.ManageIndex',
+    },
+    {
+      // 资源进度：上传 → 预览 → 院校审核 → 索引 → 联盟审核 → 学生可见
+      path: '/admin/resource-progress',
+      name: '::Menu:ResourceProgress',
+      iconClass: 'fas fa-diagram-project',
+      parentName: '::Menu:SearchAndTenantManagement',
+      order: 3,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Resources',
+    },
+    {
+      // 资源任务：媒体处理 + 文档索引 + 视频索引，按资源聚合
+      path: '/admin/resource-tasks',
+      name: '::Menu:ResourceTasks',
+      iconClass: 'fas fa-tasks',
+      parentName: '::Menu:SearchAndTenantManagement',
+      order: 4,
+      layout: eLayoutType.application,
+      requiredPolicy: 'KnowledgeHub.Resources',
     },
     {
       path: '/admin/tenant-info',
       name: '::Menu:TenantInfo',
       iconClass: 'fas fa-building',
       parentName: '::Menu:SearchAndTenantManagement',
-      order: 100,
+      order: 5,
       layout: eLayoutType.application,
       requiredPolicy: 'KnowledgeHub.TenantInfo.Edit',
     },

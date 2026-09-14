@@ -193,7 +193,7 @@ export class AiNotificationBellComponent {
     if (m.id) {
       this.mediaService.acknowledge(m.id);
     }
-    this.router.navigate(['/admin/media-jobs']);
+    this.router.navigate(['/admin/resource-tasks']);
   }
 
   goTaskCenter(): void {

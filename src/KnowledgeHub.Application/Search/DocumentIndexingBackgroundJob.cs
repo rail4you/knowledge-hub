@@ -86,7 +86,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Indexing job {JobId} failed: {Error}", args.JobId, ex.Message);
-                await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Failed, errorMessage: ex.Message);
+                await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Failed, errorMessage: "文档索引失败，请稍后重试");
             }
         }
     }
@@ -100,7 +100,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         }
         if (resource == null)
         {
-            throw new Exception($"Resource not found: {args.ResourceId}");
+            throw new Exception("资源不存在或已被删除");
         }
 
         // 切换到资源的租户上下文，确保后续文件路径查找、PageContent 保存等操作在正确的租户下执行
@@ -108,14 +108,14 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
 
         if (string.IsNullOrEmpty(resource.FilePath))
         {
-            throw new Exception("Resource has no file path");
+            throw new Exception("资源缺少源文件");
         }
 
         var fullPath = Path.Combine(_fileStorageService.RootPath, resource.FilePath);
         
         if (!File.Exists(fullPath))
         {
-            throw new Exception($"File not found: {fullPath}");
+            throw new Exception("源文件不存在，请重新上传");
         }
 
         await UpdateJobStatusAsync(args.JobId, IndexingJobStatus.Parsing, progress: 10);
@@ -178,7 +178,7 @@ public class DocumentIndexingBackgroundJob : IAsyncBackgroundJob<DocumentIndexin
         {
             _logger.LogWarning(meiliEx, "Meilisearch indexing failed for resource {ResourceId}", args.ResourceId);
             // 将 Job 标记为失败而不是静默完成，方便用户在索引任务页面看到问题
-            throw new Exception($"Meilisearch 索引失败: {meiliEx.Message}", meiliEx);
+            throw new Exception("索引服务暂不可用，请稍后重试", meiliEx);
         }
 
         // 异步入队 Summary 生成（fire-and-forget，失败不影响主流程）

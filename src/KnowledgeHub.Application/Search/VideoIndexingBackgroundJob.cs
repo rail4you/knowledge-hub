@@ -99,7 +99,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Video indexing job {JobId} failed: {Error}", args.JobId, ex.Message);
-                    await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Failed, errorMessage: ex.Message);
+                    await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Failed, errorMessage: "视频索引失败，请稍后重试");
                 }
             }
         }
@@ -114,7 +114,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         var resource = await _resourceRepository.FindAsync(args.ResourceId);
         if (resource == null)
         {
-            throw new Exception($"Resource not found: {args.ResourceId}");
+            throw new Exception("资源不存在或已被删除");
         }
 
         string videoPath;
@@ -126,7 +126,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
 
             if (!File.Exists(videoPath))
             {
-                throw new Exception($"File not found: {videoPath}");
+                throw new Exception("源文件不存在，请重新上传");
             }
             videoUrl = _fileStorageService.GetFileUrl(resource.FilePath);
         }
@@ -137,7 +137,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         }
         else
         {
-            throw new Exception("Resource has no file path or video URL");
+            throw new Exception("资源缺少源文件或视频地址");
         }
 
         await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Analyzing, progress: 20);
@@ -178,7 +178,7 @@ public class VideoIndexingBackgroundJob : IAsyncBackgroundJob<VideoIndexingJobAr
         catch (Exception meiliEx)
         {
             _logger.LogError(meiliEx, "Meilisearch indexing failed for resource {ResourceId}", args.ResourceId);
-            await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Failed, errorMessage: $"Meilisearch索引失败: {meiliEx.Message}");
+            await UpdateJobStatusAsync(args.JobId, VideoIndexingJobStatus.Failed, errorMessage: "索引服务暂不可用，请稍后重试");
             throw;
         }
 

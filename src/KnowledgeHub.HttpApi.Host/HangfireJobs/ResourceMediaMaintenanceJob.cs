@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using KnowledgeHub.Resources;
+using KnowledgeHub.Resources.Enums;
 using KnowledgeHub.Resources.FileStorage;
 using KnowledgeHub.Resources.Media;
 using Microsoft.EntityFrameworkCore;
@@ -76,8 +77,12 @@ public class ResourceMediaMaintenanceJob
             var resourceQuery = await resourceRepository.GetQueryableAsync();
             var jobQuery = await jobRepository.GetQueryableAsync();
 
+            // 仅回填「待审核/已通过」状态的资源：草稿、驳回、隐藏资源按新流程不应生成媒体任务。
             var candidates = await resourceQuery
                 .Where(r => !string.IsNullOrEmpty(r.FilePath) && !jobQuery.Any(j => j.ResourceId == r.Id))
+                .Where(r => r.Status == ResourceStatus.PendingReview
+                    || r.Status == ResourceStatus.SchoolApproved
+                    || r.Status == ResourceStatus.LeagueApproved)
                 .OrderBy(r => r.CreationTime)
                 .Take(BackfillBatchSize)
                 .ToListAsync();

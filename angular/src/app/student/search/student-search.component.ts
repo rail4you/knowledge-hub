@@ -155,8 +155,8 @@ export class StudentSearchComponent implements OnInit {
       skipCount: (this.pageIndex - 1) * this.pageSize,
       maxResultCount: this.pageSize,
       sorting: 'relevance',
-      // 学生端仅搜索已审核资源（documents 侧生效，videos 侧后端自动忽略）
-      statusFilter: '2,3',
+      // 学生端仅搜索联盟审核通过的资源（与资源列表口径一致；documents 侧生效，videos 侧后端自动忽略）
+      statusFilter: '3',
     };
     // 选“全部”时不传 indexName，后端合并 documents + videos 双索引；
     // 选文档/视频时只走单边。

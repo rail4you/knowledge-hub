@@ -430,10 +430,43 @@ public class MeiliSearchService : IMeiliSearchService
         };
     }
 
+    /// <summary>
+    /// 轻量更新资源在 documents 索引中的 status 字段（不重建分页内容）。
+    /// 用于院校/联盟审核后同步搜索可见性（学生端按 status=3 过滤）。
+    /// </summary>
+    public async Task UpdateResourceStatusAsync(Guid resourceId, int status)
+    {
+        try
+        {
+            var indices = await _documentIndexRepository.GetByResourceIdAsync(resourceId);
+            if (indices == null || indices.Count == 0)
+            {
+                return;
+            }
+
+            var partialDocs = indices.Select(i => new { id = i.Id.ToString(), status }).ToList();
+            var json = JsonSerializer.Serialize(partialDocs);
+            // PUT = 部分更新（仅覆盖传入字段），保留 pageContent 等既有字段。
+            var response = await _httpClient.PutAsync(
+                $"/indexes/{IndexName}/documents",
+                new StringContent(json, Encoding.UTF8, "application/json"));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "更新 Meili 文档状态失败 resource={ResourceId} status={Status} code={Code}",
+                    resourceId, status, (int)response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "更新 Meili 文档状态异常 resource={ResourceId} status={Status}", resourceId, status);
+        }
+    }
+
     public async Task<SearchResultDto> SearchAsync(SearchQueryDto query)
     {
         await EnsureIndexExistsAsync();
-
         // 调用者明确指定了 IndexName（前端索引下拉框）则只走单边，
         // 与 HybridSearchAsync 保持一致。之前这里忽略 IndexName 总是合并
         // 双索引，导致选“文档”时视频结果仍以 1.0 满分置顶（如 ?q=1）。

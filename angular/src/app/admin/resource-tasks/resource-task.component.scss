@@ -1,0 +1,273 @@
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+  background: var(--kh-canvas, #f5f7fa);
+}
+
+.resource-tasks-page {
+  width: 100%;
+  padding: 16px 24px 24px;
+}
+
+/* 标题容器：与其他管理页一致的卡片式头部 */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 16px 20px;
+  background: var(--kh-panel, #fff);
+  border: 1px solid var(--kh-line, #e7edf5);
+  border-radius: var(--kh-r-shell, 12px);
+  box-shadow: var(--kh-shadow-card, 0 1px 4px rgba(0, 0, 0, .04));
+}
+
+.page-header__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--kh-ink, #1f2937);
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.resource-filter-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(43, 108, 212, 0.08);
+  color: #2b6cd4;
+  font-size: 13px;
+
+  a {
+    margin-left: auto;
+    cursor: pointer;
+  }
+}
+
+/* 表格外卡片 */
+.table-card {
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--kh-line, #e7edf5);
+  border-radius: 12px;
+  box-shadow: var(--kh-shadow-card, 0 1px 4px rgba(0, 0, 0, .04));
+  overflow: hidden;
+}
+
+/* 覆盖 ng-zorro 表格默认配色，提升可读性 */
+:host ::ng-deep {
+  .table-card .ant-table {
+    width: 100%;
+    background: transparent;
+  }
+
+  .table-card .ant-table-container,
+  .table-card .ant-table-content,
+  .table-card .ant-table table {
+    width: 100%;
+  }
+
+  .table-card .ant-table-thead > tr > th {
+    background: #f7f9fc;
+    color: #5f6f81;
+    font-weight: 600;
+    border-bottom: 1px solid #e7edf5;
+  }
+
+  .table-card .ant-table-thead > tr > th::before {
+    display: none !important;
+  }
+
+  .table-card .ant-table-tbody > tr > td {
+    background: #fff;
+    border-bottom: 1px solid #eef3f9;
+  }
+
+  .table-card .ant-table-tbody > tr.ant-table-row:hover > td {
+    background: #f5f9ff;
+  }
+
+  .table-card .ant-table-row-expand-icon {
+    color: #2b6cd4;
+  }
+
+  .table-card .ant-pagination {
+    padding: 0 16px;
+  }
+}
+
+/* 资源名 + 展开图标同列 */
+.resource-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.expand-toggle {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #8a93a6;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:hover {
+    color: #2b6cd4;
+    background: rgba(43, 108, 212, 0.08);
+  }
+}
+
+.resource-cell__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.resource-name {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: inherit;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.resource-id {
+  color: #a3adbb;
+  font-size: 11px;
+}
+
+.status-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.task-count {
+  display: inline-block;
+  min-width: 22px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.task-count--failed {
+  margin-left: 6px;
+  color: #ef4444;
+  font-size: 12px;
+}
+
+.retry-count {
+  display: inline-block;
+  margin-top: 2px;
+  color: #fa8c16;
+  font-size: 12px;
+}
+
+.progress-msg {
+  display: block;
+  margin-top: 2px;
+  color: #8a93a6;
+  font-size: 12px;
+}
+
+.artifacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.artifact {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: rgba(43, 108, 212, 0.1);
+  color: #2b6cd4;
+  font-size: 12px;
+
+  &--failed {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
+}
+
+.err {
+  margin-top: 4px;
+  color: #ef4444;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.muted {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+/* 展开区域：浅灰底 + 白色子卡片，层次清晰 */
+.expanded-cell {
+  padding: 0 !important;
+  background: #f7f9fc !important;
+}
+
+.sub-table-wrap {
+  padding: 12px 16px;
+  background: #f7f9fc;
+}
+
+.sub-table-card {
+  background: #fff;
+  border: 1px solid #e7edf5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sub-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  thead th {
+    text-align: left;
+    background: #fafbfd;
+    color: #5f6f81;
+    font-weight: 600;
+    padding: 9px 12px;
+    border-bottom: 1px solid #eef3f9;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f2f5f9;
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover td {
+    background: #f9fbfe;
+  }
+}
