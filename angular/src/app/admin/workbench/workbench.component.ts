@@ -225,6 +225,7 @@ export class WorkbenchComponent implements OnInit, OnDestroy {
 
     chart.setOption(
       {
+        animation: false,
         tooltip: {
           trigger: 'axis',
           axisPointer: { type: 'line' },

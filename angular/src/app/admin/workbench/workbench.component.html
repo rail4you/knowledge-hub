@@ -391,7 +391,9 @@
         </div>
       </div>
       </div>
-    } @else if (!loading()) {
+    } @else if (loading()) {
+      <div class="state-card state-card--loading"></div>
+    } @else {
       <div class="state-card">
         <nz-empty nzNotFoundContent="暂无统计数据"></nz-empty>
       </div>
