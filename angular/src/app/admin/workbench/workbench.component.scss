@@ -421,13 +421,6 @@
   text-overflow: ellipsis;
 }
 
-.metric__hint {
-  font-size: 10px;
-  line-height: 1.25;
-  color: var(--kh-muted);
-  opacity: 0.85;
-}
-
 /* ── 空 / 错误状态 ─────────────────────────────── */
 .state-card {
   background: var(--kh-panel);
