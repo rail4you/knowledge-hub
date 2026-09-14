@@ -31,53 +31,53 @@
       <div class="stats-panel">
         <div class="stats-panel__header">检索概览</div>
         <div class="stats-groups">
-          <div class="stat-group">
+          <div class="stat-group stat-group--all">
             <div class="stat-group__title">全部检索</div>
             <div class="stat-group__items">
               <div class="stat-item">
-                <div class="stat-value accent">{{ d.all.totalSearches | number }}</div>
+                <div class="stat-value">{{ d.all.totalSearches | number }}</div>
                 <div class="stat-label">总检索次数</div>
               </div>
               <div class="stat-item">
-                <div class="stat-value cyan">{{ d.all.todaySearches | number }}</div>
+                <div class="stat-value">{{ d.all.todaySearches | number }}</div>
                 <div class="stat-label">今日检索</div>
               </div>
               <div class="stat-item">
-                <div class="stat-value indigo">{{ d.all.activeUsers | number }}</div>
+                <div class="stat-value">{{ d.all.activeUsers | number }}</div>
                 <div class="stat-label">活跃用户</div>
               </div>
             </div>
           </div>
-          <div class="stat-group">
+          <div class="stat-group stat-group--doc">
             <div class="stat-group__title">文档检索</div>
             <div class="stat-group__items">
               <div class="stat-item">
-                <div class="stat-value green">{{ d.document.totalSearches | number }}</div>
+                <div class="stat-value">{{ d.document.totalSearches | number }}</div>
                 <div class="stat-label">总检索次数</div>
               </div>
               <div class="stat-item">
-                <div class="stat-value green-light">{{ d.document.todaySearches | number }}</div>
+                <div class="stat-value">{{ d.document.todaySearches | number }}</div>
                 <div class="stat-label">今日检索</div>
               </div>
               <div class="stat-item">
-                <div class="stat-value indigo">{{ d.document.activeUsers | number }}</div>
+                <div class="stat-value">{{ d.document.activeUsers | number }}</div>
                 <div class="stat-label">活跃用户</div>
               </div>
             </div>
           </div>
-          <div class="stat-group">
+          <div class="stat-group stat-group--video">
             <div class="stat-group__title">视频检索</div>
             <div class="stat-group__items">
               <div class="stat-item">
-                <div class="stat-value purple">{{ d.video.totalSearches | number }}</div>
+                <div class="stat-value">{{ d.video.totalSearches | number }}</div>
                 <div class="stat-label">总检索次数</div>
               </div>
               <div class="stat-item">
-                <div class="stat-value purple-light">{{ d.video.todaySearches | number }}</div>
+                <div class="stat-value">{{ d.video.todaySearches | number }}</div>
                 <div class="stat-label">今日检索</div>
               </div>
               <div class="stat-item">
-                <div class="stat-value indigo">{{ d.video.activeUsers | number }}</div>
+                <div class="stat-value">{{ d.video.activeUsers | number }}</div>
                 <div class="stat-label">活跃用户</div>
               </div>
             </div>
@@ -154,9 +154,9 @@
                       @if (item.sourceType === 'video') {
                         <nz-tag nzColor="purple">视频</nz-tag>
                       } @else if (item.sourceType === 'document') {
-                        <nz-tag nzColor="cyan">文档</nz-tag>
+                        <nz-tag nzColor="green">文档</nz-tag>
                       } @else {
-                        <nz-tag nzColor="default">全部</nz-tag>
+                        <nz-tag nzColor="blue">全部</nz-tag>
                       }
                     </td>
                   </tr>

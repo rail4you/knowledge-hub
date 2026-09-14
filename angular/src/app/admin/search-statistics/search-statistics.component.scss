@@ -31,7 +31,7 @@
 
   p {
     margin: 4px 0 0;
-    color: #888;
+    color: var(--kh-muted);
     font-size: 13px;
   }
 }
@@ -95,6 +95,13 @@
   @media (max-width: 900px) { grid-template-columns: 1fr; }
 }
 .stat-group {
+  /* 每个检索范围一个主色：全部=品牌蓝、文档=语义绿、视频=紫。
+     组内三个指标共用同一主色，避免同组出现多种色相导致配色割裂。 */
+  --g: var(--kh-accent);
+  &--all { --g: #1890ff; }
+  &--doc { --g: #52c41a; }
+  &--video { --g: #722ed1; }
+
   padding: 4px 0 0;
   &:nth-child(2) {
     border-left: 1px solid var(--kh-line-2);
@@ -125,17 +132,11 @@
   font-weight: 700;
   line-height: 1.2;
   margin-bottom: 4px;
-  &.accent { color: var(--kh-accent); }
-  &.cyan { color: #13c2c2; }
-  &.indigo { color: #6366f1; }
-  &.green { color: #52c41a; }
-  &.green-light { color: #73d13d; }
-  &.purple { color: #722ed1; }
-  &.purple-light { color: #9254de; }
+  color: var(--g);
 }
 .stat-label {
   font-size: 13px;
-  color: #8c8c8c;
+  color: var(--kh-muted);
 }
 
 /* ── 图表区（两栏） ──────────────────────────── */
@@ -190,9 +191,9 @@
   border-radius: 2px 2px 0;
   min-height: 2px;
   transition: height 0.3s ease;
-  &.bar-all { background: linear-gradient(to top, #1890ff, #40a9ff); }
-  &.bar-doc { background: linear-gradient(to top, #52c41a, #73d13d); }
-  &.bar-video { background: linear-gradient(to top, #722ed1, #9254de); }
+  &.bar-all { background: linear-gradient(to top, #1890ff, #69c0ff); }
+  &.bar-doc { background: linear-gradient(to top, #52c41a, #95de64); }
+  &.bar-video { background: linear-gradient(to top, #722ed1, #b37feb); }
 }
 .trend-label {
   font-size: 10px;
@@ -305,7 +306,7 @@
 .ranking-card__sub {
   font-size: 12px;
   font-weight: 400;
-  color: #8c8c8c;
+  color: var(--kh-muted);
 }
 
 .rank-badge {
@@ -316,14 +317,14 @@
   height: 24px;
   padding: 0 6px;
   border-radius: 6px;
-  background: #f0f2f5;
-  color: #8c8c8c;
+  background: var(--kh-line-2);
+  color: var(--kh-muted);
   font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 
   &.top3 {
-    background: linear-gradient(135deg, #faad14, #ff7a45);
+    background: linear-gradient(135deg, #faad14, var(--kh-warn));
     color: #fff;
   }
 }
@@ -337,8 +338,8 @@
     text-align: center !important;
     font-size: 12px !important;
     font-weight: 600 !important;
-    color: #8c8c8c !important;
-    border-bottom: 1px solid #f0f0f0 !important;
+    color: var(--kh-muted) !important;
+    border-bottom: 1px solid var(--kh-line-2) !important;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     &::before { display: none !important; }
@@ -347,12 +348,12 @@
     padding: 10px 14px !important;
     font-size: 13px;
     color: var(--kh-ink);
-    border-bottom: 1px solid #f5f5f5 !important;
+    border-bottom: 1px solid var(--kh-line-2) !important;
     vertical-align: middle;
     text-align: center;
   }
   .ant-table-tbody > tr:last-child > td { border-bottom: none !important; }
-  .ant-table-tbody > tr:hover > td { background: #f5f9ff !important; }
+  .ant-table-tbody > tr:hover > td { background: var(--kh-accent-ghost) !important; }
   // 左对齐列：权重必须高于上面的居中规则（同处 ::ng-deep 作用域内）
   .ant-table-thead > tr > th.cell-left,
   .ant-table-tbody > tr > td.cell-left,
