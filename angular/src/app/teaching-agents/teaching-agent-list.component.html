@@ -96,7 +96,7 @@
                     @if (canManage(agent)) {
                       <a nz-button nzType="link" nzSize="small" (click)="openEditModal(agent)">编辑</a>
                       @if (agent.status !== 1) {
-                        <a nz-button nzType="link" nzSize="small" (click)="openPublishModal(agent)">发布</a>
+                        <a nz-button nzType="link" nzSize="small" (click)="openPublishModal(agent)">{{ publishActionLabel(agent) }}</a>
                       }
                       @if (agent.status === 1) {
                         <a nz-button nzType="link" nzSize="small" nzDanger (click)="unpublishAgent(agent)">下架</a>
@@ -272,7 +272,7 @@
     nzTitle="编辑智能体"
     nzWidth="720px"
     [nzOkLoading]="updating()"
-    nzOkText="保存草稿"
+    [nzOkText]="editOkText()"
     nzCancelText="取消"
     (nzOnOk)="confirmUpdate()"
     (nzOnCancel)="closeEditModal()"
@@ -353,6 +353,65 @@
               ></textarea>
             </div>
           </div>
+
+          @if (editingPublished()) {
+            <div class="edit-hint">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 16v-4M12 8h.01"/>
+              </svg>
+              <span>该智能体处于已发布状态，保存修改后将生成新版本并保持发布，学生端立即可见。</span>
+            </div>
+          }
+
+          <div class="version-history">
+            <div class="version-history-head">
+              <span class="version-history-title">历史版本</span>
+              <span class="version-history-count">共 {{ agent.versions?.length || 0 }} 个</span>
+            </div>
+            @if ((agent.versions?.length || 0) === 0) {
+              <div class="version-empty">暂无历史版本</div>
+            } @else {
+              <div class="version-list">
+                @for (version of agent.versions; track version.id) {
+                  <div class="version-row" [class.is-expanded]="expandedVersionId() === version.id">
+                    <button type="button" class="version-row-head" (click)="toggleVersion(version.id)">
+                      <span class="version-no">v{{ version.versionNumber }}</span>
+                      <span
+                        class="version-state"
+                        [class.is-current]="agent.publishedVersionId === version.id"
+                        [class.is-draft]="versionStateLabel(version) === '草稿'"
+                      >{{ versionStateLabel(version) }}</span>
+                      <span class="version-note">{{ version.versionNote || '无版本说明' }}</span>
+                      <span class="version-time">{{ formatDateTime(version.creationTime) }}</span>
+                      <span class="version-caret">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                          <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                      </span>
+                    </button>
+                    @if (expandedVersionId() === version.id) {
+                      <div class="version-detail">
+                        <div class="version-detail-field">
+                          <label>系统提示词</label>
+                          <pre>{{ version.systemPrompt || '（空）' }}</pre>
+                        </div>
+                        @if (version.welcomeMessage) {
+                          <div class="version-detail-field">
+                            <label>欢迎语</label>
+                            <pre>{{ version.welcomeMessage }}</pre>
+                          </div>
+                        }
+                        <div class="version-detail-actions">
+                          <button type="button" class="load-version-btn" (click)="loadVersionIntoForm(version)">载入此版本到编辑区</button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
         } @else {
           <div class="edit-empty">
             <nz-spin nzSimple></nz-spin>
@@ -365,10 +424,10 @@
   <!-- Publish Modal -->
   <nz-modal
     [(nzVisible)]="publishModalVisible"
-    nzTitle="发布智能体"
+    [nzTitle]="publishModalTitle()"
     nzWidth="520px"
     [nzOkLoading]="publishing()"
-    nzOkText="确认发布"
+    [nzOkText]="publishOkText()"
     nzCancelText="取消"
     (nzOnOk)="confirmPublish()"
     (nzOnCancel)="closePublishModal()"

@@ -86,12 +86,14 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
         agent.Name = input.Name;
         agent.Description = input.Description;
         agent.Visibility = input.Visibility;
-        agent.Status = agent.PublishedVersionId.HasValue ? TeachingAgentStatus.Published : TeachingAgentStatus.Draft;
-        await _teachingAgentRepository.UpdateAsync(agent, autoSave: true);
 
+        var isPublished = agent.PublishedVersionId.HasValue;
         var versions = await GetVersionsAsync(agent.Id);
         var latestVersion = versions.OrderByDescending(x => x.VersionNumber).FirstOrDefault();
-        if (latestVersion == null || latestVersion.IsPublished)
+
+        // 草稿状态下原地更新最新草稿；已发布状态下每次保存都生成新版本，
+        // 保证「编辑后维持已发布状态」且学生端立即看到修改。
+        if (latestVersion == null || latestVersion.IsPublished || isPublished)
         {
             latestVersion = new TeachingAgentVersion(
                 GuidGenerator.Create(),
@@ -109,9 +111,28 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
         latestVersion.Temperature = input.Temperature;
         latestVersion.SkillsJson = SerializeSkills(input.Skills);
         latestVersion.VersionNote = input.VersionNote;
-        latestVersion.IsPublished = false;
+
+        if (isPublished)
+        {
+            // 下线旧发布版本，保留为历史版本；新版本直接发布。
+            foreach (var version in versions.Where(x => x.Id != latestVersion.Id && x.IsPublished))
+            {
+                version.IsPublished = false;
+                await _teachingAgentVersionRepository.UpdateAsync(version, autoSave: true);
+            }
+
+            latestVersion.IsPublished = true;
+            agent.PublishedVersionId = latestVersion.Id;
+            agent.Status = TeachingAgentStatus.Published;
+        }
+        else
+        {
+            latestVersion.IsPublished = false;
+            agent.Status = TeachingAgentStatus.Draft;
+        }
 
         await _teachingAgentVersionRepository.UpdateAsync(latestVersion, autoSave: true);
+        await _teachingAgentRepository.UpdateAsync(agent, autoSave: true);
         versions = await GetVersionsAsync(agent.Id);
         return await MapAgentAsync(agent, versions);
     }
@@ -128,11 +149,10 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
         }
 
         var versions = await GetVersionsAsync(agent.Id);
-        var publishedVersion = versions.FirstOrDefault(x => x.Id == agent.PublishedVersionId);
-        if (publishedVersion != null)
+        foreach (var version in versions.Where(x => x.IsPublished))
         {
-            publishedVersion.IsPublished = false;
-            await _teachingAgentVersionRepository.UpdateAsync(publishedVersion, autoSave: true);
+            version.IsPublished = false;
+            await _teachingAgentVersionRepository.UpdateAsync(version, autoSave: true);
         }
 
         agent.PublishedVersionId = null;
@@ -199,6 +219,13 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
         if (latestVersion == null)
         {
             throw new UserFriendlyException("请先创建智能体版本草稿。");
+        }
+
+        // 同一智能体同一时刻只保留一个已发布版本，其余转为历史版本。
+        foreach (var version in versions.Where(x => x.Id != latestVersion.Id && x.IsPublished))
+        {
+            version.IsPublished = false;
+            await _teachingAgentVersionRepository.UpdateAsync(version, autoSave: true);
         }
 
         latestVersion.IsPublished = true;
@@ -437,7 +464,9 @@ public class TeachingAgentAppService : KnowledgeHubAppService, ITeachingAgentApp
         Dictionary<Guid, string> owners)
     {
         var orderedVersions = versions.OrderByDescending(x => x.VersionNumber).ToList();
-        var draftVersion = orderedVersions.FirstOrDefault(x => !x.IsPublished) ?? orderedVersions.FirstOrDefault();
+        // 只有最新版本尚未发布时才视为草稿；已发布时最新版本即发布版本。
+        var latestVersion = orderedVersions.FirstOrDefault();
+        var draftVersion = latestVersion != null && !latestVersion.IsPublished ? latestVersion : null;
 
         return new TeachingAgentDto
         {

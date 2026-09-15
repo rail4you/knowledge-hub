@@ -19,11 +19,14 @@ import {
   CreateUpdateTeachingAgentPayload,
   DEFAULT_SKILL_CATALOG,
   FIXED_TEACHING_AGENT_MODEL,
+  TEACHING_AGENT_STATUS,
   TEACHING_AGENT_VISIBILITY,
   TeachingAgent,
   TeachingAgentDetail,
   TeachingAgentPreset,
+  TeachingAgentVersion,
   agentStatusLabel,
+  formatDateTime,
   visibilityLabel,
 } from './models';
 
@@ -99,6 +102,14 @@ export class TeachingAgentListComponent implements OnInit {
   readonly editLoading = signal(false);
   readonly updating = signal(false);
   readonly editingAgent = signal<TeachingAgentDetail | null>(null);
+  readonly expandedVersionId = signal<string | null>(null);
+
+  // 已发布智能体编辑后保持已发布，按钮文案随之区分草稿 / 已发布。
+  readonly editingPublished = computed(() => this.editingAgent()?.status === TEACHING_AGENT_STATUS.published);
+  readonly editOkText = computed(() => (this.editingPublished() ? '保存修改' : '保存草稿'));
+
+  // 供模板格式化版本时间
+  readonly formatDateTime = formatDateTime;
 
   // ─── Publish modal state ───
   readonly publishModalVisible = signal(false);
@@ -241,6 +252,7 @@ export class TeachingAgentListComponent implements OnInit {
   async openEditModal(agent: TeachingAgent): Promise<void> {
     this.editModalVisible.set(true);
     this.editingAgent.set(null);
+    this.expandedVersionId.set(null);
     this.publishNote.set('');
     this.form.set(this.emptyForm());
     this.editLoading.set(true);
@@ -299,7 +311,7 @@ export class TeachingAgentListComponent implements OnInit {
     this.updating.set(true);
     try {
       await this.teachingAgentService.update(agent.id, payload).toPromise();
-      this.message.success('已保存为草稿');
+      this.message.success(this.editingPublished() ? '已保存修改，智能体保持已发布状态' : '已保存为草稿');
       this.editModalVisible.set(false);
       await this.loadAgents();
     } catch (err: any) {
@@ -309,6 +321,49 @@ export class TeachingAgentListComponent implements OnInit {
       this.updating.set(false);
     }
   }
+
+  // ─── Version history ───
+  versionStateLabel(version: TeachingAgentVersion): string {
+    const agent = this.editingAgent();
+    if (agent?.publishedVersionId === version.id) {
+      return '当前发布';
+    }
+    if (version.isPublished) {
+      return '已发布';
+    }
+    return agent?.versions?.[0]?.id === version.id ? '草稿' : '历史';
+  }
+
+  toggleVersion(versionId: string): void {
+    this.expandedVersionId.update(current => (current === versionId ? null : versionId));
+  }
+
+  loadVersionIntoForm(version: TeachingAgentVersion): void {
+    this.form.update(current => ({
+      ...current,
+      systemPrompt: version.systemPrompt ?? '',
+      welcomeMessage: version.welcomeMessage ?? '',
+      skills: (version.skills ?? []).length > 0
+        ? version.skills.map(skill => ({ ...skill }))
+        : current.skills,
+    }));
+    this.message.success(`已载入 v${version.versionNumber} 的配置`);
+  }
+
+  // 草稿首次上线叫「发布」，下架后重新上线叫「上架」。
+  publishActionLabel(agent: TeachingAgent): string {
+    return (agent.draftVersion?.versionNumber ?? 1) > 1 ? '上架' : '发布';
+  }
+
+  readonly publishModalTitle = computed(() => {
+    const agent = this.publishingAgent();
+    return (agent?.draftVersion?.versionNumber ?? 1) > 1 ? '上架智能体' : '发布智能体';
+  });
+
+  readonly publishOkText = computed(() => {
+    const agent = this.publishingAgent();
+    return (agent?.draftVersion?.versionNumber ?? 1) > 1 ? '确认上架' : '确认发布';
+  });
 
   // ─── Publish modal ───
   openPublishModal(agent: TeachingAgent): void {
@@ -329,7 +384,7 @@ export class TeachingAgentListComponent implements OnInit {
     this.publishing.set(true);
     try {
       await this.teachingAgentService.publish(agent.id, this.publishNote()).toPromise();
-      this.message.success(`${agent.name} 已发布`);
+      this.message.success(`${agent.name} 已${this.publishActionLabel(agent)}`);
       this.publishModalVisible.set(false);
       await this.loadAgents();
     } catch (err: any) {
