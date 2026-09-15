@@ -263,12 +263,11 @@ export class TeachingAgentListComponent implements OnInit {
         welcomeMessage: version?.welcomeMessage ?? '',
         modelId: FIXED_TEACHING_AGENT_MODEL,
         temperature: 0.2,
-        versionNote: version?.versionNote ?? '',
+        versionNote: '',
         skills: (version?.skills ?? []).length > 0
           ? version!.skills
           : DEFAULT_SKILL_CATALOG.map(skill => ({ ...skill })),
       });
-      this.publishNote.set(version?.versionNote ?? '');
     } catch (err: any) {
       const detail2 = err?.error?.error?.message || err?.error?.message || err?.message || '加载失败';
       this.message.error(detail2);

@@ -67,4 +67,10 @@ public class TeachingAgentController : AbpControllerBase
     {
         return _teachingAgentAppService.CloneFromPresetAsync(input);
     }
+
+    [HttpDelete("{id:guid}")]
+    public Task DeleteAsync(Guid id)
+    {
+        return _teachingAgentAppService.DeleteAsync(id);
+    }
 }

@@ -51,7 +51,6 @@
                 <th class="col-title" nzWidth="200px">任务名称</th>
                 <th nzAlign="center" nzWidth="240px">描述</th>
                 <th nzAlign="center" nzWidth="130px">智能体</th>
-                <th nzAlign="center" nzWidth="80px">版本</th>
                 <th nzAlign="center" nzWidth="160px">对象</th>
                 <th nzAlign="center" nzWidth="80px">学生数</th>
                 <th nzAlign="center" nzWidth="80px">已提交</th>
@@ -74,9 +73,6 @@
                   </td>
                   <td nzAlign="center">
                     <span class="agent-text">{{ task.teachingAgentName }}</span>
-                  </td>
-                  <td nzAlign="center">
-                    <span class="version-tag">v{{ task.teachingAgentVersionNumber }}</span>
                   </td>
                   <td nzAlign="center">
                     <div class="target-cell">
@@ -156,16 +152,16 @@
         </div>
 
         <div class="field">
-          <span>智能体版本 <em>*</em></span>
+          <span>智能体 <em>*</em></span>
           <nz-select
             [ngModel]="form().teachingAgentVersionId"
             (ngModelChange)="setFormField('teachingAgentVersionId', $event)"
-            nzPlaceHolder="选择已发布版本"
+            nzPlaceHolder="选择智能体"
           >
-            @for (agent of options().agents; track agent.versionId) {
+            @for (agent of agentOptions(); track agent.versionId) {
               <nz-option
                 [nzValue]="agent.versionId"
-                [nzLabel]="agent.name + ' · v' + agent.versionNumber"
+                [nzLabel]="agent.name"
               ></nz-option>
             }
           </nz-select>

@@ -22,6 +22,7 @@ import {
   CreateClassroomAgentTaskPayload,
   StudentOption,
   TaskCreationOptions,
+  TeachingAgentOption,
   formatDateTime,
   publishStatusLabel,
   targetTypeLabel,
@@ -100,6 +101,19 @@ export class TeachingAgentTaskListComponent implements OnInit {
     }
 
     return this.options().courses.map(item => ({ id: item.id, label: item.title }));
+  });
+  // 任务创建只按智能体名称选择：同一智能体的多个已发布版本里取最新一条，
+  // 避免 UI 出现 v1 / v2 等多个版本项。内部仍携带 versionId 供后端解析。
+  readonly agentOptions = computed<TeachingAgentOption[]>(() => {
+    const agents = this.options().agents;
+    const latest = new Map<string, TeachingAgentOption>();
+    for (const agent of agents) {
+      const existing = latest.get(agent.id);
+      if (!existing || agent.versionNumber > existing.versionNumber) {
+        latest.set(agent.id, agent);
+      }
+    }
+    return Array.from(latest.values());
   });
   // P1-16：批量选学生——暴露给模板的统计 getter，避免在模板里写三目运算。
   readonly totalStudentCount = computed(() => this.options().students.length);

@@ -67,7 +67,6 @@
               <th nzWidth="100px">状态</th>
               <th nzWidth="100px">所有者</th>
               <th nzWidth="140px">可见范围</th>
-              <th nzWidth="60px">版本</th>
               <th nzWidth="180px">操作</th>
             </tr>
           </thead>
@@ -93,9 +92,6 @@
                   </span>
                 </td>
                 <td>
-                  <span class="version-badge">v{{ agent.draftVersion?.versionNumber || 1 }}</span>
-                </td>
-                <td>
                   <div class="row-actions">
                     @if (canManage(agent)) {
                       <a nz-button nzType="link" nzSize="small" (click)="openEditModal(agent)">编辑</a>
@@ -108,7 +104,10 @@
                     }
                     <a nz-button nzType="link" nzSize="small" [routerLink]="['/teaching/agent-tasks']">分发任务</a>
                     @if (canDelete(agent)) {
-                      <a nz-button nzType="link" nzSize="small" nzDanger (click)="openDeleteModal(agent)">删除</a>
+                      <a nz-button nzType="link" nzSize="small" nzDanger (click)="openDeleteModal(agent)">
+                        <span nz-icon nzType="delete" nzTheme="outline"></span>
+                        删除
+                      </a>
                     }
                   </div>
                 </td>
@@ -261,17 +260,6 @@
                 placeholder="学生进入任务页时看到的首条引导"
               ></textarea>
             </div>
-
-            <div class="field full-width">
-              <label>版本备注</label>
-              <textarea
-                nz-input
-                rows="2"
-                [ngModel]="publishNote()"
-                (ngModelChange)="publishNote.set($event)"
-                placeholder="记录本次创建或草稿修改重点"
-              ></textarea>
-            </div>
           </div>
         </section>
       </div>
@@ -364,17 +352,6 @@
                 placeholder="学生进入任务页时看到的首条引导"
               ></textarea>
             </div>
-
-            <div class="field full-width">
-              <label>版本备注</label>
-              <textarea
-                nz-input
-                rows="2"
-                [ngModel]="publishNote()"
-                (ngModelChange)="publishNote.set($event)"
-                placeholder="记录本次草稿修改重点"
-              ></textarea>
-            </div>
           </div>
         } @else {
           <div class="edit-empty">
@@ -403,11 +380,10 @@
             <div class="publish-name">{{ agent.name }}</div>
             <div class="publish-meta">
               <span>当前状态：<strong>{{ statusLabel(agent.status) }}</strong></span>
-              <span>当前版本：<strong>v{{ agent.draftVersion?.versionNumber || 1 }}</strong></span>
             </div>
           </div>
           <div class="field">
-            <label>版本备注</label>
+            <label>发布说明</label>
             <textarea
               nz-input
               rows="3"
@@ -421,7 +397,7 @@
               <circle cx="12" cy="12" r="10"/>
               <path d="M12 8v4M12 16h.01"/>
             </svg>
-            <span>发布后学生端可立即看到该版本的智能体。</span>
+            <span>发布后学生端可立即使用该智能体。</span>
           </div>
         </div>
       }
@@ -452,7 +428,7 @@
             </div>
             <div class="delete-text">
               <div class="delete-name">{{ agent.name }}</div>
-              <div class="delete-meta">当前版本 v{{ agent.draftVersion?.versionNumber || 1 }} · {{ visibilityText(agent.visibility ?? 0) }}</div>
+              <div class="delete-meta">{{ visibilityText(agent.visibility ?? 0) }}</div>
             </div>
           </div>
           <div class="delete-warning">
@@ -461,7 +437,7 @@
               <line x1="12" y1="9" x2="12" y2="13"/>
               <line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
-            <span>删除后无法恢复，且会自动清理所有版本记录。已被课堂任务引用的智能体无法删除。</span>
+            <span>删除后无法恢复。已被课堂任务引用的智能体无法删除。</span>
           </div>
         </div>
       }

@@ -317,6 +317,11 @@
   gap: 4px;
   justify-content: center;
   align-items: center;
+
+  a .anticon {
+    margin-right: 2px;
+    vertical-align: -1px;
+  }
 }
 
 // ─── Create Modal ──────────────────────────────────────────
@@ -601,6 +606,78 @@
       height: 14px;
       flex-shrink: 0;
     }
+  }
+}
+
+// ─── Delete Modal ─────────────────────────────────────────
+.delete-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.delete-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: #fafbfd;
+  border: 1px solid var(--kh-line-2);
+  border-radius: 8px;
+}
+
+.delete-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #fff1f0;
+  color: #ff4d4f;
+  flex-shrink: 0;
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.delete-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.delete-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--kh-ink);
+}
+
+.delete-meta {
+  font-size: 13px;
+  color: var(--kh-muted);
+}
+
+.delete-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 8px;
+  color: #cf1322;
+  font-size: 13px;
+  line-height: 1.5;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
   }
 }
 

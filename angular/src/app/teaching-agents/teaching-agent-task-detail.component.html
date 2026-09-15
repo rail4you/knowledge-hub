@@ -10,7 +10,7 @@
             {{ publishText(currentTask.publishStatus) }}
           </nz-tag>
           <span class="head-tag-pill">{{ targetText(currentTask.targetType) }}</span>
-          <span class="head-tag-pill">智能体 {{ currentTask.teachingAgentName }} · v{{ currentTask.teachingAgentVersionNumber }}</span>
+          <span class="head-tag-pill">智能体 {{ currentTask.teachingAgentName }}</span>
           <span class="head-tag-pill">截止 {{ formatDate(currentTask.dueTime) }}</span>
         </div>
       } @else {
