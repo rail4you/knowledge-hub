@@ -26,7 +26,12 @@
                   </button>
                 </div>
                 <div class="sidebar-quick-filter">
-                  <div class="quick-filter-item" [class.active]="!selectedCategoryId()" (click)="clearCategoryFilter()">
+                  <div class="quick-filter-item" [class.active]="showFavorites()" (click)="selectFavorites()">
+                    <span nz-icon nzType="star" nzTheme="fill" class="quick-filter-star"></span>
+                    <span>我的收藏</span>
+                    <span class="quick-filter-count" *ngIf="favoritesCount() > 0">{{ favoritesCount() }}</span>
+                  </div>
+                  <div class="quick-filter-item" [class.active]="!showFavorites() && !selectedCategoryId()" (click)="clearCategoryFilter()">
                     <span class="quick-filter-dot dot-all"></span>
                     <span>{{ '::AllResources' | abpLocalization }}</span>
                   </div>
@@ -52,6 +57,7 @@
 
           <!-- Center: Document Table -->
           <section class="main-content">
+            <!-- 统一工具栏：新建 + 搜索 + 过滤（全部资源 / 我的收藏共用同一栏） -->
             <div class="table-toolbar">
               <button class="create-btn" type="button" (click)="createResource()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -59,10 +65,12 @@
                 </svg>
                 {{ '::NewResource' | abpLocalization }}
               </button>
-              <span class="breadcrumb" *ngIf="selectedCategoryName()">
+
+              <span class="breadcrumb" *ngIf="!showFavorites() && selectedCategoryName()">
                 <span nz-icon nzType="folder"></span>
                 {{ selectedCategoryName() }}
               </span>
+
               <div class="toolbar-filters">
                 <div class="search-box">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -79,46 +87,47 @@
                     ×
                   </button>
                 </div>
-              </div>
-            </div>
 
-            <!-- Filter Bar -->
-            <div class="filter-bar">
-              <div class="filter-left">
                 <nz-select
+                  nzPrefixIcon="clock-circle"
                   [ngModel]="timeFilter()"
                   (ngModelChange)="onTimeFilterChange($event)"
                   nzSize="small"
-                  nzPlaceHolder="时间"
-                  style="width: 120px;"
+                  nzPlaceHolder="按时间"
+                  class="filter-select filter-select--time"
                 >
                   <nz-option *ngFor="let opt of timeFilterOptions" [nzValue]="opt.value" [nzLabel]="opt.label"></nz-option>
                 </nz-select>
+
                 <nz-select
+                  nzPrefixIcon="bank"
                   [ngModel]="selectedMajorId()"
                   (ngModelChange)="onMajorFilterChange($event)"
                   nzSize="small"
-                  nzPlaceHolder="专业"
+                  nzPlaceHolder="按专业"
                   nzAllowClear
-                  style="width: 140px;"
+                  class="filter-select filter-select--major"
                 >
                   <nz-option *ngFor="let major of majors()" [nzValue]="major.id" [nzLabel]="major.name || ''"></nz-option>
                 </nz-select>
+
                 <nz-select
+                  nzPrefixIcon="flag"
                   [ngModel]="statusFilter()"
                   (ngModelChange)="onStatusFilterChange($event)"
                   nzSize="small"
-                  nzPlaceHolder="状态"
+                  nzPlaceHolder="按状态"
                   nzAllowClear
-                  style="width: 140px;"
+                  class="filter-select filter-select--status"
                 >
                   <nz-option *ngFor="let opt of resourceStatuses" [nzValue]="opt.value" [nzLabel]="getStatusName(opt.value)"></nz-option>
                 </nz-select>
+
                 <button class="toolbar-btn" *ngIf="hasActiveFilters()" (click)="clearAllFilters()">
+                  <span nz-icon nzType="close"></span>
                   {{ '::ClearFilter' | abpLocalization }}
                 </button>
-              </div>
-              <div class="filter-right">
+
                 <span class="result-count">共 {{ resources.totalCount }} 条</span>
               </div>
             </div>
@@ -267,13 +276,16 @@
 
               <div *ngIf="!isLoading && resources.items.length === 0" class="empty-tip">
                 <div class="empty-tip-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <svg *ngIf="showFavorites()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                  <svg *ngIf="!showFavorites()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                     <polyline points="14 2 14 8 20 8"/>
                   </svg>
                 </div>
-                <span>暂无资源</span>
-                <button class="create-btn" type="button" (click)="createResource()">
+                <span>{{ showFavorites() ? '暂无收藏的资源，点击列表中的星标即可收藏' : '暂无资源' }}</span>
+                <button *ngIf="!showFavorites()" class="create-btn" type="button" (click)="createResource()">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path d="M12 5v14M5 12h14"/>
                   </svg>
@@ -500,6 +512,12 @@
         </button>
       </div>
 
+      <!-- 共享资源只读提示：被其它租户共享过来的资源仅可查看 -->
+      <div class="readonly-banner" *ngIf="selectedResource()!.isShared">
+        <span nz-icon nzType="eye" class="readonly-banner-icon"></span>
+        <span>{{ '::SharedResourceReadOnly' | abpLocalization }}</span>
+      </div>
+
       <!-- Action Toolbar: 卡片化操作区 -->
       <div class="drawer-actions">
         <button class="action-card" type="button"
@@ -533,6 +551,7 @@
         </button>
         <button class="action-card cta" type="button"
           *ngIf="selectedResource()!.status === 0 || selectedResource()!.status === 4"
+          [disabled]="selectedResource()!.isShared"
           (click)="submitForReview(selectedResource()!.id!)">
           <span class="action-card-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -685,7 +704,9 @@
                     </div>
                     <div class="version-detail" *ngIf="version.updateContent">{{ version.updateContent }}</div>
                     <div class="version-actions" *ngIf="!version.isCurrentVersion">
-                      <button type="button" class="version-action-btn" (click)="rollbackVersion(version.id!)">
+                      <button type="button" class="version-action-btn"
+                        [disabled]="selectedResource()!.isShared"
+                        (click)="rollbackVersion(version.id!)">
                         {{ '::RollbackVersion' | abpLocalization }}
                       </button>
                     </div>
@@ -695,12 +716,12 @@
               </div>
 
               <div class="upload-section">
-                <nz-upload nzType="drag" [nzMultiple]="false" [nzBeforeUpload]="beforeUploadVersion.bind(this)" class="compact-upload">
+                <nz-upload nzType="drag" [nzMultiple]="false" [nzDisabled]="selectedResource()!.isShared" [nzBeforeUpload]="beforeUploadVersion.bind(this)" class="compact-upload">
                   <p class="ant-upload-drag-icon">
                     <span nz-icon nzType="cloud-upload"></span>
                   </p>
                   <p class="ant-upload-text">{{ '::UploadNewVersion' | abpLocalization }}</p>
-                  <p class="ant-upload-hint">{{ '::UploadNewVersionHint' | abpLocalization }}</p>
+                  <p class="ant-upload-hint">{{ (selectedResource()!.isShared ? '::SharedResourceReadOnly' : '::UploadNewVersionHint') | abpLocalization }}</p>
                 </nz-upload>
                 <nz-progress *ngIf="isVersionUploading()" [nzPercent]="versionUploadProgress()" nzSize="small" nzStatus="active"></nz-progress>
                 <div *ngIf="versionUploadedFileInfo && !isVersionUploading()" class="uploaded-file-info">

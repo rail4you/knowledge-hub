@@ -129,11 +129,11 @@ export class ResourceService {
     { apiName: this.apiName,...config });
   
 
-  getCollectedList = (input: PagedResultRequestDto, config?: Partial<Rest.Config>) =>
+  getCollectedList = (input: ResourceListQueryDto, config?: Partial<Rest.Config>) =>
     this.restService.request<any, PagedResultDto<ResourceDto>>({
       method: 'GET',
       url: '/api/app/resource/collected-list',
-      params: { skipCount: input.skipCount, maxResultCount: input.maxResultCount },
+      params: { filter: input.filter, status: input.status, resourceType: input.resourceType, categoryId: input.categoryId, majorId: input.majorId, startDate: input.startDate, endDate: input.endDate, sorting: input.sorting, skipCount: input.skipCount, maxResultCount: input.maxResultCount },
     },
     { apiName: this.apiName,...config });
   

@@ -119,6 +119,11 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
   selectedTreeKeys = signal<string[]>([]);
   drawerVisible = signal(false);
 
+  // 我的收藏：固定的默认分类（伪分类），展示当前用户个人收藏的资源。
+  // 与"全部资源/分类"互斥，收藏夹不叠加其它筛选条件。
+  showFavorites = signal(false);
+  favoritesCount = signal(0);
+
   // Filter state
   timeFilter = signal<string>('all');
   statusFilter = signal<number | null>(null);
@@ -229,6 +234,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     }
 
     this.loadResources();
+    this.loadFavoritesCount();
     this.openResourceFromDeepLink();
   }
 
@@ -249,8 +255,34 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
   }
 
   loadResources() {
-    const dateRange = this.getDateRangeFromFilter(this.timeFilter());
     this.isLoading.set(true);
+
+    // 我的收藏视图：展示当前用户个人收藏的资源（固定默认分类），共用同一工具栏的搜索/过滤。
+    // 后端已过滤失效资源（被取消共享 / 被删除），列表与计数自动同步。
+    if (this.showFavorites()) {
+      const favDateRange = this.getDateRangeFromFilter(this.timeFilter());
+      this.resourceService.getCollectedList({
+        maxResultCount: this.pageSize,
+        skipCount: (this.pageIndex - 1) * this.pageSize,
+        filter: this.keywordFilter()?.trim() || undefined,
+        status: this.statusFilter() ?? undefined,
+        majorId: this.selectedMajorId() || undefined,
+        startDate: favDateRange.startDate,
+        endDate: favDateRange.endDate,
+      }).subscribe({
+        next: (response) => {
+          this.resources = response;
+          this.favoritesCount.set(response.totalCount || 0);
+          this.isLoading.set(false);
+        },
+        error: () => {
+          this.isLoading.set(false);
+        },
+      });
+      return;
+    }
+
+    const dateRange = this.getDateRangeFromFilter(this.timeFilter());
     // 筛选栏：专业单选，只走 Resource.MajorId 主专业；表单里才用多选 majorIds。
     this.resourceService.getFilteredList({
       maxResultCount: this.pageSize,
@@ -644,6 +676,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
       this.clearCategoryFilter();
       return;
     }
+    this.showFavorites.set(false);
     this.selectedCategoryId.set(node.key);
     this.selectedCategoryName.set(node.title);
     this.selectedTreeKeys.set([node.key]);
@@ -651,7 +684,26 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
     this.loadResources();
   }
 
+  /** 我的收藏：固定的默认分类，展示当前用户个人收藏的资源 */
+  selectFavorites() {
+    this.showFavorites.set(true);
+    this.selectedCategoryId.set(null);
+    this.selectedCategoryName.set('');
+    this.selectedTreeKeys.set([]);
+    this.pageIndex = 1;
+    this.loadResources();
+  }
+
+  /** 收藏数量（侧边栏徽标）：取 maxResultCount=1 的 totalCount */
+  private loadFavoritesCount(): void {
+    this.resourceService.getCollectedList({ skipCount: 0, maxResultCount: 1 }).subscribe({
+      next: (result) => this.favoritesCount.set(result.totalCount || 0),
+      error: () => this.favoritesCount.set(0),
+    });
+  }
+
   clearCategoryFilter() {
+    this.showFavorites.set(false);
     this.selectedCategoryId.set(null);
     this.selectedCategoryName.set('');
     this.selectedTreeKeys.set([]);
@@ -849,6 +901,14 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
         next: () => {
           this.isCollected.set(false);
           this.list.get();
+          // 在「我的收藏」视图下取消收藏：直接从列表移除并同步计数
+          if (this.showFavorites()) {
+            this.resources = {
+              items: this.resources.items.filter(r => r.id !== res.id),
+              totalCount: Math.max(0, this.resources.totalCount - 1),
+            };
+          }
+          this.loadFavoritesCount();
         },
         error: (err) => {
           console.error('Uncollect error:', err);
@@ -860,6 +920,7 @@ export class ResourceComponent extends ResourceShareMixin implements OnInit {
         next: () => {
           this.isCollected.set(true);
           this.list.get();
+          this.loadFavoritesCount();
         },
         error: (err) => {
           console.error('Collect error:', err);

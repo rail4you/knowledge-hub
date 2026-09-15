@@ -593,36 +593,119 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         );
     }
 
-    public virtual async Task<PagedResultDto<ResourceDto>> GetCollectedListAsync(PagedResultRequestDto input)
+    public virtual async Task<PagedResultDto<ResourceDto>> GetCollectedListAsync(ResourceListQueryDto input)
     {
         var userId = CurrentUser.Id ?? throw new UserFriendlyException("请先登录");
         var collections = await CollectionRepository.GetByUserIdAsync(userId);
 
         var collectionIds = collections.Select(x => x.ResourceId).ToList();
+        if (collectionIds.Count == 0)
+        {
+            return new PagedResultDto<ResourceDto>(0, new List<ResourceDto>());
+        }
 
-        var resourceQuery = await Repository.GetQueryableAsync();
-        // Only include approved resources in collection list
-        var approvedResources = await AsyncExecuter.ToListAsync(
-            resourceQuery.Where(x => collectionIds.Contains(x.Id) &&
-                                     (x.Status == ResourceStatus.SchoolApproved ||
-                                      x.Status == ResourceStatus.LeagueApproved))
-        );
+        // 收藏夹是每个用户私有的（按 UserId 过滤），但收藏里可能包含其它租户共享过来的资源
+        // （Resource.TenantId 为源租户），需禁用多租户过滤器统一查询；
+        // 跨租户资源必须存在共享到当前租户的记录才可见，避免越权展示。
+        using (DataFilter.Disable<IMultiTenant>())
+        {
+            var resourceQuery = await Repository.GetQueryableAsync();
+            resourceQuery = resourceQuery.Where(x => collectionIds.Contains(x.Id) &&
+                                                     (x.Status == ResourceStatus.SchoolApproved ||
+                                                      x.Status == ResourceStatus.LeagueApproved));
 
-        var totalCount = approvedResources.Count;
+            // 收藏夹内筛选：与 GetFilteredListAsync 口径一致（搜索/状态/时间/专业）
+            if (!string.IsNullOrWhiteSpace(input.Filter))
+            {
+                var f = input.Filter.ToLower();
+                resourceQuery = resourceQuery.Where(x =>
+                    (x.Name != null && x.Name.ToLower().Contains(f)) ||
+                    (x.Description != null && x.Description.ToLower().Contains(f)));
+            }
+            if (input.Status.HasValue)
+            {
+                resourceQuery = resourceQuery.Where(x => x.Status == input.Status.Value);
+            }
+            if (input.ResourceType.HasValue)
+            {
+                resourceQuery = resourceQuery.Where(x => x.ResourceType == input.ResourceType.Value);
+            }
+            if (input.CategoryId.HasValue)
+            {
+                var allCategoryIds = await GetAllCategoryIdsAsync(input.CategoryId.Value);
+                resourceQuery = resourceQuery.Where(x => x.CategoryId.HasValue && allCategoryIds.Contains(x.CategoryId.Value));
+            }
+            if (input.MajorId.HasValue)
+            {
+                resourceQuery = resourceQuery.Where(x => x.MajorId == input.MajorId.Value);
+            }
+            if (input.StartDate.HasValue)
+            {
+                resourceQuery = resourceQuery.Where(x => x.CreationTime >= input.StartDate.Value);
+            }
+            if (input.EndDate.HasValue)
+            {
+                resourceQuery = resourceQuery.Where(x => x.CreationTime <= input.EndDate.Value);
+            }
 
-        var orderedResources = approvedResources
-            .OrderByDescending(x => x.CreationTime)
-            .Skip(input.SkipCount)
-            .Take(input.MaxResultCount)
-            .ToList();
+            var approvedResources = await AsyncExecuter.ToListAsync(resourceQuery);
 
-        var dtos2 = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(orderedResources);
-        EnsureFileMetadata(dtos2);
-        await EnsureFileMetadataFromCurrentVersionAsync(orderedResources, dtos2);
-        return new PagedResultDto<ResourceDto>(
-            totalCount,
-            dtos2
-        );
+            // 共享记录按 (ResourceId → 最近一条共享) 聚合，用于可见性校验 + DTO 元数据填充。
+            var shareByResource = new Dictionary<Guid, ResourceShare>();
+            if (CurrentTenant.Id.HasValue)
+            {
+                var foreignIds = approvedResources
+                    .Where(r => r.TenantId != CurrentTenant.Id.Value)
+                    .Select(r => r.Id)
+                    .ToList();
+                if (foreignIds.Count > 0)
+                {
+                    var shareQuery = await ShareRepository.GetQueryableAsync();
+                    var shares = await AsyncExecuter.ToListAsync(
+                        shareQuery.Where(s => s.TargetTenantId == CurrentTenant.Id.Value && foreignIds.Contains(s.ResourceId)));
+                    shareByResource = shares
+                        .GroupBy(s => s.ResourceId)
+                        .ToDictionary(g => g.Key, g => g.OrderByDescending(s => s.SharedAt).First());
+                }
+            }
+
+            var accessible = approvedResources
+                .Where(r => !CurrentTenant.Id.HasValue ||
+                            r.TenantId == CurrentTenant.Id.Value ||
+                            shareByResource.ContainsKey(r.Id))
+                .ToList();
+
+            var totalCount = accessible.Count;
+
+            var orderedResources = accessible
+                .OrderByDescending(x => x.CreationTime)
+                .Skip(input.SkipCount)
+                .Take(input.MaxResultCount)
+                .ToList();
+
+            var dtos = ObjectMapper.Map<List<Resource>, List<ResourceDto>>(orderedResources);
+            EnsureFileMetadata(dtos);
+            await EnsureFileMetadataFromCurrentVersionAsync(orderedResources, dtos);
+            await AttachMajorsBatchAsync(dtos);
+            await FillCreatorNamesAsync(dtos);
+
+            // 标记共享资源 + 填充共享元数据（来源租户名/共享人）
+            foreach (var dto in dtos)
+            {
+                if (!shareByResource.TryGetValue(dto.Id, out var share)) continue;
+                dto.IsShared = true;
+                dto.SourceTenantId = share.SourceTenantId;
+                dto.SharedAt = share.SharedAt;
+                dto.SharedByUserId = share.SharedByUserId;
+                dto.ShareNote = share.Note;
+            }
+            if (shareByResource.Count > 0)
+            {
+                await FillShareMetaAsync(dtos);
+            }
+
+            return new PagedResultDto<ResourceDto>(totalCount, dtos);
+        }
     }
 
     [Authorize(KnowledgeHubPermissions.Resources.Create)]
@@ -1053,7 +1136,10 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
 
         await CollectionRepository.InsertAsync(collection);
 
-        var resource = await Repository.GetAsync(resourceId);
+        // 收藏的可能是其它租户共享过来的资源（Resource.TenantId 为源租户），
+        // 需禁用多租户过滤器才能拿到该资源并累加收藏数；不可访问则抛 EntityNotFound。
+        var resource = await FindAccessibleResourceForCollectAsync(resourceId)
+            ?? throw new EntityNotFoundException(typeof(Resource), resourceId);
         resource.CollectionCount++;
         await Repository.UpdateAsync(resource);
     }
@@ -1069,10 +1155,50 @@ public class ResourceAppService : KnowledgeHubAppService, IResourceAppService
         {
             await CollectionRepository.DeleteAsync(collection);
 
-            var resource = await Repository.GetAsync(resourceId);
-            resource.CollectionCount = Math.Max(0, resource.CollectionCount - 1);
-            await Repository.UpdateAsync(resource);
+            // 与 CollectAsync 一致：收藏的可能包含其它租户共享过来的资源，
+            // 需禁用多租户过滤器；资源不可访问（如共享已被撤销）时静默跳过计数更新。
+            var resource = await FindAccessibleResourceForCollectAsync(resourceId);
+            if (resource != null)
+            {
+                resource.CollectionCount = Math.Max(0, resource.CollectionCount - 1);
+                await Repository.UpdateAsync(resource);
+            }
         }
+    }
+
+    /// <summary>
+    /// 获取可访问的资源实体（用于收藏/取消收藏的计数更新）：
+    /// - 本租户资源直接命中租户过滤器；
+    /// - 其它租户共享过来的资源禁用多租户过滤器，并校验存在共享到当前租户的记录
+    ///   （共享被撤销后视为不可访问，收藏列表也会同步剔除该资源）；
+    /// - host 上下文直接按 id 查询。
+    /// 不可访问时返回 null（不抛异常，由调用方决定处理）。
+    /// </summary>
+    private async Task<Resource?> FindAccessibleResourceForCollectAsync(Guid resourceId)
+    {
+        if (CurrentTenant.Id.HasValue)
+        {
+            using (DataFilter.Disable<IMultiTenant>())
+            {
+                var resource = await Repository.FindAsync(resourceId);
+                if (resource == null)
+                {
+                    return null;
+                }
+
+                if (resource.TenantId == CurrentTenant.Id.Value)
+                {
+                    return resource;
+                }
+
+                var shareQuery = await ShareRepository.GetQueryableAsync();
+                var share = await AsyncExecuter.FirstOrDefaultAsync(
+                    shareQuery.Where(s => s.ResourceId == resourceId && s.TargetTenantId == CurrentTenant.Id.Value));
+                return share == null ? null : resource;
+            }
+        }
+
+        return await Repository.FindAsync(resourceId);
     }
 
     [AllowAnonymous]
