@@ -231,6 +231,58 @@ export class ResourceTaskComponent implements OnInit, OnDestroy {
   }
 
   artifactLabel(kind?: number): string {
-    return kind === 0 ? '缩略图' : '预览PDF';
+    // 0=列表封面缩略图（图片缩放 / 视频抽帧），10=Office 文档预览
+    return kind === 0 ? '列表封面缩略图' : 'Office 文档预览';
+  }
+
+  /** 把后端的变体代号（w400 / full 等）翻译成可读的中文描述。 */
+  artifactVariantLabel(kind?: number, variant?: string | null): string {
+    if (!variant) return '';
+    if (kind === 0) {
+      // 缩略图：变体是宽度代号
+      const m = variant.match(/^w(\d+)$/);
+      if (m) return `${m[1]}px 宽`;
+      return variant;
+    }
+    if (kind === 10) {
+      // 预览 PDF：变体是版本（full=完整版）
+      if (variant === 'full') return '完整版';
+      return variant;
+    }
+    return variant;
+  }
+
+  /** 后端 ResourceArtifactState：0=Ready, 40=Failed */
+  artifactStateLabel(state?: number | null): string {
+    if (state === 0) return '已生成';
+    if (state === 40) return '生成失败';
+    return '处理中';
+  }
+
+  /**
+   * 索引类任务（文档索引 / 视频索引）在“任务状态”列的统一中文文案。
+   * 状态列不再显示空空的“暂无生成物”，而是讲明该资源的索引是否可用。
+   */
+  indexStatusLabel(status?: TaskStatus, kind?: string): string {
+    const isVideo = kind === 'video-index';
+    const noun = isVideo ? '视频索引' : '文档索引';
+    switch (status) {
+      case 'success': return `${noun}已生成`;
+      case 'failed': return `${noun}生成失败`;
+      case 'running': return `正在生成${noun}`;
+      case 'pending': return `等待生成${noun}`;
+      case 'cancelled': return `${noun}已取消`;
+      default: return `${noun}状态未知`;
+    }
+  }
+
+  /** 索引类任务的状态色调（颜色。 */
+  indexStatusTone(status?: TaskStatus): 'ok' | 'failed' | 'running' | 'pending' {
+    switch (status) {
+      case 'success': return 'ok';
+      case 'failed': return 'failed';
+      case 'running': return 'running';
+      default: return 'pending';
+    }
   }
 }

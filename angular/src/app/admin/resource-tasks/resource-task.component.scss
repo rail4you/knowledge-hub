@@ -154,11 +154,6 @@
   }
 }
 
-.resource-id {
-  color: #a3adbb;
-  font-size: 11px;
-}
-
 .status-tags {
   display: flex;
   flex-wrap: wrap;
@@ -192,26 +187,6 @@
   font-size: 12px;
 }
 
-.artifacts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.artifact {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 10px;
-  background: rgba(43, 108, 212, 0.1);
-  color: #2b6cd4;
-  font-size: 12px;
-
-  &--failed {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-  }
-}
-
 .err {
   margin-top: 4px;
   color: #ef4444;
@@ -224,50 +199,169 @@
   font-size: 12px;
 }
 
-/* 展开区域：浅灰底 + 白色子卡片，层次清晰 */
+/* 展开区域：浅灰底 + 白色任务列表卡片，层次清晰。
+   关键设计：使用 div + CSS Grid 代替嵌套 <table>，避免 HTML 解析器
+   对嵌套 table 触发 foster-parenting（adoption agency algorithm），
+   否则子表的 thead/tbody/colgroup 会被提升到外层 table，导致外层
+   表格列错乱。*/
 .expanded-cell {
   padding: 0 !important;
   background: #f7f9fc !important;
 }
 
-.sub-table-wrap {
-  padding: 12px 16px;
-  background: #f7f9fc;
+/* 外层 ant-table 给展开行 td 默认会画 1px 底边，这里清掉，让卡片自带描边 */
+.expanded-row > td {
+  border-bottom: none !important;
 }
 
-.sub-table-card {
+.task-list {
+  margin: 12px 16px;
   background: #fff;
   border: 1px solid #e7edf5;
   border-radius: 8px;
   overflow: hidden;
 }
 
-.sub-table {
-  width: 100%;
-  border-collapse: collapse;
+/* 列分布：固定最小宽度，剩余空间按 fr 平分，让 任务状态 列略宽能放下详细描述 */
+.task-list__head,
+.task-list__row {
+  display: grid;
+  grid-template-columns:
+    80px              /* 类型（只放一个 nz-tag） */
+    100px             /* 状态 */
+    minmax(140px, 1.2fr) /* 进度 */
+    minmax(200px, 1.6fr) /* 任务状态（最宽） */
+    minmax(150px, 1.2fr) /* 时间 */
+    80px;             /* 操作 */
+  align-items: start;
+}
+
+.task-list__head {
+  background: #fafbfd;
+  color: #5f6f81;
+  font-weight: 600;
   font-size: 13px;
+}
 
-  thead th {
-    text-align: left;
-    background: #fafbfd;
-    color: #5f6f81;
-    font-weight: 600;
-    padding: 9px 12px;
-    border-bottom: 1px solid #eef3f9;
-    white-space: nowrap;
-  }
+.task-list__col {
+  padding: 10px 12px;
+  font-size: 13px;
+  word-break: break-word;
+  min-width: 0; /* 防止 grid 子项把列撑爆 */
+  text-align: center; /* 默认全部列内容居中 */
+}
 
-  tbody td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #f2f5f9;
-    vertical-align: top;
-  }
+.task-list__col--kind {
+  text-align: left; /* 类型列左对齐 */
+}
 
-  tbody tr:last-child td {
-    border-bottom: none;
-  }
+/* 表头列名居中（除了类型列） */
+.task-list__head .task-list__col {
+  padding: 9px 12px;
+  white-space: nowrap;
+  border-bottom: 1px solid #eef3f9;
+  text-align: center;
+}
 
-  tbody tr:hover td {
-    background: #f9fbfe;
-  }
+.task-list__head .task-list__col--kind {
+  text-align: left;
+}
+
+.task-list__row + .task-list__row {
+  border-top: 1px solid #f2f5f9;
+}
+
+.task-list__row {
+  transition: background 0.15s ease;
+}
+
+.task-list__row:hover {
+  background: #f9fbfe;
+}
+
+.task-list__empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* 任务状态列：多行生成物描述 */
+.status-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* 居中每个状态行 */
+  gap: 4px;
+  width: 100%;
+}
+
+.status-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.status-line__name {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.status-line__dot {
+  color: #cbd5e1;
+}
+
+.status-line__state {
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.status-line--ok .status-line__state {
+  color: #16a34a;
+}
+
+.status-line--ok .status-line__name::before {
+  content: '✓ ';
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.status-line--failed .status-line__state {
+  color: #ef4444;
+}
+
+.status-line--failed .status-line__name::before {
+  content: '✗ ';
+  color: #ef4444;
+  font-weight: 700;
+}
+
+/* 索引类任务状态：running / pending 走中性色，不加 ✓/✗ 符号 */
+.status-line--running .status-line__name {
+  color: #2b6cd4;
+}
+
+.status-line--pending .status-line__name {
+  color: #94a3b8;
+}
+
+/* 单独使用的索引行（文档索引 / 视频索引）字体适中、醒重点 */
+.task-list__col--artifacts > .status-line--ok,
+.task-list__col--artifacts > .status-line--failed,
+.task-list__col--artifacts > .status-line--running,
+.task-list__col--artifacts > .status-line--pending {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-line__err {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: #ef4444;
+  word-break: break-all;
+  text-align: left;
+  max-width: 100%;
+  padding-left: 14px;
 }

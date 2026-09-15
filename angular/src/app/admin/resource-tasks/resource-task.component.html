@@ -70,7 +70,6 @@
                 </button>
                 <div class="resource-cell__text">
                   <span class="resource-name" (click)="openProgress(group)">{{ group.resourceName || group.resourceId }}</span>
-                  <span class="resource-id">{{ group.resourceId }}</span>
                 </div>
               </div>
             </td>
@@ -101,73 +100,89 @@
           @if (isExpanded(group.resourceId)) {
             <tr class="expanded-row">
               <td colspan="4" class="expanded-cell">
-                <div class="sub-table-wrap">
-                <div class="sub-table-card">
-                  <table class="sub-table">
-                    <thead>
-                      <tr>
-                        <th nzWidth="100px">类型</th>
-                        <th nzWidth="110px">状态</th>
-                        <th nzWidth="190px">进度</th>
-                        <th>生成物 / 错误</th>
-                        <th nzWidth="180px">时间</th>
-                        <th nzWidth="90px">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (task of group.tasks; track task.id) {
-                        <tr>
-                          <td>
-                            <nz-tag [nzColor]="kindColor(task.kind)">{{ kindLabel(task.kind) }}</nz-tag>
-                          </td>
-                          <td>
-                            <nz-tag [nzColor]="taskStatusColor(task.status)">{{ taskStatusLabel(task.status) }}</nz-tag>
-                            @if (task.retryCount > 0) {
-                              <span class="retry-count">重试 {{ task.retryCount }} 次</span>
-                            }
-                          </td>
-                          <td>
-                            <nz-progress [nzPercent]="task.progress" nzSize="small"></nz-progress>
-                            <span class="progress-msg">{{ task.message }}</span>
-                          </td>
-                          <td>
-                            <div class="artifacts">
-                              @for (a of task.artifacts; track (a.kind + (a.variant || ''))) {
-                                <span class="artifact" [class.artifact--failed]="a.state === 40">
-                                  {{ artifactLabel(a.kind) }}{{ a.variant ? '·' + a.variant : '' }}
+                <div class="task-list">
+                  <div class="task-list__head">
+                    <div class="task-list__col task-list__col--kind">类型</div>
+                    <div class="task-list__col task-list__col--status">状态</div>
+                    <div class="task-list__col task-list__col--progress">进度</div>
+                    <div class="task-list__col task-list__col--artifacts">任务状态</div>
+                    <div class="task-list__col task-list__col--time">时间</div>
+                    <div class="task-list__col task-list__col--action">操作</div>
+                  </div>
+                  @for (task of group.tasks; track task.id) {
+                    <div class="task-list__row">
+                      <div class="task-list__col task-list__col--kind">
+                        <nz-tag [nzColor]="kindColor(task.kind)">{{ kindLabel(task.kind) }}</nz-tag>
+                      </div>
+                      <div class="task-list__col task-list__col--status">
+                        <nz-tag [nzColor]="taskStatusColor(task.status)">{{ taskStatusLabel(task.status) }}</nz-tag>
+                        @if (task.retryCount > 0) {
+                          <div class="retry-count">重试 {{ task.retryCount }} 次</div>
+                        }
+                      </div>
+                      <div class="task-list__col task-list__col--progress">
+                        <nz-progress [nzPercent]="task.progress" nzSize="small"></nz-progress>
+                        @if (task.message) {
+                          <div class="progress-msg">{{ task.message }}</div>
+                        }
+                      </div>
+                      <div class="task-list__col task-list__col--artifacts">
+                        @if (task.kind === 'media') {
+                          <div class="status-detail">
+                            @for (a of task.artifacts; track (a.kind + (a.variant || ''))) {
+                              <div
+                                class="status-line"
+                                [class.status-line--ok]="a.state === 0"
+                                [class.status-line--failed]="a.state === 40"
+                              >
+                                <span class="status-line__name">
+                                  {{ artifactLabel(a.kind) }}{{ a.variant ? ' · ' + artifactVariantLabel(a.kind, a.variant) : '' }}
                                 </span>
-                              } @empty {
-                                <span class="muted">—</span>
+                                <span class="status-line__dot">·</span>
+                                <span class="status-line__state">{{ artifactStateLabel(a.state) }}</span>
+                              </div>
+                              @if (a.errorMessage) {
+                                <div class="status-line__err">失败原因：{{ a.errorMessage }}</div>
                               }
-                            </div>
-                            @if (task.errorMessage) {
-                              <div class="err">{{ task.errorMessage }}</div>
+                            } @empty {
+                              <span class="muted">暂无生成物</span>
                             }
-                          </td>
-                          <td>
-                            <div>{{ task.creationTime | date:'MM-dd HH:mm:ss' }}</div>
-                            @if (task.completedAt) {
-                              <div class="muted">完成 {{ task.completedAt | date:'MM-dd HH:mm:ss' }}</div>
-                            }
-                            @if (task.startedAt && !task.completedAt) {
-                              <div class="muted">开始 {{ task.startedAt | date:'MM-dd HH:mm:ss' }}</div>
-                            }
-                          </td>
-                          <td>
-                            <button nz-button nzType="link" nzSize="small" (click)="retry(task)" [disabled]="!task.canRetry">重试</button>
-                          </td>
-                        </tr>
-                      } @empty {
-                        <tr>
-                          <td colspan="6" class="muted">该资源暂无任务</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
+                          </div>
+                        } @else {
+                          <!-- 文档索引 / 视频索引：没有生成物，直接讲明状态 -->
+                          <div
+                            class="status-line"
+                            [class.status-line--ok]="task.status === 'success'"
+                            [class.status-line--failed]="task.status === 'failed'"
+                            [class.status-line--running]="task.status === 'running'"
+                            [class.status-line--pending]="task.status === 'pending' || task.status === 'cancelled'"
+                          >
+                            <span class="status-line__name">{{ indexStatusLabel(task.status, task.kind) }}</span>
+                          </div>
+                        }
+                        @if (task.errorMessage) {
+                          <div class="err">任务错误：{{ task.errorMessage }}</div>
+                        }
+                      </div>
+                      <div class="task-list__col task-list__col--time">
+                        <div>{{ task.creationTime | date:'MM-dd HH:mm:ss' }}</div>
+                        @if (task.completedAt) {
+                          <div class="muted">完成 {{ task.completedAt | date:'MM-dd HH:mm:ss' }}</div>
+                        }
+                        @if (task.startedAt && !task.completedAt) {
+                          <div class="muted">开始 {{ task.startedAt | date:'MM-dd HH:mm:ss' }}</div>
+                        }
+                      </div>
+                      <div class="task-list__col task-list__col--action">
+                        <button nz-button nzType="link" nzSize="small" (click)="retry(task)" [disabled]="!task.canRetry">重试</button>
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="task-list__empty">该资源暂无任务</div>
+                  }
                 </div>
-              </div>
-            </td>
-          </tr>
+              </td>
+            </tr>
           }
         }
       </tbody>
